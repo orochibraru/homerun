@@ -260,6 +260,7 @@ export function singleDraft(input: SingleDraftInput): ComposeServiceDraft {
 		networkMode: "bridge",
 		portProtocol: "tcp",
 		privileged: input.privileged ?? false,
+		publishedPorts: [],
 		registry: input.registry ?? null,
 		restartPolicy: "unless-stopped",
 		slug,

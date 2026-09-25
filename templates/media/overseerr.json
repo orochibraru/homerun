@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Overseerr",
+	"description": "Media request manager for a Plex library.",
+	"image": "lscr.io/linuxserver/overseerr",
+	"tag": "latest",
+	"containerPort": 5055,
+	"icon": "overseerr.svg",
+	"tags": ["requests", "plex", "arr", "media"],
+	"websiteUrl": "https://overseerr.dev",
+	"sourceUrl": "https://github.com/sct/overseerr",
+	"envVars": {}
+}

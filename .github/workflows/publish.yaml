@@ -401,6 +401,11 @@ jobs:
     needs: [stable]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.stable.outputs.sha }}
+          persist-credentials: false
+
       - name: Login to Container registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -425,6 +430,18 @@ jobs:
           worker=docker.io/orochibraru/homerun-worker
           docker buildx imagetools create -t "$worker:$TAG" -t "$worker:latest" -t "$worker:canary" "$worker:$SHA"
           docker buildx imagetools inspect "$worker:$TAG"
+
+      - name: Build and push the CLI image
+        env:
+          TAG: ${{ needs.stable.outputs.tag }}
+          VERSION: ${{ needs.stable.outputs.version }}
+        run: |
+          set -euo pipefail
+          cli=docker.io/orochibraru/homerun-cli
+          docker buildx build --target cli --platform linux/amd64,linux/arm64 \
+            --build-arg "HOMERUN_VERSION=$VERSION" \
+            -t "$cli:$TAG" -t "$cli:latest" --push .
+          docker buildx imagetools inspect "$cli:$TAG"
 
   stable-release:
     name: Release ${{ needs.stable.outputs.tag }}

@@ -385,6 +385,20 @@
 			"when": 1790248009278,
 			"tag": "0054_colorful_warlock",
 			"breakpoints": true
+		},
+		{
+			"idx": 55,
+			"version": "7",
+			"when": 1790339479531,
+			"tag": "0055_brave_ultimates",
+			"breakpoints": true
+		},
+		{
+			"idx": 56,
+			"version": "7",
+			"when": 1790339840910,
+			"tag": "0056_light_ghost_rider",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

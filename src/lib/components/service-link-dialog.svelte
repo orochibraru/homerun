@@ -21,12 +21,14 @@
 	}
 
 	interface Props {
+		/** Path of the route whose form actions handle this dialog, e.g. `/services`; empty for the current route. */
+		actionBase?: string;
 		service: LinkableService | null;
 		services: LinkableService[];
 		stacks: { id: string; name: string }[];
 	}
 
-	const { service, services, stacks }: Props = $props();
+	const { actionBase = "", service, services, stacks }: Props = $props();
 
 	let open = $state(false);
 	let linkTargetId = $state("");
@@ -65,7 +67,7 @@
   bind:open
 >
   <form
-    action="?/link"
+    action="{actionBase}?/link"
     class="space-y-4"
     method="POST"
     use:enhance={enhanceToast({

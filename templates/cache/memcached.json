@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Memcached",
+	"description": "The original distributed memory cache : plain key-value, no persistence, no data structures. Unauthenticated.",
+	"image": "memcached",
+	"tag": "alpine",
+	"containerPort": 11211,
+	"icon": "",
+	"tags": ["cache", "key-value", "memcached", "foss"],
+	"websiteUrl": "https://memcached.org",
+	"sourceUrl": "https://github.com/memcached/memcached",
+	"envVars": {}
+}

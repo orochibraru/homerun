@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Transmission",
+	"description": "Lightweight BitTorrent client with a web UI.",
+	"image": "linuxserver/transmission",
+	"tag": "latest",
+	"containerPort": 9091,
+	"icon": "transmission.svg",
+	"tags": ["torrent", "downloads", "bittorrent"],
+	"websiteUrl": "https://transmissionbt.com",
+	"sourceUrl": "https://github.com/transmission/transmission",
+	"envVars": {}
+}

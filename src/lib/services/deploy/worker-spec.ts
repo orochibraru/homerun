@@ -288,12 +288,14 @@ function workloadSpec(ctx: WorkerSpecContext, workload: WorkloadPlan) {
 		cpuLimit: svc.cpuLimit,
 		defaultDomainEnabled: svc.defaultDomainEnabled,
 		dnsResolvable: svc.dnsResolvable,
+		domainPorts: svc.domainPorts,
 		domains: svc.domains,
 		envVars: {},
 		healthcheckCommand: svc.healthcheckCommand,
 		image: "",
 		memoryLimitMb: svc.memoryLimitMb,
 		portProtocol: svc.portProtocol,
+		publishedPorts: svc.publishedPorts,
 		restartPolicy: svc.restartPolicy,
 		runtime,
 		serviceId: svc.id,
@@ -306,6 +308,8 @@ function workloadSpec(ctx: WorkerSpecContext, workload: WorkloadPlan) {
 		containerPort: svc.containerPort,
 		hostNetwork: workload.networkMode === "host",
 		namePrefix: `homerun-${stack?.slug ? `${stack.slug}-` : ""}${svc.slug}`,
+		publishesPorts:
+			workload.networkMode !== "host" && svc.publishedPorts.length > 0,
 		slug: svc.slug,
 	};
 	switch (workload.kind) {

@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "Open WebUI",
+	"description": "Chat UI for local models. Point OLLAMA_BASE_URL at an Ollama service on the same network.",
+	"image": "ghcr.io/open-webui/open-webui",
+	"tag": "main",
+	"containerPort": 8080,
+	"icon": "open-webui.svg",
+	"tags": ["llm", "ai", "chat", "ollama"],
+	"websiteUrl": "https://openwebui.com",
+	"sourceUrl": "https://github.com/open-webui/open-webui",
+	"envVars": {
+		"OLLAMA_BASE_URL": "http://ollama:11434",
+		"WEBUI_SECRET_KEY": "change-me-to-a-random-string"
+	}
+}

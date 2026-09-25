@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "FreshRSS",
+	"description": "RSS feed aggregator with an embedded SQLite database.",
+	"image": "freshrss/freshrss",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "freshrss.svg",
+	"tags": ["rss", "feeds", "reader", "news"],
+	"websiteUrl": "https://freshrss.org",
+	"sourceUrl": "https://github.com/FreshRSS/FreshRSS",
+	"envVars": {}
+}

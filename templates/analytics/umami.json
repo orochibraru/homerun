@@ -1,0 +1,22 @@
+{
+	"$schema": "../schema.json",
+	"name": "Umami",
+	"description": "Privacy-focused web analytics. Needs a linked Postgres database.",
+	"image": "ghcr.io/umami-software/umami",
+	"tag": "postgresql-latest",
+	"containerPort": 3000,
+	"icon": "umami.svg",
+	"tags": ["analytics", "privacy", "statistics", "web"],
+	"websiteUrl": "https://umami.is",
+	"sourceUrl": "https://github.com/umami-software/umami",
+	"envVars": {
+		"APP_SECRET": "change-me-to-a-random-32-char-string",
+		"DATABASE_URL": "postgresql://{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}"
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		}
+	]
+}

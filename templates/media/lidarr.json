@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Lidarr",
+	"description": "Music collection manager and downloader.",
+	"image": "linuxserver/lidarr",
+	"tag": "latest",
+	"containerPort": 8686,
+	"icon": "lidarr.svg",
+	"tags": ["music", "pvr", "arr", "downloads"],
+	"websiteUrl": "https://lidarr.audio",
+	"sourceUrl": "https://github.com/Lidarr/Lidarr",
+	"envVars": {}
+}

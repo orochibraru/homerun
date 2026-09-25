@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { FileUp, LayoutGridIcon, Plus, Server } from "@lucide/svelte";
-	import { onMount, tick } from "svelte";
-	import { enhance } from "$app/forms";
+	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EntityList, {
@@ -13,20 +12,22 @@
 	import Pagination from "$lib/components/pagination.svelte";
 	import SelectAllRow from "$lib/components/select-all-row.svelte";
 	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
+	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
 	import { ListSelection } from "$lib/list-selection.svelte";
 	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
+	import {
+		SERVICE_ACTION_LABELS,
+		type ServiceAction,
+	} from "$lib/service-actions";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import type { ContainerStatus } from "$lib/types";
 	import { ViewMode } from "$lib/view-mode.svelte";
 	import BulkBar from "./bulk-bar.svelte";
-	import GroupDialog from "./group-dialog.svelte";
-	import LinkDialog from "./link-dialog.svelte";
-	import { SERVICE_ACTION_LABELS, type ServiceAction } from "./service-actions";
 	import ServiceRowActions from "./service-row-actions.svelte";
 
 	const { data } = $props();
@@ -133,52 +134,7 @@
 		deleteDialogOpen = true;
 	}
 
-	// Context-menu state. The menu itself is per row; the two dialogs it can
-	// open are page-level, so only one of each exists in the DOM.
-	let menuService = $state<Svc | null>(null);
-	let linkDialog = $state<ReturnType<typeof LinkDialog>>();
-	let groupDialog = $state<ReturnType<typeof GroupDialog>>();
-	let ungroupForm = $state<HTMLFormElement | null>(null);
-
-	function openLink(svc: { id: string }) {
-		menuService = byId(svc.id) ?? null;
-		linkDialog?.show();
-	}
-
-	function openGroup(svc: { id: string }) {
-		menuService = byId(svc.id) ?? null;
-		groupDialog?.show(menuService?.stackId ?? null);
-	}
-
-	function ungroup(svc: { id: string }) {
-		menuService = byId(svc.id) ?? null;
-		void tick().then(() => ungroupForm?.requestSubmit());
-	}
-
-	function runRowAction(
-		op: "delete" | "restart" | "start" | "stop",
-		id: string,
-	) {
-		const svc = byId(id);
-		if (!svc) {
-			return;
-		}
-		if (op === "delete") {
-			menuService = svc;
-			pendingDeleteName = svc.name;
-			void tick().then(() => {
-				pendingDeleteForm = document.querySelector<HTMLFormElement>(
-					`form[data-row-action="delete"][data-service="${id}"]`,
-				);
-				deleteDialogOpen = true;
-			});
-			return;
-		}
-		const form = document.querySelector<HTMLFormElement>(
-			`form[data-row-action="${op}"][data-service="${id}"]`,
-		);
-		form?.requestSubmit();
-	}
+	let menuHost = $state<ReturnType<typeof ServiceMenuHost>>();
 </script>
 
 <div class="p-5 md:p-6 {selection.count > 0 ? 'pb-28' : ''}">
@@ -253,10 +209,10 @@
         {@const svc = byId(item.id)}
         {#if svc}
           <ServiceContextMenu
-            onaction={runRowAction}
-            ongroup={openGroup}
-            onlink={openLink}
-            onungroup={ungroup}
+            onaction={(op, id) => menuHost?.run(op, id)}
+            ongroup={(s) => menuHost?.group(s)}
+            onlink={(s) => menuHost?.link(s)}
+            onungroup={(s) => menuHost?.ungroup(s)}
             service={svc}
           >
             {@render body()}
@@ -344,29 +300,8 @@
   title="Delete service"
 />
 
-<form
-  action="?/group"
-  method="POST"
-  bind:this={ungroupForm}
-  use:enhance={enhanceToast({
-    error: "Couldn't ungroup the service.",
-    loading: "Ungrouping",
-    success: "Removed from its stack.",
-  })}
->
-  <input name="serviceId" type="hidden" value={menuService?.id ?? ""}>
-  <input name="stackId" type="hidden" value="">
-</form>
-
-<LinkDialog
-  bind:this={linkDialog}
-  service={menuService}
+<ServiceMenuHost
+  bind:this={menuHost}
   services={data.services}
-  stacks={data.stacks}
-/>
-
-<GroupDialog
-  bind:this={groupDialog}
-  service={menuService}
   stacks={data.stacks}
 />

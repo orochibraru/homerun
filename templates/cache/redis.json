@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Redis",
+	"description": "In-memory key-value store. Unauthenticated by default.",
+	"image": "redis",
+	"tag": "alpine",
+	"containerPort": 6379,
+	"icon": "redis.svg",
+	"tags": ["cache", "key-value", "nosql", "queue"],
+	"websiteUrl": "https://redis.io",
+	"sourceUrl": "https://github.com/redis/redis",
+	"envVars": {}
+}

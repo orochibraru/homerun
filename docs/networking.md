@@ -10,19 +10,45 @@ DNS-resolvability. The per-app login wall lives on the
 - **Container port, protocol, network mode**, `bridge` (default, joins the
   shared `homerun` plus the service's stack network if any) or `host` (shares
   the host's network namespace directly, for apps needing real host-network
-  access like mDNS/SSDP discovery). Homerun never publishes/maps a host port
-  either way; a bridge-mode service is reachable only via its Traefik subdomain,
-  a host-mode service only directly on the host's own port.
+  access like mDNS/SSDP discovery). A bridge-mode service is reachable via its
+  domains, plus any **published ports** below; a host-mode service directly on
+  the host's own ports.
 - **DNS-resolvable**, whether Traefik gets discovery labels at all. Forced off
   automatically in host mode (there's no per-container IP for Traefik's Docker
   provider to route to).
 - **Domains**, a list of extra hostnames on top of the automatic
   `<slug>.<baseDomain>` one (which has its own "Routed" toggle, so it can be
-  dropped once a real domain replaces it), each routed to the same backend. Pick
-  one as the main domain: it's the link shown under the service's name and the
-  one used for deploy notifications, the uptime probe and search. At least one
-  hostname has to stay routed, otherwise turn public routing off in the Network
-  section below instead.
+  dropped once a real domain replaces it). Each extra domain can target its own
+  container port (blank means the container port above), so one container can
+  serve its web UI and its API on two hostnames. Pick one as the main domain:
+  it's the link shown under the service's name and the one used for deploy
+  notifications, the uptime probe and search. At least one hostname has to stay
+  routed, otherwise turn public routing off in the Network section below
+  instead.
+
+## Published ports
+
+Domains only work for HTTP(S): Traefik routes a request by the hostname inside
+it. UDP (a VPN, a game server, DNS) and plain TCP (SSH to a git forge, a
+database) carry no hostname, so nothing can route them by domain. For those,
+**Published ports** binds a port on the host straight to the container: host
+port, container port, TCP or UDP. A client then reaches it through any hostname
+that points at your server, on the host port: `vpn.example.com:1194` over UDP is
+a published `1194/udp` plus a DNS record for `vpn.example.com`.
+
+- Homerun refuses host ports 80 and 443 over TCP (Traefik's), the same host port
+  and protocol twice, and one another service already publishes. A port
+  something else on the machine holds (the host's own SSH on 22) only fails at
+  deploy time: publish Gitea's SSH on `2222 → 22` and set its `SSH_PORT` to
+  2222, or move the host's SSH first.
+- A service with published ports stops its old container before starting the new
+  one on each deploy (two containers can't hold one port), so it has a few
+  seconds of downtime per deploy. In [swarm mode](swarm-mode.md) the port is
+  published on every node through Docker's routing mesh.
+- Host networking has nothing to publish: the container already uses the host's
+  ports.
+- [Compose import](compose-import.md) publishes a compose file's `ports:` except
+  the main one, which goes through Traefik.
 
 ## Domains & SSL
 

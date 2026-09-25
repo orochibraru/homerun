@@ -1,0 +1,168 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"additionalProperties": false,
+	"description": "A Homerun built-in template: templates/<category>/<slug>.json, where the folder is its category.",
+	"properties": {
+		"$schema": {
+			"type": "string"
+		},
+		"capAdd": {
+			"items": {
+				"type": "string"
+			},
+			"type": "array"
+		},
+		"command": {
+			"anyOf": [
+				{
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				{
+					"type": "null"
+				}
+			]
+		},
+		"containerPort": {
+			"maximum": 65535,
+			"minimum": 1,
+			"type": "integer"
+		},
+		"description": {
+			"minLength": 1,
+			"type": "string"
+		},
+		"devices": {
+			"items": {
+				"type": "string"
+			},
+			"type": "array"
+		},
+		"entrypoint": {
+			"anyOf": [
+				{
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				{
+					"type": "null"
+				}
+			]
+		},
+		"envFiles": {
+			"items": {
+				"type": "string"
+			},
+			"type": "array"
+		},
+		"envVars": {
+			"additionalProperties": {
+				"type": "string"
+			},
+			"propertyNames": {
+				"type": "string"
+			},
+			"type": "object"
+		},
+		"healthcheckCommand": {
+			"type": "string"
+		},
+		"icon": {
+			"description": "File name under static/template-icons/, or an empty string for the category's generic icon.",
+			"type": "string"
+		},
+		"image": {
+			"minLength": 1,
+			"type": "string"
+		},
+		"labels": {
+			"additionalProperties": {
+				"type": "string"
+			},
+			"propertyNames": {
+				"type": "string"
+			},
+			"type": "object"
+		},
+		"links": {
+			"items": {
+				"additionalProperties": false,
+				"properties": {
+					"alias": {
+						"description": "Name the env vars use to reference the linked service: {{alias}}, {{alias.VAR}}.",
+						"pattern": "^[a-z0-9_-]+$",
+						"type": "string"
+					},
+					"template": {
+						"description": "File name (without .json) of the linked template, which must have no links itself.",
+						"type": "string"
+					}
+				},
+				"required": ["alias", "template"],
+				"type": "object"
+			},
+			"type": "array"
+		},
+		"name": {
+			"maxLength": 100,
+			"minLength": 1,
+			"type": "string"
+		},
+		"privileged": {
+			"type": "boolean"
+		},
+		"sourceUrl": {
+			"anyOf": [
+				{
+					"format": "uri",
+					"type": "string"
+				},
+				{
+					"type": "null"
+				}
+			]
+		},
+		"tag": {
+			"minLength": 1,
+			"type": "string"
+		},
+		"tags": {
+			"items": {
+				"maxLength": 30,
+				"minLength": 1,
+				"type": "string"
+			},
+			"maxItems": 12,
+			"minItems": 1,
+			"type": "array"
+		},
+		"websiteUrl": {
+			"anyOf": [
+				{
+					"format": "uri",
+					"type": "string"
+				},
+				{
+					"type": "null"
+				}
+			]
+		}
+	},
+	"required": [
+		"containerPort",
+		"description",
+		"envVars",
+		"icon",
+		"image",
+		"name",
+		"sourceUrl",
+		"tag",
+		"tags",
+		"websiteUrl"
+	],
+	"type": "object"
+}

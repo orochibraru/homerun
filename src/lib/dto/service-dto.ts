@@ -14,6 +14,7 @@ import {
 import { PASSWORD_METHOD } from "$lib/auth-providers";
 import type { BuildMethod } from "$lib/build-methods";
 import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
+import type { PublishedPort } from "$lib/published-ports";
 import { db } from "$lib/server/db/lib";
 import { type Service, service, stack } from "$lib/server/db/schema";
 import {
@@ -221,6 +222,36 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return domains.find((domain) => taken.has(domain)) ?? null;
 	}
 
+	/**
+	 * The first of `ports` another service (not `excludeId`) already publishes
+	 * on the same host port and protocol, with that service's name, or null.
+	 */
+	static async publishedPortTaken(
+		ports: PublishedPort[],
+		excludeId: string,
+	): Promise<{ port: PublishedPort; serviceName: string } | null> {
+		if (ports.length === 0) {
+			return null;
+		}
+		const rows = await db
+			.select({ name: service.name, publishedPorts: service.publishedPorts })
+			.from(service)
+			.where(ne(service.id, excludeId));
+		for (const port of ports) {
+			const owner = rows.find((row) =>
+				row.publishedPorts.some(
+					(other) =>
+						other.hostPort === port.hostPort &&
+						other.protocol === port.protocol,
+				),
+			);
+			if (owner) {
+				return { port, serviceName: owner.name };
+			}
+		}
+		return null;
+	}
+
 	/** Whether `slug` is already taken by a *different* service (for uniqueness checks on create/update). */
 	static async slugTaken(slug: string, excludeId?: string): Promise<boolean> {
 		const conditions = excludeId
@@ -294,6 +325,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 			memoryLimitMb: input.memoryLimitMb ?? null,
 			networkMode: input.networkMode ?? "bridge",
 			portProtocol: input.portProtocol ?? "tcp",
+			domainPorts: {},
+			publishedPorts: input.publishedPorts ?? [],
 			stackId: input.stackId ?? null,
 			pullPolicy: input.pullPolicy ?? "always",
 			replicas: input.replicas ?? 1,
@@ -650,6 +683,14 @@ export class ServiceDTO extends BaseDTO<Service> {
 	 */
 	get networkMode(): Service["networkMode"] {
 		return this.row.networkMode;
+	}
+	/** Per custom domain, the container port Traefik routes it to instead of `containerPort`. */
+	get domainPorts(): Service["domainPorts"] {
+		return this.row.domainPorts;
+	}
+	/** Host ports published straight to the container, bypassing Traefik. */
+	get publishedPorts(): Service["publishedPorts"] {
+		return this.row.publishedPorts;
 	}
 	/** Which protocol(s) the container port is exposed under. */
 	get portProtocol(): Service["portProtocol"] {

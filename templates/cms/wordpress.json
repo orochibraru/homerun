@@ -1,0 +1,24 @@
+{
+	"$schema": "../schema.json",
+	"name": "WordPress",
+	"description": "World's most-used blogging and CMS engine. Needs a linked MySQL database.",
+	"image": "wordpress",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "wordpress.svg",
+	"tags": ["cms", "blog", "website", "php"],
+	"websiteUrl": "https://wordpress.org",
+	"sourceUrl": "https://github.com/WordPress/WordPress",
+	"envVars": {
+		"WORDPRESS_DB_HOST": "{{db}}",
+		"WORDPRESS_DB_NAME": "{{db.MYSQL_DATABASE}}",
+		"WORDPRESS_DB_PASSWORD": "{{db.MYSQL_ROOT_PASSWORD}}",
+		"WORDPRESS_DB_USER": "root"
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "mysql"
+		}
+	]
+}

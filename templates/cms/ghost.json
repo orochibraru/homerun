@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Ghost",
+	"description": "Blogging platform, runs standalone with an embedded SQLite database.",
+	"image": "ghost",
+	"tag": "latest",
+	"containerPort": 2368,
+	"icon": "ghost.png",
+	"tags": ["cms", "blog", "newsletter", "publishing"],
+	"websiteUrl": "https://ghost.org",
+	"sourceUrl": "https://github.com/TryGhost/Ghost",
+	"envVars": {}
+}

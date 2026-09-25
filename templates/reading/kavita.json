@@ -1,0 +1,15 @@
+{
+	"$schema": "../schema.json",
+	"name": "Kavita",
+	"description": "Reading server for comics, manga and books, with per-user progress tracking.",
+	"image": "jvmilazz0/kavita",
+	"tag": "latest",
+	"containerPort": 5000,
+	"icon": "kavita.svg",
+	"tags": ["books", "comics", "manga", "ebooks", "reading"],
+	"websiteUrl": "https://www.kavitareader.com",
+	"sourceUrl": "https://github.com/Kareadita/Kavita",
+	"envVars": {
+		"TZ": "UTC"
+	}
+}

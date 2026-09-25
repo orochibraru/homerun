@@ -723,22 +723,28 @@ the wizard compute the same refusal in `load` to warn up front (Quick Deploy is
 disabled on the details page). `saveAsTemplate` doesn't check: it only copies
 values an admin already set on the service.
 
-## Built-in template catalog and gallery (`builtin-templates.ts`, `builtin-templates-apps.ts`, `template-icon.svelte`, `templates/[templateId]/`)
+## Built-in template catalog and gallery (`templates/<category>/*.json`, `builtin-templates.ts`, `template-icon.svelte`, `templates/[templateId]/`)
 
-69 built-in templates (up from the original 8), split across two data files
-purely to stay under `noExcessiveLinesPerFile`'s 680-line limit:
-`src/lib/server/db/builtin-templates.ts` (the original 8 infra templates plus
-Media/Network/Dashboard/Productivity/Finance category entries, also exports the
-`BuiltinTemplate`/`BuiltinTemplateLink` interfaces both files use) and
-`src/lib/server/db/builtin-templates-apps.ts` (the rest, Analytics/Monitoring/
-Development/other categories, including Penombre, Nextcloud, Home Assistant,
-Mealie, Memos, Paperless-ngx, Beszel, Kavita, code-server, the Docker registry
-itself, Ollama, Open WebUI and Duplicati). `src/lib/server/db/seed.ts` is a thin
-orchestrator importing both arrays plus `BUILTIN_TEMPLATE_LINKS` (4 entries:
-WordPress→MySQL, Umami→Postgres, Miniflux→Postgres, Paperless-ngx→Redis, wiring
-the Template links feature above into real built-ins). Every image was verified
-real via `docker manifest inspect <image>:<tag>` (fast, no full pull) before
-being added, not just guessed from a stack's README.
+Built-ins are data, one JSON file per template under the repo-root
+`templates/<category>/`, so contributing one is a single file (plus an optional
+icon) with no TypeScript. The folder is the category and the file name is the
+slug: the template's id is `builtin-<slug>`, so a file name is permanent once
+shipped (renaming it deletes the old template and creates a new one, orphaning
+services' `templateId`). Links are declared inline
+(`"links": [{ "alias": "db", "template": "postgres" }]`), their ids are
+`builtin-link-<slug>-<alias>`, and the target must be a leaf.
+
+`seed.ts` loads them with Vite's `import.meta.glob(..., { eager: true })`, so
+they're bundled into the compiled binary at build time, nothing reads the disk
+at runtime. That also means `seed.ts` can't be imported outside Vite (bun tests
+and scripts have no `import.meta.glob`): the parsing and validation live in
+`builtin-templates.ts`'s `parseBuiltinTemplates` (zod, strict, so a misspelled
+field fails instead of vanishing), which the unit test drives by reading the
+files itself. `bun run gen` writes `templates/schema.json` from the same zod
+schema, and every file's `$schema` points at it for editor completion. Built-in
+links are replaced wholesale on boot: any `builtin-link-%` row no longer
+declared is deleted, then the declared ones are upserted. Every image was
+verified real via `docker manifest inspect <image>:<tag>` before being added.
 
 **The seed upserts rather than `onConflictDoNothing()`, and it has to.** A
 built-in is code, not user data (`ownerId` null), so an instance that seeded

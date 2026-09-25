@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "Penombre",
+	"description": "Self-hosted drive : a Nextcloud, ownCloud and Google Drive alternative. Set ORIGIN to the URL you'll reach it at, the rest works out of the box on SQLite.",
+	"image": "orochibraru/penombre",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "penombre.svg",
+	"tags": ["drive", "files", "storage", "sync", "nextcloud-alternative"],
+	"websiteUrl": "https://orochibraru.com/penombre",
+	"sourceUrl": "https://github.com/orochibraru/penombre",
+	"envVars": {
+		"APP_NAME": "Penombre",
+		"DATABASE_URL": "file:/data/db/penombre.sqlite",
+		"ORIGIN": "https://drive.example.com",
+		"STORAGE_PATH": "/data/storage"
+	}
+}

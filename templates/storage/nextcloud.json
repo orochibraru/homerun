@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Nextcloud",
+	"description": "Files, calendars and contacts, with an app store on top. Runs on SQLite as deployed here; link a Postgres for anything beyond a personal instance.",
+	"image": "nextcloud",
+	"tag": "stable",
+	"containerPort": 80,
+	"icon": "nextcloud.svg",
+	"tags": ["files", "drive", "storage", "calendar", "contacts"],
+	"websiteUrl": "https://nextcloud.com",
+	"sourceUrl": "https://github.com/nextcloud/server",
+	"envVars": {}
+}

@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Mealie",
+	"description": "Recipe manager and meal planner. Set BASE_URL to the URL you'll reach it at, or shared links point at the wrong host.",
+	"image": "ghcr.io/mealie-recipes/mealie",
+	"tag": "latest",
+	"containerPort": 9000,
+	"icon": "mealie.svg",
+	"tags": ["recipes", "cooking", "meal-planning", "food"],
+	"websiteUrl": "https://mealie.io",
+	"sourceUrl": "https://github.com/mealie-recipes/mealie",
+	"envVars": {
+		"ALLOW_SIGNUP": "false",
+		"BASE_URL": "https://mealie.example.com",
+		"TZ": "UTC"
+	}
+}

@@ -1,0 +1,15 @@
+{
+	"$schema": "../schema.json",
+	"name": "Bercail",
+	"description": "Homelab start page : links with live status, weather and host vitals. Set ORIGIN to the URL you'll reach it at, forms fail behind the proxy without it.",
+	"image": "orochibraru/bercail",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "bercail.svg",
+	"tags": ["dashboard", "start-page", "bookmarks", "status", "weather"],
+	"websiteUrl": "https://orochibraru.com/bercail",
+	"sourceUrl": "https://github.com/orochibraru/bercail",
+	"envVars": {
+		"ORIGIN": "https://dash.example.com"
+	}
+}

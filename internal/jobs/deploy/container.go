@@ -89,7 +89,7 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, 
 	for _, container := range previous {
 		running = running || container.State == "running"
 	}
-	plan := RolloutStrategy(running, workload.HostNetwork, r.spec.Volumes)
+	plan := RolloutStrategy(running, workload.HostNetwork, workload.PublishesPorts, r.spec.Volumes)
 	if plan.BlueGreen {
 		r.progress.line("Keeping the previous container serving until the new one is ready...")
 	} else {

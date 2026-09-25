@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "The Lounge",
+	"description": "Self-hosted web IRC client.",
+	"image": "thelounge/thelounge",
+	"tag": "latest",
+	"containerPort": 9000,
+	"icon": "thelounge.svg",
+	"tags": ["irc", "chat", "messaging"],
+	"websiteUrl": "https://thelounge.chat",
+	"sourceUrl": "https://github.com/thelounge/thelounge",
+	"envVars": {}
+}

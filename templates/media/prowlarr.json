@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Prowlarr",
+	"description": "Indexer manager, feeds Sonarr/Radarr/Lidarr.",
+	"image": "linuxserver/prowlarr",
+	"tag": "latest",
+	"containerPort": 9696,
+	"icon": "prowlarr.svg",
+	"tags": ["indexers", "arr", "downloads"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/Prowlarr/Prowlarr",
+	"envVars": {}
+}

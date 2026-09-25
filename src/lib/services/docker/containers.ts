@@ -1,5 +1,10 @@
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
+import {
+	type PublishedPort,
+	portBindings,
+	portKey,
+} from "$lib/published-ports";
 import type { ContainerStatus } from "$lib/types";
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
@@ -125,6 +130,7 @@ export interface CreateContainerParams {
 	// When false, the container gets no Traefik labels at all : no public
 	// <slug>.<baseDomain>, subnet-only reachability. Defaults to true.
 	dnsResolvable?: boolean;
+	domainPorts?: Record<string, number>;
 	domains?: string[];
 	envVars: Record<string, string>;
 	image: string;
@@ -145,11 +151,11 @@ export interface CreateContainerParams {
 	// when networkMode is "host" (see above).
 	stackId?: string | null;
 	// "tcp" (default) | "udp" | "both" : which protocol(s) containerPort is
-	// declared under (Docker's ExposedPorts). Doesn't publish/map anything by
-	// itself either way : see the Networking tab's own "no host port
-	// publishing by design" stance; matters for real host-visible reachability
-	// only in combination with networkMode: "host" above.
+	// declared under (Docker's ExposedPorts). Doesn't publish anything by
+	// itself : publishedPorts does that; matters for host-visible
+	// reachability only in combination with networkMode: "host" above.
 	portProtocol?: "tcp" | "udp" | "both";
+	publishedPorts?: PublishedPort[];
 	// Prefixes the container name and public subdomain when the service
 	// belongs to a stack (e.g. "<stackSlug>-<slug>.<baseDomain>").
 	stackSlug?: string | null;
@@ -204,6 +210,10 @@ function containerHostConfig(params: CreateContainerParams) {
 			? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
 			: undefined,
 		NetworkMode: networkModeFor(params),
+		PortBindings:
+			params.networkMode === "host"
+				? undefined
+				: portBindings(params.publishedPorts ?? []),
 		RestartPolicy: {
 			Name: params.restartPolicy === "no" ? "" : params.restartPolicy,
 		},
@@ -226,9 +236,10 @@ export function containerCreateTemplate(params: CreateContainerParams) {
 			: [params.portProtocol ?? "tcp"];
 	return {
 		...runtimeArgv(params.runtime),
-		ExposedPorts: Object.fromEntries(
-			protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
-		),
+		ExposedPorts: Object.fromEntries([
+			...protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
+			...(params.publishedPorts ?? []).map((port) => [portKey(port), {}]),
+		]),
 		HostConfig: containerHostConfig(params),
 		Labels: mergeLabels(
 			params.runtime?.labels,
@@ -236,6 +247,7 @@ export function containerCreateTemplate(params: CreateContainerParams) {
 				containerPort: params.containerPort,
 				defaultDomainEnabled: params.defaultDomainEnabled,
 				dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
+				domainPorts: params.domainPorts,
 				domains: params.domains,
 				serviceId: params.serviceId,
 				slug: params.slug,

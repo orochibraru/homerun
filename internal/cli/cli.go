@@ -33,7 +33,8 @@ Commands:
 
   services list                   list services
   services get <id>               get a service by id
-  services deploy <id>            deploy a service
+  services deploy <id> [--tag <tag>]
+                                  deploy a service and wait for it, optionally switching its image tag first
   services start|stop|restart <id>
                                   start, stop or restart a service
   services delete <id> [--force]  delete a service
@@ -226,7 +227,13 @@ func RunServices(global GlobalFlags, args []string) {
 	case "get":
 		id := RequireArg(args, 1, "id")
 		ServiceGet(client(), id)
-	case "deploy", "start", "stop", "restart":
+	case "deploy":
+		set := NewFlagSet("services deploy")
+		tag := set.String("tag", "", "switch an image-based service to this image tag before deploying")
+		rest := Parse(set, args[1:])
+		id := RequireArg(rest, 0, "id")
+		ServiceDeploy(client(), id, *tag)
+	case "start", "stop", "restart":
 		id := RequireArg(args, 1, "id")
 		ServiceAction(client(), args[0], id)
 	case "delete":

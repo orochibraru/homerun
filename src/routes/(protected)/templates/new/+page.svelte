@@ -21,6 +21,7 @@
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
+	import { TEMPLATE_CATEGORIES } from "$lib/template-categories";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
@@ -34,18 +35,7 @@
 
 	const categoryOptions = [
 		{ label: "None", value: "" },
-		{ label: "Database", value: "database" },
-		{ label: "Cache", value: "cache" },
-		{ label: "Monitoring", value: "monitoring" },
-		{ label: "Automation", value: "automation" },
-		{ label: "Media", value: "media" },
-		{ label: "Network", value: "network" },
-		{ label: "Dashboard", value: "dashboard" },
-		{ label: "Productivity", value: "productivity" },
-		{ label: "Finance", value: "finance" },
-		{ label: "Analytics", value: "analytics" },
-		{ label: "Development", value: "development" },
-		{ label: "Other", value: "other" },
+		...TEMPLATE_CATEGORIES,
 	];
 	let category = $derived(values?.category ?? "");
 	const categoryLabel = $derived(

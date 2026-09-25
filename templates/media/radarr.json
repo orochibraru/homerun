@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Radarr",
+	"description": "Movie collection manager and downloader.",
+	"image": "linuxserver/radarr",
+	"tag": "latest",
+	"containerPort": 7878,
+	"icon": "radarr.svg",
+	"tags": ["movies", "pvr", "arr", "downloads"],
+	"websiteUrl": "https://radarr.video",
+	"sourceUrl": "https://github.com/Radarr/Radarr",
+	"envVars": {}
+}

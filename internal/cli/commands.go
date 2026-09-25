@@ -264,6 +264,19 @@ func ServiceAction(client *Client, action, id string) {
 	PrintJSON(body)
 }
 
+// ServiceDeploy deploys a service and waits for it, first switching an
+// image-based service to tag when tag isn't empty, and prints the API's result
+// as JSON. Exits non-zero when the deploy fails, which is what a CI job needs.
+func ServiceDeploy(client *Client, id, tag string) {
+	if tag == "" {
+		ServiceAction(client, "deploy", id)
+		return
+	}
+	var result map[string]any
+	client.decodeJSON("POST", fmt.Sprintf("/services/%s/deploy", url.PathEscape(id)), map[string]string{"tag": tag}, &result)
+	PrintValue(result)
+}
+
 // ServiceDelete deletes a service, the same danger-zone action as the Settings
 // tab's Delete button. Exits on an API error, including the 409 the API answers
 // (without force) when the container or swarm service couldn't be removed.

@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Gitea",
+	"description": "Self-hosted Git service, GitHub-alike. Shows a setup wizard on first visit (choose SQLite there for a zero-config start).",
+	"image": "gitea/gitea",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "gitea.svg",
+	"tags": ["git", "forge", "ci", "code"],
+	"websiteUrl": "https://about.gitea.com",
+	"sourceUrl": "https://github.com/go-gitea/gitea",
+	"envVars": {}
+}

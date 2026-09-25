@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "code-server",
+	"description": "VS Code in the browser. Set a password before deploying : the default image has none.",
+	"image": "lscr.io/linuxserver/code-server",
+	"tag": "latest",
+	"containerPort": 8443,
+	"icon": "code-server.svg",
+	"tags": ["ide", "vscode", "development", "editor"],
+	"websiteUrl": "https://coder.com/docs/code-server",
+	"sourceUrl": "https://github.com/coder/code-server",
+	"envVars": {
+		"PASSWORD": "change-me",
+		"PGID": "1000",
+		"PUID": "1000",
+		"TZ": "UTC"
+	}
+}

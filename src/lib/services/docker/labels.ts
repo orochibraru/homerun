@@ -45,8 +45,10 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
  * Builds the full label set for a container/swarm service : always the
  * `homerun.managed`/`homerun.service.id` tracking labels, plus (when
  * `dnsResolvable`) one Traefik router per routed hostname (the default
- * `<slug>.<baseDomain>` unless it was turned off, then each of `domains`), all
- * sharing one Traefik service, and the login wall's forwardAuth middleware on
+ * `<slug>.<baseDomain>` unless it was turned off, then each of `domains`), each
+ * pointing at a Traefik service for its port (`<slug>` for `containerPort`,
+ * `<slug>-<port>` for a domain `domainPorts` sends elsewhere), and the login
+ * wall's forwardAuth middleware on
  * every router. The middleware is attached whether or not the wall is on:
  * auth-check lets requests through for a service whose wall is off, so
  * toggling it applies without a redeploy. A retry middleware follows it, so a
@@ -57,6 +59,7 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
 export function buildContainerLabels(params: {
 	containerPort: number;
 	defaultDomainEnabled?: boolean;
+	domainPorts?: Record<string, number>;
 	dnsResolvable?: boolean;
 	domains?: string[];
 	networkName?: string;
@@ -115,7 +118,11 @@ export function buildContainerLabels(params: {
 		labels[`traefik.http.routers.${router}.entrypoints`] =
 			config.traefik.entrypoint;
 		labels[`traefik.http.routers.${router}.tls`] = "true";
-		labels[`traefik.http.routers.${router}.service`] = slug;
+		const port = params.domainPorts?.[hostname] ?? containerPort;
+		const service = port === containerPort ? slug : `${slug}-${port}`;
+		labels[`traefik.http.services.${service}.loadbalancer.server.port`] =
+			String(port);
+		labels[`traefik.http.routers.${router}.service`] = service;
 		labels[`traefik.http.routers.${router}.middlewares`] =
 			`${authMiddleware},${retryMiddleware}`;
 		const resolver = certResolverFor(

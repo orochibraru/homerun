@@ -12,7 +12,6 @@
 		{
 			href: resolve("/(protected)/stacks/[stackId]", { stackId: stack.id }),
 			icon: Server,
-			iconClass: "text-sky-500",
 			id: "services",
 			label: `Services (${data.services.length})`,
 		},
@@ -21,7 +20,6 @@
 				stackId: stack.id,
 			}),
 			icon: Activity,
-			iconClass: "text-emerald-500",
 			id: "monitoring",
 			label: "Monitoring",
 		},
@@ -30,7 +28,6 @@
 				stackId: stack.id,
 			}),
 			icon: Settings,
-			iconClass: "text-slate-500",
 			id: "settings",
 			label: "Settings",
 		},

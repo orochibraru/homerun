@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Bazarr",
+	"description": "Subtitle manager for Sonarr/Radarr libraries.",
+	"image": "linuxserver/bazarr",
+	"tag": "latest",
+	"containerPort": 6767,
+	"icon": "bazarr.svg",
+	"tags": ["subtitles", "arr", "movies", "tv"],
+	"websiteUrl": "https://www.bazarr.media",
+	"sourceUrl": "https://github.com/morpheus65535/bazarr",
+	"envVars": {}
+}

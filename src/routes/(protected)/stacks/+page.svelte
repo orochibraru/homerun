@@ -99,7 +99,7 @@
       {#snippet wrapper(item: EntityRow, body: Snippet)}
         {@const stack = data.stacks.find((p) => p.id === item.id)}
         <ContextMenu.Root>
-          <ContextMenu.Trigger>
+          <ContextMenu.Trigger class="block h-full">
             {@render body()}
           </ContextMenu.Trigger>
           <ContextMenu.Content class="w-56">

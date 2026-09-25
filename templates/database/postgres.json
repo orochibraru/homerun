@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "PostgreSQL",
+	"description": "Relational database. Review the placeholder password before deploying.",
+	"image": "postgres",
+	"tag": "18-alpine",
+	"containerPort": 5432,
+	"icon": "postgres.svg",
+	"tags": ["sql", "database", "relational", "postgres"],
+	"websiteUrl": "https://www.postgresql.org",
+	"sourceUrl": "https://github.com/postgres/postgres",
+	"envVars": {
+		"POSTGRES_DB": "app",
+		"POSTGRES_PASSWORD": "changeme",
+		"POSTGRES_USER": "postgres"
+	}
+}

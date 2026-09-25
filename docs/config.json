@@ -33,6 +33,7 @@
 					"icon": "git-branch"
 				},
 				{ "slug": "deploy-on-push", "icon": "webhook" },
+				{ "slug": "ci-cd", "title": "Deploying from CI", "icon": "workflow" },
 				{
 					"slug": "pull-request-previews",
 					"title": "PR previews",

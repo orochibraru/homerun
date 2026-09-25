@@ -85,7 +85,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 								schema: toEmbeddedSchema(route.requestBody),
 							},
 						},
-						required: true,
+						required: !route.requestBodyOptional,
 					}
 				: undefined,
 			responses,

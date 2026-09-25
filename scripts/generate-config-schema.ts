@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { yamlConfigSchema } from "../src/lib/config";
+import { builtinTemplateFileSchema } from "../src/lib/server/db/builtin-templates";
 
 function sortKeysDeep(value: unknown): unknown {
 	if (Array.isArray(value)) {
@@ -15,15 +16,24 @@ function sortKeysDeep(value: unknown): unknown {
 	return value;
 }
 
-const schema = z.toJSONSchema(yamlConfigSchema, { target: "draft-7" });
-await Bun.write(
-	"homerun.schema.json",
-	JSON.stringify(sortKeysDeep(schema), null, "\t"),
+const outputs = [
+	[
+		"homerun.schema.json",
+		z.toJSONSchema(yamlConfigSchema, { target: "draft-7" }),
+	],
+	[
+		"templates/schema.json",
+		z.toJSONSchema(builtinTemplateFileSchema, { target: "draft-7" }),
+	],
+] as const;
+
+for (const [path, schema] of outputs) {
+	await Bun.write(path, JSON.stringify(sortKeysDeep(schema), null, "\t"));
+}
+
+Bun.spawnSync(
+	["bunx", "biome", "check", "--write", ...outputs.map(([path]) => path)],
+	{ stderr: "inherit", stdout: "inherit" },
 );
 
-Bun.spawnSync(["bunx", "biome", "check", "--write", "homerun.schema.json"], {
-	stderr: "inherit",
-	stdout: "inherit",
-});
-
-console.log("Wrote homerun.schema.json");
+console.log(`Wrote ${outputs.map(([path]) => path).join(", ")}`);

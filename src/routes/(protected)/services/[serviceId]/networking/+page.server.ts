@@ -4,7 +4,11 @@ import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
-import { updatePortsSchema } from "$lib/server/validation/service";
+import { publishedPortsProblem } from "$lib/published-ports";
+import {
+	publishedPortsSchema,
+	updatePortsSchema,
+} from "$lib/server/validation/service";
 import {
 	DOMAIN_RE,
 	defaultHostname,
@@ -49,9 +53,28 @@ export const actions = {
 		const formData = await request.formData();
 		const defaultDomainEnabled = formData.get("defaultDomainEnabled") === "on";
 		const fallback = defaultHostname(svc.slug, stack?.slug, config.baseDomain);
-		const domains = normalizeDomains(
-			formData.getAll("domains").map(String),
-		).filter((domain) => domain !== fallback);
+		const rawDomains = formData.getAll("domains").map(String);
+		const domains = normalizeDomains(rawDomains).filter(
+			(domain) => domain !== fallback,
+		);
+		const rawPorts = formData.getAll("domainPorts").map(String);
+		const domainPorts: Record<string, number> = {};
+		for (const [index, raw] of rawDomains.entries()) {
+			const domain = raw.trim().toLowerCase();
+			const port = (rawPorts[index] ?? "").trim();
+			if (!(port && domains.includes(domain))) {
+				continue;
+			}
+			const value = Number(port);
+			if (!Number.isInteger(value) || value < 1 || value > 65_535) {
+				return fail(400, {
+					error: `The port for ${domain} must be a number between 1 and 65535.`,
+				});
+			}
+			if (value !== svc.containerPort) {
+				domainPorts[domain] = value;
+			}
+		}
 
 		const invalid = domains.find((domain) => !DOMAIN_RE.test(domain));
 		if (invalid) {
@@ -85,6 +108,7 @@ export const actions = {
 
 		await svc.update({
 			defaultDomainEnabled,
+			domainPorts,
 			domains,
 			primaryDomain: hostnames.includes(chosen) ? chosen : hostnames[0],
 		});
@@ -164,5 +188,47 @@ export const actions = {
 			`Ports updated: service=${svc.id} port=${input.containerPort}/${input.portProtocol} networkMode=${input.networkMode} user=${locals.user.id}`,
 		);
 		return { portsSuccess: true };
+	},
+
+	updatePublishedPorts: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		let raw: unknown;
+		try {
+			raw = JSON.parse(
+				String((await request.formData()).get("publishedPorts") ?? "[]"),
+			);
+		} catch {
+			return fail(400, { error: "Couldn't read the port list." });
+		}
+		const result = publishedPortsSchema.safeParse(raw);
+		if (!result.success) {
+			return fail(400, {
+				error: "Every port must be a number between 1 and 65535.",
+			});
+		}
+		const ports = result.data;
+		const problem = publishedPortsProblem(ports);
+		if (problem) {
+			return fail(400, { error: problem });
+		}
+		const taken = await ServiceDTO.publishedPortTaken(ports, svc.id);
+		if (taken) {
+			return fail(400, {
+				error: `Host port ${taken.port.hostPort}/${taken.port.protocol} is already published by ${taken.serviceName}.`,
+			});
+		}
+
+		await svc.update({ publishedPorts: ports });
+		logger.info(
+			`Published ports updated: service=${svc.id} ports=${ports.map((p) => `${p.hostPort}:${p.containerPort}/${p.protocol}`).join(",") || "none"} user=${locals.user.id}`,
+		);
+		return { success: true };
 	},
 };

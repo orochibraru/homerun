@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Calibre-Web",
+	"description": "Web UI for browsing and reading a Calibre e-book library.",
+	"image": "lscr.io/linuxserver/calibre-web",
+	"tag": "latest",
+	"containerPort": 8083,
+	"icon": "calibre-web.svg",
+	"tags": ["books", "ebooks", "library", "reading"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/janeczku/calibre-web",
+	"envVars": {}
+}

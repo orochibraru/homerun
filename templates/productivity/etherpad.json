@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Etherpad",
+	"description": "Real-time collaborative document/notepad editor.",
+	"image": "etherpad/etherpad",
+	"tag": "latest",
+	"containerPort": 9001,
+	"icon": "etherpad.svg",
+	"tags": ["documents", "collaboration", "writing"],
+	"websiteUrl": "https://etherpad.org",
+	"sourceUrl": "https://github.com/ether/etherpad-lite",
+	"envVars": {}
+}

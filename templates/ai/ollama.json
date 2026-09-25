@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Ollama",
+	"description": "Runs open-weight LLMs locally. CPU-only as deployed here : GPU access needs device passthrough this app doesn't configure.",
+	"image": "ollama/ollama",
+	"tag": "latest",
+	"containerPort": 11434,
+	"icon": "ollama.svg",
+	"tags": ["llm", "ai", "models", "inference"],
+	"websiteUrl": "https://ollama.com",
+	"sourceUrl": "https://github.com/ollama/ollama",
+	"envVars": {}
+}

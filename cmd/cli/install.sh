@@ -67,5 +67,5 @@ case ":$PATH:" in
 	*) echo "warning: ${INSTALL_DIR} isn't on your PATH, add it to run 'homerun' directly." >&2 ;;
 esac
 
-homerun --version
+"$DEST" --version
 echo "Run 'homerun --help' to get started."

@@ -130,6 +130,44 @@ touched an install instruction,
 `bun scripts/e2e-multipass-release.ts --only=docs` is the seconds-long, VM-free
 half of the latter.
 
+## Adding a built-in template
+
+Built-in templates are plain JSON, one file per template:
+`templates/<category>/<slug>.json`. No TypeScript, no migration, the app picks
+new files up on its next build and seeds them at boot.
+
+- **The folder is the category**, one of the values in
+  `src/lib/template-categories.ts` (a new category goes there, plus an icon and
+  a colour in `TEMPLATE_CATEGORY_ICONS`/`TEMPLATE_CATEGORY_COLORS` in
+  `src/lib/constants.ts`). **The file name is the slug**: it becomes the
+  template's id (`builtin-<slug>`), has to be unique across every folder, and
+  can't be renamed once released.
+- Start the file with `"$schema": "../schema.json"`; your editor then completes
+  and checks every field. The schema is generated from the validation code by
+  `bun run gen`, never edit it by hand.
+- `image` and `tag` must exist: check with
+  `docker manifest inspect <image>:<tag>` rather than trusting a README.
+- `containerPort` is the port the app listens on inside the container, the one
+  Traefik routes to.
+- `envVars` holds what the app needs to boot. Secrets get an obvious placeholder
+  (`change-me-to-a-random-string`), and `description` says what to change before
+  deploying (a public URL, a key format) in one or two sentences.
+- `tags` (1 to 12, lowercase) are what the gallery search matches besides the
+  name.
+- `icon` is a file name under `static/template-icons/` (SVG preferred, PNG at
+  128px max), or `""` for the category's generic icon. Take it from the
+  project's own repo.
+- A template needing a database or cache links to another built-in instead of
+  bundling it: `"links": [{ "alias": "db", "template": "postgres" }]`. Its env
+  vars then reference the linked service as `{{db}}` (its hostname) and
+  `{{db.VAR}}` (one of its env vars), e.g.
+  `"postgres://{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}"`.
+  Only templates without links of their own can be linked.
+
+`bun --config=bunfig.unit.toml test tests/unit/app/builtin-templates.test.ts`
+validates every file, resolves every link and checks every icon exists; it runs
+as part of `bun run test`.
+
 ## Conventions
 
 The full, detailed set of architectural and style conventions this codebase

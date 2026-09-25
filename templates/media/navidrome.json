@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Navidrome",
+	"description": "Music streaming server with a Subsonic-compatible API.",
+	"image": "deluan/navidrome",
+	"tag": "latest",
+	"containerPort": 4533,
+	"icon": "navidrome.svg",
+	"tags": ["music", "audio", "streaming", "subsonic"],
+	"websiteUrl": "https://www.navidrome.org",
+	"sourceUrl": "https://github.com/navidrome/navidrome",
+	"envVars": {}
+}

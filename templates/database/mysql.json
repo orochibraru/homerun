@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "MySQL",
+	"description": "Relational database. Review the placeholder password before deploying.",
+	"image": "mysql",
+	"tag": "8",
+	"containerPort": 3306,
+	"icon": "mysql.svg",
+	"tags": ["sql", "database", "relational", "mariadb"],
+	"websiteUrl": "https://www.mysql.com",
+	"sourceUrl": "https://github.com/mysql/mysql-server",
+	"envVars": {
+		"MYSQL_DATABASE": "app",
+		"MYSQL_ROOT_PASSWORD": "changeme"
+	}
+}

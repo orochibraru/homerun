@@ -16,6 +16,11 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Replace the single accent colour on `/profile/appearance` with palettes: a
+      named set (accent, secondary, a few chart/category hues) picked as one, so
+      tab icons, category tiles and charts stop all being the same hue or
+      hand-picked Tailwind colours.
+
 - [ ] Deploy Cancel only stops the app-side wait (status checks). A queued job
       that hasn't started yet still runs, and a Go-side build/pull keeps going
       and overwrites the `failed` status when it finishes : the worker needs to

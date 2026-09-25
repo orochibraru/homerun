@@ -190,7 +190,7 @@ The rest operate on your instance:
 ```bash
 homerun services list [--json]
 homerun services get <id>
-homerun services deploy <id>
+homerun services deploy <id> [--tag <tag>]
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
@@ -226,6 +226,9 @@ than letting a truncated table look complete.
 
 `homerun services deploy` returns when the deploy has actually finished, not
 when it's been queued, so it's usable as a step in a script or CI job.
+`--tag <tag>` first switches an image-based service to that image tag (and keeps
+it), for a pipeline deploying the image it just pushed: see
+[Deploying from CI](ci-cd.md).
 
 `homerun services scans <id>` lists a service's image scans (it takes the same
 `--page`/`--per-page`/`--search` flags as a list), and

@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Nginx Proxy Manager",
+	"description": "Web UI for managing Nginx reverse proxy hosts and certs.",
+	"image": "jc21/nginx-proxy-manager",
+	"tag": "latest",
+	"containerPort": 81,
+	"icon": "nginx-proxy-manager.svg",
+	"tags": ["proxy", "reverse-proxy", "ssl", "nginx"],
+	"websiteUrl": "https://nginxproxymanager.com",
+	"sourceUrl": "https://github.com/NginxProxyManager/nginx-proxy-manager",
+	"envVars": {}
+}

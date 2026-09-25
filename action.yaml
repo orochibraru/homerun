@@ -1,0 +1,71 @@
+name: Homerun Deploy
+description: Deploy a Homerun service and wait for it, optionally switching it to the image tag this workflow just pushed.
+author: orochibraru
+branding:
+  icon: upload-cloud
+  color: red
+
+inputs:
+  base-url:
+    description: Your instance's URL, e.g. https://homerun.example.com
+    required: true
+  api-key:
+    description: A Homerun API key, from Profile → API keys. Store it as a secret.
+    required: true
+  service:
+    description: The id of the service to deploy (`homerun services list` prints it).
+    required: true
+  tag:
+    description: Image tag to deploy. Saved on the service first, so later deploys keep it. Empty redeploys the current tag.
+    required: false
+    default: ""
+  cli-version:
+    description: CLI release to install, e.g. v1.0.49. Defaults to this action's own tag when it's a release, the latest release otherwise.
+    required: false
+    default: ""
+
+outputs:
+  deployment-id:
+    description: The id of the deployment this run created.
+    value: ${{ steps.deploy.outputs.deployment-id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install the Homerun CLI
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        ACTION_REF: ${{ github.action_ref }}
+        CLI_VERSION: ${{ inputs.cli-version }}
+      run: |
+        set -euo pipefail
+        version="$CLI_VERSION"
+        if [ -z "$version" ]; then
+          if [[ "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            version="$ACTION_REF"
+          else
+            version="latest"
+          fi
+        fi
+        export HOMERUN_INSTALL_DIR="$RUNNER_TEMP/homerun-cli"
+        bash "$ACTION_PATH/cmd/cli/install.sh" "--version=$version"
+
+    - name: Deploy
+      id: deploy
+      shell: bash
+      env:
+        HOMERUN_BASE_URL: ${{ inputs.base-url }}
+        HOMERUN_API_KEY: ${{ inputs.api-key }}
+        SERVICE: ${{ inputs.service }}
+        TAG: ${{ inputs.tag }}
+      run: |
+        set -euo pipefail
+        args=(services deploy "$SERVICE")
+        if [ -n "$TAG" ]; then
+          args+=(--tag "$TAG")
+        fi
+        result="$("$RUNNER_TEMP/homerun-cli/homerun" "${args[@]}")"
+        echo "$result"
+        deployment_id="$(printf '%s' "$result" | sed -n 's/.*"deploymentId": *"\([^"]*\)".*/\1/p' | head -n 1)"
+        echo "deployment-id=$deployment_id" >> "$GITHUB_OUTPUT"

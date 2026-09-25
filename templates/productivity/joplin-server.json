@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Joplin Server",
+	"description": "Sync server for the Joplin note-taking app.",
+	"image": "joplin/server",
+	"tag": "latest",
+	"containerPort": 22300,
+	"icon": "joplin-server.svg",
+	"tags": ["notes", "sync", "markdown"],
+	"websiteUrl": "https://joplinapp.org",
+	"sourceUrl": "https://github.com/laurent22/joplin",
+	"envVars": {}
+}

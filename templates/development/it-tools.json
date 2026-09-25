@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "IT Tools",
+	"description": "Collection of handy developer utilities in one static site.",
+	"image": "ghcr.io/corentinth/it-tools",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "it-tools.svg",
+	"tags": ["tools", "utilities", "developer", "converters"],
+	"websiteUrl": "https://it-tools.tech",
+	"sourceUrl": "https://github.com/CorentinTh/it-tools",
+	"envVars": {}
+}

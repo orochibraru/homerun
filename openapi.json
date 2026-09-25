@@ -4113,7 +4113,7 @@
 		},
 		"/services/{serviceId}/deploy": {
 			"post": {
-				"description": "Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients.",
+				"description": "Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients. An optional tag switches an image-based service to that tag first, which is how CI deploys the image it just pushed.",
 				"operationId": "post_services__serviceId__deploy",
 				"parameters": [
 					{
@@ -4126,6 +4126,24 @@
 						}
 					}
 				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"tag": {
+										"description": "Image tag to deploy. Saved on the service first, so later deploys keep it. Image-based services only.",
+										"pattern": "^[\\w][\\w.-]{0,127}$",
+										"type": "string"
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": false
+				},
 				"responses": {
 					"200": {
 						"content": {
@@ -4152,6 +4170,24 @@
 							}
 						},
 						"description": "Deploy finished"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid request body"
 					},
 					"401": {
 						"content": {

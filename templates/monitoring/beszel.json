@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Beszel",
+	"description": "Lightweight server monitoring hub. Each machine you want graphed runs the separate Beszel agent and reports in here.",
+	"image": "henrygd/beszel",
+	"tag": "latest",
+	"containerPort": 8090,
+	"icon": "beszel.svg",
+	"tags": ["monitoring", "metrics", "servers", "dashboards"],
+	"websiteUrl": "https://beszel.dev",
+	"sourceUrl": "https://github.com/henrygd/beszel",
+	"envVars": {}
+}

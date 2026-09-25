@@ -5,8 +5,6 @@
 		/** Rendered as a real link when set (route tabs); otherwise a button firing onSelect (in-page section tabs). */
 		href?: string;
 		icon?: Component;
-		/** Colour class for the icon, e.g. `text-sky-500`. */
-		iconClass?: string;
 		id: string;
 		label: string;
 		/** Small amber dot next to the label : a field on this tab needs attention (e.g. Settings' setup-issue highlight) even while it's not the active tab. */
@@ -41,7 +39,7 @@
        "
         href={tab.href}
       >
-        {#if TabIcon}<TabIcon class="size-3.5 {tab.iconClass ?? ''}" />{/if}
+        {#if TabIcon}<TabIcon class="text-accent size-3.5" />{/if}
         {tab.label}
         {#if tab.hasWarning}
           <span
@@ -61,7 +59,7 @@
         onclick={() => onSelect?.(tab.id)}
         type="button"
       >
-        {#if TabIcon}<TabIcon class="size-3.5 {tab.iconClass ?? ''}" />{/if}
+        {#if TabIcon}<TabIcon class="text-accent size-3.5" />{/if}
         {tab.label}
         {#if tab.hasWarning}
           <span

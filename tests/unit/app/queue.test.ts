@@ -309,17 +309,19 @@ describe("JobWorker, Go-executed job types", () => {
 });
 
 describe("JobWorker tick", () => {
-	test("recovers orphans once, finalizes executed jobs, then claims new work", async () => {
+	test("retries a failed orphan recovery, then recovers once, finalizes executed jobs and claims new work", async () => {
 		const executed = fakeJob({ id: "executed", type: "backup" });
+		requeueOrphaned.mockRejectedValueOnce(new Error("duplicate key"));
 		claimFinalize.mockResolvedValueOnce(executed).mockResolvedValueOnce(null);
 		const tick = () =>
 			(JobWorker as unknown as { tick: () => Promise<void> }).tick();
 
+		await expect(tick()).rejects.toThrow("duplicate key");
 		await tick();
 		await tick();
 		await Bun.sleep(0);
 
-		expect(requeueOrphaned).toHaveBeenCalledTimes(1);
+		expect(requeueOrphaned).toHaveBeenCalledTimes(2);
 		expect(finalize).toHaveBeenCalledWith(executed, null, null);
 		expect(executed.markSucceeded).toHaveBeenCalledTimes(1);
 		expect(claimNext).toHaveBeenCalledTimes(2);

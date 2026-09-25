@@ -18,6 +18,7 @@ import type {
 	ImageScanStatus,
 	SeverityCounts,
 } from "$lib/image-scan";
+import type { PublishedPort } from "$lib/published-ports";
 import type { BackupRunKind, RevisionConfig } from "$lib/revision-config";
 import type {
 	ContainerStatus,
@@ -859,6 +860,10 @@ export const service = pgTable(
 			.default(true)
 			.notNull(),
 		domains: text("domains").array().default(sql`'{}'::text[]`).notNull(),
+		domainPorts: jsonb("domain_ports")
+			.$type<Record<string, number>>()
+			.default({})
+			.notNull(),
 		primaryDomain: text("primary_domain"),
 		// AES-256-GCM ciphertext (PEM), same scheme as registryPasswordEnc.
 		// Only take effect together : see
@@ -930,12 +935,16 @@ export const service = pgTable(
 			.notNull(),
 		// "tcp" | "udp" | "both" : which protocol(s) containerPort is exposed
 		// under (Docker's ExposedPorts declaration). Informational only in
-		// bridge mode (this app never publishes a host port : see the
-		// Networking tab's own copy); the container's actual host-visible
-		// port(s) in host mode, since there's no publish/mapping step there.
+		// bridge mode, where containerPort is reached through Traefik and
+		// host ports come from publishedPorts; the container's actual
+		// host-visible port(s) in host mode.
 		portProtocol: text("port_protocol")
 			.$type<"tcp" | "udp" | "both">()
 			.default("tcp")
+			.notNull(),
+		publishedPorts: jsonb("published_ports")
+			.$type<PublishedPort[]>()
+			.default([])
 			.notNull(),
 		// nullable : grouping is opt-in, ungrouped services stay valid
 		stackId: text("stack_id").references(() => stack.id, {

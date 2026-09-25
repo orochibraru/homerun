@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "qBittorrent",
+	"description": "BitTorrent client with a web UI.",
+	"image": "linuxserver/qbittorrent",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "qbittorrent.svg",
+	"tags": ["torrent", "downloads", "bittorrent"],
+	"websiteUrl": "https://www.qbittorrent.org",
+	"sourceUrl": "https://github.com/qbittorrent/qBittorrent",
+	"envVars": {}
+}

@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Sonarr",
+	"description": "TV show collection manager and downloader.",
+	"image": "linuxserver/sonarr",
+	"tag": "latest",
+	"containerPort": 8989,
+	"icon": "sonarr.svg",
+	"tags": ["tv", "pvr", "arr", "downloads"],
+	"websiteUrl": "https://sonarr.tv",
+	"sourceUrl": "https://github.com/Sonarr/Sonarr",
+	"envVars": {}
+}

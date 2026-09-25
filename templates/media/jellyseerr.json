@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Jellyseerr",
+	"description": "Media request manager for a Jellyfin/Plex library.",
+	"image": "fallenbagel/jellyseerr",
+	"tag": "latest",
+	"containerPort": 5055,
+	"icon": "jellyseerr.svg",
+	"tags": ["requests", "jellyfin", "arr", "media"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/Fallenbagel/jellyseerr",
+	"envVars": {}
+}

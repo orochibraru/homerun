@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Uptime Kuma",
+	"description": "Self-hosted uptime monitoring with status pages.",
+	"image": "louislam/uptime-kuma",
+	"tag": "2",
+	"containerPort": 3001,
+	"icon": "uptime-kuma.svg",
+	"tags": ["uptime", "status", "alerts", "monitoring"],
+	"websiteUrl": "https://uptime.kuma.pet",
+	"sourceUrl": "https://github.com/louislam/uptime-kuma",
+	"envVars": {}
+}

@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	createServiceApiBody,
 	createStackApiBody,
+	deployServiceApiBody,
 	updateChannelApiBody,
 	updateServiceApiBody,
 } from "$lib/server/validation/api";
@@ -47,6 +48,7 @@ export interface RouteDef {
 	pathParams?: ParamDef[];
 	queryParams?: ParamDef[];
 	requestBody?: z.ZodType;
+	requestBodyOptional?: boolean;
 	responses: Record<number, ResponseDef>;
 }
 
@@ -171,12 +173,15 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients.",
+			"Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients. An optional tag switches an image-based service to that tag first, which is how CI deploys the image it just pushed.",
 		method: "post",
 		path: "/services/{serviceId}/deploy",
 		pathParams: [{ description: "Service id", name: "serviceId" }],
+		requestBody: deployServiceApiBody,
+		requestBodyOptional: true,
 		responses: {
 			200: { description: "Deploy finished", schema: deployResultResponse },
+			400: badRequest,
 			401: unauthorized,
 			404: notFound,
 			500: { description: "Deploy failed", schema: deployResultResponse },

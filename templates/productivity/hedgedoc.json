@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "HedgeDoc",
+	"description": "Collaborative markdown notes, Notion-alternative-ish.",
+	"image": "quay.io/hedgedoc/hedgedoc",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "hedgedoc.svg",
+	"tags": ["notes", "markdown", "collaboration", "writing"],
+	"websiteUrl": "https://hedgedoc.org",
+	"sourceUrl": "https://github.com/hedgedoc/hedgedoc",
+	"envVars": {}
+}

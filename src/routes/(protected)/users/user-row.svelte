@@ -95,49 +95,54 @@
     </p>
   </div>
   <div class="flex items-center gap-2">
-    <form
-      bind:this={roleForm}
-      action="?/setRole"
-      method="POST"
-      use:enhance={submitToast("Updating role", "Role updated.")}
-    >
-      <input name="userId" type="hidden" value={user.id} />
-      <Select.Root
-        name="role"
-        onValueChange={async () => {
-          await tick();
-          roleForm?.requestSubmit();
-        }}
-        type="single"
-        value={user.role ?? "developer"}
+    {#if isSelf}
+      <span class="text-text-muted px-2 text-sm">
+        {roleLabel(user.role ?? "developer")}
+      </span>
+    {:else}
+      <form
+        bind:this={roleForm}
+        action="?/setRole"
+        method="POST"
+        use:enhance={submitToast("Updating role", "Role updated.")}
       >
-        <Select.Trigger class="w-32" aria-label="Role" size="sm">
-          {roleLabel(user.role ?? "developer")}
-        </Select.Trigger>
-        <Select.Content>
-          {#each ROLE_OPTIONS as opt (opt.value)}
-            <Select.Item label={opt.label} value={opt.value} />
-          {/each}
-        </Select.Content>
-      </Select.Root>
-    </form>
-    <form
-      action="?/removeUser"
-      method="POST"
-      use:enhance={submitToast("Removing user", "User removed.")}
-    >
-      <input name="userId" type="hidden" value={user.id} />
-      <Button
-        aria-label="Remove user"
-        class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-        disabled={isSelf}
-        onclick={(e) => onRemove(e, user.name)}
-        size="icon-sm"
-        type="button"
-        variant="ghost"
+        <input name="userId" type="hidden" value={user.id} />
+        <Select.Root
+          name="role"
+          onValueChange={async () => {
+            await tick();
+            roleForm?.requestSubmit();
+          }}
+          type="single"
+          value={user.role ?? "developer"}
+        >
+          <Select.Trigger class="w-32" aria-label="Role" size="sm">
+            {roleLabel(user.role ?? "developer")}
+          </Select.Trigger>
+          <Select.Content>
+            {#each ROLE_OPTIONS as opt (opt.value)}
+              <Select.Item label={opt.label} value={opt.value} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
+      </form>
+      <form
+        action="?/removeUser"
+        method="POST"
+        use:enhance={submitToast("Removing user", "User removed.")}
       >
-        <Trash2 class="size-4" />
-      </Button>
-    </form>
+        <input name="userId" type="hidden" value={user.id} />
+        <Button
+          aria-label="Remove user"
+          class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+            onclick={(e) => onRemove(e, user.name)}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <Trash2 class="size-4" />
+        </Button>
+      </form>
+    {/if}
   </div>
 </div>

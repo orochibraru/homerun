@@ -35,7 +35,7 @@
 </script>
 
 <ContextMenu.Root>
-  <ContextMenu.Trigger>
+  <ContextMenu.Trigger class="block h-full">
     {@render children()}
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-56">

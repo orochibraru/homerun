@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "AdGuard Home",
+	"description": "Ad-blocking DNS server with a setup wizard on first visit. Only its web UI is reachable here : DNS itself needs host network mode, set on the Networking tab after deploying.",
+	"image": "adguard/adguardhome",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "adguard-home.svg",
+	"tags": ["dns", "adblock", "network", "privacy"],
+	"websiteUrl": "https://adguard.com/en/adguard-home/overview.html",
+	"sourceUrl": "https://github.com/AdguardTeam/AdGuardHome",
+	"envVars": {}
+}

@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "File Browser",
+	"description": "Web-based file browser for a mounted directory.",
+	"image": "filebrowser/filebrowser",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "filebrowser.svg",
+	"tags": ["files", "storage", "web-ui", "sharing"],
+	"websiteUrl": "https://filebrowser.org",
+	"sourceUrl": "https://github.com/filebrowser/filebrowser",
+	"envVars": {}
+}

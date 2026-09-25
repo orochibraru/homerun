@@ -162,7 +162,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Deploy a service
-		 * @description Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients.
+		 * @description Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients. An optional tag switches an image-based service to that tag first, which is how CI deploys the image it just pushed.
 		 */
 		post: operations["post_services__serviceId__deploy"];
 		delete?: never;
@@ -1692,7 +1692,14 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody?: {
+			content: {
+				"application/json": {
+					/** @description Image tag to deploy. Saved on the service first, so later deploys keep it. Image-based services only. */
+					tag?: string;
+				};
+			};
+		};
 		responses: {
 			/** @description Deploy finished */
 			200: {
@@ -1705,6 +1712,18 @@ export interface operations {
 						deploymentId: string;
 						error?: string;
 						success: boolean;
+					};
+				};
+			};
+			/** @description Invalid request body */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};

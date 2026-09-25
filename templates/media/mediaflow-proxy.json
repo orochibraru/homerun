@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "MediaFlow Proxy",
+	"description": "Streaming proxy for HTTP(S), HLS and MPEG-DASH with DRM decryption, the usual way to play debrid links through Stremio addons from one IP. Every request needs API_PASSWORD.",
+	"image": "mhdzumair/mediaflow-proxy",
+	"tag": "latest",
+	"containerPort": 8888,
+	"icon": "mediaflow-proxy.png",
+	"tags": ["stremio", "proxy", "streaming", "hls", "debrid"],
+	"websiteUrl": "https://mhdzumair.github.io/mediaflow-proxy",
+	"sourceUrl": "https://github.com/mhdzumair/mediaflow-proxy",
+	"envVars": {
+		"API_PASSWORD": "change-me",
+		"FORWARDED_ALLOW_IPS": "*"
+	}
+}

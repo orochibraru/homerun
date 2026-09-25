@@ -32,6 +32,9 @@ sync by hand.
   Bitbucket OAuth apps, and browsing your repos from the Source tab.
 - **[Deploy on push](deploy-on-push.md)**: webhooks registered for you, manual
   webhooks, and polling the branch when the provider can't reach you.
+- **[Deploying from CI](ci-cd.md)**: the GitHub Action, the CLI image for GitLab
+  and other CIs, and the raw API call, deploying the tag your pipeline just
+  pushed.
 - **[Pull request previews](pull-request-previews.md)**: a service per pull
   request, and why forks are never previewed.
 - **[Required status checks](status-checks.md)**: holding a build until CI

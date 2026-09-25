@@ -125,15 +125,16 @@ type AgentConnection struct {
 // Engine API create body (a container) or service spec (swarm) with everything
 // but the image, environment, healthcheck, readiness label and name filled in.
 type WorkloadSpec struct {
-	ContainerPort int            `json:"containerPort"`
-	HostNetwork   bool           `json:"hostNetwork"`
-	Kind          string         `json:"kind"`
-	NamePrefix    string         `json:"namePrefix"`
-	Overlay       string         `json:"overlay"`
-	Privileged    bool           `json:"privileged"`
-	Slug          string         `json:"slug"`
-	StackNetwork  string         `json:"stackNetwork"`
-	Template      map[string]any `json:"template"`
+	ContainerPort  int            `json:"containerPort"`
+	HostNetwork    bool           `json:"hostNetwork"`
+	Kind           string         `json:"kind"`
+	NamePrefix     string         `json:"namePrefix"`
+	Overlay        string         `json:"overlay"`
+	Privileged     bool           `json:"privileged"`
+	PublishesPorts bool           `json:"publishesPorts"`
+	Slug           string         `json:"slug"`
+	StackNetwork   string         `json:"stackNetwork"`
+	Template       map[string]any `json:"template"`
 }
 
 // Result is what a deploy reports back to the app's finalize step. Built is

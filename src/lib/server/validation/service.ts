@@ -289,3 +289,14 @@ export const updateEnvFilesSchema = z.object({
 			),
 		),
 });
+
+const portNumber = z.number().int().min(1).max(65_535);
+
+/** The Networking tab's published ports, posted as one JSON array. */
+export const publishedPortsSchema = z.array(
+	z.object({
+		containerPort: portNumber,
+		hostPort: portNumber,
+		protocol: z.enum(["tcp", "udp"]),
+	}),
+);

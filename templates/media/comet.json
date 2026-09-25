@@ -1,0 +1,24 @@
+{
+	"$schema": "../schema.json",
+	"name": "Comet",
+	"description": "Fast torrent/debrid/usenet search addon for Stremio. The admin dashboard lives at /admin behind ADMIN_DASHBOARD_PASSWORD.",
+	"image": "g0ldyy/comet",
+	"tag": "latest",
+	"containerPort": 8000,
+	"icon": "comet.png",
+	"tags": ["stremio", "addon", "torrent", "debrid", "usenet"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/g0ldyy/comet",
+	"envVars": {
+		"ADMIN_DASHBOARD_PASSWORD": "change-me",
+		"DATABASE_TYPE": "postgresql",
+		"DATABASE_URL": "{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}",
+		"PUBLIC_BASE_URL": "https://comet.example.com"
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		}
+	]
+}

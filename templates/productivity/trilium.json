@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Trilium Notes",
+	"description": "Hierarchical note-taking app with encryption support.",
+	"image": "triliumnext/trilium",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "trilium.png",
+	"tags": ["notes", "knowledge-base", "wiki", "writing"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/TriliumNext/Trilium",
+	"envVars": {}
+}

@@ -2,6 +2,7 @@ import { parse as parseYaml } from "yaml";
 import type { BuildMethod } from "$lib/build-methods";
 import { parseDotEnv } from "$lib/env-parse";
 import { splitImageRef } from "$lib/image-ref";
+import type { PublishedPort } from "$lib/published-ports";
 import { argvFrom } from "$lib/shell-words";
 
 export type ComposeRestartPolicy =
@@ -59,6 +60,7 @@ export interface ComposeServiceDraft {
 	name: string;
 	networkMode: "bridge" | "host";
 	portProtocol: "tcp" | "udp" | "both";
+	publishedPorts: PublishedPort[];
 	privileged: boolean;
 	registry: ComposeRegistryDraft | null;
 	restartPolicy: ComposeRestartPolicy;
@@ -314,23 +316,28 @@ function stringList(raw: unknown): string[] {
 }
 
 interface PortMapping {
+	hostPort: number | null;
 	port: number;
 	protocol: "tcp" | "udp";
 }
 
 /**
- * Extracts the container-side port and protocol from one `ports:`/`expose:` entry
- * in any compose shape (number, `host:container/proto` string, range, or long
- * form object). A range yields its first port.
+ * Extracts the container-side port, protocol and (when the entry publishes
+ * one) host port from one `ports:`/`expose:` entry in any compose shape
+ * (number, `[ip:]host:container/proto` string, range, or long form object). A
+ * range yields its first container port and no host port.
  */
 function parsePortEntry(raw: unknown): PortMapping | null {
 	if (typeof raw === "number") {
-		return { port: raw, protocol: "tcp" };
+		return { hostPort: null, port: raw, protocol: "tcp" };
 	}
 	if (isRecord(raw)) {
 		const target = Number(raw.target);
+		const published = Number(raw.published);
 		if (Number.isInteger(target) && target > 0) {
 			return {
+				hostPort:
+					Number.isInteger(published) && published > 0 ? published : null,
 				port: target,
 				protocol: raw.protocol === "udp" ? "udp" : "tcp",
 			};
@@ -345,8 +352,39 @@ function parsePortEntry(raw: unknown): PortMapping | null {
 	const protocol = rawProtocol === "udp" ? "udp" : "tcp";
 	const parts = (spec ?? "").split(":");
 	const containerSide = parts[parts.length - 1] ?? "";
+	const hostSide = parts.length > 1 ? (parts[parts.length - 2] ?? "") : "";
 	const port = Number(containerSide.split("-")[0]);
-	return Number.isInteger(port) && port > 0 ? { port, protocol } : null;
+	const hostPort = /^\d+$/.test(hostSide) ? Number(hostSide) : null;
+	return Number.isInteger(port) && port > 0
+		? { hostPort: hostPort && hostPort > 0 ? hostPort : null, port, protocol }
+		: null;
+}
+
+/**
+ * The host mappings worth publishing: every one except the main TCP port,
+ * which Traefik routes by domain instead, de-duplicated on host port and
+ * protocol.
+ */
+function publishedPortsFor(
+	mappings: PortMapping[],
+	containerPort: number,
+): PublishedPort[] {
+	const ports: PublishedPort[] = [];
+	for (const m of mappings) {
+		if (
+			m.hostPort === null ||
+			(m.port === containerPort && m.protocol === "tcp") ||
+			ports.some((p) => p.hostPort === m.hostPort && p.protocol === m.protocol)
+		) {
+			continue;
+		}
+		ports.push({
+			containerPort: m.port,
+			hostPort: m.hostPort,
+			protocol: m.protocol,
+		});
+	}
+	return ports;
 }
 
 function protocolFor(mappings: PortMapping[]): "tcp" | "udp" | "both" {
@@ -528,7 +566,7 @@ function unsupportedWarnings(raw: Record<string, unknown>): string[] {
 
 /**
  * Collects port mappings from a compose service's `ports:` and `expose:`, warning
- * when none are found or when host port mappings get dropped.
+ * when none are found.
  *
  * @returns `published` is true when the service had host `ports:`, which the
  * import treats as meaning it should be publicly routed.
@@ -546,11 +584,6 @@ function portsFor(
 	if (mappings.length === 0) {
 		warnings.push(
 			`No published port found : defaulting to ${DEFAULT_CONTAINER_PORT}, change it on the Networking tab.`,
-		);
-	}
-	if (portEntries.length > 0) {
-		warnings.push(
-			"Host port mappings are dropped : Homerun routes through Traefik instead of publishing ports.",
 		);
 	}
 	return { mappings, published: portEntries.length > 0 };
@@ -602,6 +635,7 @@ function draftFor(
 	const { image: imageName, tag } = splitImageRef(image);
 
 	const { mappings, published } = portsFor(raw, warnings);
+	const containerPort = mappings[0]?.port ?? DEFAULT_CONTAINER_PORT;
 	const networkMode = raw.network_mode === "host" ? "host" : "bridge";
 	const volumes = (Array.isArray(raw.volumes) ? raw.volumes : [])
 		.map((entry) => parseVolumeEntry(entry, slug, warnings))
@@ -613,7 +647,7 @@ function draftFor(
 		build: parseBuild(raw.build),
 		capAdd: stringList(raw.cap_add),
 		command: argvFrom(raw.command),
-		containerPort: mappings[0]?.port ?? DEFAULT_CONTAINER_PORT,
+		containerPort,
 		dependsOn: parseDependsOn(raw.depends_on),
 		devices: parseDevices(raw.devices),
 		dnsResolvable: networkMode === "bridge" && published,
@@ -629,6 +663,8 @@ function draftFor(
 		name,
 		networkMode,
 		portProtocol: protocolFor(mappings),
+		publishedPorts:
+			networkMode === "host" ? [] : publishedPortsFor(mappings, containerPort),
 		privileged: raw.privileged === true,
 		registry: null,
 		restartPolicy: parseRestart(raw.restart),

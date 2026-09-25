@@ -1,0 +1,24 @@
+{
+	"$schema": "../schema.json",
+	"name": "Paperless-ngx",
+	"description": "Scans, indexes and OCRs your documents. Needs the linked Redis, and a secret key you should change before deploying.",
+	"image": "ghcr.io/paperless-ngx/paperless-ngx",
+	"tag": "latest",
+	"containerPort": 8000,
+	"icon": "paperless-ngx.svg",
+	"tags": ["documents", "ocr", "scanning", "archive", "pdf"],
+	"websiteUrl": "https://docs.paperless-ngx.com",
+	"sourceUrl": "https://github.com/paperless-ngx/paperless-ngx",
+	"envVars": {
+		"PAPERLESS_REDIS": "redis://{{redis}}:6379",
+		"PAPERLESS_SECRET_KEY": "change-me-to-a-random-string",
+		"PAPERLESS_TIME_ZONE": "UTC",
+		"PAPERLESS_URL": "https://paperless.example.com"
+	},
+	"links": [
+		{
+			"alias": "redis",
+			"template": "redis"
+		}
+	]
+}

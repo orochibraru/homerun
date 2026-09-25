@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Speedtest Tracker",
+	"description": "Tracks internet speed test results over time.",
+	"image": "lscr.io/linuxserver/speedtest-tracker",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "speedtest-tracker.svg",
+	"tags": ["speedtest", "bandwidth", "network", "monitoring"],
+	"websiteUrl": "https://speedtest-tracker.dev",
+	"sourceUrl": "https://github.com/alexjustesen/speedtest-tracker",
+	"envVars": {}
+}

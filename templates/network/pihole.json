@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Pi-hole",
+	"description": "Network-wide ad blocker. Only its web admin UI is reachable here : DNS itself needs host network mode, set on the Networking tab after deploying.",
+	"image": "pihole/pihole",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "pihole.svg",
+	"tags": ["dns", "adblock", "network", "privacy"],
+	"websiteUrl": "https://pi-hole.net",
+	"sourceUrl": "https://github.com/pi-hole/pi-hole",
+	"envVars": {}
+}

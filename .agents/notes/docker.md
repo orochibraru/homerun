@@ -734,9 +734,41 @@ mode, only the host's own interfaces, so Traefik labels are skipped entirely
 regardless of what's stored. No stack-network join either (Docker containers in
 host mode can't also join a user-defined network). A host-mode service is
 reachable only directly on the host's own `containerPort`, exactly as if you'd
-run it with `docker run --network host` yourself, this app doesn't publish or
-map anything either way, matching the existing "no host port publishing by
-design" stance for bridge mode too.
+run it with `docker run --network host` yourself; published ports don't apply
+there (the Networking tab hides them).
+
+## Per-domain container ports (`service.domainPorts`, Networking tab)
+
+One container can serve several HTTP ports under different hostnames (a web UI
+and an API side by side). `domains` stays a plain list, since DNS sync, the
+uniqueness check and compose import all read it, and `domainPorts` maps a custom
+domain to the container port its router targets; a missing entry means
+`containerPort`. `buildContainerLabels` emits one Traefik service per distinct
+port, `<slug>` for `containerPort` (unchanged from before, so existing routers
+keep their names) and `<slug>-<port>` for the others. The default
+`<slug>.<baseDomain>` hostname can't be overridden: it changes when the stack is
+renamed, and an override keyed on it would silently go stale. Anything that
+isn't HTTP (SSH, UDP) can't be routed by hostname at all, it needs a published
+port below.
+
+## Published ports (`service.publishedPorts`, Networking tab)
+
+HTTP(S) goes through Traefik by domain, but UDP and non-TLS TCP (a VPN, SSH for
+a git forge, a game server) carry no hostname, so nothing can route them by
+domain: they need a host port. `publishedPorts` is a list of
+`{ hostPort, containerPort, protocol }`, turned into `PortBindings` plus
+`ExposedPorts` on the container create body and an ingress `EndpointSpec` on a
+swarm service. The domain side of "vpn.example.com over UDP" is just a DNS
+record pointing at the box. Saving refuses host 80/443 over TCP (Traefik's), a
+duplicate host port/protocol, and a host port/protocol another service already
+publishes; a clash with something outside Homerun (the host's own sshd on 22)
+only shows up as a failed deploy. **A service with published ports always rolls
+out stop-first** (`RolloutStrategy`'s `publishesPorts`): blue-green would start
+the new container while the old one still holds the port, and Docker refuses the
+second bind. Swarm is exempt, the ingress port belongs to the service rather
+than a task. Compose import publishes every host mapping except the main TCP
+port, which stays on Traefik; ranges are skipped. Revisions snapshot the list,
+so a rollback restores it.
 
 **Real, tested finding**: `HostConfig.NetworkMode: "host"` combined with a
 `NetworkingConfig.EndpointsConfig` (the shared-network attach bridge mode uses)

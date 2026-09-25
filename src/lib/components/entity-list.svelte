@@ -108,13 +108,13 @@
 
 {#snippet gridCard(item: T)}
       <div
-        class="panel flex flex-col rounded-xl p-4 transition-colors {selected.has(
+        class="panel flex h-full flex-col rounded-xl p-4 transition-colors {selected.has(
         item.id,
       )
         ? 'border-accent/50 bg-accent-light'
         : ''}"
       >
-        <div class="flex items-start gap-3">
+        <div class="mb-3 flex items-start gap-3">
           {#if selectable}
             <Checkbox
               aria-label={selectLabel(item)}
@@ -135,14 +135,18 @@
           {@render badge?.(item)}
         </div>
         {#if details}
-          <div class="mt-3">{@render details(item)}</div>
+          <div class="mb-3">{@render details(item)}</div>
         {/if}
         {#if meta || actions}
-          <div class="border-border mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-            <div class="min-w-0">{@render meta?.(item)}</div>
-            <div class="flex min-w-0 flex-wrap items-center gap-2">
-              {@render actions?.(item)}
-            </div>
+          <div class="border-border mt-auto flex flex-col gap-3 border-t pt-3">
+            {#if meta}
+              <div class="flex min-w-0 flex-col gap-1">{@render meta(item)}</div>
+            {/if}
+            {#if actions}
+              <div class="flex flex-wrap items-center gap-2">
+                {@render actions(item)}
+              </div>
+            {/if}
           </div>
         {/if}
       </div>

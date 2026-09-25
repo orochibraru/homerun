@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Dragonfly",
+	"description": "Multi-threaded, Redis- and Memcached-compatible in-memory store, much higher throughput per box than Redis. Unauthenticated by default.",
+	"image": "docker.dragonflydb.io/dragonflydb/dragonfly",
+	"tag": "latest",
+	"containerPort": 6379,
+	"icon": "",
+	"tags": ["cache", "key-value", "redis", "memcached"],
+	"websiteUrl": "https://www.dragonflydb.io",
+	"sourceUrl": "https://github.com/dragonflydb/dragonfly",
+	"envVars": {}
+}

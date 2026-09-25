@@ -7,14 +7,16 @@ with the image, port, protocol, network mode, env var count and volume mounts it
 resolved, plus a warning for anything it had to drop.
 
 What maps across: `image`, `environment` (both the map and the `KEY=VALUE` list
-form), `ports`/`expose` (the container side, the host side is dropped, Homerun
-routes through Traefik instead), `restart`, `volumes` (named volumes and
-absolute bind mounts, in both the short `src:dst:ro` and long `type:/source:`
-forms), `depends_on`, `network_mode: host`, `container_name`,
-`deploy.resources.limits.cpus`/`memory`, and everything on the
-[Runtime tab](runtime-and-compute.md#runtime): `command` and `entrypoint`
-(string or list form), `labels` (Traefik and `homerun.*` labels are dropped,
-Homerun writes its own routing), `cap_add`, `devices` and `privileged`.
+form), `ports`/`expose` (the first port becomes the container port Traefik
+routes to, every other host mapping becomes a
+[published port](networking.md#published-ports), port ranges are skipped),
+`restart`, `volumes` (named volumes and absolute bind mounts, in both the short
+`src:dst:ro` and long `type:/source:` forms), `depends_on`,
+`network_mode: host`, `container_name`, `deploy.resources.limits.cpus`/`memory`,
+and everything on the [Runtime tab](runtime-and-compute.md#runtime): `command`
+and `entrypoint` (string or list form), `labels` (Traefik and `homerun.*` labels
+are dropped, Homerun writes its own routing), `cap_add`, `devices` and
+`privileged`.
 
 `env_file` is resolved into env vars where it can be: the preview asks you to
 paste the contents of every relative env file the compose file references, and

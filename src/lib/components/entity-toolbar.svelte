@@ -17,6 +17,7 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
 	import {
 		Drawer,
 		DrawerContent,
@@ -133,7 +134,7 @@
       <ListFilter class="size-4" />
       Filters
       {#if activeCount > 0}
-        <span class="bg-accent text-accent-foreground rounded-full px-1.5 text-xs">
+        <span class="bg-ink text-ink-foreground rounded-full px-1.5 text-xs">
           {activeCount}
         </span>
       {/if}
@@ -156,20 +157,22 @@
       {#each usableFilters as group (group.key)}
         <div>
           <h3 class="eyebrow mb-2">{group.label}</h3>
-          <div class="flex flex-wrap gap-2">
+          <ul class="flex flex-col">
             {#each group.options as option (option.value)}
               {@const isOn = (selected[group.key] ?? []).includes(option.value)}
-              <button
-                class="rounded-full border px-3 py-1.5 text-sm capitalize transition-colors {isOn
-                ? 'border-accent bg-accent text-accent-foreground'
-                : 'border-border bg-surface text-text-muted hover:bg-surface-2'}"
-                onclick={() => toggle(group.key, option.value)}
-                type="button"
-              >
-                {option.label}
-              </button>
+              <li>
+                <label class="hover:bg-surface-2 flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors">
+                  <Checkbox
+                    checked={isOn}
+                    onCheckedChange={() => toggle(group.key, option.value)}
+                  />
+                  <span class="capitalize {isOn ? 'text-text font-medium' : 'text-text-muted'}">
+                    {option.label}
+                  </span>
+                </label>
+              </li>
             {/each}
-          </div>
+          </ul>
         </div>
       {/each}
     </div>

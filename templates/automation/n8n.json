@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "n8n",
+	"description": "Workflow automation tool.",
+	"image": "n8nio/n8n",
+	"tag": "latest",
+	"containerPort": 5678,
+	"icon": "n8n.svg",
+	"tags": ["automation", "workflows", "integrations", "no-code"],
+	"websiteUrl": "https://n8n.io",
+	"sourceUrl": "https://github.com/n8n-io/n8n",
+	"envVars": {}
+}

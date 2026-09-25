@@ -103,6 +103,50 @@ describe("services : image-mode deploy", () => {
 		expect(status.containerId).toBeTruthy();
 	});
 
+	test("deploy switches the image tag when the body carries one", async () => {
+		const created = await client.POST("/services", {
+			body: {
+				authRequired: false,
+				autoDeployOnPush: false,
+				buildSource: "image",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
+				containerPort: 80,
+				dnsResolvable: false,
+				envVars: {},
+				pullPolicy: "always",
+				image: "nginx",
+				name: "IT deploy with tag",
+				restartPolicy: "no",
+				slug: slug("deploy-tag"),
+				tag: "alpine",
+			},
+		});
+		const svc = expectOk(created.data, created.response);
+		cleanup.track(svc.id);
+
+		const rejected = await client.POST("/services/{serviceId}/deploy", {
+			body: { tag: "not a tag" },
+			params: { path: { serviceId: svc.id } },
+		});
+		expect(rejected.response.status).toBe(400);
+
+		const deployed = await client.POST("/services/{serviceId}/deploy", {
+			body: { tag: "stable-alpine" },
+			params: { path: { serviceId: svc.id } },
+		});
+		expect(expectOk(deployed.data, deployed.response).success).toBe(true);
+
+		const fetched = await client.GET("/services/{serviceId}", {
+			params: { path: { serviceId: svc.id } },
+		});
+		expect(expectOk(fetched.data, fetched.response).tag).toBe("stable-alpine");
+	});
+
 	test("local target, inside a stack", async () => {
 		const stackRes = await client.POST("/stacks", {
 			body: { name: "IT Stack", slug: slug("stack") },

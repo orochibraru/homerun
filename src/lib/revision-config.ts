@@ -1,3 +1,4 @@
+import type { PublishedPort } from "$lib/published-ports";
 import {
 	runtimeOptionsFrom,
 	type ServiceRuntimeOptions,
@@ -11,6 +12,7 @@ export interface RevisionConfig extends Partial<ServiceRuntimeOptions> {
 	memoryLimitMb: number | null;
 	networkMode: "bridge" | "host";
 	portProtocol: "tcp" | "udp" | "both";
+	publishedPorts?: PublishedPort[];
 	replicas: number;
 }
 
@@ -46,6 +48,7 @@ export function snapshotRevisionConfig(
 		memoryLimitMb: service.memoryLimitMb,
 		networkMode: service.networkMode,
 		portProtocol: service.portProtocol,
+		publishedPorts: structuredClone(service.publishedPorts),
 		replicas: service.replicas,
 	};
 }

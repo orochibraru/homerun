@@ -135,6 +135,20 @@ export const updateServiceApiBody = z.object({
 	uptimeEnabled: z.boolean().optional(),
 });
 
+/** `POST /services/{serviceId}/deploy`'s optional body: a tag to switch the service to before deploying, for CI deploying the image it just pushed. */
+export const deployServiceApiBody = z.object({
+	tag: z
+		.string()
+		.regex(
+			/^[\w][\w.-]{0,127}$/,
+			"A Docker tag: letters, digits, _, . and -, up to 128 characters.",
+		)
+		.optional()
+		.describe(
+			"Image tag to deploy. Saved on the service first, so later deploys keep it. Image-based services only.",
+		),
+});
+
 export const createStackApiBody = z.object({
 	description: z.string().optional(),
 	name: z.string().min(1).max(100),

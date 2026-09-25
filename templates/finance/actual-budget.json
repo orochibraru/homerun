@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Actual Budget",
+	"description": "Local-first personal budgeting app (YNAB-alike).",
+	"image": "actualbudget/actual-server",
+	"tag": "latest",
+	"containerPort": 5006,
+	"icon": "actual-budget.svg",
+	"tags": ["budget", "finance", "money", "accounting"],
+	"websiteUrl": "https://actualbudget.org",
+	"sourceUrl": "https://github.com/actualbudget/actual",
+	"envVars": {}
+}

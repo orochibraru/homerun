@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "Duplicati",
+	"description": "Scheduled, encrypted backups to S3, WebDAV or a local volume. Set the settings encryption key before deploying.",
+	"image": "lscr.io/linuxserver/duplicati",
+	"tag": "latest",
+	"containerPort": 8200,
+	"icon": "duplicati.svg",
+	"tags": ["backup", "s3", "encryption", "storage"],
+	"websiteUrl": "https://duplicati.com",
+	"sourceUrl": "https://github.com/duplicati/duplicati",
+	"envVars": {
+		"PGID": "1000",
+		"PUID": "1000",
+		"SETTINGS_ENCRYPTION_KEY": "change-me-to-a-random-string",
+		"TZ": "UTC"
+	}
+}

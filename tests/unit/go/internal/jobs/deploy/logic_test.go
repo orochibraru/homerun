@@ -102,16 +102,19 @@ func TestSampleFromInspect(t *testing.T) {
 }
 
 func TestRolloutStrategy(t *testing.T) {
-	if !deploy.RolloutStrategy(true, false, []deploy.Volume{{ReadOnly: true}}).BlueGreen {
+	if !deploy.RolloutStrategy(true, false, false, []deploy.Volume{{ReadOnly: true}}).BlueGreen {
 		t.Error("a running previous container on bridge networking rolls out blue-green")
 	}
-	if got := deploy.RolloutStrategy(false, false, nil); got.BlueGreen || got.Reason != "" {
+	if got := deploy.RolloutStrategy(false, false, false, nil); got.BlueGreen || got.Reason != "" {
 		t.Errorf("nothing running is a plain recreate, got %+v", got)
 	}
-	if got := deploy.RolloutStrategy(true, true, nil); !strings.Contains(got.Reason, "Host networking") {
+	if got := deploy.RolloutStrategy(true, true, false, nil); !strings.Contains(got.Reason, "Host networking") {
 		t.Errorf("host: %+v", got)
 	}
-	if got := deploy.RolloutStrategy(true, false, []deploy.Volume{{}}); !strings.Contains(got.Reason, "writable volume") {
+	if got := deploy.RolloutStrategy(true, false, true, nil); !strings.Contains(got.Reason, "published host port") {
+		t.Errorf("published port: %+v", got)
+	}
+	if got := deploy.RolloutStrategy(true, false, false, []deploy.Volume{{}}); !strings.Contains(got.Reason, "writable volume") {
 		t.Errorf("volume: %+v", got)
 	}
 	if deploy.SwarmUpdateOrder([]deploy.Volume{{ReadOnly: true}}) != "start-first" || deploy.SwarmUpdateOrder([]deploy.Volume{{}}) != "stop-first" {

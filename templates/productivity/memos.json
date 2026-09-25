@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Memos",
+	"description": "Lightweight note-taking : plain markdown, no folders, an API for everything.",
+	"image": "neosmemo/memos",
+	"tag": "stable",
+	"containerPort": 5230,
+	"icon": "",
+	"tags": ["notes", "markdown", "microblog", "writing"],
+	"websiteUrl": "https://usememos.com",
+	"sourceUrl": "https://github.com/usememos/memos",
+	"envVars": {}
+}

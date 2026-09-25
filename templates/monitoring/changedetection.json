@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "changedetection.io",
+	"description": "Watches web pages for changes and notifies you.",
+	"image": "dgtlmoon/changedetection.io",
+	"tag": "latest",
+	"containerPort": 5000,
+	"icon": "changedetection.svg",
+	"tags": ["scraping", "alerts", "websites", "monitoring"],
+	"websiteUrl": "https://changedetection.io",
+	"sourceUrl": "https://github.com/dgtlmoon/changedetection.io",
+	"envVars": {}
+}

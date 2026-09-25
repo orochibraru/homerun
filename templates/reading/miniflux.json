@@ -1,0 +1,25 @@
+{
+	"$schema": "../schema.json",
+	"name": "Miniflux",
+	"description": "Minimalist RSS reader. Needs a linked Postgres database, seeds an initial admin account on first boot (change the placeholder password after logging in).",
+	"image": "miniflux/miniflux",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "miniflux.svg",
+	"tags": ["rss", "feeds", "reader", "news"],
+	"websiteUrl": "https://miniflux.app",
+	"sourceUrl": "https://github.com/miniflux/v2",
+	"envVars": {
+		"ADMIN_PASSWORD": "changeme123",
+		"ADMIN_USERNAME": "admin",
+		"CREATE_ADMIN": "1",
+		"DATABASE_URL": "postgres://{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}?sslmode=disable",
+		"RUN_MIGRATIONS": "1"
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		}
+	]
+}

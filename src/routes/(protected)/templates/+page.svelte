@@ -13,6 +13,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { title } from "$lib/store/title";
+	import { templateCategoryLabel } from "$lib/template-categories";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
 
@@ -32,7 +33,10 @@
 		{
 			key: "category",
 			label: "Category",
-			options: data.categories.map((c) => ({ label: c, value: c })),
+			options: data.categories.map((c) => ({
+				label: templateCategoryLabel(c),
+				value: c,
+			})),
 		},
 	]);
 

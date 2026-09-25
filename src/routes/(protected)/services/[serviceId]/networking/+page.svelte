@@ -3,6 +3,7 @@
 	import { title } from "$lib/store/title";
 	import DomainsSection from "./domains-section.svelte";
 	import NetworkSection from "./network-section.svelte";
+	import PublishedPortsSection from "./published-ports-section.svelte";
 	import SslSection from "./ssl-section.svelte";
 
 	const { data, form } = $props();
@@ -33,4 +34,5 @@
     submittedValues={form?.portsValues as Record<string, string> | undefined}
     {svc}
   />
+  <PublishedPortsSection {svc} />
 </div>

@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Jellyfin",
+	"description": "Media server for movies, TV, and music.",
+	"image": "jellyfin/jellyfin",
+	"tag": "latest",
+	"containerPort": 8096,
+	"icon": "jellyfin.svg",
+	"tags": ["media", "video", "streaming", "movies", "tv"],
+	"websiteUrl": "https://jellyfin.org",
+	"sourceUrl": "https://github.com/jellyfin/jellyfin",
+	"envVars": {}
+}

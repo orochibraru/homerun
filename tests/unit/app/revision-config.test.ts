@@ -24,12 +24,29 @@ function source(
 		networkMode: "bridge",
 		portProtocol: "tcp",
 		privileged: false,
+		publishedPorts: [],
 		replicas: 1,
 		...overrides,
 	};
 }
 
 describe("snapshotRevisionConfig", () => {
+	test("records published ports as a copy, and a rollback compares them", () => {
+		const service = source({
+			publishedPorts: [
+				{ containerPort: 1194, hostPort: 1194, protocol: "udp" },
+			],
+		});
+		const snapshot = snapshotRevisionConfig(service);
+		service.publishedPorts[0].hostPort = 1195;
+		expect(snapshot.publishedPorts).toEqual([
+			{ containerPort: 1194, hostPort: 1194, protocol: "udp" },
+		]);
+		expect(changedRevisionConfigFields(service, snapshot)).toEqual([
+			"publishedPorts",
+		]);
+	});
+
 	test("copies env vars instead of sharing the service's object", () => {
 		const service = source();
 		const snapshot = snapshotRevisionConfig(service);

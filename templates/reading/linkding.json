@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Linkding",
+	"description": "Minimal, fast bookmark manager.",
+	"image": "sissbruecker/linkding",
+	"tag": "latest",
+	"containerPort": 9090,
+	"icon": "linkding.svg",
+	"tags": ["bookmarks", "links", "read-later"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/sissbruecker/linkding",
+	"envVars": {}
+}

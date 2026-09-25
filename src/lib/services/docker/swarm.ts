@@ -1,5 +1,6 @@
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
+import type { PublishedPort } from "$lib/published-ports";
 import type { ContainerStatus } from "$lib/types";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RegistryAuth, VolumeMountParams } from "./containers.ts";
@@ -135,6 +136,7 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 				defaultDomainEnabled: params.defaultDomainEnabled,
 				dnsResolvable:
 					params.networkMode === "host" ? false : params.dnsResolvable,
+				domainPorts: params.domainPorts,
 				domains: params.domains,
 				networkName: swarmNetworkName(),
 				serviceId: params.serviceId,
@@ -142,6 +144,16 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 				stackSlug: params.stackSlug,
 			}),
 		),
+		EndpointSpec: params.publishedPorts?.length
+			? {
+					Ports: params.publishedPorts.map((port) => ({
+						Protocol: port.protocol,
+						PublishedPort: port.hostPort,
+						PublishMode: "ingress",
+						TargetPort: port.containerPort,
+					})),
+				}
+			: undefined,
 		Mode: { Replicated: { Replicas: params.replicas } },
 		TaskTemplate: {
 			ContainerSpec: {
@@ -218,12 +230,14 @@ export interface CreateSwarmServiceParams {
 	cpuLimit?: string | null;
 	defaultDomainEnabled?: boolean;
 	dnsResolvable?: boolean;
+	domainPorts?: Record<string, number>;
 	domains?: string[];
 	envVars: Record<string, string>;
 	image: string;
 	memoryLimitMb?: number | null;
 	networkMode?: "bridge" | "host";
 	portProtocol?: "tcp" | "udp" | "both";
+	publishedPorts?: PublishedPort[];
 	healthcheckCommand?: string | null;
 	runtime?: ContainerRuntimeParams;
 	stackSlug?: string | null;

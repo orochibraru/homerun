@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { LayoutGrid, Plus, Server } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, type Snippet } from "svelte";
 	import { resolve } from "$app/paths";
-	import EntityList from "$lib/components/entity-list.svelte";
+	import EntityList, {
+		type EntityRow,
+	} from "$lib/components/entity-list.svelte";
+	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
+	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -16,6 +20,7 @@
 	onMount(() => title.set(stack.name));
 
 	const view = new ViewMode("stack-services");
+	let menuHost = $state<ReturnType<typeof ServiceMenuHost>>();
 	let search = $state("");
 
 	const filtered = $derived(
@@ -73,9 +78,27 @@
       }))}
       {media}
       {view}
+      {wrapper}
     />
   {/if}
 {/if}
+
+{#snippet wrapper(item: EntityRow, body: Snippet)}
+  {@const svc = data.services.find((s) => s.id === item.id)}
+  {#if svc}
+    <ServiceContextMenu
+      onaction={(op, id) => menuHost?.run(op, id)}
+      ongroup={(s) => menuHost?.group(s)}
+      onlink={(s) => menuHost?.link(s)}
+      onungroup={(s) => menuHost?.ungroup(s)}
+      service={svc}
+    >
+      {@render body()}
+    </ServiceContextMenu>
+  {:else}
+    {@render body()}
+  {/if}
+{/snippet}
 
 {#snippet media(_item: { id: string })}
   <span class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
@@ -89,3 +112,10 @@
     <StatusBadge status={svc.currentStatus} />
   {/if}
 {/snippet}
+
+<ServiceMenuHost
+  bind:this={menuHost}
+  actionBase={resolve("/services")}
+  services={data.allServices}
+  stacks={data.stacks}
+/>

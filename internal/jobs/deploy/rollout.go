@@ -100,13 +100,16 @@ type RolloutPlan struct {
 }
 
 // RolloutStrategy runs the new container alongside the running previous one,
-// unless host networking or a writable volume forces a recreate.
-func RolloutStrategy(hasRunningPrevious, hostNetwork bool, volumes []Volume) RolloutPlan {
+// unless host networking, a published host port or a writable volume forces a
+// recreate.
+func RolloutStrategy(hasRunningPrevious, hostNetwork, publishesPorts bool, volumes []Volume) RolloutPlan {
 	switch {
 	case !hasRunningPrevious:
 		return RolloutPlan{}
 	case hostNetwork:
 		return RolloutPlan{Reason: "Host networking can't run two copies side by side, so the previous container stops first."}
+	case publishesPorts:
+		return RolloutPlan{Reason: "A published host port can't be bound by two copies at once, so the previous container stops first."}
 	case anyWritable(volumes):
 		return RolloutPlan{Reason: "A writable volume can't safely be shared by two copies, so the previous container stops first."}
 	}

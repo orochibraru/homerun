@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Vaultwarden",
+	"description": "Self-hosted password manager (Bitwarden-compatible server).",
+	"image": "vaultwarden/server",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "vaultwarden.svg",
+	"tags": ["passwords", "bitwarden", "secrets", "security"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/dani-garcia/vaultwarden",
+	"envVars": {}
+}

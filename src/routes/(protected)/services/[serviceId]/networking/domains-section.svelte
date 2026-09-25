@@ -18,7 +18,9 @@
 		stackSlug: string | null;
 		submitting: boolean;
 		svc: ServiceDomainFields & {
+			containerPort: number;
 			dnsResolvable: boolean;
+			domainPorts: Record<string, number>;
 			networkMode: string;
 		};
 	}
@@ -39,6 +41,9 @@
 	);
 
 	let domains = $derived([...svc.domains]);
+	let ports = $derived(
+		svc.domains.map((domain) => String(svc.domainPorts[domain] ?? "")),
+	);
 	let defaultEnabled = $derived(svc.defaultDomainEnabled);
 	let primary = $derived(mainHost ?? "");
 
@@ -55,6 +60,7 @@
 			primary = "";
 		}
 		domains = domains.filter((_, i) => i !== index);
+		ports = ports.filter((_, i) => i !== index);
 	}
 </script>
 
@@ -129,6 +135,7 @@
             readonly
             value={fallbackHost}
           />
+          <div class="w-28 shrink-0"></div>
           {@render mainToggle(fallbackHost, !defaultEnabled)}
           <label class="text-text-muted flex w-20 shrink-0 items-center gap-2 text-xs">
             <Checkbox
@@ -154,6 +161,21 @@
               type="text"
               value={domain}
             />
+            <Input
+              class="w-28 shrink-0"
+              aria-label="Container port for this domain"
+              max="65535"
+              min="1"
+              name="domainPorts"
+              placeholder={String(svc.containerPort)}
+              oninput={(event) => {
+                ports = ports.map((port, i) =>
+                  i === index ? event.currentTarget.value : port,
+                );
+              }}
+              type="number"
+              value={ports[index]}
+            />
             {@render mainToggle(domain, !domain)}
             <div class="w-20 shrink-0">
               <Button
@@ -172,6 +194,7 @@
       <Button
         onclick={() => {
           domains = [...domains, ""];
+          ports = [...ports, ""];
         }}
         size="sm"
         type="button"
@@ -181,7 +204,9 @@
         Add domain
       </Button>
       <p class="text-text-subtle text-xs">
-        The main domain is the service's link. Point each domain's
+        A domain's port sends it to another port of the same container (blank
+        means {svc.containerPort}), e.g. a web UI and an API side by side. The
+        main domain is the service's link. Point each domain's
         DNS (A/CNAME) at this server yourself first : this app only tells
         Traefik to route it, it doesn't manage DNS for domains outside
         {baseDomain}.

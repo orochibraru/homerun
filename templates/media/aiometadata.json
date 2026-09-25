@@ -1,0 +1,30 @@
+{
+	"$schema": "../schema.json",
+	"name": "AIOMetadata",
+	"description": "Stremio metadata and catalog addon (TMDB, TVDB, AniList, MDBList...). Needs a TMDB API key; set HOST_NAME to the URL you'll reach it at so Stremio finds the manifest.",
+	"image": "ghcr.io/cedya77/aiometadata",
+	"tag": "latest",
+	"containerPort": 3232,
+	"icon": "aiometadata.png",
+	"tags": ["stremio", "addon", "metadata", "catalogs", "tmdb"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/cedya77/aiometadata",
+	"envVars": {
+		"ADMIN_KEY": "change-me-to-a-random-string",
+		"DATABASE_URI": "postgresql://{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}",
+		"HOST_NAME": "https://aiometadata.example.com",
+		"NODE_ENV": "production",
+		"REDIS_URL": "redis://{{redis}}:6379",
+		"TMDB_API_KEY": ""
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		},
+		{
+			"alias": "redis",
+			"template": "redis"
+		}
+	]
+}

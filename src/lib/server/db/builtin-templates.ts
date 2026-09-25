@@ -1,4 +1,9 @@
+import { z } from "zod";
 import type { ServiceRuntimeOptions } from "$lib/service-runtime";
+import {
+	TEMPLATE_CATEGORIES,
+	type TemplateCategory,
+} from "$lib/template-categories";
 
 export interface BuiltinTemplate extends Partial<ServiceRuntimeOptions> {
 	category: string;
@@ -23,612 +28,137 @@ export interface BuiltinTemplateLink {
 	templateId: string;
 }
 
-export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
-	{
-		category: "cache",
-		containerPort: 6379,
-		description: "In-memory key-value store. Unauthenticated by default.",
-		envVars: {},
-		icon: "redis.svg",
-		id: "builtin-redis",
-		image: "redis",
-		sourceUrl: "https://github.com/redis/redis",
-		name: "Redis",
-		tag: "alpine",
-		tags: ["cache", "key-value", "nosql", "queue"],
-		websiteUrl: "https://redis.io",
-	},
-	{
-		category: "database",
-		containerPort: 5432,
-		description:
-			"Relational database. Review the placeholder password before deploying.",
-		envVars: {
-			POSTGRES_DB: "app",
-			POSTGRES_PASSWORD: "changeme",
-			POSTGRES_USER: "postgres",
-		},
-		icon: "postgres.svg",
-		id: "builtin-postgres",
-		image: "postgres",
-		sourceUrl: "https://github.com/postgres/postgres",
-		name: "PostgreSQL",
-		tag: "18-alpine",
-		tags: ["sql", "database", "relational", "postgres"],
-		websiteUrl: "https://www.postgresql.org",
-	},
-	{
-		category: "database",
-		containerPort: 3306,
-		description:
-			"Relational database. Review the placeholder password before deploying.",
-		envVars: {
-			MYSQL_DATABASE: "app",
-			MYSQL_ROOT_PASSWORD: "changeme",
-		},
-		icon: "mysql.svg",
-		id: "builtin-mysql",
-		image: "mysql",
-		sourceUrl: "https://github.com/mysql/mysql-server",
-		name: "MySQL",
-		tag: "8",
-		tags: ["sql", "database", "relational", "mariadb"],
-		websiteUrl: "https://www.mysql.com",
-	},
-	{
-		category: "database",
-		containerPort: 27_017,
-		description:
-			"Document database. Review the placeholder password before deploying.",
-		envVars: {
-			MONGO_INITDB_ROOT_PASSWORD: "changeme",
-			MONGO_INITDB_ROOT_USERNAME: "admin",
-		},
-		icon: "mongodb.svg",
-		id: "builtin-mongodb",
-		image: "mongo",
-		sourceUrl: "https://github.com/mongodb/mongo",
-		name: "MongoDB",
-		tag: "7",
-		tags: ["nosql", "database", "documents"],
-		websiteUrl: "https://www.mongodb.com",
-	},
-	{
-		category: "other",
-		containerPort: 8080,
-		description:
-			"Lightweight database admin UI (works with Postgres/MySQL/etc).",
-		envVars: {},
-		icon: "adminer.svg",
-		id: "builtin-adminer",
-		image: "adminer",
-		sourceUrl: "https://github.com/vrana/adminer",
-		name: "Adminer",
-		tag: "latest",
-		tags: ["sql", "database", "admin", "gui"],
-		websiteUrl: "https://www.adminer.org",
-	},
-	{
-		category: "monitoring",
-		containerPort: 3001,
-		description: "Self-hosted uptime monitoring with status pages.",
-		envVars: {},
-		icon: "uptime-kuma.svg",
-		id: "builtin-uptime-kuma",
-		image: "louislam/uptime-kuma",
-		sourceUrl: "https://github.com/louislam/uptime-kuma",
-		name: "Uptime Kuma",
-		tag: "2",
-		tags: ["uptime", "status", "alerts", "monitoring"],
-		websiteUrl: "https://uptime.kuma.pet",
-	},
-	{
-		category: "automation",
-		containerPort: 5678,
-		description: "Workflow automation tool.",
-		envVars: {},
-		icon: "n8n.svg",
-		id: "builtin-n8n",
-		image: "n8nio/n8n",
-		sourceUrl: "https://github.com/n8n-io/n8n",
-		name: "n8n",
-		tag: "latest",
-		tags: ["automation", "workflows", "integrations", "no-code"],
-		websiteUrl: "https://n8n.io",
-	},
-	{
-		category: "other",
-		containerPort: 80,
-		description: "Self-hosted password manager (Bitwarden-compatible server).",
-		envVars: {},
-		icon: "vaultwarden.svg",
-		id: "builtin-vaultwarden",
-		image: "vaultwarden/server",
-		sourceUrl: "https://github.com/dani-garcia/vaultwarden",
-		name: "Vaultwarden",
-		tag: "latest",
-		tags: ["passwords", "bitwarden", "secrets", "security"],
-		websiteUrl: null,
-	},
-	{
-		category: "media",
-		containerPort: 8096,
-		description: "Media server for movies, TV, and music.",
-		envVars: {},
-		icon: "jellyfin.svg",
-		id: "builtin-jellyfin",
-		image: "jellyfin/jellyfin",
-		sourceUrl: "https://github.com/jellyfin/jellyfin",
-		name: "Jellyfin",
-		tag: "latest",
-		tags: ["media", "video", "streaming", "movies", "tv"],
-		websiteUrl: "https://jellyfin.org",
-	},
-	{
-		category: "media",
-		containerPort: 4533,
-		description: "Music streaming server with a Subsonic-compatible API.",
-		envVars: {},
-		icon: "navidrome.svg",
-		id: "builtin-navidrome",
-		image: "deluan/navidrome",
-		sourceUrl: "https://github.com/navidrome/navidrome",
-		name: "Navidrome",
-		tag: "latest",
-		tags: ["music", "audio", "streaming", "subsonic"],
-		websiteUrl: "https://www.navidrome.org",
-	},
-	{
-		category: "media",
-		containerPort: 80,
-		description: "Self-hosted audiobook and podcast server.",
-		envVars: {},
-		icon: "audiobookshelf.svg",
-		id: "builtin-audiobookshelf",
-		image: "advplyr/audiobookshelf",
-		sourceUrl: "https://github.com/advplyr/audiobookshelf",
-		name: "Audiobookshelf",
-		tag: "latest",
-		tags: ["audiobooks", "podcasts", "audio"],
-		websiteUrl: "https://www.audiobookshelf.org",
-	},
-	{
-		category: "media",
-		containerPort: 8989,
-		description: "TV show collection manager and downloader.",
-		envVars: {},
-		icon: "sonarr.svg",
-		id: "builtin-sonarr",
-		image: "linuxserver/sonarr",
-		sourceUrl: "https://github.com/Sonarr/Sonarr",
-		name: "Sonarr",
-		tag: "latest",
-		tags: ["tv", "pvr", "arr", "downloads"],
-		websiteUrl: "https://sonarr.tv",
-	},
-	{
-		category: "media",
-		containerPort: 7878,
-		description: "Movie collection manager and downloader.",
-		envVars: {},
-		icon: "radarr.svg",
-		id: "builtin-radarr",
-		image: "linuxserver/radarr",
-		sourceUrl: "https://github.com/Radarr/Radarr",
-		name: "Radarr",
-		tag: "latest",
-		tags: ["movies", "pvr", "arr", "downloads"],
-		websiteUrl: "https://radarr.video",
-	},
-	{
-		category: "media",
-		containerPort: 9696,
-		description: "Indexer manager, feeds Sonarr/Radarr/Lidarr.",
-		envVars: {},
-		icon: "prowlarr.svg",
-		id: "builtin-prowlarr",
-		image: "linuxserver/prowlarr",
-		sourceUrl: "https://github.com/Prowlarr/Prowlarr",
-		name: "Prowlarr",
-		tag: "latest",
-		tags: ["indexers", "arr", "downloads"],
-		websiteUrl: null,
-	},
-	{
-		category: "media",
-		containerPort: 6767,
-		description: "Subtitle manager for Sonarr/Radarr libraries.",
-		envVars: {},
-		icon: "bazarr.svg",
-		id: "builtin-bazarr",
-		image: "linuxserver/bazarr",
-		sourceUrl: "https://github.com/morpheus65535/bazarr",
-		name: "Bazarr",
-		tag: "latest",
-		tags: ["subtitles", "arr", "movies", "tv"],
-		websiteUrl: "https://www.bazarr.media",
-	},
-	{
-		category: "media",
-		containerPort: 8686,
-		description: "Music collection manager and downloader.",
-		envVars: {},
-		icon: "lidarr.svg",
-		id: "builtin-lidarr",
-		image: "linuxserver/lidarr",
-		sourceUrl: "https://github.com/Lidarr/Lidarr",
-		name: "Lidarr",
-		tag: "latest",
-		tags: ["music", "pvr", "arr", "downloads"],
-		websiteUrl: "https://lidarr.audio",
-	},
-	{
-		category: "media",
-		containerPort: 5055,
-		description: "Media request manager for a Jellyfin/Plex library.",
-		envVars: {},
-		icon: "jellyseerr.svg",
-		id: "builtin-jellyseerr",
-		image: "fallenbagel/jellyseerr",
-		sourceUrl: "https://github.com/Fallenbagel/jellyseerr",
-		name: "Jellyseerr",
-		tag: "latest",
-		tags: ["requests", "jellyfin", "arr", "media"],
-		websiteUrl: null,
-	},
-	{
-		category: "media",
-		containerPort: 5055,
-		description: "Media request manager for a Plex library.",
-		envVars: {},
-		icon: "overseerr.svg",
-		id: "builtin-overseerr",
-		image: "lscr.io/linuxserver/overseerr",
-		sourceUrl: "https://github.com/sct/overseerr",
-		name: "Overseerr",
-		tag: "latest",
-		tags: ["requests", "plex", "arr", "media"],
-		websiteUrl: "https://overseerr.dev",
-	},
-	{
-		category: "media",
-		containerPort: 8080,
-		description: "BitTorrent client with a web UI.",
-		envVars: {},
-		icon: "qbittorrent.svg",
-		id: "builtin-qbittorrent",
-		image: "linuxserver/qbittorrent",
-		sourceUrl: "https://github.com/qbittorrent/qBittorrent",
-		name: "qBittorrent",
-		tag: "latest",
-		tags: ["torrent", "downloads", "bittorrent"],
-		websiteUrl: "https://www.qbittorrent.org",
-	},
-	{
-		category: "media",
-		containerPort: 9091,
-		description: "Lightweight BitTorrent client with a web UI.",
-		envVars: {},
-		icon: "transmission.svg",
-		id: "builtin-transmission",
-		image: "linuxserver/transmission",
-		sourceUrl: "https://github.com/transmission/transmission",
-		name: "Transmission",
-		tag: "latest",
-		tags: ["torrent", "downloads", "bittorrent"],
-		websiteUrl: "https://transmissionbt.com",
-	},
-	{
-		category: "media",
-		containerPort: 2342,
-		description:
-			"AI-powered photo management. Ships with an embedded SQLite database for small libraries.",
-		envVars: {},
-		icon: "photoprism.svg",
-		id: "builtin-photoprism",
-		image: "photoprism/photoprism",
-		sourceUrl: "https://github.com/photoprism/photoprism",
-		name: "PhotoPrism",
-		tag: "latest",
-		tags: ["photos", "gallery", "images", "ai"],
-		websiteUrl: "https://www.photoprism.app",
-	},
-	{
-		category: "media",
-		containerPort: 8083,
-		description: "Web UI for browsing and reading a Calibre e-book library.",
-		envVars: {},
-		icon: "calibre-web.svg",
-		id: "builtin-calibre-web",
-		image: "lscr.io/linuxserver/calibre-web",
-		sourceUrl: "https://github.com/janeczku/calibre-web",
-		name: "Calibre-Web",
-		tag: "latest",
-		tags: ["books", "ebooks", "library", "reading"],
-		websiteUrl: null,
-	},
-	{
-		category: "network",
-		containerPort: 80,
-		description:
-			"Network-wide ad blocker. Only its web admin UI is reachable here : DNS itself needs host network mode, set on the Networking tab after deploying.",
-		envVars: {},
-		icon: "pihole.svg",
-		id: "builtin-pihole",
-		image: "pihole/pihole",
-		sourceUrl: "https://github.com/pi-hole/pi-hole",
-		name: "Pi-hole",
-		tag: "latest",
-		tags: ["dns", "adblock", "network", "privacy"],
-		websiteUrl: "https://pi-hole.net",
-	},
-	{
-		category: "network",
-		containerPort: 3000,
-		description:
-			"Ad-blocking DNS server with a setup wizard on first visit. Only its web UI is reachable here : DNS itself needs host network mode, set on the Networking tab after deploying.",
-		envVars: {},
-		icon: "adguard-home.svg",
-		id: "builtin-adguard-home",
-		image: "adguard/adguardhome",
-		sourceUrl: "https://github.com/AdguardTeam/AdGuardHome",
-		name: "AdGuard Home",
-		tag: "latest",
-		tags: ["dns", "adblock", "network", "privacy"],
-		websiteUrl: "https://adguard.com/en/adguard-home/overview.html",
-	},
-	{
-		category: "network",
-		containerPort: 81,
-		description: "Web UI for managing Nginx reverse proxy hosts and certs.",
-		envVars: {},
-		icon: "nginx-proxy-manager.svg",
-		id: "builtin-nginx-proxy-manager",
-		image: "jc21/nginx-proxy-manager",
-		sourceUrl: "https://github.com/NginxProxyManager/nginx-proxy-manager",
-		name: "Nginx Proxy Manager",
-		tag: "latest",
-		tags: ["proxy", "reverse-proxy", "ssl", "nginx"],
-		websiteUrl: "https://nginxproxymanager.com",
-	},
-	{
-		category: "network",
-		containerPort: 9000,
-		description: "Web UI for managing this and other Docker hosts.",
-		envVars: {},
-		icon: "portainer.svg",
-		id: "builtin-portainer",
-		image: "portainer/portainer-ce",
-		sourceUrl: "https://github.com/portainer/portainer",
-		name: "Portainer",
-		tag: "latest",
-		tags: ["docker", "containers", "admin", "gui"],
-		websiteUrl: "https://www.portainer.io",
-	},
-	{
-		category: "network",
-		containerPort: 80,
-		description: "Tracks internet speed test results over time.",
-		envVars: {},
-		icon: "speedtest-tracker.svg",
-		id: "builtin-speedtest-tracker",
-		image: "lscr.io/linuxserver/speedtest-tracker",
-		sourceUrl: "https://github.com/alexjustesen/speedtest-tracker",
-		name: "Speedtest Tracker",
-		tag: "latest",
-		tags: ["speedtest", "bandwidth", "network", "monitoring"],
-		websiteUrl: "https://speedtest-tracker.dev",
-	},
-	{
-		category: "dashboard",
-		containerPort: 3000,
-		description: "Static, fast, YAML-configured start page for your services.",
-		envVars: {},
-		icon: "homepage.svg",
-		id: "builtin-homepage",
-		image: "ghcr.io/gethomepage/homepage",
-		sourceUrl: "https://github.com/gethomepage/homepage",
-		name: "Homepage",
-		tag: "latest",
-		tags: ["dashboard", "start-page", "bookmarks", "widgets"],
-		websiteUrl: "https://gethomepage.dev",
-	},
-	{
-		category: "dashboard",
-		containerPort: 8080,
-		description: "Configurable start page for self-hosted services.",
-		envVars: {},
-		icon: "dashy.png",
-		id: "builtin-dashy",
-		image: "lissy93/dashy",
-		sourceUrl: "https://github.com/Lissy93/dashy",
-		name: "Dashy",
-		tag: "latest",
-		tags: ["dashboard", "start-page", "bookmarks"],
-		websiteUrl: "https://dashy.to",
-	},
-	{
-		category: "dashboard",
-		containerPort: 7575,
-		description: "Customizable start page with app/service widgets.",
-		envVars: {},
-		icon: "homarr.svg",
-		id: "builtin-homarr",
-		image: "ghcr.io/homarr-labs/homarr",
-		sourceUrl: "https://github.com/homarr-labs/homarr",
-		name: "Homarr",
-		tag: "latest",
-		tags: ["dashboard", "start-page", "bookmarks", "widgets"],
-		websiteUrl: "https://homarr.dev",
-	},
-	{
-		category: "productivity",
-		containerPort: 8080,
-		description: "Hierarchical note-taking app with encryption support.",
-		envVars: {},
-		icon: "trilium.png",
-		id: "builtin-trilium",
-		image: "triliumnext/trilium",
-		sourceUrl: "https://github.com/TriliumNext/Trilium",
-		name: "Trilium Notes",
-		tag: "latest",
-		tags: ["notes", "knowledge-base", "wiki", "writing"],
-		websiteUrl: null,
-	},
-	{
-		category: "productivity",
-		containerPort: 3000,
-		description: "Collaborative markdown notes, Notion-alternative-ish.",
-		envVars: {},
-		icon: "hedgedoc.svg",
-		id: "builtin-hedgedoc",
-		image: "quay.io/hedgedoc/hedgedoc",
-		sourceUrl: "https://github.com/hedgedoc/hedgedoc",
-		name: "HedgeDoc",
-		tag: "latest",
-		tags: ["notes", "markdown", "collaboration", "writing"],
-		websiteUrl: "https://hedgedoc.org",
-	},
-	{
-		category: "productivity",
-		containerPort: 22_300,
-		description: "Sync server for the Joplin note-taking app.",
-		envVars: {},
-		icon: "joplin-server.svg",
-		id: "builtin-joplin-server",
-		image: "joplin/server",
-		sourceUrl: "https://github.com/laurent22/joplin",
-		name: "Joplin Server",
-		tag: "latest",
-		tags: ["notes", "sync", "markdown"],
-		websiteUrl: "https://joplinapp.org",
-	},
-	{
-		category: "productivity",
-		containerPort: 3000,
-		description:
-			"Wiki platform with a setup wizard on first visit (choose SQLite there for a zero-config start).",
-		envVars: {},
-		icon: "wikijs.svg",
-		id: "builtin-wikijs",
-		image: "requarks/wiki",
-		sourceUrl: "https://github.com/requarks/wiki",
-		name: "Wiki.js",
-		tag: "latest",
-		tags: ["wiki", "docs", "knowledge-base"],
-		websiteUrl: "https://js.wiki",
-	},
-	{
-		category: "productivity",
-		containerPort: 80,
-		description: "Collaborative whiteboarding tool.",
-		envVars: {},
-		icon: "excalidraw.svg",
-		id: "builtin-excalidraw",
-		image: "excalidraw/excalidraw",
-		sourceUrl: "https://github.com/excalidraw/excalidraw",
-		name: "Excalidraw",
-		tag: "latest",
-		tags: ["diagrams", "whiteboard", "drawing"],
-		websiteUrl: "https://excalidraw.com",
-	},
-	{
-		category: "productivity",
-		containerPort: 9001,
-		description: "Real-time collaborative document/notepad editor.",
-		envVars: {},
-		icon: "etherpad.svg",
-		id: "builtin-etherpad",
-		image: "etherpad/etherpad",
-		sourceUrl: "https://github.com/ether/etherpad-lite",
-		name: "Etherpad",
-		tag: "latest",
-		tags: ["documents", "collaboration", "writing"],
-		websiteUrl: "https://etherpad.org",
-	},
-	{
-		category: "productivity",
-		containerPort: 3456,
-		description: "Self-hosted to-do list and project management app.",
-		envVars: {},
-		icon: "vikunja.svg",
-		id: "builtin-vikunja",
-		image: "vikunja/vikunja",
-		sourceUrl: "https://github.com/go-vikunja/vikunja",
-		name: "Vikunja",
-		tag: "latest",
-		tags: ["tasks", "todo", "kanban", "project-management"],
-		websiteUrl: "https://vikunja.io",
-	},
-	{
-		category: "finance",
-		containerPort: 5006,
-		description: "Local-first personal budgeting app (YNAB-alike).",
-		envVars: {},
-		icon: "actual-budget.svg",
-		id: "builtin-actual-budget",
-		image: "actualbudget/actual-server",
-		sourceUrl: "https://github.com/actualbudget/actual",
-		name: "Actual Budget",
-		tag: "latest",
-		tags: ["budget", "finance", "money", "accounting"],
-		websiteUrl: "https://actualbudget.org",
-	},
-];
+export const BUILTIN_TEMPLATE_CATEGORIES: readonly TemplateCategory[] =
+	TEMPLATE_CATEGORIES.map((c) => c.value);
 
-export const BUILTIN_TEMPLATE_LINKS: BuiltinTemplateLink[] = [
-	{
-		alias: "db",
-		id: "builtin-link-wordpress-mysql",
-		linkedTemplateId: "builtin-mysql",
-		templateId: "builtin-wordpress",
-	},
-	{
-		alias: "db",
-		id: "builtin-link-umami-postgres",
-		linkedTemplateId: "builtin-postgres",
-		templateId: "builtin-umami",
-	},
-	{
-		alias: "db",
-		id: "builtin-link-miniflux-postgres",
-		linkedTemplateId: "builtin-postgres",
-		templateId: "builtin-miniflux",
-	},
-	{
-		alias: "redis",
-		id: "builtin-link-paperless-redis",
-		linkedTemplateId: "builtin-redis",
-		templateId: "builtin-paperless-ngx",
-	},
-	{
-		alias: "db",
-		id: "builtin-link-aiostreams-postgres",
-		linkedTemplateId: "builtin-postgres",
-		templateId: "builtin-aiostreams",
-	},
-	{
-		alias: "db",
-		id: "builtin-link-aiometadata-postgres",
-		linkedTemplateId: "builtin-postgres",
-		templateId: "builtin-aiometadata",
-	},
-	{
-		alias: "redis",
-		id: "builtin-link-aiometadata-redis",
-		linkedTemplateId: "builtin-redis",
-		templateId: "builtin-aiometadata",
-	},
-	{
-		alias: "db",
-		id: "builtin-link-stremthru-postgres",
-		linkedTemplateId: "builtin-postgres",
-		templateId: "builtin-stremthru",
-	},
-	{
-		alias: "db",
-		id: "builtin-link-comet-postgres",
-		linkedTemplateId: "builtin-postgres",
-		templateId: "builtin-comet",
-	},
-];
+const argv = z.array(z.string()).nullable();
+
+export const builtinTemplateFileSchema = z
+	.strictObject({
+		$schema: z.string().optional(),
+		capAdd: z.array(z.string()).optional(),
+		command: argv.optional(),
+		containerPort: z.number().int().min(1).max(65_535),
+		description: z.string().min(1),
+		devices: z.array(z.string()).optional(),
+		entrypoint: argv.optional(),
+		envFiles: z.array(z.string()).optional(),
+		envVars: z.record(z.string(), z.string()),
+		healthcheckCommand: z.string().optional(),
+		icon: z
+			.string()
+			.describe(
+				"File name under static/template-icons/, or an empty string for the category's generic icon.",
+			),
+		image: z.string().min(1),
+		labels: z.record(z.string(), z.string()).optional(),
+		links: z
+			.array(
+				z.strictObject({
+					alias: z
+						.string()
+						.regex(/^[a-z0-9_-]+$/)
+						.describe(
+							"Name the env vars use to reference the linked service: {{alias}}, {{alias.VAR}}.",
+						),
+					template: z
+						.string()
+						.describe(
+							"File name (without .json) of the linked template, which must have no links itself.",
+						),
+				}),
+			)
+			.optional(),
+		name: z.string().min(1).max(100),
+		privileged: z.boolean().optional(),
+		sourceUrl: z.url().nullable(),
+		tag: z.string().min(1),
+		tags: z.array(z.string().min(1).max(30)).min(1).max(12),
+		websiteUrl: z.url().nullable(),
+	})
+	.describe(
+		"A Homerun built-in template: templates/<category>/<slug>.json, where the folder is its category.",
+	);
+
+/** Splits a `templates/<category>/<slug>.json` path into its category and slug. */
+function locate(path: string): { category: string; slug: string } {
+	const [slug = "", category = ""] = path.split("/").reverse();
+	return { category, slug: slug.replace(/\.json$/, "") };
+}
+
+/**
+ * Validates every `templates/<category>/<slug>.json` file and turns them into
+ * the rows the seeder writes: the folder is the category, each template's id
+ * is `builtin-<slug>`, each link's id is
+ * `builtin-link-<slug>-<alias>`.
+ *
+ * @param files Parsed JSON contents keyed by file path.
+ * @throws Error naming the file and field when a template is invalid, sits in
+ *   a folder that isn't a known category, reuses another folder's slug, a link
+ *   points at a missing template or at one that has links of its own, or a
+ *   template reuses an alias.
+ */
+export function parseBuiltinTemplates(files: Record<string, unknown>): {
+	links: BuiltinTemplateLink[];
+	templates: BuiltinTemplate[];
+} {
+	const parsed = new Map<
+		string,
+		z.infer<typeof builtinTemplateFileSchema> & { category: string }
+	>();
+	const categories: readonly string[] = BUILTIN_TEMPLATE_CATEGORIES;
+	for (const [path, content] of Object.entries(files)) {
+		const { category, slug } = locate(path);
+		if (!categories.includes(category)) {
+			throw new Error(
+				`Template ${path} is in "${category}/", which isn't a category (${categories.join(", ")}).`,
+			);
+		}
+		if (parsed.has(slug)) {
+			throw new Error(
+				`Template ${path} reuses the slug "${slug}" : file names must be unique across every category folder.`,
+			);
+		}
+		const result = builtinTemplateFileSchema.safeParse(content);
+		if (!result.success) {
+			throw new Error(
+				`Invalid template ${path}: ${z.prettifyError(result.error)}`,
+			);
+		}
+		parsed.set(slug, { ...result.data, category });
+	}
+
+	const templates: BuiltinTemplate[] = [];
+	const links: BuiltinTemplateLink[] = [];
+	for (const [slug, file] of parsed) {
+		const { $schema: _schema, links: fileLinks = [], ...template } = file;
+		templates.push({ ...template, id: `builtin-${slug}` });
+		const aliases = new Set<string>();
+		for (const link of fileLinks) {
+			const target = parsed.get(link.template);
+			if (!target) {
+				throw new Error(
+					`Template ${slug} links to "${link.template}", which has no templates/<category>/${link.template}.json.`,
+				);
+			}
+			if (target.links?.length) {
+				throw new Error(
+					`Template ${slug} links to "${link.template}", which has links of its own : only leaf templates can be linked.`,
+				);
+			}
+			if (aliases.has(link.alias)) {
+				throw new Error(
+					`Template ${slug} uses the alias "${link.alias}" twice.`,
+				);
+			}
+			aliases.add(link.alias);
+			links.push({
+				alias: link.alias,
+				id: `builtin-link-${slug}-${link.alias}`,
+				linkedTemplateId: `builtin-${link.template}`,
+				templateId: `builtin-${slug}`,
+			});
+		}
+	}
+	return { links, templates };
+}

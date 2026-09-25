@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "Nuvio Web",
+	"description": "Unofficial web client for Nuvio : watch from your Nuvio library in the browser. NUVIO_ADMIN_EMAILS unlocks /admin; set NUVIO_SESSION_SECRET (openssl rand -hex 32) or everyone is signed out on each redeploy.",
+	"image": "orochibraru/nuvio-web",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "nuvio.png",
+	"tags": ["stremio", "nuvio", "streaming", "player", "media"],
+	"websiteUrl": "https://nuvio.orochibraru.com",
+	"sourceUrl": "https://github.com/orochibraru/nuvio-web",
+	"envVars": {
+		"NUVIO_ADMIN_EMAILS": "you@example.com",
+		"NUVIO_SESSION_SECRET": "change-me-to-64-hex-characters"
+	}
+}

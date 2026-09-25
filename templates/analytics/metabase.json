@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Metabase",
+	"description": "BI/dashboards over your own data sources. Runs standalone with an embedded database.",
+	"image": "metabase/metabase",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "metabase.svg",
+	"tags": ["analytics", "bi", "dashboards", "sql"],
+	"websiteUrl": "https://www.metabase.com",
+	"sourceUrl": "https://github.com/metabase/metabase",
+	"envVars": {}
+}

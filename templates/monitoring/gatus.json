@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Gatus",
+	"description": "Lightweight uptime/status monitoring dashboard.",
+	"image": "ghcr.io/twin/gatus",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "gatus.svg",
+	"tags": ["uptime", "status", "health", "monitoring"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/TwiN/gatus",
+	"envVars": {}
+}

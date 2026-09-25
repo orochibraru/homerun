@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Homarr",
+	"description": "Customizable start page with app/service widgets.",
+	"image": "ghcr.io/homarr-labs/homarr",
+	"tag": "latest",
+	"containerPort": 7575,
+	"icon": "homarr.svg",
+	"tags": ["dashboard", "start-page", "bookmarks", "widgets"],
+	"websiteUrl": "https://homarr.dev",
+	"sourceUrl": "https://github.com/homarr-labs/homarr",
+	"envVars": {}
+}

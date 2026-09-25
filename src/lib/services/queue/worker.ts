@@ -54,7 +54,10 @@ class JobWorkerClass extends BaseScheduler {
 
 	/** Runs `#requeueOrphans` at most once per process lifetime, caching the in-flight promise so concurrent ticks don't requeue twice. */
 	async #recoverOrphans(): Promise<void> {
-		this.#orphanCheck ??= this.#requeueOrphans();
+		this.#orphanCheck ??= this.#requeueOrphans().catch((error: unknown) => {
+			this.#orphanCheck = null;
+			throw error;
+		});
 		await this.#orphanCheck;
 	}
 

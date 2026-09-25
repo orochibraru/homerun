@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Valkey",
+	"description": "Linux Foundation fork of Redis from before its licence change, BSD-licensed and wire-compatible : a drop-in for anything that speaks Redis. Unauthenticated by default.",
+	"image": "valkey/valkey",
+	"tag": "8-alpine",
+	"containerPort": 6379,
+	"icon": "",
+	"tags": ["cache", "key-value", "redis", "queue", "foss"],
+	"websiteUrl": "https://valkey.io",
+	"sourceUrl": "https://github.com/valkey-io/valkey",
+	"envVars": {}
+}

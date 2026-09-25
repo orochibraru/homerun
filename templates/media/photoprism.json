@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "PhotoPrism",
+	"description": "AI-powered photo management. Ships with an embedded SQLite database for small libraries.",
+	"image": "photoprism/photoprism",
+	"tag": "latest",
+	"containerPort": 2342,
+	"icon": "photoprism.svg",
+	"tags": ["photos", "gallery", "images", "ai"],
+	"websiteUrl": "https://www.photoprism.app",
+	"sourceUrl": "https://github.com/photoprism/photoprism",
+	"envVars": {}
+}

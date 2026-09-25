@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "KeyDB",
+	"description": "Multi-threaded Redis fork (BSD) with active replication. Wire-compatible with Redis clients. Unauthenticated by default.",
+	"image": "eqalpha/keydb",
+	"tag": "latest",
+	"containerPort": 6379,
+	"icon": "",
+	"tags": ["cache", "key-value", "redis", "foss"],
+	"websiteUrl": "https://docs.keydb.dev",
+	"sourceUrl": "https://github.com/Snapchat/KeyDB",
+	"envVars": {}
+}

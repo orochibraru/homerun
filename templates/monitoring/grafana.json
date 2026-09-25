@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Grafana",
+	"description": "Dashboards and visualization for metrics.",
+	"image": "grafana/grafana",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "grafana.svg",
+	"tags": ["dashboards", "metrics", "observability", "charts"],
+	"websiteUrl": "https://grafana.com",
+	"sourceUrl": "https://github.com/grafana/grafana",
+	"envVars": {}
+}

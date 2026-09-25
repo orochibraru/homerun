@@ -1,0 +1,23 @@
+{
+	"$schema": "../schema.json",
+	"name": "StremThru",
+	"description": "Stremio companion: debrid store proxy, addon wrapping, lists and torrent/usenet indexing. STREMTHRU_AUTH is user:password pairs, comma separated.",
+	"image": "muniftanjim/stremthru",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "",
+	"tags": ["stremio", "debrid", "proxy", "addon", "torrent"],
+	"websiteUrl": "https://docs.stremthru.13377001.xyz",
+	"sourceUrl": "https://github.com/MunifTanjim/stremthru",
+	"envVars": {
+		"STREMTHRU_AUTH": "admin:change-me",
+		"STREMTHRU_BASE_URL": "https://stremthru.example.com",
+		"STREMTHRU_DATABASE_URI": "postgresql://{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}"
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		}
+	]
+}

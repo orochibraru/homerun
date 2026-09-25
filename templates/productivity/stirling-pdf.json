@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Stirling PDF",
+	"description": "Self-hosted PDF manipulation toolkit.",
+	"image": "stirlingtools/stirling-pdf",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "stirling-pdf.svg",
+	"tags": ["pdf", "documents", "tools", "convert"],
+	"websiteUrl": "https://stirlingpdf.com",
+	"sourceUrl": "https://github.com/Stirling-Tools/Stirling-PDF",
+	"envVars": {}
+}

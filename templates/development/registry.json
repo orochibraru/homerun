@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Docker Registry",
+	"description": "The Docker registry itself : somewhere to push your own images, including as a build cache for git-based services.",
+	"image": "registry",
+	"tag": "2",
+	"containerPort": 5000,
+	"icon": "docker.svg",
+	"tags": ["registry", "docker", "images", "cache"],
+	"websiteUrl": "https://distribution.github.io/distribution",
+	"sourceUrl": "https://github.com/distribution/distribution",
+	"envVars": {}
+}

@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Wiki.js",
+	"description": "Wiki platform with a setup wizard on first visit (choose SQLite there for a zero-config start).",
+	"image": "requarks/wiki",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "wikijs.svg",
+	"tags": ["wiki", "docs", "knowledge-base"],
+	"websiteUrl": "https://js.wiki",
+	"sourceUrl": "https://github.com/requarks/wiki",
+	"envVars": {}
+}

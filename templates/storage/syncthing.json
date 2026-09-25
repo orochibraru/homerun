@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Syncthing",
+	"description": "Continuous, peer-to-peer file synchronization.",
+	"image": "syncthing/syncthing",
+	"tag": "latest",
+	"containerPort": 8384,
+	"icon": "syncthing.svg",
+	"tags": ["sync", "files", "backup", "p2p"],
+	"websiteUrl": "https://syncthing.net",
+	"sourceUrl": "https://github.com/syncthing/syncthing",
+	"envVars": {}
+}

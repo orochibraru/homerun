@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Portainer",
+	"description": "Web UI for managing this and other Docker hosts.",
+	"image": "portainer/portainer-ce",
+	"tag": "latest",
+	"containerPort": 9000,
+	"icon": "portainer.svg",
+	"tags": ["docker", "containers", "admin", "gui"],
+	"websiteUrl": "https://www.portainer.io",
+	"sourceUrl": "https://github.com/portainer/portainer",
+	"envVars": {}
+}

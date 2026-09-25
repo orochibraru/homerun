@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Audiobookshelf",
+	"description": "Self-hosted audiobook and podcast server.",
+	"image": "advplyr/audiobookshelf",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "audiobookshelf.svg",
+	"tags": ["audiobooks", "podcasts", "audio"],
+	"websiteUrl": "https://www.audiobookshelf.org",
+	"sourceUrl": "https://github.com/advplyr/audiobookshelf",
+	"envVars": {}
+}

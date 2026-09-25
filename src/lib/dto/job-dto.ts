@@ -4,6 +4,7 @@ import {
 	count,
 	desc,
 	eq,
+	exists,
 	inArray,
 	isNull,
 	lt,
@@ -321,7 +322,9 @@ export class JobDTO extends BaseDTO<Job> {
 	 * Recovers jobs a previous app process died in the middle of: a running job
 	 * with no stage or still in `prepare` goes back to the queue, one caught
 	 * mid-`finalizing` goes back to `finalize`. Jobs in `execute` are left
-	 * alone, the Go worker's lease owns them.
+	 * alone, the Go worker's lease owns them. An orphan whose dedupe key is
+	 * already taken by a queued job, or by a newer orphan, is cancelled instead
+	 * of requeued, since two queued twins violate the queued dedupe index.
 	 *
 	 * @returns How many jobs were requeued.
 	 */
@@ -330,15 +333,48 @@ export class JobDTO extends BaseDTO<Job> {
 			.update(job)
 			.set({ stage: "finalize" })
 			.where(and(eq(job.status, "running"), eq(job.stage, "finalizing")));
+		const orphaned = and(
+			eq(job.status, "running"),
+			or(isNull(job.stage), eq(job.stage, "prepare")),
+		);
+		const twin = alias(job, "twin");
+		await db
+			.update(job)
+			.set({
+				...CLEARED_STAGE,
+				error: "Superseded by a newer job for the same target.",
+				finishedAt: new Date(),
+				status: "cancelled",
+			})
+			.where(
+				and(
+					orphaned,
+					exists(
+						db
+							.select({ id: twin.id })
+							.from(twin)
+							.where(
+								and(
+									eq(twin.type, job.type),
+									eq(twin.dedupeKey, job.dedupeKey),
+									ne(twin.id, job.id),
+									or(
+										eq(twin.status, "queued"),
+										and(
+											eq(twin.status, "running"),
+											or(isNull(twin.stage), eq(twin.stage, "prepare")),
+											sql`${twin.createdAt} > ${job.createdAt}`,
+										),
+									),
+								),
+							),
+					),
+				),
+			);
 		const rows = await db
 			.update(job)
 			.set({ ...CLEARED_STAGE, startedAt: null, status: "queued" })
-			.where(
-				and(
-					eq(job.status, "running"),
-					or(isNull(job.stage), eq(job.stage, "prepare")),
-				),
-			)
+			.where(orphaned)
 			.returning({ id: job.id });
 		return rows.length;
 	}

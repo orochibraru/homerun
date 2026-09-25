@@ -100,10 +100,34 @@ describe("parseComposeFile", () => {
 		expect(api?.restartPolicy).toBe("unless-stopped");
 	});
 
-	test("warns about what it can't reproduce", () => {
-		expect(web?.warnings.some((w) => w.includes("Host port mappings"))).toBe(
-			true,
-		);
+	test("routes the main port through Traefik rather than publishing it", () => {
+		expect(web?.publishedPorts).toEqual([]);
+		expect(api?.publishedPorts).toEqual([]);
+	});
+
+	test("publishes every other host mapping, UDP and long form included", () => {
+		const gitea = parseComposeFile(`
+services:
+  gitea:
+    image: gitea/gitea
+    ports:
+      - "3000:3000"
+      - "2222:22"
+      - "127.0.0.1:2222:22"
+  vpn:
+    image: kylemanna/openvpn
+    ports:
+      - target: 1194
+        published: 1194
+        protocol: udp
+      - "7000-7010:7000-7010"
+`).services;
+		expect(gitea.find((s) => s.key === "gitea")?.publishedPorts).toEqual([
+			{ containerPort: 22, hostPort: 2222, protocol: "tcp" },
+		]);
+		expect(gitea.find((s) => s.key === "vpn")?.publishedPorts).toEqual([
+			{ containerPort: 1194, hostPort: 1194, protocol: "udp" },
+		]);
 	});
 
 	test("maps the command instead of warning about it", () => {

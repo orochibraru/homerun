@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Excalidraw",
+	"description": "Collaborative whiteboarding tool.",
+	"image": "excalidraw/excalidraw",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "excalidraw.svg",
+	"tags": ["diagrams", "whiteboard", "drawing"],
+	"websiteUrl": "https://excalidraw.com",
+	"sourceUrl": "https://github.com/excalidraw/excalidraw",
+	"envVars": {}
+}

@@ -1,0 +1,15 @@
+{
+	"$schema": "../schema.json",
+	"name": "Home Assistant",
+	"description": "Home automation hub. Device discovery on the local network needs host networking, which this deploy doesn't use : integrations reached over IP still work.",
+	"image": "ghcr.io/home-assistant/home-assistant",
+	"tag": "stable",
+	"containerPort": 8123,
+	"icon": "home-assistant.svg",
+	"tags": ["home", "automation", "iot", "smart-home"],
+	"websiteUrl": "https://www.home-assistant.io",
+	"sourceUrl": "https://github.com/home-assistant/core",
+	"envVars": {
+		"TZ": "UTC"
+	}
+}

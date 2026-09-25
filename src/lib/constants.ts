@@ -3,17 +3,23 @@ export const UNGROUPED_LABEL = "Ungrouped";
 import {
 	Activity,
 	Ban,
+	BookOpen,
 	Box,
 	ChartBar,
 	CheckCircle,
 	Clock,
 	Database,
 	Ghost,
+	HardDrive,
 	LayoutDashboard,
 	Loader2,
+	MessagesSquare,
 	Network,
+	Newspaper,
 	NotebookPen,
 	Play,
+	ShieldCheck,
+	Sparkles,
 	Terminal,
 	Wallet,
 	Workflow,
@@ -112,9 +118,12 @@ export const SERVICE_STATUS_CONFIG: Record<
 };
 
 export const TEMPLATE_CATEGORY_ICONS: Record<string, typeof Database> = {
+	ai: Sparkles,
 	analytics: ChartBar,
 	automation: Workflow,
 	cache: Database,
+	cms: Newspaper,
+	communication: MessagesSquare,
 	dashboard: LayoutDashboard,
 	database: Database,
 	development: Terminal,
@@ -123,12 +132,19 @@ export const TEMPLATE_CATEGORY_ICONS: Record<string, typeof Database> = {
 	monitoring: Activity,
 	network: Network,
 	productivity: NotebookPen,
+	reading: BookOpen,
+	security: ShieldCheck,
+	storage: HardDrive,
 };
 
 export const TEMPLATE_CATEGORY_COLORS: Record<
 	string,
 	{ bg: string; text: string }
 > = {
+	ai: {
+		bg: "bg-purple-500/10",
+		text: "text-purple-600 dark:text-purple-400",
+	},
 	analytics: {
 		bg: "bg-fuchsia-500/10",
 		text: "text-fuchsia-600 dark:text-fuchsia-400",
@@ -138,6 +154,11 @@ export const TEMPLATE_CATEGORY_COLORS: Record<
 		text: "text-violet-600 dark:text-violet-400",
 	},
 	cache: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400" },
+	cms: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400" },
+	communication: {
+		bg: "bg-blue-500/10",
+		text: "text-blue-600 dark:text-blue-400",
+	},
 	dashboard: {
 		bg: "bg-amber-500/10",
 		text: "text-amber-600 dark:text-amber-400",
@@ -160,6 +181,15 @@ export const TEMPLATE_CATEGORY_COLORS: Record<
 	productivity: {
 		bg: "bg-indigo-500/10",
 		text: "text-indigo-600 dark:text-indigo-400",
+	},
+	reading: {
+		bg: "bg-yellow-500/10",
+		text: "text-yellow-600 dark:text-yellow-400",
+	},
+	security: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400" },
+	storage: {
+		bg: "bg-orange-500/10",
+		text: "text-orange-600 dark:text-orange-400",
 	},
 };
 

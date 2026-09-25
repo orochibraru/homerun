@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Adminer",
+	"description": "Lightweight database admin UI (works with Postgres/MySQL/etc).",
+	"image": "adminer",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "adminer.svg",
+	"tags": ["sql", "database", "admin", "gui"],
+	"websiteUrl": "https://www.adminer.org",
+	"sourceUrl": "https://github.com/vrana/adminer",
+	"envVars": {}
+}

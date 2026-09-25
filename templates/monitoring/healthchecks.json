@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Healthchecks",
+	"description": "Cron job and scheduled task monitoring.",
+	"image": "healthchecks/healthchecks",
+	"tag": "latest",
+	"containerPort": 8000,
+	"icon": "healthchecks.svg",
+	"tags": ["cron", "monitoring", "alerts", "heartbeat"],
+	"websiteUrl": "https://healthchecks.io",
+	"sourceUrl": "https://github.com/healthchecks/healthchecks",
+	"envVars": {}
+}

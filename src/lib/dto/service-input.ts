@@ -1,4 +1,5 @@
 import type { BuildMethod } from "$lib/build-methods";
+import type { PublishedPort } from "$lib/published-ports";
 import type { Service } from "$lib/server/db/schema";
 import type { runtimeOptionsFrom } from "$lib/service-runtime";
 import type { PullPolicy } from "$lib/types";
@@ -35,6 +36,7 @@ export interface NewServiceInput {
 	name: string;
 	networkMode?: "bridge" | "host";
 	portProtocol?: "tcp" | "udp" | "both";
+	publishedPorts?: PublishedPort[];
 	stackId?: string | null;
 	registryPasswordEnc?: string | null;
 	registryUrl?: string | null;
@@ -103,6 +105,8 @@ export type ServiceUpdateInput = Partial<
 		| "name"
 		| "networkMode"
 		| "portProtocol"
+		| "domainPorts"
+		| "publishedPorts"
 		| "stackId"
 		| "pullPolicy"
 		| "registryPasswordEnc"

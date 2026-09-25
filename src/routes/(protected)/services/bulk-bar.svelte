@@ -5,12 +5,12 @@
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import type { ListSelection } from "$lib/list-selection.svelte";
-	import { enhanceToast } from "$lib/toast";
 	import {
 		plural,
 		SERVICE_ACTION_LABELS,
 		type ServiceAction,
-	} from "./service-actions";
+	} from "$lib/service-actions";
+	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		selection: ListSelection;

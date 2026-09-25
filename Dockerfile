@@ -15,6 +15,24 @@ RUN VERSION="$(sed -n 's/^[[:space:]]*"version": "\(.*\)",*$/\1/p' package.json)
     -ldflags "-s -w -X github.com/orochibraru/homerun/internal/buildinfo.Version=${VERSION}" \
     -o /out/homerun-worker ./cmd/worker
 
+FROM go-builder AS cli-builder
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG HOMERUN_VERSION=""
+RUN VERSION="${HOMERUN_VERSION:-$(sed -n 's/^[[:space:]]*"version": "\(.*\)",*$/\1/p' package.json)}"; \
+    CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath \
+    -ldflags "-s -w -X github.com/orochibraru/homerun/internal/buildinfo.Version=${VERSION}" \
+    -o /out/homerun ./cmd/cli
+
+FROM alpine:3 AS cli
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=cli-builder /out/homerun /usr/local/bin/homerun
+
+CMD ["homerun", "--help"]
+
 FROM oven/bun:1.4.2-alpine AS deps-base
 
 ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1

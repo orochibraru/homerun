@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "FlareSolverr",
+	"description": "Solves Cloudflare challenges for scrapers. Point AIOStreams, Comet or Prowlarr at http://<this service's slug>:8191 on the same network; it doesn't need a public route.",
+	"image": "ghcr.io/flaresolverr/flaresolverr",
+	"tag": "latest",
+	"containerPort": 8191,
+	"icon": "",
+	"tags": ["cloudflare", "scraping", "proxy", "stremio"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/FlareSolverr/FlareSolverr",
+	"envVars": {
+		"LOG_LEVEL": "info",
+		"TZ": "UTC"
+	}
+}

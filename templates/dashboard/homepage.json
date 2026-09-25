@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "Homepage",
+	"description": "Static, fast, YAML-configured start page for your services.",
+	"image": "ghcr.io/gethomepage/homepage",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "homepage.svg",
+	"tags": ["dashboard", "start-page", "bookmarks", "widgets"],
+	"websiteUrl": "https://gethomepage.dev",
+	"sourceUrl": "https://github.com/gethomepage/homepage",
+	"envVars": {}
+}
