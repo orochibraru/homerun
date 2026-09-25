@@ -203,7 +203,7 @@
     </header>
 
     <!-- Page content -->
-    <main class="flex-1 overflow-y-auto">
+    <main class="relative flex-1 overflow-y-auto">
       <ErrorBoundary class="p-5 md:p-6">
         {@render children()}
       </ErrorBoundary>
