@@ -85,7 +85,10 @@
         onStart: () => {
           submittingAuth = true;
         },
-        success: "Access rules saved.",
+        success: (data) =>
+          (data as { redeploying?: boolean } | undefined)?.redeploying
+            ? "Access rules saved. Redeploying so the login wall change reaches Traefik."
+            : "Access rules saved.",
       })}
     >
       {#if authError}

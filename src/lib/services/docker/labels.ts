@@ -47,11 +47,12 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
  * `dnsResolvable`) one Traefik router per routed hostname (the default
  * `<slug>.<baseDomain>` unless it was turned off, then each of `domains`), each
  * pointing at a Traefik service for its port (`<slug>` for `containerPort`,
- * `<slug>-<port>` for a domain `domainPorts` sends elsewhere), and the login
- * wall's forwardAuth middleware on
- * every router. The middleware is attached whether or not the wall is on:
- * auth-check lets requests through for a service whose wall is off, so
- * toggling it applies without a redeploy. A retry middleware follows it, so a
+ * `<slug>-<port>` for a domain `domainPorts` sends elsewhere), and, only when
+ * `authRequired`, the login wall's forwardAuth middleware on every router: an
+ * ungated service never calls back into Homerun, so it costs the dashboard
+ * nothing per request and keeps serving while Homerun is down. Turning the
+ * wall on or off therefore needs a redeploy, which saving it queues. A retry
+ * middleware follows, so a
  * request that reaches a container or swarm task that just went away during a
  * rollout is sent to another one; Traefik only retries when no request bytes
  * reached the backend. With `httpCacheTtl` set and the instance's HTTP cache
@@ -60,6 +61,7 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
  * another.
  */
 export function buildContainerLabels(params: {
+	authRequired?: boolean;
 	containerPort: number;
 	defaultDomainEnabled?: boolean;
 	domainPorts?: Record<string, number>;
@@ -102,24 +104,30 @@ export function buildContainerLabels(params: {
 	const retryMiddleware = `${slug}-retry`;
 	const cacheMiddleware = `${slug}-cache`;
 	const cached = Boolean(params.httpCacheTtl && config.traefik.httpCache);
-	const middlewares = [authMiddleware, retryMiddleware]
-		.concat(cached ? [cacheMiddleware] : [])
-		.join(",");
+	const gated = params.authRequired === true;
+	const middlewares = [
+		...(gated ? [authMiddleware] : []),
+		retryMiddleware,
+		...(cached ? [cacheMiddleware] : []),
+	].join(",");
 	const labels: Record<string, string> = {
 		...baseLabels,
 		"traefik.docker.network": networkName,
 		"traefik.enable": "true",
 		[`traefik.http.services.${slug}.loadbalancer.server.port`]:
 			String(containerPort),
-		[`traefik.http.middlewares.${authMiddleware}.forwardauth.address`]:
-			authCheckUrlFor(serviceId),
-		[`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`]:
-			GATE_IDENTITY_HEADERS.join(","),
 		[`traefik.http.middlewares.${retryMiddleware}.retry.attempts`]:
 			String(RETRY_ATTEMPTS),
 		[`traefik.http.middlewares.${retryMiddleware}.retry.initialinterval`]:
 			RETRY_INITIAL_INTERVAL,
 	};
+	if (gated) {
+		labels[`traefik.http.middlewares.${authMiddleware}.forwardauth.address`] =
+			authCheckUrlFor(serviceId);
+		labels[
+			`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`
+		] = GATE_IDENTITY_HEADERS.join(",");
+	}
 	if (cached) {
 		const souin = `traefik.http.middlewares.${cacheMiddleware}.plugin.souin`;
 		labels[`${souin}.default_cache.ttl`] = `${params.httpCacheTtl}s`;

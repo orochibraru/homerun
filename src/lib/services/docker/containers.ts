@@ -131,6 +131,7 @@ export interface CreateContainerParams {
 	// <slug>.<baseDomain>, subnet-only reachability. Defaults to true.
 	dnsResolvable?: boolean;
 	domainPorts?: Record<string, number>;
+	authRequired?: boolean;
 	httpCacheTtl?: number | null;
 	domains?: string[];
 	envVars: Record<string, string>;
@@ -245,6 +246,7 @@ export function containerCreateTemplate(params: CreateContainerParams) {
 		Labels: mergeLabels(
 			params.runtime?.labels,
 			buildContainerLabels({
+				authRequired: params.authRequired,
 				containerPort: params.containerPort,
 				defaultDomainEnabled: params.defaultDomainEnabled,
 				dnsResolvable: isHostNetwork ? false : params.dnsResolvable,

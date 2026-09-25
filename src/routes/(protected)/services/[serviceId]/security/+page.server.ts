@@ -12,6 +12,7 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { invalidateGatedService } from "$lib/server/gated-service-cache";
+import { DeploymentService } from "$lib/services/deploy.service";
 import { ImageScanService } from "$lib/services/image-scan.service";
 import { UserService } from "$lib/services/user.service";
 
@@ -136,6 +137,7 @@ export const actions = {
 			});
 		}
 
+		const wasRequired = svc.authRequired;
 		await svc.update({
 			authAllowedEmails: allowedEmails,
 			authAllowedGroups: allowedGroups,
@@ -144,12 +146,17 @@ export const actions = {
 			authRequired,
 		});
 		invalidateGatedService(svc.id);
+		const redeploying = await DeploymentService.redeployIfLoginWallChanged(
+			svc,
+			wasRequired,
+			locals.user.id,
+		);
 
 		accessLogger.info(
 			`App access updated: service=${svc.id} authRequired=${authRequired} methods=${
 				methods.join("|") || "none"
 			} user=${locals.user.id}`,
 		);
-		return { authSuccess: true };
+		return { authSuccess: true, redeploying };
 	},
 };

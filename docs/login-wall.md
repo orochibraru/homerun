@@ -43,12 +43,12 @@ allowed method. Filling any of them narrows access to whoever matches at least
 one entry in that list. Changing any of this takes effect immediately, including
 for people already signed in to that app.
 
-**Turning the wall on or off applies immediately**, without a redeploy. Every
-publicly routed service carries the forwardAuth middleware whether its wall is
-on or not, and Homerun simply lets requests through for a service whose wall is
-off. Two consequences: a service deployed before this behaviour existed needs
-one redeploy to pick up the middleware, and while Homerun itself is down,
-Traefik refuses requests to every routed app, not just the gated ones.
+**Turning the wall on or off redeploys the service**, which Homerun starts for
+you when you save (on swarm that's a rolling update, so the app stays up). Only
+a service with its wall on sends each request to Homerun for a check: a public
+service is served by Traefik directly, costs Homerun nothing per request, and
+keeps working while Homerun itself is down. Changing who's allowed, with the
+wall already on, still applies immediately.
 
 The app itself receives the signed-in identity as `X-Homerun-User`,
 `X-Homerun-Email` and `X-Homerun-Name` request headers, which an app that

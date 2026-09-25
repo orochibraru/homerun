@@ -14,8 +14,9 @@ const { cachedGateAccess, forgetGateAccess, GATE_RECHECK_MS } = await import(
 );
 
 describe("login wall middleware labels", () => {
-	test("every routed service gets the forwardAuth middleware, wall on or off", () => {
+	test("only a service behind the login wall gets the forwardAuth middleware", () => {
 		const labels = buildContainerLabels({
+			authRequired: true,
 			containerPort: 80,
 			domains: ["app.example.org"],
 			serviceId: "svc-1",
@@ -29,6 +30,19 @@ describe("login wall middleware labels", () => {
 		);
 		expect(labels["traefik.http.routers.app-1.middlewares"]).toBe(
 			"app-auth,app-retry",
+		);
+	});
+
+	test("a public service never calls back into Homerun", () => {
+		const labels = buildContainerLabels({
+			containerPort: 80,
+			domains: ["app.example.org"],
+			serviceId: "svc-1",
+			slug: "app",
+		});
+		expect(labels["traefik.http.routers.app.middlewares"]).toBe("app-retry");
+		expect(Object.keys(labels).some((key) => key.includes("forwardauth"))).toBe(
+			false,
 		);
 	});
 

@@ -6,6 +6,7 @@ import { invalidateGatedService } from "$lib/server/gated-service-cache";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateServiceApiBody } from "$lib/server/validation/api";
 import { normalizeDomains } from "$lib/service-domains";
+import { DeploymentService } from "$lib/services/deploy.service";
 import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { DockerService } from "$lib/services/docker.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
@@ -79,6 +80,7 @@ export const PATCH = async ({ params, request, locals }) => {
 		gitWebhookId: svc.gitWebhookId,
 		previewsEnabled: svc.toJSON().previewsEnabled,
 	};
+	const wasRequired = svc.authRequired;
 	await svc.update({
 		...rest,
 		...(registryPassword
@@ -90,6 +92,11 @@ export const PATCH = async ({ params, request, locals }) => {
 		await PreviewService.removeAll(svc);
 	}
 	invalidateGatedService(svc.id);
+	await DeploymentService.redeployIfLoginWallChanged(
+		svc,
+		wasRequired,
+		locals.user.id,
+	);
 
 	logger.info(
 		`Service updated via API: service=${svc.id} user=${locals.user.id}`,

@@ -539,16 +539,19 @@ var** — it previously read only `homerun.yaml`/`instance_settings`, even thoug
 all set `ORIGIN`, and `auth.ts` warned based on `process.env.ORIGIN` while
 `config.auth.origin` never read it.
 
-**Turning the wall on or off applies live.** `buildContainerLabels` attaches the
-forwardAuth middleware to every publicly routed service, wall on or off, and
-auth-check answers `200` straight away for a service whose `authRequired` is
-false (the same early return `pangolinOwnsAuth` uses). Saving on the Networking
-tab or `PATCH /api/v1/services/:id` calls `invalidateGatedService()` so the 10s
-service cache doesn't delay it. The cost, accepted on purpose: every routed app
-now depends on the dashboard answering auth-check, so Traefik refuses all of
-them while Homerun is down, and each request to an ungated app costs one cached
-service lookup. Services deployed before this change need one redeploy to get
-the middleware.
+**Turning the wall on or off redeploys; the policy applies live.**
+`buildContainerLabels` attaches the forwardAuth middleware only when
+`authRequired` is on. It used to be on every publicly routed router so toggling
+applied without a redeploy, and that was reverted on purpose: every request to
+every public app then cost a round trip to Homerun (auth-check was most of the
+dashboard's traffic), and an auth layer that failed to build took down every
+site, gated or not. Now saving a change of `authRequired` (Security tab, or
+`PATCH /api/v1/services/:id`) calls
+`DeploymentService.redeployIfLoginWallChanged`, which queues a redeploy for a
+deployed, running service so the new labels reach Traefik. Policy changes with
+the wall already on still apply immediately: `invalidateGatedService()` drops
+the 10s service cache. auth-check keeps its early `200` for an ungated service,
+for a router still carrying the middleware from an older deploy.
 
 **The policy columns** on `service` (all jsonb, all `[]` by default):
 `authProviders` (allowed sign-in methods, `"password"` for built-in credentials

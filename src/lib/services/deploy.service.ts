@@ -14,6 +14,7 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import type { TrivySummary } from "$lib/image-scan";
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
 import { snapshotRevisionConfig } from "$lib/revision-config";
+import { isDeployed } from "$lib/service-state";
 import { syncAutoDns } from "./deploy/helpers.ts";
 import {
 	type BuildServer,
@@ -498,6 +499,31 @@ class DeploymentServiceClass {
 	/** Re-arms health watches for every deployment still mid-watch after a restart, same rollback wiring as `watchHealth`. */
 	resumeHealthWatches(): Promise<void> {
 		return RevisionHealthService.resume((input) => this.enqueueDeploy(input));
+	}
+
+	/**
+	 * Queues a redeploy when a service's login wall was turned on or off: the
+	 * forwardAuth middleware is part of its routing labels, attached only while
+	 * the wall is on, so the change only reaches Traefik with new labels. A
+	 * service that was never deployed, or is stopped, picks it up on its next
+	 * deploy instead.
+	 *
+	 * @returns Whether a redeploy was queued.
+	 */
+	async redeployIfLoginWallChanged(
+		svc: ServiceDTO,
+		wasRequired: boolean,
+		userId: string,
+	): Promise<boolean> {
+		if (
+			svc.authRequired === wasRequired ||
+			!isDeployed(svc) ||
+			svc.toJSON().desiredState === "stopped"
+		) {
+			return false;
+		}
+		await this.enqueueDeploy({ svc, trigger: "manual", userId });
+		return true;
 	}
 
 	/**

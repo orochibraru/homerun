@@ -41,6 +41,7 @@ describe("per-domain container ports", () => {
 describe("response cache middleware", () => {
 	const build = (httpCacheTtl: number | null) =>
 		buildContainerLabels({
+			authRequired: true,
 			containerPort: 80,
 			domains: ["app.example.org"],
 			httpCacheTtl,

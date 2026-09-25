@@ -132,6 +132,7 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 		Labels: mergeLabels(
 			params.runtime?.labels,
 			buildContainerLabels({
+				authRequired: params.authRequired,
 				containerPort: params.containerPort,
 				defaultDomainEnabled: params.defaultDomainEnabled,
 				dnsResolvable:
@@ -232,6 +233,7 @@ export interface CreateSwarmServiceParams {
 	defaultDomainEnabled?: boolean;
 	dnsResolvable?: boolean;
 	domainPorts?: Record<string, number>;
+	authRequired?: boolean;
 	httpCacheTtl?: number | null;
 	domains?: string[];
 	envVars: Record<string, string>;
