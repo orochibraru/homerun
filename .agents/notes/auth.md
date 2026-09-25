@@ -863,24 +863,51 @@ available (a deleted provider, passkey on the wrong host) simply doesn't apply,
 `lookup` still falls back to the `"password"`/`"sso"` step it would pick anyway,
 so the page can never render with no way in.
 
+## MCP server (`$lib/server/mcp-server.ts`, `/api/v1/mcp`, `/.well-known/*`)
+
+AI agents manage Homerun through a streamable-HTTP MCP endpoint at
+`/api/v1/mcp`. Its tools don't touch DTOs: each one calls the REST API through
+SvelteKit's `event.fetch` with the caller's own `authorization`/`cookie`/
+`x-api-key` headers, so permissions, read-only enforcement and validation are
+the REST routes' and nothing is duplicated. `/api/v1/mcp` is on the read-only
+allowlist (`permissions.ts`) because MCP sends every read as a POST; the inner
+REST calls still refuse a read-only caller's writes.
+
+Auth: `hooks.server.ts` treats a Bearer credential shaped like a JWT as an MCP
+access token (`verifyMcpAccessToken` in `auth.ts`: `jose` against the `jwks`
+table, issuer `oidcIssuer`, audience `mcpResource`, `typ: at+jwt`) and anything
+else as an API key. Real, tested finding: better-auth's own `auth.api.verifyJWT`
+can't be used, it always enforces an audience of the base URL, which no access
+token has. An anonymous call gets a 401 with
+`WWW-Authenticate: Bearer resource_metadata=".../.well-known/oauth-protected-resource/api/v1/mcp"`.
+Clients register themselves: `cimd()` for Client ID Metadata Documents plus open
+dynamic registration, since claude.ai still uses the latter; a registered client
+still needs a user to sign in and consent. MCP clients look for discovery at the
+site root, not under the auth base path, so `src/routes/.well-known/[...path]`
+hands every root `/.well-known/*` request to `auth.handler`, whose `mcp()`
+plugin answers the protected-resource and authorization-server documents.
+`tests/integration/mcp.test.ts` walks the whole claude.ai flow: register, sign
+in, authorize, consent, token, tool call.
+
 ## Homerun as an OIDC provider (`@better-auth/oauth-provider`, `$lib/oidc-provider.ts`, `/authentication/apps`, `/auth/consent`)
 
 `oidcProviderPlugins()` in `auth.ts` adds better-auth's `jwt` plugin (RS256 key
 pairs in the `jwks` table, since plenty of apps' OIDC libraries reject the EdDSA
-default) and `oauthProvider` (`loginPage: "/auth/sign-in"`,
-`consentPage: "/auth/consent"`, scopes
-`openid profile email offline_access groups`, claims from `oidcClaimsFor`:
-`groups` is `[user.role]`, `preferred_username` the email's local part).
-`@better-auth/oauth-provider` is pinned to the installed better-auth version
-(1.7.1); the two move together. Issuer is `<config.auth.origin>/api/v1/auth`,
-discovery at `/api/v1/auth/.well-known/openid-configuration`, which
-`svelteKitHandler` already forwards. **The plugins are only added when
-`config.auth.origin` is set**: `baseURL` is deliberately unset (see the
-`buildAuth` comment), and the provider's `init()` builds
-`new URL(issuer ?? baseURL)`, which throws on an empty base; `rebuildAuth()`
-adds them once settings supply the origin. `sveltekitCookies` must stay the
-**last** plugin, better-auth warns otherwise and the provider's after-hooks set
-cookies.
+default) and `mcp` from `@better-auth/mcp`, which is `oauthProvider` bound to
+the MCP endpoint as a protected resource and can't be registered next to a plain
+`oauthProvider` (`loginPage: "/auth/sign-in"`, `consentPage: "/auth/consent"`,
+scopes `openid profile email offline_access groups`, claims from
+`oidcClaimsFor`: `groups` is `[user.role]`, `preferred_username` the email's
+local part). `@better-auth/oauth-provider` is pinned to the installed
+better-auth version (1.7.1); the two move together. Issuer is
+`<config.auth.origin>/api/v1/auth`, discovery at
+`/api/v1/auth/.well-known/openid-configuration`, which `svelteKitHandler`
+already forwards. **The plugins are only added when `config.auth.origin` is
+set**: `baseURL` is deliberately unset (see the `buildAuth` comment), and the
+provider's `init()` builds `new URL(issuer ?? baseURL)`, which throws on an
+empty base; `rebuildAuth()` adds them once settings supply the origin.
+`sveltekitCookies` must stay the **last** plugin, better-auth warns otherwise
+and the provider's after-hooks set cookies.
 
 **Tables** (`jwks`, `oauth_client`, `oauth_access_token`, `oauth_refresh_token`,
 `oauth_consent`, `oauth_client_assertion`, plus the unused `oauth_resource` /

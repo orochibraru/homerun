@@ -211,11 +211,11 @@ installer). Put it (and anything else you want to override, `POSTGRES_PASSWORD`,
 `--docker=rootless` install). Set `ORIGIN` (or `HOMERUN_HOST`) there if the
 instance moves to another address after install. Getting it wrong is not
 cosmetic, real, reported finding: better-auth's trusted origins are derived from
-`ORIGIN` alone, so a stale one makes every sign-in and the first sign-up
-403 with "Invalid origin" from the address you are actually using, and absolute
-URLs this app constructs (e.g. the CLI login flow's own approval link) point at
-the wrong host too. See `ComposeFile`'s doc comment in `fullstack.go`. Base
-domain is seeded from the same answer, and is still editable afterward in
+`ORIGIN` alone, so a stale one makes every sign-in and the first sign-up 403
+with "Invalid origin" from the address you are actually using, and absolute URLs
+this app constructs (e.g. the CLI login flow's own approval link) point at the
+wrong host too. See `ComposeFile`'s doc comment in `fullstack.go`. Base domain
+is seeded from the same answer, and is still editable afterward in
 `homerun.yaml` next to `compose.yaml`, or on `/settings`.
 
 ## Joining a host to a swarm (`swarm-join.sh`)

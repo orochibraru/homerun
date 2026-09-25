@@ -1,6 +1,8 @@
 import process from "node:process";
 import { apiKey } from "@better-auth/api-key";
-import { oauthProvider } from "@better-auth/oauth-provider";
+import { cimd } from "@better-auth/cimd";
+import { fetchClientMetadataResource } from "@better-auth/cimd/node";
+import { mcp } from "@better-auth/mcp";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -15,12 +17,14 @@ import {
 } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { inArray } from "drizzle-orm";
+import { createLocalJWKSet, type JWK, jwtVerify } from "jose";
 import { building, dev } from "$app/environment";
 import { getRequestEvent } from "$app/server";
 import { resolveAdvertisedTokenAuth } from "$lib/auth-providers";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
 import {
+	mcpResource,
 	OIDC_CLAIMS,
 	OIDC_SCOPES,
 	type OidcUser,
@@ -79,8 +83,11 @@ function tokenAuthOptions(provider: {
  * The plugins that make Homerun an OpenID Connect provider for the apps it
  * hosts: `jwt` signs id tokens (RS256, since plenty of apps' OIDC libraries
  * don't accept EdDSA) with keys kept in the `jwks` table, and
- * `oauthProvider` serves authorize/token/userinfo/discovery under the auth
- * base path. Empty until the dashboard's origin is known, because the issuer
+ * `mcp` (better-auth's OAuth provider bound to the MCP endpoint as a protected
+ * resource) serves authorize/token/userinfo/discovery under the auth base
+ * path. MCP clients like claude.ai register themselves, through a Client ID
+ * Metadata Document (`cimd`) or open dynamic registration: a registered client
+ * still needs a Homerun user to sign in and consent before it gets a token. Empty until the dashboard's origin is known, because the issuer
  * has to be an absolute URL and `baseURL` is deliberately left unset (see
  * buildAuth); `rebuildAuth()` adds them once instance settings supply it.
  */
@@ -93,7 +100,7 @@ function oidcProviderPlugins(origin: string | undefined) {
 			jwks: { keyPairConfig: { alg: "RS256", modulusLength: 2048 } },
 			jwt: { issuer: oidcIssuer(origin) },
 		}),
-		oauthProvider({
+		mcp({
 			advertisedMetadata: {
 				claims_supported: [...OIDC_CLAIMS],
 				scopes_supported: [...OIDC_SCOPES],
@@ -104,9 +111,13 @@ function oidcProviderPlugins(origin: string | undefined) {
 				oidcClaimsFor(user as OidcUser, scopes),
 			customUserInfoClaims: ({ user, scopes }) =>
 				oidcClaimsFor(user as OidcUser, scopes),
+			allowDynamicClientRegistration: true,
+			allowUnauthenticatedClientRegistration: true,
 			loginPage: "/auth/sign-in",
+			resource: mcpResource(origin),
 			scopes: [...OIDC_SCOPES],
 		}),
+		cimd({ fetchClientMetadataResource, metadataProfile: "mcp-2026-07-28" }),
 	];
 }
 
@@ -486,3 +497,43 @@ export async function pruneUndecryptableSigningKeys(): Promise<void> {
 }
 
 export type AuthType = typeof auth.$Infer.Session;
+
+/**
+ * The user id an MCP access token was issued to, or null when it doesn't
+ * verify: signed with one of Homerun's own keys, issued by Homerun, typed as
+ * an access token and bound to the MCP endpoint. An id token, or a token
+ * minted for an app using "Sign in with Homerun", has another audience and is
+ * refused.
+ */
+export async function verifyMcpAccessToken(
+	token: string,
+): Promise<string | null> {
+	const origin = config.auth.origin;
+	if (!origin) {
+		return null;
+	}
+	const rows = await db
+		.select({
+			alg: schema.jwks.alg,
+			id: schema.jwks.id,
+			publicKey: schema.jwks.publicKey,
+		})
+		.from(schema.jwks);
+	const keys = createLocalJWKSet({
+		keys: rows.map((row) => ({
+			...(JSON.parse(row.publicKey) as JWK),
+			alg: row.alg ?? "RS256",
+			kid: row.id,
+		})),
+	});
+	try {
+		const { payload } = await jwtVerify(token, keys, {
+			audience: mcpResource(origin),
+			issuer: oidcIssuer(origin),
+			typ: "at+jwt",
+		});
+		return payload.sub ?? null;
+	} catch {
+		return null;
+	}
+}

@@ -26,6 +26,13 @@ export interface OidcUser {
 	role?: string | null;
 }
 
+export const MCP_PATH = "/api/v1/mcp";
+
+/** The MCP endpoint's URL, which is also the audience its access tokens are bound to. */
+export function mcpResource(origin: string): string {
+	return `${origin.replace(/\/+$/, "")}${MCP_PATH}`;
+}
+
 /** The issuer Homerun signs tokens as, derived from the dashboard's origin. */
 export function oidcIssuer(origin: string): string {
 	return `${origin.replace(/\/+$/, "")}${OIDC_BASE_PATH}`;

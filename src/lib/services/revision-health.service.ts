@@ -8,17 +8,22 @@ import {
 	type HealthVerdict,
 	healthVerdict,
 	previousRevision,
+	type ReadinessSample,
 	revisionRoot,
 	type WorkloadHealthSample,
+	withReadiness,
 } from "$lib/revisions";
 import type { Deployment } from "$lib/server/db/schema";
 import { DockerService } from "./docker.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { revisionHealthMessage } from "./notification-messages.ts";
+import { UptimeProbe } from "./uptime/uptime-probe.ts";
 
 const logger = new Logger("RevisionHealth");
 
 const POLL_MS = 5000;
+
+const readinessProbe = new UptimeProbe();
 
 const registry = globalThis as unknown as {
 	__homerun_revision_watches?: Set<string>;
@@ -119,6 +124,20 @@ class RevisionHealthServiceClass {
 	}
 
 	/**
+	 * The service's own HTTP answer on its container port, the uptime probe's
+	 * internal check, or null when that check isn't HTTP (a database's TCP
+	 * connect, or its own Docker healthcheck, which the health sample already
+	 * covers) or couldn't run.
+	 */
+	async #readiness(svc: ServiceDTO): Promise<ReadinessSample | null> {
+		const result = await readinessProbe.probeInternal(svc).catch(() => null);
+		if (!result?.target?.startsWith("http://")) {
+			return null;
+		}
+		return { detail: result.detail ?? "no answer", ok: result.ok };
+	}
+
+	/**
 	 * Whether the watched deployment is still the service's latest deployment,
 	 * running the same workload (container/swarm service), and not desired
 	 * stopped. Returns the service when so, so the caller doesn't have to
@@ -146,8 +165,9 @@ class RevisionHealthServiceClass {
 
 	/**
 	 * The watch loop itself: polls the workload's health every `POLL_MS`
-	 * against a baseline sample until `healthVerdict` returns healthy or
-	 * unhealthy (or the deployment stops being current, in which case its
+	 * against a baseline sample until `healthVerdict`, then `withReadiness`
+	 * (the service has to answer its own HTTP port without a 5xx), return
+	 * healthy or unhealthy (or the deployment stops being current, in which case its
 	 * `health` is cleared and the watch just exits). Records the healthy
 	 * outcome, or hands off to `#unhealthy` for the failure path. Every
 	 * outcome is written through `settleHealth`, so a watch whose deployment
@@ -179,12 +199,17 @@ class RevisionHealthServiceClass {
 			}
 			// oxlint-disable-next-line no-await-in-loop -- the health window is sampled one tick at a time
 			const sample = await this.#sample(workload, startedAt);
-			verdict = healthVerdict(
-				baseline,
-				sample,
-				Date.now() - startedAt.getTime(),
-				HEALTH_WINDOW,
-			);
+			const elapsedMs = Date.now() - startedAt.getTime();
+			verdict = healthVerdict(baseline, sample, elapsedMs, HEALTH_WINDOW);
+			if (verdict.verdict === "healthy") {
+				verdict = withReadiness(
+					verdict,
+					// oxlint-disable-next-line no-await-in-loop -- the health window is sampled one tick at a time
+					await this.#readiness(current),
+					elapsedMs,
+					HEALTH_WINDOW,
+				);
+			}
 		}
 		if (verdict.verdict === "healthy") {
 			if (!(await dep.settleHealth("healthy"))) {

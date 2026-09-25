@@ -22,6 +22,7 @@ import {
 	auth,
 	pruneUndecryptableSigningKeys,
 	rebuildAuth,
+	verifyMcpAccessToken,
 } from "$lib/services/auth";
 import { detectAuthCheckUrl } from "$lib/services/cron/core-services-watch";
 import { CronService } from "$lib/services/cron.service";
@@ -313,6 +314,40 @@ function isAuthCheckPath(url: URL): boolean {
 	return url.pathname === "/api/v1/auth-check";
 }
 
+/** Whether a bearer credential is a JWT rather than an opaque API key. */
+function isJwt(token: string): boolean {
+	return token.split(".").length === 3;
+}
+
+/**
+ * Signs the request in with an OAuth access token an MCP client (claude.ai,
+ * Claude Code…) got from Homerun: a JWT signed with Homerun's own keys whose
+ * audience is the MCP endpoint, so an id token or a token minted for an app
+ * using "Sign in with Homerun" is refused. Returns a 401 when it doesn't
+ * verify.
+ */
+async function applyMcpTokenAuth(
+	event: RequestEvent,
+	token: string,
+): Promise<Response | null> {
+	const userId = await verifyMcpAccessToken(token);
+	if (!userId) {
+		logger.warn("Invalid MCP access token");
+		return new Response(JSON.stringify({ error: "Unauthorized" }), {
+			status: 401,
+		});
+	}
+	const [tokenUser] = await appDb
+		.select()
+		.from(userTable)
+		.where(eq(userTable.id, userId))
+		.limit(1);
+	if (tokenUser) {
+		event.locals.user = tokenUser;
+	}
+	return null;
+}
+
 /**
  * API-key fallback for a request with no cookie session : populates
  * `locals.user` on success, and returns a 401 response when a key was sent
@@ -322,6 +357,10 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 	const rawKey = readApiKey(event);
 	if (!rawKey) {
 		return null;
+	}
+
+	if (isJwt(rawKey)) {
+		return await applyMcpTokenAuth(event, rawKey);
 	}
 
 	const result = await auth.api

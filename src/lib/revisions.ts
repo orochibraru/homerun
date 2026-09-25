@@ -382,6 +382,36 @@ function swarmVerdict(
 			};
 }
 
+export interface ReadinessSample {
+	detail: string;
+	ok: boolean;
+}
+
+/**
+ * Holds back a healthy container verdict while the service's own HTTP answer
+ * says it isn't ready: a container with no healthcheck that stays up but
+ * answers every request with a 5xx (an app stuck waiting on its cache) is
+ * running, not healthy. It stays pending up to the window's `maxWaitMs`,
+ * then turns unhealthy with the answer as the reason. A null `readiness`
+ * (a database, or a service with its own healthcheck) changes nothing.
+ */
+export function withReadiness(
+	verdict: HealthVerdict,
+	readiness: ReadinessSample | null,
+	elapsedMs: number,
+	window: HealthWindow = HEALTH_WINDOW,
+): HealthVerdict {
+	if (verdict.verdict !== "healthy" || !readiness || readiness.ok) {
+		return verdict;
+	}
+	return elapsedMs < window.maxWaitMs
+		? { verdict: "pending" }
+		: {
+				reason: `It never became ready: ${readiness.detail} on its own port.`,
+				verdict: "unhealthy",
+			};
+}
+
 /**
  * Decides whether a freshly deployed workload is healthy, unhealthy (with a
  * reason, which triggers auto-rollback) or still pending, by comparing a sample

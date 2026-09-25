@@ -48,7 +48,12 @@ listed but may need their image pulled or rebuilt.
 longer while its healthcheck is still starting (up to 5 minutes). It's unhealthy
 when the container exits, restarts twice or more, or its Docker healthcheck
 (including the service's own healthcheck command) reports unhealthy, or for a
-swarm service when two tasks fail or not every replica is running. An unhealthy
+swarm service when two tasks fail or not every replica is running. A service
+with no healthcheck of its own also has to answer its container port over HTTP
+without a 5xx (a 401 or 404 still counts as an answer); one still answering
+errors after 5 minutes is unhealthy, so an app stuck waiting on its database or
+cache no longer passes as healthy just because its process is up. Databases are
+exempt, they're checked by their port accepting connections. An unhealthy
 revision is always marked on the Revisions tab and reported (**Revision
 unhealthy**), and the reason is kept on the revision, so
 `homerun services revisions <id>` shows it too. With **Auto-rollback when a new

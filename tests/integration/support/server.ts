@@ -46,6 +46,7 @@ export async function spawnApp(options: SpawnAppOptions): Promise<SpawnedApp> {
 			AUTH_SECRET: options.authSecret,
 			BASE_DOMAIN: options.baseDomain,
 			DATABASE_URL: options.databaseUrl,
+			HOMERUN_DISABLE_AUTH_RATE_LIMIT: "1",
 			ORIGIN: options.origin,
 			PORT: String(options.port),
 			WORKER_URL: options.workerUrl,

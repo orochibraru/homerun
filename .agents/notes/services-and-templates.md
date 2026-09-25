@@ -229,11 +229,16 @@ and asks `healthVerdict`. Unhealthy at once on an exit, 2+ restarts since the
 baseline, a missing container, Docker health `unhealthy`, or 2 failed swarm
 tasks created since the deploy; healthy once `HEALTH_WINDOW.windowMs` (90s)
 passed, extended while health is `starting` or replicas are missing up to
-`maxWaitMs` (5 min), after which it's unhealthy. The service's
-`healthcheckCommand` runs every 30s with a 30s start period and 3 retries, so a
-failing one turns unhealthy after about two minutes, inside that bound. On
-unhealthy, with `autoRollback` on, the revision not itself a rollback and a
-`previousRevision` found: `rolled_back`, a rollback deploy and
+`maxWaitMs` (5 min), after which it's unhealthy. A healthy verdict then goes
+through `withReadiness`: the uptime probe's `probeInternal` hits the service's
+container port, and when that check is HTTP (no Docker healthcheck, not a
+database image) a 5xx or refused connection keeps it pending, unhealthy at
+`maxWaitMs`. Real finding: AIOMetadata sat on "waiting for Redis" for an hour,
+answering 503 everywhere, and was marked healthy because its container never
+exited. The service's `healthcheckCommand` runs every 30s with a 30s start
+period and 3 retries, so a failing one turns unhealthy after about two minutes,
+inside that bound. On unhealthy, with `autoRollback` on, the revision not itself
+a rollback and a `previousRevision` found: `rolled_back`, a rollback deploy and
 `deploy.rolled_back`. Otherwise `unhealthy` and `deploy.unhealthy`, with the
 reason nothing was rolled back. The rollback enqueuer is passed in by
 `DeploymentService` rather than imported, since `RevisionService` imports

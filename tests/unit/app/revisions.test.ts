@@ -12,6 +12,7 @@ import {
 	supersededHealth,
 	swarmSampleFromTasks,
 	type WorkloadHealthSample,
+	withReadiness,
 } from "../../../src/lib/revisions";
 
 let clock = 0;
@@ -424,5 +425,32 @@ describe("swarmSampleFromTasks", () => {
 		);
 		expect(sample.failed).toBe(2);
 		expect(sample.lastError).toBe("mount still missing");
+	});
+});
+
+describe("withReadiness", () => {
+	const healthy = { verdict: "healthy" } as const;
+	const failing = { detail: "HTTP 503", ok: false };
+
+	test("a service still answering 5xx holds a healthy verdict back, then fails it", () => {
+		expect(withReadiness(healthy, failing, 100_000)).toEqual({
+			verdict: "pending",
+		});
+		expect(withReadiness(healthy, failing, HEALTH_WINDOW.maxWaitMs)).toEqual({
+			reason: "It never became ready: HTTP 503 on its own port.",
+			verdict: "unhealthy",
+		});
+	});
+
+	test("an answering service, a non-HTTP one, or any other verdict is left alone", () => {
+		expect(
+			withReadiness(healthy, { detail: "HTTP 401", ok: true }, 100_000),
+		).toEqual(healthy);
+		expect(withReadiness(healthy, null, 100_000)).toEqual(healthy);
+		const unhealthy = { reason: "exited", verdict: "unhealthy" } as const;
+		expect(withReadiness(unhealthy, failing, 100_000)).toEqual(unhealthy);
+		expect(withReadiness({ verdict: "pending" }, failing, 1)).toEqual({
+			verdict: "pending",
+		});
 	});
 });

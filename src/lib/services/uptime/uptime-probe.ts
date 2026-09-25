@@ -193,7 +193,7 @@ export class UptimeProbe extends BaseScheduler {
 		);
 
 		const probes = services.flatMap((svc) => [
-			this.#internal(svc),
+			this.probeInternal(svc),
 			this.#external(svc),
 		]);
 		const results = (await Promise.all(probes)).filter((r) => r !== null);
@@ -222,9 +222,10 @@ export class UptimeProbe extends BaseScheduler {
 	 * Probes a service from inside the Docker network: its own healthcheck if
 	 * it has one, else TCP or HTTP against its container address, or against
 	 * its overlay alias for a swarm service. A swarm service with no running
-	 * task on this node records a failure.
+	 * task on this node records a failure. The revision health watch calls it
+	 * too, to hold a deploy until the service actually answers.
 	 */
-	async #internal(svc: ServiceDTO): Promise<ProbeResult> {
+	async probeInternal(svc: ServiceDTO): Promise<ProbeResult> {
 		const containerId =
 			svc.containerId ||
 			(svc.swarmServiceId

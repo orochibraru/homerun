@@ -44,6 +44,7 @@ const SELF_SERVICE_PREFIXES = [
 	"/security-setup",
 	"/auth/",
 	"/app-auth",
+	"/api/v1/mcp",
 ];
 
 const SELF_SERVICE_REMOTE_COMMANDS = new Set([

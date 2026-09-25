@@ -120,6 +120,31 @@ from that page makes its own unauthenticated `fetch` calls (it doesn't share
 your dashboard session), so paste an API key there to actually exercise a
 request.
 
+## MCP server for AI agents
+
+Homerun serves an [MCP](https://modelcontextprotocol.io) server at
+`https://<your dashboard>/api/v1/mcp`, so an AI agent can diagnose and fix your
+services for you. It needs the dashboard to be reachable over HTTPS from
+wherever the agent runs.
+
+- **claude.ai** (and Claude Desktop, which uses the same connectors): Settings →
+  Connectors → Add custom connector, paste the URL. Claude sends you to
+  Homerun's sign-in page, Homerun asks you to allow it, and from then on it acts
+  as you.
+- **Claude Code**:
+  `claude mcp add --transport http homerun https://<your dashboard>/api/v1/mcp`,
+  then `/mcp` inside Claude Code to sign in the same way. For a headless setup,
+  pass an API key instead: `--header "x-api-key: <key>"`.
+
+It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
+`list_revisions`, `list_stacks`, `system_stats` and `instance_status`. It
+changes: `update_service`, `deploy_service`, `restart_service`, `start_service`,
+`stop_service` and `rollback_service`. Deleting a service is deliberately not a
+tool. Every tool goes through the REST API with your own permissions, so a
+read-only account or API key can diagnose but not change anything. To disconnect
+an agent, revoke it under Profile → Authorized Clients: it can't refresh its
+access any more, and the token it holds expires within the hour.
+
 ## CLI
 
 A CLI (`cmd/cli/`) against the API above. It's a small, standalone Go binary
@@ -268,24 +293,6 @@ and previous one marked and, for an unhealthy one, the reason, and
 `homerun services rollback <id> [revisionId]` redeploys a revision (the previous
 one when no id is given) and waits for it like `deploy`; `--restore-config` also
 restores that revision's env vars, resources and networking.
-
-### MCP server for AI agents
-
-`homerun mcp` serves an [MCP](https://modelcontextprotocol.io) server over
-stdio, so an AI agent (Claude Code, Claude Desktop, Cursor…) can diagnose and
-fix your services with the same login the CLI uses:
-
-```bash
-claude mcp add homerun -- homerun mcp
-```
-
-It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
-`list_revisions`, `list_stacks`, `system_stats` and `instance_status`. It
-changes: `update_service`, `deploy_service`, `restart_service`, `start_service`,
-`stop_service` and `rollback_service`. Deleting a service is deliberately not a
-tool. `homerun mcp --read-only` leaves out every tool that changes something,
-for an agent you only want diagnosing; a read-only API key enforces the same
-thing on the instance's side.
 
 ### Working on the CLI itself
 
