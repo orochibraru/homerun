@@ -1,21 +1,28 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { HOST_VOLUME_PREFIX } from "$lib/constants";
+import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import {
+	backupConfigError,
+	DEFAULT_BACKUP_SCHEDULE,
+} from "$lib/server/volume-backup-form";
 
 const logger = new Logger("Services");
 
 export const load = async ({ params, parent }) => {
 	await parent();
-	const [volumes, mounts] = await Promise.all([
+	const [volumes, mounts, destinations] = await Promise.all([
 		StorageVolumeDTO.list(),
 		ServiceVolumeDTO.listForService(params.serviceId),
+		S3DestinationDTO.list(),
 	]);
 
 	return {
+		destinations: destinations.map((d) => ({ id: d.id, name: d.name })),
 		mounts: mounts.map((m) => ({
 			...m.mount.toJSON(),
 			volumeKind: m.volumeKind,
@@ -26,6 +33,88 @@ export const load = async ({ params, parent }) => {
 };
 
 export const actions = {
+	toggleBackup: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const volume = await StorageVolumeDTO.get(String(formData.get("volumeId")));
+		if (!volume) {
+			return fail(404, { error: "Volume not found." });
+		}
+		const enabled = formData.get("enabled") === "on";
+		if (!enabled) {
+			await volume.update({ backupEnabled: false });
+			logger.info(
+				`Backups turned off: volume=${volume.id} user=${locals.user.id}`,
+			);
+			return { backupEnabled: false, success: true };
+		}
+		const destinations = await S3DestinationDTO.list();
+		const s3DestinationId =
+			volume.s3DestinationId ??
+			(destinations.length === 1 ? (destinations[0]?.id ?? null) : null);
+		if (!s3DestinationId) {
+			return fail(400, {
+				error: "Pick where the backups go first.",
+				needsSettings: volume.id,
+			});
+		}
+		const schedule = volume.backupSchedule ?? DEFAULT_BACKUP_SCHEDULE;
+		const configError = await backupConfigError({
+			enabled: true,
+			s3DestinationId,
+			schedule,
+		});
+		if (configError) {
+			return fail(400, { error: configError, needsSettings: volume.id });
+		}
+		await volume.update({
+			backupEnabled: true,
+			backupSchedule: schedule,
+			s3DestinationId,
+		});
+		logger.info(
+			`Backups turned on: volume=${volume.id} user=${locals.user.id}`,
+		);
+		return { backupEnabled: true, success: true };
+	},
+
+	configureBackup: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const volume = await StorageVolumeDTO.get(String(formData.get("volumeId")));
+		if (!volume) {
+			return fail(404, { error: "Volume not found." });
+		}
+		const backupSchedule =
+			String(formData.get("backupSchedule") ?? "").trim() || null;
+		const s3DestinationId =
+			String(formData.get("s3DestinationId") ?? "").trim() || null;
+		const backupPrefix =
+			String(formData.get("backupPrefix") ?? "").trim() || null;
+		const configError = await backupConfigError({
+			enabled: true,
+			s3DestinationId,
+			schedule: backupSchedule,
+		});
+		if (configError) {
+			return fail(400, { error: configError, needsSettings: volume.id });
+		}
+		await volume.update({
+			backupEnabled: true,
+			backupPrefix,
+			backupSchedule,
+			s3DestinationId,
+		});
+		logger.info(
+			`Backup config updated: volume=${volume.id} enabled=true user=${locals.user.id}`,
+		);
+		return { backupEnabled: true, success: true };
+	},
+
 	attachVolume: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

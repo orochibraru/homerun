@@ -9,6 +9,7 @@ extend-exclude = [
   "go.mod",
   "go.sum",
   "bun.lock",
+  "drizzle/",
 ]
 
 [default.extend-words]

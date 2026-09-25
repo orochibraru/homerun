@@ -58,13 +58,12 @@
 		return groups;
 	}
 
-	const mainNavGroups = $derived(
-		groupByCategory(allNavItems.filter((item) => !item.adminOnly)),
-	);
-	const adminNavGroups = $derived(
-		data.user?.role === "admin"
-			? groupByCategory(allNavItems.filter((item) => item.adminOnly))
-			: [],
+	const navItemGroups = $derived(
+		groupByCategory(
+			allNavItems.filter(
+				(item) => !item.adminOnly || data.user?.role === "admin",
+			),
+		),
 	);
 
 	function isActive(href: string, exact: boolean): boolean {
@@ -123,8 +122,7 @@
 
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto px-2 pb-3">
-      {@render navGroups(mainNavGroups)}
-      {@render navGroups(adminNavGroups)}
+      {@render navGroups(navItemGroups)}
     </nav>
     <AppVersion admin={data.user?.role === "admin"} />
   </aside>
@@ -146,10 +144,7 @@
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
       <nav class="flex-1 overflow-y-auto px-2.5 pt-3 pb-4">
-        {@render navGroups(mainNavGroups, () => {
-          sidebarOpen = false;
-        })}
-        {@render navGroups(adminNavGroups, () => {
+        {@render navGroups(navItemGroups, () => {
           sidebarOpen = false;
         })}
       </nav>

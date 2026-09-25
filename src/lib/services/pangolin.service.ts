@@ -111,6 +111,24 @@ class PangolinServiceClass {
 		});
 	}
 
+	/**
+	 * The base domains registered to the configured org, sorted, or null when
+	 * Pangolin isn't the DNS provider.
+	 *
+	 * @throws PangolinApiError when Pangolin refuses the call.
+	 */
+	async listDomainNames(): Promise<string[] | null> {
+		const settings = await InstanceSettingsDTO.get();
+		const token = settings.decryptPangolinApiToken();
+		const baseUrl = settings.pangolinApiBaseUrl;
+		const orgId = settings.pangolinOrgId;
+		if (!(settings.pangolinConfigured && token && baseUrl && orgId)) {
+			return null;
+		}
+		const domains = await this.listDomains(baseUrl, token, orgId);
+		return domains.map((domain) => domain.baseDomain).sort();
+	}
+
 	/** Lists every resource in the org, following pagination. */
 	private listResources(
 		baseUrl: string,

@@ -145,7 +145,9 @@
             <span class="text-text-muted">
               {check.kind === "internal" ? "not answering on the network" : "hostname not responding"}
             </span>
-            <span class="text-text-subtle ml-auto truncate">{check.detail ?? ""}</span>
+            <span class="text-text-subtle ml-auto truncate">
+              {check.detail ?? ""}{check.target ? ` (${check.target})` : ""}
+            </span>
           </a>
         {/each}
       </div>

@@ -4,13 +4,15 @@ import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
-import { parseVolumeBackupGuard } from "$lib/server/volume-backup-form";
+import {
+	backupConfigError,
+	parseVolumeBackupGuard,
+} from "$lib/server/volume-backup-form";
 import { VolumeServices } from "$lib/services/backup/volume-services";
 import {
 	enqueueVolumeBackup,
 	enqueueVolumeRestore,
 } from "$lib/services/backup-queue";
-import { CronService } from "$lib/services/cron.service";
 
 const logger = new Logger("Storage");
 
@@ -94,17 +96,13 @@ export const actions = {
 		const backupPrefix =
 			(formData.get("backupPrefix") as string | null)?.trim() || null;
 
-		if (backupEnabled && !CronService.parseCronSchedule(backupSchedule ?? "")) {
-			return fail(400, {
-				error:
-					'Invalid schedule : use standard 5-field cron syntax (e.g. "0 3 * * *").',
-			});
-		}
-		if (backupEnabled && !s3DestinationId) {
-			return fail(400, { error: "Pick an S3 destination." });
-		}
-		if (s3DestinationId && !(await S3DestinationDTO.get(s3DestinationId))) {
-			return fail(400, { error: "That S3 destination wasn't found." });
+		const configError = await backupConfigError({
+			enabled: backupEnabled,
+			s3DestinationId,
+			schedule: backupSchedule,
+		});
+		if (configError) {
+			return fail(400, { error: configError });
 		}
 
 		const guard = await parseVolumeBackupGuard(formData, volume);

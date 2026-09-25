@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	cronMatches,
+	nextCronRun,
 	parseCronSchedule,
 	sameMinute,
 } from "../../../src/lib/services/cron/cron-expression";
@@ -115,5 +116,33 @@ describe("sameMinute", () => {
 		expect(
 			sameMinute(at("2026-09-06T13:37:00"), at("2025-09-06T13:37:00")),
 		).toBe(false);
+	});
+});
+
+describe("nextCronRun", () => {
+	const at = (y: number, mo: number, d: number, h: number, mi: number) =>
+		new Date(y, mo - 1, d, h, mi);
+
+	test("finds the next minute the schedule is due, strictly after now", () => {
+		expect(nextCronRun("0 3 * * *", at(2026, 9, 25, 2, 59))).toEqual(
+			at(2026, 9, 25, 3, 0),
+		);
+		expect(nextCronRun("0 3 * * *", at(2026, 9, 25, 3, 0))).toEqual(
+			at(2026, 9, 26, 3, 0),
+		);
+		expect(nextCronRun("30 22 * * 1", at(2026, 9, 25, 12, 0))).toEqual(
+			at(2026, 9, 28, 22, 30),
+		);
+		expect(nextCronRun("*/15 * * * *", at(2026, 9, 25, 12, 7))).toEqual(
+			at(2026, 9, 25, 12, 15),
+		);
+	});
+
+	test("handles the leap day and gives up on impossible dates", () => {
+		expect(nextCronRun("0 0 29 2 *", at(2026, 9, 25, 0, 0))).toEqual(
+			at(2028, 2, 29, 0, 0),
+		);
+		expect(nextCronRun("0 0 30 2 *", at(2026, 9, 25, 0, 0))).toBeNull();
+		expect(nextCronRun("nonsense", at(2026, 9, 25, 0, 0))).toBeNull();
 	});
 });

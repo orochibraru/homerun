@@ -9,17 +9,27 @@ than in this one.
 ## DNS automation: Cloudflare and Pangolin (`src/lib/services/cloudflare.service.ts`, `src/lib/services/pangolin.service.ts`)
 
 The DNS-provider automation gap this doc used to list under Planned features is
-closed: two independent, optional integrations, configured on `/settings`, both
-DB-backed on `instance_settings`, both unset by default (inert until
-configured), and both can be turned on simultaneously (they run independently).
-Both are instance singletons that re-read `InstanceSettingsDTO` on every call
-rather than caching, the admin can change credentials mid-session and syncs are
-infrequent (once per deploy), same reasoning as `GitProviderService`. Both fire
-from the same spot, `deploy.service.ts`'s `syncAutoDns`, right after a
-successful **local** deploy with `dnsResolvable` set, for **every** hostname the
-service answers on (`serviceHostnames()` in `$lib/service-domains.ts`: the
-default `<slug>.<baseDomain>` hostname while it's still routed, plus each of
-`domains`, which used not to be synced at all). Neither can fail the deploy.
+closed: two optional integrations, configured on the admin-only `/dns` page
+(Integrations in the sidebar), DB-backed on `instance_settings`, both unset by
+default. **Only one runs at a time**: `instance_settings.dns_provider` picks it,
+and `cloudflareConfigured`/`pangolinConfigured` are true only for the chosen
+provider, so every consumer (DNS fan-out, Newt, Pangolin's TLS and sign-in
+handling) follows the choice without knowing about it. The other provider's
+credentials stay stored (`cloudflareCredentialsSet`/`pangolinCredentialsSet`)
+but inert. Saving a provider's settings with none chosen makes it the provider,
+which is how onboarding's Pangolin step keeps working. Migration 0060 backfills
+the choice from whatever was configured, Pangolin first. The page also lists the
+active provider's domains (`CloudflareService.listZoneNames`,
+`PangolinService.listDomainNames`), streamed from `load` so a slow API never
+holds the page. Both are instance singletons that re-read `InstanceSettingsDTO`
+on every call rather than caching, the admin can change credentials mid-session
+and syncs are infrequent (once per deploy), same reasoning as
+`GitProviderService`. Both fire from the same spot, `deploy.service.ts`'s
+`syncAutoDns`, right after a successful **local** deploy with `dnsResolvable`
+set, for **every** hostname the service answers on (`serviceHostnames()` in
+`$lib/service-domains.ts`: the default `<slug>.<baseDomain>` hostname while it's
+still routed, plus each of `domains`, which used not to be synced at all).
+Neither can fail the deploy.
 
 **They are no longer fire-and-forget, and that was the whole bug behind
 "Pangolin is configured and nothing gets created".** Both `syncDnsRecord`s
@@ -94,10 +104,10 @@ unreachable as a missing one. Access control for a deployed service belongs to
 this app's own per-service login wall (see `auth.md`), not to a second,
 invisible gate at the edge — **unless the admin says otherwise**:
 `instance_settings.pangolinOwnsAuth` ("Let Pangolin handle sign-in", the
-Pangolin card on `/settings/networking`, default off) flips it, creating
-Resources with `sso: true` and making `api/v1/auth-check` answer 200 for every
-gated service, so Pangolin's own login is the only one a visitor sees instead of
-two in a row. That endpoint runs on every proxied request, so it reads
+Pangolin card on `/dns`, default off) flips it, creating Resources with
+`sso: true` and making `api/v1/auth-check` answer 200 for every gated service,
+so Pangolin's own login is the only one a visitor sees instead of two in a row.
+That endpoint runs on every proxied request, so it reads
 `config.pangolinOwnsAuth` rather than querying the DTO; `toConfigOverride()`
 only reports it true when Pangolin is actually configured.
 `instance_settings.pangolinTargetHost` (same card) is the address a created
@@ -209,7 +219,7 @@ after page one fails the test.
 
 Both integrations can also be switched on from the onboarding wizard's DNS step
 (see `auth.md`'s Onboarding section). Its form parsing and Test connection
-checks are the same functions Settings → Networking uses,
+checks are the same functions the DNS page uses,
 `$lib/server/validation/dns-settings-form.ts` (`cloudflareInputFromForm`,
 `pangolinInputFromForm`, `testCloudflareFromForm`, `testPangolinFromForm`), so
 the two surfaces can't drift. The wizard tests Pangolin against the base domain

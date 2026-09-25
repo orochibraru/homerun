@@ -15,13 +15,13 @@ for people who'd rather manage settings as code.
 
 `/settings` is one page per tab, all admin-only:
 
-| Tab            | What's on it                                                                                                                                                                                                                      |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **General**    | Base domain, Use HTTPS, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                                                                                                   |
-| **Docker**     | Docker socket path, the shared network name, [image scanning](image-scanning.md) and its block policy, orchestration mode ([swarm](swarm-mode.md) or standalone)                                                                  |
-| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, the [HTTP cache](networking.md#response-cache), and [DNS automation](dns-automation.md) (Cloudflare, Pangolin, and whether Pangolin handles sign-in) |
-| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved                                                                                  |
-| **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Migrating from Dokploy or Coolify](migrating-from-dokploy-or-coolify.md)                                                                          |
+| Tab            | What's on it                                                                                                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **General**    | Base domain, Use HTTPS, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                                                                                                       |
+| **Docker**     | Docker socket path, the shared network name, [image scanning](image-scanning.md) and its block policy, orchestration mode ([swarm](swarm-mode.md) or standalone)                                                                      |
+| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and the [HTTP cache](networking.md#response-cache). [DNS automation](dns-automation.md) (Cloudflare or Pangolin) has its own DNS page under Integrations |
+| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved                                                                                      |
+| **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Migrating from Dokploy or Coolify](migrating-from-dokploy-or-coolify.md)                                                                              |
 
 **Use HTTPS** sets the scheme of the Dashboard URL derived from the base domain,
 and the helper text under it shows the resulting origin.
@@ -179,11 +179,11 @@ Settings → Docker.
 Signing in for the first time drops you into a six-step wizard (Core / Docker /
 Traefik / Email / DNS / Review) that sets exactly the fields above, once. The
 DNS step turns on Cloudflare or Pangolin automation with the same fields and
-**Test** checks as Settings → Networking, including the optional Newt
-credentials that have Homerun run the tunnel client itself; Pangolin's target
-host, target port and sign-in option keep their defaults there. It calls the
-same code `/settings` does, so there's nothing it can set that you can't change
-afterwards, and nothing it leaves out that you have to go find in a file.
+**Test** checks as the DNS page, including the optional Newt credentials that
+have Homerun run the tunnel client itself; Pangolin's target host, target port
+and sign-in option keep their defaults there. It calls the same code `/settings`
+does, so there's nothing it can set that you can't change afterwards, and
+nothing it leaves out that you have to go find in a file.
 
 ## A note on lockout
 

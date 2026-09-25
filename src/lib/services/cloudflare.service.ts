@@ -160,6 +160,24 @@ class CloudflareServiceClass {
 		);
 	}
 
+	/**
+	 * The names of every zone the configured token can see, sorted, or null
+	 * when Cloudflare isn't the DNS provider.
+	 *
+	 * @throws CloudflareApiError when Cloudflare refuses the token.
+	 */
+	async listZoneNames(): Promise<string[] | null> {
+		const credentials = await this.credentialsOrNull();
+		if (!credentials) {
+			return null;
+		}
+		const zones = await this.request<CloudflareZone[]>(
+			credentials.token,
+			"/zones?per_page=50",
+		);
+		return zones.map((zone) => zone.name).sort();
+	}
+
 	/** The decrypted token and zone id, or null when the integration is off. */
 	private async credentialsOrNull(): Promise<{
 		token: string;

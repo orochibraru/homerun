@@ -6,6 +6,7 @@ import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { enqueueVolumeBackup } from "$lib/services/backup-queue";
+import { nextCronRun } from "$lib/services/cron/cron-expression";
 
 const logger = new Logger("Backups");
 
@@ -32,6 +33,10 @@ export const load = async ({ parent, url }) => {
 			destinationName: v.s3DestinationId
 				? (destinationNames.get(v.s3DestinationId) ?? "unknown destination")
 				: "no destination",
+			nextRunAt:
+				v.backupEnabled && v.backupSchedule
+					? nextCronRun(v.backupSchedule, new Date())
+					: null,
 			...v.toJSON(),
 		})),
 	};

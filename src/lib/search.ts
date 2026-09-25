@@ -313,9 +313,16 @@ export const SEARCH_PAGES: SearchPage[] = [
 	{
 		adminOnly: true,
 		href: "/settings/networking",
-		keywords: ["dns", "cloudflare", "pangolin", "traefik", "tls"],
+		keywords: ["traefik", "tls", "acme", "cache"],
 		label: "Networking Settings",
 		section: "Settings",
+	},
+	{
+		adminOnly: true,
+		href: "/dns",
+		keywords: ["dns", "cloudflare", "pangolin", "domains", "tunnel"],
+		label: "DNS",
+		section: "Integrations",
 	},
 	{
 		adminOnly: true,

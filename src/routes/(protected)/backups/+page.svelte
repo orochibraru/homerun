@@ -11,6 +11,7 @@
 	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { describeSchedule, scheduleFromCron } from "$lib/schedule";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -82,11 +83,11 @@
 
   <!-- ═══ Configured volumes ═══ -->
   <section class="mb-8">
-    <h2 class="eyebrow mb-3">Backup-enabled volumes</h2>
+    <h2 class="eyebrow mb-3">Scheduled backups</h2>
     {#if backupEnabledVolumes.length === 0}
       <EmptyState
         icon={CloudUpload}
-        subtitle="Enable backups on a volume's own page under Storage."
+        subtitle="Flip the backup switch next to a volume on a service's Volumes tab, or on the volume's own page under Storage."
         title="No volumes have backups enabled"
       >
         {#snippet children()}
@@ -107,11 +108,12 @@
                 {vol.name}
               </a>
               <p class="text-text-muted mt-0.5 truncate text-xs">
-                {vol.backupSchedule}
-                · {vol.destinationName}
+                {describeSchedule(scheduleFromCron(vol.backupSchedule))}
+                · to {vol.destinationName}
               </p>
               <p class="text-text-subtle mt-0.5 text-xs">
-                last run: {formatDate(vol.backupLastRunAt)}
+                next run {vol.nextRunAt ? formatDate(vol.nextRunAt) : "never"}
+                · last run {formatDate(vol.backupLastRunAt)}
               </p>
             </div>
             <form

@@ -21,6 +21,7 @@
 	import { getUnknownHostVolumes } from "$lib/remote/docker-infra.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import MountBackup from "./mount-backup.svelte";
 
 	let volumeId = $state("");
 
@@ -68,6 +69,7 @@
   {#if data.mounts.length > 0}
     <div class="divide-border border-border divide-y border-b">
       {#each data.mounts as mount (mount.id)}
+        {@const vol = data.volumes.find((v) => v.id === mount.volumeId)}
         <div class="flex items-center gap-3 px-5 py-3">
           <div class="min-w-0 flex-1">
             <p class="text-text truncate text-sm font-medium">
@@ -81,6 +83,9 @@
               {mount.containerPath}
             </p>
           </div>
+          {#if vol}
+            <MountBackup destinations={data.destinations} volume={vol} />
+          {/if}
           <form
             action="?/detachVolume"
             method="POST"

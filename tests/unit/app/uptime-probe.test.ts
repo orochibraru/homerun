@@ -10,6 +10,7 @@ const {
 	externalProbeSkipReason,
 	internalProbeMethod,
 	isCertificateError,
+	isProbed,
 	probeErrorMessage,
 	tcpConnect,
 } = await import("../../../src/lib/services/uptime/uptime-probe");
@@ -129,5 +130,27 @@ describe("tcpConnect", () => {
 		await expect(tcpConnect("10.255.255.1", 5432, 250)).rejects.toThrow(
 			"Timed out.",
 		);
+	});
+});
+
+describe("isProbed", () => {
+	const base = {
+		containerId: "c1",
+		currentStatus: "running",
+		swarmServiceId: null,
+		uptimeEnabled: true,
+	};
+
+	test("probes a running, deployed service with uptime on", () => {
+		expect(isProbed(base)).toBe(true);
+		expect(isProbed({ ...base, containerId: null, swarmServiceId: "s1" })).toBe(
+			true,
+		);
+	});
+
+	test("stops once uptime is off, the service stops or it has no workload", () => {
+		expect(isProbed({ ...base, uptimeEnabled: false })).toBe(false);
+		expect(isProbed({ ...base, currentStatus: "failed" })).toBe(false);
+		expect(isProbed({ ...base, containerId: null })).toBe(false);
 	});
 });

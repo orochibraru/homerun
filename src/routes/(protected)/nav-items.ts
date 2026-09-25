@@ -9,6 +9,7 @@ import {
 	Database,
 	FolderKanban,
 	GitBranch,
+	Globe,
 	HardDrive,
 	KeyRound,
 	LayoutDashboard,
@@ -135,6 +136,14 @@ export const allNavItems = [
 		href: resolve("/notification-channels"),
 		icon: Send,
 		label: "Notification Channels",
+	},
+	{
+		adminOnly: true,
+		category: "Integrations",
+		exact: false,
+		href: resolve("/dns"),
+		icon: Globe,
+		label: "DNS",
 	},
 	{
 		adminOnly: false,

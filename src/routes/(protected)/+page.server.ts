@@ -5,6 +5,7 @@ import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 import { Logger } from "$lib/logger";
+import { isProbed } from "$lib/services/uptime/uptime-probe";
 
 const logger = new Logger("Dashboard");
 
@@ -25,6 +26,10 @@ export const load = async ({ locals, parent }) => {
 				5,
 			);
 	const serviceNames = new Map(services.map((svc) => [svc.id, svc.name]));
+	const probed = new Set(
+		services.filter((svc) => isProbed(svc.toJSON())).map((svc) => svc.id),
+	);
+	const live = uptime.filter((check) => probed.has(check.serviceId));
 
 	return {
 		isAdmin: locals.isAdmin,
@@ -53,15 +58,16 @@ export const load = async ({ locals, parent }) => {
 		},
 		// One row per failing probe, newest first : the dashboard shows what's
 		// down, not a roll-call of everything that's fine.
-		uptimeDown: uptime
+		uptimeDown: live
 			.filter((check) => !check.ok)
 			.map((check) => ({
 				detail: check.detail,
 				kind: check.kind,
 				serviceId: check.serviceId,
 				serviceName: serviceNames.get(check.serviceId) ?? "Unknown service",
+				target: check.target,
 			})),
-		uptimeProbes: uptime.length,
+		uptimeProbes: live.length,
 	};
 };
 

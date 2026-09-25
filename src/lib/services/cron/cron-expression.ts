@@ -122,18 +122,65 @@ export function cronMatches(schedule: string, date: Date): boolean {
 	if (!parsed) {
 		return false;
 	}
+	return (
+		parsed.minute.has(date.getMinutes()) &&
+		parsed.hour.has(date.getHours()) &&
+		dateMatches(parsed, date)
+	);
+}
+
+function dateMatches(parsed: ParsedCron, date: Date): boolean {
 	const dayHit = parsed.day.has(date.getDate());
 	const weekdayHit = parsed.weekday.has(date.getDay());
 	const dateHit =
 		parsed.dayRestricted && parsed.weekdayRestricted
 			? dayHit || weekdayHit
 			: dayHit && weekdayHit;
-	return (
-		parsed.minute.has(date.getMinutes()) &&
-		parsed.hour.has(date.getHours()) &&
-		parsed.month.has(date.getMonth() + 1) &&
-		dateHit
-	);
+	return parsed.month.has(date.getMonth() + 1) && dateHit;
+}
+
+const MAX_LOOKAHEAD_DAYS = 366 * 4;
+
+/**
+ * The first minute strictly after `from` the schedule is due, in local time,
+ * or null for an invalid schedule or one that never fires within four years
+ * (a Feb 30th).
+ */
+export function nextCronRun(schedule: string, from: Date): Date | null {
+	const parsed = parseCronSchedule(schedule);
+	if (!parsed) {
+		return null;
+	}
+	const hours = [...parsed.hour].sort((a, b) => a - b);
+	const minutes = [...parsed.minute].sort((a, b) => a - b);
+	const start = new Date(from);
+	start.setSeconds(0, 0);
+	start.setMinutes(start.getMinutes() + 1);
+	for (let offset = 0; offset < MAX_LOOKAHEAD_DAYS; offset += 1) {
+		const day = new Date(
+			start.getFullYear(),
+			start.getMonth(),
+			start.getDate() + offset,
+		);
+		if (!dateMatches(parsed, day)) {
+			continue;
+		}
+		for (const hour of hours) {
+			for (const minute of minutes) {
+				const candidate = new Date(
+					day.getFullYear(),
+					day.getMonth(),
+					day.getDate(),
+					hour,
+					minute,
+				);
+				if (candidate >= start) {
+					return candidate;
+				}
+			}
+		}
+	}
+	return null;
 }
 
 /** Whether two dates fall in the same calendar minute : used to guard against a double-fire within one due minute. */

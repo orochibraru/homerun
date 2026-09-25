@@ -420,6 +420,13 @@
 			"when": 1790344611348,
 			"tag": "0059_workable_celestials",
 			"breakpoints": true
+		},
+		{
+			"idx": 60,
+			"version": "7",
+			"when": 1790345889611,
+			"tag": "0060_curious_randall_flagg",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

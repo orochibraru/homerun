@@ -20,9 +20,14 @@ nothing.
 
 ## S3-compatible backups
 
-Turned on per-volume from `storage/[volumeId]`, off by default: pick a
-destination, optionally a key prefix, and optionally a cron schedule. The
-homerun worker tars the volume's contents and streams it, gzipped, to
+Off by default, turned on per volume. The quickest way is the **switch** next to
+a mounted volume on a service's Volumes tab: it turns backups on every day at
+03:00, to your S3 destination when you have exactly one. With none, or several,
+it opens the settings instead. The **cog** beside it sets the schedule, the
+destination and an optional key prefix. The volume's own page
+(`storage/[volumeId]`) has the same settings plus restores, stopping services
+during the backup, and a pre-backup command. The homerun worker tars the
+volume's contents and streams it, gzipped, to
 `<prefix/>volumeName-<timestamp>.tar.gz` through a hand-rolled Signature V4
 client (multipart upload in 16 MiB parts, archives up to about 160 GB, never a
 whole archive in memory, no SDK).
@@ -65,7 +70,11 @@ that:
   (before any stop), a non-zero exit or a run longer than 15 minutes fails the
   backup with the tail of its output, and nothing is uploaded.
 
-## Backup history
+## Scheduled backups and history
+
+The top of `/backups` lists every volume with backups on, as soon as they're
+turned on: its schedule in words, its destination, and when it next and last
+ran, with a **Run now** button.
 
 `/backups` is one row per attempt across every volume, scheduled or manual,
 backups and restores alike, with its kind, when it started and finished, whether

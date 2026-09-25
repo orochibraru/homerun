@@ -1,0 +1,2 @@
+ALTER TABLE "instance_settings" ADD COLUMN "dns_provider" text;--> statement-breakpoint
+UPDATE "instance_settings" SET "dns_provider" = CASE WHEN "pangolin_api_token_enc" IS NOT NULL AND "pangolin_api_base_url" IS NOT NULL AND "pangolin_org_id" IS NOT NULL AND "pangolin_main_site_name" IS NOT NULL THEN 'pangolin' WHEN "cloudflare_api_token_enc" IS NOT NULL AND "cloudflare_zone_id" IS NOT NULL THEN 'cloudflare' END;

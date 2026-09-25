@@ -543,6 +543,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	// "background automation defaults inert" posture as autoscaling/backups.
 	// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
 	cloudflareApiTokenEnc: text("cloudflare_api_token_enc"),
+	dnsProvider: text("dns_provider").$type<"cloudflare" | "pangolin">(),
 	cloudflareZoneId: text("cloudflare_zone_id"),
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	dockerNetworkName: text("docker_network_name"),

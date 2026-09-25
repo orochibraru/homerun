@@ -1,11 +1,23 @@
 # DNS automation
 
 If your instance's DNS is on Cloudflare, or you front it with a self-hosted
-[Pangolin](https://github.com/fosrl/pangolin) tunnel instead, configure one (or
-both) from `/settings` → Networking and Homerun keeps DNS in sync on its own for
-any service with **DNS-resolvable** on: a deploy creates or updates a record per
-routed hostname (a Cloudflare CNAME, or a Pangolin Resource + Target), deleting
-the service removes them, including any extra domains it has.
+[Pangolin](https://github.com/fosrl/pangolin) tunnel instead, pick it on the
+**DNS** page (sidebar → Integrations, admins only) and Homerun keeps DNS in sync
+on its own for any service with **DNS-resolvable** on: a deploy creates or
+updates a record per routed hostname (a Cloudflare CNAME, or a Pangolin
+Resource + Target), deleting the service removes them, including any extra
+domains it has.
+
+**Only one provider is ever active.** Two providers writing records for the same
+hostnames would fight each other, so the DNS page is a choice: None, Cloudflare
+or Pangolin. Only the chosen one's settings show, and only it syncs anything;
+switching keeps the other's settings saved but inert, and leaves the records and
+resources it already made alone. Choosing Cloudflare also stops Homerun's own
+Newt tunnel client and Pangolin's handling of sign-in. The first time you save
+one provider's settings with none chosen, it becomes the provider. Once one is
+active and set up, the page lists its domains (the zones your Cloudflare token
+can see, or your Pangolin org's domains): a service's domain has to sit under
+one of them to be published.
 
 Both are best-effort and fire only after a successful deploy, a DNS failure
 never fails the deploy itself. **What each provider did is written into that

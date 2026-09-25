@@ -1,5 +1,7 @@
+import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { VolumeServices } from "$lib/services/backup/volume-services";
+import { CronService } from "$lib/services/cron.service";
 
 export interface VolumeBackupGuardFields {
 	backupPreCommand: string | null;
@@ -42,4 +44,30 @@ export async function parseVolumeBackupGuard(
 			backupStopServices: formData.get("backupStopServices") === "on",
 		},
 	};
+}
+
+export const DEFAULT_BACKUP_SCHEDULE = "0 3 * * *";
+
+/**
+ * Why a volume's backup settings can't be saved, or null: an enabled backup
+ * needs a valid schedule and a destination, and a destination has to exist.
+ */
+export async function backupConfigError(input: {
+	enabled: boolean;
+	s3DestinationId: string | null;
+	schedule: string | null;
+}): Promise<string | null> {
+	if (input.enabled && !CronService.parseCronSchedule(input.schedule ?? "")) {
+		return "Invalid schedule : pick one, or use standard 5-field cron.";
+	}
+	if (input.enabled && !input.s3DestinationId) {
+		return "Pick an S3 destination.";
+	}
+	if (
+		input.s3DestinationId &&
+		!(await S3DestinationDTO.get(input.s3DestinationId))
+	) {
+		return "That S3 destination wasn't found.";
+	}
+	return null;
 }

@@ -52,6 +52,25 @@ export function externalHostFor(
 export type InternalProbeMethod = "healthcheck" | "http" | "tcp";
 
 /** Which internal probe to use for a service: its own Docker healthcheck when it has one, else a raw TCP connect for a database image, else an HTTP request. */
+/**
+ * Whether the uptime loop probes this service: probing on, a deployed
+ * workload, and running (the loop's own query plus its filter). Anything
+ * showing probe results filters through this, so a probe turned off or a
+ * stopped service stops showing its last beat as a live failure.
+ */
+export function isProbed(svc: {
+	containerId: string | null;
+	currentStatus: string;
+	swarmServiceId: string | null;
+	uptimeEnabled: boolean;
+}): boolean {
+	return (
+		svc.uptimeEnabled &&
+		svc.currentStatus === "running" &&
+		Boolean(svc.containerId || svc.swarmServiceId)
+	);
+}
+
 export function internalProbeMethod(
 	image: string,
 	hasHealthcheck: boolean,

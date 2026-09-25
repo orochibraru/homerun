@@ -171,6 +171,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			authOrigin: null,
 			baseDomain: null,
 			cloudflareApiTokenEnc: null,
+			dnsProvider: null,
 			cloudflareZoneId: null,
 			createdAt: now,
 			dockerNetworkName: null,
@@ -397,7 +398,26 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	/** Whether both the token and zone id are set : CloudflareService treats anything less as "feature off". */
 	get cloudflareConfigured(): boolean {
+		return (
+			this.row.dnsProvider === "cloudflare" && this.cloudflareCredentialsSet
+		);
+	}
+
+	/** Whether a Cloudflare token and zone are stored, whichever provider is chosen. */
+	get cloudflareCredentialsSet(): boolean {
 		return !!(this.row.cloudflareApiTokenEnc && this.row.cloudflareZoneId);
+	}
+
+	/** The one DNS provider Homerun drives, null for none : the other's stored settings stay inert. */
+	get dnsProvider(): "cloudflare" | "pangolin" | null {
+		return this.row.dnsProvider ?? null;
+	}
+
+	/** Makes `provider` the only DNS integration Homerun drives, or none. */
+	async updateDnsProvider(
+		provider: "cloudflare" | "pangolin" | null,
+	): Promise<void> {
+		await this.persist({ dnsProvider: provider });
 	}
 
 	/** Decrypted API token, for CloudflareService's own HTTP calls only : never exposed to a `load` return value. */
@@ -409,7 +429,8 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	/**
 	 * Persists the Cloudflare zone id and, when a new token was typed, the
-	 * re-encrypted API token; a blank token keeps the stored one.
+	 * re-encrypted API token; a blank token keeps the stored one. Becomes the
+	 * DNS provider when none is chosen yet.
 	 */
 	async updateCloudflare(
 		input: InstanceSettingsCloudflareInput,
@@ -422,6 +443,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			...(cloudflareApiToken
 				? { cloudflareApiTokenEnc: encryptSecret(cloudflareApiToken) }
 				: {}),
+			...(this.row.dnsProvider ? {} : { dnsProvider: "cloudflare" as const }),
 		});
 	}
 
@@ -457,6 +479,11 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	/** Whether every field PangolinService needs is set : anything less treats the integration as "feature off". */
 	get pangolinConfigured(): boolean {
+		return this.row.dnsProvider === "pangolin" && this.pangolinCredentialsSet;
+	}
+
+	/** Whether the Pangolin API, org and site are all stored, whichever provider is chosen. */
+	get pangolinCredentialsSet(): boolean {
 		return !!(
 			this.row.pangolinApiTokenEnc &&
 			this.row.pangolinApiBaseUrl &&
@@ -474,7 +501,8 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	/**
 	 * Persists the Pangolin settings and, when a new token was typed, the
-	 * re-encrypted API token; a blank token keeps the stored one.
+	 * re-encrypted API token; a blank token keeps the stored one. Becomes the
+	 * DNS provider when none is chosen yet.
 	 */
 	async updatePangolin(input: InstanceSettingsPangolinInput): Promise<void> {
 		const { pangolinApiToken, pangolinNewtSecret, ...rest } = input;
@@ -488,6 +516,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			...(pangolinNewtSecret
 				? { pangolinNewtSecretEnc: encryptSecret(pangolinNewtSecret) }
 				: {}),
+			...(this.row.dnsProvider ? {} : { dnsProvider: "pangolin" as const }),
 		});
 	}
 
