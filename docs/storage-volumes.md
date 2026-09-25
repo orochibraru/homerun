@@ -24,6 +24,22 @@ schedule and an S3 destination set on their backup settings page; the rest are
 skipped and counted in the result. Bulk delete asks for confirmation first, and
 services mounting a deleted volume need a redeploy.
 
+## Browsing and editing files
+
+A volume's **Files** tab browses what's inside it and edits text files in the
+browser, for config files you'd otherwise need a shell for (an nginx
+`default.conf`, an app's `config.yaml`). Folders open by clicking them; a text
+file up to 1 MB opens in an editor, and **Save** writes it in place, keeping its
+owner and permissions. A volume that is a single bound file, the way Dokploy
+file mounts are imported, shows that one file. Binary files can be browsed but
+not edited.
+
+Each action runs a short-lived Alpine container with the volume mounted
+(read-only, except while saving), so it works the same for bind mounts and
+Docker volumes and needs nothing installed on the host. A saved file is picked
+up the next time the services using it read it; most apps only read their config
+at start, so restart them after saving.
+
 ## The Volumes tab
 
 Mount a [storage volume](storage-volumes.md) into the container path of your

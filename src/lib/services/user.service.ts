@@ -18,6 +18,7 @@ import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import { DockerService } from "./docker.service.ts";
 
@@ -201,7 +202,17 @@ class UserServiceClass {
 				.select()
 				.from(userTable)
 				.where(where)
-				.orderBy(desc(userTable.createdAt))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: userTable.createdAt,
+							name: userTable.name,
+							updated: userTable.updatedAt,
+						},
+						desc(userTable.createdAt),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db.select({ total: count() }).from(userTable).where(where),

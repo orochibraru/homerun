@@ -216,6 +216,7 @@ const configSchema = z.object({
 			certResolver: z.string().default("letsencrypt"),
 			dynamicConfigDir: z.string().optional(),
 			entrypoint: z.string().default("websecure"),
+			httpCache: z.boolean().default(false),
 		})
 		.prefault({}),
 	// The Go worker's Docker control API. The app makes no Docker calls of its
@@ -254,6 +255,7 @@ export interface InstanceSettingsOverride {
 	traefikCertResolver?: string | null;
 	traefikDynamicConfigDir?: string | null;
 	traefikEntrypoint?: string | null;
+	traefikHttpCache?: boolean | null;
 }
 
 /** Path to the YAML config file : `CONFIG_FILE` env var if set, else `./homerun.yaml` relative to cwd. This is the one env var config still needs, the same bootstrapping role `DATABASE_URL`/`AUTH_SECRET` already play. */
@@ -491,4 +493,6 @@ function applyTraefikOverride(override: InstanceSettingsOverride): void {
 		override.traefikDynamicConfigDir ?? fileDefaults.traefik.dynamicConfigDir;
 	config.traefik.entrypoint =
 		override.traefikEntrypoint ?? fileDefaults.traefik.entrypoint;
+	config.traefik.httpCache =
+		override.traefikHttpCache ?? fileDefaults.traefik.httpCache;
 }

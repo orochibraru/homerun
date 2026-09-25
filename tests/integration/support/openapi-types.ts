@@ -839,6 +839,8 @@ export interface operations {
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
+						/** @description The app's type, a template category like database */
+						category: string | null;
 						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
@@ -867,6 +869,10 @@ export interface operations {
 						desiredState: "running" | "stopped";
 						devices: string[];
 						dnsResolvable: boolean;
+						/** @description Per custom domain, the container port it routes to instead of containerPort */
+						domainPorts: {
+							[key: string]: number;
+						};
 						domains: string[];
 						entrypoint: string[] | null;
 						envFiles: string[];
@@ -896,6 +902,8 @@ export interface operations {
 						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
+						/** @description A bundled template icon file name, or an uploaded data:image URL */
+						icon: string | null;
 						id: string;
 						image: string;
 						imageScanEnabled: boolean;
@@ -915,6 +923,13 @@ export interface operations {
 						previewsEnabled: boolean;
 						primaryDomain: string | null;
 						privileged: boolean;
+						/** @description Host ports bound straight to the container, for UDP and non-HTTP TCP */
+						publishedPorts: {
+							containerPort: number;
+							hostPort: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -1061,6 +1076,8 @@ export interface operations {
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
+						/** @description The app's type, a template category like database */
+						category: string | null;
 						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
@@ -1089,6 +1106,10 @@ export interface operations {
 						desiredState: "running" | "stopped";
 						devices: string[];
 						dnsResolvable: boolean;
+						/** @description Per custom domain, the container port it routes to instead of containerPort */
+						domainPorts: {
+							[key: string]: number;
+						};
 						domains: string[];
 						entrypoint: string[] | null;
 						envFiles: string[];
@@ -1118,6 +1139,8 @@ export interface operations {
 						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
+						/** @description A bundled template icon file name, or an uploaded data:image URL */
+						icon: string | null;
 						id: string;
 						image: string;
 						imageScanEnabled: boolean;
@@ -1137,6 +1160,13 @@ export interface operations {
 						previewsEnabled: boolean;
 						primaryDomain: string | null;
 						privileged: boolean;
+						/** @description Host ports bound straight to the container, for UDP and non-HTTP TCP */
+						publishedPorts: {
+							containerPort: number;
+							hostPort: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -1240,6 +1270,8 @@ export interface operations {
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
+						/** @description The app's type, a template category like database */
+						category: string | null;
 						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
@@ -1268,6 +1300,10 @@ export interface operations {
 						desiredState: "running" | "stopped";
 						devices: string[];
 						dnsResolvable: boolean;
+						/** @description Per custom domain, the container port it routes to instead of containerPort */
+						domainPorts: {
+							[key: string]: number;
+						};
 						domains: string[];
 						entrypoint: string[] | null;
 						envFiles: string[];
@@ -1297,6 +1333,8 @@ export interface operations {
 						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
+						/** @description A bundled template icon file name, or an uploaded data:image URL */
+						icon: string | null;
 						id: string;
 						image: string;
 						imageScanEnabled: boolean;
@@ -1316,6 +1354,13 @@ export interface operations {
 						previewsEnabled: boolean;
 						primaryDomain: string | null;
 						privileged: boolean;
+						/** @description Host ports bound straight to the container, for UDP and non-HTTP TCP */
+						publishedPorts: {
+							containerPort: number;
+							hostPort: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -1533,6 +1578,8 @@ export interface operations {
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
+						/** @description The app's type, a template category like database */
+						category: string | null;
 						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
@@ -1561,6 +1608,10 @@ export interface operations {
 						desiredState: "running" | "stopped";
 						devices: string[];
 						dnsResolvable: boolean;
+						/** @description Per custom domain, the container port it routes to instead of containerPort */
+						domainPorts: {
+							[key: string]: number;
+						};
 						domains: string[];
 						entrypoint: string[] | null;
 						envFiles: string[];
@@ -1590,6 +1641,8 @@ export interface operations {
 						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
+						/** @description A bundled template icon file name, or an uploaded data:image URL */
+						icon: string | null;
 						id: string;
 						image: string;
 						imageScanEnabled: boolean;
@@ -1609,6 +1662,13 @@ export interface operations {
 						previewsEnabled: boolean;
 						primaryDomain: string | null;
 						privileged: boolean;
+						/** @description Host ports bound straight to the container, for UDP and non-HTTP TCP */
+						publishedPorts: {
+							containerPort: number;
+							hostPort: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;

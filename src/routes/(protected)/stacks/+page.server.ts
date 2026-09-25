@@ -1,10 +1,11 @@
 import { StackDTO } from "$lib/dto/stack-dto";
+import { STACK_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { parseListQuery } from "$lib/server/list-query";
 
 export const load = async ({ parent, url }) => {
 	await parent();
 
-	const query = parseListQuery(url);
+	const query = parseListQuery(url, { sortKeys: sortKeysOf(STACK_SORTS) });
 	const paged = await StackDTO.listWithServiceCountsPaged(query);
 
 	return {

@@ -10,6 +10,7 @@
 	} from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { BASE_SORTS } from "$lib/list-sorts";
 	import { ROLE_OPTIONS, roleLabel } from "$lib/permissions";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -105,7 +106,8 @@
     {submitting}
   />
 
-  <EntityToolbar {filters} placeholder="Search users by name or email…" />
+  <EntityToolbar
+    sorts={BASE_SORTS} {filters} placeholder="Search users by name or email…" />
 
   {#if data.users.length === 0}
     <div class="border-border/70 rounded-md border border-dashed py-16 text-center">

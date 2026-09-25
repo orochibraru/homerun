@@ -192,6 +192,7 @@ describe("UserService reads", () => {
 			page: 3,
 			perPage: 2,
 			q: "ann",
+			sort: null,
 		});
 
 		expect(result).toEqual({
@@ -224,6 +225,7 @@ describe("UserService reads", () => {
 			page: 1,
 			perPage: 25,
 			q: "",
+			sort: null,
 		});
 
 		expect(result.total).toBe(0);

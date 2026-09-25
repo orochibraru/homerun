@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
-const ACCENT = "#22c55e";
+const ACCENT = "#0b6fa4";
+const CHART_1 = "#0b8ac0";
 
 async function signIn(page: Page) {
 	await page.goto("/auth/sign-in");
@@ -11,62 +12,62 @@ async function signIn(page: Page) {
 	await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
 }
 
-async function saveAccent(page: Page, preset: string | null): Promise<void> {
+async function saveColors(page: Page, palette: string): Promise<void> {
 	await page.goto("/profile/appearance");
-	if (preset) {
-		await page.getByRole("button", { name: preset }).click();
-	} else {
-		await page.getByRole("button", { name: "Reset to default" }).click();
-	}
+	await page.getByRole("button", { name: palette }).click();
 	await page
-		.locator("form[action='?/updateAccent']")
+		.locator("form[action='?/updateColors']")
 		.getByRole("button", { name: "Save" })
 		.click();
-	await expect(page.getByText("Accent color saved.")).toBeVisible();
+	await expect(page.getByText("Colors saved.")).toBeVisible();
 }
 
-function accentVarOf(page: Page, selector: string): Promise<string> {
+function cssVarOf(
+	page: Page,
+	selector: string,
+	name = "--color-accent",
+): Promise<string> {
 	return page
 		.locator(selector)
 		.first()
-		.evaluate((el) =>
-			getComputedStyle(el).getPropertyValue("--color-accent").trim(),
+		.evaluate(
+			(el, variable) => getComputedStyle(el).getPropertyValue(variable).trim(),
+			name,
 		);
 }
 
 test.describe
-	.serial("accent colour", () => {
+	.serial("colour palette", () => {
 		test.afterAll(async ({ browser }) => {
 			const page = await browser.newPage();
 			await signIn(page);
-			await saveAccent(page, null);
+			await saveColors(page, "Bordeaux (default)");
 			await page.close();
 		});
 
-		test("a saved accent reaches portaled content, not just the page", async ({
+		test("a saved palette reaches portaled content, not just the page", async ({
 			page,
 		}) => {
 			await signIn(page);
-			await saveAccent(page, ACCENT);
+			await saveColors(page, "Ocean");
 
 			await page.goto("/");
-			expect(await accentVarOf(page, "html")).toBe(ACCENT);
+			expect(await cssVarOf(page, "html")).toBe(ACCENT);
+			expect(await cssVarOf(page, "html", "--chart-1")).toBe(CHART_1);
 
 			await page.getByRole("button", { name: "Notifications" }).click();
 			const popover = page.locator("[data-slot='popover-content']");
 			await expect(popover).toBeVisible();
-			expect(await accentVarOf(page, "[data-slot='popover-content']")).toBe(
+			expect(await cssVarOf(page, "[data-slot='popover-content']")).toBe(
 				ACCENT,
 			);
 		});
 
-		test("resetting to the default puts the stock accent back", async ({
-			page,
-		}) => {
+		test("the default palette puts the stock accent back", async ({ page }) => {
 			await signIn(page);
-			await saveAccent(page, null);
+			await saveColors(page, "Bordeaux (default)");
 
 			await page.goto("/");
-			expect(await accentVarOf(page, "html")).not.toBe(ACCENT);
+			expect(await cssVarOf(page, "html")).not.toBe(ACCENT);
 		});
 	});

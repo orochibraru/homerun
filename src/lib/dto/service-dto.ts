@@ -22,6 +22,7 @@ import {
 	narrowFilter,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import { runtimeOptionsFrom } from "$lib/service-runtime";
 import type { ContainerStatus, PullPolicy } from "$lib/types";
@@ -139,7 +140,17 @@ export class ServiceDTO extends BaseDTO<Service> {
 				.from(service)
 				.leftJoin(stack, eq(service.stackId, stack.id))
 				.where(where)
-				.orderBy(desc(service.createdAt))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: service.createdAt,
+							name: service.name,
+							updated: service.updatedAt,
+						},
+						desc(service.createdAt),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db
@@ -325,7 +336,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 			memoryLimitMb: input.memoryLimitMb ?? null,
 			networkMode: input.networkMode ?? "bridge",
 			portProtocol: input.portProtocol ?? "tcp",
+			category: input.category ?? null,
 			domainPorts: {},
+			httpCacheTtl: null,
+			icon: input.icon ?? null,
 			publishedPorts: input.publishedPorts ?? [],
 			stackId: input.stackId ?? null,
 			pullPolicy: input.pullPolicy ?? "always",
@@ -683,6 +697,18 @@ export class ServiceDTO extends BaseDTO<Service> {
 	 */
 	get networkMode(): Service["networkMode"] {
 		return this.row.networkMode;
+	}
+	/** What kind of app this is (a template category like `database`), for its icon and grouping; null when unset. */
+	get category(): Service["category"] {
+		return this.row.category;
+	}
+	/** Seconds Traefik caches this service's responses for, per session; null when caching is off. */
+	get httpCacheTtl(): Service["httpCacheTtl"] {
+		return this.row.httpCacheTtl;
+	}
+	/** A bundled template icon file name or an uploaded `data:image/...` URL; null for the category's generic icon. */
+	get icon(): Service["icon"] {
+		return this.row.icon;
 	}
 	/** Per custom domain, the container port Traefik routes it to instead of `containerPort`. */
 	get domainPorts(): Service["domainPorts"] {

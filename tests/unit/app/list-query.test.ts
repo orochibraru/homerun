@@ -1,10 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { PgDialect, pgTable, text } from "drizzle-orm/pg-core";
+import { desc, sql } from "drizzle-orm";
+import { PgDialect, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+	BASE_SORTS,
+	STACK_SORTS,
+	sortKeysOf,
+} from "../../../src/lib/list-sorts";
 import {
 	DEFAULT_PER_PAGE,
 	narrowFilter,
 	parseListQuery,
 	searchCondition,
+	sortOrder,
 } from "../../../src/lib/server/list-query";
 
 const url = (query: string) => new URL(`https://homerun.test/services${query}`);
@@ -19,7 +26,22 @@ describe("parseListQuery", () => {
 			page: 1,
 			perPage: DEFAULT_PER_PAGE,
 			q: "",
+			sort: null,
 		});
+	});
+
+	test("reads an allowed sort key, descending with a leading minus", () => {
+		const options = { sortKeys: ["name", "created"] };
+		expect(parseListQuery(url("?sort=name"), options).sort).toEqual({
+			desc: false,
+			key: "name",
+		});
+		expect(parseListQuery(url("?sort=-created"), options).sort).toEqual({
+			desc: true,
+			key: "created",
+		});
+		expect(parseListQuery(url("?sort=password"), options).sort).toBeNull();
+		expect(parseListQuery(url("?sort=name")).sort).toBeNull();
 	});
 
 	test("turns page and perPage into an offset", () => {
@@ -98,5 +120,46 @@ describe("narrowFilter", () => {
 	test("is empty for a missing or empty filter", () => {
 		expect(narrowFilter(undefined, allowed)).toEqual([]);
 		expect(narrowFilter([], allowed)).toEqual([]);
+	});
+});
+
+describe("sortOrder", () => {
+	const table = pgTable("svc", {
+		createdAt: timestamp("created_at"),
+		name: text("name"),
+	});
+	const columns = { created: table.createdAt, name: table.name };
+	const fallback = desc(table.createdAt);
+	const render = (sort: Parameters<typeof sortOrder>[0]) =>
+		new PgDialect().sqlToQuery(
+			sql.join(sortOrder(sort, columns, fallback), sql`, `),
+		).sql;
+
+	test("falls back to the list's own order without a known sort", () => {
+		expect(render(null)).toBe('"svc"."created_at" desc');
+		expect(render({ desc: false, key: "services" })).toBe(
+			'"svc"."created_at" desc',
+		);
+	});
+
+	test("sorts text case-insensitively and keeps the fallback as a tie-break", () => {
+		expect(render({ desc: false, key: "name" })).toBe(
+			'lower("svc"."name") asc, "svc"."created_at" desc',
+		);
+		expect(render({ desc: true, key: "created" })).toBe(
+			'"svc"."created_at" desc, "svc"."created_at" desc',
+		);
+	});
+});
+
+describe("sortKeysOf", () => {
+	test("lists each key once, without the descending minus", () => {
+		expect(sortKeysOf(STACK_SORTS).sort()).toEqual([
+			"created",
+			"name",
+			"services",
+			"updated",
+		]);
+		expect(sortKeysOf(BASE_SORTS)).not.toContain("services");
 	});
 });

@@ -37,6 +37,8 @@ export interface NewServiceInput {
 	networkMode?: "bridge" | "host";
 	portProtocol?: "tcp" | "udp" | "both";
 	publishedPorts?: PublishedPort[];
+	category?: string | null;
+	icon?: string | null;
 	stackId?: string | null;
 	registryPasswordEnc?: string | null;
 	registryUrl?: string | null;
@@ -105,6 +107,9 @@ export type ServiceUpdateInput = Partial<
 		| "name"
 		| "networkMode"
 		| "portProtocol"
+		| "category"
+		| "httpCacheTtl"
+		| "icon"
 		| "domainPorts"
 		| "publishedPorts"
 		| "stackId"

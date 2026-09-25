@@ -73,6 +73,15 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 	};
 }
 
+/** The type and icon a service created from `template` starts with, none without one. */
+function templateIdentity(template: TemplateDTO | null): {
+	category: string | null;
+	icon: string | null;
+} {
+	const row = template?.toJSON();
+	return { category: row?.category ?? null, icon: row?.icon ?? null };
+}
+
 export const load = async ({ url, parent, locals }) => {
 	const { user } = await parent();
 	const stackId = url.searchParams.get("stackId");
@@ -396,6 +405,7 @@ async function createServiceFromForm(
 			: parseEnvVars(formData);
 
 	const svc = await ServiceDTO.create({
+		...templateIdentity(template),
 		authRequired: input.authRequired,
 		domains: input.domain ? [input.domain] : [],
 		networkMode: input.networkMode,

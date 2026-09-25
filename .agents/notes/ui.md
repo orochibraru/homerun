@@ -55,16 +55,23 @@ a blur/shadow stack, route it through a token here instead.
   sidebar label, an id segment takes the `name`/`label`/`title` of whichever
   `page.data` object has that `id`, anything else is the humanized segment.
   Don't add an `← Parent` link to a page; a URL prefix that isn't a real page
-  goes in the layout's `skip` list. The pane's `<main>` is `relative` so
-  absolutely-positioned content (`sr-only` spans) is contained by its scroll
-  area instead of stretching the document into a second scrollbar.
-- **The accent picker has to move more than one variable, and it has to move
-  them on the document root.** `/profile/appearance` writes `--color-accent`,
-  and the `(protected)` layout's `accentCss` also sets `--color-ink`,
-  `--primary` and `--ring` from the same hex. Overriding only `--color-accent`
-  leaves every button on the stock violet, which is exactly what "the accent
-  switch doesn't work on buttons" meant. Two further traps, both real bugs that
-  shipped:
+  goes in the layout's `skip` list. A page whose place in the hierarchy isn't
+  its URL returns `crumbRoot` (a list of `{ href, label }`) from its `load` to
+  stand in for the first segment: a service in a stack reads
+  `Stacks › <stack> › <service>` although its URL is `/services/<id>`. The
+  pane's `<main>` is `relative` so absolutely-positioned content (`sr-only`
+  spans) is contained by its scroll area instead of stretching the document into
+  a second scrollbar.
+- **Colours come from palettes, and they have to move more than one variable, on
+  the document root.** `/profile/appearance` picks a palette
+  (`$lib/palettes.ts`: an accent plus five chart hues) or a custom accent;
+  `appearanceCss` turns that into `--color-accent`, `--color-ink`, `--primary`,
+  `--ring`, the `--chart-*` hues and the aurora's `--brand-2/3`, and only ever
+  emits a known palette or a validated hex. Category tiles use the `chart-*`
+  tokens (`TEMPLATE_CATEGORY_COLORS`), so they follow the palette too.
+  Overriding only `--color-accent` leaves every button on the stock violet,
+  which is exactly what "the accent switch doesn't work on buttons" meant. Two
+  further traps, both real bugs that shipped:
   - **It's a `<svelte:head>` rule, not a `style=""` on the layout wrapper.**
     bits-ui portals every dialog, popover, dropdown and tooltip out to
     `document.body`, so anything rendered inside one sits outside that wrapper

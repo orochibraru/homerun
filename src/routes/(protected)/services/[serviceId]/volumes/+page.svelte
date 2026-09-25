@@ -204,8 +204,8 @@
     <Dialog.Header>
       <Dialog.Title>New volume</Dialog.Title>
       <Dialog.Description>
-        A local storage source : mount it into this service right after, no need
-        to leave the page.
+        A local storage source, created and mounted into this service in one
+        step.
       </Dialog.Description>
     </Dialog.Header>
 
@@ -220,7 +220,7 @@
           newVolumeOpen = false;
           return refreshAll();
         },
-        success: "Volume created : select it above to mount it.",
+        success: "Volume created and mounted. Redeploy for it to take effect.",
       })}
     >
       {#if createError}
@@ -230,6 +230,30 @@
       {/if}
 
       <NewVolumeFields bind:kind={newVolumeKind} />
+
+      <div>
+        <label class="text-text mb-1.5 block text-sm font-medium" for="newContainerPath">
+          Mount path in this container <span class="text-red-500">*</span>
+        </label>
+        <Input
+          id="newContainerPath"
+          name="containerPath"
+          placeholder="/data"
+          required
+          type="text"
+        />
+        <p class="text-text-subtle mt-1.5 text-xs">
+          Where the volume shows up inside the container, e.g.
+          <code>/mnt/drive</code> or <code>/config</code>.
+        </p>
+      </div>
+      <CheckBox
+        checked={false}
+        helperText="Mount this volume without write access"
+        id="newReadOnly"
+        label="Read-only"
+        name="readOnly"
+      />
 
       <Dialog.Footer>
         <Button

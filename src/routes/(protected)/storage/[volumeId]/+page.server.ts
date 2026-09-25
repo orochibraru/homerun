@@ -32,7 +32,6 @@ export const load = async ({ params, parent }) => {
 			id: service.id,
 			name: service.name,
 		})),
-		volume: volume.toJSON(),
 	};
 };
 

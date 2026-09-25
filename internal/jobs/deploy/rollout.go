@@ -135,6 +135,38 @@ func SwarmUpdateOrder(volumes []Volume) string {
 	return "start-first"
 }
 
+// SwarmFailureAction is what swarm does when an update's new tasks fail:
+// roll back when at least one current task is actually running, since that
+// version still works; otherwise pause with the new tasks in place, because
+// rolling back to tasks that are already failing would throw away the very
+// deploy meant to fix them.
+func SwarmFailureAction(current []dockerapi.SwarmTask) string {
+	for _, task := range current {
+		if task.DesiredState == "running" && task.Status.State == "running" {
+			return "rollback"
+		}
+	}
+	return "pause"
+}
+
+// LastTaskError is the error the most recently updated task that has one
+// reported (a crash, a failed healthcheck), or "" when none did.
+func LastTaskError(tasks []dockerapi.SwarmTask) string {
+	var latest time.Time
+	message := ""
+	for _, task := range tasks {
+		if task.Status.Err == "" {
+			continue
+		}
+		at, _ := time.Parse(time.RFC3339Nano, task.Status.Timestamp)
+		if message == "" || !at.Before(latest) {
+			latest = at
+			message = task.Status.Err
+		}
+	}
+	return message
+}
+
 // SwarmUpdateOutcome reads a swarm service's update status: State is
 // "pending", "completed" or "failed".
 func SwarmUpdateOutcome(service *dockerapi.SwarmService, previousStartedAt string) Verdict {
@@ -145,7 +177,13 @@ func SwarmUpdateOutcome(service *dockerapi.SwarmService, previousStartedAt strin
 	switch status.State {
 	case "completed":
 		return Verdict{State: "completed"}
-	case "paused", "rollback_started", "rollback_paused", "rollback_completed":
+	case "paused":
+		reason := "The new swarm tasks didn't become healthy; the previous ones weren't running either, so swarm left the new ones in place"
+		if status.Message != "" {
+			return Verdict{State: "failed", Reason: reason + ": " + status.Message}
+		}
+		return Verdict{State: "failed", Reason: reason + "."}
+	case "rollback_started", "rollback_paused", "rollback_completed":
 		reason := "The new swarm tasks didn't become healthy, so swarm kept the previous ones"
 		if status.Message != "" {
 			return Verdict{State: "failed", Reason: reason + ": " + status.Message}

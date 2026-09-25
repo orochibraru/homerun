@@ -21,8 +21,9 @@ service's Settings tab. A stack's page lists its services with what each one is
 using right now; its **Settings** tab renames it (name, slug, description) and
 deletes it.
 
-`/stacks` has a search box, a list/card view toggle, and a pager once you have
-more than a page's worth, same as the
-[services list](services.md#the-services-list) and searched/paginated
-server-side the same way. Deleting a stack from its own page requires typing the
-stack's name to confirm, since it also deletes every service inside it.
+`/stacks` has a search box, a sort (the same ones as services, plus **Most
+services**), a list/card view toggle, and a pager once you have more than a
+page's worth, same as the [services list](services.md#the-services-list) and
+searched/paginated server-side the same way. Deleting a stack from its own page
+requires typing the stack's name to confirm, since it also deletes every service
+inside it.

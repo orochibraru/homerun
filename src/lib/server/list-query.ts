@@ -1,9 +1,14 @@
-import { ilike, or, type SQL } from "drizzle-orm";
+import { asc, desc, ilike, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const DEFAULT_PER_PAGE = 25;
 
 const MAX_PER_PAGE = 100;
+
+export interface ListSort {
+	desc: boolean;
+	key: string;
+}
 
 export interface ListQuery {
 	active: boolean;
@@ -13,6 +18,7 @@ export interface ListQuery {
 	page: number;
 	perPage: number;
 	q: string;
+	sort: ListSort | null;
 }
 
 export interface PagedResult<T> {
@@ -35,19 +41,26 @@ function positiveInt(
 }
 
 /**
- * Reads a list page's `page`, `perPage` (capped at 100), `q` and
+ * Reads a list page's `page`, `perPage` (capped at 100), `q`, `sort` and
  * comma-separated filter params from the URL, falling back to defaults for
- * anything missing or invalid.
+ * anything missing or invalid. `sort` is a key with an optional leading `-`
+ * for descending (`name`, `-created`).
  *
  * @param options.filterKeys Query params to read as multi-value filters; any
  * other params are ignored.
  * @param options.pageParam Name of the page param, for pages that page more
  * than one list.
  * @param options.perPage Default page size when the URL doesn't set one.
+ * @param options.sortKeys Sort keys the list accepts; any other is ignored.
  */
 export function parseListQuery(
 	url: URL,
-	options: { filterKeys?: string[]; pageParam?: string; perPage?: number } = {},
+	options: {
+		filterKeys?: string[];
+		pageParam?: string;
+		perPage?: number;
+		sortKeys?: string[];
+	} = {},
 ): ListQuery {
 	const pageParam = options.pageParam ?? "page";
 	const perPage = positiveInt(
@@ -72,6 +85,12 @@ export function parseListQuery(
 	}
 
 	const q = (url.searchParams.get("q") ?? "").trim();
+	const rawSort = (url.searchParams.get("sort") ?? "").trim();
+	const sortKey = rawSort.replace(/^-/, "");
+	const sort =
+		sortKey && options.sortKeys?.includes(sortKey)
+			? { desc: rawSort.startsWith("-"), key: sortKey }
+			: null;
 
 	return {
 		active: Boolean(q) || Object.keys(filters).length > 0,
@@ -81,7 +100,29 @@ export function parseListQuery(
 		page,
 		perPage,
 		q,
+		sort,
 	};
+}
+
+/**
+ * The ORDER BY for a list: the sort the URL asked for when `columns` knows its
+ * key (a text column compared case-insensitively), then `fallback`, which is
+ * also the whole order when nothing valid was asked for.
+ */
+export function sortOrder(
+	sort: ListSort | null,
+	columns: Record<string, AnyPgColumn | SQL>,
+	fallback: SQL,
+): SQL[] {
+	const column = sort ? columns[sort.key] : undefined;
+	if (!(sort && column)) {
+		return [fallback];
+	}
+	const target =
+		"columnType" in column && column.columnType === "PgText"
+			? sql`lower(${column})`
+			: column;
+	return [sort.desc ? desc(target) : asc(target), fallback];
 }
 
 function escapeLike(value: string): string {

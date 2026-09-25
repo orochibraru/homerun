@@ -8,6 +8,7 @@
 	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
 	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
+	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
@@ -100,10 +101,14 @@
   {/if}
 {/snippet}
 
-{#snippet media(_item: { id: string })}
-  <span class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-    <Server class="size-4" />
-  </span>
+{#snippet media(item: { id: string })}
+  {@const svc = data.services.find((s) => s.id === item.id)}
+  <TemplateIcon
+    category={svc?.category ?? null}
+    class="size-8 rounded-lg"
+    fallback={Server}
+    icon={svc?.icon ?? null}
+  />
 {/snippet}
 
 {#snippet badge(item: { id: string })}

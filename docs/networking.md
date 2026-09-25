@@ -26,6 +26,23 @@ DNS-resolvability. The per-app login wall lives on the
   routed, otherwise turn public routing off in the Network section below
   instead.
 
+## Response cache
+
+Traefik can cache a service's responses and answer repeat requests itself,
+Varnish-style, so a slow or static-heavy app gets the speed of a CDN edge from
+your own server. An admin turns on **HTTP cache** under Settings → Networking
+once: that loads the [Souin](https://github.com/darkweak/souin) cache plugin
+into Traefik (Traefik is recreated and downloads the plugin on start, so the
+server needs internet access then). Each service then opts in on its Networking
+tab with **Cache for (seconds)**, applied on its next deploy.
+
+The cache is keyed on each visitor's cookies and credentials, so a logged-in
+page is only ever served back to the session that fetched it, never to someone
+else. Responses marked `Cache-Control: no-store` are never stored; everything
+else, `private` included, is cached per session for the time you set. The login
+wall still checks every request before the cache answers. Leave caching off for
+apps whose pages must always be live (dashboards, anything real-time).
+
 ## Published ports
 
 Domains only work for HTTP(S): Traefik routes a request by the hostname inside

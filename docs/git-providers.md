@@ -33,4 +33,8 @@ provider connected at all.
 
 **Connections made before deploy-on-push existed** only allowed reading repos on
 GitLab, Gitea and Bitbucket. The Source tab offers to reconnect them once
-Homerun is refused; until then it shows the webhook to add by hand.
+Homerun is refused; until then it shows the webhook to add by hand. **Gitea
+keeps the old read-only permissions across a reconnect**: it reuses the
+authorization it already has for Homerun without asking again. Revoke Homerun
+under Gitea's **Settings → Applications → Authorized OAuth2 Applications**
+first, then reconnect, and Gitea asks for the new permissions.

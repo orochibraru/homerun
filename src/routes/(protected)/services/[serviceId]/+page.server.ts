@@ -1,11 +1,13 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { JobDTO } from "$lib/dto/job-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { DeploymentService } from "$lib/services/deploy.service";
+import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Services");
@@ -92,6 +94,16 @@ export const actions = {
 			errorMessage: "Cancelled.",
 			finishedAt: new Date(),
 			status: "failed",
+		});
+		await JobDTO.cancelForDeployment(
+			latest.id,
+			"Cancelled from the dashboard.",
+		);
+		await DockerService.syncServiceStatus(params.serviceId).catch((error) => {
+			logger.warn(
+				"Couldn't refresh the service's status after a cancel",
+				error,
+			);
 		});
 		logger.info(
 			`Deploy cancelled: service=${params.serviceId} deployment=${latest.id} user=${locals.user.id}`,

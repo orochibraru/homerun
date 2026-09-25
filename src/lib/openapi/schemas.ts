@@ -97,6 +97,29 @@ export const serviceResponse = z.object({
 	name: z.string(),
 	networkMode: z.enum(["bridge", "host"]),
 	portProtocol: z.enum(["tcp", "udp", "both"]),
+	publishedPorts: z
+		.array(
+			z.object({
+				containerPort: z.number().int(),
+				hostPort: z.number().int(),
+				protocol: z.enum(["tcp", "udp"]),
+			}),
+		)
+		.meta({
+			description:
+				"Host ports bound straight to the container, for UDP and non-HTTP TCP",
+		}),
+	domainPorts: z.record(z.string(), z.number().int()).meta({
+		description:
+			"Per custom domain, the container port it routes to instead of containerPort",
+	}),
+	category: z.string().nullable().meta({
+		description: "The app's type, a template category like database",
+	}),
+	icon: z.string().nullable().meta({
+		description:
+			"A bundled template icon file name, or an uploaded data:image URL",
+	}),
 	stackId: z.string().nullable(),
 	registryPasswordEnc: z
 		.string()

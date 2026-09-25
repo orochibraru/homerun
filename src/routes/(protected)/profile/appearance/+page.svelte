@@ -9,38 +9,44 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
+	import { PALETTES } from "$lib/palettes";
 	import { title } from "$lib/store/title.js";
 	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 
 	const DEFAULT_ACCENT = "#8b1e3f";
-	const PRESET_ACCENTS = [
-		"#8b1e3f",
-		"#7c3aed",
-		"#0b8ac0",
-		"#22c55e",
-		"#f97316",
-		"#ef4444",
-		"#a855f7",
-		"#ec4899",
-		"#eab308",
-		"#14b8a6",
+	const DEFAULT_CHARTS = [
+		"#b8325a",
+		"#c2418f",
+		"#3b8fc4",
+		"#2f9e6e",
+		"#d99a2b",
 	];
 
 	// Seeded once from the initial load : untrack() is intentional, not a
 	// lint workaround (same pattern as /settings' own $state seeds).
 	let theme = $state(untrack(() => data.preferences.theme));
+	let palette = $state(
+		untrack(
+			() =>
+				data.preferences.palette ??
+				(data.preferences.accentColor ? "custom" : ""),
+		),
+	);
 	let accentColor = $state(
 		untrack(() => data.preferences.accentColor ?? DEFAULT_ACCENT),
 	);
-	// Tracked separately from `accentColor` (always a valid hex, for the
-	// swatch/picker display) so "Reset to default" actually submits a blank
-	// value, persisted as null : `accentColor` alone can't tell "picked the
-	// same hex as the default" apart from "explicitly reset".
-	let accentIsDefault = $state(
-		untrack(() => data.preferences.accentColor === null),
-	);
+
+	const choices = [
+		{
+			accent: DEFAULT_ACCENT,
+			charts: DEFAULT_CHARTS,
+			id: "",
+			name: "Bordeaux",
+		},
+		...PALETTES,
+	];
 
 	const themeLabels: Record<typeof theme, string> = {
 		dark: "Dark",
@@ -88,62 +94,71 @@
         </form>
     </section>
 
-    <!-- ═══ Main color accent ═══ -->
+    <!-- ═══ Colors ═══ -->
     <section class="panel rounded-md">
         <div class="border-border border-b px-5 py-4">
-            <h2 class="eyebrow">Main color accent</h2>
+            <h2 class="eyebrow">Colors</h2>
             <p class="text-text-muted text-xs">
-                Used for buttons, links, and highlighted state throughout the
-                dashboard.
+                A palette sets the accent (buttons, links, tab icons) and the
+                hues charts, category tiles and the background use, all
+                picked to go together. Custom sets the accent alone.
             </p>
         </div>
         <form
-            action="?/updateAccent"
+            action="?/updateColors"
             class="space-y-4 p-5"
             method="POST"
-            use:enhance={saveToast("Accent color")}
+            use:enhance={saveToast("Colors")}
         >
-            <div class="flex flex-wrap items-center gap-2.5">
-                {#each PRESET_ACCENTS as preset (preset)}
+            <input name="palette" type="hidden" value={palette} />
+            <input name="accentColor" type="hidden" value={accentColor} />
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-3">
+                {#each choices as choice (choice.id)}
                     <button
-                        aria-label={preset}
-                        class="size-8 rounded-full border-2 transition-transform hover:scale-110 {!accentIsDefault &&
-                        accentColor.toLowerCase() === preset
-                            ? 'border-text'
-                            : 'border-transparent'}"
+                        class="flex flex-col gap-2 rounded-md border p-3 text-left transition-colors {palette ===
+                        choice.id
+                            ? 'border-accent bg-accent-light'
+                            : 'border-border hover:bg-surface-2'}"
                         onclick={() => {
-                            accentColor = preset;
-                            accentIsDefault = false;
+                            palette = choice.id;
                         }}
-                        style="background-color: {preset}"
                         type="button"
-                    ></button>
+                    >
+                        <span class="text-text text-sm font-medium">
+                            {choice.name}{choice.id === "" ? " (default)" : ""}
+                        </span>
+                        <span class="flex gap-1">
+                            <span
+                                class="size-5 rounded-full"
+                                style="background-color: {choice.accent}"
+                            ></span>
+                            {#each choice.charts as hue, index (index)}
+                                <span
+                                    class="size-5 rounded-full opacity-80"
+                                    style="background-color: {hue}"
+                                ></span>
+                            {/each}
+                        </span>
+                    </button>
                 {/each}
-                <input
-                    aria-label="Custom color"
-                    bind:value={accentColor}
-                    class="border-border size-8 cursor-pointer rounded-lg border p-0.5"
-                    oninput={() => {
-                        accentIsDefault = false;
-                    }}
-                    type="color"
-                />
-                <Button
-                    onclick={() => {
-                        accentColor = DEFAULT_ACCENT;
-                        accentIsDefault = true;
-                    }}
-                    type="button"
-                    variant="ghost"
+                <label
+                    class="flex cursor-pointer flex-col gap-2 rounded-md border p-3 transition-colors {palette ===
+                    'custom'
+                        ? 'border-accent bg-accent-light'
+                        : 'border-border hover:bg-surface-2'}"
                 >
-                    Reset to default
-                </Button>
+                    <span class="text-text text-sm font-medium">Custom</span>
+                    <input
+                        aria-label="Custom accent color"
+                        class="border-border h-5 w-16 cursor-pointer rounded border p-0"
+                        oninput={() => {
+                            palette = "custom";
+                        }}
+                        type="color"
+                        bind:value={accentColor}
+                    />
+                </label>
             </div>
-            <input
-                name="accentColor"
-                type="hidden"
-                value={accentIsDefault ? "" : accentColor}
-            />
             <div class="flex justify-end">
                 <Button type="submit">Save</Button>
             </div>

@@ -5,6 +5,7 @@ import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import { BaseDTO } from "./base-dto";
 
@@ -79,7 +80,17 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 				.select()
 				.from(storageVolume)
 				.where(where)
-				.orderBy(desc(storageVolume.createdAt))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: storageVolume.createdAt,
+							name: storageVolume.name,
+							updated: storageVolume.updatedAt,
+						},
+						desc(storageVolume.createdAt),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db.select({ total: count() }).from(storageVolume).where(where),

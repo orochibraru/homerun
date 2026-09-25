@@ -331,3 +331,19 @@ export function revisionHealthMessage(
 			: `${service.name}'s new revision is unhealthy`,
 	};
 }
+
+/**
+ * Prefixes a message's title with the stack its service belongs to
+ * ("Vortex › Server was built and deployed"), so services with generic names
+ * say which project they're from. Unchanged without a stack, or when the title
+ * already starts with it.
+ */
+export function withStackTitle(
+	message: ChannelMessage,
+	stackName: string | null,
+): ChannelMessage {
+	if (!stackName || message.title.startsWith(`${stackName} › `)) {
+		return message;
+	}
+	return { ...message, title: `${stackName} › ${message.title}` };
+}

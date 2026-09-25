@@ -40,6 +40,16 @@
 		return text.charAt(0).toUpperCase() + text.slice(1);
 	}
 
+	/**
+	 * Crumbs a page's `load` returns as `crumbRoot` to stand in for its first
+	 * URL segment, e.g. a service in a stack reads Stacks › <stack> instead of
+	 * Services.
+	 */
+	function crumbRoot(): Crumb[] | null {
+		const root = (page.data as { crumbRoot?: unknown }).crumbRoot;
+		return Array.isArray(root) ? (root as Crumb[]) : null;
+	}
+
 	const crumbs = $derived.by<Crumb[]>(() => {
 		const segments = page.url.pathname.split("/").filter(Boolean);
 		if (segments.length === 0) {
@@ -50,10 +60,15 @@
 				},
 			];
 		}
+		const root = crumbRoot();
 		const out: Crumb[] = [];
 		let href = "";
-		for (const segment of segments) {
+		for (const [index, segment] of segments.entries()) {
 			href += `/${segment}`;
+			if (index === 0 && root) {
+				out.push(...root);
+				continue;
+			}
 			if (skip.includes(href)) {
 				continue;
 			}

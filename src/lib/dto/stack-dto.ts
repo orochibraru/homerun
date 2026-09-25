@@ -6,6 +6,7 @@ import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import {
 	tryRemoveWorkload,
@@ -96,7 +97,18 @@ export class StackDTO extends BaseDTO<Stack> {
 				.leftJoin(service, eq(service.stackId, stack.id))
 				.where(where)
 				.groupBy(stack.id)
-				.orderBy(desc(stack.createdAt))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: stack.createdAt,
+							name: stack.name,
+							updated: stack.updatedAt,
+							services: sql`count(${service.id})`,
+						},
+						desc(stack.createdAt),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db.select({ total: count() }).from(stack).where(where),

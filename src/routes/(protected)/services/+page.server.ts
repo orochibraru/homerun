@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { allowLongRequest } from "$lib/server/long-request";
@@ -71,7 +72,10 @@ const OP_PAST_TENSE: Record<BulkOp, string> = {
 };
 
 async function loadServices(url: URL) {
-	const query = parseListQuery(url, { filterKeys: ["status", "stack"] });
+	const query = parseListQuery(url, {
+		filterKeys: ["status", "stack"],
+		sortKeys: sortKeysOf(BASE_SORTS),
+	});
 	const paged = await ServiceDTO.listWithStackNamesPaged(query);
 
 	return {
@@ -165,7 +169,10 @@ async function runBulk(formData: FormData, userId: string) {
 export const load = async ({ parent, platform, url }) => {
 	allowLongRequest(platform);
 	await parent();
-	const query = parseListQuery(url, { filterKeys: ["status", "stack"] });
+	const query = parseListQuery(url, {
+		filterKeys: ["status", "stack"],
+		sortKeys: sortKeysOf(BASE_SORTS),
+	});
 	const [{ services, total }, facets, stacks] = await Promise.all([
 		loadServices(url),
 		ServiceDTO.listFilterFacets(),

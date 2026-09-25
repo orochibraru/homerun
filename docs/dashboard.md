@@ -24,6 +24,14 @@
 - **Quick actions**, shortcuts to deploy a service and to the services list.
 - **A setup-issues banner**, when applicable, see below.
 
+## List pages
+
+Every list page (services, stacks, templates, cron jobs, storage, remote hosts,
+build cache registries, S3 destinations, users) has the same toolbar: a search
+box, a sort (newest, oldest, name A–Z or Z–A, recently updated, and most
+services on stacks), filters where the list has any, and a pager. All of them
+run on the server over everything you can see, and live in the URL.
+
 ## Search
 
 The **Search…** button in the header, or `⌘K` / `Ctrl+K` anywhere, opens a

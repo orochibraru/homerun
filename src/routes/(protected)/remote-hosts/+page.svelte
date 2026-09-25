@@ -15,6 +15,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
+	import { BASE_SORTS } from "$lib/list-sorts";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
@@ -146,7 +147,8 @@
       </Button>
     </EmptyState>
   {:else}
-    <EntityToolbar {filters} placeholder="Search hosts by name or address…">
+    <EntityToolbar
+    sorts={BASE_SORTS} {filters} placeholder="Search hosts by name or address…">
       {#snippet trailing()}
         <ViewModeToggle {view} />
       {/snippet}

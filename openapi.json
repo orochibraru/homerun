@@ -825,6 +825,17 @@
 												},
 												"type": "array"
 											},
+											"category": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The app's type, a template category like database"
+											},
 											"command": {
 												"anyOf": [
 													{
@@ -940,6 +951,18 @@
 											},
 											"dnsResolvable": {
 												"type": "boolean"
+											},
+											"domainPorts": {
+												"additionalProperties": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"description": "Per custom domain, the container port it routes to instead of containerPort",
+												"propertyNames": {
+													"type": "string"
+												},
+												"type": "object"
 											},
 											"domains": {
 												"items": {
@@ -1122,6 +1145,17 @@
 													}
 												]
 											},
+											"icon": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "A bundled template icon file name, or an uploaded data:image URL"
+											},
 											"id": {
 												"type": "string"
 											},
@@ -1220,6 +1254,31 @@
 											},
 											"privileged": {
 												"type": "boolean"
+											},
+											"publishedPorts": {
+												"description": "Host ports bound straight to the container, for UDP and non-HTTP TCP",
+												"items": {
+													"additionalProperties": false,
+													"properties": {
+														"containerPort": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"hostPort": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"protocol": {
+															"enum": ["tcp", "udp"],
+															"type": "string"
+														}
+													},
+													"required": ["containerPort", "hostPort", "protocol"],
+													"type": "object"
+												},
+												"type": "array"
 											},
 											"registryPasswordEnc": {
 												"anyOf": [
@@ -1360,6 +1419,10 @@
 											"name",
 											"networkMode",
 											"portProtocol",
+											"publishedPorts",
+											"domainPorts",
+											"category",
+											"icon",
 											"stackId",
 											"registryPasswordEnc",
 											"registryUrl",
@@ -1685,6 +1748,17 @@
 											},
 											"type": "array"
 										},
+										"category": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The app's type, a template category like database"
+										},
 										"command": {
 											"anyOf": [
 												{
@@ -1800,6 +1874,18 @@
 										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"domainPorts": {
+											"additionalProperties": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"description": "Per custom domain, the container port it routes to instead of containerPort",
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
 										},
 										"domains": {
 											"items": {
@@ -1982,6 +2068,17 @@
 												}
 											]
 										},
+										"icon": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "A bundled template icon file name, or an uploaded data:image URL"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -2080,6 +2177,31 @@
 										},
 										"privileged": {
 											"type": "boolean"
+										},
+										"publishedPorts": {
+											"description": "Host ports bound straight to the container, for UDP and non-HTTP TCP",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"containerPort": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"hostPort": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"protocol": {
+														"enum": ["tcp", "udp"],
+														"type": "string"
+													}
+												},
+												"required": ["containerPort", "hostPort", "protocol"],
+												"type": "object"
+											},
+											"type": "array"
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -2215,6 +2337,10 @@
 										"name",
 										"networkMode",
 										"portProtocol",
+										"publishedPorts",
+										"domainPorts",
+										"category",
+										"icon",
 										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",
@@ -2493,6 +2619,17 @@
 											},
 											"type": "array"
 										},
+										"category": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The app's type, a template category like database"
+										},
 										"command": {
 											"anyOf": [
 												{
@@ -2608,6 +2745,18 @@
 										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"domainPorts": {
+											"additionalProperties": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"description": "Per custom domain, the container port it routes to instead of containerPort",
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
 										},
 										"domains": {
 											"items": {
@@ -2790,6 +2939,17 @@
 												}
 											]
 										},
+										"icon": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "A bundled template icon file name, or an uploaded data:image URL"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -2888,6 +3048,31 @@
 										},
 										"privileged": {
 											"type": "boolean"
+										},
+										"publishedPorts": {
+											"description": "Host ports bound straight to the container, for UDP and non-HTTP TCP",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"containerPort": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"hostPort": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"protocol": {
+														"enum": ["tcp", "udp"],
+														"type": "string"
+													}
+												},
+												"required": ["containerPort", "hostPort", "protocol"],
+												"type": "object"
+											},
+											"type": "array"
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -3023,6 +3208,10 @@
 										"name",
 										"networkMode",
 										"portProtocol",
+										"publishedPorts",
+										"domainPorts",
+										"category",
+										"icon",
 										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",
@@ -3478,6 +3667,17 @@
 											},
 											"type": "array"
 										},
+										"category": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The app's type, a template category like database"
+										},
 										"command": {
 											"anyOf": [
 												{
@@ -3593,6 +3793,18 @@
 										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"domainPorts": {
+											"additionalProperties": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"description": "Per custom domain, the container port it routes to instead of containerPort",
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
 										},
 										"domains": {
 											"items": {
@@ -3775,6 +3987,17 @@
 												}
 											]
 										},
+										"icon": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "A bundled template icon file name, or an uploaded data:image URL"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -3873,6 +4096,31 @@
 										},
 										"privileged": {
 											"type": "boolean"
+										},
+										"publishedPorts": {
+											"description": "Host ports bound straight to the container, for UDP and non-HTTP TCP",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"containerPort": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"hostPort": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"protocol": {
+														"enum": ["tcp", "udp"],
+														"type": "string"
+													}
+												},
+												"required": ["containerPort", "hostPort", "protocol"],
+												"type": "object"
+											},
+											"type": "array"
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -4008,6 +4256,10 @@
 										"name",
 										"networkMode",
 										"portProtocol",
+										"publishedPorts",
+										"domainPorts",
+										"category",
+										"icon",
 										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",

@@ -138,6 +138,7 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 					params.networkMode === "host" ? false : params.dnsResolvable,
 				domainPorts: params.domainPorts,
 				domains: params.domains,
+				httpCacheTtl: params.httpCacheTtl,
 				networkName: swarmNetworkName(),
 				serviceId: params.serviceId,
 				slug: params.slug,
@@ -231,6 +232,7 @@ export interface CreateSwarmServiceParams {
 	defaultDomainEnabled?: boolean;
 	dnsResolvable?: boolean;
 	domainPorts?: Record<string, number>;
+	httpCacheTtl?: number | null;
 	domains?: string[];
 	envVars: Record<string, string>;
 	image: string;

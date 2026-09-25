@@ -15,13 +15,13 @@ for people who'd rather manage settings as code.
 
 `/settings` is one page per tab, all admin-only:
 
-| Tab            | What's on it                                                                                                                                                                      |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **General**    | Base domain, Use HTTPS, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                                                   |
-| **Docker**     | Docker socket path, the shared network name, [image scanning](image-scanning.md) and its block policy, orchestration mode ([swarm](swarm-mode.md) or standalone)                  |
-| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and [DNS automation](dns-automation.md) (Cloudflare, Pangolin, and whether Pangolin handles sign-in) |
-| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved                                  |
-| **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Migrating from Dokploy or Coolify](migrating-from-dokploy-or-coolify.md)                          |
+| Tab            | What's on it                                                                                                                                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **General**    | Base domain, Use HTTPS, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                                                                                                   |
+| **Docker**     | Docker socket path, the shared network name, [image scanning](image-scanning.md) and its block policy, orchestration mode ([swarm](swarm-mode.md) or standalone)                                                                  |
+| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, the [HTTP cache](networking.md#response-cache), and [DNS automation](dns-automation.md) (Cloudflare, Pangolin, and whether Pangolin handles sign-in) |
+| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved                                                                                  |
+| **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Migrating from Dokploy or Coolify](migrating-from-dokploy-or-coolify.md)                                                                          |
 
 **Use HTTPS** sets the scheme of the Dashboard URL derived from the base domain,
 and the helper text under it shows the resulting origin.

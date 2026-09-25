@@ -29,6 +29,7 @@ const {
 	revisionHealthMessage,
 	statusChecksMessage,
 	uptimeMessage,
+	withStackTitle,
 } = await import("../../../src/lib/services/notification-messages");
 const { channelTargetFromForm, validateChannelTarget } = await import(
 	"../../../src/lib/server/validation/notification-channel"
@@ -453,5 +454,20 @@ describe("deploy and uptime messages", () => {
 		);
 		expect(logTail(log, null).split("\n")).toHaveLength(15);
 		expect(logTail(log, null)).toEndWith("line 29");
+	});
+});
+
+describe("withStackTitle", () => {
+	test("prefixes the title with the stack, once", () => {
+		const titled = withStackTitle(
+			{ ...message, title: "Server was built and deployed" },
+			"Vortex",
+		);
+		expect(titled.title).toBe("Vortex › Server was built and deployed");
+		expect(withStackTitle(titled, "Vortex").title).toBe(titled.title);
+	});
+
+	test("leaves an ungrouped service's title alone", () => {
+		expect(withStackTitle(message, null)).toBe(message);
 	});
 });

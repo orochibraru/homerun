@@ -105,6 +105,13 @@
           </p>
         {/if}
       </div>
+      <CheckBox
+        checked={data.settings.traefikHttpCache}
+        helperText="Loads the Souin cache plugin into Traefik (downloaded on its next start), so services can turn on Cache responses on their Networking tab. Nothing is cached until a service does."
+        id="traefikHttpCache"
+        label="HTTP cache"
+        name="traefikHttpCache"
+      />
       <div class="flex justify-end">
         <Button type="submit">Save</Button>
       </div>

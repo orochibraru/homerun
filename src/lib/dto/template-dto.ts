@@ -16,6 +16,7 @@ import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import {
 	runtimeOptionsFrom,
@@ -101,7 +102,17 @@ export class TemplateDTO extends BaseDTO<Template> {
 				.select()
 				.from(template)
 				.where(where)
-				.orderBy(asc(template.name))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: template.createdAt,
+							name: template.name,
+							updated: template.updatedAt,
+						},
+						asc(template.name),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db.select({ total: count() }).from(template).where(where),
@@ -113,6 +124,28 @@ export class TemplateDTO extends BaseDTO<Template> {
 			perPage: query.perPage,
 			total: totals[0]?.total ?? 0,
 		};
+	}
+
+	/**
+	 * The icon library a service can pick from: every built-in template's
+	 * bundled icon with that template's name, one entry per file, sorted by
+	 * name.
+	 */
+	static async listBundledIcons(): Promise<{ icon: string; name: string }[]> {
+		const rows = await db
+			.select({ icon: template.icon, name: template.name })
+			.from(template)
+			.where(and(isNull(template.ownerId), isNotNull(template.icon)))
+			.orderBy(asc(template.name));
+		const seen = new Set<string>();
+		const icons: { icon: string; name: string }[] = [];
+		for (const row of rows) {
+			if (row.icon?.includes(".") && !seen.has(row.icon)) {
+				seen.add(row.icon);
+				icons.push({ icon: row.icon, name: row.name });
+			}
+		}
+		return icons;
 	}
 
 	/** Every category present across built-in and custom templates, for the gallery's filter pills. */

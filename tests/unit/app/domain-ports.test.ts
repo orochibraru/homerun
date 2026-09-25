@@ -9,6 +9,7 @@ mock.module("$app/environment", () => ({
 const { buildContainerLabels } = await import(
 	"../../../src/lib/services/docker/labels"
 );
+const { config } = await import("../../../src/lib/config");
 
 describe("per-domain container ports", () => {
 	const labels = buildContainerLabels({
@@ -34,5 +35,52 @@ describe("per-domain container ports", () => {
 		expect(
 			labels["traefik.http.services.gitea-8080.loadbalancer.server.port"],
 		).toBe("8080");
+	});
+});
+
+describe("response cache middleware", () => {
+	const build = (httpCacheTtl: number | null) =>
+		buildContainerLabels({
+			containerPort: 80,
+			domains: ["app.example.org"],
+			httpCacheTtl,
+			serviceId: "svc-1",
+			slug: "app",
+		});
+
+	test("adds a per-session Souin cache after auth and retry when the plugin is on", () => {
+		config.traefik.httpCache = true;
+		const labels = build(120);
+		expect(labels["traefik.http.routers.app.middlewares"]).toBe(
+			"app-auth,app-retry,app-cache",
+		);
+		expect(
+			labels[
+				"traefik.http.middlewares.app-cache.plugin.souin.default_cache.ttl"
+			],
+		).toBe("120s");
+		expect(
+			labels[
+				"traefik.http.middlewares.app-cache.plugin.souin.default_cache.key.headers[0]"
+			],
+		).toBe("Cookie");
+		expect(
+			labels[
+				"traefik.http.middlewares.app-cache.plugin.souin.default_cache.key.headers[1]"
+			],
+		).toBe("Authorization");
+	});
+
+	test("adds nothing when the service or the instance has caching off", () => {
+		config.traefik.httpCache = true;
+		expect(build(null)["traefik.http.routers.app.middlewares"]).toBe(
+			"app-auth,app-retry",
+		);
+		config.traefik.httpCache = false;
+		const labels = build(120);
+		expect(labels["traefik.http.routers.app.middlewares"]).toBe(
+			"app-auth,app-retry",
+		);
+		expect(Object.keys(labels).some((k) => k.includes("souin"))).toBe(false);
 	});
 });

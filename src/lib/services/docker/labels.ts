@@ -54,12 +54,16 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
  * toggling it applies without a redeploy. A retry middleware follows it, so a
  * request that reaches a container or swarm task that just went away during a
  * rollout is sent to another one; Traefik only retries when no request bytes
- * reached the backend.
+ * reached the backend. With `httpCacheTtl` set and the instance's HTTP cache
+ * plugin loaded, a Souin cache middleware follows both, keyed on the Cookie
+ * and Authorization headers so one session's pages are never served to
+ * another.
  */
 export function buildContainerLabels(params: {
 	containerPort: number;
 	defaultDomainEnabled?: boolean;
 	domainPorts?: Record<string, number>;
+	httpCacheTtl?: number | null;
 	dnsResolvable?: boolean;
 	domains?: string[];
 	networkName?: string;
@@ -96,6 +100,11 @@ export function buildContainerLabels(params: {
 
 	const authMiddleware = `${slug}-auth`;
 	const retryMiddleware = `${slug}-retry`;
+	const cacheMiddleware = `${slug}-cache`;
+	const cached = Boolean(params.httpCacheTtl && config.traefik.httpCache);
+	const middlewares = [authMiddleware, retryMiddleware]
+		.concat(cached ? [cacheMiddleware] : [])
+		.join(",");
 	const labels: Record<string, string> = {
 		...baseLabels,
 		"traefik.docker.network": networkName,
@@ -111,6 +120,12 @@ export function buildContainerLabels(params: {
 		[`traefik.http.middlewares.${retryMiddleware}.retry.initialinterval`]:
 			RETRY_INITIAL_INTERVAL,
 	};
+	if (cached) {
+		const souin = `traefik.http.middlewares.${cacheMiddleware}.plugin.souin`;
+		labels[`${souin}.default_cache.ttl`] = `${params.httpCacheTtl}s`;
+		labels[`${souin}.default_cache.key.headers[0]`] = "Cookie";
+		labels[`${souin}.default_cache.key.headers[1]`] = "Authorization";
+	}
 
 	hostnames.forEach((hostname, index) => {
 		const router = index === 0 ? slug : `${slug}-${index}`;
@@ -123,8 +138,7 @@ export function buildContainerLabels(params: {
 		labels[`traefik.http.services.${service}.loadbalancer.server.port`] =
 			String(port);
 		labels[`traefik.http.routers.${router}.service`] = service;
-		labels[`traefik.http.routers.${router}.middlewares`] =
-			`${authMiddleware},${retryMiddleware}`;
+		labels[`traefik.http.routers.${router}.middlewares`] = middlewares;
 		const resolver = certResolverFor(
 			hostname,
 			config.traefik.certResolver,

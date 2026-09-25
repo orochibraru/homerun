@@ -98,6 +98,11 @@
                 href="{resolve('/services')}/{n.serviceId}"
                 onclick={() => onItemClick(n)}
               >
+                {#if n.stackName}
+                  <p class="text-text-subtle mb-0.5 text-[0.65rem] font-medium">
+                    {n.stackName}
+                  </p>
+                {/if}
                 <p class="text-text text-xs">{n.message}</p>
                 <p class="text-text-subtle mt-0.5 text-[0.65rem]">
                   {timeAgo(n.createdAt)}

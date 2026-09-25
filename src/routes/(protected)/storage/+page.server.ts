@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { CronService } from "$lib/services/cron.service";
@@ -80,7 +81,10 @@ async function runBulk(formData: FormData, userId: string) {
 
 export const load = async ({ parent, url }) => {
 	await parent();
-	const query = parseListQuery(url, { filterKeys: ["kind", "backup"] });
+	const query = parseListQuery(url, {
+		filterKeys: ["kind", "backup"],
+		sortKeys: sortKeysOf(BASE_SORTS),
+	});
 	const paged = await StorageVolumeDTO.listPaged(query);
 
 	return {

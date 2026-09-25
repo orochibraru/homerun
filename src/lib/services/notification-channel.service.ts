@@ -3,7 +3,7 @@ import type { DeployTrigger } from "$lib/deploy-trigger";
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
 import type { NewJobInput } from "$lib/dto/job-dto";
 import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { parseTelegramTarget } from "$lib/notification-channel-target";
@@ -11,7 +11,11 @@ import { isFailureEvent, NOTIFICATION_EVENTS } from "$lib/notification-events";
 import { primaryHostname } from "$lib/service-domains";
 import { serviceHostname } from "./dns.service";
 import { EmailService } from "./email.service";
-import { type ChannelMessage, deployMessage } from "./notification-messages";
+import {
+	type ChannelMessage,
+	deployMessage,
+	withStackTitle,
+} from "./notification-messages";
 import { QueueService } from "./queue.service";
 
 const logger = new Logger("NotificationChannels");
@@ -252,7 +256,25 @@ class NotificationChannelServiceClass {
 	/** Delivers `message` to every account's enabled channels subscribed to that event, in parallel. Per-channel failures don't reject; see `#send`. */
 	async dispatch(message: ChannelMessage): Promise<void> {
 		const channels = await NotificationChannelDTO.listSubscribed(message.event);
-		await Promise.all(channels.map((channel) => this.#send(channel, message)));
+		if (channels.length === 0) {
+			return;
+		}
+		const titled = withStackTitle(
+			message,
+			await this.#stackNameOf(message.serviceId),
+		);
+		await Promise.all(channels.map((channel) => this.#send(channel, titled)));
+	}
+
+	/** The name of the stack `serviceId` belongs to, null for an ungrouped or unknown service, or when the lookup fails. */
+	async #stackNameOf(serviceId: string): Promise<string | null> {
+		try {
+			const svc = await ServiceDTO.get(serviceId);
+			const stack = svc?.stackId ? await StackDTO.get(svc.stackId) : null;
+			return stack?.name ?? null;
+		} catch {
+			return null;
+		}
 	}
 
 	/**

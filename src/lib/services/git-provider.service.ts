@@ -63,6 +63,8 @@ export class GitProviderRefusedError extends Error {
 const TOKEN_REFUSAL_PATTERN =
 	/scope|token|unauthori[sz]ed|expired|revoked|invalid[_ ]grant|credential/i;
 
+const STALE_GRANT_PATTERN = /token scope=/i;
+
 /** The human-readable reason in a provider's error body, whichever of the common shapes it uses. */
 function providerErrorDetail(bodyText: string): string {
 	try {
@@ -84,7 +86,9 @@ function providerErrorDetail(bodyText: string): string {
 /**
  * Turns a provider's 401/403 answer into a refusal error: carries the
  * provider's own reason, and only suggests reconnecting when that reason is
- * about the token (always for a 401).
+ * about the token (always for a 401). Gitea's scope mismatch says to revoke
+ * the app first: Gitea reuses an existing authorization on reconnect, scopes
+ * included, so reconnecting alone hands back the same token scopes.
  */
 export function refusalFrom(
 	providerName: string,
@@ -95,9 +99,11 @@ export function refusalFrom(
 	const reconnectHelps =
 		status === 401 || detail === "" || TOKEN_REFUSAL_PATTERN.test(detail);
 	const reason = detail ? `: ${detail}` : "";
-	const advice = reconnectHelps
-		? "Reconnect it so Homerun gets repository and webhook access."
-		: "Reconnecting won't change this: the connected account needs admin rights on the repository, or the provider has webhooks turned off.";
+	const advice = STALE_GRANT_PATTERN.test(detail)
+		? `Its authorization for Homerun predates the permissions Homerun now asks for, and reconnecting reuses it: revoke Homerun in ${providerName}'s settings (Gitea: Settings → Applications → Authorized OAuth2 Applications), then reconnect.`
+		: reconnectHelps
+			? "Reconnect it so Homerun gets repository and webhook access."
+			: "Reconnecting won't change this: the connected account needs admin rights on the repository, or the provider has webhooks turned off.";
 	return new GitProviderRefusedError(
 		`${providerName} refused the request (${status})${reason}. ${advice}`,
 		status,

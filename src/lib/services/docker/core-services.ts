@@ -39,6 +39,9 @@ export interface SelfContainer {
 	networkAddress: string | null;
 }
 
+export const SOUIN_MODULE = "github.com/darkweak/souin";
+export const SOUIN_VERSION = "v1.7.9";
+
 export interface InfraContainer {
 	id: string;
 	image: string;
@@ -656,6 +659,18 @@ export function DockerCoreServicesMixin<
 				applied.message,
 				"The swarm itself is left running : run `docker swarm leave --force` yourself if you want it gone.",
 			];
+		}
+
+		/**
+		 * Loads or unloads the Souin HTTP cache plugin into Traefik, which a
+		 * service's "Cache responses" setting needs: plugins are static
+		 * configuration, so this recreates Traefik when it changes anything.
+		 */
+		async applyHttpCache(enabled: boolean): Promise<TraefikUpdateResult> {
+			return await this.applyTraefikFlags({
+				"experimental.plugins.souin.modulename": enabled ? SOUIN_MODULE : null,
+				"experimental.plugins.souin.version": enabled ? SOUIN_VERSION : null,
+			});
 		}
 
 		/**

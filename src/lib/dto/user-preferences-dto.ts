@@ -28,6 +28,7 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 		const row: UserPreferences = {
 			accentColor: null,
 			createdAt: now,
+			palette: null,
 			theme: "system",
 			updatedAt: now,
 			userId,
@@ -41,9 +42,19 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 		await this.persist({ theme });
 	}
 
-	/** Null resets to the built-in --color-accent default. */
-	async updateAccentColor(accentColor: string | null): Promise<void> {
-		await this.persist({ accentColor });
+	/**
+	 * Saves the colour choice: a palette by id, or a custom accent colour, or
+	 * neither for the built-in default. The two are exclusive, so setting one
+	 * clears the other.
+	 */
+	async updateColors(
+		choice: { palette: string } | { accentColor: string } | null,
+	): Promise<void> {
+		await this.persist({
+			accentColor:
+				choice && "accentColor" in choice ? choice.accentColor : null,
+			palette: choice && "palette" in choice ? choice.palette : null,
+		});
 	}
 
 	/** Persists a partial field update to this row, in DB and locally. */

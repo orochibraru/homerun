@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { parseListQuery } from "$lib/server/list-query";
 import { allowLongRequest } from "$lib/server/long-request";
 import { quickDeployFromTemplate } from "$lib/services/template-links";
@@ -24,11 +25,13 @@ export const load = async ({ parent, url }) => {
 		filterKeys: ["category"],
 		pageParam: "bpage",
 		perPage: 24,
+		sortKeys: sortKeysOf(BASE_SORTS),
 	});
 	const customQuery = parseListQuery(url, {
 		filterKeys: ["category"],
 		pageParam: "cpage",
 		perPage: 24,
+		sortKeys: sortKeysOf(BASE_SORTS),
 	});
 
 	const rawStackId = url.searchParams.get("stackId");

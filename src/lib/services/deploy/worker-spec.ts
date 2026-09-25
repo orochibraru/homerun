@@ -290,6 +290,7 @@ function workloadSpec(ctx: WorkerSpecContext, workload: WorkloadPlan) {
 		dnsResolvable: svc.dnsResolvable,
 		domainPorts: svc.domainPorts,
 		domains: svc.domains,
+		httpCacheTtl: svc.httpCacheTtl,
 		envVars: {},
 		healthcheckCommand: svc.healthcheckCommand,
 		image: "",

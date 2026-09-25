@@ -447,6 +447,39 @@ export class JobDTO extends BaseDTO<Job> {
 	}
 
 	/**
+	 * Cancels the queued or running job carrying `deploymentId` in its payload,
+	 * and anything waiting on it. A queued job never starts; one the Go worker
+	 * is executing loses its lease on the next heartbeat, which cancels the
+	 * build or pull and drops its result.
+	 *
+	 * @returns Whether a job was cancelled.
+	 */
+	static async cancelForDeployment(
+		deploymentId: string,
+		reason: string,
+	): Promise<boolean> {
+		const cancelled = await db
+			.update(job)
+			.set({
+				...CLEARED_STAGE,
+				error: reason,
+				finishedAt: new Date(),
+				status: "cancelled",
+			})
+			.where(
+				and(
+					sql`${job.payload}->>'deploymentId' = ${deploymentId}`,
+					inArray(job.status, ["queued", "running"]),
+				),
+			)
+			.returning({ id: job.id });
+		await Promise.all(
+			cancelled.map((row) => JobDTO.cancelDependents(row.id, reason)),
+		);
+		return cancelled.length > 0;
+	}
+
+	/**
 	 * Up to 50 running and queued jobs, running first, then by priority and
 	 * age.
 	 */

@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 
@@ -8,7 +9,7 @@ const logger = new Logger("S3Destinations");
 
 export const load = async ({ parent, url }) => {
 	await parent();
-	const query = parseListQuery(url);
+	const query = parseListQuery(url, { sortKeys: sortKeysOf(BASE_SORTS) });
 	const paged = await S3DestinationDTO.listPaged(query);
 	return {
 		destinations: paged.items.map((d) => d.toJSON()),

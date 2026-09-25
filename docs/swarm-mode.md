@@ -9,7 +9,18 @@ Docker Swarm Service instead of a plain container, and the Compute tab gets a
 **replicas** field (default 1) controlling how many copies Docker runs and
 load-balances across via its own routing mesh. Start/ stop map to scaling to
 0/back up rather than a real container stop/start, and restart force-updates
-every task (recreating them) instead of restarting one container.
+every task (recreating them) instead of restarting one container. Restart reuses
+the service's current settings: a changed environment variable needs a
+**Deploy**.
+
+A deploy updates the service in place and waits for the new tasks to be healthy.
+If they aren't, swarm rolls back to the previous tasks, as long as at least one
+of those is actually running. When the service is already broken (its tasks
+crash-looping, say on a wrong database URL), there's nothing worth going back
+to, so the new tasks stay in place instead: the deploy that fixes the setting
+isn't thrown away, and the next one after it doesn't have to fight a rollback.
+Either way the failed deploy's error ends with the last task error Docker
+recorded (the crash or failed healthcheck), so you see why, not just that.
 
 Swarm mode needs Homerun on the **system (rootful)** Docker daemon: rootless
 Docker can't create overlay networks, so saving **Swarm** on an instance running

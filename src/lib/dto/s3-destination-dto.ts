@@ -5,6 +5,7 @@ import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import { decryptSecret, encryptSecret } from "$lib/services/secrets";
 import { BaseDTO } from "./base-dto";
@@ -68,7 +69,17 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 				.select()
 				.from(s3Destination)
 				.where(where)
-				.orderBy(desc(s3Destination.createdAt))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: s3Destination.createdAt,
+							name: s3Destination.name,
+							updated: s3Destination.updatedAt,
+						},
+						desc(s3Destination.createdAt),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db.select({ total: count() }).from(s3Destination).where(where),

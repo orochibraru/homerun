@@ -4,6 +4,7 @@
 	import CheckBox from "$lib/components/check-box.svelte";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import { inputClass, labelClass } from "$lib/components/form-styles";
+	import ScheduleField from "$lib/components/schedule-field.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
@@ -89,17 +90,7 @@
         value={values.name}
       />
     </div>
-    <div>
-      <label class={labelClass} for="schedule">Schedule (cron syntax)</label>
-      <Input
-        class=""
-        id="schedule"
-        name="schedule"
-        placeholder="0 3 * * *"
-        type="text"
-        value={values.schedule}
-      />
-    </div>
+    <ScheduleField id="schedule" name="schedule" value={values.schedule} />
   </div>
 
   <div>

@@ -87,7 +87,7 @@ test.describe
 		}) => {
 			await page.goto("/cron-jobs/new");
 			await page.locator("#name").fill("Nightly");
-			await page.locator("#schedule").fill("0 3 * * *");
+			await page.getByLabel("Time of day").fill("03:00");
 			await page.locator("#image").fill("alpine");
 			await page
 				.getByRole("button", { name: /Create/i })

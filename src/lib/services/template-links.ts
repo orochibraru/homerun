@@ -17,9 +17,11 @@ const logger = new Logger("Templates");
 
 export interface ResolvedTemplateLink {
 	alias: string;
+	category: string | null;
 	containerPort: number;
 	cpuLimit: string | null;
 	envVars: Record<string, string>;
+	icon: string | null;
 	image: string;
 	memoryLimitMb: number | null;
 	restartPolicy: string;
@@ -83,9 +85,11 @@ export async function buildTemplateLinkContext(
 		);
 		resolved.push({
 			alias: link.alias,
+			category: linkedTemplate.linkedTemplateCategory,
 			containerPort: linkedTemplate.linkedTemplateContainerPort,
 			cpuLimit: linkedTemplate.linkedTemplateCpuLimit,
 			envVars: linkedTemplate.linkedTemplateEnvVars,
+			icon: linkedTemplate.linkedTemplateIcon,
 			image: linkedTemplate.linkedTemplateImage,
 			memoryLimitMb: linkedTemplate.linkedTemplateMemoryLimitMb,
 			restartPolicy: linkedTemplate.linkedTemplateRestartPolicy,
@@ -155,10 +159,12 @@ export async function createLinkedServices(
 	for (const link of links) {
 		// oxlint-disable-next-line no-await-in-loop -- services are created one at a time so each gets a fresh slug-uniqueness check against the ones already committed
 		const svc = await ServiceDTO.create({
+			category: link.category,
 			containerPort: link.containerPort,
 			cpuLimit: link.cpuLimit,
 			dnsResolvable: false,
 			envVars: link.envVars,
+			icon: link.icon,
 			memoryLimitMb: link.memoryLimitMb,
 			name: link.templateName,
 			stackId: params.stackId,
@@ -215,6 +221,7 @@ export async function createServiceFromTemplate(
 			: (row.envVars ?? {});
 
 	const svc = await ServiceDTO.create({
+		category: row.category,
 		containerPort: row.containerPort,
 		cpuLimit: row.cpuLimit,
 		// Same default as the wizard: a datastore template (Postgres, Redis,
@@ -222,6 +229,7 @@ export async function createServiceFromTemplate(
 		dnsResolvable: !isDatabaseImage(row.image),
 		envVars,
 		healthcheckCommand: row.healthcheckCommand,
+		icon: row.icon,
 		image: row.image,
 		memoryLimitMb: row.memoryLimitMb,
 		name: row.name,

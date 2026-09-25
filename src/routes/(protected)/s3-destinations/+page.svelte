@@ -10,6 +10,7 @@
 	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
+	import { BASE_SORTS } from "$lib/list-sorts";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
@@ -98,7 +99,8 @@
       </Button>
     </EmptyState>
   {:else}
-    <EntityToolbar placeholder="Search destinations by name, endpoint or bucket…">
+    <EntityToolbar
+    sorts={BASE_SORTS} placeholder="Search destinations by name, endpoint or bucket…">
       {#snippet trailing()}
         <ViewModeToggle {view} />
       {/snippet}

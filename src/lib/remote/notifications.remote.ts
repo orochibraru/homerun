@@ -11,6 +11,7 @@ export interface NotificationFeedItem {
 	message: string;
 	readAt: Date | null;
 	serviceId: string | null;
+	stackName: string | null;
 }
 
 export interface NotificationFeed {
@@ -25,7 +26,7 @@ export const getNotifications = query(async (): Promise<NotificationFeed> => {
 		NotificationDTO.unreadCount(user.id),
 	]);
 	return {
-		items: rows.map(({ notification }) => {
+		items: rows.map(({ notification, stackName }) => {
 			const row = notification.toJSON();
 			return {
 				createdAt: row.createdAt,
@@ -33,6 +34,7 @@ export const getNotifications = query(async (): Promise<NotificationFeed> => {
 				message: row.message,
 				readAt: row.readAt,
 				serviceId: row.serviceId,
+				stackName,
 			};
 		}),
 		unreadCount,

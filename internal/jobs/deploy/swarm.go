@@ -93,6 +93,14 @@ func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any) 
 	if err != nil {
 		return "", err
 	}
+	current, err := r.docker.ListSwarmTasks(ctx, id, true)
+	if err != nil {
+		return "", err
+	}
+	failureAction := SwarmFailureAction(current)
+	if failureAction == "pause" {
+		r.progress.line("None of the current tasks is running, so a failed update keeps the new tasks instead of rolling back to the broken ones.")
+	}
 	order := SwarmUpdateOrder(r.spec.Volumes)
 	if order == "start-first" {
 		r.progress.line("Updating the swarm service : each new task starts first, and swarm stops the old one once the new one is running (healthy, when it has a healthcheck)...")
@@ -107,7 +115,7 @@ func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any) 
 	update["TaskTemplate"] = task
 	update["RollbackConfig"] = map[string]any{"Order": order, "Parallelism": 1}
 	update["UpdateConfig"] = map[string]any{
-		"FailureAction":   "rollback",
+		"FailureAction":   failureAction,
 		"MaxFailureRatio": 0,
 		"Monitor":         swarmUpdateMonitorN,
 		"Order":           order,
@@ -149,7 +157,13 @@ func (r *run) awaitSwarmUpdate(ctx context.Context, id, previousStartedAt string
 		case "completed":
 			return nil
 		case "failed":
-			return &kindError{kind: FailureRolloutFailed, err: errors.New(outcome.Reason)}
+			reason := outcome.Reason
+			if tasks, err := r.docker.ListSwarmTasks(ctx, id, false); err == nil {
+				if taskErr := LastTaskError(tasks); taskErr != "" {
+					reason += " Last task error: " + taskErr
+				}
+			}
+			return &kindError{kind: FailureRolloutFailed, err: errors.New(reason)}
 		}
 	}
 }

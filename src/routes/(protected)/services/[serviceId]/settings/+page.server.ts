@@ -6,18 +6,23 @@ import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateGeneralSchema } from "$lib/server/validation/service";
+import { iconProblem } from "$lib/service-icon";
 import { runtimeOptionsFrom } from "$lib/service-runtime";
 import { CronService } from "$lib/services/cron.service";
 import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
+import { TEMPLATE_CATEGORIES } from "$lib/template-categories";
 
 const logger = new Logger("Services");
 
 export const load = async ({ parent }) => {
 	await parent();
-	const stacks = await StackDTO.list();
+	const [stacks, icons] = await Promise.all([
+		StackDTO.list(),
+		TemplateDTO.listBundledIcons(),
+	]);
 
-	return { stacks: stacks.map((p) => p.toJSON()) };
+	return { icons, stacks: stacks.map((p) => p.toJSON()) };
 };
 
 export const actions = {
@@ -44,6 +49,33 @@ export const actions = {
 			`Service deleted: service=${svc.id} force=${force} user=${locals.user.id}`,
 		);
 		throw redirect(303, resolve("/services"));
+	},
+	updateIdentity: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		const formData = await request.formData();
+		const category = String(formData.get("category") ?? "");
+		const icon = String(formData.get("icon") ?? "");
+		if (category && !TEMPLATE_CATEGORIES.some((c) => c.value === category)) {
+			return fail(400, { error: "Pick a type from the list." });
+		}
+		const bundled = (await TemplateDTO.listBundledIcons()).map((i) => i.icon);
+		const problem = iconProblem(icon, bundled);
+		if (problem) {
+			return fail(400, { error: problem });
+		}
+
+		await svc.update({ category: category || null, icon: icon || null });
+		logger.info(
+			`Service identity updated: service=${svc.id} category=${category || "none"} icon=${icon.startsWith("data:") ? "upload" : icon || "none"} user=${locals.user.id}`,
+		);
+		return { identitySaved: true };
 	},
 	moveStack: async ({ request, params, locals }) => {
 		if (!locals.user) {

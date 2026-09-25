@@ -6,11 +6,7 @@ import { svelteKitHandler } from "better-auth/svelte-kit";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
 import { building } from "$app/environment";
-import {
-	applyInstanceSettings,
-	config,
-	setDetectedAuthCheckUrl,
-} from "$lib/config";
+import { applyInstanceSettings, config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { GIT_WEBHOOK_PATH } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
@@ -27,9 +23,9 @@ import {
 	pruneUndecryptableSigningKeys,
 	rebuildAuth,
 } from "$lib/services/auth";
+import { detectAuthCheckUrl } from "$lib/services/cron/core-services-watch";
 import { CronService } from "$lib/services/cron.service";
 import { DeploymentService } from "$lib/services/deploy.service";
-import { DockerService } from "$lib/services/docker.service";
 import { OrchestrationService } from "$lib/services/orchestration.service";
 import { JobWorker } from "$lib/services/queue/worker";
 
@@ -216,13 +212,7 @@ export const init = async () => {
 	// not just after a settings-page save.
 	const { created, settings } = await InstanceSettingsDTO.getOrCreate();
 	applyInstanceSettings(settings.toConfigOverride());
-	const self = await DockerService.selfContainer();
-	if (self?.name && self.networkAddress) {
-		setDetectedAuthCheckUrl(
-			`http://${self.name}:${config.port}/api/v1/auth-check`,
-		);
-		applyInstanceSettings(settings.toConfigOverride());
-	}
+	await detectAuthCheckUrl();
 	rebuildAuth();
 	await pruneUndecryptableSigningKeys().catch((err) => {
 		logger.warn("Couldn't check the OIDC signing keys", err);

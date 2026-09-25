@@ -2,8 +2,8 @@
 	import { Clock } from "@lucide/svelte";
 	import { enhance } from "$app/forms";
 	import CheckBox from "$lib/components/check-box.svelte";
+	import ScheduleField from "$lib/components/schedule-field.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
 	import { timeAgo } from "$lib/formatting";
 	import { enhanceToast } from "$lib/toast";
 
@@ -55,26 +55,16 @@
       label="Enable auto-redeploy"
       name="cronEnabled"
     />
-    <div>
-      <label class="text-text mb-1.5 block text-sm font-medium" for="cronSchedule">
-        Schedule (cron syntax)
-      </label>
-      <Input
-        class=""
-        id="cronSchedule"
-        name="cronSchedule"
-        placeholder="0 3 * * *"
-        type="text"
-        value={svc.cronSchedule ?? ""}
-      />
-      <p class="text-text-subtle mt-1.5 text-xs">
-        Standard 5-field cron ("min hour day month weekday"), server local
-        time. E.g. <code>0 3 * * *</code> = every day at 3am.
-        {#if svc.cronLastRunAt}
-          · last run {timeAgo(svc.cronLastRunAt)}
-        {/if}
+    <ScheduleField
+      id="cronSchedule"
+      name="cronSchedule"
+      value={svc.cronSchedule}
+    />
+    {#if svc.cronLastRunAt}
+      <p class="text-text-subtle text-xs">
+        Last run {timeAgo(svc.cronLastRunAt)}.
       </p>
-    </div>
+    {/if}
     <Button type="submit" variant="outline">Save schedule</Button>
   </form>
 </section>

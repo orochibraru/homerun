@@ -55,8 +55,10 @@ A per-account "Appearance" tab on your profile page controls:
 - **Theme**: light, dark, or match system (the default). Changes apply instantly
   and are saved to your account, so the choice follows you to a new browser or
   device, not just the one you set it on.
-- **Main color accent**: pick a preset or a custom color for buttons, links, and
-  highlighted state throughout the dashboard. Bordeaux is the default.
+- **Colors**: a palette (Bordeaux, the default, Ocean, Forest, Sunset, Grape,
+  Rose or Graphite) sets the accent for buttons, links and tab icons plus the
+  hues charts, category tiles and the background use, all chosen to go together.
+  **Custom** sets the accent alone from any color.
 
 These are personal preferences, not instance-wide settings, each account picks
 its own independently of `/settings`.

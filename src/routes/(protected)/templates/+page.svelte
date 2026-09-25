@@ -12,6 +12,7 @@
 	import { Button } from "$lib/components/ui/button";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
+	import { BASE_SORTS } from "$lib/list-sorts";
 	import { title } from "$lib/store/title";
 	import { templateCategoryLabel } from "$lib/template-categories";
 	import { enhanceToast } from "$lib/toast";
@@ -151,6 +152,7 @@
   </div>
 
   <EntityToolbar
+    sorts={BASE_SORTS}
     {filters}
     pageParams={["bpage", "cpage"]}
     placeholder="Search templates by name or image…"

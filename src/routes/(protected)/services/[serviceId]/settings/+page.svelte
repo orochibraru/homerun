@@ -21,6 +21,7 @@
 	import AutoRedeploySection from "./auto-redeploy-section.svelte";
 	import AutoRollbackSection from "./auto-rollback-section.svelte";
 	import DangerZoneSection from "./danger-zone-section.svelte";
+	import IdentitySection from "./identity-section.svelte";
 	import ImageScanSection from "./image-scan-section.svelte";
 	import SaveAsTemplateSection from "./save-as-template-section.svelte";
 	import StackSection from "./stack-section.svelte";
@@ -226,6 +227,7 @@
     </form>
   </section>
 
+  <IdentitySection icons={data.icons} {svc} />
   <StackSection stackId={svc.stackId} stacks={data.stacks} />
   <SaveAsTemplateSection />
   <AutoRollbackSection {svc} />

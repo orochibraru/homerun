@@ -5,6 +5,7 @@ import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import { BaseDTO } from "./base-dto";
 
@@ -108,7 +109,17 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 				.select()
 				.from(cronJob)
 				.where(where)
-				.orderBy(desc(cronJob.createdAt))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: cronJob.createdAt,
+							name: cronJob.name,
+							updated: cronJob.updatedAt,
+						},
+						desc(cronJob.createdAt),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db.select({ total: count() }).from(cronJob).where(where),

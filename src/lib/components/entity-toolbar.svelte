@@ -12,12 +12,19 @@
 </script>
 
 <script lang="ts">
-	import { ListFilter, Search, X } from "@lucide/svelte";
+	import { ArrowDownUp, ListFilter, Search, X } from "@lucide/svelte";
 	import type { Snippet } from "svelte";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
+	import type { SortOption } from "$lib/list-sorts";
 	import {
 		Drawer,
 		DrawerContent,
@@ -29,6 +36,7 @@
 		filters?: FilterGroup[];
 		pageParams?: string[];
 		placeholder?: string;
+		sorts?: SortOption[];
 		trailing?: Snippet;
 	}
 
@@ -36,8 +44,25 @@
 		filters = [],
 		pageParams = ["page"],
 		placeholder = "Search…",
+		sorts = [],
 		trailing,
 	}: Props = $props();
+
+	const currentSort = $derived(page.url.searchParams.get("sort") ?? "");
+	const sortLabel = $derived(
+		sorts.find((option) => option.value === currentSort)?.label ??
+			"Default order",
+	);
+
+	function setSort(value: string) {
+		apply((params) => {
+			if (value) {
+				params.set("sort", value);
+			} else {
+				params.delete("sort");
+			}
+		});
+	}
 
 	const usableFilters = $derived(filters.filter((f) => f.options.length > 0));
 
@@ -129,6 +154,20 @@
       value={draft}
     >
   </div>
+  {#if sorts.length > 0}
+    <SelectRoot onValueChange={setSort} type="single" value={currentSort}>
+      <SelectTrigger class="w-48" aria-label="Sort">
+        <ArrowDownUp class="size-4" />
+        {sortLabel}
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem label="Default order" value="" />
+        {#each sorts as option (option.value)}
+          <SelectItem label={option.label} value={option.value} />
+        {/each}
+      </SelectContent>
+    </SelectRoot>
+  {/if}
   {#if usableFilters.length > 0}
     <Button onclick={() => { filtersOpen = true; }} variant="outline">
       <ListFilter class="size-4" />

@@ -4,6 +4,7 @@ import {
 	type Notification,
 	notification,
 	service,
+	stack,
 	user,
 } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -26,18 +27,28 @@ export class NotificationDTO extends BaseDTO<Notification> {
 		userId: string,
 		limit = 30,
 	): Promise<
-		Array<{ notification: NotificationDTO; serviceSlug: string | null }>
+		Array<{
+			notification: NotificationDTO;
+			serviceSlug: string | null;
+			stackName: string | null;
+		}>
 	> {
 		const rows = await db
-			.select({ row: notification, serviceSlug: service.slug })
+			.select({
+				row: notification,
+				serviceSlug: service.slug,
+				stackName: stack.name,
+			})
 			.from(notification)
 			.leftJoin(service, eq(notification.serviceId, service.id))
+			.leftJoin(stack, eq(service.stackId, stack.id))
 			.where(eq(notification.userId, userId))
 			.orderBy(desc(notification.createdAt))
 			.limit(limit);
 		return rows.map((r) => ({
 			notification: new NotificationDTO(r.row),
 			serviceSlug: r.serviceSlug,
+			stackName: r.stackName,
 		}));
 	}
 

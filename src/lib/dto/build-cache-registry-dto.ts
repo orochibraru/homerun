@@ -8,6 +8,7 @@ import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import { decryptSecret, encryptSecret } from "$lib/services/secrets";
 import { BaseDTO } from "./base-dto";
@@ -69,7 +70,17 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 				.select()
 				.from(buildCacheRegistry)
 				.where(where)
-				.orderBy(desc(buildCacheRegistry.createdAt))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: buildCacheRegistry.createdAt,
+							name: buildCacheRegistry.name,
+							updated: buildCacheRegistry.updatedAt,
+						},
+						desc(buildCacheRegistry.createdAt),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db.select({ total: count() }).from(buildCacheRegistry).where(where),

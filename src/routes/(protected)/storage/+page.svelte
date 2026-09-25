@@ -22,6 +22,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { ListSelection } from "$lib/list-selection.svelte";
+	import { BASE_SORTS } from "$lib/list-sorts";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
@@ -216,7 +217,8 @@
       {/if}
     {/snippet}
 
-    <EntityToolbar {filters} placeholder="Search volumes by name or source…">
+    <EntityToolbar
+    sorts={BASE_SORTS} {filters} placeholder="Search volumes by name or source…">
       {#snippet trailing()}
         <ViewModeToggle {view} />
       {/snippet}

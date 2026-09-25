@@ -47,14 +47,7 @@
 	);
 </script>
 
-<div class="space-y-6 p-6 md:p-8">
-  <div>
-    <h1 class="text-text text-lg font-semibold tracking-tight">{vol.name}</h1>
-    <p class="mt-1 text-sm text-text-muted">
-      {vol.kind}
-      · {vol.source}
-    </p>
-  </div>
+<div class="space-y-6">
 
   <section class="rounded-md panel p-5">
     <div class="mb-4 flex items-center gap-3">

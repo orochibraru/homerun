@@ -2,6 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { CronJobRunDTO } from "$lib/dto/cron-job-run-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { enqueueCronJobRun } from "$lib/services/cron-job-queue";
@@ -10,7 +11,10 @@ const logger = new Logger("CronJob");
 
 export const load = async ({ parent, url }) => {
 	await parent();
-	const query = parseListQuery(url, { filterKeys: ["kind", "enabled"] });
+	const query = parseListQuery(url, {
+		filterKeys: ["kind", "enabled"],
+		sortKeys: sortKeysOf(BASE_SORTS),
+	});
 	const [paged, runs] = await Promise.all([
 		CronJobDTO.listPaged(query),
 		CronJobRunDTO.listRecent(),

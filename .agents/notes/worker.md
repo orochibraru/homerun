@@ -80,6 +80,16 @@ The `job` row stays `status = 'running'` through all of it, so `lockKey`,
    throw goes through the same retry (back to `queued`, stages cleared) or
    permanent-fail logic as an in-process handler.
 
+**Cancelling a deploy** (the Overview's Cancel button) marks the deployment
+failed and `JobDTO.cancelForDeployment` sets its job (matched on
+`payload->>'deploymentId'`) and anything depending on it to `cancelled`. That's
+the whole mechanism for every stage: a queued job is never claimed, a `prepare`
+still waiting on status checks sees the failed deployment and stops, and an
+`execute` loses its lease on the next heartbeat, which cancels the context the
+Docker build or pull runs under and drops the result. `handOff` after a cancel
+can still flip the stage to `execute`, harmlessly: the claim requires
+`status = 'running'`.
+
 **Restarts.** The app's boot-time `requeueOrphaned` only requeues `running` rows
 with no stage or `prepare`, puts `finalizing` back to `finalize`, and leaves
 `execute` to the Go lease. On SIGTERM the worker stops claiming, gives in-flight

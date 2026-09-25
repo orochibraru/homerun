@@ -138,6 +138,20 @@ describe("GitProviderService.accessToken", () => {
 });
 
 describe("refusalFrom", () => {
+	test("tells Gitea's stale-grant scope mismatch to revoke before reconnecting", () => {
+		const refusal = refusalFrom(
+			"Ombrage git",
+			403,
+			JSON.stringify({
+				message:
+					"token does not have at least one of required scope(s), required=[write:repository], token scope=read:repository,read:user",
+			}),
+		);
+		expect(refusal.reconnectHelps).toBe(true);
+		expect(refusal.message).toContain("revoke Homerun");
+		expect(refusal.message).toContain("Authorized OAuth2 Applications");
+	});
+
 	test("a missing scope keeps the provider's reason and suggests reconnecting", () => {
 		const refusal = refusalFrom(
 			"Gitea",

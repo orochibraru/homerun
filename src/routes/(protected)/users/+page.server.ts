@@ -2,6 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config, isSmtpEnabled } from "$lib/config";
 import { InvitationDTO } from "$lib/dto/invitation-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { asAuthRole, isUserRole, roleLabel } from "$lib/permissions";
 import { parseListQuery } from "$lib/server/list-query";
@@ -19,7 +20,10 @@ export const load = async ({ locals, url }) => {
 		throw redirect(302, resolve("/"));
 	}
 
-	const query = parseListQuery(url, { filterKeys: ["role"] });
+	const query = parseListQuery(url, {
+		filterKeys: ["role"],
+		sortKeys: sortKeysOf(BASE_SORTS),
+	});
 	const [users, invites] = await Promise.all([
 		UserService.listUsersPaged(query),
 		InvitationDTO.listPending(),

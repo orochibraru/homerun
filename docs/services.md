@@ -11,24 +11,26 @@ Overview tab yourself.
 ## The services list
 
 `Services` has a search box (matches name, image, and domain) plus Status/ Stack
-filters, and a list/card view toggle that remembers your choice per browser;
-both the search and filters are applied on the server, so they reach every
-service you own, not just whichever page happens to be on screen. Once you have
-more than a page's worth, a pager at the bottom shows "26–50 of 60" and lets you
-step through the rest. Check one or more services (a "select all" scopes to
-whatever's on the **current page**, paginating or changing the search/filters
-clears your selection) to bring up a bottom bar with bulk
-Start/Stop/Restart/Delete: bulk actions run against every selected service and
-report back which ones succeeded, so one service with no container yet doesn't
-block the rest. Bulk delete, and the single-row delete on this page and the
-danger-zone delete on a service's own Settings tab, all require typing a
-confirmation phrase (the service's name for a single delete, `delete N services`
-for a bulk one) before the button unlocks, an irreversible action gets a real
-"are you sure" rather than a single click. A delete removes the container or
-swarm service first: one that's already gone is fine, but if Docker fails to
-remove it, the service is kept and the error says why. The Settings tab's delete
-then offers **Delete anyway**, which removes only Homerun's record (the REST
-API's equivalent is `DELETE /api/v1/services/:id?force=true`).
+filters, a sort (newest, oldest, name either way, recently updated; it's in the
+URL, so a sorted view can be bookmarked), and a list/card view toggle that
+remembers your choice per browser; both the search and filters are applied on
+the server, so they reach every service you own, not just whichever page happens
+to be on screen. Once you have more than a page's worth, a pager at the bottom
+shows "26–50 of 60" and lets you step through the rest. Check one or more
+services (a "select all" scopes to whatever's on the **current page**,
+paginating or changing the search/filters clears your selection) to bring up a
+bottom bar with bulk Start/Stop/Restart/Delete: bulk actions run against every
+selected service and report back which ones succeeded, so one service with no
+container yet doesn't block the rest. Bulk delete, and the single-row delete on
+this page and the danger-zone delete on a service's own Settings tab, all
+require typing a confirmation phrase (the service's name for a single delete,
+`delete N services` for a bulk one) before the button unlocks, an irreversible
+action gets a real "are you sure" rather than a single click. A delete removes
+the container or swarm service first: one that's already gone is fine, but if
+Docker fails to remove it, the service is kept and the error says why. The
+Settings tab's delete then offers **Delete anyway**, which removes only
+Homerun's record (the REST API's equivalent is
+`DELETE /api/v1/services/:id?force=true`).
 
 ## Settings
 

@@ -145,6 +145,48 @@ func TestSwarmUpdateOutcome(t *testing.T) {
 	if failed.State != "failed" || !strings.Contains(failed.Reason, "update rolled back due to failure") {
 		t.Errorf("a rollback is a failure, got %+v", failed)
 	}
+	paused := deploy.SwarmUpdateOutcome(status("paused", "t2", "update paused due to failure"), "")
+	if paused.State != "failed" || !strings.Contains(paused.Reason, "left the new ones in place") {
+		t.Errorf("a pause is a failure that keeps the new tasks, got %+v", paused)
+	}
+}
+
+func swarmTask(desired, state, err, at string) dockerapi.SwarmTask {
+	task := dockerapi.SwarmTask{DesiredState: desired}
+	task.Status.State = state
+	task.Status.Err = err
+	task.Status.Timestamp = at
+	return task
+}
+
+func TestSwarmFailureAction(t *testing.T) {
+	if deploy.SwarmFailureAction([]dockerapi.SwarmTask{swarmTask("running", "running", "", "")}) != "rollback" {
+		t.Error("a running current task is worth rolling back to")
+	}
+	crashing := []dockerapi.SwarmTask{
+		swarmTask("running", "starting", "", ""),
+		swarmTask("shutdown", "failed", "task: non-zero exit (1)", ""),
+	}
+	if deploy.SwarmFailureAction(crashing) != "pause" {
+		t.Error("tasks that aren't running aren't worth rolling back to")
+	}
+	if deploy.SwarmFailureAction(nil) != "pause" {
+		t.Error("no current task at all pauses")
+	}
+}
+
+func TestLastTaskError(t *testing.T) {
+	tasks := []dockerapi.SwarmTask{
+		swarmTask("shutdown", "failed", "old failure", "2026-09-25T11:00:00Z"),
+		swarmTask("running", "running", "", "2026-09-25T12:00:00Z"),
+		swarmTask("shutdown", "failed", "task: non-zero exit (1): invalid DATABASE_URL", "2026-09-25T11:00:00.5Z"),
+	}
+	if got := deploy.LastTaskError(tasks); got != "task: non-zero exit (1): invalid DATABASE_URL" {
+		t.Errorf("the newest task error wins, got %q", got)
+	}
+	if deploy.LastTaskError(nil) != "" {
+		t.Error("no tasks, no error")
+	}
 }
 
 func TestShouldSkipPull(t *testing.T) {

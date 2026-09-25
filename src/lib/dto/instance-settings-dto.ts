@@ -35,6 +35,7 @@ export interface InstanceSettingsTraefikInput {
 	traefikCertResolver: string | null;
 	traefikDynamicConfigDir: string | null;
 	traefikEntrypoint: string | null;
+	traefikHttpCache?: boolean;
 }
 
 export interface InstanceSettingsCloudflareInput {
@@ -130,6 +131,7 @@ export interface InstanceSettingsOverride {
 	traefikCertResolver?: string | null;
 	traefikDynamicConfigDir?: string | null;
 	traefikEntrypoint?: string | null;
+	traefikHttpCache?: boolean;
 }
 
 /**
@@ -211,6 +213,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			traefikCertResolver: null,
 			traefikDynamicConfigDir: null,
 			traefikEntrypoint: null,
+			traefikHttpCache: false,
 			updateChannel: null,
 			updatedAt: now,
 		};
@@ -655,6 +658,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			traefikCertResolver: this.row.traefikCertResolver,
 			traefikDynamicConfigDir: this.row.traefikDynamicConfigDir,
 			traefikEntrypoint: this.row.traefikEntrypoint,
+			traefikHttpCache: this.row.traefikHttpCache,
 		};
 	}
 }

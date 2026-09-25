@@ -1,3 +1,8 @@
+import {
+	applyInstanceSettings,
+	config,
+	setDetectedAuthCheckUrl,
+} from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { WorkerClient } from "$lib/server/worker-client";
 import { syncDashboardDns } from "../dns.service.ts";
@@ -5,6 +10,28 @@ import { DockerService } from "../docker.service.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
 
 const TICK_MS = 15_000;
+
+/**
+ * Points the login wall's forwardAuth at this dashboard's own container on the
+ * Docker network (unless the config file pins the URL), then re-applies the
+ * instance settings so it takes effect. Asks the worker, so it does nothing
+ * while the worker isn't reachable; the core-services watch calls it again
+ * once it is.
+ *
+ * @returns Whether the dashboard's container was found.
+ */
+export async function detectAuthCheckUrl(): Promise<boolean> {
+	const self = await DockerService.selfContainer().catch(() => null);
+	if (!(self?.name && self.networkAddress)) {
+		return false;
+	}
+	setDetectedAuthCheckUrl(
+		`http://${self.name}:${config.port}/api/v1/auth-check`,
+	);
+	const settings = await InstanceSettingsDTO.get();
+	applyInstanceSettings(settings.toConfigOverride());
+	return true;
+}
 
 export class CoreServicesWatch extends BaseScheduler {
 	protected readonly label = "CoreServices";
@@ -18,8 +45,9 @@ export class CoreServicesWatch extends BaseScheduler {
 	/**
 	 * Polls the worker's health and, whenever its boot id differs from the
 	 * last one seen (the first successful contact included), re-asserts the
-	 * core services onto it: the dashboard's Traefik router and DNS record,
-	 * the Newt tunnel, and swarm mode when that's the orchestration mode. So a
+	 * core services onto it: the forward-auth URL detection, the dashboard's
+	 * Traefik router and DNS record, the Newt tunnel, and swarm mode when
+	 * that's the orchestration mode. So a
 	 * worker restarted alone, or one that wasn't up yet when the app booted,
 	 * still ends up converged. An unreachable worker is skipped silently and
 	 * retried next tick; a failed convergence step is logged, not retried
@@ -39,6 +67,7 @@ export class CoreServicesWatch extends BaseScheduler {
 				: "Worker reachable, asserting the core services",
 		);
 		this.#bootId = bootId;
+		await detectAuthCheckUrl();
 		const settings = await InstanceSettingsDTO.get();
 		await DockerService.syncDashboardRouter();
 		void syncDashboardDns();

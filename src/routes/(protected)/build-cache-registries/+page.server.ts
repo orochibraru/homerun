@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 
@@ -8,7 +9,7 @@ const logger = new Logger("BuildCacheRegistries");
 
 export const load = async ({ parent, url }) => {
 	await parent();
-	const query = parseListQuery(url);
+	const query = parseListQuery(url, { sortKeys: sortKeysOf(BASE_SORTS) });
 	const paged = await BuildCacheRegistryDTO.listPaged(query);
 	return {
 		filtered: query.active,

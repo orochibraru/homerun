@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { AgentClientService } from "$lib/services/agent-client.service";
@@ -49,7 +50,10 @@ async function checkAgentStatuses(
 
 export const load = async ({ parent, url }) => {
 	await parent();
-	const query = parseListQuery(url, { filterKeys: ["kind"] });
+	const query = parseListQuery(url, {
+		filterKeys: ["kind"],
+		sortKeys: sortKeysOf(BASE_SORTS),
+	});
 	const paged = await RemoteHostDTO.listPaged(query);
 	const agentStatuses = await checkAgentStatuses(paged.items);
 	return {

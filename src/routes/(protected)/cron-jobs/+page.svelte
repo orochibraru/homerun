@@ -15,6 +15,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { timeAgo } from "$lib/formatting";
+	import { BASE_SORTS } from "$lib/list-sorts";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
@@ -158,7 +159,8 @@
       </Button>
     </EmptyState>
   {:else}
-    <EntityToolbar {filters} placeholder="Search cron jobs…">
+    <EntityToolbar
+    sorts={BASE_SORTS} {filters} placeholder="Search cron jobs…">
       {#snippet trailing()}
         <ViewModeToggle {view} />
       {/snippet}

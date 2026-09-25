@@ -656,6 +656,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	traefikCertResolver: text("traefik_cert_resolver"),
 	traefikDynamicConfigDir: text("traefik_dynamic_config_dir"),
 	traefikEntrypoint: text("traefik_entrypoint"),
+	traefikHttpCache: boolean("traefik_http_cache").default(false).notNull(),
 	updatedAt: timestamp("updated_at", { mode: "date" })
 		.$onUpdate(() => new Date())
 		.notNull(),
@@ -860,6 +861,9 @@ export const service = pgTable(
 			.default(true)
 			.notNull(),
 		domains: text("domains").array().default(sql`'{}'::text[]`).notNull(),
+		category: text("category"),
+		httpCacheTtl: integer("http_cache_ttl"),
+		icon: text("icon"),
 		domainPorts: jsonb("domain_ports")
 			.$type<Record<string, number>>()
 			.default({})
@@ -1502,6 +1506,7 @@ export const userPreferences = pgTable("user_preferences", {
 	// default", see (protected)/+layout.svelte.
 	accentColor: text("accent_color"),
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	palette: text("palette"),
 	// "system" (default, off the OS's own light/dark preference) | "light" |
 	// "dark" : applied via the mode-watcher package already mounted in the
 	// root layout (src/routes/+layout.svelte), this table is just its

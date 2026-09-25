@@ -13,6 +13,7 @@
 	import NotificationBell from "$lib/components/notification-bell.svelte";
 	import ProfileMenu from "$lib/components/profile-menu.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { appearanceCss } from "$lib/palettes";
 	import { allNavItems } from "./nav-items";
 
 	const { data, children } = $props();
@@ -41,16 +42,7 @@
 		items: (typeof allNavItems)[number][];
 	}
 
-	const accentCss = $derived.by(() => {
-		const hex = data.preferences.accentColor ?? "";
-		if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
-			return "";
-		}
-		const r = Number.parseInt(hex.slice(1, 3), 16);
-		const g = Number.parseInt(hex.slice(3, 5), 16);
-		const b = Number.parseInt(hex.slice(5, 7), 16);
-		return `:root:root{--color-accent:${hex};--color-ink:${hex};--primary:${hex};--color-accent-light:rgba(${r},${g},${b},0.12);--color-accent-glow:rgba(${r},${g},${b},0.35);--ring:rgba(${r},${g},${b},0.55);}`;
-	});
+	const accentCss = $derived(appearanceCss(data.preferences));
 
 	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
 	function groupByCategory(items: typeof allNavItems): NavGroup[] {

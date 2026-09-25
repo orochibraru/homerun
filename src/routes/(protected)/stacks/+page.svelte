@@ -22,6 +22,7 @@
 	import { Button } from "$lib/components/ui/button";
 	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
+	import { STACK_SORTS } from "$lib/list-sorts";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
@@ -85,7 +86,8 @@
       </Button>
     </EmptyState>
   {:else}
-    <EntityToolbar placeholder="Search stacks by name…">
+    <EntityToolbar
+    sorts={STACK_SORTS} placeholder="Search stacks by name…">
       {#snippet trailing()}
         <ViewModeToggle {view} />
       {/snippet}

@@ -82,7 +82,7 @@ export const actions = {
 	// Mirrors storage/new/+page.server.ts's `create` action : lets the "New
 	// volume" modal on this tab create a StorageVolume without navigating
 	// away from the service (see storage/new for the full-page equivalent).
-	createVolume: async ({ request, locals }) => {
+	createVolume: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -93,6 +93,8 @@ export const actions = {
 		const source = (formData.get("source") as string | null)?.trim() ?? "";
 		const description =
 			(formData.get("description") as string | null)?.trim() || null;
+		const containerPath =
+			(formData.get("containerPath") as string | null)?.trim() ?? "";
 
 		if (!name) {
 			return fail(400, { error: "Name is required." });
@@ -111,6 +113,15 @@ export const actions = {
 		if (kind === "bind" && !source.startsWith("/")) {
 			return fail(400, { error: "Host path must be absolute (start with /)." });
 		}
+		if (containerPath && !containerPath.startsWith("/")) {
+			return fail(400, {
+				error: "Mount path must be absolute (start with /).",
+			});
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
 
 		const vol = await StorageVolumeDTO.create({
 			description,
@@ -123,7 +134,22 @@ export const actions = {
 		logger.info(
 			`Storage volume created: volume=${vol.id} kind=${kind} user=${locals.user.id}`,
 		);
-		return { volumeCreated: true, volumeId: vol.id };
+		if (containerPath) {
+			await ServiceVolumeDTO.attach({
+				containerPath,
+				readOnly: formData.get("readOnly") === "on",
+				serviceId: svc.id,
+				volumeId: vol.id,
+			});
+			logger.info(
+				`Volume mounted: service=${svc.id} volume=${vol.id} path=${containerPath} user=${locals.user.id}`,
+			);
+		}
+		return {
+			volumeAttached: Boolean(containerPath),
+			volumeCreated: true,
+			volumeId: vol.id,
+		};
 	},
 	detachVolume: async ({ request, params, locals }) => {
 		if (!locals.user) {

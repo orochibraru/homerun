@@ -122,14 +122,21 @@ export const actions = {
 				"traefikDynamicConfigDir",
 			),
 			traefikEntrypoint: nullableText(formData, "traefikEntrypoint"),
+			traefikHttpCache: formData.get("traefikHttpCache") === "on",
 		});
 		applyAndRebuild(settings);
 		logger.info(`Traefik instance settings updated: user=${locals.user.id}`);
 
 		let traefikDetail: string | null = null;
 		try {
-			const applied = await DockerService.applyAcmeEmail(traefikAcmeEmail);
-			traefikDetail = applied.updated ? applied.message : null;
+			const acme = await DockerService.applyAcmeEmail(traefikAcmeEmail);
+			const cache = await DockerService.applyHttpCache(
+				settings.toConfigOverride().traefikHttpCache ?? false,
+			);
+			traefikDetail =
+				acme.updated || cache.updated
+					? "Traefik was recreated with the new configuration."
+					: null;
 		} catch (err) {
 			traefikDetail = `Saved, but Traefik wasn't reconfigured: ${err instanceof Error ? err.message : String(err)}`;
 		}

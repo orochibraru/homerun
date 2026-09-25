@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
@@ -22,6 +23,17 @@ export const load = async ({ params, parent }) => {
 	return {
 		baseDomain: config.baseDomain,
 		behindPangolin: config.pangolinEnabled,
+		crumbRoot: stack
+			? [
+					{ href: resolve("/stacks"), label: "Stacks" },
+					{
+						href: resolve("/(protected)/stacks/[stackId]", {
+							stackId: stack.id,
+						}),
+						label: stack.name,
+					},
+				]
+			: null,
 		certResolver: certResolverFor(
 			serviceHostname(svc.slug, stack?.slug),
 			config.traefik.certResolver,

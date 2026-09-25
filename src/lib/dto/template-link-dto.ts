@@ -21,6 +21,7 @@ export interface TemplateLinkWithTemplate {
 	link: TemplateLinkDTO;
 	linkedTemplateContainerPort: number;
 	linkedTemplateCpuLimit: string | null;
+	linkedTemplateCategory: string | null;
 	linkedTemplateEnvVars: Record<string, string>;
 	linkedTemplateIcon: string | null;
 	linkedTemplateImage: string;
@@ -55,6 +56,7 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 				linkedTemplatePrivileged: template.privileged,
 				linkedTemplateContainerPort: template.containerPort,
 				linkedTemplateCpuLimit: template.cpuLimit,
+				linkedTemplateCategory: template.category,
 				linkedTemplateEnvVars: template.envVars,
 				linkedTemplateIcon: template.icon,
 				linkedTemplateImage: template.image,
@@ -71,6 +73,7 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 			link: new TemplateLinkDTO(r.row),
 			linkedTemplateContainerPort: r.linkedTemplateContainerPort,
 			linkedTemplateCpuLimit: r.linkedTemplateCpuLimit,
+			linkedTemplateCategory: r.linkedTemplateCategory,
 			linkedTemplateEnvVars: r.linkedTemplateEnvVars ?? {},
 			linkedTemplateIcon: r.linkedTemplateIcon,
 			linkedTemplateImage: r.linkedTemplateImage,

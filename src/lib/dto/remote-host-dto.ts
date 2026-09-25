@@ -6,6 +6,7 @@ import {
 	narrowFilter,
 	type PagedResult,
 	searchCondition,
+	sortOrder,
 } from "$lib/server/list-query";
 import type { AgentConnection } from "$lib/services/agent-client.service";
 import type { RemoteHostConnection } from "$lib/services/docker.service";
@@ -92,7 +93,17 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 				.select()
 				.from(remoteHost)
 				.where(where)
-				.orderBy(desc(remoteHost.createdAt))
+				.orderBy(
+					...sortOrder(
+						query.sort,
+						{
+							created: remoteHost.createdAt,
+							name: remoteHost.name,
+							updated: remoteHost.updatedAt,
+						},
+						desc(remoteHost.createdAt),
+					),
+				)
 				.limit(query.limit)
 				.offset(query.offset),
 			db.select({ total: count() }).from(remoteHost).where(where),

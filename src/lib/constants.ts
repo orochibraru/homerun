@@ -137,60 +137,35 @@ export const TEMPLATE_CATEGORY_ICONS: Record<string, typeof Database> = {
 	storage: HardDrive,
 };
 
+const CHART_TONES = [
+	{ bg: "bg-chart-1/12", text: "text-chart-1" },
+	{ bg: "bg-chart-2/12", text: "text-chart-2" },
+	{ bg: "bg-chart-3/12", text: "text-chart-3" },
+	{ bg: "bg-chart-4/12", text: "text-chart-4" },
+	{ bg: "bg-chart-5/12", text: "text-chart-5" },
+] as const;
+
 export const TEMPLATE_CATEGORY_COLORS: Record<
 	string,
 	{ bg: string; text: string }
 > = {
-	ai: {
-		bg: "bg-purple-500/10",
-		text: "text-purple-600 dark:text-purple-400",
-	},
-	analytics: {
-		bg: "bg-fuchsia-500/10",
-		text: "text-fuchsia-600 dark:text-fuchsia-400",
-	},
-	automation: {
-		bg: "bg-violet-500/10",
-		text: "text-violet-600 dark:text-violet-400",
-	},
-	cache: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400" },
-	cms: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400" },
-	communication: {
-		bg: "bg-blue-500/10",
-		text: "text-blue-600 dark:text-blue-400",
-	},
-	dashboard: {
-		bg: "bg-amber-500/10",
-		text: "text-amber-600 dark:text-amber-400",
-	},
-	database: {
-		bg: "bg-emerald-500/10",
-		text: "text-emerald-600 dark:text-emerald-400",
-	},
-	development: {
-		bg: "bg-slate-500/10",
-		text: "text-slate-600 dark:text-slate-400",
-	},
-	finance: { bg: "bg-lime-500/10", text: "text-lime-600 dark:text-lime-400" },
-	media: { bg: "bg-rose-500/10", text: "text-rose-600 dark:text-rose-400" },
-	monitoring: {
-		bg: "bg-cyan-500/10",
-		text: "text-cyan-600 dark:text-cyan-400",
-	},
-	network: { bg: "bg-sky-500/10", text: "text-sky-600 dark:text-sky-400" },
-	productivity: {
-		bg: "bg-indigo-500/10",
-		text: "text-indigo-600 dark:text-indigo-400",
-	},
-	reading: {
-		bg: "bg-yellow-500/10",
-		text: "text-yellow-600 dark:text-yellow-400",
-	},
-	security: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400" },
-	storage: {
-		bg: "bg-orange-500/10",
-		text: "text-orange-600 dark:text-orange-400",
-	},
+	ai: CHART_TONES[1],
+	analytics: CHART_TONES[1],
+	automation: CHART_TONES[3],
+	cache: CHART_TONES[2],
+	cms: CHART_TONES[4],
+	communication: CHART_TONES[2],
+	dashboard: CHART_TONES[4],
+	database: CHART_TONES[3],
+	development: CHART_TONES[2],
+	finance: CHART_TONES[3],
+	media: CHART_TONES[0],
+	monitoring: CHART_TONES[2],
+	network: CHART_TONES[1],
+	productivity: CHART_TONES[4],
+	reading: CHART_TONES[4],
+	security: CHART_TONES[0],
+	storage: CHART_TONES[3],
 };
 
 /**
