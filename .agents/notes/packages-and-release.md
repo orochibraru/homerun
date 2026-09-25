@@ -614,9 +614,31 @@ canary lands on a stable tag. Switching back never downgrades because only a
 strictly newer version counts as an update, and a release outranks its own
 canaries.
 
-Then `docker compose -p <project> "$@" pull` and `up -d --no-deps` for the app
-and its worker companions only. **Never Traefik, Postgres or anything outside
-the project**: Traefik carries flags the app applies at runtime (swarm provider,
+Then `docker compose -p <project> "$@" pull`, and the safety net, before
+`up -d --no-deps` for the app and its worker companions only. Real finding that
+motivated it: a canary whose auth layer threw on every request still passed the
+image's `/_health` (the adapter answers that before any hook runs), got swapped
+in, and took the instance and every gated site down. The updater backs up every
+file it may rewrite (`<file>.homerun-rollback`) before touching them, then
+starts the new image as `homerun-update-candidate` through
+`docker compose run -d --no-deps` (so it gets the service's own env, volumes and
+networks, but no published port) with `HOMERUN_CANDIDATE=1`, `PORT=3999` and
+`traefik.enable=false`. `HOMERUN_CANDIDATE` makes `init()` stop right after auth
+is built: no job worker, schedulers, orchestration apply or core-services watch,
+which would recreate Traefik next to the live app. `wait_ready` polls
+`/api/v1/ready` (settings row + `auth.api.getSession`, the path the bug broke)
+through the image's own `/app/build/healthcheck` binary with `HEALTHCHECK_PATH`,
+via `docker exec`, since the updater isn't on the app's network. A failed
+candidate restores the files and exits 1 without recreating anything. After
+`up -d`, the same check runs against the new app container, and a failure there
+restores the files and runs `up -d` again on the old tag, which is still pulled
+locally. The candidate does run the new migrations on the live database; they're
+additive, and the old version keeps working on them. On the app side, `start()`
+then follows the updater (`#watchUpdater`): if it exits and this process is
+still alive, the update didn't take, so the job hold is lifted and an
+`update_failed` notification names the last `==>` line; after 30 minutes it
+lifts the hold regardless. **Never Traefik, Postgres or anything outside the
+project**: Traefik carries flags the app applies at runtime (swarm provider,
 ACME email, custom SSL) that a compose recreate would drop, and the Newt tunnel
 is a bare container or swarm service with no compose labels, which `--no-deps`
 without `--remove-orphans` can't touch. The script is exercised under a real

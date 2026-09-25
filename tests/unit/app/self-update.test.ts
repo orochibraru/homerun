@@ -195,7 +195,7 @@ describe("updaterScript", () => {
 		);
 		expect(script).not.toContain("--remove-orphans");
 		expect(script).not.toMatch(/up -d(?! --no-deps)/);
-		expect(script).not.toContain("traefik");
+		expect(script).not.toMatch(/'traefik'|'postgres'/);
 	});
 
 	test("mounts the socket and the project dir at their host paths", () => {
@@ -242,6 +242,12 @@ if [ "$1" = run ]; then
 	eval "file=\\\${$#}"
 	printf '# homerun:generated\\nnew %s\\n' "$(basename "$file")"
 fi
+case "$*" in
+	*" ps -q "*) echo app-container ;;
+	"inspect "*) echo true ;;
+	"exec "*homerun-update-candidate*) [ -z "$FAIL_CANDIDATE" ] || exit 1 ;;
+	"exec "*app-container*) [ -z "$FAIL_APP" ] || exit 1 ;;
+esac
 `;
 
 /** Runs `script` under sh in a scratch compose dir holding `files`, with a fake `docker` on PATH, and returns the dir's files afterwards plus every docker call made. */
@@ -250,8 +256,10 @@ async function runUpdater(
 	image: string,
 	envDefaults: Record<string, string> = {},
 	channel: "canary" | "stable" = "stable",
+	failures: { app?: boolean; candidate?: boolean } = {},
 ): Promise<{
 	calls: string[];
+	code: number;
 	dir: string;
 	read: (name: string) => Promise<string>;
 }> {
@@ -284,17 +292,29 @@ async function runUpdater(
 			),
 		],
 		{
-			env: { DOCKER_LOG: log, PATH: `${bin}:${process.env.PATH}` },
+			env: {
+				DOCKER_LOG: log,
+				FAIL_APP: failures.app ? "1" : "",
+				FAIL_CANDIDATE: failures.candidate ? "1" : "",
+				HOMERUN_CHECK_INTERVAL: "0",
+				HOMERUN_CHECK_TRIES: "2",
+				PATH: `${bin}:${process.env.PATH}`,
+			},
 			stderr: "pipe",
 			stdout: "pipe",
 		},
 	);
 	const code = await proc.exited;
-	if (code !== 0) {
+	if (code !== 0 && !(failures.app || failures.candidate)) {
 		throw new Error(await new Response(proc.stderr).text());
 	}
 	const calls = (await readFile(log, "utf8")).trim().split("\n");
-	return { calls, dir, read: (name) => readFile(join(dir, name), "utf8") };
+	return {
+		calls,
+		code,
+		dir,
+		read: (name) => readFile(join(dir, name), "utf8"),
+	};
 }
 
 describe("updaterScript against a real shell", () => {
@@ -322,7 +342,7 @@ describe("updaterScript against a real shell", () => {
 		expect(calls).toContain(
 			"docker run --rm --entrypoint cat docker.io/orochibraru/homerun:v1.0.22 /app/compose/compose.yaml",
 		);
-		expect(calls.at(-1)).toMatch(
+		expect(calls.findLast((call) => call.includes(" up -d "))).toMatch(
 			/^docker compose -p homerun -f compose\.yaml up -d --no-deps app worker$/,
 		);
 	});
@@ -357,7 +377,7 @@ describe("updaterScript against a real shell", () => {
 		const env = await read(".env");
 		expect(env).toContain("HOMERUN_HOST=203.0.113.10\n");
 		expect(env).toContain("HOMERUN_VERSION=latest\n");
-		expect(calls.at(-1)).toBe(
+		expect(calls.findLast((call) => call.includes(" up -d "))).toBe(
 			"docker compose -p homerun -f compose.yaml -f compose.swarm.yaml up -d --no-deps app worker",
 		);
 	});
@@ -375,9 +395,72 @@ describe("updaterScript against a real shell", () => {
 				"services:\n  app:\n    image: homerun:v1.0.22\n",
 			);
 			expect(calls.some((call) => call.startsWith("docker run"))).toBe(false);
-			expect(calls.at(-1)).toBe(
+			expect(calls.findLast((call) => call.includes(" up -d "))).toBe(
 				`docker compose -p homerun -f ${join(dir, "compose.yaml")} up -d --no-deps app worker`,
 			);
 		},
 	);
+});
+
+describe("the updater's safety net", () => {
+	const files = {
+		".env": "HOMERUN_VERSION=v1.0.21\n",
+		"compose.yaml": "# homerun:generated\nold\n",
+	};
+
+	test("checks the new version in a candidate before switching, then drops the backups", async () => {
+		const { calls, code, read } = await runUpdater(
+			files,
+			"docker.io/orochibraru/homerun:v1.0.21",
+		);
+		expect(code).toBe(0);
+		const candidate = calls.findIndex((call) =>
+			call.includes(
+				"run -d --no-deps --name homerun-update-candidate -e HOMERUN_CANDIDATE=1 -e PORT=3999 -l traefik.enable=false app",
+			),
+		);
+		const recreate = calls.findIndex((call) =>
+			call.includes("up -d --no-deps"),
+		);
+		expect(candidate).toBeGreaterThan(-1);
+		expect(recreate).toBeGreaterThan(candidate);
+		expect(calls).toContain(
+			"docker exec -e PORT=3999 -e HEALTHCHECK_PATH=/api/v1/ready homerun-update-candidate /app/build/healthcheck",
+		);
+		expect(calls).toContain(
+			"docker exec -e HEALTHCHECK_PATH=/api/v1/ready app-container /app/build/healthcheck",
+		);
+		expect(await read(".env")).toContain("v1.0.22");
+		await expect(read(".env.homerun-rollback")).rejects.toThrow();
+	});
+
+	test("a candidate that fails its check leaves the running version and its files alone", async () => {
+		const { calls, code, read } = await runUpdater(
+			files,
+			"docker.io/orochibraru/homerun:v1.0.21",
+			{},
+			"stable",
+			{ candidate: true },
+		);
+		expect(code).toBe(1);
+		expect(calls.some((call) => call.includes("up -d --no-deps"))).toBe(false);
+		expect(await read(".env")).toBe("HOMERUN_VERSION=v1.0.21\n");
+		expect(await read("compose.yaml")).toBe("# homerun:generated\nold\n");
+	});
+
+	test("a new version that passes the check but doesn't come up is rolled back", async () => {
+		const { calls, code, read } = await runUpdater(
+			files,
+			"docker.io/orochibraru/homerun:v1.0.21",
+			{},
+			"stable",
+			{ app: true },
+		);
+		expect(code).toBe(1);
+		expect(
+			calls.filter((call) => call.includes("up -d --no-deps")),
+		).toHaveLength(2);
+		expect(await read(".env")).toBe("HOMERUN_VERSION=v1.0.21\n");
+		expect(await read("compose.yaml")).toBe("# homerun:generated\nold\n");
+	});
 });

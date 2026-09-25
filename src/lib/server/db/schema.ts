@@ -1305,6 +1305,7 @@ export const notification = pgTable(
 				| "deploy_unhealthy"
 				| "deploy_rolled_back"
 				| "resource_alert"
+				| "update_failed"
 			>()
 			.notNull(),
 		userId: text("user_id")

@@ -105,6 +105,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/ready": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Readiness
+		 * @description Public readiness probe: ok once the database answers and the auth layer builds. The self-updater checks a new version with it before switching to it.
+		 */
+		get: operations["get_ready"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services": {
 		parameters: {
 			query?: never;
@@ -820,6 +840,42 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_ready: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Ready */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @constant */
+						status: "ok";
+					};
+				};
+			};
+			/** @description Not ready, with the reason */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						/** @constant */
+						status: "error";
 					};
 				};
 			};

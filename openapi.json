@@ -740,6 +740,64 @@
 				"tags": ["Jobs"]
 			}
 		},
+		"/ready": {
+			"get": {
+				"description": "Public readiness probe: ok once the database answers and the auth layer builds. The self-updater checks a new version with it before switching to it.",
+				"operationId": "get_ready",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"status": {
+											"const": "ok",
+											"type": "string"
+										}
+									},
+									"required": ["status"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Ready"
+					},
+					"503": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"status": {
+											"const": "error",
+											"type": "string"
+										}
+									},
+									"required": ["error", "status"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not ready, with the reason"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Readiness",
+				"tags": ["Meta"]
+			}
+		},
 		"/services": {
 			"get": {
 				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",

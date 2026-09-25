@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 
 export const COMPOSE_PROJECT_LABEL = "com.docker.compose.project";
 export const COMPOSE_SERVICE_LABEL = "com.docker.compose.service";
@@ -13,6 +13,10 @@ export const WORKER_ROLE = "worker";
 export const UPDATER_CONTAINER_NAME = "homerun-updater";
 export const UPDATER_IMAGE = "docker";
 export const UPDATER_IMAGE_TAG = "cli";
+
+export const CANDIDATE_CONTAINER_NAME = "homerun-update-candidate";
+export const CANDIDATE_PORT = "3999";
+export const READY_PATH = "/api/v1/ready";
 
 export const GENERATED_COMPOSE_FILE = "compose.yaml";
 export const GENERATED_SWARM_FILE = "compose.swarm.yaml";
@@ -257,10 +261,19 @@ export function updaterScript(
 	const services = [...new Set([target.service, ...companions])]
 		.map(shellQuote)
 		.join(" ");
+	const backedUp = [
+		...target.configFiles,
+		join(target.workingDir, ".env"),
+		join(target.workingDir, GENERATED_SWARM_FILE),
+	]
+		.map(shellQuote)
+		.join(" ");
+	const candidate = shellQuote(CANDIDATE_CONTAINER_NAME);
 	return [
 		"set -eu",
 		`echo ${shellQuote(`==> Updating Homerun to v${latestVersion}`)}`,
 		`cd ${shellQuote(target.workingDir)}`,
+		...safetyNetLines(backedUp),
 		`if [ -f ${GENERATED_COMPOSE_FILE} ] && grep -qE ${shellQuote(GENERATED_MARKER_RE)} ${GENERATED_COMPOSE_FILE}; then`,
 		...generatedComposeLines(
 			`${repository}:${imageTag}`,
@@ -273,10 +286,47 @@ export function updaterScript(
 		"fi",
 		"echo '==> Pulling the new images'",
 		`${compose} pull ${services}`,
+		"echo '==> Checking the new version before switching to it'",
+		`docker rm -f ${candidate} >/dev/null 2>&1 || true`,
+		`if ! ${compose} run -d --no-deps --name ${candidate} -e HOMERUN_CANDIDATE=1 -e PORT=${CANDIDATE_PORT} -l traefik.enable=false ${shellQuote(target.service)} >/dev/null || ! wait_ready ${candidate} ${CANDIDATE_PORT}; then`,
+		`	echo ${shellQuote(`==> v${latestVersion} failed its check: staying on the current version`)}`,
+		`	docker logs --tail 40 ${candidate} 2>&1 || true`,
+		`	docker rm -f ${candidate} >/dev/null 2>&1 || true`,
+		"	restore",
+		"	exit 1",
+		"fi",
+		`docker rm -f ${candidate} >/dev/null 2>&1 || true`,
 		"echo '==> Recreating the Homerun containers'",
 		`${compose} up -d --no-deps ${services}`,
+		"echo '==> Waiting for the new version to answer'",
+		`app=$(${compose} ps -q ${shellQuote(target.service)} | head -n 1)`,
+		'if [ -z "$app" ] || ! wait_ready "$app"; then',
+		`	echo ${shellQuote(`==> v${latestVersion} didn't come up: rolling back`)}`,
+		"	restore",
+		`	${compose} up -d --no-deps ${services}`,
+		"	exit 1",
+		"fi",
+		"forget",
 		"echo '==> Done'",
 	].join("\n");
+}
+
+/**
+ * Shell helpers the updater's safety net uses: a copy of every file it may
+ * rewrite (`restore` puts them back in place, keeping owner and mode;
+ * `forget` drops the copies once the update held), and `wait_ready`, which
+ * polls a container's `/api/v1/ready` through the image's own healthcheck
+ * binary until it answers or the container stops.
+ * `HOMERUN_CHECK_TRIES`/`HOMERUN_CHECK_INTERVAL` exist for the tests.
+ */
+function safetyNetLines(backedUp: string): string[] {
+	return [
+		`for f in ${backedUp}; do if [ -f "$f" ]; then cp -p "$f" "$f.homerun-rollback"; fi; done`,
+		`restore() { for f in ${backedUp}; do if [ -f "$f.homerun-rollback" ]; then cat "$f.homerun-rollback" > "$f"; rm -f "$f.homerun-rollback"; fi; done; }`,
+		`forget() { for f in ${backedUp}; do rm -f "$f.homerun-rollback"; done; }`,
+		`ready() { docker exec \${2:+-e PORT=$2} -e HEALTHCHECK_PATH=${READY_PATH} "$1" /app/build/healthcheck >/dev/null 2>&1; }`,
+		'wait_ready() { i=0; while [ "$i" -lt "${HOMERUN_CHECK_TRIES:-60}" ]; do if ready "$1" "${2:-}"; then return 0; fi; if [ "$(docker inspect -f \'{{.State.Running}}\' "$1" 2>/dev/null)" != true ]; then return 1; fi; i=$((i + 1)); sleep "${HOMERUN_CHECK_INTERVAL:-2}"; done; return 1; }',
+	];
 }
 
 /** Bind mounts the updater container needs: the host Docker socket, plus every compose working/config directory so the rewritten files and `docker compose` invocation land on the host's real paths. */

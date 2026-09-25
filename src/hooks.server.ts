@@ -199,7 +199,11 @@ async function runMigrations() {
  * instance and queues the redeploys `--migrate-to-rootful` asked for, then
  * starts the job worker, rollout health watches and every scheduler,
  * including the core-services watch that asserts the dashboard router, DNS,
- * Newt and swarm mode every time the worker (re)starts.
+ * Newt and swarm mode every time the worker (re)starts. With
+ * `HOMERUN_CANDIDATE=1` (the self-updater's pre-switch check of a new
+ * version) it stops after auth is built: the candidate only has to answer
+ * `/api/v1/ready`, and must not run jobs or touch Traefik next to the live
+ * app.
  */
 export const init = async () => {
 	await waitForDatabase();
@@ -218,6 +222,12 @@ export const init = async () => {
 	await pruneUndecryptableSigningKeys().catch((err) => {
 		logger.warn("Couldn't check the OIDC signing keys", err);
 	});
+	if (process.env.HOMERUN_CANDIDATE === "1") {
+		logger.info(
+			"Candidate mode: serving requests for the update check, no job worker, schedulers or core-services watch",
+		);
+		return;
+	}
 	await OrchestrationService.applyOnBoot(settings, created).catch((err) => {
 		logger.warn("Couldn't apply the orchestration mode on boot", err);
 	});

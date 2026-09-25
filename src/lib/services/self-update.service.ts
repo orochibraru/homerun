@@ -3,6 +3,7 @@ import { hostname } from "node:os";
 import { config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { JobDTO } from "$lib/dto/job-dto";
+import { NotificationDTO } from "$lib/dto/notification-dto";
 import { Logger } from "$lib/logger";
 import { APP_VERSION } from "$lib/server/app-version";
 import { isNotFound, WorkerClient } from "$lib/server/worker-client";
@@ -31,6 +32,8 @@ const RELEASE_URLS = {
 	stable: "https://api.github.com/repos/orochibraru/homerun/releases/latest",
 } as const;
 const RELEASE_CACHE_MS = 10 * 60 * 1000;
+const UPDATE_POLL_MS = 5000;
+const UPDATE_WATCH_MS = 30 * 60 * 1000;
 const RELEASE_FAILURE_CACHE_MS = 5 * 60 * 1000;
 const RELEASE_TIMEOUT_MS = 5000;
 
@@ -332,6 +335,7 @@ class SelfUpdateServiceClass {
 				throw new Error("Couldn't find this app's own compose service.");
 			}
 			await this.#launchUpdater(self, status.latest.version, status.channel);
+			void this.#watchUpdater(status.latest.version);
 			logger.info(
 				`Update to ${status.latest.version} started: project=${self.target.project} service=${self.target.service}`,
 			);
@@ -340,6 +344,41 @@ class SelfUpdateServiceClass {
 			JobWorker.release();
 			throw err;
 		}
+	}
+
+	/**
+	 * Follows the updater this process launched. When the update works, the
+	 * updater recreates this container and the watch dies with it. When it
+	 * doesn't (the new version failed its check, or was rolled back), this
+	 * process is still the one running: it lifts the job hold and says so in
+	 * the notification feed. Gives up after `UPDATE_WATCH_MS`, lifting the hold
+	 * anyway, so a stuck updater can't freeze the job queue for good.
+	 */
+	async #watchUpdater(version: string): Promise<void> {
+		const deadline = Date.now() + UPDATE_WATCH_MS;
+		while (Date.now() < deadline) {
+			// oxlint-disable-next-line no-await-in-loop -- polling the updater one check at a time
+			await new Promise((done) => setTimeout(done, UPDATE_POLL_MS));
+			// oxlint-disable-next-line no-await-in-loop -- polling the updater one check at a time
+			const progress = await this.progress().catch(() => null);
+			if (progress?.state !== "exited") {
+				continue;
+			}
+			JobWorker.release();
+			if (progress.exitCode !== 0) {
+				const reason =
+					progress.log.findLast((line) => line.startsWith("==>")) ??
+					"the updater failed";
+				logger.error(`Update to ${version} failed: ${reason}`);
+				NotificationDTO.notify({
+					message: `The update to v${version} didn't go through, Homerun is still on v${APP_VERSION}: ${reason.replace(/^==>\s*/, "")}`,
+					type: "update_failed",
+				});
+			}
+			return;
+		}
+		JobWorker.release();
+		logger.warn(`Update to ${version} still hadn't finished, resuming jobs`);
 	}
 
 	/**

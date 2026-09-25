@@ -22,9 +22,22 @@ opens the update dialog:
   version tag (`image: …:v1.0.20`, or `HOMERUN_VERSION=v1.0.20` with
   `compose.prod.yaml`), that tag is bumped to the new release first. `latest`
   and `canary` are just pulled again.
-- The dashboard is down for a few seconds and the page reloads itself once the
-  new version answers. Jobs that were waiting run once it's back. If it doesn't
-  come back, run `docker logs homerun-updater` on the host.
+- **A broken release never replaces a working one.** Before switching, the
+  updater boots the new version next to the running one as a throwaway
+  `homerun-update-candidate` container. The candidate isn't routed by Traefik
+  and runs no jobs. The updater only switches once the candidate answers
+  `/api/v1/ready`, which needs the database and the whole auth layer working. If
+  it doesn't within about two minutes, the updater restores your compose files
+  and `.env`, leaves the running version alone, and the dashboard says the
+  update didn't go through. The candidate does apply the new version's database
+  migrations, which are additive.
+- After the switch the updater waits for the new app to answer the same check.
+  If it doesn't, it rolls back: it restores the previous files and recreates the
+  containers on the version you had.
+- The dashboard is down for a few seconds during the switch itself, and the page
+  reloads itself once the new version answers. Jobs that were waiting run once
+  it's back. If something looks wrong, run `docker logs homerun-updater` on the
+  host: every step, and any rollback, is in there.
 
 ## Release channels
 

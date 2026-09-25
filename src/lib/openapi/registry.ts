@@ -545,6 +545,24 @@ export const routes: RouteDef[] = [
 		tags: ["Meta"],
 	},
 	{
+		description:
+			"Public readiness probe: ok once the database answers and the auth layer builds. The self-updater checks a new version with it before switching to it.",
+		method: "get",
+		path: "/ready",
+		responses: {
+			200: {
+				description: "Ready",
+				schema: z.object({ status: z.literal("ok") }),
+			},
+			503: {
+				description: "Not ready, with the reason",
+				schema: z.object({ error: z.string(), status: z.literal("error") }),
+			},
+		},
+		summary: "Readiness",
+		tags: ["Meta"],
+	},
+	{
 		method: "get",
 		path: "/system-stats",
 		responses: {
