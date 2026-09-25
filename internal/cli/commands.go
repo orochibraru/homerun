@@ -258,6 +258,13 @@ func ServiceGet(client *Client, id string) {
 	PrintJSON(body)
 }
 
+// ServiceConfig prints a service's settings as JSON, grouped the way the
+// dashboard's tabs group them, with secrets left out.
+func ServiceConfig(client *Client, id string) {
+	body, _ := client.do("GET", "/services/"+url.PathEscape(id)+"/config", nil)
+	PrintJSON(body)
+}
+
 // ServiceAction triggers a deploy, start, stop or restart on a service and prints the API's result as JSON.
 func ServiceAction(client *Client, action, id string) {
 	body, _ := client.do("POST", fmt.Sprintf("/services/%s/%s", url.PathEscape(id), action), nil)

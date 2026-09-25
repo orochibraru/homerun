@@ -316,7 +316,9 @@ export class UptimeProbe extends BaseScheduler {
 	}
 
 	/**
-	 * HTTP probe of `target`: any response counts as up. On a certificate
+	 * HTTP probe of `target`: any response under 500 counts as up, a 5xx
+	 * (an app reporting itself not ready, or a proxy with no live backend)
+	 * as down. On a certificate
 	 * error, retries once without verifying TLS so a self-signed/not-yet-
 	 * issued cert is reported as "up, untrusted cert" rather than as down.
 	 */
@@ -341,7 +343,7 @@ export class UptimeProbe extends BaseScheduler {
 				detail: `HTTP ${response.status}`,
 				kind,
 				latencyMs: Date.now() - startedAt,
-				ok: true,
+				ok: response.status < 500,
 				serviceId,
 				target,
 			};
@@ -355,7 +357,7 @@ export class UptimeProbe extends BaseScheduler {
 					detail: `HTTP ${response.status} · ${UNTRUSTED_CERT_NOTE}`,
 					kind,
 					latencyMs: Date.now() - startedAt,
-					ok: true,
+					ok: response.status < 500,
 					serviceId,
 					target,
 				};

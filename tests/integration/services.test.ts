@@ -147,6 +147,47 @@ describe("services : image-mode deploy", () => {
 		expect(expectOk(fetched.data, fetched.response).tag).toBe("stable-alpine");
 	});
 
+	test("config groups the settings by tab without secrets", async () => {
+		const created = await client.POST("/services", {
+			body: {
+				authRequired: false,
+				autoDeployOnPush: false,
+				buildSource: "image",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
+				containerPort: 80,
+				dnsResolvable: false,
+				envVars: { GREETING: "hi" },
+				pullPolicy: "always",
+				image: "nginx",
+				name: "IT config",
+				registryPassword: "hunter2",
+				registryUrl: "ghcr.io",
+				registryUsername: "me",
+				restartPolicy: "no",
+				slug: slug("config"),
+				tag: "alpine",
+			},
+		});
+		const svc = expectOk(created.data, created.response);
+		cleanup.track(svc.id);
+
+		const fetched = await client.GET("/services/{serviceId}/config", {
+			params: { path: { serviceId: svc.id } },
+		});
+		const config = expectOk(fetched.data, fetched.response);
+		expect(config.source.image).toBe("nginx");
+		expect(config.env.vars).toEqual({ GREETING: "hi" });
+		expect(config.networking.containerPort).toBe(80);
+		expect(config.source.registry.passwordSet).toBe(true);
+		expect(JSON.stringify(config)).not.toContain("hunter2");
+		expect(config.volumes).toEqual([]);
+	});
+
 	test("local target, inside a stack", async () => {
 		const stackRes = await client.POST("/stacks", {
 			body: { name: "IT Stack", slug: slug("stack") },

@@ -316,10 +316,14 @@ people actually hit (timeout/abort, refused, TLS) into one actionable sentence;
 both it and `internalProbeMethod` are pure and unit-tested in
 `tests/unit/app/uptime-probe.test.ts`.
 
-**Any HTTP response counts as up**, including 401/403 (a service behind the
-login wall is alive, it's just refusing the prober) and 404 (it answered, it
-just has no route at `/`). Only a transport error or the 5s timeout is a
-failure, and `redirect: "manual"` keeps a redirect from being chased.
+**Any HTTP response under 500 counts as up**, including 401/403 (a service
+behind the login wall is alive, it's just refusing the prober) and 404 (it
+answered, it just has no route at `/`). A 5xx is down: it's either the app
+saying it isn't ready (AIOMetadata answers every route with 503 while it waits
+forever for its Redis) or Traefik's 502/503/504 for a backend that isn't there,
+and counting those as up showed a broken service green for hours. A transport
+error or the 5s timeout is a failure too, and `redirect: "manual"` keeps a
+redirect from being chased.
 
 **The external probe is skipped, not failed, when the hostname is a loopback
 one** (`externalProbeSkipReason`: `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`,

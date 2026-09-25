@@ -4,6 +4,7 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
+import { listIconLibrary } from "$lib/server/icon-library";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateGeneralSchema } from "$lib/server/validation/service";
 import { iconProblem } from "$lib/service-icon";
@@ -19,7 +20,7 @@ export const load = async ({ parent }) => {
 	await parent();
 	const [stacks, icons] = await Promise.all([
 		StackDTO.list(),
-		TemplateDTO.listBundledIcons(),
+		listIconLibrary(),
 	]);
 
 	return { icons, stacks: stacks.map((p) => p.toJSON()) };
@@ -65,7 +66,7 @@ export const actions = {
 		if (category && !TEMPLATE_CATEGORIES.some((c) => c.value === category)) {
 			return fail(400, { error: "Pick a type from the list." });
 		}
-		const bundled = (await TemplateDTO.listBundledIcons()).map((i) => i.icon);
+		const bundled = (await listIconLibrary()).map((i) => i.icon);
 		const problem = iconProblem(icon, bundled);
 		if (problem) {
 			return fail(400, { error: problem });

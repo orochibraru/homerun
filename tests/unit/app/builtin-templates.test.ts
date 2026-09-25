@@ -5,6 +5,7 @@ import {
 	TEMPLATE_CATEGORY_COLORS,
 	TEMPLATE_CATEGORY_ICONS,
 } from "../../../src/lib/constants";
+import { EXTRA_ICONS } from "../../../src/lib/icon-library";
 import {
 	BUILTIN_TEMPLATE_CATEGORIES,
 	parseBuiltinTemplates,
@@ -157,5 +158,17 @@ describe("templateCategoryLabel", () => {
 		expect(templateCategoryLabel("ai")).toBe("AI");
 		expect(templateCategoryLabel("cms")).toBe("CMS");
 		expect(templateCategoryLabel("custom-thing")).toBe("custom-thing");
+	});
+});
+
+describe("EXTRA_ICONS", () => {
+	test("every library icon exists under static/template-icons, once", () => {
+		const missing = EXTRA_ICONS.filter(
+			(entry) => !existsSync(join(root, "static/template-icons", entry.icon)),
+		).map((entry) => entry.icon);
+		expect(missing).toEqual([]);
+		expect(new Set(EXTRA_ICONS.map((entry) => entry.icon)).size).toBe(
+			EXTRA_ICONS.length,
+		);
 	});
 });

@@ -6,6 +6,7 @@ import {
 	updateChannelApiBody,
 	updateServiceApiBody,
 } from "$lib/server/validation/api";
+import { serviceConfigSchema } from "$lib/service-config";
 import {
 	deployResultResponse,
 	errorResponse,
@@ -129,6 +130,23 @@ export const routes: RouteDef[] = [
 			404: notFound,
 		},
 		summary: "Get a service",
+		tags: ["Services"],
+	},
+	{
+		description:
+			"The service's settings grouped the way the dashboard's tabs group them (source, env, volumes, networking, compute, runtime, security, settings). Secrets are never included: a stored registry password or SSL key shows as a boolean, and an uploaded icon as \"uploaded\".",
+		method: "get",
+		path: "/services/{serviceId}/config",
+		pathParams: [{ description: "Service id", name: "serviceId" }],
+		responses: {
+			200: {
+				description: "The service's settings",
+				schema: serviceConfigSchema,
+			},
+			401: unauthorized,
+			404: notFound,
+		},
+		summary: "Get a service's settings, by tab",
 		tags: ["Services"],
 	},
 	{

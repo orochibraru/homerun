@@ -4363,6 +4363,696 @@
 				"tags": ["Services"]
 			}
 		},
+		"/services/{serviceId}/config": {
+			"get": {
+				"description": "The service's settings grouped the way the dashboard's tabs group them (source, env, volumes, networking, compute, runtime, security, settings). Secrets are never included: a stored registry password or SSL key shows as a boolean, and an uploaded icon as \"uploaded\".",
+				"operationId": "get_services__serviceId__config",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"compute": {
+											"additionalProperties": false,
+											"properties": {
+												"cpuLimit": {
+													"anyOf": [
+														{
+															"type": "string"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"memoryLimitMb": {
+													"anyOf": [
+														{
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"replicas": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"restartPolicy": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"cpuLimit",
+												"memoryLimitMb",
+												"replicas",
+												"restartPolicy"
+											],
+											"type": "object"
+										},
+										"env": {
+											"additionalProperties": false,
+											"properties": {
+												"files": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"vars": {
+													"additionalProperties": {
+														"type": "string"
+													},
+													"propertyNames": {
+														"type": "string"
+													},
+													"type": "object"
+												}
+											},
+											"required": ["files", "vars"],
+											"type": "object"
+										},
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"networking": {
+											"additionalProperties": false,
+											"properties": {
+												"containerPort": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"customSsl": {
+													"type": "boolean"
+												},
+												"defaultDomainEnabled": {
+													"type": "boolean"
+												},
+												"dnsResolvable": {
+													"type": "boolean"
+												},
+												"domainPorts": {
+													"additionalProperties": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"propertyNames": {
+														"type": "string"
+													},
+													"type": "object"
+												},
+												"domains": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"httpCacheTtl": {
+													"anyOf": [
+														{
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"networkMode": {
+													"enum": ["bridge", "host"],
+													"type": "string"
+												},
+												"portProtocol": {
+													"enum": ["tcp", "udp", "both"],
+													"type": "string"
+												},
+												"primaryDomain": {
+													"anyOf": [
+														{
+															"type": "string"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"publishedPorts": {
+													"items": {
+														"additionalProperties": false,
+														"properties": {
+															"containerPort": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"hostPort": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"protocol": {
+																"enum": ["tcp", "udp"],
+																"type": "string"
+															}
+														},
+														"required": [
+															"containerPort",
+															"hostPort",
+															"protocol"
+														],
+														"type": "object"
+													},
+													"type": "array"
+												}
+											},
+											"required": [
+												"containerPort",
+												"customSsl",
+												"defaultDomainEnabled",
+												"dnsResolvable",
+												"domainPorts",
+												"domains",
+												"httpCacheTtl",
+												"networkMode",
+												"portProtocol",
+												"primaryDomain",
+												"publishedPorts"
+											],
+											"type": "object"
+										},
+										"runtime": {
+											"additionalProperties": false,
+											"properties": {
+												"capAdd": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"command": {
+													"anyOf": [
+														{
+															"items": {
+																"type": "string"
+															},
+															"type": "array"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"devices": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"entrypoint": {
+													"anyOf": [
+														{
+															"items": {
+																"type": "string"
+															},
+															"type": "array"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"healthcheckCommand": {
+													"anyOf": [
+														{
+															"type": "string"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"labels": {
+													"additionalProperties": {
+														"type": "string"
+													},
+													"propertyNames": {
+														"type": "string"
+													},
+													"type": "object"
+												},
+												"privileged": {
+													"type": "boolean"
+												}
+											},
+											"required": [
+												"capAdd",
+												"command",
+												"devices",
+												"entrypoint",
+												"healthcheckCommand",
+												"labels",
+												"privileged"
+											],
+											"type": "object"
+										},
+										"security": {
+											"additionalProperties": false,
+											"properties": {
+												"allowedEmails": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"allowedGroups": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"allowedUserIds": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"imageScanEnabled": {
+													"type": "boolean"
+												},
+												"loginProviders": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"loginRequired": {
+													"type": "boolean"
+												}
+											},
+											"required": [
+												"allowedEmails",
+												"allowedGroups",
+												"allowedUserIds",
+												"imageScanEnabled",
+												"loginProviders",
+												"loginRequired"
+											],
+											"type": "object"
+										},
+										"settings": {
+											"additionalProperties": false,
+											"properties": {
+												"autoRedeploy": {
+													"additionalProperties": false,
+													"properties": {
+														"enabled": {
+															"type": "boolean"
+														},
+														"schedule": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														}
+													},
+													"required": ["enabled", "schedule"],
+													"type": "object"
+												},
+												"autoRollback": {
+													"type": "boolean"
+												},
+												"category": {
+													"anyOf": [
+														{
+															"type": "string"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"icon": {
+													"anyOf": [
+														{
+															"type": "string"
+														},
+														{
+															"type": "null"
+														}
+													],
+													"description": "A bundled template icon file name, \"uploaded\" for a custom image, or null."
+												},
+												"stack": {
+													"anyOf": [
+														{
+															"additionalProperties": false,
+															"properties": {
+																"id": {
+																	"type": "string"
+																},
+																"name": {
+																	"type": "string"
+																}
+															},
+															"required": ["id", "name"],
+															"type": "object"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"uptimeEnabled": {
+													"type": "boolean"
+												}
+											},
+											"required": [
+												"autoRedeploy",
+												"autoRollback",
+												"category",
+												"icon",
+												"stack",
+												"uptimeEnabled"
+											],
+											"type": "object"
+										},
+										"slug": {
+											"type": "string"
+										},
+										"source": {
+											"additionalProperties": false,
+											"properties": {
+												"buildSource": {
+													"enum": ["image", "git"],
+													"type": "string"
+												},
+												"git": {
+													"anyOf": [
+														{
+															"additionalProperties": false,
+															"properties": {
+																"autoDeployOnPush": {
+																	"type": "boolean"
+																},
+																"bakeFile": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"bakeTarget": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"buildCacheRegistryId": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"buildContext": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"buildMethod": {
+																	"type": "string"
+																},
+																"buildServerRemoteHostId": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"dockerfilePath": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"pollEnabled": {
+																	"type": "boolean"
+																},
+																"previewsEnabled": {
+																	"type": "boolean"
+																},
+																"ref": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"requireStatusChecks": {
+																	"type": "boolean"
+																},
+																"requiredStatusChecks": {
+																	"items": {
+																		"type": "string"
+																	},
+																	"type": "array"
+																},
+																"url": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																}
+															},
+															"required": [
+																"autoDeployOnPush",
+																"bakeFile",
+																"bakeTarget",
+																"buildCacheRegistryId",
+																"buildContext",
+																"buildMethod",
+																"buildServerRemoteHostId",
+																"dockerfilePath",
+																"pollEnabled",
+																"previewsEnabled",
+																"ref",
+																"requireStatusChecks",
+																"requiredStatusChecks",
+																"url"
+															],
+															"type": "object"
+														},
+														{
+															"type": "null"
+														}
+													]
+												},
+												"image": {
+													"type": "string"
+												},
+												"pullPolicy": {
+													"type": "string"
+												},
+												"registry": {
+													"additionalProperties": false,
+													"properties": {
+														"passwordSet": {
+															"type": "boolean"
+														},
+														"url": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"username": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														}
+													},
+													"required": ["passwordSet", "url", "username"],
+													"type": "object"
+												},
+												"tag": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"buildSource",
+												"git",
+												"image",
+												"pullPolicy",
+												"registry",
+												"tag"
+											],
+											"type": "object"
+										},
+										"volumes": {
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"containerPath": {
+														"type": "string"
+													},
+													"kind": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"readOnly": {
+														"type": "boolean"
+													},
+													"source": {
+														"type": "string"
+													}
+												},
+												"required": [
+													"containerPath",
+													"kind",
+													"name",
+													"readOnly",
+													"source"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										}
+									},
+									"required": [
+										"compute",
+										"env",
+										"id",
+										"name",
+										"networking",
+										"runtime",
+										"security",
+										"settings",
+										"slug",
+										"source",
+										"volumes"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The service's settings"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a service's settings, by tab",
+				"tags": ["Services"]
+			}
+		},
 		"/services/{serviceId}/deploy": {
 			"post": {
 				"description": "Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients. An optional tag switches an image-based service to that tag first, which is how CI deploys the image it just pushed.",

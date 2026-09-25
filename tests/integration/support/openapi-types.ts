@@ -151,6 +151,26 @@ export interface paths {
 		patch: operations["patch_services__serviceId_"];
 		trace?: never;
 	};
+	"/services/{serviceId}/config": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a service's settings, by tab
+		 * @description The service's settings grouped the way the dashboard's tabs group them (source, env, volumes, networking, compute, runtime, security, settings). Secrets are never included: a stored registry password or SSL key shows as a boolean, and an uploaded icon as "uploaded".
+		 */
+		get: operations["get_services__serviceId__config"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/deploy": {
 		parameters: {
 			query?: never;
@@ -1725,6 +1745,160 @@ export interface operations {
 					"application/json": {
 						/** @example This account or API key is read-only: it can view everything but can't change anything. */
 						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__config: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's settings */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						compute: {
+							cpuLimit: string | null;
+							memoryLimitMb: number | null;
+							replicas: number;
+							restartPolicy: string;
+						};
+						env: {
+							files: string[];
+							vars: {
+								[key: string]: string;
+							};
+						};
+						id: string;
+						name: string;
+						networking: {
+							containerPort: number;
+							customSsl: boolean;
+							defaultDomainEnabled: boolean;
+							dnsResolvable: boolean;
+							domainPorts: {
+								[key: string]: number;
+							};
+							domains: string[];
+							httpCacheTtl: number | null;
+							/** @enum {string} */
+							networkMode: "bridge" | "host";
+							/** @enum {string} */
+							portProtocol: "tcp" | "udp" | "both";
+							primaryDomain: string | null;
+							publishedPorts: {
+								containerPort: number;
+								hostPort: number;
+								/** @enum {string} */
+								protocol: "tcp" | "udp";
+							}[];
+						};
+						runtime: {
+							capAdd: string[];
+							command: string[] | null;
+							devices: string[];
+							entrypoint: string[] | null;
+							healthcheckCommand: string | null;
+							labels: {
+								[key: string]: string;
+							};
+							privileged: boolean;
+						};
+						security: {
+							allowedEmails: string[];
+							allowedGroups: string[];
+							allowedUserIds: string[];
+							imageScanEnabled: boolean;
+							loginProviders: string[];
+							loginRequired: boolean;
+						};
+						settings: {
+							autoRedeploy: {
+								enabled: boolean;
+								schedule: string | null;
+							};
+							autoRollback: boolean;
+							category: string | null;
+							/** @description A bundled template icon file name, "uploaded" for a custom image, or null. */
+							icon: string | null;
+							stack: {
+								id: string;
+								name: string;
+							} | null;
+							uptimeEnabled: boolean;
+						};
+						slug: string;
+						source: {
+							/** @enum {string} */
+							buildSource: "image" | "git";
+							git: {
+								autoDeployOnPush: boolean;
+								bakeFile: string | null;
+								bakeTarget: string | null;
+								buildCacheRegistryId: string | null;
+								buildContext: string | null;
+								buildMethod: string;
+								buildServerRemoteHostId: string | null;
+								dockerfilePath: string | null;
+								pollEnabled: boolean;
+								previewsEnabled: boolean;
+								ref: string | null;
+								requireStatusChecks: boolean;
+								requiredStatusChecks: string[];
+								url: string | null;
+							} | null;
+							image: string;
+							pullPolicy: string;
+							registry: {
+								passwordSet: boolean;
+								url: string | null;
+								username: string | null;
+							};
+							tag: string;
+						};
+						volumes: {
+							containerPath: string;
+							kind: string;
+							name: string;
+							readOnly: boolean;
+							source: string;
+						}[];
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};

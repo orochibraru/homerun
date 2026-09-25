@@ -86,6 +86,7 @@ homerun update [--channel stable|canary]
 homerun --version
 homerun services list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services get <id>
+homerun services config <id>
 homerun services deploy <id> [--tag <tag>]
 homerun services start <id>
 homerun services stop <id>

@@ -190,6 +190,7 @@ The rest operate on your instance:
 ```bash
 homerun services list [--json]
 homerun services get <id>
+homerun services config <id>
 homerun services deploy <id> [--tag <tag>]
 homerun services start <id>
 homerun services stop <id>
@@ -223,6 +224,18 @@ and `--search <term>` for a large result set; if what's printed is only part of
 the total, a footer line tells you so
 (`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.`) rather
 than letting a truncated table look complete.
+
+`homerun services config <id>` (or `homerun services <id> config`) prints a
+service's settings as JSON, grouped the way the dashboard's tabs are: `source`,
+`env`, `volumes`, `networking`, `compute`, `runtime`, `security` and `settings`.
+Secrets never appear: a stored registry password or SSL key shows as
+`passwordSet`/`customSsl: true`, and an uploaded icon as `"uploaded"`. It's
+`GET /api/v1/services/{id}/config` underneath, handy for diffing two services or
+keeping a copy of one's setup:
+
+```bash
+homerun services config "$SERVICE_ID" > app-config.json
+```
 
 `homerun services deploy` returns when the deploy has actually finished, not
 when it's been queued, so it's usable as a step in a script or CI job.

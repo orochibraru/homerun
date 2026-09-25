@@ -92,3 +92,10 @@ primary is cancelled rather than started against a missing dependency (see
 Links go exactly one level deep: you can't link to a template that itself has
 links. That's deliberate, it keeps `{{alias}}` resolution to a single pass with
 no cycles to detect.
+
+## Icon credits
+
+The language, framework and server logos a service can pick as its icon come
+from [Devicon](https://devicon.dev) (MIT) and
+[Simple Icons](https://simpleicons.org) (CC0). Every logo is a trademark of its
+owner.

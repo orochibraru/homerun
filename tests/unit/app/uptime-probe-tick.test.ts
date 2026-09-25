@@ -196,12 +196,21 @@ describe("UptimeProbe tick", () => {
 		]);
 	});
 
-	test("an HTTP probe counts any response as up and a refusal as down", async () => {
-		const h = harness([svc({ id: "a" }), svc({ containerId: "c2", id: "b" })]);
+	test("an HTTP probe counts a non-5xx response as up, and a 5xx or a refusal as down", async () => {
+		const h = harness([
+			svc({ id: "a" }),
+			svc({ containerId: "c2", id: "b" }),
+			svc({ containerId: "c3", id: "c" }),
+		]);
 		track(spyOn(DockerService, "containerHealth").mockResolvedValue(null));
+		const addresses: Record<string, string> = {
+			c2: "10.0.0.3",
+			c3: "10.0.0.4",
+			ctr: "10.0.0.2",
+		};
 		track(
 			spyOn(DockerService, "containerAddress").mockImplementation(
-				async (id: string) => (id === "ctr" ? "10.0.0.2" : "10.0.0.3"),
+				async (id: string) => addresses[id] ?? null,
 			),
 		);
 		const requests: { init: RequestInit; url: string }[] = [];
@@ -210,12 +219,14 @@ describe("UptimeProbe tick", () => {
 			if (url.includes("10.0.0.3")) {
 				throw new Error("ConnectionRefused");
 			}
-			return new Response("", { status: 401 });
+			return new Response("", {
+				status: url.includes("10.0.0.4") ? 503 : 401,
+			});
 		}) as unknown as typeof fetch;
 
 		await new TestProbe().run();
 
-		const [a, b] = h.recorded[0];
+		const [a, b, c] = h.recorded[0];
 		expect(a).toMatchObject({
 			detail: "HTTP 401",
 			kind: "internal",
@@ -223,6 +234,7 @@ describe("UptimeProbe tick", () => {
 			target: "http://10.0.0.2:8080/",
 		});
 		expect(b).toMatchObject({ detail: "Connection refused.", ok: false });
+		expect(c).toMatchObject({ detail: "HTTP 503", ok: false });
 		expect(requests[0].init.redirect).toBe("manual");
 	});
 

@@ -21,7 +21,7 @@
 	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
-		icons: { icon: string; name: string }[];
+		icons: { group: string; icon: string; name: string }[];
 		svc: { category: string | null; icon: string | null };
 	}
 
@@ -37,6 +37,12 @@
 		icons.filter((entry) =>
 			entry.name.toLowerCase().includes(filter.trim().toLowerCase()),
 		),
+	);
+	const groups = $derived(
+		[...new Set(shown.map((entry) => entry.group))].map((group) => ({
+			entries: shown.filter((entry) => entry.group === group),
+			group,
+		})),
 	);
 
 	function readUpload(file: File): void {
@@ -155,26 +161,39 @@
           bind:value={filter}
         />
       </div>
-      <div class="grid max-h-64 grid-cols-[repeat(auto-fill,minmax(3.5rem,1fr))] gap-2 overflow-y-auto">
-        {#each shown as entry (entry.icon)}
-          <button
-            class="
-              flex aspect-square items-center justify-center rounded-md border p-2 transition-colors {icon ===
-              entry.icon
-              ? 'border-accent bg-accent-light'
-              : 'border-border hover:bg-surface-2'}
-            "
-            aria-label={entry.name}
-            onclick={() => {
-              icon = entry.icon;
-            }}
-            title={entry.name}
-            type="button"
-          >
-            <img alt="" class="size-full object-contain" src="/template-icons/{entry.icon}">
-          </button>
+      <div class="max-h-80 space-y-3 overflow-y-auto">
+        {#each groups as { entries, group } (group)}
+          <div>
+            <p class="text-text-subtle mb-1.5 text-[0.6875rem] font-medium">
+              {group}
+            </p>
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(3.5rem,1fr))] gap-2">
+              {#each entries as entry (entry.icon)}
+                <button
+                  class="
+                    flex aspect-square items-center justify-center rounded-md border p-2 transition-colors {icon ===
+                    entry.icon
+                    ? 'border-accent bg-accent-light'
+                    : 'border-border hover:bg-surface-2'}
+                  "
+                  aria-label={entry.name}
+                  onclick={() => {
+                    icon = entry.icon;
+                  }}
+                  title={entry.name}
+                  type="button"
+                >
+                  <img
+                    alt=""
+                    class="size-full object-contain"
+                    src="/template-icons/{entry.icon}"
+                  >
+                </button>
+              {/each}
+            </div>
+          </div>
         {:else}
-          <p class="text-text-subtle col-span-full text-xs">No icon matches.</p>
+          <p class="text-text-subtle text-xs">No icon matches.</p>
         {/each}
       </div>
     </div>

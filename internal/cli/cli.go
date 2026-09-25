@@ -33,6 +33,7 @@ Commands:
 
   services list                   list services
   services get <id>               get a service by id
+  services config <id>            print a service's settings as JSON, grouped by dashboard tab (also: services <id> config)
   services deploy <id> [--tag <tag>]
                                   deploy a service and wait for it, optionally switching its image tag first
   services start|stop|restart <id>
@@ -218,7 +219,13 @@ func RunServices(global GlobalFlags, args []string) {
 	}
 	client := func() *Client { return RequireClient(global.BaseURL, global.APIKey) }
 
+	if len(args) >= 2 && args[1] == "config" {
+		args = []string{"config", args[0]}
+	}
 	switch args[0] {
+	case "config":
+		id := RequireArg(args, 1, "id")
+		ServiceConfig(client(), id)
 	case "list":
 		set := NewFlagSet("services list")
 		options := ListFlags(set)
