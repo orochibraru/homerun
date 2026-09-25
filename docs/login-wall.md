@@ -61,7 +61,7 @@ so an app can be limited to `admin` without an identity provider at all.
 **Revocation.** Access is re-checked when the app cookie is issued, whenever the
 rules change, and again at least every five minutes while the cookie is in use.
 Deleting, banning or re-roling a user in Homerun, or unlinking one of their
-sign-in methods, is picked up on their very next request to any gated app. For
+sign-in methods, is picked up on their next request to any gated app. For
 an app that filters on groups, the five-minute re-check first asks the user's
 OAuth provider for fresh tokens, so a group removed at the provider is noticed
 within about five minutes, as long as the provider issues refresh tokens and

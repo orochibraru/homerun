@@ -36,6 +36,62 @@ export function detectTransitions(
 	return transitions;
 }
 
+export const RECOVERY_STABLE_MS = 15 * 60_000;
+
+/**
+ * Turns raw probe transitions into the alerts worth sending, so a service that
+ * flaps (a swarm task that passes its healthcheck for a while, then fails it
+ * again, forever) alerts once instead of on every cycle. A probe that goes
+ * down alerts only if it wasn't already down; its recovery alerts only once
+ * it has stayed up for `RECOVERY_STABLE_MS`, and a failure before then is
+ * silent, since the down alert still stands. State lives in memory: a restart
+ * forgets it, which at worst sends one extra alert.
+ */
+export class AlertDamper {
+	readonly #upSince = new Map<string, number | null>();
+
+	/** The alerts to dispatch for this tick's `transitions`, given every result of the tick and the current time. */
+	alerts(
+		transitions: ProbeTransition[],
+		results: ProbeResult[],
+		now: number,
+	): ProbeTransition[] {
+		const alerts: ProbeTransition[] = [];
+		for (const transition of transitions) {
+			const key = `${transition.serviceId}:${transition.kind}`;
+			if (!(transition.ok || this.#upSince.has(key))) {
+				alerts.push(transition);
+			}
+			if (!this.#upSince.has(key) || !transition.ok) {
+				this.#upSince.set(key, null);
+			}
+		}
+		for (const result of results) {
+			const key = `${result.serviceId}:${result.kind}`;
+			if (!this.#upSince.has(key)) {
+				continue;
+			}
+			if (!result.ok) {
+				this.#upSince.set(key, null);
+				continue;
+			}
+			const since = this.#upSince.get(key) ?? now;
+			if (now - since < RECOVERY_STABLE_MS) {
+				this.#upSince.set(key, since);
+				continue;
+			}
+			this.#upSince.delete(key);
+			alerts.push({
+				detail: result.detail ?? null,
+				kind: result.kind,
+				ok: true,
+				serviceId: result.serviceId,
+			});
+		}
+		return alerts;
+	}
+}
+
 class StatusAlertServiceClass {
 	/** Sends an uptime notification for each transition to every account's channels via `NotificationChannelService`. Per-transition failures are logged and don't stop the others from dispatching. */
 	async dispatch(

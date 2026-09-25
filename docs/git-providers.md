@@ -2,7 +2,7 @@
 
 `Git Providers` in the sidebar is what turns "paste a clone URL" into "browse my
 repos", and it's how a private repo works without putting a token in the URL.
-There are two steps, and they're done by different people:
+It takes two steps, done by different people:
 
 1. **An admin registers the provider**, once. For **GitHub**, give the app a
    name (and an organization, or leave it empty for your personal account) and

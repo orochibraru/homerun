@@ -7,9 +7,12 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { detectTransitions, StatusAlertService } = await import(
-	"../../../src/lib/services/status-alert.service"
-);
+const {
+	AlertDamper,
+	detectTransitions,
+	RECOVERY_STABLE_MS,
+	StatusAlertService,
+} = await import("../../../src/lib/services/status-alert.service");
 const { NotificationChannelService } = await import(
 	"../../../src/lib/services/notification-channel.service"
 );
@@ -19,6 +22,47 @@ const { Logger } = await import("../../../src/lib/logger");
 function prior(entries: Array<[string, boolean]>) {
 	return new Map(entries.map(([key, ok]) => [key, { ok }]));
 }
+
+describe("AlertDamper", () => {
+	const probe = (ok: boolean) => ({
+		detail: ok ? "HTTP 200" : "HTTP 504",
+		kind: "external" as const,
+		ok,
+		serviceId: "umami",
+	});
+	const flip = (ok: boolean) => ({ ...probe(ok) });
+
+	test("a flapping service alerts down once, and recovered only after staying up", () => {
+		const damper = new AlertDamper();
+		const minute = 60_000;
+
+		expect(damper.alerts([flip(false)], [probe(false)], 0)).toEqual([
+			flip(false),
+		]);
+		expect(damper.alerts([flip(true)], [probe(true)], 5 * minute)).toEqual([]);
+		expect(damper.alerts([flip(false)], [probe(false)], 12 * minute)).toEqual(
+			[],
+		);
+		expect(damper.alerts([flip(true)], [probe(true)], 20 * minute)).toEqual([]);
+		expect(damper.alerts([], [probe(true)], 30 * minute)).toEqual([]);
+		expect(
+			damper.alerts([], [probe(true)], 20 * minute + RECOVERY_STABLE_MS),
+		).toEqual([flip(true)]);
+
+		expect(damper.alerts([], [probe(true)], 60 * minute)).toEqual([]);
+		expect(damper.alerts([flip(false)], [probe(false)], 61 * minute)).toEqual([
+			flip(false),
+		]);
+	});
+
+	test("a recovery seen with no down on record still waits to be stable", () => {
+		const damper = new AlertDamper();
+		expect(damper.alerts([flip(true)], [probe(true)], 0)).toEqual([]);
+		expect(damper.alerts([], [probe(true)], RECOVERY_STABLE_MS)).toEqual([
+			flip(true),
+		]);
+	});
+});
 
 describe("detectTransitions", () => {
 	test("reports a probe that went from up to down, and back", () => {

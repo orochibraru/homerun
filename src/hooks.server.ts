@@ -304,6 +304,16 @@ function isOidcProviderPath(pathname: string): boolean {
 }
 
 /**
+ * Whether this is the login wall's forwardAuth check. Traefik forwards the
+ * gated app's own request headers to it, so an `Authorization: Bearer` there
+ * is that app's token (Umami's API calls carry one), not a Homerun API key,
+ * and the check reads its own gate cookie rather than `locals.user` anyway.
+ */
+function isAuthCheckPath(url: URL): boolean {
+	return url.pathname === "/api/v1/auth-check";
+}
+
+/**
  * API-key fallback for a request with no cookie session : populates
  * `locals.user` on success, and returns a 401 response when a key was sent
  * but doesn't verify. Returns null when there's nothing to do.
@@ -319,7 +329,9 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 		.catch(() => null);
 
 	if (!(result?.valid && result.key)) {
-		logger.warn("Invalid API key authentication attempt", { key: rawKey });
+		logger.warn("Invalid API key authentication attempt", {
+			key: `${rawKey.slice(0, 6)}…`,
+		});
 		return new Response(JSON.stringify({ error: "Unauthorized" }), {
 			status: 401,
 		});
@@ -366,7 +378,9 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		// Make session and user available on server
 		event.locals.session = session.session;
 		event.locals.user = session.user;
-	} else if (!isOidcProviderPath(event.url.pathname)) {
+	} else if (
+		!(isOidcProviderPath(event.url.pathname) || isAuthCheckPath(event.url))
+	) {
 		const rejected = await applyApiKeyAuth(event);
 		if (rejected) {
 			return rejected;

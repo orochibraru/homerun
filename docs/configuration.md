@@ -75,7 +75,7 @@ or `https`, and flipping that at runtime would rename the session cookie and
 sign everyone out mid-session. Two failure modes if it's wrong:
 
 - Leaving it at `localhost` while reaching the instance at anything else makes
-  the very first sign-up fail with **"Invalid origin"**, because that's the only
+  the first sign-up fail with **"Invalid origin"**, because that's the only
   origin the auth layer trusts.
 - Serving over plain HTTP at a bare IP while `ORIGIN` says `https` makes sign-in
   appear to succeed and then hang, because the browser silently discards a

@@ -397,7 +397,7 @@ describe("UptimeProbe tick", () => {
 		}
 	});
 
-	test("state flips are dispatched with each service's public host", async () => {
+	test("a down flip is dispatched at once with the public host, a recovery waits to be stable", async () => {
 		config.baseDomain = "example.com";
 		const h = harness(
 			[svc({ dnsResolvable: true })],
@@ -419,7 +419,6 @@ describe("UptimeProbe tick", () => {
 			Map<string, { host: string | null }>,
 		];
 		expect(transitions.map((t) => [t.kind, t.ok])).toEqual([
-			["internal", true],
 			["external", false],
 		]);
 		expect(byId.get("svc")?.host).toBe("svc.example.com");

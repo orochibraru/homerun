@@ -91,12 +91,18 @@ These are enforced by git hooks, not just CI. The hooks are run by
 from `mise install`, then `bun install` wires them up for you (`prepare` runs
 `prek install`, which installs the pre-commit, commit-msg and pre-push hooks). A
 commit only runs the fast, per-file hooks (oxlint, Biome format and import
-sorting, Prettier and markdownlint, gofmt, Tailwind, typos, secret scanning), a
-few seconds. A push runs the whole-repo gates: the type check, unit tests (80%
-coverage gate), golangci-lint and the Go tests. Hooks autofix in place, so a
-commit that gets rejected for "files were modified by this hook" just needs
-`git add` and a re-commit. After pulling this change, run `prek install` once so
-the pre-push hook exists.
+sorting, Prettier and markdownlint, gofmt, Tailwind, typos, Vale, secret
+scanning), a few seconds. A push runs the whole-repo gates: the type check, unit
+tests (80% coverage gate), golangci-lint and the Go tests. Hooks autofix in
+place, so a commit that gets rejected for "files were modified by this hook"
+just needs `git add` and a re-commit. After pulling this change, run
+`prek install` once so the pre-push hook exists.
+
+Vale checks the prose of `docs/`, the READMEs and this file against the Google,
+proselint and write-good styles. Only its errors block a commit; warnings are
+advice. A product or tool name it flags as a misspelling goes in
+`.vale/styles/config/vocabularies/Homerun/accept.txt`. Run it on everything with
+`prek run vale --all-files`.
 
 ```sh
 bun run check   # svelte-check --fail-on-warnings over src/ and tests/, tsc over scripts/, go vet and golangci-lint over every package under cmd/ and internal/, zero errors AND zero warnings

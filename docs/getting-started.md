@@ -142,7 +142,7 @@ docker network create homerun
 docker compose -f compose.prod.yaml up -d
 ```
 
-**There are exactly two values to fill in**, both in `.env`, and then you're
+**You fill in exactly two values**, both in `.env`, and then you're
 done with files for good:
 
 - `AUTH_SECRET`, any long random string (`openssl rand -hex 32`). It signs your

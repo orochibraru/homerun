@@ -269,6 +269,24 @@ and previous one marked and, for an unhealthy one, the reason, and
 one when no id is given) and waits for it like `deploy`; `--restore-config` also
 restores that revision's env vars, resources and networking.
 
+### MCP server for AI agents
+
+`homerun mcp` serves an [MCP](https://modelcontextprotocol.io) server over
+stdio, so an AI agent (Claude Code, Claude Desktop, Cursor…) can diagnose and
+fix your services with the same login the CLI uses:
+
+```bash
+claude mcp add homerun -- homerun mcp
+```
+
+It reads: `list_services`, `get_service`, `get_service_config`,
+`service_logs`, `list_revisions`, `list_stacks`, `system_stats` and
+`instance_status`. It changes: `update_service`, `deploy_service`,
+`restart_service`, `start_service`, `stop_service` and `rollback_service`.
+Deleting a service is deliberately not a tool. `homerun mcp --read-only` leaves
+out every tool that changes something, for an agent you only want diagnosing;
+a read-only API key enforces the same thing on the instance's side.
+
 ### Working on the CLI itself
 
 The CLI is a Go program, not part of the Bun app: from the repo root (with Go

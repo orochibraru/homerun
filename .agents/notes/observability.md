@@ -346,9 +346,15 @@ is the shared strip, also used by both status-page surfaces.
 `UptimeCheckDTO.latestByProbe` _before_ recording its own results, and
 `detectTransitions` compares the two: a probe with no previous beat is
 deliberately not a transition, or the first tick after a deploy (or after
-`prune()` cleared the window) would alert on every service at once. Each
-transition is handed to `NotificationChannelService.dispatch` (`service.down`/
-`service.up`), which fans it out to every channel account-wide subscribed to
-that event, see Outbound notification channels above, no longer scoped to a
-status page. A channel that throws is caught, logged and written to its own
-`lastError`, never allowed to abort the tick.
+`prune()` cleared the window) would alert on every service at once.
+`AlertDamper` then filters them: a flapping service (a swarm task that passes
+its healthcheck for ten minutes, gets replaced, fails again, forever) used to
+send a down and a recovered alert every cycle. Now a probe already alerted down
+stays silent until it has been up for `RECOVERY_STABLE_MS` (15 minutes), and
+only then sends one recovered. The state is in memory, so a restart costs at
+most one extra alert. Each remaining transition is handed to
+`NotificationChannelService.dispatch` (`service.down`/ `service.up`), which fans
+it out to every channel account-wide subscribed to that event, see Outbound
+notification channels above, no longer scoped to a status page. A channel that
+throws is caught, logged and written to its own `lastError`, never allowed to
+abort the tick.

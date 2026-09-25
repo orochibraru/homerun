@@ -17,7 +17,7 @@ migrations only run forward.
 Yes. Every account sees and manages every service, stack, volume, backup and the
 rest of the instance's resources, whoever created them. Sessions, API keys,
 preferences, git connections, the bell feed and notification channels stay
-personal. There are no teams and no per-stack permissions: the two roles, admin
+personal. Homerun has no teams and no per-stack permissions: the two roles, admin
 and developer, only differ in which instance-wide pages they can open. An API
 key has the full permissions of its account. Deleting an account hands what it
 created over to another admin. See [Users and roles](users-and-roles.md).

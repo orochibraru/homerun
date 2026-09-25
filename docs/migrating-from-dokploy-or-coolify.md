@@ -42,7 +42,7 @@ What carries over:
   targets, and named volumes keep pointing at the data Dokploy created
   (`<appName>_<volume>`, or the volume's own `name:`/`external` declaration).
 - **Databases**: the image, the port, and the credentials turned into the
-  image's own env vars (`POSTGRES_PASSWORD`, `MYSQL_ROOT_PASSWORD`, ...), always
+  image's own env vars (`POSTGRES_PASSWORD`, `MYSQL_ROOT_PASSWORD`, …), always
   internal-only. A Redis, KeyDB or Dragonfly password is applied through the
   start command, the way both platforms set it.
 

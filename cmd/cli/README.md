@@ -32,7 +32,7 @@ homerun login
 Prompts for your instance URL, then walks you through a machine-to-machine
 login: it prints a short code and a URL, you open that URL in any
 already-signed-in browser tab and enter the code to approve, and the CLI picks
-up a freshly-issued API key once you do. No API key to copy/paste by hand. The
+up a freshly issued API key once you do. No API key to copy/paste by hand. The
 URL and key are saved to `~/.config/homerun/config.json` (mode `0600`) so you
 don't need to log in again; `homerun logout` clears it.
 
@@ -183,6 +183,10 @@ install directory isn't writable by your user, same as `install.sh`). Release
 assets are gzipped, so it unpacks the download before replacing the binary.
 Linux and macOS, same as installation itself. `homerun --version` (or `-v`) just
 prints the current version, no network call.
+
+`homerun mcp [--read-only]` serves an MCP server over stdio for AI agents, a
+thin layer of tools over the same REST calls; see
+`docs/api-and-cli.md` for the tool list.
 
 ## After a REST API change
 

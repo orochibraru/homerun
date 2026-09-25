@@ -59,6 +59,15 @@ repos:
         name: Look for typos
         args: [--force-exclude]
 
+  - repo: https://github.com/errata-ai/vale
+    rev: v3.22.0
+    hooks:
+      - id: vale
+        name: Lint docs prose (Vale)
+        entry: sh -c 'vale sync >/dev/null && vale "$@"' --
+        require_serial: true
+        files: ^(docs/.*|README|CONTRIBUTING|cmd/[^/]+/README)\.md$
+
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
     hooks:

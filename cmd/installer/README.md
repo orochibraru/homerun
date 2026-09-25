@@ -211,7 +211,7 @@ installer). Put it (and anything else you want to override, `POSTGRES_PASSWORD`,
 `--docker=rootless` install). Set `ORIGIN` (or `HOMERUN_HOST`) there if the
 instance moves to another address after install. Getting it wrong is not
 cosmetic, real, reported finding: better-auth's trusted origins are derived from
-`ORIGIN` alone, so a stale one makes every sign-in and the very first sign-up
+`ORIGIN` alone, so a stale one makes every sign-in and the first sign-up
 403 with "Invalid origin" from the address you are actually using, and absolute
 URLs this app constructs (e.g. the CLI login flow's own approval link) point at
 the wrong host too. See `ComposeFile`'s doc comment in `fullstack.go`. Base
@@ -378,7 +378,7 @@ full detail):
 7. That default was `http://localhost:3000`, which turned out to be worse than
    wrong links: reported live on a real install reached at
    `http://<public ip>:3000`, where the first sign-up 403'd with better-auth's
-   "Invalid origin ... Current list of trustedOrigins: <http://localhost:3000>",
+   "Invalid origin … Current list of trustedOrigins: <http://localhost:3000>",
    making a fresh instance impossible to sign up to from anywhere but the box
    itself. Fixed by asking for (or detecting) the real address, see the Flags
    section above.

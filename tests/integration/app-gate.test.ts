@@ -221,6 +221,36 @@ describe("per-app auth gate", () => {
 		);
 	});
 
+	test("the gated app's own Bearer token is ignored, not checked as a Homerun API key", async () => {
+		const challenge = await gateCheck("/");
+		const rd = new URL(
+			challenge.headers.get("location") ?? "",
+		).searchParams.get("rd");
+		const authed = await nativeFetch(
+			`${fixture.origin}/app-auth?rd=${encodeURIComponent(rd ?? "")}`,
+			{ headers: { "x-api-key": fixture.apiKey }, redirect: "manual" },
+		);
+		const callback = new URL(authed.headers.get("location") ?? "");
+		const cookie = gateCookieFrom(
+			await gateCheck(`${callback.pathname}${callback.search}`),
+		);
+
+		const res = await nativeFetch(
+			`${fixture.origin}/api/v1/auth-check?service=${fixture.serviceId}`,
+			{
+				headers: {
+					authorization: "Bearer umami_not-a-homerun-key",
+					cookie,
+					"x-forwarded-host": GATED_HOST,
+					"x-forwarded-proto": "https",
+					"x-forwarded-uri": "/api/websites",
+				},
+				redirect: "manual",
+			},
+		);
+		expect(res.status).toBe(200);
+	});
+
 	test("a gate cookie minted for one host is not accepted on another", async () => {
 		const challenge = await gateCheck("/");
 		const rd = new URL(

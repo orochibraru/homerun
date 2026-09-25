@@ -46,8 +46,11 @@ export class CoreServicesWatch extends BaseScheduler {
 	 * Polls the worker's health and, whenever its boot id differs from the
 	 * last one seen (the first successful contact included), re-asserts the
 	 * core services onto it: the forward-auth URL detection, the dashboard's
-	 * Traefik router and DNS record, the Newt tunnel, and swarm mode when
-	 * that's the orchestration mode. So a
+	 * Traefik router and DNS record, the Newt tunnel, swarm mode when
+	 * that's the orchestration mode, and the Traefik flags Settings →
+	 * Networking adds (the HTTP cache plugin, the ACME email), which a
+	 * `docker compose up --force-recreate` or a self-update wipes by
+	 * recreating Traefik from the compose file. So a
 	 * worker restarted alone, or one that wasn't up yet when the app booted,
 	 * still ends up converged. An unreachable worker is skipped silently and
 	 * retried next tick; a failed convergence step is logged, not retried
@@ -79,6 +82,18 @@ export class CoreServicesWatch extends BaseScheduler {
 			await DockerService.enableSwarmMode().catch((err) => {
 				this.logger.warn("Couldn't re-assert swarm mode on this host", err);
 			});
+		}
+		await DockerService.applyHttpCache(config.traefik.httpCache).catch(
+			(err) => {
+				this.logger.warn("Couldn't re-assert the HTTP cache plugin", err);
+			},
+		);
+		if (config.traefik.acmeEmail) {
+			await DockerService.applyAcmeEmail(config.traefik.acmeEmail).catch(
+				(err) => {
+					this.logger.warn("Couldn't re-assert the ACME email", err);
+				},
+			);
 		}
 	}
 }

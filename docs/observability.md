@@ -18,10 +18,12 @@ and the reason for the latest failure plus hints for fixing it:
   service that isn't DNS-resolvable, and while the base domain is a loopback
   address like `localhost`, since probing it from this machine proves nothing.
 
-A probe that changes from up to down, or back, fires the **Service down** or
-**Service recovered** event on any [notification channel](notifications.md)
-subscribed to it. Results are kept for a week; **Clear heartbeats** empties the
-history. Uptime also feeds [status pages](status-pages.md).
+A probe that goes down fires the **Service down** event on any
+[notification channel](notifications.md) subscribed to it, and **Service
+recovered** once it has stayed up for 15 minutes. A service that keeps falling
+over and coming back alerts once, not on every cycle. Results are kept for a
+week; **Clear heartbeats** empties the history. Uptime also feeds
+[status pages](status-pages.md).
 
 Probing is on for every service by default. **Turn off** in the Uptime panel's
 header stops both probes for that service (the panel then says so), **Turn on**

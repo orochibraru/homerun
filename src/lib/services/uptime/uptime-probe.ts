@@ -10,6 +10,7 @@ import { isDatabaseImage } from "$lib/service-link";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { DockerService } from "../docker.service.ts";
 import {
+	AlertDamper,
 	detectTransitions,
 	StatusAlertService,
 } from "../status-alert.service.ts";
@@ -172,10 +173,13 @@ export class UptimeProbe extends BaseScheduler {
 
 	#ticks = 0;
 
+	readonly #damper = new AlertDamper();
+
 	/**
 	 * One uptime-check cycle: probes every uptime-enabled service internally
 	 * and externally, persists the results, dispatches notifications for any
-	 * up/down transitions (`StatusAlertService.dispatch`), and, once every
+	 * up/down transitions, damped so a flapping service alerts once
+	 * (`AlertDamper`, `StatusAlertService.dispatch`), and, once every
 	 * `PRUNE_EVERY_TICKS` ticks, prunes old check rows.
 	 */
 	protected async tick(): Promise<void> {
@@ -195,7 +199,11 @@ export class UptimeProbe extends BaseScheduler {
 		const results = (await Promise.all(probes)).filter((r) => r !== null);
 		await UptimeCheckDTO.recordMany(results);
 
-		const transitions = detectTransitions(previous, results);
+		const transitions = this.#damper.alerts(
+			detectTransitions(previous, results),
+			results,
+			Date.now(),
+		);
 		if (transitions.length > 0) {
 			await StatusAlertService.dispatch(
 				transitions,

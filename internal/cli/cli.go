@@ -59,6 +59,9 @@ Commands:
                                   update the instance to the latest release on its channel (not the CLI itself, see ` + "`homerun update`" + `)
   instance channel stable|canary  set the release channel the instance updates from (switching back to stable never downgrades)
 
+  mcp [--read-only]               serve an MCP server over stdio so an AI agent can diagnose and fix services
+                                  (e.g. ` + "`claude mcp add homerun -- homerun mcp`" + `); --read-only leaves out every tool that changes something
+
 List options (services/stacks/templates/scans list):
   --json                          print raw JSON instead of a table
   --page <n>                      1-based page number (default 1)
@@ -109,6 +112,8 @@ func Main() {
 		RunTemplates(global, rest[1:])
 	case "instance":
 		RunInstance(global, rest[1:])
+	case "mcp":
+		RunMCP(global, rest[1:])
 	default:
 		Fail(fmt.Sprintf("unknown command %q. Run `homerun --help` to see what's available.", rest[0]))
 	}
