@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.48](https://github.com/orochibraru/homerun/compare/v1.0.47...v1.0.48) (2026-09-24)
+
+### Bug Fixes
+
+- **ci:** push refreshed screenshots with RELEASE_TOKEN, root font 110% → 100%
+  ([4088964](https://github.com/orochibraru/homerun/commit/4088964a5ee85b9bbed19a5b13ed8e1d2663e06a))
+- **ui:** drop root font size from 110% to 100%
+  ([952f4f1](https://github.com/orochibraru/homerun/commit/952f4f130f874e9c32bd79d3e75e12085ee570cc))
+
 ## [1.0.47](https://github.com/orochibraru/homerun/compare/v1.0.46...v1.0.47) (2026-09-24)
 
 ### Bug Fixes
