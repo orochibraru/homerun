@@ -8,7 +8,6 @@ description:
   cascade/set null) versus what still needs explicit app-level cleanup. Use
   whenever a table in schema.ts is added, changed, or a column's meaning
   changes.
-user-invocable: true
 ---
 
 # migration-workflow

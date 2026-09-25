@@ -13,7 +13,6 @@ env:
 
 permissions:
   contents: read
-  packages: write
 
 # code quality → build (by digest) → e2e against that exact image → tag
 # `pr-<number>`. The images are built once and reused, and nothing is published
@@ -60,14 +59,12 @@ jobs:
     uses: ./.github/workflows/code_quality.yaml
     with:
       tests: ${{ needs.changes.outputs.code == 'true' }}
-    secrets: inherit
 
   go:
     name: Go
     needs: [changes]
     if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/go.yaml
-    secrets: inherit
 
   binaries:
     name: Binaries

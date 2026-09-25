@@ -1,0 +1,4 @@
+target = "ClaudeCode"
+
+[rules]
+disabled_rules = ["CC-MEM-006", "CC-MEM-008", "CC-MEM-009", "PE-001", "PE-006", "XP-003"]

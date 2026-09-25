@@ -85,6 +85,7 @@ bun run gen              # svelte-kit sync + regenerate openapi.json, tests/inte
 bun run check            # svelte-check --fail-on-warnings --tsgo, tsc over scripts/, go vet, and golangci-lint (`go tool -modfile=tools/go/go.mod`), the whole gate in one command, see `.agents/notes/testing.md`
 bun run lint             # markdownlint-cli2, scripts/lint-tailwind.ts (Tailwind class sorting) and oxlint --type-aware --deny-warnings (`.oxlintrc.json`; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
 bun run lint:fix         # the --fix half of all three
+bun run lint:ai          # agnix --strict over CLAUDE.md, AGENTS.md, .agents/ and .claude/ (`.agnix.toml` disables its prose heuristics), also a prek hook; agnix is a trusted dependency because its postinstall downloads the binary
 bun run format           # prettier --write over **/*.md, then biome format --write (formatting only, doesn't gate `bun run lint`; import sorting/formatting is enforced at commit time by the pre-commit hooks instead)
 bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts, the app applies them itself at boot
 docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml, needs `docker network create homerun` once), required, the app has no fallback DB, see .agents/notes/docker.md
@@ -100,7 +101,7 @@ bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a
 bun run screenshots       # regenerate docs/images/ through playwright.screenshots.config.ts, same prerequisites as test:e2e plus a Docker daemon (it really deploys); CI reruns it and commits the result after every stable release
 ```
 
-Package.json's script list is deliberately short (15 entries): there's no
+Package.json's script list is deliberately short (16 entries): there's no
 `bun run release` (releases run entirely in CI, driven by
 `orochibraru/releaser`, see `.agents/notes/packages-and-release.md`), and a
 handful of scripts that used to exist are now just the raw command, run directly

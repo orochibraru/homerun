@@ -7,7 +7,6 @@ description:
   containers before reconcile). Use when adding new Docker functionality (a new
   lifecycle operation, a new inspection/status method, a new concern file under
   services/docker/) rather than a wholly new service.
-user-invocable: true
 ---
 
 # new-docker-mixin

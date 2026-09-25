@@ -7,7 +7,6 @@ description: >-
   vs. in a route's load. Use when adding a panel that loads behind a skeleton, a
   poll, a picker's on-demand lookup, or a small mutation the bell/a self-loading
   component fires — not for data a page's own correctness depends on.
-user-invocable: true
 ---
 
 # new-remote-function

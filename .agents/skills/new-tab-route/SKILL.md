@@ -8,7 +8,6 @@ description: >-
   subfolder. Use when adding a section to services/[serviceId], settings/,
   profile/, or any page shaped like them — never a client-side activeTab switch
   in one file.
-user-invocable: true
 ---
 
 # new-tab-route

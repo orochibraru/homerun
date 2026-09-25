@@ -23,6 +23,8 @@ jobs:
       result: ${{ steps.done.outputs.result }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -49,13 +51,17 @@ jobs:
       - name: Record result
         id: done
         if: always()
-        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: echo "result=$JOB_STATUS" >> "$GITHUB_OUTPUT"
 
   lint:
     name: Lint (golangci-lint)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

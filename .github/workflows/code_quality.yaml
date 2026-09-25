@@ -36,6 +36,8 @@ jobs:
       result: ${{ steps.done.outputs.result }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -52,6 +54,9 @@ jobs:
       # first.
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Download the agnix binary
+        run: node node_modules/agnix/install.js
 
       # $lib resolves through .svelte-kit/tsconfig.json's paths, which is
       # generated and gitignored. The test/check scripts sync it themselves;
@@ -95,7 +100,9 @@ jobs:
       - name: Record result
         id: done
         if: always()
-        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: echo "result=$JOB_STATUS" >> "$GITHUB_OUTPUT"
 
   ts-test:
     name: Tests (TS)
@@ -119,6 +126,8 @@ jobs:
       HOMERUN_TEST_POSTGRES_URL: postgres://homerun:homerun@127.0.0.1:5432/homerun_test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -154,7 +163,9 @@ jobs:
       - name: Record result
         id: done
         if: always()
-        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: echo "result=$JOB_STATUS" >> "$GITHUB_OUTPUT"
 
       - name: Upload coverage report
         if: always()

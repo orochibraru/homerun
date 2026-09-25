@@ -8,7 +8,6 @@ description:
   a DTO from load, nested (protected) loads must not re-check !locals.user. Use
   when adding a new database table, a new DTO class under src/lib/dto/, or a new
   route that reads/writes one.
-user-invocable: true
 ---
 
 # new-dto-route

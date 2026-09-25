@@ -65,6 +65,12 @@ repos:
       - id: actionlint
         name: Lint Github Actions
 
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.1
+    hooks:
+      - id: zizmor
+        name: Audit Github Actions security
+
   - repo: local
     hooks:
       - id: pinact
@@ -116,6 +122,13 @@ repos:
         entry: bun run markdownlint-cli2 --fix
         language: system
         types: [markdown]
+
+      - id: agnix
+        name: Lint AI configs (agnix)
+        entry: node_modules/.bin/agnix --strict
+        language: system
+        pass_filenames: false
+        files: (^|/)(CLAUDE|AGENTS)\.md$|^\.agents/|^\.claude/|^\.agnix\.toml$|^\.mcp\.json$
 
       - id: format-go
         name: Formatting (Go)

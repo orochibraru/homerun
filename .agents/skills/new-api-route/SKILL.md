@@ -8,7 +8,6 @@ description: >-
   in sync by hand, and regenerating cmd/cli/'s OpenAPI-derived types afterward.
   Use whenever a route under src/routes/api/v1/ is added, removed, or has its
   request/response shape changed.
-user-invocable: true
 ---
 
 # new-api-route

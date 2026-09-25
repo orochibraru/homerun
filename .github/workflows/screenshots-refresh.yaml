@@ -3,13 +3,18 @@ name: Refresh Screenshots
 on:
   workflow_dispatch:
   workflow_call:
+    secrets:
+      RELEASE_TOKEN:
+        required: true
+      DOCS_TRIGGER_TOKEN:
+        required: false
 
 concurrency:
   group: screenshots-refresh
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   TZ: Europe/Paris
@@ -30,7 +35,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN }} # zizmor: ignore[artipacked]
 
       - name: Download the captured images
         uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2

@@ -9,7 +9,6 @@ description: >-
   --deny-warnings), plus the matching unit tests. Use whenever finishing an edit
   to this codebase, before saying a change is "done", or after any change under
   src/, cmd/, internal/, scripts/ or tests/.
-user-invocable: true
 allowed-tools:
   Bash(bun run check), Bash(bun run lint), Bash(bun run lint:fix), Bash(bun run
   test), Bash(bun run gen), Bash(go vet *), Bash(go test *), Bash(go tool *),
