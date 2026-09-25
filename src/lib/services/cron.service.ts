@@ -24,6 +24,7 @@ import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { StatsSampler } from "./stats/stats-sampler.ts";
+import { BOOT_QUIET_MS, quietUptimeProbes } from "./uptime/quiet.ts";
 import { UptimeProbe } from "./uptime/uptime-probe.ts";
 
 export type { ParsedCron } from "./cron/cron-expression.ts";
@@ -101,8 +102,9 @@ class CronServiceClass {
 		this.statsSampler.start();
 	}
 
-	/** Starts the service uptime probe. */
+	/** Starts the service uptime probe, quiet for `BOOT_QUIET_MS` while Homerun itself settles after a boot or an update. */
 	startUptimeProbe(): void {
+		quietUptimeProbes(BOOT_QUIET_MS);
 		this.uptimeProbe.start();
 	}
 

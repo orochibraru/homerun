@@ -435,3 +435,20 @@ describe("UptimeProbe tick", () => {
 		expect(h.pruned()).toBe(1);
 	});
 });
+
+describe("quiet windows", () => {
+	test("a quiet window skips probing entirely, and resuming ends it", async () => {
+		const { quietUptimeProbes, resumeUptimeProbes, uptimeProbesQuiet } =
+			await import("../../../src/lib/services/uptime/quiet");
+		const h = harness([svc({ id: "a" })]);
+		quietUptimeProbes(60_000);
+		expect(uptimeProbesQuiet()).toBe(true);
+		await new TestProbe().run();
+		expect(h.recorded).toHaveLength(0);
+
+		quietUptimeProbes(1000, 0);
+		expect(uptimeProbesQuiet()).toBe(true);
+		resumeUptimeProbes();
+		expect(uptimeProbesQuiet()).toBe(false);
+	});
+});

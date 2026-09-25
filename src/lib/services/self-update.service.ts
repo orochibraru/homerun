@@ -10,6 +10,10 @@ import { isNotFound, WorkerClient } from "$lib/server/worker-client";
 import { DockerService } from "$lib/services/docker.service";
 import { JobWorker } from "$lib/services/queue/worker";
 import {
+	quietUptimeProbes,
+	resumeUptimeProbes,
+} from "$lib/services/uptime/quiet";
+import {
 	COMPOSE_PROJECT_LABEL,
 	COMPOSE_SERVICE_LABEL,
 	type ComposeTarget,
@@ -334,6 +338,7 @@ class SelfUpdateServiceClass {
 			if (!self) {
 				throw new Error("Couldn't find this app's own compose service.");
 			}
+			quietUptimeProbes(UPDATE_WATCH_MS);
 			await this.#launchUpdater(self, status.latest.version, status.channel);
 			void this.#watchUpdater(status.latest.version);
 			logger.info(
@@ -342,6 +347,7 @@ class SelfUpdateServiceClass {
 			return { version: status.latest.version };
 		} catch (err) {
 			JobWorker.release();
+			resumeUptimeProbes();
 			throw err;
 		}
 	}
@@ -365,6 +371,7 @@ class SelfUpdateServiceClass {
 				continue;
 			}
 			JobWorker.release();
+			resumeUptimeProbes();
 			if (progress.exitCode !== 0) {
 				const reason =
 					progress.log.findLast((line) => line.startsWith("==>")) ??

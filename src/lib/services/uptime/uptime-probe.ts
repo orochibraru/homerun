@@ -14,6 +14,7 @@ import {
 	detectTransitions,
 	StatusAlertService,
 } from "../status-alert.service.ts";
+import { uptimeProbesQuiet } from "./quiet.ts";
 
 const TIMEOUT_MS = 5000;
 
@@ -180,9 +181,14 @@ export class UptimeProbe extends BaseScheduler {
 	 * and externally, persists the results, dispatches notifications for any
 	 * up/down transitions, damped so a flapping service alerts once
 	 * (`AlertDamper`, `StatusAlertService.dispatch`), and, once every
-	 * `PRUNE_EVERY_TICKS` ticks, prunes old check rows.
+	 * `PRUNE_EVERY_TICKS` ticks, prunes old check rows. Skipped entirely
+	 * inside a quiet window (`quietUptimeProbes`): a disruption Homerun causes
+	 * on purpose isn't an outage.
 	 */
 	protected async tick(): Promise<void> {
+		if (uptimeProbesQuiet()) {
+			return;
+		}
 		this.#ticks += 1;
 
 		const services = (await ServiceDTO.listRunningWithContainers()).filter(

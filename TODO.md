@@ -12,6 +12,13 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Swarm deploys can lose a service's slug alias in Docker's DNS when the old
+      and new task overlap (moby's alias-removal race): only the full service
+      name still resolves, and every link to the slug breaks (AIOMetadata →
+      `aiometadata-dragonfly`, for 8 hours). After a swarm deploy, check from
+      the worker that the slug resolves on the overlay and force-update the
+      service once if it doesn't.
+
 ## Large
 
 <!--  -->

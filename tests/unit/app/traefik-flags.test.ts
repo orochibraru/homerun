@@ -138,3 +138,46 @@ describe("infraContainersFrom", () => {
 		expect(infraContainersFrom(listed as never, null)).toHaveLength(5);
 	});
 });
+
+describe("applyFlags on a Traefik that already has them", () => {
+	const live = [
+		"--providers.docker=true",
+		"--providers.docker.exposedbydefault=false",
+		"--providers.docker.network=homerun",
+		"--providers.file.directory=/etc/traefik/dynamic",
+		"--providers.file.watch=true",
+		"--entrypoints.web.address=:80",
+		"--entrypoints.websecure.address=:443",
+		"--certificatesresolvers.letsencrypt.acme.httpchallenge=true",
+		"--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web",
+		"--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json",
+		"--providers.swarm=true",
+		"--providers.swarm.exposedByDefault=false",
+		"--providers.swarm.network=homerun-swarm",
+		"--providers.swarm.refreshSeconds=2",
+		"--experimental.plugins.souin.modulename=github.com/darkweak/souin",
+		"--experimental.plugins.souin.version=v1.7.9",
+		"--certificatesresolvers.letsencrypt.acme.email=me@example.com",
+	];
+
+	test("comes back identical, so nothing gets recreated on boot", () => {
+		const groups = expectedTraefikFlags({
+			acmeEmail: "me@example.com",
+			certResolver: "letsencrypt",
+			httpCache: true,
+			swarm: true,
+		});
+		for (const flags of Object.values(groups)) {
+			expect(applyFlags(live, flags)).toEqual(live);
+		}
+		expect(
+			applyFlags(["--providers.swarm", "--x=1"], { "providers.swarm": "true" }),
+		).toEqual(["--providers.swarm", "--x=1"]);
+	});
+
+	test("a changed value is replaced where it stands, a new one appended", () => {
+		expect(
+			applyFlags(["--a=1", "--b=2", "--c=3"], { b: "9", d: "4", a: null }),
+		).toEqual(["--b=9", "--c=3", "--d=4"]);
+	});
+});

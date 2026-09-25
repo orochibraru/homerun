@@ -4,6 +4,10 @@ import { join } from "node:path";
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import { WorkerRequestError } from "$lib/server/worker-client";
+import {
+	quietUptimeProbes,
+	TRAEFIK_RESTART_QUIET_MS,
+} from "../uptime/quiet.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import { certResolverFor } from "./cert-resolver.ts";
 import {
@@ -58,22 +62,48 @@ export interface TraefikUpdateResult {
 
 /**
  * Rewrites a Traefik command line so every `--key=value` in `flags` is
- * present exactly once, replacing whatever that key was set to before and
- * appending it when it was absent. A null value removes the flag.
+ * present exactly once: replaced where it already is, appended when absent,
+ * removed for a null value. Everything keeps its place, and a bare boolean flag
+ * counts as `true`, so a command that already has these flags comes back
+ * identical and `applyTraefikFlags` leaves Traefik alone. Real bug: removing
+ * and re-appending moved the flags to the end, the command never compared
+ * equal, and every worker boot recreated Traefik three times, taking every
+ * routed site down with it.
  */
 export function applyFlags(
 	cmd: string[],
 	flags: Record<string, string | null>,
 ): string[] {
-	const keys = Object.keys(flags);
-	const kept = cmd.filter(
-		(arg) =>
-			!keys.some((key) => arg === `--${key}` || arg.startsWith(`--${key}=`)),
+	const keyOf = (arg: string) =>
+		arg.startsWith("--") ? arg.slice(2).split("=")[0]?.toLowerCase() : null;
+	const wanted = new Map(
+		Object.entries(flags).map(([key, value]) => [key.toLowerCase(), value]),
 	);
-	const added = keys
-		.filter((key) => flags[key] !== null)
-		.map((key) => `--${key}=${flags[key]}`);
-	return [...kept, ...added];
+	const seen = new Set<string>();
+	const next: string[] = [];
+	for (const arg of cmd) {
+		const key = keyOf(arg);
+		if (key === null || key === undefined || !wanted.has(key)) {
+			next.push(arg);
+			continue;
+		}
+		const value = wanted.get(key);
+		if (value === null || seen.has(key)) {
+			continue;
+		}
+		seen.add(key);
+		next.push(
+			!arg.includes("=") && value === "true"
+				? arg
+				: `--${arg.slice(2).split("=")[0]}=${value}`,
+		);
+	}
+	for (const [key, value] of Object.entries(flags)) {
+		if (value !== null && !seen.has(key.toLowerCase())) {
+			next.push(`--${key}=${value}`);
+		}
+	}
+	return next;
 }
 
 export interface TraefikExpectation {
@@ -634,6 +664,7 @@ export function DockerCoreServicesMixin<
 			changes: Record<string, unknown>,
 			wasRunning: boolean,
 		): Promise<void> {
+			quietUptimeProbes(TRAEFIK_RESTART_QUIET_MS);
 			await this.worker.post(`/v1/containers/${target.id}/stop`).catch(() => {
 				// Already stopped : the remove below still applies.
 			});
