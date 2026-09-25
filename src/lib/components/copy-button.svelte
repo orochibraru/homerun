@@ -18,15 +18,35 @@
 	let copied = $state(false);
 	let resetTimer: ReturnType<typeof setTimeout> | undefined;
 
+	let button: HTMLButtonElement | undefined;
+
+	function legacyCopy(): boolean {
+		const area = document.createElement("textarea");
+		area.value = value;
+		area.setAttribute("readonly", "");
+		area.style.position = "fixed";
+		area.style.opacity = "0";
+		(button?.parentElement ?? document.body).append(area);
+		area.select();
+		try {
+			return document.execCommand("copy");
+		} finally {
+			area.remove();
+			button?.focus();
+		}
+	}
+
 	async function copyCallback(): Promise<void> {
 		try {
 			await navigator.clipboard.writeText(value);
 		} catch (error) {
-			throw new Error(
-				error instanceof Error && error.message
-					? error.message
-					: "Clipboard access was refused.",
-			);
+			if (!legacyCopy()) {
+				throw new Error(
+					error instanceof Error && error.message
+						? error.message
+						: "Clipboard access was refused.",
+				);
+			}
 		}
 		copied = true;
 		clearTimeout(resetTimer);
@@ -52,6 +72,7 @@
   )}
   onclick={handleCopy}
   type="button"
+  bind:this={button}
 >
   {#if copied}
     <Check class="size-3.5 text-emerald-500" />
