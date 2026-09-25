@@ -18,6 +18,12 @@
 		const entries = [
 			{ label: "Connection URL", value: buildLinkUrl(engine, service, "url") },
 		];
+		if (engine.id === "postgres") {
+			entries.push({
+				label: "postgresql://",
+				value: buildLinkUrl(engine, service, "postgresql"),
+			});
+		}
 		if (engine.supportsJdbc) {
 			entries.push({
 				label: "JDBC URL",

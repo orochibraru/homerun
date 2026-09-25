@@ -1,6 +1,6 @@
 import type { ParsedEnvVar } from "$lib/env-parse";
 
-export type LinkFormat = "url" | "jdbc" | "vars";
+export type LinkFormat = "url" | "postgresql" | "jdbc" | "vars";
 
 export type LinkEngineId =
 	| "postgres"
@@ -288,13 +288,15 @@ function jdbcDriver(engine: LinkEngine): string {
  * the internal network, addressed by its slug and container port, with
  * credentials taken from the target's env vars.
  *
- * @param format `url` for a scheme URL with credentials in the authority, `jdbc`
- * for a JDBC URL with credentials as query parameters.
+ * @param format `url` for a scheme URL with credentials in the authority,
+ * `postgresql` for the same with the `postgresql://` scheme some drivers
+ * insist on (Postgres only; any other engine keeps its own), `jdbc` for a JDBC
+ * URL with credentials as query parameters.
  */
 export function buildLinkUrl(
 	engine: LinkEngine,
 	target: LinkTargetService,
-	format: "url" | "jdbc",
+	format: "url" | "postgresql" | "jdbc",
 ): string {
 	const credentials = credentialsFor(engine, target);
 	const port = target.containerPort || engine.defaultPort;
@@ -312,7 +314,38 @@ export function buildLinkUrl(
 		return `jdbc:${jdbcDriver(engine)}://${host}${path}${query}`;
 	}
 
-	return `${credentials.scheme}://${authorityFor(credentials, host)}${path}`;
+	const scheme =
+		format === "postgresql" && engine.id === "postgres"
+			? "postgresql"
+			: credentials.scheme;
+	return `${scheme}://${authorityFor(credentials, host)}${path}`;
+}
+
+/**
+ * The URL formats a link to this engine can be written in, for a picker:
+ * Postgres gets both `postgres://` and `postgresql://` (drivers disagree on
+ * which they accept), and JDBC for the engines that have a driver.
+ */
+export function linkFormatsFor(
+	engine: LinkEngine | null,
+): Array<[LinkFormat, string]> {
+	return [
+		[
+			"url",
+			engine?.id === "postgres"
+				? "Connection URL (postgres://)"
+				: "Connection URL",
+		],
+		...(engine?.id === "postgres"
+			? ([["postgresql", "Connection URL (postgresql://)"]] as Array<
+					[LinkFormat, string]
+				>)
+			: []),
+		...(engine?.supportsJdbc
+			? ([["jdbc", "JDBC URL"]] as Array<[LinkFormat, string]>)
+			: []),
+		["vars", "One variable per value"],
+	];
 }
 
 /**
@@ -360,4 +393,21 @@ export function buildLinkEnv(params: BuildLinkEnvParams): ParsedEnvVar[] {
 			value: buildLinkUrl(engine, params.target, params.format),
 		},
 	];
+}
+
+/**
+ * The address other services reach this one at: a datastore's full connection
+ * URL, credentials included (what a consumer actually needs to paste), or
+ * `http://<slug>:<port>` for anything else.
+ */
+export function internalUrl(target: LinkTargetService): string {
+	const engine = detectLinkEngine(target.image);
+	return engine.id === "generic"
+		? `http://${target.slug}:${target.containerPort}`
+		: buildLinkUrl(engine, target, "url");
+}
+
+/** A URL with the password in its authority replaced by dots, for display. */
+export function maskUrlPassword(url: string): string {
+	return url.replace(/(:\/\/[^:/@]*:)[^@/]+@/, "$1•••@");
 }

@@ -6,9 +6,12 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { applyFlags, expectedTraefikFlags, missingTraefikFlags } = await import(
-	"../../../src/lib/services/docker/core-services"
-);
+const {
+	applyFlags,
+	expectedTraefikFlags,
+	infraContainersFrom,
+	missingTraefikFlags,
+} = await import("../../../src/lib/services/docker/core-services");
 
 const CMD = [
 	"--providers.docker=true",
@@ -102,5 +105,36 @@ describe("Traefik drift", () => {
 				}),
 			),
 		).toEqual(["the ACME email"]);
+	});
+});
+
+describe("infraContainersFrom", () => {
+	const container = (name: string, labels: Record<string, string>) => ({
+		Id: `${name}-id`,
+		Image: "img",
+		Labels: labels,
+		Names: [`/${name}`],
+		State: "running",
+	});
+	const listed = [
+		container("homerun-app-1", { "com.docker.compose.project": "homerun" }),
+		container("homerun-traefik-1", { "com.docker.compose.project": "homerun" }),
+		container("newt", { "com.docker.compose.project": "dokploy" }),
+		container("trigger-webapp", { "com.docker.compose.project": "trigger" }),
+		container("homerun-newt", { "homerun.core": "newt" }),
+		container("my-app", {
+			"com.docker.compose.project": "homerun",
+			"homerun.managed": "true",
+		}),
+	];
+
+	test("only its own compose project and its core containers, never a deployed service", () => {
+		expect(
+			infraContainersFrom(listed as never, "homerun").map((c) => c.name),
+		).toEqual(["homerun-app-1", "homerun-newt", "homerun-traefik-1"]);
+	});
+
+	test("with no known project, any compose container counts", () => {
+		expect(infraContainersFrom(listed as never, null)).toHaveLength(5);
 	});
 });

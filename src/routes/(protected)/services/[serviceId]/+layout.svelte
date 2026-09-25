@@ -17,12 +17,14 @@
 	} from "@lucide/svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import CopyButton from "$lib/components/copy-button.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
 	import { primaryHostname } from "$lib/service-domains";
+	import { internalUrl, maskUrlPassword } from "$lib/service-link";
 
 	const { data, children } = $props();
 
@@ -199,9 +201,18 @@
       <span class="text-text-subtle">not publicly routed</span>
     {/if}
     {#if svc.containerId || svc.swarmServiceId}
+      {@const internal = internalUrl({
+        command: svc.command,
+        containerPort: svc.containerPort,
+        envVars: svc.envVars ?? {},
+        image: svc.image,
+        name: svc.name,
+        slug: svc.slug,
+      })}
       <span aria-hidden="true">·</span>
-      <span class="text-text-subtle">
-        internal: {svc.slug}:{svc.containerPort}
+      <span class="text-text-subtle inline-flex items-center gap-0.5">
+        internal: {maskUrlPassword(internal)}
+        <CopyButton class="p-0.5" label="internal URL" value={internal} />
       </span>
     {/if}
     {#if data.lastDeployedAt}

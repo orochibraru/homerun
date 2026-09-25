@@ -127,14 +127,23 @@ Homerun serves an [MCP](https://modelcontextprotocol.io) server at
 services for you. It needs the dashboard to be reachable over HTTPS from
 wherever the agent runs.
 
-- **claude.ai** (and Claude Desktop, which uses the same connectors): Settings →
-  Connectors → Add custom connector, paste the URL. Claude sends you to
-  Homerun's sign-in page, Homerun asks you to allow it, and from then on it acts
-  as you.
-- **Claude Code**:
-  `claude mcp add --transport http homerun https://<your dashboard>/api/v1/mcp`,
-  then `/mcp` inside Claude Code to sign in the same way. For a headless setup,
-  pass an API key instead: `--header "x-api-key: <key>"`.
+Nothing can connect to it until you allow it: MCP clients can't register
+themselves, an admin creates each one.
+
+- **claude.ai** (and Claude Desktop, which uses the same connectors): under
+  **Authentication → Apps → Register an app**, click **Claude connector**, then
+  **Register app**. In Claude, open Settings → Connectors → Add custom
+  connector, paste the MCP URL above, and under Advanced settings the client ID
+  and secret Homerun just showed you. Claude sends you to Homerun's sign-in
+  page, Homerun asks you to allow it, and from then on it acts as you.
+- **Claude Code**, or anything headless: pass an API key, created under Profile
+  → Authorized Clients. A read-only key gives an agent that can diagnose but not
+  change anything.
+
+```bash
+claude mcp add --transport http homerun \
+  https://<your dashboard>/api/v1/mcp --header "x-api-key: <key>"
+```
 
 It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
 `list_revisions`, `list_stacks`, `system_stats` and `instance_status`. It
@@ -142,8 +151,9 @@ changes: `update_service`, `deploy_service`, `restart_service`, `start_service`,
 `stop_service` and `rollback_service`. Deleting a service is deliberately not a
 tool. Every tool goes through the REST API with your own permissions, so a
 read-only account or API key can diagnose but not change anything. To disconnect
-an agent, revoke it under Profile → Authorized Clients: it can't refresh its
-access any more, and the token it holds expires within the hour.
+Claude, revoke it under Profile → Authorized Clients (it can't refresh its
+access any more, and the token it holds expires within the hour), or delete its
+app under Authentication → Apps to cut it off for everyone.
 
 ## CLI
 

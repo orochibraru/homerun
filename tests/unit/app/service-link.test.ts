@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
 	buildLinkEnv,
+	buildLinkUrl,
 	defaultUrlKey,
 	defaultVarPrefix,
 	detectLinkEngine,
+	internalUrl,
+	linkFormatsFor,
+	maskUrlPassword,
 	requirePassword,
 } from "../../../src/lib/service-link";
 
@@ -162,5 +166,54 @@ describe("Redis passwords set on the command line", () => {
 	test("KeyDB and Garnet are Redis-compatible", () => {
 		expect(detectLinkEngine("eqalpha/keydb").id).toBe("redis");
 		expect(detectLinkEngine("ghcr.io/microsoft/garnet").id).toBe("redis");
+	});
+});
+
+describe("URLs other services use", () => {
+	test("Postgres comes as both postgres:// and postgresql://", () => {
+		const engine = detectLinkEngine(postgres.image);
+		expect(buildLinkUrl(engine, postgres, "url")).toBe(
+			"postgres://app:s3cr%20et@db:5432/app",
+		);
+		expect(buildLinkUrl(engine, postgres, "postgresql")).toBe(
+			"postgresql://app:s3cr%20et@db:5432/app",
+		);
+		expect(linkFormatsFor(engine).map(([value]) => value)).toEqual([
+			"url",
+			"postgresql",
+			"jdbc",
+			"vars",
+		]);
+		expect(
+			linkFormatsFor(detectLinkEngine(redis.image)).map(([value]) => value),
+		).toEqual(["url", "vars"]);
+		expect(
+			buildLinkEnv({
+				format: "postgresql",
+				prefix: "POSTGRES",
+				target: postgres,
+				urlKey: "DATABASE_URL",
+			}),
+		).toEqual([
+			{ key: "DATABASE_URL", value: "postgresql://app:s3cr%20et@db:5432/app" },
+		]);
+	});
+
+	test("the internal URL carries a datastore's credentials, masked for display", () => {
+		const url = internalUrl(redis);
+		expect(url).toBe("redis://:hunter2@cache:6379");
+		expect(maskUrlPassword(url)).toBe("redis://:•••@cache:6379");
+		expect(maskUrlPassword(internalUrl(postgres))).toBe(
+			"postgres://app:•••@db:5432/app",
+		);
+		expect(
+			internalUrl({
+				containerPort: 3000,
+				envVars: {},
+				image: "ghcr.io/acme/web",
+				name: "Web",
+				slug: "web",
+			}),
+		).toBe("http://web:3000");
 	});
 });

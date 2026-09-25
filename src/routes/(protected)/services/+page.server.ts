@@ -228,7 +228,10 @@ export const actions = {
 			slug: target.slug,
 		};
 		const rows = buildLinkEnv({
-			format: format === "vars" || format === "jdbc" ? format : "url",
+			format:
+				format === "vars" || format === "jdbc" || format === "postgresql"
+					? format
+					: "url",
 			prefix: defaultVarPrefix(engine, linkTarget),
 			target: linkTarget,
 			urlKey: defaultUrlKey(engine, linkTarget),

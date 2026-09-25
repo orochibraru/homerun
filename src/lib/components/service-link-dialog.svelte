@@ -12,6 +12,11 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
+	import {
+		detectLinkEngine,
+		type LinkFormat,
+		linkFormatsFor,
+	} from "$lib/service-link";
 	import { enhanceToast } from "$lib/toast";
 
 	interface LinkableService {
@@ -33,7 +38,7 @@
 
 	let open = $state(false);
 	let linkTargetId = $state("");
-	let linkFormat = $state<"url" | "jdbc" | "vars">("url");
+	let linkFormat = $state<LinkFormat>("url");
 	let alsoGroup = $state(true);
 
 	const groupHint = $derived.by(() => {
@@ -47,6 +52,22 @@
 		return service
 			? `Creates a stack named "${service.name}" and moves both into it, so they reach each other by slug.`
 			: "They only reach each other by slug once they share a stack network.";
+	});
+
+	const formats = $derived(
+		linkFormatsFor(
+			linkTargetId
+				? detectLinkEngine(
+						services.find((svc) => svc.id === linkTargetId)?.image ?? "",
+					)
+				: null,
+		),
+	);
+
+	$effect(() => {
+		if (!formats.some(([value]) => value === linkFormat)) {
+			linkFormat = "url";
+		}
 	});
 
 	const linkCandidates = $derived(
@@ -100,16 +121,12 @@
       <label class={label} for="format">Inject as</label>
       <SelectRoot name="format" type="single" bind:value={linkFormat}>
         <SelectTrigger class="w-full" id="format">
-          {linkFormat === "jdbc"
-          ? "JDBC URL"
-          : linkFormat === "vars"
-            ? "Separate variables"
-            : "Connection URL"}
+          {formats.find(([value]) => value === linkFormat)?.[1] ?? "Connection URL"}
         </SelectTrigger>
         <SelectContent>
-          <SelectItem label="Connection URL" value="url" />
-          <SelectItem label="JDBC URL" value="jdbc" />
-          <SelectItem label="Separate variables" value="vars" />
+          {#each formats as [value, formatLabel] (value)}
+            <SelectItem label={formatLabel} {value} />
+          {/each}
         </SelectContent>
       </SelectRoot>
     </div>

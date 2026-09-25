@@ -141,6 +141,48 @@ export function missingTraefikFlags(
 		.map(([group]) => group);
 }
 
+/**
+ * The containers that belong to this instance's own stack: every container of
+ * its compose project (`ownProject`, off its own container's labels) plus the
+ * core containers Homerun starts itself (`homerun.core`), never a service it
+ * deployed. Another compose stack on the same host (a leftover tunnel, an app
+ * from another tool) isn't Homerun's and doesn't belong in its system logs.
+ * With no known project (dev, no compose) any compose container counts.
+ */
+export function infraContainersFrom(
+	containers: ListedContainer[],
+	ownProject: string | null,
+): InfraContainer[] {
+	return containers
+		.filter((container) => {
+			const labels = container.Labels ?? {};
+			if (labels[MANAGED_LABEL]) {
+				return false;
+			}
+			const project = labels["com.docker.compose.project"];
+			return Boolean(
+				labels[CORE_LABEL] || (ownProject ? project === ownProject : project),
+			);
+		})
+		.map((container) => {
+			const labels = container.Labels ?? {};
+			return {
+				id: container.Id,
+				image: container.Image,
+				name:
+					container.Names[0]?.replace(LEADING_SLASH_RE, "") ??
+					container.Id.slice(0, 12),
+				project:
+					labels["com.docker.compose.project"] ??
+					(labels[CORE_LABEL] ? "homerun" : ""),
+				service:
+					labels["com.docker.compose.service"] ?? labels[CORE_LABEL] ?? "",
+				state: container.State,
+			};
+		})
+		.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** What this mixin needs from the swarm and container mixins, both merged ahead of it (see docker.service.ts). */
 interface RequiresSwarmMixin {
 	assertSwarmCapableDaemon: () => Promise<void>;
@@ -405,45 +447,25 @@ export function DockerCoreServicesMixin<
 		}
 
 		/**
-		 * The containers that make up this instance's own stack : anything
-		 * carrying a compose project label that Homerun didn't create itself
-		 * (the app, Postgres, Traefik, a Newt tunnel, whatever else the
-		 * operator's compose file starts). Deployed services are excluded by
-		 * the managed label, they have their own pages.
+		 * The containers that make up this instance's own stack
+		 * (`infraContainersFrom`): its own compose project (the app, Postgres,
+		 * Traefik, whatever else that compose file starts) and the core
+		 * containers Homerun runs itself. Deployed services are excluded by the
+		 * managed label, they have their own pages.
 		 *
 		 * The same narrow "core infrastructure" exception findTraefikContainer
 		 * documents, and read-only: this lists and streams logs, it never
 		 * touches them.
 		 */
 		async listInfraContainers(): Promise<InfraContainer[]> {
-			const containers = await this.worker.get<ListedContainer[]>(
-				"/v1/containers",
-				{ all: "1" },
+			const [containers, self] = await Promise.all([
+				this.worker.get<ListedContainer[]>("/v1/containers", { all: "1" }),
+				this.selfContainer().catch(() => null),
+			]);
+			return infraContainersFrom(
+				containers,
+				self?.labels["com.docker.compose.project"] ?? null,
 			);
-			return containers
-				.filter(
-					(container) =>
-						!container.Labels?.[MANAGED_LABEL] &&
-						(container.Labels?.["com.docker.compose.project"] ||
-							container.Labels?.[CORE_LABEL]),
-				)
-				.map((container) => {
-					const labels = container.Labels ?? {};
-					return {
-						id: container.Id,
-						image: container.Image,
-						name:
-							container.Names[0]?.replace(LEADING_SLASH_RE, "") ??
-							container.Id.slice(0, 12),
-						project:
-							labels["com.docker.compose.project"] ??
-							(labels[CORE_LABEL] ? "homerun" : ""),
-						service:
-							labels["com.docker.compose.service"] ?? labels[CORE_LABEL] ?? "",
-						state: container.State,
-					};
-				})
-				.sort((a, b) => a.name.localeCompare(b.name));
 		}
 
 		/**

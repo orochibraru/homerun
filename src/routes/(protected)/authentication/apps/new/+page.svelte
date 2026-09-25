@@ -25,6 +25,18 @@
 	});
 
 	onMount(() => title.set("Register an app"));
+
+	const CLAUDE_CALLBACK = "https://claude.ai/api/mcp/auth_callback";
+	const isClaude = $derived(values.redirectUris.includes(CLAUDE_CALLBACK));
+
+	function useClaudePreset() {
+		values.confidential = true;
+		values.enableEndSession = false;
+		values.name = "Claude";
+		values.redirectUris = CLAUDE_CALLBACK;
+		values.requirePkce = true;
+		values.skipConsent = false;
+	}
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
@@ -50,6 +62,13 @@
     </Alert>
   {:else if form?.created}
     <section class="panel space-y-5 rounded-md p-5">
+      {#if isClaude && data.mcpUrl}
+        <p class="text-text-muted text-sm">
+          In Claude, open Settings → Connectors → Add custom connector, paste
+          <code class="text-text">{data.mcpUrl}</code> as the URL, and this
+          client ID and secret under Advanced settings.
+        </p>
+      {/if}
       <OauthAppCredentials
         clientId={form.created.clientId}
         clientSecret={form.created.clientSecret}
@@ -84,6 +103,18 @@
           <p class="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500">
             {form.error}
           </p>
+        {/if}
+
+        {#if data.mcpUrl}
+          <div class="border-border bg-surface-2 flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
+            <p class="text-text-muted text-xs">
+              Connecting Claude to Homerun's MCP server? Start from the Claude
+              connector settings.
+            </p>
+            <Button onclick={useClaudePreset} size="sm" type="button" variant="outline">
+              Claude connector
+            </Button>
+          </div>
         {/if}
 
         <OauthAppFields {values} />

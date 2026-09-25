@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import * as devalue from "devalue";
 import { nativeFetch } from "./support/config";
 import { integrationContext } from "./support/context";
 
@@ -95,9 +96,7 @@ describe("MCP server", () => {
 			registration_endpoint?: string;
 		};
 		expect(resourceBody.authorization_servers).toEqual([serverBody.issuer]);
-		expect(serverBody.registration_endpoint).toBe(
-			`${origin}/api/v1/auth/oauth2/register`,
-		);
+		expect(serverBody.registration_endpoint).toBeUndefined();
 	});
 
 	test("an API key lists the tools and runs one", async () => {
@@ -128,29 +127,27 @@ describe("MCP server", () => {
 		expect(missing.result?.content?.[0]?.text).toStartWith("HTTP 404");
 	});
 
-	test("a client that registers itself, signs in and consents gets a token the MCP endpoint accepts", async () => {
+	test("a client can't register itself", async () => {
 		const { origin } = integrationContext();
-		const redirectUri = "https://claude.example/api/mcp/auth_callback";
-		const resource = `${origin}/api/v1/mcp`;
-
 		const registered = await nativeFetch(
 			`${origin}/api/v1/auth/oauth2/register`,
 			{
 				body: JSON.stringify({
-					client_name: "Integration MCP client",
-					grant_types: ["authorization_code", "refresh_token"],
-					redirect_uris: [redirectUri],
-					response_types: ["code"],
+					client_name: "Uninvited",
+					redirect_uris: ["https://evil.example/callback"],
 					token_endpoint_auth_method: "none",
 				}),
 				headers: { "content-type": "application/json" },
 				method: "POST",
 			},
 		);
-		expect(registered.status).toBeLessThan(300);
-		const { client_id: clientId } = (await registered.json()) as {
-			client_id: string;
-		};
+		expect(registered.status).toBeGreaterThanOrEqual(400);
+	});
+
+	test("a connector an admin created, with its client ID and secret, gets a token the MCP endpoint accepts", async () => {
+		const { origin } = integrationContext();
+		const redirectUri = "https://claude.ai/api/mcp/auth_callback";
+		const resource = `${origin}/api/v1/mcp`;
 
 		const signedIn = await nativeFetch(`${origin}/api/v1/auth/sign-in/email`, {
 			body: JSON.stringify({
@@ -165,6 +162,35 @@ describe("MCP server", () => {
 			.getSetCookie()
 			.map((entry) => entry.split(";")[0])
 			.join("; ");
+
+		const createdRes = await nativeFetch(
+			`${origin}/authentication/apps/new?/create`,
+			{
+				body: new URLSearchParams({
+					clientType: "confidential",
+					name: "Claude",
+					redirectUris: redirectUri,
+					requirePkce: "on",
+				}),
+				headers: {
+					accept: "application/json",
+					"content-type": "application/x-www-form-urlencoded",
+					cookie,
+					origin,
+				},
+				method: "POST",
+			},
+		);
+		const envelope = (await createdRes.json()) as {
+			data?: string;
+			type: string;
+		};
+		expect(envelope.type).toBe("success");
+		const { created } = devalue.parse(envelope.data ?? "null") as {
+			created: { clientId: string; clientSecret: string };
+		};
+		const { clientId, clientSecret } = created;
+		expect(clientSecret).toBeTruthy();
 
 		const { challenge, verifier } = await pkcePair();
 		const authorizeUrl = new URL(`${origin}/api/v1/auth/oauth2/authorize`);
@@ -208,14 +234,16 @@ describe("MCP server", () => {
 
 		const tokened = await nativeFetch(`${origin}/api/v1/auth/oauth2/token`, {
 			body: new URLSearchParams({
-				client_id: clientId,
 				code,
 				code_verifier: verifier,
 				grant_type: "authorization_code",
 				redirect_uri: redirectUri,
 				resource,
 			}),
-			headers: { "content-type": "application/x-www-form-urlencoded" },
+			headers: {
+				authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+				"content-type": "application/x-www-form-urlencoded",
+			},
 			method: "POST",
 		});
 		expect(tokened.status).toBe(200);

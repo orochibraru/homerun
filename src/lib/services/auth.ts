@@ -1,7 +1,5 @@
 import process from "node:process";
 import { apiKey } from "@better-auth/api-key";
-import { cimd } from "@better-auth/cimd";
-import { fetchClientMetadataResource } from "@better-auth/cimd/node";
 import { mcp } from "@better-auth/mcp";
 import {
 	type OAuthOptions,
@@ -91,9 +89,9 @@ function tokenAuthOptions(provider: {
  * don't accept EdDSA) with keys kept in the `jwks` table, and
  * `mcp` (better-auth's OAuth provider bound to the MCP endpoint as a protected
  * resource) serves authorize/token/userinfo/discovery under the auth base
- * path. MCP clients like claude.ai register themselves, through a Client ID
- * Metadata Document (`cimd`) or open dynamic registration: a registered client
- * still needs a Homerun user to sign in and consent before it gets a token.
+ * path. Clients can't register themselves: an admin creates each one under
+ * Authentication → Apps (a claude.ai connector included) and hands its ID and
+ * secret over, so nothing Homerun didn't issue can even ask for a token.
  * MCP only accepts an HTTPS origin (or loopback HTTP), so on any other one the
  * plain `oauthProvider` serves "Sign in with Homerun" without it: `mcp()`
  * throws on such an origin, which took the whole auth layer, and every
@@ -125,18 +123,7 @@ function oidcProviderPlugins(origin: string | undefined) {
 			jwt: { issuer: oidcIssuer(origin) },
 		}),
 		...(mcpAllowed(origin)
-			? [
-					mcp({
-						...provider,
-						allowDynamicClientRegistration: true,
-						allowUnauthenticatedClientRegistration: true,
-						resource: mcpResource(origin),
-					}),
-					cimd({
-						fetchClientMetadataResource,
-						metadataProfile: "mcp-2026-07-28",
-					}),
-				]
+			? [mcp({ ...provider, resource: mcpResource(origin) })]
 			: [oauthProvider(provider)]),
 	];
 }

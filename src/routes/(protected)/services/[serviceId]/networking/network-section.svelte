@@ -2,6 +2,7 @@
 	import { Check, Network } from "@lucide/svelte";
 	import { enhance } from "$app/forms";
 	import CheckBox from "$lib/components/check-box.svelte";
+	import CopyButton from "$lib/components/copy-button.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -12,6 +13,7 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { internalUrl, maskUrlPassword } from "$lib/service-link";
 	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
@@ -19,12 +21,17 @@
 		errors?: Record<string, string[]>;
 		submittedValues?: Record<string, string>;
 		svc: {
+			command: string[] | null;
 			containerId: string | null;
 			containerPort: number;
 			dnsResolvable: boolean;
+			envVars: Record<string, string> | null;
+			image: string;
+			name: string;
 			networkMode: string;
 			portProtocol: string;
 			slug: string;
+			swarmServiceId: string | null;
 		};
 	}
 
@@ -34,6 +41,10 @@
 		submittedValues,
 		svc,
 	}: Props = $props();
+
+	const internal = $derived(
+		internalUrl({ ...svc, envVars: svc.envVars ?? {} }),
+	);
 
 	const portsValues = $derived(
 		submittedValues ?? {
@@ -73,11 +84,10 @@
         {#if networkMode === "host"}
           Runs on the host's own network : reachable directly on this machine
           at its own port, not through Traefik or the shared network.
-        {:else if svc.containerId}
+        {:else if svc.containerId || svc.swarmServiceId}
           Reachable from other services at
-          <span class="text-text-subtle">{svc.slug}:{
-              svc.containerPort
-            }</span>.
+          <span class="text-text-subtle">{maskUrlPassword(internal)}</span>
+          <CopyButton class="p-0.5 align-middle" label="internal URL" value={internal} />
         {:else}
           Container port
           <span class="text-text-subtle">{svc.containerPort}</span>

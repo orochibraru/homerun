@@ -883,14 +883,22 @@ else as an API key. Real, tested finding: better-auth's own `auth.api.verifyJWT`
 can't be used, it always enforces an audience of the base URL, which no access
 token has. An anonymous call gets a 401 with
 `WWW-Authenticate: Bearer resource_metadata=".../.well-known/oauth-protected-resource/api/v1/mcp"`.
-Clients register themselves: `cimd()` for Client ID Metadata Documents plus open
-dynamic registration, since claude.ai still uses the latter; a registered client
-still needs a user to sign in and consent. MCP clients look for discovery at the
-site root, not under the auth base path, so `src/routes/.well-known/[...path]`
-hands every root `/.well-known/*` request to `auth.handler`, whose `mcp()`
-plugin answers the protected-resource and authorization-server documents.
-`tests/integration/mcp.test.ts` walks the whole claude.ai flow: register, sign
-in, authorize, consent, token, tool call.
+Clients can't register themselves (no dynamic registration, no CIMD): open
+registration let anything on the internet create a client, which only a consent
+screen then stood in front of. An admin creates the claude.ai connector under
+Authentication → Apps (the **Claude connector** preset fills in
+`https://claude.ai/api/mcp/auth_callback`, confidential, PKCE, consent on) and
+pastes its ID and secret into Claude's connector form. `mcp()` binds every
+client created that way to the MCP resource
+(`clientRegistrationDefaultResources`), so its access tokens carry the MCP
+audience. Claude Code and other headless agents use an API key header instead.
+MCP clients look for discovery at the site root, not under the auth base path,
+so `src/routes/.well-known/[...path]` hands every root `/.well-known/*` request
+to `auth.handler`, whose `mcp()` plugin answers the protected-resource and
+authorization-server documents. `tests/integration/mcp.test.ts` walks the whole
+claude.ai flow: an admin creates the client through the Apps form, then sign in,
+authorize, consent, token (client secret over Basic auth), tool call; and open
+registration is refused.
 
 ## Homerun as an OIDC provider (`@better-auth/oauth-provider`, `$lib/oidc-provider.ts`, `/authentication/apps`, `/auth/consent`)
 

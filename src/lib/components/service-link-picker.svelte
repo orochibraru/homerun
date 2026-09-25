@@ -22,6 +22,7 @@
 		detectLinkEngine,
 		type LinkFormat,
 		type LinkTargetService,
+		linkFormatsFor,
 	} from "$lib/service-link";
 
 	const {
@@ -51,7 +52,7 @@
 		}
 		urlKey = defaultUrlKey(engine, target);
 		prefix = defaultVarPrefix(engine, target);
-		if (format === "jdbc" && !engine.supportsJdbc) {
+		if (!linkFormatsFor(engine).some(([value]) => value === format)) {
 			format = "url";
 		}
 	});
@@ -63,11 +64,7 @@
 			: ([] as ParsedEnvVar[]),
 	);
 
-	const formatOptions = $derived([
-		["url", "Connection URL"],
-		...(engine?.supportsJdbc ? [["jdbc", "JDBC URL"]] : []),
-		["vars", "One variable per value"],
-	] as Array<[LinkFormat, string]>);
+	const formatOptions = $derived(linkFormatsFor(engine));
 	const formatLabel = $derived(
 		formatOptions.find(([value]) => value === format)?.[1] ?? "Connection URL",
 	);
