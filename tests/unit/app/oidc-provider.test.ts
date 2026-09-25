@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	mcpResource,
 	oidcClaimsFor,
 	oidcDiscoveryUrl,
 	oidcIssuer,
@@ -14,6 +15,14 @@ const ada = {
 	name: "Ada Lovelace",
 	role: "admin",
 };
+
+describe("mcpResource", () => {
+	test("is the MCP endpoint's URL, ignoring a trailing slash", () => {
+		expect(mcpResource("https://homerun.example.com/")).toBe(
+			"https://homerun.example.com/api/v1/mcp",
+		);
+	});
+});
 
 describe("oidcIssuer / oidcDiscoveryUrl", () => {
 	test("hang off the auth base path, ignoring a trailing slash", () => {

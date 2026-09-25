@@ -12,6 +12,10 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Notifications for server resource usage, set thresholds in admin (per
+      category, CPU, memory, disk, GPU), default to 85% for all. Soft and hard
+      thresholds. Soft alerts, hard prevents adding new resources. Also show
+      alert in admin when hard threshold is reached.
 - [ ] Swarm service logs (Observability tab, `homerun services logs`) mix the
       output of every task generation, dead ones included, in no reliable order,
       so a crash from an old revision reads like the current task's. Show only
@@ -25,11 +29,3 @@ When done delete the entry, no bloat.
       case, this catches the rest.
 
 ## Large
-
-## Done
-
-- [x] The post-deploy revision health watch only looks at container state
-      (restarts, Docker healthcheck), so an image with no HEALTHCHECK that stays
-      up but never gets ready (AIOMetadata stuck waiting on Redis, answering 503
-      everywhere) is marked healthy. Also probe the service over HTTP and treat
-      a 5xx as unhealthy, like the uptime probe now does.
