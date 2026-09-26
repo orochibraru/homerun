@@ -464,6 +464,7 @@ class SelfUpdateServiceClass {
 						{ channel, version },
 						{
 							companions: self.companions,
+							network: config.docker.networkName,
 							envDefaults: composeEnvDefaults(
 								self.labels,
 								Bun.env.ORIGIN,

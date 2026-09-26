@@ -31,8 +31,10 @@ services:
       - traefik-dynamic:/app/traefik-dynamic
       - ./homerun.yaml:/app/homerun.yaml:ro
     networks:
-      - homerun
-      - default
+      homerun:
+        aliases:
+          - homerun-auth
+      default: {}
 
   worker:
     image: ${HOMERUN_IMAGE:-docker.io/orochibraru/homerun}:${HOMERUN_VERSION:-latest}

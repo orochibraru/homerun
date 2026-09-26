@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceGitDTO } from "$lib/dto/service-git-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
@@ -13,6 +14,7 @@ import {
 	dependencyMap,
 	mergeDependencies,
 	toGraphService,
+	toPreviewRow,
 } from "$lib/service-graph";
 import {
 	buildLinkEnv,
@@ -85,10 +87,16 @@ async function loadServices(url: URL) {
 		sortKeys: sortKeysOf(BASE_SORTS),
 	});
 	const paged = await ServiceDTO.listWithStackNamesPaged(query);
+	const previews = await ServiceGitDTO.listPreviewsOf(
+		paged.items.map((r) => r.service.id),
+	);
 
 	return {
 		services: paged.items.map((r) => ({
 			...r.service.toJSON(),
+			previews: (previews.get(r.service.id) ?? []).map((p) =>
+				toPreviewRow(p.toJSON()),
+			),
 			stackName: r.stackName,
 		})),
 		total: paged.total,
@@ -216,6 +224,9 @@ export const load = async ({ parent, platform, url }) => {
 		treeView ? ServiceDTO.list() : null,
 	]);
 
+	const roots = (everything ?? []).filter(
+		(svc) => !svc.toJSON().previewParentId,
+	);
 	return {
 		baseDomain: config.baseDomain,
 		facets,
@@ -234,7 +245,7 @@ export const load = async ({ parent, platform, url }) => {
 			deps: Object.fromEntries(
 				mergeDependencies(
 					dependencyMap(
-						everything.map((svc) => ({
+						roots.map((svc) => ({
 							envVars: svc.envVars,
 							id: svc.id,
 							slug: svc.slug,
@@ -243,7 +254,10 @@ export const load = async ({ parent, platform, url }) => {
 					await ServiceDependencyDTO.map(),
 				),
 			),
-			services: everything.map((svc) => toGraphService(svc.toJSON())),
+			previews: everything
+				.filter((svc) => svc.toJSON().previewParentId)
+				.map((svc) => toPreviewRow(svc.toJSON())),
+			services: roots.map((svc) => toGraphService(svc.toJSON())),
 		},
 	};
 };

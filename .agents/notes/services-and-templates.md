@@ -1376,11 +1376,19 @@ domain another service already routes is skipped and the default hostname forced
 on. `#refresh` never touches domains; `applyDomains` re-applies them to every
 open preview (DNS synced, deployed ones redeployed) when the tab saves a changed
 template or default-hostname flag, overwriting hand-added domains.
-`redeploy`/`delete` check `previewParentId` before acting. The finders live in
-`ServiceGitDTO` (`$lib/dto/service-git-dto.ts`), which extends `ServiceDTO` only
-to reach its protected constructor, to keep `service-dto.ts` under the file
-length limit. **Not verified against real providers**, same caveat as
-push-to-deploy.
+`redeploy`/`delete` check `previewParentId` before acting. Previews are never
+list rows: `ServiceDTO.#listFilters` always adds `previewParentId IS NULL` and
+matches a parent when a preview (aliased `service` as `preview`) matches the
+search; the services list attaches each page's previews via
+`ServiceGitDTO.listPreviewsOf`, and the stack page and the services dependency
+tree keep previews out of `graph.services`/`tree.services` and ship them as
+`previews` (`toPreviewRow`, grouped by `previewsByParent` in
+`$lib/service-graph.ts`), drawn by `preview-rows.svelte` under the parent's row
+(EntityList `details`) or tree node (`ServiceTree`'s `previews` prop). Icon and
+category are mirrored from the parent. The finders live in `ServiceGitDTO`
+(`$lib/dto/service-git-dto.ts`), which extends `ServiceDTO` only to reach its
+protected constructor, to keep `service-dto.ts` under the file length limit.
+**Not verified against real providers**, same caveat as push-to-deploy.
 
 ## Migrating from Dokploy or Coolify (`settings/migrate/`)
 

@@ -5,17 +5,22 @@ import {
 } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { WorkerClient } from "$lib/server/worker-client";
+import { DeploymentService } from "../deploy.service.ts";
 import { syncDashboardDns } from "../dns.service.ts";
 import type { TraefikExpectation } from "../docker/core-services.ts";
 import { DockerService } from "../docker.service.ts";
+import { AUTH_CHECK_ALIAS } from "../self-update/compose-target.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
 
 const TICK_MS = 15_000;
 
 /**
- * Points the login wall's forwardAuth at this dashboard's own container on the
- * Docker network (unless the config file pins the URL), then re-applies the
- * instance settings so it takes effect. Asks the worker, so it does nothing
+ * Points the login wall's forwardAuth at this dashboard on the Docker network
+ * (unless the config file pins the URL), then re-applies the instance
+ * settings so it takes effect. Uses the `homerun-auth` network alias when the
+ * container has it, which the self-updater's candidate takes over while the
+ * app container is swapped, so gated sites keep answering during an update;
+ * the container's own name otherwise. Asks the worker, so it does nothing
  * while the worker isn't reachable; the core-services watch calls it again
  * once it is.
  *
@@ -26,9 +31,10 @@ export async function detectAuthCheckUrl(): Promise<boolean> {
 	if (!(self?.name && self.networkAddress)) {
 		return false;
 	}
-	setDetectedAuthCheckUrl(
-		`http://${self.name}:${config.port}/api/v1/auth-check`,
-	);
+	const host = self.aliases.includes(AUTH_CHECK_ALIAS)
+		? AUTH_CHECK_ALIAS
+		: self.name;
+	setDetectedAuthCheckUrl(`http://${host}:${config.port}/api/v1/auth-check`);
 	const settings = await InstanceSettingsDTO.get();
 	applyInstanceSettings(settings.toConfigOverride());
 	return true;
@@ -81,7 +87,11 @@ export class CoreServicesWatch extends BaseScheduler {
 				: "Worker reachable, asserting the core services",
 		);
 		this.#bootId = bootId;
-		await detectAuthCheckUrl();
+		if (await detectAuthCheckUrl()) {
+			void DeploymentService.redeployStaleLoginWalls().catch((err) => {
+				this.logger.warn("Couldn't check for stale login-wall routing", err);
+			});
+		}
 		const settings = await InstanceSettingsDTO.get();
 		await DockerService.syncDashboardRouter();
 		void syncDashboardDns();

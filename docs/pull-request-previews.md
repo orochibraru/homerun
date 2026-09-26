@@ -23,7 +23,11 @@ volumes, domains, cron schedule or status checks. The Previews tab lists the
 open ones with their status and domains, a **Redeploy** and a **Delete** button
 (a push to its pull request brings a deleted one back), and a **Domains** link
 to the preview's own Networking tab. Each preview is a normal service you can
-open too. Turning previews off, or deleting the service, deletes every preview.
+open too. Previews aren't rows of their own on the services list or a stack's
+page: each one is listed under the service it previews, in the list and in the
+dependency tree, and searching for a preview's branch or title finds its parent.
+A preview takes its parent's stack, icon and category. Turning previews off, or
+deleting the service, deletes every preview.
 
 ## Domains
 

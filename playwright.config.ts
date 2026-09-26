@@ -25,7 +25,7 @@ export default defineConfig({
 	reporter: "list",
 	retries: 0,
 	testDir: "./tests/e2e",
-	testIgnore: "screenshots/**",
+	testIgnore: ["screenshots/**", "templates/**"],
 	timeout: 30_000,
 	use: {
 		baseURL: E2E_BASE_URL,

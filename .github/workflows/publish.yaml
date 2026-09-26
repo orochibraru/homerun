@@ -196,6 +196,13 @@ jobs:
     with:
       version: ${{ needs.version.outputs.version }}
 
+  templates:
+    name: Templates E2E
+    needs: [code_quality]
+    uses: ./.github/workflows/templates-e2e.yaml
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
   e2e:
     name: E2E
     needs: [build-app]

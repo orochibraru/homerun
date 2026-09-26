@@ -1,0 +1,114 @@
+name: Templates E2E
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        default: ""
+        description: "Commit or branch to test, the triggering commit when empty"
+        type: string
+    secrets:
+      registry_password:
+        required: false
+    outputs:
+      summary:
+        description: "Pass/fail counts over the built-in templates"
+        value: ${{ jobs.templates.outputs.summary }}
+
+permissions:
+  contents: read
+
+env:
+  TZ: Europe/Paris
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CI: true
+  NO_COLOR: "1"
+
+jobs:
+  templates:
+    name: Deploy every template
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    outputs:
+      summary: ${{ steps.stats.outputs.summary }}
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: homerun
+          POSTGRES_PASSWORD: homerun
+          POSTGRES_DB: homerun_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U homerun -d homerun_test" --health-interval
+          5s --health-timeout 5s --health-retries 20
+    env:
+      HOMERUN_TEST_POSTGRES_URL: postgres://homerun:homerun@127.0.0.1:5432/homerun_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Free disk space for the template images
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af
+          df -h /
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Log in to Docker Hub for pull limits
+        env:
+          REGISTRY_PASSWORD: ${{ secrets.registry_password }}
+        run: |
+          if [ -n "$REGISTRY_PASSWORD" ]; then
+            echo "$REGISTRY_PASSWORD" | docker login docker.io -u orochibraru --password-stdin
+          else
+            echo "No registry secret: pulling anonymously."
+          fi
+
+      - name: Build app from source
+        run: bun run build
+
+      - name: Install Playwright's Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Deploy every template
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
+        timeout-minutes: 130
+        run: bunx playwright test --config playwright.templates.config.ts --reporter=list,json,./tests/e2e/templates/report.ts
+
+      - name: Summarise the run
+        id: stats
+        if: always()
+        run: |
+          if [ -f playwright-results.json ]; then
+            jq -r '.stats | "summary=\(.expected) passed" + (if .flaky > 0 then ", \(.flaky) flaky" else "" end) + (if .unexpected > 0 then ", \(.unexpected) failed" else "" end) + (if .skipped > 0 then ", \(.skipped) skipped" else "" end)' \
+              playwright-results.json >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
+        with:
+          name: playwright-report-templates
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7

@@ -519,6 +519,34 @@ export function DockerContainerMixin<
 			};
 		}
 
+		/**
+		 * The labels a service's running workload was created with: the swarm
+		 * service's spec labels, else the container's. Null when there's no
+		 * workload or it can't be inspected.
+		 */
+		async workloadLabels(ids: {
+			containerId: string | null;
+			swarmServiceId: string | null;
+		}): Promise<Record<string, string> | null> {
+			if (ids.swarmServiceId) {
+				const svc = await this.worker
+					.get<{ Spec?: { Labels?: Record<string, string> | null } }>(
+						`v1/swarm/services/${ids.swarmServiceId}`,
+					)
+					.catch(() => null);
+				return svc ? (svc.Spec?.Labels ?? {}) : null;
+			}
+			if (!ids.containerId) {
+				return null;
+			}
+			const inspected = await this.worker
+				.get<{ Config?: { Labels?: Record<string, string> | null } }>(
+					`v1/containers/${ids.containerId}/inspect`,
+				)
+				.catch(() => null);
+			return inspected ? (inspected.Config?.Labels ?? {}) : null;
+		}
+
 		/** The container's own IP on the first network it's attached to, for the internal liveness probe. */
 		async containerAddress(
 			containerId: string,

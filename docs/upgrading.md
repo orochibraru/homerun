@@ -36,6 +36,11 @@ GitHub right away. Once an update is available, the dialog behaves as follows:
 - After the switch the updater waits for the new app to answer the same check.
   If it doesn't, it rolls back: it restores the previous files and recreates the
   containers on the version you had.
+- **Your sites keep answering during the switch.** Apps without a login wall
+  never go through Homerun. Apps behind the wall do, so the candidate takes over
+  the wall's check while the dashboard container is replaced, and it's only
+  removed once the new version answers. Apps deployed before this existed are
+  redeployed once after the update to pick it up.
 - The dashboard is down for a few seconds during the switch itself, and the page
   reloads itself once the new version answers. Jobs that were waiting run once
   it's back. If something looks wrong, run `docker logs homerun-updater` on the

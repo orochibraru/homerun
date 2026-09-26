@@ -35,6 +35,51 @@ export function toGraphService(
 	};
 }
 
+export interface PreviewRow {
+	branch: string | null;
+	currentStatus: string;
+	id: string;
+	name: string;
+	parentId: string;
+	prNumber: number;
+	title: string | null;
+}
+
+/** A pull request preview as it's listed under its parent service. */
+export function toPreviewRow(row: {
+	currentStatus: string;
+	id: string;
+	name: string;
+	previewBranch: string | null;
+	previewParentId: string | null;
+	previewPrNumber: number | null;
+	previewPrTitle: string | null;
+}): PreviewRow {
+	return {
+		branch: row.previewBranch,
+		currentStatus: row.currentStatus,
+		id: row.id,
+		name: row.name,
+		parentId: row.previewParentId ?? "",
+		prNumber: row.previewPrNumber ?? 0,
+		title: row.previewPrTitle,
+	};
+}
+
+/** Previews grouped by the service they preview. */
+export function previewsByParent(
+	previews: PreviewRow[],
+): Map<string, PreviewRow[]> {
+	const byParent = new Map<string, PreviewRow[]>();
+	for (const preview of previews) {
+		byParent.set(preview.parentId, [
+			...(byParent.get(preview.parentId) ?? []),
+			preview,
+		]);
+	}
+	return byParent;
+}
+
 export interface DependencyNode {
 	children: DependencyNode[];
 	id: string;

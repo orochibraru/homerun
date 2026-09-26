@@ -16,6 +16,10 @@ When done delete the entry, no bloat.
       dependencies in the REST API and MCP.
 - [ ] Browser-check the xterm.js Terminal tab (vim, top, resize, dark mode).
 
+- [ ] The aiostreams template restart-loops on its placeholder `SECRET_KEY` (not
+      64 hex chars): generate it like the other `{{secret}}` passwords, then
+      drop it from the template E2E skip list.
+
 ## Large
 
 <!--  -->

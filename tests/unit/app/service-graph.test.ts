@@ -6,7 +6,9 @@ import {
 	dependencyMap,
 	linkKeys,
 	mergeDependencies,
+	previewsByParent,
 	referencesHost,
+	toPreviewRow,
 } from "../../../src/lib/service-graph";
 import {
 	ancestorIds,
@@ -249,5 +251,29 @@ describe("recorded dependencies", () => {
 			"a",
 			"b",
 		]);
+	});
+});
+
+describe("previews under their parent", () => {
+	const row = (id: string, parent: string, pr: number) =>
+		toPreviewRow({
+			currentStatus: "running",
+			id,
+			name: `Web PR #${pr}`,
+			previewBranch: "feat/x",
+			previewParentId: parent,
+			previewPrNumber: pr,
+			previewPrTitle: null,
+		});
+
+	test("groups previews by the service they preview, keeping order", () => {
+		const grouped = previewsByParent([
+			row("p2", "web", 2),
+			row("p9", "api", 9),
+			row("p1", "web", 1),
+		]);
+		expect(grouped.get("web")?.map((p) => p.prNumber)).toEqual([2, 1]);
+		expect(grouped.get("api")?.map((p) => p.id)).toEqual(["p9"]);
+		expect(grouped.get("db")).toBeUndefined();
 	});
 });

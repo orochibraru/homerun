@@ -1,0 +1,84 @@
+name: Template Versions
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: template-versions
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TZ: Europe/Paris
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  bump:
+    name: Bump pinned template tags
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      head: ${{ steps.pr.outputs.pull-request-head-sha }}
+      operation: ${{ steps.pr.outputs.pull-request-operation }}
+      triggers_ci: ${{ steps.token.outputs.triggers_ci }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Resolve the newest stable tags
+        run: |
+          bun scripts/bump-template-versions.ts | tee "$RUNNER_TEMP/summary.md"
+          {
+            echo "Weekly bump of the built-in templates' pinned image tags, by \`scripts/bump-template-versions.ts\`. Every template is deployed and health-checked by the Templates E2E job before this can merge."
+            echo
+            cat "$RUNNER_TEMP/summary.md"
+          } > "$RUNNER_TEMP/body.md"
+
+      - name: Pick the token that opens the PR
+        id: token
+        env:
+          BUMP_TOKEN: ${{ secrets.TEMPLATE_BUMP_TOKEN }}
+        run: |
+          if [ -n "$BUMP_TOKEN" ]; then
+            echo "triggers_ci=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No TEMPLATE_BUMP_TOKEN secret: the PR is opened with GITHUB_TOKEN, which starts no workflows, so this run tests the templates itself."
+            echo "triggers_ci=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update the pull request
+        id: pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.TEMPLATE_BUMP_TOKEN || github.token }}
+          branch: chore/template-versions
+          delete-branch: true
+          add-paths: templates/*/*.json
+          commit-message: "chore(templates): bump pinned image tags"
+          title: "chore(templates): bump pinned image tags"
+          body-path: ${{ runner.temp }}/body.md
+
+  templates-e2e:
+    name: Templates E2E
+    needs: [bump]
+    if:
+      needs.bump.outputs.triggers_ci == 'false' && (needs.bump.outputs.operation
+      == 'created' || needs.bump.outputs.operation == 'updated')
+    uses: ./.github/workflows/templates-e2e.yaml
+    with:
+      ref: ${{ needs.bump.outputs.head }}
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}

@@ -32,8 +32,10 @@ services:
       test: ["CMD", "/app/build/healthcheck"]
       timeout: 30s
     networks:
-      - homerun
-      - internal
+      homerun:
+        aliases:
+          - homerun-auth
+      internal: {}
 
   worker:
     image: docker.io/orochibraru/homerun:${HOMERUN_VERSION:-latest}

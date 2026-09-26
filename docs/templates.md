@@ -21,6 +21,22 @@ can deploy from repeatedly without re-entering everything. Two kinds:
   files. Like every other resource, a custom template is shared with every
   account on the instance, see [Users and roles](users-and-roles.md).
 
+## Keeping built-ins current
+
+Most built-ins track a floating tag (`latest`, `stable`, `alpine`), so a new
+deploy gets the app's current release on its own. The few pinned to a version
+(PostgreSQL, MySQL, MongoDB, Valkey, the Docker registry, Uptime Kuma) are
+bumped by a weekly job that looks up each image's newest stable release in its
+registry and keeps the tag's shape: `18-alpine` moves to the next `NN-alpine`, a
+bare major to the next bare major, never to a release candidate or a nightly.
+Every bump is only merged after each built-in template, companions included, has
+been deployed on a real Docker host and reported healthy.
+
+A bump only changes what a **new** deploy uses. A service you already created
+keeps its own tag until you change it on its Settings tab, which matters for a
+database: moving PostgreSQL or MySQL to a new major needs a dump and restore,
+not just a new tag.
+
 A database or cache deployed from a template, or pulled in as a linked
 container, gets its own data volume, see
 [Storage volumes](storage-volumes.md#a-databases-data-volume).

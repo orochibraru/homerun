@@ -38,6 +38,7 @@ export interface TraefikInfo {
 }
 
 export interface SelfContainer {
+	aliases: string[];
 	labels: Record<string, string>;
 	name: string | null;
 	networkAddress: string | null;
@@ -313,6 +314,7 @@ export function DockerCoreServicesMixin<
 			const network =
 				info.NetworkSettings?.Networks?.[config.docker.networkName];
 			return {
+				aliases: network?.Aliases ?? [],
 				labels: info.Config?.Labels ?? {},
 				name: info.Name?.replace(LEADING_SLASH_RE, "") || null,
 				networkAddress: network?.IPAddress || null,

@@ -31,6 +31,7 @@ import {
 	StatusChecksFailedError,
 } from "./deploy/status-check-step.ts";
 import { deployWorkerSpec } from "./deploy/worker-spec.ts";
+import { authCheckUrlFor, loginWallDrifted } from "./docker/labels.ts";
 import { RolloutFailedError } from "./docker/rollout.ts";
 import { DockerService } from "./docker.service.ts";
 import { ImageScanBlockedError } from "./image-scan.service.ts";
@@ -502,6 +503,43 @@ class DeploymentServiceClass {
 	/** Re-arms health watches for every deployment still mid-watch after a restart, same rollback wiring as `watchHealth`. */
 	resumeHealthWatches(): Promise<void> {
 		return RevisionHealthService.resume((input) => this.enqueueDeploy(input));
+	}
+
+	/**
+	 * Redeploys every running, routed service whose login-wall labels drifted
+	 * from what a deploy would give it now (see `loginWallDrifted`): an
+	 * ungated service still sending each request through the auth check,
+	 * which then answers 500 while the dashboard restarts, or a gated one
+	 * still pointing at an old check URL. Run once the check URL is detected,
+	 * so it converges after an update. Returns how many were queued.
+	 */
+	async redeployStaleLoginWalls(): Promise<number> {
+		const services = (await ServiceDTO.list()).filter(
+			(svc) =>
+				isDeployed(svc) &&
+				svc.dnsResolvable &&
+				svc.toJSON().desiredState !== "stopped",
+		);
+		const stale = (
+			await Promise.all(
+				services.map(async (svc) => {
+					const labels = await DockerService.workloadLabels(svc.toJSON());
+					const expected = svc.authRequired ? authCheckUrlFor(svc.id) : null;
+					return labels && loginWallDrifted(labels, expected) ? svc : null;
+				}),
+			)
+		).filter((svc): svc is ServiceDTO => svc !== null);
+		await Promise.all(
+			stale.map((svc) =>
+				this.enqueueDeploy({ svc, trigger: "manual", userId: svc.userId }),
+			),
+		);
+		if (stale.length > 0) {
+			logger.info(
+				`Redeploying ${stale.length} service(s) whose login-wall routing was stale: ${stale.map((svc) => svc.slug).join(", ")}`,
+			);
+		}
+		return stale.length;
 	}
 
 	/**

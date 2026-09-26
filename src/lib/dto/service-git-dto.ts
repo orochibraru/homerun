@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { service } from "$lib/server/db/schema";
 import { ServiceDTO } from "./service-dto";
@@ -28,6 +28,29 @@ export class ServiceGitDTO extends ServiceDTO {
 				),
 			);
 		return rows.map((row) => new ServiceGitDTO(row));
+	}
+
+	/** The pull request previews of each of `parentIds`, newest pull request first, keyed by parent id. */
+	static async listPreviewsOf(
+		parentIds: string[],
+	): Promise<Map<string, ServiceDTO[]>> {
+		const byParent = new Map<string, ServiceDTO[]>();
+		if (parentIds.length === 0) {
+			return byParent;
+		}
+		const rows = await db
+			.select()
+			.from(service)
+			.where(inArray(service.previewParentId, parentIds))
+			.orderBy(desc(service.previewPrNumber));
+		for (const row of rows) {
+			const parentId = row.previewParentId ?? "";
+			byParent.set(parentId, [
+				...(byParent.get(parentId) ?? []),
+				new ServiceGitDTO(row),
+			]);
+		}
+		return byParent;
 	}
 
 	/** The pull request previews of a service, newest pull request first. */

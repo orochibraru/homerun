@@ -37,22 +37,42 @@ through the redaction so a token can't reach the deployment log.
 **The CI pipeline builds each image once and reuses it.** Both
 `pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
 `docker.yaml` (per image) → `e2e.yaml` → `docker-manifest.yaml` (per image) →
-gate/release. `pull_request.yaml` additionally runs `screenshots.yaml` off
-`code_quality`, in parallel with the image builds rather than after them,
-because that one is the exception to "build the image once" : it must run the
-app and worker as local processes to reach the Docker socket (see Screenshots in
-`testing.md`), so it does its own `bun run build` and never touches the image
-under test. The split between the last two is the point : `docker.yaml` pushes
-**by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
-`docker pull` that exact digest and run Playwright against the real artefact,
-and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`, or
-`<sha>` + `canary` on `main`). Nothing anyone can pull by name is ever published
-before e2e has passed against it, and the app is built once per platform instead
-of once for the image plus again from source for the tests. The per-platform
-digests and the `docker-metadata-action` bake file travel between those
-workflows as run artefacts, which is why they must stay in one workflow run
-(`uses:`, not a separate `workflow_run`). Both arches build natively
-(`ubuntu-24.04-arm` for arm64), never under QEMU.
+gate/release. `pull_request.yaml` additionally runs `screenshots.yaml` and
+`templates-e2e.yaml` off `code_quality`, in parallel with the image builds
+rather than after them, because both are the exception to "build the image once"
+: they must run the app and worker as local processes to reach the Docker socket
+(see Screenshots and Template deploys in `testing.md`), so each does its own
+`bun run build` and never touches the image under test. Both feed the CI Gate.
+`publish.yaml` runs `templates-e2e.yaml` too, off `code_quality` (so only when
+it builds from scratch rather than promoting a PR's images, which already passed
+it), but nothing waits on it : an hour-plus job in front of every canary isn't
+worth it when the PR gate already ran it. The split between `docker.yaml` and
+`docker-manifest.yaml` is the point : `docker.yaml` pushes **by digest only**
+(`push-by-digest=true`, no tag), so `e2e.yaml` can `docker pull` that exact
+digest and run Playwright against the real artefact, and `docker-manifest.yaml`
+only then applies the friendly tag (`pr-<n>`, or `<sha>` + `canary` on `main`).
+Nothing anyone can pull by name is ever published before e2e has passed against
+it, and the app is built once per platform instead of once for the image plus
+again from source for the tests. The per-platform digests and the
+`docker-metadata-action` bake file travel between those workflows as run
+artefacts, which is why they must stay in one workflow run (`uses:`, not a
+separate `workflow_run`). Both arches build natively (`ubuntu-24.04-arm` for
+arm64), never under QEMU.
+
+**`template-versions.yaml` bumps the built-in templates' pinned tags weekly**
+(Monday 05:17, plus `workflow_dispatch`): `scripts/bump-template-versions.ts`
+rewrites the `tag` of every version-pinned `templates/*/*.json` to the newest
+stable tag of the same shape (`scripts/template-tags.ts`, unit-tested in
+`tests/unit/scripts/`), and `peter-evans/create-pull-request` opens or updates
+one rolling PR from `chore/template-versions`, with the script's table as its
+body. A PR opened with the default `GITHUB_TOKEN` starts no workflows, so the
+job uses the `TEMPLATE_BUMP_TOKEN` secret when it exists (a fine-grained PAT, or
+a GitHub App token, with contents and pull-requests write on this repo): the PR
+then runs the normal `pull_request.yaml` chain, templates E2E included. Without
+that secret it falls back to `GITHUB_TOKEN` (which needs "Allow GitHub Actions
+to create and approve pull requests" in the repo settings) and calls
+`templates-e2e.yaml` itself on the PR's head commit, so the bump is still
+proven; the PR's own checks stay empty until someone closes and reopens it.
 
 **A merge to `main` is a canary, not a release.** The flow is trunk-based with
 promotion, deliberately not a `next`/`canary` branch: squash-merging a branch
@@ -641,27 +661,31 @@ in, and took the instance and every gated site down. The updater backs up every
 file it may rewrite (`<file>.homerun-rollback`) before touching them, then
 starts the new image as `homerun-update-candidate` through
 `docker compose run -d --no-deps` (so it gets the service's own env, volumes and
-networks, but no published port) with `HOMERUN_CANDIDATE=1`, `PORT=3999` and
-`traefik.enable=false`. `HOMERUN_CANDIDATE` makes `init()` stop right after auth
-is built: no job worker, schedulers, orchestration apply or core-services watch,
-which would recreate Traefik next to the live app. `wait_ready` polls
-`/api/v1/ready` (settings row + `auth.api.getSession`, the path the bug broke)
-through the image's own `/app/build/healthcheck` binary with `HEALTHCHECK_PATH`,
-via `docker exec`, since the updater isn't on the app's network. A failed
-candidate restores the files and exits 1 without recreating anything. After
-`up -d`, the same check runs against the new app container, and a failure there
-restores the files and runs `up -d` again on the old tag, which is still pulled
-locally. The candidate does run the new migrations on the live database; they're
-additive, and the old version keeps working on them. On the app side, `start()`
-then follows the updater (`#watchUpdater`): if it exits and this process is
-still alive, the update didn't take, so the job hold is lifted and an
-`update_failed` notification names the last `==>` line; after 30 minutes it
-lifts the hold regardless. **Never Traefik, Postgres or anything outside the
-project**: Traefik carries flags the app applies at runtime (swarm provider,
-ACME email, custom SSL) that a compose recreate would drop, and the Newt tunnel
-is a bare container or swarm service with no compose labels, which `--no-deps`
-without `--remove-orphans` can't touch. The script is exercised under a real
-`sh` against a fake `docker` in `tests/unit/app/self-update.test.ts` (the
+networks, but no published port) with `HOMERUN_CANDIDATE=1` and
+`traefik.enable=false`, on the app's own port so the login wall's `homerun-auth`
+alias can move to it: once it's ready the updater reconnects it to the Homerun
+network with that alias, keeps it through `up -d`, and removes it only after the
+new app answers (see the self-update 500s in `auth.md`). `HOMERUN_CANDIDATE`
+makes `init()` stop right after auth is built: no job worker, schedulers,
+orchestration apply or core-services watch, which would recreate Traefik next to
+the live app. `wait_ready` polls `/api/v1/ready` (settings row +
+`auth.api.getSession`, the path the bug broke) through the image's own
+`/app/build/healthcheck` binary with `HEALTHCHECK_PATH`, via `docker exec`,
+since the updater isn't on the app's network. A failed candidate restores the
+files and exits 1 without recreating anything. After `up -d`, the same check
+runs against the new app container, and a failure there restores the files and
+runs `up -d` again on the old tag, which is still pulled locally. The candidate
+does run the new migrations on the live database; they're additive, and the old
+version keeps working on them. On the app side, `start()` then follows the
+updater (`#watchUpdater`): if it exits and this process is still alive, the
+update didn't take, so the job hold is lifted and an `update_failed`
+notification names the last `==>` line; after 30 minutes it lifts the hold
+regardless. **Never Traefik, Postgres or anything outside the project**: Traefik
+carries flags the app applies at runtime (swarm provider, ACME email, custom
+SSL) that a compose recreate would drop, and the Newt tunnel is a bare container
+or swarm service with no compose labels, which `--no-deps` without
+`--remove-orphans` can't touch. The script is exercised under a real `sh`
+against a fake `docker` in `tests/unit/app/self-update.test.ts` (the
 hand-written case skips on macOS, whose BSD `sed -i` differs from the updater's
 busybox one), and `docker:cli` does ship the compose plugin. **Not verified**: a
 real end-to-end update on an installed instance, and the CI changes above

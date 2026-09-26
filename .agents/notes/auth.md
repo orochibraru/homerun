@@ -219,7 +219,10 @@ the code. The field renders blank whenever the stored origin equals
 **Auth-check URL default**: when the app itself runs in a container attached to
 the Docker network (installer `--mode=full`), `hooks.server.ts`'s `init()`
 resolves it via `DockerService.selfContainer()` to
-`http://<container name>:<PORT>/api/v1/auth-check` through
+`http://homerun-auth:<PORT>/api/v1/auth-check` when the app's endpoint on the
+Homerun network carries the `homerun-auth` alias (the installer's and
+`compose.prod.yaml`'s app service both declare it), else
+`http://<container name>:<PORT>/api/v1/auth-check`, through
 `setDetectedAuthCheckUrl` (a `homerun.yaml` `authCheckUrl` still wins, a DB
 override still wins over both). Real bug this fixes: the old
 `host.docker.internal` default doesn't resolve inside a Linux Traefik container
@@ -552,6 +555,24 @@ deployed, running service so the new labels reach Traefik. Policy changes with
 the wall already on still apply immediately: `invalidateGatedService()` drops
 the 10s service cache. auth-check keeps its early `200` for an ungated service,
 for a router still carrying the middleware from an older deploy.
+
+**Real bug: every site 500'd during a self-update.** Services deployed before
+the gated-only change still carried the middleware, so each request went through
+auth-check, and while compose swapped the app container Traefik's forwardAuth
+had nothing to reach and answered 500 for all of them. Two fixes.
+`DeploymentService.redeployStaleLoginWalls` runs from the core-services watch
+right after a successful `detectAuthCheckUrl` (so on every boot and worker
+restart) and redeploys any running routed service whose labels fail
+`loginWallDrifted` (`docker/labels.ts`): a forwardAuth on an ungated service,
+none on a gated one, or an address other than today's `authCheckUrlFor`, which
+also moves every gated service onto the alias. And the updater hands the alias
+to its candidate (`docker network disconnect` + `connect --alias homerun-auth`,
+on the app's own port now rather than 3999) before `up -d`, and removes the
+candidate only after the new app answers `/api/v1/ready`, so the check always
+has one live answerer: Go's dialer tries every address the alias resolves to, so
+a container that's stopping or not yet listening is skipped. The first update
+onto this version still runs the old updater script, so that one still has the
+gap.
 
 **The policy columns** on `service` (all jsonb, all `[]` by default):
 `authProviders` (allowed sign-in methods, `"password"` for built-in credentials

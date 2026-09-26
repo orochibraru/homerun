@@ -3,6 +3,7 @@
 	import { onMount, type Snippet } from "svelte";
 	import { resolve } from "$app/paths";
 	import EntityList from "$lib/components/entity-list.svelte";
+	import PreviewRows from "$lib/components/preview-rows.svelte";
 	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
 	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
 	import ServiceTree from "$lib/components/service-tree.svelte";
@@ -17,7 +18,11 @@
 		type UnlinkTarget,
 	} from "$lib/components/unlink-dialog.svelte";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { dependencyForest, type GraphServiceInfo } from "$lib/service-graph";
+	import {
+		dependencyForest,
+		type GraphServiceInfo,
+		previewsByParent,
+	} from "$lib/service-graph";
 	import { flattenStackTree, type StackNode } from "$lib/stack-tree";
 	import { title } from "$lib/store/title";
 	import { ViewMode } from "$lib/view-mode.svelte";
@@ -60,6 +65,7 @@
 		new Map(data.graph.services.map((svc) => [svc.id, svc])),
 	);
 	const depMap = $derived(new Map(Object.entries(data.graph.deps)));
+	const previews = $derived(previewsByParent(data.graph.previews));
 	const localStackIds = $derived(new Set(data.graph.stacks.map((s) => s.id)));
 	const stackNames = $derived(new Map(data.stacks.map((s) => [s.id, s.name])));
 	const sections = $derived(
@@ -75,7 +81,17 @@
 	);
 	const matches = $derived(
 		members.filter((svc) =>
-			`${svc.name} ${svc.slug} ${svc.image}`
+			[
+				svc.name,
+				svc.slug,
+				svc.image,
+				...(previews.get(svc.id) ?? []).flatMap((p) => [
+					p.name,
+					p.title ?? "",
+					p.branch ?? "",
+				]),
+			]
+				.join(" ")
 				.toLowerCase()
 				.includes(search.trim().toLowerCase()),
 		),
@@ -145,6 +161,9 @@
         }))}
         {view}
       >
+        {#snippet details(item: { id: string })}
+          <PreviewRows class="ml-4 sm:ml-11" previews={previews.get(item.id) ?? []} />
+        {/snippet}
         {#snippet media(item: { id: string })}
           {@const svc = services.get(item.id)}
           <TemplateIcon
@@ -202,6 +221,7 @@
             <ServiceTree
               localStackIds={new Set([section.id])}
               nodes={forest}
+              {previews}
               {services}
               {stackNames}
               {wrapper}

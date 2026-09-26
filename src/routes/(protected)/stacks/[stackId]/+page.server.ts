@@ -6,12 +6,13 @@ import {
 	linkKeys,
 	mergeDependencies,
 	toGraphService,
+	toPreviewRow,
 } from "$lib/service-graph";
 import { descendantIds } from "$lib/stack-tree";
 
 export const load = async ({ params, parent }) => {
 	await parent();
-	const [services, stacks, recorded] = await Promise.all([
+	const [everything, stacks, recorded] = await Promise.all([
 		ServiceDTO.list(),
 		StackDTO.list(),
 		ServiceDependencyDTO.map(),
@@ -22,6 +23,8 @@ export const load = async ({ params, parent }) => {
 		parentId: s.parentId,
 		slug: s.slug,
 	}));
+	const services = everything.filter((svc) => !svc.toJSON().previewParentId);
+	const previews = everything.filter((svc) => svc.toJSON().previewParentId);
 	const inTree = new Set([
 		params.stackId,
 		...descendantIds(params.stackId, stackNodes),
@@ -52,6 +55,9 @@ export const load = async ({ params, parent }) => {
 			stackId: svc.stackId,
 		})),
 		graph: {
+			previews: previews
+				.map((svc) => toPreviewRow(svc.toJSON()))
+				.filter((row) => graphServices.some((svc) => svc.id === row.parentId)),
 			deps: Object.fromEntries(
 				graphServices.map((svc) => [svc.id, deps.get(svc.id) ?? []]),
 			),

@@ -18,6 +18,7 @@
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
+	import PreviewRows from "$lib/components/preview-rows.svelte";
 	import SelectAllRow from "$lib/components/select-all-row.svelte";
 	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
 	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
@@ -34,7 +35,11 @@
 		SERVICE_ACTION_LABELS,
 		type ServiceAction,
 	} from "$lib/service-actions";
-	import { dependencyForest, type GraphServiceInfo } from "$lib/service-graph";
+	import {
+		dependencyForest,
+		type GraphServiceInfo,
+		previewsByParent,
+	} from "$lib/service-graph";
 	import { ancestorIds, flattenStackTree } from "$lib/stack-tree";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -167,6 +172,7 @@
 				data.tree.services.map((svc) => svc.id),
 				new Map(Object.entries(data.tree.deps)),
 			),
+			previews: previewsByParent(data.tree.previews),
 			services: new Map(data.tree.services.map((svc) => [svc.id, svc])),
 		},
 	);
@@ -237,6 +243,7 @@
     </div>
     <ServiceTree
       nodes={tree.forest}
+      previews={tree.previews}
       services={tree.services}
       stackNames={new Map()}
       wrapper={treeWrapper}
@@ -308,6 +315,10 @@
         {/if}
       {/snippet}
 
+      {#snippet details(item: { id: string })}
+        <PreviewRows class="ml-4 sm:ml-11" previews={byId(item.id)?.previews ?? []} />
+      {/snippet}
+
       {#snippet actions(item: { id: string })}
         {@const svc = byId(item.id)}
         {#if svc}
@@ -337,6 +348,7 @@
             {#if services.length > 0}
             <EntityList
               {actions}
+              {details}
               {wrapper}
               items={services.map((svc) => ({
                 description: `${svc.image}:${svc.tag}`,

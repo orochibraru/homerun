@@ -4,6 +4,7 @@ import {
 	count,
 	desc,
 	eq,
+	exists,
 	inArray,
 	isNotNull,
 	isNull,
@@ -11,6 +12,7 @@ import {
 	or,
 	type SQL,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { PASSWORD_METHOD } from "$lib/auth-providers";
 import type { BuildMethod } from "$lib/build-methods";
 import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
@@ -29,6 +31,8 @@ import { runtimeOptionsFrom } from "$lib/service-runtime";
 import type { ContainerStatus, PullPolicy } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 import type { NewServiceInput, ServiceUpdateInput } from "./service-input";
+
+const preview = alias(service, "preview");
 
 /**
  * Wraps the `service` table : every route that touches a service goes
@@ -87,11 +91,13 @@ export class ServiceDTO extends BaseDTO<Service> {
 
 	/**
 	 * Builds the WHERE clause for the paged services list : the search box
-	 * (name, slug, image, tag), status pills, and stack pills where the
-	 * Ungrouped label means no stack.
+	 * (name, slug, image, tag, or any of the service's previews), status
+	 * pills, and stack pills where the Ungrouped label means no stack. Pull
+	 * request previews are never rows of their own, they're listed under
+	 * their parent.
 	 */
 	static #listFilters(query: ListQuery): SQL | undefined {
-		const conditions: SQL[] = [];
+		const conditions: SQL[] = [isNull(service.previewParentId)];
 
 		const search = searchCondition(query.q, [
 			service.name,
@@ -99,8 +105,26 @@ export class ServiceDTO extends BaseDTO<Service> {
 			service.image,
 			service.tag,
 		]);
-		if (search) {
-			conditions.push(search);
+		const previewSearch = searchCondition(query.q, [
+			preview.name,
+			preview.slug,
+			preview.previewBranch,
+			preview.previewPrTitle,
+		]);
+		if (search && previewSearch) {
+			conditions.push(
+				or(
+					search,
+					exists(
+						db
+							.select({ id: preview.id })
+							.from(preview)
+							.where(
+								and(eq(preview.previewParentId, service.id), previewSearch),
+							),
+					),
+				) as SQL,
+			);
 		}
 
 		const statuses = narrowFilter(

@@ -16,7 +16,7 @@ export const UPDATER_IMAGE = "docker";
 export const UPDATER_IMAGE_TAG = "cli";
 
 export const CANDIDATE_CONTAINER_NAME = "homerun-update-candidate";
-export const CANDIDATE_PORT = "3999";
+export const AUTH_CHECK_ALIAS = "homerun-auth";
 export const READY_PATH = "/api/v1/ready";
 
 export const GENERATED_COMPOSE_FILE = "compose.yaml";
@@ -251,7 +251,12 @@ export function updaterScript(
 	{
 		companions = [],
 		envDefaults = {},
-	}: { companions?: string[]; envDefaults?: Record<string, string> } = {},
+		network = "homerun",
+	}: {
+		companions?: string[];
+		envDefaults?: Record<string, string>;
+		network?: string;
+	} = {},
 ): string {
 	const { channel, version: latestVersion } = release;
 	const { repository, tag } = splitImageRef(target.image);
@@ -269,6 +274,7 @@ export function updaterScript(
 		.map(shellQuote)
 		.join(" ");
 	const candidate = shellQuote(CANDIDATE_CONTAINER_NAME);
+	const net = shellQuote(network);
 	return [
 		"set -eu",
 		`echo ${shellQuote(`==> Updating Homerun to v${latestVersion}`)}`,
@@ -288,14 +294,15 @@ export function updaterScript(
 		`${compose} pull ${services}`,
 		"echo '==> Checking the new version before switching to it'",
 		`docker rm -f ${candidate} >/dev/null 2>&1 || true`,
-		`if ! ${compose} run -d --no-deps --name ${candidate} -e HOMERUN_CANDIDATE=1 -e PORT=${CANDIDATE_PORT} -l traefik.enable=false ${shellQuote(target.service)} >/dev/null || ! wait_ready ${candidate} ${CANDIDATE_PORT}; then`,
+		`if ! ${compose} run -d --no-deps --name ${candidate} -e HOMERUN_CANDIDATE=1 -l traefik.enable=false ${shellQuote(target.service)} >/dev/null || ! wait_ready ${candidate}; then`,
 		`	echo ${shellQuote(`==> v${latestVersion} failed its check: staying on the current version`)}`,
 		`	docker logs --tail 40 ${candidate} 2>&1 || true`,
 		`	docker rm -f ${candidate} >/dev/null 2>&1 || true`,
 		"	restore",
 		"	exit 1",
 		"fi",
-		`docker rm -f ${candidate} >/dev/null 2>&1 || true`,
+		"echo '==> Keeping the login wall answering while the containers switch'",
+		`if docker network disconnect ${net} ${candidate} >/dev/null 2>&1; then docker network connect --alias ${AUTH_CHECK_ALIAS} ${net} ${candidate} >/dev/null 2>&1 || true; fi`,
 		"echo '==> Recreating the Homerun containers'",
 		`${compose} up -d --no-deps ${services}`,
 		"echo '==> Waiting for the new version to answer'",
@@ -304,8 +311,12 @@ export function updaterScript(
 		`	echo ${shellQuote(`==> v${latestVersion} didn't come up: rolling back`)}`,
 		"	restore",
 		`	${compose} up -d --no-deps ${services}`,
+		`	app=$(${compose} ps -q ${shellQuote(target.service)} | head -n 1)`,
+		'	if [ -n "$app" ]; then wait_ready "$app" || true; fi',
+		`	docker rm -f ${candidate} >/dev/null 2>&1 || true`,
 		"	exit 1",
 		"fi",
+		`docker rm -f ${candidate} >/dev/null 2>&1 || true`,
 		"forget",
 		"echo '==> Done'",
 	].join("\n");

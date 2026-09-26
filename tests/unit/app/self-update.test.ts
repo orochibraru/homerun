@@ -430,16 +430,25 @@ describe("the updater's safety net", () => {
 		expect(code).toBe(0);
 		const candidate = calls.findIndex((call) =>
 			call.includes(
-				"run -d --no-deps --name homerun-update-candidate -e HOMERUN_CANDIDATE=1 -e PORT=3999 -l traefik.enable=false app",
+				"run -d --no-deps --name homerun-update-candidate -e HOMERUN_CANDIDATE=1 -l traefik.enable=false app",
 			),
+		);
+		const handoff = calls.indexOf(
+			"docker network connect --alias homerun-auth homerun homerun-update-candidate",
 		);
 		const recreate = calls.findIndex((call) =>
 			call.includes("up -d --no-deps"),
 		);
+		const removed = calls.lastIndexOf("docker rm -f homerun-update-candidate");
 		expect(candidate).toBeGreaterThan(-1);
-		expect(recreate).toBeGreaterThan(candidate);
+		expect(handoff).toBeGreaterThan(candidate);
+		expect(calls[handoff - 1]).toBe(
+			"docker network disconnect homerun homerun-update-candidate",
+		);
+		expect(recreate).toBeGreaterThan(handoff);
+		expect(removed).toBeGreaterThan(recreate);
 		expect(calls).toContain(
-			"docker exec -e PORT=3999 -e HEALTHCHECK_PATH=/api/v1/ready homerun-update-candidate /app/build/healthcheck",
+			"docker exec -e HEALTHCHECK_PATH=/api/v1/ready homerun-update-candidate /app/build/healthcheck",
 		);
 		expect(calls).toContain(
 			"docker exec -e HEALTHCHECK_PATH=/api/v1/ready app-container /app/build/healthcheck",

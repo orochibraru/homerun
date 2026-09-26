@@ -113,6 +113,14 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/screenshots.yaml
 
+  templates:
+    name: Templates E2E
+    needs: [changes, code_quality]
+    if: needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/templates-e2e.yaml
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
   e2e:
     name: E2E
     needs: [build-app]
@@ -166,6 +174,7 @@ jobs:
       - build-app
       - build-worker
       - screenshots
+      - templates
       - e2e
       - publish-app
       - publish-worker
@@ -202,6 +211,7 @@ jobs:
               ["Tests (unit + integration)", cell(needs.code_quality?.outputs?.tests || "skipped")],
               ["E2E", cell(result("e2e"), needs.e2e?.outputs?.summary)],
               ["Docs screenshots", cell(result("screenshots"), needs.screenshots?.outputs?.summary)],
+              ["Templates E2E", cell(result("templates"), needs.templates?.outputs?.summary)],
               ["Binaries", cell(result("binaries"))],
               ["Docker build", cell(result("build-app"))],
             ];
@@ -302,6 +312,7 @@ jobs:
       - build-app
       - build-worker
       - screenshots
+      - templates
       - e2e
       - publish-app
       - publish-worker
@@ -317,6 +328,7 @@ jobs:
             "${{ needs.build-app.result }}"
             "${{ needs.build-worker.result }}"
             "${{ needs.screenshots.result }}"
+            "${{ needs.templates.result }}"
             "${{ needs.e2e.result }}"
             "${{ needs.publish-app.result }}"
             "${{ needs.publish-worker.result }}"

@@ -159,3 +159,26 @@ export function buildContainerLabels(params: {
 
 	return labels;
 }
+
+/**
+ * Whether a running workload's login-wall routing no longer matches what a
+ * deploy would give it today: a forwardAuth middleware on a service whose
+ * wall is off (left by a deploy from before ungated services stopped getting
+ * one), none on a gated service, or one pointing at an old check URL (the
+ * dashboard's container name before the `homerun-auth` alias).
+ */
+export function loginWallDrifted(
+	labels: Record<string, string>,
+	expectedAddress: string | null,
+): boolean {
+	const addresses = Object.entries(labels)
+		.filter(([key]) => key.endsWith(".forwardauth.address"))
+		.map(([, value]) => value);
+	if (expectedAddress === null) {
+		return addresses.length > 0;
+	}
+	return (
+		addresses.length === 0 ||
+		addresses.some((address) => address !== expectedAddress)
+	);
+}

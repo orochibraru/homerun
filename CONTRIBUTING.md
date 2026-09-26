@@ -152,7 +152,15 @@ new files up on its next build and seeds them at boot.
   and checks every field. The schema is generated from the validation code by
   `bun run gen`, never edit it by hand.
 - `image` and `tag` must exist: check with
-  `docker manifest inspect <image>:<tag>` rather than trusting a README.
+  `docker manifest inspect <image>:<tag>` rather than trusting a README. A tag
+  pinned to a version (`18-alpine`, `8`, `1.2.3`) is bumped weekly by
+  `scripts/bump-template-versions.ts`, keeping its shape; a floating one
+  (`latest`, `stable`) is left alone.
+- Every template must deploy and turn healthy with its defaults: the Templates
+  E2E job deploys each one on a real Docker daemon. Run it locally on yours with
+  `bun run build && TEMPLATES_E2E_ONLY=<slug> bunx playwright test --config playwright.templates.config.ts`.
+  One that genuinely can't run headless (needs hardware, host networking or an
+  external account) goes in that spec's skip list with the reason.
 - `containerPort` is the port the app listens on inside the container, the one
   Traefik routes to.
 - `envVars` holds what the app needs to boot. Secrets get an obvious placeholder

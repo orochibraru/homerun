@@ -293,10 +293,10 @@ then every list/get command, the flag/env overrides, 401/404 exits and logout
 (`bun run test:e2e tests/e2e/bootstrap.spec.ts tests/e2e/onboarding.spec.ts tests/e2e/ui-cli.spec.ts`
 runs it with only the bootstrap and onboarding specs ahead of it; see
 `tests/e2e/README.md` for why it strips `FORCE_COLOR` from the CLI's env). Not
-covered by the specs above: a real deploy (the screenshot pipeline below does
-one, on purpose, and is the only thing here that touches Docker). Add
-browser-level cases here; don't re-prove API shapes `tests/integration/` already
-covers directly and faster.
+covered by the specs above: a real deploy (the screenshot pipeline and the
+template deploys below do, on purpose, and are the only things here that touch
+Docker). Add browser-level cases here; don't re-prove API shapes
+`tests/integration/` already covers directly and faster.
 
 ## Screenshots for the docs (`tests/e2e/screenshots/`, `bun run screenshots`)
 
@@ -354,20 +354,21 @@ config's `testDir` points at the subfolder.
 a `workflow_call` job wired into `pull_request.yaml` (off `code_quality`, in
 parallel with the image builds): it builds from source, pre-pulls the two images
 the seed deploys, captures everything and uploads `docs/images` as an artefact.
-It proves the generator still works and is the only job in CI that performs a
-**real deploy** — `e2e.yaml` can't, because it runs the app as a container with
-no Docker socket. It does **not** commit anything. The capture step is a plain
-`run:` with a step-level `timeout-minutes`, like `e2e.yaml`'s and
-`code_quality.yaml`'s: all four steps used to be wrapped in `nick-fields/retry`
-(one run in six against a shared Postgres failed at the seeding step and passed
-on re-run), and the wrapper was removed because it buried the first attempt's
-output behind two more, which is exactly what you need to read when the failure
-turns out not to be flake. Re-run the job by hand instead.
-`screenshots-refresh.yaml` (`workflow_dispatch`, `contents: write`) calls that
-same workflow, downloads the artefact over `docs/images/`, and commits the
-result with `[skip ci]`, then pings the docs site the way `docs-update.yaml`
-does — `[skip ci]` stops the push from re-running the whole publish pipeline,
-and a `GITHUB_TOKEN` push wouldn't trigger `docs-update.yaml` anyway.
+It proves the generator still works and is, with the template deploys below, the
+only job in CI that performs a **real deploy** — `e2e.yaml` can't, because it
+runs the app as a container with no Docker socket. It does **not** commit
+anything. The capture step is a plain `run:` with a step-level
+`timeout-minutes`, like `e2e.yaml`'s and `code_quality.yaml`'s: all four steps
+used to be wrapped in `nick-fields/retry` (one run in six against a shared
+Postgres failed at the seeding step and passed on re-run), and the wrapper was
+removed because it buried the first attempt's output behind two more, which is
+exactly what you need to read when the failure turns out not to be flake. Re-run
+the job by hand instead. `screenshots-refresh.yaml` (`workflow_dispatch`,
+`contents: write`) calls that same workflow, downloads the artefact over
+`docs/images/`, and commits the result with `[skip ci]`, then pings the docs
+site the way `docs-update.yaml` does — `[skip ci]` stops the push from
+re-running the whole publish pipeline, and a `GITHUB_TOKEN` push wouldn't
+trigger `docs-update.yaml` anyway.
 
 **The gallery refreshes once per stable release, not per merge.**
 `publish.yaml`'s `stable-screenshots` job calls `screenshots-refresh.yaml` (also
@@ -412,3 +413,58 @@ assert the _page's own chrome_ renders — which is exactly what a blocking `loa
 used to withhold — and the failed branch of `AsyncBlock` is covered
 deterministically in `tests/unit/app/async-block.test.ts` instead. A first pass
 that asserted the failure alert passed in CI and failed on a dev machine.
+
+## Template deploys (`tests/e2e/templates/`, `playwright.templates.config.ts`)
+
+Deploys every built-in template, one Playwright test each, on a real Docker
+daemon and checks it comes up healthy. Same harness as the screenshots (the
+shared `globalSetup`, local-process app and worker, no `E2E_IMAGE`), its own
+config because it's slow (an hour-plus for the whole catalog) and needs a
+socket. `playwright.config.ts` ignores `templates/**`.
+
+```sh
+bun run build
+TEMPLATES_E2E_ONLY=redis,umami bunx playwright test --config playwright.templates.config.ts
+```
+
+- **A `setup` project signs up and finishes onboarding once**, saving
+  `test-results/templates-auth.json`; the `templates` project depends on it and
+  runs `fullyParallel` with `TEMPLATES_E2E_WORKERS` workers (3 by default: the
+  job queue has 3 slots) and `retries: 1`.
+- **A second `globalSetup`, `templates/traefik.ts`, runs a throwaway
+  `traefik:v3`** (`homerun-e2e-traefik`, removed first if a crashed run left it)
+  on the `homerun` network with the docker provider, publishing its `websecure`
+  entrypoint on `E2E_TRAEFIK_PORT` (4443), not 443, so it doesn't collide with a
+  dev Traefik.
+- **Each test**: pre-pulls the template's and companions' images with the
+  `docker` CLI (3 attempts with backoff, and the CLI uses the runner's
+  `docker login`, which the worker's own Engine API pull doesn't), then POSTs
+  the gallery's `?/quickDeploy` form action, the real Quick Deploy path (stack,
+  companions, `{{secret}}`, default data volumes); there's no REST route for
+  deploying a template. It waits on `GET /deployments?limit=1` for each service,
+  companions first; a failed one is redeployed up to twice through
+  `POST /deploy` after `PATCH pullPolicy: missing`, and once a companion was
+  redeployed the primary is redeployed directly, since its queued job was
+  cancelled with the chain. Then every service's current revision must reach
+  `healthy` from the app's own health watch (`GET /revisions`), and every
+  container with Traefik router labels must answer `https://<host>/` through the
+  e2e Traefik (SNI + Host header, self-signed cert accepted) with anything but a
+  5xx or Traefik's own "404 page not found".
+- **Cleanup in `afterEach`** (with 10 more minutes on the clock, so a timed-out
+  test still cleans up): deletes the stack (`?/delete` form action with `force`)
+  or the lone service (`DELETE ?force=true`), `docker rm -f`s any container
+  left, removes every volume the containers mounted, and under `CI` removes the
+  images the test pulled, so a runner's disk survives the catalog. Storage
+  volume rows stay in the throwaway database.
+- **`SKIP` in `deploy.spec.ts`** is the explicit list of templates that can't
+  run headless, each with its reason; they're reported as skipped, never
+  silently dropped.
+- **`templates/report.ts`** prints one line per template at the end (outcome of
+  its last attempt, duration, the route answers or the first error line) and
+  appends the same table to `$GITHUB_STEP_SUMMARY`. A failure also attaches the
+  last 150 log lines of each container.
+
+In CI it's `templates-e2e.yaml` (`workflow_call`, optional `ref` input), called
+from `pull_request.yaml`, `publish.yaml` and `template-versions.yaml`; see
+`packages-and-release.md`. It frees ~30GB of preinstalled toolchains first and
+logs in to Docker Hub when the registry secret is there.

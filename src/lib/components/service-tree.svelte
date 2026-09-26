@@ -2,24 +2,37 @@
 	import { CornerDownRight, Server } from "@lucide/svelte";
 	import type { Snippet } from "svelte";
 	import { resolve } from "$app/paths";
+	import PreviewRows from "$lib/components/preview-rows.svelte";
 	import ServiceTree from "$lib/components/service-tree.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import type { DependencyNode, GraphServiceInfo } from "$lib/service-graph";
+	import type {
+		DependencyNode,
+		GraphServiceInfo,
+		PreviewRow,
+	} from "$lib/service-graph";
 	import type { ContainerStatus } from "$lib/types";
 
 	interface Props {
 		/** Stacks shown on this page: a dependency in any other one is marked as outside. Unset, nothing is. */
 		localStackIds?: Set<string>;
 		nodes: DependencyNode[];
+		/** Pull request previews by parent id, drawn under their parent's row. */
+		previews?: Map<string, PreviewRow[]>;
 		services: Map<string, GraphServiceInfo>;
 		stackNames: Map<string, string>;
 		/** Wraps each row, for the service context menu. */
 		wrapper?: Snippet<[GraphServiceInfo, Snippet]>;
 	}
 
-	const { localStackIds, nodes, services, stackNames, wrapper }: Props =
-		$props();
+	const {
+		localStackIds,
+		nodes,
+		previews,
+		services,
+		stackNames,
+		wrapper,
+	}: Props = $props();
 </script>
 
 <ul class="space-y-1">
@@ -74,6 +87,12 @@
         {:else}
           {@render row()}
         {/if}
+        {#if !node.repeat}
+          <PreviewRows
+            class="mt-1 ml-2 sm:ml-5"
+            previews={previews?.get(node.id) ?? []}
+          />
+        {/if}
         {#if node.children.length > 0}
           <div class="border-border mt-1 ml-2 flex gap-1 border-l pl-1.5 sm:ml-5 sm:pl-2">
             <CornerDownRight class="text-text-subtle mt-2.5 hidden size-3.5 shrink-0 sm:block" />
@@ -81,6 +100,7 @@
               <ServiceTree
                 {localStackIds}
                 nodes={node.children}
+                {previews}
                 {services}
                 {stackNames}
                 {wrapper}
