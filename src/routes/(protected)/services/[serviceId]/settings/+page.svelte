@@ -15,6 +15,7 @@
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { PULL_POLICIES } from "$lib/pull-policy";
+	import { defaultHostname } from "$lib/service-domains";
 	import { isDeployed } from "$lib/service-state";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -127,10 +128,10 @@
         <p class="text-text-subtle mt-1 text-xs">
           {#if svc.dnsResolvable && svc.networkMode !== "host" && svc.defaultDomainEnabled}
             Routed at
-            <span class="text-accent">{values.slug}.{data.baseDomain}</span>
+            <span class="text-accent">{defaultHostname(values.slug, data.stackSlug, data.baseDomain)}</span>
             : redeploy to apply a change.
           {:else if svc.dnsResolvable && svc.networkMode !== "host"}
-            Its own domains are routed, not {values.slug}.{data.baseDomain}.
+            Its own domains are routed, not {defaultHostname(values.slug, data.stackSlug, data.baseDomain)}.
             Other services reach it at
             <span class="text-accent">{values.slug}</span>
             : redeploy to apply a change.

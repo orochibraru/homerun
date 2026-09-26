@@ -1,5 +1,6 @@
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
+import { defaultHostname } from "$lib/service-domains";
 import { CloudflareService } from "./cloudflare.service.ts";
 import type { DnsSyncResult } from "./dns-result.ts";
 import { dashboardHostFrom } from "./docker/dashboard.ts";
@@ -29,13 +30,12 @@ const providers = [
 	},
 ];
 
-/** The public hostname a service resolves at: `<stackSlug->slug|slug>.<baseDomain>`. */
+/** The public hostname a service resolves at, the same `defaultHostname` Traefik routes. */
 export function serviceHostname(
 	slug: string,
 	stackSlug: string | null | undefined,
 ): string {
-	const host = stackSlug ? `${stackSlug}-${slug}` : slug;
-	return `${host}.${config.baseDomain}`;
+	return defaultHostname(slug, stackSlug, config.baseDomain);
 }
 
 /**

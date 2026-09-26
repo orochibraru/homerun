@@ -1,5 +1,6 @@
 (?i)cli
 (?i)deploy's
+(?i)substack's
 (?i)healthchecks?
 (?i)homerun
 (?i)hostnames?
@@ -92,6 +93,7 @@ stdin
 stdout
 storages
 subcommand
+substacks?
 subuid
 sysctl
 systemd

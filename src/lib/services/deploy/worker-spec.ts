@@ -5,6 +5,7 @@ import type { StackDTO } from "$lib/dto/stack-dto";
 import { cloneFailureHint } from "$lib/git-clone-url";
 import { splitImageRef } from "$lib/image-ref";
 import { runtimeOptionsFrom } from "$lib/service-runtime";
+import { stackScopedSlug } from "$lib/slug";
 import {
 	containerCreateTemplate,
 	type RegistryAuth,
@@ -309,7 +310,7 @@ function workloadSpec(ctx: WorkerSpecContext, workload: WorkloadPlan) {
 	const common = {
 		containerPort: svc.containerPort,
 		hostNetwork: workload.networkMode === "host",
-		namePrefix: `homerun-${stack?.slug ? `${stack.slug}-` : ""}${svc.slug}`,
+		namePrefix: `homerun-${stackScopedSlug(stack?.slug, svc.slug)}`,
 		publishesPorts:
 			workload.networkMode !== "host" && svc.publishedPorts.length > 0,
 		slug: svc.slug,

@@ -30,3 +30,18 @@ export async function uniqueSlug(
 	}
 	return candidate;
 }
+
+/**
+ * `slug` scoped to the stack it's created in: prefixed with the stack's slug
+ * (`redis` in the vortex stack → `vortex-redis`), unless it already is or is
+ * the stack's slug itself. Without a stack it's unchanged.
+ */
+export function stackScopedSlug(
+	stackSlug: string | null | undefined,
+	slug: string,
+): string {
+	if (!stackSlug || slug === stackSlug || slug.startsWith(`${stackSlug}-`)) {
+		return slug;
+	}
+	return `${stackSlug}-${slug}`.slice(0, MAX_SLUG_LENGTH).replace(/-+$/, "");
+}

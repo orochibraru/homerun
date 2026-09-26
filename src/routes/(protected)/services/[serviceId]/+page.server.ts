@@ -6,6 +6,7 @@ import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
+import { referencesHost } from "$lib/service-graph";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
@@ -27,15 +28,13 @@ export const load = async ({ params, parent }) => {
 		ServiceDTO.list(),
 	]);
 
-	// A link between two services is an env var pointing at the other one's
-	// internal DNS alias (its slug), which is exactly what the service-link
-	// picker writes : deriving the graph from the env values means it stays
-	// true for hand-written variables too, with no second source of truth to
-	// keep in sync.
 	const references = (
 		from: { envVars: Record<string, string> | null },
 		slug: string,
-	) => Object.values(from.envVars ?? {}).some((value) => value.includes(slug));
+	) =>
+		Object.values(from.envVars ?? {}).some((value) =>
+			referencesHost(value, slug),
+		);
 
 	const others = siblings.filter((other) => other.id !== params.serviceId);
 	const dependsOn = others

@@ -19,7 +19,10 @@ the common path. `logs/` still exists as a **route without a page**: its
 
 Overview now leads with the service's own resource chart and a **Connections**
 panel (what it needs, what needs it, derived from env vars naming another
-service's slug), plus the connection URLs for a datastore image.
+service's slug as a host, `$lib/service-graph.ts`'s `referencesHost`: the slug
+standing alone as a hostname, not merely a substring of a longer value or domain
+— see Stacks' Services tab below, which reads the same graph), plus the
+connection URLs for a datastore image.
 
 ## Routing: dashboard-first, with exactly one public page
 
@@ -214,3 +217,33 @@ deep-linking into `/settings`.
 mirror this pattern (list + `new/` create route + `[id]` detail where
 applicable). `system-logs/` streams the logs of any container in the instance's
 own compose stack, Traefik included (see Docker integration below).
+
+`stacks/` also nests: `new/+page.svelte` accepts `?parentId=`, pre-filling the
+slug as `stackScopedSlug(parent.slug, slugify(name))` and, once created,
+redirecting into the parent's own page rather than `/stacks` (see Nested stacks
+in `services-and-templates.md` for the schema/helpers).
+`[stackId]/+layout.svelte` shows the ancestor chain above the stack's name
+(`ancestorIds`, nearest last) and a **New Substack** button next to the existing
+template/deploy ones; `[stackId]/settings/+page.svelte` has a "Nested in"
+section (a `Select` of every stack that isn't this one or one of its own
+descendants, `?/move` action calling `StackDTO.setParent`).
+
+`[stackId]/+page.svelte`'s Services tab is a dependency graph over the whole
+subtree (this stack plus every nested one, `descendantIds`), not a flat list:
+`+page.server.ts` builds `dependencyMap`/`dependencyForest` (list view) and
+`dependencyLayers` (card view) from `$lib/service-graph.ts` once for the page,
+over every member service plus anything they reference outside the tree. List
+view (`ServiceTree`, one instance per substack section via `flattenStackTree`)
+nests each service's dependencies underneath it, marking one outside the tree
+"in `<stack>`"/"no stack" and one already expanded elsewhere "shown above"
+rather than repeating its subtree. Card view (`StackDiagram`) is the same graph
+as nested boxes per substack, arrows drawn from consumer to dependency with
+`$lib/diagram-edges.ts`'s `edgePaths` (measures each rendered card, spreads
+same-side arrows so none overlap, redrawn on `ResizeObserver`), everything
+outside the tree collected into one "Outside this stack" box, hovering a card
+highlighting only its own edges. Both fall back to `EntityList`'s flat search
+results the moment the search box has anything in it, since a
+matched-and-filtered set has no tree structure worth drawing. `/stacks`' own
+list marks each row with its `substackCount` (`descendantIds(id).length`) and
+shows only top-level stacks unless a search is on
+(`StackDTO.listWithServiceCountsPaged`'s `topLevelOnly`).

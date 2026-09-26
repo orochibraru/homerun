@@ -3099,6 +3099,8 @@ export interface operations {
 						description: string | null;
 						id: string;
 						name: string;
+						/** @description The stack this one is nested in, null at the top level. */
+						parentId: string | null;
 						slug: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -3155,6 +3157,8 @@ export interface operations {
 						description: string | null;
 						id: string;
 						name: string;
+						/** @description The stack this one is nested in, null at the top level. */
+						parentId: string | null;
 						slug: string;
 						/**
 						 * @description ISO 8601 timestamp

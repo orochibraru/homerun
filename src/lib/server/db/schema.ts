@@ -405,6 +405,9 @@ export const stack = pgTable(
 		description: text("description"),
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
+		parentId: text("parent_id").references((): AnyPgColumn => stack.id, {
+			onDelete: "set null",
+		}),
 		// DNS-safe prefix applied to every member service's container name and
 		// subdomain (e.g. "<stackSlug>-<serviceSlug>.<baseDomain>") : see
 		// docker/service.ts's containerName() and docker/labels.ts.

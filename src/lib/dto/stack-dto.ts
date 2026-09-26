@@ -1,4 +1,14 @@
-import { and, count, desc, eq, inArray, ne, type SQL, sql } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	inArray,
+	isNull,
+	ne,
+	type SQL,
+	sql,
+} from "drizzle-orm";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import { deployment, type Stack, service, stack } from "$lib/server/db/schema";
@@ -13,6 +23,7 @@ import {
 	WorkloadDetachError,
 } from "$lib/services/docker/workload-removal";
 import { DockerService } from "$lib/services/docker.service";
+import { wouldCycle } from "$lib/stack-tree";
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
 
@@ -21,12 +32,13 @@ const logger = new Logger("StackDTO");
 export interface NewStackInput {
 	description?: string | null;
 	name: string;
+	parentId?: string | null;
 	slug: string;
 	userId: string;
 }
 
 export type StackUpdateInput = Partial<
-	Pick<Stack, "description" | "name" | "slug">
+	Pick<Stack, "description" | "name" | "parentId" | "slug">
 >;
 
 /** Wraps the `stack` table : see ServiceDTO for the pattern this follows. */
@@ -72,9 +84,14 @@ export class StackDTO extends BaseDTO<Stack> {
 		}));
 	}
 
-	/** One page of `listWithServiceCounts`, searched server-side, plus the unpaged total. */
+	/**
+	 * One page of `listWithServiceCounts`, searched server-side, plus the
+	 * unpaged total. With `topLevelOnly`, substacks are left out unless a
+	 * search is on, so a nested one can still be found.
+	 */
 	static async listWithServiceCountsPaged(
 		query: ListQuery,
+		options: { topLevelOnly?: boolean } = {},
 	): Promise<PagedResult<{ stack: StackDTO; serviceCount: number }>> {
 		const conditions: SQL[] = [];
 		const search = searchCondition(query.q, [
@@ -84,6 +101,8 @@ export class StackDTO extends BaseDTO<Stack> {
 		]);
 		if (search) {
 			conditions.push(search);
+		} else if (options.topLevelOnly) {
+			conditions.push(isNull(stack.parentId));
 		}
 		const where = and(...conditions);
 
@@ -159,6 +178,7 @@ export class StackDTO extends BaseDTO<Stack> {
 			description: input.description ?? null,
 			id: crypto.randomUUID(),
 			name: input.name,
+			parentId: input.parentId ?? null,
 			slug: input.slug,
 			updatedAt: now,
 			userId: input.userId,
@@ -264,5 +284,32 @@ export class StackDTO extends BaseDTO<Stack> {
 	/** The stack's URL-safe slug. */
 	get slug(): string {
 		return this.row.slug;
+	}
+	/** The stack this one is nested in, null for a top-level stack. */
+	get parentId(): string | null {
+		return this.row.parentId;
+	}
+
+	/**
+	 * Nests this stack inside `parentId`, or moves it to the top level with
+	 * null.
+	 *
+	 * @throws Error when the parent doesn't exist, or is this stack or one of
+	 *   its own descendants, which would make a loop.
+	 */
+	async setParent(parentId: string | null): Promise<void> {
+		if (parentId) {
+			const all = await StackDTO.list();
+			if (!all.some((s) => s.id === parentId)) {
+				throw new Error("That parent stack doesn't exist.");
+			}
+			const parents = new Map(all.map((s) => [s.id, s.parentId]));
+			if (wouldCycle(this.row.id, parentId, parents)) {
+				throw new Error(
+					"A stack can't be nested inside itself or one of its own substacks.",
+				);
+			}
+		}
+		await this.update({ parentId });
 	}
 }

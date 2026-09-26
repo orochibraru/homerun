@@ -19,6 +19,9 @@ describe("service domains", () => {
 	test("the default hostname carries the stack's slug", () => {
 		expect(defaultHostname("app", null, base)).toBe("app.example.com");
 		expect(defaultHostname("app", "shop", base)).toBe("shop-app.example.com");
+		expect(defaultHostname("shop-app", "shop", base)).toBe(
+			"shop-app.example.com",
+		);
 	});
 
 	test("routes the default hostname first, then the service's own domains", () => {

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { suffixedSlug, uniqueSlug } from "../../../src/lib/slug";
+import {
+	stackScopedSlug,
+	suffixedSlug,
+	uniqueSlug,
+} from "../../../src/lib/slug";
 
 function takenSet(...slugs: string[]): (slug: string) => Promise<boolean> {
 	const taken = new Set(slugs);
@@ -43,5 +47,15 @@ describe("uniqueSlug", () => {
 		const base = "a".repeat(63);
 		const slug = await uniqueSlug(base, takenSet(base));
 		expect(slug).toBe(`${"a".repeat(61)}-2`);
+	});
+});
+
+describe("stackScopedSlug", () => {
+	test("a service created in a stack is prefixed with the stack's slug, once", () => {
+		expect(stackScopedSlug("vortex", "redis")).toBe("vortex-redis");
+		expect(stackScopedSlug("vortex", "vortex-redis")).toBe("vortex-redis");
+		expect(stackScopedSlug("vortex", "vortex")).toBe("vortex");
+		expect(stackScopedSlug(null, "redis")).toBe("redis");
+		expect(stackScopedSlug("a".repeat(40), "b".repeat(40))).toHaveLength(63);
 	});
 });

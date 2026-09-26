@@ -50,11 +50,20 @@ to pick an address to advertise: the installer passes the default-route address
 again.
 
 Services reach each other at `http://<slug>:<port>` in both modes: a swarm
-service joins the overlay with its slug as a network alias. Named volumes and
-bind mounts work the same way as in standalone mode, and
-[host networking](networking.md) attaches the service to the host's network
-instead of the overlay. What swarm mode doesn't do, and the Docker settings tab
-lists too:
+service joins the overlay with its slug as a network alias. A Docker race during
+a rolling update can drop that alias (the old task shuts down and un-registers
+it after the new one already re-registered it), so only the full
+`homerun-<slug>-<hash>` name resolves and every link to it by slug fails, even
+though the service itself is healthy. Every 5 minutes Homerun checks whether
+each running swarm service's slug still resolves, and force-restarts one that
+doesn't (which re-registers the alias) — at most once an hour per service, and
+it says so in the notification feed. That's a periodic catch, not an instant
+one: a dropped alias can stay broken for up to 5 minutes, and see
+[Known, real limitations](faq-and-limitations.md#known-real-limitations-not-hypothetical)
+for how thoroughly it's actually been tested. Named volumes and bind mounts work
+the same way as in standalone mode, and [host networking](networking.md)
+attaches the service to the host's network instead of the overlay. What swarm
+mode doesn't do, and the Docker settings tab lists too:
 
 - **Privileged mode and device mappings** are ignored (the swarm API has
   neither, the deploy log says so). Added capabilities do apply.

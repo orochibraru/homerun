@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { Activity, LayoutGrid, Plus, Server, Settings } from "@lucide/svelte";
+	import {
+		Activity,
+		FolderPlus,
+		LayoutGrid,
+		Plus,
+		Server,
+		Settings,
+	} from "@lucide/svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
@@ -41,12 +48,32 @@
 <div class="p-5 md:p-6">
   <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
     <div>
+      {#if data.ancestors.length > 0}
+        <p class="text-text-subtle mb-0.5 text-xs">
+          {#each data.ancestors as ancestor, i (ancestor.id)}
+            <a
+              class="hover:text-text"
+              href={resolve("/(protected)/stacks/[stackId]", {
+                stackId: ancestor.id,
+              })}>{ancestor.name}</a
+            >{i < data.ancestors.length - 1 ? " / " : " /"}
+          {/each}
+        </p>
+      {/if}
       <h1 class="text-text text-lg font-semibold tracking-tight">{stack.name}</h1>
       <p class="text-text-muted mt-0.5 text-xs">
         {stack.description ?? `Services on the ${stack.slug} network.`}
       </p>
     </div>
     <div class="flex flex-wrap gap-2">
+      <Button
+        href="{resolve('/stacks/new')}?parentId={stack.id}"
+        size="sm"
+        variant="outline"
+      >
+        <FolderPlus class="size-3.5" />
+        New Substack
+      </Button>
       <Button
         href="{resolve('/templates')}?stackId={stack.id}"
         size="sm"

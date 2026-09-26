@@ -21,6 +21,7 @@ import { type ParsedCron, parseCronSchedule } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
 import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
 import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
+import { SwarmDnsWatch } from "./cron/swarm-dns-watch.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { StatsSampler } from "./stats/stats-sampler.ts";
@@ -77,6 +78,8 @@ class CronServiceClass {
 
 	private readonly coreServicesWatch = new CoreServicesWatch();
 
+	private readonly swarmDnsWatch = new SwarmDnsWatch();
+
 	/** Parses a 5-field cron expression for schedule-input validation, see `cron-expression.ts`'s `parseCronSchedule`. */
 	parseCronSchedule(schedule: string): ParsedCron | null {
 		return parseCronSchedule(schedule);
@@ -121,6 +124,11 @@ class CronServiceClass {
 	/** Starts the watch that re-asserts the core services every time the worker (re)starts. */
 	startCoreServicesWatch(): void {
 		this.coreServicesWatch.start();
+	}
+
+	/** Starts the watch that restarts a swarm service whose slug dropped out of Docker's DNS. */
+	startSwarmDnsWatch(): void {
+		this.swarmDnsWatch.start();
 	}
 }
 

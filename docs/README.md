@@ -66,7 +66,8 @@ sync by hand.
 
 ## Stacks, templates and storage
 
-- **[Stacks](stacks.md)**: grouping services on a shared private network.
+- **[Stacks](stacks.md)**: grouping services on a shared private network,
+  nesting stacks, and the dependency tree/diagram.
 - **[Templates](templates.md)**: the built-in app catalog, quick deploys, host
   access, linked companion containers, and saving your own.
 - **[Storage volumes](storage-volumes.md)**: bind-mount and Docker-managed

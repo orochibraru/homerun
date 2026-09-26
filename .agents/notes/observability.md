@@ -239,9 +239,11 @@ stack itself, so both deploy exits pass the same `{dep, ok, svc, trigger}`.
 
 ## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `$lib/services/uptime/uptime-probe.ts`)
 
-Two probes a minute per service with `uptimeEnabled` (default true, toggled by
-the Observability tab's `?/setUptime` action or `uptimeEnabled` on the REST
-PATCH) and a live container, run by another `BaseScheduler`:
+Two probes a minute per service with `uptimeEnabled` (default
+`!isDatabaseImage(image)` in `ServiceDTO.create`, so off by default for a
+datastore, toggled by the Observability tab's `?/setUptime` action or
+`uptimeEnabled` on the REST PATCH) and a live container, run by another
+`BaseScheduler`:
 
 - **internal** — asks the container itself, on the Docker network
   (`DockerService.containerAddress`) and its container port. This is what a

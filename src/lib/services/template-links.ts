@@ -10,7 +10,7 @@ import {
 import { Logger } from "$lib/logger";
 import { isDatabaseImage } from "$lib/service-link";
 import type { ServiceRuntimeOptions } from "$lib/service-runtime";
-import { uniqueSlug } from "$lib/slug";
+import { stackScopedSlug, uniqueSlug } from "$lib/slug";
 import {
 	fillSecretInEnv,
 	fillSecretInRuntime,
@@ -213,8 +213,10 @@ export async function createServiceFromTemplate(
 > {
 	const { stackId, userId } = params;
 	const row = template.toJSON();
-	const slug = await uniqueSlug(slugify(row.name), (candidate) =>
-		ServiceDTO.slugTaken(candidate),
+	const stackSlug = stackId ? (await StackDTO.get(stackId))?.slug : null;
+	const slug = await uniqueSlug(
+		stackScopedSlug(stackSlug, slugify(row.name)),
+		(candidate) => ServiceDTO.slugTaken(candidate),
 	);
 	const links = await buildTemplateLinkContext(row.id, slug);
 	const refusal = templateHostAccessRefusal(template, links, params.isAdmin);

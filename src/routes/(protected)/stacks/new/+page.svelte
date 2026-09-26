@@ -8,10 +8,11 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { stackScopedSlug } from "$lib/slug";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
-	const { form } = $props();
+	const { data, form } = $props();
 
 	onMount(() => title.set("New Stack"));
 
@@ -34,7 +35,7 @@
 
 	function onNameInput() {
 		if (!slugTouched) {
-			slug = slugify(name);
+			slug = stackScopedSlug(data.parent?.slug, slugify(name));
 		}
 	}
 
@@ -45,9 +46,13 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-text text-lg font-semibold tracking-tight">New Stack</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">
+      {data.parent ? "New Substack" : "New Stack"}
+    </h1>
     <p class="mt-0.5 text-sm text-text-muted">
-      Group related services together.
+      {data.parent
+        ? `Nested inside ${data.parent.path}.`
+        : "Group related services together."}
     </p>
   </div>
 
@@ -67,6 +72,7 @@
       success: "Stack created.",
     })}
   >
+    <input name="parentId" type="hidden" value={data.parent?.id ?? ""}>
     {#if form?.error}
       <Alert>
         {form.error}

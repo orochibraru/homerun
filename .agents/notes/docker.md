@@ -74,20 +74,24 @@ they now fail for different reasons with different fixes, see
   indiscriminately anymore : status/lifecycle is always by a stored
   `containerId`/`swarmServiceId`, Docker Cleanup's host-wide listing is the one
   deliberate exception, see below), this app must never touch a container it
-  didn't create. When the service belongs to a stack, the public subdomain is
-  `<stackSlug>-<slug>.<baseDomain>` (`stackSlug` param, optional).
-  `serviceHostnames()` (`$lib/service-domains.ts`) resolves the full hostname
-  list — the default hostname first when `defaultDomainEnabled`, then each of
-  `domains` — and one Traefik router is added per hostname (router name `<slug>`
-  for the first, `<slug>-<n>` after it), all pointing at the _same_
-  `traefik.http.services.<slug>` backend, one loadbalancer config, N hostnames
-  reaching it, not a duplicated service block. When `authRequired` is set, a
-  forwardAuth middleware is attached to every router for the service, pointing
-  at `authCheckUrlFor(serviceId)` — `config.authCheckUrl` with a `?service=<id>`
-  query param, so the gate identifies the service from the URL rather than
-  having to resolve `X-Forwarded-Host` back to a slug or domain — plus
-  `authResponseHeaders` for `GATE_IDENTITY_HEADERS`. Because these are labels,
-  turning the wall on or off only takes effect on the next deploy.
+  didn't create. The public subdomain is `<slug>.<baseDomain>`
+  (`defaultHostname`, `$lib/service-domains.ts`); `slug` itself is stack-scoped
+  at creation time (`$lib/slug.ts`'s `stackScopedSlug`: prefixed with the
+  stack's own slug unless it already is one, so a stack's slug is never doubled
+  into the hostname), not re-prefixed again here — see Stack-scoped slugs in
+  `services-and-templates.md`. `serviceHostnames()` (`$lib/service-domains.ts`)
+  resolves the full hostname list — the default hostname first when
+  `defaultDomainEnabled`, then each of `domains` — and one Traefik router is
+  added per hostname (router name `<slug>` for the first, `<slug>-<n>` after
+  it), all pointing at the _same_ `traefik.http.services.<slug>` backend, one
+  loadbalancer config, N hostnames reaching it, not a duplicated service block.
+  When `authRequired` is set, a forwardAuth middleware is attached to every
+  router for the service, pointing at `authCheckUrlFor(serviceId)` —
+  `config.authCheckUrl` with a `?service=<id>` query param, so the gate
+  identifies the service from the URL rather than having to resolve
+  `X-Forwarded-Host` back to a slug or domain — plus `authResponseHeaders` for
+  `GATE_IDENTITY_HEADERS`. Because these are labels, turning the wall on or off
+  only takes effect on the next deploy.
 - `networks.ts`, `DockerNetworkMixin`, per-stack Docker networks.
   `stackNetworkName(stackId)` is deterministic (`homerun-stack-<id>`, no
   separate id stored, stays a plain exported pure function).
@@ -95,16 +99,17 @@ they now fail for different reasons with different fixes, see
   worker's `POST`/`DELETE /v1/networks`, called from
   `StackDTO.create`/`cascadeDelete`) →
   `DockerService.ensureStackNetwork`/`removeStackNetwork`. A container actually
-  joining its stack's network under a DNS alias equal to the service's slug (the
-  _internal_ alias is never stack-prefixed, only the container name and public
-  subdomain are, sibling services keep addressing each other by plain slug) is
-  `joinStackNetwork` in the Go worker now, not a TS mixin method at all, same
-  re-assert-on-every-deploy shape as the Go worker's own `ensureBridge()` call
-  for a container deploy (`internal/jobs/deploy/container.go`, formerly
-  `createAndStartContainer`'s own `ensureSharedNetwork()` call, see below): a
-  network a prune or a Docker Cleanup run removed out from under a still-live
-  stack row gets recreated, rather than failing every subsequent deploy with a
-  raw 404 from the Engine.
+  joining its stack's network under a DNS alias equal to the service's slug
+  (sibling services address each other by that plain slug; whether it happens to
+  carry the stack as a prefix depends only on whether `slug` itself does, see
+  Stack-scoped slugs in `services-and-templates.md` — the network alias itself
+  never adds one) is `joinStackNetwork` in the Go worker now, not a TS mixin
+  method at all, same re-assert-on-every-deploy shape as the Go worker's own
+  `ensureBridge()` call for a container deploy
+  (`internal/jobs/deploy/container.go`, formerly `createAndStartContainer`'s own
+  `ensureSharedNetwork()` call, see below): a network a prune or a Docker
+  Cleanup run removed out from under a still-live stack row gets recreated,
+  rather than failing every subsequent deploy with a raw 404 from the Engine.
 - `core-services.ts`, `DockerCoreServicesMixin`, the Traefik container itself :
   `findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`
   (image-only recreate), plus **`applyTraefikFlags(flags)`**, which rewrites
@@ -591,6 +596,24 @@ drifted and lacked the AppArmor profile). Usage:
 `curl -fsSL .../swarm-join.sh | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377`.
 Once joined, the node is schedulable by the swarm itself, nothing in this app
 has to register it.
+
+**Swarm DNS alias watch** (`SwarmDnsWatch`, `cron/swarm-dns-watch.ts`, started
+from `hooks.server.ts`'s `init()` alongside the other cron schedulers, see
+`jobs-and-queue.md`): every 5 minutes, in swarm mode only, it `lookup()`s each
+running swarm service's own slug from inside this process (Docker's embedded DNS
+when the app itself runs in a container). A Docker rolling-update race can drop
+a service's overlay alias when the old task sharing it shuts down after the new
+one registered it — every link written as `<slug>` then fails while only the
+full `homerun-<slug>-<hash>` name still resolves, the actual cause of services
+reporting "can't reach redis" despite correct env vars. `lostAliases()` treats a
+slug as lost only when at least one other service's slug still resolves (if none
+do, this process isn't on the overlay at all — dev, or an unattached container —
+and restarting would fix nothing); a lost one gets `restartSwarmService`d
+(forces a new task, re-registering the alias), at most once an hour per service
+(`RESTART_COOLDOWN_MS`), plus a `NotificationDTO.notify`. Unit-tested with a
+stubbed `resolves()` (`tests/unit/app/swarm-dns-watch.test.ts`); not yet
+exercised against a real alias-drop on a live swarm the way the rootless/rootful
+findings below were.
 
 **Real, tested finding: swarm mode can't run on rootless Docker.** On a rootless
 install (the installer's default at the time), saving Swarm initialised the

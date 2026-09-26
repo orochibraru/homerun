@@ -1,0 +1,148 @@
+import { describe, expect, test } from "bun:test";
+import {
+	dependencyForest,
+	dependencyLayers,
+	dependencyMap,
+	referencesHost,
+} from "../../../src/lib/service-graph";
+import {
+	ancestorIds,
+	descendantIds,
+	flattenStackTree,
+	stackPath,
+	wouldCycle,
+} from "../../../src/lib/stack-tree";
+
+const vortex: {
+	envVars: Record<string, string>;
+	id: string;
+	slug: string;
+}[] = [
+	{
+		envVars: {
+			REDIS_URL: "redis://:pw@vortex-redis:6379",
+			STREMTHRU_URL: "http://stremthru:8080",
+		},
+		id: "server",
+		slug: "vortex-server",
+	},
+	{
+		envVars: {
+			REDIS_URL: "redis://:pw@vortex-redis:6379",
+			VORTEX_URL: "http://vortex-server:7080",
+		},
+		id: "worker",
+		slug: "vortex-worker",
+	},
+	{ envVars: {}, id: "redis", slug: "vortex-redis" },
+	{ envVars: {}, id: "stremthru", slug: "stremthru" },
+	{ envVars: { X: "https://redis.io" }, id: "bare", slug: "redis" },
+];
+
+describe("service dependencies", () => {
+	test("a slug counts only as a whole hostname", () => {
+		expect(
+			referencesHost("redis://:pw@vortex-redis:6379", "vortex-redis"),
+		).toBe(true);
+		expect(referencesHost("vortex-redis:6379", "vortex-redis")).toBe(true);
+		expect(referencesHost("http://vortex-server", "vortex-server")).toBe(true);
+		expect(referencesHost("redis://:pw@vortex-redis:6379", "redis")).toBe(
+			false,
+		);
+		expect(referencesHost("https://redis.io", "redis")).toBe(false);
+	});
+
+	test("edges come from env values pointing at another service's slug", () => {
+		const deps = dependencyMap(vortex);
+		expect(deps.get("server")).toEqual(["redis", "stremthru"]);
+		expect(deps.get("worker")).toEqual(["server", "redis"]);
+		expect(deps.get("bare")).toEqual([]);
+	});
+
+	test("a stack reads as a tree from what nothing depends on down", () => {
+		const deps = dependencyMap(vortex);
+		const forest = dependencyForest(["server", "worker", "redis"], deps);
+		expect(forest.map((n) => n.id)).toEqual(["worker"]);
+		const [worker] = forest;
+		expect(worker?.children.map((n) => [n.id, n.repeat])).toEqual([
+			["server", false],
+			["redis", true],
+		]);
+		expect(worker?.children[0]?.children.map((n) => [n.id, n.repeat])).toEqual([
+			["redis", false],
+			["stremthru", false],
+		]);
+	});
+
+	test("a dependency outside the members isn't expanded", () => {
+		const deps = new Map([
+			["stremthru", ["server"]],
+			["server", ["redis"]],
+		]);
+		expect(dependencyForest(["stremthru"], deps)).toEqual([
+			{
+				children: [{ children: [], id: "server", repeat: false }],
+				id: "stremthru",
+				repeat: false,
+			},
+		]);
+	});
+
+	test("a cycle neither loops nor loses a member", () => {
+		const deps = new Map([
+			["a", ["b"]],
+			["b", ["a"]],
+		]);
+		const forest = dependencyForest(["a", "b"], deps);
+		expect(forest.map((n) => n.id)).toEqual(["a"]);
+		expect(forest[0]?.children[0]?.children[0]).toEqual({
+			children: [],
+			id: "a",
+			repeat: true,
+		});
+		expect(dependencyLayers(["a", "b"], deps).flat().sort()).toEqual([
+			"a",
+			"b",
+		]);
+	});
+
+	test("the diagram puts consumers on top and dependencies below", () => {
+		const deps = dependencyMap(vortex);
+		expect(
+			dependencyLayers(["server", "worker", "redis", "stremthru"], deps),
+		).toEqual([["worker"], ["server"], ["redis", "stremthru"]]);
+	});
+});
+
+describe("nested stacks", () => {
+	const stacks = [
+		{ id: "media", name: "Media", parentId: null, slug: "media" },
+		{ id: "vortex", name: "Vortex", parentId: "media", slug: "vortex" },
+		{ id: "cache", name: "Cache", parentId: "vortex", slug: "cache" },
+		{ id: "gitea", name: "Gitea", parentId: null, slug: "gitea" },
+	];
+	const parents = new Map(stacks.map((s) => [s.id, s.parentId]));
+
+	test("ancestors, descendants and the display path", () => {
+		expect(ancestorIds("cache", parents)).toEqual(["vortex", "media"]);
+		expect(descendantIds("media", stacks)).toEqual(["vortex", "cache"]);
+		expect(stackPath("cache", stacks)).toBe("Media / Vortex / Cache");
+	});
+
+	test("a stack can't be nested under itself or its own substack", () => {
+		expect(wouldCycle("media", "cache", parents)).toBe(true);
+		expect(wouldCycle("media", "media", parents)).toBe(true);
+		expect(wouldCycle("gitea", "cache", parents)).toBe(false);
+	});
+
+	test("the flattened tree lists each parent before its children", () => {
+		expect(
+			flattenStackTree(stacks).map(({ depth, stack }) => [stack.id, depth]),
+		).toEqual([
+			["gitea", 0],
+			["media", 0],
+			["vortex", 1],
+			["cache", 2],
+		]);
+	});
+});

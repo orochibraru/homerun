@@ -4,11 +4,54 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
+import { descendantIds, stackPath } from "$lib/stack-tree";
 
 const logger = new Logger("Stacks");
 const SLUG_RE = /^[a-z0-9-]{1,63}$/;
 
+export const load = async ({ params, parent }) => {
+	await parent();
+	const stacks = (await StackDTO.list()).map((s) => ({
+		id: s.id,
+		name: s.name,
+		parentId: s.parentId,
+		slug: s.slug,
+	}));
+	const excluded = new Set([
+		params.stackId,
+		...descendantIds(params.stackId, stacks),
+	]);
+	return {
+		parentOptions: stacks
+			.filter((s) => !excluded.has(s.id))
+			.map((s) => ({ id: s.id, path: stackPath(s.id, stacks) }))
+			.sort((a, b) => a.path.localeCompare(b.path)),
+	};
+};
+
 export const actions = {
+	move: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const stack = await StackDTO.get(params.stackId);
+		if (!stack) {
+			return fail(404, { error: "Stack not found." });
+		}
+		const parentId =
+			((await request.formData()).get("parentId") as string | null) || null;
+		try {
+			await stack.setParent(parentId);
+		} catch (err) {
+			return fail(400, {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+		logger.info(
+			`Stack moved: stack=${stack.id} parent=${parentId ?? "none"} user=${locals.user.id}`,
+		);
+		return { success: true };
+	},
 	delete: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

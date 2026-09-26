@@ -5,11 +5,9 @@ When done delete the entry, no bloat.
 
 ## Small
 
-- [ ] Swarm start-first rollouts can drop the VIP alias from Docker's DNS
-      (Docker 28.5.2): after a redeploy `<slug>` answers SERVFAIL while the
-      service name and `tasks.<slug>` still resolve. Hit on `gitea-redis` and
-      `aiometadata-dragonfly`. Resolve the alias on the overlay after a swarm
-      rollout and re-register (stop-first force update) or fail the deploy.
+- [ ] A tree view on the global `/services` page, like `/stacks/[stackId]`'s
+      Services tab. Skipped there for now because that page is paged and sorted,
+      and a dependency tree needs the whole unpaged set to draw correctly.
 
 - [ ] Run Cloudflare and Pangolin DNS automation against real accounts and fix
       what breaks. Offline audit against the docs and Pangolin 1.23.0 source is
@@ -32,12 +30,6 @@ When done delete the entry, no bloat.
       whatever its name. Today redaction goes by name pattern plus URL passwords
       and password arguments, which misses a secret under an innocent name
       (`TMDB_API`).
-- [ ] Swarm deploys can lose a service's slug alias in Docker's DNS when the old
-      and new task overlap (moby's alias-removal race): only the full service
-      name still resolves, and every link to the slug breaks (AIOMetadata →
-      `aiometadata-dragonfly`, for 8 hours). After a swarm deploy, check from
-      the worker that the slug resolves on the overlay and force-update the
-      service once if it doesn't.
 
 ## Large
 

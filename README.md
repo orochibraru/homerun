@@ -103,7 +103,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 
 - **[Stacks](docs/stacks.md)**: group services on their own private Docker
   network so they reach each other by slug (`http://api:8080`), with prefixed
-  subdomains and one-step delete of the whole stack
+  subdomains, nested substacks, a dependency tree/diagram of a stack's services,
+  and one-step delete of the whole stack
 - **[~70 built-in templates](docs/templates.md)**: Jellyfin, the *arr stack,
   Pi-hole, Vaultwarden, Grafana, Uptime Kuma, PostgreSQL, Redis, n8n and more,
   with bundled app logos, one-click **Quick Deploy**, and a details page that

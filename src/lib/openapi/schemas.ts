@@ -149,6 +149,9 @@ export const stackResponse = z.object({
 	description: z.string().nullable(),
 	id: z.string(),
 	name: z.string(),
+	parentId: z.string().nullable().meta({
+		description: "The stack this one is nested in, null at the top level.",
+	}),
 	slug: z.string(),
 	updatedAt: isoTimestamp,
 	userId: z.string(),

@@ -23,6 +23,8 @@
 	import PanelHeader from "$lib/components/panel-header.svelte";
 	import RegistryFields from "$lib/components/registry-fields.svelte";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { defaultHostname } from "$lib/service-domains";
+	import { stackScopedSlug } from "$lib/slug";
 	import type { WizardData } from "./wizard-types";
 	import { errorClass, label } from "./field-classes";
 
@@ -72,7 +74,7 @@
 
 	function onNameInput() {
 		if (!slugTouched) {
-			slug = slugify(name);
+			slug = stackScopedSlug(data.stackSlug, slugify(name));
 		}
 	}
 
@@ -128,7 +130,7 @@
       />
       <p class="mt-1 text-xs text-text-subtle">
         Routed at
-        <span class="text-accent">{slug || "your-slug"}.{data.baseDomain}</span>
+        <span class="text-accent">{defaultHostname(slug || "your-slug", data.stackSlug, data.baseDomain)}</span>
       </p>
       {#if errors?.slug}
         <p class={errorClass}>{errors.slug[0]}</p>

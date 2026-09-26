@@ -113,7 +113,8 @@ export const load = async ({ url, parent, locals }) => {
 	const stackId = url.searchParams.get("stackId");
 	const templateId = url.searchParams.get("templateId");
 
-	const stack = stackId && (await StackDTO.get(stackId)) ? stackId : null;
+	const stackRow = stackId ? await StackDTO.get(stackId) : null;
+	const stack = stackRow ? stackId : null;
 	const template = templateId ? await TemplateDTO.get(templateId) : null;
 	const [
 		settings,
@@ -155,6 +156,7 @@ export const load = async ({ url, parent, locals }) => {
 				providerUsername: c.providerUsername,
 			})),
 		stackId: stack,
+		stackSlug: stackRow?.slug ?? null,
 		stacks: stacks.map((row) => ({ id: row.id, name: row.name })),
 		template: template
 			? {

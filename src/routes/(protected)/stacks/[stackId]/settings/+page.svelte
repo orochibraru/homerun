@@ -7,6 +7,12 @@
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { title } from "$lib/store/title";
@@ -24,6 +30,7 @@
 	let forceDelete = $state(false);
 	let forceDeleteDialogOpen = $state(false);
 	let detachError = $state("");
+	let parentId = $derived(stack.parentId ?? "");
 </script>
 
 <div>
@@ -87,6 +94,49 @@
             <Check class="size-4" />
           {/if}
           Save
+        </Button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel mb-4 rounded-xl">
+    <div class="panel-head">
+      <h2 class="eyebrow">Nested in</h2>
+    </div>
+    <form
+      action="?/move"
+      class="space-y-4 p-4"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't move the stack.",
+        loading: "Moving the stack",
+        success: "Stack moved.",
+      })}
+    >
+      <input name="parentId" type="hidden" value={parentId}>
+      <div>
+        <label class={label} for="parentId">Parent stack</label>
+        <SelectRoot type="single" bind:value={parentId}>
+          <SelectTrigger class="w-full" id="parentId">
+            {data.parentOptions.find((o) => o.id === parentId)?.path ?? "None, a top-level stack"}
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem label="None, a top-level stack" value="" />
+            {#each data.parentOptions as option (option.id)}
+              <SelectItem label={option.path} value={option.id} />
+            {/each}
+          </SelectContent>
+        </SelectRoot>
+        <p class="text-text-subtle mt-1.5 text-xs">
+          A substack shows inside its parent's page, tree and diagram. Its
+          services keep their own slugs and hostnames; every service still
+          reaches every other by slug, nested or not.
+        </p>
+      </div>
+      <div class="flex justify-end">
+        <Button type="submit">
+          <Check class="size-4" />
+          Move
         </Button>
       </div>
     </form>

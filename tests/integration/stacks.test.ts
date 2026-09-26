@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { expectOk } from "./support/assert";
 import type { ApiClient } from "./support/client";
+import { nativeFetch } from "./support/config";
 import { apiClient, integrationContext } from "./support/context";
 import { StackCleanup } from "./support/stacks";
 
@@ -51,5 +52,58 @@ describe("stacks", () => {
 			body: { name: "Second", slug: s },
 		});
 		expect(second.response.status).toBe(409);
+	});
+});
+
+describe("nested stacks", () => {
+	async function moveStack(stackId: string, parentId: string) {
+		const { apiKey, origin } = integrationContext();
+		const res = await nativeFetch(
+			`${origin}/stacks/${stackId}/settings?/move`,
+			{
+				body: new URLSearchParams({ parentId }),
+				headers: {
+					accept: "application/json",
+					"content-type": "application/x-www-form-urlencoded",
+					origin,
+					"x-api-key": apiKey,
+				},
+				method: "POST",
+			},
+		);
+		return (await res.json()) as { type: string };
+	}
+
+	async function create(name: string) {
+		const created = await client.POST("/stacks", {
+			body: { name, slug: slug(name.toLowerCase()) },
+		});
+		const stack = expectOk(created.data, created.response);
+		cleanup.track(stack.id);
+		return stack;
+	}
+
+	async function parentOf(id: string): Promise<string | null> {
+		const listed = await client.GET("/stacks", {
+			params: { query: { perPage: "100" } },
+		});
+		const stacks = expectOk(listed.data, listed.response) as {
+			id: string;
+			parentId: string | null;
+		}[];
+		return stacks.find((s) => s.id === id)?.parentId ?? null;
+	}
+
+	test("a stack nests under another, never under its own substack", async () => {
+		const media = await create("Media");
+		const vortex = await create("Vortex");
+		expect((await moveStack(vortex.id, media.id)).type).toBe("success");
+		expect(await parentOf(vortex.id)).toBe(media.id);
+
+		expect((await moveStack(media.id, vortex.id)).type).toBe("failure");
+		expect(await parentOf(media.id)).toBeNull();
+
+		expect((await moveStack(vortex.id, "")).type).toBe("success");
+		expect(await parentOf(vortex.id)).toBeNull();
 	});
 });

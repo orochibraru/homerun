@@ -243,6 +243,7 @@ export const init = async () => {
 	CronService.startMirrorGcScheduler();
 	CronService.startGitPollScheduler();
 	CronService.startCoreServicesWatch();
+	CronService.startSwarmDnsWatch();
 };
 
 /**

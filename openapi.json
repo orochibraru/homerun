@@ -7611,6 +7611,17 @@
 											"name": {
 												"type": "string"
 											},
+											"parentId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The stack this one is nested in, null at the top level."
+											},
 											"slug": {
 												"type": "string"
 											},
@@ -7628,6 +7639,7 @@
 											"description",
 											"id",
 											"name",
+											"parentId",
 											"slug",
 											"updatedAt",
 											"userId"
@@ -7727,6 +7739,17 @@
 										"name": {
 											"type": "string"
 										},
+										"parentId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The stack this one is nested in, null at the top level."
+										},
 										"slug": {
 											"type": "string"
 										},
@@ -7744,6 +7767,7 @@
 										"description",
 										"id",
 										"name",
+										"parentId",
 										"slug",
 										"updatedAt",
 										"userId"

@@ -226,7 +226,13 @@ OIDC provider in `auth.md`) plus:
   alongside the row and removed on cascade-delete. Account deletion hands stacks
   over to another account (`UserService.cleanupUserResources`, see Shared
   resources below); only the last account's deletion removes their networks
-  before `stack.userId`'s `onDelete: "cascade"` drops the rows.
+  before `stack.userId`'s `onDelete: "cascade"` drops the rows. `parentId`
+  (nullable self-FK, `onDelete: "set null"`) nests a stack inside another, to
+  any depth; `StackDTO.setParent` refuses a cycle (`$lib/stack-tree.ts`'s
+  `wouldCycle`/`ancestorIds`). Nesting is purely a grouping/display
+  relationship, not a network one: a substack keeps its own Docker network and
+  its members' slugs are unprefixed by the parent, see Stack-scoped slugs in
+  `services-and-templates.md` and Stacks in `routing.md`.
 - `stat_sample`, one point on the resource graphs: `serviceId` (null = the host
   itself), CPU%, memory, the cumulative network counters and a timestamp,
   written every minute by `StatsSampler` and read back bucketed per range. See

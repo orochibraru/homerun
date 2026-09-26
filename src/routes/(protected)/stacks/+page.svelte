@@ -146,6 +146,10 @@
             <Server class="size-3.5" />
             {stack.serviceCount}
             {serviceLabel(stack.serviceCount)}
+            {#if stack.substackCount > 0}
+              · {stack.substackCount}
+              {stack.substackCount === 1 ? "substack" : "substacks"}
+            {/if}
           </span>
         {/if}
       {/snippet}
@@ -155,7 +159,7 @@
           description: stack.description,
           href: stackHref(stack.id),
           id: stack.id,
-          title: stack.name,
+          title: stack.path,
         }))}
         {media}
         {meta}

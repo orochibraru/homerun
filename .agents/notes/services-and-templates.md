@@ -17,6 +17,37 @@ since two services only reach each other by slug once they share one. It moves
 them into whichever stack either is already in, and creates one named after the
 source otherwise.
 
+## Nested stacks and stack-scoped slugs
+
+`stack.parentId` (self-FK, `onDelete: "set null"`, see Data model in
+`data-and-config.md`) nests a stack inside another, to any depth. It's a pure
+grouping/display relationship: a substack keeps its own Docker network, and
+nesting changes nothing about how services reach each other (still plain slug,
+same as any two stacks). `$lib/stack-tree.ts` holds the pure helpers:
+`ancestorIds`/`wouldCycle` (used by `StackDTO.setParent` to refuse nesting a
+stack inside itself or one of its own descendants), `descendantIds` (a stack's
+own settings page excludes itself and its descendants from the "Nested in"
+picker, `stacks/[stackId]/settings/+page.server.ts`), `stackPath`
+(`Media / Vortex`, the picker's option labels and the breadcrumb above a
+substack's title) and `flattenStackTree` (indented list order, parent before
+children, siblings by name). `/stacks` lists only top-level stacks
+(`StackDTO.listWithServiceCountsPaged`'s `topLevelOnly` option, dropped the
+moment a search is on, so a nested stack is still findable) with each row's
+`substackCount`; a stack's own page shows a **New Substack** button
+(`/stacks/new?parentId=`).
+
+A service created inside a stack — from the wizard or from a template, including
+a template's linked companions — gets that stack's slug as a prefix:
+`$lib/slug.ts`'s `stackScopedSlug(stackSlug, slug)` is `${stackSlug}-${slug}`,
+unless `slug` already is or already starts with `${stackSlug}-` (so resubmitting
+a form, or a template link building on an already-scoped primary slug, never
+doubles the prefix). `$lib/service-domains.ts`'s `defaultHostname` no longer
+prefixes on its own, it just calls `stackScopedSlug` : the public subdomain is
+`<slug>.<baseDomain>` where `slug` is already scoped, not
+`<stackSlug>-<slug>.<baseDomain>` layered on top. `dns.service.ts`'s
+`serviceHostname` calls the same `defaultHostname` rather than re-deriving the
+prefix, one source of truth for the hostname a service resolves at.
+
 ## Where creating something lands you
 
 Every create path ends on the thing it just made, not on a list: the wizard's

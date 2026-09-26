@@ -1,3 +1,4 @@
+import { stackScopedSlug } from "$lib/slug";
 export const DOMAIN_RE =
 	/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
@@ -14,7 +15,7 @@ export function defaultHostname(
 	stackSlug: string | null | undefined,
 	baseDomain: string,
 ): string {
-	return `${stackSlug ? `${stackSlug}-${slug}` : slug}.${baseDomain}`;
+	return `${stackScopedSlug(stackSlug, slug)}.${baseDomain}`;
 }
 
 /** Every hostname Traefik routes to the service: the default one first when it's kept, then the service's own domains. */

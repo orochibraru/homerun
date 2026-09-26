@@ -12,6 +12,7 @@
 	import Alert from "$lib/components/alert.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { runtimeOptionsSummary } from "$lib/service-runtime";
+	import { stackScopedSlug } from "$lib/slug";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import BasicInfoStep, { slugify } from "./basic-info-step.svelte";
@@ -48,7 +49,10 @@
 	let currentStep = $state(0);
 
 	let slug = $derived(
-		values?.slug ?? (data.template ? slugify(data.template.name) : ""),
+		values?.slug ??
+			(data.template
+				? stackScopedSlug(data.stackSlug, slugify(data.template.name))
+				: ""),
 	);
 	let image = $derived(values?.image ?? data.template?.image ?? "");
 	let submittingAction = $state<"create" | "createAndDeploy" | null>(null);

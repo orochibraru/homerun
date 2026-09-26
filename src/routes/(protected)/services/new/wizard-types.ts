@@ -19,6 +19,7 @@ export interface WizardData {
 	connectedGitProviders: ComponentProps<typeof GitSourceFields>["providers"];
 	linkableServices: ComponentProps<typeof ServiceLinkPicker>["services"];
 	stackId: string | null;
+	stackSlug: string | null;
 	stacks: ComponentProps<typeof ServiceLinkPicker>["stacks"];
 	template: WizardTemplate | null;
 }

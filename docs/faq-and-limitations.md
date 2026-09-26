@@ -76,6 +76,12 @@ are dropped with a warning. See [Importing a compose file](compose-import.md).
 - **Swarm mode ignores privileged mode and devices** and doesn't give a stack
   its own network. With several nodes, volumes are per node and locally built
   images need a build cache registry. See [Swarm mode](swarm-mode.md).
+- **A dropped swarm DNS alias can take up to 5 minutes to self-heal, and at most
+  once an hour per service.** Homerun's watch for this (see
+  [Swarm mode](swarm-mode.md)) only unit-tests the restart logic itself, it
+  hasn't been run against a real alias drop on a live swarm; if a service can't
+  reach another by slug right after a rolling update, that's the known window,
+  not a new bug.
 - **Cloudflare and Pangolin DNS automation haven't been tried against real
   accounts.** Every deploy writes what each provider did into its log, so read
   the first one. Point Pangolin at its **Integration API** (its own port, base
