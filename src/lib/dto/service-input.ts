@@ -108,6 +108,8 @@ export type ServiceUpdateInput = Partial<
 		| "gitLastSeenCommit"
 		| "previewsEnabled"
 		| "previewPrTitle"
+		| "previewDefaultDomain"
+		| "previewDomainTemplate"
 		| "previewBranch"
 		| "healthcheckCommand"
 		| "healthcheckDisabled"

@@ -57,11 +57,16 @@ both halves (a published page is readable signed out and leaks none of that; an
 unpublished one 404s).
 
 The sidebar nav is grouped into four labeled categories (`category` on each item
-in `(protected)/+layout.svelte`'s nav array, color-coded per category, see
-Appearance preferences below for the per-user "single accent color" override):
+in `(protected)/nav-items.ts`, color-coded per category, see Appearance
+preferences below for the per-user "single accent color" override):
 
 - **Workspace**: **Overview** (dashboard stats + recent deployments),
-  **Services**, **Stacks**, **Templates**, **Cron Jobs** (user-defined scheduled
+  **Services**, **Deployments** (`/deployments`, every deploy/rollback across
+  all services, paged by `DeploymentDTO.listPaged` with `status`/`trigger`
+  filters; the trigger comes from the deploy job's payload via a correlated
+  subquery, since the `deployment` row doesn't store one, so it's lost once
+  `JobDTO.prune` drops the job; the dashboard's Recent Deployments "View all"
+  links here), **Stacks**, **Templates**, **Cron Jobs** (user-defined scheduled
   tasks, see Cron jobs below), **Status Page** (service health and the public
   pages themselves, see Status pages in `services-and-templates.md`).
 - **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",

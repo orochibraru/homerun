@@ -236,7 +236,7 @@
         </h2>
         <a
           class="text-accent text-xs font-medium hover:underline"
-          href={resolve("/services")}
+          href={resolve("/deployments")}
         >
           View all
         </a>

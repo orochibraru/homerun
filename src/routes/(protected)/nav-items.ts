@@ -11,6 +11,7 @@ import {
 	GitBranch,
 	Globe,
 	HardDrive,
+	History,
 	KeyRound,
 	LayoutDashboard,
 	LayoutGrid,
@@ -40,6 +41,14 @@ export const allNavItems = [
 		href: resolve("/services"),
 		icon: Server,
 		label: "Services",
+	},
+	{
+		adminOnly: false,
+		category: "Workspace",
+		exact: false,
+		href: resolve("/deployments"),
+		icon: History,
+		label: "Deployments",
 	},
 	{
 		adminOnly: false,

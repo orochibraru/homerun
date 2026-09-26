@@ -56,6 +56,8 @@ function row(overrides: Partial<Service> = {}): Service {
 		name: "DB",
 		networkMode: "bridge",
 		portProtocol: "tcp",
+		previewDefaultDomain: true,
+		previewDomainTemplate: null,
 		previewsEnabled: false,
 		primaryDomain: null,
 		privileged: false,

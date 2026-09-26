@@ -25,7 +25,8 @@
   own page has the same table for its members, and a service's Overview tab has
   its own chart.
 - **Recent deployments** across every service, each linking to the service it
-  belongs to.
+  belongs to; **View all** opens the full
+  [deployment history](revisions-and-rollback.md).
 - **Recent errors**, the latest warn/error-level log lines, each linking to the
   service it mentions (or to System Logs when it mentions none). An admin sees
   the instance's most recent errors, including ones that mention no service; a

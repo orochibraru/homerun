@@ -86,6 +86,8 @@ export const serviceResponse = z.object({
 	gitWebhookReconnect: z.boolean(),
 	gitPollEnabled: z.boolean(),
 	gitLastSeenCommit: z.string().nullable(),
+	previewDefaultDomain: z.boolean(),
+	previewDomainTemplate: z.string().nullable(),
 	previewsEnabled: z.boolean(),
 	previewParentId: z.string().nullable(),
 	previewPrNumber: z.number().int().nullable(),

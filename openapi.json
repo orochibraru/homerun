@@ -1330,6 +1330,19 @@
 													}
 												]
 											},
+											"previewDefaultDomain": {
+												"type": "boolean"
+											},
+											"previewDomainTemplate": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"previewParentId": {
 												"anyOf": [
 													{
@@ -1536,6 +1549,8 @@
 											"gitWebhookReconnect",
 											"gitPollEnabled",
 											"gitLastSeenCommit",
+											"previewDefaultDomain",
+											"previewDomainTemplate",
 											"previewsEnabled",
 											"previewParentId",
 											"previewPrNumber",
@@ -2316,6 +2331,19 @@
 												}
 											]
 										},
+										"previewDefaultDomain": {
+											"type": "boolean"
+										},
+										"previewDomainTemplate": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"previewParentId": {
 											"anyOf": [
 												{
@@ -2517,6 +2545,8 @@
 										"gitWebhookReconnect",
 										"gitPollEnabled",
 										"gitLastSeenCommit",
+										"previewDefaultDomain",
+										"previewDomainTemplate",
 										"previewsEnabled",
 										"previewParentId",
 										"previewPrNumber",
@@ -3250,6 +3280,19 @@
 												}
 											]
 										},
+										"previewDefaultDomain": {
+											"type": "boolean"
+										},
+										"previewDomainTemplate": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"previewParentId": {
 											"anyOf": [
 												{
@@ -3451,6 +3494,8 @@
 										"gitWebhookReconnect",
 										"gitPollEnabled",
 										"gitLastSeenCommit",
+										"previewDefaultDomain",
+										"previewDomainTemplate",
 										"previewsEnabled",
 										"previewParentId",
 										"previewPrNumber",
@@ -4361,6 +4406,19 @@
 												}
 											]
 										},
+										"previewDefaultDomain": {
+											"type": "boolean"
+										},
+										"previewDomainTemplate": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"previewParentId": {
 											"anyOf": [
 												{
@@ -4562,6 +4620,8 @@
 										"gitWebhookReconnect",
 										"gitPollEnabled",
 										"gitLastSeenCommit",
+										"previewDefaultDomain",
+										"previewDomainTemplate",
 										"previewsEnabled",
 										"previewParentId",
 										"previewPrNumber",

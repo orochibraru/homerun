@@ -1,13 +1,16 @@
+import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceGitDTO } from "$lib/dto/service-git-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { isCommitSha } from "$lib/git-ref";
 import { type PullRequestEvent, previewSlug } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
+import { renderPreviewDomain, serviceHostnames } from "$lib/service-domains";
+import { isDeployed } from "$lib/service-state";
 import type { ContainerStatus } from "$lib/types";
 import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
-import { serviceHostname } from "./dns.service.ts";
+import { serviceHostname, syncServiceDomainsDns } from "./dns.service.ts";
 import { ServiceLifecycleService } from "./service-lifecycle.service.ts";
 
 const logger = new Logger("Previews");
@@ -16,6 +19,7 @@ export interface PreviewSummary {
 	branch: string | null;
 	gitRef: string | null;
 	hostname: string | null;
+	hostnames: string[];
 	id: string;
 	name: string;
 	prNumber: number;
@@ -66,6 +70,38 @@ function mirroredSettings(parent: ServiceDTO) {
 		registryPasswordEnc: parent.registryPasswordEnc,
 		registryUrl: parent.registryUrl,
 		registryUsername: parent.registryUsername,
+	};
+}
+
+/**
+ * The domains a preview gets from its parent's settings: the templated
+ * domain when the parent has one and no other service already routes it,
+ * and the default `<slug>-pr-<n>` hostname when the parent keeps it or
+ * there'd be nothing routed otherwise.
+ */
+async function previewDomains(
+	parent: ServiceDTO,
+	values: { branch: string | null; pr: number },
+	previewId?: string,
+) {
+	const row = parent.toJSON();
+	const rendered = renderPreviewDomain(row.previewDomainTemplate, {
+		...values,
+		slug: parent.slug,
+	});
+	const taken = rendered
+		? await ServiceDTO.domainTaken([rendered], previewId)
+		: null;
+	if (taken) {
+		logger.warn(
+			`Preview domain already routed to another service, skipped: parent=${parent.id} pr=${values.pr} domain=${taken}`,
+		);
+	}
+	const domains = rendered && !taken ? [rendered] : [];
+	return {
+		defaultDomainEnabled: row.previewDefaultDomain || domains.length === 0,
+		domains,
+		primaryDomain: domains[0] ?? null,
 	};
 }
 
@@ -134,18 +170,22 @@ class PreviewServiceClass {
 		);
 	}
 
-	/** The previews of a service for the Source tab, newest pull request first. */
+	/** The previews of a service for its Previews tab, newest pull request first. */
 	async list(parent: ServiceDTO): Promise<PreviewSummary[]> {
 		const previews = await ServiceGitDTO.listPreviews(parent.id);
 		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
 		return previews.map((preview) => {
 			const row = preview.toJSON();
+			const hostnames = preview.dnsResolvable
+				? serviceHostnames(row, stack?.slug, config.baseDomain)
+				: [];
 			return {
 				branch: row.previewBranch,
 				gitRef: preview.gitRef,
 				hostname: preview.dnsResolvable
-					? serviceHostname(preview.slug, stack?.slug)
+					? (row.primaryDomain ?? serviceHostname(preview.slug, stack?.slug))
 					: null,
+				hostnames,
 				id: preview.id,
 				name: preview.name,
 				prNumber: preview.toJSON().previewPrNumber ?? 0,
@@ -154,6 +194,76 @@ class PreviewServiceClass {
 				title: row.previewPrTitle,
 			};
 		});
+	}
+
+	/**
+	 * Re-applies the parent's preview domain settings to every open preview:
+	 * updates each one's domains, brings DNS in line right away and redeploys
+	 * the ones already deployed so Traefik picks up the new routes. A preview
+	 * the operator gave its own extra domains loses them, the template owns a
+	 * preview's domains.
+	 */
+	async applyDomains(parent: ServiceDTO): Promise<void> {
+		const previews = await ServiceGitDTO.listPreviews(parent.id);
+		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
+		await Promise.all(
+			previews.map(async (preview) => {
+				const row = preview.toJSON();
+				const previous = serviceHostnames(row, stack?.slug, config.baseDomain);
+				await preview.update(
+					await previewDomains(
+						parent,
+						{ branch: row.previewBranch, pr: row.previewPrNumber ?? 0 },
+						preview.id,
+					),
+				);
+				if (preview.dnsResolvable) {
+					void syncServiceDomainsDns(
+						previous,
+						serviceHostnames(preview.toJSON(), stack?.slug, config.baseDomain),
+					);
+				}
+				if (isDeployed(preview)) {
+					await this.#deploy(parent, preview);
+				}
+			}),
+		);
+	}
+
+	/**
+	 * Redeploys one preview of `parent` from its pull request's current ref.
+	 *
+	 * @throws When `previewId` isn't one of `parent`'s previews.
+	 */
+	async redeploy(
+		parent: ServiceDTO,
+		previewId: string,
+	): Promise<PreviewResult> {
+		return await this.#deploy(parent, await this.#own(parent, previewId));
+	}
+
+	/**
+	 * Deletes one preview of `parent` ahead of its pull request closing; the
+	 * next push to that pull request recreates it.
+	 *
+	 * @throws When `previewId` isn't one of `parent`'s previews, or the
+	 * workload can't be removed.
+	 */
+	async delete(parent: ServiceDTO, previewId: string): Promise<void> {
+		const preview = await this.#own(parent, previewId);
+		await ServiceLifecycleService.deleteService(preview);
+		logger.info(
+			`Preview deleted by hand: parent=${parent.id} service=${preview.id}`,
+		);
+	}
+
+	/** The preview `previewId` when it belongs to `parent`, else throws. */
+	async #own(parent: ServiceDTO, previewId: string): Promise<ServiceDTO> {
+		const preview = await ServiceDTO.get(previewId);
+		if (!preview || preview.toJSON().previewParentId !== parent.id) {
+			throw new Error("That preview doesn't belong to this service.");
+		}
+		return preview;
 	}
 
 	/** Creates the preview service for a newly opened pull request and deploys it. */
@@ -174,8 +284,13 @@ class PreviewServiceClass {
 			return { reason: full, status: "ignored" };
 		}
 		const settings = mirroredSettings(parent);
+		const domains = await previewDomains(parent, {
+			branch: event.branch,
+			pr: event.number,
+		});
 		const preview = await ServiceDTO.create({
 			...settings,
+			domains: domains.domains,
 			buildSource: "git",
 			gitRef: ref,
 			image: parent.image,
@@ -194,6 +309,8 @@ class PreviewServiceClass {
 			userId: parent.userId,
 		});
 		await preview.update({
+			defaultDomainEnabled: domains.defaultDomainEnabled,
+			primaryDomain: domains.primaryDomain,
 			authAllowedEmails: settings.authAllowedEmails,
 			authAllowedGroups: settings.authAllowedGroups,
 			authAllowedUserIds: settings.authAllowedUserIds,

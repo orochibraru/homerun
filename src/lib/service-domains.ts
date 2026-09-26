@@ -58,3 +58,51 @@ export function normalizeDomains(raw: readonly string[]): string[] {
 		),
 	];
 }
+
+/** A branch name as one DNS label: lowercased, anything outside `a-z0-9` turned into single dashes, trimmed of dashes and cut to 63 characters. */
+export function branchLabel(branch: string): string {
+	return (
+		branch
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/^-+|-+$/g, "")
+			.slice(0, 63)
+			.replace(/-+$/, "") || "branch"
+	);
+}
+
+/**
+ * A preview's hostname from its parent's domain template: `{pr}` becomes the
+ * pull request number, `{branch}` its branch as one DNS label (`feat/login`
+ * becomes `feat-login`), `{slug}` the parent's slug. Null for a blank template.
+ */
+export function renderPreviewDomain(
+	template: string | null | undefined,
+	values: { branch: string | null; pr: number; slug: string },
+): string | null {
+	const trimmed = template?.trim().toLowerCase();
+	if (!trimmed) {
+		return null;
+	}
+	return trimmed
+		.replaceAll("{pr}", String(values.pr))
+		.replaceAll("{branch}", branchLabel(values.branch ?? `pr-${values.pr}`))
+		.replaceAll("{slug}", values.slug);
+}
+
+/** Why a preview domain template can't be used, or null when it's fine: it must name `{pr}` or `{branch}` so each preview gets its own hostname, and render to a valid domain. */
+export function previewDomainTemplateProblem(template: string): string | null {
+	const trimmed = template.trim().toLowerCase();
+	if (!(trimmed.includes("{pr}") || trimmed.includes("{branch}"))) {
+		return "The template needs {pr} or {branch}, or every preview would get the same domain.";
+	}
+	const sample = renderPreviewDomain(trimmed, {
+		branch: "feature-branch",
+		pr: 123,
+		slug: "app",
+	});
+	if (!(sample && DOMAIN_RE.test(sample))) {
+		return `"${template.trim()}" doesn't make a valid domain (it renders to "${sample}").`;
+	}
+	return null;
+}

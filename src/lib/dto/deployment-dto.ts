@@ -6,9 +6,14 @@ import {
 	gt,
 	inArray,
 	isNotNull,
+	isNull,
 	lte,
 	ne,
+	or,
+	type SQL,
+	sql,
 } from "drizzle-orm";
+import { DEPLOY_TRIGGERS } from "$lib/deploy-trigger";
 import type { RevisionConfig } from "$lib/revision-config";
 import {
 	CLEARED_ON_SUPERSEDE,
@@ -16,8 +21,19 @@ import {
 	retainedRevisions,
 } from "$lib/revisions";
 import { db } from "$lib/server/db/lib";
-import { type Deployment, deployment, service } from "$lib/server/db/schema";
-import type { RevisionHealth } from "$lib/types";
+import {
+	type Deployment,
+	deployment,
+	service,
+	user,
+} from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	narrowFilter,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
+import type { ContainerStatus, RevisionHealth } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 import { InstanceSettingsDTO } from "./instance-settings-dto";
 
@@ -30,6 +46,7 @@ export interface NewDeploymentInput {
 	rollbackOfDeploymentId?: string | null;
 	serviceId: string;
 	status: Deployment["status"];
+	trigger?: Deployment["trigger"];
 	userId: string;
 }
 
@@ -52,6 +69,22 @@ export type DeploymentUpdateInput = Partial<
 		| "status"
 	>
 >;
+
+const DEPLOYMENT_STATUSES: readonly ContainerStatus[] = [
+	"pending",
+	"pulling",
+	"starting",
+	"running",
+	"stopped",
+	"failed",
+];
+
+export interface DeploymentHistoryRow {
+	deployment: DeploymentDTO;
+	serviceName: string;
+	serviceSlug: string;
+	userName: string | null;
+}
 
 /** Wraps the `deployment` table : see ServiceDTO for the pattern this follows. */
 export class DeploymentDTO extends BaseDTO<Deployment> {
@@ -305,6 +338,85 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	}
 
 	/**
+	 * One page of every deployment across all services, newest first, for the
+	 * deployment history page. Searches service name/slug, image, git ref and
+	 * commit and the error; filters on `status` and `trigger` (`rollback`
+	 * matches any deploy with a rollback target, the others the recorded
+	 * trigger).
+	 */
+	static async listPaged(
+		query: ListQuery,
+	): Promise<PagedResult<DeploymentHistoryRow>> {
+		const conditions: SQL[] = [];
+		const search = searchCondition(query.q, [
+			service.name,
+			service.slug,
+			deployment.imageRef,
+			deployment.gitRef,
+			deployment.gitCommit,
+			deployment.errorMessage,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+		const statuses = narrowFilter(query.filters.status, DEPLOYMENT_STATUSES);
+		if (statuses.length > 0) {
+			conditions.push(inArray(deployment.status, statuses));
+		}
+		const triggers = query.filters.trigger ?? [];
+		const deployTriggers = narrowFilter(triggers, DEPLOY_TRIGGERS);
+		const triggerParts: SQL[] = [];
+		if (triggers.includes("rollback")) {
+			triggerParts.push(isNotNull(deployment.rollbackOfDeploymentId));
+		}
+		if (deployTriggers.length > 0) {
+			triggerParts.push(
+				and(
+					isNull(deployment.rollbackOfDeploymentId),
+					inArray(deployment.trigger, deployTriggers),
+				) as SQL,
+			);
+		}
+		if (triggers.length > 0) {
+			conditions.push(or(...triggerParts) ?? sql`false`);
+		}
+		const where = and(...conditions);
+
+		const [rows, totals] = await Promise.all([
+			db
+				.select({
+					row: deployment,
+					serviceName: service.name,
+					serviceSlug: service.slug,
+					userName: user.name,
+				})
+				.from(deployment)
+				.innerJoin(service, eq(deployment.serviceId, service.id))
+				.leftJoin(user, eq(deployment.userId, user.id))
+				.where(where)
+				.orderBy(desc(deployment.createdAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db
+				.select({ total: count() })
+				.from(deployment)
+				.innerJoin(service, eq(deployment.serviceId, service.id))
+				.where(where),
+		]);
+		return {
+			items: rows.map((r) => ({
+				deployment: new DeploymentDTO(r.row),
+				serviceName: r.serviceName,
+				serviceSlug: r.serviceSlug,
+				userName: r.userName,
+			})),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
+	}
+
+	/**
 	 * Inserts a new deployment row with an empty log, using the caller's
 	 * pre-generated id when one is given.
 	 */
@@ -331,6 +443,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			serviceId: input.serviceId,
 			startedAt: now,
 			status: input.status,
+			trigger: input.trigger ?? null,
 			userId: input.userId,
 		};
 		await db.insert(deployment).values(row);

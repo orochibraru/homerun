@@ -1364,7 +1364,19 @@ else, close included: a fork PR's code would run with the parent's env vars. An
 `ServiceLifecycleService.deleteService`, which also deletes every preview first
 when the parent is deleted; turning previews off calls `removeAll`. Volumes,
 domains, cron, status checks and host networking are deliberately not copied.
-The Source tab lists them via `PreviewService.list`. The finders live in
+They live on the service's own Previews tab (`services/[serviceId]/previews/`,
+shown only for a git service that isn't a preview itself), which owns the
+`previewsEnabled` toggle (and its `GitWebhookService.sync`/`removeAll`); the
+Source tab only forces it off when the service stops building from git.
+`previewDomainTemplate` (`{pr}`, `{branch}` via `branchLabel`, `{slug}`,
+rendered by `renderPreviewDomain` in `$lib/service-domains.ts`, validated by
+`previewDomainTemplateProblem`) and `previewDefaultDomain` pick a new preview's
+`domains`/`defaultDomainEnabled`/`primaryDomain` in `#create`; a templated
+domain another service already routes is skipped and the default hostname forced
+on. `#refresh` never touches domains; `applyDomains` re-applies them to every
+open preview (DNS synced, deployed ones redeployed) when the tab saves a changed
+template or default-hostname flag, overwriting hand-added domains.
+`redeploy`/`delete` check `previewParentId` before acting. The finders live in
 `ServiceGitDTO` (`$lib/dto/service-git-dto.ts`), which extends `ServiceDTO` only
 to reach its protected constructor, to keep `service-dto.ts` under the file
 length limit. **Not verified against real providers**, same caveat as

@@ -16,6 +16,7 @@ export const TEMPLATE_CATEGORIES = [
 	{ label: "Reading", value: "reading" },
 	{ label: "Security", value: "security" },
 	{ label: "Storage", value: "storage" },
+	{ label: "Website", value: "website" },
 	{ label: "Other", value: "other" },
 ] as const;
 

@@ -2,10 +2,8 @@
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import CopyBox from "$lib/components/copy-box.svelte";
-	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import type { PushWebhookDetails } from "$lib/services/git-webhook.service";
-	import type { PreviewSummary } from "$lib/services/preview.service";
 
 	interface Props {
 		autoDeployOnPush: boolean;
@@ -13,11 +11,8 @@
 		gitRef: string;
 		labelClass: string;
 		previewOf: { id: string; name: string } | null;
-		previews: PreviewSummary[];
-		previewsEnabled: boolean;
 		pushWebhook: PushWebhookDetails | null;
 		serviceId: string;
-		serviceSlug: string;
 	}
 
 	let {
@@ -26,11 +21,8 @@
 		gitRef,
 		labelClass,
 		previewOf,
-		previews,
-		previewsEnabled = $bindable(),
 		pushWebhook,
 		serviceId,
-		serviceSlug,
 	}: Props = $props();
 
 	const reconnectHref = $derived(
@@ -101,7 +93,7 @@
     This service is a pull request preview of
     <a
       class="text-accent underline"
-      href={resolve("/(protected)/services/[serviceId]/source", {
+      href={resolve("/(protected)/services/[serviceId]/previews", {
         serviceId: previewOf.id,
       })}
     >
@@ -109,36 +101,16 @@
     </a>. It follows the pull request and is removed when it closes.
   </p>
 {:else}
-  <CheckBox
-    helperText={`Every pull request opened on the repo gets its own service at ${serviceSlug}-pr-<number>, built from the pull request's head, redeployed on every push to it and removed when it's closed or merged. Needs the webhook.`}
-    id="previewsEnabled"
-    label="Pull request previews"
-    name="previewsEnabled"
-    bind:checked={previewsEnabled}
-  />
-  {#if previews.length > 0}
-    <div class="border-border divide-border divide-y rounded-md border">
-      {#each previews as preview (preview.id)}
-        <div class="flex flex-wrap items-center gap-3 px-4 py-3">
-          <div class="min-w-0 flex-1">
-            <a
-              class="text-text text-sm font-medium hover:underline"
-              href={resolve("/(protected)/services/[serviceId]", {
-                serviceId: preview.id,
-              })}
-            >
-              #{preview.prNumber} {preview.title ?? preview.name}
-            </a>
-            <p class="text-text-muted truncate text-xs">
-              {preview.branch ?? preview.gitRef}
-              {#if preview.hostname}
-                · {preview.hostname}
-              {/if}
-            </p>
-          </div>
-          <StatusBadge status={preview.status} />
-        </div>
-      {/each}
-    </div>
-  {/if}
+  <p class="text-text-muted text-xs">
+    Pull request previews are on the
+    <a
+      class="text-accent underline"
+      href={resolve("/(protected)/services/[serviceId]/previews", {
+        serviceId,
+      })}
+    >
+      Previews
+    </a>
+    tab.
+  </p>
 {/if}

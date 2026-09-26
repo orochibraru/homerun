@@ -12,6 +12,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { BuildMethod } from "$lib/build-methods";
+import type { DeployTrigger } from "$lib/deploy-trigger";
 import type {
 	BlockSeverity,
 	ImageScanFinding,
@@ -930,6 +931,10 @@ export const service = pgTable(
 		gitPollEnabled: boolean("git_poll_enabled").default(false).notNull(),
 		gitLastSeenCommit: text("git_last_seen_commit"),
 		previewsEnabled: boolean("previews_enabled").default(false).notNull(),
+		previewDomainTemplate: text("preview_domain_template"),
+		previewDefaultDomain: boolean("preview_default_domain")
+			.default(true)
+			.notNull(),
 		previewParentId: text("preview_parent_id").references(
 			(): AnyPgColumn => service.id,
 			{ onDelete: "cascade" },
@@ -1062,6 +1067,7 @@ export const deployment = pgTable(
 			.$type<ContainerStatus>()
 			.default("pending")
 			.notNull(),
+		trigger: text("trigger").$type<DeployTrigger>(),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),

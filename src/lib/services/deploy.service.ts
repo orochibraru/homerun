@@ -333,6 +333,7 @@ class DeploymentServiceClass {
 				id: deploymentId,
 				serviceId: svc.id,
 				status: "pulling",
+				trigger,
 				userId,
 			}));
 		await dep.update({ startedAt: new Date(), status: "pulling" });
@@ -545,6 +546,7 @@ class DeploymentServiceClass {
 			rollbackOfDeploymentId: rollbackOf,
 			serviceId: svc.id,
 			status: "pending",
+			trigger: input.trigger ?? "manual",
 			userId,
 		});
 		await svc.update({ currentStatus: "pending" });

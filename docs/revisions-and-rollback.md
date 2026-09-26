@@ -13,6 +13,16 @@ expandable log, status and error are the latest attempt's (a failed rollback
 shows its error there while the revision that's still running stays Current).
 The API and CLI list revisions the same way.
 
+**Deployments** in the sidebar is the same history across every service: one row
+per deploy or rollback attempt, newest first, with its status, what triggered it
+(Manual, Git push, Scheduled or Rollback), the git branch and commit or the
+image it ran, who started it, when and how long it took, and the error for a
+failed one. Click a row for its deploy log; the service name opens that
+service's Revisions tab. Search matches the service, image, git ref, commit or
+error, and the Status and Trigger filters narrow it down. A deploy from before
+triggers were recorded, whose queue job was already pruned by then, shows as
+plain **Deploy** and only matches the Rollback filter.
+
 The **Healthy** and **Checking health** badges only ever sit on the current
 revision: once another revision is deployed they're cleared from the one it
 replaced. **Unhealthy** and **Rolled back** stay on the revision as history.

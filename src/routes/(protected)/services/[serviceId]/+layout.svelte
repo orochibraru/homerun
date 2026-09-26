@@ -5,6 +5,7 @@
 		Cpu,
 		ExternalLink,
 		FileText,
+		GitPullRequest,
 		HardDrive,
 		HeartPulse,
 		LayoutGrid,
@@ -66,6 +67,19 @@
 			id: "source",
 			label: "Source",
 		},
+		...(svc.buildSource === "git" && !svc.previewParentId
+			? [
+					{
+						exact: false,
+						href: resolve("/(protected)/services/[serviceId]/previews", {
+							serviceId: svc.id,
+						}),
+						icon: GitPullRequest,
+						id: "previews",
+						label: "Previews",
+					},
+				]
+			: []),
 		{
 			exact: false,
 			href: resolve("/(protected)/services/[serviceId]/revisions", {

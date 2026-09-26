@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
+	branchLabel,
 	defaultHostname,
 	isUnderDomain,
 	normalizeDomains,
+	previewDomainTemplateProblem,
 	primaryHostname,
+	renderPreviewDomain,
 	serviceHostnames,
 } from "$lib/service-domains";
 
@@ -65,5 +68,37 @@ describe("service domains", () => {
 		expect(
 			normalizeDomains([" A.example.org", "", "a.example.org", "b.io"]),
 		).toEqual(["a.example.org", "b.io"]);
+	});
+
+	test("a branch becomes one DNS label", () => {
+		expect(branchLabel("Feat/Login_Page")).toBe("feat-login-page");
+		expect(branchLabel("--x--")).toBe("x");
+		expect(branchLabel("///")).toBe("branch");
+		expect(branchLabel("a".repeat(70))).toHaveLength(63);
+	});
+
+	test("a preview domain template fills in the pull request", () => {
+		const values = { branch: "feat/login", pr: 42, slug: "web" };
+		expect(renderPreviewDomain("pr-{pr}.example.com", values)).toBe(
+			"pr-42.example.com",
+		);
+		expect(renderPreviewDomain(" {Branch}.{slug}.Example.com ", values)).toBe(
+			"feat-login.web.example.com",
+		);
+		expect(
+			renderPreviewDomain("{branch}.example.com", { ...values, branch: null }),
+		).toBe("pr-42.example.com");
+		expect(renderPreviewDomain("  ", values)).toBeNull();
+	});
+
+	test("a template must vary per preview and render a valid domain", () => {
+		expect(previewDomainTemplateProblem("pr-{pr}.example.com")).toBeNull();
+		expect(previewDomainTemplateProblem("{branch}.preview.io")).toBeNull();
+		expect(previewDomainTemplateProblem("preview.example.com")).toContain(
+			"{pr} or {branch}",
+		);
+		expect(previewDomainTemplateProblem("pr-{pr}")).toContain(
+			"doesn't make a valid domain",
+		);
 	});
 });

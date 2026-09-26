@@ -46,7 +46,8 @@ sync by hand.
 - **[Deploying](deploying.md)**: the live progress panel, health-gated
   redeploys, readiness checks and retried requests.
 - **[Revisions and rollback](revisions-and-rollback.md)**: every deploy as a
-  revision, rolling back, retained images and auto-rollback.
+  revision, rolling back, retained images and auto-rollback, and the
+  instance-wide deployment history.
 - **[Image scanning](image-scanning.md)**: Trivy scans through the registry
   mirror, the Security tab, and blocking deploys on findings.
 - **[Env vars](env-vars.md)**: key/value rows, linking a service to fill in

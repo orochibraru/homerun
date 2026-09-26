@@ -10,6 +10,7 @@ import {
 	Clock,
 	Database,
 	Ghost,
+	Globe,
 	HardDrive,
 	LayoutDashboard,
 	Loader2,
@@ -135,6 +136,7 @@ export const TEMPLATE_CATEGORY_ICONS: Record<string, typeof Database> = {
 	reading: BookOpen,
 	security: ShieldCheck,
 	storage: HardDrive,
+	website: Globe,
 };
 
 const CHART_TONES = [
@@ -166,6 +168,7 @@ export const TEMPLATE_CATEGORY_COLORS: Record<
 	reading: CHART_TONES[4],
 	security: CHART_TONES[0],
 	storage: CHART_TONES[3],
+	website: CHART_TONES[1],
 };
 
 /**

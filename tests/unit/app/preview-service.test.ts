@@ -35,11 +35,16 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		authAllowedUserIds: [],
 		authProviders: [],
 		currentStatus: "running",
+		defaultDomainEnabled: true,
 		dnsResolvable: true,
+		domains: [],
 		gitRef: "main",
 		id: "parent",
 		image: "img",
 		name: "Web",
+		previewDefaultDomain: true,
+		previewDomainTemplate: null,
+		primaryDomain: null,
 		slug: "web",
 		stackId: null,
 		tag: "latest",
@@ -73,6 +78,8 @@ let deleteError: unknown = null;
 let existing: Svc | null = null;
 let slugTaken = false;
 let created: Record<string, unknown>[] = [];
+let createdUpdates: Record<string, unknown>[] = [];
+let domainTaken: string | null = null;
 let previews: Svc[] = [];
 const originalBaseDomain = config.baseDomain;
 
@@ -83,6 +90,8 @@ beforeEach(() => {
 	existing = null;
 	slugTaken = false;
 	created = [];
+	createdUpdates = [];
+	domainTaken = null;
 	previews = [];
 	config.baseDomain = "example.com";
 	stub(Logger.prototype, "info", () => undefined);
@@ -100,9 +109,12 @@ beforeEach(() => {
 	stub(ServiceGitDTO, "getPreview", async () => existing);
 	stub(ServiceGitDTO, "listPreviews", async () => previews);
 	stub(ServiceDTO, "slugTaken", async () => slugTaken);
+	stub(ServiceDTO, "domainTaken", async () => domainTaken);
 	stub(ServiceDTO, "create", async (input: Record<string, unknown>) => {
 		created.push(input);
-		return fakeService({ ...input, id: "preview" }).svc;
+		const made = fakeService({ ...input, id: "preview" });
+		createdUpdates = made.updates;
+		return made.svc;
 	});
 	stub(StackDTO, "get", async (id: string) => ({ id, slug: "stk" }));
 });
@@ -153,6 +165,33 @@ describe("PreviewService.handle", () => {
 		expect(enqueued).toEqual([
 			expect.objectContaining({ trigger: "push", userId: "u1" }),
 		]);
+	});
+
+	test("gives a new preview its templated domain", async () => {
+		const { svc } = fakeService({
+			previewDefaultDomain: false,
+			previewDomainTemplate: "{branch}-{pr}.preview.io",
+		});
+		await PreviewService.handle(svc, event({ branch: "feat/Login" }));
+		expect(created[0].domains).toEqual(["feat-login-7.preview.io"]);
+		expect(createdUpdates[0]).toMatchObject({
+			defaultDomainEnabled: false,
+			primaryDomain: "feat-login-7.preview.io",
+		});
+	});
+
+	test("keeps only the default hostname when the templated one is taken", async () => {
+		domainTaken = "pr-7.preview.io";
+		const { svc } = fakeService({
+			previewDefaultDomain: false,
+			previewDomainTemplate: "pr-{pr}.preview.io",
+		});
+		await PreviewService.handle(svc, event());
+		expect(created[0].domains).toEqual([]);
+		expect(createdUpdates[0]).toMatchObject({
+			defaultDomainEnabled: true,
+			primaryDomain: null,
+		});
 	});
 
 	test("builds the branch when the commit isn't a full SHA", async () => {
@@ -268,6 +307,7 @@ describe("PreviewService.list", () => {
 			branch: "feature",
 			gitRef: "main",
 			hostname: "stk-web-pr-7.example.com",
+			hostnames: ["stk-web-pr-7.example.com"],
 			id: "p1",
 			name: "Web",
 			prNumber: 7,
@@ -283,5 +323,58 @@ describe("PreviewService.list", () => {
 		const { svc } = fakeService();
 		const list = await PreviewService.list(svc);
 		expect(list[0].hostname).toBe("web-pr-7.example.com");
+	});
+});
+
+describe("PreviewService.applyDomains / redeploy / delete", () => {
+	test("re-applies the template to open previews and redeploys deployed ones", async () => {
+		const deployed = fakeService({
+			containerId: "c1",
+			dnsResolvable: false,
+			id: "p1",
+			previewBranch: "a",
+			previewParentId: "parent",
+			previewPrNumber: 1,
+		});
+		const idle = fakeService({
+			dnsResolvable: false,
+			id: "p2",
+			previewBranch: "b",
+			previewParentId: "parent",
+			previewPrNumber: 2,
+		});
+		previews = [deployed.svc, idle.svc];
+		const { svc } = fakeService({ previewDomainTemplate: "pr-{pr}.x.io" });
+		await PreviewService.applyDomains(svc);
+		expect(deployed.updates[0]).toEqual({
+			defaultDomainEnabled: true,
+			domains: ["pr-1.x.io"],
+			primaryDomain: "pr-1.x.io",
+		});
+		expect(idle.updates[0]).toMatchObject({ domains: ["pr-2.x.io"] });
+		expect(enqueued).toHaveLength(1);
+	});
+
+	test("refuses to act on a service that isn't this one's preview", async () => {
+		const other = fakeService({ id: "p9", previewParentId: "someone-else" });
+		stub(ServiceDTO, "get", async () => other.svc);
+		const { svc } = fakeService();
+		await expect(PreviewService.redeploy(svc, "p9")).rejects.toThrow(
+			"doesn't belong",
+		);
+		await expect(PreviewService.delete(svc, "p9")).rejects.toThrow(
+			"doesn't belong",
+		);
+		expect(enqueued).toHaveLength(0);
+		expect(deleted).toHaveLength(0);
+	});
+
+	test("redeploys and deletes its own preview", async () => {
+		const own = fakeService({ id: "p1", previewParentId: "parent" });
+		stub(ServiceDTO, "get", async () => own.svc);
+		const { svc } = fakeService();
+		expect((await PreviewService.redeploy(svc, "p1")).status).toBe("deployed");
+		await PreviewService.delete(svc, "p1");
+		expect(deleted).toEqual(["p1"]);
 	});
 });

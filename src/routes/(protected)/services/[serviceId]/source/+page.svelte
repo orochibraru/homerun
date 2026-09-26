@@ -87,9 +87,6 @@
 	let gitPollEnabled = $derived(
 		form?.values ? values.gitPollEnabled === "on" : svc.gitPollEnabled,
 	);
-	let previewsEnabled = $derived(
-		form?.values ? values.previewsEnabled === "on" : svc.previewsEnabled,
-	);
 </script>
 
 <section class="panel rounded-md">
@@ -213,12 +210,9 @@
         {gitRef}
         labelClass={label}
         previewOf={data.previewOf}
-        previews={data.previews}
         pushWebhook={data.pushWebhook}
         serviceId={svc.id}
-        serviceSlug={svc.slug}
         bind:gitPollEnabled
-        bind:previewsEnabled
       />
       <GitBuildFields
         {errorClass}

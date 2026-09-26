@@ -37,7 +37,6 @@ export const load = async ({ parent, params }) => {
 		previewOf: previewParent
 			? { id: previewParent.id, name: previewParent.name }
 			: null,
-		previews: svc ? await PreviewService.list(svc) : [],
 		pushWebhook: svc ? await GitWebhookService.describe(svc) : null,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
 		buildServers: buildServers.map((r) => r.toJSON()),
@@ -56,12 +55,11 @@ export const load = async ({ parent, params }) => {
 function gitTriggerPatch(
 	formData: FormData,
 	isGitBuild: boolean,
-	isPreview: boolean,
+	previewsEnabled: boolean,
 ) {
 	return {
 		gitPollEnabled: isGitBuild && formData.get("gitPollEnabled") === "on",
-		previewsEnabled:
-			isGitBuild && !isPreview && formData.get("previewsEnabled") === "on",
+		previewsEnabled: isGitBuild && previewsEnabled,
 	};
 }
 
@@ -210,7 +208,7 @@ export const actions = {
 			buildCacheRegistryId,
 			buildServerRemoteHostId,
 			...checks,
-			...gitTriggerPatch(formData, isGitBuild, !!svc.toJSON().previewParentId),
+			...gitTriggerPatch(formData, isGitBuild, svc.toJSON().previewsEnabled),
 			...sourcePatch(input, isGitBuild),
 		});
 		await GitWebhookService.sync(svc, previousWebhook);

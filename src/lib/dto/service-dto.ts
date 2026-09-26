@@ -319,6 +319,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 			previewParentId: input.previewParentId ?? null,
 			previewPrNumber: input.previewPrNumber ?? null,
 			previewPrTitle: input.previewPrTitle ?? null,
+			previewDefaultDomain: true,
+			previewDomainTemplate: null,
 			previewsEnabled: false,
 		} satisfies Partial<Service>;
 	}

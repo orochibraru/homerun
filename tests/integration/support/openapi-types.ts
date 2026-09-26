@@ -1020,6 +1020,8 @@ export interface operations {
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
 						previewBranch: string | null;
+						previewDefaultDomain: boolean;
+						previewDomainTemplate: string | null;
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
@@ -1263,6 +1265,8 @@ export interface operations {
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
 						previewBranch: string | null;
+						previewDefaultDomain: boolean;
+						previewDomainTemplate: string | null;
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
@@ -1463,6 +1467,8 @@ export interface operations {
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
 						previewBranch: string | null;
+						previewDefaultDomain: boolean;
+						previewDomainTemplate: string | null;
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
@@ -1777,6 +1783,8 @@ export interface operations {
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
 						previewBranch: string | null;
+						previewDefaultDomain: boolean;
+						previewDomainTemplate: string | null;
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
