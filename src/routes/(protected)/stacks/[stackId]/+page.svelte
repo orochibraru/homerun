@@ -8,6 +8,7 @@
 	import ServiceTree from "$lib/components/service-tree.svelte";
 	import StackDiagram from "$lib/components/stack-diagram.svelte";
 	import StackMoveDialog from "$lib/components/stack-move-dialog.svelte";
+	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -143,7 +144,17 @@
           title: svc.name,
         }))}
         {view}
-      />
+      >
+        {#snippet media(item: { id: string })}
+          {@const svc = services.get(item.id)}
+          <TemplateIcon
+            category={svc?.category ?? null}
+            class="size-8 rounded-lg"
+            fallback={Server}
+            icon={svc?.icon ?? null}
+          />
+        {/snippet}
+      </EntityList>
     {/if}
   {:else if view.current === "card"}
     <StackDiagram

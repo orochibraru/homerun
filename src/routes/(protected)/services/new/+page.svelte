@@ -55,6 +55,7 @@
 				: ""),
 	);
 	let image = $derived(values?.image ?? data.template?.image ?? "");
+	let tag = $derived(values?.tag ?? data.template?.tag ?? "latest");
 	let submittingAction = $state<"create" | "createAndDeploy" | null>(null);
 
 	function stepButtonClass(i: number): string {
@@ -198,6 +199,7 @@
           {values}
           bind:image
           bind:slug
+          bind:tag
         />
         <NetworkingStep
           {data}
@@ -211,7 +213,9 @@
         <VolumesStep
           {errors}
           hidden={currentStep !== 3}
+          {image}
           {slug}
+          {tag}
           volumes={data.volumes}
         />
         <ComputeStep

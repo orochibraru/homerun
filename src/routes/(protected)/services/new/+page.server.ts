@@ -19,7 +19,6 @@ import {
 	parseEnvVars,
 } from "$lib/server/validation/service";
 import { CapacityService } from "$lib/services/capacity.service";
-import { attachDefaultDataVolume } from "$lib/services/default-volume";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
@@ -487,7 +486,6 @@ async function createServiceFromForm(
 	});
 
 	await attachVolumeMounts(volumes.mounts, svc, userId);
-	await attachDefaultDataVolume(svc, userId);
 
 	announceCreated(svc, input, userId);
 

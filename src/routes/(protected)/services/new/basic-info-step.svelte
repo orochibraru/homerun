@@ -34,6 +34,7 @@
 		hidden: boolean;
 		image: string;
 		slug: string;
+		tag: string;
 		values?: Record<string, string>;
 	}
 
@@ -43,6 +44,7 @@
 		hidden,
 		image = $bindable(),
 		slug = $bindable(),
+		tag = $bindable(),
 		values,
 	}: Props = $props();
 
@@ -53,7 +55,6 @@
 	let buildSource = $derived<"image" | "git">(
 		(values?.buildSource as "image" | "git" | undefined) ?? "image",
 	);
-	let tag = $derived(values?.tag ?? data.template?.tag ?? "latest");
 	let registryUrl = $derived(values?.registryUrl ?? "");
 	let registryUsername = $derived(values?.registryUsername ?? "");
 	let gitUrl = $derived(values?.gitUrl ?? "");

@@ -29,7 +29,9 @@ services mounting a deleted volume need a redeploy.
 A new database or cache service gets a Docker volume named `<slug>-data` mounted
 at its engine's data directory when it's created with no volume of its own,
 whether from the deploy wizard, a template (its linked containers included) or
-the API, so a redeploy doesn't start it empty:
+the API, so a redeploy doesn't start it empty. The deploy wizard shows it as a
+pre-filled row on its Volumes step, remove the row to create the service without
+one:
 
 | Engine                                  | Mounted at                                                               |
 | --------------------------------------- | ------------------------------------------------------------------------ |

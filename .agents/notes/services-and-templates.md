@@ -525,12 +525,14 @@ worth keeping) or any non-datastore image. `default-volume.ts`'s
 `ServiceVolumeDTO.listForService` already returns a mount, and otherwise creates
 a `StorageVolumeDTO` named `<slug>-data` (`kind: "volume"`,
 `source: <slug>-data`) and `ServiceVolumeDTO.attach`es it read-write at that
-path. Called from every service-creation path that can produce a database:
-`services/new/+page.server.ts`'s wizard action, `POST /api/v1/services`, and
-both of `template-links.ts`'s creators (`createServiceFromTemplate` and
-`createLinkedServices`, so a linked companion like WordPress's MySQL gets one
-too). An existing service is never touched, mounting a volume on it later still
-starts from empty, same as any other first mount.
+path. Called from `POST /api/v1/services` and both of `template-links.ts`'s
+creators (`createServiceFromTemplate` and `createLinkedServices`, so a linked
+companion like WordPress's MySQL gets one too). The deploy wizard doesn't call
+it: its Volumes step (`services/new/volumes-step.svelte`) pre-fills a "New
+volume" row at `dataPathFor(image, tag)` instead, so the operator sees the mount
+before creating and can remove it; the row follows image/tag edits until the
+operator changes its path. An existing service is never touched, mounting a
+volume on it later still starts from empty, same as any other first mount.
 
 ## Live progress: SSE, streams, and why not WebSockets
 

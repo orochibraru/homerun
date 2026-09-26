@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { HardDrive, Plus, Trash2 } from "@lucide/svelte";
+	import { untrack } from "svelte";
 	import PanelHeader from "$lib/components/panel-header.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
@@ -12,17 +13,20 @@
 	} from "$lib/components/ui/select/index.js";
 	import { HOST_VOLUME_PREFIX } from "$lib/constants";
 	import { getUnknownHostVolumes } from "$lib/remote/docker-infra.remote";
+	import { dataPathFor } from "$lib/service-link";
 	import { errorClass, label } from "./field-classes";
 	import type { WizardVolume } from "./wizard-types";
 
 	interface Props {
 		errors?: Record<string, string[]>;
 		hidden: boolean;
+		image: string;
 		slug: string;
+		tag: string;
 		volumes: WizardVolume[];
 	}
 
-	const { errors, hidden, slug, volumes }: Props = $props();
+	const { errors, hidden, image, slug, tag, volumes }: Props = $props();
 
 	const NEW_VOLUME = "new";
 
@@ -34,6 +38,34 @@
 	}
 
 	const volumeRows = $state<VolumeRow[]>([]);
+	let defaultRow: VolumeRow | null = null;
+	let defaultPath = "";
+
+	$effect(() => {
+		const path = dataPathFor(image, tag);
+		untrack(() => {
+			const untouched =
+				defaultRow &&
+				volumeRows.includes(defaultRow) &&
+				defaultRow.containerPath === defaultPath;
+			if (untouched && defaultRow) {
+				if (path) {
+					defaultRow.containerPath = path;
+				} else {
+					volumeRows.splice(volumeRows.indexOf(defaultRow), 1);
+				}
+			} else if (path && volumeRows.length === 0) {
+				volumeRows.push({
+					containerPath: path,
+					newName: "",
+					readOnly: false,
+					volumeId: NEW_VOLUME,
+				});
+				defaultRow = volumeRows[0];
+			}
+			defaultPath = path ?? "";
+		});
+	});
 
 	const knownVolumeSources = $derived(
 		volumes.filter((v) => v.kind === "volume").map((v) => v.source),
