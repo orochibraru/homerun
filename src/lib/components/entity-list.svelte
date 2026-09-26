@@ -67,7 +67,7 @@
 
 {#snippet listRow(item: T)}
   <div
-        class="hover:bg-surface-2 flex items-center gap-3 px-4 py-3 transition-colors {selected.has(
+        class="hover:bg-surface-2 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors sm:flex-nowrap {selected.has(
         item.id,
       )
         ? 'bg-accent-light'
@@ -98,7 +98,7 @@
           {/if}
           {@render details?.(item)}
         </div>
-        <div class="flex shrink-0 items-center gap-2">
+        <div class="flex w-full shrink-0 flex-wrap items-center gap-2 empty:hidden sm:w-auto sm:flex-nowrap {selectable ? 'pl-7 sm:pl-0' : ''}">
           {@render badge?.(item)}
           {@render meta?.(item)}
           {@render actions?.(item)}

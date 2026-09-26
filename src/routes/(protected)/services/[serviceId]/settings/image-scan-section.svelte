@@ -15,7 +15,7 @@
 
 <section class="panel rounded-md p-5">
   <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
       <ShieldCheck class="size-4" />
     </div>
     <div>

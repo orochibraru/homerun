@@ -37,6 +37,7 @@ export function toGraphService(
 
 export interface PreviewRow {
 	branch: string | null;
+	canary: boolean;
 	currentStatus: string;
 	id: string;
 	name: string;
@@ -45,8 +46,9 @@ export interface PreviewRow {
 	title: string | null;
 }
 
-/** A pull request preview as it's listed under its parent service. */
+/** A pull request preview or release channel canary as it's listed under its parent service. */
 export function toPreviewRow(row: {
+	channelCanary: boolean;
 	currentStatus: string;
 	id: string;
 	name: string;
@@ -57,6 +59,7 @@ export function toPreviewRow(row: {
 }): PreviewRow {
 	return {
 		branch: row.previewBranch,
+		canary: row.channelCanary,
 		currentStatus: row.currentStatus,
 		id: row.id,
 		name: row.name,

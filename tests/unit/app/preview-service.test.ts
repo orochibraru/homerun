@@ -180,6 +180,20 @@ describe("PreviewService.handle", () => {
 		});
 	});
 
+	test("points the parent's own domain in its env at the preview", async () => {
+		const { svc } = fakeService({
+			defaultDomainEnabled: false,
+			domains: ["sergios.fr"],
+			envVars: { ORIGIN: "https://sergios.fr", PORT: "3000" },
+			previewDomainTemplate: "preview-{pr}.sergios.fr",
+		});
+		await PreviewService.handle(svc, event());
+		expect(created[0].envVars).toEqual({
+			ORIGIN: "https://preview-7.sergios.fr",
+			PORT: "3000",
+		});
+	});
+
 	test("keeps only the default hostname when the templated one is taken", async () => {
 		domainTaken = "pr-7.preview.io";
 		const { svc } = fakeService({

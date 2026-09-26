@@ -257,6 +257,7 @@ describe("recorded dependencies", () => {
 describe("previews under their parent", () => {
 	const row = (id: string, parent: string, pr: number) =>
 		toPreviewRow({
+			channelCanary: false,
 			currentStatus: "running",
 			id,
 			name: `Web PR #${pr}`,
@@ -275,5 +276,20 @@ describe("previews under their parent", () => {
 		expect(grouped.get("web")?.map((p) => p.prNumber)).toEqual([2, 1]);
 		expect(grouped.get("api")?.map((p) => p.id)).toEqual(["p9"]);
 		expect(grouped.get("db")).toBeUndefined();
+	});
+
+	test("a release channel canary is flagged as one", () => {
+		const canary = toPreviewRow({
+			channelCanary: true,
+			currentStatus: "running",
+			id: "c1",
+			name: "Web (canary)",
+			previewBranch: null,
+			previewParentId: "web",
+			previewPrNumber: null,
+			previewPrTitle: null,
+		});
+		expect(canary).toMatchObject({ canary: true, parentId: "web" });
+		expect(row("p1", "web", 1).canary).toBe(false);
 	});
 });

@@ -6,6 +6,7 @@ import {
 	gitWebhookUrl,
 	parsePullRequestEvent,
 	parsePushEvent,
+	parseTagPushEvent,
 	previewSlug,
 	verifyGitWebhook,
 	webhookIdFrom,
@@ -204,10 +205,105 @@ describe("webhook API shapes", () => {
 		).toContain("pullrequest:fulfilled");
 	});
 
+	test("tag pushes are only subscribed on GitLab, the others send them as pushes", () => {
+		const hook = { secret, tags: true, url: "https://h/x" };
+		expect(
+			createWebhookRequest("gitlab", "acme/api", hook).body.tag_push_events,
+		).toBe(true);
+		expect(
+			createWebhookRequest("gitlab", "acme/api", { secret, url: "https://h/x" })
+				.body.tag_push_events,
+		).toBe(false);
+		expect(
+			createWebhookRequest("github", "acme/api", hook).body.events,
+		).toEqual(["push"]);
+		expect(
+			createWebhookRequest("bitbucket", "ws/api", hook).body.events,
+		).toEqual(["repo:push"]);
+	});
+
 	test("reads the new hook's id", () => {
 		expect(webhookIdFrom("github", { id: 42 })).toBe("42");
 		expect(webhookIdFrom("bitbucket", { uuid: "{abc}" })).toBe("{abc}");
 		expect(webhookIdFrom("gitea", {})).toBeNull();
+	});
+});
+
+describe("parseTagPushEvent", () => {
+	const sha = "68c1b9e0f1a2b3c4d5e6f708192a3b4c5d6e7f80";
+	const zero = "0000000000000000000000000000000000000000";
+
+	test("GitHub and Gitea tag pushes", () => {
+		for (const header of ["x-github-event", "x-gitea-event"]) {
+			expect(
+				parseTagPushEvent(new Headers({ [header]: "push" }), {
+					after: sha,
+					ref: "refs/tags/v1.2.0",
+				}),
+			).toEqual([{ commit: sha, tag: "v1.2.0" }]);
+		}
+	});
+
+	test("GitHub's create event for a tag", () => {
+		const headers = new Headers({ "x-github-event": "create" });
+		expect(
+			parseTagPushEvent(headers, { ref: "v2.0.0", ref_type: "tag" }),
+		).toEqual([{ commit: null, tag: "v2.0.0" }]);
+		expect(
+			parseTagPushEvent(headers, { ref: "feature", ref_type: "branch" }),
+		).toEqual([]);
+	});
+
+	test("GitLab Tag Push Hook, deletions ignored", () => {
+		const headers = new Headers({ "x-gitlab-event": "Tag Push Hook" });
+		expect(
+			parseTagPushEvent(headers, {
+				after: sha,
+				checkout_sha: sha,
+				object_kind: "tag_push",
+				ref: "refs/tags/v3.1.0",
+			}),
+		).toEqual([{ commit: sha, tag: "v3.1.0" }]);
+		expect(
+			parseTagPushEvent(headers, {
+				after: zero,
+				checkout_sha: null,
+				ref: "refs/tags/v3.1.0",
+			}),
+		).toEqual([]);
+	});
+
+	test("Bitbucket tag changes, branch changes skipped", () => {
+		expect(
+			parseTagPushEvent(new Headers({ "x-event-key": "repo:push" }), {
+				push: {
+					changes: [
+						{ new: { name: "main", target: { hash: sha }, type: "branch" } },
+						{ new: { name: "v4.0.0", target: { hash: sha }, type: "tag" } },
+						{ new: null },
+					],
+				},
+			}),
+		).toEqual([{ commit: sha, tag: "v4.0.0" }]);
+	});
+
+	test("branch pushes, deleted tags and other events yield nothing", () => {
+		const push = new Headers({ "x-github-event": "push" });
+		expect(
+			parseTagPushEvent(push, { after: sha, ref: "refs/heads/main" }),
+		).toEqual([]);
+		expect(
+			parseTagPushEvent(push, { deleted: true, ref: "refs/tags/v1.0.0" }),
+		).toEqual([]);
+		expect(
+			parseTagPushEvent(push, { after: zero, ref: "refs/tags/v1.0.0" }),
+		).toEqual([]);
+		expect(
+			parseTagPushEvent(new Headers({ "x-github-event": "ping" }), {}),
+		).toEqual([]);
+		expect(
+			parsePushEvent(push, { after: sha, ref: "refs/tags/v1.0.0" }),
+		).toEqual([]);
 	});
 });
 

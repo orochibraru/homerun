@@ -111,7 +111,7 @@
     <p class="text-text-muted text-sm font-medium">
       No services in this stack yet
     </p>
-    <div class="mt-5 flex gap-2">
+    <div class="mt-5 flex flex-wrap justify-center gap-2">
       <Button href="{resolve('/templates')}?stackId={stack.id}" variant="outline">
         <LayoutGrid class="size-4" />
         From Template
@@ -125,7 +125,7 @@
 {:else}
   <div class="mb-3 flex flex-wrap items-center gap-2">
     <Input
-      class="max-w-xs"
+      class="sm:max-w-xs"
       placeholder="Search services…"
       type="search"
       bind:value={search}

@@ -942,6 +942,11 @@ export const service = pgTable(
 		previewPrNumber: integer("preview_pr_number"),
 		previewPrTitle: text("preview_pr_title"),
 		previewBranch: text("preview_branch"),
+		channelsEnabled: boolean("channels_enabled").default(false).notNull(),
+		channelBranch: text("channel_branch"),
+		channelTagPattern: text("channel_tag_pattern").default("v*").notNull(),
+		channelCanaryDomain: text("channel_canary_domain"),
+		channelCanary: boolean("channel_canary").default(false).notNull(),
 		id: text("id").primaryKey(),
 		// e.g. "ghcr.io/acme/api"
 		image: text("image").notNull(),
@@ -1038,6 +1043,7 @@ export const deployment = pgTable(
 		configSnapshot: jsonb("config_snapshot").$type<RevisionConfig>(),
 		containerId: text("container_id"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		environment: text("environment").default("production").notNull(),
 		errorMessage: text("error_message"),
 		finishedAt: timestamp("finished_at", { mode: "date" }),
 		// The commit this revision actually built, for a git-sourced service :
@@ -1558,6 +1564,7 @@ export const userPreferences = pgTable("user_preferences", {
 	accentColor: text("accent_color"),
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	palette: text("palette"),
+	perPage: integer("per_page").default(50).notNull(),
 	// "system" (default, off the OS's own light/dark preference) | "light" |
 	// "dark" : applied via the mode-watcher package already mounted in the
 	// root layout (src/routes/+layout.svelte), this table is just its

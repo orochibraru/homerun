@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
 import { PALETTES } from "$lib/palettes";
 
 /** A bare "#rrggbb" hex color, the shape a native `<input type="color">` always submits. */
@@ -18,3 +19,13 @@ export const colorsSchema = z.discriminatedUnion("palette", [
 		palette: z.enum(PALETTES.map((p) => p.id) as [string, ...string[]]),
 	}),
 ]);
+
+export const perPageSchema = z.object({
+	perPage: z.coerce
+		.number()
+		.int()
+		.refine(
+			(value) => (PER_PAGE_OPTIONS as readonly number[]).includes(value),
+			"Pick one of the listed page sizes.",
+		),
+});

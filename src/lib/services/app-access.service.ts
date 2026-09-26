@@ -1,12 +1,16 @@
 import { eq } from "drizzle-orm";
 import { accountProviderIdFor, emailMatchesPattern } from "$lib/auth-providers";
-import type { ServiceDTO } from "$lib/dto/service-dto";
+import { config } from "$lib/config";
+import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import {
 	account as accountTable,
+	type Service,
 	user as userTable,
 } from "$lib/server/db/schema";
+import { primaryHostname } from "$lib/service-domains";
 
 const GROUP_CLAIMS = ["groups", "roles", "grp"];
 
@@ -155,6 +159,64 @@ function emailAllowed(svc: ServiceDTO, email: string): boolean {
 	);
 }
 
+export interface SharedApp {
+	canary: boolean;
+	id: string;
+	name: string;
+	pullRequest: { number: number; title: string | null } | null;
+	url: string;
+}
+
+type SharedAppRow = Pick<
+	Service,
+	| "channelCanary"
+	| "defaultDomainEnabled"
+	| "dnsResolvable"
+	| "domains"
+	| "id"
+	| "name"
+	| "previewPrNumber"
+	| "previewPrTitle"
+	| "primaryDomain"
+	| "slug"
+>;
+
+/**
+ * The links for the login-wall apps a user may open, from services already
+ * known to let them through: each one's primary hostname over https, skipping
+ * a service with nothing routed or not published in DNS, sorted by name. A pull
+ * request preview carries its number and title so a client can tell which
+ * change they're looking at; a release channel canary is flagged as such,
+ * never as a pull request.
+ */
+export function sharedAppLinks(
+	entries: { row: SharedAppRow; stackSlug: string | null }[],
+	baseDomain: string,
+): SharedApp[] {
+	return entries
+		.flatMap(({ row, stackSlug }) => {
+			const host = row.dnsResolvable
+				? primaryHostname(row, stackSlug, baseDomain)
+				: null;
+			if (!host) {
+				return [];
+			}
+			return [
+				{
+					canary: row.channelCanary,
+					id: row.id,
+					name: row.name,
+					pullRequest:
+						row.channelCanary || row.previewPrNumber === null
+							? null
+							: { number: row.previewPrNumber, title: row.previewPrTitle },
+					url: `https://${host}`,
+				},
+			];
+		})
+		.toSorted((a, b) => a.name.localeCompare(b.name));
+}
+
 class AppAccessServiceClass {
 	readonly #lastProviderRefresh = new Map<string, number>();
 
@@ -197,6 +259,35 @@ class AppAccessServiceClass {
 			}
 		}
 		return { allowed: true };
+	}
+
+	/**
+	 * Every app behind a login wall that `userId` would be let through right
+	 * now, as links for the "apps shared with you" page. Runs the full
+	 * `evaluate()` per gated service.
+	 */
+	async sharedApps(userId: string): Promise<SharedApp[]> {
+		const gated = (await ServiceDTO.list()).filter((svc) => svc.authRequired);
+		const decisions = await Promise.all(
+			gated.map((svc) => this.evaluate(svc, userId)),
+		);
+		const allowed = gated.filter((_, index) => decisions[index].allowed);
+		if (allowed.length === 0) {
+			return [];
+		}
+		const stackSlugs = new Map(
+			(await StackDTO.list()).map((stack) => [stack.id, stack.slug]),
+		);
+		return sharedAppLinks(
+			allowed.map((svc) => {
+				const row = svc.toJSON();
+				return {
+					row,
+					stackSlug: row.stackId ? (stackSlugs.get(row.stackId) ?? null) : null,
+				};
+			}),
+			config.baseDomain,
+		);
 	}
 
 	/**

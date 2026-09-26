@@ -39,6 +39,12 @@
 					"title": "PR previews",
 					"icon": "git-pull-request"
 				},
+				{ "slug": "release-channels", "icon": "bird" },
+				{
+					"slug": "main-canary-tags-stable",
+					"title": "Canary and stable cookbook",
+					"icon": "book-open"
+				},
 				{ "slug": "status-checks", "icon": "circle-check" },
 				{
 					"slug": "compose-import",

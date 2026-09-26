@@ -1,0 +1,1 @@
+ALTER TABLE "user_preferences" ADD COLUMN "per_page" integer DEFAULT 50 NOT NULL;

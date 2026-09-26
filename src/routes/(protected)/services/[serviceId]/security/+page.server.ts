@@ -54,7 +54,12 @@ export const load = async ({ locals, params, parent }) => {
 			})),
 		scanning,
 		scans: scans.map((scan) => scan.toJSON()),
-		users: users.map((u) => ({ email: u.email, id: u.id, name: u.name })),
+		users: users.map((u) => ({
+			email: u.email,
+			id: u.id,
+			name: u.name,
+			role: u.role,
+		})),
 	};
 };
 

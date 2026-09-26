@@ -157,8 +157,7 @@
   {#if sorts.length > 0}
     <SelectRoot onValueChange={setSort} type="single" value={currentSort}>
       <SelectTrigger class="w-48" aria-label="Sort">
-        <ArrowDownUp class="size-4" />
-        {sortLabel}
+        <ArrowDownUp class="mr-1.5 inline size-4 align-text-bottom" />{sortLabel}
       </SelectTrigger>
       <SelectContent>
         <SelectItem label="Default order" value="" />

@@ -6,9 +6,9 @@
 </script>
 
 <section class="panel rounded-md">
-  <div class="flex items-center justify-between gap-4 p-5">
+  <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
-      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+      <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
         <LayoutGrid class="size-4" />
       </div>
       <div>

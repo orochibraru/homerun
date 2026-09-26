@@ -59,6 +59,9 @@ A per-account "Appearance" tab on your profile page controls:
   Rose or Graphite) sets the accent for buttons, links and tab icons plus the
   hues charts, category tiles and the background use, all chosen to go together.
   **Custom** sets the accent alone from any color.
+- **Lists**: how many rows every paginated list (services, stacks, templates,
+  deployments, backups and the rest) shows per page: 25, 50 (the default), 100
+  or 200. A `?perPage=` in the page's URL still wins for that one view.
 
 These are personal preferences, not instance-wide settings, each account picks
 its own independently of `/settings`.

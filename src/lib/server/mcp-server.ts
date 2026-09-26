@@ -87,7 +87,7 @@ function registerReadTools(server: McpServer, api: ApiCall): void {
 		{
 			annotations: read,
 			description:
-				"List services with their id, name, slug, image, tag, status and stack.",
+				"List services with their id, name, slug, image, tag, status and stack; a pull request preview also names the service it previews (previewOf).",
 			inputSchema: z.object({
 				search: z
 					.string()
@@ -110,6 +110,7 @@ function registerReadTools(server: McpServer, api: ApiCall): void {
 				id: row.id,
 				image: row.image,
 				name: row.name,
+				previewOf: row.previewParentId ?? undefined,
 				slug: row.slug,
 				stackId: row.stackId,
 				tag: row.tag,
@@ -299,14 +300,20 @@ function registerChangeTools(server: McpServer, api: ApiCall): void {
 					.string()
 					.optional()
 					.describe("Switch an image-based service to this image tag first"),
+				environment: z
+					.enum(["stable", "canary"])
+					.optional()
+					.describe(
+						"With release channels on, canary deploys the service's canary from its canary branch; stable (the default) the service itself",
+					),
 			}),
 		},
-		async ({ serviceId: id, tag }) =>
+		async ({ environment, serviceId: id, tag }) =>
 			asResult(
 				await api(
 					"POST",
 					servicePath(id, "/deploy"),
-					tag ? { tag } : undefined,
+					tag || environment ? { environment, tag } : undefined,
 				),
 			),
 	);

@@ -1,19 +1,19 @@
 # Users and roles
 
-Homerun has three roles, **admin**, **developer** and **read-only**. Every
-account sees every resource on the instance, and every admin or developer
-account manages it: services, stacks, volumes, backups, S3 destinations, build
-cache registries, remote hosts, cron jobs, status pages, custom templates and
-the job queue are shared, whoever created them. Each one still records who
-created it. What stays personal is your sessions, API keys, preferences, git
-provider connections, terminal sessions, bell feed and notification channels.
-Every account gets a copy of each bell notification, and every account's own
-notification channels hear about every event. Between admin and developer, the
-only difference is a few admin-only pages, **Users**, **Authentication**,
-**Settings**, **System Logs**, **Registry**, **Docker Cleanup** and **DNS**,
-plus admin-only actions elsewhere: registering a git provider's OAuth app and
-host-command cron jobs. There's no finer-grained permission system yet (no
-per-stack access control, no teams).
+Homerun has four roles, **admin**, **developer**, **read-only** and **app access
+only**. Every dashboard account sees every resource on the instance, and every
+admin or developer account manages it: services, stacks, volumes, backups, S3
+destinations, build cache registries, remote hosts, cron jobs, status pages,
+custom templates and the job queue are shared, whoever created them. Each one
+still records who created it. What stays personal is your sessions, API keys,
+preferences, git provider connections, terminal sessions, bell feed and
+notification channels. Every account gets a copy of each bell notification, and
+every account's own notification channels hear about every event. Between admin
+and developer, the only difference is a few admin-only pages, **Users**,
+**Authentication**, **Settings**, **System Logs**, **Registry**, **Docker
+Cleanup** and **DNS**, plus admin-only actions elsewhere: registering a git
+provider's OAuth app and host-command cron jobs. There's no finer-grained
+permission system yet (no per-stack access control, no teams).
 
 **Read-only** accounts see everything a developer sees but can't change
 anything: every form, button and API call that writes is refused with "This
@@ -23,6 +23,23 @@ remote commands and the REST API alike, and the dashboard header shows a
 sign out, change their password, manage passkeys and two-factor, set
 preferences, clear their notification bell, create API keys (always read-only)
 and log in the CLI. They don't see the admin-only pages.
+
+**App access only** accounts never see the dashboard. They exist so you can let
+someone (a client, a friend, the family) through the [login wall](login-wall.md)
+of the apps you choose without giving them anything else. They sign in on the
+normal sign-in page, with a password, passkey or OAuth provider like anyone
+else, and are sent straight back to the app they were trying to open. Opening
+the dashboard URL directly lands them on a small **Your apps** page instead: the
+apps whose login wall currently lets them through (pull request previews show
+their PR number and title), their passkeys and two-factor setup, and a Sign out
+button. Every dashboard page, form, remote call and REST API route refuses them
+on the server, not just in the menu, and so does the MCP endpoint. They can't
+create or use API keys or log in the CLI, and an API key they held under an
+earlier role stops working. They can still use **Sign in with Homerun** apps
+(see [Sign in with Homerun](sign-in-with-homerun.md)), since that's a login for
+an app, not for Homerun. To share an app with one, tick them under **Users** on
+the app's Security tab, or add `app-user` to its **Groups / roles** to let every
+app-access account in.
 
 **The first account created on a fresh instance becomes admin automatically.**
 After that, there's no public sign-up, every other account is created by an

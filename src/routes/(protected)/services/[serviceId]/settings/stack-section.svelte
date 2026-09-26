@@ -24,9 +24,9 @@
 </script>
 
 <section class="panel rounded-md">
-  <div class="flex items-center justify-between gap-4 p-5">
+  <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex items-center gap-3">
-      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+      <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
         <FolderKanban class="size-4" />
       </div>
       <div>
@@ -38,7 +38,7 @@
     </div>
     <form
       action="?/moveStack"
-      class="flex w-75 items-center gap-2"
+      class="flex w-full items-center gap-2 sm:w-75"
       method="POST"
       use:enhance={enhanceToast({
         error: "Couldn't move the service.",

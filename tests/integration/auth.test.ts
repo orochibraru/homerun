@@ -80,3 +80,69 @@ describe("openapi.json", () => {
 		expect(Object.keys(doc.paths ?? {}).length).toBeGreaterThan(0);
 	});
 });
+
+describe("app-access-only accounts", () => {
+	const email = "client@integration.test";
+	const password = "client-integration-password-1234";
+
+	async function signIn(as: string, secret: string): Promise<string> {
+		const { origin } = integrationContext();
+		const res = await nativeFetch(`${origin}/api/v1/auth/sign-in/email`, {
+			body: JSON.stringify({ email: as, password: secret }),
+			headers: { "content-type": "application/json", origin },
+			method: "POST",
+		});
+		expect(res.status, await res.clone().text()).toBe(200);
+		return res.headers
+			.getSetCookie()
+			.map((cookie) => cookie.split(";")[0])
+			.join("; ");
+	}
+
+	test("sign in, reach only their apps page, and are refused the dashboard, API and API keys", async () => {
+		const { origin } = integrationContext();
+		const adminCookie = await signIn(
+			"admin@integration.test",
+			"integration-test-password-1234",
+		);
+		const created = await nativeFetch(
+			`${origin}/api/v1/auth/admin/create-user`,
+			{
+				body: JSON.stringify({
+					email,
+					name: "Client",
+					password,
+					role: "app-user",
+				}),
+				headers: {
+					"content-type": "application/json",
+					cookie: adminCookie,
+					origin,
+				},
+				method: "POST",
+			},
+		);
+		expect(created.status, await created.clone().text()).toBe(200);
+
+		const cookie = await signIn(email, password);
+		const get = (path: string) =>
+			nativeFetch(`${origin}${path}`, {
+				headers: { cookie },
+				redirect: "manual",
+			});
+
+		const dashboard = await get("/services");
+		expect(dashboard.status).toBe(303);
+		expect(dashboard.headers.get("location")).toBe("/my-apps");
+		expect((await get("/my-apps")).status).toBe(200);
+		expect((await get("/api/v1/services")).status).toBe(403);
+		expect((await get("/api/v1/auth/get-session")).status).toBe(200);
+
+		const key = await nativeFetch(`${origin}/api/v1/auth/api-key/create`, {
+			body: JSON.stringify({ name: "sneaky" }),
+			headers: { "content-type": "application/json", cookie, origin },
+			method: "POST",
+		});
+		expect(key.status).toBe(403);
+	});
+});

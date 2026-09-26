@@ -112,6 +112,9 @@
       </button>
     {/each}
   </div>
+  <p class="text-text-muted -mt-3 text-xs sm:hidden">
+    Step {currentStep + 1} of {STEPS.length} : {STEPS[currentStep].label}
+  </p>
 
   <form
     action="?/create"
@@ -190,7 +193,7 @@
       </Alert>
     {/if}
 
-    <div class="flex min-h-136 flex-col gap-6">
+    <div class="flex flex-col gap-6 sm:min-h-136">
       <div class="flex-1 space-y-6">
         <BasicInfoStep
           {data}

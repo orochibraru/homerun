@@ -209,7 +209,7 @@
       <p class="text-text-subtle mt-1 text-xs">
         Point at an image, fill in a config, and deploy.
       </p>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center justify-center gap-2">
         <Button class="mt-5" href={resolve("/services/new")} size="sm">
           <Plus class="size-4" />
           Deploy your first service

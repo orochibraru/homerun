@@ -15,15 +15,17 @@ const logger = new Logger("Users");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const load = async ({ locals, url }) => {
+export const load = async ({ locals, parent, url }) => {
 	if (!locals.isAdmin) {
 		throw redirect(302, resolve("/"));
 	}
 
-	const query = parseListQuery(url, {
-		filterKeys: ["role"],
-		sortKeys: sortKeysOf(BASE_SORTS),
-	});
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{ filterKeys: ["role"], sortKeys: sortKeysOf(BASE_SORTS) },
+		preferences.perPage,
+	);
 	const [users, invites] = await Promise.all([
 		UserService.listUsersPaged(query),
 		InvitationDTO.listPending(),

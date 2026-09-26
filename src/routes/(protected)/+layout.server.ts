@@ -15,6 +15,10 @@ export const load = async ({ locals, url }) => {
 		);
 	}
 
+	if (locals.appOnly) {
+		throw redirect(302, resolve("/my-apps"));
+	}
+
 	const settings = await InstanceSettingsDTO.get();
 	const onboardingDone = settings.onboardingComplete;
 

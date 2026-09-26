@@ -28,8 +28,8 @@
   <div
     class="flex items-baseline justify-between gap-4 border-b border-border/60 py-2.5 last:border-0"
   >
-    <dt class="text-text-muted text-sm">{term}</dt>
-    <dd class="text-text truncate text-sm {mono ? 'text-xs' : ''}">
+    <dt class="text-text-muted shrink-0 text-sm">{term}</dt>
+    <dd class="text-text min-w-0 text-right text-sm break-all {mono ? 'text-xs' : ''}">
       {value}
     </dd>
   </div>

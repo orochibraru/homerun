@@ -153,11 +153,11 @@
   {:else}
     <section class="panel rounded-xl">
       <div class="panel-head">
-        <h2 class="eyebrow flex items-center gap-1.5">
+        <h2 class="eyebrow flex shrink-0 items-center gap-1.5">
           <Boxes class="size-3" />
           This instance's stack
         </h2>
-        <span class="text-text-subtle text-[0.6875rem]">
+        <span class="text-text-subtle text-right text-[0.6875rem]">
           Everything your compose file starts, Homerun included
         </span>
       </div>

@@ -8,11 +8,13 @@
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
+	import EnvironmentBadge from "$lib/components/environment-badge.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { SERVICE_STATUS_CONFIG } from "$lib/constants";
 	import { HISTORY_TRIGGERS, historyTriggerLabel } from "$lib/deploy-trigger";
 	import { timeAgo } from "$lib/formatting";
+	import { DEPLOY_ENVIRONMENTS, environmentLabel } from "$lib/release-channels";
 	import { title } from "$lib/store/title";
 
 	const { data } = $props();
@@ -60,6 +62,14 @@
 				value,
 			})),
 		},
+		{
+			key: "environment",
+			label: "Environment",
+			options: DEPLOY_ENVIRONMENTS.map((value) => ({
+				label: environmentLabel(value),
+				value,
+			})),
+		},
 	];
 </script>
 
@@ -95,11 +105,11 @@
             <tr class="border-border text-text-muted border-b text-left text-xs uppercase">
               <th class="px-4 py-3 font-medium">Service</th>
               <th class="px-4 py-3 font-medium">Status</th>
-              <th class="px-4 py-3 font-medium">Trigger</th>
-              <th class="px-4 py-3 font-medium">Source</th>
-              <th class="px-4 py-3 font-medium">By</th>
-              <th class="px-4 py-3 font-medium">Started</th>
-              <th class="px-4 py-3 font-medium">Duration</th>
+              <th class="hidden px-4 py-3 font-medium md:table-cell">Trigger</th>
+              <th class="hidden px-4 py-3 font-medium md:table-cell">Source</th>
+              <th class="hidden px-4 py-3 font-medium md:table-cell">By</th>
+              <th class="hidden px-4 py-3 font-medium md:table-cell">Started</th>
+              <th class="hidden px-4 py-3 font-medium md:table-cell">Duration</th>
             </tr>
           </thead>
           <tbody>
@@ -133,16 +143,20 @@
                     >
                       {dep.serviceName}
                     </a>
+                    <EnvironmentBadge environment={dep.environment} />
                   </div>
+                  <p class="text-text-muted mt-0.5 pl-5 text-xs md:hidden">
+                    {timeAgo(dep.startedAt)} · {historyTriggerLabel(dep.trigger)}{dep.userName ? ` · ${dep.userName}` : ""}{dep.duration ? ` · ${dep.duration}` : ""}
+                  </p>
                   {#if dep.status === "failed" && dep.errorMessage}
-                    <p class="mt-1 max-w-md truncate text-xs text-red-500" title={dep.errorMessage}>
+                    <p class="mt-1 line-clamp-2 max-w-md text-xs text-red-500 md:line-clamp-1" title={dep.errorMessage}>
                       {dep.errorMessage}
                     </p>
                   {/if}
                 </td>
                 <td class="px-4 py-3"><StatusBadge status={dep.status} /></td>
-                <td class="text-text-muted px-4 py-3">{historyTriggerLabel(dep.trigger)}</td>
-                <td class="text-text-muted px-4 py-3 font-mono text-xs">
+                <td class="text-text-muted hidden px-4 py-3 md:table-cell">{historyTriggerLabel(dep.trigger)}</td>
+                <td class="text-text-muted hidden px-4 py-3 font-mono text-xs md:table-cell">
                   {#if dep.gitCommit}
                     <span title={dep.gitRef ?? ""}>
                       {dep.gitRef ? `${dep.gitRef} @ ` : ""}{dep.gitCommit.slice(0, 7)}
@@ -151,14 +165,14 @@
                     {dep.imageRef ?? "—"}
                   {/if}
                 </td>
-                <td class="text-text-muted px-4 py-3">{dep.userName ?? "—"}</td>
+                <td class="text-text-muted hidden px-4 py-3 md:table-cell">{dep.userName ?? "—"}</td>
                 <td
-                  class="text-text-muted px-4 py-3 whitespace-nowrap"
+                  class="text-text-muted hidden px-4 py-3 whitespace-nowrap md:table-cell"
                   title={new Date(dep.startedAt).toLocaleString()}
                 >
                   {timeAgo(dep.startedAt)}
                 </td>
-                <td class="text-text-muted px-4 py-3 tabular-nums">{dep.duration ?? "—"}</td>
+                <td class="text-text-muted hidden px-4 py-3 tabular-nums md:table-cell">{dep.duration ?? "—"}</td>
               </tr>
               {#if expandedId === dep.id}
                 <tr class="border-border/60 border-b last:border-0">

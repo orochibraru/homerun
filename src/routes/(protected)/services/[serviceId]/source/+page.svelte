@@ -165,8 +165,8 @@
     </div>
 
     {#if buildSource === "image"}
-      <div class="grid grid-cols-3 gap-3">
-        <div class="col-span-2">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="sm:col-span-2">
           <label class={label} for="image">
             Image <span class="text-red-500">*</span>
           </label>

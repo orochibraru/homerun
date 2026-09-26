@@ -16,6 +16,7 @@ export interface RevisionView {
 	createdAt: Date;
 	current: boolean;
 	deployable: boolean;
+	environment: string;
 	errorMessage: string | null;
 	finishedAt: Date | null;
 	gitCommit: string | null;
@@ -142,6 +143,7 @@ class RevisionServiceClass {
 				createdAt: revision.createdAt,
 				current: entry.current,
 				deployable: isRevision(revision),
+				environment: revision.environment,
 				errorMessage: latest.errorMessage,
 				finishedAt: latest.finishedAt,
 				gitCommit: revision.gitCommit,

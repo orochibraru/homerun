@@ -7,6 +7,7 @@ import {
 	previewDomainTemplateProblem,
 	primaryHostname,
 	renderPreviewDomain,
+	rewriteHostnames,
 	serviceHostnames,
 } from "$lib/service-domains";
 
@@ -99,6 +100,31 @@ describe("service domains", () => {
 		);
 		expect(previewDomainTemplateProblem("pr-{pr}")).toContain(
 			"doesn't make a valid domain",
+		);
+	});
+
+	test("a preview's env points at its own hostname, not its parent's", () => {
+		expect(
+			rewriteHostnames(
+				{
+					API: "https://api.sergios.fr",
+					ORIGIN: "https://sergios.fr",
+					OTHER: "https://www.sergios.fr/x",
+					PORT: "3000",
+				},
+				["sergios.fr", "www.sergios.fr"],
+				"preview-4.sergios.fr",
+			),
+		).toEqual({
+			API: "https://api.sergios.fr",
+			ORIGIN: "https://preview-4.sergios.fr",
+			OTHER: "https://preview-4.sergios.fr/x",
+			PORT: "3000",
+		});
+		expect(rewriteHostnames({ A: "sergios.fr" }, ["sergios.fr"], null)).toEqual(
+			{
+				A: "sergios.fr",
+			},
 		);
 	});
 });

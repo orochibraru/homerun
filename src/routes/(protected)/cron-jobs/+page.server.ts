@@ -10,11 +10,15 @@ import { enqueueCronJobRun } from "$lib/services/cron-job-queue";
 const logger = new Logger("CronJob");
 
 export const load = async ({ parent, url }) => {
-	await parent();
-	const query = parseListQuery(url, {
-		filterKeys: ["kind", "enabled"],
-		sortKeys: sortKeysOf(BASE_SORTS),
-	});
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{
+			filterKeys: ["kind", "enabled"],
+			sortKeys: sortKeysOf(BASE_SORTS),
+		},
+		preferences.perPage,
+	);
 	const [paged, runs] = await Promise.all([
 		CronJobDTO.listPaged(query),
 		CronJobRunDTO.listRecent(),

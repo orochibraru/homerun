@@ -9,6 +9,7 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
+	import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
 	import { PALETTES } from "$lib/palettes";
 	import { title } from "$lib/store/title.js";
 	import { saveToast } from "$lib/toast";
@@ -34,6 +35,7 @@
 				(data.preferences.accentColor ? "custom" : ""),
 		),
 	);
+	let perPage = $state(untrack(() => String(data.preferences.perPage)));
 	let accentColor = $state(
 		untrack(() => data.preferences.accentColor ?? DEFAULT_ACCENT),
 	);
@@ -159,6 +161,36 @@
                     />
                 </label>
             </div>
+            <div class="flex justify-end">
+                <Button type="submit">Save</Button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel rounded-md">
+        <div class="border-border border-b px-5 py-4">
+            <h2 class="eyebrow">Lists</h2>
+            <p class="text-text-muted text-xs">
+                How many rows every paginated list shows per page by default.
+            </p>
+        </div>
+        <form
+            action="?/updatePerPage"
+            class="space-y-4 p-5"
+            method="POST"
+            use:enhance={saveToast("Page size")}
+        >
+            <SelectRoot name="perPage" type="single" bind:value={perPage}>
+                <SelectTrigger id="perPage">{perPage} per page</SelectTrigger>
+                <SelectContent>
+                    {#each PER_PAGE_OPTIONS as option (option)}
+                        <SelectItem
+                            label="{option} per page"
+                            value={String(option)}
+                        />
+                    {/each}
+                </SelectContent>
+            </SelectRoot>
             <div class="flex justify-end">
                 <Button type="submit">Save</Button>
             </div>

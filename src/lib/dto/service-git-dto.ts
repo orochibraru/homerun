@@ -13,7 +13,9 @@ export class ServiceGitDTO extends ServiceDTO {
 	/**
 	 * Every git service that deploys on push and needs its branch polled:
 	 * polling is turned on for it, or Homerun couldn't register its webhook.
-	 * Pull request previews are never polled.
+	 * Pull request previews are never polled, and neither is a service with
+	 * release channels on (branch pushes feed its canary, which is polled
+	 * instead, never having a webhook of its own).
 	 */
 	static async listPushPollable(): Promise<ServiceDTO[]> {
 		const rows = await db
@@ -23,14 +25,15 @@ export class ServiceGitDTO extends ServiceDTO {
 				and(
 					eq(service.buildSource, "git"),
 					eq(service.autoDeployOnPush, true),
-					isNull(service.previewParentId),
+					eq(service.channelsEnabled, false),
+					or(isNull(service.previewParentId), eq(service.channelCanary, true)),
 					or(eq(service.gitPollEnabled, true), isNull(service.gitWebhookId)),
 				),
 			);
 		return rows.map((row) => new ServiceGitDTO(row));
 	}
 
-	/** The pull request previews of each of `parentIds`, newest pull request first, keyed by parent id. */
+	/** The pull request previews and release channel canary of each of `parentIds`, the canary first then newest pull request first, keyed by parent id. */
 	static async listPreviewsOf(
 		parentIds: string[],
 	): Promise<Map<string, ServiceDTO[]>> {
@@ -58,9 +61,38 @@ export class ServiceGitDTO extends ServiceDTO {
 		const rows = await db
 			.select()
 			.from(service)
-			.where(eq(service.previewParentId, parentId))
+			.where(
+				and(
+					eq(service.previewParentId, parentId),
+					eq(service.channelCanary, false),
+				),
+			)
 			.orderBy(desc(service.previewPrNumber));
 		return rows.map((row) => new ServiceGitDTO(row));
+	}
+
+	/** Every service Homerun manages under a parent: its pull request previews and its release channel canary. */
+	static async listChildren(parentId: string): Promise<ServiceDTO[]> {
+		const rows = await db
+			.select()
+			.from(service)
+			.where(eq(service.previewParentId, parentId));
+		return rows.map((row) => new ServiceGitDTO(row));
+	}
+
+	/** The release channel canary of a service, null when it has none. */
+	static async getCanary(parentId: string): Promise<ServiceDTO | null> {
+		const [row] = await db
+			.select()
+			.from(service)
+			.where(
+				and(
+					eq(service.previewParentId, parentId),
+					eq(service.channelCanary, true),
+				),
+			)
+			.limit(1);
+		return row ? new ServiceGitDTO(row) : null;
 	}
 
 	/** The preview of pull request `prNumber` on a service, null when there's none. */
@@ -99,9 +131,11 @@ export class ServiceGitDTO extends ServiceDTO {
 					eq(service.gitProviderId, providerId),
 					eq(service.buildSource, "git"),
 					isNull(service.gitWebhookId),
+					isNull(service.previewParentId),
 					or(
 						eq(service.autoDeployOnPush, true),
 						eq(service.previewsEnabled, true),
+						eq(service.channelsEnabled, true),
 					),
 				),
 			);

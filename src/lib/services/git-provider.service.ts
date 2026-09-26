@@ -618,9 +618,9 @@ class GitProviderServiceClass {
 	}
 
 	/**
-	 * Registers a webhook on `hook.repo` that delivers push events, and pull
-	 * request events when `hook.pullRequests` is set, to `hook.url`, signed
-	 * with `hook.secret`.
+	 * Registers a webhook on `hook.repo` that delivers push events, pull
+	 * request events when `hook.pullRequests` is set and tag pushes when
+	 * `hook.tags` is set, to `hook.url`, signed with `hook.secret`.
 	 *
 	 * @returns The provider's id for the new hook, used to delete it later.
 	 * @throws `GitProviderRefusedError` when the provider refuses (usually a
@@ -634,6 +634,7 @@ class GitProviderServiceClass {
 			pullRequests?: boolean;
 			repo: string;
 			secret: string;
+			tags?: boolean;
 			url: string;
 		},
 	): Promise<string> {

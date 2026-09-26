@@ -86,9 +86,9 @@
   <ol class="flex min-w-0 items-center gap-1 text-sm">
     {#each crumbs as crumb, i (crumb.href)}
       {@const last = i === crumbs.length - 1}
-      <li class="flex min-w-0 items-center gap-1 {last ? '' : 'shrink-0'}">
+      <li class="min-w-0 items-center gap-1 {last ? 'flex' : 'hidden shrink-0 sm:flex'}">
         {#if i > 0}
-          <ChevronRight class="text-text-subtle size-3.5 shrink-0" />
+          <ChevronRight class="text-text-subtle hidden size-3.5 shrink-0 sm:block" />
         {/if}
         {#if last}
           <span aria-current="page" class="text-text truncate font-medium">

@@ -7,6 +7,8 @@ import {
 	updateServiceApiBody,
 } from "$lib/server/validation/api";
 import { serviceConfigSchema } from "$lib/service-config";
+import { channelRoutes } from "./channels";
+import { previewRoutes } from "./previews";
 import {
 	deploymentResponse,
 	deployResultResponse,
@@ -57,7 +59,7 @@ export interface RouteDef {
 const listQueryParams: ParamDef[] = [
 	{ description: "1-based page number (default 1)", name: "page" },
 	{
-		description: "Items per page (default 100, max 100)",
+		description: "Items per page (default 100, max 200)",
 		name: "perPage",
 	},
 	{ description: "Case-insensitive search term", name: "q" },
@@ -620,4 +622,6 @@ export const routes: RouteDef[] = [
 		summary: "Revoke the current API key",
 		tags: ["Meta"],
 	},
+	...previewRoutes,
+	...channelRoutes,
 ];

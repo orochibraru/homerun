@@ -55,8 +55,18 @@ The app itself receives the signed-in identity as `X-Homerun-User`,
 supports proxy-header authentication can consume directly.
 
 **Groups include the Homerun role.** Besides the provider's claims, a user's
-Homerun role (`admin`, `developer` or `viewer` for read-only) counts as a group,
-so an app can be limited to `admin` without an identity provider at all.
+Homerun role (`admin`, `developer`, `viewer` for read-only, or `app-user` for
+app access only) counts as a group, so an app can be limited to `admin` without
+an identity provider at all.
+
+**Sharing an app with someone who shouldn't see the dashboard.** Create them on
+`/users` with the **App access only** role, then pick them under **Users** on
+the app's Security tab (every account is listed there, with its role). They sign
+in through the wall like anyone else, but Homerun itself refuses them everywhere
+else, and opening the dashboard shows them only the list of apps they're allowed
+into. See [Users and roles](users-and-roles.md). Note that a wall with all three
+lists empty lets **any** signed-in account through, app-access accounts
+included.
 
 **Revocation.** Access is re-checked when the app cookie is issued, whenever the
 rules change, and again at least every five minutes while the cookie is in use.

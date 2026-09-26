@@ -37,6 +37,14 @@ sync by hand.
   pushed.
 - **[Pull request previews](pull-request-previews.md)**: a service per pull
   request, and why forks are never previewed.
+- **[Release channels](release-channels.md)**: a managed canary service fed by a
+  branch, and the service itself deployed from matching tags.
+- **[Main is canary, tags are stable](main-canary-tags-stable.md)**: a cookbook
+  for that release model, with a GitHub Actions release workflow, rollback and
+  pull request previews.
+- **[Testing pull requests with GitHub Actions](github-actions-preview-testing.md)**:
+  E2E tests against each pull request's preview, then shipping the exact image
+  that passed.
 - **[Required status checks](status-checks.md)**: holding a build until CI
   passes on the exact commit.
 - **[Importing a compose file](compose-import.md)**: what maps across from a

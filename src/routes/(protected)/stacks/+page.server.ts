@@ -4,9 +4,13 @@ import { parseListQuery } from "$lib/server/list-query";
 import { descendantIds, stackPath } from "$lib/stack-tree";
 
 export const load = async ({ parent, url }) => {
-	await parent();
+	const { preferences } = await parent();
 
-	const query = parseListQuery(url, { sortKeys: sortKeysOf(STACK_SORTS) });
+	const query = parseListQuery(
+		url,
+		{ sortKeys: sortKeysOf(STACK_SORTS) },
+		preferences.perPage,
+	);
 	const [paged, all] = await Promise.all([
 		StackDTO.listWithServiceCountsPaged(query, { topLevelOnly: true }),
 		StackDTO.list(),

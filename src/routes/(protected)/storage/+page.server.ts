@@ -80,11 +80,15 @@ async function runBulk(formData: FormData, userId: string) {
 }
 
 export const load = async ({ parent, url }) => {
-	await parent();
-	const query = parseListQuery(url, {
-		filterKeys: ["kind", "backup"],
-		sortKeys: sortKeysOf(BASE_SORTS),
-	});
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{
+			filterKeys: ["kind", "backup"],
+			sortKeys: sortKeysOf(BASE_SORTS),
+		},
+		preferences.perPage,
+	);
 	const paged = await StorageVolumeDTO.listPaged(query);
 
 	return {

@@ -148,6 +148,45 @@ export const deployServiceApiBody = z.object({
 		.describe(
 			"Image tag to deploy. Saved on the service first, so later deploys keep it. Image-based services only.",
 		),
+	environment: z
+		.enum(["stable", "production", "canary"])
+		.optional()
+		.describe(
+			"With release channels on: canary deploys the canary service from the canary branch, stable (or production) the service itself at its current ref. Defaults to stable.",
+		),
+});
+
+export const releaseChannelsApiBody = z.object({
+	branch: z
+		.string()
+		.trim()
+		.min(1)
+		.optional()
+		.describe(
+			"The branch that feeds the canary. Defaults to the one already set, else the service's branch.",
+		),
+	canaryDomain: z
+		.string()
+		.trim()
+		.toLowerCase()
+		.nullable()
+		.optional()
+		.describe(
+			"A custom domain for the canary, null for none (it keeps its default <slug>-canary hostname). Omit to keep the current one.",
+		),
+	enabled: z
+		.boolean()
+		.describe(
+			"Turn release channels on or off. Off deletes the canary service.",
+		),
+	tagPattern: z
+		.string()
+		.trim()
+		.min(1)
+		.optional()
+		.describe(
+			"Glob a pushed tag must match to deploy the stable service, e.g. v*. Defaults to the one already set.",
+		),
 });
 
 export const createStackApiBody = z.object({
@@ -161,4 +200,15 @@ export const updateChannelApiBody = z.object({
 		description:
 			"stable follows stable releases; canary every build merged to main that passed e2e; nightly every build merged to main, published before e2e. Switching to a more stable channel never downgrades",
 	}),
+});
+
+/** `POST /services/{serviceId}/previews/{prNumber}/promote`'s optional body: the commit CI tested, refused when the preview runs another one. */
+export const promotePreviewApiBody = z.object({
+	commit: z
+		.string()
+		.regex(/^[0-9a-f]{7,40}$/i, "A full or abbreviated (7+) commit SHA.")
+		.optional()
+		.describe(
+			"The commit the preview must be running, e.g. the pull request head CI tested. Omitted, whatever the preview runs is promoted.",
+		),
 });

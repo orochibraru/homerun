@@ -1,17 +1,21 @@
 import { error } from "@sveltejs/kit";
 import { getRequestEvent } from "$app/server";
-import { READ_ONLY_MESSAGE } from "$lib/permissions";
+import { APP_ONLY_MESSAGE, READ_ONLY_MESSAGE } from "$lib/permissions";
 import type { AuthType } from "$lib/services/auth";
 
 /**
  * The signed-in user for the current remote function call.
  *
- * @throws A 401 error when nobody is signed in.
+ * @throws A 401 error when nobody is signed in, or 403 for an
+ * app-access-only user, who can't use the dashboard's remote functions.
  */
 export function requireUser(): AuthType["user"] {
 	const { locals } = getRequestEvent();
 	if (!locals.user) {
 		error(401, "Unauthorized");
+	}
+	if (locals.appOnly) {
+		error(403, APP_ONLY_MESSAGE);
 	}
 	return locals.user;
 }

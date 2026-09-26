@@ -34,7 +34,7 @@
   <div class="relative">
     <Popover.Trigger>
       {#snippet child({ props })}
-        <button {...props} aria-label="Notifications" class="{headerControlClass} w-8" type="button">
+        <button {...props} aria-label="Notifications" class="{headerControlClass} w-9 sm:w-8" type="button">
           <Bell class="size-3.5" />
         </button>
       {/snippet}
@@ -50,7 +50,7 @@
 
   <Popover.Content
     align="end"
-    class="max-h-96 w-80 gap-0 overflow-y-auto rounded-md p-0"
+    class="max-h-[min(24rem,70dvh)] w-[min(20rem,calc(100vw-1rem))] gap-0 overflow-y-auto rounded-md p-0"
   >
     <div class="border-border flex items-center justify-between gap-2 border-b px-4 py-3">
       <p class="text-text text-sm font-semibold">Notifications</p>

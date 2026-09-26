@@ -1,13 +1,37 @@
-export const USER_ROLES = ["admin", "developer", "viewer"] as const;
+export const USER_ROLES = ["admin", "developer", "viewer", "app-user"] as const;
 
 export type Role = (typeof USER_ROLES)[number];
 
 export const READ_ONLY_ROLE: Role = "viewer";
 
-export const ROLE_OPTIONS: { label: string; value: Role }[] = [
-	{ label: "Developer", value: "developer" },
-	{ label: "Read-only", value: "viewer" },
-	{ label: "Admin", value: "admin" },
+export const APP_ONLY_ROLE: Role = "app-user";
+
+export const ROLE_OPTIONS: {
+	description: string;
+	label: string;
+	value: Role;
+}[] = [
+	{
+		description: "The whole dashboard, except Users and Settings.",
+		label: "Developer",
+		value: "developer",
+	},
+	{
+		description: "Sees the whole dashboard but can't change anything.",
+		label: "Read-only",
+		value: "viewer",
+	},
+	{
+		description:
+			"No dashboard at all: only signs in to the apps whose login wall lets them through.",
+		label: "App access only",
+		value: "app-user",
+	},
+	{
+		description: "Everything, including Users and Settings.",
+		label: "Admin",
+		value: "admin",
+	},
 ];
 
 export const API_KEY_SCOPES = ["full", "read"] as const;
@@ -56,6 +80,27 @@ const SELF_SERVICE_REMOTE_COMMANDS = new Set([
 
 const REMOTE_PREFIX = "/_app/remote/";
 
+export const APP_ONLY_MESSAGE =
+	"This account can only sign in to the apps shared with it, not the Homerun dashboard.";
+
+export const APP_ONLY_HOME = "/my-apps";
+
+const APP_ONLY_API_PREFIXES = ["/api/v1/auth/", "/api/health", "/api/v1/ready"];
+
+const APP_ONLY_DENIED_AUTH_PREFIXES = [
+	"/api/v1/auth/api-key/",
+	"/api/v1/auth/admin/",
+	"/api/v1/auth/cli/",
+];
+
+const APP_ONLY_REMOTE_COMMANDS = new Set([
+	"completeAccountSetup",
+	"lookupSignIn",
+	"resendSetupCode",
+]);
+
+const APP_ONLY_DENIED_ROUTES = ["/(protected)", "/onboarding"];
+
 /**
  * A role in the shape better-auth's admin plugin endpoints are typed with. The
  * plugin types roles as its own defaults ("user" | "admin") because this app
@@ -75,6 +120,43 @@ export function isUserRole(role: unknown): role is Role {
 export function roleLabel(role: string | null | undefined): string {
 	return (
 		ROLE_OPTIONS.find((option) => option.value === role)?.label ?? "Developer"
+	);
+}
+
+/** Whether a user holds the app-access-only role: login-wall apps only, never the dashboard. */
+export function isAppOnly(role: string | null | undefined): boolean {
+	return role === APP_ONLY_ROLE;
+}
+
+/**
+ * Whether an app-access-only user may make this request, whatever its method:
+ * their own account's better-auth endpoints (sign-in and out, password,
+ * passkeys, 2FA, sessions, Homerun's own OIDC authorize and consent) minus API
+ * keys, the admin plugin and CLI login; the sign-in page's remote
+ * commands; and every page outside the dashboard (`(protected)`) and
+ * onboarding. `routeId` is SvelteKit's matched route, null for a 404.
+ */
+export function appOnlyMayRequest(
+	pathname: string,
+	routeId: string | null,
+): boolean {
+	if (pathname.startsWith(REMOTE_PREFIX)) {
+		const name = pathname.slice(REMOTE_PREFIX.length).split("/")[1] ?? "";
+		return APP_ONLY_REMOTE_COMMANDS.has(name);
+	}
+	if (pathname.startsWith("/api/")) {
+		return (
+			APP_ONLY_API_PREFIXES.some((prefix) => pathname.startsWith(prefix)) &&
+			!APP_ONLY_DENIED_AUTH_PREFIXES.some((prefix) =>
+				pathname.startsWith(prefix),
+			)
+		);
+	}
+	return !(
+		routeId &&
+		APP_ONLY_DENIED_ROUTES.some(
+			(denied) => routeId === denied || routeId.startsWith(`${denied}/`),
+		)
 	);
 }
 

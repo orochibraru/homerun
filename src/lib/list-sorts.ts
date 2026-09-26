@@ -20,3 +20,7 @@ export const STACK_SORTS: SortOption[] = [
 export function sortKeysOf(options: SortOption[]): string[] {
 	return [...new Set(options.map((o) => o.value.replace(/^-/, "")))];
 }
+
+export const PER_PAGE_OPTIONS = [25, 50, 100, 200] as const;
+
+export const DEFAULT_PER_PAGE = 50;

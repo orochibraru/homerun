@@ -27,9 +27,11 @@ const { db } = await import("../../../src/lib/server/db/lib");
 const { account: accountTable, user: userTable } = await import(
 	"../../../src/lib/server/db/schema"
 );
-const { ACCESS_DENIAL_MESSAGES, AppAccessService } = await import(
-	"../../../src/lib/services/app-access.service"
-);
+const { ACCESS_DENIAL_MESSAGES, AppAccessService, sharedAppLinks } =
+	await import("../../../src/lib/services/app-access.service");
+const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
+const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
+const { config } = await import("../../../src/lib/config");
 
 type Service = Parameters<typeof AppAccessService.evaluate>[0];
 
@@ -271,5 +273,164 @@ describe("AppAccessService.recheck", () => {
 			),
 		).toBe(false);
 		expect(refreshToken).not.toHaveBeenCalled();
+	});
+});
+
+function appRow(overrides: Record<string, unknown> = {}) {
+	return {
+		channelCanary: false,
+		defaultDomainEnabled: true,
+		dnsResolvable: true,
+		domains: [],
+		id: "svc",
+		name: "App",
+		previewPrNumber: null,
+		previewPrTitle: null,
+		primaryDomain: null,
+		slug: "app",
+		...overrides,
+	} as Parameters<typeof sharedAppLinks>[0][number]["row"];
+}
+
+describe("sharedAppLinks", () => {
+	test("links each app's primary hostname over https, sorted by name", () => {
+		expect(
+			sharedAppLinks(
+				[
+					{
+						row: appRow({ id: "w", name: "Wiki", slug: "wiki" }),
+						stackSlug: "docs",
+					},
+					{
+						row: appRow({
+							domains: ["books.example.org"],
+							id: "b",
+							name: "Books",
+							primaryDomain: "books.example.org",
+						}),
+						stackSlug: null,
+					},
+				],
+				"example.com",
+			),
+		).toEqual([
+			{
+				canary: false,
+				id: "b",
+				name: "Books",
+				pullRequest: null,
+				url: "https://books.example.org",
+			},
+			{
+				canary: false,
+				id: "w",
+				name: "Wiki",
+				pullRequest: null,
+				url: "https://docs-wiki.example.com",
+			},
+		]);
+	});
+
+	test("skips an app with nothing routed or kept out of DNS", () => {
+		expect(
+			sharedAppLinks(
+				[
+					{ row: appRow({ defaultDomainEnabled: false }), stackSlug: null },
+					{ row: appRow({ dnsResolvable: false }), stackSlug: null },
+				],
+				"example.com",
+			),
+		).toEqual([]);
+	});
+
+	test("a pull request preview carries its number and title", () => {
+		const [link] = sharedAppLinks(
+			[
+				{
+					row: appRow({
+						name: "App PR #7",
+						previewPrNumber: 7,
+						previewPrTitle: "New checkout",
+						slug: "app-pr-7",
+					}),
+					stackSlug: null,
+				},
+			],
+			"example.com",
+		);
+		expect(link.pullRequest).toEqual({ number: 7, title: "New checkout" });
+		expect(link.url).toBe("https://app-pr-7.example.com");
+	});
+
+	test("a release channel canary is flagged as the canary, not a pull request", () => {
+		const [link] = sharedAppLinks(
+			[
+				{
+					row: appRow({
+						channelCanary: true,
+						previewPrNumber: 3,
+						slug: "app-canary",
+					}),
+					stackSlug: null,
+				},
+			],
+			"example.com",
+		);
+		expect(link.canary).toBe(true);
+		expect(link.pullRequest).toBeNull();
+	});
+});
+
+describe("AppAccessService.sharedApps", () => {
+	function gated(overrides: Record<string, unknown>) {
+		const row = {
+			...appRow(overrides),
+			authAllowedEmails: [],
+			authAllowedGroups: [],
+			authAllowedUserIds: [],
+			authProviders: ["password"],
+			authRequired: true,
+			stackId: null,
+			...overrides,
+		};
+		return { ...row, toJSON: () => row } as unknown as Service;
+	}
+
+	test("lists only the gated apps whose wall lets the user through", async () => {
+		tables.users = [ada];
+		tables.accounts = [
+			{ id: "a", idToken: null, providerId: "credential", refreshToken: null },
+		];
+		const listSpy = spyOn(ServiceDTO, "list").mockResolvedValue([
+			gated({ id: "open", name: "Open", slug: "open" }),
+			gated({ authAllowedUserIds: ["someone-else"], id: "shut", name: "Shut" }),
+			gated({ authRequired: false, id: "public", name: "Public" }),
+			gated({ id: "stacked", name: "Stacked", slug: "web", stackId: "s1" }),
+		]);
+		const stackSpy = spyOn(StackDTO, "list").mockResolvedValue([
+			{ id: "s1", slug: "shop" },
+		] as unknown as Awaited<ReturnType<typeof StackDTO.list>>);
+		try {
+			const apps = await AppAccessService.sharedApps("u1");
+			expect(apps.map((app) => [app.id, app.url])).toEqual([
+				["open", `https://open.${config.baseDomain}`],
+				["stacked", `https://shop-web.${config.baseDomain}`],
+			]);
+		} finally {
+			listSpy.mockRestore();
+			stackSpy.mockRestore();
+		}
+	});
+
+	test("skips the stack lookup when nothing is shared", async () => {
+		const listSpy = spyOn(ServiceDTO, "list").mockResolvedValue([]);
+		const stackSpy = spyOn(StackDTO, "list");
+		try {
+			expect(await AppAccessService.sharedApps("u1")).toEqual([]);
+			expect(stackSpy).not.toHaveBeenCalled();
+		} finally {
+			listSpy.mockRestore();
+			stackSpy.mockRestore();
+		}
 	});
 });

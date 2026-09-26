@@ -53,8 +53,9 @@ HTTP on `localhost`).
 If an app asks for individual endpoints instead, the app's page in Homerun lists
 the issuer, authorization, token, userinfo and JWKS URLs. Request the scopes
 `openid profile email`, plus `groups` if the app maps groups to roles: the
-`groups` claim holds the user's Homerun role (`admin`, `developer` or `viewer`).
-Tokens are signed with RS256.
+`groups` claim holds the user's Homerun role (`admin`, `developer`, `viewer` or
+`app-user`). An **App access only** account can sign in to these apps too, it
+just can't reach the Homerun dashboard. Tokens are signed with RS256.
 
 **Turning an app off or deleting it.** **Turn off** stops new sign-ins through
 the app. **Delete app** also revokes every token it holds, so users are signed

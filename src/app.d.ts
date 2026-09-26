@@ -14,6 +14,7 @@ declare global {
 		// interface Error {}
 		interface Locals {
 			apiKeyScope: ApiKeyScope | null;
+			appOnly: boolean;
 			authCookie: string;
 			error: string;
 			errorId: string;

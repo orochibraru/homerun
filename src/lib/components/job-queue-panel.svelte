@@ -29,10 +29,10 @@
 
 {#snippet row(entry: QueuedJob)}
   {@const meta = JOB_STATUS_CONFIG[entry.status]}
-  <div class="panel flex items-center gap-4 rounded-md p-4">
+  <div class="panel flex flex-col gap-2 rounded-md p-4 sm:flex-row sm:items-center sm:gap-4">
     <div class="min-w-0 flex-1">
       <p class="text-text truncate text-sm font-semibold">{entry.title}</p>
-      <p class="text-text-muted mt-0.5 truncate text-xs">
+      <p class="text-text-muted mt-0.5 line-clamp-2 text-xs break-all sm:line-clamp-none sm:truncate sm:break-normal">
         {JOB_TYPE_LABELS[entry.type]}
         {#if entry.maxAttempts > 1}
           · attempt {entry.attempts}/{entry.maxAttempts}

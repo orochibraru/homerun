@@ -16,6 +16,7 @@ export const GET = async ({ params, locals }) => {
 			buildSource: revision.buildSource,
 			createdAt: revision.createdAt,
 			current: revision.current,
+			environment: revision.environment,
 			gitCommit: revision.gitCommit,
 			gitRef: revision.gitRef,
 			health: revision.health,

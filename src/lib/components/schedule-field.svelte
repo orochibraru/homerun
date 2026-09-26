@@ -94,24 +94,28 @@
           </SelectContent>
         </SelectRoot>
       {:else if schedule.mode === "monthly"}
-        <span class="text-text-muted text-sm">on day</span>
-        <Input
-          class="w-20"
-          aria-label="Day of the month"
-          max="31"
-          min="1"
-          type="number"
-          bind:value={schedule.dayOfMonth}
-        />
+        <span class="flex items-center gap-2">
+          <span class="text-text-muted text-sm">on day</span>
+          <Input
+            class="w-20"
+            aria-label="Day of the month"
+            max="31"
+            min="1"
+            type="number"
+            bind:value={schedule.dayOfMonth}
+          />
+        </span>
       {/if}
-      <span class="text-text-muted text-sm">at</span>
-      <Input
-        class="w-32"
-        aria-label="Time of day"
-        required
-        type="time"
-        bind:value={schedule.time}
-      />
+      <span class="flex items-center gap-2">
+        <span class="text-text-muted text-sm">at</span>
+        <Input
+          class="w-32"
+          aria-label="Time of day"
+          required
+          type="time"
+          bind:value={schedule.time}
+        />
+      </span>
     {/if}
   </div>
   <p class="text-text-subtle mt-1.5 text-xs">

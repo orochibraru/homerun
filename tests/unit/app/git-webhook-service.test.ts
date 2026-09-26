@@ -26,6 +26,9 @@ const { GitProviderRefusedError, GitProviderService } = await import(
 const { PreviewService } = await import(
 	"../../../src/lib/services/preview.service"
 );
+const { ReleaseChannelError, ReleaseChannelService } = await import(
+	"../../../src/lib/services/release-channel.service"
+);
 const { decryptSecret, encryptSecret } = await import(
 	"../../../src/lib/services/secrets"
 );
@@ -186,6 +189,21 @@ describe("GitWebhookService.sync", () => {
 		});
 		expect(deleted).toHaveLength(1);
 		expect(created[0][2]).toMatchObject({ pullRequests: true });
+	});
+
+	test("re-registers with tag pushes when release channels are toggled", async () => {
+		const { svc } = fakeService({
+			autoDeployOnPush: false,
+			channelsEnabled: true,
+			gitWebhookId: "hook-0",
+		});
+		await GitWebhookService.sync(svc, {
+			...snapshot,
+			channelsEnabled: false,
+			gitWebhookId: "hook-0",
+		});
+		expect(deleted).toHaveLength(1);
+		expect(created[0][2]).toMatchObject({ tags: true });
 	});
 
 	test("logs rather than throws when the provider refuses a delete", async () => {
@@ -444,6 +462,109 @@ describe("GitWebhookService.handleDelivery", () => {
 		expect(result).toEqual({
 			reason: "Pull request previews are off.",
 			status: "ignored",
+		});
+	});
+
+	describe("with release channels on", () => {
+		const channels = {
+			channelBranch: "main",
+			channelsEnabled: true,
+			channelTagPattern: "v*",
+			gitRef: "v1.0.0",
+		};
+		let canaryCalls: unknown[][] = [];
+		let stableCalls: unknown[][] = [];
+		let canaryError: unknown = null;
+
+		beforeEach(() => {
+			canaryCalls = [];
+			stableCalls = [];
+			canaryError = null;
+			stub(
+				ReleaseChannelService,
+				"deployCanary",
+				async (...args: unknown[]) => {
+					if (canaryError) {
+						throw canaryError;
+					}
+					canaryCalls.push(args);
+					return {
+						deploymentId: "dc",
+						jobId: "jc",
+						serviceId: "canary1",
+						status: "deployed",
+					};
+				},
+			);
+			stub(
+				ReleaseChannelService,
+				"deployStable",
+				async (...args: unknown[]) => {
+					stableCalls.push(args);
+					return {
+						deploymentId: "ds",
+						jobId: "js",
+						serviceId: "svc1",
+						status: "deployed",
+					};
+				},
+			);
+		});
+
+		test("a push to the canary branch deploys the canary, not the service", async () => {
+			const { svc } = fakeService(channels);
+			const { headers, raw } = signed("push", {
+				after: "b".repeat(40),
+				ref: "refs/heads/main",
+			});
+			const result = await GitWebhookService.handleDelivery(svc, headers, raw);
+			expect(result).toMatchObject({
+				serviceId: "canary1",
+				status: "deployed",
+			});
+			expect(canaryCalls[0][1]).toEqual({
+				commit: "b".repeat(40),
+				trigger: "push",
+				userId: "u1",
+			});
+			expect(enqueued).toHaveLength(0);
+		});
+
+		test("a matching tag deploys the stable service at that tag", async () => {
+			const { svc } = fakeService(channels);
+			const { headers, raw } = signed("push", {
+				after: "c".repeat(40),
+				ref: "refs/tags/v1.1.0",
+			});
+			const result = await GitWebhookService.handleDelivery(svc, headers, raw);
+			expect(result).toMatchObject({ serviceId: "svc1", status: "deployed" });
+			expect(stableCalls[0][1]).toEqual({
+				tag: "v1.1.0",
+				trigger: "push",
+				userId: "u1",
+			});
+			expect(canaryCalls).toHaveLength(0);
+		});
+
+		test("a tag outside the pattern and other branches are ignored", async () => {
+			const { svc } = fakeService(channels);
+			for (const ref of ["refs/tags/nightly-3", "refs/heads/dev"]) {
+				const { headers, raw } = signed("push", { ref });
+				expect(
+					(await GitWebhookService.handleDelivery(svc, headers, raw)).status,
+				).toBe("ignored");
+			}
+			expect(canaryCalls).toHaveLength(0);
+			expect(stableCalls).toHaveLength(0);
+		});
+
+		test("a canary that can't be deployed is reported, not thrown", async () => {
+			canaryError = new ReleaseChannelError("slug taken");
+			const { svc } = fakeService(channels);
+			const { headers, raw } = signed("push", { ref: "refs/heads/main" });
+			expect(await GitWebhookService.handleDelivery(svc, headers, raw)).toEqual(
+				{ reason: "slug taken", status: "ignored" },
+			);
 		});
 	});
 

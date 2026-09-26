@@ -5,7 +5,13 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { isCommitSha } from "$lib/git-ref";
 import { type PullRequestEvent, previewSlug } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
-import { renderPreviewDomain, serviceHostnames } from "$lib/service-domains";
+import {
+	defaultHostname,
+	primaryHostname,
+	renderPreviewDomain,
+	rewriteHostnames,
+	serviceHostnames,
+} from "$lib/service-domains";
 import { isDeployed } from "$lib/service-state";
 import type { ContainerStatus } from "$lib/types";
 import { CapacityService } from "./capacity.service.ts";
@@ -38,8 +44,25 @@ function previewRef(event: PullRequestEvent): string | null {
 	return isCommitSha(event.commit) ? event.commit : event.branch;
 }
 
-/** The parent's build and runtime settings a preview mirrors, refreshed on every pull request update. */
-function mirroredSettings(parent: ServiceDTO) {
+/**
+ * The parent's env for a preview whose main hostname is `previewHost`: any
+ * of the parent's own hostnames in a value (an `ORIGIN`, a public URL) point
+ * at the preview instead, so the preview doesn't claim to be the parent.
+ */
+async function previewEnv(
+	parent: ServiceDTO,
+	previewHost: string | null,
+): Promise<Record<string, string>> {
+	const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
+	return rewriteHostnames(
+		parent.envVars ?? {},
+		serviceHostnames(parent.toJSON(), stack?.slug, config.baseDomain),
+		previewHost,
+	);
+}
+
+/** The parent's build and runtime settings a preview or a release channel canary mirrors, refreshed on every pull request update or canary deploy. */
+export function mirroredSettings(parent: ServiceDTO) {
 	return {
 		authAllowedEmails: parent.authAllowedEmails,
 		authAllowedGroups: parent.authAllowedGroups,
@@ -262,7 +285,11 @@ class PreviewServiceClass {
 	/** The preview `previewId` when it belongs to `parent`, else throws. */
 	async #own(parent: ServiceDTO, previewId: string): Promise<ServiceDTO> {
 		const preview = await ServiceDTO.get(previewId);
-		if (!preview || preview.toJSON().previewParentId !== parent.id) {
+		if (
+			!preview ||
+			preview.toJSON().previewParentId !== parent.id ||
+			preview.toJSON().channelCanary
+		) {
 			throw new Error("That preview doesn't belong to this service.");
 		}
 		return preview;
@@ -290,8 +317,14 @@ class PreviewServiceClass {
 			branch: event.branch,
 			pr: event.number,
 		});
+		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
 		const preview = await ServiceDTO.create({
 			...settings,
+			envVars: await previewEnv(
+				parent,
+				domains.primaryDomain ??
+					defaultHostname(slug, stack?.slug, config.baseDomain),
+			),
 			domains: domains.domains,
 			buildSource: "git",
 			gitRef: ref,
@@ -332,8 +365,13 @@ class PreviewServiceClass {
 		ref: string,
 	): Promise<PreviewResult> {
 		const unchanged = preview.gitRef === ref && event.action === "update";
+		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
 		await preview.update({
 			...mirroredSettings(parent),
+			envVars: await previewEnv(
+				parent,
+				primaryHostname(preview.toJSON(), stack?.slug, config.baseDomain),
+			),
 			gitRef: ref,
 			previewBranch: event.branch,
 			previewPrTitle: event.title,

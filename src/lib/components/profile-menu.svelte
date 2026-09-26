@@ -37,7 +37,7 @@
       <button
         {...props}
         aria-label="Account menu"
-        class="{headerControlClass} w-8"
+        class="{headerControlClass} w-9 sm:w-8"
         type="button"
       >
         {#if user?.image}

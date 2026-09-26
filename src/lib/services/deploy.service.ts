@@ -14,6 +14,7 @@ import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import type { TrivySummary } from "$lib/image-scan";
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
+import { deployEnvironment } from "$lib/release-channels";
 import { snapshotRevisionConfig } from "$lib/revision-config";
 import { dependencyLayers } from "$lib/service-graph";
 import { isDeployed } from "$lib/service-state";
@@ -61,6 +62,7 @@ export interface EnqueueDeployInput {
 	clientDeploymentId?: string | null;
 	dependsOnJobId?: string | null;
 	noCache?: boolean;
+	note?: string;
 	restoreConfig?: boolean;
 	rollbackOfDeploymentId?: string | null;
 	svc: ServiceDTO;
@@ -331,6 +333,7 @@ class DeploymentServiceClass {
 		const dep =
 			(await DeploymentDTO.get(deploymentId)) ??
 			(await DeploymentDTO.create({
+				environment: deployEnvironment(svc.toJSON()),
 				id: deploymentId,
 				serviceId: svc.id,
 				status: "pulling",
@@ -579,7 +582,9 @@ class DeploymentServiceClass {
 		const { svc, userId } = input;
 		const rollbackOf = input.rollbackOfDeploymentId ?? null;
 		const dep = await DeploymentDTO.create({
+			environment: deployEnvironment(svc.toJSON()),
 			id: input.clientDeploymentId || undefined,
+			log: input.note ? `${input.note}\n` : undefined,
 			restoreConfig: Boolean(rollbackOf && input.restoreConfig),
 			rollbackOfDeploymentId: rollbackOf,
 			serviceId: svc.id,

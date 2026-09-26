@@ -52,7 +52,7 @@
 
   <section class="rounded-md panel p-5">
     <div class="mb-4 flex items-center gap-3">
-      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+      <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
         <CloudUpload class="size-4" />
       </div>
       <div>
@@ -111,7 +111,7 @@
         name="backupStopServices"
       />
 
-      <div class="grid gap-3 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label class={label} for="backupPreCommand"
           >Pre-backup command (optional)</label>
@@ -141,7 +141,7 @@
               type="single"
               bind:value={preCommandServiceId}
             >
-              <SelectTrigger id="backupPreCommandServiceId">
+              <SelectTrigger class="max-w-full" id="backupPreCommandServiceId">
                 {preCommandServiceLabel}
               </SelectTrigger>
               <SelectContent>
@@ -158,7 +158,7 @@
         </div>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label class={label} for="s3DestinationId">S3 destination</label>
           {#if data.destinations.length === 0}
@@ -175,7 +175,7 @@
               type="single"
               bind:value={s3DestinationId}
             >
-              <SelectTrigger id="s3DestinationId">{destinationLabel}</SelectTrigger>
+              <SelectTrigger class="max-w-full" id="s3DestinationId"><span class="truncate">{destinationLabel}</span></SelectTrigger>
               <SelectContent>
                 {#each data.destinations as dest (dest.id)}
                   <SelectItem label={dest.name} value={dest.id} />

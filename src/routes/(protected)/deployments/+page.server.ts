@@ -4,14 +4,19 @@ import { parseListQuery } from "$lib/server/list-query";
 import { formatDuration } from "$lib/services/notification-messages";
 
 export const load = async ({ parent, url }) => {
-	await parent();
-	const query = parseListQuery(url, { filterKeys: ["status", "trigger"] });
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{ filterKeys: ["status", "trigger", "environment"] },
+		preferences.perPage,
+	);
 	const result = await DeploymentDTO.listPaged(query);
 	return {
 		deployments: result.items.map((item) => {
 			const row = item.deployment.toJSON();
 			return {
 				duration: formatDuration(row.startedAt, row.finishedAt),
+				environment: row.environment,
 				errorMessage: row.errorMessage,
 				gitCommit: row.gitCommit,
 				gitRef: row.gitRef,

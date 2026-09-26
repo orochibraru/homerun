@@ -225,7 +225,7 @@
       method="POST"
       use:enhance={saveToast("Resource limits")}
     >
-      <div class="grid grid-cols-[auto_1fr_1fr] items-center gap-x-4 gap-y-3 text-sm">
+      <div class="grid grid-cols-[auto_1fr_1fr] items-center gap-x-3 gap-y-3 text-sm sm:gap-x-4">
         <span></span>
         <span class={label}>Soft %</span>
         <span class={label}>Hard %</span>

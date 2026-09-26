@@ -17,7 +17,7 @@
 	const serviceIds = $derived(data.services.map((svc) => svc.id));
 </script>
 
-<div class="mb-4 grid items-start gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
+<div class="mb-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
   <div class="panel divide-border flex divide-x rounded-xl">
     <div class="min-w-0 flex-1 px-4 py-3">
       <p class="eyebrow flex items-center gap-1.5">

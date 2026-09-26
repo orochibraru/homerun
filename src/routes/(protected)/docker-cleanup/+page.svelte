@@ -184,7 +184,7 @@
       <section class="panel rounded-md">
         <PanelHeader icon={NetworkIcon} title="Networks">
           {#snippet trailing()}
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <form
                 action="?/reclaimStackNetworks"
                 method="POST"
@@ -318,11 +318,11 @@
   </section>
 
   <section class="bg-surface mt-6 rounded-md border border-red-200 dark:border-red-900/40">
-    <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
-      <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
+    <div class="flex flex-wrap items-center gap-3 border-b border-red-100 px-5 py-4 sm:flex-nowrap dark:border-red-900/30">
+      <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <TriangleAlert class="size-4" />
       </div>
-      <div>
+      <div class="min-w-0 grow basis-[calc(100%-2.75rem)] sm:basis-0">
         <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
           Volumes
         </h2>
@@ -331,7 +331,7 @@
           Volumes mounted into a Homerun service are never listed or pruned.
         </p>
       </div>
-      <form action="?/pruneVolumes" class="ml-auto" method="POST" use:enhance={pruneToast("pruneVolumes")}>
+      <form action="?/pruneVolumes" class="ml-11 sm:ml-auto" method="POST" use:enhance={pruneToast("pruneVolumes")}>
         <Button
           disabled={pendingAction !== null}
           onclick={(e) => requestConfirm("pruneVolumes", e)}

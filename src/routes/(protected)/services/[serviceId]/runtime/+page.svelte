@@ -34,7 +34,7 @@
 
 <section class="panel rounded-md">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
       <TerminalSquare class="size-4" />
     </div>
     <div>

@@ -22,6 +22,7 @@ export const GET = async ({ locals, url }) => {
 
 	const paged = await ServiceDTO.listWithStackNamesPaged(
 		parseApiListQuery(url),
+		{ includePreviews: true },
 	);
 	return jsonPage(
 		paged.items.map((r) => r.service.toJSON()),

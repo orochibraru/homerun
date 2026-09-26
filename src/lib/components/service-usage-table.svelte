@@ -67,7 +67,7 @@
 </script>
 
 <section class="panel rounded-xl">
-  <div class="border-border flex items-center justify-between gap-3 border-b px-4 py-3">
+  <div class="border-border flex flex-col gap-1 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
     <h2 class="eyebrow">{title}</h2>
     <span class="text-text-subtle text-[0.6875rem]">
       Newest sample · traffic is since each container started
@@ -89,6 +89,7 @@
       No services yet.
     </p>
   {:else}
+    <div class="overflow-x-auto">
     <table class="w-full text-left">
       <thead>
         <tr class="border-border border-b">
@@ -117,7 +118,7 @@
           <tr class="hover:bg-surface-2 transition-colors">
             <td class="px-4 py-2">
               <a
-                class="text-text truncate text-sm hover:underline"
+                class="text-text block max-w-40 truncate text-sm hover:underline sm:max-w-none"
                 href="{resolve('/services')}/{row.id}"
               >
                 {row.name}
@@ -138,6 +139,7 @@
         {/each}
       </tbody>
     </table>
+    </div>
     {#if shown.length < rows.length}
       <div
         class="border-border text-text-subtle flex items-center justify-between gap-3 border-t px-4 py-2 text-[0.6875rem]"

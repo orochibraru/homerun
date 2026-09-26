@@ -48,7 +48,7 @@
 </section>
 
 <section class="border-border bg-surface-1 mb-6 rounded-lg border p-4">
-  <div class="flex items-start justify-between gap-4">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
     <div>
       <h2 class="text-text text-sm font-medium">Require authentication</h2>
       <p class="text-text-muted mt-1 text-sm">

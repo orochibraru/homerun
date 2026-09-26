@@ -209,6 +209,10 @@ export const revisionResponse = z.object({
 		description: "When this revision was first deployed",
 	}),
 	current: z.boolean().meta({ description: "The revision running now" }),
+	environment: z.string().meta({
+		description:
+			"The environment it deployed: production, canary (a release channel's canary service) or preview (a pull request preview)",
+	}),
 	gitCommit: z.string().nullable(),
 	gitRef: z.string().nullable(),
 	health: z
@@ -261,6 +265,10 @@ export const revisionResponse = z.object({
 
 export const deploymentResponse = z.object({
 	createdAt: isoTimestamp,
+	environment: z.string().meta({
+		description:
+			"The environment it deployed: production, canary (a release channel's canary service) or preview (a pull request preview)",
+	}),
 	errorMessage: z.string().nullable().meta({
 		description: "Why the deploy failed, null unless status is failed",
 	}),

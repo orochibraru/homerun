@@ -9,9 +9,11 @@ import {
 	gitWebhookUrl,
 	parsePullRequestEvent,
 	parsePushEvent,
+	parseTagPushEvent,
 	verifyGitWebhook,
 } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
+import { matchesTagPattern } from "$lib/release-channels";
 import type { GitProviderConfig, GitProviderKind } from "$lib/server/db/schema";
 import { inferProviderKind } from "$lib/status-checks";
 import { DeploymentService } from "./deploy.service.ts";
@@ -20,6 +22,10 @@ import {
 	GitProviderService,
 } from "./git-provider.service.ts";
 import { PreviewService } from "./preview.service.ts";
+import {
+	ReleaseChannelError,
+	ReleaseChannelService,
+} from "./release-channel.service.ts";
 import { decryptSecret, encryptSecret } from "./secrets.ts";
 
 const logger = new Logger("GitWebhook");
@@ -29,6 +35,7 @@ export interface WebhookSnapshot {
 	gitRepo: string | null;
 	gitWebhookId: string | null;
 	previewsEnabled?: boolean;
+	channelsEnabled?: boolean;
 }
 
 export interface PushWebhookDetails {
@@ -52,12 +59,13 @@ interface RegistrationOutcome {
 	reconnect: boolean;
 }
 
-/** Whether a service wants a webhook on its repo at all: pushes to deploy, or pull requests to preview. */
+/** Whether a service wants a webhook on its repo at all: pushes to deploy, pull requests to preview, or release channels' branch and tag pushes. */
 function wantsWebhook(svc: ServiceDTO): boolean {
+	const row = svc.toJSON();
 	return (
 		svc.buildSource === "git" &&
-		!svc.toJSON().previewParentId &&
-		(svc.autoDeployOnPush || svc.toJSON().previewsEnabled)
+		!row.previewParentId &&
+		(svc.autoDeployOnPush || row.previewsEnabled || row.channelsEnabled)
 	);
 }
 
@@ -94,7 +102,9 @@ class GitWebhookServiceClass {
 			previous.gitProviderId !== svc.gitProviderId ||
 			previous.gitRepo !== svc.gitRepo ||
 			(previous.previewsEnabled !== undefined &&
-				previous.previewsEnabled !== svc.toJSON().previewsEnabled);
+				previous.previewsEnabled !== svc.toJSON().previewsEnabled) ||
+			(previous.channelsEnabled !== undefined &&
+				previous.channelsEnabled !== svc.toJSON().channelsEnabled);
 
 		if (previous.gitWebhookId && (!wanted || moved)) {
 			await this.#deleteHook(svc.userId, previous);
@@ -237,6 +247,10 @@ class GitWebhookServiceClass {
 				: { reason: "Pull request previews are off.", status: "ignored" };
 		}
 
+		if (svc.toJSON().channelsEnabled) {
+			return await this.#routeChannels(svc, headers, payload);
+		}
+
 		const branch = svc.gitRef ?? "main";
 		const push = parsePushEvent(headers, payload).find(
 			(entry) => entry.branch === branch,
@@ -257,6 +271,60 @@ class GitWebhookServiceClass {
 			`Push to ${branch} (${push.commit ?? "unknown commit"}) deploys service=${svc.id} deployment=${deploymentId}`,
 		);
 		return { deploymentId, jobId, status: "deployed" };
+	}
+
+	/**
+	 * Routes a push to a service with release channels on: a pushed tag
+	 * matching its pattern deploys the service itself (stable) at that tag, a
+	 * push to the canary branch deploys its canary. Every other push is
+	 * ignored, the service's own branch included.
+	 */
+	async #routeChannels(
+		svc: ServiceDTO,
+		headers: Headers,
+		payload: unknown,
+	): Promise<WebhookDeliveryResult> {
+		const row = svc.toJSON();
+		const tag = parseTagPushEvent(headers, payload).findLast((entry) =>
+			matchesTagPattern(row.channelTagPattern, entry.tag),
+		);
+		if (tag) {
+			const result = await ReleaseChannelService.deployStable(svc, {
+				tag: tag.tag,
+				trigger: "push",
+				userId: svc.userId,
+			});
+			logger.info(
+				`Tag ${tag.tag} (${tag.commit ?? "unknown commit"}) deploys stable service=${svc.id} deployment=${result.deploymentId}`,
+			);
+			return result;
+		}
+		const branch = row.channelBranch ?? svc.gitRef ?? "main";
+		const push = parsePushEvent(headers, payload).find(
+			(entry) => entry.branch === branch,
+		);
+		if (!push) {
+			return {
+				reason: `Neither a push to the canary branch ${branch} nor a tag matching ${row.channelTagPattern}.`,
+				status: "ignored",
+			};
+		}
+		try {
+			const result = await ReleaseChannelService.deployCanary(svc, {
+				commit: push.commit,
+				trigger: "push",
+				userId: svc.userId,
+			});
+			logger.info(
+				`Push to ${branch} (${push.commit ?? "unknown commit"}) deploys canary service=${result.serviceId} deployment=${result.deploymentId}`,
+			);
+			return result;
+		} catch (err) {
+			if (err instanceof ReleaseChannelError) {
+				return { reason: err.message, status: "ignored" };
+			}
+			throw err;
+		}
 	}
 
 	/** The provider kind whose signature scheme a delivery uses, null when it can't be told from the service. */
@@ -311,6 +379,7 @@ class GitWebhookServiceClass {
 					pullRequests: svc.toJSON().previewsEnabled,
 					repo: svc.gitRepo,
 					secret,
+					tags: svc.toJSON().channelsEnabled,
 					url: gitWebhookUrl(config.auth.origin, svc.id),
 				},
 			);

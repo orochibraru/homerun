@@ -91,11 +91,11 @@
 
   <section class="panel mb-6 rounded-md">
     <div class="panel-head">
-      <h2 class="eyebrow flex items-center gap-1.5">
+      <h2 class="eyebrow flex shrink-0 items-center gap-1.5">
         <Plus class="size-3" />
         Add a channel
       </h2>
-      <span class="text-text-subtle text-[0.6875rem]">
+      <span class="text-text-subtle text-right text-[0.6875rem]">
         New channels get build and update failures by default
       </span>
     </div>
@@ -230,39 +230,41 @@
                 <p class="truncate text-xs text-red-500">{channel.lastError}</p>
               {/if}
             </div>
-            <form
-              action="?/testChannel"
-              method="POST"
-              use:enhance={enhanceToast({
-                error: "Couldn't send the test notification.",
-                loading: "Sending a test notification",
-                success: "Test notification sent.",
-              })}
-            >
-              <input name="channelId" type="hidden" value={channel.id} />
-              <Button size="sm" type="submit" variant="outline">Send test</Button>
-            </form>
-            <form
-              action="?/deleteChannel"
-              method="POST"
-              use:enhance={enhanceToast({
-                error: "Couldn't remove the channel.",
-                loading: "Removing the channel",
-                success: "Channel removed.",
-              })}
-            >
-              <input name="channelId" type="hidden" value={channel.id} />
-              <Button
-                aria-label="Remove {channel.name}"
-                class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                onclick={(event) => requestDelete(event, channel.name)}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
+            <div class="flex w-full items-center gap-3 pl-7 sm:w-auto sm:pl-0">
+              <form
+                action="?/testChannel"
+                method="POST"
+                use:enhance={enhanceToast({
+                  error: "Couldn't send the test notification.",
+                  loading: "Sending a test notification",
+                  success: "Test notification sent.",
+                })}
               >
-                <Trash2 class="size-4" />
-              </Button>
-            </form>
+                <input name="channelId" type="hidden" value={channel.id} />
+                <Button size="sm" type="submit" variant="outline">Send test</Button>
+              </form>
+              <form
+                action="?/deleteChannel"
+                method="POST"
+                use:enhance={enhanceToast({
+                  error: "Couldn't remove the channel.",
+                  loading: "Removing the channel",
+                  success: "Channel removed.",
+                })}
+              >
+                <input name="channelId" type="hidden" value={channel.id} />
+                <Button
+                  aria-label="Remove {channel.name}"
+                  class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                  onclick={(event) => requestDelete(event, channel.name)}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Trash2 class="size-4" />
+                </Button>
+              </form>
+            </div>
           </div>
         {/each}
       </div>

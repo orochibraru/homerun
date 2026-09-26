@@ -10,7 +10,7 @@
 		gitPollEnabled: boolean;
 		gitRef: string;
 		labelClass: string;
-		previewOf: { id: string; name: string } | null;
+		previewOf: { canary: boolean; id: string; name: string } | null;
 		pushWebhook: PushWebhookDetails | null;
 		serviceId: string;
 	}
@@ -88,7 +88,20 @@
     bind:checked={gitPollEnabled}
   />
 {/if}
-{#if previewOf}
+{#if previewOf?.canary}
+  <p class="text-text-muted text-xs">
+    This service is the release channel canary of
+    <a
+      class="text-accent underline"
+      href={resolve("/(protected)/services/[serviceId]/channels", {
+        serviceId: previewOf.id,
+      })}
+    >
+      {previewOf.name}
+    </a>. It mirrors that service's settings, deploys every push to its canary
+    branch and is removed when channels are turned off.
+  </p>
+{:else if previewOf}
   <p class="text-text-muted text-xs">
     This service is a pull request preview of
     <a

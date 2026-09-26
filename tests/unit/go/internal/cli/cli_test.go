@@ -842,7 +842,7 @@ func TestWaitForJobGivesUp(t *testing.T) {
 	client, _ := jsonAPI(t, `{"status":"running"}`)
 
 	_, failed := runCLI(t, func() { cli.WaitForJob(client, "job-1", time.Millisecond, -time.Second) })
-	if !strings.Contains(failed, "Timed out waiting for scan job job-1") {
+	if !strings.Contains(failed, "Timed out waiting for job job-1") {
 		t.Errorf("got %q", failed)
 	}
 }

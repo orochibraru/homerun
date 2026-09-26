@@ -131,8 +131,8 @@
         />
       </div>
     </div>
-    <div class="flex items-center justify-end gap-2">
-      <p class="text-text-subtle mr-auto text-xs">
+    <div class="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
+      <p class="text-text-subtle mr-auto basis-full text-xs sm:basis-auto">
         The test goes to {data.user.email} using the saved settings, so save
         first if you've just changed anything.
       </p>

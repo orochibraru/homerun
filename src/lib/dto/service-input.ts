@@ -35,6 +35,7 @@ export interface NewServiceInput {
 	healthcheckStartPeriodSeconds?: number | null;
 	healthcheckTimeoutSeconds?: number | null;
 	previewBranch?: string | null;
+	channelCanary?: boolean;
 	previewParentId?: string | null;
 	previewPrNumber?: number | null;
 	previewPrTitle?: string | null;
@@ -111,6 +112,10 @@ export type ServiceUpdateInput = Partial<
 		| "previewDefaultDomain"
 		| "previewDomainTemplate"
 		| "previewBranch"
+		| "channelsEnabled"
+		| "channelBranch"
+		| "channelTagPattern"
+		| "channelCanaryDomain"
 		| "healthcheckCommand"
 		| "healthcheckDisabled"
 		| "healthcheckIntervalSeconds"

@@ -34,12 +34,17 @@ Commands:
   services list                   list services
   services get <id>               get a service by id
   services config <id>            print a service's settings as JSON, grouped by dashboard tab (also: services <id> config)
-  services deploy <id> [--tag <tag>]
+  services deploy <id> [--tag <tag>] [--environment canary|stable]
                                   deploy a service and wait for it, optionally switching its image tag first
+                                  (also: deploy <id>); --environment picks the release channel to deploy
   services start|stop|restart <id>
                                   start, stop or restart a service
   services delete <id> [--force]  delete a service
   services webhook <id>           show a service's push-to-deploy webhook URL and secret
+  services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>]
+                                  turn release channels on or change them: branch pushes deploy a <slug>-canary service, matching tags deploy this one
+  services channels disable <id>  turn release channels off and delete the canary
+  services channels status <id>   show a service's release channel settings and canary
   services revisions <id>         list a service's revisions, newest first by first deploy
   services logs <id> [--tail <n>] [-f|--follow]
                                   print a service's logs (the last 200 lines by default)
@@ -51,6 +56,13 @@ Commands:
   services scans get <id> [scanId]
                                   show one scan's counts and findings (default: the latest)
 
+  previews list <service>         list a git service's open pull request previews
+  previews get <service> <pr>     show one preview: URL, the revision it runs, its latest deploy
+  previews wait <service> <pr> [--commit <sha>] [--timeout 20m] [--json]
+                                  wait until the preview runs that commit and is healthy, then print its URL (non-zero on failure or timeout)
+  previews delete <service> <pr>  delete a preview (the next push to the pull request recreates it)
+  previews promote <service> <pr> [--commit <sha>] [--wait] [--timeout 30m]
+                                  deploy the preview's exact image to <service>, no rebuild
   stacks list                     list stacks
   templates list                  list templates
 
@@ -102,8 +114,12 @@ func Main() {
 		channel := set.String("channel", "stable", "release channel to update from: stable, canary or nightly")
 		Parse(set, rest[1:])
 		SelfUpdate(*channel)
-	case "services":
+	case "services", "service":
 		RunServices(global, rest[1:])
+	case "deploy":
+		RunServices(global, append([]string{"deploy"}, rest[1:]...))
+	case "previews":
+		RunPreviews(global, rest[1:])
 	case "stacks":
 		RunStacks(global, rest[1:])
 	case "templates":
@@ -238,8 +254,16 @@ func RunServices(global GlobalFlags, args []string) {
 	case "deploy":
 		set := NewFlagSet("services deploy")
 		tag := set.String("tag", "", "switch an image-based service to this image tag before deploying")
+		environment := set.String("environment", "", "with release channels on, deploy canary or stable")
 		rest := Parse(set, args[1:])
 		id := RequireArg(rest, 0, "id")
+		if *environment != "" && *tag != "" {
+			Fail("--tag and --environment can't be combined.")
+		}
+		if *environment != "" {
+			ServiceDeployEnvironment(client(), id, *environment)
+			return
+		}
 		ServiceDeploy(client(), id, *tag)
 	case "start", "stop", "restart":
 		id := RequireArg(args, 1, "id")
@@ -253,6 +277,8 @@ func RunServices(global GlobalFlags, args []string) {
 	case "webhook":
 		id := RequireArg(args, 1, "id")
 		ServiceWebhook(client(), id)
+	case "channels":
+		RunChannels(client, args[1:])
 	case "revisions":
 		set := NewFlagSet("services revisions")
 		asJSON := set.Bool("json", false, "print raw JSON instead of a table")

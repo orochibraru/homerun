@@ -41,7 +41,9 @@ export interface NewDeploymentInput {
 	// Lets a caller pre-generate the id (e.g. the client, so it can start
 	// polling the progress endpoint before the create-deployment request
 	// even resolves) : falls back to a fresh one when omitted.
+	environment?: string;
 	id?: string;
+	log?: string;
 	restoreConfig?: boolean;
 	rollbackOfDeploymentId?: string | null;
 	serviceId: string;
@@ -363,6 +365,10 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		if (statuses.length > 0) {
 			conditions.push(inArray(deployment.status, statuses));
 		}
+		const environments = query.filters.environment ?? [];
+		if (environments.length > 0) {
+			conditions.push(inArray(deployment.environment, environments));
+		}
 		const triggers = query.filters.trigger ?? [];
 		const deployTriggers = narrowFilter(triggers, DEPLOY_TRIGGERS);
 		const triggerParts: SQL[] = [];
@@ -417,8 +423,8 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	}
 
 	/**
-	 * Inserts a new deployment row with an empty log, using the caller's
-	 * pre-generated id when one is given.
+	 * Inserts a new deployment row, its log empty unless `input.log` opens it,
+	 * using the caller's pre-generated id when one is given.
 	 */
 	static async create(input: NewDeploymentInput): Promise<DeploymentDTO> {
 		const now = new Date();
@@ -427,6 +433,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			configSnapshot: null,
 			containerId: null,
 			createdAt: now,
+			environment: input.environment ?? "production",
 			errorMessage: null,
 			finishedAt: null,
 			gitCommit: null,
@@ -437,7 +444,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			imageDigest: null,
 			imageId: null,
 			imageRef: null,
-			log: "",
+			log: input.log ?? "",
 			restoreConfig: input.restoreConfig ?? false,
 			rollbackOfDeploymentId: input.rollbackOfDeploymentId ?? null,
 			serviceId: input.serviceId,

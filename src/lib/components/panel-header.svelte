@@ -18,13 +18,13 @@
 	}: Props = $props();
 </script>
 
-<div class="border-border flex items-center gap-3 border-b px-5 py-4 {className}">
+<div class="border-border flex flex-wrap items-center gap-3 border-b px-5 py-4 sm:flex-nowrap {className}">
   {#if Icon}
     <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
       <Icon class="size-4" />
     </div>
   {/if}
-  <div class="min-w-0 flex-1">
+  <div class="min-w-0 grow {Icon ? 'basis-[calc(100%-2.75rem)]' : 'basis-full'} sm:basis-0">
     <h2 class="eyebrow">{title}</h2>
     {#if typeof description === "string"}
       <p class="text-text-muted text-xs">{description}</p>
@@ -33,6 +33,8 @@
     {/if}
   </div>
   {#if trailing}
-    {@render trailing()}
+    <div class="flex flex-wrap items-center gap-3 {Icon ? 'ml-11' : ''} sm:ml-0 sm:flex-nowrap">
+      {@render trailing()}
+    </div>
   {/if}
 </div>

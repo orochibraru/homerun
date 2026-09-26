@@ -7,7 +7,7 @@ import { ServiceGitDTO } from "$lib/dto/service-git-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
-import { parseListQuery } from "$lib/server/list-query";
+import { type ListQuery, parseListQuery } from "$lib/server/list-query";
 import { allowLongRequest } from "$lib/server/long-request";
 import {
 	dependencyLayers,
@@ -81,11 +81,7 @@ const OP_PAST_TENSE: Record<BulkOp, string> = {
 	stop: "stopped",
 };
 
-async function loadServices(url: URL) {
-	const query = parseListQuery(url, {
-		filterKeys: ["status", "stack"],
-		sortKeys: sortKeysOf(BASE_SORTS),
-	});
+async function loadServices(query: ListQuery) {
 	const paged = await ServiceDTO.listWithStackNamesPaged(query);
 	const previews = await ServiceGitDTO.listPreviewsOf(
 		paged.items.map((r) => r.service.id),
@@ -211,14 +207,15 @@ async function runBulk(formData: FormData, userId: string) {
 
 export const load = async ({ parent, platform, url }) => {
 	allowLongRequest(platform);
-	await parent();
-	const query = parseListQuery(url, {
-		filterKeys: ["status", "stack"],
-		sortKeys: sortKeysOf(BASE_SORTS),
-	});
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{ filterKeys: ["status", "stack"], sortKeys: sortKeysOf(BASE_SORTS) },
+		preferences.perPage,
+	);
 	const treeView = url.searchParams.get("view") === "tree";
 	const [{ services, total }, facets, stacks, everything] = await Promise.all([
-		loadServices(url),
+		loadServices(query),
 		ServiceDTO.listFilterFacets(),
 		StackDTO.list(),
 		treeView ? ServiceDTO.list() : null,

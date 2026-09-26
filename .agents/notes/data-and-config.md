@@ -107,12 +107,18 @@ services list's status-sync loop, see below) used to do, and what a handful of
 history views (`/backups`) silently truncated to their newest N rows instead of
 paging through.
 
-- `list-query.ts`'s `parseListQuery(url, {filterKeys, pageParam, perPage})`
+- `list-query.ts`'s
+  `parseListQuery(url, {filterKeys, pageParam, perPage, sortKeys}, userPerPage)`
   turns a request's `URL` into a `ListQuery` (`page`/`perPage`/`limit`/
   `offset`/`q`/`filters`, plus `active`, true when a search term or any filter
   is set, what a page uses to tell "you have nothing yet" apart from "nothing
-  matched"). Defaults to 25/page, hard-capped at 100 regardless of what's
-  requested; malformed/negative `page`/`perPage` fall back rather than erroring.
+  matched"). Page size precedence: the URL's `perPage`, then `options.perPage`
+  (the REST API's fixed 100), then `userPerPage`, the signed-in account's
+  `user_preferences.per_page` that every dashboard list `load` passes from
+  `(await parent()).preferences.perPage`, run through `resolvePerPage` (one of
+  `PER_PAGE_OPTIONS`, 25/50/100/200 in `$lib/list-sorts.ts`, else
+  `DEFAULT_PER_PAGE`, 50). Hard-capped at 200 regardless of what's requested;
+  malformed/negative `page`/`perPage` fall back rather than erroring.
   `PagedResult<T>` (`{items, page, perPage, total}`) is the shape every paged
   DTO finder below returns. `searchCondition(q, columns)` builds a
   case-insensitive `ilike` `or(...)` across the given columns, escaping
@@ -121,7 +127,7 @@ paging through.
   (`$type<ContainerStatus>()`) and `remote_host.kind` (a `text(..., {enum})`
   column) both reject a bare `string[]` passed to `inArray`.
 - `api-pagination.ts`'s `parseApiListQuery(url)` is the same parser with a
-  100/page default (API callers don't get the dashboard's 25);
+  100/page default (API callers don't get the dashboard's per-account one);
   `jsonPage(items, meta)` wraps `json()` and stamps
   `x-total-count`/`x-page`/`x-per-page` response headers, see REST API below for
   why the body itself stays a plain array rather than growing an envelope.
@@ -378,8 +384,9 @@ OIDC provider in `auth.md`) plus:
 - `user_preferences` (`UserPreferencesDTO`), one row per user, `userId` itself
   as the primary key (a genuine 1:1 extension of `user`, not a singleton like
   `instance_settings`): `theme` (`"light"` | `"dark"` | `"system"` default),
-  `accentColor` (nullable hex string, null = the built-in bordeaux). See
-  Appearance preferences below.
+  `accentColor` (nullable hex string, null = the built-in bordeaux), `perPage`
+  (not null, default 50, the account's default list page size, see Server-side
+  list pagination above). See Appearance preferences below.
 
 **Postgres enforces the schema's `onDelete: "cascade"`/`"set null"` FK
 constraints for real.** (This app ran on SQLite until the Postgres conversion

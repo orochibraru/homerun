@@ -26,8 +26,11 @@ to the preview's own Networking tab. Each preview is a normal service you can
 open too. Previews aren't rows of their own on the services list or a stack's
 page: each one is listed under the service it previews, in the list and in the
 dependency tree, and searching for a preview's branch or title finds its parent.
-A preview takes its parent's stack, icon and category. Turning previews off, or
-deleting the service, deletes every preview.
+A preview takes its parent's stack, icon and category. Any of the service's own
+hostnames in its env vars (an `ORIGIN`, a public URL) are replaced with the
+preview's main hostname, so a preview doesn't send its visitors, cookies or CSRF
+checks to the real site. Turning previews off, or deleting the service, deletes
+every preview.
 
 ## Domains
 
@@ -60,3 +63,19 @@ re-registers the webhook to also send pull request events. A webhook added by
 hand needs **Pull requests** (GitHub, Gitea), **Merge request events** (GitLab)
 or the **Pull request** created, updated, merged and declined triggers
 (Bitbucket) ticked too. Polling doesn't cover pull requests.
+
+Previews combine with [release channels](release-channels.md) on the same
+service: pull requests get previews, the canary branch deploys the canary and
+matching tags deploy the service itself. See
+[Main is canary, tags are stable](main-canary-tags-stable.md).
+
+## Testing previews from CI
+
+`homerun previews wait <service> <pr> --commit <sha>` blocks until a pull
+request's preview runs that commit and is healthy, then prints its URL, and
+`homerun previews promote <service> <pr>` deploys the preview's exact image to
+the service, with no rebuild. The same endpoints are under
+`/api/v1/services/{id}/previews` (see [API & CLI](api-and-cli.md#previews)).
+[Testing pull requests with GitHub Actions](github-actions-preview-testing.md)
+puts them together: E2E tests against every preview, and shipping the image that
+passed.

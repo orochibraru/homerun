@@ -10,6 +10,7 @@ import {
 	DEFAULT_PER_PAGE,
 	narrowFilter,
 	parseListQuery,
+	resolvePerPage,
 	searchCondition,
 	sortOrder,
 } from "../../../src/lib/server/list-query";
@@ -49,8 +50,8 @@ describe("parseListQuery", () => {
 		expect(query).toMatchObject({ limit: 10, offset: 20, page: 3 });
 	});
 
-	test("caps perPage at 100 and ignores junk, zero and negative values", () => {
-		expect(parseListQuery(url("?perPage=5000")).perPage).toBe(100);
+	test("caps perPage at 200 and ignores junk, zero and negative values", () => {
+		expect(parseListQuery(url("?perPage=5000")).perPage).toBe(200);
 		expect(parseListQuery(url("?perPage=abc")).perPage).toBe(DEFAULT_PER_PAGE);
 		expect(parseListQuery(url("?perPage=0")).perPage).toBe(DEFAULT_PER_PAGE);
 		expect(parseListQuery(url("?page=-2")).page).toBe(1);
@@ -63,6 +64,14 @@ describe("parseListQuery", () => {
 			perPage: 50,
 		});
 		expect(query).toMatchObject({ offset: 50, page: 2, perPage: 50 });
+	});
+
+	test("defaults to the account's page size, behind the URL and options", () => {
+		expect(DEFAULT_PER_PAGE).toBe(50);
+		expect(parseListQuery(url(""), {}, 100).perPage).toBe(100);
+		expect(parseListQuery(url("?perPage=10"), {}, 100).perPage).toBe(10);
+		expect(parseListQuery(url(""), { perPage: 25 }, 200).perPage).toBe(25);
+		expect(parseListQuery(url(""), {}, 37).perPage).toBe(DEFAULT_PER_PAGE);
 	});
 
 	test("trims the search and marks the query active", () => {
@@ -79,6 +88,17 @@ describe("parseListQuery", () => {
 		);
 		expect(query.filters).toEqual({ status: ["running", "failed"] });
 		expect(query.active).toBe(true);
+	});
+});
+
+describe("resolvePerPage", () => {
+	test("keeps an allowed size and falls back to the default otherwise", () => {
+		for (const size of [25, 50, 100, 200]) {
+			expect(resolvePerPage(size)).toBe(size);
+		}
+		for (const bad of [null, undefined, 0, -25, 24, 500]) {
+			expect(resolvePerPage(bad)).toBe(DEFAULT_PER_PAGE);
+		}
 	});
 });
 

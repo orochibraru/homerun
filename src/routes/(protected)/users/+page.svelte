@@ -64,10 +64,11 @@
     <div>
       <h1 class="text-text text-lg font-semibold tracking-tight">Users</h1>
       <p class="text-text-muted mt-1 text-sm">
-        Admin, developer and read-only accounts for this instance. Public
-        sign-up is closed once the first account exists : every account after
-        that is created here. A read-only account sees everything but can't
-        change anything.
+        Every account on this instance. Public sign-up is closed once the
+        first account exists : every account after that is created here. A
+        read-only account sees everything but can't change anything; an app
+        access only account never sees the dashboard, it only gets through the
+        login wall of apps you share with it on their Security tab.
       </p>
     </div>
     <Button

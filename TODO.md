@@ -11,6 +11,27 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] **[WIP]** Share a PR preview with a client: the app-access-only role and
+      `/my-apps` landed; the preview access policy didn't (edits to
+      `service-dto.ts`, `service-input.ts` and `schema.ts` were refused by the
+      permission system). Still needed: `previewAuth*` columns + migration, DTO
+      defaults/getters/update input, apply the parent's preview policy in
+      `PreviewService#create`/`#refresh` (not in `mirroredSettings`, the canary
+      keeps the parent's own wall), `applyAuth` re-apply + redeploy, the
+      Previews-tab form, docs, tests; add `"app-user"` to `UserRole` and drop
+      the cast in `InvitationDTO.create`.
+- [ ] Preview promote rides on the rollback path, so the deployment history
+      labels it "Rollback" and auto-rollback never fires on a promoted deploy:
+      give it its own `promote` trigger and let auto-rollback watch it.
+- [ ] Release channels: exercise against a real provider (tag push to stable,
+      branch push to canary), open the Channels tab in a browser, and add a test
+      for canary branch polling; a custom environment name isn't settable
+      anywhere yet.
+- [ ] Preview "unhealthy while healthy" with several domains (sergios.fr PR #4):
+      its current revision reads `healthy` and both hostnames answer, so it
+      didn't reproduce; need where the Unhealthy label showed (revision, uptime,
+      overview) next time it happens.
+
 - [ ] Backfill `service_dependency` rows from existing env-var links (links made
       before the table existed give no start order until re-linked), and expose
       dependencies in the REST API and MCP.

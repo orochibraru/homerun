@@ -4,6 +4,10 @@ import { allowLongRequest } from "$lib/server/long-request";
 import { deployServiceApiBody } from "$lib/server/validation/api";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { QueueService } from "$lib/services/queue.service";
+import {
+	ReleaseChannelError,
+	ReleaseChannelService,
+} from "$lib/services/release-channel.service";
 
 export const POST = async ({ params, locals, platform, request }) => {
 	allowLongRequest(platform);
@@ -27,7 +31,16 @@ export const POST = async ({ params, locals, platform, request }) => {
 	if (!result.success) {
 		return json(result.error.flatten(), { status: 400 });
 	}
-	const { tag } = result.data;
+	const { environment, tag } = result.data;
+	if (environment === "canary" && !service.toJSON().channelsEnabled) {
+		return json(
+			{
+				error:
+					"Release channels are off for this service, so it has no canary.",
+			},
+			{ status: 400 },
+		);
+	}
 	if (tag && service.buildSource === "git") {
 		return json(
 			{ error: "This service builds from git : it has no image tag to set." },
@@ -38,10 +51,25 @@ export const POST = async ({ params, locals, platform, request }) => {
 		await service.update({ tag });
 	}
 
-	const { deploymentId, jobId } = await DeploymentService.enqueueDeploy({
-		svc: service,
-		userId: locals.user.id,
-	});
+	let enqueued: { deploymentId: string; jobId: string };
+	try {
+		enqueued =
+			environment === "canary"
+				? await ReleaseChannelService.deployCanary(service, {
+						trigger: "manual",
+						userId: locals.user.id,
+					})
+				: await DeploymentService.enqueueDeploy({
+						svc: service,
+						userId: locals.user.id,
+					});
+	} catch (err) {
+		if (err instanceof ReleaseChannelError) {
+			return json({ error: err.message }, { status: 400 });
+		}
+		throw err;
+	}
+	const { deploymentId, jobId } = enqueued;
 	const finished = await QueueService.wait(jobId);
 	if (finished.status !== "succeeded") {
 		return json(

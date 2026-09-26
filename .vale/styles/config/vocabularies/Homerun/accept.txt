@@ -122,3 +122,8 @@ Valkey
 Dragonfly
 KeyDB
 Garnet
+stderr
+ruleset
+[Mm]ergeable
+[Mm]ergeability
+walkthrough

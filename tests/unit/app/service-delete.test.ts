@@ -132,7 +132,7 @@ beforeEach(() => {
 	});
 	stub(
 		ServiceGitDTO,
-		"listPreviews",
+		"listChildren",
 		async (parentId: string) => previewsByParent.get(parentId) ?? [],
 	);
 	stub(CloudflareService, "deleteDnsRecord", async (host: string) => {
@@ -230,6 +230,20 @@ describe("ServiceLifecycleService.deleteService", () => {
 		await ServiceLifecycleService.deleteService(svc);
 		expect(removed).toEqual(["c2", "c1"]);
 		expect(preview.state.deleted).toBe(true);
+		expect(state.deleted).toBe(true);
+	});
+
+	test("removes the release channel canary before the service", async () => {
+		const canary = fakeService({
+			channelCanary: true,
+			containerId: "c3",
+			id: "s3",
+		});
+		previewsByParent.set("s1", [canary.svc]);
+		const { state, svc } = fakeService();
+		await ServiceLifecycleService.deleteService(svc);
+		expect(removed).toEqual(["c3", "c1"]);
+		expect(canary.state.deleted).toBe(true);
 		expect(state.deleted).toBe(true);
 	});
 });

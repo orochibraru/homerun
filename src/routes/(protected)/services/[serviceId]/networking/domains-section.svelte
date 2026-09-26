@@ -65,7 +65,7 @@
 </script>
 
 {#snippet mainToggle(host: string, disabled: boolean)}
-  <div class="flex w-24 shrink-0 justify-center">
+  <div class="flex shrink-0 justify-center sm:w-24">
     {#if primary !== "" && primary === host}
       <span class="bg-accent/10 text-accent rounded-full px-2.5 py-0.5 text-xs font-medium">Main</span>
     {:else}
@@ -86,7 +86,7 @@
 
 <section class="panel rounded-md p-5">
   <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
       <Globe class="size-4" />
     </div>
     <div>
@@ -128,16 +128,16 @@
     >
       <input name="primaryDomain" type="hidden" value={primary}>
       <div class="space-y-2">
-        <div class="flex items-center gap-3">
+        <div class="border-border flex flex-wrap items-center gap-3 rounded-lg border p-3 sm:flex-nowrap sm:border-0 sm:p-0">
           <Input
-            class={defaultEnabled ? "" : "text-text-subtle line-through"}
+            class="basis-full sm:basis-auto {defaultEnabled ? '' : 'text-text-subtle line-through'}"
             aria-label="Default domain"
             readonly
             value={fallbackHost}
           />
-          <div class="w-28 shrink-0"></div>
+          <div class="hidden w-28 shrink-0 sm:block"></div>
           {@render mainToggle(fallbackHost, !defaultEnabled)}
-          <label class="text-text-muted flex w-20 shrink-0 items-center gap-2 text-xs">
+          <label class="text-text-muted ml-auto flex shrink-0 items-center gap-2 text-xs sm:ml-0 sm:w-20">
             <Checkbox
               name="defaultDomainEnabled"
               onCheckedChange={(checked) => {
@@ -151,8 +151,9 @@
           </label>
         </div>
         {#each domains as domain, index (index)}
-          <div class="flex items-center gap-3">
+          <div class="border-border flex flex-wrap items-center gap-3 rounded-lg border p-3 sm:flex-nowrap sm:border-0 sm:p-0">
             <Input
+              class="basis-full sm:basis-auto"
               aria-label="Domain"
               name="domains"
               oninput={(event) => renameDomain(index, event.currentTarget.value)}
@@ -162,7 +163,7 @@
               value={domain}
             />
             <Input
-              class="w-28 shrink-0"
+              class="min-w-0 flex-1 sm:w-28 sm:flex-none sm:shrink-0"
               aria-label="Container port for this domain"
               max="65535"
               min="1"
@@ -177,7 +178,7 @@
               value={ports[index]}
             />
             {@render mainToggle(domain, !domain)}
-            <div class="w-20 shrink-0">
+            <div class="shrink-0 sm:w-20">
               <Button
                 aria-label="Remove this domain"
                 onclick={() => removeDomain(index)}

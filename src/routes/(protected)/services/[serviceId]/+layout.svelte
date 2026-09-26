@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Bird,
 		Clock,
 		Container,
 		Cpu,
@@ -77,6 +78,15 @@
 						icon: GitPullRequest,
 						id: "previews",
 						label: "Previews",
+					},
+					{
+						exact: false,
+						href: resolve("/(protected)/services/[serviceId]/channels", {
+							serviceId: svc.id,
+						}),
+						icon: Bird,
+						id: "channels",
+						label: "Channels",
 					},
 				]
 			: []),

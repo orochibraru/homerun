@@ -28,7 +28,7 @@
     </div>
   {:else}
     <div class="panel overflow-x-auto rounded-md">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-3xl text-sm">
         <thead>
           <tr class="border-border text-text-muted border-b text-left text-xs uppercase">
             <th class="px-4 py-3 font-medium">Severity</th>

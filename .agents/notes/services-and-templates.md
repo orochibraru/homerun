@@ -1390,6 +1390,62 @@ category are mirrored from the parent. The finders live in `ServiceGitDTO`
 protected constructor, to keep `service-dto.ts` under the file length limit.
 **Not verified against real providers**, same caveat as push-to-deploy.
 
+## Release channels (`service.channels*` columns, `channelCanary`, `ReleaseChannelService`, `$lib/release-channels.ts`)
+
+Opt-in per git service (`channelsEnabled`, off by default): the service itself
+is **stable**, deployed from pushed tags matching `channelTagPattern` (glob,
+`matchesTagPattern`: `*` any run incl. `/`, `?` one char, no classes), and
+Homerun manages a **canary** child fed by `channelBranch`. The canary is a
+`service` row with `previewParentId` = parent **and** `channelCanary = true`,
+reusing the preview parent FK on purpose so it nests everywhere previews do
+(`listPreviewsOf`, `ServiceDTO.#listFilters`, stack page, services tree,
+`preview-rows.svelte` draws it as "Canary"). Everything preview-specific
+excludes it: `ServiceGitDTO.listPreviews` filters `channelCanary = false` (so
+`PreviewService.removeAll`/`list`/`applyDomains` never touch it) and
+`PreviewService.#own` refuses it; `ServiceLifecycleService.deleteService` uses
+`listChildren` (previews + canary). Slug `canarySlug` (`<slug>-canary`, 63-char
+cut); settings from `PreviewService`'s exported `mirroredSettings`, re-applied
+with `gitRef = channelBranch` and the domains (`channelCanaryDomain`, else only
+the default hostname) on every canary deploy; DNS re-synced only when its
+hostnames changed.
+
+`ReleaseChannelService.configure` validates (`#resolveSettings`: git, not a
+child, pattern, domain shape and not routed elsewhere), saves, deletes the
+canary when turned off, else deploys it when new, just enabled, or its branch or
+domain changed. It doesn't call `GitWebhookService.sync` (import cycle:
+`git-webhook.service` imports it for routing), so both callers (the Channels tab
+action and `PATCH /api/v1/services/:id/channels`) sync afterwards with
+`channelsEnabled` in the snapshot, which counts as "moved" and re-registers the
+hook; `createWebhookRequest`'s `tags` sets GitLab's `tag_push_events` (GitHub,
+Gitea and Bitbucket already deliver tags as pushes; GitHub/Gitea `create` events
+are parsed too but not subscribed, to avoid a double delivery). `wantsWebhook`
+includes `channelsEnabled`.
+
+`handleDelivery`, after the PR branch, hands a channels service to
+`#routeChannels`: `parseTagPushEvent` (GitHub/Gitea `refs/tags/` push or
+`create` with `ref_type: tag`, GitLab `Tag Push Hook`, Bitbucket `repo:push`
+change `type: tag`, deletions ignored) matching the pattern → `deployStable`
+(writes the tag as the parent's `gitRef`, so manual redeploys rebuild it); a
+push to `channelBranch` → `deployCanary` (records `gitLastSeenCommit` on the
+canary); anything else ignored, `autoDeployOnPush` irrelevant. Polling:
+`listPushPollable` skips channel parents and includes canary rows (created with
+`autoDeployOnPush: true`, never a webhook of their own, so always polled; the
+webhook's `gitLastSeenCommit` keeps a poll from redeploying), and
+`GitPollScheduler.#deploy` routes a canary through its parent's `deployCanary`
+to refresh the mirror. Tags aren't polled.
+
+**Deployment environment**: `deployment.environment` (text, default
+`production`, free-form on purpose), written by both `DeploymentDTO.create` call
+sites from `deployEnvironment(svc)`: `canary` for `channelCanary`, `preview` for
+any other child, else `production`. The migration backfills `preview` for
+existing preview rows. Shown by `environment-badge.svelte` on the Revisions tab
+and `/deployments` (filter key `environment`), exposed as `environment` on the
+REST deployment/revision shapes (so the MCP tools get it). `POST /deploy` and
+the MCP `deploy_service` take `environment: canary|stable`. CLI:
+`services channels enable|disable|status`, `services deploy --environment`,
+`deploy` as an alias of `services deploy`. **Not verified against real
+providers**: webhook routing is unit-tested only.
+
 ## Migrating from Dokploy or Coolify (`settings/migrate/`)
 
 Admin-only tab under `/settings`: `settings/migrate/+page.svelte` picks the

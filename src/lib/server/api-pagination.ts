@@ -5,7 +5,7 @@ const API_DEFAULT_PER_PAGE = 100;
 
 /**
  * Parses a REST API list request's paging, search and filter params, defaulting
- * to 100 items a page instead of the dashboard's 25.
+ * to 100 items a page instead of the dashboard's per-account default.
  */
 export function parseApiListQuery(url: URL): ListQuery {
 	return parseListQuery(url, { perPage: API_DEFAULT_PER_PAGE });

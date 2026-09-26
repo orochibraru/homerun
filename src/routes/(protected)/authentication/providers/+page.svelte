@@ -9,7 +9,7 @@
 
 <div class="space-y-6">
   <section class="panel rounded-md">
-    <div class="border-border flex items-start justify-between gap-4 border-b px-5 py-4">
+    <div class="border-border flex flex-col items-start gap-3 border-b px-5 py-4 sm:flex-row sm:justify-between sm:gap-4">
       <div>
         <h2 class="eyebrow">OAuth / OIDC providers</h2>
         <p class="text-text-muted text-xs">

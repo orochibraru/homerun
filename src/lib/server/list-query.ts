@@ -1,9 +1,10 @@
 import { asc, desc, ilike, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from "$lib/list-sorts";
 
-export const DEFAULT_PER_PAGE = 25;
+export { DEFAULT_PER_PAGE };
 
-const MAX_PER_PAGE = 100;
+const MAX_PER_PAGE = Math.max(...PER_PAGE_OPTIONS);
 
 export interface ListSort {
 	desc: boolean;
@@ -41,7 +42,17 @@ function positiveInt(
 }
 
 /**
- * Reads a list page's `page`, `perPage` (capped at 100), `q`, `sort` and
+ * An account's saved page size when it's one of `PER_PAGE_OPTIONS`, otherwise
+ * the instance default.
+ */
+export function resolvePerPage(value: number | null | undefined): number {
+	return (
+		PER_PAGE_OPTIONS.find((option) => option === value) ?? DEFAULT_PER_PAGE
+	);
+}
+
+/**
+ * Reads a list page's `page`, `perPage` (capped at 200), `q`, `sort` and
  * comma-separated filter params from the URL, falling back to defaults for
  * anything missing or invalid. `sort` is a key with an optional leading `-`
  * for descending (`name`, `-created`).
@@ -50,8 +61,12 @@ function positiveInt(
  * other params are ignored.
  * @param options.pageParam Name of the page param, for pages that page more
  * than one list.
- * @param options.perPage Default page size when the URL doesn't set one.
+ * @param options.perPage Default page size when the URL doesn't set one,
+ * ahead of `userPerPage`.
  * @param options.sortKeys Sort keys the list accepts; any other is ignored.
+ * @param userPerPage The signed-in account's saved page size, used when
+ * neither the URL nor `options.perPage` sets one; anything outside
+ * `PER_PAGE_OPTIONS` falls back to the instance default.
  */
 export function parseListQuery(
 	url: URL,
@@ -61,11 +76,12 @@ export function parseListQuery(
 		perPage?: number;
 		sortKeys?: string[];
 	} = {},
+	userPerPage?: number | null,
 ): ListQuery {
 	const pageParam = options.pageParam ?? "page";
 	const perPage = positiveInt(
 		url.searchParams.get("perPage"),
-		options.perPage ?? DEFAULT_PER_PAGE,
+		options.perPage ?? resolvePerPage(userPerPage),
 		MAX_PER_PAGE,
 	);
 	const page = positiveInt(url.searchParams.get(pageParam), 1, 100_000);

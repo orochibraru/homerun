@@ -20,9 +20,10 @@
 
 	let addMode = $state<"direct" | "invite">("direct");
 	let newRole = $state("developer");
-	const newRoleLabel = $derived(
-		ROLE_OPTIONS.find((r) => r.value === newRole)?.label ?? "Developer",
+	const newRoleOption = $derived(
+		ROLE_OPTIONS.find((r) => r.value === newRole) ?? ROLE_OPTIONS[0],
 	);
+	const newRoleLabel = $derived(newRoleOption.label);
 </script>
 
 {#if open}
@@ -106,6 +107,9 @@
               </Select.Group>
             </Select.Content>
           </Select.Root>
+          <p class="text-text-subtle mt-1.5 text-xs">
+            {newRoleOption.description}
+          </p>
         </div>
         <div class="flex justify-end">
           <Button disabled={submitting} type="submit">
@@ -144,6 +148,9 @@
               </Select.Group>
             </Select.Content>
           </Select.Root>
+          <p class="text-text-subtle mt-1.5 text-xs">
+            {newRoleOption.description}
+          </p>
         </div>
         <div class="flex justify-end">
           <Button disabled={submitting} type="submit">

@@ -53,7 +53,7 @@
             class="cursor-pointer border-b border-border/60 last:border-0 hover:bg-surface-2"
             onclick={() => toggleRun(run.id)}
           >
-            <td class="px-5 py-3 text-text-muted">
+            <td class="px-5 py-3 whitespace-nowrap text-text-muted">
               <button
                 class="flex items-center gap-1.5 text-left"
                 aria-expanded={expandedRunId === run.id}

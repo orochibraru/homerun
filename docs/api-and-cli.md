@@ -22,14 +22,21 @@ that `403` on every write.
 - `POST /api/v1/services/:id/{deploy,start,stop,restart}`: `deploy` awaits the
   full pull-or-build → create → start pipeline and returns once it's done (no
   separate polling endpoint for API clients: that's dashboard-only, for its own
-  progress UI)
+  progress UI); with [release channels](release-channels.md) on,
+  `{"environment": "canary"}` deploys the canary instead (`stable`, the default,
+  deploys the service itself)
+- `GET/PATCH /api/v1/services/:id/channels`: a git service's
+  [release channels](release-channels.md), the canary branch, tag pattern,
+  canary domain and canary service; `PATCH` takes `enabled` plus any of
+  `branch`, `tagPattern` and `canaryDomain` (null clears it), and turning them
+  off deletes the canary
 - `GET /api/v1/services/:id/logs`: the service's container or swarm service logs
   as plain text, the last `?tail=` lines (default 200, max 10000), or a live
   stream with `?follow=true`; a `400` for a service that was never deployed
 - `GET /api/v1/services/:id/webhook`: the [push-to-deploy](deploy-on-push.md)
   payload URL and secret for that service, whether the branch is polled instead
-  and which provider to reconnect when it refused the webhook, a 404 when
-  neither Deploy on push nor pull request previews are on
+  and which provider to reconnect when it refused the webhook, a 404 when none
+  of Deploy on push, pull request previews or release channels are on
 - `DELETE /api/v1/auth-token`: revokes the API key that authenticated the
   request, what `homerun logout` calls (see [Logging in](#logging-in) below)
 - `GET/POST /api/v1/stacks`, `GET /api/v1/templates`
@@ -41,7 +48,9 @@ that `403` on every write.
   `POST /api/v1/services/:id/revisions/:revisionId/deploy`: revisions and
   rollback, see [Revisions](#revisions) below
 - `GET /api/v1/services/:id/deployments?limit=10`: the latest deploy attempts,
-  failed ones included, each with its error and progress log (up to 50)
+  failed ones included, each with its error and progress log (up to 50); these
+  and revisions carry the `environment` they deployed (`production`, `canary` or
+  `preview`)
 - `GET /api/v1/jobs/:jobId`: the status of a queued job, such as a scan
 - `GET /api/v1/system-stats`: host CPU/RAM/disk/GPU
 - `GET/POST /api/v1/instance/update`: the running version, the latest release
@@ -51,7 +60,7 @@ that `403` on every write.
   to follow a running update; admins only
 
 The list `GET`s (`services`, `stacks`, `templates`, a service's `scans`) are
-paginated: `?page=`, `?perPage=` (default 100, max 100), and `?q=` for a
+paginated: `?page=`, `?perPage=` (default 100, max 200), and `?q=` for a
 case-insensitive search. The response body stays a plain JSON array, on purpose,
 so an existing integration keeps working unchanged; the total row count and the
 page/size you got back come in the `x-total-count`/`x-page`/`x-per-page`
@@ -107,6 +116,30 @@ Every account sees every service's scans and jobs; an unknown id is a 404.
 and `requiredStatusChecks` (see [Required status checks](status-checks.md)),
 plus `healthcheckCommand`, `imageScanEnabled` and `uptimeEnabled` (turns the
 service's [uptime probes](observability.md#uptime) on or off).
+
+### Previews
+
+The open [pull request previews](pull-request-previews.md) of a git service, for
+CI to test against (see
+[Testing pull requests with GitHub Actions](github-actions-preview-testing.md)):
+
+- `GET /api/v1/services/:id/previews` lists them, newest pull request first, and
+  `GET /api/v1/services/:id/previews/:prNumber` returns one (`404` when that
+  pull request has none). Fields: `id` (the preview's own service id),
+  `prNumber`, `title`, `branch`, `gitRef` (the head SHA it builds), `status`,
+  `hostnames`, `url`, `revision` (the revision it runs now: `id`, `gitCommit`,
+  `imageRef`, `imageDigest`, `health`, `healthReason`, `deployedAt`, or null)
+  and `deployment` (its latest deploy attempt, failed or in flight included:
+  `id`, `status`, `gitCommit`, `errorMessage`, or null).
+- `DELETE /api/v1/services/:id/previews/:prNumber` deletes it, like the Previews
+  tab's Delete button (`409` when its container couldn't be removed).
+- `POST /api/v1/services/:id/previews/:prNumber/promote` deploys the image the
+  preview runs to the service itself, the way a rollback redeploys a revision:
+  no build, no pull from upstream, no scan. An optional `{"commit": "<sha>"}`
+  body refuses (`409`) unless the preview runs that commit; it's also a `409`
+  while the preview has no running revision or its health check is still running
+  or failed. It answers `202` with `deploymentId`, `jobId` (poll
+  `GET /api/v1/jobs/:jobId`), `revisionId`, `imageRef` and `gitCommit`.
 
 ## OpenAPI spec & Swagger UI
 
@@ -252,18 +285,26 @@ The rest operate on your instance:
 homerun services list [--json]
 homerun services get <id>
 homerun services config <id>
-homerun services deploy <id> [--tag <tag>]
+homerun services deploy <id> [--tag <tag>] [--environment canary|stable]
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
 homerun services delete <id> [--force]
 homerun services webhook <id>
+homerun services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>]
+homerun services channels disable <id>
+homerun services channels status <id>
 homerun services scans <id> [--json]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
 homerun services logs <id> [--tail <lines>] [--follow]
 homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
+homerun previews list <id> [--json]
+homerun previews get <id> <pr>
+homerun previews wait <id> <pr> [--commit <sha>] [--timeout 20m] [--json]
+homerun previews delete <id> <pr>
+homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list [--json]
 homerun templates list [--json]
 homerun instance status [--json]
@@ -277,8 +318,8 @@ Settings tab's Delete button, and `--force` deletes Homerun's record even when
 the container or swarm service couldn't be removed (the API's `?force=true`,
 without it that case is a `409` and deletes nothing).
 `homerun services webhook <id>` prints a service's push-to-deploy payload URL
-and secret (a `404` when neither Deploy on push nor pull request previews are
-turned on).
+and secret (a `404` when none of Deploy on push, pull request previews or
+release channels are turned on).
 
 Every `list` command also accepts `--page`, `--per-page` (default 100, max 100)
 and `--search <term>` for a large result set; if what's printed is only part of
@@ -302,7 +343,12 @@ homerun services config "$SERVICE_ID" > app-config.json
 when it's been queued, so it's usable as a step in a script or CI job.
 `--tag <tag>` first switches an image-based service to that image tag (and keeps
 it), for a pipeline deploying the image it just pushed: see
-[Deploying from CI](ci-cd.md).
+[Deploying from CI](ci-cd.md). `--environment canary|stable` deploys one side of
+a service with [release channels](release-channels.md) on; `homerun deploy` is
+short for `homerun services deploy`, and `service` works for `services`.
+`homerun services channels enable` turns release channels on or, when they
+already are, changes only the settings you pass (`--canary-domain ""` clears the
+canary domain); `disable` turns them off and deletes the canary.
 
 `homerun services scans <id>` lists a service's image scans (it takes the same
 `--page`/`--per-page`/`--search` flags as a list), and
@@ -329,6 +375,16 @@ and previous one marked and, for an unhealthy one, the reason, and
 `homerun services rollback <id> [revisionId]` redeploys a revision (the previous
 one when no id is given) and waits for it like `deploy`; `--restore-config` also
 restores that revision's env vars, resources and networking.
+
+`homerun previews` works on a git service's pull request previews, `<id>` being
+the service they preview. `homerun previews wait <id> <pr>` waits until the
+preview exists, runs `--commit` when given, and its health check passed, then
+prints its URL alone on stdout (`--json` prints the preview instead); it exits
+non-zero when the deploy failed, the preview is unhealthy, previews are off, or
+`--timeout` (a duration, default `20m`) passes. `homerun previews promote`
+deploys the preview's exact image to the service, refusing when `--commit` isn't
+what it runs; `--wait` follows the deploy and exits non-zero if it fails. See
+[Testing pull requests with GitHub Actions](github-actions-preview-testing.md).
 
 ### Working on the CLI itself
 

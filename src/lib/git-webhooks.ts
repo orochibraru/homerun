@@ -10,6 +10,11 @@ export interface PushedBranch {
 	commit: string | null;
 }
 
+export interface PushedTag {
+	commit: string | null;
+	tag: string;
+}
+
 export type PullRequestAction = "open" | "update" | "close";
 
 export interface PullRequestEvent {
@@ -138,6 +143,61 @@ export function parsePushEvent(
 	return [{ branch, commit }];
 }
 
+/**
+ * The tags a delivery created or moved, with the commit each points at.
+ * GitHub, Gitea and GitLab send a push whose ref is `refs/tags/<name>`
+ * (GitLab as a "Tag Push Hook"), GitHub and Gitea also a `create` event with
+ * `ref_type: tag`, and Bitbucket a `repo:push` change of type `tag`. Empty for
+ * a deleted tag and for anything that isn't a tag.
+ */
+export function parseTagPushEvent(
+	headers: Headers,
+	payload: unknown,
+): PushedTag[] {
+	const body = record(payload);
+
+	if (headers.get("x-event-key") === "repo:push") {
+		const changes = record(body.push).changes;
+		return (Array.isArray(changes) ? changes : []).flatMap((change) => {
+			const next = record(record(change).new);
+			const name = stringOrNull(next.name);
+			if (next.type !== "tag" || !name) {
+				return [];
+			}
+			return [{ commit: stringOrNull(record(next.target).hash), tag: name }];
+		});
+	}
+
+	const event =
+		headers.get("x-github-event") ??
+		headers.get("x-gitea-event") ??
+		headers.get("x-gitlab-event");
+	if (event === "create") {
+		const tag = stringOrNull(body.ref);
+		return body.ref_type === "tag" && tag
+			? [{ commit: stringOrNull(body.sha), tag }]
+			: [];
+	}
+	if (!(event === "push" || event === "Tag Push Hook")) {
+		return [];
+	}
+	const ref = stringOrNull(body.ref);
+	const after = stringOrNull(body.after);
+	if (
+		!ref?.startsWith("refs/tags/") ||
+		body.deleted === true ||
+		(after && ZERO_SHA.test(after))
+	) {
+		return [];
+	}
+	return [
+		{
+			commit: stringOrNull(body.checkout_sha) ?? after,
+			tag: ref.slice("refs/tags/".length),
+		},
+	];
+}
+
 const BITBUCKET_PULL_REQUEST_EVENTS = [
 	"pullrequest:created",
 	"pullrequest:updated",
@@ -148,14 +208,21 @@ const BITBUCKET_PULL_REQUEST_EVENTS = [
 /**
  * The API call that registers a webhook for `repo` on a provider of `kind`,
  * relative to its API base: push events always, pull request events too when
- * `hook.pullRequests` is set.
+ * `hook.pullRequests` is set, and tag pushes when `hook.tags` is set. GitHub,
+ * Gitea and Bitbucket already deliver tag pushes as push events, only GitLab
+ * needs its own flag for them.
  */
 export function createWebhookRequest(
 	kind: GitProviderKind,
 	repo: string,
-	hook: { pullRequests?: boolean; secret: string; url: string },
+	hook: {
+		pullRequests?: boolean;
+		secret: string;
+		tags?: boolean;
+		url: string;
+	},
 ): WebhookRequest {
-	const { pullRequests = false, secret, url } = hook;
+	const { pullRequests = false, secret, tags = false, url } = hook;
 	const events = pullRequests ? ["push", "pull_request"] : ["push"];
 	switch (kind) {
 		case "github":
@@ -186,6 +253,7 @@ export function createWebhookRequest(
 					enable_ssl_verification: true,
 					merge_requests_events: pullRequests,
 					push_events: true,
+					tag_push_events: tags,
 					token: secret,
 					url,
 				},

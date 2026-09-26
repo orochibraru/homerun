@@ -2,7 +2,11 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { UserPreferencesDTO } from "$lib/dto/user-preferences-dto";
 import { Logger } from "$lib/logger";
-import { colorsSchema, themeSchema } from "$lib/server/validation/appearance";
+import {
+	colorsSchema,
+	perPageSchema,
+	themeSchema,
+} from "$lib/server/validation/appearance";
 
 const logger = new Logger("Appearance");
 
@@ -45,6 +49,23 @@ export const actions = {
 			await prefs.updateColors({ palette: choice.palette });
 		}
 		logger.info("Colors updated", { userId: locals.user.id });
+		return { success: true };
+	},
+
+	/** Saves the default page size every paginated list opens with. */
+	updatePerPage: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const parsed = perPageSchema.safeParse(
+			Object.fromEntries(await request.formData()),
+		);
+		if (!parsed.success) {
+			return fail(400, { error: "Pick one of the listed page sizes." });
+		}
+		const prefs = await UserPreferencesDTO.get(locals.user.id);
+		await prefs.updatePerPage(parsed.data.perPage);
+		logger.info("Page size updated", { userId: locals.user.id });
 		return { success: true };
 	},
 };

@@ -93,11 +93,16 @@ export class ServiceDTO extends BaseDTO<Service> {
 	 * Builds the WHERE clause for the paged services list : the search box
 	 * (name, slug, image, tag, or any of the service's previews), status
 	 * pills, and stack pills where the Ungrouped label means no stack. Pull
-	 * request previews are never rows of their own, they're listed under
-	 * their parent.
+	 * request previews are left out unless `includePreviews`: the dashboard
+	 * lists them under their parent, the REST API returns every service.
 	 */
-	static #listFilters(query: ListQuery): SQL | undefined {
-		const conditions: SQL[] = [isNull(service.previewParentId)];
+	static #listFilters(
+		query: ListQuery,
+		includePreviews: boolean,
+	): SQL | undefined {
+		const conditions: SQL[] = includePreviews
+			? []
+			: [isNull(service.previewParentId)];
 
 		const search = searchCondition(query.q, [
 			service.name,
@@ -154,11 +159,12 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return and(...conditions);
 	}
 
-	/** One page of `listWithStackNames`, filtered/searched server-side, plus the unpaged total the pager needs. */
+	/** One page of `listWithStackNames`, filtered/searched server-side, plus the unpaged total the pager needs. Pull request previews are only rows of their own with `includePreviews`. */
 	static async listWithStackNamesPaged(
 		query: ListQuery,
+		{ includePreviews = false }: { includePreviews?: boolean } = {},
 	): Promise<PagedResult<{ stackName: string | null; service: ServiceDTO }>> {
-		const where = ServiceDTO.#listFilters(query);
+		const where = ServiceDTO.#listFilters(query, includePreviews);
 		const [rows, totals] = await Promise.all([
 			db
 				.select({ stackName: stack.name, row: service })
@@ -346,6 +352,11 @@ export class ServiceDTO extends BaseDTO<Service> {
 			previewDefaultDomain: true,
 			previewDomainTemplate: null,
 			previewsEnabled: false,
+			channelsEnabled: false,
+			channelBranch: null,
+			channelTagPattern: "v*",
+			channelCanaryDomain: null,
+			channelCanary: input.channelCanary ?? false,
 		} satisfies Partial<Service>;
 	}
 

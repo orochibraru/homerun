@@ -12,8 +12,12 @@ import { nextCronRun } from "$lib/services/cron/cron-expression";
 const logger = new Logger("Backups");
 
 export const load = async ({ parent, url }) => {
-	await parent();
-	const query = parseListQuery(url, { filterKeys: ["kind", "outcome"] });
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{ filterKeys: ["kind", "outcome"] },
+		preferences.perPage,
+	);
 	const [volumes, runs, destinations] = await Promise.all([
 		StorageVolumeDTO.list(),
 		BackupRunDTO.listPaged(query),

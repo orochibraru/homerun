@@ -35,7 +35,11 @@ export const load = async ({ parent, params }) => {
 
 	return {
 		previewOf: previewParent
-			? { id: previewParent.id, name: previewParent.name }
+			? {
+					canary: Boolean(svc?.toJSON().channelCanary),
+					id: previewParent.id,
+					name: previewParent.name,
+				}
 			: null,
 		pushWebhook: svc ? await GitWebhookService.describe(svc) : null,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),

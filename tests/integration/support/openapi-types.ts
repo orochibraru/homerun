@@ -171,6 +171,30 @@ export interface paths {
 		patch: operations["patch_services__serviceId_"];
 		trace?: never;
 	};
+	"/services/{serviceId}/channels": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a service's release channels
+		 * @description A git service's release channel settings: the canary branch, the tag pattern that deploys stable, and its canary service.
+		 */
+		get: operations["get_services__serviceId__channels"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Configure a service's release channels
+		 * @description Turns release channels on or off, or changes their settings. On: pushes to the canary branch deploy a companion <slug>-canary service, and pushed tags matching the pattern deploy this service at that tag. Turning them on creates and deploys the canary; off deletes it. The webhook is re-registered to include tag pushes.
+		 */
+		patch: operations["patch_services__serviceId__channels"];
+		trace?: never;
+	};
 	"/services/{serviceId}/config": {
 		parameters: {
 			query?: never;
@@ -245,6 +269,70 @@ export interface paths {
 		get: operations["get_services__serviceId__logs"];
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/previews": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's previews
+		 * @description The service's open pull request previews, newest pull request first, each with its URL, the revision it runs and its latest deploy attempt.
+		 */
+		get: operations["get_services__serviceId__previews"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/previews/{prNumber}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a preview
+		 * @description One pull request's preview. What `homerun previews wait` polls: ready once revision.gitCommit is the commit under test and revision.health is healthy.
+		 */
+		get: operations["get_services__serviceId__previews__prNumber_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a preview
+		 * @description Deletes the preview's workload, DNS records and row. The next push to the pull request recreates it.
+		 */
+		delete: operations["delete_services__serviceId__previews__prNumber_"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/previews/{prNumber}/promote": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Promote a preview
+		 * @description Deploys the exact image the preview's current revision runs to the service it previews, without building, pulling or scanning, the same way a rollback redeploys a revision. The deployment points at the preview revision (rollbackOfDeploymentId) and its log opens with where the image came from. Refused while the preview has no running revision, while its health is still being watched or unhealthy, or when commit is given and isn't what it runs. Returns once queued: poll GET /jobs/{jobId}.
+		 */
+		post: operations["post_services__serviceId__previews__prNumber__promote"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -908,7 +996,7 @@ export interface operations {
 			query?: {
 				/** @description 1-based page number (default 1) */
 				page?: string;
-				/** @description Items per page (default 100, max 100) */
+				/** @description Items per page (default 100, max 200) */
 				perPage?: string;
 				/** @description Case-insensitive search term */
 				q?: string;
@@ -1872,6 +1960,189 @@ export interface operations {
 			};
 		};
 	};
+	get_services__serviceId__channels: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The release channel settings */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The branch whose pushes deploy the canary */
+						branch: string | null;
+						/** @description The canary service Homerun manages, null while channels are off */
+						canary: {
+							gitRef: string | null;
+							hostname: string | null;
+							id: string;
+							name: string;
+							slug: string;
+							/** @enum {string} */
+							status:
+								| "pending"
+								| "pulling"
+								| "starting"
+								| "running"
+								| "stopped"
+								| "failed"
+								| "missing";
+						} | null;
+						canaryDomain: string | null;
+						enabled: boolean;
+						/** @description The ref the stable service (this one) builds: the last tag deployed, or its branch until the first tag */
+						stableRef: string | null;
+						/** @description Glob a pushed tag must match to deploy the stable service */
+						tagPattern: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_services__serviceId__channels: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The branch that feeds the canary. Defaults to the one already set, else the service's branch. */
+					branch?: string;
+					/** @description A custom domain for the canary, null for none (it keeps its default <slug>-canary hostname). Omit to keep the current one. */
+					canaryDomain?: string | null;
+					/** @description Turn release channels on or off. Off deletes the canary service. */
+					enabled: boolean;
+					/** @description Glob a pushed tag must match to deploy the stable service, e.g. v*. Defaults to the one already set. */
+					tagPattern?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description The updated settings */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The branch whose pushes deploy the canary */
+						branch: string | null;
+						/** @description The canary service Homerun manages, null while channels are off */
+						canary: {
+							gitRef: string | null;
+							hostname: string | null;
+							id: string;
+							name: string;
+							slug: string;
+							/** @enum {string} */
+							status:
+								| "pending"
+								| "pulling"
+								| "starting"
+								| "running"
+								| "stopped"
+								| "failed"
+								| "missing";
+						} | null;
+						canaryDomain: string | null;
+						enabled: boolean;
+						/** @description The ref the stable service (this one) builds: the last tag deployed, or its branch until the first tag */
+						stableRef: string | null;
+						/** @description Glob a pushed tag must match to deploy the stable service */
+						tagPattern: string;
+					};
+				};
+			};
+			/** @description Not a git service, a preview or canary itself, or an invalid setting */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	get_services__serviceId__config: {
 		parameters: {
 			query?: never;
@@ -2047,6 +2318,11 @@ export interface operations {
 		requestBody?: {
 			content: {
 				"application/json": {
+					/**
+					 * @description With release channels on: canary deploys the canary service from the canary branch, stable (or production) the service itself at its current ref. Defaults to stable.
+					 * @enum {string}
+					 */
+					environment?: "stable" | "production" | "canary";
 					/** @description Image tag to deploy. Saved on the service first, so later deploys keep it. Image-based services only. */
 					tag?: string;
 				};
@@ -2158,6 +2434,8 @@ export interface operations {
 						 * @example 2026-08-20T12:00:00.000Z
 						 */
 						createdAt: string;
+						/** @description The environment it deployed: production, canary (a release channel's canary service) or preview (a pull request preview) */
+						environment: string;
 						/** @description Why the deploy failed, null unless status is failed */
 						errorMessage: string | null;
 						finishedAt: string | null;
@@ -2284,6 +2562,427 @@ export interface operations {
 			};
 		};
 	};
+	get_services__serviceId__previews: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's previews */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						branch: string | null;
+						/** @description The preview's latest deploy attempt, failed or in flight ones included */
+						deployment: {
+							/**
+							 * @description ISO 8601 timestamp
+							 * @example 2026-08-20T12:00:00.000Z
+							 */
+							createdAt: string;
+							errorMessage: string | null;
+							finishedAt: string | null;
+							/** @description The commit it built, null until the build checked it out */
+							gitCommit: string | null;
+							gitRef: string | null;
+							id: string;
+							/** @enum {string} */
+							status:
+								| "pending"
+								| "pulling"
+								| "starting"
+								| "running"
+								| "stopped"
+								| "failed"
+								| "missing";
+						} | null;
+						/** @description What the preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA */
+						gitRef: string | null;
+						hostnames: string[];
+						/** @description The preview's own service id */
+						id: string;
+						name: string;
+						prNumber: number;
+						/** @description The revision the preview runs now, null until a deploy of it succeeded */
+						revision: {
+							deployedAt: string | null;
+							gitCommit: string | null;
+							gitRef: string | null;
+							health:
+								| ("watching" | "healthy" | "unhealthy" | "rolled_back")
+								| null;
+							healthReason: string | null;
+							/** @description The revision's deployment id on the preview */
+							id: string;
+							imageDigest: string | null;
+							imageRef: string | null;
+						} | null;
+						slug: string;
+						/**
+						 * @description The preview service's last known status
+						 * @enum {string}
+						 */
+						status:
+							| "pending"
+							| "pulling"
+							| "starting"
+							| "running"
+							| "stopped"
+							| "failed"
+							| "missing";
+						title: string | null;
+						/** @description The preview's main URL, null when nothing routes to it */
+						url: string | null;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__previews__prNumber_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id (the preview's parent) */
+				serviceId: string;
+				/** @description Pull request number */
+				prNumber: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The preview */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						branch: string | null;
+						/** @description The preview's latest deploy attempt, failed or in flight ones included */
+						deployment: {
+							/**
+							 * @description ISO 8601 timestamp
+							 * @example 2026-08-20T12:00:00.000Z
+							 */
+							createdAt: string;
+							errorMessage: string | null;
+							finishedAt: string | null;
+							/** @description The commit it built, null until the build checked it out */
+							gitCommit: string | null;
+							gitRef: string | null;
+							id: string;
+							/** @enum {string} */
+							status:
+								| "pending"
+								| "pulling"
+								| "starting"
+								| "running"
+								| "stopped"
+								| "failed"
+								| "missing";
+						} | null;
+						/** @description What the preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA */
+						gitRef: string | null;
+						hostnames: string[];
+						/** @description The preview's own service id */
+						id: string;
+						name: string;
+						prNumber: number;
+						/** @description The revision the preview runs now, null until a deploy of it succeeded */
+						revision: {
+							deployedAt: string | null;
+							gitCommit: string | null;
+							gitRef: string | null;
+							health:
+								| ("watching" | "healthy" | "unhealthy" | "rolled_back")
+								| null;
+							healthReason: string | null;
+							/** @description The revision's deployment id on the preview */
+							id: string;
+							imageDigest: string | null;
+							imageRef: string | null;
+						} | null;
+						slug: string;
+						/**
+						 * @description The preview service's last known status
+						 * @enum {string}
+						 */
+						status:
+							| "pending"
+							| "pulling"
+							| "starting"
+							| "running"
+							| "stopped"
+							| "failed"
+							| "missing";
+						title: string | null;
+						/** @description The preview's main URL, null when nothing routes to it */
+						url: string | null;
+					};
+				};
+			};
+			/** @description Not a pull request number */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description No such service, or no preview for that pull request */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_services__serviceId__previews__prNumber_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id (the preview's parent) */
+				serviceId: string;
+				/** @description Pull request number */
+				prNumber: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						success: boolean;
+					};
+				};
+			};
+			/** @description Not a pull request number */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description No such service, or no preview for that pull request */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The preview's workload couldn't be removed */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_services__serviceId__previews__prNumber__promote: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id (the preview's parent) */
+				serviceId: string;
+				/** @description Pull request number */
+				prNumber: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: {
+			content: {
+				"application/json": {
+					/** @description The commit the preview must be running, e.g. the pull request head CI tested. Omitted, whatever the preview runs is promoted. */
+					commit?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Deploy queued */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The deployment on the service the preview was promoted to */
+						deploymentId: string;
+						gitCommit: string | null;
+						imageRef: string | null;
+						/** @description The deploy job, poll GET /jobs/{jobId} to follow it */
+						jobId: string;
+						previewId: string;
+						/** @description The preview revision whose image is deployed */
+						revisionId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or the service doesn't build from git */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description No such service, or no preview for that pull request */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The preview has no running revision, isn't healthy, or runs another commit */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	post_services__serviceId__restart: {
 		parameters: {
 			query?: never;
@@ -2384,6 +3083,8 @@ export interface operations {
 						createdAt: string;
 						/** @description The revision running now */
 						current: boolean;
+						/** @description The environment it deployed: production, canary (a release channel's canary service) or preview (a pull request preview) */
+						environment: string;
 						gitCommit: string | null;
 						gitRef: string | null;
 						/** @description Health of its latest run. watching and healthy only ever appear on the current revision; unhealthy and rolled_back are kept as history; null otherwise */
@@ -2545,7 +3246,7 @@ export interface operations {
 			query?: {
 				/** @description 1-based page number (default 1) */
 				page?: string;
-				/** @description Items per page (default 100, max 100) */
+				/** @description Items per page (default 100, max 200) */
 				perPage?: string;
 				/** @description Case-insensitive search term */
 				q?: string;
@@ -3115,7 +3816,7 @@ export interface operations {
 			query?: {
 				/** @description 1-based page number (default 1) */
 				page?: string;
-				/** @description Items per page (default 100, max 100) */
+				/** @description Items per page (default 100, max 200) */
 				perPage?: string;
 				/** @description Case-insensitive search term */
 				q?: string;
@@ -3312,7 +4013,7 @@ export interface operations {
 			query?: {
 				/** @description 1-based page number (default 1) */
 				page?: string;
-				/** @description Items per page (default 100, max 100) */
+				/** @description Items per page (default 100, max 200) */
 				perPage?: string;
 				/** @description Case-insensitive search term */
 				q?: string;

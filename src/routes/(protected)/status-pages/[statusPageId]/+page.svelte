@@ -152,11 +152,11 @@
   </form>
 
   <section class="bg-surface mt-6 rounded-md border border-red-200 dark:border-red-900/40">
-    <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
-      <span class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
+    <div class="flex flex-wrap items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
+      <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <Trash2 class="size-4" />
       </span>
-      <div>
+      <div class="min-w-0 flex-1 basis-56">
         <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
           Delete this status page
         </h2>

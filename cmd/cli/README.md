@@ -87,18 +87,26 @@ homerun --version
 homerun services list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services get <id>
 homerun services config <id>
-homerun services deploy <id> [--tag <tag>]
+homerun services deploy <id> [--tag <tag>] [--environment canary|stable]
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
 homerun services delete <id> [--force]
 homerun services webhook <id>
+homerun services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>]
+homerun services channels disable <id>
+homerun services channels status <id>
 homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
 homerun services logs <id> [--tail <lines>] [--follow]
 homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
+homerun previews list <id> [--json]
+homerun previews get <id> <pr>
+homerun previews wait <id> <pr> [--commit <sha>] [--timeout 20m] [--json]
+homerun previews delete <id> <pr>
+homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun instance status [--json]
 homerun instance update [--wait=false] [--timeout <seconds>]
@@ -156,6 +164,19 @@ older healthy revision with a different image), and prints the deploy result
 once it's finished, same contract as `homerun services deploy`.
 `--restore-config` adds `?restoreConfig=true`, which also restores the env vars,
 resources and networking that revision ran with.
+
+`homerun previews list|get|delete <id> [pr]` call
+`GET|DELETE /services/{serviceId}/previews[/{prNumber}]`.
+`homerun previews wait` first reads the service (failing fast when
+`previewsEnabled` is off), then polls
+`GET /services/{serviceId}/previews/{prNumber}` every 5s, treating a `404` as
+not created yet, until `PreviewVerdict` says ready (the current revision is
+`--commit` and `healthy`, or has no health and the preview is running) or failed
+(the deploy of that commit failed, or its revision is
+`unhealthy`/`rolled_back`), and prints only the URL on stdout, progress on
+stderr. `homerun previews promote` posts `{commit}` to `.../promote` (a `202`
+with the deploy's `jobId`), and with `--wait` polls `GET /jobs/{jobId}` like
+`services scan --wait`.
 
 `homerun instance status` calls `GET /instance/update` and prints the running
 version, the release channel, its latest release and whether an update can start

@@ -49,11 +49,15 @@ async function checkAgentStatuses(
 }
 
 export const load = async ({ parent, url }) => {
-	await parent();
-	const query = parseListQuery(url, {
-		filterKeys: ["kind"],
-		sortKeys: sortKeysOf(BASE_SORTS),
-	});
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{
+			filterKeys: ["kind"],
+			sortKeys: sortKeysOf(BASE_SORTS),
+		},
+		preferences.perPage,
+	);
 	const paged = await RemoteHostDTO.listPaged(query);
 	const agentStatuses = await checkAgentStatuses(paged.items);
 	return {

@@ -8,6 +8,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { roleLabel } from "$lib/permissions";
 	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
@@ -23,7 +24,7 @@
 			dnsResolvable: boolean;
 			id: string;
 		};
-		users: { email: string; id: string; name: string }[];
+		users: { email: string; id: string; name: string; role: string | null }[];
 	}
 
 	const { authError, dashboardOrigin, oauthProviders, svc, users }: Props =
@@ -168,7 +169,7 @@
                 {#each users as u (u.id)}
                   <CheckBox
                     checked={allowedUserIds.includes(u.id)}
-                    helperText={u.email}
+                    helperText="{u.email} · {roleLabel(u.role)}"
                     id="user-{u.id}"
                     label={u.name}
                     name="user-{u.id}"

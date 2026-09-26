@@ -358,6 +358,11 @@ per-user instead of a singleton row.
 - **Sidebar**: no per-category colors. Every icon is `text-accent`; items are
   `font-medium`, the active one `font-semibold text-accent`. A "colorful"
   per-category mode existed and was removed as noise.
+- **Lists**: the account's default page size (`updatePerPage`, validated by
+  `perPageSchema` against `PER_PAGE_OPTIONS`), which every list page's `load`
+  hands to `parseListQuery`, see Server-side list pagination in
+  `data-and-config.md`. `pagination.svelte` has no per-page picker; `?perPage=`
+  in the URL overrides it for one view.
 - **Accent color**: `(protected)/+layout.svelte`'s root wrapper div gets an
   inline `style` computed from `accentColor` (a `"#rrggbb"` hex string, `null`
   meaning "use the built-in default") that overrides

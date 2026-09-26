@@ -23,9 +23,26 @@
 		tabs,
 	}: { active: string; onSelect?: (id: string) => void; tabs: NavTab[] } =
 		$props();
+
+	let strip = $state<HTMLDivElement>();
+
+	$effect(() => {
+		const current =
+			active && strip?.querySelector<HTMLElement>("[data-active]");
+		if (
+			strip &&
+			current &&
+			(current.offsetLeft < strip.scrollLeft ||
+				current.offsetLeft + current.offsetWidth >
+					strip.scrollLeft + strip.clientWidth)
+		) {
+			strip.scrollLeft =
+				current.offsetLeft - (strip.clientWidth - current.offsetWidth) / 2;
+		}
+	});
 </script>
 
-<div class="border-border mb-5 flex gap-0.5 overflow-x-auto border-b">
+<div bind:this={strip} class="border-border relative mb-5 flex gap-0.5 overflow-x-auto border-b">
   {#each tabs as tab (tab.id)}
     {@const isActive = tab.id === active}
     {@const TabIcon = tab.icon}
@@ -37,6 +54,8 @@
           ? 'border-accent text-text'
           : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
        "
+        aria-current={isActive ? "page" : undefined}
+        data-active={isActive || undefined}
         href={tab.href}
       >
         {#if TabIcon}<TabIcon class="text-accent size-3.5" />{/if}
@@ -56,6 +75,7 @@
           ? 'border-accent text-text'
           : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
        "
+        data-active={isActive || undefined}
         onclick={() => onSelect?.(tab.id)}
         type="button"
       >

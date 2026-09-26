@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
+import type { Role } from "$lib/permissions";
 import { db } from "$lib/server/db/lib";
 import type { Invitation, UserRole } from "$lib/server/db/schema";
 import { invitation } from "$lib/server/db/schema";
@@ -18,7 +19,7 @@ export function isInviteLive(
 export interface InvitationCreateInput {
 	email: string;
 	invitedByUserId: string;
-	role: UserRole;
+	role: Role;
 }
 
 /**
@@ -43,7 +44,7 @@ export class InvitationDTO extends BaseDTO<Invitation> {
 			expiresAt: new Date(now.getTime() + INVITE_EXPIRY_MS),
 			id: crypto.randomUUID(),
 			invitedByUserId: input.invitedByUserId,
-			role: input.role,
+			role: input.role as UserRole,
 			token: randomBytes(32).toString("hex"),
 		};
 		await db.insert(invitation).values(row);

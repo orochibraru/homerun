@@ -17,8 +17,8 @@
 	}: Props = $props();
 </script>
 
-<div class="flex justify-between gap-3">
-  <div>
+<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:gap-3">
+  <div class="flex flex-col max-sm:empty:hidden sm:block">
     {#if currentStep > 0}
       <Button
         onclick={() => {
@@ -31,7 +31,7 @@
       </Button>
     {/if}
   </div>
-  <div class="flex gap-3">
+  <div class="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
     <Button href={resolve("/services")} variant="outline">
       <X class="size-4" />
       Cancel

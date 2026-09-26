@@ -106,7 +106,7 @@
 </svelte:head>
 
 <!-- Fills the full viewport : there's no global navbar above this. -->
-<div class="flex h-screen overflow-hidden p-2 md:gap-2">
+<div class="flex h-dvh overflow-hidden p-2 md:gap-2">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
   <aside class="hidden w-56 shrink-0 flex-col md:flex">
     <BrandMark class="px-3 py-2.5" />
@@ -140,7 +140,7 @@
     </button>
 
     <div
-      class="panel-strong fixed top-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-border md:hidden"
+      class="panel-strong fixed top-0 left-0 z-50 flex h-dvh w-64 flex-col border-r border-border md:hidden"
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
       <nav class="flex-1 overflow-y-auto px-2.5 pt-3 pb-4">
@@ -157,7 +157,7 @@
     <!-- Sticky header, every page, both breakpoints : hamburger (mobile
          only) + page title on the left, notifications + account menu on
          the right. -->
-    <header class="border-border sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b px-3 md:px-5">
+    <header class="border-border sticky top-0 z-30 flex h-12 shrink-0 items-center gap-1.5 border-b px-2 sm:gap-2 sm:px-3 md:px-5">
       <Button
         aria-label="Toggle sidebar"
         class="md:hidden"
@@ -176,7 +176,7 @@
       <Breadcrumbs roots={allNavItems} />
       {#if data.readOnly}
         <span
-          class="text-text-muted border-border rounded-full border px-2 py-0.5 text-[0.7rem] font-medium"
+          class="text-text-muted border-border hidden rounded-full border px-2 py-0.5 text-[0.7rem] font-medium sm:inline"
           title="This account or API key can view everything but can't change anything."
         >
           Read-only

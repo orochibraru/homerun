@@ -19,20 +19,26 @@ async function withLinkedNames(templates: TemplateDTO[]) {
 }
 
 export const load = async ({ parent, url }) => {
-	await parent();
+	const { preferences } = await parent();
 
-	const builtinQuery = parseListQuery(url, {
-		filterKeys: ["category"],
-		pageParam: "bpage",
-		perPage: 24,
-		sortKeys: sortKeysOf(BASE_SORTS),
-	});
-	const customQuery = parseListQuery(url, {
-		filterKeys: ["category"],
-		pageParam: "cpage",
-		perPage: 24,
-		sortKeys: sortKeysOf(BASE_SORTS),
-	});
+	const builtinQuery = parseListQuery(
+		url,
+		{
+			filterKeys: ["category"],
+			pageParam: "bpage",
+			sortKeys: sortKeysOf(BASE_SORTS),
+		},
+		preferences.perPage,
+	);
+	const customQuery = parseListQuery(
+		url,
+		{
+			filterKeys: ["category"],
+			pageParam: "cpage",
+			sortKeys: sortKeysOf(BASE_SORTS),
+		},
+		preferences.perPage,
+	);
 
 	const rawStackId = url.searchParams.get("stackId");
 	const [builtins, custom, categories, stack] = await Promise.all([

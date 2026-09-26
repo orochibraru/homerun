@@ -133,7 +133,7 @@
 {/snippet}
 
 <div class="p-5 md:p-6">
-  <div class="mb-8 flex items-center justify-between gap-4">
+  <div class="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
     <div>
       <h1 class="text-text text-lg font-semibold tracking-tight">Cron Jobs</h1>
       <p class="text-text-muted mt-1 text-sm">

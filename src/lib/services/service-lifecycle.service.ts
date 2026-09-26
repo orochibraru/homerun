@@ -179,9 +179,10 @@ class ServiceLifecycleServiceClass {
 	}
 
 	/**
-	 * Deletes a service: removes its pull request previews first, then its
-	 * swarm service or container, its git webhook and its row. A workload
-	 * Docker reports as already gone counts as removed.
+	 * Deletes a service: removes its pull request previews and release
+	 * channel canary first, then its swarm service or container, its git
+	 * webhook and its row. A workload Docker reports as already gone counts as
+	 * removed.
 	 *
 	 * @param options.force Deletes the row even when the workload couldn't be
 	 * removed, for a daemon that will never answer for it again.
@@ -192,7 +193,7 @@ class ServiceLifecycleServiceClass {
 		svc: ServiceDTO,
 		options: { force?: boolean } = {},
 	): Promise<void> {
-		for (const preview of await ServiceGitDTO.listPreviews(svc.id)) {
+		for (const preview of await ServiceGitDTO.listChildren(svc.id)) {
 			// oxlint-disable-next-line no-await-in-loop -- each preview's workload removal can fail the whole delete
 			await this.deleteService(preview, options);
 		}

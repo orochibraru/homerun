@@ -206,7 +206,7 @@
     </div>
   {/if}
 
-  <div class="mb-4 grid gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
+  <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
     <div class="panel divide-border flex divide-x rounded-xl">
       {#each statCards as card (card.label)}
         <div class="min-w-0 flex-1 px-4 py-3">
@@ -222,12 +222,12 @@
     <HostResources />
   </div>
 
-  <div class="mb-4 grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+  <div class="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
     <UsageChart title="Host resources" />
     <ServiceUsageTable limit={5} />
   </div>
 
-  <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
     <div class="panel rounded-xl lg:col-span-2 xl:col-span-1">
       <div class="panel-head">
         <h2 class="eyebrow flex items-center gap-1.5">

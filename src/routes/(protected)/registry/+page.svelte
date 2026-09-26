@@ -83,7 +83,7 @@
     {#each data.catalog as entry (entry.repository)}
       <section class="border-border bg-surface-1 rounded-lg border">
         <header
-          class="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3"
+          class="border-border flex items-center justify-between gap-3 border-b px-4 py-3"
         >
           <div class="min-w-0">
             <h2 class="text-text font-mono text-sm font-medium break-all">
@@ -98,6 +98,7 @@
             </p>
           </div>
           <form
+            class="shrink-0"
             action="?/deleteRepository"
             method="POST"
             use:enhance={enhanceToast({
@@ -127,7 +128,7 @@
           {#each entry.tags as tag (tag.tag)}
             <li class="flex items-center justify-between gap-3 px-4 py-2.5">
               <div class="min-w-0">
-                <span class="text-text font-mono text-sm">{tag.tag}</span>
+                <span class="text-text font-mono text-sm break-all">{tag.tag}</span>
                 {#if tag.digest}
                   <span class="text-text-muted ml-2 font-mono text-xs">
                     {tag.digest.slice(0, 19)}

@@ -114,7 +114,7 @@
     {:else}
       <div class="space-y-2.5">
         {#each backupEnabledVolumes as vol (vol.id)}
-          <div class="panel flex items-center gap-4 rounded-md p-4">
+          <div class="panel flex flex-col gap-3 rounded-md p-4 sm:flex-row sm:items-center sm:gap-4">
             <div class="min-w-0 flex-1">
               <a
                 class="text-text hover:text-accent truncate text-sm font-semibold"
@@ -194,7 +194,7 @@
                 class="border-border/60 hover:bg-surface-2 cursor-pointer border-b last:border-0"
                 onclick={() => toggleRun(run.id)}
               >
-                <td class="text-text px-4 py-3 font-medium">
+                <td class="text-text px-4 py-3 font-medium whitespace-nowrap">
                   <button
                     class="flex items-center gap-1.5 text-left"
                     aria-expanded={expandedRunId === run.id}
@@ -216,7 +216,7 @@
                 <td class="text-text-muted px-4 py-3" title={run.key ?? ""}>
                   {run.kind === "restore" ? "Restore" : "Backup"}
                 </td>
-                <td class="text-text-muted px-4 py-3">{formatDate(run.startedAt)}</td>
+                <td class="text-text-muted px-4 py-3 whitespace-nowrap">{formatDate(run.startedAt)}</td>
                 <td class="text-text-muted px-4 py-3">
                   {durationMs != null ? `${(durationMs / 1000).toFixed(1)}s` : "—"}
                 </td>

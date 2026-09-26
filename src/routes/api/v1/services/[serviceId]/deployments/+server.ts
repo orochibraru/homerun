@@ -23,6 +23,7 @@ export const GET = async ({ params, locals, url }) => {
 			.map((deployment) => deployment.toJSON())
 			.map((row) => ({
 				createdAt: row.createdAt,
+				environment: row.environment,
 				errorMessage: row.errorMessage,
 				finishedAt: row.finishedAt,
 				gitCommit: row.gitCommit,

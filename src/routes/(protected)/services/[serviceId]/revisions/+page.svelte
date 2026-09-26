@@ -8,6 +8,7 @@
 	import CheckBox from "$lib/components/check-box.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
+	import EnvironmentBadge from "$lib/components/environment-badge.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { timeAgo } from "$lib/formatting";
@@ -103,6 +104,7 @@
                                     <span class="truncate">
                                         {revision.imageRef ?? `${data.service.image}:${data.service.tag}`}
                                     </span>
+                                    <EnvironmentBadge environment={revision.environment} />
                                     {#if revision.current}
                                         <span class="border-accent/40 text-accent rounded-sm border px-1.5 py-px text-[0.625rem] font-semibold tracking-[0.08em] uppercase">
                                             Current

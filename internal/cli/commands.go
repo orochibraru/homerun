@@ -487,7 +487,7 @@ func WaitForJob(client *Client, jobID string, pollEvery, timeout time.Duration) 
 			return job.Status, job.Error
 		}
 		if time.Now().After(deadline) {
-			Fail(fmt.Sprintf("Timed out waiting for scan job %s (still %s).", jobID, job.Status))
+			Fail(fmt.Sprintf("Timed out waiting for job %s (still %s).", jobID, job.Status))
 		}
 		Sleep(pollEvery)
 	}

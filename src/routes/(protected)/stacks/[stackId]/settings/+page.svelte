@@ -144,7 +144,7 @@
 
   <section class="rounded-xl border border-red-300/60 dark:border-red-900/50">
     <div class="flex items-center gap-3 border-b border-red-300/40 px-4 py-3 dark:border-red-900/40">
-      <span class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
+      <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <AlertTriangle class="size-4" />
       </span>
       <div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { GitPullRequest } from "@lucide/svelte";
+	import { Bird, GitPullRequest } from "@lucide/svelte";
 	import { resolve } from "$app/paths";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import type { PreviewRow } from "$lib/service-graph";
@@ -23,11 +23,17 @@
             serviceId: preview.id,
           })}
         >
-          <GitPullRequest class="text-text-subtle size-3.5 shrink-0" />
-          <span class="text-text shrink-0 font-medium">#{preview.prNumber}</span>
-          <span class="text-text-muted min-w-0 flex-1 truncate">
-            {preview.title ?? preview.branch ?? preview.name}
-          </span>
+          {#if preview.canary}
+            <Bird class="text-text-subtle size-3.5 shrink-0" />
+            <span class="text-text shrink-0 font-medium">Canary</span>
+            <span class="text-text-muted min-w-0 flex-1 truncate">{preview.name}</span>
+          {:else}
+            <GitPullRequest class="text-text-subtle size-3.5 shrink-0" />
+            <span class="text-text shrink-0 font-medium">#{preview.prNumber}</span>
+            <span class="text-text-muted min-w-0 flex-1 truncate">
+              {preview.title ?? preview.branch ?? preview.name}
+            </span>
+          {/if}
           <StatusBadge status={preview.currentStatus as ContainerStatus} />
         </a>
       </li>

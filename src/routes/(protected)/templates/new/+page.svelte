@@ -108,7 +108,7 @@
   >
     <section class="rounded-md panel">
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+        <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
           <LayoutGrid class="size-4" />
         </div>
         <h2 class="eyebrow">Basics</h2>
@@ -173,8 +173,8 @@
           </p>
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
-          <div class="col-span-2">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div class="sm:col-span-2">
             <label class={label} for="image">
               Image <span class="text-red-500">*</span>
             </label>
@@ -267,7 +267,7 @@
 
     <section class="rounded-md panel">
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+        <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
           <TerminalSquare class="size-4" />
         </div>
         <div>
@@ -292,7 +292,7 @@
     {#if data.linkableTemplates.length > 0}
       <section class="rounded-md panel">
         <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-          <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+          <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
             <Link2 class="size-4" />
           </div>
           <div>
@@ -312,7 +312,7 @@
           {#each data.linkableTemplates as linkable (linkable.id)}
             {@const envEntries = Object.entries(linkable.envVars ?? {})}
             {@const enabled = linkEnabled[linkable.id] ?? false}
-            <div class="flex items-start gap-3 px-5 py-3">
+            <div class="flex flex-wrap items-start gap-3 px-5 py-3 sm:flex-nowrap">
               <Checkbox
                 class="mt-1"
                 id="linkEnabled-{linkable.id}"
@@ -340,7 +340,7 @@
                 {/if}
               </label>
               <Input
-                class="w-32 shrink-0"
+                class="w-full shrink-0 sm:w-32"
                 disabled={!enabled}
                 name="linkAlias.{linkable.id}"
                 placeholder={slugify(linkable.name)}

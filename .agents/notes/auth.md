@@ -22,13 +22,14 @@ above).
 
 ## Read-only role and scoped API keys (`$lib/permissions.ts`, `$lib/server/read-only.ts`)
 
-Roles are `admin`, `developer` and `viewer` (labelled "Read-only"), all listed
-in `$lib/permissions.ts` (`USER_ROLES`, `ROLE_OPTIONS`, `isUserRole`), which
-`/users` validates against. An API key carries a scope in better-auth's key
-`metadata` (`{scope: "read"}`, `apiKey({ enableMetadata: true })` in `auth.ts`,
-metadata is rejected otherwise); no scope recorded means full access, so every
-key created before this is a full key. `apiKeyScopeOf` reads it, tolerating the
-double-stringified legacy shape better-auth itself migrates.
+Roles are `admin`, `developer`, `viewer` (labelled "Read-only") and `app-user`
+(see App-access-only role below), all listed in `$lib/permissions.ts`
+(`USER_ROLES`, `ROLE_OPTIONS`, `isUserRole`), which `/users` validates against.
+An API key carries a scope in better-auth's key `metadata` (`{scope: "read"}`,
+`apiKey({ enableMetadata: true })` in `auth.ts`, metadata is rejected
+otherwise); no scope recorded means full access, so every key created before
+this is a full key. `apiKeyScopeOf` reads it, tolerating the double-stringified
+legacy shape better-auth itself migrates.
 
 **Enforcement is one check in `hooks.server.ts`, not one per action.**
 `authHandler` sets `locals.apiKeyScope` (API-key path only) and
@@ -180,6 +181,45 @@ per-request rather than destructuring it at import time, so ES module
 live-bindings mean a reassignment inside `auth.ts` is immediately visible
 everywhere without a restart. `rebuildAuth()` is called at the end of
 `hooks.server.ts`'s `init()` and every `/settings` action.
+
+## App-access-only role (`app-user`, `/my-apps`)
+
+`app-user` (labelled "App access only", `APP_ONLY_ROLE`) is for people who
+should only get through chosen apps' login walls, typically a client reviewing a
+pull request preview. Roles are a plain `text` column, so the value needed no
+migration; `schema.ts`'s `UserRole` type alias (used only by the invitation row)
+still lists three roles, so `InvitationDTO.create` casts. **Enforcement is one
+gate in `hooks.server.ts`, like read-only, but it covers reads too.**
+`authHandler` sets `locals.appOnly` and runs `appOnlyRejection` (`read-only.ts`)
+before resolving; `appOnlyMayRequest` (`permissions.ts`) decides from the path
+and SvelteKit's matched `event.route.id` (already set when `handle` runs): any
+route under `/(protected)` or `/onboarding` is refused, every other page
+(`/auth/*`, `/app-auth`, `/security-setup`, `/my-apps`, public status pages) is
+allowed; under `/api/` only `/api/v1/auth/*` (minus `api-key/`, `admin/` and
+`cli/`), `/api/health` and `/api/v1/ready`; remote functions only the sign-in
+page's three commands, by export name. A refused page GET is a 303 to
+`/my-apps`, and a refused `__data.json` gets SvelteKit's own
+`{"type":"redirect"}` JSON so client-side navigation (sign-in's `goto("/")`)
+follows it instead of choking on a 303; everything else gets the read-only 403
+shapes with `APP_ONLY_MESSAGE`. Belt and braces: the `(protected)` layout load
+redirects to `/my-apps`, `requireUser()` throws 403, and
+`applyApiKeyAuth`/`applyMcpTokenAuth` refuse a key or MCP token owned by an
+app-only user outright (so a key minted under an earlier role dies with the role
+change). Homerun as an OIDC provider stays open to them
+(`/api/v1/auth/oauth2/*`, `/auth/consent`): that's an app login, the point of
+the role; its client-management endpoints are admin-checked by better-auth.
+
+`/my-apps` is a top-level `AuthShell` page (outside `(protected)`): the apps
+from `AppAccessService.sharedApps(userId)` (every `authRequired` service whose
+full `evaluate()` passes, one evaluate per gated service, turned into links by
+the pure `sharedAppLinks`: primary hostname over https, previews with PR
+number/title), plus `TwoFactorPanel`/`PasskeyPanel` and sign-out. It enforces
+the instance's 2FA/passkey requirement itself via
+`/security-setup?next=/my-apps`. Password change and session management are not
+on it (better-auth's endpoints would allow them, there's just no UI). The
+Security tab's user picker lists every account with its role label. **Not built
+yet**: a per-parent preview access policy (previews still mirror the parent's
+own wall via `mirroredSettings`).
 
 ## Base domain vs. Dashboard URL, and why they're two things
 
@@ -606,14 +646,15 @@ claim extraction.
 ## User roles & admin-managed accounts (`user.role`, `/users`, `invitation` table)
 
 This moved from "anyone can `/auth/sign-up`" to a real single-instance model.
-Roles are `"admin"`, `"developer"` and `"viewer"` (read-only, see Read-only role
-above). Between admin and developer the difference is a label plus route-gating
-only, not a permissions system: both roles get the full dashboard over every
-shared resource (no shared-resource DTO filters by `userId`, which only records
-the creator; see Shared resources in `data-and-config.md`), the only difference
-is two admin-only pages, `/users` and `/settings` (`locals.isAdmin`, see below,
-checked at the top of each `load`, plus the nav items are filtered out of
-`(protected)/+layout.svelte`'s sidebar for non-admins).
+Roles are `"admin"`, `"developer"`, `"viewer"` and `"app-user"` (read-only and
+app-access-only, see their sections above). Between admin and developer the
+difference is a label plus route-gating only, not a permissions system: both
+roles get the full dashboard over every shared resource (no shared-resource DTO
+filters by `userId`, which only records the creator; see Shared resources in
+`data-and-config.md`), the only difference is two admin-only pages, `/users` and
+`/settings` (`locals.isAdmin`, see below, checked at the top of each `load`,
+plus the nav items are filtered out of `(protected)/+layout.svelte`'s sidebar
+for non-admins).
 
 - **The very first account becomes admin automatically**, whoever creates it.
   `hooks.server.ts`'s `authHandler` hard-blocks

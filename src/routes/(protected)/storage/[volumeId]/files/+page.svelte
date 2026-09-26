@@ -60,7 +60,7 @@
       <ArrowLeft class="size-4" />
       Back
     </Button>
-    <span class="text-text font-mono text-sm">/{file.path}</span>
+    <span class="text-text min-w-0 font-mono text-sm break-all">/{file.path}</span>
     <span class="text-text-subtle text-xs">{formatBytes(file.size)}</span>
   </div>
   {#if file.editable}
@@ -121,20 +121,22 @@
       {#each data.listing.entries as entry (entry.path)}
         {@const Icon = entry.kind === "directory" ? Folder : entry.kind === "link" ? Link2 : File}
         <a
-          class="hover:bg-surface-2 flex items-center gap-3 px-4 py-2.5 transition-colors"
+          class="hover:bg-surface-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2.5 transition-colors sm:flex-nowrap"
           href={entry.kind === "directory" ? dirHref(entry.path) : fileHref(entry.path)}
         >
           <Icon class="text-accent size-4 shrink-0" />
           <span class="text-text min-w-0 flex-1 truncate font-mono text-sm">
             {entry.name}
           </span>
-          {#if entry.kind !== "directory"}
-            <span class="text-text-subtle shrink-0 text-xs tabular-nums">
-              {formatBytes(entry.size)}
+          <span class="flex w-full shrink-0 items-center gap-3 pl-7 sm:w-auto sm:pl-0">
+            {#if entry.kind !== "directory"}
+              <span class="text-text-subtle shrink-0 text-xs tabular-nums">
+                {formatBytes(entry.size)}
+              </span>
+            {/if}
+            <span class="text-text-subtle shrink-0 text-xs sm:w-24 sm:text-right">
+              {timeAgo(entry.modifiedAt)}
             </span>
-          {/if}
-          <span class="text-text-subtle w-24 shrink-0 text-right text-xs">
-            {timeAgo(entry.modifiedAt)}
           </span>
         </a>
       {/each}

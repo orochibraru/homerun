@@ -11,12 +11,17 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { GIT_WEBHOOK_PATH } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
 import { OIDC_BASE_PATH, rebaseOnOrigin } from "$lib/oidc-provider";
-import { apiKeyScopeOf, isReadOnly } from "$lib/permissions";
+import {
+	APP_ONLY_MESSAGE,
+	apiKeyScopeOf,
+	isAppOnly,
+	isReadOnly,
+} from "$lib/permissions";
 import { isForbiddenCrossSiteForm } from "$lib/server/csrf";
 import { db as appDb, getDb, resetDb } from "$lib/server/db";
 import { user as userTable } from "$lib/server/db/schema";
 import { seedBuiltinTemplates } from "$lib/server/db/seed";
-import { readOnlyRejection } from "$lib/server/read-only";
+import { appOnlyRejection, readOnlyRejection } from "$lib/server/read-only";
 import { AdminService } from "$lib/services/admin.service";
 import {
 	auth,
@@ -355,10 +360,21 @@ async function applyMcpTokenAuth(
 		.from(userTable)
 		.where(eq(userTable.id, userId))
 		.limit(1);
+	if (tokenUser && isAppOnly(tokenUser.role)) {
+		return appOnlyTokenRefusal();
+	}
 	if (tokenUser) {
 		event.locals.user = tokenUser;
 	}
 	return null;
+}
+
+/** The 403 for an API key or MCP token owned by an app-access-only user, who can't use either. */
+function appOnlyTokenRefusal(): Response {
+	return new Response(JSON.stringify({ error: APP_ONLY_MESSAGE }), {
+		headers: { "content-type": "application/json" },
+		status: 403,
+	});
 }
 
 /**
@@ -400,6 +416,9 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 		.where(eq(userTable.id, result.key.referenceId))
 		.limit(1);
 
+	if (apiKeyUser && isAppOnly(apiKeyUser.role)) {
+		return appOnlyTokenRefusal();
+	}
 	if (apiKeyUser) {
 		event.locals.user = apiKeyUser;
 		event.locals.apiKeyScope = apiKeyScopeOf(result.key.metadata);
@@ -418,6 +437,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		event.locals.isAdmin = false;
 		event.locals.apiKeyScope = null;
 		event.locals.readOnly = false;
+		event.locals.appOnly = false;
 		return resolve(event);
 	}
 
@@ -448,6 +468,18 @@ const authHandler: Handle = async ({ event, resolve }) => {
 	// can check `locals.isAdmin` instead of re-deriving it from `role`.
 	event.locals.isAdmin = event.locals.user?.role === "admin";
 	event.locals.apiKeyScope ??= null;
+	event.locals.appOnly = isAppOnly(event.locals.user?.role);
+	if (event.locals.appOnly) {
+		const refused = appOnlyRejection(
+			event.request,
+			event.url.pathname,
+			event.route.id,
+			event.isDataRequest,
+		);
+		if (refused) {
+			return refused;
+		}
+	}
 	event.locals.readOnly =
 		!!event.locals.user &&
 		isReadOnly(event.locals.user.role, event.locals.apiKeyScope);

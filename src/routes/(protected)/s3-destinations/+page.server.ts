@@ -8,8 +8,12 @@ import { parseListQuery } from "$lib/server/list-query";
 const logger = new Logger("S3Destinations");
 
 export const load = async ({ parent, url }) => {
-	await parent();
-	const query = parseListQuery(url, { sortKeys: sortKeysOf(BASE_SORTS) });
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{ sortKeys: sortKeysOf(BASE_SORTS) },
+		preferences.perPage,
+	);
 	const paged = await S3DestinationDTO.listPaged(query);
 	return {
 		destinations: paged.items.map((d) => d.toJSON()),

@@ -1,7 +1,8 @@
-import type { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceGitDTO } from "$lib/dto/service-git-dto";
 import { isCommitSha, pollOutcome } from "$lib/git-ref";
 import { DeploymentService } from "../deploy.service.ts";
+import { ReleaseChannelService } from "../release-channel.service.ts";
 import { StatusCheckService } from "../status-check.service.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
 
@@ -34,6 +35,26 @@ export class GitPollScheduler extends BaseScheduler {
 		}
 	}
 
+	/** Enqueues a push deploy of a polled service; a release channel canary goes through its parent, so it picks up the parent's latest settings first. */
+	async #deploy(svc: ServiceDTO): Promise<{ deploymentId: string }> {
+		const parentId = svc.toJSON().previewParentId;
+		const parent =
+			svc.toJSON().channelCanary && parentId
+				? await ServiceDTO.get(parentId)
+				: null;
+		if (parent?.toJSON().channelsEnabled) {
+			return await ReleaseChannelService.deployCanary(parent, {
+				trigger: "push",
+				userId: parent.userId,
+			});
+		}
+		return await DeploymentService.enqueueDeploy({
+			svc,
+			trigger: "push",
+			userId: svc.userId,
+		});
+	}
+
 	/**
 	 * Reads one service's branch head and records it, enqueueing a deploy as
 	 * the service's owner when it differs from the last head seen.
@@ -52,11 +73,7 @@ export class GitPollScheduler extends BaseScheduler {
 		if (outcome === "baseline") {
 			return;
 		}
-		const { deploymentId } = await DeploymentService.enqueueDeploy({
-			svc,
-			trigger: "push",
-			userId: svc.userId,
-		});
+		const { deploymentId } = await this.#deploy(svc);
 		this.logger.info(
 			`${branch} moved to ${head.slice(0, 7)}, deploying service=${svc.id} deployment=${deploymentId}`,
 		);

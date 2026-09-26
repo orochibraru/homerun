@@ -50,6 +50,21 @@ automatically, so a new write route documents it without a registry entry.
 - `jobs/[jobId]/`, `GET`, a trimmed job row (no `payload`) for polling a queued
   job, any account's job (resources are shared), 404 for an unknown id. Exists
   for `homerun services scan --wait`, generic on purpose.
+- `services/[serviceId]/previews/` (`GET`), `previews/[prNumber]/` (`GET`,
+  `DELETE`) and `previews/[prNumber]/promote/` (`POST`, 202
+  `{deploymentId, jobId, ...}`), backed by `PreviewApiService`
+  (`$lib/services/preview-api.service.ts`, kept out of `preview.service.ts`),
+  their OpenAPI entries and response schemas in `$lib/openapi/previews.ts`
+  (spread into `registry.ts`'s `routes`, which is near the `max-lines` limit).
+  Promote is a rollback whose `rollbackOfDeploymentId` is the _preview's_
+  current revision: `revisionSourceFor` loads it unscoped, so the parent reuses
+  the preview's exact image, and `enqueueDeploy`'s `note` opens the deployment
+  log with the provenance (no schema column). Consequences: the history shows it
+  as a rollback, and auto-rollback never fires on it. It has to happen before
+  the merge, since the close webhook deletes the preview and cascades its
+  deployment rows; `docs/github-actions-preview-testing.md` promotes then merges
+  for that reason. `homerun previews wait` is the CI gate (`PreviewVerdict` in
+  `internal/cli/previews.go`).
 - `stacks/`, `templates/`, read/create, same pattern, thinner (no lifecycle
   actions).
 - `services/`, `stacks/`, and `templates/`'s `GET`s are paginated

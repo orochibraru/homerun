@@ -106,3 +106,30 @@ export function previewDomainTemplateProblem(template: string): string | null {
 	}
 	return null;
 }
+
+/**
+ * Env values with every one of `from` (the parent's hostnames) replaced by
+ * `to` (the preview's), matched as whole hostnames so `api.example.com` is
+ * left alone when replacing `example.com`. What a preview's `ORIGIN`,
+ * `PUBLIC_URL` and the like need, since they're copied from its parent.
+ */
+export function rewriteHostnames(
+	env: Record<string, string>,
+	from: readonly string[],
+	to: string | null,
+): Record<string, string> {
+	const hosts = from.filter((host) => host && host !== to);
+	if (!to || hosts.length === 0) {
+		return env;
+	}
+	const pattern = new RegExp(
+		`(?<![a-z0-9.-])(?:${hosts.map((host) => host.replaceAll(".", "\\.")).join("|")})(?![a-z0-9.-])`,
+		"gi",
+	);
+	return Object.fromEntries(
+		Object.entries(env).map(([key, value]) => [
+			key,
+			value.replace(pattern, to),
+		]),
+	);
+}

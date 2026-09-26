@@ -23,7 +23,7 @@
 
 <section class="bg-surface rounded-md border border-red-200 dark:border-red-900/40">
   <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
-    <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
+    <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
       <TriangleAlertIcon class="size-4" />
     </div>
     <div>

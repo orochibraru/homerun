@@ -75,7 +75,7 @@
 <div class="space-y-6">
 <section class="rounded-md panel">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
       <SlidersHorizontal class="size-4" />
     </div>
     <div>
@@ -105,16 +105,16 @@
     })}
   >
     {#each envRows as row, i}
-      <div class="flex items-center gap-2">
+      <div class="border-border flex flex-wrap items-center gap-2 rounded-lg border p-2 sm:flex-nowrap sm:border-0 sm:p-0">
         <Input
-          class=""
+          class="basis-full sm:basis-auto"
           name="envKey"
           placeholder="KEY"
           type="text"
           bind:value={row.key}
         />
         <Input
-          class=""
+          class="w-auto min-w-0 flex-1 sm:w-full sm:flex-initial"
           autocomplete="off"
           name="envValue"
           placeholder="value"
@@ -179,7 +179,7 @@
 
 <section class="panel rounded-md">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
       <FileText class="size-4" />
     </div>
     <div>
