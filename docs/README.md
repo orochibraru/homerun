@@ -91,8 +91,8 @@ sync by hand.
 - **[Users and roles](users-and-roles.md)**: admin, developer and read-only,
   creating and inviting accounts, and onboarding.
 - **[Authentication providers](authentication-providers.md)**: OAuth/OIDC
-  sign-in, preferred methods, sign-in requirements, and linking a provider to an
-  existing account.
+  sign-in, emailed codes and links, preferred methods, sign-in requirements, and
+  linking a provider to an existing account.
 - **[Your profile](your-profile.md)**: personal information, sessions, API keys,
   appearance, and git provider accounts.
 - **[Two-factor authentication and passkeys](two-factor-and-passkeys.md)**:

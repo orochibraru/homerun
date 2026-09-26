@@ -5,7 +5,7 @@
 	"image": "ghcr.io/twin/gatus",
 	"tag": "latest",
 	"containerPort": 8080,
-	"icon": "gatus.svg",
+	"icon": "di:gatus",
 	"tags": ["uptime", "status", "health", "monitoring"],
 	"websiteUrl": null,
 	"sourceUrl": "https://github.com/TwiN/gatus",

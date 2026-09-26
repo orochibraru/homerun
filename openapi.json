@@ -1277,7 +1277,7 @@
 														"type": "null"
 													}
 												],
-												"description": "A bundled template icon file name, or an uploaded data:image URL"
+												"description": "A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL"
 											},
 											"id": {
 												"type": "string"
@@ -2278,7 +2278,7 @@
 													"type": "null"
 												}
 											],
-											"description": "A bundled template icon file name, or an uploaded data:image URL"
+											"description": "A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL"
 										},
 										"id": {
 											"type": "string"
@@ -3227,7 +3227,7 @@
 													"type": "null"
 												}
 											],
-											"description": "A bundled template icon file name, or an uploaded data:image URL"
+											"description": "A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL"
 										},
 										"id": {
 											"type": "string"
@@ -4353,7 +4353,7 @@
 													"type": "null"
 												}
 											],
-											"description": "A bundled template icon file name, or an uploaded data:image URL"
+											"description": "A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL"
 										},
 										"id": {
 											"type": "string"

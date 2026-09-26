@@ -5,7 +5,7 @@
 	"image": "linuxserver/prowlarr",
 	"tag": "latest",
 	"containerPort": 9696,
-	"icon": "prowlarr.svg",
+	"icon": "di:prowlarr",
 	"tags": ["indexers", "arr", "downloads"],
 	"websiteUrl": null,
 	"sourceUrl": "https://github.com/Prowlarr/Prowlarr",

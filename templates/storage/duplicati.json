@@ -5,7 +5,7 @@
 	"image": "lscr.io/linuxserver/duplicati",
 	"tag": "latest",
 	"containerPort": 8200,
-	"icon": "duplicati.svg",
+	"icon": "di:duplicati",
 	"tags": ["backup", "s3", "encryption", "storage"],
 	"websiteUrl": "https://duplicati.com",
 	"sourceUrl": "https://github.com/duplicati/duplicati",

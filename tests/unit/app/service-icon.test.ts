@@ -21,6 +21,13 @@ describe("hasIconImage and iconSrc", () => {
 		expect(iconSrc("redis.svg")).toBe("/template-icons/redis.svg");
 		expect(iconSrc(png(10))).toBe(png(10));
 	});
+
+	test("serve a Dashboard Icon through the proxy", () => {
+		expect(hasIconImage("di:redis")).toBe(true);
+		expect(iconSrc("di:home-assistant")).toBe(
+			"/icons/dashboard/home-assistant",
+		);
+	});
 });
 
 describe("iconProblem", () => {
@@ -33,6 +40,14 @@ describe("iconProblem", () => {
 		expect(
 			iconProblem("data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=", bundled),
 		).toBeNull();
+	});
+
+	test("accepts a Dashboard Icons slug and refuses anything else after di:", () => {
+		expect(iconProblem("di:redis", bundled)).toBeNull();
+		expect(iconProblem("di:1panel", bundled)).toBeNull();
+		for (const bad of ["di:", "di:Redis", "di:../x", "di:-x", "di:a/b"]) {
+			expect(iconProblem(bad, bundled)).toContain("Dashboard Icons");
+		}
 	});
 
 	test("refuses a file outside the library, including a path", () => {

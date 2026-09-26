@@ -5,7 +5,7 @@
 	"image": "thelounge/thelounge",
 	"tag": "latest",
 	"containerPort": 9000,
-	"icon": "thelounge.svg",
+	"icon": "di:thelounge",
 	"tags": ["irc", "chat", "messaging"],
 	"websiteUrl": "https://thelounge.chat",
 	"sourceUrl": "https://github.com/thelounge/thelounge",

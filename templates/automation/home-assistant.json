@@ -5,7 +5,7 @@
 	"image": "ghcr.io/home-assistant/home-assistant",
 	"tag": "stable",
 	"containerPort": 8123,
-	"icon": "home-assistant.svg",
+	"icon": "di:home-assistant",
 	"tags": ["home", "automation", "iot", "smart-home"],
 	"websiteUrl": "https://www.home-assistant.io",
 	"sourceUrl": "https://github.com/home-assistant/core",

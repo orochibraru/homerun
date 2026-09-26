@@ -4,6 +4,7 @@ import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { Logger } from "$lib/logger";
 import { asAuthRole } from "$lib/permissions";
 import { auth } from "$lib/services/auth";
+import { emailSignInAvailability } from "$lib/services/email-sign-in";
 
 const logger = new Logger("AcceptInvite");
 
@@ -13,7 +14,13 @@ export const load = async ({ params }) => {
 		return { invalid: true as const };
 	}
 	const { email, role } = invitation.toJSON();
-	return { email, invalid: false as const, role };
+	const emailSignIn = await emailSignInAvailability();
+	return {
+		codesAvailable: emailSignIn.emailOtp || emailSignIn.magicLink,
+		email,
+		invalid: false as const,
+		role,
+	};
 };
 
 export const actions = {
@@ -69,5 +76,53 @@ export const actions = {
 		await invitation.markAccepted();
 		logger.info(`Invite accepted: user=${result.user.id} email=${email}`);
 		throw redirect(302, resolve("/auth/sign-in"));
+	},
+	acceptWithCodes: async ({ request, params }) => {
+		const invitation = await InvitationDTO.getByToken(params.token);
+		if (!invitation) {
+			return fail(400, { error: "This invite is invalid or has expired." });
+		}
+		const emailSignIn = await emailSignInAvailability();
+		if (!(emailSignIn.emailOtp || emailSignIn.magicLink)) {
+			return fail(400, {
+				error:
+					"Signing in with emailed codes is turned off on this instance. Choose a password instead.",
+			});
+		}
+		const formData = await request.formData();
+		const name = (formData.get("name") as string | null)?.trim();
+		if (!name) {
+			return fail(400, { error: "Name is required." });
+		}
+
+		const { email, role } = invitation.toJSON();
+		const result = await auth.api
+			.createUser({
+				body: {
+					data: { emailVerified: true },
+					email,
+					name,
+					role: asAuthRole(role),
+				},
+			})
+			.catch((error: unknown) => ({ error }));
+		if ("error" in result) {
+			logger.warn(`Invite acceptance failed: email=${email} ${result.error}`);
+			return fail(400, {
+				error:
+					result.error instanceof Error
+						? result.error.message
+						: "Could not create your account.",
+			});
+		}
+
+		await invitation.markAccepted();
+		logger.info(
+			`Invite accepted without a password: user=${result.user.id} email=${email}`,
+		);
+		throw redirect(
+			302,
+			`${resolve("/auth/sign-in")}?${new URLSearchParams({ email })}`,
+		);
 	},
 };

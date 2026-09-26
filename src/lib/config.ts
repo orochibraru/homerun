@@ -183,6 +183,7 @@ const configSchema = z.object({
 	}),
 	authCheckUrl: z.string(),
 	baseDomain: z.string().default("localhost"),
+	dataDir: z.string().default("./data"),
 	databaseUrl: z
 		.string()
 		.default("postgres://homerun:homerun@localhost:5432/homerun"),
@@ -290,7 +291,8 @@ export function isPlaceholderAuthSecret(secret: string | undefined): boolean {
 
 /**
  * Builds the file+env configuration: validates the YAML config file, then layers
- * the env-only values (`DATABASE_URL`, `PORT`, `AUTH_SECRET`, `ORIGIN`), the
+ * the env-only values (`DATABASE_URL`, `PORT`, `AUTH_SECRET`, `ORIGIN`,
+ * `STORAGE_BASE_PATH`), the
  * `TRAEFIK_DYNAMIC_CONFIG_DIR` fallback for `traefik.dynamicConfigDir`, and the
  * default forwardAuth check URL over it.
  *
@@ -327,6 +329,7 @@ export const parseConfig = (): AppConfig => {
 		authCheckUrl:
 			yamlConfig.authCheckUrl ??
 			`http://host.docker.internal:${port}/api/v1/auth-check`,
+		dataDir: firstNonBlank(Bun.env.STORAGE_BASE_PATH),
 		databaseUrl: firstNonBlank(Bun.env.DATABASE_URL),
 		port,
 		traefik: {

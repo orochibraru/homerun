@@ -5,7 +5,7 @@
 	"image": "miniflux/miniflux",
 	"tag": "latest",
 	"containerPort": 8080,
-	"icon": "miniflux.svg",
+	"icon": "di:miniflux",
 	"tags": ["rss", "feeds", "reader", "news"],
 	"websiteUrl": "https://miniflux.app",
 	"sourceUrl": "https://github.com/miniflux/v2",

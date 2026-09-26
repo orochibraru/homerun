@@ -2,6 +2,11 @@
 	import { Check, LockKeyhole } from "@lucide/svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import {
+		EMAIL_OTP_METHOD,
+		type EmailSignIn,
+		MAGIC_LINK_METHOD,
+	} from "$lib/auth-providers";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import PanelHeader from "$lib/components/panel-header.svelte";
@@ -14,6 +19,7 @@
 	interface Props {
 		authError?: string;
 		dashboardOrigin: string | null;
+		emailSignIn: EmailSignIn;
 		oauthProviders: { label: string; method: string; name: string }[];
 		svc: {
 			authAllowedEmails: string[];
@@ -27,8 +33,32 @@
 		users: { email: string; id: string; name: string; role: string | null }[];
 	}
 
-	const { authError, dashboardOrigin, oauthProviders, svc, users }: Props =
-		$props();
+	const {
+		authError,
+		dashboardOrigin,
+		emailSignIn,
+		oauthProviders,
+		svc,
+		users,
+	}: Props = $props();
+
+	const emailMethods = $derived(
+		[
+			{
+				available: emailSignIn.emailOtp,
+				helperText:
+					"A 6-digit code emailed to the account's address, no password needed",
+				label: "Emailed code",
+				method: EMAIL_OTP_METHOD,
+			},
+			{
+				available: emailSignIn.magicLink,
+				helperText: "A one-time sign-in link emailed to the account's address",
+				label: "Emailed link",
+				method: MAGIC_LINK_METHOD,
+			},
+		].filter((entry) => entry.available || methods.includes(entry.method)),
+	);
 
 	let submittingAuth = $state(false);
 	let authRequired = $derived(svc.authRequired);
@@ -128,6 +158,18 @@
               name="method-password"
               onCheckedChange={(v) => toggleMethod("password", v)}
             />
+            {#each emailMethods as entry (entry.method)}
+              <CheckBox
+                checked={methods.includes(entry.method)}
+                helperText={entry.available
+                  ? entry.helperText
+                  : "Unavailable: turned off under Authentication, or SMTP isn't configured. Nobody gets in this way until it's back."}
+                id="method-{entry.method}"
+                label={entry.label}
+                name="method-{entry.method}"
+                onCheckedChange={(v) => toggleMethod(entry.method, v)}
+              />
+            {/each}
             {#each oauthProviders as provider (provider.method)}
               <CheckBox
                 checked={methods.includes(provider.method)}

@@ -5,7 +5,7 @@
 	"image": "wordpress",
 	"tag": "latest",
 	"containerPort": 80,
-	"icon": "wordpress.svg",
+	"icon": "di:wordpress",
 	"tags": ["cms", "blog", "website", "php"],
 	"websiteUrl": "https://wordpress.org",
 	"sourceUrl": "https://github.com/WordPress/WordPress",

@@ -5,7 +5,7 @@
 	"image": "ghcr.io/corentinth/it-tools",
 	"tag": "latest",
 	"containerPort": 80,
-	"icon": "it-tools.svg",
+	"icon": "di:it-tools",
 	"tags": ["tools", "utilities", "developer", "converters"],
 	"websiteUrl": "https://it-tools.tech",
 	"sourceUrl": "https://github.com/CorentinTh/it-tools",

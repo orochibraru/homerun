@@ -5,7 +5,7 @@
 	"image": "freshrss/freshrss",
 	"tag": "latest",
 	"containerPort": 80,
-	"icon": "freshrss.svg",
+	"icon": "di:freshrss",
 	"tags": ["rss", "feeds", "reader", "news"],
 	"websiteUrl": "https://freshrss.org",
 	"sourceUrl": "https://github.com/FreshRSS/FreshRSS",

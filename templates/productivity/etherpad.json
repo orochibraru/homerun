@@ -5,7 +5,7 @@
 	"image": "etherpad/etherpad",
 	"tag": "latest",
 	"containerPort": 9001,
-	"icon": "etherpad.svg",
+	"icon": "di:etherpad",
 	"tags": ["documents", "collaboration", "writing"],
 	"websiteUrl": "https://etherpad.org",
 	"sourceUrl": "https://github.com/ether/etherpad-lite",

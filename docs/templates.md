@@ -11,10 +11,9 @@ can deploy from repeatedly without re-entering everything. Two kinds:
   Manager), monitoring (Uptime Kuma, Grafana, Gatus, Healthchecks), dashboards
   (Homepage, Dashy, Homarr, Portainer), productivity (Vaultwarden, Trilium,
   Wiki.js, Vikunja, Excalidraw), and more. Seeded on every boot (idempotent),
-  immutable, available to every account. Each carries its real app logo, bundled
-  with Homerun rather than hotlinked, so the gallery renders with no outbound
-  internet; an app with no official logo falls back to a colored icon for its
-  category.
+  immutable, available to every account. Each carries its real app logo, most of
+  them from [Dashboard Icons](#icons) and a few bundled with Homerun; an app
+  with no official logo falls back to a colored icon for its category.
 - **Custom**, save any service's current config as a template from its Settings
   tab, or build one from scratch under `Templates → New Template`, whose
   **Runtime** section takes the same fields as a service's Runtime tab plus env
@@ -121,9 +120,37 @@ Links go exactly one level deep: you can't link to a template that itself has
 links. That's deliberate, it keeps `{{alias}}` resolution to a single pass with
 no cycles to detect.
 
+## Icons
+
+A service's icon is set under its `Settings` tab, in **Type & icon**. Three
+sources:
+
+- **Icon library**, the built-in templates' logos plus a bundled set of
+  language, framework and server logos.
+- **Dashboard Icons**, the ~3,300 app logos of
+  [Dashboard Icons](https://dashboardicons.com), searchable by name or alias and
+  filterable by category.
+- **Upload**, a PNG, JPEG, WebP, GIF or SVG image up to 256 KB, stored with the
+  service.
+
+Browsers never contact the Dashboard Icons CDN themselves. Homerun fetches the
+catalog and each icon from its CDN once, on first use, and serves them from its
+own origin at `/icons/dashboard/<name>`, so an instance only reachable on a LAN
+still shows them and viewers' IP addresses don't leak to a third party. The
+files are kept on disk under `STORAGE_BASE_PATH` (the app's `/app/data` volume)
+in `dashboard-icons/`, the catalog is refreshed once a day, and an icon upstream
+doesn't have is retried after ten minutes. If the CDN can't be reached for an
+icon that isn't cached yet, the service shows its category icon instead of a
+broken image. That route is public, like the status pages that also show icons.
+
+A service keeps whatever icon it was created with: switching a built-in
+template's logo to Dashboard Icons only changes the template (and services
+created from it afterwards), never an existing service.
+
 ## Icon credits
 
-The language, framework and server logos a service can pick as its icon come
-from [Devicon](https://devicon.dev) (MIT) and
+App logos come from [Dashboard Icons](https://dashboardicons.com) (Apache 2.0)
+and [selfh.st/icons](https://selfh.st/icons/) (CC BY 4.0). The language,
+framework and server logos come from [Devicon](https://devicon.dev) (MIT) and
 [Simple Icons](https://simpleicons.org) (CC0). Every logo is a trademark of its
 owner.

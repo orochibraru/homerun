@@ -5,7 +5,7 @@
 	"image": "ghcr.io/umami-software/umami",
 	"tag": "postgresql-latest",
 	"containerPort": 3000,
-	"icon": "umami.svg",
+	"icon": "di:umami",
 	"tags": ["analytics", "privacy", "statistics", "web"],
 	"websiteUrl": "https://umami.is",
 	"sourceUrl": "https://github.com/umami-software/umami",

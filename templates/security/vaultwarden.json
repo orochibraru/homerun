@@ -5,7 +5,7 @@
 	"image": "vaultwarden/server",
 	"tag": "latest",
 	"containerPort": 80,
-	"icon": "vaultwarden.svg",
+	"icon": "di:vaultwarden",
 	"tags": ["passwords", "bitwarden", "secrets", "security"],
 	"websiteUrl": null,
 	"sourceUrl": "https://github.com/dani-garcia/vaultwarden",

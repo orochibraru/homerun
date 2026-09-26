@@ -5,7 +5,7 @@
 	"image": "registry",
 	"tag": "2",
 	"containerPort": 5000,
-	"icon": "docker.svg",
+	"icon": "di:docker",
 	"tags": ["registry", "docker", "images", "cache"],
 	"websiteUrl": "https://distribution.github.io/distribution",
 	"sourceUrl": "https://github.com/distribution/distribution",

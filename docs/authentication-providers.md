@@ -9,6 +9,8 @@ accepts).
 
 - **Built-in authentication** is Homerun's own email and password accounts,
   managed on the Users page. It's always available for the dashboard.
+- **Emailed sign-in** lets people sign in without a password, with a 6-digit
+  code or a one-time link sent to their account's address (see below).
 - **OAuth / OIDC providers** are any standards-compliant provider, and you can
   configure **as many as you like**. The **Providers** tab lists them the same
   way Services does: **Add provider** opens its own page, and each one has a
@@ -26,7 +28,12 @@ accepts).
 Register `<your-homerun-url>/api/v1/auth/callback/<provider id>` as the redirect
 URI on the provider's side. The Authentication page prints the exact URL to use.
 
-The same page has two instance-wide switches:
+The same page has three instance-wide switches:
+
+- **Emailed sign-in**: **Email me a code** (on by default) and **Email me a
+  sign-in link** (off by default), each switched on or off separately. Both need
+  SMTP (Settings → Email); until it's configured the section says so and neither
+  is offered anywhere. See [Emailed codes and links](#emailed-codes-and-links).
 
 - **Preferred sign-in methods** picks among password, passkey and each enabled
   provider. The sign-in page is email-first (see below), so this no longer
@@ -77,6 +84,32 @@ other email gets a password field with every enabled provider offered below it.
 Every enabled provider also becomes selectable as a per-app sign-in method on
 the [login wall](login-wall.md). Saving takes effect immediately, without a
 restart.
+
+## Emailed codes and links
+
+After entering their email, anyone with an account can pick **Email me a code**
+or **Email me a sign-in link** below the password field (or below the provider
+buttons for a single sign-on account). An account with no password and no linked
+provider, such as a client who accepted an invite with emailed codes, skips
+straight to it: entering the email sends the code.
+
+- **Codes** are 6 digits, expire after 10 minutes and allow five tries. Paste
+  the code or type it; the form signs in as soon as all six digits are there.
+  **Send a new code** replaces the old one, with a 30-second wait between sends.
+- **Links** expire after 10 minutes and work once, in whichever browser opens
+  them. A link opens a Homerun page with a **Sign in as …** button rather than
+  signing in straight away, so a mail filter that fetches links can't use it up.
+  A link isn't offered on the **Sign in with Homerun** screen of an app, since
+  that flow has to finish in the tab it started in.
+
+Neither can create an account: an email Homerun doesn't know simply gets no
+mail, and the page doesn't say whether the address exists. Everything else works
+as with a password: the login wall and **Sign in with Homerun** send you back
+where you came from, an account with two-factor authentication is still asked
+for its authenticator code, and the instance's sign-in requirements still apply.
+Signing in with a code or link also marks the account's email as verified, and
+ends a directly created account's pending password setup (it can keep signing in
+with codes).
 
 ## Locked out after a typo?
 

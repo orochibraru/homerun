@@ -553,6 +553,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	dockerNetworkName: text("docker_network_name"),
 	dockerSocketPath: text("docker_socket_path"),
+	emailOtpSignIn: boolean("email_otp_sign_in"),
 	// The built-in registry's own settings. `registryAuthEnabled` turns on
 	// htpasswd auth (see the registry_token table); `registryPublicHost` is
 	// the hostname Traefik routes to it, null meaning it stays internal.
@@ -584,6 +585,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	).$type<BlockSeverity>(),
 	imageScanEnabled: boolean("image_scan_enabled"),
 	imageScanRequired: boolean("image_scan_required"),
+	magicLinkSignIn: boolean("magic_link_sign_in"),
 	retainedImagesPerService: integer("retained_images_per_service"),
 	// {name, clientId, clientSecretEnc, discoveryUrl, enabled, pkce, scopes}[]
 	// : see genericOAuth's config shape in $lib/services/auth.ts.

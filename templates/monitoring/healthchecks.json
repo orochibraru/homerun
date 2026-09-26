@@ -5,7 +5,7 @@
 	"image": "healthchecks/healthchecks",
 	"tag": "latest",
 	"containerPort": 8000,
-	"icon": "healthchecks.svg",
+	"icon": "di:healthchecks",
 	"tags": ["cron", "monitoring", "alerts", "heartbeat"],
 	"websiteUrl": "https://healthchecks.io",
 	"sourceUrl": "https://github.com/healthchecks/healthchecks",

@@ -5,7 +5,7 @@
 	"image": "adguard/adguardhome",
 	"tag": "latest",
 	"containerPort": 3000,
-	"icon": "adguard-home.svg",
+	"icon": "di:adguard-home",
 	"tags": ["dns", "adblock", "network", "privacy"],
 	"websiteUrl": "https://adguard.com/en/adguard-home/overview.html",
 	"sourceUrl": "https://github.com/AdguardTeam/AdGuardHome",

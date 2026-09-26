@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { nativeFetch } from "./support/config";
 import { integrationContext } from "./support/context";
+import { startMailSink } from "./support/mail-sink";
 
 // The heavy setup (fresh Postgres container, real built app, real agent,
 // real socat proxy) lives once, globally, in setup.ts's own beforeAll/
@@ -144,5 +145,113 @@ describe("app-access-only accounts", () => {
 			method: "POST",
 		});
 		expect(key.status).toBe(403);
+	});
+});
+
+describe("emailed sign-in codes", () => {
+	const email = "code-client@integration.test";
+
+	function cookiesOf(res: Response): string {
+		return res.headers
+			.getSetCookie()
+			.map((cookie) => cookie.split(";")[0])
+			.join("; ");
+	}
+
+	function post(path: string, body: unknown, cookie = ""): Promise<Response> {
+		const { origin } = integrationContext();
+		return nativeFetch(`${origin}${path}`, {
+			body: JSON.stringify(body),
+			headers: { "content-type": "application/json", cookie, origin },
+			method: "POST",
+		});
+	}
+
+	function saveSmtp(cookie: string, port: number | null): Promise<Response> {
+		const { origin } = integrationContext();
+		const form = new URLSearchParams(
+			port === null
+				? {}
+				: {
+						smtpEnabled: "on",
+						smtpFrom: "homerun@integration.test",
+						smtpHost: "127.0.0.1",
+						smtpPassword: "sink-password",
+						smtpPort: String(port),
+						smtpUser: "sink",
+					},
+		);
+		return nativeFetch(`${origin}/settings/email?/updateSmtp`, {
+			body: form,
+			headers: {
+				"content-type": "application/x-www-form-urlencoded",
+				cookie,
+				origin,
+				"x-sveltekit-action": "true",
+			},
+			method: "POST",
+		});
+	}
+
+	test("an account with no password signs in with a code, strangers get no mail", async () => {
+		const sink = startMailSink();
+		const admin = await post("/api/v1/auth/sign-in/email", {
+			email: "admin@integration.test",
+			password: "integration-test-password-1234",
+		});
+		const adminCookie = cookiesOf(admin);
+		try {
+			const refused = await post(
+				"/api/v1/auth/email-otp/send-verification-otp",
+				{
+					email,
+					type: "sign-in",
+				},
+			);
+			expect(refused.status).toBe(403);
+
+			expect((await saveSmtp(adminCookie, sink.port)).status).toBe(200);
+			const created = await post(
+				"/api/v1/auth/admin/create-user",
+				{ email, name: "Code Client", role: "app-user" },
+				adminCookie,
+			);
+			expect(created.status, await created.clone().text()).toBe(200);
+
+			const stranger = await post(
+				"/api/v1/auth/email-otp/send-verification-otp",
+				{ email: "stranger@integration.test", type: "sign-in" },
+			);
+			expect(stranger.status).toBe(200);
+			const sent = await post("/api/v1/auth/email-otp/send-verification-otp", {
+				email,
+				type: "sign-in",
+			});
+			expect(sent.status, await sent.clone().text()).toBe(200);
+			expect(sink.messages.map((mail) => mail.to)).toEqual([[email]]);
+			const code = /code is:\s+(\d{6})/.exec(sink.messages[0].data)?.[1];
+			expect(code).toMatch(/^\d{6}$/);
+
+			const wrong = await post("/api/v1/auth/sign-in/email-otp", {
+				email,
+				otp: code === "000000" ? "111111" : "000000",
+			});
+			expect(wrong.status).toBe(400);
+			const signedIn = await post("/api/v1/auth/sign-in/email-otp", {
+				email,
+				otp: code,
+			});
+			expect(signedIn.status, await signedIn.clone().text()).toBe(200);
+
+			const { origin } = integrationContext();
+			const home = await nativeFetch(`${origin}/services`, {
+				headers: { cookie: cookiesOf(signedIn) },
+				redirect: "manual",
+			});
+			expect(home.headers.get("location")).toBe("/my-apps");
+		} finally {
+			await saveSmtp(adminCookie, null);
+			sink.stop();
+		}
 	});
 });

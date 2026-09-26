@@ -12,6 +12,7 @@ export const load = async ({ parent }) => {
 	await parent();
 	const settings = await InstanceSettingsDTO.get();
 	return {
+		emailSignIn: settings.emailSignIn,
 		preferredSignInMethods: settings.preferredSignInMethods,
 		securityPolicy: settings.securityPolicy,
 		signInMethods: [
@@ -39,6 +40,23 @@ export const load = async ({ parent }) => {
 };
 
 export const actions = {
+	emailSignIn: async ({ locals, request }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			return fail(403, {
+				error: "Only admins can change the emailed sign-in methods.",
+			});
+		}
+		const formData = await request.formData();
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateEmailSignIn({
+			emailOtp: checkbox(formData, "emailOtp"),
+			magicLink: checkbox(formData, "magicLink"),
+		});
+		return { saved: true };
+	},
 	preferredSignIn: async ({ locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

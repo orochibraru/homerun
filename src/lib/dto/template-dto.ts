@@ -18,6 +18,7 @@ import {
 	searchCondition,
 	sortOrder,
 } from "$lib/server/list-query";
+import { hasIconImage } from "$lib/service-icon";
 import {
 	runtimeOptionsFrom,
 	type ServiceRuntimeOptions,
@@ -128,8 +129,8 @@ export class TemplateDTO extends BaseDTO<Template> {
 
 	/**
 	 * The icon library a service can pick from: every built-in template's
-	 * bundled icon with that template's name, one entry per file, sorted by
-	 * name.
+	 * icon (a bundled file or a `di:` Dashboard Icon) with that template's
+	 * name, one entry per icon, sorted by name.
 	 */
 	static async listBundledIcons(): Promise<{ icon: string; name: string }[]> {
 		const rows = await db
@@ -140,7 +141,11 @@ export class TemplateDTO extends BaseDTO<Template> {
 		const seen = new Set<string>();
 		const icons: { icon: string; name: string }[] = [];
 		for (const row of rows) {
-			if (row.icon?.includes(".") && !seen.has(row.icon)) {
+			if (
+				hasIconImage(row.icon) &&
+				!row.icon.startsWith("data:") &&
+				!seen.has(row.icon)
+			) {
 				seen.add(row.icon);
 				icons.push({ icon: row.icon, name: row.name });
 			}

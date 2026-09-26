@@ -11,6 +11,11 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Emailed sign-in: a way for a code-only (passwordless) user to set a
+      password later, and a choice between code and link for accounts without a
+      password (today they get a code automatically).
+- [ ] Dashboard Icons: switch to the `-light`/`-dark` variant with the theme, so
+      monochrome logos (umami, open-webui) stay visible on the dark theme.
 - [ ] **[WIP]** Share a PR preview with a client: the app-access-only role and
       `/my-apps` landed; the preview access policy didn't (edits to
       `service-dto.ts`, `service-input.ts` and `schema.ts` were refused by the

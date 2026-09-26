@@ -33,6 +33,7 @@
   <LoginWallSection
     authError={form?.authError}
     dashboardOrigin={data.dashboardOrigin}
+    emailSignIn={data.emailSignIn}
     oauthProviders={data.oauthProviders}
     {svc}
     users={data.users}

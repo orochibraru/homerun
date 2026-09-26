@@ -48,6 +48,11 @@ import {
 	trustedOriginsFor,
 } from "./auth-origins.ts";
 import { EmailService } from "./email.service.ts";
+import {
+	emailSignInPlugins,
+	TWO_FACTOR_SIGN_IN_PATHS,
+	UNUSED_EMAIL_OTP_PATHS,
+} from "./email-sign-in.ts";
 import { UserService } from "./user.service.ts";
 
 const logger = new Logger("Auth");
@@ -141,6 +146,29 @@ if (!(process.env.ORIGIN || dev || building)) {
 }
 
 /**
+ * better-auth's `twoFactor` plugin with its sign-in challenge widened from
+ * password sign-in to every path in `TWO_FACTOR_SIGN_IN_PATHS`, so an emailed
+ * code or link still asks an account with an authenticator app for its code.
+ */
+function twoFactorOnEverySignIn() {
+	const plugin = twoFactor({ allowPasswordless: true, issuer: "Homerun" });
+	const [challenge] = plugin.hooks.after;
+	return {
+		...plugin,
+		hooks: {
+			...plugin.hooks,
+			after: [
+				{
+					...challenge,
+					matcher: (context: { path?: string }) =>
+						TWO_FACTOR_SIGN_IN_PATHS.has(context.path ?? ""),
+				},
+			],
+		},
+	};
+}
+
+/**
  * Drops the cached login-wall decisions for the user a changed better-auth row
  * belongs to, so gated apps re-check them on their next request. The row can
  * be null after an update that matched nothing.
@@ -216,7 +244,7 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 		// has no other consumer in this codebase (grep it), Base domain
 		// itself is still what Traefik routing (config.baseDomain) uses.
 
-		disabledPaths: ["/token"],
+		disabledPaths: ["/token", ...UNUSED_EMAIL_OTP_PATHS],
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
 			schema,
@@ -332,10 +360,8 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 				rpID: passkeyRpId(config.auth.origin),
 				rpName: "Homerun",
 			}),
-			twoFactor({
-				allowPasswordless: true,
-				issuer: "Homerun",
-			}),
+			twoFactorOnEverySignIn(),
+			...emailSignInPlugins(),
 			// "developer" is the sane fallback default : every real creation
 			// path (admin-direct-create, invite-accept) always passes an
 			// explicit role, and the bootstrap-admin case is handled by the

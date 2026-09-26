@@ -5,7 +5,7 @@
 	"image": "mysql",
 	"tag": "8",
 	"containerPort": 3306,
-	"icon": "mysql.svg",
+	"icon": "di:mysql",
 	"tags": ["sql", "database", "relational", "mariadb"],
 	"websiteUrl": "https://www.mysql.com",
 	"sourceUrl": "https://github.com/mysql/mysql-server",

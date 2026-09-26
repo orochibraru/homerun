@@ -243,6 +243,17 @@
       href="https://creativecommons.org/licenses/by/4.0/"
       rel="noopener noreferrer"
       target="_blank">CC BY 4.0</a
-    >.
+    >, and <a
+      class="hover:text-text-muted underline"
+      href="https://dashboardicons.com"
+      rel="noopener noreferrer"
+      target="_blank">Dashboard Icons</a
+    >, licensed under
+    <a
+      class="hover:text-text-muted underline"
+      href="https://www.apache.org/licenses/LICENSE-2.0"
+      rel="noopener noreferrer"
+      target="_blank">Apache 2.0</a
+    >. Logos are their owners' trademarks.
   </p>
 </div>

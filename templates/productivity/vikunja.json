@@ -5,7 +5,7 @@
 	"image": "vikunja/vikunja",
 	"tag": "latest",
 	"containerPort": 3456,
-	"icon": "vikunja.svg",
+	"icon": "di:vikunja",
 	"tags": ["tasks", "todo", "kanban", "project-management"],
 	"websiteUrl": "https://vikunja.io",
 	"sourceUrl": "https://github.com/go-vikunja/vikunja",

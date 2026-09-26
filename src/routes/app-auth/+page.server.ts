@@ -1,6 +1,6 @@
 import { error, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { oauthProviderName, PASSWORD_METHOD } from "$lib/auth-providers";
+import { signInMethodAvailable } from "$lib/auth-providers";
 import { config } from "$lib/config";
 import { signInUrlFor } from "$lib/redirect-target";
 import {
@@ -15,6 +15,7 @@ import {
 	ACCESS_DENIAL_MESSAGES,
 	AppAccessService,
 } from "$lib/services/app-access.service";
+import { emailSignInAvailability } from "$lib/services/email-sign-in";
 
 export const load = async ({ request: incoming, url, locals }) => {
 	const canonicalOrigin = offCanonicalOrigin(incoming, url);
@@ -36,16 +37,15 @@ export const load = async ({ request: incoming, url, locals }) => {
 		error(404, "That app isn't gated behind Homerun's login.");
 	}
 
-	const enabledProviders = new Set(
-		config.auth.oauthProviders.filter((p) => p.enabled).map((p) => p.name),
+	const available = {
+		email: await emailSignInAvailability(),
+		oauthProviders: new Set(
+			config.auth.oauthProviders.filter((p) => p.enabled).map((p) => p.name),
+		),
+	};
+	const hasUsableMethod = svc.authProviders.some((method) =>
+		signInMethodAvailable(method, available),
 	);
-	const hasUsableMethod = svc.authProviders.some((method) => {
-		if (method === PASSWORD_METHOD) {
-			return true;
-		}
-		const providerName = oauthProviderName(method);
-		return providerName !== null && enabledProviders.has(providerName);
-	});
 
 	const base = { appName: svc.name, appUrl: request.target };
 

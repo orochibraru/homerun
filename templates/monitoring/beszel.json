@@ -5,7 +5,7 @@
 	"image": "henrygd/beszel",
 	"tag": "latest",
 	"containerPort": 8090,
-	"icon": "beszel.svg",
+	"icon": "di:beszel",
 	"tags": ["monitoring", "metrics", "servers", "dashboards"],
 	"websiteUrl": "https://beszel.dev",
 	"sourceUrl": "https://github.com/henrygd/beszel",

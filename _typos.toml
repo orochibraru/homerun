@@ -16,3 +16,4 @@ extend-exclude = [
 # A real word, just not in typos' dictionary under this spelling.
 unparseable = "unparseable"
 Strem = "Strem"
+HELO = "HELO"

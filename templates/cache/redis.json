@@ -5,7 +5,7 @@
 	"image": "redis",
 	"tag": "alpine",
 	"containerPort": 6379,
-	"icon": "redis.svg",
+	"icon": "di:redis",
 	"tags": ["cache", "key-value", "nosql", "queue"],
 	"websiteUrl": "https://redis.io",
 	"sourceUrl": "https://github.com/redis/redis",

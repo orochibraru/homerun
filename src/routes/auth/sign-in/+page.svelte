@@ -1,10 +1,17 @@
 <script lang="ts">
-	import { ArrowRight, Fingerprint, TriangleAlert } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import {
+		ArrowRight,
+		Fingerprint,
+		Link,
+		Mail,
+		TriangleAlert,
+	} from "@lucide/svelte";
+	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { goto, onNavigate, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { authClient, signIn, useSession } from "$lib/auth-client";
+	import { type EmailSignIn, NO_EMAIL_SIGN_IN } from "$lib/auth-providers";
 	import Alert from "$lib/components/alert.svelte";
 	import AuthShell from "$lib/components/auth-shell.svelte";
 	import PasswordField from "$lib/components/password-field.svelte";
@@ -16,12 +23,13 @@
 	import type { SignInProvider } from "$lib/services/account-setup.service";
 	import { title } from "$lib/store/title";
 	import { toastError } from "$lib/toast";
+	import EmailSignInForm from "./email-sign-in-form.svelte";
 	import SetupForm from "./setup-form.svelte";
 	import TwoFactorForm from "./two-factor-form.svelte";
 
 	const { data } = $props();
 
-	let email = $state("");
+	let email = $state(untrack(() => data.email) ?? "");
 	let password = $state("");
 	let loading = $state(false);
 
@@ -85,8 +93,12 @@
 	}
 
 	let twoFactorStep = $state(false);
-	let step = $state<"email" | "password" | "setup" | "sso">("email");
+	let step = $state<"code" | "email" | "link" | "password" | "setup" | "sso">(
+		"email",
+	);
 	let stepProviders = $state<SignInProvider[]>([]);
+	let stepEmail = $state<EmailSignIn>(NO_EMAIL_SIGN_IN);
+	const offerLink = $derived(stepEmail.magicLink && !data.oauthSignIn);
 	let setupEmailed = $state(false);
 
 	function backToEmail() {
@@ -100,6 +112,12 @@
 		try {
 			const next = await lookupSignIn(email);
 			loading = false;
+			stepEmail = next.email;
+			if (next.step === "email-only") {
+				stepProviders = [];
+				step = next.email.emailOtp ? "code" : offerLink ? "link" : "password";
+				return "Continue signing in.";
+			}
 			if (next.step === "setup") {
 				setupEmailed = next.emailed;
 				step = "setup";
@@ -314,6 +332,39 @@
     </div>
 {/snippet}
 
+{#snippet emailButtons()}
+    {#if stepEmail.emailOtp || offerLink}
+        <div class="space-y-2">
+            {#if stepEmail.emailOtp}
+                <Button
+                    class="h-10 w-full"
+                    disabled={loading}
+                    onclick={() => {
+                        step = "code";
+                    }}
+                    variant="outline"
+                >
+                    <Mail class="size-4" />
+                    Email me a code
+                </Button>
+            {/if}
+            {#if offerLink}
+                <Button
+                    class="h-10 w-full"
+                    disabled={loading}
+                    onclick={() => {
+                        step = "link";
+                    }}
+                    variant="outline"
+                >
+                    <Link class="size-4" />
+                    Email me a sign-in link
+                </Button>
+            {/if}
+        </div>
+    {/if}
+{/snippet}
+
 {#snippet oauthButtons(providers: SignInProvider[])}
     {#if data.canonicalSignInUrl}
         <div
@@ -448,9 +499,14 @@
                     {/if}
                 </Button>
             </form>
-            {#if stepProviders.length > 0}
+            {#if stepProviders.length > 0 || stepEmail.emailOtp || offerLink}
                 {@render orDivider()}
-                {@render oauthButtons(stepProviders)}
+                <div class="space-y-2">
+                    {@render emailButtons()}
+                    {#if stepProviders.length > 0}
+                        {@render oauthButtons(stepProviders)}
+                    {/if}
+                </div>
             {/if}
         {:else if step === "sso"}
             <div class="space-y-4">
@@ -460,10 +516,34 @@
                 </p>
                 {@render oauthButtons(stepProviders)}
             </div>
+            {#if stepEmail.emailOtp || offerLink}
+                {@render orDivider()}
+                {@render emailButtons()}
+            {/if}
+        {:else if step === "code" || step === "link"}
+            {#key step}
+                <EmailSignInForm
+                    {email}
+                    mode={step}
+                    onSignedIn={finishSignIn}
+                    onTwoFactor={() => {
+                        twoFactorStep = true;
+                    }}
+                    redirectTo={data.redirectTo}
+                    successMessage={signedInToast("Signed in successfully").success}
+                    summary={emailSummary}
+                    bind:loading
+                />
+            {/key}
         {:else}
             <SetupForm
                 {email}
                 emailed={setupEmailed}
+                onEmailCode={stepEmail.emailOtp
+                    ? () => {
+                          step = "code";
+                      }
+                    : undefined}
                 onSignedIn={finishSignIn}
                 successMessage={signedInToast("Your account is ready").success}
                 summary={emailSummary}

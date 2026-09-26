@@ -5,7 +5,7 @@
 	"image": "lscr.io/linuxserver/overseerr",
 	"tag": "latest",
 	"containerPort": 5055,
-	"icon": "overseerr.svg",
+	"icon": "di:overseerr",
 	"tags": ["requests", "plex", "arr", "media"],
 	"websiteUrl": "https://overseerr.dev",
 	"sourceUrl": "https://github.com/sct/overseerr",

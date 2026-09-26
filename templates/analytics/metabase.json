@@ -5,7 +5,7 @@
 	"image": "metabase/metabase",
 	"tag": "latest",
 	"containerPort": 3000,
-	"icon": "metabase.svg",
+	"icon": "di:metabase",
 	"tags": ["analytics", "bi", "dashboards", "sql"],
 	"websiteUrl": "https://www.metabase.com",
 	"sourceUrl": "https://github.com/metabase/metabase",

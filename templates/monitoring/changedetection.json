@@ -5,7 +5,7 @@
 	"image": "dgtlmoon/changedetection.io",
 	"tag": "latest",
 	"containerPort": 5000,
-	"icon": "changedetection.svg",
+	"icon": "di:changedetection",
 	"tags": ["scraping", "alerts", "websites", "monitoring"],
 	"websiteUrl": "https://changedetection.io",
 	"sourceUrl": "https://github.com/dgtlmoon/changedetection.io",

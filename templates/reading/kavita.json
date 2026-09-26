@@ -5,7 +5,7 @@
 	"image": "jvmilazz0/kavita",
 	"tag": "latest",
 	"containerPort": 5000,
-	"icon": "kavita.svg",
+	"icon": "di:kavita",
 	"tags": ["books", "comics", "manga", "ebooks", "reading"],
 	"websiteUrl": "https://www.kavitareader.com",
 	"sourceUrl": "https://github.com/Kareadita/Kavita",

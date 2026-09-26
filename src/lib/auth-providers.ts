@@ -1,6 +1,19 @@
 export const PASSWORD_METHOD = "password";
 
+export const EMAIL_OTP_METHOD = "email-otp";
+export const MAGIC_LINK_METHOD = "magic-link";
+
 export const OAUTH_METHOD_PREFIX = "oauth:";
+
+export interface EmailSignIn {
+	emailOtp: boolean;
+	magicLink: boolean;
+}
+
+export const NO_EMAIL_SIGN_IN: EmailSignIn = {
+	emailOtp: false,
+	magicLink: false,
+};
 
 export interface OauthPreset {
 	docsUrl: string;
@@ -101,6 +114,45 @@ export function oauthProviderName(method: string): string | null {
 	return isOauthMethod(method)
 		? method.slice(OAUTH_METHOD_PREFIX.length)
 		: null;
+}
+
+/**
+ * Whether `method` can be used to sign in on this instance right now: the
+ * built-in password always, an OAuth provider while it's enabled, an emailed
+ * code or link while that method is switched on and SMTP works. Anything else
+ * (a deleted provider, a typo) is not.
+ */
+export function signInMethodAvailable(
+	method: string,
+	available: { email: EmailSignIn; oauthProviders: Set<string> },
+): boolean {
+	if (method === PASSWORD_METHOD) {
+		return true;
+	}
+	if (method === EMAIL_OTP_METHOD) {
+		return available.email.emailOtp;
+	}
+	if (method === MAGIC_LINK_METHOD) {
+		return available.email.magicLink;
+	}
+	const provider = oauthProviderName(method);
+	return provider !== null && available.oauthProviders.has(provider);
+}
+
+/**
+ * Whether a login wall's allowed methods let any account through on the
+ * strength of its email address alone: an emailed code or link proves the
+ * mailbox, and every account has one, so no linked identity is needed. Only
+ * counts a method that's available right now.
+ */
+export function acceptsEmailSignIn(
+	methods: string[],
+	email: EmailSignIn,
+): boolean {
+	return (
+		(email.emailOtp && methods.includes(EMAIL_OTP_METHOD)) ||
+		(email.magicLink && methods.includes(MAGIC_LINK_METHOD))
+	);
 }
 
 /**

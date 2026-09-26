@@ -928,6 +928,93 @@ available (a deleted provider, passkey on the wrong host) simply doesn't apply,
 `lookup` still falls back to the `"password"`/`"sso"` step it would pick anyway,
 so the page can never render with no way in.
 
+## Emailed codes and links (`$lib/services/email-sign-in.ts`, `/auth/magic-link`)
+
+better-auth's `emailOTP` and `magicLink` plugins, registered always (no
+`rebuildAuth()` on toggle), plus a small `homerun-email-sign-in` plugin whose
+before hook (`guardEmailSignIn`) runs on the four endpoints Homerun uses. The
+switches are `instance_settings.email_otp_sign_in` (null = on) and
+`magic_link_sign_in` (null = off), edited on `/authentication`;
+`emailSignInAvailability()` ANDs them with `isSmtpEnabled()`, and the guard 403s
+a method that's off. Codes: 6 digits, 10 minutes, five tries, stored as their
+SHA-256 through a custom `storeOTP.hash`. Links: 10 minutes, one use, stored
+hashed through a custom `storeToken`. Both `disableSignUp: true`: there is no
+public sign-up after the first account, so neither may create one. An unknown
+email gets `{success: true}` and no mail (the OTP plugin skips sending itself;
+`sendMagicLink` checks the user exists first). Every other emailOTP endpoint
+(password reset, verify-email, change-email, check-otp) is in `disabledPaths`,
+and `send-verification-otp` refuses any `type` but `sign-in`.
+
+**Real, tested finding: an emailed sign-in wipes an unverified account.** Both
+plugins call `revokeUnprovenAccountAccess` when the account's `emailVerified` is
+false, which deletes every `account` row (password, OAuth links) and session —
+their defence against someone pre-registering a victim's email. Most Homerun
+accounts are unverified (bootstrap admin without SMTP, direct-created users), so
+the first code sign-in would have erased the admin's password. That pre-hijack
+can't happen here (every account comes from an admin or an invite), so the guard
+checks the code or link itself, without consuming it (`storedCodeMatches`, or
+the hashed token's verification row), and marks the email verified before the
+plugin runs; it also deletes the `account-setup:<id>` pending mark, so a
+direct-created account that signed in by code stops being sent to the
+set-a-password step. Verified live: `client@example.com` signed in by code and
+kept its `credential` row, and password sign-in still worked afterwards.
+
+**Two-factor still applies.** `twoFactor()`'s sign-in challenge only matches
+`/sign-in/email`; `twoFactorOnEverySignIn()` in `auth.ts` re-registers its after
+hook with a matcher over `TWO_FACTOR_SIGN_IN_PATHS` (password,
+`/sign-in/email-otp`, `/magic-link/verify`). Verified against the dev app: an
+account with TOTP gets `{twoFactorRedirect: true}` and no session from a correct
+emailed code, and a session only after `verify-totp`. `security-setup`
+requirements need nothing: they're enforced per session by the `(protected)`
+layout and `/my-apps`.
+
+**The emailed link is Homerun's page, not better-auth's verify URL.**
+`sendMagicLink` mails `<Dashboard URL>/auth/magic-link?token=…&redirectTo=…`
+(`magicLinkLandingUrl`; `redirectTo` comes from the client's `metadata` and is
+re-checked with `safeRedirectTarget`). That page shows the address
+(`magicLinkEmail`, a non-consuming peek) and spends the token only when the
+visitor clicks **Sign in as …**, calling `magicLink.verify` without a
+`callbackURL` so better-auth answers JSON (with a callback it redirects, errors
+included, which a fetch can't report). So a mail scanner fetching links can't
+burn it, and the 2FA challenge comes back as JSON the page can act on. The link
+isn't offered in the "Sign in with Homerun" flow: the OIDC provider resumes
+authorize from the `oauth_query` the client adds to POSTs, which a GET verify in
+another tab doesn't carry. Codes work there.
+
+**Sign-in page.** `lookup` carries `email: EmailSignIn` on every step, and has a
+new `"email-only"` step for an account with no `credential` row and no linked
+enabled provider (an invite accepted with codes): the page goes straight to the
+code form, whose mount sends the code. Other steps show **Email me a code** /
+**Email me a sign-in link** buttons; the pending-setup step offers **Skip the
+password, sign in with emailed codes**. The code form strips non-digits (paste
+`123 456` works), auto-submits at six digits, and rate-limits resends to one per
+30 seconds client-side; server-side it's the plugins' own limits (3/min per
+endpoint for codes, 5/min for links), off with
+`HOMERUN_DISABLE_AUTH_RATE_LIMIT`. No new remote functions, so the app-only
+allowlist didn't change; the page talks to `/api/v1/auth/*` directly.
+
+**Invites.** `/auth/accept-invite/[token]` has an **Emailed codes** option while
+either method is available: `acceptWithCodes` calls `auth.api.createUser`
+without a password (no `credential` row, `emailVerified: true` since the invite
+link proved the address) and redirects to `/auth/sign-in?email=…`, which
+pre-fills the email.
+
+**Login wall.** `"email-otp"` and `"magic-link"` join `"password"` and
+`"oauth:<name>"` in `$lib/auth-providers.ts`; `signInMethodAvailable` is the one
+check for the Security tab's save and `/app-auth`'s "any usable method". There's
+no identity row for an emailed method, and the session doesn't record how it was
+created, so `evaluate()` treats an allowed, currently available emailed method
+as satisfied for every account (`acceptsEmailSignIn`): it proves only the
+mailbox, and every account has one. The user/email/group lists still narrow it.
+Switching the method off or losing SMTP makes it stop counting on the next
+re-check.
+
+`tests/integration/support/mail-sink.ts` is a tiny in-process SMTP server
+(accepts any AUTH, keeps messages); `tests/integration/auth.test.ts` points SMTP
+at it through the real `/settings/email` action, signs a password-less app-only
+account in with the mailed code, checks strangers get no mail, and turns SMTP
+back off.
+
 ## MCP server (`$lib/server/mcp-server.ts`, `/api/v1/mcp`, `/.well-known/*`)
 
 AI agents manage Homerun through a streamable-HTTP MCP endpoint at

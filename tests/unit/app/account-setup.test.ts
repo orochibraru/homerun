@@ -98,6 +98,8 @@ const SMTP = {
 
 let sent: { content: string; subject: string; to: string }[] = [];
 let preferred: string[] = [];
+let emailSignIn = { emailOtp: true, magicLink: false };
+const NONE = { emailOtp: false, magicLink: false };
 let spies: { mockRestore: () => void }[] = [];
 
 function provider(name: string, enabled = true, label = "") {
@@ -144,6 +146,7 @@ beforeEach(() => {
 	createdUsers.length = 0;
 	sent = [];
 	preferred = [];
+	emailSignIn = { emailOtp: true, magicLink: false };
 	spies = [
 		spyOn(console, "log").mockImplementation(() => undefined),
 		spyOn(EmailService.prototype, "send").mockImplementation(function (
@@ -154,9 +157,10 @@ beforeEach(() => {
 		}),
 		spyOn(InstanceSettingsDTO, "get").mockImplementation(
 			async () =>
-				({ preferredSignInMethods: preferred }) as unknown as Awaited<
-					ReturnType<typeof InstanceSettingsDTO.get>
-				>,
+				({
+					emailSignIn,
+					preferredSignInMethods: preferred,
+				}) as unknown as Awaited<ReturnType<typeof InstanceSettingsDTO.get>>,
 		),
 	];
 });
@@ -176,6 +180,7 @@ describe("AccountSetupService.lookup", () => {
 			provider("authentik"),
 		];
 		expect(await AccountSetupService.lookup("nobody@example.com")).toEqual({
+			email: NONE,
 			providers: [
 				{ label: "GitHub", name: "github" },
 				{ label: "authentik", name: "authentik" },
@@ -187,6 +192,7 @@ describe("AccountSetupService.lookup", () => {
 	test("a password account gets the password step", async () => {
 		addUser("pw@example.com", ["credential"]);
 		expect(await AccountSetupService.lookup("pw@example.com")).toEqual({
+			email: NONE,
 			providers: [],
 			step: "password",
 		});
@@ -197,6 +203,7 @@ describe("AccountSetupService.lookup", () => {
 		addUser("sso@example.com", ["github"]);
 		expect(await AccountSetupService.lookup("sso@example.com")).toEqual({
 			autoRedirect: "github",
+			email: NONE,
 			providers: [{ label: "github", name: "github" }],
 			step: "sso",
 		});
@@ -234,6 +241,41 @@ describe("AccountSetupService.lookup", () => {
 	});
 });
 
+describe("AccountSetupService.lookup with emailed sign-in", () => {
+	test("an account with no password and no provider gets the email-only step", async () => {
+		applyInstanceSettings(SMTP);
+		addUser("client@example.com", []);
+		expect(await AccountSetupService.lookup("client@example.com")).toEqual({
+			email: { emailOtp: true, magicLink: false },
+			step: "email-only",
+		});
+	});
+
+	test("every step says which emailed methods are on, and none without SMTP", async () => {
+		addUser("client@example.com", []);
+		expect((await AccountSetupService.lookup("client@example.com")).step).toBe(
+			"password",
+		);
+
+		applyInstanceSettings(SMTP);
+		emailSignIn = { emailOtp: false, magicLink: true };
+		addUser("pw@example.com", ["credential"]);
+		expect(await AccountSetupService.lookup("pw@example.com")).toEqual({
+			email: { emailOtp: false, magicLink: true },
+			providers: [],
+			step: "password",
+		});
+		expect((await AccountSetupService.lookup("client@example.com")).step).toBe(
+			"email-only",
+		);
+
+		emailSignIn = NONE;
+		expect((await AccountSetupService.lookup("client@example.com")).step).toBe(
+			"password",
+		);
+	});
+});
+
 describe("AccountSetupService pending accounts", () => {
 	test("createPendingUser makes an account with an unknown password, marked pending", async () => {
 		const headers = new Headers({ cookie: "x" });
@@ -252,6 +294,7 @@ describe("AccountSetupService pending accounts", () => {
 		expect(String(createdUsers[0].password)).toMatch(/^[0-9a-f]{64}$/);
 		expect(verifications.get(`account-setup:${id}`)?.value).toBe("pending");
 		expect(await AccountSetupService.lookup("new@example.com")).toEqual({
+			email: NONE,
 			emailed: false,
 			step: "setup",
 		});
@@ -262,6 +305,7 @@ describe("AccountSetupService pending accounts", () => {
 		applyInstanceSettings(SMTP);
 		const id = addUser("p@example.com", ["credential"], true);
 		expect(await AccountSetupService.lookup("p@example.com")).toEqual({
+			email: { emailOtp: true, magicLink: false },
 			emailed: true,
 			step: "setup",
 		});

@@ -5,7 +5,7 @@
 	"image": "nextcloud",
 	"tag": "stable",
 	"containerPort": 80,
-	"icon": "nextcloud.svg",
+	"icon": "di:nextcloud",
 	"tags": ["files", "drive", "storage", "calendar", "contacts"],
 	"websiteUrl": "https://nextcloud.com",
 	"sourceUrl": "https://github.com/nextcloud/server",

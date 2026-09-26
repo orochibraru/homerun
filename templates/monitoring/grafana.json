@@ -5,7 +5,7 @@
 	"image": "grafana/grafana",
 	"tag": "latest",
 	"containerPort": 3000,
-	"icon": "grafana.svg",
+	"icon": "di:grafana",
 	"tags": ["dashboards", "metrics", "observability", "charts"],
 	"websiteUrl": "https://grafana.com",
 	"sourceUrl": "https://github.com/grafana/grafana",

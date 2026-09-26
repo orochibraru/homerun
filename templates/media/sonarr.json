@@ -5,7 +5,7 @@
 	"image": "linuxserver/sonarr",
 	"tag": "latest",
 	"containerPort": 8989,
-	"icon": "sonarr.svg",
+	"icon": "di:sonarr",
 	"tags": ["tv", "pvr", "arr", "downloads"],
 	"websiteUrl": "https://sonarr.tv",
 	"sourceUrl": "https://github.com/Sonarr/Sonarr",

@@ -5,7 +5,7 @@
 	"image": "photoprism/photoprism",
 	"tag": "latest",
 	"containerPort": 2342,
-	"icon": "photoprism.svg",
+	"icon": "di:photoprism",
 	"tags": ["photos", "gallery", "images", "ai"],
 	"websiteUrl": "https://www.photoprism.app",
 	"sourceUrl": "https://github.com/photoprism/photoprism",

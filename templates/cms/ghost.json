@@ -5,7 +5,7 @@
 	"image": "ghost",
 	"tag": "latest",
 	"containerPort": 2368,
-	"icon": "ghost.png",
+	"icon": "di:ghost",
 	"tags": ["cms", "blog", "newsletter", "publishing"],
 	"websiteUrl": "https://ghost.org",
 	"sourceUrl": "https://github.com/TryGhost/Ghost",

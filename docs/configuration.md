@@ -84,9 +84,11 @@ sign everyone out mid-session. Two failure modes if it's wrong:
 Set it to exactly what you type in the address bar: `http://203.0.113.10:3000`,
 or `https://homerun.example.com`.
 
-Two more exist and you can usually ignore them: `PORT` (default `3000`, the port
-the app listens on inside its container) and `CONFIG_FILE` (default
-`./homerun.yaml`, where the optional file below lives).
+Three more exist and you can usually ignore them: `PORT` (default `3000`, the
+port the app listens on inside its container), `CONFIG_FILE` (default
+`./homerun.yaml`, where the optional file below lives) and `STORAGE_BASE_PATH`
+(default `./data`, `/app/data` in the container image, which is its data volume:
+where the app caches [Dashboard Icons](templates.md#icons) on disk).
 
 ### The app and the worker
 

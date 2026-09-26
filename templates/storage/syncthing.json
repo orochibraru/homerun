@@ -5,7 +5,7 @@
 	"image": "syncthing/syncthing",
 	"tag": "latest",
 	"containerPort": 8384,
-	"icon": "syncthing.svg",
+	"icon": "di:syncthing",
 	"tags": ["sync", "files", "backup", "p2p"],
 	"websiteUrl": "https://syncthing.net",
 	"sourceUrl": "https://github.com/syncthing/syncthing",

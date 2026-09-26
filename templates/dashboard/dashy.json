@@ -5,7 +5,7 @@
 	"image": "lissy93/dashy",
 	"tag": "latest",
 	"containerPort": 8080,
-	"icon": "dashy.png",
+	"icon": "di:dashy",
 	"tags": ["dashboard", "start-page", "bookmarks"],
 	"websiteUrl": "https://dashy.to",
 	"sourceUrl": "https://github.com/Lissy93/dashy",

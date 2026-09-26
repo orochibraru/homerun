@@ -31,7 +31,12 @@ const { ACCESS_DENIAL_MESSAGES, AppAccessService, sharedAppLinks } =
 	await import("../../../src/lib/services/app-access.service");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
-const { config } = await import("../../../src/lib/config");
+const { applyInstanceSettings, config } = await import(
+	"../../../src/lib/config"
+);
+const { InstanceSettingsDTO } = await import(
+	"../../../src/lib/dto/instance-settings-dto"
+);
 
 type Service = Parameters<typeof AppAccessService.evaluate>[0];
 
@@ -173,6 +178,53 @@ describe("AppAccessService.evaluate", () => {
 				"u1",
 			),
 		).toEqual({ allowed: true });
+	});
+
+	test("an emailed code or link lets any account through while it's available", async () => {
+		tables.users = [ada];
+		const settings = spyOn(InstanceSettingsDTO, "get").mockImplementation(
+			async () =>
+				({
+					emailSignIn: { emailOtp: true, magicLink: false },
+				}) as unknown as Awaited<ReturnType<typeof InstanceSettingsDTO.get>>,
+		);
+		try {
+			const otpWall = service({ authProviders: ["email-otp"] });
+			expect(await AppAccessService.evaluate(otpWall, "u1")).toEqual({
+				allowed: false,
+				reason: "method-not-linked",
+			});
+
+			applyInstanceSettings({
+				smtpEnabled: true,
+				smtpFrom: "homerun@example.com",
+				smtpHost: "smtp.example.com",
+				smtpPassword: "pw",
+				smtpPort: 587,
+				smtpUser: "mailer",
+			});
+			expect(await AppAccessService.evaluate(otpWall, "u1")).toEqual({
+				allowed: true,
+			});
+			expect(
+				await AppAccessService.evaluate(
+					service({ authProviders: ["magic-link"] }),
+					"u1",
+				),
+			).toEqual({ allowed: false, reason: "method-not-linked" });
+			expect(
+				await AppAccessService.evaluate(
+					service({
+						authAllowedEmails: ["bob@example.com"],
+						authProviders: ["email-otp"],
+					}),
+					"u1",
+				),
+			).toEqual({ allowed: false, reason: "email-not-allowed" });
+		} finally {
+			settings.mockRestore();
+			applyInstanceSettings({});
+		}
 	});
 
 	test("groups come from the provider's id token or the Homerun role", async () => {

@@ -5,7 +5,7 @@
 	"image": "linuxserver/qbittorrent",
 	"tag": "latest",
 	"containerPort": 8080,
-	"icon": "qbittorrent.svg",
+	"icon": "di:qbittorrent",
 	"tags": ["torrent", "downloads", "bittorrent"],
 	"websiteUrl": "https://www.qbittorrent.org",
 	"sourceUrl": "https://github.com/qbittorrent/qBittorrent",

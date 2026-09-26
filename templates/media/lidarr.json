@@ -5,7 +5,7 @@
 	"image": "linuxserver/lidarr",
 	"tag": "latest",
 	"containerPort": 8686,
-	"icon": "lidarr.svg",
+	"icon": "di:lidarr",
 	"tags": ["music", "pvr", "arr", "downloads"],
 	"websiteUrl": "https://lidarr.audio",
 	"sourceUrl": "https://github.com/Lidarr/Lidarr",

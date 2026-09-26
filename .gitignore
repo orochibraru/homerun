@@ -27,6 +27,7 @@ homerun.yaml
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 tmp/
+/data/
 *.db
 test-results/
 playwright-report/

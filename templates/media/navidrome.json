@@ -5,7 +5,7 @@
 	"image": "deluan/navidrome",
 	"tag": "latest",
 	"containerPort": 4533,
-	"icon": "navidrome.svg",
+	"icon": "di:navidrome",
 	"tags": ["music", "audio", "streaming", "subsonic"],
 	"websiteUrl": "https://www.navidrome.org",
 	"sourceUrl": "https://github.com/navidrome/navidrome",

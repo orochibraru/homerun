@@ -5,7 +5,7 @@
 	"image": "ghcr.io/open-webui/open-webui",
 	"tag": "main",
 	"containerPort": 8080,
-	"icon": "open-webui.svg",
+	"icon": "di:open-webui",
 	"tags": ["llm", "ai", "chat", "ollama"],
 	"websiteUrl": "https://openwebui.com",
 	"sourceUrl": "https://github.com/open-webui/open-webui",

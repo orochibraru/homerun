@@ -4,12 +4,16 @@ import {
 	randomInt,
 	timingSafeEqual,
 } from "node:crypto";
-import { oauthMethod } from "$lib/auth-providers";
+import { type EmailSignIn, oauthMethod } from "$lib/auth-providers";
 import { config, isSmtpEnabled } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
 import { auth } from "./auth.ts";
 import { EmailService } from "./email.service.ts";
+import {
+	accountSetupPendingKey,
+	emailSignInAvailability,
+} from "./email-sign-in.ts";
 
 const logger = new Logger("AccountSetup");
 
@@ -24,16 +28,22 @@ export interface SignInProvider {
 }
 
 export type SignInLookup =
-	| { providers: SignInProvider[]; step: "password" }
-	| { autoRedirect: string | null; providers: SignInProvider[]; step: "sso" }
-	| { emailed: boolean; step: "setup" };
+	| { email: EmailSignIn; providers: SignInProvider[]; step: "password" }
+	| {
+			autoRedirect: string | null;
+			email: EmailSignIn;
+			providers: SignInProvider[];
+			step: "sso";
+	  }
+	| { email: EmailSignIn; emailed: boolean; step: "setup" }
+	| { email: EmailSignIn; step: "email-only" };
 
 interface StoredCode {
 	attempts: number;
 	hash: string;
 }
 
-const pendingKey = (userId: string) => `account-setup:${userId}`;
+const pendingKey = accountSetupPendingKey;
 const codeKey = (userId: string) => `account-setup-code:${userId}`;
 const hashCode = (code: string) =>
 	createHash("sha256").update(code).digest("hex");
@@ -89,18 +99,21 @@ class AccountSetupServiceClass {
 	/**
 	 * What the sign-in page should ask for after `email`: a password, a
 	 * redirect to (or a button for) the account's single sign-on provider, or
-	 * the first-password setup, which emails a code first when SMTP is on.
+	 * the first-password setup, which emails a code first when SMTP is on, or
+	 * only the emailed code or link for an account with neither a password nor
+	 * a provider. Every step carries which emailed methods are available.
 	 * An unknown email gets the password step, so the form doesn't reveal
 	 * which emails have an account.
 	 */
 	async lookup(email: string): Promise<SignInLookup> {
 		const providers = enabledProviders();
+		const emailMethods = await emailSignInAvailability();
 		const ctx = await auth.$context;
 		const found = await ctx.internalAdapter.findUserByEmail(email, {
 			includeAccounts: true,
 		});
 		if (!found) {
-			return { providers, step: "password" };
+			return { email: emailMethods, providers, step: "password" };
 		}
 		if (
 			await ctx.internalAdapter.findVerificationValue(pendingKey(found.user.id))
@@ -109,7 +122,7 @@ class AccountSetupServiceClass {
 			if (emailed) {
 				await this.#sendCode(found.user.id, found.user.email);
 			}
-			return { emailed, step: "setup" };
+			return { email: emailMethods, emailed, step: "setup" };
 		}
 
 		const linked = new Set(found.accounts.map((account) => account.providerId));
@@ -122,11 +135,18 @@ class AccountSetupServiceClass {
 			return {
 				autoRedirect:
 					preferredSso?.name ?? (sso.length === 1 ? sso[0].name : null),
+				email: emailMethods,
 				providers: sso,
 				step: "sso",
 			};
 		}
-		return { providers, step: "password" };
+		if (
+			!linked.has("credential") &&
+			(emailMethods.emailOtp || emailMethods.magicLink)
+		) {
+			return { email: emailMethods, step: "email-only" };
+		}
+		return { email: emailMethods, providers, step: "password" };
 	}
 
 	/**

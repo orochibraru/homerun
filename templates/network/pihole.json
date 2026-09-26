@@ -5,7 +5,7 @@
 	"image": "pihole/pihole",
 	"tag": "latest",
 	"containerPort": 80,
-	"icon": "pihole.svg",
+	"icon": "di:pi-hole",
 	"tags": ["dns", "adblock", "network", "privacy"],
 	"websiteUrl": "https://pi-hole.net",
 	"sourceUrl": "https://github.com/pi-hole/pi-hole",

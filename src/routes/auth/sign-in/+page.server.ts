@@ -37,6 +37,7 @@ export const load = async ({ request, url, locals }) => {
 		appName: oauthClientId
 			? ((await OauthClientDTO.getByClientId(oauthClientId))?.name ?? null)
 			: await gatedAppNameFor(redirectTo),
+		email: url.searchParams.get("email"),
 		canonicalSignInUrl: canonicalOrigin
 			? `${canonicalOrigin}${url.pathname}${url.search}`
 			: null,

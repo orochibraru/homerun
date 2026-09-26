@@ -10,6 +10,7 @@ import {
 	BUILTIN_TEMPLATE_CATEGORIES,
 	parseBuiltinTemplates,
 } from "../../../src/lib/server/db/builtin-templates";
+import { iconProblem } from "../../../src/lib/service-icon";
 import { templateCategoryLabel } from "../../../src/lib/template-categories";
 
 const root = join(import.meta.dir, "../../..");
@@ -48,12 +49,15 @@ describe("templates/*.json", () => {
 		expect(links.length).toBeGreaterThan(0);
 	});
 
-	test("every bundled icon exists under static/template-icons", async () => {
+	test("every icon is a valid Dashboard Icon or exists under static/template-icons", async () => {
 		const { templates } = parseBuiltinTemplates(await readTemplateFiles());
 		const missing = templates
 			.filter(
 				(t) =>
-					t.icon && !existsSync(join(root, "static/template-icons", t.icon)),
+					t.icon &&
+					(t.icon.startsWith("di:")
+						? iconProblem(t.icon, []) !== null
+						: !existsSync(join(root, "static/template-icons", t.icon))),
 			)
 			.map((t) => `${t.id}: ${t.icon}`);
 		expect(missing).toEqual([]);

@@ -5,7 +5,7 @@
 	"image": "postgres",
 	"tag": "18-alpine",
 	"containerPort": 5432,
-	"icon": "postgres.svg",
+	"icon": "di:postgres",
 	"tags": ["sql", "database", "relational", "postgres"],
 	"websiteUrl": "https://www.postgresql.org",
 	"sourceUrl": "https://github.com/postgres/postgres",

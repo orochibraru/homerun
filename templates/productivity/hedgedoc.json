@@ -5,7 +5,7 @@
 	"image": "quay.io/hedgedoc/hedgedoc",
 	"tag": "latest",
 	"containerPort": 3000,
-	"icon": "hedgedoc.svg",
+	"icon": "di:hedgedoc",
 	"tags": ["notes", "markdown", "collaboration", "writing"],
 	"websiteUrl": "https://hedgedoc.org",
 	"sourceUrl": "https://github.com/hedgedoc/hedgedoc",

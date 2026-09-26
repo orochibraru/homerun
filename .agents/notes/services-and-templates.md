@@ -873,21 +873,52 @@ pre-existing `icon`) can carry a source-code and a website link, shown as
 external-link buttons on the template details page (below); either can be `null`
 (some projects genuinely have no separate marketing site).
 
-**Icons are real bundled app logos, not generic per-category lucide icons.**
-`static/template-icons/` holds the downloaded SVG/PNG files (named
-`<id-without-builtin->.{svg,png}`, e.g. `redis.svg`, `ghost.png`), sourced from
-[selfh.st/icons](https://selfh.st/icons/) (the de facto self-hosted-app icon
-set, also used by Homepage/Dashy/Homarr), CC BY 4.0, bundled locally rather than
-hotlinked from its CDN for the same "self-hosted app shouldn't need outbound
-internet to render" reasoning as the Swagger UI docs page (see API Docs page
-below) — attribution credited in the templates gallery's own footer. A
-template's `icon` column holds a bundled filename (`"redis.svg"`) when a real
-logo exists, or `null`/a legacy category string for one that predates this
-(anything without a `.` in it). `$lib/components/template-icon.svelte` is the
-one place that renders a template's icon anywhere in the app (the gallery, the
-details page, template-linking pickers on `templates/new`/`services/new`):
-`icon.includes(".")` picks the bundled `<img>` path (`/template-icons/<icon>`),
-otherwise it falls back to
+**Icons are real app logos, not generic per-category lucide icons.** A
+template's or service's `icon` column holds one of four shapes, all parsed by
+`$lib/service-icon.ts` (`hasIconImage`/`iconSrc`/`iconProblem`): `di:<slug>` for
+a [Dashboard Icons](https://dashboardicons.com) logo
+(`homarr-labs/dashboard-icons`, Apache 2.0, slug `^[a-z0-9][a-z0-9-]*$`), a
+bundled file name under `static/template-icons/` (`"redis.svg"`), an uploaded
+`data:image/...;base64` URL, or `null`/a legacy category string (anything else)
+for the category's generic icon. Built-ins use `di:` wherever Dashboard Icons
+has the exact app (checked against the real `metadata.json`, not guessed); the
+bundled files stay for the handful it lacks (aiometadata, aiostreams, bercail,
+comet, mediaflow-proxy, nuvio, penombre), for `icon-library.ts`'s
+servers/languages/ frameworks set, and **are never deleted**: services created
+before the switch still reference them. The seed upserts `icon` like every other
+display field, so a boot moves every install's built-ins to the new value, while
+a service copied its template's icon at creation and keeps it. Because of that,
+the settings action only runs `iconProblem` when the icon actually changed, so
+re-saving a service still on a bundled file that's no longer in the library
+isn't refused.
+
+**No browser ever calls jsDelivr.** `/icons/dashboard/[name]` (public, outside
+`(protected)`, since status pages and `/my-apps` render icons too) serves the
+icon from `DashboardIconsService` (`$lib/services/dashboard-icons.service.ts`):
+the catalog (`metadata.json`, ~1.1 MB, trimmed to name/aliases/lowercased
+categories/format/colour variants) is kept in memory and at
+`<STORAGE_BASE_PATH>/dashboard-icons/catalog.json`, refreshed after 24h
+stale-while-revalidate, so it works offline from the disk copy. Icons are
+fetched once in the catalog's `base` format (svg or png, never webp) and written
+to `dashboard-icons/icons/<name>.<ext>`; an entry with `colors` whose plain file
+is missing upstream (e.g. `dagster`, only `-dark`/`-light` exist) falls back to
+its dark then light variant. Unknown names 404 without a CDN call, a name
+upstream doesn't have is negative-cached in memory for 10 minutes, bodies over 2
+MB are refused. **`tree.json` is stale and useless for existence checks** (it
+misses ~970 names that do exist, e.g. `8311`), which is why nothing reads it.
+Every response carries
+`Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`
+and `nosniff`, so opening an SVG directly can't run script on Homerun's origin.
+`config.dataDir` is `STORAGE_BASE_PATH` (`/app/data` in the image, the data
+volume; `./data` in dev, gitignored).
+
+`$lib/components/template-icon.svelte` is the one place that renders an icon
+anywhere in the app, and it falls back to the category icon on the `<img>`'s
+`onerror`, so an unreachable CDN or a bogus `di:` name never shows a broken
+image. The picker is `dashboard-icon-picker.svelte` inside the service Settings'
+Type & icon section, fed by the `getDashboardIcons` remote query: search over
+name and aliases, a category select, 48 results at a time with "Show more", lazy
+`<img>`s through the proxy. Otherwise:
 `templateCategoryIcon(category)`/`templateCategoryColor(category)`
 (`$lib/constants.ts`, `TEMPLATE_CATEGORY_ICONS`/`TEMPLATE_CATEGORY_COLORS`,
 keyed by the `category` column) — one lucide icon and one accent color per

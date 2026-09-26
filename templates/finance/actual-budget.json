@@ -5,7 +5,7 @@
 	"image": "actualbudget/actual-server",
 	"tag": "latest",
 	"containerPort": 5006,
-	"icon": "actual-budget.svg",
+	"icon": "di:actual-budget",
 	"tags": ["budget", "finance", "money", "accounting"],
 	"websiteUrl": "https://actualbudget.org",
 	"sourceUrl": "https://github.com/actualbudget/actual",

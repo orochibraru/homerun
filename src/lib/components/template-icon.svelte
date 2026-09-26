@@ -16,13 +16,21 @@
 	} = $props();
 
 	const color = $derived(templateCategoryColor(category));
+	let failed = $state<string | null>(null);
 </script>
 
-{#if hasIconImage(icon)}
+{#if hasIconImage(icon) && failed !== icon}
   <div
     class="flex shrink-0 items-center justify-center rounded-md bg-surface-2 p-2 {className}"
   >
-    <img alt="" class="size-full object-contain" src={iconSrc(icon)}>
+    <img
+      alt=""
+      class="size-full object-contain"
+      onerror={() => {
+        failed = icon;
+      }}
+      src={iconSrc(icon)}
+    >
   </div>
 {:else}
   {@const Icon = !category && fallback ? fallback : templateCategoryIcon(category)}

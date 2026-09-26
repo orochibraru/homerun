@@ -5,7 +5,7 @@
 	"image": "excalidraw/excalidraw",
 	"tag": "latest",
 	"containerPort": 80,
-	"icon": "excalidraw.svg",
+	"icon": "di:excalidraw",
 	"tags": ["diagrams", "whiteboard", "drawing"],
 	"websiteUrl": "https://excalidraw.com",
 	"sourceUrl": "https://github.com/excalidraw/excalidraw",

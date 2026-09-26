@@ -36,6 +36,55 @@
 
   <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
+      <h2 class="eyebrow">Emailed sign-in</h2>
+      <p class="text-text-muted text-xs">
+        Sign in without a password: after entering their email, people can ask
+        for a 6-digit code or a one-time link. Handy for clients with app
+        access only, who can then accept an invite without choosing a password.
+        Neither creates accounts, and each also becomes a method protected apps
+        can accept.
+      </p>
+    </div>
+    {#if data.smtpEnabled}
+      <form
+        class="space-y-3 p-5"
+        action="?/emailSignIn"
+        method="POST"
+        use:enhance={saveToast("Emailed sign-in")}
+      >
+        <CheckBox
+          checked={data.emailSignIn.emailOtp}
+          helperText="A 6-digit code, valid 10 minutes, five tries."
+          id="emailOtp"
+          label="Email me a code"
+          name="emailOtp"
+        />
+        <CheckBox
+          checked={data.emailSignIn.magicLink}
+          helperText="A link that signs in once, valid 10 minutes. Some mail filters open links, so the link lands on a page with a button rather than signing in straight away."
+          id="magicLink"
+          label="Email me a sign-in link"
+          name="magicLink"
+        />
+        <div class="flex justify-end">
+          <Button type="submit">Save</Button>
+        </div>
+      </form>
+    {:else}
+      <div class="space-y-2 p-5 text-sm">
+        <p class="text-text-muted">
+          Unavailable until SMTP is configured: Homerun has no way to deliver
+          the codes or links.
+        </p>
+        <Button href={resolve("/settings/email")} size="sm" variant="outline">
+          Configure email
+        </Button>
+      </div>
+    {/if}
+  </section>
+
+  <section class="panel rounded-md">
+    <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Preferred sign-in methods</h2>
       <p class="text-text-muted text-xs">
         Picking passkey prompts for one as soon as the sign-in page opens.

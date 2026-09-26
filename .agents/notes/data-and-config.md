@@ -480,11 +480,13 @@ half-started server up that looks alive but answers nothing correctly.
 ## Config (`src/lib/config.ts`)
 
 Zod-validated YAML config, not env vars, except `DATABASE_URL`/`AUTH_SECRET`/
-`PORT`/`CONFIG_FILE` (env-only, needed before the file/DB are reachable).
-`CONFIG_FILE` (default `./homerun.yaml`) points at the YAML file; missing file =
-all defaults, every field optional. `yamlConfigSchema` is the file's own schema
-(exported so `scripts/generate-config-schema.ts` can turn it into
-`homerun.schema.json`, a JSON Schema `homerun.example.yaml` references via a
+`PORT`/`CONFIG_FILE` (env-only, needed before the file/DB are reachable), plus
+`STORAGE_BASE_PATH` (`config.dataDir`, default `./data`, `/app/data` in the
+image: the app's on-disk cache, today only Dashboard Icons). `CONFIG_FILE`
+(default `./homerun.yaml`) points at the YAML file; missing file = all defaults,
+every field optional. `yamlConfigSchema` is the file's own schema (exported so
+`scripts/generate-config-schema.ts` can turn it into `homerun.schema.json`, a
+JSON Schema `homerun.example.yaml` references via a
 `# yaml-language-server: $schema=` comment for editor linting); `configSchema`
 extends it with the env-only fields for the full `AppConfig` type. Notable
 groups: `docker.{socketPath,networkName}`, `baseDomain`,

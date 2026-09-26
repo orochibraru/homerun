@@ -5,7 +5,7 @@
 	"image": "adminer",
 	"tag": "latest",
 	"containerPort": 8080,
-	"icon": "adminer.svg",
+	"icon": "di:adminer",
 	"tags": ["sql", "database", "admin", "gui"],
 	"websiteUrl": "https://www.adminer.org",
 	"sourceUrl": "https://github.com/vrana/adminer",

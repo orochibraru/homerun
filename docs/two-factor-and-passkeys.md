@@ -3,11 +3,11 @@
 Both live under **Profile → Security**.
 
 - **Two-factor authentication** asks for a code from an authenticator app after
-  your password. Turning it on (confirm your password first, if you have one)
-  shows a QR code to scan and a set of **backup codes**; save those, each one
-  signs you in once when the app isn't to hand. The sign-in page's code step
-  accepts either. You can generate new backup codes or turn it off from the same
-  panel.
+  your password, or after an emailed sign-in code or link. Turning it on
+  (confirm your password first, if you have one) shows a QR code to scan and a
+  set of **backup codes**; save those, each one signs you in once when the app
+  isn't to hand. The sign-in page's code step accepts either. You can generate
+  new backup codes or turn it off from the same panel.
 - **Passkeys** sign you in with Touch ID, Windows Hello, a security key or your
   password manager instead of a password. Register as many as you like, name
   them, and remove the ones you no longer use. The sign-in page offers a passkey

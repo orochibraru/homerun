@@ -23,11 +23,17 @@ an explanation if it isn't set yet. It does **not** need **Cross-subdomain
 cookies** (Settings → General), which is unrelated to this flow.
 
 **Sign-in methods.** Nothing is enabled by default: pick at least one of the
-built-in login and your configured OAuth providers. Only an account linked to
-one of the methods you pick is let through; someone who signs in another way
-sees a "you don't have access" screen with a button to sign in as someone else.
-Turning the wall on with nothing picked is refused, so you can't lock yourself
-out by accident.
+built-in login, **Emailed code**, **Emailed link** and your configured OAuth
+providers. The two emailed methods are listed once they're switched on under
+Authentication (see
+[Emailed codes and links](authentication-providers.md#emailed-codes-and-links)).
+Only an account linked to one of the methods you pick is let through; someone
+who signs in another way sees a "you don't have access" screen with a button to
+sign in as someone else. Every account has an email address, so allowing an
+emailed method lets any account through on that count; narrow it with the lists
+below. An emailed method that's later switched off, or loses SMTP, stops
+counting until it's back. Turning the wall on with nothing picked is refused, so
+you can't lock yourself out by accident.
 
 **Who's allowed.** Three optional lists narrow access further:
 
@@ -61,12 +67,13 @@ an identity provider at all.
 
 **Sharing an app with someone who shouldn't see the dashboard.** Create them on
 `/users` with the **App access only** role, then pick them under **Users** on
-the app's Security tab (every account is listed there, with its role). They sign
-in through the wall like anyone else, but Homerun itself refuses them everywhere
-else, and opening the dashboard shows them only the list of apps they're allowed
-into. See [Users and roles](users-and-roles.md). Note that a wall with all three
-lists empty lets **any** signed-in account through, app-access accounts
-included.
+the app's Security tab (every account is listed there, with its role). Allow
+**Emailed code** on the app too if they shouldn't need a password: they then
+sign in with a code sent to their address. They sign in through the wall like
+anyone else, but Homerun itself refuses them everywhere else, and opening the
+dashboard shows them only the list of apps they're allowed into. See
+[Users and roles](users-and-roles.md). Note that a wall with all three lists
+empty lets **any** signed-in account through, app-access accounts included.
 
 **Revocation.** Access is re-checked when the app cookie is issued, whenever the
 rules change, and again at least every five minutes while the cookie is in use.

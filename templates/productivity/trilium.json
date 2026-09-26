@@ -5,7 +5,7 @@
 	"image": "triliumnext/trilium",
 	"tag": "latest",
 	"containerPort": 8080,
-	"icon": "trilium.png",
+	"icon": "di:trilium",
 	"tags": ["notes", "knowledge-base", "wiki", "writing"],
 	"websiteUrl": null,
 	"sourceUrl": "https://github.com/TriliumNext/Trilium",

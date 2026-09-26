@@ -5,7 +5,7 @@
 	"image": "jc21/nginx-proxy-manager",
 	"tag": "latest",
 	"containerPort": 81,
-	"icon": "nginx-proxy-manager.svg",
+	"icon": "di:nginx-proxy-manager",
 	"tags": ["proxy", "reverse-proxy", "ssl", "nginx"],
 	"websiteUrl": "https://nginxproxymanager.com",
 	"sourceUrl": "https://github.com/NginxProxyManager/nginx-proxy-manager",

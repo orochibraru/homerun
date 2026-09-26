@@ -67,7 +67,7 @@ export const actions = {
 			return fail(400, { error: "Pick a type from the list." });
 		}
 		const bundled = (await listIconLibrary()).map((i) => i.icon);
-		const problem = iconProblem(icon, bundled);
+		const problem = icon === svc.icon ? null : iconProblem(icon, bundled);
 		if (problem) {
 			return fail(400, { error: problem });
 		}

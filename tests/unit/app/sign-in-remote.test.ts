@@ -59,7 +59,11 @@ beforeEach(() => {
 	spies = [
 		spyOn(AccountSetupService, "lookup").mockImplementation(async (email) => {
 			calls.push(["lookup", email]);
-			return { providers: [], step: "password" };
+			return {
+				email: { emailOtp: false, magicLink: false },
+				providers: [],
+				step: "password",
+			};
 		}),
 		spyOn(AccountSetupService, "resendCode").mockImplementation(
 			async (email) => {
@@ -83,6 +87,7 @@ afterEach(() => {
 describe("sign-in remote commands", () => {
 	test("normalise the email before handing it to the service", async () => {
 		expect(await lookup("  Admin@Example.COM ")).toEqual({
+			email: { emailOtp: false, magicLink: false },
 			providers: [],
 			step: "password",
 		});

@@ -109,8 +109,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   and one-step delete of the whole stack
 - **[~70 built-in templates](docs/templates.md)**: Jellyfin, the *arr stack,
   Pi-hole, Vaultwarden, Grafana, Uptime Kuma, PostgreSQL, Redis, n8n and more,
-  with bundled app logos, one-click **Quick Deploy**, and a details page that
-  pulls in the project's GitHub README, stars and latest release
+  with real app logos, one-click **Quick Deploy**, and a details page that pulls
+  in the project's GitHub README, stars and latest release
 - **[Linked containers](docs/templates.md#linked-containers)**: companions
   deploy with the primary (WordPress brings MySQL), and env vars like
   `{{db.POSTGRES_PASSWORD}}` wire them together without retyping

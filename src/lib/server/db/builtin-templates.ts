@@ -48,7 +48,7 @@ export const builtinTemplateFileSchema = z
 		icon: z
 			.string()
 			.describe(
-				"File name under static/template-icons/, or an empty string for the category's generic icon.",
+				"di:<name> for a Dashboard Icons (dashboardicons.com) icon, a file name under static/template-icons/, or an empty string for the category's generic icon.",
 			),
 		image: z.string().min(1),
 		labels: z.record(z.string(), z.string()).optional(),

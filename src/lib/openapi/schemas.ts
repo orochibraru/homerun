@@ -127,7 +127,7 @@ export const serviceResponse = z.object({
 	}),
 	icon: z.string().nullable().meta({
 		description:
-			"A bundled template icon file name, or an uploaded data:image URL",
+			"A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL",
 	}),
 	stackId: z.string().nullable(),
 	registryPasswordEnc: z

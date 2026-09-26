@@ -5,7 +5,7 @@
 	"image": "linuxserver/transmission",
 	"tag": "latest",
 	"containerPort": 9091,
-	"icon": "transmission.svg",
+	"icon": "di:transmission",
 	"tags": ["torrent", "downloads", "bittorrent"],
 	"websiteUrl": "https://transmissionbt.com",
 	"sourceUrl": "https://github.com/transmission/transmission",

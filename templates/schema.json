@@ -72,7 +72,7 @@
 			"type": "string"
 		},
 		"icon": {
-			"description": "File name under static/template-icons/, or an empty string for the category's generic icon.",
+			"description": "di:<name> for a Dashboard Icons (dashboardicons.com) icon, a file name under static/template-icons/, or an empty string for the category's generic icon.",
 			"type": "string"
 		},
 		"image": {

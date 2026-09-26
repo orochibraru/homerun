@@ -5,7 +5,7 @@
 	"image": "jellyfin/jellyfin",
 	"tag": "latest",
 	"containerPort": 8096,
-	"icon": "jellyfin.svg",
+	"icon": "di:jellyfin",
 	"tags": ["media", "video", "streaming", "movies", "tv"],
 	"websiteUrl": "https://jellyfin.org",
 	"sourceUrl": "https://github.com/jellyfin/jellyfin",

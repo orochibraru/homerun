@@ -17,6 +17,7 @@
 		email: string;
 		emailed: boolean;
 		loading: boolean;
+		onEmailCode?: () => void;
 		onSignedIn: () => Promise<void>;
 		successMessage?: string;
 		summary: Snippet;
@@ -26,6 +27,7 @@
 		email,
 		emailed,
 		loading = $bindable(),
+		onEmailCode,
 		onSignedIn,
 		successMessage,
 		summary,
@@ -145,6 +147,16 @@
       <ArrowRight class="size-4 opacity-70" />
     {/if}
   </Button>
+  {#if onEmailCode}
+    <Button
+      class="h-10 w-full"
+      disabled={loading}
+      onclick={onEmailCode}
+      variant="outline"
+    >
+      Skip the password, sign in with emailed codes
+    </Button>
+  {/if}
   {#if emailed}
     <div class="text-center">
       <button

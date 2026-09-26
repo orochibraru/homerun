@@ -1,5 +1,9 @@
 import { eq } from "drizzle-orm";
-import { accountProviderIdFor, emailMatchesPattern } from "$lib/auth-providers";
+import {
+	acceptsEmailSignIn,
+	accountProviderIdFor,
+	emailMatchesPattern,
+} from "$lib/auth-providers";
 import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
@@ -11,6 +15,7 @@ import {
 	user as userTable,
 } from "$lib/server/db/schema";
 import { primaryHostname } from "$lib/service-domains";
+import { emailSignInAvailability } from "./email-sign-in.ts";
 
 const GROUP_CLAIMS = ["groups", "roles", "grp"];
 
@@ -225,7 +230,9 @@ class AppAccessServiceClass {
 	 * checking, in order: a sign-in method is configured at all, an explicit
 	 * allowed-user-id list, that the user still exists and isn't banned, their
 	 * email against `authAllowedEmails`, that they have actually linked one of
-	 * `svc.authProviders`, and (if set) that their linked accounts' OIDC groups
+	 * `svc.authProviders` (an emailed code or link, while available, counts as
+	 * linked for every account: it signs in on the email address alone), and
+	 * (if set) that their linked accounts' OIDC groups
 	 * or their Homerun role intersect `authAllowedGroups`.
 	 */
 	async evaluate(svc: ServiceDTO, userId: string): Promise<AccessDecision> {
@@ -249,7 +256,7 @@ class AppAccessServiceClass {
 		if (!emailAllowed(svc, account.email)) {
 			return { allowed: false, reason: "email-not-allowed" };
 		}
-		if (linked.length === 0) {
+		if (linked.length === 0 && !(await this.#acceptsEmail(svc))) {
 			return { allowed: false, reason: "method-not-linked" };
 		}
 		if (svc.authAllowedGroups.length > 0) {
@@ -331,6 +338,22 @@ class AppAccessServiceClass {
 					);
 				}
 			}),
+		);
+	}
+
+	/** Whether the wall allows an emailed code or link that's available right now; skips the settings read when it allows neither. */
+	async #acceptsEmail(svc: ServiceDTO): Promise<boolean> {
+		if (
+			!acceptsEmailSignIn(svc.authProviders, {
+				emailOtp: true,
+				magicLink: true,
+			})
+		) {
+			return false;
+		}
+		return acceptsEmailSignIn(
+			svc.authProviders,
+			await emailSignInAvailability(),
 		);
 	}
 

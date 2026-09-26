@@ -1,11 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import {
-	isOauthMethod,
-	oauthMethod,
-	oauthProviderName,
-	PASSWORD_METHOD,
-} from "$lib/auth-providers";
+import { oauthMethod, signInMethodAvailable } from "$lib/auth-providers";
 import { config } from "$lib/config";
 import { ImageScanDTO } from "$lib/dto/image-scan-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
@@ -13,6 +8,7 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { invalidateGatedService } from "$lib/server/gated-service-cache";
 import { DeploymentService } from "$lib/services/deploy.service";
+import { emailSignInAvailability } from "$lib/services/email-sign-in";
 import { ImageScanService } from "$lib/services/image-scan.service";
 import { UserService } from "$lib/services/user.service";
 
@@ -34,15 +30,17 @@ function splitList(raw: string | null): string[] {
 
 export const load = async ({ locals, params, parent }) => {
 	await parent();
-	const [scans, scanning, settings, users] = await Promise.all([
+	const [scans, scanning, settings, users, emailSignIn] = await Promise.all([
 		ImageScanDTO.listForService(params.serviceId, 15),
 		ImageScanService.isScanning(params.serviceId),
 		InstanceSettingsDTO.get(),
 		UserService.listUsers(),
+		emailSignInAvailability(),
 	]);
 	return {
 		blockPolicy: settings.imageScanBlockPolicy,
 		dashboardOrigin: config.auth.origin ?? null,
+		emailSignIn,
 		instanceScanEnabled: settings.imageScanEnabled,
 		isAdmin: locals.isAdmin,
 		oauthProviders: config.auth.oauthProviders
@@ -105,17 +103,14 @@ export const actions = {
 			formData.get("authAllowedGroups") as string | null,
 		);
 
-		const enabledOauth = new Set(
-			config.auth.oauthProviders.filter((p) => p.enabled).map((p) => p.name),
-		);
+		const available = {
+			email: await emailSignInAvailability(),
+			oauthProviders: new Set(
+				config.auth.oauthProviders.filter((p) => p.enabled).map((p) => p.name),
+			),
+		};
 		for (const method of methods) {
-			const providerName = oauthProviderName(method);
-			const known =
-				method === PASSWORD_METHOD ||
-				(isOauthMethod(method) &&
-					!!providerName &&
-					enabledOauth.has(providerName));
-			if (!known) {
+			if (!signInMethodAvailable(method, available)) {
 				return fail(400, {
 					authError: `"${method}" isn't an enabled sign-in method on this instance.`,
 				});

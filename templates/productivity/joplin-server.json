@@ -5,7 +5,7 @@
 	"image": "joplin/server",
 	"tag": "latest",
 	"containerPort": 22300,
-	"icon": "joplin-server.svg",
+	"icon": "di:joplin",
 	"tags": ["notes", "sync", "markdown"],
 	"websiteUrl": "https://joplinapp.org",
 	"sourceUrl": "https://github.com/laurent22/joplin",

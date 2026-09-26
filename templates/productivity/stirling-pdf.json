@@ -5,7 +5,7 @@
 	"image": "stirlingtools/stirling-pdf",
 	"tag": "latest",
 	"containerPort": 8080,
-	"icon": "stirling-pdf.svg",
+	"icon": "di:stirling-pdf",
 	"tags": ["pdf", "documents", "tools", "convert"],
 	"websiteUrl": "https://stirlingpdf.com",
 	"sourceUrl": "https://github.com/Stirling-Tools/Stirling-PDF",

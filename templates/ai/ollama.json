@@ -5,7 +5,7 @@
 	"image": "ollama/ollama",
 	"tag": "latest",
 	"containerPort": 11434,
-	"icon": "ollama.svg",
+	"icon": "di:ollama",
 	"tags": ["llm", "ai", "models", "inference"],
 	"websiteUrl": "https://ollama.com",
 	"sourceUrl": "https://github.com/ollama/ollama",

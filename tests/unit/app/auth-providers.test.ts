@@ -1,14 +1,46 @@
 import { describe, expect, test } from "bun:test";
 import {
+	acceptsEmailSignIn,
 	accountProviderIdFor,
+	EMAIL_OTP_METHOD,
 	emailMatchesPattern,
 	isOauthMethod,
+	MAGIC_LINK_METHOD,
 	methodForAccountProviderId,
 	OAUTH_PRESETS,
 	oauthMethod,
 	oauthProviderName,
 	PASSWORD_METHOD,
+	signInMethodAvailable,
 } from "../../../src/lib/auth-providers";
+
+describe("emailed sign-in methods", () => {
+	const email = { emailOtp: true, magicLink: false };
+	const available = { email, oauthProviders: new Set(["keycloak"]) };
+
+	test("a method is available only while the instance offers it", () => {
+		expect(signInMethodAvailable(PASSWORD_METHOD, available)).toBe(true);
+		expect(signInMethodAvailable(EMAIL_OTP_METHOD, available)).toBe(true);
+		expect(signInMethodAvailable(MAGIC_LINK_METHOD, available)).toBe(false);
+		expect(signInMethodAvailable(oauthMethod("keycloak"), available)).toBe(
+			true,
+		);
+		expect(signInMethodAvailable(oauthMethod("gone"), available)).toBe(false);
+		expect(signInMethodAvailable("typo", available)).toBe(false);
+	});
+
+	test("a wall accepts email sign-in only for an allowed, available method", () => {
+		expect(acceptsEmailSignIn([EMAIL_OTP_METHOD], email)).toBe(true);
+		expect(acceptsEmailSignIn([MAGIC_LINK_METHOD], email)).toBe(false);
+		expect(
+			acceptsEmailSignIn([MAGIC_LINK_METHOD], {
+				emailOtp: false,
+				magicLink: true,
+			}),
+		).toBe(true);
+		expect(acceptsEmailSignIn([PASSWORD_METHOD], email)).toBe(false);
+	});
+});
 
 describe("method encoding", () => {
 	test("round-trips an oauth provider name", () => {

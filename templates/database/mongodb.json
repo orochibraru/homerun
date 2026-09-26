@@ -5,7 +5,7 @@
 	"image": "mongo",
 	"tag": "7",
 	"containerPort": 27017,
-	"icon": "mongodb.svg",
+	"icon": "di:mongodb",
 	"tags": ["nosql", "database", "documents"],
 	"websiteUrl": "https://www.mongodb.com",
 	"sourceUrl": "https://github.com/mongodb/mongo",

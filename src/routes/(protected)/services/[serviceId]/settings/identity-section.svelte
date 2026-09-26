@@ -2,6 +2,7 @@
 	import { Check, Palette, Server, Upload, X } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
+	import DashboardIconPicker from "$lib/components/dashboard-icon-picker.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -13,7 +14,11 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { ICON_UPLOAD_TYPES, MAX_ICON_BYTES } from "$lib/service-icon";
+	import {
+		ICON_UPLOAD_TYPES,
+		iconSrc,
+		MAX_ICON_BYTES,
+	} from "$lib/service-icon";
 	import {
 		TEMPLATE_CATEGORIES,
 		templateCategoryLabel,
@@ -186,7 +191,7 @@
                   <img
                     alt=""
                     class="size-full object-contain"
-                    src="/template-icons/{entry.icon}"
+                    src={iconSrc(entry.icon)}
                   >
                 </button>
               {/each}
@@ -197,6 +202,13 @@
         {/each}
       </div>
     </div>
+
+    <DashboardIconPicker
+      onpick={(value) => {
+        icon = value;
+      }}
+      selected={icon}
+    />
 
     <p class="text-text-subtle text-xs">
       Uploads up to {MAX_ICON_BYTES / 1024} KB, PNG, JPEG, WebP, GIF or SVG,

@@ -5,7 +5,7 @@
 	"image": "gitea/gitea",
 	"tag": "latest",
 	"containerPort": 3000,
-	"icon": "gitea.svg",
+	"icon": "di:gitea",
 	"tags": ["git", "forge", "ci", "code"],
 	"websiteUrl": "https://about.gitea.com",
 	"sourceUrl": "https://github.com/go-gitea/gitea",

@@ -5,7 +5,7 @@
 	"image": "advplyr/audiobookshelf",
 	"tag": "latest",
 	"containerPort": 80,
-	"icon": "audiobookshelf.svg",
+	"icon": "di:audiobookshelf",
 	"tags": ["audiobooks", "podcasts", "audio"],
 	"websiteUrl": "https://www.audiobookshelf.org",
 	"sourceUrl": "https://github.com/advplyr/audiobookshelf",

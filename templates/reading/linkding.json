@@ -5,7 +5,7 @@
 	"image": "sissbruecker/linkding",
 	"tag": "latest",
 	"containerPort": 9090,
-	"icon": "linkding.svg",
+	"icon": "di:linkding",
 	"tags": ["bookmarks", "links", "read-later"],
 	"websiteUrl": null,
 	"sourceUrl": "https://github.com/sissbruecker/linkding",

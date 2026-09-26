@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import type { EmailSignIn } from "$lib/auth-providers";
 import type { BlockSeverity, ScanBlockPolicy } from "$lib/image-scan";
 import {
 	type ResourceThresholds,
@@ -181,12 +182,14 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			createdAt: now,
 			dockerNetworkName: null,
 			dockerSocketPath: null,
+			emailOtpSignIn: null,
 			gitProviders: [],
 			id: SINGLETON_ID,
 			imageScanBlockFixableOnly: null,
 			imageScanBlockSeverity: null,
 			imageScanEnabled: null,
 			imageScanRequired: null,
+			magicLinkSignIn: null,
 			oauthProviders: [],
 			onboardingCompletedAt: null,
 			orchestrationMode: null,
@@ -261,6 +264,26 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	/** Persists the passkey and two-factor requirements. */
 	async updateSecurityPolicy(input: SecurityPolicy): Promise<void> {
 		await this.persist(input);
+	}
+
+	/**
+	 * Which emailed sign-in methods an admin has switched on: one-time codes
+	 * default on, magic links off. Neither works without SMTP, see
+	 * `emailSignInAvailability`.
+	 */
+	get emailSignIn(): EmailSignIn {
+		return {
+			emailOtp: this.row.emailOtpSignIn ?? true,
+			magicLink: this.row.magicLinkSignIn ?? false,
+		};
+	}
+
+	/** Persists which emailed sign-in methods are switched on. */
+	async updateEmailSignIn(input: EmailSignIn): Promise<void> {
+		await this.persist({
+			emailOtpSignIn: input.emailOtp,
+			magicLinkSignIn: input.magicLink,
+		});
 	}
 
 	/**

@@ -1093,7 +1093,7 @@ export interface operations {
 						healthcheckRetries: number | null;
 						healthcheckStartPeriodSeconds: number | null;
 						healthcheckTimeoutSeconds: number | null;
-						/** @description A bundled template icon file name, or an uploaded data:image URL */
+						/** @description A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
 						image: string;
@@ -1338,7 +1338,7 @@ export interface operations {
 						healthcheckRetries: number | null;
 						healthcheckStartPeriodSeconds: number | null;
 						healthcheckTimeoutSeconds: number | null;
-						/** @description A bundled template icon file name, or an uploaded data:image URL */
+						/** @description A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
 						image: string;
@@ -1540,7 +1540,7 @@ export interface operations {
 						healthcheckRetries: number | null;
 						healthcheckStartPeriodSeconds: number | null;
 						healthcheckTimeoutSeconds: number | null;
-						/** @description A bundled template icon file name, or an uploaded data:image URL */
+						/** @description A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
 						image: string;
@@ -1856,7 +1856,7 @@ export interface operations {
 						healthcheckRetries: number | null;
 						healthcheckStartPeriodSeconds: number | null;
 						healthcheckTimeoutSeconds: number | null;
-						/** @description A bundled template icon file name, or an uploaded data:image URL */
+						/** @description A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
 						image: string;

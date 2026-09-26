@@ -5,7 +5,7 @@
 	"image": "louislam/uptime-kuma",
 	"tag": "2",
 	"containerPort": 3001,
-	"icon": "uptime-kuma.svg",
+	"icon": "di:uptime-kuma",
 	"tags": ["uptime", "status", "alerts", "monitoring"],
 	"websiteUrl": "https://uptime.kuma.pet",
 	"sourceUrl": "https://github.com/louislam/uptime-kuma",

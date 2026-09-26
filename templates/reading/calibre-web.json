@@ -5,7 +5,7 @@
 	"image": "lscr.io/linuxserver/calibre-web",
 	"tag": "latest",
 	"containerPort": 8083,
-	"icon": "calibre-web.svg",
+	"icon": "di:calibre-web",
 	"tags": ["books", "ebooks", "library", "reading"],
 	"websiteUrl": null,
 	"sourceUrl": "https://github.com/janeczku/calibre-web",
