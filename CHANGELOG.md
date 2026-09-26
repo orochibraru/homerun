@@ -1,5 +1,106 @@
 # Changelog
 
+## [1.0.49](https://github.com/orochibraru/homerun/compare/v1.0.48...v1.0.49) (2026-09-26)
+
+### Features
+
+- emailed sign-in codes and magic links with passwordless client invites,
+  Dashboard Icons through a cached proxy
+  ([378d66d](https://github.com/orochibraru/homerun/commit/378d66d45a1792beb8a11ebd53993e1aabd18a0a))
+- mobile-responsive dashboard, per-account page size, previews API/CLI with
+  promote and a GitHub Actions cookbook, opt-in release channels with deployment
+  environments, app-access-only role with /my-apps
+  ([7ebfd59](https://github.com/orochibraru/homerun/commit/7ebfd597386e239af6f4d25199fb326041dbdb10))
+- keep sites up during self-updates, nest PR previews under their parent, weekly
+  template tag bumps with an E2E suite deploying every template
+  ([27852f9](https://github.com/orochibraru/homerun/commit/27852f9a5958a3b27690684c50bca9faac3a7ff9))
+- Previews tab with preview domain templates, instance-wide deployment history
+  with recorded triggers, Website service category
+  ([3e64b91](https://github.com/orochibraru/homerun/commit/3e64b9178531b887029a4a366442338430f95808))
+- service Health tab with healthcheck overrides and off switch, DB-stored
+  service dependencies driving start order, xterm.js terminal; fix false
+  unhealthy verdict on unrouted services
+  ([0cbf285](https://github.com/orochibraru/homerun/commit/0cbf285caf110292dc8353000b18e5186fd15749))
+- substacks with dependency tree, draggable architecture diagram and unlink;
+  per-var secret marks, default datastore volumes, Dockerfile build target, own
+  nightly workflow, update-status dialog; fix Pangolin org check and false
+  service links
+  ([7aaee6b](https://github.com/orochibraru/homerun/commit/7aaee6ba99f9b6c160ff17a32ebedf99dd9f6f2a))
+- nested substacks, per-stack dependency tree and architecture diagram,
+  stack-prefixed slugs; auto-restart swarm services whose DNS alias Docker
+  dropped
+  ([3153e59](https://github.com/orochibraru/homerun/commit/3153e59c902a7e1aaa7c600fc209b5fb7f5ffdff))
+- nightly update channel, generated {{secret}} template passwords,
+  authentication page tabs, deployment history API and MCP tool, recreate a
+  missing swarm ingress network; fix MCP env redaction and Claude connector
+  token auth
+  ([ab39c37](https://github.com/orochibraru/homerun/commit/ab39c37a6944ed386c0321ba0f91523bde4de85e))
+- self-updates check the new version in a candidate before switching and roll
+  back on failure; public /api/v1/ready probe
+  ([711cb77](https://github.com/orochibraru/homerun/commit/711cb77c88b9f2ab541fdeb83864c95773928d7d))
+- remote MCP server with OAuth for claude.ai, HTTP readiness in revision health;
+  fix installer README formatting
+  ([9f0bb03](https://github.com/orochibraru/homerun/commit/9f0bb0389e6afe3295052c7b0f4f691d3318d7f7))
+- one-switch volume backups with schedule dialog, scheduled backups on /backups,
+  DNS page with exclusive Cloudflare/Pangolin provider and domain listing; fix
+  stale uptime alerts
+  ([5f3823c](https://github.com/orochibraru/homerun/commit/5f3823c46f23fe59af268d6edd72c83c8411c3b0))
+- sorting, palettes, volume file editor, per-session HTTP cache, cancellable
+  worker deploys, swarm rollback fix, schedule picker, stack-aware breadcrumbs
+  and notifications, create-and-mount volumes
+  ([8f31e2a](https://github.com/orochibraru/homerun/commit/8f31e2a9cba5e65de63810929d7da771188a47f5))
+- published ports and per-domain ports, templates as JSON by category, CI deploy
+  action and CLI image, queue orphan recovery fix, UI consistency fixes
+  ([8475c45](https://github.com/orochibraru/homerun/commit/8475c458f6edd1dc390707399ae965967b896925))
+- Stremio/Nuvio templates, deploy cancel button, fail status checks on commits
+  with no checks
+  ([a83e937](https://github.com/orochibraru/homerun/commit/a83e93751d609dfddbd16753b17a02c6fc88cd74))
+- header breadcrumbs replacing back links, tabbed stack page with services first
+  ([8ebb472](https://github.com/orochibraru/homerun/commit/8ebb4727bee038eb7a0a6f1f8a5db5f003b39b69))
+- right-click context menu on stacks list, coloured service tab icons
+  ([19b596b](https://github.com/orochibraru/homerun/commit/19b596b9b3e3d070c26697ff3ac4338603fa1c2b))
+
+### Bug Fixes
+
+- pre-fill the deploy wizard's default data volume row for datastore images and
+  show icons in the stack flat list
+  ([ea959a1](https://github.com/orochibraru/homerun/commit/ea959a1abac43c261872c3dc2eace5ab09fbdcea))
+- MCP redacts env vars by secret-looking name, URL passwords and password args
+  instead of every value; update_service merges env changes and refuses
+  unmatched placeholders
+  ([788e77e](https://github.com/orochibraru/homerun/commit/788e77ee4f24f1443a12fc4f46caa02764c6d2ab))
+- stop re-applying unchanged Traefik flags from recreating Traefik on every
+  boot; pause uptime probes during updates, boot and Traefik restarts
+  ([7f9e243](https://github.com/orochibraru/homerun/commit/7f9e243f357ec26eaff8c1c34c5201b0dabb8881))
+- add cache engine names to the Vale vocabulary
+  ([6e14c5c](https://github.com/orochibraru/homerun/commit/6e14c5c39f12606df211ffe52ea055436d653e87))
+- traefik expectations
+  ([ed6e234](https://github.com/orochibraru/homerun/commit/ed6e23464b5659ae2777ccd68b144f757376bf86))
+- cover mcpResource and make the Claude Stop gate block on failure
+  ([4a5f006](https://github.com/orochibraru/homerun/commit/4a5f00640b3d51523fc71d361fe8614905be65db))
+- re-apply Traefik cache plugin on worker boot, stop treating gated apps' bearer
+  tokens as API keys, damp flapping uptime alerts; feat: homerun mcp server,
+  Vale prose linting for docs
+  ([c7dd792](https://github.com/orochibraru/homerun/commit/c7dd79221526d53d7ea5cd2fe9e76e85c3d0d19c))
+- count 5xx responses as down in uptime probes; add htmx, Remix, SolidJS, Qwik,
+  Vite, Hono and more service icons
+  ([e95bca7](https://github.com/orochibraru/homerun/commit/e95bca7c3926f4f2648b809c753d690c530516f7))
+- show an alert linking to a failed deploy instead of redirecting to it on every
+  Overview visit
+  ([281a37e](https://github.com/orochibraru/homerun/commit/281a37e908747382de795cdda2f1c7906b9fa921))
+- contain absolutely-positioned content in the dashboard scroll area to kill the
+  double scrollbar
+  ([5b4b2ab](https://github.com/orochibraru/homerun/commit/5b4b2ab89838b83dabb2f04dfbdbf0af5e3a6803))
+- import Dokploy/Coolify domains on migration, target Traefik's 443 for
+  in-network Pangolin tunnels
+  ([14c5b35](https://github.com/orochibraru/homerun/commit/14c5b354920ff1361597f626fe5ebbdfdd36e5f9))
+
+### Performance Improvements
+
+- attach the login-wall middleware only to gated services and redeploy when the
+  wall is toggled
+  ([c21162f](https://github.com/orochibraru/homerun/commit/c21162f32eca4d464238d15bae5095894db7cf73))
+
 ## [1.0.48](https://github.com/orochibraru/homerun/compare/v1.0.47...v1.0.48) (2026-09-24)
 
 ### Bug Fixes
