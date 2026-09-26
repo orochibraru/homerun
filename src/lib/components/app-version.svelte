@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowUpCircle } from "@lucide/svelte";
+	import { ArrowUpCircle, CircleCheck, RefreshCw } from "@lucide/svelte";
 	import { onDestroy } from "svelte";
 	import { toast } from "svelte-sonner";
 	import Alert from "$lib/components/alert.svelte";
@@ -9,6 +9,7 @@
 	import * as Dialog from "$lib/components/ui/dialog/index.js";
 	import { Spinner } from "$lib/components/ui/spinner/index.js";
 	import {
+		checkForUpdates,
 		getAppVersion,
 		getReleaseStatus,
 		getUpdatePreflight,
@@ -28,11 +29,15 @@
 	);
 
 	let open = $state(false);
+	let checking = $state(false);
 	let starting = $state(false);
 	let updatingTo = $state<string | null>(null);
 	let timer: ReturnType<typeof setInterval> | null = null;
 
-	const preflight = $derived(open && !updatingTo ? getUpdatePreflight() : null);
+	const preflight = $derived(
+		open && latest && !updatingTo ? getUpdatePreflight() : null,
+	);
+	const status = $derived(release?.current ?? null);
 
 	$effect(() => {
 		if (!release) {
@@ -78,6 +83,32 @@
 		}
 	}
 
+	async function checkCallback() {
+		checking = true;
+		try {
+			const result = await checkForUpdates();
+			if (!result.latest) {
+				throw new Error(
+					`Couldn't reach GitHub to look up the newest ${result.channel} release.`,
+				);
+			}
+			return result;
+		} finally {
+			checking = false;
+		}
+	}
+
+	function handleCheck() {
+		return toast.promise(checkCallback(), {
+			error: (error) => toastError(error, "Couldn't check for updates"),
+			loading: "Checking for updates",
+			success: (result) =>
+				result.updateAvailable && result.latest
+					? `v${result.latest.version} is available`
+					: `v${result.current} is the newest ${result.channel} release`,
+		});
+	}
+
 	function handleUpdate() {
 		return toast.promise(updateCallback(), {
 			error: (error) => toastError(error, "Couldn't start the update"),
@@ -100,29 +131,72 @@
       <span class="truncate">v{latest.version} is available</span>
     </button>
   {/if}
-  <p class="text-text-subtle font-mono text-[0.6875rem]">
-    {#if version.current}
-      v{version.current}
-    {:else}
-      &nbsp;
-    {/if}
-  </p>
+  {#if admin}
+    <button
+      class="text-text-subtle hover:text-text font-mono text-[0.6875rem] transition-colors"
+      onclick={() => {
+        open = true;
+      }}
+      title="Update status"
+      type="button"
+    >
+      {#if version.current}
+        v{version.current}
+      {:else}
+        &nbsp;
+      {/if}
+    </button>
+  {:else}
+    <p class="text-text-subtle font-mono text-[0.6875rem]">
+      {#if version.current}
+        v{version.current}
+      {:else}
+        &nbsp;
+      {/if}
+    </p>
+  {/if}
 </div>
 
-{#if latest}
+{#if admin}
   <Dialog.Root bind:open>
     <Dialog.Content>
       <Dialog.Header>
-        <Dialog.Title>Update to v{latest.version}</Dialog.Title>
+        <Dialog.Title>
+          {latest ? `Update to v${latest.version}` : `Homerun v${version.current ?? ""}`}
+        </Dialog.Title>
         <Dialog.Description>
-          You're on v{version.current}.
-          <a class="text-accent underline" href={latest.url} rel="noreferrer" target="_blank">
-            Release notes
-          </a>
+          {#if latest}
+            You're on v{version.current}.
+            <a class="text-accent underline" href={latest.url} rel="noreferrer" target="_blank">
+              Release notes
+            </a>
+          {:else if status}
+            Following the {status.channel} channel.
+            {#if status.checkedAt}
+              Last checked {new Date(status.checkedAt).toLocaleString()}.
+            {/if}
+          {/if}
         </Dialog.Description>
       </Dialog.Header>
 
-      {#if updatingTo}
+      {#if !latest}
+        {#if release?.error}
+          <Alert title="Couldn't load the update status" variant="warning">
+            Try checking again.
+          </Alert>
+        {:else if !status}
+          <Skeleton class="h-10 w-full" />
+        {:else if status.latest}
+          <p class="text-text-muted flex items-center gap-2 text-sm">
+            <CircleCheck class="text-accent size-4 shrink-0" />
+            Up to date: v{status.latest.version} is the newest {status.channel} release.
+          </p>
+        {:else}
+          <Alert title="Couldn't reach GitHub" variant="warning">
+            The newest {status.channel} release couldn't be looked up. Check again in a moment.
+          </Alert>
+        {/if}
+      {:else if updatingTo}
         <Alert title="Updating to v{updatingTo}" variant="info">
           <span class="flex items-center gap-2">
             <Spinner class="size-3.5" />
@@ -170,7 +244,22 @@
         >
           Close
         </Button>
-        {#if !updatingTo && preflight?.current?.ready}
+        {#if !updatingTo}
+          <Button
+            disabled={checking}
+            onclick={handleCheck}
+            type="button"
+            variant={latest ? "outline" : "default"}
+          >
+            {#if checking}
+              <Spinner class="size-4" />
+            {:else}
+              <RefreshCw class="size-4" />
+            {/if}
+            Check for updates
+          </Button>
+        {/if}
+        {#if !updatingTo && latest && preflight?.current?.ready}
           <Button disabled={starting} onclick={handleUpdate} type="button">
             {#if starting}
               <Spinner class="size-4" />

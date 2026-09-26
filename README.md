@@ -81,10 +81,12 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   machines join as workers with one command; standalone (one container per
   service) stays available
 - **[Env vars & env files](docs/env-vars.md)**: key/value rows plus `.env` files
-  read off the host at each deploy
+  read off the host at each deploy, with a per-variable secret lock always
+  redacted for AI agents regardless of name
 - **[Smart service links](docs/env-vars.md)**: point a service at an existing
   Postgres, MySQL, Redis, Mongo, RabbitMQ or HTTP service and get the connection
-  URL, JDBC URL or one variable per value filled in for you
+  URL, JDBC URL or one variable per value filled in for you, unlink it later
+  with one click
 - **[Runtime options](docs/runtime-and-compute.md#runtime)**: entrypoint,
   command, custom labels, and (admin-only) added capabilities, device mappings
   and privileged mode
@@ -95,9 +97,9 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   [a web terminal](docs/observability.md#terminal)**: tail stdout/stderr or open
   an interactive shell into a running container from the browser
 - **[The services list](docs/services.md#the-services-list)**: server-side
-  search, filters and paging on every list page, a list/card toggle, and bulk
-  Start/Stop/Restart/Delete with a typed confirmation before anything
-  destructive
+  search, filters and paging on every list page, a list/card toggle, a
+  dependency-tree view across every service, and bulk Start/Stop/Restart/Delete
+  with a typed confirmation before anything destructive
 
 ### Stacks & templates
 
@@ -134,7 +136,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 
 - **[Storage volumes](docs/storage-volumes.md)**: bind mounts or Docker-managed
   volumes defined once, mounted into one or more services, read-write or
-  read-only
+  read-only, with a database or cache getting one at its data directory
+  automatically
 - **[S3 backups](docs/backups.md#s3-compatible-backups)**: scheduled or
   on-demand backups of both volume kinds to any S3-compatible endpoint, with
   optional service stop or a pre-backup command (`pg_dump`, `mysqldump`) for

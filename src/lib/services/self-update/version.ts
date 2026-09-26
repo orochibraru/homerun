@@ -55,7 +55,7 @@ function comparePrerelease(a: string | null, b: string | null): number {
  * Compares two version strings by major/minor/patch then prerelease
  * (a release beats any of its prereleases; two prereleases compare
  * lexically/numerically, except two main builds like `canary.N` and
- * `nightly.N`, which compare by run number alone). Returns -1/0/1, or null if either fails to parse.
+ * `nightly.N`, which compare by build number alone). Returns -1/0/1, or null if either fails to parse.
  */
 export function compareVersions(a: string, b: string): number | null {
 	const left = parseVersion(a);

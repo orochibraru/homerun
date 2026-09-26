@@ -63,7 +63,7 @@ var (
 	buildInputSchema = object{
 		"properties": object{
 			"bakeFile":     nullableString,
-			"bakeTarget":   object{"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$", "type": []string{"string", "null"}},
+			"buildTarget":  object{"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$", "type": []string{"string", "null"}},
 			"buildContext": nullableString,
 			"buildMethod":  object{"enum": append(toAny(Tools.BuildMethods), nil)},
 			"commit":       object{"pattern": "^[0-9a-f]{40}$", "type": []string{"string", "null"}},

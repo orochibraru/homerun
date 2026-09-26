@@ -1,8 +1,10 @@
 # Upgrading Homerun
 
-The sidebar shows the version you're running. Admins also see a notice there
-when a newer GitHub release exists (checked every ten minutes). Clicking it
-opens the update dialog:
+The sidebar shows the version you're running. Admins can click it any time to
+open an update-status dialog; a notice also appears there on its own when a
+newer GitHub release already exists (checked every ten minutes). A **Check for
+updates** button inside the dialog bypasses that ten-minute cache and asks
+GitHub right away. Once an update is available, the dialog behaves as follows:
 
 - It refuses while a deployment is queued or running, or while any other job
   (backup, cron job, cleanup) is running. Wait, then **Check again**.

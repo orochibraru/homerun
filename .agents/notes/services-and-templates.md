@@ -10,12 +10,25 @@ than in this one.
 
 A right-click on a service row offers **Link to…** and **group/ungroup**
 (`services/+page.server.ts`'s `link` and `group` actions). Linking writes the
-target's connection variables into the source's env — the same `buildLinkEnv`
-output the wizard's link picker produces, so a URL, a JDBC URL or separate vars
-depending on the target's image — and optionally puts both on one stack network,
-since two services only reach each other by slug once they share one. It moves
-them into whichever stack either is already in, and creates one named after the
-source otherwise.
+provider's connection variables into the consumer's env — the same
+`buildLinkEnv` output the wizard's link picker produces, so a URL, a JDBC URL or
+separate vars depending on the provider's image. Which side is which isn't just
+"the one you right-clicked": `$lib/service-link.ts`'s `linkRoles` makes a
+database or cache (`isDatabaseImage`) the provider whenever the other side isn't
+one too, whichever service you started from, so linking an app to a database
+from the app's own menu writes the database's vars into the app the same as
+doing it from the database's menu would. Linking also optionally puts both on
+one stack network, since two services only reach each other by slug once they
+share one, and moves them into whichever stack either is already in, creating
+one named after the source (not necessarily the consumer) when neither has one.
+
+**Unlinking** is the reverse, and lives in `$lib/service-graph.ts` rather than
+`service-link.ts`: `linkKeys(envVars, slug)` finds which of a consumer's own env
+vars point at a given provider's slug (via `hostsIn`, see A service's tabs in
+`routing.md` for the detection rule), and the `unlink` form action — on a
+service's own Overview tab, or a stack page's right-click **Unlink from** —
+deletes exactly those keys plus any of them marked in `secretEnvKeys`. It only
+ever touches the consumer, and only takes effect on its next deploy.
 
 ## Nested stacks and stack-scoped slugs
 
@@ -497,6 +510,27 @@ The picker merges into `envRows` through the same `mergeEnvRows` helper
 duplicated. It's a preview-then-add dialog, not an async mutation, which is why
 it's one of the documented `toast.success` exceptions rather than a promise
 toast.
+
+## Default data volume on create (`$lib/service-link.ts`'s `dataPathFor`, `$lib/services/default-volume.ts`)
+
+A database or cache created with no volume of its own now gets one anyway:
+`dataPathFor(image, tag)` (next to `detectLinkEngine`/`isDatabaseImage` in
+`service-link.ts`) maps an engine to where it keeps its data —
+`/var/lib/postgresql` on Postgres 18+ tags, `/var/lib/postgresql/data` before
+(the tag's own major, `17-alpine`/`latest-pg16`, no version parsed means
+newest), `/var/lib/mysql` for MySQL/MariaDB, `/data/db` for Mongo, `/data` for
+every Redis-compatible, `/var/lib/rabbitmq`, and `null` for memcached (nothing
+worth keeping) or any non-datastore image. `default-volume.ts`'s
+`attachDefaultDataVolume(svc, userId)` calls that, bails if it's `null` or
+`ServiceVolumeDTO.listForService` already returns a mount, and otherwise creates
+a `StorageVolumeDTO` named `<slug>-data` (`kind: "volume"`,
+`source: <slug>-data`) and `ServiceVolumeDTO.attach`es it read-write at that
+path. Called from every service-creation path that can produce a database:
+`services/new/+page.server.ts`'s wizard action, `POST /api/v1/services`, and
+both of `template-links.ts`'s creators (`createServiceFromTemplate` and
+`createLinkedServices`, so a linked companion like WordPress's MySQL gets one
+too). An existing service is never touched, mounting a volume on it later still
+starts from empty, same as any other first mount.
 
 ## Live progress: SSE, streams, and why not WebSockets
 
@@ -1026,13 +1060,17 @@ live), then `docker buildx bake --progress plain -f <file>` with
 conditional and a target with its own `output = ["type=registry"]` must still
 end up loaded under Homerun's tag (verified live: a target tagged
 `example.invalid/web` with a registry output loaded as
-`homerun-build-live-bake:1` and nothing was pushed). The bake target is
-validated against `bakeTargetPattern` (`internal/agent/builders.go`, compiled
-from `builder-tools.json`'s `bakeTargetPattern`, no leading dash, so it can't be
-read as a flag, no dots, since `--set a.b.tags` splits on the first dot). A
-failed build throws `BuildFailureMessage`: the exit code plus the last BuildKit
-`ERROR` line from the last 40 output lines, so the deployment error says why,
-not "see the log" (the agent returns no log at all).
+`homerun-build-live-bake:1` and nothing was pushed). The target lives in one
+field for both methods, `service.gitBuildTarget` (`buildTarget` on the worker's
+`BuildInput`, `BUILD_TARGET` in the builder container): the bake target for
+bake, the `--target` stage for a Dockerfile (omitted when empty, so the last
+stage builds). It is validated against `bakeTargetPattern`
+(`internal/agent/builders.go`, compiled from `builder-tools.json`'s
+`bakeTargetPattern`, no leading dash, so it can't be read as a flag, no dots,
+since `--set a.b.tags` splits on the first dot). A failed build throws
+`BuildFailureMessage`: the exit code plus the last BuildKit `ERROR` line from
+the last 40 output lines, so the deployment error says why, not "see the log"
+(the agent returns no log at all).
 
 None of the three tools ships an official CLI image, so the script downloads the
 pinned musl release binary from GitHub once per version into `/tools` and runs

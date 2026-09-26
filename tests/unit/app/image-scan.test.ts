@@ -229,7 +229,7 @@ describe("helper commands", () => {
 describe("buildScanTargets", () => {
 	const git = {
 		bakeFile: null,
-		bakeTarget: null,
+		buildTarget: null,
 		buildContext: null,
 		buildMethod: "dockerfile" as const,
 		dockerfilePath: null,

@@ -13,7 +13,7 @@ export type BuildServer = Exclude<RemoteExecutionTarget, { kind: "local" }>;
 
 export interface GitSource {
 	bakeFile: string | null;
-	bakeTarget: string | null;
+	buildTarget: string | null;
 	buildContext: string | null;
 	buildMethod: BuildMethod;
 	dockerfilePath: string | null;
@@ -72,7 +72,7 @@ export type DeployPlanService = Pick<
 	| "buildServerRemoteHostId"
 	| "buildSource"
 	| "gitBakeFile"
-	| "gitBakeTarget"
+	| "gitBuildTarget"
 	| "gitBuildContext"
 	| "gitBuildMethod"
 	| "gitDockerfilePath"
@@ -124,7 +124,7 @@ function resolveGitBuild(input: DeployPlanInput): GitBuildPlan {
 	}
 	const git: GitSource = {
 		bakeFile: service.gitBakeFile,
-		bakeTarget: service.gitBakeTarget,
+		buildTarget: service.gitBuildTarget,
 		buildContext: service.gitBuildContext,
 		buildMethod: service.gitBuildMethod,
 		dockerfilePath: service.gitDockerfilePath,

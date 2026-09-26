@@ -29,12 +29,15 @@ deletes it.
 A stack can be nested inside another, to any depth (a stack can't be nested
 inside itself or one of its own substacks, that's refused). A button on a
 stack's page starts a new one already nested there, with its slug pre-filled as
-`<parent slug>-<name>`; the page above a substack's title shows the path down to
-it, each part a link. A stack's **Settings** tab has a **Nested in** section to
-move it: pick a parent, or "None, a top-level stack" to lift it back out.
-Nesting is purely organizational: a substack keeps its own private network, and
-every service still reaches every other by slug whether they share a stack, sit
-in a parent/child pair, or don't share one at all.
+`<parent slug>-<name>`; the breadcrumbs show the whole path down to it
+(`Stacks › Streaming › Vortex`), on the stack's own pages and on every service
+inside it, each part a link. A stack's **Settings** tab has a **Nested in**
+section to move it: pick a parent, or "None, a top-level stack" to lift it back
+out. The same move is also a right-click away, as **Move into…**, on a stack row
+on `/stacks` or on a substack's heading on a stack page. Nesting is purely
+organizational: a substack keeps its own private network, and every service
+still reaches every other by slug whether they share a stack, sit in a
+parent/child pair, or don't share one at all.
 
 `/stacks` lists only top-level stacks, each with its own substack count;
 searching lists every stack regardless of nesting, so a substack is still
@@ -46,21 +49,31 @@ A stack's default tab shows every member service, across it and its substacks,
 as a dependency graph rather than a flat list, in either view:
 
 - **List view** is a tree: each service lists what it connects to underneath,
-  read from its env values naming another service's slug as a hostname (a
-  service-link env var, or one written by hand, `redis://:pw@vortex-redis:6379`
-  and `http://vortex-worker:8080` both count; `redis` alone or `redis.io`
-  wouldn't). Each substack gets its own indented section. A dependency outside
-  the stack is marked "in `<stack>`" or "no stack" rather than expanded further;
-  one already shown elsewhere in the tree is marked "shown above" instead of
-  repeating its own dependencies a second time.
+  read from its env values: a URL's host (`redis://:pw@vortex-redis:6379`, never
+  its password or path), a bare `host:port`, or a plain name only under a
+  variable that looks like it names a host (`*_HOST`, `*_URL`, `*_DSN`,
+  `*_BROKER`…) — so `POSTGRES_DB=vortex` no longer counts as pointing at a
+  service slugged `vortex`, only a value that actually names it as a host does.
+  Each substack gets its own indented section. A dependency outside the stack is
+  marked "in `<stack>`" or "no stack" rather than expanded further; one already
+  shown elsewhere in the tree is marked "shown above" instead of repeating its
+  own dependencies a second time. Right-click a service for **Unlink from**, a
+  submenu of what it points at; confirming lists the exact env vars it will
+  remove and takes effect on that service's next deploy.
 - **Card view** is an architecture diagram: each service is a card, consumers
   sit above what they use with an arrow between them, substacks are nested
   boxes, and anything the stack depends on outside itself sits in its own
-  "Outside this stack" box. Hovering a card highlights only its own arrows.
+  "Outside this stack" box. Hovering a card highlights only its own arrows. Drag
+  a card to untangle a crossing arrow — the layout is remembered in your browser
+  per stack, and **Reset layout** puts every card back where it started.
 
 Searching drops the graph for a flat, filtered list, since a matched subset
-doesn't have a tree worth drawing. A service's own Overview tab has the same
-**Connections** panel, just for that one service, see [Deploying](deploying.md).
+doesn't have a tree worth drawing. The **Architecture** switch next to the view
+toggle turns the graph off entirely, for a plain list or plain cards; your
+browser remembers the choice. On a phone, each tree row puts the full name on
+its own line, with the slug, labels and status underneath. A service's own
+Overview tab has the same **Connections** panel and unlink button, just for that
+one service, see [Deploying](deploying.md).
 
 `/stacks` has a search box, a sort (the same ones as services, plus **Most
 services**), a list/card view toggle, and a pager once you have more than a

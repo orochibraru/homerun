@@ -58,10 +58,11 @@ a blur/shadow stack, route it through a token here instead.
   goes in the layout's `skip` list. A page whose place in the hierarchy isn't
   its URL returns `crumbRoot` (a list of `{ href, label }`) from its `load` to
   stand in for the first segment: a service in a stack reads
-  `Stacks › <stack> › <service>` although its URL is `/services/<id>`. The
-  pane's `<main>` is `relative` so absolutely-positioned content (`sr-only`
-  spans) is contained by its scroll area instead of stretching the document into
-  a second scrollbar.
+  `Stacks › <parent stacks…> › <stack> › <service>` although its URL is
+  `/services/<id>`, and a nested stack's own pages list its parents the same
+  way. The pane's `<main>` is `relative` so absolutely-positioned content
+  (`sr-only` spans) is contained by its scroll area instead of stretching the
+  document into a second scrollbar.
 - **Colours come from palettes, and they have to move more than one variable, on
   the document root.** `/profile/appearance` picks a palette
   (`$lib/palettes.ts`: an accent plus five chart hues) or a custom accent;

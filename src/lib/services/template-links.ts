@@ -15,8 +15,10 @@ import {
 	fillSecretInEnv,
 	fillSecretInRuntime,
 	generateTemplateSecret,
+	secretEnvKeysOf,
 } from "$lib/template-secrets";
 import { CapacityService } from "./capacity.service.ts";
+import { attachDefaultDataVolume } from "./default-volume";
 import { DeploymentService } from "./deploy.service";
 
 const logger = new Logger("Templates");
@@ -32,6 +34,7 @@ export interface ResolvedTemplateLink {
 	memoryLimitMb: number | null;
 	restartPolicy: string;
 	runtime: ServiceRuntimeOptions;
+	secretEnvKeys: string[];
 	slug: string;
 	tag: string;
 	templateName: string;
@@ -106,6 +109,7 @@ export async function buildTemplateLinkContext(
 				linkedTemplate.linkedTemplateRuntime,
 				secret,
 			),
+			secretEnvKeys: secretEnvKeysOf(linkedTemplate.linkedTemplateEnvVars),
 			slug,
 			tag: linkedTemplate.linkedTemplateTag,
 			templateName: linkedTemplate.linkedTemplateName,
@@ -182,11 +186,14 @@ export async function createLinkedServices(
 			stackId: params.stackId,
 			restartPolicy: link.restartPolicy,
 			runtime: link.runtime,
+			secretEnvKeys: link.secretEnvKeys,
 			slug: link.slug,
 			tag: link.tag,
 			userId: params.userId,
 			image: link.image,
 		});
+		// oxlint-disable-next-line no-await-in-loop -- attached to the service just created, before the next one
+		await attachDefaultDataVolume(svc, params.userId);
 		created.push(svc);
 	}
 	return created;
@@ -253,10 +260,12 @@ export async function createServiceFromTemplate(
 		stackId: finalStackId,
 		restartPolicy: row.restartPolicy,
 		runtime: fillSecretInRuntime(template.runtimeOptions, secret),
+		secretEnvKeys: secretEnvKeysOf(row.envVars ?? {}),
 		slug,
 		tag: row.tag,
 		userId,
 	});
+	await attachDefaultDataVolume(svc, userId);
 
 	const linkedServices =
 		links.length > 0 && finalStackId

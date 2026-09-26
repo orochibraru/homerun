@@ -49,7 +49,7 @@ function mirroredSettings(parent: ServiceDTO) {
 		dnsResolvable: parent.dnsResolvable,
 		envVars: parent.envVars,
 		gitBakeFile: parent.gitBakeFile,
-		gitBakeTarget: parent.gitBakeTarget,
+		gitBuildTarget: parent.gitBuildTarget,
 		gitBuildContext: parent.gitBuildContext,
 		gitBuildMethod: parent.gitBuildMethod,
 		gitDockerfilePath: parent.gitDockerfilePath,

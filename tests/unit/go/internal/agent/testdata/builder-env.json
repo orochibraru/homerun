@@ -13,6 +13,30 @@
 				"PACK_VERSION=0.40.9",
 				"PACK_VOLUME_KEY=svc-1",
 				"RAILPACK_VERSION=0.39.0",
+				"BUILD_FILE=/workspace/repo/Dockerfile",
+				"BUILD_TARGET=server"
+			],
+			"input": {
+				"buildContext": null,
+				"buildTarget": " server ",
+				"method": "dockerfile",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-1:abc"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo",
+				"BUILD_METHOD=dockerfile",
+				"CACHE_PASSWORD=",
+				"CACHE_REF=",
+				"CACHE_REGISTRY=",
+				"CACHE_USERNAME=",
+				"IMAGE_TAG=svc-1:abc",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-1",
+				"RAILPACK_VERSION=0.39.0",
 				"BUILD_FILE=/workspace/repo/Dockerfile"
 			],
 			"input": {
@@ -86,11 +110,11 @@
 				"PACK_VOLUME_KEY=svc-2",
 				"RAILPACK_VERSION=0.39.0",
 				"BUILD_FILE=/workspace/repo/docker-bake.hcl",
-				"BAKE_TARGET=default"
+				"BUILD_TARGET=default"
 			],
 			"input": {
 				"bakeFile": null,
-				"bakeTarget": null,
+				"buildTarget": null,
 				"buildContext": null,
 				"method": "bake",
 				"repoDir": "/workspace/repo",
@@ -111,11 +135,11 @@
 				"PACK_VOLUME_KEY=svc-2",
 				"RAILPACK_VERSION=0.39.0",
 				"BUILD_FILE=/workspace/repo/srv/ci/bake.hcl",
-				"BAKE_TARGET=web"
+				"BUILD_TARGET=web"
 			],
 			"input": {
 				"bakeFile": "ci/bake.hcl",
-				"bakeTarget": "web",
+				"buildTarget": "web",
 				"buildContext": "/srv/",
 				"cacheRegistry": {
 					"password": "p4ss",
@@ -221,6 +245,16 @@
 	],
 	"errors": [
 		{
+			"error": "The build target a;b isn't valid, use letters, digits, dashes and underscores.",
+			"input": {
+				"buildContext": null,
+				"buildTarget": "a;b",
+				"method": "dockerfile",
+				"repoDir": "/workspace/repo",
+				"tag": "svc:1"
+			}
+		},
+		{
 			"error": "The build context can't leave the repository.",
 			"input": {
 				"buildContext": "../escape",
@@ -251,7 +285,7 @@
 		{
 			"error": "The bake target bad target! isn't valid, use letters, digits, dashes and underscores.",
 			"input": {
-				"bakeTarget": "bad target!",
+				"buildTarget": "bad target!",
 				"buildContext": null,
 				"method": "bake",
 				"repoDir": "/workspace/repo",

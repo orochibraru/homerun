@@ -2,6 +2,7 @@ export const REDACTED = "[redacted]";
 
 const ENV_MAP_KEYS = new Set(["envVars", "vars"]);
 const ARGV_KEYS = new Set(["command", "entrypoint"]);
+const SECRET_LIST_KEYS = ["secretEnvKeys", "secretKeys"];
 
 const SECRET_NAME_PARTS = new Set([
 	"APIKEY",
@@ -50,9 +51,27 @@ export function maskInlineSecrets(value: string): string {
 		.replace(SECRET_FLAG_RE, `$1${REDACTED}`);
 }
 
-/** One env var's value as an agent sees it: fully masked under a secret-looking name, otherwise only its inline secrets. */
-export function redactEnvValue(name: string, value: string): string {
-	return isSecretName(name) ? REDACTED : maskInlineSecrets(value);
+/** One env var's value as an agent sees it: fully masked under a secret-looking name or one the owner marked secret, otherwise only its inline secrets. */
+export function redactEnvValue(
+	name: string,
+	value: string,
+	secretKeys: ReadonlySet<string> = new Set(),
+): string {
+	return secretKeys.has(name) || isSecretName(name)
+		? REDACTED
+		: maskInlineSecrets(value);
+}
+
+/** The env var names an object marks secret, from its `secretEnvKeys` (a service) or `secretKeys` (a config's env group). */
+function markedSecret(value: Record<string, unknown>): Set<string> {
+	return new Set(
+		SECRET_LIST_KEYS.flatMap((key) => {
+			const list = value[key];
+			return Array.isArray(list)
+				? list.filter((item): item is string => typeof item === "string")
+				: [];
+		}),
+	);
 }
 
 /** An argv with the argument after a password flag, and every inline secret, masked. */
@@ -71,8 +90,8 @@ function redactArgv(argv: unknown[]): unknown[] {
 
 /**
  * A copy of an API body safe to hand an agent: env values masked by name
- * (secret-looking names fully, any other value only its URL passwords and
- * password flags), password arguments masked in commands, and every
+ * (secret-looking names and the ones marked secret next to them fully, any
+ * other value only its URL passwords and password flags), password arguments masked in commands, and every
  * encrypted `…Enc` field dropped, however deep they sit.
  */
 export function redactSecrets(value: unknown): unknown {
@@ -83,6 +102,7 @@ export function redactSecrets(value: unknown): unknown {
 		return value;
 	}
 	const out: Record<string, unknown> = {};
+	const secretKeys = markedSecret(value as Record<string, unknown>);
 	for (const [key, inner] of Object.entries(value)) {
 		if (key.endsWith("Enc")) {
 			continue;
@@ -92,7 +112,7 @@ export function redactSecrets(value: unknown): unknown {
 				Object.entries(inner).map(([name, envValue]) => [
 					name,
 					typeof envValue === "string"
-						? redactEnvValue(name, envValue)
+						? redactEnvValue(name, envValue, secretKeys)
 						: envValue,
 				]),
 			);
@@ -127,6 +147,7 @@ export function redactText(text: string): string {
 export function mergeEnvChanges(
 	sent: Record<string, unknown>,
 	stored: Record<string, string>,
+	secretKeys: ReadonlySet<string> = new Set(),
 ): Record<string, string> {
 	const merged = { ...stored };
 	for (const [name, value] of Object.entries(sent)) {
@@ -140,7 +161,10 @@ export function mergeEnvChanges(
 			continue;
 		}
 		const current = stored[name];
-		if (current === undefined || redactEnvValue(name, current) !== text) {
+		if (
+			current === undefined ||
+			redactEnvValue(name, current, secretKeys) !== text
+		) {
 			throw new Error(
 				`${name} still contains "${REDACTED}": send its real value, or leave it out to keep the stored one.`,
 			);

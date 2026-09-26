@@ -93,6 +93,7 @@ stdin
 stdout
 storages
 subcommand
+submenus?
 substacks?
 subuid
 sysctl
@@ -103,7 +104,7 @@ Trivy
 trustedOrigins
 uid
 Umami
-unlinking
+[Uu]nlinking
 unproxied
 unreferenced
 URIs

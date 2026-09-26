@@ -131,6 +131,45 @@ export function isDatabaseImage(image: string): boolean {
 	);
 }
 
+const DATA_PATHS: Partial<Record<LinkEngineId, string>> = {
+	mariadb: "/var/lib/mysql",
+	mongo: "/data/db",
+	mysql: "/var/lib/mysql",
+	rabbitmq: "/var/lib/rabbitmq",
+	redis: "/data",
+};
+
+/**
+ * Where a datastore image keeps its data, for the volume a new database or
+ * cache gets by default; null for anything else, memcached included (it
+ * holds nothing worth keeping). Postgres 18 moved its data under a
+ * versioned directory and wants `/var/lib/postgresql` mounted, while older
+ * majors still declare `/var/lib/postgresql/data` as their volume, so the
+ * tag decides (`17-alpine`, `latest-pg16`; no version means the newest).
+ */
+export function dataPathFor(image: string, tag: string): string | null {
+	const engine = detectLinkEngine(image).id;
+	if (engine !== "postgres") {
+		return DATA_PATHS[engine] ?? null;
+	}
+	const major = Number(/(?:^|pg)(\d+)/.exec(tag)?.[1] ?? Number.NaN);
+	return major < 18 ? "/var/lib/postgresql/data" : "/var/lib/postgresql";
+}
+
+/**
+ * Who gets the connection variables when `source` is linked to `target`: the
+ * source, unless it's a database or cache linked to something that isn't, in
+ * which case the app gets the database's URL rather than the other way round.
+ */
+export function linkRoles<T extends { image: string }>(
+	source: T,
+	target: T,
+): { consumer: T; provider: T } {
+	return isDatabaseImage(source.image) && !isDatabaseImage(target.image)
+		? { consumer: target, provider: source }
+		: { consumer: source, provider: target };
+}
+
 /**
  * Turns a service slug into an env var name prefix: uppercase, underscores for
  * anything non-alphanumeric, and `SVC_` prepended when it wouldn't start with a

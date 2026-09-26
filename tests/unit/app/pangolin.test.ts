@@ -62,7 +62,7 @@ interface StubResource {
 	mode?: string;
 	name: string;
 	resourceId: number;
-	sso?: boolean;
+	sso?: boolean | number;
 }
 
 interface StubWrite {
@@ -154,6 +154,9 @@ beforeEach(() => {
 			return new Response("<!doctype html><html>dashboard</html>", {
 				headers: { "content-type": "text/html" },
 			});
+		}
+		if (url.pathname === "/v1/org/org-1") {
+			return json({ data: { orgId: "org-1" }, success: true });
 		}
 		if (url.pathname === "/v1/org/org-1/sites") {
 			return pageOf(SITES, url, "sites");
@@ -379,8 +382,9 @@ describe("PangolinService.verifyConnection", () => {
 		expect(result.detail).toContain('site "site-23" found');
 		expect(result.detail).toContain("app.example.com routes under example.com");
 		expect(requested.filter((href) => href.includes("/sites"))).toHaveLength(3);
-		expect(requested[0]).toContain("page=1");
-		expect(requested[0]).toContain("pageSize=1000");
+		const sitesCall = requested.find((href) => href.includes("/sites"));
+		expect(sitesCall).toContain("page=1");
+		expect(sitesCall).toContain("pageSize=1000");
 	});
 
 	test("pages the domains endpoint by offset, not by page number", async () => {
@@ -401,7 +405,8 @@ describe("PangolinService.verifyConnection", () => {
 			token: "good-token",
 		});
 		expect(result.success).toBe(true);
-		expect(requested[0]).toContain("/v1/org/org-1/sites?");
+		expect(requested[0]).toEndWith("/v1/org/org-1");
+		expect(requested[1]).toContain("/v1/org/org-1/sites?");
 	});
 
 	test("fails on a site name that doesn't exist, and says what does", async () => {
@@ -427,6 +432,18 @@ describe("PangolinService.verifyConnection", () => {
 		expect(result.success).toBe(false);
 		expect(result.error).toContain("No registered Pangolin domain covers");
 		expect(result.error).toContain("example.com, other.test");
+	});
+
+	test("names a missing org instead of reporting empty lists", async () => {
+		const result = await PangolinService.verifyConnection({
+			baseDomain: "app.example.com",
+			baseUrl: BASE_URL,
+			orgId: "typo",
+			token: "good-token",
+		});
+		expect(result.success).toBe(false);
+		expect(result.error).toContain('Organization "typo" doesn\'t exist');
+		expect(requested.some((href) => href.includes("/sites"))).toBe(false);
 	});
 
 	test("surfaces the API's own message on a bad token", async () => {
@@ -501,7 +518,7 @@ describe("PangolinService idempotency", () => {
 
 	test("finds an existing resource regardless of hostname case, and skips an SSO write that changes nothing", async () => {
 		resources = [
-			{ fullDomain: "app.example.com", name: "app", resourceId: 7, sso: false },
+			{ fullDomain: "app.example.com", name: "app", resourceId: 7, sso: 0 },
 		];
 
 		const result = await PangolinService.syncDnsRecord("App.Example.com");

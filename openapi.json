@@ -127,6 +127,19 @@
 											"enum": ["stable", "canary", "nightly"],
 											"type": "string"
 										},
+										"checkedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"example": "2026-08-20T12:00:00.000Z",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "When the channel's newest release was last looked up"
+										},
 										"current": {
 											"description": "The running version",
 											"type": "string"
@@ -207,6 +220,7 @@
 									},
 									"required": [
 										"channel",
+										"checkedAt",
 										"current",
 										"latest",
 										"preflight",
@@ -1066,16 +1080,6 @@
 													}
 												]
 											},
-											"gitBakeTarget": {
-												"anyOf": [
-													{
-														"type": "string"
-													},
-													{
-														"type": "null"
-													}
-												]
-											},
 											"gitBuildContext": {
 												"anyOf": [
 													{
@@ -1096,6 +1100,16 @@
 													"paketo"
 												],
 												"type": "string"
+											},
+											"gitBuildTarget": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
 											},
 											"gitDockerfilePath": {
 												"anyOf": [
@@ -1388,6 +1402,12 @@
 												],
 												"type": "string"
 											},
+											"secretEnvKeys": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"slug": {
 												"type": "string"
 											},
@@ -1447,10 +1467,11 @@
 											"dnsResolvable",
 											"domains",
 											"envVars",
+											"secretEnvKeys",
 											"autoDeployOnPush",
 											"gitBakeFile",
 											"primaryDomain",
-											"gitBakeTarget",
+											"gitBuildTarget",
 											"gitBuildContext",
 											"gitBuildMethod",
 											"gitDockerfilePath",
@@ -1639,10 +1660,6 @@
 									"gitBakeFile": {
 										"type": "string"
 									},
-									"gitBakeTarget": {
-										"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$",
-										"type": "string"
-									},
 									"gitBuildContext": {
 										"type": "string"
 									},
@@ -1656,6 +1673,10 @@
 											"heroku",
 											"paketo"
 										],
+										"type": "string"
+									},
+									"gitBuildTarget": {
+										"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$",
 										"type": "string"
 									},
 									"gitDockerfilePath": {
@@ -1989,16 +2010,6 @@
 												}
 											]
 										},
-										"gitBakeTarget": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"gitBuildContext": {
 											"anyOf": [
 												{
@@ -2019,6 +2030,16 @@
 												"paketo"
 											],
 											"type": "string"
+										},
+										"gitBuildTarget": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"gitDockerfilePath": {
 											"anyOf": [
@@ -2306,6 +2327,12 @@
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
+										"secretEnvKeys": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"slug": {
 											"type": "string"
 										},
@@ -2365,10 +2392,11 @@
 										"dnsResolvable",
 										"domains",
 										"envVars",
+										"secretEnvKeys",
 										"autoDeployOnPush",
 										"gitBakeFile",
 										"primaryDomain",
-										"gitBakeTarget",
+										"gitBuildTarget",
 										"gitBuildContext",
 										"gitBuildMethod",
 										"gitDockerfilePath",
@@ -2860,16 +2888,6 @@
 												}
 											]
 										},
-										"gitBakeTarget": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"gitBuildContext": {
 											"anyOf": [
 												{
@@ -2890,6 +2908,16 @@
 												"paketo"
 											],
 											"type": "string"
+										},
+										"gitBuildTarget": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"gitDockerfilePath": {
 											"anyOf": [
@@ -3177,6 +3205,12 @@
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
+										"secretEnvKeys": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"slug": {
 											"type": "string"
 										},
@@ -3236,10 +3270,11 @@
 										"dnsResolvable",
 										"domains",
 										"envVars",
+										"secretEnvKeys",
 										"autoDeployOnPush",
 										"gitBakeFile",
 										"primaryDomain",
-										"gitBakeTarget",
+										"gitBuildTarget",
 										"gitBuildContext",
 										"gitBuildMethod",
 										"gitDockerfilePath",
@@ -3472,17 +3507,6 @@
 											}
 										]
 									},
-									"gitBakeTarget": {
-										"anyOf": [
-											{
-												"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$",
-												"type": "string"
-											},
-											{
-												"type": "null"
-											}
-										]
-									},
 									"gitBuildContext": {
 										"anyOf": [
 											{
@@ -3503,6 +3527,17 @@
 											"paketo"
 										],
 										"type": "string"
+									},
+									"gitBuildTarget": {
+										"anyOf": [
+											{
+												"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$",
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
 									},
 									"gitDockerfilePath": {
 										"anyOf": [
@@ -3908,16 +3943,6 @@
 												}
 											]
 										},
-										"gitBakeTarget": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"gitBuildContext": {
 											"anyOf": [
 												{
@@ -3938,6 +3963,16 @@
 												"paketo"
 											],
 											"type": "string"
+										},
+										"gitBuildTarget": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"gitDockerfilePath": {
 											"anyOf": [
@@ -4225,6 +4260,12 @@
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
+										"secretEnvKeys": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"slug": {
 											"type": "string"
 										},
@@ -4284,10 +4325,11 @@
 										"dnsResolvable",
 										"domains",
 										"envVars",
+										"secretEnvKeys",
 										"autoDeployOnPush",
 										"gitBakeFile",
 										"primaryDomain",
-										"gitBakeTarget",
+										"gitBuildTarget",
 										"gitBuildContext",
 										"gitBuildMethod",
 										"gitDockerfilePath",
@@ -4494,6 +4536,12 @@
 													},
 													"type": "array"
 												},
+												"secretKeys": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
 												"vars": {
 													"additionalProperties": {
 														"type": "string"
@@ -4504,7 +4552,7 @@
 													"type": "object"
 												}
 											},
-											"required": ["files", "vars"],
+											"required": ["files", "secretKeys", "vars"],
 											"type": "object"
 										},
 										"id": {
@@ -4849,16 +4897,6 @@
 																		}
 																	]
 																},
-																"bakeTarget": {
-																	"anyOf": [
-																		{
-																			"type": "string"
-																		},
-																		{
-																			"type": "null"
-																		}
-																	]
-																},
 																"buildCacheRegistryId": {
 																	"anyOf": [
 																		{
@@ -4883,6 +4921,16 @@
 																	"type": "string"
 																},
 																"buildServerRemoteHostId": {
+																	"anyOf": [
+																		{
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"buildTarget": {
 																	"anyOf": [
 																		{
 																			"type": "string"
@@ -4941,7 +4989,7 @@
 															"required": [
 																"autoDeployOnPush",
 																"bakeFile",
-																"bakeTarget",
+																"buildTarget",
 																"buildCacheRegistryId",
 																"buildContext",
 																"buildMethod",

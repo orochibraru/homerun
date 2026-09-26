@@ -38,8 +38,8 @@ func ParseVersion(input string) (Version, bool) {
 // IsNewer reports whether candidate is a strictly newer version than
 // current: a release outranks its own prereleases, and prereleases compare
 // identifier by identifier, numbers numerically (canary.10 after canary.9).
-// Two main builds (canary.N, nightly.N) compare by run number alone, since
-// both channels stamp the same publish run's number.
+// Two main builds (canary.N, nightly.N) compare by build number alone, since
+// both channels stamp the commit count of the same push to main.
 // False when either doesn't parse, so a dev build never "updates" anywhere.
 func IsNewer(candidate, current string) bool {
 	left, okLeft := ParseVersion(candidate)

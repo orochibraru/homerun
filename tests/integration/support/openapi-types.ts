@@ -569,6 +569,8 @@ export interface operations {
 						 * @enum {string}
 						 */
 						channel: "stable" | "canary" | "nightly";
+						/** @description When the channel's newest release was last looked up */
+						checkedAt: string | null;
 						/** @description The running version */
 						current: string;
 						/** @description The newest release on the channel, null when it couldn't be checked */
@@ -976,7 +978,6 @@ export interface operations {
 							[key: string]: string;
 						};
 						gitBakeFile: string | null;
-						gitBakeTarget: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
 						gitBuildMethod:
@@ -986,6 +987,7 @@ export interface operations {
 							| "railpack"
 							| "heroku"
 							| "paketo";
+						gitBuildTarget: string | null;
 						gitDockerfilePath: string | null;
 						gitLastSeenCommit: string | null;
 						gitPollEnabled: boolean;
@@ -1035,6 +1037,7 @@ export interface operations {
 						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
 						tag: string;
@@ -1107,7 +1110,6 @@ export interface operations {
 						[key: string]: string;
 					};
 					gitBakeFile?: string;
-					gitBakeTarget?: string;
 					gitBuildContext?: string;
 					/**
 					 * @default dockerfile
@@ -1120,6 +1122,7 @@ export interface operations {
 						| "railpack"
 						| "heroku"
 						| "paketo";
+					gitBuildTarget?: string;
 					gitDockerfilePath?: string;
 					gitProviderId?: string;
 					gitRef?: string;
@@ -1213,7 +1216,6 @@ export interface operations {
 							[key: string]: string;
 						};
 						gitBakeFile: string | null;
-						gitBakeTarget: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
 						gitBuildMethod:
@@ -1223,6 +1225,7 @@ export interface operations {
 							| "railpack"
 							| "heroku"
 							| "paketo";
+						gitBuildTarget: string | null;
 						gitDockerfilePath: string | null;
 						gitLastSeenCommit: string | null;
 						gitPollEnabled: boolean;
@@ -1272,6 +1275,7 @@ export interface operations {
 						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
 						tag: string;
@@ -1407,7 +1411,6 @@ export interface operations {
 							[key: string]: string;
 						};
 						gitBakeFile: string | null;
-						gitBakeTarget: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
 						gitBuildMethod:
@@ -1417,6 +1420,7 @@ export interface operations {
 							| "railpack"
 							| "heroku"
 							| "paketo";
+						gitBuildTarget: string | null;
 						gitDockerfilePath: string | null;
 						gitLastSeenCommit: string | null;
 						gitPollEnabled: boolean;
@@ -1466,6 +1470,7 @@ export interface operations {
 						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
 						tag: string;
@@ -1614,7 +1619,6 @@ export interface operations {
 						[key: string]: string;
 					};
 					gitBakeFile?: string | null;
-					gitBakeTarget?: string | null;
 					gitBuildContext?: string | null;
 					/** @enum {string} */
 					gitBuildMethod?:
@@ -1624,6 +1628,7 @@ export interface operations {
 						| "railpack"
 						| "heroku"
 						| "paketo";
+					gitBuildTarget?: string | null;
 					gitDockerfilePath?: string | null;
 					gitPollEnabled?: boolean;
 					gitProviderId?: string | null;
@@ -1715,7 +1720,6 @@ export interface operations {
 							[key: string]: string;
 						};
 						gitBakeFile: string | null;
-						gitBakeTarget: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
 						gitBuildMethod:
@@ -1725,6 +1729,7 @@ export interface operations {
 							| "railpack"
 							| "heroku"
 							| "paketo";
+						gitBuildTarget: string | null;
 						gitDockerfilePath: string | null;
 						gitLastSeenCommit: string | null;
 						gitPollEnabled: boolean;
@@ -1774,6 +1779,7 @@ export interface operations {
 						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
 						tag: string;
@@ -1865,6 +1871,7 @@ export interface operations {
 						};
 						env: {
 							files: string[];
+							secretKeys: string[];
 							vars: {
 								[key: string]: string;
 							};
@@ -1934,11 +1941,11 @@ export interface operations {
 							git: {
 								autoDeployOnPush: boolean;
 								bakeFile: string | null;
-								bakeTarget: string | null;
 								buildCacheRegistryId: string | null;
 								buildContext: string | null;
 								buildMethod: string;
 								buildServerRemoteHostId: string | null;
+								buildTarget: string | null;
 								dockerfilePath: string | null;
 								pollEnabled: boolean;
 								previewsEnabled: boolean;

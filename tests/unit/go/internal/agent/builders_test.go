@@ -14,7 +14,7 @@ type envCase struct {
 	Env   []string `json:"env"`
 	Input struct {
 		BakeFile      *string `json:"bakeFile"`
-		BakeTarget    *string `json:"bakeTarget"`
+		BuildTarget   *string `json:"buildTarget"`
 		BuildContext  *string `json:"buildContext"`
 		CacheRegistry *struct {
 			Password    string `json:"password"`
@@ -41,7 +41,7 @@ func deref(value *string) string {
 func (c envCase) builderInput() agent.BuilderInput {
 	input := agent.BuilderInput{
 		BakeFile:       deref(c.Input.BakeFile),
-		BakeTarget:     deref(c.Input.BakeTarget),
+		BuildTarget:    deref(c.Input.BuildTarget),
 		BuildContext:   deref(c.Input.BuildContext),
 		DockerfilePath: deref(c.Input.DockerfilePath),
 		Method:         c.Input.Method,

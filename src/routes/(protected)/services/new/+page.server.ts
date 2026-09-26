@@ -19,6 +19,7 @@ import {
 	parseEnvVars,
 } from "$lib/server/validation/service";
 import { CapacityService } from "$lib/services/capacity.service";
+import { attachDefaultDataVolume } from "$lib/services/default-volume";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
@@ -33,6 +34,7 @@ import {
 	fillSecretInEnv,
 	fillSecretInRuntime,
 	generateTemplateSecret,
+	secretEnvKeysOf,
 	submittedSecret,
 } from "$lib/template-secrets";
 
@@ -52,7 +54,7 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 		return {
 			autoDeployOnPush: false,
 			gitBakeFile: null,
-			gitBakeTarget: null,
+			gitBuildTarget: null,
 			gitBuildContext: null,
 			gitBuildMethod: "dockerfile" as const,
 			gitDockerfilePath: null,
@@ -67,7 +69,7 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 	return {
 		autoDeployOnPush: input.autoDeployOnPush,
 		gitBakeFile: input.gitBakeFile || null,
-		gitBakeTarget: input.gitBakeTarget || null,
+		gitBuildTarget: input.gitBuildTarget || null,
 		gitBuildContext: input.gitBuildContext || null,
 		gitBuildMethod: input.gitBuildMethod,
 		gitDockerfilePath: input.gitDockerfilePath || null,
@@ -417,7 +419,7 @@ async function createServiceFromForm(
 			failure: fail(400, {
 				errors: {
 					authRequired: [
-						"Set Origin under Settings → General first : the login wall sends visitors to this instance's sign-in page, so Homerun has to know its own public URL.",
+						"Set the Dashboard URL under Settings → General first : the login wall sends visitors to this instance's sign-in page, so Homerun has to know its own public URL.",
 					],
 				},
 				values: Object.fromEntries(formData),
@@ -458,6 +460,9 @@ async function createServiceFromForm(
 		cpuLimit: input.cpuLimit || null,
 		dnsResolvable: input.dnsResolvable,
 		envVars,
+		secretEnvKeys: secretEnvKeysOf(template?.toJSON().envVars ?? {}).filter(
+			(key) => key in envVars,
+		),
 		healthcheckCommand:
 			input.healthcheckCommand || template?.healthcheckCommand || null,
 		memoryLimitMb: input.memoryLimitMb ?? null,
@@ -482,6 +487,7 @@ async function createServiceFromForm(
 	});
 
 	await attachVolumeMounts(volumes.mounts, svc, userId);
+	await attachDefaultDataVolume(svc, userId);
 
 	announceCreated(svc, input, userId);
 

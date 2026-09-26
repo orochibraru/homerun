@@ -1,9 +1,15 @@
 <script lang="ts">
-	import { ArrowRight, Server } from "@lucide/svelte";
+	import { ArrowRight, Server, Unlink } from "@lucide/svelte";
 	import { resolve } from "$app/paths";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import UnlinkDialog, {
+		type UnlinkTarget,
+	} from "$lib/components/unlink-dialog.svelte";
 
 	interface Node {
 		id: string;
+		/** The env vars carrying the link: in this service for a dependency, in the other one for a consumer. */
+		keys: string[];
 		name: string;
 		slug: string;
 	}
@@ -11,27 +17,56 @@
 	interface Props {
 		dependsOn: Node[];
 		name: string;
+		serviceId: string;
 		usedBy: Node[];
 	}
 
-	const { name, dependsOn, usedBy }: Props = $props();
+	const { name, dependsOn, serviceId, usedBy }: Props = $props();
+
+	let unlinkOpen = $state(false);
+	let unlink = $state<UnlinkTarget | null>(null);
+
+	function askUnlink(item: Node, direction: "dependsOn" | "usedBy") {
+		const self = { id: serviceId, name };
+		const other = { id: item.id, name: item.name };
+		unlink =
+			direction === "dependsOn"
+				? { from: self, keys: item.keys, to: other }
+				: { from: other, keys: item.keys, to: self };
+		unlinkOpen = true;
+	}
 </script>
 
-{#snippet node(item: Node)}
-    <a
-        class="border-border bg-surface-2 hover:border-accent/50 flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors"
-        href="{resolve('/services')}/{item.id}"
+{#snippet node(item: Node, direction: "dependsOn" | "usedBy")}
+    <div
+        class="border-border bg-surface-2 hover:border-accent/50 flex items-center gap-1 rounded-lg border pr-1 transition-colors"
     >
-        <Server class="text-text-subtle size-3.5 shrink-0" />
-        <span class="min-w-0">
-            <span class="text-text block truncate text-xs font-medium"
-                >{item.name}</span
-            >
-            <span class="text-text-subtle block truncate text-[0.6875rem]"
-                >{item.slug}</span
-            >
-        </span>
-    </a>
+        <a
+            class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2"
+            href="{resolve('/services')}/{item.id}"
+            title="Through {item.keys.join(', ')}"
+        >
+            <Server class="text-text-subtle size-3.5 shrink-0" />
+            <span class="min-w-0">
+                <span class="text-text block truncate text-xs font-medium"
+                    >{item.name}</span
+                >
+                <span class="text-text-subtle block truncate text-[0.6875rem]"
+                    >{item.slug}</span
+                >
+            </span>
+        </a>
+        <Button
+            aria-label="Unlink {item.name}"
+            class="text-text-subtle hover:text-red-500 shrink-0"
+            onclick={() => askUnlink(item, direction)}
+            size="icon-sm"
+            title="Unlink"
+            variant="ghost"
+        >
+            <Unlink class="size-3.5" />
+        </Button>
+    </div>
 {/snippet}
 
 <section class="panel rounded-xl">
@@ -57,7 +92,7 @@
                         Needs
                     </p>
                     {#each dependsOn as item (item.id)}
-                        {@render node(item)}
+                        {@render node(item, "dependsOn")}
                     {/each}
                 {/if}
             </div>
@@ -87,10 +122,12 @@
                         Used by
                     </p>
                     {#each usedBy as item (item.id)}
-                        {@render node(item)}
+                        {@render node(item, "usedBy")}
                     {/each}
                 {/if}
             </div>
         </div>
     {/if}
 </section>
+
+<UnlinkDialog link={unlink} bind:open={unlinkOpen} />

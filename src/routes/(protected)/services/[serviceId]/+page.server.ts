@@ -6,7 +6,7 @@ import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
-import { referencesHost } from "$lib/service-graph";
+import { linkKeys } from "$lib/service-graph";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
@@ -28,21 +28,23 @@ export const load = async ({ params, parent }) => {
 		ServiceDTO.list(),
 	]);
 
-	const references = (
-		from: { envVars: Record<string, string> | null },
-		slug: string,
-	) =>
-		Object.values(from.envVars ?? {}).some((value) =>
-			referencesHost(value, slug),
-		);
-
 	const others = siblings.filter((other) => other.id !== params.serviceId);
 	const dependsOn = others
-		.filter((other) => references(svc, other.slug))
-		.map((other) => ({ id: other.id, name: other.name, slug: other.slug }));
+		.map((other) => ({
+			id: other.id,
+			keys: linkKeys(svc.envVars, other.slug),
+			name: other.name,
+			slug: other.slug,
+		}))
+		.filter((other) => other.keys.length > 0);
 	const usedBy = others
-		.filter((other) => references(other, svc.slug))
-		.map((other) => ({ id: other.id, name: other.name, slug: other.slug }));
+		.map((other) => ({
+			id: other.id,
+			keys: linkKeys(other.envVars, svc.slug),
+			name: other.name,
+			slug: other.slug,
+		}))
+		.filter((other) => other.keys.length > 0);
 
 	return {
 		dependsOn,
@@ -52,6 +54,40 @@ export const load = async ({ params, parent }) => {
 };
 
 export const actions = {
+	/**
+	 * Unlinks this service from `targetId`: drops every env var whose value
+	 * points at the target's host (and its secret mark), so the two stop
+	 * showing as connected. Applied on the next deploy, like any env change.
+	 */
+	unlink: async ({ params, locals, request }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const targetId = (await request.formData()).get("targetId");
+		const [svc, target] = await Promise.all([
+			ServiceDTO.get(params.serviceId),
+			typeof targetId === "string" ? ServiceDTO.get(targetId) : null,
+		]);
+		if (!(svc && target)) {
+			return fail(404, { error: "Service not found." });
+		}
+		const removed = linkKeys(svc.envVars, target.slug);
+		if (removed.length === 0) {
+			return fail(400, {
+				error: `${svc.name} doesn't point at ${target.name}.`,
+			});
+		}
+		await svc.update({
+			envVars: Object.fromEntries(
+				Object.entries(svc.envVars).filter(([key]) => !removed.includes(key)),
+			),
+			secretEnvKeys: svc.secretEnvKeys.filter((key) => !removed.includes(key)),
+		});
+		logger.info(
+			`Service unlinked: service=${svc.id} target=${target.id} vars=${removed.join(",")} user=${locals.user.id}`,
+		);
+		return { removed, success: true };
+	},
 	deploy: async ({ params, locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

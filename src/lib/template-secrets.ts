@@ -22,6 +22,13 @@ export function fillSecretInEnv(
 	);
 }
 
+/** The env var names a template fills from `{{secret}}`, which start out marked secret on the service it creates. */
+export function secretEnvKeysOf(templateEnv: Record<string, string>): string[] {
+	return Object.keys(templateEnv).filter((key) =>
+		templateEnv[key]?.includes(SECRET_TOKEN),
+	);
+}
+
 /** `runtime` with every `{{secret}}` in its command and entrypoint replaced by `secret`. */
 export function fillSecretInRuntime(
 	runtime: ServiceRuntimeOptions,

@@ -2,6 +2,7 @@
 	import {
 		CloudOff,
 		CloudUpload,
+		FolderOpen,
 		HardDrive,
 		Plus,
 		Trash2,
@@ -161,6 +162,16 @@
     </EmptyState>
   {:else}
     {#snippet volActions(vol: (typeof data.volumes)[number])}
+      <Button
+        href={resolve("/(protected)/storage/[volumeId]/files", {
+          volumeId: vol.id,
+        })}
+        size="icon-sm"
+        title="Browse files"
+        variant="ghost"
+      >
+        <FolderOpen class="size-4" />
+      </Button>
       <Button
         href={resolve("/(protected)/storage/[volumeId]", {
           volumeId: vol.id,

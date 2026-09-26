@@ -138,8 +138,8 @@ func validateBuildInput(input BuildInput) []httpapi.ValidationIssue {
 	if input.BuildMethod != nil && *input.BuildMethod != "" && !IsBuildMethod(*input.BuildMethod) {
 		add(fmt.Sprintf("buildMethod must be one of %s", strings.Join(Tools.BuildMethods, ", ")), "buildMethod")
 	}
-	if input.BakeTarget != nil && *input.BakeTarget != "" && !bakeTargetPattern.MatchString(*input.BakeTarget) {
-		add("bakeTarget must be a plain target name", "bakeTarget")
+	if input.BuildTarget != nil && *input.BuildTarget != "" && !bakeTargetPattern.MatchString(*input.BuildTarget) {
+		add("buildTarget must be a plain target name", "buildTarget")
 	}
 	if input.Credential != nil && input.Credential.Token == "" {
 		add("credential.token is required", "credential", "token")

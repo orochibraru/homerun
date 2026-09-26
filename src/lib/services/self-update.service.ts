@@ -65,6 +65,7 @@ export interface UpdateProgress {
 
 export interface ReleaseStatus {
 	channel: UpdateChannel;
+	checkedAt: string | null;
 	current: string;
 	latest: LatestRelease | null;
 	updateAvailable: boolean;
@@ -89,7 +90,7 @@ class SelfUpdateServiceClass {
 	readonly currentVersion = normalizeVersion(APP_VERSION) ?? APP_VERSION;
 	readonly #release = new Map<
 		UpdateChannel,
-		{ expiresAt: number; value: LatestRelease | null }
+		{ checkedAt: number; expiresAt: number; value: LatestRelease | null }
 	>();
 	readonly #inFlightRelease = new Map<
 		UpdateChannel,
@@ -171,6 +172,7 @@ class SelfUpdateServiceClass {
 				version,
 			};
 			this.#release.set(channel, {
+				checkedAt: Date.now(),
 				expiresAt: Date.now() + RELEASE_CACHE_MS,
 				value,
 			});
@@ -178,6 +180,7 @@ class SelfUpdateServiceClass {
 		} catch (err) {
 			logger.warn("Couldn't check for a newer release", err);
 			this.#release.set(channel, {
+				checkedAt: Date.now(),
 				expiresAt: Date.now() + RELEASE_FAILURE_CACHE_MS,
 				value: null,
 			});
@@ -189,13 +192,21 @@ class SelfUpdateServiceClass {
 	 * The current vs. latest version on the configured channel and whether an
 	 * update is available. Only a strictly newer version counts, so an
 	 * instance switched to a more stable channel sees nothing until that
-	 * channel has a release newer than the one it runs.
+	 * channel has a release newer than the one it runs. `fresh` skips the
+	 * cached answer and asks GitHub again, for the "Check for updates" button.
 	 */
-	async releaseStatus(): Promise<ReleaseStatus> {
+	async releaseStatus(
+		options: { fresh?: boolean } = {},
+	): Promise<ReleaseStatus> {
 		const { updateChannel: channel } = await InstanceSettingsDTO.get();
+		if (options.fresh && !this.#inFlightRelease.has(channel)) {
+			this.#release.delete(channel);
+		}
 		const latest = await this.latestRelease(channel);
+		const checkedAt = this.#release.get(channel)?.checkedAt;
 		return {
 			channel,
+			checkedAt: checkedAt ? new Date(checkedAt).toISOString() : null,
 			current: this.currentVersion,
 			latest,
 			updateAvailable:

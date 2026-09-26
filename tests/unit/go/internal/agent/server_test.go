@@ -149,7 +149,7 @@ func TestBuildRouteValidatesTheBody(t *testing.T) {
 		"missing fields":  `{}`,
 		"short commit":    `{"gitUrl":"g","tag":"t","commit":"abc"}`,
 		"unknown method":  `{"gitUrl":"g","tag":"t","buildMethod":"compose"}`,
-		"shell in target": `{"gitUrl":"g","tag":"t","bakeTarget":"a;b"}`,
+		"shell in target": `{"gitUrl":"g","tag":"t","buildTarget":"a;b"}`,
 		"empty token":     `{"gitUrl":"g","tag":"t","credential":{"username":"u","token":""}}`,
 		"incomplete push": `{"gitUrl":"g","tag":"t","push":{"username":"u","password":"p"}}`,
 	}

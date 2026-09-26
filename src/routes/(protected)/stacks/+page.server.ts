@@ -19,6 +19,7 @@ export const load = async ({ parent, url }) => {
 	}));
 
 	return {
+		allStacks: nodes,
 		filtered: query.active,
 		page: paged.page,
 		perPage: paged.perPage,

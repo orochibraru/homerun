@@ -209,13 +209,28 @@ route source. Three things it settled, all of which matter:
   self-hosted instance wouldn't know `mode`, and strict parsing would reject it.
 
 `verifyConnection` deliberately checks the **whole** configuration, not just
-that the token authenticates: the named site must exist and one of the org's
-registered domains must cover this instance's `baseDomain`, since without either
-no resource can ever be created. The old version listed sites and called it a
-pass, which is how a setup that could never work reported "Org access verified".
-`tests/unit/app/pangolin.test.ts` drives all of this against a stubbed API that
-caps pages at 10 rows regardless of the requested size, so a client that stops
-after page one fails the test.
+that the token authenticates: it first confirms the org itself exists
+(`GET /org/{orgId}`, a 404 reported directly as
+`Organization "X" doesn't exist…` rather than falling through), since Pangolin
+answers a _list_ call for an unknown org with an empty 200 — a typo'd org ID
+used to surface three steps later as "no registered domain", which reads like a
+domain problem, not an org one. It then confirms the named site exists and one
+of the org's registered domains covers this instance's `baseDomain`, since
+without either no resource can ever be created. The old version listed sites and
+called it a pass, which is how a setup that could never work reported "Org
+access verified". `tests/unit/app/pangolin.test.ts` drives all of this against a
+stubbed API that caps pages at 10 rows regardless of the requested size, so a
+client that stops after page one fails the test.
+
+**Live-verified, not just built from the docs and offline audit below**:
+Pangolin's side ran against a real `homelab` org, site `homerun-live-test`,
+domain `chibre.space`, and passed end to end. That run also caught a real bug
+the offline audit's stub didn't: `/resources`' list endpoint reports `sso` as
+`0`/`1`, not a JSON boolean, so `healResource`'s `resource.sso !== sso` never
+matched and re-wrote the flag on every single deploy. `sso` is now
+`boolean | number` on `PangolinResource` and compared with
+`Boolean(resource.sso) !== sso`. Cloudflare hasn't been tried against a real
+account yet, see the note at the end of this section.
 
 Both integrations can also be switched on from the onboarding wizard's DNS step
 (see `auth.md`'s Onboarding section). Its form parsing and Test connection

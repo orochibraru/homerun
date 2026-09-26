@@ -12,6 +12,7 @@ export const serviceConfigSchema = z.object({
 	}),
 	env: z.object({
 		files: z.array(z.string()),
+		secretKeys: z.array(z.string()),
 		vars: z.record(z.string(), z.string()),
 	}),
 	id: z.string(),
@@ -73,7 +74,7 @@ export const serviceConfigSchema = z.object({
 			.object({
 				autoDeployOnPush: z.boolean(),
 				bakeFile: z.string().nullable(),
-				bakeTarget: z.string().nullable(),
+				buildTarget: z.string().nullable(),
 				buildCacheRegistryId: z.string().nullable(),
 				buildContext: z.string().nullable(),
 				buildMethod: z.string(),
@@ -137,7 +138,11 @@ export function serviceConfig(
 			replicas: row.replicas,
 			restartPolicy: row.restartPolicy,
 		},
-		env: { files: row.envFiles, vars: row.envVars ?? {} },
+		env: {
+			files: row.envFiles,
+			secretKeys: row.secretEnvKeys,
+			vars: row.envVars ?? {},
+		},
 		id: row.id,
 		name: row.name,
 		networking: {
@@ -186,7 +191,7 @@ export function serviceConfig(
 					? {
 							autoDeployOnPush: row.autoDeployOnPush,
 							bakeFile: row.gitBakeFile,
-							bakeTarget: row.gitBakeTarget,
+							buildTarget: row.gitBuildTarget,
 							buildCacheRegistryId: row.buildCacheRegistryId,
 							buildContext: row.gitBuildContext,
 							buildMethod: row.gitBuildMethod,

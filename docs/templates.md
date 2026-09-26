@@ -21,6 +21,10 @@ can deploy from repeatedly without re-entering everything. Two kinds:
   files. Like every other resource, a custom template is shared with every
   account on the instance, see [Users and roles](users-and-roles.md).
 
+A database or cache deployed from a template, or pulled in as a linked
+container, gets its own data volume, see
+[Storage volumes](storage-volumes.md#a-databases-data-volume).
+
 ## Host access
 
 Privileged mode, devices, added capabilities and env files give a container

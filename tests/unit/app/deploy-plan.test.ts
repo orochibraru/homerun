@@ -33,7 +33,7 @@ function service(
 		buildServerRemoteHostId: null,
 		buildSource: "image",
 		gitBakeFile: null,
-		gitBakeTarget: null,
+		gitBuildTarget: null,
 		gitBuildContext: null,
 		gitBuildMethod: "dockerfile",
 		gitDockerfilePath: null,
@@ -165,7 +165,7 @@ describe("resolveDeployPlan, legal combinations", () => {
 			input({
 				service: gitService({
 					gitBakeFile: "build/docker-bake.json",
-					gitBakeTarget: "api",
+					gitBuildTarget: "api",
 					gitBuildMethod: "bake",
 				}),
 			}),
@@ -173,7 +173,7 @@ describe("resolveDeployPlan, legal combinations", () => {
 		expect(plan.image).toMatchObject({
 			git: {
 				bakeFile: "build/docker-bake.json",
-				bakeTarget: "api",
+				buildTarget: "api",
 				buildMethod: "bake",
 			},
 			kind: "local-build",
@@ -186,7 +186,7 @@ describe("resolveDeployPlan, legal combinations", () => {
 			cacheRegistry: null,
 			git: {
 				bakeFile: null,
-				bakeTarget: null,
+				buildTarget: null,
 				buildContext: null,
 				buildMethod: "dockerfile",
 				dockerfilePath: null,

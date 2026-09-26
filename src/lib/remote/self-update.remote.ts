@@ -20,6 +20,13 @@ export const getReleaseStatus = query(async (): Promise<ReleaseStatus> => {
 	return await SelfUpdateService.releaseStatus();
 });
 
+export const checkForUpdates = command(async (): Promise<ReleaseStatus> => {
+	requireAdmin();
+	const status = await SelfUpdateService.releaseStatus({ fresh: true });
+	await getReleaseStatus().refresh();
+	return status;
+});
+
 export const getUpdatePreflight = query(async (): Promise<UpdatePreflight> => {
 	requireAdmin();
 	return await SelfUpdateService.preflight();

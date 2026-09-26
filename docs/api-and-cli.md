@@ -161,7 +161,9 @@ read-only account or API key can diagnose but not change anything.
 Secrets don't reach the agent, the rest stays readable:
 
 - An env var whose name has a secret-looking part (`PASSWORD`, `SECRET`,
-  `TOKEN`, `KEY`, `CREDENTIAL`, `PRIVATE`, `SALT`…) shows as `[redacted]`.
+  `TOKEN`, `KEY`, `CREDENTIAL`, `PRIVATE`, `SALT`…), or one marked secret by
+  hand (see [Marking a variable secret](env-vars.md#marking-a-variable-secret)),
+  shows as `[redacted]` regardless of its name.
 - Any other value is shown as is, except a URL's password
   (`postgres://app:[redacted]@db:5432/app`).
 - A `--requirepass` or `--password` argument in a command is also redacted, in
@@ -171,11 +173,12 @@ Secrets don't reach the agent, the rest stays readable:
 change, `null` deletes one. Anything sent back exactly as the agent read it,
 redaction included, keeps its stored value, and a placeholder that matches
 nothing stored is refused rather than written. A secret under a name that
-doesn't look like one (`TMDB_API`) isn't caught, and an app that prints its own
-secrets in some other form still leaks them in its logs. To disconnect Claude,
-revoke it under Profile → Authorized Clients (it can't refresh its access any
-more, and the token it holds expires within the hour), or delete its app under
-Authentication → Sign in with Homerun to cut it off for everyone.
+doesn't look like one (`TMDB_API`) is caught only once you mark it secret on the
+Env vars tab; an app that prints its own secrets in some other form still leaks
+them in its logs. To disconnect Claude, revoke it under Profile → Authorized
+Clients (it can't refresh its access any more, and the token it holds expires
+within the hour), or delete its app under Authentication → Sign in with Homerun
+to cut it off for everyone.
 
 ## CLI
 
@@ -195,7 +198,8 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/in
 
 `homerun update` re-runs that from inside the binary, replacing itself with the
 latest release; `homerun update --channel canary` (or `nightly`) follows those
-builds instead (install one with `install.sh --version=canary`). It never
+builds instead (install one with `install.sh --version=canary` or
+`--version=nightly`, which pick the newest build on that channel). It never
 downgrades. `homerun --version` tells you what you have.
 
 ### Logging in

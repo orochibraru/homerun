@@ -84,13 +84,16 @@ off:
   Homerun owns access and every Resource it creates has Pangolin SSO turned off.
 
 **Test connection** checks the whole set rather than just that the token
-authenticates: it confirms the site exists, and that one of your registered
-Pangolin domains actually covers this instance's base domain, since without that
-no service hostname could ever be routed. A token-only check passed on setups
-that could never work. The domain must also be **verified** in Pangolin, and a
-CNAME-type Pangolin domain only routes its own exact name, never a subdomain of
-it. When several registered domains cover a hostname, the most specific one is
-used.
+authenticates. A missing or mistyped **Org ID** is caught first and named
+directly ("Organization X doesn't exist…"), since Pangolin answers a list call
+for an unknown org with an empty result rather than an error, which used to
+surface as a confusing "no registered domain". It then confirms the site exists,
+and that one of your registered Pangolin domains actually covers this instance's
+base domain, since without that no service hostname could ever be routed. A
+token-only check passed on setups that could never work. The domain must also be
+**verified** in Pangolin, and a CNAME-type Pangolin domain only routes its own
+exact name, never a subdomain of it. When several registered domains cover a
+hostname, the most specific one is used.
 
 Syncing Pangolin is safe to re-run too. An existing Resource for the hostname is
 reused rather than duplicated: its SSO flag is changed only if it differs, and
@@ -99,6 +102,7 @@ second one being added behind Pangolin's load balancer. A Resource you disabled
 in Pangolin stays disabled, and the deploy log says so. Deleting a service
 deletes its Resource, and one already removed by hand counts as done.
 
-> Neither integration has been exercised against a real account by the
-> maintainer yet, so verify the first real sync by reading the deploy log it
-> writes to. See [FAQ & limitations](faq-and-limitations.md).
+> Pangolin's side has been run against a real account and site, and passed.
+> Cloudflare hasn't been exercised against a real account by the maintainer yet.
+> Verify your own first real sync by reading the deploy log it writes to. See
+> [FAQ & limitations](faq-and-limitations.md).

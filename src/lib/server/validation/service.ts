@@ -13,12 +13,12 @@ const optionalNumber = (schema: z.ZodNumber | z.ZodCoercedNumber) =>
 		schema.optional(),
 	);
 
-const bakeTargetField = z
+const buildTargetField = z
 	.string()
 	.trim()
 	.refine(
 		(value) => value === "" || BAKE_TARGET_PATTERN.test(value),
-		"A bake target is letters, digits, dashes and underscores.",
+		"A build target is letters, digits, dashes and underscores.",
 	)
 	.optional();
 
@@ -60,7 +60,7 @@ const baseServiceSchema = z.object({
 		z.boolean(),
 	),
 	gitBakeFile: z.string().trim().optional(),
-	gitBakeTarget: bakeTargetField,
+	gitBuildTarget: buildTargetField,
 	gitBuildContext: z.string().optional(),
 	gitBuildMethod: z.enum(BUILD_METHODS).default("dockerfile"),
 	gitDockerfilePath: z.string().optional(),
@@ -174,7 +174,7 @@ export const updateSourceSchema = baseServiceSchema
 		buildServerRemoteHostId: true,
 		buildSource: true,
 		gitBakeFile: true,
-		gitBakeTarget: true,
+		gitBuildTarget: true,
 		gitBuildContext: true,
 		gitBuildMethod: true,
 		gitDockerfilePath: true,

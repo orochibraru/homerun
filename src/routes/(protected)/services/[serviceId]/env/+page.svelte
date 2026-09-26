@@ -2,6 +2,8 @@
 	import {
 		Check,
 		FileText,
+		Lock,
+		LockOpen,
 		Plus,
 		SlidersHorizontal,
 		Trash2,
@@ -24,14 +26,19 @@
 
 	interface EnvRow {
 		key: string;
+		secret: boolean;
 		value: string;
 	}
 	function envRowsFromService(): EnvRow[] {
+		const secret = new Set(svc.secretEnvKeys);
 		const entries = Object.entries(svc.envVars ?? {}).map(([key, value]) => ({
 			key,
+			secret: secret.has(key),
 			value,
 		}));
-		return entries.length > 0 ? entries : [{ key: "", value: "" }];
+		return entries.length > 0
+			? entries
+			: [{ key: "", secret: false, value: "" }];
 	}
 
 	// $state, not $derived: pushed/spliced into directly below
@@ -47,18 +54,21 @@
 	let submitting = $state(false);
 
 	function addRow() {
-		envRows.push({ key: "", value: "" });
+		envRows.push({ key: "", secret: false, value: "" });
 	}
 
 	function removeRow(i: number) {
 		envRows.splice(i, 1);
 		if (envRows.length === 0) {
-			envRows.push({ key: "", value: "" });
+			envRows.push({ key: "", secret: false, value: "" });
 		}
 	}
 
 	function importRows(imported: ParsedEnvVar[]) {
-		envRows = mergeEnvRows(envRows, imported, (row) => row);
+		envRows = mergeEnvRows(envRows, imported, (row) => ({
+			...row,
+			secret: false,
+		}));
 	}
 </script>
 
@@ -72,7 +82,8 @@
       <h2 class="eyebrow">Environment variables</h2>
       <p class="text-xs text-text-muted">
         Changes take effect on the next deploy : hit Redeploy on Overview after
-        saving.
+        saving. The lock marks a value secret: it's hidden here and always
+        redacted for AI agents, whatever its name.
       </p>
     </div>
   </div>
@@ -104,11 +115,34 @@
         />
         <Input
           class=""
+          autocomplete="off"
           name="envValue"
           placeholder="value"
-          type="text"
+          type={row.secret ? "password" : "text"}
           bind:value={row.value}
         />
+        {#if row.secret}
+          <input name="envSecret" type="hidden" value={row.key} />
+        {/if}
+        <Button
+          aria-label={row.secret ? "Unmark as secret" : "Mark as secret"}
+          aria-pressed={row.secret}
+          class="shrink-0 {row.secret ? 'text-accent' : 'text-text-subtle'}"
+          onclick={() => {
+            row.secret = !row.secret;
+          }}
+          size="icon-sm"
+          title={row.secret
+            ? "Secret: hidden here and always redacted for AI agents"
+            : "Mark as secret"}
+          variant="ghost"
+        >
+          {#if row.secret}
+            <Lock class="size-4" />
+          {:else}
+            <LockOpen class="size-4" />
+          {/if}
+        </Button>
         <Button
           aria-label="Remove"
           class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"

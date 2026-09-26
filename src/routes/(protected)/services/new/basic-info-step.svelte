@@ -68,7 +68,7 @@
 	);
 	let gitDockerfilePath = $derived(values?.gitDockerfilePath ?? "");
 	let gitBakeFile = $derived(values?.gitBakeFile ?? "");
-	let gitBakeTarget = $derived(values?.gitBakeTarget ?? "");
+	let gitBuildTarget = $derived(values?.gitBuildTarget ?? "");
 	let gitBuildContext = $derived(values?.gitBuildContext ?? "");
 	let buildCacheRegistryId = $derived(values?.buildCacheRegistryId ?? "");
 
@@ -223,7 +223,7 @@
         bind:gitBuildMethod
         bind:gitDockerfilePath
         bind:gitBakeFile
-        bind:gitBakeTarget
+        bind:gitBuildTarget
         bind:gitBuildContext
         bind:buildCacheRegistryId
       />

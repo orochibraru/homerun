@@ -1,6 +1,14 @@
 <script lang="ts">
-	import { FileUp, LayoutGridIcon, Plus, Server } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import {
+		CornerDownRight,
+		FileUp,
+		LayoutGridIcon,
+		List,
+		Network,
+		Plus,
+		Server,
+	} from "@lucide/svelte";
+	import { onMount, type Snippet } from "svelte";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EntityList, {
@@ -13,6 +21,7 @@
 	import SelectAllRow from "$lib/components/select-all-row.svelte";
 	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
 	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
+	import ServiceTree from "$lib/components/service-tree.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -25,6 +34,8 @@
 		SERVICE_ACTION_LABELS,
 		type ServiceAction,
 	} from "$lib/service-actions";
+	import { dependencyForest, type GraphServiceInfo } from "$lib/service-graph";
+	import { ancestorIds, flattenStackTree } from "$lib/stack-tree";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import type { ContainerStatus } from "$lib/types";
@@ -61,26 +72,38 @@
 		},
 	]);
 
-	// Group by stack name, "Ungrouped" last : order of first appearance
-	// otherwise, matching the underlying createdAt-desc query order.
 	const groups = $derived.by(() => {
-		const byLabel = new Map<string, Svc[]>();
+		const byStack = new Map<string | null, Svc[]>();
 		for (const svc of data.services) {
-			const label = svc.stackName ?? UNGROUPED_LABEL;
-			const bucket = byLabel.get(label);
-			if (bucket) {
-				bucket.push(svc);
-			} else {
-				byLabel.set(label, [svc]);
-			}
+			const key = svc.stackId ?? null;
+			byStack.set(key, [...(byStack.get(key) ?? []), svc]);
 		}
-		const ungrouped = byLabel.get(UNGROUPED_LABEL);
-		byLabel.delete(UNGROUPED_LABEL);
-		const entries = [...byLabel.entries()];
-		if (ungrouped) {
-			entries.push([UNGROUPED_LABEL, ungrouped]);
-		}
-		return entries;
+		const parents = new Map(data.stacks.map((s) => [s.id, s.parentId]));
+		const shown = new Set(
+			[...byStack.keys()]
+				.filter((id): id is string => id !== null)
+				.flatMap((id) => [id, ...ancestorIds(id, parents)]),
+		);
+		const rows = flattenStackTree(
+			data.stacks.filter((s) => shown.has(s.id)),
+		).map(({ depth, stack }) => ({
+			depth,
+			key: stack.id,
+			label: stack.name,
+			services: byStack.get(stack.id) ?? [],
+		}));
+		const ungrouped = byStack.get(null);
+		return ungrouped
+			? [
+					...rows,
+					{
+						depth: 0,
+						key: "ungrouped",
+						label: UNGROUPED_LABEL,
+						services: ungrouped,
+					},
+				]
+			: rows;
 	});
 
 	const deployedIds = $derived(
@@ -137,6 +160,16 @@
 	}
 
 	let menuHost = $state<ReturnType<typeof ServiceMenuHost>>();
+
+	const tree = $derived(
+		data.tree && {
+			forest: dependencyForest(
+				data.tree.services.map((svc) => svc.id),
+				new Map(Object.entries(data.tree.deps)),
+			),
+			services: new Map(data.tree.services.map((svc) => [svc.id, svc])),
+		},
+	);
 </script>
 
 <div class="p-5 md:p-6 {selection.count > 0 ? 'pb-28' : ''}">
@@ -186,6 +219,28 @@
         </Button>
       </div>
     </div>
+  {:else if tree}
+    <div class="mb-3 flex flex-wrap items-center gap-2">
+      <p class="text-text-subtle text-xs">
+        Every service, with what it connects to underneath. Connections are read
+        from env vars pointing at another service's slug.
+      </p>
+      <Button
+        class="ml-auto"
+        href={resolve("/services")}
+        size="sm"
+        variant="outline"
+      >
+        <List class="size-4" />
+        Back to the list
+      </Button>
+    </div>
+    <ServiceTree
+      nodes={tree.forest}
+      services={tree.services}
+      stackNames={new Map()}
+      wrapper={treeWrapper}
+    />
   {:else}
     <EntityToolbar
     sorts={BASE_SORTS}
@@ -193,6 +248,14 @@
       placeholder="Search services by name, image or domain…"
     >
       {#snippet trailing()}
+        <Button
+          href="{resolve('/services')}?view=tree"
+          size="sm"
+          variant="outline"
+        >
+          <Network class="size-4" />
+          Dependencies
+        </Button>
         <ViewModeToggle {view} />
       {/snippet}
     </EntityToolbar>
@@ -258,13 +321,20 @@
       {/snippet}
 
       <div class="space-y-6">
-        {#each groups as [label, services] (label)}
-          <div>
+        {#each groups as { depth, key, label, services } (key)}
+          <div
+            class={depth > 0 ? "border-border border-l pl-4" : ""}
+            style:margin-left="{depth * 1.25}rem"
+          >
             {#if groups.length > 1}
-              <h2 class="eyebrow mb-2">
+              <h2 class="eyebrow mb-2 flex items-center gap-1.5">
+                {#if depth > 0}
+                  <CornerDownRight class="text-text-subtle size-3.5" />
+                {/if}
                 {label}
               </h2>
             {/if}
+            {#if services.length > 0}
             <EntityList
               {actions}
               {wrapper}
@@ -281,6 +351,7 @@
               selectedIds={selection.ids}
               {view}
             />
+            {/if}
           </div>
         {/each}
       </div>
@@ -294,6 +365,18 @@
     {/if}
   {/if}
 </div>
+
+{#snippet treeWrapper(svc: GraphServiceInfo, body: Snippet)}
+  <ServiceContextMenu
+    onaction={(op, id) => menuHost?.run(op, id)}
+    ongroup={(s) => menuHost?.group(s)}
+    onlink={(s) => menuHost?.link(s)}
+    onungroup={(s) => menuHost?.ungroup(s)}
+    service={svc}
+  >
+    {@render body()}
+  </ServiceContextMenu>
+{/snippet}
 
 <BulkBar {selection} />
 

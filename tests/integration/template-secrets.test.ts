@@ -60,6 +60,7 @@ async function createFromWizard(fields: [string, string][]): Promise<void> {
 async function serviceBySlug(slug: string): Promise<{
 	command: string[] | null;
 	envVars: Record<string, string>;
+	secretEnvKeys: string[];
 	slug: string;
 }> {
 	const listed = await client.GET("/services", {
@@ -69,6 +70,7 @@ async function serviceBySlug(slug: string): Promise<{
 		(listed.data ?? []) as {
 			command: string[] | null;
 			envVars: Record<string, string>;
+			secretEnvKeys: string[];
 			slug: string;
 		}[]
 	).find((svc) => svc.slug === slug);
@@ -99,6 +101,7 @@ describe("templates' generated secrets", () => {
 			"edited-in-the-form",
 		]);
 		expect(svc.envVars.REDIS_PASSWORD).toBe("edited-in-the-form");
+		expect(svc.secretEnvKeys).toEqual(["REDIS_PASSWORD"]);
 	});
 
 	test("a linked cache gets its own password, and the app's URL carries it", async () => {
@@ -118,6 +121,7 @@ describe("templates' generated secrets", () => {
 		const cache = await serviceBySlug(`${slug}-redis`);
 		const password = cache.envVars.REDIS_PASSWORD ?? "";
 		expect(password).toMatch(/^[0-9a-f]{48}$/);
+		expect(cache.secretEnvKeys).toEqual(["REDIS_PASSWORD"]);
 		expect(cache.command).toContain(password);
 		expect(app.envVars.PAPERLESS_REDIS).toBe(
 			`redis://:${password}@${cache.slug}:6379`,

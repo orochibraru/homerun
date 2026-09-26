@@ -62,6 +62,9 @@ case "$BUILD_METHOD" in
       exit 1
     fi
     set -- build --progress plain -f "$BUILD_FILE" -t "$IMAGE_TAG" --load
+    if [ -n "${BUILD_TARGET:-}" ]; then
+      set -- "$@" --target "$BUILD_TARGET"
+    fi
     if [ -n "${NO_CACHE:-}" ]; then
       set -- "$@" --no-cache
     fi
@@ -77,11 +80,11 @@ case "$BUILD_METHOD" in
       exit 1
     fi
     cd "$BUILD_DIR"
-    definition=$(docker buildx bake --progress quiet -f "$BUILD_FILE" --print "$BAKE_TARGET")
+    definition=$(docker buildx bake --progress quiet -f "$BUILD_FILE" --print "$BUILD_TARGET")
     targets=$(printf '%s\n' "$definition" | awk '/^  "target": [{]/ {inside=1; next} inside && /^  [}]/ {inside=0} inside && /^    "[^"]+": [{]/ {sub(/^    "/, ""); sub(/".*/, ""); print}')
     count=$(printf '%s\n' "$targets" | grep -c . || true)
     if [ "$count" != 1 ]; then
-      echo "The bake target $BAKE_TARGET resolves to $count targets ($(echo $targets)), pick a single target." >&2
+      echo "The bake target $BUILD_TARGET resolves to $count targets ($(echo $targets)), pick a single target." >&2
       exit 1
     fi
     set -- bake --progress plain -f "$BUILD_FILE" --set "$targets.tags=$IMAGE_TAG" --set "$targets.output=type=docker"
@@ -92,7 +95,7 @@ case "$BUILD_METHOD" in
       use_cache_builder
       set -- "$@" --builder homerun-cache --set "$targets.cache-from=type=registry,ref=$CACHE_REF" --set "$targets.cache-to=type=registry,ref=$CACHE_REF,mode=max,ignore-error=true"
     fi
-    exec docker buildx "$@" "$BAKE_TARGET"
+    exec docker buildx "$@" "$BUILD_TARGET"
     ;;
   nixpacks)
     fetch "nixpacks-$NIXPACKS_VERSION" "https://github.com/railwayapp/nixpacks/releases/download/v$NIXPACKS_VERSION/nixpacks-v$NIXPACKS_VERSION-$nix.tar.gz" nixpacks "$nix_archive" "$nix_binary"

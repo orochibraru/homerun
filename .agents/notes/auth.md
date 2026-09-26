@@ -876,6 +876,16 @@ the REST routes' and nothing is duplicated. `/api/v1/mcp` is on the read-only
 allowlist (`permissions.ts`) because MCP sends every read as a POST; the inner
 REST calls still refuse a read-only caller's writes.
 
+Every value an agent reads goes through `mcp-redact.ts`'s `redactSecrets` first:
+`redactEnvValue` fully masks a secret-looking name (`PASSWORD`, `TOKEN`…) and,
+now, any name in that service's own `secretEnvKeys` (the lock toggle on the Env
+vars tab, `service.secretEnvKeys`, see Data model in `data-and-config.md`) — a
+name marked secret is caught whatever it's called, e.g. `TMDB_API`.
+`update_service`'s env merge (`mergeEnvChanges` in `mcp-server.ts`'s
+`updateService`) is handed that same set, so a value it reads back unchanged
+from a marked var is still recognised as "unchanged" rather than rejected as a
+bad placeholder.
+
 Auth: `hooks.server.ts` treats a Bearer credential shaped like a JWT as an MCP
 access token (`verifyMcpAccessToken` in `auth.ts`: `jose` against the `jwks`
 table, issuer `oidcIssuer`, audience `mcpResource`, `typ: at+jwt`) and anything

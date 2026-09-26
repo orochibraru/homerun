@@ -281,7 +281,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 	static #buildMethodColumns(input: NewServiceInput) {
 		return {
 			gitBakeFile: input.gitBakeFile ?? null,
-			gitBakeTarget: input.gitBakeTarget ?? null,
+			gitBuildTarget: input.gitBuildTarget ?? null,
 			gitBuildContext: input.gitBuildContext ?? null,
 			gitBuildMethod: input.gitBuildMethod ?? "dockerfile",
 			gitDockerfilePath: input.gitDockerfilePath ?? null,
@@ -397,6 +397,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			primaryDomain: input.domains?.[0] ?? null,
 			desiredState: "stopped",
 			envVars: input.envVars,
+			secretEnvKeys: input.secretEnvKeys ?? [],
 			healthcheckCommand: input.healthcheckCommand ?? null,
 			id: crypto.randomUUID(),
 			image: input.image,
@@ -498,6 +499,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 	/** The service's environment variables, empty when none are stored. */
 	get envVars(): Record<string, string> {
 		return this.row.envVars ?? {};
+	}
+	/** Env var names the owner marked secret: redacted wherever the service is exported, whatever their name. */
+	get secretEnvKeys(): string[] {
+		return this.row.secretEnvKeys;
 	}
 	/** The container healthcheck command, if one is set. */
 	get healthcheckCommand(): string | null {
@@ -658,8 +663,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return this.row.gitBakeFile;
 	}
 	/** The bake target or single-target group to build, if not `default`. */
-	get gitBakeTarget(): string | null {
-		return this.row.gitBakeTarget;
+	get gitBuildTarget(): string | null {
+		return this.row.gitBuildTarget;
 	}
 	/** The build context directory inside the repo, if not the root. */
 	get gitBuildContext(): string | null {

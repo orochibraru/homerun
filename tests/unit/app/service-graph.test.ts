@@ -3,6 +3,7 @@ import {
 	dependencyForest,
 	dependencyLayers,
 	dependencyMap,
+	linkKeys,
 	referencesHost,
 } from "../../../src/lib/service-graph";
 import {
@@ -52,6 +53,44 @@ describe("service dependencies", () => {
 		expect(referencesHost("https://redis.io", "redis")).toBe(false);
 	});
 
+	test("prefixed keys like StremThru's still link to the right hosts only", () => {
+		const deps = dependencyMap([
+			{
+				envVars: {
+					STREMTHRU_DATABASE_URI:
+						"postgresql://stremthru:pw@stremthru-db:5432/stremthru?sslmode=disable",
+					STREMTHRU_REDIS_URI: "redis://:pw@stremthru-cache:6379",
+				},
+				id: "app",
+				slug: "stremthru",
+			},
+			{
+				envVars: { POSTGRES_DB: "stremthru", POSTGRES_USER: "stremthru" },
+				id: "db",
+				slug: "stremthru-db",
+			},
+			{ envVars: {}, id: "cache", slug: "stremthru-cache" },
+		]);
+		expect(deps.get("app")).toEqual(["db", "cache"]);
+		expect(deps.get("db")).toEqual([]);
+		expect(
+			dependencyForest(["cache", "db", "app"], deps).map((n) => n.id),
+		).toEqual(["app"]);
+	});
+
+	test("a user, password, database name or path isn't a host", () => {
+		const url = "postgres://stremthru:pw@stremthru-db:5432/stremthru";
+		expect(referencesHost(url, "stremthru")).toBe(false);
+		expect(referencesHost(url, "stremthru-db")).toBe(true);
+		expect(referencesHost("stremthru", "stremthru", "POSTGRES_DB")).toBe(false);
+		expect(referencesHost("stremthru", "stremthru", "UPSTREAM_HOST")).toBe(
+			true,
+		);
+		expect(
+			referencesHost("kafka-1:9092,kafka-2:9092", "kafka-2", "BROKERS"),
+		).toBe(true);
+	});
+
 	test("edges come from env values pointing at another service's slug", () => {
 		const deps = dependencyMap(vortex);
 		expect(deps.get("server")).toEqual(["redis", "stremthru"]);
@@ -72,6 +111,20 @@ describe("service dependencies", () => {
 			["redis", false],
 			["stremthru", false],
 		]);
+	});
+
+	test("unlinking removes only the vars pointing at that host", () => {
+		expect(
+			linkKeys(
+				{
+					CACHE: "redis://:pw@vortex-redis:6379",
+					NAME: "vortex-redis-backup",
+					QUEUE: "vortex-redis:6379/1",
+				},
+				"vortex-redis",
+			),
+		).toEqual(["CACHE", "QUEUE"]);
+		expect(linkKeys(null, "x")).toEqual([]);
 	});
 
 	test("a dependency outside the members isn't expanded", () => {

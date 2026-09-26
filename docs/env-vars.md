@@ -12,8 +12,10 @@ MongoDB, Redis-compatibles like Valkey, Dragonfly, KeyDB and Garnet, RabbitMQ,
 or a plain HTTP service) and reads the credentials off its own env vars. A Redis
 password set with `--requirepass` in the service's command counts too. The
 **Link to** dialog on a service's context menu does the same for a service that
-already exists. The picker lists the services in the same stack first, and every
-entry says which stack it's in. You then choose the shape you want:
+already exists, and it always writes the database or cache's own vars into the
+other service, whichever of the two you right-clicked. The picker lists the
+services in the same stack first, and every entry says which stack it's in. You
+then choose the shape you want:
 
 - **Connection URL**, e.g. `POSTGRES_URL=postgres://app:secret@db:5432/app`. For
   PostgreSQL there's also a `postgresql://` variant, since drivers disagree on
@@ -29,6 +31,25 @@ the linked service's slug, which is how services already reach each other on the
 shared network, so this works across stacks and needs no extra networking. The
 same full URL, password included, is what a service's header and its Networking
 tab show as its internal address (masked on screen, copied in full).
+
+## Unlinking
+
+A service's Overview tab has an **Unlink** button on each row of its
+**Connections** panel (see [Deploying](deploying.md)), and a stack page's
+right-click menu offers the same thing as **Unlink from**. Both list exactly
+which env vars will be removed before you confirm, then delete those rows from
+the service that holds them, same as deleting them by hand. It takes effect on
+that service's next deploy.
+
+## Marking a variable secret
+
+The lock icon next to a row on the Env Vars tab marks that variable secret,
+independent of its name: useful for something that doesn't look secret, like
+`TMDB_API`. A secret value is a password field here, and is always redacted for
+an AI agent through the [MCP server](api-and-cli.md#mcp-server-for-ai-agents),
+whatever it's called. A variable a template fills with a generated password
+starts out marked. Only the dashboard can set or clear the mark, the REST API's
+`PATCH` ignores it if sent.
 
 ## Env files
 

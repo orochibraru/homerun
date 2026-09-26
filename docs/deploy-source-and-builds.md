@@ -23,7 +23,8 @@ A git-based service picks how it's built on the Source tab (and in the wizard):
   relative to the build context, built with BuildKit
   (`docker buildx build --load`). Everything BuildKit supports works:
   `# syntax=` directives, `COPY --chmod`, `RUN --mount=type=cache`, multi-stage
-  builds.
+  builds. **Target stage** picks which stage of a multi-stage Dockerfile to
+  build (`--target`, the `FROM … AS <name>` name); empty builds the last one.
 - **Docker Bake**: one target of a bake file, `docker buildx bake`. Set the
   **bake file** (relative to the build context, default `docker-bake.hcl`; a
   `docker-bake.json` or a compose file works too) and the **bake target**

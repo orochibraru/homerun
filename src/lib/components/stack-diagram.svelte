@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Server } from "@lucide/svelte";
+	import { RotateCcw, Server } from "@lucide/svelte";
 	import { type Snippet, tick } from "svelte";
 	import { resolve } from "$app/paths";
-	import type { GraphServiceInfo } from "$lib/components/service-tree.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
 	import { type Box, edgePaths } from "$lib/diagram-edges";
-	import { dependencyLayers } from "$lib/service-graph";
+	import { dependencyLayers, type GraphServiceInfo } from "$lib/service-graph";
 	import type { StackNode } from "$lib/stack-tree";
 	import type { ContainerStatus } from "$lib/types";
 
@@ -46,6 +46,84 @@
 		[],
 	);
 	let focused = $state<string | null>(null);
+
+	type Offsets = Record<string, { x: number; y: number }>;
+	const storageKey = $derived(`homerun:stack-diagram:${rootStackId}`);
+	let offsets = $state<Offsets>({});
+	let drag: {
+		id: string;
+		moved: boolean;
+		originX: number;
+		originY: number;
+		startX: number;
+		startY: number;
+	} | null = null;
+	let suppressClick = false;
+
+	$effect(() => {
+		try {
+			offsets = JSON.parse(localStorage.getItem(storageKey) ?? "{}") as Offsets;
+		} catch {
+			offsets = {};
+		}
+	});
+
+	/** Remembers where the cards were dragged to, in this browser only. */
+	function saveOffsets() {
+		try {
+			localStorage.setItem(storageKey, JSON.stringify(offsets));
+		} catch {
+			return;
+		}
+	}
+
+	/** Puts every card back where the layout puts it. */
+	function resetLayout() {
+		offsets = {};
+		saveOffsets();
+		void tick().then(measure);
+	}
+
+	/** Starts dragging a card with the primary button. */
+	function startDrag(event: PointerEvent, id: string) {
+		if (event.button !== 0) {
+			return;
+		}
+		const at = offsets[id] ?? { x: 0, y: 0 };
+		drag = {
+			id,
+			moved: false,
+			originX: at.x,
+			originY: at.y,
+			startX: event.clientX,
+			startY: event.clientY,
+		};
+		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+	}
+
+	/** Moves the dragged card and redraws its arrows, once it's past a click's wobble. */
+	function moveDrag(event: PointerEvent) {
+		if (!drag) {
+			return;
+		}
+		const dx = event.clientX - drag.startX;
+		const dy = event.clientY - drag.startY;
+		if (!drag.moved && Math.hypot(dx, dy) < 4) {
+			return;
+		}
+		drag.moved = true;
+		offsets[drag.id] = { x: drag.originX + dx, y: drag.originY + dy };
+		measure();
+	}
+
+	/** Drops the dragged card, keeping the click that ends a drag from opening it. */
+	function endDrag() {
+		if (drag?.moved) {
+			suppressClick = true;
+			saveOffsets();
+		}
+		drag = null;
+	}
 	let size = $state({ height: 0, width: 0 });
 
 	/** Measures every card and draws a curve from each service down to what it depends on. */
@@ -90,9 +168,23 @@
 {#snippet card(svc: GraphServiceInfo)}
   {#snippet body()}
     <a
-      class="border-border bg-bg hover:border-border-light flex w-72 items-center gap-2.5 rounded-lg border px-3 py-2 shadow-sm transition-colors"
+      class="border-border bg-bg hover:border-border-light relative flex w-72 cursor-grab touch-none items-center gap-2.5 rounded-lg border px-3 py-2 shadow-sm transition-colors"
       data-node={svc.id}
+      draggable="false"
       href={`${resolve("/services")}/${svc.id}`}
+      onclick={(event) => {
+        if (suppressClick) {
+          event.preventDefault();
+          suppressClick = false;
+        }
+      }}
+      onpointercancel={endDrag}
+      onpointerdown={(event) => startDrag(event, svc.id)}
+      onpointermove={moveDrag}
+      onpointerup={endDrag}
+      style:transform={offsets[svc.id]
+        ? `translate(${offsets[svc.id]?.x}px, ${offsets[svc.id]?.y}px)`
+        : undefined}
       onblur={() => (focused = null)}
       onfocus={() => (focused = svc.id)}
       onmouseenter={() => (focused = svc.id)}
@@ -165,6 +257,15 @@
     </div>
   </section>
 {/snippet}
+
+{#if Object.keys(offsets).length > 0}
+  <div class="mb-2 flex justify-end">
+    <Button onclick={resetLayout} size="sm" variant="outline">
+      <RotateCcw class="size-4" />
+      Reset layout
+    </Button>
+  </div>
+{/if}
 
 <div class="relative overflow-x-auto" bind:this={canvas}>
   <svg

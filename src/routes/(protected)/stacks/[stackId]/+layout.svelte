@@ -48,18 +48,6 @@
 <div class="p-5 md:p-6">
   <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
     <div>
-      {#if data.ancestors.length > 0}
-        <p class="text-text-subtle mb-0.5 text-xs">
-          {#each data.ancestors as ancestor, i (ancestor.id)}
-            <a
-              class="hover:text-text"
-              href={resolve("/(protected)/stacks/[stackId]", {
-                stackId: ancestor.id,
-              })}>{ancestor.name}</a
-            >{i < data.ancestors.length - 1 ? " / " : " /"}
-          {/each}
-        </p>
-      {/if}
       <h1 class="text-text text-lg font-semibold tracking-tight">{stack.name}</h1>
       <p class="text-text-muted mt-0.5 text-xs">
         {stack.description ?? `Services on the ${stack.slug} network.`}

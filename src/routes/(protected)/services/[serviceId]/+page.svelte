@@ -286,6 +286,7 @@
         <ServiceGraph
             dependsOn={data.dependsOn}
             name={svc.name}
+            serviceId={svc.id}
             usedBy={data.usedBy}
         />
         <ConnectionStrings

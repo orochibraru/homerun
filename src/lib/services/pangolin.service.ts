@@ -31,7 +31,7 @@ interface PangolinResource {
 	mode?: string | null;
 	name: string;
 	resourceId: number | string;
-	sso?: boolean;
+	sso?: boolean | number;
 }
 
 interface PangolinSite {
@@ -378,7 +378,8 @@ class PangolinServiceClass {
 
 	/**
 	 * Heals a resource that already exists: its SSO flag is written only when
-	 * it differs from `sso`, and its target is repaired (see `ensureTarget`).
+	 * it differs from `sso` (the list endpoint reports it as 0/1, not a
+	 * boolean), and its target is repaired (see `ensureTarget`).
 	 * A resource disabled in Pangolin is reported, not re-enabled.
 	 */
 	private async healResource(
@@ -392,7 +393,7 @@ class PangolinServiceClass {
 		siteId: number | string,
 		sso: boolean,
 	): Promise<string> {
-		if (resource.sso !== sso) {
+		if (resource.sso === undefined || Boolean(resource.sso) !== sso) {
 			await this.setResourceSso(
 				connection.baseUrl,
 				connection.token,
@@ -609,7 +610,9 @@ class PangolinServiceClass {
 
 	/**
 	 * Live end-to-end configuration check for the Settings page's "Test
-	 * connection" button : confirms the token can list the org's sites *and*
+	 * connection" button : confirms the org exists (Pangolin answers a list
+	 * call for a missing org with an empty 200, so a typo'd org ID used to
+	 * surface as "no registered domain"), that the token can list its sites *and*
 	 * that the configured site exists and a verified domain can route a
 	 * service hostname under this instance's base domain. The old version only
 	 * listed sites, so it passed happily on a configuration that could never
@@ -620,6 +623,17 @@ class PangolinServiceClass {
 	): Promise<PangolinVerifyResult> {
 		const { baseDomain, baseUrl, orgId, siteName, token } = input;
 		try {
+			try {
+				await pangolinRequest(baseUrl, token, `/org/${orgId}`);
+			} catch (error) {
+				if (error instanceof PangolinApiError && error.status === 404) {
+					return {
+						error: `Organization "${orgId}" doesn't exist, or this API key can't see it. Use the org ID from Pangolin's URL (/<orgId>/settings), not its display name.`,
+						success: false,
+					};
+				}
+				throw error;
+			}
 			const sites = await this.listSites(baseUrl, token, orgId);
 			const site = siteName
 				? sites.find((candidate) => candidate.name === siteName)

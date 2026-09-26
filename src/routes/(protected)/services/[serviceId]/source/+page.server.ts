@@ -121,7 +121,7 @@ function sourcePatch(input: UpdateSourceInput, isGitBuild: boolean) {
 			? {
 					autoDeployOnPush: input.autoDeployOnPush,
 					gitBakeFile: input.gitBakeFile || null,
-					gitBakeTarget: input.gitBakeTarget || null,
+					gitBuildTarget: input.gitBuildTarget || null,
 					gitBuildContext: input.gitBuildContext || null,
 					gitBuildMethod: input.gitBuildMethod,
 					gitDockerfilePath: input.gitDockerfilePath || null,
@@ -133,7 +133,7 @@ function sourcePatch(input: UpdateSourceInput, isGitBuild: boolean) {
 			: {
 					autoDeployOnPush: false,
 					gitBakeFile: null,
-					gitBakeTarget: null,
+					gitBuildTarget: null,
 					gitBuildContext: null,
 					gitBuildMethod: "dockerfile" as const,
 					gitDockerfilePath: null,

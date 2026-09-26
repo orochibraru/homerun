@@ -5,6 +5,7 @@ import {
 	fillSecretInRuntime,
 	generateTemplateSecret,
 	SECRET_TOKEN,
+	secretEnvKeysOf,
 	submittedSecret,
 } from "../../../src/lib/template-secrets";
 
@@ -19,6 +20,16 @@ const runtime = {
 };
 
 describe("template secrets", () => {
+	test("the vars filled from {{secret}} start out marked secret", () => {
+		expect(
+			secretEnvKeysOf({
+				DB_URL: `postgres://u:${SECRET_TOKEN}@db/app`,
+				REDIS_PASSWORD: SECRET_TOKEN,
+				TZ: "UTC",
+			}),
+		).toEqual(["DB_URL", "REDIS_PASSWORD"]);
+	});
+
 	test("a generated secret is 48 hex characters and fresh every time", () => {
 		const secret = generateTemplateSecret();
 		expect(secret).toMatch(/^[0-9a-f]{48}$/);

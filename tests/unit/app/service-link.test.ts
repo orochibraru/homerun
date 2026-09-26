@@ -2,11 +2,13 @@ import { describe, expect, test } from "bun:test";
 import {
 	buildLinkEnv,
 	buildLinkUrl,
+	dataPathFor,
 	defaultUrlKey,
 	defaultVarPrefix,
 	detectLinkEngine,
 	internalUrl,
 	linkFormatsFor,
+	linkRoles,
 	maskUrlPassword,
 	requirePassword,
 } from "../../../src/lib/service-link";
@@ -38,6 +40,37 @@ const other = {
 	name: "API",
 	slug: "acme-api",
 };
+
+describe("dataPathFor", () => {
+	test("each datastore keeps its data where its image expects", () => {
+		expect(dataPathFor("postgres", "18-alpine")).toBe("/var/lib/postgresql");
+		expect(dataPathFor("postgres", "latest")).toBe("/var/lib/postgresql");
+		expect(dataPathFor("postgres", "17")).toBe("/var/lib/postgresql/data");
+		expect(dataPathFor("timescale/timescaledb", "latest-pg16")).toBe(
+			"/var/lib/postgresql/data",
+		);
+		expect(dataPathFor("mysql", "8")).toBe("/var/lib/mysql");
+		expect(dataPathFor("mongo", "7")).toBe("/data/db");
+		expect(dataPathFor("valkey/valkey", "8")).toBe("/data");
+		expect(dataPathFor("memcached", "1")).toBeNull();
+		expect(dataPathFor("ghcr.io/x/app", "latest")).toBeNull();
+	});
+});
+
+describe("linkRoles", () => {
+	const db = { image: "postgres", name: "db" };
+	const app = { image: "ghcr.io/x/app", name: "app" };
+	const cache = { image: "redis", name: "cache" };
+
+	test("a database linked to an app puts its URL in the app", () => {
+		expect(linkRoles(db, app)).toEqual({ consumer: app, provider: db });
+	});
+
+	test("an app linked to a database, or two datastores, keep the picked direction", () => {
+		expect(linkRoles(app, db)).toEqual({ consumer: app, provider: db });
+		expect(linkRoles(cache, db)).toEqual({ consumer: cache, provider: db });
+	});
+});
 
 describe("detectLinkEngine", () => {
 	test("recognises the common data stores", () => {

@@ -24,15 +24,35 @@ schedule and an S3 destination set on their backup settings page; the rest are
 skipped and counted in the result. Bulk delete asks for confirmation first, and
 services mounting a deleted volume need a redeploy.
 
+## A database's data volume
+
+A new database or cache service gets a Docker volume named `<slug>-data` mounted
+at its engine's data directory when it's created with no volume of its own,
+whether from the deploy wizard, a template (its linked containers included) or
+the API, so a redeploy doesn't start it empty:
+
+| Engine                                  | Mounted at                                                               |
+| --------------------------------------- | ------------------------------------------------------------------------ |
+| PostgreSQL (and forks)                  | `/var/lib/postgresql` on 18 and later, `/var/lib/postgresql/data` before |
+| MySQL, MariaDB                          | `/var/lib/mysql`                                                         |
+| MongoDB                                 | `/data/db`                                                               |
+| Redis, Valkey, Dragonfly, KeyDB, Garnet | `/data`                                                                  |
+| RabbitMQ                                | `/var/lib/rabbitmq`                                                      |
+
+Memcached holds nothing worth keeping and gets none. A service that already
+existed isn't changed: mounting a volume on it later starts it from an empty
+data directory.
+
 ## Browsing and editing files
 
-A volume's **Files** tab browses what's inside it and edits text files in the
-browser, for config files you'd otherwise need a shell for (an nginx
-`default.conf`, an app's `config.yaml`). Folders open by clicking them; a text
-file up to 1 MB opens in an editor, and **Save** writes it in place, keeping its
-owner and permissions. A volume that is a single bound file, the way Dokploy
-file mounts are imported, shows that one file. Binary files can be browsed but
-not edited.
+A volume's **Files** tab (the **Browse** button next to it on `/storage` and on
+a service's Volumes tab opens it directly) browses what's inside it and edits
+text files in the browser, for config files you'd otherwise need a shell for (an
+nginx `default.conf`, an app's `config.yaml`). Folders open by clicking them; a
+text file up to 1 MB opens in an editor, and **Save** writes it in place,
+keeping its owner and permissions. A volume that is a single bound file, the way
+Dokploy file mounts are imported, shows that one file. Binary files can be
+browsed but not edited.
 
 Each action runs a short-lived Alpine container with the volume mounted
 (read-only, except while saving), so it works the same for bind mounts and

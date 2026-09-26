@@ -68,10 +68,11 @@ export const serviceResponse = z.object({
 	dnsResolvable: z.boolean(),
 	domains: z.array(z.string()),
 	envVars: z.record(z.string(), z.string()),
+	secretEnvKeys: z.array(z.string()),
 	autoDeployOnPush: z.boolean(),
 	gitBakeFile: z.string().nullable(),
 	primaryDomain: z.string().nullable(),
-	gitBakeTarget: z.string().nullable(),
+	gitBuildTarget: z.string().nullable(),
 	gitBuildContext: z.string().nullable(),
 	gitBuildMethod: z.enum(BUILD_METHODS),
 	gitDockerfilePath: z.string().nullable(),
@@ -285,6 +286,9 @@ export const instanceUpdateStatusResponse = z.object({
 	channel: z.enum(UPDATE_CHANNELS).meta({
 		description:
 			"The release channel updates follow, set on Settings → General",
+	}),
+	checkedAt: isoTimestamp.nullable().meta({
+		description: "When the channel's newest release was last looked up",
 	}),
 	current: z.string().meta({ description: "The running version" }),
 	latest: z

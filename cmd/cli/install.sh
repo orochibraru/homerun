@@ -38,6 +38,19 @@ case "$(uname -m)" in
 		;;
 esac
 
+case "$VERSION" in
+	canary | nightly)
+		CHANNEL="$VERSION"
+		VERSION="$(curl -fsSL "https://api.${GIT_HOST}/repos/${GIT_REPO}/releases?per_page=100" |
+			grep -o "\"tag_name\": *\"[^\"]*-${CHANNEL}\.[0-9]*\"" |
+			head -n 1 | sed 's/.*"\([^"]*\)"$/\1/')"
+		if [ -z "$VERSION" ]; then
+			echo "error: no ${CHANNEL} build found in ${GIT_HOST}/${GIT_REPO}'s releases." >&2
+			exit 1
+		fi
+		;;
+esac
+
 if [ "$VERSION" = "latest" ]; then
 	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-cli-${ARCH}.gz"
 else

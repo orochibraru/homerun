@@ -59,33 +59,35 @@ promotion, deliberately not a `next`/`canary` branch: squash-merging a branch
 into `main` would collapse every PR title `releaser` reads into one commit and
 leave the two branches permanently diverged. Instead `publish.yaml` publishes
 every push to `main` as the canary : images tagged `<sha>` + `canary` (never
-`latest`), binaries stamped `<next version>-canary.<run number>` (a run number,
-not the SHA, so two canaries order correctly, and the self-update notice ranks a
-canary below the release it becomes, see `version.ts`), and a GitHub prerelease
-tagged `v<version>` per run, uploaded through
-`upload-release-assets.ts v<version> --prerelease` (which publishes it with
-`--latest=false`), keeping the newest five. Not one rolling `canary` tag:
-immutable releases are on, and a tag an immutable release ever used can never be
-recreated, even after deleting it (that's how `canary` got burned). Everything
-stable reads `releases/latest` or `:latest`, which a prerelease never is, so
-nothing stable moves.
+`latest`), binaries stamped `<next version>-canary.<n>`, where `n` is
+`git rev-list --count HEAD` on `main` (a number, not the SHA, so two canaries
+order correctly, and the self-update notice ranks a canary below the release it
+becomes, see `version.ts`), and a GitHub prerelease tagged `v<version>` per run,
+uploaded through `upload-release-assets.ts v<version> --prerelease` (which
+publishes it with `--latest=false`), keeping the newest five. Not one rolling
+`canary` tag: immutable releases are on, and a tag an immutable release ever
+used can never be recreated, even after deleting it (that's how `canary` got
+burned). Everything stable reads `releases/latest` or `:latest`, which a
+prerelease never is, so nothing stable moves.
 
-**Every canary build also ships as a nightly, before e2e.** `publish.yaml`'s
-`nightly` job runs as soon as the images exist (built by `docker.yaml`, or the
-PR's `pr-<n>` on the promote path), without waiting for `e2e`: it assembles the
-per-platform digests into `:nightly`, restamps the app with
-`HOMERUN_APP_VERSION=<version>-nightly.<run>` through the same `FROM`+`ENV`
-build as `promote`, and publishes a `v<version>-nightly.<run>` prerelease with
-its own binaries (`nightly-binaries`, a second `binaries.yaml` call whose
-artifact name sits outside the `binaries-*` pattern the canary job downloads). A
-build that fails e2e still ships as nightly; that's the point. Canary and
-nightly share `github.run_number`, and both version comparers (`version.ts`,
-`internal/release/version.go`) order two `<word>.<n>` prereleases by `n` alone,
-so switching between the channels works both ways instead of `nightly` always
-sorting above `canary` lexically. Every prerelease lookup filters by its label
-(`-canary.` / `-nightly.`): the app's self-update, the CLI's `LatestPrerelease`,
-each channel's keep-five retention, and the `stable` job's "newest canary"
-check, which would otherwise try to release a nightly.
+**Every push to `main` also ships as a nightly, from its own workflow.**
+`nightly.yaml` runs next to `publish.yaml` rather than inside it, so a nightly
+never waits on Code Quality, Go, or e2e: it runs prek (the same hook set Code
+Quality runs, minus the heavy gates it skips there) alongside the image and
+binary builds, then assembles the per-platform digests into `:nightly` and
+publishes a `v<version>-nightly.<n>` prerelease with its own binaries. The app
+image is built with the nightly version baked in, so there's no `FROM`+`ENV`
+restamp. A newer push cancels a nightly still in flight. A build that fails
+anything but prek still ships as nightly; that's the point. Canary and nightly
+share `n` because both count commits on the same SHA (`run_number` is per
+workflow, so it stopped working once nightly got its own), and both version
+comparers (`version.ts`, `internal/release/version.go`) order two `<word>.<n>`
+prereleases by `n` alone, so switching between the channels works both ways
+instead of `nightly` always sorting above `canary` lexically. Every prerelease
+lookup filters by its label (`-canary.` / `-nightly.`): the app's self-update,
+the CLI's `LatestPrerelease`, `install.sh --version=canary|nightly`, each
+channel's keep-five retention, and the `stable` job's "newest canary" check,
+which would otherwise try to release a nightly.
 
 **A stable release is merging the release PR.** The `canary` job's last step
 runs `releaser` (v1.5.0+) with `release-pr: true`, which force-pushes a

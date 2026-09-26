@@ -106,7 +106,7 @@
       {#if authRequired}
         {#if !dashboardOrigin}
           <p class="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600">
-            Set Origin under Settings → General first. The login wall
+            Set the Dashboard URL under Settings → General first. The login wall
             redirects visitors to this instance's own sign-in page, so
             Homerun has to know its own public URL to send them there.
           </p>

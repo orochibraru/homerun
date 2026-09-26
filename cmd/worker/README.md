@@ -113,10 +113,11 @@ Every route requires `Authorization: Bearer <token>` except `/v1/health` and
 - `POST /v1/build`, body is a `BuildInput` (see `internal/agent/build.go`):
   clones a git repo at a ref (a branch, tag or full commit SHA) and builds it
   into a local image with `buildMethod`: `dockerfile` (the default,
-  `docker buildx build` with BuildKit), `bake` (`docker buildx bake`, one target
-  of `bakeFile`, default `docker-bake.hcl`, `bakeTarget`, default `default`), or
-  `nixpacks`, `railpack`, `heroku`, `paketo`. Every method runs in a pinned
-  `docker:cli` helper container with the host's Docker socket mounted, see
+  `docker buildx build` with BuildKit, `buildTarget` picking the stage, the last
+  one when unset), `bake` (`docker buildx bake`, one target of `bakeFile`,
+  default `docker-bake.hcl`, `buildTarget`, default `default`), or `nixpacks`,
+  `railpack`, `heroku`, `paketo`. Every method runs in a pinned `docker:cli`
+  helper container with the host's Docker socket mounted, see
   `internal/agent/builders.go`. With `push`, the BuildKit layer cache is read
   from and written to that registry (`<registry>/<image>:buildcache`) and the
   image is pushed there afterward. A `commit` pins the build to that commit even

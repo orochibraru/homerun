@@ -23,7 +23,11 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		await svc.update({ envVars: parseEnvVars(formData) });
+		const envVars = parseEnvVars(formData);
+		const secretEnvKeys = [
+			...new Set(formData.getAll("envSecret").map(String)),
+		].filter((key) => key in envVars);
+		await svc.update({ envVars, secretEnvKeys });
 
 		logger.info(`Env vars updated: service=${svc.id} user=${locals.user.id}`);
 		return { success: true };

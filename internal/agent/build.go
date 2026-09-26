@@ -68,7 +68,7 @@ type PushTarget struct {
 // local tag directly.
 type BuildInput struct {
 	BakeFile       *string        `json:"bakeFile"`
-	BakeTarget     *string        `json:"bakeTarget"`
+	BuildTarget    *string        `json:"buildTarget"`
 	BuildContext   *string        `json:"buildContext"`
 	BuildMethod    *string        `json:"buildMethod"`
 	Commit         *string        `json:"commit"`
@@ -165,7 +165,7 @@ func (b *Builder) BuildWithProgress(ctx context.Context, input BuildInput, progr
 
 	builderInput := BuilderInput{
 		BakeFile:       valueOr(input.BakeFile, ""),
-		BakeTarget:     valueOr(input.BakeTarget, ""),
+		BuildTarget:    valueOr(input.BuildTarget, ""),
 		BuildContext:   valueOr(input.BuildContext, ""),
 		DockerfilePath: valueOr(input.DockerfilePath, ""),
 		Method:         valueOr(input.BuildMethod, "dockerfile"),

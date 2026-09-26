@@ -7,11 +7,13 @@ import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { allowLongRequest } from "$lib/server/long-request";
+import { dependencyMap, toGraphService } from "$lib/service-graph";
 import {
 	buildLinkEnv,
 	defaultUrlKey,
 	defaultVarPrefix,
 	detectLinkEngine,
+	linkRoles,
 } from "$lib/service-link";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 import { uniqueSlug } from "$lib/slug";
@@ -173,10 +175,12 @@ export const load = async ({ parent, platform, url }) => {
 		filterKeys: ["status", "stack"],
 		sortKeys: sortKeysOf(BASE_SORTS),
 	});
-	const [{ services, total }, facets, stacks] = await Promise.all([
+	const treeView = url.searchParams.get("view") === "tree";
+	const [{ services, total }, facets, stacks, everything] = await Promise.all([
 		loadServices(url),
 		ServiceDTO.listFilterFacets(),
 		StackDTO.list(),
+		treeView ? ServiceDTO.list() : null,
 	]);
 
 	return {
@@ -185,9 +189,26 @@ export const load = async ({ parent, platform, url }) => {
 		filtered: query.active,
 		page: query.page,
 		perPage: query.perPage,
-		stacks: stacks.map((p) => ({ id: p.id, name: p.name })),
+		stacks: stacks.map((p) => ({
+			id: p.id,
+			name: p.name,
+			parentId: p.parentId,
+			slug: p.slug,
+		})),
 		services,
 		total,
+		tree: everything && {
+			deps: Object.fromEntries(
+				dependencyMap(
+					everything.map((svc) => ({
+						envVars: svc.envVars,
+						id: svc.id,
+						slug: svc.slug,
+					})),
+				),
+			),
+			services: everything.map((svc) => toGraphService(svc.toJSON())),
+		},
 	};
 };
 
@@ -210,13 +231,14 @@ export const actions = {
 			return fail(400, { error: "Pick a service to link to." });
 		}
 
-		const [svc, target] = await Promise.all([
+		const [source, picked] = await Promise.all([
 			ServiceDTO.get(serviceId),
 			ServiceDTO.get(targetId),
 		]);
-		if (!(svc && target)) {
+		if (!(source && picked)) {
 			return fail(404, { error: "Service not found." });
 		}
+		const { consumer: svc, provider: target } = linkRoles(source, picked);
 
 		const engine = detectLinkEngine(target.image);
 		const linkTarget = {
@@ -253,6 +275,7 @@ export const actions = {
 			`Service linked: service=${svc.id} target=${target.id} stack=${groupedInto ?? "none"} user=${locals.user.id}`,
 		);
 		return {
+			consumer: svc.name,
 			grouped: groupedInto !== null,
 			linked: rows.map((row) => row.key),
 			success: true,

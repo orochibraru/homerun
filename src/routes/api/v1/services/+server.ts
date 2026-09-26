@@ -9,6 +9,7 @@ import {
 	createServiceApiBody,
 } from "$lib/server/validation/api";
 import { CapacityService } from "$lib/services/capacity.service";
+import { attachDefaultDataVolume } from "$lib/services/default-volume";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
 
@@ -81,7 +82,7 @@ function toSourceInput(input: CreateServiceApiInput) {
 		autoDeployOnPush: input.autoDeployOnPush,
 		buildSource: input.buildSource,
 		gitBakeFile: input.gitBakeFile || null,
-		gitBakeTarget: input.gitBakeTarget || null,
+		gitBuildTarget: input.gitBuildTarget || null,
 		gitBuildContext: input.gitBuildContext || null,
 		gitBuildMethod: input.gitBuildMethod,
 		gitDockerfilePath: input.gitDockerfilePath || null,
@@ -133,6 +134,8 @@ export const POST = async ({ request, locals }) => {
 	const svc = await ServiceDTO.create(
 		toCreateInput(input, stackId, locals.user.id),
 	);
+
+	await attachDefaultDataVolume(svc, locals.user.id);
 
 	await GitWebhookService.sync(svc, {
 		gitProviderId: null,

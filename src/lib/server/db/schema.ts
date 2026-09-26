@@ -900,7 +900,7 @@ export const service = pgTable(
 		// Bake file relative to gitBuildContext, "docker-bake.hcl" when unset.
 		gitBakeFile: text("git_bake_file"),
 		// Bake target or group resolving to one target, "default" when unset.
-		gitBakeTarget: text("git_bake_target"),
+		gitBuildTarget: text("git_build_target"),
 		gitBuildContext: text("git_build_context"),
 		gitBuildMethod: text("git_build_method")
 			.$type<BuildMethod>()
@@ -986,6 +986,10 @@ export const service = pgTable(
 			.notNull(),
 		// no | always | on-failure | unless-stopped
 		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
+		secretEnvKeys: jsonb("secret_env_keys")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
 		// subdomain: <slug>.<baseDomain>
 		slug: text("slug").notNull().unique(),
 		// Swarm mode's equivalent of `containerId` : the Docker Swarm service

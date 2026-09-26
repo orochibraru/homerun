@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { HardDrive, Plus, X } from "@lucide/svelte";
+	import { FolderOpen, HardDrive, Plus, X } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
@@ -83,6 +83,16 @@
               {mount.containerPath}
             </p>
           </div>
+          <Button
+            href={resolve("/(protected)/storage/[volumeId]/files", {
+              volumeId: mount.volumeId,
+            })}
+            size="sm"
+            variant="outline"
+          >
+            <FolderOpen class="size-4" />
+            Browse
+          </Button>
           {#if vol}
             <MountBackup destinations={data.destinations} volume={vol} />
           {/if}

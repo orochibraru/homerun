@@ -170,9 +170,12 @@ output since the drizzle adapter needs every column explicit; see Homerun as an
 OIDC provider in `auth.md`) plus:
 
 - `service`, image/tag, registry creds (`registryPasswordEnc`, AES-256-GCM),
-  envVars (JSON), port/restart-policy/resource limits, `desiredState` (user
-  intent) vs `currentStatus` (live reconciled Docker state), `containerId`,
-  `stackId` (nullable FK, `onDelete: "set null"`),
+  envVars (JSON), `secretEnvKeys` (jsonb `string[]`, migration 0065, the subset
+  of `envVars`' own keys the owner marked secret on the Env vars tab; always
+  redacted for the MCP server regardless of name, see the MCP server section in
+  `auth.md`), port/restart-policy/resource limits, `desiredState` (user intent)
+  vs `currentStatus` (live reconciled Docker state), `containerId`, `stackId`
+  (nullable FK, `onDelete: "set null"`),
   `cronEnabled`/`cronSchedule`/`cronLastRunAt` (opt-in scheduled redeploy, see
   below), `authRequired` + `authProviders`/`authAllowedUserIds`/
   `authAllowedEmails`/`authAllowedGroups` (the per-app login wall and its access

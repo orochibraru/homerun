@@ -17,8 +17,9 @@ export interface NewServiceInput {
 	dnsResolvable?: boolean;
 	domains?: string[];
 	envVars: Record<string, string>;
+	secretEnvKeys?: string[];
 	gitBakeFile?: string | null;
-	gitBakeTarget?: string | null;
+	gitBuildTarget?: string | null;
 	gitBuildContext?: string | null;
 	gitBuildMethod?: BuildMethod;
 	gitDockerfilePath?: string | null;
@@ -81,10 +82,11 @@ export type ServiceUpdateInput = Partial<
 		| "desiredState"
 		| "dnsResolvable"
 		| "envVars"
+		| "secretEnvKeys"
 		| "errorsDismissedAt"
 		| "errorsDismissedByDeploymentId"
 		| "gitBakeFile"
-		| "gitBakeTarget"
+		| "gitBuildTarget"
 		| "gitBuildContext"
 		| "gitBuildMethod"
 		| "gitDockerfilePath"

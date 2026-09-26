@@ -1,0 +1,1 @@
+ALTER TABLE "service" ADD COLUMN "secret_env_keys" jsonb DEFAULT '[]'::jsonb NOT NULL;

@@ -19,7 +19,7 @@
 		errorClass: string;
 		errors?: Record<string, string[] | undefined>;
 		gitBakeFile?: string;
-		gitBakeTarget?: string;
+		gitBuildTarget?: string;
 		gitBuildContext?: string;
 		gitBuildMethod?: BuildMethod;
 		gitDockerfilePath?: string;
@@ -33,7 +33,7 @@
 		errorClass,
 		errors,
 		gitBakeFile = $bindable(""),
-		gitBakeTarget = $bindable(""),
+		gitBuildTarget = $bindable(""),
 		gitBuildContext = $bindable(""),
 		gitBuildMethod = $bindable("dockerfile"),
 		gitDockerfilePath = $bindable(""),
@@ -59,6 +59,23 @@
       bind:value={gitDockerfilePath}
     />
   </div>
+  <div>
+    <label class={labelClass} for="gitBuildTarget">Target stage</label>
+    <Input
+      id="gitBuildTarget"
+      name="gitBuildTarget"
+      placeholder="The last stage"
+      type="text"
+      bind:value={gitBuildTarget}
+    />
+    <p class="text-text-muted mt-1.5 text-xs">
+      The <code>FROM … AS &lt;name&gt;</code> stage to build, for a multi-stage
+      Dockerfile. Empty builds the last one.
+    </p>
+    {#if errors?.gitBuildTarget}
+      <p class={errorClass}>{errors.gitBuildTarget[0]}</p>
+    {/if}
+  </div>
 {:else if keepHiddenFields}
   <input name="gitDockerfilePath" type="hidden" value={gitDockerfilePath}>
 {/if}
@@ -77,21 +94,23 @@
     </p>
   </div>
   <div>
-    <label class={labelClass} for="gitBakeTarget">Bake target</label>
+    <label class={labelClass} for="gitBuildTarget">Bake target</label>
     <Input
-      id="gitBakeTarget"
-      name="gitBakeTarget"
+      id="gitBuildTarget"
+      name="gitBuildTarget"
       placeholder={DEFAULT_BAKE_TARGET}
       type="text"
-      bind:value={gitBakeTarget}
+      bind:value={gitBuildTarget}
     />
-    {#if errors?.gitBakeTarget}
-      <p class={errorClass}>{errors.gitBakeTarget[0]}</p>
+    {#if errors?.gitBuildTarget}
+      <p class={errorClass}>{errors.gitBuildTarget[0]}</p>
     {/if}
   </div>
 {:else if keepHiddenFields}
   <input name="gitBakeFile" type="hidden" value={gitBakeFile}>
-  <input name="gitBakeTarget" type="hidden" value={gitBakeTarget}>
+  {#if gitBuildMethod !== "dockerfile"}
+    <input name="gitBuildTarget" type="hidden" value={gitBuildTarget}>
+  {/if}
 {/if}
 <div>
   <label class={labelClass} for="gitBuildContext">

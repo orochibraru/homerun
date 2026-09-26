@@ -74,7 +74,7 @@ type CacheRegistry struct {
 // BuilderInput is what selects and configures a build.
 type BuilderInput struct {
 	BakeFile       string
-	BakeTarget     string
+	BuildTarget    string
 	BuildContext   string
 	CacheRegistry  *CacheRegistry
 	DockerfilePath string
@@ -168,17 +168,25 @@ func BuilderEnv(input BuilderInput) ([]string, error) {
 			return nil, err
 		}
 		env["BUILD_FILE"] = file
+		if stage := strings.TrimSpace(input.BuildTarget); stage != "" {
+			if !bakeTargetPattern.MatchString(stage) {
+				return nil, fmt.Errorf(
+					"The build target %s isn't valid, use letters, digits, dashes and underscores.", stage,
+				)
+			}
+			env["BUILD_TARGET"] = stage
+		}
 	case "bake":
 		file, err := builderFilePath(input.RepoDir, buildDir, input.BakeFile, Tools.DefaultBakeFile)
 		if err != nil {
 			return nil, err
 		}
-		target, err := BakeTargetName(input.BakeTarget)
+		target, err := BakeTargetName(input.BuildTarget)
 		if err != nil {
 			return nil, err
 		}
 		env["BUILD_FILE"] = file
-		env["BAKE_TARGET"] = target
+		env["BUILD_TARGET"] = target
 	case "heroku", "paketo":
 		env["PACK_BUILDER"] = Tools.PackBuilders[input.Method]
 	}
@@ -190,7 +198,7 @@ func BuilderEnv(input BuilderInput) ([]string, error) {
 var envOrder = []string{
 	"BUILD_DIR", "BUILD_METHOD", "CACHE_PASSWORD", "CACHE_REF", "CACHE_REGISTRY",
 	"CACHE_USERNAME", "IMAGE_TAG", "NIXPACKS_VERSION", "PACK_VERSION",
-	"PACK_VOLUME_KEY", "RAILPACK_VERSION", "BUILD_FILE", "BAKE_TARGET", "PACK_BUILDER", "NO_CACHE",
+	"PACK_VOLUME_KEY", "RAILPACK_VERSION", "BUILD_FILE", "BUILD_TARGET", "PACK_BUILDER", "NO_CACHE",
 }
 
 // orderedEnv renders env as KEY=value strings in envOrder.

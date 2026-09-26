@@ -32,6 +32,14 @@ Settings tab's delete then offers **Delete anyway**, which removes only
 Homerun's record (the REST API's equivalent is
 `DELETE /api/v1/services/:id?force=true`).
 
+The list groups services by stack, ordered as a tree (a substack's group is
+indented under its parent's), with services outside any stack last. A
+**Dependencies** button next to the toolbar swaps the whole list for the same
+dependency tree a [stack page](stacks.md#the-services-tabs-dependency-graph)
+shows, but across every service on the instance rather than one stack, since a
+dependency tree needs the whole unpaged set to draw correctly and can't be
+combined with the list's own paging.
+
 ## Settings
 
 Name, slug, restart policy, which stack the service belongs to, the

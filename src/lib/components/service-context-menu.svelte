@@ -6,6 +6,7 @@
 		Settings as SettingsIcon,
 		Square,
 		Trash2,
+		Unlink,
 		Wrench,
 	} from "@lucide/svelte";
 	import type { Snippet } from "svelte";
@@ -21,17 +22,34 @@
 		stackId: string | null;
 	}
 
+	interface LinkedService {
+		id: string;
+		keys: string[];
+		name: string;
+	}
+
 	interface Props {
 		children: Snippet;
+		/** What this service points at, offered under "Unlink from" when set. */
+		links?: LinkedService[];
 		onaction: (op: "delete" | "restart" | "start" | "stop", id: string) => void;
 		ongroup: (service: Service) => void;
 		onlink: (service: Service) => void;
 		onungroup: (service: Service) => void;
+		onunlink?: (service: Service, target: LinkedService) => void;
 		service: Service;
 	}
 
-	const { service, children, onaction, onlink, ongroup, onungroup }: Props =
-		$props();
+	const {
+		service,
+		children,
+		links = [],
+		onaction,
+		onlink,
+		ongroup,
+		onungroup,
+		onunlink,
+	}: Props = $props();
 </script>
 
 <ContextMenu.Root>
@@ -64,6 +82,21 @@
       <Link2 class="size-4" />
       Link to…
     </ContextMenu.Item>
+    {#if onunlink && links.length > 0}
+      <ContextMenu.Sub>
+        <ContextMenu.SubTrigger>
+          <Unlink class="size-4" />
+          Unlink from
+        </ContextMenu.SubTrigger>
+        <ContextMenu.SubContent class="w-52">
+          {#each links as target (target.id)}
+            <ContextMenu.Item onSelect={() => onunlink(service, target)}>
+              {target.name}
+            </ContextMenu.Item>
+          {/each}
+        </ContextMenu.SubContent>
+      </ContextMenu.Sub>
+    {/if}
     <ContextMenu.Item onSelect={() => ongroup(service)}>
       <Wrench class="size-4" />
       {service.stackId ? "Move to stack…" : "Group into stack…"}

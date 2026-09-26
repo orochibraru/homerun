@@ -143,18 +143,18 @@ class AdminServiceClass {
 	#originCheck(): SetupCheck {
 		if (config.auth.origin || dev) {
 			return {
-				detail: `Origin set to ${config.auth.origin}.`,
+				detail: `Dashboard URL set to ${config.auth.origin}.`,
 				id: "origin",
-				label: "Origin URL",
+				label: "Dashboard URL",
 				severity: "ok",
 			};
 		}
 		return {
 			detail:
-				"No origin configured : derived per-request for now, which is fine for a single domain but can misbehave behind a proxy. Set a Base domain (env var below, or the General section of /settings) to pin it.",
+				"No Dashboard URL configured : derived per-request for now, which is fine for a single domain but can misbehave behind a proxy. Set a Base domain (env var below, or the General section of /settings) to pin it.",
 			envVar: "ORIGIN",
 			id: "origin",
-			label: "Origin URL",
+			label: "Dashboard URL",
 			severity: "warn",
 		};
 	}

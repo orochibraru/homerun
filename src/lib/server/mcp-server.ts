@@ -237,6 +237,7 @@ async function updateService(
 		command: string[] | null;
 		entrypoint: string[] | null;
 		envVars: Record<string, string> | null;
+		secretEnvKeys?: string[];
 	};
 	try {
 		const patch = { ...changes };
@@ -244,6 +245,7 @@ async function updateService(
 			patch.envVars = mergeEnvChanges(
 				patch.envVars as Record<string, unknown>,
 				stored.envVars ?? {},
+				new Set(stored.secretEnvKeys ?? []),
 			);
 		}
 		for (const key of ["command", "entrypoint"] as const) {

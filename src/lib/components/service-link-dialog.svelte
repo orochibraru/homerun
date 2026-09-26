@@ -16,6 +16,7 @@
 		detectLinkEngine,
 		type LinkFormat,
 		linkFormatsFor,
+		linkRoles,
 	} from "$lib/service-link";
 	import { enhanceToast } from "$lib/toast";
 
@@ -54,14 +55,13 @@
 			: "They only reach each other by slug once they share a stack network.";
 	});
 
+	const roles = $derived.by(() => {
+		const target = services.find((svc) => svc.id === linkTargetId);
+		return service && target ? linkRoles(service, target) : null;
+	});
+
 	const formats = $derived(
-		linkFormatsFor(
-			linkTargetId
-				? detectLinkEngine(
-						services.find((svc) => svc.id === linkTargetId)?.image ?? "",
-					)
-				: null,
-		),
+		linkFormatsFor(roles ? detectLinkEngine(roles.provider.image) : null),
 	);
 
 	$effect(() => {
@@ -83,7 +83,9 @@
 </script>
 
 <ResponsiveDialog
-  description="Writes the connection variables for the service you pick into this service's own environment. Takes effect on its next deploy."
+  description={roles
+    ? `Writes ${roles.provider.name}'s connection variables into ${roles.consumer.name}'s environment. Takes effect on its next deploy.`
+    : "Writes the connection variables into whichever of the two uses the other: a database or cache always goes into the app. Takes effect on its next deploy."}
   size="sm"
   title="Link {service?.name ?? 'service'}"
   bind:open
@@ -100,10 +102,13 @@
       },
       success: (result) => {
         const data = result as
-          | { grouped?: boolean; linked?: string[] }
+          | { consumer?: string; grouped?: boolean; linked?: string[] }
           | undefined;
         const keys = data?.linked ?? [];
-        const vars = keys.length > 0 ? `Added ${keys.join(", ")}` : "Linked";
+        const vars =
+          keys.length > 0
+            ? `Added ${keys.join(", ")} to ${data?.consumer ?? "the service"}`
+            : "Linked";
         return data?.grouped ? `${vars}, and grouped them.` : `${vars}.`;
       },
     })}

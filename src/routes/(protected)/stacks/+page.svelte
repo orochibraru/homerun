@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		ExternalLink,
+		FolderInput,
 		FolderKanban,
 		FolderOpen,
 		Plus,
@@ -19,6 +20,7 @@
 	} from "$lib/components/entity-list.svelte";
 	import EntityToolbar from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
+	import StackMoveDialog from "$lib/components/stack-move-dialog.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
@@ -53,6 +55,14 @@
 	let forceDelete = $state(false);
 	let forceDeleteDialogOpen = $state(false);
 	let detachError = $state("");
+
+	let moveOpen = $state(false);
+	let moveTarget = $state<(typeof data.allStacks)[number] | null>(null);
+
+	function askMove(id: string) {
+		moveTarget = data.allStacks.find((s) => s.id === id) ?? null;
+		moveOpen = moveTarget !== null;
+	}
 
 	function askDelete(stack: Stack) {
 		deleteTarget = stack;
@@ -115,6 +125,10 @@
               <ExternalLink class="size-4" />
               Open in new tab
             </ContextMenu.Item>
+            <ContextMenu.Item onSelect={() => askMove(item.id)}>
+              <FolderInput class="size-4" />
+              Move into…
+            </ContextMenu.Item>
             <ContextMenu.Item onSelect={() => goto(settingsHref(item.id))}>
               <SettingsIcon class="size-4" />
               Settings
@@ -176,6 +190,8 @@
     {/if}
   {/if}
 </div>
+
+<StackMoveDialog stack={moveTarget} stacks={data.allStacks} bind:open={moveOpen} />
 
 <form
   action={deleteTarget ? `${settingsHref(deleteTarget.id)}?/delete` : undefined}

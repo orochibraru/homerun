@@ -455,6 +455,20 @@
 			"when": 1790415032881,
 			"tag": "0064_jittery_martin_li",
 			"breakpoints": true
+		},
+		{
+			"idx": 65,
+			"version": "7",
+			"when": 1790420244210,
+			"tag": "0065_condemned_dragon_lord",
+			"breakpoints": true
+		},
+		{
+			"idx": 66,
+			"version": "7",
+			"when": 1790422929801,
+			"tag": "0066_rename_build_target",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

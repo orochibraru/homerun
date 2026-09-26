@@ -64,7 +64,7 @@ function challenge(svc: ServiceDTO, forwarded: ForwardedRequest): Response {
 	const dashboard = config.auth.origin;
 	if (!dashboard) {
 		return deny(
-			"This app is gated behind Homerun's login, but Homerun doesn't know its own public URL yet, so it can't send you to a sign-in page. Set Origin under Settings → General.",
+			"This app is gated behind Homerun's login, but Homerun doesn't know its own public URL yet, so it can't send you to a sign-in page. Set the Dashboard URL under Settings → General.",
 			500,
 		);
 	}

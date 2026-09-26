@@ -1,19 +1,23 @@
 <script lang="ts">
-	import { LayoutGrid, Plus, Server } from "@lucide/svelte";
+	import { FolderInput, LayoutGrid, Plus, Server } from "@lucide/svelte";
 	import { onMount, type Snippet } from "svelte";
 	import { resolve } from "$app/paths";
 	import EntityList from "$lib/components/entity-list.svelte";
 	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
 	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
-	import ServiceTree, {
-		type GraphServiceInfo,
-	} from "$lib/components/service-tree.svelte";
+	import ServiceTree from "$lib/components/service-tree.svelte";
 	import StackDiagram from "$lib/components/stack-diagram.svelte";
+	import StackMoveDialog from "$lib/components/stack-move-dialog.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { Switch } from "$lib/components/ui/switch/index.js";
+	import UnlinkDialog, {
+		type UnlinkTarget,
+	} from "$lib/components/unlink-dialog.svelte";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { dependencyForest } from "$lib/service-graph";
-	import { flattenStackTree } from "$lib/stack-tree";
+	import { dependencyForest, type GraphServiceInfo } from "$lib/service-graph";
+	import { flattenStackTree, type StackNode } from "$lib/stack-tree";
 	import { title } from "$lib/store/title";
 	import { ViewMode } from "$lib/view-mode.svelte";
 
@@ -24,7 +28,32 @@
 
 	const view = new ViewMode("stack-services");
 	let menuHost = $state<ReturnType<typeof ServiceMenuHost>>();
+	let moveOpen = $state(false);
+	let moveTarget = $state<StackNode | null>(null);
+	let unlinkOpen = $state(false);
+	let unlink = $state<UnlinkTarget | null>(null);
 	let search = $state("");
+
+	const ARCHITECTURE_KEY = "homerun:stack-architecture";
+	let architecture = $state(true);
+
+	onMount(() => {
+		try {
+			architecture = localStorage.getItem(ARCHITECTURE_KEY) !== "off";
+		} catch {
+			architecture = true;
+		}
+	});
+
+	/** Turns the tree and diagram on or off, remembered in this browser. */
+	function setArchitecture(on: boolean) {
+		architecture = on;
+		try {
+			localStorage.setItem(ARCHITECTURE_KEY, on ? "on" : "off");
+		} catch {
+			return;
+		}
+	}
 
 	const services = $derived(
 		new Map(data.graph.services.map((svc) => [svc.id, svc])),
@@ -84,18 +113,22 @@
       type="search"
       bind:value={search}
     />
-    <p class="text-text-subtle text-xs">
+    <p class="text-text-subtle hidden text-xs sm:block {architecture ? '' : 'sm:hidden'}">
       {view.current === "card"
         ? "Arrows point from a service to what it connects to."
         : "Each service lists what it connects to underneath."}
       Connections are read from env vars pointing at another service's slug.
     </p>
-    <div class="ml-auto">
+    <div class="ml-auto flex items-center gap-3">
+      <label class="text-text-muted flex items-center gap-2 text-xs">
+        <Switch checked={architecture} onCheckedChange={setArchitecture} />
+        Architecture
+      </label>
       <ViewModeToggle {view} />
     </div>
   </div>
 
-  {#if search.trim()}
+  {#if search.trim() || !architecture}
     {#if matches.length === 0}
       <div class="border-border/70 rounded-xl border border-dashed py-12 text-center">
         <p class="text-text-muted text-sm">No services match your search.</p>
@@ -125,26 +158,44 @@
     <div class="space-y-6">
       {#each sections as { depth, stack: section } (section.id)}
         {@const forest = forestFor(section.id)}
-        <section style="margin-left: {depth * 1.5}rem">
+        <section
+          class="ml-[calc(var(--depth)*0.75rem)] sm:ml-[calc(var(--depth)*1.5rem)]"
+          style:--depth={depth}
+        >
           {#if section.id !== stack.id}
-            <a
-              class="eyebrow text-text-muted hover:text-text mb-2 inline-block"
-              href={resolve("/(protected)/stacks/[stackId]", {
-                stackId: section.id,
-              })}
-            >
-              {section.name}
-            </a>
+            <ContextMenu.Root>
+              <ContextMenu.Trigger class="mb-2 inline-block">
+                <a
+                  class="eyebrow text-text-muted hover:text-text"
+                  href={resolve("/(protected)/stacks/[stackId]", {
+                    stackId: section.id,
+                  })}
+                >
+                  {section.name}
+                </a>
+              </ContextMenu.Trigger>
+              <ContextMenu.Content class="w-48">
+                <ContextMenu.Item
+                  onSelect={() => {
+                    moveTarget = section;
+                    moveOpen = true;
+                  }}
+                >
+                  <FolderInput class="size-4" />
+                  Move into…
+                </ContextMenu.Item>
+              </ContextMenu.Content>
+            </ContextMenu.Root>
           {/if}
           {#if forest.length > 0}
             <ServiceTree
-              {localStackIds}
+              localStackIds={new Set([section.id])}
               nodes={forest}
               {services}
               {stackNames}
               {wrapper}
             />
-          {:else}
+          {:else if !sections.some(({ stack: s }) => s.parentId === section.id)}
             <p class="text-text-subtle text-xs">No services yet.</p>
           {/if}
         </section>
@@ -159,11 +210,24 @@
     ongroup={(s) => menuHost?.group(s)}
     onlink={(s) => menuHost?.link(s)}
     onungroup={(s) => menuHost?.ungroup(s)}
+    links={data.graph.links[svc.id] ?? []}
+    onunlink={(from, to) => {
+      unlink = {
+        from: { id: from.id, name: from.name },
+        keys: to.keys,
+        to: { id: to.id, name: to.name },
+      };
+      unlinkOpen = true;
+    }}
     service={svc}
   >
     {@render body()}
   </ServiceContextMenu>
 {/snippet}
+
+<UnlinkDialog link={unlink} bind:open={unlinkOpen} />
+
+<StackMoveDialog stack={moveTarget} stacks={data.stacks} bind:open={moveOpen} />
 
 <ServiceMenuHost
   bind:this={menuHost}

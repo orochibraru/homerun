@@ -4,6 +4,37 @@ export interface GraphService {
 	slug: string;
 }
 
+export interface GraphServiceInfo {
+	category: string | null;
+	containerId: string | null;
+	currentStatus: string;
+	desiredState: string;
+	icon: string | null;
+	id: string;
+	image: string;
+	name: string;
+	slug: string;
+	stackId: string | null;
+}
+
+/** The slice of a service row a dependency tree or diagram draws. */
+export function toGraphService(
+	row: Omit<GraphServiceInfo, "image"> & { image: string; tag: string },
+): GraphServiceInfo {
+	return {
+		category: row.category,
+		containerId: row.containerId,
+		currentStatus: row.currentStatus,
+		desiredState: row.desiredState,
+		icon: row.icon,
+		id: row.id,
+		image: `${row.image}:${row.tag}`,
+		name: row.name,
+		slug: row.slug,
+		stackId: row.stackId,
+	};
+}
+
 export interface DependencyNode {
 	children: DependencyNode[];
 	id: string;
@@ -11,21 +42,45 @@ export interface DependencyNode {
 	repeat: boolean;
 }
 
-function escapeRegExp(value: string): string {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const URL_HOST_RE = /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/?#]*@)?([^:/?#@]+)/i;
+const HOST_PORT_RE = /^([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?):\d+(?:\/.*)?$/i;
+const BARE_HOST_RE = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i;
+const HOST_KEY_RE =
+	/(^|_)(HOST|HOSTNAME|URL|URI|ADDR|ADDRESS|SERVER|ENDPOINT|DSN|UPSTREAM|BACKEND|BROKERS?|NODES?)(_|$)/i;
+
+/**
+ * The hostnames an env value names: each URL's host (not its user, password
+ * or path), each `host:port`, and a bare name only under a host-ish key
+ * (`REDIS_HOST`, `WORKER_URL`), since `POSTGRES_DB=stremthru` names a
+ * database, not a service. Comma, semicolon and space separated lists are
+ * read item by item.
+ */
+export function hostsIn(value: string, key = ""): string[] {
+	return value.split(/[\s,;]+/).flatMap((part) => {
+		const host =
+			URL_HOST_RE.exec(part)?.[1] ??
+			HOST_PORT_RE.exec(part)?.[1] ??
+			(HOST_KEY_RE.test(key) && BARE_HOST_RE.test(part) ? part : undefined);
+		return host ? [host.toLowerCase()] : [];
+	});
 }
 
 /**
- * Whether `value` points at the host `slug`: the slug standing alone as a
- * hostname (`vortex-redis:6379`, `redis://:pw@vortex-redis/0`,
- * `http://vortex-server`), not as part of a longer name (`redis` inside
- * `vortex-redis` or `redis.io`) nor as a URL's scheme (`redis://`).
+ * Whether `value` (under env var `key`) points at the host `slug`, as a URL's
+ * host, a `host:port` or a bare name under a host-ish key; see `hostsIn`.
  */
-export function referencesHost(value: string, slug: string): boolean {
-	return new RegExp(
-		`(?:^|[^a-z0-9.-])${escapeRegExp(slug)}(?!://)(?:[^a-z0-9.-]|$)`,
-		"i",
-	).test(value);
+export function referencesHost(value: string, slug: string, key = ""): boolean {
+	return hostsIn(value, key).includes(slug.toLowerCase());
+}
+
+/** The env var names in `envVars` whose value points at the host `slug`: what unlinking from that service removes. */
+export function linkKeys(
+	envVars: Record<string, string> | null,
+	slug: string,
+): string[] {
+	return Object.entries(envVars ?? {})
+		.filter(([key, value]) => referencesHost(value, slug, key))
+		.map(([key]) => key);
 }
 
 /**
@@ -36,14 +91,14 @@ export function referencesHost(value: string, slug: string): boolean {
 export function dependencyMap(services: GraphService[]): Map<string, string[]> {
 	const deps = new Map<string, string[]>();
 	for (const from of services) {
-		const values = Object.values(from.envVars ?? {});
+		const entries = Object.entries(from.envVars ?? {});
 		deps.set(
 			from.id,
 			services
 				.filter(
 					(to) =>
 						to.id !== from.id &&
-						values.some((value) => referencesHost(value, to.slug)),
+						entries.some(([key, value]) => referencesHost(value, to.slug, key)),
 				)
 				.map((to) => to.id),
 		);

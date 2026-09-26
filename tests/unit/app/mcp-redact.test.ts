@@ -71,6 +71,25 @@ describe("MCP secret redaction", () => {
 		);
 	});
 
+	test("a var marked secret is hidden whatever its name, in a service and a config", () => {
+		expect(
+			redactSecrets({
+				envVars: { TMDB_API: "abc123", TZ: "Europe/Paris" },
+				secretEnvKeys: ["TMDB_API"],
+			}),
+		).toEqual({
+			envVars: { TMDB_API: REDACTED, TZ: "Europe/Paris" },
+			secretEnvKeys: ["TMDB_API"],
+		});
+		expect(
+			redactSecrets({
+				env: { secretKeys: ["TMDB_API"], vars: { TMDB_API: "abc123" } },
+			}),
+		).toEqual({
+			env: { secretKeys: ["TMDB_API"], vars: { TMDB_API: REDACTED } },
+		});
+	});
+
 	test("a non-JSON body still loses its inline secrets", () => {
 		expect(redactText("dial redis://:gitea@gitea-redis:6379 failed")).toBe(
 			`dial redis://:${REDACTED}@gitea-redis:6379 failed`,
@@ -109,6 +128,15 @@ describe("update_service's env merge", () => {
 				stored,
 			),
 		).toThrow(/DATABASE_URI/);
+	});
+
+	test("echoing a marked-secret var back keeps its stored value", () => {
+		const stored = { TMDB_API: "abc123" };
+		const secret = new Set(["TMDB_API"]);
+		expect(mergeEnvChanges({ TMDB_API: REDACTED }, stored, secret)).toEqual(
+			stored,
+		);
+		expect(() => mergeEnvChanges({ TMDB_API: REDACTED }, stored)).toThrow();
 	});
 
 	test("a redacted password argument keeps the stored one", () => {

@@ -15,9 +15,11 @@ the deploy was started somewhere else entirely (a template quick-deploy, cron).
 Below it sit a **Resource usage** chart for the service's own container (CPU,
 memory and network traffic, live or over the last hour, day, week, month, year
 or all of it, sampled every minute), a **Connections** panel listing the
-services it references through env vars and the ones that reference it, and a
-tail of its live logs. Deployment history, every attempt with its status, image
-and full log, is on the [Revisions](revisions-and-rollback.md) tab.
+services it references through env vars and the ones that reference it (same
+detection as a stack's dependency graph, see [Stacks](stacks.md)), each with an
+**Unlink** button (see [Env vars](env-vars.md#unlinking)), and a tail of its
+live logs. Deployment history, every attempt with its status, image and full
+log, is on the [Revisions](revisions-and-rollback.md) tab.
 
 **Redeploys are health-gated.** When the service already has a running
 container, the new one starts next to it and the old one keeps serving until the

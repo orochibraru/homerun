@@ -87,7 +87,7 @@ type BuildSpec struct {
 // GitSource is the repository and build settings of a git build.
 type GitSource struct {
 	BakeFile       *string `json:"bakeFile"`
-	BakeTarget     *string `json:"bakeTarget"`
+	BuildTarget    *string `json:"buildTarget"`
 	BuildContext   *string `json:"buildContext"`
 	BuildMethod    *string `json:"buildMethod"`
 	DockerfilePath *string `json:"dockerfilePath"`

@@ -125,7 +125,7 @@ export const actions = {
 		if (authRequired && !config.auth.origin) {
 			return fail(400, {
 				authError:
-					"Set Origin under Settings → General first : the login wall redirects visitors to this instance's own sign-in page, so Homerun has to know its own public URL.",
+					"Set the Dashboard URL under Settings → General first : the login wall redirects visitors to this instance's own sign-in page, so Homerun has to know its own public URL.",
 			});
 		}
 		const badEmail = allowedEmails.find(

@@ -39,7 +39,7 @@
 			buildServerRemoteHostId: svc.buildServerRemoteHostId ?? "",
 			buildSource: svc.buildSource,
 			gitBakeFile: svc.gitBakeFile ?? "",
-			gitBakeTarget: svc.gitBakeTarget ?? "",
+			gitBuildTarget: svc.gitBuildTarget ?? "",
 			gitBuildContext: svc.gitBuildContext ?? "",
 			gitBuildMethod: svc.gitBuildMethod,
 			gitDockerfilePath: svc.gitDockerfilePath ?? "",
@@ -78,7 +78,7 @@
 	);
 	let gitDockerfilePath = $derived(values.gitDockerfilePath ?? "");
 	let gitBakeFile = $derived(values.gitBakeFile ?? "");
-	let gitBakeTarget = $derived(values.gitBakeTarget ?? "");
+	let gitBuildTarget = $derived(values.gitBuildTarget ?? "");
 	let gitBuildContext = $derived(values.gitBuildContext ?? "");
 	let registryUsername = $derived(values.registryUsername ?? "");
 	let gitProviderId = $derived(values.gitProviderId ?? "");
@@ -229,7 +229,7 @@
         bind:gitBuildMethod
         bind:gitDockerfilePath
         bind:gitBakeFile
-        bind:gitBakeTarget
+        bind:gitBuildTarget
         bind:gitBuildContext
         bind:buildCacheRegistryId
       />

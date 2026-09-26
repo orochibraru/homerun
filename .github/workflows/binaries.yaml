@@ -18,8 +18,7 @@ on:
         default: binaries-all
         description:
           "Name of the uploaded artifact. The canary release downloads
-          binaries-*, so a second build in the same run (nightly) needs a name
-          outside that pattern."
+          binaries-*; nightly.yaml names its own nightly-binaries."
 
 permissions:
   contents: read

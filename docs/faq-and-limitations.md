@@ -44,10 +44,11 @@ compile images, they never run services.
 ## Does it manage databases?
 
 Not as a separate kind of resource. PostgreSQL, MySQL, Redis, MongoDB and others
-are [templates](templates.md) deployed like any other service, and
-[service links](env-vars.md) fill in the connection URL for the apps that use
-them. Backups tar the database's volume while it runs, they don't run a dump
-tool, so read the backup warning below.
+are [templates](templates.md) deployed like any other service, get
+[a data volume automatically](storage-volumes.md#a-databases-data-volume) so a
+redeploy doesn't wipe them, and [service links](env-vars.md) fill in the
+connection URL for the apps that use them. Backups tar the database's volume
+while it runs, they don't run a dump tool, so read the backup warning below.
 
 ## Can I bring my existing services over?
 
@@ -82,11 +83,11 @@ are dropped with a warning. See [Importing a compose file](compose-import.md).
   hasn't been run against a real alias drop on a live swarm; if a service can't
   reach another by slug right after a rolling update, that's the known window,
   not a new bug.
-- **Cloudflare and Pangolin DNS automation haven't been tried against real
-  accounts.** Every deploy writes what each provider did into its log, so read
-  the first one. Point Pangolin at its **Integration API** (its own port, base
-  path `/v1`), not the dashboard's `/api/v1`. See
-  [DNS automation](dns-automation.md).
+- **Cloudflare DNS automation hasn't been tried against a real account yet.**
+  Pangolin's has, live, against a real org and site, and passed. Every deploy
+  writes what each provider did into its log, so read the first one. Point
+  Pangolin at its **Integration API** (its own port, base path `/v1`), not the
+  dashboard's `/api/v1`. See [DNS automation](dns-automation.md).
 - **Deploy on push without a reachable dashboard polls every two minutes.** A
   GitHub repo can't deliver a webhook to a dashboard only reachable on your LAN,
   so Homerun reads the branch head through the provider's API instead, which
