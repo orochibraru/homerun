@@ -252,12 +252,12 @@ func (r *run) deployThroughMirror(ctx context.Context) (resolvedImage, bool, err
 	r.progress.line("Copying " + ref + " into the Homerun mirror for scanning...")
 	copied, err := helperRun{}, errors.New(mirror.Unavailable)
 	if mirror.Unavailable == "" {
-		copied, err = r.runHelper(ctx, map[string]any{
-			"Cmd":        mirror.Copy.Cmd,
-			"Entrypoint": mirror.Copy.Entrypoint,
-			"Env":        mirror.Copy.Env,
-			"HostConfig": map[string]any{"NetworkMode": r.spec.Network},
-			"Image":      mirror.SkopeoImage,
+		copied, err = r.runHelper(ctx, dockerapi.HelperConfig{
+			Cmd:         mirror.Copy.Cmd,
+			Entrypoint:  mirror.Copy.Entrypoint,
+			Env:         mirror.Copy.Env,
+			Image:       mirror.SkopeoImage,
+			NetworkMode: r.spec.Network,
 		}, mirrorTimeout)
 	}
 	if err == nil && (copied.timedOut || copied.code != 0) {
@@ -364,7 +364,7 @@ func (r *run) loadFromMirror(ctx context.Context, ref string) error {
 		"Entrypoint": mirror.Archive.Entrypoint,
 		"HostConfig": map[string]any{"NetworkMode": r.spec.Network},
 		"Image":      mirror.SkopeoImage,
-		"Labels":     map[string]string{managedLabel: "true"},
+		"Labels":     dockerapi.HelperLabels(nil),
 		"Tty":        false,
 	})
 	if err != nil {

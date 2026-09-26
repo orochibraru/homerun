@@ -41,6 +41,16 @@ explicit port (that instance is reached directly on that port, not through
 Traefik : the installer's own IP-mode default) and when self-inspection fails
 (dev, or not running in a container).
 
+It now looks for the router file Homerun publishes first (the route that
+survives a stalled Traefik Docker provider, see `docker.md`) and reports a
+label-only route as working but not resilient.
+
+**`docker-wedged` reports helper containers the Docker daemon is stuck on**,
+read from the worker's `/v1/health` `wedgedContainers` (see `worker.md`'s
+janitor): a danger check naming them and the fix,
+`sudo systemctl restart docker`. `CoreServicesWatch` posts the same text once
+per newly wedged container as a `docker_wedged` notification.
+
 There's no standalone `/setup` page anymore (removed, it duplicated what
 `/settings` already does live). `AdminService.runSetupChecks()` now only backs
 the dashboard's setup-issue banner, which deep-links straight into `/settings`
@@ -360,3 +370,40 @@ it out to every channel account-wide subscribed to that event, see Outbound
 notification channels above, no longer scoped to a status page. A channel that
 throws is caught, logged and written to its own `lastError`, never allowed to
 abort the tick.
+
+## Error tracking (`error_project`/`error_issue`/`error_event`, `$lib/error-tracking/`, `ErrorTrackingService`)
+
+Sentry-protocol ingest so official SDKs work unchanged (GlitchTip's approach):
+`POST /api/<projectId>/envelope/` and legacy `/store/`
+(`src/routes/api/[projectId=integer]/`), public, keyed by `X-Sentry-Auth` or
+`sentry_key`, CORS open, gzip/deflate, 1 MB cap (413; a gzip bomb past the cap
+is a 400), 120 events/min per project (429 +
+`Retry-After`/`X-Sentry-Rate-Limits`). Only `event` items are stored;
+transactions, sessions, replays, attachments and client reports get 200 and are
+dropped so SDKs don't retry. The pure parts live in `$lib/error-tracking/`:
+`envelope.ts` (envelope/auth parsing, `isIngestPath`), `event.ts`
+(`normalizeEvent` trims everything: 60 frames, 5 chained exceptions, 50
+breadcrumbs, capped strings/contexts), `grouping.ts` (SDK `fingerprint` with
+`{{ default }}`, else exception type + in-app frames without line numbers, else
+the message with numbers/hex/uuids normalized), `source-links.ts` (strips build
+roots like `/app/` and schemes like `webpack://` to a repo path, links it at the
+release SHA or the deployment live at event time for GitHub/GitLab/
+Gitea/Bitbucket), `dsn.ts` (public DSN from `config.auth.origin`, internal DSN
+to the dashboard's network alias, `sentryEnv` for deploy injection of
+`SENTRY_DSN`/`SENTRY_RELEASE`/`SENTRY_ENVIRONMENT`, never overriding a user-set
+var; a git build's release is filled in by the worker from the commit it built).
+Previews and the canary report to the parent's project.
+
+Two real findings from the end-to-end run with `@sentry/node`: the SDK sends no
+`Content-Type`, and SvelteKit's dev (Node) adapter drops a body without one, so
+`vite.config.ts`'s `ingestContentTypePlugin` sets one on ingest POSTs in dev
+(the built server is fine); and the SDK posts events of one issue in parallel,
+so `ErrorIssueDTO.record` decides "regressed" with a conditional
+`UPDATE ... WHERE status = 'resolved' RETURNING id` before the upsert, which
+only one concurrent request can win (a timestamp comparison let two through).
+Notifications (`error.issue.new`, `error.issue.regressed`, in the default
+channel subscriptions) are capped at 10 per service per hour per kind
+(`WindowRateLimiter` keyed `serviceId:new|regressed`), so a burst of new issues
+can't hide a regression. `error-retention-scheduler.ts` prunes hourly: 100
+events kept per issue, 30 days of events, closed issues with nothing newer.
+Operator doc: `docs/error-tracking.md`.

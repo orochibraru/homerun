@@ -17,6 +17,7 @@
 	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
+		action?: string;
 		authError?: string;
 		dashboardOrigin: string | null;
 		emailSignIn: EmailSignIn;
@@ -30,15 +31,20 @@
 			dnsResolvable: boolean;
 			id: string;
 		};
+		subject?: "app" | "previews";
+		title?: string;
 		users: { email: string; id: string; name: string; role: string | null }[];
 	}
 
 	const {
+		action = "?/updateAppAuth",
 		authError,
 		dashboardOrigin,
 		emailSignIn,
 		oauthProviders,
+		subject = "app",
 		svc,
+		title = "Login wall",
 		users,
 	}: Props = $props();
 
@@ -79,9 +85,17 @@
 </script>
 
 <section class="panel rounded-md">
-  <PanelHeader icon={LockKeyhole} title="Login wall">
+  <PanelHeader icon={LockKeyhole} {title}>
     {#snippet description()}
-      {#if svc.authRequired}
+      {#if subject === "previews"}
+        {#if svc.authRequired}
+          Every pull request preview sends visitors to this instance's sign-in
+          page, and only the people allowed below get in. The service's own
+          wall is separate.
+        {:else}
+          Previews are open to anyone who can reach them.
+        {/if}
+      {:else if svc.authRequired}
         Visitors are sent to this instance's sign-in page before they reach
         this app.
       {:else}
@@ -104,7 +118,7 @@
     </p>
   {:else}
     <form
-      action="?/updateAppAuth"
+      {action}
       class="space-y-4 p-5"
       method="POST"
       use:enhance={enhanceToast({
@@ -129,7 +143,9 @@
       <CheckBox
         helperText="Send anonymous visitors to Homerun's sign-in page instead of letting them through"
         id="authRequired"
-        label="Require login to access this app"
+        label={subject === "previews"
+          ? "Require login to open previews"
+          : "Require login to access this app"}
         name="authRequired"
         bind:checked={authRequired}
       />

@@ -29,7 +29,8 @@ func (i resolvedImage) ref() string { return i.image + ":" + i.tag }
 
 // workloadEnv is the service's environment as a Docker Env list: the env files
 // read from the host first, in order, then the service's own variables, a later
-// value overriding an earlier one in place.
+// value overriding an earlier one in place, then the built commit under
+// ReleaseEnv when the spec names one.
 func (r *run) workloadEnv(ctx context.Context) ([]string, error) {
 	merged, err := r.readEnvFiles(ctx)
 	if err != nil {
@@ -37,6 +38,9 @@ func (r *run) workloadEnv(ctx context.Context) ([]string, error) {
 	}
 	for _, pair := range r.spec.Env {
 		merged = SetEnv(merged, pair[0], pair[1])
+	}
+	if r.spec.ReleaseEnv != "" && r.result.GitCommit != "" {
+		merged = SetEnv(merged, r.spec.ReleaseEnv, r.result.GitCommit)
 	}
 	env := make([]string, 0, len(merged))
 	for _, pair := range merged {

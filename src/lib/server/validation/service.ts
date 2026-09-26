@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
+import { environmentNameField } from "$lib/server/validation/environment-name";
 import { DOMAIN_RE } from "$lib/service-domains";
 import { splitShellWords } from "$lib/shell-words";
 
@@ -135,12 +136,14 @@ export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 // section for port/protocol/network-mode/DNS : see updatePortsSchema below),
 // each validated against only its own subset of baseServiceSchema rather
 // than the full create-time shape.
-export const updateGeneralSchema = baseServiceSchema.pick({
-	name: true,
-	pullPolicy: true,
-	restartPolicy: true,
-	slug: true,
-});
+export const updateGeneralSchema = baseServiceSchema
+	.pick({
+		name: true,
+		pullPolicy: true,
+		restartPolicy: true,
+		slug: true,
+	})
+	.extend({ environmentName: environmentNameField.optional() });
 export type UpdateGeneralInput = z.infer<typeof updateGeneralSchema>;
 
 const healthSeconds = optionalNumber(z.coerce.number().int().min(1).max(3600));

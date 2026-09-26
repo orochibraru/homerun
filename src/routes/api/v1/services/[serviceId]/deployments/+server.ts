@@ -1,4 +1,5 @@
 import { json } from "@sveltejs/kit";
+import { historyTrigger } from "$lib/deploy-trigger";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 
@@ -35,6 +36,7 @@ export const GET = async ({ params, locals, url }) => {
 				rollbackOfDeploymentId: row.rollbackOfDeploymentId,
 				startedAt: row.startedAt,
 				status: row.status,
+				trigger: historyTrigger(row.rollbackOfDeploymentId, row.trigger),
 			})),
 	);
 };

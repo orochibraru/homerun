@@ -148,6 +148,14 @@ describe("ReleaseChannelService.configure", () => {
 				"u1",
 			),
 		).rejects.toThrow("already routed");
+		domainTaken = false;
+		await expect(
+			ReleaseChannelService.configure(
+				svc,
+				{ canaryDomain: "web.example.com", enabled: true },
+				"u1",
+			),
+		).rejects.toThrow("where this service itself answers");
 	});
 
 	test("turning channels on creates the canary on the branch and deploys it", async () => {
@@ -187,6 +195,30 @@ describe("ReleaseChannelService.configure", () => {
 		await ReleaseChannelService.configure(svc, { enabled: false }, "u1");
 		expect(deleted).toEqual(["canary"]);
 		expect(enqueued).toHaveLength(0);
+	});
+
+	test("changing the canary domain redeploys the canary on it", async () => {
+		const existing = fakeService({
+			dnsResolvable: false,
+			gitRef: "main",
+			id: "canary",
+		});
+		canary = existing.svc;
+		const { svc } = fakeService({
+			channelBranch: "main",
+			channelCanaryDomain: "old.example.org",
+			channelsEnabled: true,
+			dnsResolvable: false,
+		});
+		await ReleaseChannelService.configure(
+			svc,
+			{ canaryDomain: "new.example.org", enabled: true },
+			"u1",
+		);
+		expect(existing.updates[0]).toMatchObject({
+			domains: ["new.example.org"],
+		});
+		expect(enqueued.map((e) => e.svc.id)).toEqual(["canary"]);
 	});
 
 	test("an unchanged configuration doesn't redeploy the canary", async () => {

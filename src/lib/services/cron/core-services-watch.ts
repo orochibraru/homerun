@@ -4,10 +4,12 @@ import {
 	setDetectedAuthCheckUrl,
 } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { NotificationDTO } from "$lib/dto/notification-dto";
 import { WorkerClient } from "$lib/server/worker-client";
 import { DeploymentService } from "../deploy.service.ts";
 import { syncDashboardDns } from "../dns.service.ts";
 import type { TraefikExpectation } from "../docker/core-services.ts";
+import { type WedgedContainer, WedgedReporter } from "../docker/wedged.ts";
 import { DockerService } from "../docker.service.ts";
 import { AUTH_CHECK_ALIAS } from "../self-update/compose-target.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
@@ -59,6 +61,8 @@ export class CoreServicesWatch extends BaseScheduler {
 
 	#bootId: string | null = null;
 
+	readonly #wedged = new WedgedReporter();
+
 	/**
 	 * Polls the worker's health and, whenever its boot id differs from the
 	 * last one seen (the first successful contact included), re-asserts the
@@ -71,12 +75,21 @@ export class CoreServicesWatch extends BaseScheduler {
 	 * worker restarted alone, or one that wasn't up yet when the app booted,
 	 * still ends up converged. An unreachable worker is skipped silently and
 	 * retried next tick; a failed convergence step is logged, not retried
-	 * until the next worker restart.
+	 * until the next worker restart. Every tick also reports helper
+	 * containers the worker found Docker wedged on, once each, as a
+	 * notification.
 	 */
 	protected async tick(): Promise<void> {
-		const health = await WorkerClient.get<{ bootId?: string }>(
-			"/v1/health",
-		).catch(() => null);
+		const health = await WorkerClient.get<{
+			bootId?: string;
+			wedgedContainers?: WedgedContainer[];
+		}>("/v1/health").catch(() => null);
+		if (health) {
+			this.#wedged.report(health.wedgedContainers ?? [], (message) => {
+				this.logger.warn(message);
+				NotificationDTO.notify({ message, type: "docker_wedged" });
+			});
+		}
 		const bootId = health?.bootId;
 		if (!bootId || bootId === this.#bootId) {
 			return;

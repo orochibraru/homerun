@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/orochibraru/homerun/internal/activity"
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/secrets"
 	"github.com/orochibraru/homerun/internal/worker"
@@ -25,6 +27,7 @@ type fakeStore struct {
 	finished  []outcome
 	released  []string
 	leaseLost bool
+	progress  []time.Time
 }
 
 // Claim implements worker.Store.
@@ -40,9 +43,10 @@ func (s *fakeStore) Claim(context.Context, string) (*worker.ClaimedJob, error) {
 }
 
 // Heartbeat implements worker.Store.
-func (s *fakeStore) Heartbeat(context.Context, string, string) (bool, error) {
+func (s *fakeStore) Heartbeat(_ context.Context, _, _ string, progressAt time.Time) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.progress = append(s.progress, progressAt)
 	return !s.leaseLost, nil
 }
 
@@ -187,6 +191,57 @@ func TestLostLeaseCancelsAndDropsTheResult(t *testing.T) {
 	})
 	if len(store.finished) != 0 || len(store.released) != 0 {
 		t.Errorf("a job leased elsewhere must not be written to, got %+v / %v", store.finished, store.released)
+	}
+}
+
+func TestAJobWithNoProgressFailsEvenThoughItHeartbeats(t *testing.T) {
+	store := &fakeStore{queue: []*worker.ClaimedJob{{ID: "stuck", JobType: "hang", Spec: sealed(t, `{}`)}}}
+	w := testWorker(t, store, map[string]worker.Executor{
+		"hang": func(ctx context.Context, _ jobs.Job) (map[string]any, error) {
+			<-ctx.Done()
+			return nil, ctx.Err()
+		},
+	})
+	w.StallTimeout = 30 * time.Millisecond
+	runUntil(t, w, func() bool { store.mu.Lock(); defer store.mu.Unlock(); return len(store.finished) == 1 })
+
+	got := store.finished[0]
+	if got.err == nil || !strings.Contains(got.err.Error(), "made no progress") {
+		t.Fatalf("a job stuck with no progress must fail through the normal path, got %+v", got)
+	}
+}
+
+func TestProgressKeepsAJobAliveAndIsReportedOnTheHeartbeat(t *testing.T) {
+	store := &fakeStore{queue: []*worker.ClaimedJob{{ID: "busy", JobType: "work", Spec: sealed(t, `{}`)}}}
+	w := testWorker(t, store, map[string]worker.Executor{
+		"work": func(ctx context.Context, _ jobs.Job) (map[string]any, error) {
+			for range 20 {
+				activity.Touch(ctx)
+				time.Sleep(5 * time.Millisecond)
+			}
+			return map[string]any{"ok": true}, nil
+		},
+	})
+	w.StallTimeout = 30 * time.Millisecond
+	runUntil(t, w, func() bool { store.mu.Lock(); defer store.mu.Unlock(); return len(store.finished) == 1 })
+
+	if got := store.finished[0]; got.err != nil {
+		t.Fatalf("a job that keeps making progress must not be stopped, got %v", got.err)
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if len(store.progress) == 0 || time.Since(store.progress[len(store.progress)-1]) > time.Second {
+		t.Fatalf("heartbeats must carry the last progress time, got %v", store.progress)
+	}
+}
+
+func TestStalledErrorKeepsARealCause(t *testing.T) {
+	if err := worker.StalledError(time.Minute, context.Canceled); !strings.Contains(err.Error(), "Docker daemon may be stuck") {
+		t.Errorf("a bare cancellation points at the daemon, got %v", err)
+	}
+	cause := errors.New("Docker didn't answer for 1m0s (GET /containers/abc/json)")
+	if err := worker.StalledError(time.Minute, cause); !errors.Is(err, cause) {
+		t.Errorf("a real error is kept, got %v", err)
 	}
 }
 

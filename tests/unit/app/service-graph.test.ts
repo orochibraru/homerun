@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+	backfillEdges,
 	createsCycle,
+	dependencyEdges,
 	dependencyForest,
 	dependencyLayers,
 	dependencyMap,
@@ -8,6 +10,7 @@ import {
 	mergeDependencies,
 	previewsByParent,
 	referencesHost,
+	replacementCycle,
 	toPreviewRow,
 } from "../../../src/lib/service-graph";
 import {
@@ -291,5 +294,127 @@ describe("previews under their parent", () => {
 		});
 		expect(canary).toMatchObject({ canary: true, parentId: "web" });
 		expect(row("p1", "web", 1).canary).toBe(false);
+	});
+});
+
+describe("backfilling recorded dependencies from env links", () => {
+	const old = new Date("2026-01-01");
+	const cutoff = new Date("2026-06-01");
+	const svc = (
+		id: string,
+		envVars: Record<string, string>,
+		extra: Partial<{
+			createdAt: Date;
+			image: string;
+			stackId: string | null;
+		}> = {},
+	) => ({
+		createdAt: old,
+		envVars,
+		id,
+		image: "ghcr.io/acme/app",
+		slug: id,
+		stackId: null,
+		...extra,
+	});
+
+	test("records a URL link across stacks and a bare-host link inside one", () => {
+		const { add, cycles } = backfillEdges(
+			[
+				svc("web", { API_URL: "http://api:8080" }),
+				svc("api", { CACHE_HOST: "cache" }, { stackId: "s1" }),
+				svc("cache", {}, { image: "redis", stackId: "s1" }),
+			],
+			new Map(),
+			cutoff,
+		);
+		expect(add).toEqual([
+			["web", "api"],
+			["api", "cache"],
+		]);
+		expect(cycles).toEqual([]);
+	});
+
+	test("skips a bare-host link across stacks", () => {
+		const { add } = backfillEdges(
+			[
+				svc("web", { CACHE_HOST: "cache" }),
+				svc("cache", {}, { image: "redis" }),
+			],
+			new Map(),
+			cutoff,
+		);
+		expect(add).toEqual([]);
+	});
+
+	test("turns a database pointing at an app into app → database", () => {
+		const { add } = backfillEdges(
+			[
+				svc("db", { APP_URL: "http://app:3000" }, { image: "postgres" }),
+				svc("app", {}),
+			],
+			new Map(),
+			cutoff,
+		);
+		expect(add).toEqual([["app", "db"]]);
+	});
+
+	test("leaves consumers that are new or already have recorded dependencies", () => {
+		const { add } = backfillEdges(
+			[
+				svc("new", { DB_URL: "postgres://db:5432" }, { createdAt: cutoff }),
+				svc("kept", { DB_URL: "postgres://db:5432" }),
+				svc("db", {}, { image: "postgres" }),
+				svc("other", {}),
+			],
+			new Map([["kept", ["other"]]]),
+			cutoff,
+		);
+		expect(add).toEqual([]);
+	});
+
+	test("reports an edge that would close a loop instead of recording it", () => {
+		const { add, cycles } = backfillEdges(
+			[svc("a", { B_URL: "http://b" }), svc("b", { A_URL: "http://a" })],
+			new Map(),
+			cutoff,
+		);
+		expect(add).toEqual([["a", "b"]]);
+		expect(cycles).toEqual([["b", "a"]]);
+	});
+});
+
+describe("a service's dependency edges", () => {
+	const env = new Map([
+		["web", ["api", "db"]],
+		["worker", ["api"]],
+	]);
+	const recorded = new Map([
+		["web", ["api", "cache"]],
+		["cron", ["web"]],
+	]);
+
+	test("tags each edge with where it comes from, both directions", () => {
+		expect(dependencyEdges("web", env, recorded)).toEqual({
+			dependedOnBy: [{ id: "cron", source: "recorded" }],
+			dependsOn: [
+				{ id: "api", source: "both" },
+				{ id: "db", source: "env" },
+				{ id: "cache", source: "recorded" },
+			],
+		});
+		expect(dependencyEdges("api", env, recorded).dependedOnBy).toEqual([
+			{ id: "web", source: "both" },
+			{ id: "worker", source: "env" },
+		]);
+	});
+
+	test("a replacement set that loops back is refused, its own old edges aside", () => {
+		expect(replacementCycle("api", ["web"], recorded)).toBe("web");
+		expect(replacementCycle("api", ["api"], recorded)).toBe("api");
+		expect(replacementCycle("web", ["cache"], recorded)).toBeUndefined();
+		expect(
+			replacementCycle("api", ["db"], new Map([["api", ["web"]]])),
+		).toBeUndefined();
 	});
 });

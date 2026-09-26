@@ -17,20 +17,48 @@ repository as its base (GitHub and Gitea compare the head and base repository,
 GitLab the source and target project, Bitbucket the source and destination
 repository); a fork, or a payload that doesn't say, is acknowledged and ignored.
 
-A preview copies the service's build settings, env vars, resources, healthcheck,
-stack and login wall when it's created and again on every update, but not its
-volumes, domains, cron schedule or status checks. The Previews tab lists the
-open ones with their status and domains, a **Redeploy** and a **Delete** button
-(a push to its pull request brings a deleted one back), and a **Domains** link
-to the preview's own Networking tab. Each preview is a normal service you can
-open too. Previews aren't rows of their own on the services list or a stack's
-page: each one is listed under the service it previews, in the list and in the
-dependency tree, and searching for a preview's branch or title finds its parent.
-A preview takes its parent's stack, icon and category. Any of the service's own
-hostnames in its env vars (an `ORIGIN`, a public URL) are replaced with the
-preview's main hostname, so a preview doesn't send its visitors, cookies or CSRF
-checks to the real site. Turning previews off, or deleting the service, deletes
-every preview.
+A preview copies the service's build settings, env vars, resources, healthcheck
+and stack when it's created and again on every update, but not its volumes,
+domains, cron schedule, status checks or login wall: previews have their own
+access rules, see
+[Sharing a preview with a client](#sharing-a-preview-with-a-client). The
+Previews tab lists the open ones with their status and domains, a **Redeploy**
+and a **Delete** button (a push to its pull request brings a deleted one back),
+and a **Domains** link to the preview's own Networking tab. Each preview is a
+normal service you can open too. Previews aren't rows of their own on the
+services list or a stack's page: each one is listed under the service it
+previews, in the list and in the dependency tree, and searching for a preview's
+branch or title finds its parent. A preview takes its parent's stack, icon and
+category. Any of the service's own hostnames in its env vars (an `ORIGIN`, a
+public URL) are replaced with the preview's main hostname, so a preview doesn't
+send its visitors, cookies or CSRF checks to the real site. Turning previews
+off, or deleting the service, deletes every preview.
+
+## Sharing a preview with a client
+
+**Who can open previews**, on the Previews tab, is a login wall for every
+preview of the service, separate from the service's own wall on its Security
+tab: production can stay public while previews are for your team and a client.
+It takes the same settings as a service's wall (the sign-in methods it accepts
+and the users, emails and groups it lets in) and applies them to each preview
+when it's created and again on every push to its pull request, so a wall set
+here can't be lost to a push. Saving it re-applies it to the open previews at
+once, redeploying the ones whose wall was switched on or off.
+
+To show a client a pull request before it's merged:
+
+1. On **Users**, invite the client with the **App access only** role. They can
+   accept with a password or with emailed codes, and they never see the
+   dashboard.
+2. On the service's **Previews** tab, turn on the wall under **Who can open
+   previews**, tick **Emailed code** (or whichever methods they use), and pick
+   the client in the allowed users or add their email.
+3. Send them the preview's link. After signing in they're let through, and their
+   `/my-apps` page lists every preview shared with them with its pull request
+   title.
+
+Services that had a login wall before this setting existed start with their own
+wall copied into it, so their previews stay gated as before.
 
 ## Domains
 

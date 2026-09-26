@@ -90,8 +90,11 @@ restart.
 After entering their email, anyone with an account can pick **Email me a code**
 or **Email me a sign-in link** below the password field (or below the provider
 buttons for a single sign-on account). An account with no password and no linked
-provider, such as a client who accepted an invite with emailed codes, skips
-straight to it: entering the email sends the code.
+provider, such as a client who accepted an invite with emailed codes, skips the
+password step: when codes are the only emailed method on, entering the email
+sends the code straight away; when sign-in links are on too, it offers **Email
+me a code** and **Email me a sign-in link** and sends nothing until one is
+picked.
 
 - **Codes** are 6 digits, expire after 10 minutes and allow five tries. Paste
   the code or type it; the form signs in as soon as all six digits are there.
@@ -110,6 +113,13 @@ for its authenticator code, and the instance's sign-in requirements still apply.
 Signing in with a code or link also marks the account's email as verified, and
 ends a directly created account's pending password setup (it can keep signing in
 with codes).
+
+An account without a password can add one later: **Set a password** under
+Profile → Security, or on the **Your apps** page for an app-access-only account.
+Homerun emails a code first to check it's really the account's owner, so this
+needs SMTP; the password follows the usual 12-character minimum. From then on
+the sign-in page asks that account for its password like any other, with the
+emailed options still below it.
 
 ## Locked out after a typo?
 

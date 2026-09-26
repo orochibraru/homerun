@@ -1,21 +1,9 @@
-import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RegistryAuth } from "./containers.ts";
 import { MANAGED_LABEL } from "./labels.ts";
 
-const logger = new Logger("Docker");
-
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 const NS_PER_MS = 1_000_000;
-
-interface RequiresContainerMixin {
-	pullImage: (params: {
-		image: string;
-		tag: string;
-		auth?: RegistryAuth;
-		onProgress?: (line: string) => void;
-	}) => Promise<{ digest: string | null }>;
-}
 
 export interface OneOffRunParams {
 	auth?: RegistryAuth;
@@ -63,59 +51,28 @@ function decodeOutput(value: string | null): Buffer {
 
 /** Mixin adding one-off/helper container support : running a throwaway container to completion, and extracting an archive into a named volume. */
 // oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
-export function DockerOneOffMixin<
-	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
->(Base: TBase) {
+export function DockerOneOffMixin<TBase extends Constructor<BaseDockerService>>(
+	Base: TBase,
+) {
 	return class DockerOneOffService extends Base {
-		/** Pulls `image:tag` if the daemon doesn't already have it. */
-		async #ensureImage(image: string, tag: string): Promise<void> {
-			const ref = `${image}:${tag}`;
-			const local = await this.worker.get<{ id: string | null }>(
-				"/v1/images/id",
-				{ ref },
-			);
-			if (local.id) {
-				return;
-			}
-			await this.pullImage({ image, tag });
-		}
-
 		/**
-		 * Unpacks a tar (gzipped is fine, Docker sniffs it) into a named
-		 * volume, through a never-started helper container that has the volume
-		 * mounted. The daemon does the extraction, so nothing is needed on this
-		 * host beyond the archive itself.
+		 * Unpacks a tar into a named volume (or host directory): the worker
+		 * runs a throwaway helper from `image:tag` with the volume mounted and
+		 * pipes the archive into its `tar -x`, pulling the image first if the
+		 * daemon lacks it. Nothing is needed on this host beyond the archive.
 		 *
-		 * @throws When the helper container can't be created or the archive
-		 * can't be written into it.
+		 * @throws When the helper can't run or its `tar` rejects the archive.
 		 */
 		async extractIntoVolume(params: ExtractIntoVolumeParams): Promise<void> {
-			await this.#ensureImage(params.image, params.tag);
-			const { id } = await this.worker.post<{ id: string }>("/v1/containers", {
-				body: {
-					Entrypoint: ["true"],
-					HostConfig: {
-						Binds: [`${params.volumeName}:${params.mountPath}`],
-					},
-					Image: `${params.image}:${params.tag}`,
-					Labels: { [MANAGED_LABEL]: "true" },
+			await this.worker.putRaw(
+				"/v1/volumes/archive",
+				new Uint8Array(params.archive),
+				{
+					image: `${params.image}:${params.tag}`,
+					source: params.volumeName,
+					target: params.mountPath,
 				},
-			});
-			try {
-				await this.worker.putRaw(
-					`/v1/containers/${id}/archive`,
-					new Uint8Array(params.archive),
-					{
-						path: params.mountPath,
-					},
-				);
-			} finally {
-				await this.worker
-					.delete(`/v1/containers/${id}`, { force: "1" })
-					.catch((error: unknown) => {
-						logger.warn(`Couldn't remove restore helper ${id}`, error);
-					});
-			}
+			);
 		}
 
 		/**

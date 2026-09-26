@@ -109,6 +109,19 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 		group: "Server",
 		label: "Resources recovered",
 	},
+	{
+		description:
+			"A service with error tracking on reported an error that doesn't match any existing issue.",
+		event: "error.issue.new",
+		group: "Errors",
+		label: "New error",
+	},
+	{
+		description: "An error issue marked resolved happened again.",
+		event: "error.issue.regressed",
+		group: "Errors",
+		label: "Error regressed",
+	},
 ];
 
 export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
@@ -119,6 +132,8 @@ export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
 	"deploy.rolled_back",
 	"resource.warning",
 	"resource.critical",
+	"error.issue.new",
+	"error.issue.regressed",
 ];
 
 const EVENT_SET = new Set<string>(
@@ -143,13 +158,15 @@ export function isFailureEvent(event: NotificationEvent): boolean {
 		event === "deploy.rolled_back" ||
 		event === "image.vulnerable" ||
 		event === "resource.warning" ||
-		event === "resource.critical"
+		event === "resource.critical" ||
+		event.startsWith("error.issue.")
 	);
 }
 
 /**
  * Picks the notification event for a finished deploy: `build.*` for git-based
- * services, `update.*` for scheduled image updates, `deploy.*` otherwise.
+ * services (a preview promote excepted, nothing is built), `update.*` for
+ * scheduled image updates, `deploy.*` otherwise.
  */
 export function deployEvent(
 	buildSource: string,
@@ -157,7 +174,7 @@ export function deployEvent(
 	ok: boolean,
 ): NotificationEvent {
 	const outcome = ok ? "succeeded" : "failed";
-	if (buildSource === "git") {
+	if (buildSource === "git" && trigger !== "promote") {
 		return `build.${outcome}`;
 	}
 	return trigger === "cron" ? `update.${outcome}` : `deploy.${outcome}`;

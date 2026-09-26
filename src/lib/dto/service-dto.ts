@@ -349,6 +349,11 @@ export class ServiceDTO extends BaseDTO<Service> {
 			previewParentId: input.previewParentId ?? null,
 			previewPrNumber: input.previewPrNumber ?? null,
 			previewPrTitle: input.previewPrTitle ?? null,
+			previewAuthAllowedEmails: [],
+			previewAuthAllowedGroups: [],
+			previewAuthAllowedUserIds: [],
+			previewAuthProviders: [],
+			previewAuthRequired: false,
 			previewDefaultDomain: true,
 			previewDomainTemplate: null,
 			previewsEnabled: false,
@@ -357,6 +362,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			channelTagPattern: "v*",
 			channelCanaryDomain: null,
 			channelCanary: input.channelCanary ?? false,
+			environmentName: null,
 		} satisfies Partial<Service>;
 	}
 
@@ -689,6 +695,23 @@ export class ServiceDTO extends BaseDTO<Service> {
 	/** Identity provider groups allowed through the login wall. */
 	get authAllowedGroups(): string[] {
 		return this.row.authAllowedGroups;
+	}
+
+	/** The login wall every pull request preview of this service gets, independent of the service's own wall. */
+	get previewAccessPolicy(): {
+		authAllowedEmails: string[];
+		authAllowedGroups: string[];
+		authAllowedUserIds: string[];
+		authProviders: string[];
+		authRequired: boolean;
+	} {
+		return {
+			authAllowedEmails: this.row.previewAuthAllowedEmails,
+			authAllowedGroups: this.row.previewAuthAllowedGroups,
+			authAllowedUserIds: this.row.previewAuthAllowedUserIds,
+			authProviders: this.row.previewAuthProviders,
+			authRequired: this.row.previewAuthRequired,
+		};
 	}
 	/** Whether the service deploys a registry image or builds from a git repo. */
 	get buildSource(): Service["buildSource"] {

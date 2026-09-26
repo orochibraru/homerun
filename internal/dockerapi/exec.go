@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // ExecConfig is an interactive exec: a command to run inside a running
@@ -40,6 +41,15 @@ func (s *HijackedStream) Read(buffer []byte) (int, error) {
 // Write sends bytes to the exec's stdin.
 func (s *HijackedStream) Write(chunk []byte) (int, error) {
 	return s.conn.Write(chunk)
+}
+
+// CloseWrite half-closes the connection, which the daemon takes as the end of
+// the process's stdin while its output keeps coming back.
+func (s *HijackedStream) CloseWrite() error {
+	if closer, ok := s.conn.(interface{ CloseWrite() error }); ok {
+		return closer.CloseWrite()
+	}
+	return errors.New("dockerapi: this connection can't be half-closed")
 }
 
 // Close ends the exec's connection, which the daemon takes as the end of its
@@ -135,6 +145,7 @@ func (c *Client) hijack(ctx context.Context, path string, query url.Values, body
 		request.Body = io.NopCloser(bytes.NewReader(body))
 		request.ContentLength = int64(len(body))
 	}
+	_ = conn.SetDeadline(time.Now().Add(ControlTimeout))
 	if err := request.Write(conn); err != nil {
 		_ = conn.Close()
 		return nil, err
@@ -143,8 +154,13 @@ func (c *Client) hijack(ctx context.Context, path string, query url.Values, body
 	response, err := http.ReadResponse(reader, request)
 	if err != nil {
 		_ = conn.Close()
+		var timeout net.Error
+		if errors.As(err, &timeout) && timeout.Timeout() {
+			return nil, &StallError{Call: http.MethodPost + " " + path, Container: containerOf(path), Idle: ControlTimeout}
+		}
 		return nil, err
 	}
+	_ = conn.SetDeadline(time.Time{})
 	if response.StatusCode != http.StatusSwitchingProtocols && response.StatusCode != http.StatusOK {
 		message, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
 		_ = response.Body.Close()

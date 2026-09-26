@@ -215,11 +215,24 @@ full `evaluate()` passes, one evaluate per gated service, turned into links by
 the pure `sharedAppLinks`: primary hostname over https, previews with PR
 number/title), plus `TwoFactorPanel`/`PasskeyPanel` and sign-out. It enforces
 the instance's 2FA/passkey requirement itself via
-`/security-setup?next=/my-apps`. Password change and session management are not
-on it (better-auth's endpoints would allow them, there's just no UI). The
-Security tab's user picker lists every account with its role label. **Not built
-yet**: a per-parent preview access policy (previews still mirror the parent's
-own wall via `mirroredSettings`).
+`/security-setup?next=/my-apps`. An account without a password gets **Set a
+password** there (see Emailed codes and links); password change and session
+management are not on it (better-auth's endpoints would allow them, there's just
+no UI). The Security tab's user picker lists every account with its role label.
+**Preview access policy**: `service.previewAuth*` (required, providers, allowed
+user ids/emails/groups, `ServiceDTO.previewAccessPolicy`) is the wall every pull
+request preview of a service gets, independent of the service's own `auth*`.
+`PreviewService#create`/`#refresh` apply it on top of `mirroredSettings` (which
+still carries the parent's own wall, deliberately: the release-channel canary
+mirrors that one), and `applyAccessPolicy` re-applies it to open previews when
+the Previews tab saves it, invalidating the gate cache and redeploying only the
+ones whose wall flipped (`redeployIfLoginWallChanged`). The form and its
+validation are shared with the Security tab:
+`$lib/components/login-wall-section.svelte` (`action`/`subject`/`title` props)
+and `$lib/server/login-wall-form.ts` (`parseLoginWallForm`,
+`loginWallAvailability`, `loginWallOptions`). Migration 0074 copies each
+service's own wall into its preview policy so previews that were gated through
+the old mirroring stay gated.
 
 ## Base domain vs. Dashboard URL, and why they're two things
 
@@ -983,15 +996,35 @@ another tab doesn't carry. Codes work there.
 
 **Sign-in page.** `lookup` carries `email: EmailSignIn` on every step, and has a
 new `"email-only"` step for an account with no `credential` row and no linked
-enabled provider (an invite accepted with codes): the page goes straight to the
-code form, whose mount sends the code. Other steps show **Email me a code** /
-**Email me a sign-in link** buttons; the pending-setup step offers **Skip the
-password, sign in with emailed codes**. The code form strips non-digits (paste
-`123 456` works), auto-submits at six digits, and rate-limits resends to one per
-30 seconds client-side; server-side it's the plugins' own limits (3/min per
-endpoint for codes, 5/min for links), off with
+enabled provider (an invite accepted with codes). What the page does there is
+`emailOnlyStep` (`$lib/auth-providers.ts`): straight to the code form, whose
+mount sends the code, only when codes are the only emailed method; with links on
+it shows a `"choose"` step with both buttons and sends nothing until one is
+clicked; links never count in the "Sign in with Homerun" flow. Other steps show
+**Email me a code** / **Email me a sign-in link** buttons; the pending-setup
+step offers **Skip the password, sign in with emailed codes**. The code form
+strips non-digits (paste `123 456` works), auto-submits at six digits, and
+rate-limits resends to one per 30 seconds client-side; server-side it's the
+plugins' own limits (3/min per endpoint for codes, 5/min for links), off with
 `HOMERUN_DISABLE_AUTH_RATE_LIMIT`. No new remote functions, so the app-only
 allowlist didn't change; the page talks to `/api/v1/auth/*` directly.
+
+**Adding a password later.** A signed-in account with no password (codes-only
+invitee, SSO-only user) gets **Set a password** on `/profile/security` and on
+`/my-apps` (`set-password-panel.svelte`, both routes export
+`$lib/server/set-password-actions.ts`'s `setPasswordActions`: form actions, so
+neither the app-only remote allowlist nor the read-only allowlist needed a new
+entry). `AccountSetupService.sendPasswordCode` emails an account-setup-style
+code (same `account-setup-code:<id>` row, five tries), `addPassword` checks it,
+then calls better-auth's server-only `auth.api.setPassword` with the request
+headers (it links the `credential` account, enforces `minPasswordLength` and
+refuses an account that already has one) and marks the email verified, so no
+later emailed sign-in can take the account for unproven and wipe the new
+password. Needs SMTP: without it the panel says so and there's no fallback
+(session freshness was the alternative; an account with no password and no SMTP
+can't sign in by email anyway). `lookup` then returns `"password"` for that
+account, nothing else to change. `tests/integration/auth.test.ts` covers code →
+set → password sign-in.
 
 **Invites.** `/auth/accept-invite/[token]` has an **Emailed codes** option while
 either method is available: `acceptWithCodes` calls `auth.api.createUser`

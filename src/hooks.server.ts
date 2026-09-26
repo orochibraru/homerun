@@ -8,6 +8,8 @@ import { migrate } from "drizzle-orm/bun-sql/migrator";
 import { building } from "$app/environment";
 import { applyInstanceSettings, config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
+import { isIngestPath } from "$lib/error-tracking/envelope";
 import { GIT_WEBHOOK_PATH } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
 import { OIDC_BASE_PATH, rebaseOnOrigin } from "$lib/oidc-provider";
@@ -196,12 +198,35 @@ async function runMigrations() {
 	}
 }
 
+/** Once per instance, records the start-order dependencies of every service linked only through env vars, logging a summary and every skipped loop, then stamps it done so later boots skip it; never fails the boot. */
+async function backfillDependencies(): Promise<void> {
+	try {
+		const settings = await InstanceSettingsDTO.get();
+		if (settings.dependenciesBackfilled) {
+			return;
+		}
+		const { added, cycles } = await ServiceDependencyDTO.backfillFromEnv();
+		await settings.markDependenciesBackfilled();
+		for (const cycle of cycles) {
+			logger.warn(`Dependency backfill skipped ${cycle}: it would make a loop`);
+		}
+		if (added > 0 || cycles.length > 0) {
+			logger.info(
+				`Dependency backfill: recorded ${added} dependencies from env links, skipped ${cycles.length} loops`,
+			);
+		}
+	} catch (err) {
+		logger.warn("Couldn't backfill service dependencies from env links", err);
+	}
+}
+
 /**
  * Server boot sequence, run once before the first request : waits for the
  * database, migrates and seeds built-in templates, applies DB-backed instance
  * settings (plus the auto-detected forward-auth URL when running in a
  * container), rebuilds auth, picks the orchestration mode for a brand new
- * instance and queues the redeploys `--migrate-to-rootful` asked for, then
+ * instance and queues the redeploys `--migrate-to-rootful` asked for,
+ * backfills start-order dependencies from pre-existing env links, then
  * starts the job worker, rollout health watches and every scheduler,
  * including the core-services watch that asserts the dashboard router, DNS,
  * Newt and swarm mode every time the worker (re)starts. With
@@ -236,6 +261,7 @@ export const init = async () => {
 	await OrchestrationService.applyOnBoot(settings, created).catch((err) => {
 		logger.warn("Couldn't apply the orchestration mode on boot", err);
 	});
+	await backfillDependencies();
 
 	JobWorker.start();
 	void DeploymentService.resumeHealthWatches();
@@ -247,6 +273,7 @@ export const init = async () => {
 	CronService.startUptimeProbe();
 	CronService.startMirrorGcScheduler();
 	CronService.startGitPollScheduler();
+	CronService.startErrorRetention();
 	CronService.startCoreServicesWatch();
 	CronService.startSwarmDnsWatch();
 };
@@ -433,7 +460,7 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
  * SvelteKit routes that live under its base path.
  */
 const authHandler: Handle = async ({ event, resolve }) => {
-	if (isAuthCheckPath(event.url)) {
+	if (isAuthCheckPath(event.url) || isIngestPath(event.url.pathname)) {
 		event.locals.isAdmin = false;
 		event.locals.apiKeyScope = null;
 		event.locals.readOnly = false;
@@ -546,7 +573,12 @@ const generalHandler: Handle = async ({ event, resolve }) => {
 
 	const isAsset =
 		!event.url.pathname.endsWith("/") && event.url.pathname.includes(".");
-	if (res.status >= 400 && !isAsset && res.status !== 404) {
+	if (
+		res.status >= 400 &&
+		!isAsset &&
+		res.status !== 404 &&
+		!isIngestPath(event.url.pathname)
+	) {
 		logger.error(
 			`Error on ${event.request.method} ${event.url.pathname} - ${res.status}`,
 		);
@@ -578,7 +610,8 @@ const csrfHandler: Handle = async ({ event, resolve }) => {
 			event.url,
 			(pathname) =>
 				OIDC_SERVER_TO_SERVER_PATHS.has(pathname) ||
-				pathname.startsWith(`${GIT_WEBHOOK_PATH}/`),
+				pathname.startsWith(`${GIT_WEBHOOK_PATH}/`) ||
+				isIngestPath(pathname),
 		)
 	) {
 		return new Response(

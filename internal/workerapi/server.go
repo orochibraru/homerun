@@ -21,10 +21,15 @@ import (
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/hoststats"
 	"github.com/orochibraru/homerun/internal/httpapi"
+	"github.com/orochibraru/homerun/internal/janitor"
 )
 
 // Server answers the app's Docker control calls for one daemon.
 type Server struct {
+	// Wedged lists the helper containers the janitor couldn't remove, for
+	// /v1/health. Nil reports none.
+	Wedged func() []janitor.Wedged
+
 	bootID    string
 	docker    *dockerapi.Client
 	stats     *hoststats.StatsSampler
@@ -42,6 +47,12 @@ func NewServer(ctx context.Context, token string, docker *dockerapi.Client) *Ser
 		terminals: NewTerminalHub(ctx, docker),
 		token:     token,
 	}
+}
+
+// TerminalsClosed is closed once every terminal session has been closed after
+// the server's context ended.
+func (s *Server) TerminalsClosed() <-chan struct{} {
+	return s.terminals.Done()
 }
 
 // Handler routes every request. /v1/health is open and unlogged, everything
@@ -67,13 +78,19 @@ func (s *Server) Handler() http.Handler {
 }
 
 // health answers with the worker's version, so the app can tell a worker
-// that's up from one that's merely listening, and a boot id that changes on
-// every worker start, so the app can tell it restarted and re-converge the
-// core services onto it.
+// that's up from one that's merely listening, a boot id that changes on every
+// worker start, so the app can tell it restarted and re-converge the core
+// services onto it, and the helper containers the daemon is wedged on, so the
+// app can tell the operator to restart Docker.
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
-	httpapi.WriteJSON(w, http.StatusOK, map[string]string{
-		"bootId":  s.bootID,
-		"status":  "ok",
-		"version": buildinfo.Version,
+	wedged := []janitor.Wedged{}
+	if s.Wedged != nil {
+		wedged = s.Wedged()
+	}
+	httpapi.WriteJSON(w, http.StatusOK, map[string]any{
+		"bootId":           s.bootID,
+		"status":           "ok",
+		"version":          buildinfo.Version,
+		"wedgedContainers": wedged,
 	})
 }

@@ -7,12 +7,14 @@ import {
 	integer,
 	jsonb,
 	pgTable,
+	serial,
 	text,
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { BuildMethod } from "$lib/build-methods";
 import type { DeployTrigger } from "$lib/deploy-trigger";
+import type { StoredErrorEvent } from "$lib/error-tracking/event";
 import type {
 	BlockSeverity,
 	ImageScanFinding,
@@ -601,6 +603,9 @@ export const instanceSettings = pgTable("instance_settings", {
 	onboardingCompletedAt: timestamp("onboarding_completed_at", {
 		mode: "date",
 	}),
+	dependenciesBackfilledAt: timestamp("dependencies_backfilled_at", {
+		mode: "date",
+	}),
 	// "standalone" (one container per service) |
 	// "swarm" (a swarm service : replicas, rolling updates, overlay
 	// networking). A fresh instance picks swarm when its daemon is already a
@@ -814,6 +819,25 @@ export const service = pgTable(
 			.default([])
 			.notNull(),
 		authRequired: boolean("auth_required").default(false).notNull(),
+		previewAuthAllowedGroups: jsonb("preview_auth_allowed_groups")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		previewAuthAllowedEmails: jsonb("preview_auth_allowed_emails")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		previewAuthAllowedUserIds: jsonb("preview_auth_allowed_user_ids")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		previewAuthProviders: jsonb("preview_auth_providers")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		previewAuthRequired: boolean("preview_auth_required")
+			.default(false)
+			.notNull(),
 		autoRollback: boolean("auto_rollback").default(false).notNull(),
 		capAdd: jsonb("cap_add").$type<string[]>().default([]).notNull(),
 		command: jsonb("command").$type<string[] | null>(),
@@ -949,6 +973,7 @@ export const service = pgTable(
 		channelTagPattern: text("channel_tag_pattern").default("v*").notNull(),
 		channelCanaryDomain: text("channel_canary_domain"),
 		channelCanary: boolean("channel_canary").default(false).notNull(),
+		environmentName: text("environment_name"),
 		id: text("id").primaryKey(),
 		// e.g. "ghcr.io/acme/api"
 		image: text("image").notNull(),
@@ -1357,6 +1382,8 @@ export const notification = pgTable(
 				| "deploy_rolled_back"
 				| "resource_alert"
 				| "update_failed"
+				| "docker_wedged"
+				| "error_issue"
 			>()
 			.notNull(),
 		userId: text("user_id")
@@ -1489,6 +1516,7 @@ export const job = pgTable(
 		maxAttempts: integer("max_attempts").default(1).notNull(),
 		payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
 		priority: integer("priority").default(0).notNull(),
+		progressAt: timestamp("progress_at", { mode: "date" }),
 		result: jsonb("result").$type<Record<string, unknown>>(),
 		runAt: timestamp("run_at", { mode: "date" }).notNull(),
 		serviceId: text("service_id").references(() => service.id, {
@@ -1674,7 +1702,7 @@ export const serviceDependencyRelations = relations(
 	}),
 );
 
-export type UserRole = "admin" | "developer" | "viewer";
+export type UserRole = "admin" | "developer" | "viewer" | "app-user";
 export const statusPage = pgTable(
 	"status_page",
 	{
@@ -1750,6 +1778,93 @@ export const notificationChannel = pgTable(
 	(table) => [index("notificationChannel_userId_idx").on(table.userId)],
 );
 
+export const errorProject = pgTable("error_project", {
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	enabled: boolean("enabled").default(true).notNull(),
+	id: text("id").primaryKey(),
+	injectEnv: boolean("inject_env").default(true).notNull(),
+	internalDsn: boolean("internal_dsn").default(true).notNull(),
+	projectId: serial("project_id").notNull().unique(),
+	publicKey: text("public_key").notNull().unique(),
+	serviceId: text("service_id")
+		.notNull()
+		.unique()
+		.references(() => service.id, { onDelete: "cascade" }),
+});
+
+export const errorIssue = pgTable(
+	"error_issue",
+	{
+		count: integer("count").default(0).notNull(),
+		culprit: text("culprit"),
+		fingerprint: text("fingerprint").notNull(),
+		firstRelease: text("first_release"),
+		firstSeen: timestamp("first_seen", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		lastEnvironment: text("last_environment"),
+		lastRelease: text("last_release"),
+		lastSeen: timestamp("last_seen", { mode: "date" }).notNull(),
+		level: text("level").default("error").notNull(),
+		platform: text("platform"),
+		regressedAt: timestamp("regressed_at", { mode: "date" }),
+		resolvedAt: timestamp("resolved_at", { mode: "date" }),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		status: text("status")
+			.$type<"unresolved" | "resolved" | "ignored">()
+			.default("unresolved")
+			.notNull(),
+		title: text("title").notNull(),
+		type: text("type"),
+		value: text("value"),
+	},
+	(table) => [
+		uniqueIndex("errorIssue_serviceId_fingerprint_uidx").on(
+			table.serviceId,
+			table.fingerprint,
+		),
+		index("errorIssue_serviceId_status_lastSeen_idx").on(
+			table.serviceId,
+			table.status,
+			table.lastSeen,
+		),
+	],
+);
+
+export const errorEvent = pgTable(
+	"error_event",
+	{
+		environment: text("environment"),
+		eventId: text("event_id").notNull(),
+		id: text("id").primaryKey(),
+		issueId: text("issue_id")
+			.notNull()
+			.references(() => errorIssue.id, { onDelete: "cascade" }),
+		level: text("level").default("error").notNull(),
+		message: text("message"),
+		payload: jsonb("payload").$type<StoredErrorEvent>().notNull(),
+		receivedAt: timestamp("received_at", { mode: "date" }).notNull(),
+		release: text("release"),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		timestamp: timestamp("timestamp", { mode: "date" }).notNull(),
+		userKey: text("user_key"),
+	},
+	(table) => [
+		uniqueIndex("errorEvent_serviceId_eventId_uidx").on(
+			table.serviceId,
+			table.eventId,
+		),
+		index("errorEvent_issueId_receivedAt_idx").on(
+			table.issueId,
+			table.receivedAt,
+		),
+		index("errorEvent_receivedAt_idx").on(table.receivedAt),
+	],
+);
+
 export type Stack = typeof stack.$inferSelect;
 export type OauthClient = typeof oauthClient.$inferSelect;
 export type Template = typeof template.$inferSelect;
@@ -1775,6 +1890,9 @@ export type StatusPage = typeof statusPage.$inferSelect;
 export type StatusPageService = typeof statusPageService.$inferSelect;
 export type NotificationChannel = typeof notificationChannel.$inferSelect;
 export type Job = typeof job.$inferSelect;
+export type ErrorProject = typeof errorProject.$inferSelect;
+export type ErrorIssue = typeof errorIssue.$inferSelect;
+export type ErrorEvent = typeof errorEvent.$inferSelect;
 export type ImageScan = typeof imageScan.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;

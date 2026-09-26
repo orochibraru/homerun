@@ -27,6 +27,10 @@ describe("hasIconImage and iconSrc", () => {
 		expect(iconSrc("di:home-assistant")).toBe(
 			"/icons/dashboard/home-assistant",
 		);
+		expect(iconSrc("di:umami", "dark")).toBe(
+			"/icons/dashboard/umami?theme=dark",
+		);
+		expect(iconSrc("redis.svg", "dark")).toBe("/template-icons/redis.svg");
 	});
 });
 

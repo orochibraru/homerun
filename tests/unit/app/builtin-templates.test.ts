@@ -116,6 +116,25 @@ describe("parseBuiltinTemplates", () => {
 		).toThrow(/unique/);
 	});
 
+	test("rejects a secret token it can't fill", () => {
+		expect(() =>
+			parseBuiltinTemplates({
+				"/templates/database/postgres.json": {
+					...leaf,
+					envVars: { KEY: "{{secret:base64}}" },
+				},
+			}),
+		).toThrow(/secret token/);
+		expect(() =>
+			parseBuiltinTemplates({
+				"/templates/database/postgres.json": {
+					...leaf,
+					command: ["run", "{{secret:hex0}}"],
+				},
+			}),
+		).toThrow(/secret token/);
+	});
+
 	test("names the file and field of an invalid template", () => {
 		expect(() =>
 			parseBuiltinTemplates({

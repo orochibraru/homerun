@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "$lib/host-access";
 import { Logger } from "$lib/logger";
+import { normalizeEnvironmentName } from "$lib/release-channels";
 import { invalidateGatedService } from "$lib/server/gated-service-cache";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateServiceApiBody } from "$lib/server/validation/api";
@@ -60,6 +61,9 @@ export const PATCH = async ({ params, request, locals }) => {
 		);
 	}
 	const { registryPassword, ...rest } = result.data;
+	if (rest.environmentName !== undefined) {
+		rest.environmentName = normalizeEnvironmentName(rest.environmentName);
+	}
 	if (rest.domains) {
 		rest.domains = normalizeDomains(rest.domains);
 		const taken = await ServiceDTO.domainTaken(rest.domains, svc.id);

@@ -1,0 +1,1 @@
+ALTER TABLE "instance_settings" ADD COLUMN "dependencies_backfilled_at" timestamp;

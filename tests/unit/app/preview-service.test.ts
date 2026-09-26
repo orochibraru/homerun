@@ -42,6 +42,13 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		id: "parent",
 		image: "img",
 		name: "Web",
+		previewAccessPolicy: {
+			authAllowedEmails: [],
+			authAllowedGroups: [],
+			authAllowedUserIds: [],
+			authProviders: [],
+			authRequired: false,
+		},
 		previewDefaultDomain: true,
 		previewDomainTemplate: null,
 		primaryDomain: null,
@@ -390,5 +397,61 @@ describe("PreviewService.applyDomains / redeploy / delete", () => {
 		expect((await PreviewService.redeploy(svc, "p1")).status).toBe("deployed");
 		await PreviewService.delete(svc, "p1");
 		expect(deleted).toEqual(["p1"]);
+	});
+});
+
+describe("PreviewService preview access policy", () => {
+	const clientOnly = {
+		authAllowedEmails: [],
+		authAllowedGroups: [],
+		authAllowedUserIds: ["client-1"],
+		authProviders: ["email-otp"],
+		authRequired: true,
+	};
+
+	test("a new preview gets the parent's preview policy, not its own wall", async () => {
+		const { svc } = fakeService({
+			authAllowedEmails: ["owner@x.io"],
+			authRequired: false,
+			previewAccessPolicy: clientOnly,
+		});
+		await PreviewService.handle(svc, event());
+		expect(created[0].authRequired).toBe(true);
+		expect(createdUpdates[0]).toMatchObject({
+			authAllowedEmails: [],
+			authAllowedUserIds: ["client-1"],
+			authProviders: ["email-otp"],
+		});
+	});
+
+	test("a pull request update re-applies the preview policy", async () => {
+		const preview = fakeService({ gitRef: "old", id: "preview" });
+		existing = preview.svc;
+		const { svc } = fakeService({ previewAccessPolicy: clientOnly });
+		await PreviewService.handle(svc, event({ action: "update" }));
+		expect(preview.updates[0]).toMatchObject(clientOnly);
+	});
+
+	test("saving the policy updates every open preview and redeploys the ones whose wall flipped", async () => {
+		const walled = fakeService({ authRequired: true, id: "p1" });
+		const open = fakeService({ authRequired: false, id: "p2" });
+		previews = [walled.svc, open.svc];
+		const redeploys: { id: string; wasRequired: boolean }[] = [];
+		stub(
+			DeploymentService,
+			"redeployIfLoginWallChanged",
+			async (svc: { id: string }, wasRequired: boolean) => {
+				redeploys.push({ id: svc.id, wasRequired });
+				return true;
+			},
+		);
+		const { svc } = fakeService({ previewAccessPolicy: clientOnly });
+		await PreviewService.applyAccessPolicy(svc);
+		expect(walled.updates[0]).toEqual(clientOnly);
+		expect(open.updates[0]).toEqual(clientOnly);
+		expect(redeploys).toEqual([
+			{ id: "p1", wasRequired: true },
+			{ id: "p2", wasRequired: false },
+		]);
 	});
 });

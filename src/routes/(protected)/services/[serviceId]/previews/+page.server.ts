@@ -5,6 +5,11 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import {
+	loginWallAvailability,
+	loginWallOptions,
+	parseLoginWallForm,
+} from "$lib/server/login-wall-form";
+import {
 	defaultHostname,
 	previewDomainTemplateProblem,
 } from "$lib/service-domains";
@@ -25,6 +30,8 @@ export const load = async ({ params }) => {
 			stack?.slug,
 			config.baseDomain,
 		),
+		...(await loginWallOptions()),
+		previewAccess: svc.previewAccessPolicy,
 		previews: await PreviewService.list(svc),
 		pushWebhook: await GitWebhookService.describe(svc),
 	};
@@ -44,6 +51,39 @@ async function previewParent(serviceId: string) {
 }
 
 export const actions = {
+	updatePreviewAccess: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await previewParent(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Previews need a service built from git." });
+		}
+		const parsed = parseLoginWallForm(
+			await request.formData(),
+			await loginWallAvailability(),
+			config.auth.origin,
+		);
+		if ("error" in parsed) {
+			return fail(400, { authError: parsed.error });
+		}
+		const { policy } = parsed;
+		await svc.update({
+			previewAuthAllowedEmails: policy.authAllowedEmails,
+			previewAuthAllowedGroups: policy.authAllowedGroups,
+			previewAuthAllowedUserIds: policy.authAllowedUserIds,
+			previewAuthProviders: policy.authProviders,
+			previewAuthRequired: policy.authRequired,
+		});
+		await PreviewService.applyAccessPolicy(svc);
+		logger.info(
+			`Preview access updated: service=${svc.id} authRequired=${policy.authRequired} methods=${
+				policy.authProviders.join("|") || "none"
+			} user=${locals.user.id}`,
+		);
+		return { authSuccess: true };
+	},
+
 	updatePreviews: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

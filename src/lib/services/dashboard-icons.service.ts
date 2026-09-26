@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
-import { DASHBOARD_ICON_NAME } from "$lib/service-icon";
+import { DASHBOARD_ICON_NAME, type IconTheme } from "$lib/service-icon";
 
 export const DASHBOARD_ICONS_CDN =
 	"https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons";
@@ -88,6 +88,24 @@ export function parseDashboardIconsMetadata(raw: unknown): CatalogEntry[] {
 }
 
 /**
+ * The file `theme` should show for icon `name`: Dashboard Icons names the
+ * variant drawn for dark backgrounds `<name>-light` and the one for light
+ * backgrounds `<name>-dark`, so the dark theme gets `-light` when the icon has
+ * one. Falls back to `name` without a theme or a matching variant.
+ */
+export function themedIconFile(
+	name: string,
+	variants: readonly string[],
+	theme: IconTheme | null,
+): string {
+	if (!theme) {
+		return name;
+	}
+	const file = `${name}-${theme === "dark" ? "light" : "dark"}`;
+	return variants.includes(file) ? file : name;
+}
+
+/**
  * Serves Dashboard Icons (homarr-labs/dashboard-icons) through Homerun, so no
  * browser ever calls jsDelivr: the catalog and every icon are fetched once
  * and kept on disk under the data directory.
@@ -124,12 +142,16 @@ export class DashboardIconsServiceClass {
 	}
 
 	/**
-	 * The icon file for `name`, from disk or fetched once from jsDelivr and
-	 * written to disk. Returns null for an invalid or unknown name, or one
-	 * upstream doesn't have (remembered for ten minutes so a missing icon
-	 * doesn't hit the CDN on every render).
+	 * The icon file for `name`, in its `theme` variant when it has one (see
+	 * `themedIconFile`), from disk or fetched once from jsDelivr and written to
+	 * disk under the variant's own name. Returns null for an invalid or unknown
+	 * name, or one upstream doesn't have (remembered for ten minutes so a
+	 * missing icon doesn't hit the CDN on every render).
 	 */
-	async icon(name: string): Promise<DashboardIconFile | null> {
+	async icon(
+		name: string,
+		theme: IconTheme | null = null,
+	): Promise<DashboardIconFile | null> {
 		if (!DASHBOARD_ICON_NAME.test(name)) {
 			return null;
 		}
@@ -140,10 +162,12 @@ export class DashboardIconsServiceClass {
 		if (entry === null) {
 			return null;
 		}
+		const variants = entry?.variants ?? [];
+		const file = themedIconFile(name, variants, theme);
 		const formats = entry ? [entry.format] : FORMATS;
 		const cached = await Promise.all(
 			formats.map((format) =>
-				readFile(join(this.#dir(), "icons", `${name}.${format}`)).then(
+				readFile(join(this.#dir(), "icons", `${file}.${format}`)).then(
 					(body) => ({ body, format }),
 					() => null,
 				),
@@ -156,27 +180,29 @@ export class DashboardIconsServiceClass {
 				contentType: CONTENT_TYPES[hit.format],
 			};
 		}
-		if ((this.#misses.get(name) ?? 0) > this.#now()) {
+		if ((this.#misses.get(file) ?? 0) > this.#now()) {
 			return null;
 		}
-		let load = this.#iconLoads.get(name);
+		let load = this.#iconLoads.get(file);
 		if (!load) {
-			load = this.#download(name, formats, entry?.variants ?? []).finally(() =>
-				this.#iconLoads.delete(name),
-			);
-			this.#iconLoads.set(name, load);
+			load = this.#download(
+				file,
+				formats,
+				[name, ...variants].filter((other) => other !== file),
+			).finally(() => this.#iconLoads.delete(file));
+			this.#iconLoads.set(file, load);
 		}
 		return await load;
 	}
 
-	/** Fetches `name` (then its colour variants) in each format in turn, caching the first hit; records a miss when none exists. */
+	/** Fetches `name` (then its `fallbacks`) in each format in turn, caching the first hit under `name`; records a miss when none exists. */
 	async #download(
 		name: string,
 		formats: readonly IconFormat[],
-		variants: string[],
+		fallbacks: string[],
 	): Promise<DashboardIconFile | null> {
 		const candidates = formats.flatMap((format) =>
-			[name, ...variants].map((file) => ({ file, format })),
+			[name, ...fallbacks].map((file) => ({ file, format })),
 		);
 		for (const { file, format } of candidates) {
 			// oxlint-disable-next-line no-await-in-loop -- the first file upstream has wins, the rest mustn't be fetched

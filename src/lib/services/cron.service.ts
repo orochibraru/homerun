@@ -19,6 +19,7 @@ import { enqueueVolumeBackup } from "./backup-queue.ts";
 import { CoreServicesWatch } from "./cron/core-services-watch.ts";
 import { type ParsedCron, parseCronSchedule } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
+import { ErrorRetentionScheduler } from "./cron/error-retention-scheduler.ts";
 import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
 import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { SwarmDnsWatch } from "./cron/swarm-dns-watch.ts";
@@ -76,6 +77,8 @@ class CronServiceClass {
 
 	private readonly gitPollScheduler = new GitPollScheduler();
 
+	private readonly errorRetentionScheduler = new ErrorRetentionScheduler();
+
 	private readonly coreServicesWatch = new CoreServicesWatch();
 
 	private readonly swarmDnsWatch = new SwarmDnsWatch();
@@ -119,6 +122,11 @@ class CronServiceClass {
 	/** Starts the branch poller that deploys on push when a webhook can't be delivered. */
 	startGitPollScheduler(): void {
 		this.gitPollScheduler.start();
+	}
+
+	/** Starts the hourly error tracking retention pass. */
+	startErrorRetention(): void {
+		this.errorRetentionScheduler.start();
 	}
 
 	/** Starts the watch that re-asserts the core services every time the worker (re)starts. */

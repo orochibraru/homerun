@@ -58,11 +58,13 @@ and auth secret still at their defaults, no Dashboard URL set, the dashboard's
 own hostname actually routed to it by Traefik, the Traefik container reachable,
 the [worker](configuration.md#the-app-and-the-worker) reachable and the Docker
 socket it fronts answering, Traefik still running with the flags your settings
-put on it (the swarm provider, the HTTP cache plugin, the ACME email), and SMTP
-fully configured if you turned it on. The worker and Docker checks are reported
-separately on purpose: a worker that's down and a worker that's up but can't
-reach Docker are different problems with different fixes. Any that aren't OK
-show up as a banner at the top of the dashboard.
+put on it (the swarm provider, the HTTP cache plugin, the ACME email), Docker
+not stuck on a helper container (see
+[Docker stuck on a container](faq-and-limitations.md#docker-stuck-on-a-container)),
+and SMTP fully configured if you turned it on. The worker and Docker checks are
+reported separately on purpose: a worker that's down and a worker that's up but
+can't reach Docker are different problems with different fixes. Any that aren't
+OK show up as a banner at the top of the dashboard.
 
 The banner links straight into `/settings`, on whichever tab the offending field
 lives, and rings the relevant fields so you can see what it's complaining about

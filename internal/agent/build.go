@@ -272,7 +272,7 @@ func (b *Builder) RunGit(ctx context.Context, cmd []string, volume string) (stri
 		Entrypoint: []string{"git"},
 		Env:        []string{"GIT_TERMINAL_PROMPT=0"},
 		Image:      GitImage,
-		Labels:     map[string]string{managedLabel: "true"},
+		Labels:     dockerapi.HelperLabels(nil),
 	})
 	if err != nil {
 		return "", 0, err
@@ -327,7 +327,7 @@ func (b *Builder) runBuilder(ctx context.Context, input BuilderInput, volume str
 		Entrypoint: []string{"sh"},
 		Env:        env,
 		Image:      Tools.HelperImage,
-		Labels:     map[string]string{managedLabel: "true"},
+		Labels:     dockerapi.HelperLabels(nil),
 	})
 	if err != nil {
 		return err

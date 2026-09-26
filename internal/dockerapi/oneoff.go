@@ -120,7 +120,8 @@ func (c *Client) RunOneOff(ctx context.Context, config OneOffConfig) (OneOffResu
 	return OneOffResult{ExitCode: code, Stderr: stderr.buffer, Stdout: stdout.buffer, TimedOut: timedOut.Load()}, nil
 }
 
-// createOneOff creates (but does not start) the one-off container for config.
+// createOneOff creates (but does not start) the one-off container for config,
+// labelled as a helper so the janitor can reap it if this process dies first.
 func (c *Client) createOneOff(ctx context.Context, config OneOffConfig) (string, error) {
 	hostConfig := map[string]any{"Privileged": config.Privileged}
 	if config.PidMode != "" {
@@ -137,7 +138,7 @@ func (c *Client) createOneOff(ctx context.Context, config OneOffConfig) (string,
 		"Env":        config.Env,
 		"HostConfig": hostConfig,
 		"Image":      config.Image,
-		"Labels":     config.Labels,
+		"Labels":     HelperLabels(config.Labels),
 		"Tty":        false,
 	}
 	if len(config.Entrypoint) > 0 {

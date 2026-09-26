@@ -34,10 +34,18 @@ whole archive in memory, no SDK).
 
 **Both volume kinds are backed up the same way.** The volume (a bind mount's
 host path or a Docker-managed volume) is mounted read-only into a short-lived
-`alpine` helper container that is never started: the Docker daemon reads its
-files out through its archive API, and the helper is removed straight after. A
+`alpine` helper container that runs `tar` and streams the archive out on its own
+output, straight into the upload, and the helper is removed straight after. A
 restore downloads the archive to a temporary file first, so the volume (and any
-services stopped for it) are only touched once the download succeeded.
+services stopped for it) are only touched once the download succeeded, then
+pipes it into `tar` in the same kind of helper. Backups made by older versions
+(which read the volume through Docker's archive API) restore the same way: the
+file format didn't change.
+
+A backup that stops making progress doesn't hang: if Docker stops answering for
+the helper, the backup fails after about 10 minutes with an error naming the
+container, instead of running (and blocking updates) forever. See
+[Docker stuck on a container](faq-and-limitations.md#docker-stuck-on-a-container).
 
 Set a cron schedule alongside the destination to back up automatically; the
 scheduler mirrors the [scheduled-redeploy](scheduling.md#scheduled-redeploy)

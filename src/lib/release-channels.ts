@@ -1,18 +1,59 @@
 export const DEPLOY_ENVIRONMENTS = ["production", "canary", "preview"] as const;
 
-export type DeployEnvironment = (typeof DEPLOY_ENVIRONMENTS)[number];
-
 export const DEFAULT_TAG_PATTERN = "v*";
 
-/** The environment a service's deployments belong to: its release channel canary, a pull request preview, or production. */
+/**
+ * The environment a service's deployments belong to: its release channel
+ * canary, a pull request preview, else the service's own environment name,
+ * `production` when it has none.
+ */
 export function deployEnvironment(row: {
 	channelCanary: boolean;
+	environmentName: string | null;
 	previewParentId: string | null;
-}): DeployEnvironment {
+}): string {
 	if (row.channelCanary) {
 		return "canary";
 	}
-	return row.previewParentId ? "preview" : "production";
+	if (row.previewParentId) {
+		return "preview";
+	}
+	return row.environmentName ?? "production";
+}
+
+export const ENVIRONMENT_NAME_PATTERN =
+	/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/;
+
+/** Why a custom environment name can't be used, null when it's fine (blank means production). */
+export function environmentNameProblem(name: string): string | null {
+	if (!name || name === "production") {
+		return null;
+	}
+	if (name === "canary" || name === "preview") {
+		return `${name} is reserved for ${name === "canary" ? "release channel canaries" : "pull request previews"}.`;
+	}
+	if (!ENVIRONMENT_NAME_PATTERN.test(name)) {
+		return "Use up to 32 lowercase letters, digits and dashes, e.g. staging or eu-prod.";
+	}
+	return null;
+}
+
+/** The environment name to store for what the operator typed: trimmed and lowercased, null for blank or production. */
+export function normalizeEnvironmentName(
+	name: string | null | undefined,
+): string | null {
+	const value = (name ?? "").trim().toLowerCase();
+	return value && value !== "production" ? value : null;
+}
+
+/** The environments to offer as a filter: the built-in three, then every other name in `used`, alphabetically. */
+export function deploymentEnvironments(used: string[]): string[] {
+	const custom = used
+		.filter(
+			(name) => !(DEPLOY_ENVIRONMENTS as readonly string[]).includes(name),
+		)
+		.toSorted((a, b) => a.localeCompare(b));
+	return [...DEPLOY_ENVIRONMENTS, ...custom];
 }
 
 /** How an environment name reads on a badge, any custom name as is. */

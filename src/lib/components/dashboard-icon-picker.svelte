@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { mode } from "mode-watcher";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -119,7 +120,7 @@
               onerror={(event) => {
                 event.currentTarget.setAttribute("hidden", "");
               }}
-              src={iconSrc(value)}
+              src={iconSrc(value, mode.current)}
             >
           </button>
         {:else}

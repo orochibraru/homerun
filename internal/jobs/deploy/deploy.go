@@ -26,6 +26,7 @@ type Spec struct {
 	Image        ImageSpec      `json:"image"`
 	Network      string         `json:"network"`
 	Readiness    ReadinessInput `json:"readiness"`
+	ReleaseEnv   string         `json:"releaseEnv"`
 	ServiceID    string         `json:"serviceId"`
 	SocketPath   string         `json:"socketPath"`
 	Volumes      []Volume       `json:"volumes"`

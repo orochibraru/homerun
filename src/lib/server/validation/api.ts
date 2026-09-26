@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
+import { environmentNameField } from "$lib/server/validation/environment-name";
 import { DOMAIN_RE } from "$lib/service-domains";
 import { UPDATE_CHANNELS } from "$lib/update-channel";
 
@@ -105,6 +106,11 @@ export const updateServiceApiBody = z.object({
 	entrypoint: runtimeFields.entrypoint.optional(),
 	envFiles: runtimeFields.envFiles.optional(),
 	envVars: z.record(z.string(), z.string()).optional(),
+	environmentName: environmentNameField
+		.optional()
+		.describe(
+			"The environment this service's deployments are recorded under, e.g. staging. null or production resets it to production. Canaries and previews keep canary and preview.",
+		),
 	gitBakeFile: z.string().nullable().optional(),
 	gitBuildTarget: z.string().regex(BAKE_TARGET_PATTERN).nullable().optional(),
 	gitBuildContext: z.string().nullable().optional(),
@@ -195,6 +201,13 @@ export const createStackApiBody = z.object({
 	slug: z.string().regex(SLUG_RE),
 });
 
+export const startUpdateApiBody = z.object({
+	force: z.boolean().optional().meta({
+		description:
+			"Update even while deploys are queued or jobs are running. They're interrupted by the restart, then resumed or run again by the new version",
+	}),
+});
+
 export const updateChannelApiBody = z.object({
 	channel: z.enum(UPDATE_CHANNELS).meta({
 		description:
@@ -210,5 +223,24 @@ export const promotePreviewApiBody = z.object({
 		.optional()
 		.describe(
 			"The commit the preview must be running, e.g. the pull request head CI tested. Omitted, whatever the preview runs is promoted.",
+		),
+});
+
+/** `PUT /services/{serviceId}/dependencies`'s body: the full set of services it depends on, replacing the recorded ones. */
+export const serviceDependenciesApiBody = z.object({
+	dependsOn: z
+		.array(z.string().min(1))
+		.max(200)
+		.describe(
+			"Ids of the services this one depends on, started before it. An empty list clears the recorded ones; env links are left alone.",
+		),
+});
+
+/** `PATCH /services/{serviceId}/errors/{issueId}`'s body: the issue's new status. */
+export const errorIssueStatusApiBody = z.object({
+	status: z
+		.enum(["unresolved", "resolved", "ignored"])
+		.describe(
+			"resolved: marked fixed, a new event reopens it as a regression; ignored: kept counting but never notifies; unresolved: open.",
 		),
 });

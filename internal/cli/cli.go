@@ -45,6 +45,14 @@ Commands:
                                   turn release channels on or change them: branch pushes deploy a <slug>-canary service, matching tags deploy this one
   services channels disable <id>  turn release channels off and delete the canary
   services channels status <id>   show a service's release channel settings and canary
+  services environment <id> [name]
+                                  name the environment its deployments are recorded under, e.g. staging; no name resets it to production
+  services dependencies <id> [--json]
+                                  list what a service depends on and what depends on it (recorded, env or both)
+  services dependencies set <id> [<dependsOnId>...]
+                                  replace the services it depends on, started before it (none clears them)
+  services errors <id> [--status unresolved|resolved|ignored|all]
+                                  list the error issues its apps reported through a Sentry SDK, most recently seen first
   services revisions <id>         list a service's revisions, newest first by first deploy
   services logs <id> [--tail <n>] [-f|--follow]
                                   print a service's logs (the last 200 lines by default)
@@ -67,12 +75,12 @@ Commands:
   templates list                  list templates
 
   instance status                 show the running version, the channel, its latest release and whether an update can start
-  instance update [--wait=false] [--timeout <seconds>]
-                                  update the instance to the latest release on its channel (not the CLI itself, see ` + "`homerun update`" + `)
+  instance update [--wait=false] [--timeout <seconds>] [--force]
+                                  update the instance to the latest release on its channel (not the CLI itself, see ` + "`homerun update`" + `); --force updates over queued deploys and running jobs, which resume after the restart
   instance channel stable|canary|nightly
                                   set the release channel the instance updates from (switching to a more stable one never downgrades)
 
-List options (services/stacks/templates/scans list):
+List options (services/stacks/templates/scans list, services errors):
   --json                          print raw JSON instead of a table
   --page <n>                      1-based page number (default 1)
   --per-page <n>                  items per page (default 100, max 100)
@@ -279,6 +287,17 @@ func RunServices(global GlobalFlags, args []string) {
 		ServiceWebhook(client(), id)
 	case "channels":
 		RunChannels(client, args[1:])
+	case "environment":
+		id := RequireArg(args, 1, "id")
+		name := ""
+		if len(args) > 2 {
+			name = args[2]
+		}
+		ServiceSetEnvironment(client(), id, name)
+	case "dependencies":
+		RunDependencies(client, args[1:])
+	case "errors":
+		RunErrors(client, args[1:])
 	case "revisions":
 		set := NewFlagSet("services revisions")
 		asJSON := set.Bool("json", false, "print raw JSON instead of a table")
@@ -396,12 +415,14 @@ func RunInstance(global GlobalFlags, args []string) {
 		set := NewFlagSet("instance update")
 		wait := set.Bool("wait", true, "follow the update until the instance is back on the new version, --wait=false to return once it starts")
 		timeout := set.Int("timeout", 0, "with --wait, how long to wait before giving up, in seconds")
+		force := set.Bool("force", false, "update even while deploys are queued or jobs are running (homerun instance status lists them); the restart interrupts them and the new version resumes or re-runs them")
 		Parse(set, args[1:])
 		RequirePositiveTimeout(*timeout)
 		InstanceUpdate(
 			RequireClient(global.BaseURL, global.APIKey),
 			*wait,
 			time.Duration(*timeout)*time.Second,
+			*force,
 		)
 	case "channel":
 		if len(args) != 2 {

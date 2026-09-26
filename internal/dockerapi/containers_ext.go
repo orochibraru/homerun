@@ -81,15 +81,6 @@ func (c *Client) ListContainersByLabel(ctx context.Context, label string) ([]Con
 	return containers, err
 }
 
-// PathExists reports whether path exists inside a container, running or not.
-func (c *Client) PathExists(ctx context.Context, id, path string) (bool, error) {
-	err := c.Call(ctx, http.MethodHead, "/containers/"+id+"/archive", url.Values{"path": {path}}, nil)
-	if errors.Is(err, ErrNotFound) {
-		return false, nil
-	}
-	return err == nil, err
-}
-
 // ContainerLogsTail is the last tail lines of a TTY container's output, which
 // the daemon returns unframed.
 func (c *Client) ContainerLogsTail(ctx context.Context, id string, tail int) (string, error) {
@@ -107,8 +98,8 @@ func (c *Client) ContainerLogsTail(ctx context.Context, id string, tail int) (st
 // it starts, so none of its output is missed. The stream is multiplexed for a
 // non-TTY container (see DemuxSplit). The caller closes it.
 func (c *Client) AttachContainer(ctx context.Context, id string) (io.ReadCloser, error) {
-	response, err := c.request(ctx, http.MethodPost, "/containers/"+id+"/attach",
-		url.Values{"stream": {"1"}, "stdout": {"1"}, "stderr": {"1"}}, nil, nil)
+	response, err := c.stream(ctx, http.MethodPost, "/containers/"+id+"/attach",
+		url.Values{"stream": {"1"}, "stdout": {"1"}, "stderr": {"1"}}, nil, nil, c.containerRunning(id))
 	if err != nil {
 		return nil, err
 	}

@@ -103,3 +103,24 @@ func ServiceDeployEnvironment(client *Client, id, environment string) {
 	client.decodeJSON("POST", fmt.Sprintf("/services/%s/deploy", url.PathEscape(id)), map[string]string{"environment": environment}, &result)
 	PrintValue(result)
 }
+
+// ServiceSetEnvironment renames the environment a service's deployments are
+// recorded under, an empty name resetting it to production, and prints the
+// name now in effect.
+func ServiceSetEnvironment(client *Client, id, name string) {
+	var body map[string]any
+	if name == "" {
+		body = map[string]any{"environmentName": nil}
+	} else {
+		body = map[string]any{"environmentName": name}
+	}
+	var result struct {
+		EnvironmentName *string `json:"environmentName"`
+	}
+	client.decodeJSON("PATCH", "/services/"+url.PathEscape(id), body, &result)
+	if result.EnvironmentName == nil {
+		fmt.Println("production")
+		return
+	}
+	fmt.Println(*result.EnvironmentName)
+}

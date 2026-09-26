@@ -213,11 +213,18 @@
 		for (const cleanup of cleanups) {
 			cleanup();
 		}
-		if (sessionId) {
-			fetch(sessionUrl("close"), { method: "POST" }).catch(() => undefined);
-		}
+		closeSession();
 	});
+
+	function closeSession() {
+		if (sessionId) {
+			navigator.sendBeacon(sessionUrl("close"));
+			sessionId = null;
+		}
+	}
 </script>
+
+<svelte:window onpagehide={closeSession} />
 
 <section class="rounded-md panel">
   <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">

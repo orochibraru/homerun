@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	setSystemTime,
+	test,
+} from "bun:test";
 
 interface FakeJob {
 	attempts: number;
@@ -39,7 +46,7 @@ const cancelDependents = mock(
 const findQueued = mock(async (_type: string, _key: string) => null as unknown);
 const create = mock(async (_input: unknown) => null as unknown);
 const get = mock(async (_id: string) => null as unknown);
-const requeueOrphaned = mock(async () => 0);
+const requeueOrphaned = mock(async (_live?: string[]) => 0);
 const claimNext = mock(async () => null as unknown);
 const claimFinalize = mock(async () => null as unknown);
 const listStalledExecutions = mock(async (_since: Date) => [] as unknown[]);
@@ -394,5 +401,46 @@ describe("JobWorker hold and dispatch", () => {
 
 		expect(executed.markFailed).toHaveBeenCalledTimes(1);
 		expect(JobWorker.busy).toBe(false);
+	});
+});
+
+describe("JobWorker orphan sweep", () => {
+	const tick = () =>
+		(JobWorker as unknown as { tick: () => Promise<void> }).tick();
+
+	test("keeps sweeping every 30s, sparing the jobs still in flight", async () => {
+		const start = Date.now() + 10 * 60_000;
+		setSystemTime(new Date(start));
+		try {
+			let finish: (value: unknown) => void = () => undefined;
+			handler.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						finish = resolve;
+					}),
+			);
+			claimNext
+				.mockResolvedValueOnce(fakeJob({ id: "in-flight" }))
+				.mockResolvedValueOnce(null);
+			requeueOrphaned.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+			await tick();
+			await tick();
+			expect(requeueOrphaned).toHaveBeenCalledTimes(1);
+
+			setSystemTime(new Date(start + 31_000));
+			await tick();
+			expect(requeueOrphaned).toHaveBeenCalledTimes(2);
+			expect(requeueOrphaned.mock.calls[1]?.[0]).toEqual(["in-flight"]);
+
+			finish({ ok: true });
+			await Bun.sleep(0);
+			await Bun.sleep(0);
+			setSystemTime(new Date(start + 62_000));
+			await tick();
+			expect(requeueOrphaned.mock.calls[2]?.[0]).toEqual([]);
+		} finally {
+			setSystemTime();
+		}
 	});
 });

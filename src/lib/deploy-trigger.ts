@@ -1,10 +1,15 @@
-export const DEPLOY_TRIGGERS = ["manual", "cron", "push"] as const;
+export const DEPLOY_TRIGGERS = ["manual", "cron", "push", "promote"] as const;
 
 export type DeployTrigger = (typeof DEPLOY_TRIGGERS)[number];
 
 /** How a deploy's trigger reads in a notification. */
 export function deployTriggerLabel(trigger: DeployTrigger): string {
-	return { cron: "Scheduled", manual: "Manual", push: "Git push" }[trigger];
+	return {
+		cron: "Scheduled",
+		manual: "Manual",
+		promote: "Promote",
+		push: "Git push",
+	}[trigger];
 }
 
 export const HISTORY_TRIGGERS = [...DEPLOY_TRIGGERS, "rollback"] as const;
@@ -12,15 +17,27 @@ export const HISTORY_TRIGGERS = [...DEPLOY_TRIGGERS, "rollback"] as const;
 export type HistoryTrigger = (typeof HISTORY_TRIGGERS)[number];
 
 /**
+ * Whether a deployment row is a rollback: it points at a revision to redeploy
+ * and wasn't a preview promote, which reuses that same pointer to name the
+ * preview revision whose image it deploys.
+ */
+export function isRollback(
+	rollbackOfDeploymentId: string | null,
+	trigger: string | null,
+): boolean {
+	return Boolean(rollbackOfDeploymentId) && trigger !== "promote";
+}
+
+/**
  * What started a deployment, for the history page: a rollback when it has a
- * rollback target, otherwise its recorded trigger, or null for a deployment
- * from before triggers were recorded.
+ * rollback target (a promote excepted), otherwise its recorded trigger, or
+ * null for a deployment from before triggers were recorded.
  */
 export function historyTrigger(
 	rollbackOfDeploymentId: string | null,
 	trigger: string | null,
 ): HistoryTrigger | null {
-	if (rollbackOfDeploymentId) {
+	if (isRollback(rollbackOfDeploymentId, trigger)) {
 		return "rollback";
 	}
 	return (DEPLOY_TRIGGERS as readonly string[]).includes(trigger ?? "")

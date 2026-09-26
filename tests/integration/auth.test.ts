@@ -168,8 +168,9 @@ describe("emailed sign-in codes", () => {
 	}
 
 	function saveSmtp(cookie: string, port: number | null): Promise<Response> {
-		const { origin } = integrationContext();
-		const form = new URLSearchParams(
+		return formAction(
+			"/settings/email?/updateSmtp",
+			cookie,
 			port === null
 				? {}
 				: {
@@ -181,8 +182,16 @@ describe("emailed sign-in codes", () => {
 						smtpUser: "sink",
 					},
 		);
-		return nativeFetch(`${origin}/settings/email?/updateSmtp`, {
-			body: form,
+	}
+
+	function formAction(
+		path: string,
+		cookie: string,
+		fields: Record<string, string>,
+	): Promise<Response> {
+		const { origin } = integrationContext();
+		return nativeFetch(`${origin}${path}`, {
+			body: new URLSearchParams(fields),
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
 				cookie,
@@ -193,7 +202,7 @@ describe("emailed sign-in codes", () => {
 		});
 	}
 
-	test("an account with no password signs in with a code, strangers get no mail", async () => {
+	test("an account with no password signs in with a code, strangers get no mail, then adds a password", async () => {
 		const sink = startMailSink();
 		const admin = await post("/api/v1/auth/sign-in/email", {
 			email: "admin@integration.test",
@@ -249,6 +258,34 @@ describe("emailed sign-in codes", () => {
 				redirect: "manual",
 			});
 			expect(home.headers.get("location")).toBe("/my-apps");
+
+			const clientCookie = cookiesOf(signedIn);
+			expect(
+				(await formAction("/my-apps?/sendPasswordCode", clientCookie, {}))
+					.status,
+			).toBe(200);
+			expect(sink.messages).toHaveLength(2);
+			const passwordCode = /code is (\d{6})/.exec(sink.messages[1].data)?.[1];
+			expect(passwordCode).toMatch(/^\d{6}$/);
+			const newPassword = "code-client-password-1234";
+			const set = await formAction("/my-apps?/setPassword", clientCookie, {
+				code: passwordCode ?? "",
+				password: newPassword,
+			});
+			expect(set.status).toBe(200);
+			expect(await set.text()).toContain("passwordSet");
+
+			const withPassword = await post("/api/v1/auth/sign-in/email", {
+				email,
+				password: newPassword,
+			});
+			expect(withPassword.status, await withPassword.clone().text()).toBe(200);
+			const again = await formAction(
+				"/my-apps?/sendPasswordCode",
+				clientCookie,
+				{},
+			);
+			expect(await again.text()).toContain("already has a password");
 		} finally {
 			await saveSmtp(adminCookie, null);
 			sink.stop();

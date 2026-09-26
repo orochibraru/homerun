@@ -14,6 +14,7 @@
 	import CheckBox from "$lib/components/check-box.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import LoginWallSection from "$lib/components/login-wall-section.svelte";
 	import PanelHeader from "$lib/components/panel-header.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -189,6 +190,22 @@
         </div>
       </form>
     </section>
+
+    <LoginWallSection
+      action="?/updatePreviewAccess"
+      authError={form && "authError" in form ? (form.authError as string) : undefined}
+      dashboardOrigin={data.dashboardOrigin}
+      emailSignIn={data.emailSignIn}
+      oauthProviders={data.oauthProviders}
+      subject="previews"
+      svc={{
+        ...data.previewAccess,
+        dnsResolvable: svc.dnsResolvable,
+        id: svc.id,
+      }}
+      title="Who can open previews"
+      users={data.users}
+    />
 
     <section class="panel rounded-md">
       <PanelHeader

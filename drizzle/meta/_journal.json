@@ -511,6 +511,41 @@
 			"when": 1790437576106,
 			"tag": "0072_fair_silk_fever",
 			"breakpoints": true
+		},
+		{
+			"idx": 73,
+			"version": "7",
+			"when": 1790448954059,
+			"tag": "0073_serious_thena",
+			"breakpoints": true
+		},
+		{
+			"idx": 74,
+			"version": "7",
+			"when": 1790451166556,
+			"tag": "0074_late_mindworm",
+			"breakpoints": true
+		},
+		{
+			"idx": 75,
+			"version": "7",
+			"when": 1790452024972,
+			"tag": "0075_neat_jackal",
+			"breakpoints": true
+		},
+		{
+			"idx": 76,
+			"version": "7",
+			"when": 1790452945656,
+			"tag": "0076_spicy_misty_knight",
+			"breakpoints": true
+		},
+		{
+			"idx": 77,
+			"version": "7",
+			"when": 1790454330808,
+			"tag": "0077_clear_cloak",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

@@ -66,6 +66,7 @@ import { assertAppIsBuilt, spawnApp } from "./server";
 export interface IntegrationContext {
 	agentRemoteHostId: string;
 	apiKey: string;
+	databaseUrl: string;
 	dockerRemoteHostId: string;
 	gitBuildFixtureUrl: string;
 	origin: string;
@@ -168,6 +169,7 @@ if (wantsIntegrationTests()) {
 				globalForIntegration.__integration_ctx = {
 					agentRemoteHostId,
 					apiKey,
+					databaseUrl: pg.databaseUrl,
 					dockerRemoteHostId,
 					gitBuildFixtureUrl,
 					origin,

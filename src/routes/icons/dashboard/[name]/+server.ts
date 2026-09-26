@@ -7,8 +7,12 @@ const LOCKDOWN = {
 	"X-Content-Type-Options": "nosniff",
 };
 
-export const GET = async ({ params, request }) => {
-	const icon = await DashboardIconsService.icon(params.name);
+export const GET = async ({ params, request, url }) => {
+	const theme = url.searchParams.get("theme");
+	const icon = await DashboardIconsService.icon(
+		params.name,
+		theme === "dark" || theme === "light" ? theme : null,
+	);
 	if (!icon) {
 		return new Response("Unknown icon", {
 			headers: {

@@ -8,8 +8,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/orochibraru/homerun/internal/janitor"
 	"github.com/orochibraru/homerun/internal/workerapi"
 )
 
@@ -79,6 +81,40 @@ func TestHealthIsOpenAndEverythingElseIsNot(t *testing.T) {
 	}
 	if status, _ := call(t, api, http.MethodGet, "/v1/containers", false); status != http.StatusOK {
 		t.Fatalf("an authenticated control call must pass, got %d", status)
+	}
+}
+
+func TestHealthListsWedgedHelpers(t *testing.T) {
+	engine := httptest.NewServer(&fakeDaemon{bodies: map[string]string{}})
+	t.Cleanup(engine.Close)
+	server := workerapi.NewServer(context.Background(), token, dockerapi.NewWithHTTP(engine.Client(), engine.URL))
+	api := httptest.NewServer(server.Handler())
+	t.Cleanup(api.Close)
+	health := func() []janitor.Wedged {
+		_, body := call(t, api, http.MethodGet, "/v1/health", true)
+		var decoded struct {
+			WedgedContainers []janitor.Wedged `json:"wedgedContainers"`
+		}
+		if err := json.Unmarshal([]byte(body), &decoded); err != nil || decoded.WedgedContainers == nil {
+			t.Fatalf("health must always carry wedgedContainers, got %s", body)
+		}
+		return decoded.WedgedContainers
+	}
+	if len(health()) != 0 {
+		t.Fatal("no janitor means nothing wedged")
+	}
+	since := time.Date(2026, 9, 26, 18, 7, 0, 0, time.UTC)
+	server.Wedged = func() []janitor.Wedged { return []janitor.Wedged{{ID: "abc", Name: "helper", Since: since}} }
+	if got := health(); len(got) != 1 || got[0].ID != "abc" || !got[0].Since.Equal(since) {
+		t.Fatalf("wedged helpers must be reported, got %+v", got)
+	}
+}
+
+func TestExtractIntoVolumeNeedsSourceTargetAndImage(t *testing.T) {
+	api := newAPI(t, &fakeDaemon{bodies: map[string]string{}})
+	status, body := call(t, api, http.MethodPut, "/v1/volumes/archive?source=files", false)
+	if status != http.StatusBadRequest || !strings.Contains(body, "target is required") || !strings.Contains(body, "image is required") {
+		t.Fatalf("want a 400 naming the missing params, got %d %s", status, body)
 	}
 }
 

@@ -39,7 +39,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Update the instance
-		 * @description Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. Admins only.
+		 * @description Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. force: true updates over queued deploys and running jobs (GET /instance/update lists them in preflight.blockers): the restart interrupts them and the new version resumes or re-runs them. Admins only.
 		 */
 		post: operations["post_instance_update"];
 		delete?: never;
@@ -80,6 +80,26 @@ export interface paths {
 		 * @description The update helper container's state and output, to follow an update started with POST /instance/update. The helper outlives the Homerun container it recreates, so this keeps answering once the new version is up; it fails for a moment while the container restarts. Admins only.
 		 */
 		get: operations["get_instance_update_progress"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/jobs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List jobs
+		 * @description Paginated, running jobs first, then queued and running oldest first, finished newest first. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers. Admins only.
+		 */
+		get: operations["get_jobs"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -215,6 +235,30 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/services/{serviceId}/dependencies": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's dependencies
+		 * @description What a service depends on and what depends on it, both recorded dependencies (which set start order) and env links (an env value naming the other service's slug as a host).
+		 */
+		get: operations["get_services__serviceId__dependencies"];
+		/**
+		 * Set a service's dependencies
+		 * @description Replaces the services this one is recorded as depending on: they're started before it, and a stack deploy queues them first. Env vars aren't touched, so an env link to a service left out still shows as an env dependency.
+		 */
+		put: operations["put_services__serviceId__dependencies"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/deploy": {
 		parameters: {
 			query?: never;
@@ -253,6 +297,50 @@ export interface paths {
 		options?: never;
 		head?: never;
 		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/errors": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's error issues
+		 * @description A service's error issues, most recently seen first. Paginated like the other lists: the body is the page, x-total-count, x-page and x-per-page carry the rest.
+		 */
+		get: operations["get_services__serviceId__errors"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/errors/{issueId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get an error issue and its latest event
+		 * @description One issue with one of its events: the newest, or the one `event` names. The event carries the exception chain, stack frames with source context, breadcrumbs, tags, request and user, plus repository links for in-app frames of git services.
+		 */
+		get: operations["get_services__serviceId__errors__issueId_"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Change an error issue's status
+		 * @description Resolve, ignore or reopen an issue. A resolved issue that happens again reopens as a regression and notifies.
+		 */
+		patch: operations["patch_services__serviceId__errors__issueId_"];
 		trace?: never;
 	};
 	"/services/{serviceId}/logs": {
@@ -668,6 +756,39 @@ export interface operations {
 							version: string;
 						} | null;
 						preflight: {
+							/** @description The jobs keeping an update from starting: queued or running deploys and every running job, running first */
+							blockers: {
+								/** @description How many times it has been claimed */
+								attempts: number;
+								/**
+								 * @description ISO 8601 timestamp
+								 * @example 2026-08-20T12:00:00.000Z
+								 */
+								createdAt: string;
+								/** @description The Go worker's last heartbeat while it executes the job, null when no worker holds it */
+								heartbeatAt: string | null;
+								id: string;
+								serviceId: string | null;
+								serviceName: string | null;
+								/** @description prepare and finalize(ing) run in the app, execute in the Go worker, null for a job the app runs itself */
+								stage:
+									| ("prepare" | "execute" | "finalize" | "finalizing")
+									| null;
+								/** @description Running in execute with no heartbeat (or, never leased, no claim) for over two minutes: no live worker is on it */
+								stale: boolean;
+								startedAt: string | null;
+								/** @enum {string} */
+								status:
+									| "queued"
+									| "running"
+									| "succeeded"
+									| "failed"
+									| "cancelled";
+								title: string;
+								type: string;
+								/** @description The Go worker holding the job's lease */
+								workerId: string | null;
+							}[];
 							pendingDeploys: number;
 							ready: boolean;
 							/** @description Why an update can't start right now, null when ready */
@@ -713,7 +834,14 @@ export interface operations {
 			path?: never;
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody?: {
+			content: {
+				"application/json": {
+					/** @description Update even while deploys are queued or jobs are running. They're interrupted by the restart, then resumed or run again by the new version */
+					force?: boolean;
+				};
+			};
+		};
 		responses: {
 			/** @description Update started */
 			202: {
@@ -724,6 +852,18 @@ export interface operations {
 					"application/json": {
 						/** @description The version being installed */
 						version: string;
+					};
+				};
+			};
+			/** @description Invalid request body */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};
@@ -751,7 +891,7 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Already on the latest release, not running under Docker Compose, or a deploy or job is in flight */
+			/** @description Already on the latest release, not running under Docker Compose, or (without force) a deploy or job is in flight */
 			409: {
 				headers: {
 					[name: string]: unknown;
@@ -861,6 +1001,93 @@ export interface operations {
 						state: "exited" | "none" | "running";
 						/** @description The version the updater is installing */
 						version: string | null;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not an admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_jobs: {
+		parameters: {
+			query?: {
+				/** @description Comma-separated statuses to keep: queued, running, succeeded, failed, cancelled (default: all) */
+				status?: string;
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Jobs, with their service's name and a stale flag */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description How many times it has been claimed */
+						attempts: number;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						/** @description The Go worker's last heartbeat while it executes the job, null when no worker holds it */
+						heartbeatAt: string | null;
+						id: string;
+						serviceId: string | null;
+						serviceName: string | null;
+						/** @description prepare and finalize(ing) run in the app, execute in the Go worker, null for a job the app runs itself */
+						stage: ("prepare" | "execute" | "finalize" | "finalizing") | null;
+						/** @description Running in execute with no heartbeat (or, never leased, no claim) for over two minutes: no live worker is on it */
+						stale: boolean;
+						startedAt: string | null;
+						/** @enum {string} */
+						status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+						title: string;
+						type: string;
+						/** @description The Go worker holding the job's lease */
+						workerId: string | null;
+					}[];
+				};
+			};
+			/** @description Unknown status */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};
@@ -1065,6 +1292,8 @@ export interface operations {
 						envVars: {
 							[key: string]: string;
 						};
+						/** @description Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it. */
+						environmentName: string | null;
 						gitBakeFile: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
@@ -1310,6 +1539,8 @@ export interface operations {
 						envVars: {
 							[key: string]: string;
 						};
+						/** @description Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it. */
+						environmentName: string | null;
 						gitBakeFile: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
@@ -1512,6 +1743,8 @@ export interface operations {
 						envVars: {
 							[key: string]: string;
 						};
+						/** @description Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it. */
+						environmentName: string | null;
 						gitBakeFile: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
@@ -1727,6 +1960,8 @@ export interface operations {
 					envVars?: {
 						[key: string]: string;
 					};
+					/** @description The environment this service's deployments are recorded under, e.g. staging. null or production resets it to production. Canaries and previews keep canary and preview. */
+					environmentName?: string | null;
 					gitBakeFile?: string | null;
 					gitBuildContext?: string | null;
 					/** @enum {string} */
@@ -1828,6 +2063,8 @@ export interface operations {
 						envVars: {
 							[key: string]: string;
 						};
+						/** @description Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it. */
+						environmentName: string | null;
 						gitBakeFile: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
@@ -2232,6 +2469,8 @@ export interface operations {
 							};
 							autoRollback: boolean;
 							category: string | null;
+							/** @description The environment its deployments are recorded under: production unless renamed, canary or preview for a child service. */
+							environment: string;
 							/** @description A bundled template icon file name, "uploaded" for a custom image, or null. */
 							icon: string | null;
 							stack: {
@@ -2292,6 +2531,177 @@ export interface operations {
 				};
 			};
 			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__dependencies: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's dependencies, both directions */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The services that depend on this one */
+						dependedOnBy: {
+							id: string;
+							name: string;
+							slug: string;
+							/**
+							 * @description recorded: a stored dependency, the only kind that orders starts; env: one of the depending service's env values points at the other's slug as a host; both: the two at once
+							 * @enum {string}
+							 */
+							source: "recorded" | "env" | "both";
+						}[];
+						/** @description The services this one depends on */
+						dependsOn: {
+							id: string;
+							name: string;
+							slug: string;
+							/**
+							 * @description recorded: a stored dependency, the only kind that orders starts; env: one of the depending service's env values points at the other's slug as a host; both: the two at once
+							 * @enum {string}
+							 */
+							source: "recorded" | "env" | "both";
+						}[];
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	put_services__serviceId__dependencies: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description Ids of the services this one depends on, started before it. An empty list clears the recorded ones; env links are left alone. */
+					dependsOn: string[];
+				};
+			};
+		};
+		responses: {
+			/** @description The service's dependencies after the change */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The services that depend on this one */
+						dependedOnBy: {
+							id: string;
+							name: string;
+							slug: string;
+							/**
+							 * @description recorded: a stored dependency, the only kind that orders starts; env: one of the depending service's env values points at the other's slug as a host; both: the two at once
+							 * @enum {string}
+							 */
+							source: "recorded" | "env" | "both";
+						}[];
+						/** @description The services this one depends on */
+						dependsOn: {
+							id: string;
+							name: string;
+							slug: string;
+							/**
+							 * @description recorded: a stored dependency, the only kind that orders starts; env: one of the depending service's env values points at the other's slug as a host; both: the two at once
+							 * @enum {string}
+							 */
+							source: "recorded" | "env" | "both";
+						}[];
+					};
+				};
+			};
+			/** @description An invalid body, an unknown service id, the service itself, or a service that already depends on this one (a loop) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Service not found */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -2446,6 +2856,7 @@ export interface operations {
 						imageRef: string | null;
 						/** @description The deploy's progress lines as the dashboard shows them: pull, scan, rollout, and the Docker error when it failed */
 						log: string | null;
+						/** @description The deployment whose image this one redeployed: the revision a rollback went back to, or the preview revision a promote deployed */
 						rollbackOfDeploymentId: string | null;
 						startedAt: string | null;
 						/** @enum {string} */
@@ -2457,6 +2868,10 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
+						/** @description What started it: manual, cron (scheduled), push (git push), promote (a pull request preview promoted) or rollback; null for a deploy from before triggers were recorded */
+						trigger:
+							| ("manual" | "cron" | "push" | "promote" | "rollback")
+							| null;
 					}[];
 				};
 			};
@@ -2485,6 +2900,355 @@ export interface operations {
 				};
 			};
 			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__errors: {
+		parameters: {
+			query?: {
+				/** @description unresolved (default), resolved, ignored or all; comma-separated for several */
+				status?: string;
+				/** @description lastSeen, firstSeen or count, with a leading - for descending */
+				sort?: string;
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Search title and culprit */
+				q?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of issues */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Events received, all time */
+						count: number;
+						/** @description The innermost in-app frame, function (file), or the transaction */
+						culprit: string | null;
+						/** @description The grouping hash */
+						fingerprint: string;
+						firstRelease: string | null;
+						/** @description ISO 8601 timestamp */
+						firstSeen: string;
+						id: string;
+						lastEnvironment: string | null;
+						lastRelease: string | null;
+						/** @description ISO 8601 timestamp */
+						lastSeen: string;
+						/** @enum {string} */
+						level: "fatal" | "error" | "warning" | "info" | "debug";
+						platform: string | null;
+						/** @description When a resolved issue last happened again */
+						regressedAt: string | null;
+						resolvedAt: string | null;
+						serviceId: string;
+						/** @enum {string} */
+						status: "unresolved" | "resolved" | "ignored";
+						title: string;
+						type: string | null;
+						/** @description Distinct users named by the retained events */
+						usersAffected: number;
+						value: string | null;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__errors__issueId_: {
+		parameters: {
+			query?: {
+				/** @description An event id of this issue */
+				event?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+				/** @description Issue id */
+				issueId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The issue */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Events received, all time */
+						count: number;
+						/** @description The innermost in-app frame, function (file), or the transaction */
+						culprit: string | null;
+						/** @description The requested event, the newest by default; null once none is retained */
+						event: {
+							breadcrumbs: {
+								category: string | null;
+								level: string | null;
+								message: string | null;
+								timestamp: string | null;
+								type: string | null;
+							}[];
+							contexts: {
+								[key: string]: {
+									[key: string]: unknown;
+								};
+							};
+							culprit: string | null;
+							environment: string | null;
+							/** @description The SDK's event id */
+							eventId: string;
+							/** @description The exception chain, the raised one last */
+							exceptions: {
+								/** @description Oldest call first, the raising frame last */
+								frames: {
+									absPath: string | null;
+									colno: number | null;
+									contextLine: string | null;
+									filename: string | null;
+									function: string | null;
+									inApp: boolean;
+									lineno: number | null;
+									module: string | null;
+									postContext: string[];
+									preContext: string[];
+								}[];
+								handled: boolean | null;
+								mechanism: string | null;
+								module: string | null;
+								type: string | null;
+								value: string | null;
+							}[];
+							fingerprint: string[] | null;
+							id: string;
+							level: string;
+							message: string | null;
+							newerEventId: string | null;
+							olderEventId: string | null;
+							platform: string | null;
+							/** @description ISO 8601 timestamp */
+							receivedAt: string;
+							release: string | null;
+							request: {
+								method: string | null;
+								url: string | null;
+							} | null;
+							sdk: string | null;
+							serverName: string | null;
+							/** @description Repository links of in-app frames at the deployed commit, keyed <exception index>:<frame index> */
+							sourceLinks: {
+								[key: string]: string;
+							};
+							tags: [string, string][];
+							/** @description ISO 8601 timestamp */
+							timestamp: string;
+							title: string;
+							transaction: string | null;
+							user: {
+								email: string | null;
+								id: string | null;
+								ipAddress: string | null;
+								username: string | null;
+							} | null;
+						} | null;
+						eventsRetained: number;
+						/** @description The grouping hash */
+						fingerprint: string;
+						firstRelease: string | null;
+						/** @description ISO 8601 timestamp */
+						firstSeen: string;
+						id: string;
+						lastEnvironment: string | null;
+						lastRelease: string | null;
+						/** @description ISO 8601 timestamp */
+						lastSeen: string;
+						/** @enum {string} */
+						level: "fatal" | "error" | "warning" | "info" | "debug";
+						platform: string | null;
+						/** @description When a resolved issue last happened again */
+						regressedAt: string | null;
+						resolvedAt: string | null;
+						serviceId: string;
+						/** @enum {string} */
+						status: "unresolved" | "resolved" | "ignored";
+						title: string;
+						type: string | null;
+						usersAffected: number;
+						value: string | null;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Service or issue not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_services__serviceId__errors__issueId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+				/** @description Issue id */
+				issueId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * @description resolved: marked fixed, a new event reopens it as a regression; ignored: kept counting but never notifies; unresolved: open.
+					 * @enum {string}
+					 */
+					status: "unresolved" | "resolved" | "ignored";
+				};
+			};
+		};
+		responses: {
+			/** @description The updated issue */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Events received, all time */
+						count: number;
+						/** @description The innermost in-app frame, function (file), or the transaction */
+						culprit: string | null;
+						/** @description The grouping hash */
+						fingerprint: string;
+						firstRelease: string | null;
+						/** @description ISO 8601 timestamp */
+						firstSeen: string;
+						id: string;
+						lastEnvironment: string | null;
+						lastRelease: string | null;
+						/** @description ISO 8601 timestamp */
+						lastSeen: string;
+						/** @enum {string} */
+						level: "fatal" | "error" | "warning" | "info" | "debug";
+						platform: string | null;
+						/** @description When a resolved issue last happened again */
+						regressedAt: string | null;
+						resolvedAt: string | null;
+						serviceId: string;
+						/** @enum {string} */
+						status: "unresolved" | "resolved" | "ignored";
+						title: string;
+						type: string | null;
+						value: string | null;
+					};
+				};
+			};
+			/** @description Invalid request body */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Service or issue not found */
 			404: {
 				headers: {
 					[name: string]: unknown;

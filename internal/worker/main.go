@@ -21,6 +21,7 @@ import (
 	"github.com/orochibraru/homerun/internal/db"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/httpapi"
+	"github.com/orochibraru/homerun/internal/janitor"
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/logging"
 	"github.com/orochibraru/homerun/internal/secrets"
@@ -47,6 +48,9 @@ Environment:
   AUTH_SECRET         The app's auth secret, which job specs are encrypted with
   DOCKER_SOCKET_PATH  The local Docker socket, auto-detected when unset
   WORKER_CONCURRENCY  Jobs executed at once, 3 by default
+  WORKER_DOCKER_TIMEOUT        One Docker control call's deadline, 60s by default
+  WORKER_DOCKER_STALL_TIMEOUT  How long a Docker stream may go silent, 10m by default
+  WORKER_JOB_STALL_TIMEOUT     A job with no progress this long fails, 15m by default
   WORKER_ID           Lease owner name, hostname-pid by default
   WORKER_LOG_LEVEL    debug/info/warn/error, else LOG_LEVEL, info by default
   WORKER_PORT         HTTP port, 7430 by default (7420 in agent mode)
@@ -79,6 +83,8 @@ func Main() {
 
 // run connects, waits for Postgres, and works until SIGINT/SIGTERM.
 func run(config Config) error {
+	dockerapi.ControlTimeout = config.DockerTimeout
+	dockerapi.StallTimeout = config.DockerStallTimeout
 	if config.AgentMode() {
 		return runAgent(config)
 	}
@@ -105,17 +111,20 @@ func run(config Config) error {
 		source = "derived from AUTH_SECRET"
 	}
 	docker := dockerapi.New(config.DockerSocketPath)
-	stopAPI, err := serveControlAPI(ctx, config, token, docker)
+	sweeper := &janitor.Janitor{Docker: docker}
+	stopAPI, err := serveControlAPI(ctx, config, token, docker, sweeper)
 	if err != nil {
 		return err
 	}
 	defer stopAPI()
+	go sweeper.Run(ctx)
 
 	logging.Infof(scope, "ready: id=%s concurrency=%d docker=%s version=%s",
 		config.ID, config.Concurrency, config.DockerSocketPath, buildinfo.Version)
 	logging.Infof(scope, "docker control API on :%d (token %s)", config.Port, source)
 	logging.Debugf(scope, "executors registered: %s", strings.Join(executorNames(), ", "))
-	logging.Debugf(scope, "poll=1s heartbeat=10s lease-timeout=60s shutdown-grace=60s")
+	logging.Debugf(scope, "poll=1s heartbeat=10s lease-timeout=60s shutdown-grace=60s docker-timeout=%s docker-stall=%s job-stall=%s",
+		config.DockerTimeout, config.DockerStallTimeout, config.JobStallTimeout)
 	w := &Worker{
 		Box:               box,
 		Concurrency:       config.Concurrency,
@@ -124,6 +133,7 @@ func run(config Config) error {
 		ID:                config.ID,
 		PollInterval:      time.Second,
 		ShutdownGrace:     60 * time.Second,
+		StallTimeout:      config.JobStallTimeout,
 		Store:             PGStore{Pool: pool},
 	}
 	w.NewJob = func(c *ClaimedJob, spec json.RawMessage) jobs.Job {

@@ -92,7 +92,7 @@ func Scan(ctx context.Context, docker *dockerapi.Client, socket, network string,
 		Cmd:    Command(target.Ref, target.Source),
 		Env:    env,
 		Image:  TrivyImage,
-		Labels: map[string]string{"homerun.managed": "true"},
+		Labels: dockerapi.HelperLabels(nil),
 	}, network)
 	if err != nil {
 		return Summary{}, err

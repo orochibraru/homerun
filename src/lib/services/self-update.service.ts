@@ -29,6 +29,12 @@ import {
 	WORKER_ROLE,
 	WORKER_ROLE_LABEL,
 } from "./self-update/compose-target.ts";
+import {
+	describeBlockers,
+	preflightFrom,
+	startRefusal,
+	type UpdatePreflight,
+} from "./self-update/preflight.ts";
 import { isNewerVersion, normalizeVersion } from "./self-update/version.ts";
 
 const RELEASES_URL =
@@ -69,14 +75,6 @@ export interface ReleaseStatus {
 	current: string;
 	latest: LatestRelease | null;
 	updateAvailable: boolean;
-}
-
-export interface UpdatePreflight {
-	pendingDeploys: number;
-	reason: string | null;
-	ready: boolean;
-	runningJobs: number;
-	supported: boolean;
 }
 
 interface ResolvedSelf {
@@ -279,45 +277,19 @@ class SelfUpdateServiceClass {
 	/**
 	 * Checks whether a self-update can safely start: the app must resolve to
 	 * a Compose service (`#resolveSelf`), and no deploy or job may be
-	 * queued/running. Never throws: a `#resolveSelf` failure is logged and
-	 * treated as "unsupported" rather than propagated.
+	 * queued/running. Lists the jobs in the way (`JobDTO.listUpdateBlockers`)
+	 * so the caller can show them. Never throws on a `#resolveSelf` failure:
+	 * it's logged and treated as "unsupported" rather than propagated.
 	 */
 	async preflight(): Promise<UpdatePreflight> {
-		const [self, activity] = await Promise.all([
+		const [self, blockers] = await Promise.all([
 			this.#resolveSelf().catch((err) => {
 				logger.warn("Couldn't inspect this app's own container", err);
 				return null;
 			}),
-			JobDTO.activitySummary(),
+			JobDTO.listUpdateBlockers(),
 		]);
-		const base = {
-			pendingDeploys: activity.pendingDeploys,
-			runningJobs: activity.running,
-			supported: self !== null,
-		};
-		if (!self) {
-			return {
-				...base,
-				ready: false,
-				reason:
-					"Homerun isn't running as a Docker Compose service here, so it can't update itself. Pull the new image and restart it the way you started it.",
-			};
-		}
-		if (activity.pendingDeploys > 0) {
-			return {
-				...base,
-				ready: false,
-				reason: `${activity.pendingDeploys} deployment(s) are queued or running. Wait for them to finish first.`,
-			};
-		}
-		if (activity.running > 0) {
-			return {
-				...base,
-				ready: false,
-				reason: `${activity.running} job(s) are running. Wait for them to finish first.`,
-			};
-		}
-		return { ...base, ready: true, reason: null };
+		return preflightFrom(self !== null, blockers);
 	}
 
 	/**
@@ -325,14 +297,17 @@ class SelfUpdateServiceClass {
 	 * new job starts mid-update, re-checks `preflight()` and that no job is
 	 * still running, then launches the updater container (`#launchUpdater`)
 	 * which pulls and recreates this app's own compose service and its
-	 * homerun-worker companion. Releases the
-	 * hold and rethrows on any failure before the updater launches; once it
-	 * launches, the hold is left in place (this process is about to be
-	 * replaced).
+	 * homerun-worker companion. With `force`, queued or running jobs don't
+	 * refuse it: they're logged and interrupted by the restart, and the new
+	 * version's job worker requeues or resumes them. Releases the hold and
+	 * rethrows on any failure before the updater launches; once it launches,
+	 * the hold is left in place (this process is about to be replaced).
 	 * @throws When already on the latest release, an update is already in
-	 * progress, or `preflight`/business checks fail.
+	 * progress, self-update isn't supported here, or (without `force`) jobs
+	 * are in the way.
 	 */
-	async start(): Promise<{ version: string }> {
+	async start(options: { force?: boolean } = {}): Promise<{ version: string }> {
+		const force = options.force === true;
 		const status = await this.releaseStatus();
 		if (!(status.latest && status.updateAvailable)) {
 			throw new Error(
@@ -346,11 +321,14 @@ class SelfUpdateServiceClass {
 		JobWorker.hold();
 		try {
 			const check = await this.preflight();
-			if (!check.ready) {
-				throw new Error(check.reason ?? "Homerun can't update right now.");
+			const refusal = startRefusal(check, { busy: JobWorker.busy, force });
+			if (refusal) {
+				throw new Error(refusal);
 			}
-			if (JobWorker.busy) {
-				throw new Error("A job is still running. Try again in a moment.");
+			if (force && check.blockers.length > 0) {
+				logger.warn(
+					`Forcing the update to ${status.latest.version} over ${check.blockers.length} job(s), they resume or run again after the restart: ${describeBlockers(check.blockers)}`,
+				);
 			}
 			const self = await this.#resolveSelf();
 			if (!self) {
@@ -360,7 +338,7 @@ class SelfUpdateServiceClass {
 			await this.#launchUpdater(self, status.latest.version, status.channel);
 			void this.#watchUpdater(status.latest.version);
 			logger.info(
-				`Update to ${status.latest.version} started: project=${self.target.project} service=${self.target.service}`,
+				`Update to ${status.latest.version} started: project=${self.target.project} service=${self.target.service}${force ? " (forced)" : ""}`,
 			);
 			return { version: status.latest.version };
 		} catch (err) {

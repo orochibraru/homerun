@@ -1,7 +1,9 @@
 import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { isSmtpEnabled } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { APP_ONLY_HOME } from "$lib/permissions";
+import { setPasswordActions } from "$lib/server/set-password-actions";
 import { AccountSecurityService } from "$lib/services/account-security.service";
 import { AppAccessService } from "$lib/services/app-access.service";
 
@@ -40,6 +42,9 @@ export const load = async ({ locals }) => {
 		email: locals.user.email,
 		hasPassword,
 		passkeys,
+		smtpEnabled: isSmtpEnabled(),
 		twoFactorEnabled: security.twoFactorEnabled,
 	};
 };
+
+export const actions = setPasswordActions;

@@ -45,8 +45,8 @@ func (c *Client) InspectImage(ctx context.Context, ref string) (*ImageInspect, e
 // layer id along with its status, for a caller that dedupes per layer.
 func (c *Client) PullImageEvents(ctx context.Context, ref string, auth *AuthConfig, onEvent func(id, status string)) error {
 	repository, tag := SplitRef(ref)
-	response, err := c.request(ctx, http.MethodPost, "/images/create",
-		url.Values{"fromImage": {repository}, "tag": {tag}}, nil, auth)
+	response, err := c.stream(ctx, http.MethodPost, "/images/create",
+		url.Values{"fromImage": {repository}, "tag": {tag}}, nil, auth, nil)
 	if err != nil {
 		return err
 	}
@@ -57,28 +57,14 @@ func (c *Client) PullImageEvents(ctx context.Context, ref string, auth *AuthConf
 // LoadImage loads a `docker save` tarball into the daemon, consuming archive
 // as it arrives.
 func (c *Client) LoadImage(ctx context.Context, archive io.Reader) error {
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Base+"/images/load?quiet=1", archive)
-	if err != nil {
-		return err
-	}
-	request.Header.Set("Content-Type", "application/x-tar")
-	response, err := c.http.Do(request)
+	response, err := c.upload(ctx, http.MethodPost, "/images/load", url.Values{"quiet": {"1"}},
+		archive, "application/x-tar", nil, c.daemonAnswers)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = response.Body.Close() }()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		raw, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-		var decoded struct {
-			Message string `json:"message"`
-		}
-		message := strings.TrimSpace(string(raw))
-		if json.Unmarshal(raw, &decoded) == nil && decoded.Message != "" {
-			message = decoded.Message
-		}
-		return &APIError{Message: message, Status: response.StatusCode}
-	}
-	return followEvents(response.Body, nil)
+	_, err = io.Copy(io.Discard, response.Body)
+	return err
 }
 
 // followEvents reads a progress stream to the end like followProgress,

@@ -3,6 +3,7 @@
 		AppWindow,
 		ExternalLink,
 		Fingerprint,
+		KeyRound,
 		LogOut,
 		Smartphone,
 	} from "@lucide/svelte";
@@ -12,6 +13,7 @@
 	import { signOut } from "$lib/auth-client";
 	import AuthShell from "$lib/components/auth-shell.svelte";
 	import PasskeyPanel from "$lib/components/passkey-panel.svelte";
+	import SetPasswordPanel from "$lib/components/set-password-panel.svelte";
 	import TwoFactorPanel from "$lib/components/two-factor-panel.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
@@ -88,6 +90,16 @@
           </li>
         {/each}
       </ul>
+    {/if}
+
+    {#if !data.hasPassword}
+      <section class="border-border space-y-3 border-t pt-5">
+        <h2 class="text-text flex items-center gap-2 text-sm font-semibold">
+          <KeyRound class="size-4" />
+          Password
+        </h2>
+        <SetPasswordPanel email={data.email} emailEnabled={data.smtpEnabled} />
+      </section>
     {/if}
 
     <section class="border-border space-y-3 border-t pt-5">

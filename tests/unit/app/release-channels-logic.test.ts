@@ -2,22 +2,54 @@ import { describe, expect, test } from "bun:test";
 import {
 	canarySlug,
 	deployEnvironment,
+	deploymentEnvironments,
 	environmentLabel,
+	environmentNameProblem,
 	matchesTagPattern,
+	normalizeEnvironmentName,
 	tagPatternProblem,
 } from "../../../src/lib/release-channels";
 
 describe("release channels", () => {
-	test("a service's environment: canary, preview or production", () => {
+	test("a service's environment: canary, preview, its own name, else production", () => {
+		const row = {
+			channelCanary: false,
+			environmentName: null,
+			previewParentId: null,
+		};
+		expect(deployEnvironment({ ...row, channelCanary: true })).toBe("canary");
+		expect(deployEnvironment({ ...row, previewParentId: "p" })).toBe("preview");
+		expect(deployEnvironment(row)).toBe("production");
+		expect(deployEnvironment({ ...row, environmentName: "staging" })).toBe(
+			"staging",
+		);
 		expect(
-			deployEnvironment({ channelCanary: true, previewParentId: null }),
+			deployEnvironment({
+				...row,
+				channelCanary: true,
+				environmentName: "staging",
+			}),
 		).toBe("canary");
+	});
+
+	test("a custom environment name is a short slug, not a reserved one", () => {
+		expect(environmentNameProblem("")).toBeNull();
+		expect(environmentNameProblem("production")).toBeNull();
+		expect(environmentNameProblem("eu-prod")).toBeNull();
+		expect(environmentNameProblem("canary")).toContain("reserved");
+		expect(environmentNameProblem("preview")).toContain("reserved");
+		expect(environmentNameProblem("EU prod")).toContain("lowercase");
+		expect(environmentNameProblem("-staging")).toContain("lowercase");
+		expect(environmentNameProblem("a".repeat(33))).toContain("lowercase");
+		expect(normalizeEnvironmentName("  Staging ")).toBe("staging");
+		expect(normalizeEnvironmentName("production")).toBeNull();
+		expect(normalizeEnvironmentName(null)).toBeNull();
+	});
+
+	test("the environment filter lists the built-in three, then custom names in use", () => {
 		expect(
-			deployEnvironment({ channelCanary: false, previewParentId: "p" }),
-		).toBe("preview");
-		expect(
-			deployEnvironment({ channelCanary: false, previewParentId: null }),
-		).toBe("production");
+			deploymentEnvironments(["staging", "production", "eu-prod"]),
+		).toEqual(["production", "canary", "preview", "eu-prod", "staging"]);
 	});
 
 	test("known environments get a label, custom ones read as is", () => {

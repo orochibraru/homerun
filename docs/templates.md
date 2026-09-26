@@ -104,6 +104,11 @@ Env vars on the primary template can then reference a companion:
   so a link to them, and an app template that links one, gets a URL that
   authenticates. In the wizard you see the generated value and can change it;
   the command follows what you submit.
+- `{{secret:hex64}}` becomes 64 random hex characters, for apps that only boot
+  with a key of an exact length and format, like a `SECRET_KEY` that must be 64
+  hex characters. Any length from 1 to 999 works (`{{secret:hex32}}`), and
+  unlike `{{secret}}` every occurrence gets its own value. Built-in templates
+  fail validation on any other `{{secret:…}}` token.
 
 An alias that doesn't resolve is left in the deployed env var verbatim rather
 than silently blanked, so a typo is visible instead of mysterious.
@@ -142,6 +147,11 @@ in `dashboard-icons/`, the catalog is refreshed once a day, and an icon upstream
 doesn't have is retried after ten minutes. If the CDN can't be reached for an
 icon that isn't cached yet, the service shows its category icon instead of a
 broken image. That route is public, like the status pages that also show icons.
+
+Logos drawn for one background, like the dark Umami and Open WebUI logos, follow
+the theme: when Dashboard Icons has a variant for the other background, the dark
+theme shows the light one (and the other way round), and switching the theme
+swaps it live. An icon with no variants looks the same in both themes.
 
 A service keeps whatever icon it was created with: switching a built-in
 template's logo to Dashboard Icons only changes the template (and services

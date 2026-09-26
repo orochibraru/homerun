@@ -105,6 +105,16 @@ control:
 | `WORKER_TOKEN` | derived from `AUTH_SECRET` | The shared bearer token the app presents to the worker. Leave it unset (both sides derive the same one automatically) unless you want to set it yourself. |
 | `WORKER_PORT`  | `7430`                     | The port the worker listens on for that API. Set on the worker's own environment, not the app's.                                                          |
 
+The worker also bounds every call it makes to Docker, so a stuck daemon fails a
+job instead of hanging it. Set these on the worker's own environment, as Go
+durations (`90s`, `20m`):
+
+| Var                           | Default | Meaning                                                                                                                  |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `WORKER_DOCKER_TIMEOUT`       | `60s`   | How long one Docker call (inspect, create, start, remove) may take before it fails.                                      |
+| `WORKER_DOCKER_STALL_TIMEOUT` | `10m`   | How long a Docker stream (a backup's tar, logs, a pull) may go without data while its container stops answering.         |
+| `WORKER_JOB_STALL_TIMEOUT`    | `15m`   | A job that made no progress at all for this long fails through its normal retry path, even though the worker is healthy. |
+
 Nothing deploys, no container status refreshes and the web terminal won't open
 while the app can't reach the worker, so if something feels stuck, check the
 dashboard's setup diagnostics first (see

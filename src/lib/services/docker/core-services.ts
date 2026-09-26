@@ -14,8 +14,9 @@ import {
 	DASHBOARD_ROUTER_FILE,
 	dashboardHostFrom,
 	dashboardRouterConfig,
+	dashboardRouterPlan,
 } from "./dashboard.ts";
-import { hasTraefikRouterFor, MANAGED_LABEL } from "./labels.ts";
+import { MANAGED_LABEL } from "./labels.ts";
 import {
 	CORE_HASH_LABEL,
 	CORE_LABEL,
@@ -340,14 +341,15 @@ export function DockerCoreServicesMixin<
 		}
 
 		/**
-		 * Writes (or removes) the Traefik dynamic-config file that routes the
-		 * dashboard's own configured host to this app's container, so the
-		 * dashboard is reachable through Traefik under a custom domain rather
-		 * than only on its own port. Removes the file when there's no origin
-		 * host configured, this app's own container can't be found, or
-		 * Traefik already has a router for that host from elsewhere (e.g. the
-		 * operator's own compose labels). Writes to disk under
-		 * `config.traefik.dynamicConfigDir`; failures are logged, not thrown.
+		 * Writes the Traefik dynamic-config file that routes the dashboard's
+		 * own configured host to this app's container, always, even when the
+		 * container's compose labels route that host too: the file router
+		 * outranks the label one (`DASHBOARD_ROUTER_PRIORITY`), so the
+		 * dashboard stays reachable when Traefik's Docker provider stalls on a
+		 * wedged container. Removes the file only when there's no origin host;
+		 * leaves it alone when this container can't be inspected. See
+		 * `dashboardRouterPlan`. Writes under `config.traefik.dynamicConfigDir`;
+		 * failures are logged, not thrown.
 		 */
 		async syncDashboardRouter(): Promise<void> {
 			const dir = config.traefik.dynamicConfigDir;
@@ -356,10 +358,14 @@ export function DockerCoreServicesMixin<
 			}
 			const path = join(dir, DASHBOARD_ROUTER_FILE);
 			const host = dashboardHostFrom(config.auth.origin ?? null);
-			const self = host ? await this.selfContainer() : null;
-			const target = self?.name ?? self?.networkAddress ?? null;
-
-			if (!(host && target) || hasTraefikRouterFor(self?.labels ?? {}, host)) {
+			const plan = dashboardRouterPlan(
+				host,
+				host ? await this.selfContainer() : null,
+			);
+			if (plan.action === "keep") {
+				return;
+			}
+			if (plan.action === "remove" || !host) {
 				await rm(path, { force: true }).catch((err) => {
 					logger.warn("Couldn't remove the dashboard router config", err);
 				});
@@ -378,10 +384,10 @@ export function DockerCoreServicesMixin<
 						),
 						entrypoint: config.traefik.entrypoint,
 						host,
-						target: `http://${target}:${config.port}`,
+						target: `http://${plan.target}:${config.port}`,
 					}),
 				);
-				logger.info(`Dashboard router published for ${host} -> ${target}`);
+				logger.info(`Dashboard router published for ${host} -> ${plan.target}`);
 			} catch (err) {
 				logger.error(`Couldn't publish the dashboard router for ${host}`, err);
 			}

@@ -3,10 +3,12 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/orochibraru/homerun/internal/activity"
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/logging"
 	"github.com/orochibraru/homerun/internal/secrets"
@@ -26,7 +28,11 @@ type Worker struct {
 	NewJob            func(c *ClaimedJob, spec json.RawMessage) jobs.Job
 	PollInterval      time.Duration
 	ShutdownGrace     time.Duration
-	Store             Store
+	// StallTimeout fails a job that made no progress (no Docker call
+	// answered, no byte moved) for this long, even though it still
+	// heartbeats. Zero turns the watchdog off.
+	StallTimeout time.Duration
+	Store        Store
 
 	lastClaimErr string
 }
@@ -112,20 +118,30 @@ func (w *Worker) reportClaimError(err error) {
 func (w *Worker) execute(ctx, execCtx context.Context, job *ClaimedJob) {
 	started := time.Now()
 	logging.Infof(scope, "job started: type=%s job=%s attempt=%d", job.JobType, job.ID, job.Attempts)
-	runCtx, cancel := context.WithCancel(execCtx)
+	tracker := activity.NewTracker()
+	runCtx, cancel := context.WithCancel(activity.With(execCtx, tracker))
 	defer cancel()
 
-	lost := make(chan struct{})
-	stopHeartbeat := make(chan struct{})
+	beat := heartbeat{
+		cancel: cancel, jobID: job.ID, lost: make(chan struct{}), stalled: make(chan time.Duration, 1),
+		stop: make(chan struct{}), tracker: tracker,
+	}
 	heartbeatDone := make(chan struct{})
 	go func() {
 		defer close(heartbeatDone)
-		w.heartbeat(runCtx, job.ID, cancel, lost, stopHeartbeat)
+		w.heartbeat(runCtx, beat)
 	}()
 
 	result, execErr := w.dispatch(runCtx, job)
-	close(stopHeartbeat)
+	close(beat.stop)
 	<-heartbeatDone
+	lost := beat.lost
+	select {
+	case quiet := <-beat.stalled:
+		result, execErr = nil, StalledError(quiet, execErr)
+		logging.Errorf(scope, "job %s made no progress for %s, stopped it", job.ID, quiet.Round(time.Second))
+	default:
+	}
 
 	bookkeeping, done := context.WithTimeout(context.Background(), 10*time.Second)
 	defer done()
@@ -159,31 +175,62 @@ func (w *Worker) execute(ctx, execCtx context.Context, job *ClaimedJob) {
 	}
 }
 
-// heartbeat refreshes the lease every HeartbeatInterval until stop closes.
-// When the row stops being this worker's, it closes lost and cancels the
-// execution.
-func (w *Worker) heartbeat(ctx context.Context, jobID string, cancel context.CancelFunc, lost, stop chan struct{}) {
+// heartbeat is one execution's heartbeat loop state: stop ends it, lost is
+// closed when the lease was taken away, and stalled receives how long the job
+// had been quiet when the no-progress watchdog stopped it.
+type heartbeat struct {
+	cancel  context.CancelFunc
+	jobID   string
+	lost    chan struct{}
+	stalled chan time.Duration
+	stop    chan struct{}
+	tracker *activity.Tracker
+}
+
+// heartbeat refreshes the lease and the job's last-progress time every
+// HeartbeatInterval until beat.stop closes. When the row stops being this
+// worker's, it closes beat.lost and cancels the execution; when the job made
+// no progress for StallTimeout, it reports that on beat.stalled and cancels
+// the execution, which then fails through the normal retry path.
+func (w *Worker) heartbeat(ctx context.Context, beat heartbeat) {
 	ticker := time.NewTicker(w.HeartbeatInterval)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-stop:
+		case <-beat.stop:
 			return
 		case <-ticker.C:
 		}
-		ours, err := w.Store.Heartbeat(ctx, jobID, w.ID)
+		progressAt := beat.tracker.Last()
+		if quiet := time.Since(progressAt); w.StallTimeout > 0 && quiet >= w.StallTimeout {
+			beat.stalled <- quiet
+			beat.cancel()
+			return
+		}
+		ours, err := w.Store.Heartbeat(ctx, beat.jobID, w.ID, progressAt)
 		if err != nil {
-			logging.Warnf(scope, "heartbeat for job %s failed: %s", jobID, err)
+			logging.Warnf(scope, "heartbeat for job %s failed: %s", beat.jobID, err)
 			continue
 		}
 		if !ours {
-			logging.Warnf(scope, "lost the lease on job %s", jobID)
-			close(lost)
-			cancel()
+			logging.Warnf(scope, "lost the lease on job %s", beat.jobID)
+			close(beat.lost)
+			beat.cancel()
 			return
 		}
-		logging.Debugf(scope, "heartbeat ok for job %s", jobID)
+		logging.Debugf(scope, "heartbeat ok for job %s", beat.jobID)
 	}
+}
+
+// StalledError is the error a job fails with when the no-progress watchdog
+// stopped it after quiet, keeping what the executor itself returned when that
+// says more than a cancellation.
+func StalledError(quiet time.Duration, cause error) error {
+	message := fmt.Sprintf("The job made no progress for %s (no Docker call answered and no data moved), so the worker stopped it.", quiet.Round(time.Second))
+	if cause != nil && !errors.Is(cause, context.Canceled) {
+		return fmt.Errorf("%s Last error: %w", message, cause)
+	}
+	return fmt.Errorf("%s The Docker daemon may be stuck: check the worker's health and `docker ps` on the host.", message)
 }
 
 // dispatch decrypts the spec and runs the job's executor, turning a missing

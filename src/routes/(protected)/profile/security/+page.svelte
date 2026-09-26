@@ -13,6 +13,7 @@
 	import PanelHeader from "$lib/components/panel-header.svelte";
 	import PasskeyPanel from "$lib/components/passkey-panel.svelte";
 	import PasswordField from "$lib/components/password-field.svelte";
+	import SetPasswordPanel from "$lib/components/set-password-panel.svelte";
 	import TwoFactorPanel from "$lib/components/two-factor-panel.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
@@ -99,95 +100,106 @@
             <div>
                 <h2 class="eyebrow">Password</h2>
                 <p class="text-xs text-text-muted">
-                    Change your password. All other sessions will be signed out.
+                    {data.hasPassword
+                        ? "Change your password. All other sessions will be signed out."
+                        : "Add a password to sign in with it as well as your email or provider."}
                 </p>
             </div>
         </div>
 
-        <form class="space-y-5 p-5" onsubmit={changePassword}>
-            <PasswordField
-                autocomplete="current-password"
-                id="currentPassword"
-                label="Current password"
-                required
-                bind:value={currentPassword}
-            />
-
-            <div>
-                <PasswordField
-                    autocomplete="new-password"
-                    id="newPassword"
-                    label="New password"
-                    placeholder="Min. 12 characters"
-                    required
-                    bind:value={newPassword}
+        {#if !data.hasPassword}
+            <div class="p-5">
+                <SetPasswordPanel
+                    email={data.email}
+                    emailEnabled={data.smtpEnabled}
                 />
-                {#if newPassword}
-                    <div class="mt-2.5">
-                        <div class="flex gap-1">
-                            {#each [1, 2, 3, 4] as level (level)}
-                                <div
-                                    class="
-                    h-1 flex-1 rounded-full transition-all duration-300 {level <=
-                                    passwordStrength
-                                        ? strengthMeta.bar
-                                        : 'bg-surface-3'}
-                 "
-                                ></div>
-                            {/each}
+            </div>
+        {:else}
+            <form class="space-y-5 p-5" onsubmit={changePassword}>
+                <PasswordField
+                    autocomplete="current-password"
+                    id="currentPassword"
+                    label="Current password"
+                    required
+                    bind:value={currentPassword}
+                />
+
+                <div>
+                    <PasswordField
+                        autocomplete="new-password"
+                        id="newPassword"
+                        label="New password"
+                        placeholder="Min. 12 characters"
+                        required
+                        bind:value={newPassword}
+                    />
+                    {#if newPassword}
+                        <div class="mt-2.5">
+                            <div class="flex gap-1">
+                                {#each [1, 2, 3, 4] as level (level)}
+                                    <div
+                                        class="
+                        h-1 flex-1 rounded-full transition-all duration-300 {level <=
+                                        passwordStrength
+                                            ? strengthMeta.bar
+                                            : 'bg-surface-3'}
+                     "
+                                    ></div>
+                                {/each}
+                            </div>
+                            <p class="mt-1 text-xs text-text-muted">
+                                Strength:
+                                <span class="font-medium {strengthMeta.text}"
+                                    >{strengthMeta.label}</span
+                                >
+                            </p>
                         </div>
-                        <p class="mt-1 text-xs text-text-muted">
-                            Strength:
-                            <span class="font-medium {strengthMeta.text}"
-                                >{strengthMeta.label}</span
-                            >
-                        </p>
-                    </div>
-                {/if}
-            </div>
-
-            <div>
-                <PasswordField
-                    autocomplete="new-password"
-                    class={confirmPasswordClass}
-                    id="confirmPassword"
-                    label="Confirm new password"
-                    placeholder="Repeat new password"
-                    required
-                    bind:value={confirmPassword}
-                />
-                {#if confirmPassword && confirmPassword !== newPassword}
-                    <p class="mt-1 text-xs text-red-500">
-                        Passwords don't match.
-                    </p>
-                {:else if confirmPassword && confirmPassword === newPassword}
-                    <p
-                        class="mt-1 flex items-center gap-1 text-xs text-green-600"
-                    >
-                        <ShieldCheck class="size-3.5" />
-                        Passwords match
-                    </p>
-                {/if}
-            </div>
-
-            <div class="flex justify-end">
-                <Button
-                    disabled={passwordLoading ||
-                        !currentPassword ||
-                        !newPassword ||
-                        !confirmPassword}
-                    type="submit"
-                >
-                    {#if passwordLoading}
-                        <Spinner />
-                        Updating…
-                    {:else}
-                        <Lock class="size-4" />
-                        Update password
                     {/if}
-                </Button>
-            </div>
-        </form>
+                </div>
+
+                <div>
+                    <PasswordField
+                        autocomplete="new-password"
+                        class={confirmPasswordClass}
+                        id="confirmPassword"
+                        label="Confirm new password"
+                        placeholder="Repeat new password"
+                        required
+                        bind:value={confirmPassword}
+                    />
+                    {#if confirmPassword && confirmPassword !== newPassword}
+                        <p class="mt-1 text-xs text-red-500">
+                            Passwords don't match.
+                        </p>
+                    {:else if confirmPassword && confirmPassword === newPassword}
+                        <p
+                            class="mt-1 flex items-center gap-1 text-xs text-green-600"
+                        >
+                            <ShieldCheck class="size-3.5" />
+                            Passwords match
+                        </p>
+                    {/if}
+                </div>
+
+                <div class="flex justify-end">
+                    <Button
+                        disabled={passwordLoading ||
+                            !currentPassword ||
+                            !newPassword ||
+                            !confirmPassword}
+                        type="submit"
+                    >
+                        {#if passwordLoading}
+                            <Spinner />
+                            Updating…
+                        {:else}
+                            <Lock class="size-4" />
+                            Update password
+                        {/if}
+                    </Button>
+                </div>
+            </form>
+        {/if}
     </section>
 
     <section class="panel rounded-md">

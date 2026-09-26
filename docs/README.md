@@ -70,6 +70,8 @@ sync by hand.
   a node.
 - **[Observability](observability.md)**: uptime probes, live logs, failed
   deploys and errors, and the web terminal.
+- **[Error tracking](error-tracking.md)**: Sentry-compatible error collection
+  per service, issues, stack traces linked to the source, and alerts.
 - **[Scheduling and the job queue](scheduling.md)**: scheduled redeploys, cron
   jobs, the Scheduling page, and the background job queue.
 

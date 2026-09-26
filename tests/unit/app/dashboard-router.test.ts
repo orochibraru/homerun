@@ -6,9 +6,12 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { dashboardHostFrom, dashboardRouterConfig } = await import(
-	"../../../src/lib/services/docker/dashboard"
-);
+const {
+	DASHBOARD_ROUTER_PRIORITY,
+	dashboardHostFrom,
+	dashboardRouterConfig,
+	dashboardRouterPlan,
+} = await import("../../../src/lib/services/docker/dashboard");
 
 describe("dashboardHostFrom", () => {
 	test("takes the host out of a Dashboard URL", () => {
@@ -47,6 +50,14 @@ describe("dashboardRouterConfig", () => {
 		expect(yaml).toContain("certResolver: letsencrypt");
 	});
 
+	test("outranks the rule-length priority a label router for the same host gets", () => {
+		const yaml = dashboardRouterConfig(params);
+		expect(yaml).toContain(`priority: ${DASHBOARD_ROUTER_PRIORITY}`);
+		expect(DASHBOARD_ROUTER_PRIORITY).toBeGreaterThan(
+			"Host(`a-very-long-dashboard-hostname.example.com`)".length * 10,
+		);
+	});
+
 	test("asks for no certificate when there's no resolver for that host", () => {
 		const yaml = dashboardRouterConfig({
 			...params,
@@ -55,5 +66,50 @@ describe("dashboardRouterConfig", () => {
 		});
 		expect(yaml).toContain("tls: {}");
 		expect(yaml).not.toContain("certResolver");
+	});
+});
+
+describe("dashboardRouterPlan", () => {
+	const self = {
+		aliases: ["app", "homerun-auth"],
+		name: "homerun-app-1",
+		networkAddress: "172.20.0.5",
+	};
+
+	test("always writes the file route, even when the container's own labels route the host", () => {
+		expect(dashboardRouterPlan("dash.example.com", self)).toEqual({
+			action: "write",
+			target: "homerun-auth",
+		});
+	});
+
+	test("targets the container's name, then its address, when it lacks the homerun-auth alias", () => {
+		expect(
+			dashboardRouterPlan("dash.example.com", { ...self, aliases: [] }),
+		).toEqual({ action: "write", target: "homerun-app-1" });
+		expect(
+			dashboardRouterPlan("dash.example.com", {
+				...self,
+				aliases: [],
+				name: null,
+			}),
+		).toEqual({ action: "write", target: "172.20.0.5" });
+	});
+
+	test("removes the route only when there's no host to route", () => {
+		expect(dashboardRouterPlan(null, self)).toEqual({ action: "remove" });
+	});
+
+	test("leaves a working route alone when this container can't be inspected", () => {
+		expect(dashboardRouterPlan("dash.example.com", null)).toEqual({
+			action: "keep",
+		});
+		expect(
+			dashboardRouterPlan("dash.example.com", {
+				aliases: [],
+				name: null,
+				networkAddress: null,
+			}),
+		).toEqual({ action: "keep" });
 	});
 });

@@ -348,3 +348,52 @@ export function withStackTitle(
 	}
 	return { ...message, title: `${stackName} › ${message.title}` };
 }
+
+export interface ErrorIssueMessageInput {
+	issue: {
+		count: number;
+		culprit: string | null;
+		id: string;
+		lastEnvironment: string | null;
+		lastRelease: string | null;
+		level: string;
+		title: string;
+	};
+	origin: string | null;
+	regressed: boolean;
+	service: Pick<Service, "id" | "name">;
+}
+
+/** Builds the notification channel message for a new or regressed error issue. */
+export function errorIssueMessage(
+	input: ErrorIssueMessageInput,
+	timestamp: string,
+): ChannelMessage {
+	const { issue, service } = input;
+	const fields: MessageField[] = [
+		{ name: "Level", value: issue.level },
+		{ name: "Events", value: String(issue.count) },
+	];
+	if (issue.culprit) {
+		fields.push({ name: "Culprit", value: issue.culprit });
+	}
+	if (issue.lastEnvironment) {
+		fields.push({ name: "Environment", value: issue.lastEnvironment });
+	}
+	if (issue.lastRelease) {
+		fields.push({ name: "Release", value: issue.lastRelease });
+	}
+	return {
+		detail: issue.title,
+		event: input.regressed ? "error.issue.regressed" : "error.issue.new",
+		fields,
+		link: dashboardLink(
+			input.origin,
+			`/services/${service.id}/errors/${issue.id}`,
+		),
+		serviceId: service.id,
+		serviceName: service.name,
+		timestamp,
+		title: `${service.name}: ${input.regressed ? "error regressed" : "new error"}`,
+	};
+}

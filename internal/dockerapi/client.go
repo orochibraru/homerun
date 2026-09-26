@@ -99,34 +99,27 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("docker: %d %s", e.Status, e.Message)
 }
 
-// request sends one call, with an optional JSON body and registry auth, and
-// returns the open response for a 2xx, or an error carrying the daemon's own
-// message otherwise. The caller closes the body.
-func (c *Client) request(
+// exchange sends one call with an optional body and registry auth under ctx,
+// and returns the open response for a 2xx, or an error carrying the daemon's
+// own message otherwise. The caller closes the body.
+func (c *Client) exchange(
 	ctx context.Context,
 	method, path string,
 	query url.Values,
-	body any,
+	body io.Reader,
+	contentType string,
 	auth *AuthConfig,
 ) (*http.Response, error) {
 	endpoint := c.Base + path
 	if len(query) > 0 {
 		endpoint += "?" + query.Encode()
 	}
-	var reader io.Reader
-	if body != nil {
-		encoded, err := json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-		reader = bytes.NewReader(encoded)
-	}
-	request, err := http.NewRequestWithContext(ctx, method, endpoint, reader)
+	request, err := http.NewRequestWithContext(ctx, method, endpoint, body)
 	if err != nil {
 		return nil, err
 	}
-	if body != nil {
-		request.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		request.Header.Set("Content-Type", contentType)
 	}
 	if auth != nil {
 		encoded, err := json.Marshal(auth)
@@ -148,7 +141,7 @@ func (c *Client) request(
 		return response, nil
 	}
 	defer func() { _ = response.Body.Close() }()
-	raw, _ := io.ReadAll(response.Body)
+	raw, _ := io.ReadAll(io.LimitReader(response.Body, 64*1024))
 	var decoded struct {
 		Message string `json:"message"`
 	}
@@ -163,6 +156,31 @@ func (c *Client) request(
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, message)
 	}
 	return nil, &APIError{Message: message, Status: response.StatusCode}
+}
+
+// jsonBody encodes body as a JSON request body, or returns no body for nil.
+func jsonBody(body any) (io.Reader, string, error) {
+	if body == nil {
+		return nil, "", nil
+	}
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return nil, "", err
+	}
+	return bytes.NewReader(encoded), "application/json", nil
+}
+
+// request sends one control call, bounded by ControlTimeout (longer for the
+// few calls the daemon legitimately takes its time over, see timeoutFor),
+// with an optional JSON body and registry auth. The caller closes the body.
+func (c *Client) request(
+	ctx context.Context,
+	method, path string,
+	query url.Values,
+	body any,
+	auth *AuthConfig,
+) (*http.Response, error) {
+	return c.bounded(ctx, timeoutFor(method, path), method, path, query, body, auth)
 }
 
 // Call sends one request and discards a successful body.
@@ -212,8 +230,8 @@ func SplitRef(ref string) (string, string) {
 // returned as an error, as it would be by the docker CLI.
 func (c *Client) PullImage(ctx context.Context, ref string, auth *AuthConfig, onProgress func(string)) error {
 	repository, tag := SplitRef(ref)
-	response, err := c.request(ctx, http.MethodPost, "/images/create",
-		url.Values{"fromImage": {repository}, "tag": {tag}}, nil, auth)
+	response, err := c.stream(ctx, http.MethodPost, "/images/create",
+		url.Values{"fromImage": {repository}, "tag": {tag}}, nil, auth, nil)
 	if err != nil {
 		return err
 	}
@@ -230,8 +248,8 @@ func (c *Client) TagImage(ctx context.Context, source, repository, tag string) e
 // PushImage pushes repository:tag with auth, forwarding progress to onProgress
 // when given. A failure reported inside the progress stream is an error.
 func (c *Client) PushImage(ctx context.Context, repository, tag string, auth AuthConfig, onProgress func(string)) error {
-	response, err := c.request(ctx, http.MethodPost, "/images/"+repository+"/push",
-		url.Values{"tag": {tag}}, nil, &auth)
+	response, err := c.stream(ctx, http.MethodPost, "/images/"+repository+"/push",
+		url.Values{"tag": {tag}}, nil, &auth, nil)
 	if err != nil {
 		return err
 	}
@@ -242,7 +260,7 @@ func (c *Client) PushImage(ctx context.Context, repository, tag string, auth Aut
 // SaveImage streams ref as a `docker save` tarball. Returns ErrNotFound when
 // the daemon doesn't have it. The caller closes the stream.
 func (c *Client) SaveImage(ctx context.Context, ref string) (io.ReadCloser, error) {
-	response, err := c.request(ctx, http.MethodGet, "/images/"+ref+"/get", nil, nil, nil)
+	response, err := c.stream(ctx, http.MethodGet, "/images/"+ref+"/get", nil, nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -281,8 +299,11 @@ func (c *Client) StartContainer(ctx context.Context, id string) error {
 }
 
 // WaitContainer blocks until the container exits and returns its exit code.
+// There's no deadline on the wait itself: while the container runs, the stall
+// watchdog keeps checking the daemon still answers for it, and gives up with a
+// StallError once it doesn't.
 func (c *Client) WaitContainer(ctx context.Context, id string) (int, error) {
-	response, err := c.request(ctx, http.MethodPost, "/containers/"+id+"/wait", nil, nil, nil)
+	response, err := c.stream(ctx, http.MethodPost, "/containers/"+id+"/wait", nil, nil, nil, c.containerRunning(id))
 	if err != nil {
 		return 0, err
 	}
@@ -304,7 +325,7 @@ func (c *Client) ContainerLogs(ctx context.Context, id string, follow bool) (io.
 	if follow {
 		query.Set("follow", "1")
 	}
-	response, err := c.request(ctx, http.MethodGet, "/containers/"+id+"/logs", query, nil, nil)
+	response, err := c.stream(ctx, http.MethodGet, "/containers/"+id+"/logs", query, nil, nil, c.containerRunning(id))
 	if err != nil {
 		return nil, err
 	}

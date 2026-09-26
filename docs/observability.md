@@ -67,3 +67,10 @@ full-screen tools like `vim`, `top` or `htop` work as they would over SSH. It
 follows the app's light/dark theme. Open/close events are logged; individual
 keystrokes/commands are not (that's a deliberate scope cut, not an oversight,
 raw TTY bytes don't map cleanly to discrete commands anyway).
+
+Leaving the tab (closing it, navigating away, or 15 minutes with no input or
+output) ends the session and kills the shell along with everything started from
+it, background jobs included: they get `SIGHUP`, then `SIGKILL` a second later
+if they're still there. Run something meant to outlive the session as a
+[cron job](scheduling.md#cron-jobs) or in the image itself, not from the
+terminal.

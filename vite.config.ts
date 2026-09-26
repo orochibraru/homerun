@@ -3,6 +3,7 @@ import adapter from "@orochibraru/svelte-smol";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+import { isIngestPath } from "./src/lib/error-tracking/envelope.ts";
 
 process.env.BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT = "1";
 
@@ -28,9 +29,33 @@ function listeningPortPlugin(): Plugin {
 	};
 }
 
+/**
+ * Gives a Sentry ingest POST without a `Content-Type` one in dev, since
+ * SvelteKit's Node request adapter drops a body without it and the Sentry Node
+ * SDK sends none. The built app hands Bun's own request through untouched.
+ */
+function ingestContentTypePlugin(): Plugin {
+	return {
+		configureServer: (server) => {
+			server.middlewares.use((req, _res, next) => {
+				if (
+					req.method === "POST" &&
+					!req.headers["content-type"] &&
+					isIngestPath((req.url ?? "").split("?")[0])
+				) {
+					req.headers["content-type"] = "application/x-sentry-envelope";
+				}
+				next();
+			});
+		},
+		name: "homerun-ingest-content-type",
+	};
+}
+
 export default defineConfig({
 	plugins: [
 		listeningPortPlugin(),
+		ingestContentTypePlugin(),
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {

@@ -1,4 +1,5 @@
 import { config } from "$lib/config";
+import { isRollback } from "$lib/deploy-trigger";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
@@ -236,7 +237,7 @@ class RevisionHealthServiceClass {
 	/**
 	 * Decides the auto-rollback target for an unhealthy revision, or why none
 	 * was chosen: auto-rollback is off, the revision was itself a rollback
-	 * (never rolled back again), or there's no previous revision to fall
+	 * (never rolled back again, a preview promote isn't one), or there's no previous revision to fall
 	 * back to. The target is the original deploy of that revision, never one
 	 * of its redeploys, so the rollback folds into its row on the Revisions
 	 * list.
@@ -252,7 +253,7 @@ class RevisionHealthServiceClass {
 				target: null,
 			};
 		}
-		if (dep.rollbackOfDeploymentId) {
+		if (isRollback(dep.rollbackOfDeploymentId, dep.trigger)) {
 			return {
 				skipReason:
 					"This revision was itself a rollback, so it isn't rolled back again.",

@@ -4,6 +4,7 @@ import {
 	accountProviderIdFor,
 	EMAIL_OTP_METHOD,
 	emailMatchesPattern,
+	emailOnlyStep,
 	isOauthMethod,
 	MAGIC_LINK_METHOD,
 	methodForAccountProviderId,
@@ -39,6 +40,29 @@ describe("emailed sign-in methods", () => {
 			}),
 		).toBe(true);
 		expect(acceptsEmailSignIn([PASSWORD_METHOD], email)).toBe(false);
+	});
+});
+
+describe("emailOnlyStep", () => {
+	const both = { emailOtp: true, magicLink: true };
+	const codes = { emailOtp: true, magicLink: false };
+	const links = { emailOtp: false, magicLink: true };
+	const none = { emailOtp: false, magicLink: false };
+
+	test("codes alone are sent straight away", () => {
+		expect(emailOnlyStep(codes, false)).toBe("code");
+		expect(emailOnlyStep(codes, true)).toBe("code");
+	});
+
+	test("with links on, the visitor chooses instead of getting an auto-sent code", () => {
+		expect(emailOnlyStep(both, false)).toBe("choose");
+		expect(emailOnlyStep(links, false)).toBe("choose");
+	});
+
+	test("Sign in with Homerun hides links, so codes are sent or nothing is left", () => {
+		expect(emailOnlyStep(both, true)).toBe("code");
+		expect(emailOnlyStep(links, true)).toBe("password");
+		expect(emailOnlyStep(none, false)).toBe("password");
 	});
 });
 

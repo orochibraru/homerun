@@ -96,6 +96,9 @@ homerun services webhook <id>
 homerun services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>]
 homerun services channels disable <id>
 homerun services channels status <id>
+homerun services environment <id> [name]
+homerun services dependencies <id> [--json]
+homerun services dependencies set <id> [<dependsOnId>...]
 homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
@@ -109,7 +112,7 @@ homerun previews delete <id> <pr>
 homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun instance status [--json]
-homerun instance update [--wait=false] [--timeout <seconds>]
+homerun instance update [--wait=false] [--timeout <seconds>] [--force]
 homerun instance channel stable|canary|nightly
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
@@ -180,16 +183,21 @@ with the deploy's `jobId`), and with `--wait` polls `GET /jobs/{jobId}` like
 
 `homerun instance status` calls `GET /instance/update` and prints the running
 version, the release channel, its latest release and whether an update can start
-now (with the reason when it can't), `--json` for the raw body.
-`homerun instance update` calls `POST /instance/update`, which starts the same
-self-update as the dashboard's **Update now** and answers `202` with the target
-version, or `409` with why it can't. It then follows the update, polling every
-3s: it prints the update helper's output from `GET /instance/update/progress` as
-it arrives, ignores failed requests while the container is recreated, and stops
-once `GET /instance/update` reports the new version as `current`. It exits 1
-when the helper fails or after `--timeout <seconds>` (default 600).
-`--wait=false` returns as soon as the update has started.
-`homerun instance channel stable|canary|nightly` calls
+now (with the reason when it can't, and one line per job in the way: `STUCK`
+first when no worker has sent a heartbeat for it in two minutes, its title,
+service, status/stage, start and last heartbeat, and job id), `--json` for the
+raw body. `homerun instance update` calls `POST /instance/update`, which starts
+the same self-update as the dashboard's **Update now** and answers `202` with
+the target version, or `409` with why it can't. `--force` sends
+`{"force": true}`, the dashboard's **Update anyway**: it updates over queued
+deploys and running jobs, which run again or resume on the new version, but
+still refuses when there's no newer release or the instance can't update itself.
+It then follows the update, polling every 3s: it prints the update helper's
+output from `GET /instance/update/progress` as it arrives, ignores failed
+requests while the container is recreated, and stops once `GET /instance/update`
+reports the new version as `current`. It exits 1 when the helper fails or after
+`--timeout <seconds>` (default 600). `--wait=false` returns as soon as the
+update has started. `homerun instance channel stable|canary|nightly` calls
 `PATCH /instance/update/channel`, the same setting as Settings → General →
 Release channel. All three are admin-only. `homerun update` is unrelated: it
 updates the CLI binary itself.

@@ -192,6 +192,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			magicLinkSignIn: null,
 			oauthProviders: [],
 			onboardingCompletedAt: null,
+			dependenciesBackfilledAt: null,
 			orchestrationMode: null,
 			pangolinApiBaseUrl: null,
 			pangolinApiTokenEnc: null,
@@ -244,6 +245,16 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	/** Whether the onboarding wizard has been completed on this instance. */
 	get onboardingComplete(): boolean {
 		return this.row.onboardingCompletedAt !== null;
+	}
+
+	/** Whether env-var links have been turned into recorded dependencies on this instance yet. */
+	get dependenciesBackfilled(): boolean {
+		return this.row.dependenciesBackfilledAt !== null;
+	}
+
+	/** Stamps the one-time dependency backfill as done, so later boots skip it. */
+	async markDependenciesBackfilled(): Promise<void> {
+		await this.persist({ dependenciesBackfilledAt: new Date() });
 	}
 
 	/** Stamps onboarding as completed now, so the wizard stops being shown. */

@@ -5,6 +5,7 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { isCommitSha } from "$lib/git-ref";
 import { type PullRequestEvent, previewSlug } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
+import { invalidateGatedService } from "$lib/server/gated-service-cache";
 import {
 	defaultHostname,
 	primaryHostname,
@@ -256,6 +257,30 @@ class PreviewServiceClass {
 	}
 
 	/**
+	 * Re-applies the parent's preview access policy to every open preview:
+	 * updates each one's login wall and allow-lists, drops the cached gate
+	 * decision, and redeploys the ones whose wall was switched on or off, since
+	 * the forwardAuth middleware is part of their routing labels. A policy
+	 * change with the wall already on applies without a redeploy.
+	 */
+	async applyAccessPolicy(parent: ServiceDTO): Promise<void> {
+		const policy = parent.previewAccessPolicy;
+		const previews = await ServiceGitDTO.listPreviews(parent.id);
+		await Promise.all(
+			previews.map(async (preview) => {
+				const wasRequired = preview.authRequired;
+				await preview.update(policy);
+				invalidateGatedService(preview.id);
+				await DeploymentService.redeployIfLoginWallChanged(
+					preview,
+					wasRequired,
+					parent.userId,
+				);
+			}),
+		);
+	}
+
+	/**
 	 * Redeploys one preview of `parent` from its pull request's current ref.
 	 *
 	 * @throws When `previewId` isn't one of `parent`'s previews.
@@ -318,8 +343,10 @@ class PreviewServiceClass {
 			pr: event.number,
 		});
 		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
+		const policy = parent.previewAccessPolicy;
 		const preview = await ServiceDTO.create({
 			...settings,
+			authRequired: policy.authRequired,
 			envVars: await previewEnv(
 				parent,
 				domains.primaryDomain ??
@@ -346,10 +373,10 @@ class PreviewServiceClass {
 		await preview.update({
 			defaultDomainEnabled: domains.defaultDomainEnabled,
 			primaryDomain: domains.primaryDomain,
-			authAllowedEmails: settings.authAllowedEmails,
-			authAllowedGroups: settings.authAllowedGroups,
-			authAllowedUserIds: settings.authAllowedUserIds,
-			authProviders: settings.authProviders,
+			authAllowedEmails: policy.authAllowedEmails,
+			authAllowedGroups: policy.authAllowedGroups,
+			authAllowedUserIds: policy.authAllowedUserIds,
+			authProviders: policy.authProviders,
 		});
 		logger.info(
 			`Preview created: parent=${parent.id} pr=${event.number} service=${preview.id} ref=${ref}`,
@@ -368,6 +395,7 @@ class PreviewServiceClass {
 		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
 		await preview.update({
 			...mirroredSettings(parent),
+			...parent.previewAccessPolicy,
 			envVars: await previewEnv(
 				parent,
 				primaryHostname(preview.toJSON(), stack?.slug, config.baseDomain),

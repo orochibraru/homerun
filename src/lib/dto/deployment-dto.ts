@@ -13,7 +13,7 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import { DEPLOY_TRIGGERS } from "$lib/deploy-trigger";
+import { DEPLOY_TRIGGERS, type DeployTrigger } from "$lib/deploy-trigger";
 import type { RevisionConfig } from "$lib/revision-config";
 import {
 	CLEARED_ON_SUPERSEDE,
@@ -339,6 +339,33 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		}));
 	}
 
+	/** Every environment name recorded on at least one deployment, for the deployment history page's filter. */
+	static async listEnvironments(): Promise<string[]> {
+		const rows = await db
+			.selectDistinct({ environment: deployment.environment })
+			.from(deployment)
+			.orderBy(deployment.environment);
+		return rows.map((row) => row.environment);
+	}
+
+	/** The git commit of the newest deployment of a service that started by `at` and recorded one, or null. */
+	static async commitAt(serviceId: string, at: Date): Promise<string | null> {
+		const [row] = await db
+			.select({ gitCommit: deployment.gitCommit })
+			.from(deployment)
+			.where(
+				and(
+					eq(deployment.serviceId, serviceId),
+					isNotNull(deployment.gitCommit),
+					lte(deployment.createdAt, at),
+					ne(deployment.status, "failed"),
+				),
+			)
+			.orderBy(desc(deployment.createdAt))
+			.limit(1);
+		return row?.gitCommit ?? null;
+	}
+
 	/**
 	 * One page of every deployment across all services, newest first, for the
 	 * deployment history page. Searches service name/slug, image, git ref and
@@ -373,13 +400,21 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		const deployTriggers = narrowFilter(triggers, DEPLOY_TRIGGERS);
 		const triggerParts: SQL[] = [];
 		if (triggers.includes("rollback")) {
-			triggerParts.push(isNotNull(deployment.rollbackOfDeploymentId));
+			triggerParts.push(
+				and(
+					isNotNull(deployment.rollbackOfDeploymentId),
+					or(isNull(deployment.trigger), ne(deployment.trigger, "promote")),
+				) as SQL,
+			);
 		}
 		if (deployTriggers.length > 0) {
 			triggerParts.push(
 				and(
-					isNull(deployment.rollbackOfDeploymentId),
 					inArray(deployment.trigger, deployTriggers),
+					or(
+						isNull(deployment.rollbackOfDeploymentId),
+						eq(deployment.trigger, "promote"),
+					),
 				) as SQL,
 			);
 		}
@@ -509,9 +544,13 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	get log(): string {
 		return this.row.log ?? "";
 	}
-	/** The deployment this one rolled back to, null when it wasn't a rollback. */
+	/** The deployment whose image this one redeploys: the revision a rollback went back to, or the preview revision a promote deployed; null for a plain deploy. */
 	get rollbackOfDeploymentId(): string | null {
 		return this.row.rollbackOfDeploymentId;
+	}
+	/** What started this deployment, null for one from before triggers were recorded. */
+	get trigger(): DeployTrigger | null {
+		return this.row.trigger;
 	}
 	/** Whether this rollback also puts back the target revision's env vars, resources and networking. */
 	get restoreConfig(): boolean {

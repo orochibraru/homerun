@@ -37,6 +37,16 @@ services depend on each other, directly or through others, is refused when it's
 dependency only; with env vars the variables are still written, just without the
 recorded dependency.
 
+Links made before Homerun recorded dependencies only had their env vars, so on
+upgrade the dashboard records them once at startup: for each service that has no
+recorded dependency yet, every service one of its env values points at, when the
+two share a stack or the value is a URL or `host:port` (a bare
+`REDIS_HOST=redis` across stacks doesn't count), becomes a recorded dependency,
+app before database whichever side holds the variable. One that would make a
+loop is skipped and logged. The API, CLI and MCP server can also read and
+replace a service's recorded dependencies directly, see
+[API & CLI](api-and-cli.md).
+
 The suggested variable name (or prefix) is a default, not a rule, rename it to
 whatever your app expects before adding it. The host in every generated value is
 the linked service's slug, which is how services already reach each other on the

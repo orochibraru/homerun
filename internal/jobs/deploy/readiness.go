@@ -7,7 +7,11 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/orochibraru/homerun/internal/dockerapi"
 )
+
+const shellProbeTimeout = 2 * time.Minute
 
 // ReadinessLabel marks a workload whose readiness comes from Homerun's
 // generated "listening" check rather than the image's or service's own.
@@ -128,7 +132,7 @@ func ReadinessLabels(check Readiness) map[string]string {
 
 // planReadiness picks the readiness check for imageRef and reports it on the
 // deploy log. It only inspects the image when the answer depends on it;
-// checking for /bin/sh creates a throwaway, never-started container.
+// checking for /bin/sh runs a throwaway helper from the image.
 func (r *run) planReadiness(ctx context.Context, imageRef, workload string) Readiness {
 	in := r.spec.Readiness
 	var facts *ImageFacts
@@ -140,8 +144,9 @@ func (r *run) planReadiness(ctx context.Context, imageRef, workload string) Read
 	return check
 }
 
-// imageReadinessFacts inspects imageRef for a HEALTHCHECK, or probes it for
-// /bin/sh via a throwaway container when it has none.
+// imageReadinessFacts inspects imageRef for a HEALTHCHECK, or, when it has
+// none, checks it ships /bin/sh by running `/bin/sh -c "exit 0"` in a
+// throwaway, network-less helper: a start that fails means no shell.
 func (r *run) imageReadinessFacts(ctx context.Context, imageRef string) *ImageFacts {
 	image, err := r.docker.InspectImage(ctx, imageRef)
 	if err != nil {
@@ -150,23 +155,19 @@ func (r *run) imageReadinessFacts(ctx context.Context, imageRef string) *ImageFa
 	if image.Config.Healthcheck != nil && ImageDeclaresHealthcheck(image.Config.Healthcheck.Test) {
 		return &ImageFacts{HasHealthcheck: true}
 	}
-	probe, err := r.docker.CreateContainerFrom(ctx, "homerun-readiness-"+randomSuffix(), map[string]any{
-		"Entrypoint":      []string{"/bin/sh"},
-		"Image":           imageRef,
-		"NetworkDisabled": true,
-	})
-	if err != nil {
-		return nil
-	}
-	hasShell, err := r.docker.PathExists(ctx, probe, "/bin/sh")
-	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+	probeCtx, cancel := context.WithTimeout(ctx, shellProbeTimeout)
 	defer cancel()
-	_ = r.docker.RemoveContainer(cleanup, probe)
-	return &ImageFacts{HasShell: err == nil && hasShell}
+	result, err := r.docker.RunHelper(probeCtx, dockerapi.HelperConfig{
+		Cmd:             []string{},
+		Entrypoint:      []string{"/bin/sh", "-c", "exit 0"},
+		Image:           imageRef,
+		NetworkDisabled: true,
+	})
+	return &ImageFacts{HasShell: err == nil && result.ExitCode == 0}
 }
 
 // randomSuffix returns a random 8-character hex string, for a unique
-// container/probe name.
+// container name.
 func randomSuffix() string {
 	buffer := make([]byte, 4)
 	_, _ = rand.Read(buffer)

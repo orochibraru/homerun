@@ -1,4 +1,5 @@
-import { config } from "$lib/config";
+import { config, isSmtpEnabled } from "$lib/config";
+import { setPasswordActions } from "$lib/server/set-password-actions";
 import { AccountSecurityService } from "$lib/services/account-security.service";
 
 export const load = async ({ parent }) => {
@@ -12,6 +13,7 @@ export const load = async ({ parent }) => {
 	const linked = new Map(rows.map((row) => [row.providerId, row.accountId]));
 
 	return {
+		email: user.email,
 		hasPassword: linked.has("credential"),
 		passkeys,
 		providers: config.auth.oauthProviders
@@ -21,6 +23,9 @@ export const load = async ({ parent }) => {
 				linked: linked.has(provider.name),
 				name: provider.name,
 			})),
+		smtpEnabled: isSmtpEnabled(),
 		twoFactorEnabled: securityState.twoFactorEnabled,
 	};
 };
+
+export const actions = setPasswordActions;

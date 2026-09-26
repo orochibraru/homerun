@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deployEnvironment } from "$lib/release-channels";
 import type { Service } from "$lib/server/db/schema";
 
 const argv = z.array(z.string()).nullable();
@@ -67,6 +68,10 @@ export const serviceConfigSchema = z.object({
 		}),
 		autoRollback: z.boolean(),
 		category: z.string().nullable(),
+		environment: z.string().meta({
+			description:
+				"The environment its deployments are recorded under: production unless renamed, canary or preview for a child service.",
+		}),
 		icon: z.string().nullable().meta({
 			description:
 				'A bundled template icon file name, "uploaded" for a custom image, or null.',
@@ -193,6 +198,7 @@ export function serviceConfig(
 			autoRedeploy: { enabled: row.cronEnabled, schedule: row.cronSchedule },
 			autoRollback: row.autoRollback,
 			category: row.category,
+			environment: deployEnvironment(row),
 			icon: row.icon?.startsWith("data:") ? "uploaded" : row.icon,
 			stack: extras.stack,
 			uptimeEnabled: row.uptimeEnabled,

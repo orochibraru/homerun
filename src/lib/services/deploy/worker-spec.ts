@@ -2,6 +2,7 @@ import { config } from "$lib/config";
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import type { StackDTO } from "$lib/dto/stack-dto";
+import { RELEASE_ENV } from "$lib/error-tracking/dsn";
 import { cloneFailureHint } from "$lib/git-clone-url";
 import { splitImageRef } from "$lib/image-ref";
 import { runtimeOptionsFrom } from "$lib/service-runtime";
@@ -31,6 +32,7 @@ import { stackNetworkName } from "../docker/networks.ts";
 import { listeningHealthcheck } from "../docker/readiness.ts";
 import { swarmNetworkName, swarmServiceTemplate } from "../docker/swarm.ts";
 import { DockerService } from "../docker.service.ts";
+import { ErrorTrackingService } from "../error-tracking.service.ts";
 import { ImageMirrorGcService } from "../image-mirror-gc.service.ts";
 import { ImageScanService, type ScanPolicy } from "../image-scan.service.ts";
 import {
@@ -347,6 +349,18 @@ function workloadSpec(ctx: WorkerSpecContext, workload: WorkloadPlan) {
 	}
 }
 
+/** The release a deploy's error tracking env names up front: a rollback's commit or image, a pulled image's ref. Null for a git build, whose commit the worker fills in. */
+function knownRelease(image: ImagePlan): string | null {
+	switch (image.kind) {
+		case "pull":
+			return `${image.image}:${image.tag}`;
+		case "revision":
+			return image.revision.gitCommit ?? image.revision.imageRef;
+		default:
+			return null;
+	}
+}
+
 /**
  * Resolves everything the homerun worker needs to run a deploy: the image
  * source (a pull with its scan gate and mirror, a rollback's revision, or a git
@@ -365,9 +379,13 @@ export async function deployWorkerSpec(
 	const { dep, mounts, plan, svc } = ctx;
 	const runtime = runtimeOptionsFrom(svc.toJSON());
 	const timing = healthcheckTimingOf(svc);
+	const sentry = await ErrorTrackingService.deployEnv(
+		svc.toJSON(),
+		knownRelease(plan.image),
+	);
 	return {
 		deploymentId: dep.id,
-		env: Object.entries(svc.envVars ?? {}),
+		env: [...(sentry?.env ?? []), ...Object.entries(svc.envVars ?? {})],
 		envFiles: runtime.envFiles,
 		healthchecks: {
 			listening: listeningHealthcheck(svc.containerPort, timing),
@@ -382,6 +400,7 @@ export async function deployWorkerSpec(
 			portProtocol: svc.portProtocol ?? "tcp",
 			routed: svc.dnsResolvable && plan.workload.networkMode !== "host",
 		},
+		releaseEnv: sentry?.releaseFromBuild ? RELEASE_ENV : "",
 		serviceId: svc.id,
 		socketPath: config.docker.socketPath,
 		volumes: mounts.map((m) => ({ readOnly: m.mount.toJSON().readOnly })),

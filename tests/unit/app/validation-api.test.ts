@@ -120,3 +120,25 @@ describe("createStackApiBody", () => {
 		).toBe(false);
 	});
 });
+
+describe("updateServiceApiBody environmentName", () => {
+	test("lowercases a custom name and accepts null to reset it", () => {
+		expect(
+			updateServiceApiBody.parse({ environmentName: " Staging " })
+				.environmentName,
+		).toBe("staging");
+		expect(
+			updateServiceApiBody.parse({ environmentName: null }).environmentName,
+		).toBeNull();
+	});
+
+	test("rejects a reserved or malformed name", () => {
+		const reserved = updateServiceApiBody.safeParse({
+			environmentName: "canary",
+		});
+		expect(issuePaths(reserved)).toEqual(["environmentName"]);
+		expect(
+			updateServiceApiBody.safeParse({ environmentName: "eu prod" }).success,
+		).toBe(false);
+	});
+});

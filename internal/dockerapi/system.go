@@ -124,7 +124,7 @@ func (c *Client) ContainerLogsStream(ctx context.Context, id string, tail int, f
 	if tail > 0 {
 		query.Set("tail", strconv.Itoa(tail))
 	}
-	response, err := c.request(ctx, http.MethodGet, "/containers/"+id+"/logs", query, nil, nil)
+	response, err := c.stream(ctx, http.MethodGet, "/containers/"+id+"/logs", query, nil, nil, c.containerRunning(id))
 	if err != nil {
 		return nil, err
 	}

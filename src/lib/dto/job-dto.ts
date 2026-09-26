@@ -11,14 +11,18 @@ import {
 	lte,
 	ne,
 	notExists,
+	notInArray,
 	or,
+	type SQL,
 	sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "$lib/server/db/lib";
 import { type Job, job, service } from "$lib/server/db/schema";
+import type { ListQuery, PagedResult } from "$lib/server/list-query";
+import { isStaleJob } from "$lib/services/queue/stale";
 import { decryptSecret, encryptSecret } from "$lib/services/secrets";
-import type { JobStage, JobStatus, JobType } from "$lib/types";
+import type { JobStage, JobStatus, JobSummary, JobType } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
 const TERMINAL_STATUSES: JobStatus[] = ["succeeded", "failed", "cancelled"];
@@ -46,6 +50,7 @@ const CLEARED_STAGE = {
 	executorError: null,
 	executorResult: null,
 	heartbeatAt: null,
+	progressAt: null,
 	spec: null,
 	stage: null,
 	workerId: null,
@@ -226,6 +231,7 @@ export class JobDTO extends BaseDTO<Job> {
 			maxAttempts: input.maxAttempts ?? 1,
 			payload: input.payload,
 			priority: input.priority ?? 0,
+			progressAt: null,
 			result: null,
 			runAt: input.runAt ?? now,
 			serviceId: input.serviceId ?? null,
@@ -294,29 +300,75 @@ export class JobDTO extends BaseDTO<Job> {
 	}
 
 	/**
-	 * Instance-wide counts of queued-or-running deploys and of jobs running right
-	 * now, for the activity indicator.
+	 * The jobs that keep a self-update from starting: every queued or running
+	 * deploy and every running job of any type, running first, then oldest
+	 * first, each with its service's name and whether it has gone stale.
 	 */
-	static async activitySummary(): Promise<{
-		pendingDeploys: number;
-		running: number;
-	}> {
-		const [[deploys], [running]] = await Promise.all([
-			db
-				.select({ total: count() })
-				.from(job)
-				.where(
-					and(
-						eq(job.type, "deploy"),
-						inArray(job.status, ["queued", "running"]),
-					),
-				),
-			db.select({ total: count() }).from(job).where(eq(job.status, "running")),
+	static async listUpdateBlockers(): Promise<JobSummary[]> {
+		return await JobDTO.#summaries(
+			or(
+				eq(job.status, "running"),
+				and(eq(job.type, "deploy"), eq(job.status, "queued")),
+			),
+		);
+	}
+
+	/**
+	 * One page of jobs in any of `statuses` (every job when empty), running
+	 * first, then newest first, as summaries with their service's name.
+	 */
+	static async listPaged(
+		query: ListQuery,
+		statuses: JobStatus[],
+	): Promise<PagedResult<JobSummary>> {
+		const where =
+			statuses.length > 0 ? inArray(job.status, statuses) : undefined;
+		const [items, [totals]] = await Promise.all([
+			JobDTO.#summaries(where, query),
+			db.select({ total: count() }).from(job).where(where),
 		]);
 		return {
-			pendingDeploys: deploys?.total ?? 0,
-			running: running?.total ?? 0,
+			items,
+			page: query.page,
+			perPage: query.perPage,
+			total: totals?.total ?? 0,
 		};
+	}
+
+	/** Jobs matching `where` as summaries joined to their service's name, running jobs first, then by age (queued and running oldest first, finished newest first). */
+	static async #summaries(
+		where: SQL | undefined,
+		page?: { limit: number; offset: number },
+	): Promise<JobSummary[]> {
+		const select = db
+			.select({ row: job, serviceName: service.name })
+			.from(job)
+			.leftJoin(service, eq(job.serviceId, service.id))
+			.where(where)
+			.orderBy(
+				sql`case ${job.status} when 'running' then 0 when 'queued' then 1 else 2 end`,
+				sql`case when ${job.status} in ('running', 'queued') then ${job.createdAt} end asc`,
+				desc(job.createdAt),
+			);
+		const rows = page
+			? await select.limit(page.limit).offset(page.offset)
+			: await select;
+		const now = Date.now();
+		return rows.map(({ row, serviceName }) => ({
+			attempts: row.attempts,
+			createdAt: row.createdAt,
+			heartbeatAt: row.heartbeatAt,
+			id: row.id,
+			serviceId: row.serviceId,
+			serviceName,
+			stage: row.stage,
+			stale: isStaleJob(row, now),
+			startedAt: row.startedAt,
+			status: row.status,
+			title: row.title,
+			type: row.type,
+			workerId: row.workerId,
+		}));
 	}
 
 	/**
@@ -335,23 +387,30 @@ export class JobDTO extends BaseDTO<Job> {
 	}
 
 	/**
-	 * Recovers jobs a previous app process died in the middle of: a running job
+	 * Recovers jobs no app process is working on any more (a previous process
+	 * died mid-job, or a job's own bookkeeping failed): a running job
 	 * with no stage or still in `prepare` goes back to the queue, one caught
 	 * mid-`finalizing` goes back to `finalize`. Jobs in `execute` are left
 	 * alone, the Go worker's lease owns them. An orphan whose dedupe key is
 	 * already taken by a queued job, or by a newer orphan, is cancelled instead
 	 * of requeued, since two queued twins violate the queued dedupe index.
 	 *
+	 * @param live Ids of jobs this process is still working on, left alone, so
+	 *   the job worker can run this periodically and not only at boot.
 	 * @returns How many jobs were requeued.
 	 */
-	static async requeueOrphaned(): Promise<number> {
+	static async requeueOrphaned(live: string[] = []): Promise<number> {
+		const notLive = live.length > 0 ? notInArray(job.id, live) : undefined;
 		await db
 			.update(job)
 			.set({ stage: "finalize" })
-			.where(and(eq(job.status, "running"), eq(job.stage, "finalizing")));
+			.where(
+				and(eq(job.status, "running"), eq(job.stage, "finalizing"), notLive),
+			);
 		const orphaned = and(
 			eq(job.status, "running"),
 			or(isNull(job.stage), eq(job.stage, "prepare")),
+			notLive,
 		);
 		const twin = alias(job, "twin");
 		await db

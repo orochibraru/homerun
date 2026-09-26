@@ -10,10 +10,7 @@ import {
 	type TemplateFile,
 } from "./support";
 
-const SKIP: Record<string, string> = {
-	aiostreams:
-		"Refuses to boot until SECRET_KEY is 64 hex characters, which the operator sets: the template's placeholder is deliberately invalid so no two installs share a key.",
-};
+const SKIP: Record<string, string> = {};
 
 const DEPLOY_TIMEOUT_MS = 12 * 60_000;
 const HEALTH_TIMEOUT_MS = 8 * 60_000;

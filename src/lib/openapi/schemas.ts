@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BUILD_METHODS } from "$lib/build-methods";
+import { HISTORY_TRIGGERS } from "$lib/deploy-trigger";
 import { UPDATE_CHANNELS } from "$lib/update-channel";
 
 /**
@@ -68,6 +69,10 @@ export const serviceResponse = z.object({
 	dnsResolvable: z.boolean(),
 	domains: z.array(z.string()),
 	envVars: z.record(z.string(), z.string()),
+	environmentName: z.string().nullable().meta({
+		description:
+			"Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it.",
+	}),
 	secretEnvKeys: z.array(z.string()),
 	autoDeployOnPush: z.boolean(),
 	gitBakeFile: z.string().nullable(),
@@ -282,7 +287,10 @@ export const deploymentResponse = z.object({
 		description:
 			"The deploy's progress lines as the dashboard shows them: pull, scan, rollout, and the Docker error when it failed",
 	}),
-	rollbackOfDeploymentId: z.string().nullable(),
+	rollbackOfDeploymentId: z.string().nullable().meta({
+		description:
+			"The deployment whose image this one redeployed: the revision a rollback went back to, or the preview revision a promote deployed",
+	}),
 	startedAt: isoTimestamp.nullable(),
 	status: z.enum([
 		"pending",
@@ -293,9 +301,53 @@ export const deploymentResponse = z.object({
 		"failed",
 		"missing",
 	]),
+	trigger: z.enum(HISTORY_TRIGGERS).nullable().meta({
+		description:
+			"What started it: manual, cron (scheduled), push (git push), promote (a pull request preview promoted) or rollback; null for a deploy from before triggers were recorded",
+	}),
 });
 
 export const successResponse = z.object({ success: z.boolean() });
+
+const JOB_STATUSES = [
+	"queued",
+	"running",
+	"succeeded",
+	"failed",
+	"cancelled",
+] as const;
+
+export const jobSummaryResponse = z.object({
+	attempts: z
+		.number()
+		.meta({ description: "How many times it has been claimed" }),
+	createdAt: isoTimestamp,
+	heartbeatAt: isoTimestamp.nullable().meta({
+		description:
+			"The Go worker's last heartbeat while it executes the job, null when no worker holds it",
+	}),
+	id: z.string(),
+	serviceId: z.string().nullable(),
+	serviceName: z.string().nullable(),
+	stage: z
+		.enum(["prepare", "execute", "finalize", "finalizing"])
+		.nullable()
+		.meta({
+			description:
+				"prepare and finalize(ing) run in the app, execute in the Go worker, null for a job the app runs itself",
+		}),
+	stale: z.boolean().meta({
+		description:
+			"Running in execute with no heartbeat (or, never leased, no claim) for over two minutes: no live worker is on it",
+	}),
+	startedAt: isoTimestamp.nullable(),
+	status: z.enum(JOB_STATUSES),
+	title: z.string(),
+	type: z.string(),
+	workerId: z.string().nullable().meta({
+		description: "The Go worker holding the job's lease",
+	}),
+});
 
 export const instanceUpdateStatusResponse = z.object({
 	channel: z.enum(UPDATE_CHANNELS).meta({
@@ -318,6 +370,10 @@ export const instanceUpdateStatusResponse = z.object({
 				"The newest release on the channel, null when it couldn't be checked",
 		}),
 	preflight: z.object({
+		blockers: z.array(jobSummaryResponse).meta({
+			description:
+				"The jobs keeping an update from starting: queued or running deploys and every running job, running first",
+		}),
 		pendingDeploys: z.number(),
 		reason: z.string().nullable().meta({
 			description: "Why an update can't start right now, null when ready",
@@ -471,7 +527,7 @@ export const jobResponse = z.object({
 	result: z.record(z.string(), z.unknown()).nullable(),
 	serviceId: z.string().nullable(),
 	startedAt: isoTimestamp.nullable(),
-	status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+	status: z.enum(JOB_STATUSES),
 	title: z.string(),
 	type: z.string(),
 });

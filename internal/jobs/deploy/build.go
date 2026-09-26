@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/orochibraru/homerun/internal/activity"
 	"github.com/orochibraru/homerun/internal/agent"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 )
@@ -184,7 +185,9 @@ func (r *run) agentRequest(ctx context.Context, method, path string, query url.V
 	if body != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
+	release := activity.Hold(ctx)
 	response, err := (&http.Client{Timeout: timeout}).Do(request)
+	release()
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't reach the agent at %s : %w", connection.AgentURL, err)
 	}

@@ -694,22 +694,23 @@ deploy spec upfront as `healthchecks.listening`): a `CMD-SHELL` loop over
 socket is in `LISTEN` (`0A`) on the container port on a non-loopback address. It
 works without nc/curl/wget/bash, verified on busybox ash and Debian dash (a
 loopback-only listener fails it, as it should: Traefik couldn't reach it
-either). `/bin/sh` is detected by creating a never-started throwaway container
-from the image (`homerun-readiness-<hex>`) and `PathExists`-ing `/bin/sh`
-(`internal/dockerapi`'s `HEAD .../containers/<id>/archive`, the Go equivalent of
-dockerode's `infoArchive`), which follows `/bin -> usr/bin` and busybox
-symlinks; `scratch` images (`traefik/whoami`, `hello-world`) come back without
-one. The generated check starts probing every second (`StartInterval`, Engine
-API 1.44+) for a start period as long as `ROLLOUT_WINDOW.maxWaitMs`
-(`docker/rollout.ts`, still TS, read by `listeningHealthcheck` when the spec is
-built), then every 30s with 3 retries, so it's liveness too: a crash-restart
-resets health to `starting`, which takes the container out of Traefik again
-until it listens (verified). The service healthcheck spec (`dockerHealthcheck`)
-got the same 1s `StartInterval`, so a rollout no longer waits 30s for its first
-probe. Containers and task specs with the generated check carry
-`homerun.readiness=listening`, and `containerHealth` returns null for them so
-the uptime probe keeps its own HTTP/TCP probe rather than reporting the
-generated check as the image's.
+either). `/bin/sh` is detected by running a throwaway, network-less helper from
+the image with entrypoint `/bin/sh -c "exit 0"` (`dockerapi.RunHelper`, 2 minute
+cap): exit 0 means a shell, a start the daemon refuses means none, so `scratch`
+images (`traefik/whoami`, `hello-world`) come back without one. It used to
+`HEAD .../containers/<id>/archive` a never-started container, the same
+archive-API-on-a-never-started-container pattern that wedged dockerd in
+production (see `jobs-and-queue.md`'s S3 backups). The generated check starts
+probing every second (`StartInterval`, Engine API 1.44+) for a start period as
+long as `ROLLOUT_WINDOW.maxWaitMs` (`docker/rollout.ts`, still TS, read by
+`listeningHealthcheck` when the spec is built), then every 30s with 3 retries,
+so it's liveness too: a crash-restart resets health to `starting`, which takes
+the container out of Traefik again until it listens (verified). The service
+healthcheck spec (`dockerHealthcheck`) got the same 1s `StartInterval`, so a
+rollout no longer waits 30s for its first probe. Containers and task specs with
+the generated check carry `homerun.readiness=listening`, and `containerHealth`
+returns null for them so the uptime probe keeps its own HTTP/TCP probe rather
+than reporting the generated check as the image's.
 
 The deploy log gets one `Readiness: ...` line from `ReadinessDescription` on
 every deploy, standalone and swarm, and the blue-green completion line says
@@ -935,6 +936,31 @@ Opening a session is `POST /v1/terminal {containerId}` on the worker, which
 returns a session id the app then streams/writes/closes by hitting
 `/v1/terminal/<id>/stream`\|`/input`\|itself for `DELETE`.
 
+**Closing a session kills its processes; detaching doesn't.** Docker leaves an
+exec's process running when its hijacked stream closes, and the pty's master
+stays open in the shim, so the shell never gets SIGHUP: before this, every
+session left a `/bin/sh` (plus whatever `top`/`vim`/background job it ran) in
+the container until it restarted, 19 in a day on the dev nginx. `defaultShell`
+now prints its in-container PID as an OSC sequence
+(`\033]homerun-pid;<pid>\007`) before `exec`ing bash/sh; `pump` strips it
+(buffering across split reads, passing output through untouched if it doesn't
+start with the marker). Exec inspect's `Pid` can't replace this, it's the host
+PID. A TTY exec runs as a session leader, so that PID is the session id of
+everything started from the shell, but _not_ its process group once job control
+gives each foreground job its own (`top` gets its own pgid), which is why
+`Close` kills by session, not `kill -HUP -<pgid>`: a bounded (`killTimeout`, 5s)
+`ContainerExec` of `killScript`, which scans `/proc/*/stat` with shell builtins
+only (busybox `ps` can't print a sid), HUPs the session, then KILLs survivors
+after 1s. Every close path runs it (the app's close route, the reaper, the
+shell's own exit, `closeAll`); a kill that fails is logged and Close carries on,
+quietly at debug when the shell had already exited (the container may be what
+went away). `closeAll` runs them in parallel and the control API's shutdown
+waits for it (`TerminalsClosed`), bounded by its 10s grace, so a worker restart
+doesn't orphan shells either. On the page, `onDestroy` only fires on client-side
+navigation, so a `pagehide` listener sends the close with `navigator.sendBeacon`
+for a real tab close or full reload; before, those waited out the 15-minute
+reaper.
+
 **Load-bearing implementation detail, now resolved by moving to Go.**
 dockerode's normal `exec.start({hijack:true})`, the standard way to get an
 interactive exec's duplex stream, hangs forever under Bun: confirmed with a
@@ -1035,14 +1061,29 @@ from `hooks.server.ts`'s `init()` and from `applyAndRebuild()`, so every
 settings save re-publishes it, and the file provider's `watch` means the change
 is live with no restart of anything.
 
-Three deliberate skips: an origin carrying an **explicit port** (that instance
-is reached directly on it, not through Traefik : the installer's IP-mode
-default), a container **whose own labels already route that host** (writing a
-second, competing router for it would be worse than doing nothing), and an
-**IPv4 dashboard host**, which gets `tls: {}` rather than a cert resolver
-because ACME can't issue for a bare IP. The matching `dashboard-router` setup
-check (see `observability.md`) reports the case this can't fix itself: no
-dynamic config directory and no labels either.
+**The file route is always written, even when the container's own compose labels
+route the same host** (`dashboardRouterPlan`). Traefik's Docker provider
+inspects every container before building any route, so one container the daemon
+is wedged on freezes every label route (a production incident took the dashboard
+to 404 this way while swarm services kept working); the file provider needs
+nothing from Docker. Two routers for one host don't race: the file router
+carries `priority: 10000` (`DASHBOARD_ROUTER_PRIORITY`), far above the
+rule-length default a label router gets, so it always wins, and both end at the
+same app anyway. It targets the `homerun-auth` alias when the container has it
+(the self-updater's candidate takes that alias over while the app container is
+swapped, the same resilience the login wall's forwardAuth relies on), else the
+container's name, else its IP, and Traefik resolves it per connection, so a
+recreated app container is picked up with no rewrite. The candidate itself never
+writes it (candidate mode starts no core-services watch).
+
+What it skips: no Dashboard URL host, or an origin carrying an **explicit port**
+(that instance is reached directly on it, not through Traefik : the installer's
+IP-mode default), removes the file; a container it **can't inspect** (worker
+down, dev outside Docker) leaves the file alone rather than taking a working
+route away. An **IPv4 dashboard host** gets `tls: {}` rather than a cert
+resolver because ACME can't issue for a bare IP. The matching `dashboard-router`
+setup check (see `observability.md`) reports the file route as the healthy case
+and a label-only route as working but not resilient.
 
 Verified live: the encrypted round-trip, the no-op path when the dir is unset,
 and, with a real directory configured, the three files actually landing with

@@ -4,6 +4,7 @@ import {
 	TEMPLATE_CATEGORIES,
 	type TemplateCategory,
 } from "$lib/template-categories";
+import { secretTokensValid } from "$lib/template-secrets";
 
 export interface BuiltinTemplate extends Partial<ServiceRuntimeOptions> {
 	category: string;
@@ -31,7 +32,10 @@ export interface BuiltinTemplateLink {
 export const BUILTIN_TEMPLATE_CATEGORIES: readonly TemplateCategory[] =
 	TEMPLATE_CATEGORIES.map((c) => c.value);
 
-const argv = z.array(z.string()).nullable();
+const tokenized = z.string().refine(secretTokensValid, {
+	message: "Unknown secret token: use {{secret}} or {{secret:hex<N>}}.",
+});
+const argv = z.array(tokenized).nullable();
 
 export const builtinTemplateFileSchema = z
 	.strictObject({
@@ -43,7 +47,7 @@ export const builtinTemplateFileSchema = z
 		devices: z.array(z.string()).optional(),
 		entrypoint: argv.optional(),
 		envFiles: z.array(z.string()).optional(),
-		envVars: z.record(z.string(), z.string()),
+		envVars: z.record(z.string(), tokenized),
 		healthcheckCommand: z.string().optional(),
 		icon: z
 			.string()

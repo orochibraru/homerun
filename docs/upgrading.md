@@ -7,7 +7,14 @@ updates** button inside the dialog bypasses that ten-minute cache and asks
 GitHub right away. Once an update is available, the dialog behaves as follows:
 
 - It refuses while a deployment is queued or running, or while any other job
-  (backup, cron job, cleanup) is running. Wait, then **Check again**.
+  (backup, cron job, cleanup) is running, and lists those jobs: their service
+  (linked), stage, when they started and the worker's last heartbeat. A job
+  marked **Stuck** is running in the worker with no heartbeat for over two
+  minutes, or with a heartbeat but no progress for 15 minutes (no Docker call
+  answered, no data moved), so waiting won't clear it. The worker fails a job
+  with no progress on its own after 15 minutes; if Docker itself is stuck, see
+  [Docker stuck on a container](faq-and-limitations.md#docker-stuck-on-a-container).
+  Wait, then **Check again**, or use **Update anyway** (below).
 - **Update now** holds the job queue, so nothing new starts, then launches a
   short-lived `homerun-updater` container (`docker:cli`) with the Docker socket
   and your compose directory mounted. It runs `docker compose pull` then
@@ -46,6 +53,33 @@ GitHub right away. Once an update is available, the dialog behaves as follows:
   it's back. If something looks wrong, run `docker logs homerun-updater` on the
   host: every step, and any rollback, is in there.
 
+## Update anyway
+
+When jobs are in the way, **Update anyway** (after a confirmation listing them)
+starts the same update over them. Homerun logs which jobs it overrode. The job
+queue is still held, so nothing new starts, and each job carries on after the
+restart:
+
+- **Queued** jobs, deploys included, stay queued and run on the new version.
+- **Deploys and other jobs the app was preparing** (pulling config, waiting on
+  status checks) go back to the queue and run again from the start, on the same
+  deployment.
+- **Jobs the worker was executing** (builds, pulls, backups, scans, cron jobs,
+  cleanups) get a minute to finish when the old worker stops. One that finishes
+  is recorded as usual; one that doesn't is released and the new worker runs it
+  again (or, if the old worker died without releasing it, once its one-minute
+  lease runs out).
+- **Jobs the worker had finished** get their results recorded by the new
+  version.
+
+A deploy that runs again redeploys the same service with the same settings, so
+at worst it happens twice. A job stuck the same way on the new version still
+shows as **Stuck** in the dialog.
+
+Running jobs that nothing in the app is working on any more (the process
+handling one hit a database error, say) no longer need an update or a restart:
+the app puts them back on the queue within 30 seconds.
+
 ## Release channels
 
 Pick one on **Settings → General → Release channel**:
@@ -75,15 +109,18 @@ If you can't reach the dashboard, the same update runs from the
 [CLI](api-and-cli.md#cli), logged in as an admin:
 
 ```bash
-homerun instance status             # running version, channel, latest version, and whether it can update now
+homerun instance status             # running version, channel, latest version, whether it can update now, and the jobs in the way
 homerun instance channel canary     # switch the release channel (stable, canary or nightly)
 homerun instance update             # start the update and follow it until the new version answers
+homerun instance update --force     # the same, over queued deploys and running jobs (Update anyway)
 ```
 
 It goes through the same checks and the same `homerun-updater` container as
 **Update now**, and prints the reason when it refuses. Scripts can call
-`GET /api/v1/instance/update`, `POST /api/v1/instance/update` and
-`GET /api/v1/instance/update/progress` directly.
+`GET /api/v1/instance/update` (the jobs in the way are in `preflight.blockers`),
+`POST /api/v1/instance/update` (with `{"force": true}` for **Update anyway**)
+and `GET /api/v1/instance/update/progress` directly.
+`GET /api/v1/jobs?status=running` lists every running job.
 
 ## When it can't update itself
 

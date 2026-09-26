@@ -32,14 +32,15 @@ like anyone else, and are sent straight back to the app they were trying to
 open. Opening the dashboard URL directly lands them on a small **Your apps**
 page instead: the apps whose login wall currently lets them through (pull
 request previews show their PR number and title), their passkeys and two-factor
-setup, and a Sign out button. Every dashboard page, form, remote call and REST
-API route refuses them on the server, not just in the menu, and so does the MCP
-endpoint. They can't create or use API keys or log in the CLI, and an API key
-they held under an earlier role stops working. They can still use **Sign in with
-Homerun** apps (see [Sign in with Homerun](sign-in-with-homerun.md)), since
-that's a login for an app, not for Homerun. To share an app with one, tick them
-under **Users** on the app's Security tab, or add `app-user` to its **Groups /
-roles** to let every app-access account in.
+setup, **Set a password** for an account that signs in by emailed code only, and
+a Sign out button. Every dashboard page, form, remote call and REST API route
+refuses them on the server, not just in the menu, and so does the MCP endpoint.
+They can't create or use API keys or log in the CLI, and an API key they held
+under an earlier role stops working. They can still use **Sign in with Homerun**
+apps (see [Sign in with Homerun](sign-in-with-homerun.md)), since that's a login
+for an app, not for Homerun. To share an app with one, tick them under **Users**
+on the app's Security tab, or add `app-user` to its **Groups / roles** to let
+every app-access account in.
 
 **The first account created on a fresh instance becomes admin automatically.**
 After that, there's no public sign-up, every other account is created by an
@@ -60,7 +61,8 @@ admin from `/users`:
   switched on (Authentication → Sign-in), the invite page lets the person choose
   between **Set a password** and **Emailed codes**: the second creates the
   account with no password at all, and they sign in each time with a code sent
-  to their address.
+  to their address. They can add a password later, after confirming an emailed
+  code (Profile → Security, or **Your apps** for app-access-only accounts).
 
 **Inviting a client to review a pull request preview.** Invite them with the
 **App access only** role, and on the preview's parent service's Security tab

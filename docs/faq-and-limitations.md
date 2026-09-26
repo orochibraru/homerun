@@ -62,6 +62,38 @@ pasted compose file works too, including `command`, `entrypoint`, `env_file`,
 labels, `cap_add`, devices and `privileged`; `healthcheck`, secrets and configs
 are dropped with a warning. See [Importing a compose file](compose-import.md).
 
+## Docker stuck on a container
+
+Rarely, the Docker daemon deadlocks on one container: `docker inspect <id>` and
+`docker rm -f <id>` on it hang forever, while `docker ps` still lists it. It's a
+bug in Docker, and only restarting the daemon clears it:
+
+```sh
+sudo systemctl restart docker
+```
+
+What you'd see before that:
+
+- **Sites routed by labels answer 404**, while swarm services keep working.
+  Traefik's Docker provider inspects every container before building routes, so
+  one it can't inspect stalls all of them. The dashboard itself keeps answering
+  when Homerun publishes its own route (the Traefik dynamic config directory
+  under Settings → Networking, set by the installer), since that route doesn't
+  go through the Docker provider.
+- **A backup or deploy fails** with "Docker didn't answer for … the daemon may
+  be stuck on container …" instead of running forever. Every Docker call the
+  worker makes has a deadline, and a job with no progress for 15 minutes fails
+  on its own (see
+  [The app and the worker](configuration.md#the-app-and-the-worker) to tune
+  both).
+- **A notification and a dashboard banner** saying Docker is stuck on a helper
+  container, with its name. The worker cleans up its throwaway helper containers
+  every 5 minutes; one Docker won't remove in time is reported instead of
+  retried in a loop, and the report clears itself once Docker answers again.
+
+After the restart, containers with a restart policy come back on their own;
+check the dashboard for anything that didn't.
+
 ## Known, real limitations (not hypothetical)
 
 - **The default install runs Docker as root.** Swarm mode, the default, needs

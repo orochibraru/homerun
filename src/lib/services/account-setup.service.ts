@@ -203,6 +203,73 @@ class AccountSetupServiceClass {
 		logger.info(`Account set up: user=${pending.id} verified=${verified}`);
 	}
 
+	/**
+	 * Emails a code proving the signed-in `user` owns their mailbox before
+	 * they add a password to an account that has none (one that signs in by
+	 * emailed code or single sign-on only).
+	 *
+	 * @throws When SMTP isn't configured or the account already has a password.
+	 */
+	async sendPasswordCode(user: { email: string; id: string }): Promise<void> {
+		await this.#assertCanAddPassword(user.id);
+		await this.#sendCode(user.id, user.email, "set a password");
+	}
+
+	/**
+	 * Adds a password to the signed-in `user`'s account, which has none, once
+	 * `code` matches the one `sendPasswordCode` emailed (five tries per code).
+	 * Goes through better-auth's `setPassword` with the request's session
+	 * headers, and marks the address verified so a later emailed sign-in
+	 * can't strip the new password as an unproven account's.
+	 *
+	 * @throws When SMTP is off, the account already has a password, the
+	 *   password is too short, or the code is wrong, expired or used up.
+	 */
+	async addPassword(input: {
+		code: string;
+		headers: Headers;
+		password: string;
+		user: { email: string; id: string };
+	}): Promise<void> {
+		if (input.password.length < MIN_PASSWORD_LENGTH) {
+			throw new Error(
+				`Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`,
+			);
+		}
+		await this.#assertCanAddPassword(input.user.id);
+		await this.#checkCode(input.user.id, input.code);
+		await auth.api.setPassword({
+			body: { newPassword: input.password },
+			headers: input.headers,
+		});
+		const ctx = await auth.$context;
+		await ctx.internalAdapter.updateUser(input.user.id, {
+			emailVerified: true,
+		});
+		await ctx.internalAdapter.deleteVerificationByIdentifier(
+			codeKey(input.user.id),
+		);
+		logger.info(`Password added: user=${input.user.id}`);
+	}
+
+	/**
+	 * Refuses adding a password when no code can prove the mailbox (SMTP is
+	 * off) or the account already has one (that's a change, not an add).
+	 *
+	 * @throws An `Error` saying which.
+	 */
+	async #assertCanAddPassword(userId: string): Promise<void> {
+		if (!isSmtpEnabled()) {
+			throw new Error(
+				"Adding a password needs email, and email isn't set up on this instance. Ask your admin.",
+			);
+		}
+		const ctx = await auth.$context;
+		if ((await ctx.internalAdapter.findCredentialAccount(userId))?.password) {
+			throw new Error("Your account already has a password.");
+		}
+	}
+
 	/** The account behind `email` when it's still waiting for its first password. */
 	async #pendingUser(
 		email: string,
@@ -218,8 +285,12 @@ class AccountSetupServiceClass {
 		return pending ? { email: found.user.email, id: found.user.id } : null;
 	}
 
-	/** Stores a new 6-digit code (hashed) and emails it. */
-	async #sendCode(userId: string, email: string): Promise<void> {
+	/** Stores a new 6-digit code (hashed) and emails it, naming what it's for. */
+	async #sendCode(
+		userId: string,
+		email: string,
+		purpose = "sign in",
+	): Promise<void> {
 		const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
 		const ctx = await auth.$context;
 		await ctx.internalAdapter.deleteVerificationByIdentifier(codeKey(userId));
@@ -230,7 +301,7 @@ class AccountSetupServiceClass {
 			value: JSON.stringify(stored),
 		});
 		await new EmailService({
-			content: `Your Homerun verification code is ${code}.\n\nIt expires in 10 minutes. If you didn't try to sign in, ignore this email.`,
+			content: `Your Homerun verification code is ${code}.\n\nIt expires in 10 minutes. If you didn't try to ${purpose}, ignore this email.`,
 			subject: `${code} is your Homerun verification code`,
 			to: email,
 		}).send();

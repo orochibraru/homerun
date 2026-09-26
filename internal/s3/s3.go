@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/orochibraru/homerun/internal/activity"
 )
 
 // PartSize is how much of an upload is held in memory at once: one multipart
@@ -156,11 +158,18 @@ func (c *Client) do(ctx context.Context, method, key string, query url.Values, b
 		"x-amz-date":           amzDate,
 	}
 	signature, signedHeaders := Signature(c.SecretAccessKey, c.Region, amzDate, method, escapedPath, canonical, headers, payloadHash)
-	request, err := http.NewRequestWithContext(ctx, method, target.String(), bytes.NewReader(body))
+	var payload io.Reader = http.NoBody
+	if len(body) > 0 {
+		payload = activity.Reader(ctx, bytes.NewReader(body))
+	}
+	request, err := http.NewRequestWithContext(ctx, method, target.String(), payload)
 	if err != nil {
 		return nil, err
 	}
 	request.ContentLength = int64(len(body))
+	if len(body) > 0 {
+		request.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
+	}
 	request.Header.Set("x-amz-content-sha256", payloadHash)
 	request.Header.Set("x-amz-date", amzDate)
 	request.Header.Set("Authorization", fmt.Sprintf("AWS4-HMAC-SHA256 Credential=%s/%s/%s/s3/aws4_request, SignedHeaders=%s, Signature=%s",
@@ -194,6 +203,7 @@ func (c *Client) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
+	response.Body = progressBody{Reader: activity.Reader(ctx, response.Body), Closer: response.Body}
 	return response.Body, nil
 }
 
@@ -281,4 +291,9 @@ func (c *Client) uploadParts(ctx context.Context, key, uploadID string, buffer [
 		return 0, fmt.Errorf("S3 couldn't complete the upload: %s", strings.TrimSpace(string(raw)))
 	}
 	return total, nil
+}
+
+type progressBody struct {
+	io.Reader
+	io.Closer
 }

@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { mode } from "mode-watcher";
 	import type { Component } from "svelte";
 	import { templateCategoryColor, templateCategoryIcon } from "$lib/constants";
-	import { hasIconImage, iconSrc } from "$lib/service-icon";
+	import { hasIconImage, type IconTheme, iconSrc } from "$lib/service-icon";
 
 	const {
 		icon,
@@ -17,6 +18,11 @@
 
 	const color = $derived(templateCategoryColor(category));
 	let failed = $state<string | null>(null);
+	let theme = $state<IconTheme>();
+
+	$effect(() => {
+		theme = mode.current;
+	});
 </script>
 
 {#if hasIconImage(icon) && failed !== icon}
@@ -29,7 +35,7 @@
       onerror={() => {
         failed = icon;
       }}
-      src={iconSrc(icon)}
+      src={iconSrc(icon, theme)}
     >
   </div>
 {:else}

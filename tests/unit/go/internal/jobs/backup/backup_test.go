@@ -1,7 +1,6 @@
 package backup_test
 
 import (
-	"archive/tar"
 	"context"
 	"errors"
 	"fmt"
@@ -125,32 +124,20 @@ func stubS3(t *testing.T) s3.Client {
 	return s3.Client{AccessKeyID: "k", Bucket: "b", Endpoint: server.URL, Region: "us-east-1", SecretAccessKey: "s"}
 }
 
-// volumeFiles lists the regular file names inside spec's volume, via a
+// volumeFiles lists the regular file paths inside spec's volume, via a
 // throwaway helper container.
 func volumeFiles(t *testing.T, docker *dockerapi.Client, spec backup.Spec) []string {
-	var names []string
-	err := backup.WithHelper(context.Background(), docker, spec, true, func(id string) error {
-		stream, err := docker.ContainerArchive(context.Background(), id, spec.MountPath+"/.")
-		if err != nil {
-			return err
-		}
-		defer stream.Close()
-		reader := tar.NewReader(stream)
-		for {
-			header, err := reader.Next()
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			if header.Typeflag == tar.TypeReg {
-				names = append(names, strings.TrimPrefix(header.Name, "./"))
-			}
-		}
+	result, err := docker.RunHelper(context.Background(), dockerapi.HelperConfig{
+		Binds: []string{spec.Source + ":" + spec.MountPath + ":ro"},
+		Cmd:   []string{"sh", "-c", "cd " + spec.MountPath + " && find . -type f"},
+		Image: spec.HelperImage,
 	})
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || result.ExitCode != 0 {
+		t.Fatalf("listing the volume: %v %+v", err, result)
+	}
+	var names []string
+	for _, line := range strings.Fields(result.Stdout) {
+		names = append(names, strings.TrimPrefix(line, "./"))
 	}
 	sort.Strings(names)
 	return names
@@ -188,7 +175,7 @@ func TestBackupAndRestoreRoundTripOnRealDocker(t *testing.T) {
 		Destination: stubS3(t), HelperImage: "alpine:3", Key: "p/" + volume + ".tar.gz",
 		MountPath: "/homerun-backup-source", Source: volume, VolumeName: volume,
 	}
-	if err := backup.EnsureImage(ctx, docker, spec.HelperImage); err != nil {
+	if err := docker.EnsureImage(ctx, spec.HelperImage); err != nil {
 		t.Fatal(err)
 	}
 	runStep(t, docker, spec, "echo hi > /homerun-backup-source/a.txt && mkdir /homerun-backup-source/sub && echo x > /homerun-backup-source/sub/b")

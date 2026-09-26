@@ -6,6 +6,7 @@ import {
 	generateTemplateSecret,
 	SECRET_TOKEN,
 	secretEnvKeysOf,
+	secretTokensValid,
 	submittedSecret,
 } from "../../../src/lib/template-secrets";
 
@@ -64,5 +65,40 @@ describe("template secrets", () => {
 		expect(isDatabaseImage("memcached")).toBe(true);
 		expect(isDatabaseImage("bitnami/memcached")).toBe(true);
 		expect(isDatabaseImage("nginx")).toBe(false);
+	});
+
+	test("{{secret:hex<N>}} fills N fresh hex characters per occurrence", () => {
+		const env = fillSecretInEnv(
+			{
+				KEY: "{{secret:hex64}}",
+				ODD: "k={{secret:hex7}}",
+				OTHER: "{{secret:hex64}}",
+			},
+			"s1",
+		);
+		expect(env.KEY).toMatch(/^[0-9a-f]{64}$/);
+		expect(env.ODD).toMatch(/^k=[0-9a-f]{7}$/);
+		expect(env.OTHER).not.toBe(env.KEY);
+		expect(
+			fillSecretInRuntime(
+				{ ...runtime, command: ["--key", "{{secret:hex32}}"] },
+				"s1",
+			).command?.[1],
+		).toMatch(/^[0-9a-f]{32}$/);
+	});
+
+	test("hex secret vars start out marked secret too", () => {
+		expect(
+			secretEnvKeysOf({ KEY: "{{secret:hex64}}", TZ: "{{secret:hex}}" }),
+		).toEqual(["KEY"]);
+	});
+
+	test("only {{secret}} and {{secret:hex1..999}} are valid tokens", () => {
+		expect(secretTokensValid("a {{secret}} {{secret:hex64}} {{db.X}}")).toBe(
+			true,
+		);
+		expect(secretTokensValid("{{secret:hex0}}")).toBe(false);
+		expect(secretTokensValid("{{secret:hex1000}}")).toBe(false);
+		expect(secretTokensValid("{{secret:base64}}")).toBe(false);
 	});
 });

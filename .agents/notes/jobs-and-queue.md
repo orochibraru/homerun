@@ -62,11 +62,18 @@ two deploys of the same service racing each other, and what keeps a
   `MAX_CONCURRENT_JOBS` (3) jobs, claiming _serially_ so each claim sees the
   previous one's committed `running` row (a parallel batch of claims would each
   run in its own uncommitted transaction and could hand out two jobs sharing a
-  `lockKey`). On the very first tick it calls `JobDTO.requeueOrphaned()` : this
-  app runs one worker, so any row still `running` at boot was left there by a
-  process that died, and is put back on the queue. `runJob()` is public
-  specifically so `tests/unit/app/queue.test.ts` can drive the
-  succeed/retry/permanently-fail decision without an interval.
+  `lockKey`). On the first tick and every 30s after it calls
+  `JobDTO.requeueOrphaned(inFlightIds)` : this app runs one worker, so a row
+  still `running` in an app-side stage (none, `prepare`, `finalizing`) that
+  isn't in this process's `#inFlight` set was left there by a process that died
+  (at boot) or by a job whose own bookkeeping threw (`markFailed` on a dead
+  connection, later), and is put back on the queue. Before it ran every 30s, the
+  second case sat in `running` until the next restart and blocked self-update
+  ("1 job(s) are running") forever. The sweep is safe against the claim path
+  because ticks never overlap and `#dispatch` adds to `#inFlight` synchronously
+  after `claimNext` returns. `runJob()` is public specifically so
+  `tests/unit/app/queue.test.ts` can drive the succeed/retry/permanently-fail
+  decision without an interval.
 - **Go-executed job types** skip any in-process handler: a non-null module in
   `$lib/services/queue/worker-jobs/`
   (`src/lib/services/queue/worker-jobs/index.ts`'s `workerJobs`) makes `runJob`
@@ -300,13 +307,30 @@ itself lists backups for the Restore picker; the Go side has its own S3 client
 `kind: "bind"` is tar'd straight off the host, and `kind: "volume"`
 (Docker-managed, whose content isn't visible on the host filesystem the same
 way) is mounted read-only into a throwaway helper container that tars it to
-stdout — both now `internal/jobs/backup/backup.go`'s
-`archiveAndUpload`/`withHelper`, one code path for both kinds since a bind's
-source is as mountable as a named volume, matching the old TS
-`archiveHostPath()`/`archiveNamedVolume()` split it replaced. A non-zero exit
-from the helper fails the run with the helper's own stderr attached, rather than
-uploading a truncated/empty tarball. Scheduled backups are one `DueScheduler`
-config over `StorageVolumeDTO.listBackupEnabled()`, see Schedulers above.
+stdout — both `internal/jobs/backup/backup.go`'s `archiveAndUpload`, one code
+path for both kinds since a bind's source is as mountable as a named volume. The
+helper is **started** and streams through its own process
+(`tar -C <mount> --numeric-owner -cf - .`, read off a hijacked attach by
+`dockerapi.RunHelper`, gzipped on the fly and piped straight into the multipart
+upload, no temp file whatever the volume's size). A non-zero exit from the
+helper fails the run with the helper's own stderr attached, and the upload is
+aborted rather than left truncated.
+
+**Never Docker's archive API on a never-started container.** Backups used to
+create an `alpine` helper with entrypoint `true`, never start it, and read the
+volume out through `GET /containers/<id>/archive` (restores used
+`PUT .../archive`, the readiness probe `HEAD .../archive`). **Real production
+incident** (Docker 28.5.2): that archive call hung forever, the job kept
+heartbeating so it never looked stale, and it blocked the self-update ("1 job(s)
+are running") for hours; after a forced restart the requeued backup's fresh
+helper wedged dockerd itself (`docker inspect`/`docker rm -f` on it hung until
+dockerd restarted), and because Traefik's Docker provider inspects every
+container before building any route, every label-routed site, the dashboard
+included, went 404 (swarm services kept working). The file format is unchanged
+(a gzipped tar of `./`-prefixed entries), so archives made the old way restore
+through the new `tar -x` (verified with a `docker cp` archive, symlink and uid
+999 file included). Scheduled backups are one `DueScheduler` config over
+`StorageVolumeDTO.listBackupEnabled()`, see Schedulers above.
 
 **Quiescing** is resolved in `$lib/services/backup/volume-services.ts`
 (`VolumeServices`) but executed in Go. `storage_volume.backupStopServices`
@@ -362,13 +386,15 @@ row with `kind: "restore"` and the object `key` (backups now record their
 uploaded `key` too), so the run log and `/backups` (Kind filter) show both.
 `internal/jobs/backup/backup.go`'s `restore` downloads before `whileStopped`, so
 services are down only for the optional `wipe` (a helper
-`find <mount> -mindepth 1 -delete`) and the unpack. **Docker's own archive
-endpoint does the unpacking** (`internal/dockerapi.Client.PutContainerArchive`,
-called from `backup.go`'s `withHelper` against a stopped helper container with
-the target mounted): it accepts a gzipped tar directly, needs no `tar` on this
-host, no stdin plumbing into a running container, and works against a remote
-daemon. One path covers both volume kinds, since a bind's source is as mountable
-as a named volume.
+`find <mount> -mindepth 1 -delete`) and the unpack. The unpack is a started
+helper running `tar -C <mount> --numeric-owner -xf -` with the archive fed into
+its stdin over a hijacked attach (`backup.go`'s `unpack`, gunzipping in Go when
+the object starts with the gzip magic, so a plain tar works too), then the
+connection half-closed so `tar` sees EOF (`OpenStdin`+`StdinOnce`). One path
+covers both volume kinds, since a bind's source is as mountable as a named
+volume. Compose import's file mounts (`DockerService.extractIntoVolume`) go
+through the same shape: the worker's `PUT /v1/volumes/archive` runs the helper
+with the request body as its stdin.
 
 Without `wipe` it's a **restore-over** : files in the archive replace what's on
 disk and anything else is left alone. `stopServices` defaults to on in the UI;

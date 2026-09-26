@@ -37,6 +37,7 @@
 
 	const values = $derived(
 		(form?.values as Record<string, string> | undefined) ?? {
+			environmentName: svc.environmentName ?? "",
 			name: svc.name,
 			pullPolicy: svc.pullPolicy,
 			restartPolicy: svc.restartPolicy,
@@ -190,6 +191,28 @@
           </SelectContent>
         </SelectRoot>
       </div>
+
+      {#if !svc.previewParentId}
+        <div>
+          <label class={label} for="environmentName">Environment</label>
+          <Input
+            id="environmentName"
+            maxlength={32}
+            name="environmentName"
+            placeholder="production"
+            type="text"
+            value={values.environmentName}
+          />
+          <p class="text-text-subtle mt-1 text-xs">
+            The environment this service's deployments are recorded under, on the
+            Revisions tab and Deployments page, e.g. staging or eu-prod. Leave blank
+            for production.
+          </p>
+          {#if errors?.environmentName}
+            <p class={errorClass}>{errors.environmentName[0]}</p>
+          {/if}
+        </div>
+      {/if}
 
       <p class="text-text-subtle text-xs">
         CPU/memory limits and autoscaling moved to the

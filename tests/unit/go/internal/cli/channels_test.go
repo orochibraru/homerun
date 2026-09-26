@@ -134,3 +134,28 @@ func TestServiceDeployEnvironment(t *testing.T) {
 		t.Errorf("got %q", failed)
 	}
 }
+
+func TestServiceSetEnvironment(t *testing.T) {
+	client, seen := jsonAPI(t, `{"environmentName":"staging"}`)
+
+	out, failed := runCLI(t, func() { cli.ServiceSetEnvironment(client, "svc-1", "staging") })
+	if failed != "" {
+		t.Fatalf("failed with %q", failed)
+	}
+	request := (*seen)[0]
+	if request.Method != "PATCH" || request.Path != "/api/v1/services/svc-1" {
+		t.Errorf("wrong request %s %s", request.Method, request.Path)
+	}
+	if request.Body != `{"environmentName":"staging"}` {
+		t.Errorf("got body %s", request.Body)
+	}
+	if strings.TrimSpace(out) != "staging" {
+		t.Errorf("got %q", out)
+	}
+
+	reset, seenReset := jsonAPI(t, `{"environmentName":null}`)
+	out, _ = runCLI(t, func() { cli.ServiceSetEnvironment(reset, "svc-1", "") })
+	if (*seenReset)[0].Body != `{"environmentName":null}` || strings.TrimSpace(out) != "production" {
+		t.Errorf("got body %s, output %q", (*seenReset)[0].Body, out)
+	}
+}

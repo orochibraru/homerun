@@ -57,6 +57,11 @@ describe("deployEvent", () => {
 		expect(deployEvent("git", "cron", true)).toBe("build.succeeded");
 	});
 
+	test("a promote to a git service is a deploy, nothing was built", () => {
+		expect(deployEvent("git", "promote", true)).toBe("deploy.succeeded");
+		expect(deployEvent("git", "promote", false)).toBe("deploy.failed");
+	});
+
 	test("a scheduled image redeploy is an update", () => {
 		expect(deployEvent("image", "cron", false)).toBe("update.failed");
 		expect(deployEvent("image", "cron", true)).toBe("update.succeeded");

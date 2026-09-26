@@ -1,3 +1,5 @@
+import { linkRoles } from "$lib/service-link";
+
 export interface GraphService {
 	envVars: Record<string, string> | null;
 	id: string;
@@ -269,4 +271,108 @@ export function createsCycle(
 		}
 	}
 	return false;
+}
+
+export interface BackfillService extends GraphService {
+	createdAt: Date;
+	image: string;
+	stackId: string | null;
+}
+
+/**
+ * The dependency rows to record for links made before dependencies were
+ * stored: each env-inferred edge whose two services share a stack or whose
+ * value is a URL or `host:port` (not a bare name), turned consumer→provider
+ * with `linkRoles`, for consumers created before `before` that have no
+ * recorded dependency yet. An edge that would close a loop with the recorded
+ * ones or an earlier pick is returned in `cycles` instead.
+ */
+export function backfillEdges(
+	services: BackfillService[],
+	recorded: Map<string, string[]>,
+	before: Date,
+): { add: [string, string][]; cycles: [string, string][] } {
+	const byId = new Map(services.map((svc) => [svc.id, svc]));
+	const working = mergeDependencies(recorded);
+	const add: [string, string][] = [];
+	const cycles: [string, string][] = [];
+	for (const [fromId, toIds] of dependencyMap(services)) {
+		const from = byId.get(fromId) as BackfillService;
+		for (const to of toIds.map((id) => byId.get(id) as BackfillService)) {
+			const sameStack = from.stackId !== null && from.stackId === to.stackId;
+			const byUrl = Object.values(from.envVars ?? {}).some((value) =>
+				hostsIn(value).includes(to.slug.toLowerCase()),
+			);
+			const { consumer, provider } = linkRoles(from, to);
+			if (
+				!(sameStack || byUrl) ||
+				consumer.createdAt >= before ||
+				(recorded.get(consumer.id) ?? []).length > 0 ||
+				(working.get(consumer.id) ?? []).includes(provider.id)
+			) {
+				continue;
+			}
+			if (createsCycle(consumer.id, provider.id, working)) {
+				cycles.push([consumer.id, provider.id]);
+				continue;
+			}
+			add.push([consumer.id, provider.id]);
+			working.set(consumer.id, [
+				...(working.get(consumer.id) ?? []),
+				provider.id,
+			]);
+		}
+	}
+	return { add, cycles };
+}
+
+export type DependencySource = "both" | "env" | "recorded";
+
+/**
+ * The services `serviceId` depends on and the ones depending on it, each
+ * with where the edge comes from: a recorded row, an env value pointing at
+ * the other's slug, or both.
+ */
+export function dependencyEdges(
+	serviceId: string,
+	env: Map<string, string[]>,
+	recorded: Map<string, string[]>,
+): {
+	dependedOnBy: { id: string; source: DependencySource }[];
+	dependsOn: { id: string; source: DependencySource }[];
+} {
+	const sourceOf = (from: string, to: string): DependencySource | null => {
+		const byEnv = (env.get(from) ?? []).includes(to);
+		const byRow = (recorded.get(from) ?? []).includes(to);
+		if (byEnv && byRow) {
+			return "both";
+		}
+		return byEnv ? "env" : byRow ? "recorded" : null;
+	};
+	const merged = mergeDependencies(env, recorded);
+	return {
+		dependedOnBy: [...merged.keys()].flatMap((id) => {
+			const source = sourceOf(id, serviceId);
+			return source ? [{ id, source }] : [];
+		}),
+		dependsOn: (merged.get(serviceId) ?? []).map((id) => ({
+			id,
+			source: sourceOf(serviceId, id) as DependencySource,
+		})),
+	};
+}
+
+/**
+ * The first of `ids` that already depends on `serviceId` (itself included),
+ * so making `serviceId` depend on all of them in place of its recorded
+ * dependencies would close a loop; undefined when none does.
+ */
+export function replacementCycle(
+	serviceId: string,
+	ids: string[],
+	recorded: Map<string, string[]>,
+): string | undefined {
+	const others = new Map(recorded);
+	others.delete(serviceId);
+	return ids.find((id) => createsCycle(serviceId, id, others));
 }

@@ -3,11 +3,14 @@ import {
 	createServiceApiBody,
 	createStackApiBody,
 	deployServiceApiBody,
+	startUpdateApiBody,
 	updateChannelApiBody,
 	updateServiceApiBody,
 } from "$lib/server/validation/api";
 import { serviceConfigSchema } from "$lib/service-config";
 import { channelRoutes } from "./channels";
+import { dependencyRoutes } from "./dependencies";
+import { errorRoutes } from "./errors";
 import { previewRoutes } from "./previews";
 import {
 	deploymentResponse,
@@ -20,6 +23,7 @@ import {
 	instanceUpdateStartResponse,
 	instanceUpdateStatusResponse,
 	jobResponse,
+	jobSummaryResponse,
 	pushWebhookResponse,
 	queuedJobResponse,
 	revisionResponse,
@@ -44,7 +48,7 @@ export interface ParamDef {
 }
 
 export interface RouteDef {
-	method: "get" | "post" | "patch" | "delete";
+	method: "get" | "post" | "put" | "patch" | "delete";
 	path: string;
 	tags: string[];
 	summary: string;
@@ -456,6 +460,32 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
+			"Paginated, running jobs first, then queued and running oldest first, finished newest first. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers. Admins only.",
+		method: "get",
+		path: "/jobs",
+		queryParams: [
+			{
+				description:
+					"Comma-separated statuses to keep: queued, running, succeeded, failed, cancelled (default: all)",
+				name: "status",
+			},
+			...listQueryParams.filter((param) => param.name !== "q"),
+		],
+		responses: {
+			200: {
+				description: "Jobs, with their service's name and a stale flag",
+				isArray: true,
+				schema: jobSummaryResponse,
+			},
+			400: { description: "Unknown status", schema: errorResponse },
+			401: unauthorized,
+			403: { description: "Not an admin", schema: errorResponse },
+		},
+		summary: "List jobs",
+		tags: ["Jobs"],
+	},
+	{
+		description:
 			"Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
 		method: "get",
 		path: "/stacks",
@@ -519,19 +549,22 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. Admins only.",
+			"Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. force: true updates over queued deploys and running jobs (GET /instance/update lists them in preflight.blockers): the restart interrupts them and the new version resumes or re-runs them. Admins only.",
 		method: "post",
 		path: "/instance/update",
+		requestBody: startUpdateApiBody,
+		requestBodyOptional: true,
 		responses: {
 			202: {
 				description: "Update started",
 				schema: instanceUpdateStartResponse,
 			},
+			400: badRequest,
 			401: unauthorized,
 			403: { description: "Not an admin", schema: errorResponse },
 			409: {
 				description:
-					"Already on the latest release, not running under Docker Compose, or a deploy or job is in flight",
+					"Already on the latest release, not running under Docker Compose, or (without force) a deploy or job is in flight",
 				schema: errorResponse,
 			},
 		},
@@ -624,4 +657,6 @@ export const routes: RouteDef[] = [
 	},
 	...previewRoutes,
 	...channelRoutes,
+	...dependencyRoutes,
+	...errorRoutes,
 ];

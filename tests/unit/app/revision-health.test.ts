@@ -96,13 +96,18 @@ interface FakeDep {
 
 function fakeDep(
 	id: string,
-	options: { rollbackOf?: string | null; settles?: boolean } = {},
+	options: {
+		rollbackOf?: string | null;
+		settles?: boolean;
+		trigger?: string;
+	} = {},
 ): FakeDep & Deployment {
 	return {
 		appendLog: mock(async () => undefined),
 		id,
 		rollbackOfDeploymentId: options.rollbackOf ?? null,
 		settleHealth: mock(async () => options.settles ?? true),
+		trigger: options.trigger ?? "manual",
 		toJSON: () => ({
 			createdAt: new Date(Date.now() - 2 * 60 * 1000),
 			finishedAt: null,
@@ -317,6 +322,34 @@ describe("RevisionHealthService.watch", () => {
 			type: "deploy_rolled_back",
 		});
 		expect(s.channelNotify).toHaveBeenCalledTimes(1);
+	});
+
+	test("a promoted preview revision that goes unhealthy is rolled back like a fresh deploy", async () => {
+		const dep = fakeDep("d-promoted", {
+			rollbackOf: "d-preview",
+			trigger: "promote",
+		});
+		const s = setup({
+			dep,
+			revisions: [
+				revisionRow("d-promoted", "app:2", 0, "d-preview"),
+				revisionRow("d-orig", "app:1", 5000),
+			],
+			samples: [exited(1)],
+			svc: fakeService(),
+		});
+
+		await watch(dep, s.enqueueRollback);
+
+		expect(dep.settleHealth).toHaveBeenCalledWith(
+			"rolled_back",
+			"The container exited with code 1.",
+		);
+		expect(s.enqueueRollback).toHaveBeenCalledWith({
+			rollbackOfDeploymentId: "d-orig",
+			svc: expect.anything(),
+			userId: "user-1",
+		});
 	});
 
 	test("an unhealthy revision with no rollback target says why", async () => {

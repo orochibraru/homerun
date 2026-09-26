@@ -50,7 +50,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	if _, err := pool.Exec(ctx, `create table job (
 		id text primary key, type text not null, status text not null, stage text, spec text,
 		attempts integer not null default 1, priority integer not null default 0,
-		created_at timestamp not null default now(), worker_id text, heartbeat_at timestamp,
+		created_at timestamp not null default now(), worker_id text, heartbeat_at timestamp, progress_at timestamp,
 		executor_result jsonb, executor_error text, log text not null default '')`); err != nil {
 		t.Fatal(err)
 	}
@@ -81,10 +81,14 @@ func TestPgStoreLeaseLifecycle(t *testing.T) {
 		t.Fatalf("a live lease isn't claimable, got %+v", none)
 	}
 
-	if ours, err := s.Heartbeat(ctx, "urgent", "w1"); err != nil || !ours {
+	if ours, err := s.Heartbeat(ctx, "urgent", "w1", time.Now().Add(-5*time.Minute)); err != nil || !ours {
 		t.Errorf("the owner's heartbeat lands, got %v %v", ours, err)
 	}
-	if ours, _ := s.Heartbeat(ctx, "urgent", "w2"); ours {
+	var quiet float64
+	if err := pool.QueryRow(ctx, `select extract(epoch from (heartbeat_at - progress_at)) from job where id = 'urgent'`).Scan(&quiet); err != nil || quiet < 290 || quiet > 310 {
+		t.Errorf("the heartbeat records when the job last made progress, got %v seconds before it, %v", quiet, err)
+	}
+	if ours, _ := s.Heartbeat(ctx, "urgent", "w2", time.Now()); ours {
 		t.Error("a heartbeat from another worker doesn't")
 	}
 
@@ -95,7 +99,7 @@ func TestPgStoreLeaseLifecycle(t *testing.T) {
 	if stolen == nil || stolen.ID != "prepared" {
 		t.Fatalf("an expired lease is taken over, got %+v", stolen)
 	}
-	if ours, _ := s.Heartbeat(ctx, "prepared", "w2"); ours {
+	if ours, _ := s.Heartbeat(ctx, "prepared", "w2", time.Now()); ours {
 		t.Error("the previous owner learns its lease is gone")
 	}
 

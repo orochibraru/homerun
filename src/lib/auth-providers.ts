@@ -156,6 +156,23 @@ export function acceptsEmailSignIn(
 }
 
 /**
+ * What the sign-in page does for an account with neither a password nor a
+ * linked provider: send a code straight away when codes are the only way in,
+ * otherwise let the visitor choose between a code and a link. Links are never
+ * offered in the "Sign in with Homerun" flow, which a link opened in another
+ * tab can't resume.
+ */
+export function emailOnlyStep(
+	email: EmailSignIn,
+	oauthSignIn: boolean,
+): "choose" | "code" | "password" {
+	if (email.magicLink && !oauthSignIn) {
+		return "choose";
+	}
+	return email.emailOtp ? "code" : "password";
+}
+
+/**
  * Maps a sign-in method id to the `providerId` better-auth stores on the account
  * row: `credential` for password, the bare provider name for OAuth.
  */

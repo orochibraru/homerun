@@ -1,7 +1,6 @@
 package deploy
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -140,11 +139,11 @@ func shorten(text string, length int) string {
 	return text[:length]
 }
 
-// revisionImage locates the exact image a rollback reuses, mirroring
+// revisionImage locates the exact image a rollback or promote reuses, mirroring
 // resolveRevisionImage in deploy/revision-step.ts.
 func (r *run) revisionImage(ctx context.Context) (resolvedImage, error) {
 	revision := *r.spec.Image.Revision
-	r.progress.line(fmt.Sprintf("Rolling back to revision %s: %s", shorten(revision.ID, 8), DescribeRevision(revision)))
+	r.progress.line(fmt.Sprintf("Redeploying the image of revision %s: %s", shorten(revision.ID, 8), DescribeRevision(revision)))
 	r.progress.line("Skipping the build, the registry pull and the image scan: this exact image already ran here.")
 	resolved, err := r.locateRevision(ctx, revision)
 	if err != nil {
@@ -194,50 +193,20 @@ type helperRun struct {
 	timedOut bool
 }
 
-// runHelper runs a throwaway container from a raw create body to completion,
-// pulling its image first when missing, killing it past timeout and always
-// removing it.
-func (r *run) runHelper(ctx context.Context, body map[string]any, timeout time.Duration) (helperRun, error) {
-	image, _ := body["Image"].(string)
-	if _, err := r.docker.InspectImage(ctx, image); err != nil {
-		if !errors.Is(err, dockerapi.ErrNotFound) {
-			return helperRun{}, err
-		}
-		if err := r.docker.PullImage(ctx, image, nil, nil); err != nil {
-			return helperRun{}, err
-		}
-	}
-	body["Labels"] = withLabels(body["Labels"], map[string]string{managedLabel: "true"})
-	body["Tty"] = false
-	id, err := r.docker.CreateContainerFrom(ctx, "", body)
-	if err != nil {
-		return helperRun{}, err
-	}
-	defer r.removeQuietly(ctx, id)
-	if err := r.docker.StartContainer(ctx, id); err != nil {
-		return helperRun{}, err
-	}
-	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+// runHelper runs a throwaway helper container to completion through
+// dockerapi.RunHelper (pulled when missing, labelled for the janitor, always
+// removed), reporting timedOut instead of an error when it outlives timeout.
+func (r *run) runHelper(ctx context.Context, config dockerapi.HelperConfig, timeout time.Duration) (helperRun, error) {
+	helperCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	code, err := r.docker.WaitContainer(waitCtx, id)
-	timedOut := false
+	result, err := r.docker.RunHelper(helperCtx, config)
 	if err != nil {
-		if ctx.Err() != nil || !errors.Is(waitCtx.Err(), context.DeadlineExceeded) {
-			return helperRun{}, err
+		if ctx.Err() == nil && errors.Is(helperCtx.Err(), context.DeadlineExceeded) {
+			return helperRun{timedOut: true}, nil
 		}
-		timedOut = true
-		_ = r.docker.KillContainer(context.WithoutCancel(ctx), id)
-	}
-	logs, err := r.docker.ContainerLogs(ctx, id, false)
-	if err != nil {
 		return helperRun{}, err
 	}
-	defer func() { _ = logs.Close() }()
-	var stdout, stderr bytes.Buffer
-	if err := dockerapi.DemuxSplit(logs, &stdout, &stderr); err != nil {
-		return helperRun{}, err
-	}
-	return helperRun{code: code, stderr: stderr.String(), stdout: stdout.String(), timedOut: timedOut}, nil
+	return helperRun{code: result.ExitCode, stderr: result.Stderr, stdout: result.Stdout}, nil
 }
 
 // readEnvFiles reads the service's env files from this host and merges them in
@@ -249,10 +218,10 @@ func (r *run) readEnvFiles(ctx context.Context) ([][2]string, error) {
 	var merged [][2]string
 	for _, path := range r.spec.EnvFiles {
 		r.progress.line("Reading env file " + path + "...")
-		result, err := r.runHelper(ctx, map[string]any{
-			"Cmd":        []string{"cat", envFileHost + path},
-			"HostConfig": map[string]any{"Binds": []string{"/:" + envFileHost + ":ro"}},
-			"Image":      envFileHelper,
+		result, err := r.runHelper(ctx, dockerapi.HelperConfig{
+			Binds: []string{"/:" + envFileHost + ":ro"},
+			Cmd:   []string{"cat", envFileHost + path},
+			Image: envFileHelper,
 		}, envFileTimeout)
 		if err != nil {
 			return nil, err

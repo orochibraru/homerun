@@ -51,6 +51,29 @@ in `dependencyLayers` order, delete all at once; `enqueueStackDeploy` reorders
 `depends_on` (compose key → created id) after creating the services, skipping
 targets that weren't imported. Rows cascade on either service's delete.
 
+Links made before the table existed are backfilled at boot (`init()` in
+`hooks.server.ts`, skipped in candidate mode) by
+`ServiceDependencyDTO.backfillFromEnv`, whose edge picking is the pure
+`backfillEdges`: every `dependencyMap` edge whose two ends share a stack or
+whose value is a URL/`host:port` (`hostsIn` with no key, so a bare name under a
+host-ish key only counts within a stack), turned consumer→provider by
+`linkRoles`, for consumers with no recorded row yet; cycles are skipped and
+logged. It runs once per instance:
+`instance_settings.dependencies_backfilled_at`
+(`InstanceSettingsDTO.dependenciesBackfilled`/`markDependenciesBackfilled`) is
+stamped after the first run and later boots skip it, so clearing a service's
+recorded dependencies later sticks. The cutoff passed to `backfillEdges` is the
+moment of that first run, which covers every service that existed then, not only
+those created before the table's migration was generated (the earlier design,
+which missed services created between that and an instance's upgrade). The REST
+API exposes the graph as `GET/PUT /api/v1/services/:id/dependencies`
+(`ServiceDependencyDTO.describe`, sources via the pure `dependencyEdges`;
+`replace` swaps the recorded set in a transaction, 400 on an unknown id or a
+loop via `replacementCycle`), wrapped by the MCP
+`list_dependencies`/`set_dependencies` tools and
+`homerun services dependencies [set]`. The service detail shape doesn't carry
+`dependsOn`: read the dependencies route.
+
 ## Nested stacks and stack-scoped slugs
 
 `stack.parentId` (self-FK, `onDelete: "set null"`, see Data model in
@@ -303,8 +326,9 @@ answering 503 everywhere, and was marked healthy because its container never
 exited. The service's `healthcheckCommand` runs every 30s with a 30s start
 period and 3 retries, so a failing one turns unhealthy after about two minutes,
 inside that bound. On unhealthy, with `autoRollback` on, the revision not itself
-a rollback and a `previousRevision` found: `rolled_back`, a rollback deploy and
-`deploy.rolled_back`. Otherwise `unhealthy` and `deploy.unhealthy`, with the
+a rollback (`isRollback`: a preview promote also sets `rollbackOfDeploymentId`
+but isn't one) and a `previousRevision` found: `rolled_back`, a rollback deploy
+and `deploy.rolled_back`. Otherwise `unhealthy` and `deploy.unhealthy`, with the
 reason nothing was rolled back. The rollback enqueuer is passed in by
 `DeploymentService` rather than imported, since `RevisionService` imports
 `deploy.service.ts`.
@@ -827,6 +851,15 @@ services' `templateId`). Links are declared inline
 (`"links": [{ "alias": "db", "template": "postgres" }]`), their ids are
 `builtin-link-<slug>-<alias>`, and the target must be a leaf.
 
+Generated secrets (`$lib/template-secrets.ts`): `{{secret}}` is one 48-hex value
+per created service, shared by every env var and command arg that uses it (the
+wizard's submitted value wins, so the command matches an edited password).
+`{{secret:hex<N>}}` is for apps that validate a key's format (AIOStreams refuses
+to boot without a 64-hex `SECRET_KEY`): each occurrence is its own fresh N hex
+chars, and both mark their env var secret. `parseBuiltinTemplates` rejects any
+other `{{secret…}}` spelling, so a typo fails the unit test instead of shipping
+a literal token.
+
 `seed.ts` loads them with Vite's `import.meta.glob(..., { eager: true })`, so
 they're bundled into the compiled binary at build time, nothing reads the disk
 at runtime. That also means `seed.ts` can't be imported outside Vite (bun tests
@@ -902,11 +935,19 @@ stale-while-revalidate, so it works offline from the disk copy. Icons are
 fetched once in the catalog's `base` format (svg or png, never webp) and written
 to `dashboard-icons/icons/<name>.<ext>`; an entry with `colors` whose plain file
 is missing upstream (e.g. `dagster`, only `-dark`/`-light` exist) falls back to
-its dark then light variant. Unknown names 404 without a CDN call, a name
-upstream doesn't have is negative-cached in memory for 10 minutes, bodies over 2
-MB are refused. **`tree.json` is stale and useless for existence checks** (it
-misses ~970 names that do exist, e.g. `8311`), which is why nothing reads it.
-Every response carries
+its dark then light variant. `?theme=dark|light` picks the variant for the
+viewer's theme (`themedIconFile`): upstream's naming is `<name>-light` for dark
+backgrounds and `<name>-dark` for light ones (checked against the real `colors`
+map, only `apple` breaks it), so that suffix is looked up in the entry's
+`variants` rather than trusting the `colors` keys, and the old on-disk catalog
+keeps working. Each variant is cached under its own file name and falls back to
+the base. `template-icon.svelte` and the picker pass mode-watcher's
+`mode.current`, so the `src` swaps live on a theme change; SSR renders the base
+until hydration. Unknown names 404 without a CDN call, a name upstream doesn't
+have is negative-cached in memory for 10 minutes, bodies over 2 MB are refused.
+**`tree.json` is stale and useless for existence checks** (it misses ~970 names
+that do exist, e.g. `8311`), which is why nothing reads it. Every response
+carries
 `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`
 and `nosniff`, so opening an SVG directly can't run script on Homerun's origin.
 `config.dataDir` is `STORAGE_BASE_PATH` (`/app/data` in the image, the data
@@ -1464,18 +1505,33 @@ canary); anything else ignored, `autoDeployOnPush` irrelevant. Polling:
 webhook's `gitLastSeenCommit` keeps a poll from redeploying), and
 `GitPollScheduler.#deploy` routes a canary through its parent's `deployCanary`
 to refresh the mirror. Tags aren't polled.
+`tests/unit/app/git-poll-scheduler.test.ts` covers the query filter (rendered
+SQL) and the canary routing.
+
+`configure` snapshots the parent row with a spread before saving: `toJSON()`
+returns the live row that `update()` mutates, and comparing against it made a
+canary domain change never redeploy the canary. A canary domain equal to one of
+the stable service's own hostnames (its default one included, which
+`domainTaken` doesn't see) is refused.
 
 **Deployment environment**: `deployment.environment` (text, default
 `production`, free-form on purpose), written by both `DeploymentDTO.create` call
 sites from `deployEnvironment(svc)`: `canary` for `channelCanary`, `preview` for
-any other child, else `production`. The migration backfills `preview` for
-existing preview rows. Shown by `environment-badge.svelte` on the Revisions tab
-and `/deployments` (filter key `environment`), exposed as `environment` on the
-REST deployment/revision shapes (so the MCP tools get it). `POST /deploy` and
-the MCP `deploy_service` take `environment: canary|stable`. CLI:
-`services channels enable|disable|status`, `services deploy --environment`,
-`deploy` as an alias of `services deploy`. **Not verified against real
-providers**: webhook routing is unit-tested only.
+any other child, else the service's own `service.environmentName` (nullable, set
+on the Settings tab, `PATCH /services/:id`, `homerun services environment`),
+else `production`. A custom name never overrides `canary`/`preview`; those two
+are reserved and `production` is stored as null (`environmentNameProblem`,
+`normalizeEnvironmentName`, `environmentNameField` in `validation/service.ts`).
+`/deployments`' Environment filter is the built-in three plus every other name
+`DeploymentDTO.listEnvironments` finds recorded (`deploymentEnvironments`);
+`get_service_config` reports the effective one as `settings.environment`. The
+migration backfills `preview` for existing preview rows. Shown by
+`environment-badge.svelte` on the Revisions tab and `/deployments` (filter key
+`environment`), exposed as `environment` on the REST deployment/revision shapes
+(so the MCP tools get it). `POST /deploy` and the MCP `deploy_service` take
+`environment: canary|stable`. CLI: `services channels enable|disable|status`,
+`services deploy --environment`, `deploy` as an alias of `services deploy`.
+**Not verified against real providers**: webhook routing is unit-tested only.
 
 ## Migrating from Dokploy or Coolify (`settings/migrate/`)
 

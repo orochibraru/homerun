@@ -22,11 +22,12 @@ succeeded/failed, a build stopped by failing [status checks](status-checks.md),
 scheduled update succeeded/failed, manual deploy succeeded/failed, a new
 revision found unhealthy or [rolled back](revisions-and-rollback.md), an image
 scan finding [critical vulnerabilities](image-scanning.md), a service going down
-or recovering (from its [uptime probe](observability.md#uptime)), and the server
-crossing a [resource limit](dashboard.md) or recovering from one. A new channel
-starts subscribed to build and update failures, status checks failures,
-unhealthy revisions, rollbacks, and both resource alerts; turn on the rest you
-want from that matrix. A **Send test** button on each channel fires a sample
+or recovering (from its [uptime probe](observability.md#uptime)), the server
+crossing a [resource limit](dashboard.md) or recovering from one, and a new or
+regressed [error issue](error-tracking.md). A new channel starts subscribed to
+build and update failures, status checks failures, unhealthy revisions,
+rollbacks, both resource alerts, and new and regressed errors; turn on the rest
+you want from that matrix. A **Send test** button on each channel fires a sample
 notification so you can check the destination actually works before relying on
 it. A delivery failure is shown right on the channel rather than failing
 silently, and retried in the background through the job queue: first after 30

@@ -15,13 +15,18 @@ The API and CLI list revisions the same way.
 
 **Deployments** in the sidebar is the same history across every service: one row
 per deploy or rollback attempt, newest first, with its status, what triggered it
-(Manual, Git push, Scheduled or Rollback), the git branch and commit or the
-image it ran, who started it, when and how long it took, and the error for a
-failed one. Click a row for its deploy log; the service name opens that
-service's Revisions tab. Search matches the service, image, git ref, commit or
-error, and the Status and Trigger filters narrow it down. A deploy from before
-triggers were recorded, whose queue job was already pruned by then, shows as
-plain **Deploy** and only matches the Rollback filter.
+(Manual, Git push, Scheduled, Promote or Rollback, Promote being a
+[pull request preview promoted](pull-request-previews.md) to the service), the
+git branch and commit or the image it ran, who started it, when and how long it
+took, and the error for a failed one. Click a row for its deploy log; the
+service name opens that service's Revisions tab. Search matches the service,
+image, git ref, commit or error, and the Status, Trigger and Environment filters
+narrow it down. Each row, and each revision on the Revisions tab, carries its
+environment as a badge: **Production**, **Canary**, **Preview**, or a name you
+gave the service (see
+[Release channels](release-channels.md#environments-in-the-history)). A deploy
+from before triggers were recorded, whose queue job was already pruned by then,
+shows as plain **Deploy** and only matches the Rollback filter.
 
 The **Healthy** and **Checking health** badges only ever sit on the current
 revision: once another revision is deployed they're cleared from the one it
@@ -72,4 +77,4 @@ too. With **Auto-rollback when a new revision is unhealthy** turned on in the
 service's Settings tab (off by default), Homerun instead redeploys the previous
 healthy revision with a different image, marks the new one as rolled back and
 sends **Rolled back**. A rollback that is itself unhealthy isn't rolled back
-again.
+again; a promoted preview is a new revision, not a rollback, so it is.

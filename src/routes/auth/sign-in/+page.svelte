@@ -11,7 +11,11 @@
 	import { goto, onNavigate, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { authClient, signIn, useSession } from "$lib/auth-client";
-	import { type EmailSignIn, NO_EMAIL_SIGN_IN } from "$lib/auth-providers";
+	import {
+		type EmailSignIn,
+		emailOnlyStep,
+		NO_EMAIL_SIGN_IN,
+	} from "$lib/auth-providers";
 	import Alert from "$lib/components/alert.svelte";
 	import AuthShell from "$lib/components/auth-shell.svelte";
 	import PasswordField from "$lib/components/password-field.svelte";
@@ -93,9 +97,9 @@
 	}
 
 	let twoFactorStep = $state(false);
-	let step = $state<"code" | "email" | "link" | "password" | "setup" | "sso">(
-		"email",
-	);
+	let step = $state<
+		"choose" | "code" | "email" | "link" | "password" | "setup" | "sso"
+	>("email");
 	let stepProviders = $state<SignInProvider[]>([]);
 	let stepEmail = $state<EmailSignIn>(NO_EMAIL_SIGN_IN);
 	const offerLink = $derived(stepEmail.magicLink && !data.oauthSignIn);
@@ -115,7 +119,7 @@
 			stepEmail = next.email;
 			if (next.step === "email-only") {
 				stepProviders = [];
-				step = next.email.emailOtp ? "code" : offerLink ? "link" : "password";
+				step = emailOnlyStep(next.email, data.oauthSignIn);
 				return "Continue signing in.";
 			}
 			if (next.step === "setup") {
@@ -520,6 +524,14 @@
                 {@render orDivider()}
                 {@render emailButtons()}
             {/if}
+        {:else if step === "choose"}
+            <div class="space-y-4">
+                {@render emailSummary()}
+                <p class="text-text-muted text-sm">
+                    This account signs in by email. How should we send it?
+                </p>
+                {@render emailButtons()}
+            </div>
         {:else if step === "code" || step === "link"}
             {#key step}
                 <EmailSignInForm

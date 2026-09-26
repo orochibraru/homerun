@@ -30,6 +30,13 @@ that `403` on every write.
   canary domain and canary service; `PATCH` takes `enabled` plus any of
   `branch`, `tagPattern` and `canaryDomain` (null clears it), and turning them
   off deletes the canary
+- `GET/PUT /api/v1/services/:id/dependencies`: what a service depends on and
+  what depends on it, each with its `id`, `name`, `slug` and `source`:
+  `recorded` (a stored dependency, the only kind that sets
+  [start order](env-vars.md)), `env` (an env value points at the other's slug as
+  a host) or `both`. `PUT {"dependsOn": [ids]}` replaces the recorded ones (an
+  empty list clears them) and leaves env vars alone; an unknown id, the service
+  itself or one that already depends on it is a `400`
 - `GET /api/v1/services/:id/logs`: the service's container or swarm service logs
   as plain text, the last `?tail=` lines (default 200, max 10000), or a live
   stream with `?follow=true`; a `400` for a service that was never deployed
@@ -49,18 +56,26 @@ that `403` on every write.
   rollback, see [Revisions](#revisions) below
 - `GET /api/v1/services/:id/deployments?limit=10`: the latest deploy attempts,
   failed ones included, each with its error and progress log (up to 50); these
-  and revisions carry the `environment` they deployed (`production`, `canary` or
-  `preview`)
+  and revisions carry the `environment` they deployed (`production`, `canary`,
+  `preview`, or the service's own `environmentName`, see
+  [Release channels](release-channels.md#environments-in-the-history)), and each
+  deploy attempt its `trigger` (`manual`, `cron`, `push`, `promote`, `rollback`,
+  or null for a deploy from before triggers were recorded)
 - `GET /api/v1/jobs/:jobId`: the status of a queued job, such as a scan
+- `GET /api/v1/jobs?status=running,queued`: jobs by status (comma-separated;
+  every job without it), running first, each with its service's name, stage,
+  worker lease and a `stale` flag (executing with no worker heartbeat for over
+  two minutes); admins only
 - `GET /api/v1/system-stats`: host CPU/RAM/disk/GPU
 - `GET/POST /api/v1/instance/update`: the running version, the latest release
-  and whether an update can start, and starting one, see
-  [Upgrading](upgrading.md#without-the-dashboard); admins only
+  and whether an update can start (with the jobs in the way in
+  `preflight.blockers`), and starting one (`{"force": true}` to update over
+  those jobs), see [Upgrading](upgrading.md#without-the-dashboard); admins only
 - `GET /api/v1/instance/update/progress`: the update helper's state and output,
   to follow a running update; admins only
 
-The list `GET`s (`services`, `stacks`, `templates`, a service's `scans`) are
-paginated: `?page=`, `?perPage=` (default 100, max 200), and `?q=` for a
+The list `GET`s (`services`, `stacks`, `templates`, `jobs`, a service's `scans`)
+are paginated: `?page=`, `?perPage=` (default 100, max 200), and `?q=` for a
 case-insensitive search. The response body stays a plain JSON array, on purpose,
 so an existing integration keeps working unchanged; the total row count and the
 page/size you got back come in the `x-total-count`/`x-page`/`x-per-page`
@@ -138,8 +153,22 @@ CI to test against (see
   no build, no pull from upstream, no scan. An optional `{"commit": "<sha>"}`
   body refuses (`409`) unless the preview runs that commit; it's also a `409`
   while the preview has no running revision or its health check is still running
-  or failed. It answers `202` with `deploymentId`, `jobId` (poll
-  `GET /api/v1/jobs/:jobId`), `revisionId`, `imageRef` and `gitCommit`.
+  or failed. The deploy's trigger is `promote`, not `rollback`, so auto-rollback
+  watches it like any new revision. It answers `202` with `deploymentId`,
+  `jobId` (poll `GET /api/v1/jobs/:jobId`), `revisionId`, `imageRef` and
+  `gitCommit`.
+
+### Errors
+
+For a service with [error tracking](error-tracking.md) on,
+`GET /api/v1/services/:id/errors` lists its issues (`?status=unresolved`, the
+default, `resolved`, `ignored` or `all`, `q` to search, `sort` by `lastSeen`,
+`firstSeen` or `count`, and the usual paging),
+`GET /api/v1/services/:id/errors/:issueId` returns one issue with its latest
+event (stack trace, source context, request, tags, breadcrumbs), and `PATCH` on
+it with `{"status": "resolved" | "ignored" | "unresolved"}` changes its status.
+The MCP server exposes the same as `list_errors` and `get_error`, and the CLI as
+`homerun services errors <id>`.
 
 ## OpenAPI spec & Swagger UI
 
@@ -185,11 +214,12 @@ claude mcp add --transport http homerun \
 
 It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
 `list_deployments` (each deploy attempt's error and log), `list_revisions`,
-`list_stacks`, `system_stats` and `instance_status`. It changes:
-`update_service`, `deploy_service`, `restart_service`, `start_service`,
-`stop_service` and `rollback_service`. Deleting a service is deliberately not a
-tool. Every tool goes through the REST API with your own permissions, so a
-read-only account or API key can diagnose but not change anything.
+`list_dependencies`, `list_stacks`, `system_stats` and `instance_status`. It
+changes: `update_service`, `set_dependencies`, `deploy_service`,
+`restart_service`, `start_service`, `stop_service` and `rollback_service`.
+Deleting a service is deliberately not a tool. Every tool goes through the REST
+API with your own permissions, so a read-only account or API key can diagnose
+but not change anything.
 
 Secrets don't reach the agent, the rest stays readable:
 
@@ -294,6 +324,9 @@ homerun services webhook <id>
 homerun services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>]
 homerun services channels disable <id>
 homerun services channels status <id>
+homerun services environment <id> [name]
+homerun services dependencies <id> [--json]
+homerun services dependencies set <id> [<dependsOnId>...]
 homerun services scans <id> [--json]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
@@ -308,7 +341,7 @@ homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list [--json]
 homerun templates list [--json]
 homerun instance status [--json]
-homerun instance update [--wait=false] [--timeout <seconds>]
+homerun instance update [--wait=false] [--timeout <seconds>] [--force]
 homerun instance channel stable|canary|nightly
 ```
 
@@ -349,6 +382,10 @@ short for `homerun services deploy`, and `service` works for `services`.
 `homerun services channels enable` turns release channels on or, when they
 already are, changes only the settings you pass (`--canary-domain ""` clears the
 canary domain); `disable` turns them off and deletes the canary.
+`homerun services dependencies <id>` lists what a service depends on and what
+depends on it, with each one's source (recorded, env or both);
+`dependencies set <id> <dependsOnId>...` replaces its recorded dependencies, and
+with no ids clears them.
 
 `homerun services scans <id>` lists a service's image scans (it takes the same
 `--page`/`--per-page`/`--search` flags as a list), and

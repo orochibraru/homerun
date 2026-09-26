@@ -4,10 +4,12 @@
 	import { toast } from "svelte-sonner";
 	import Alert from "$lib/components/alert.svelte";
 	import AsyncBlock from "$lib/components/async-block.svelte";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Dialog from "$lib/components/ui/dialog/index.js";
 	import { Spinner } from "$lib/components/ui/spinner/index.js";
+	import UpdateBlockers from "$lib/components/update-blockers.svelte";
 	import {
 		checkForUpdates,
 		getAppVersion,
@@ -31,6 +33,7 @@
 	let open = $state(false);
 	let checking = $state(false);
 	let starting = $state(false);
+	let confirmingForce = $state(false);
 	let updatingTo = $state<string | null>(null);
 	let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -38,6 +41,11 @@
 		open && latest && !updatingTo ? getUpdatePreflight() : null,
 	);
 	const status = $derived(release?.current ?? null);
+	const blockers = $derived(
+		preflight?.current?.supported && !preflight.current.ready
+			? preflight.current.blockers
+			: [],
+	);
 
 	$effect(() => {
 		if (!release) {
@@ -68,10 +76,10 @@
 		}
 	});
 
-	async function updateCallback() {
+	async function updateCallback(force: boolean) {
 		starting = true;
 		try {
-			const result = await startSelfUpdate();
+			const result = await startSelfUpdate({ force });
 			updatingTo = result.version;
 			waitForNewVersion(version.current);
 			return result;
@@ -109,8 +117,8 @@
 		});
 	}
 
-	function handleUpdate() {
-		return toast.promise(updateCallback(), {
+	function handleUpdate(force = false) {
+		return toast.promise(updateCallback(force), {
 			error: (error) => toastError(error, "Couldn't start the update"),
 			loading: "Starting the update",
 			success: (result) => `Updating to v${result.version}`,
@@ -217,6 +225,11 @@
             {:else if !check.ready}
               <Alert title="Not right now" variant="warning">
                 {check.reason}
+                {#if check.blockers.length > 0}
+                  <div class="mt-2">
+                    <UpdateBlockers jobs={check.blockers} />
+                  </div>
+                {/if}
                 {#snippet actions()}
                   <Button onclick={() => preflight.refresh()} size="sm" variant="outline">
                     Check again
@@ -260,14 +273,39 @@
           </Button>
         {/if}
         {#if !updatingTo && latest && preflight?.current?.ready}
-          <Button disabled={starting} onclick={handleUpdate} type="button">
+          <Button disabled={starting} onclick={() => handleUpdate()} type="button">
             {#if starting}
               <Spinner class="size-4" />
             {/if}
             Update now
           </Button>
         {/if}
+        {#if !updatingTo && latest && blockers.length > 0}
+          <Button
+            disabled={starting}
+            onclick={() => {
+              confirmingForce = true;
+            }}
+            type="button"
+            variant="destructive"
+          >
+            {#if starting}
+              <Spinner class="size-4" />
+            {/if}
+            Update anyway
+          </Button>
+        {/if}
       </Dialog.Footer>
     </Dialog.Content>
   </Dialog.Root>
+
+  <ConfirmDialog
+    confirmLabel="Update anyway"
+    description="The restart interrupts these jobs. Once v{latest?.version ?? ''} is up, work that was interrupted runs again or picks up where it stopped, and queued jobs start as usual."
+    onConfirm={() => handleUpdate(true)}
+    title="Update over running jobs?"
+    bind:open={confirmingForce}
+  >
+    <UpdateBlockers jobs={blockers} />
+  </ConfirmDialog>
 {/if}

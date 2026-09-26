@@ -209,8 +209,8 @@ func (c *Client) ContainerExec(ctx context.Context, name string, cmd []string) (
 		map[string]any{"AttachStderr": true, "AttachStdout": true, "Cmd": cmd}, &created); err != nil {
 		return ExecResult{}, err
 	}
-	response, err := c.request(ctx, http.MethodPost, "/exec/"+created.ID+"/start", nil,
-		map[string]any{"Detach": false, "Tty": false}, nil)
+	response, err := c.stream(ctx, http.MethodPost, "/exec/"+created.ID+"/start", nil,
+		map[string]any{"Detach": false, "Tty": false}, nil, c.containerRunning(name))
 	if err != nil {
 		return ExecResult{}, err
 	}

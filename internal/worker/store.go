@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,7 +26,7 @@ type ClaimedJob struct {
 // Postgres-backed implementation; a test fakes it instead of a database.
 type Store interface {
 	Claim(ctx context.Context, workerID string) (*ClaimedJob, error)
-	Heartbeat(ctx context.Context, jobID, workerID string) (bool, error)
+	Heartbeat(ctx context.Context, jobID, workerID string, progressAt time.Time) (bool, error)
 	Finish(ctx context.Context, jobID, workerID string, result map[string]any, execErr error) error
 	Release(ctx context.Context, jobID, workerID string) error
 }
@@ -47,7 +48,7 @@ func (s PGStore) Claim(ctx context.Context, workerID string) (*ClaimedJob, error
 			for update skip locked
 			limit 1
 		)
-		update job set worker_id = $1, heartbeat_at = `+db.UTCNow+`
+		update job set worker_id = $1, heartbeat_at = `+db.UTCNow+`, progress_at = `+db.UTCNow+`
 		from next where job.id = next.id
 		returning job.id, job.type, coalesce(job.spec, ''), job.attempts`, workerID)
 	var job ClaimedJob
@@ -60,11 +61,14 @@ func (s PGStore) Claim(ctx context.Context, workerID string) (*ClaimedJob, error
 	return &job, nil
 }
 
-// Heartbeat refreshes jobID's lease and reports whether workerID still owns it.
-func (s PGStore) Heartbeat(ctx context.Context, jobID, workerID string) (bool, error) {
+// Heartbeat refreshes jobID's lease, records when it last made progress, and
+// reports whether workerID still owns it.
+func (s PGStore) Heartbeat(ctx context.Context, jobID, workerID string, progressAt time.Time) (bool, error) {
+	quiet := max(time.Since(progressAt), 0).Seconds()
 	tag, err := s.Pool.Exec(ctx, `
-		update job set heartbeat_at = `+db.UTCNow+`
-		where id = $1 and worker_id = $2 and status = 'running' and stage = 'execute'`, jobID, workerID)
+		update job set heartbeat_at = `+db.UTCNow+`,
+			progress_at = `+db.UTCNow+` - make_interval(secs => $3)
+		where id = $1 and worker_id = $2 and status = 'running' and stage = 'execute'`, jobID, workerID, quiet)
 	if err != nil {
 		return true, err
 	}

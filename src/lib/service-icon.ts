@@ -11,6 +11,8 @@ export const ICON_UPLOAD_TYPES = [
 export const DASHBOARD_ICON_PREFIX = "di:";
 export const DASHBOARD_ICON_NAME = /^[a-z0-9][a-z0-9-]*$/;
 
+export type IconTheme = "dark" | "light";
+
 const BUNDLED_ICON = /^[a-z0-9][a-z0-9._-]*\.(svg|png|webp|jpg)$/;
 const DATA_URL = /^data:(image\/[a-z+.-]+);base64,[A-Za-z0-9+/]+={0,2}$/;
 
@@ -24,13 +26,18 @@ export function hasIconImage(icon: string | null | undefined): icon is string {
 	);
 }
 
-/** The `<img src>` for an icon: an uploaded data URL as is, a Dashboard Icon through Homerun's proxy, a bundled file under `/template-icons/`. */
-export function iconSrc(icon: string): string {
+/**
+ * The `<img src>` for an icon: an uploaded data URL as is, a Dashboard Icon
+ * through Homerun's proxy (asking for its `theme` variant when one is given),
+ * a bundled file under `/template-icons/`.
+ */
+export function iconSrc(icon: string, theme?: IconTheme): string {
 	if (icon.startsWith("data:")) {
 		return icon;
 	}
 	if (icon.startsWith(DASHBOARD_ICON_PREFIX)) {
-		return `/icons/dashboard/${icon.slice(DASHBOARD_ICON_PREFIX.length)}`;
+		const path = `/icons/dashboard/${icon.slice(DASHBOARD_ICON_PREFIX.length)}`;
+		return theme ? `${path}?theme=${theme}` : path;
 	}
 	return `/template-icons/${icon}`;
 }

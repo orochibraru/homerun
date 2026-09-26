@@ -30,6 +30,7 @@ const users = new Map<string, FakeUser>();
 const passwords = new Map<string, string>();
 const userUpdates: [string, Record<string, unknown>][] = [];
 const createdUsers: Record<string, unknown>[] = [];
+const passwordsSet: { headers: Headers; newPassword: string }[] = [];
 
 const internalAdapter = {
 	createVerificationValue: async (row: Verification) => {
@@ -39,6 +40,14 @@ const internalAdapter = {
 	deleteVerificationByIdentifier: async (identifier: string) => {
 		verifications.delete(identifier);
 	},
+	findCredentialAccount: async (userId: string) =>
+		[...users.values()].some(
+			(found) =>
+				found.user.id === userId &&
+				found.accounts.some((row) => row.providerId === "credential"),
+		)
+			? { password: "hash" }
+			: null,
 	findUserByEmail: async (email: string) => users.get(email) ?? null,
 	findVerificationValue: async (identifier: string) =>
 		verifications.get(identifier) ?? null,
@@ -64,6 +73,16 @@ const fakeAuth = {
 				user: { email: String(body.email), id },
 			});
 			return { user: { id } };
+		},
+		setPassword: async ({
+			body,
+			headers,
+		}: {
+			body: { newPassword: string };
+			headers: Headers;
+		}) => {
+			passwordsSet.push({ headers, newPassword: body.newPassword });
+			return { status: true };
 		},
 	},
 };
@@ -144,6 +163,7 @@ beforeEach(() => {
 	passwords.clear();
 	userUpdates.length = 0;
 	createdUsers.length = 0;
+	passwordsSet.length = 0;
 	sent = [];
 	preferred = [];
 	emailSignIn = { emailOtp: true, magicLink: false };
@@ -422,5 +442,80 @@ describe("AccountSetupService.complete with SMTP", () => {
 		await expect(
 			AccountSetupService.complete("p@example.com", code, "long-enough-pw"),
 		).rejects.toThrow("That code expired.");
+	});
+});
+
+describe("AccountSetupService adding a password to a passwordless account", () => {
+	const headers = new Headers({ cookie: "session=1" });
+
+	function passwordless() {
+		const id = addUser("client@example.com", []);
+		return { email: "client@example.com", id };
+	}
+
+	test("needs SMTP, and refuses an account that already has a password", async () => {
+		const user = passwordless();
+		await expect(AccountSetupService.sendPasswordCode(user)).rejects.toThrow(
+			"email isn't set up",
+		);
+
+		applyInstanceSettings(SMTP);
+		const id = addUser("pw@example.com", ["credential"]);
+		await expect(
+			AccountSetupService.sendPasswordCode({ email: "pw@example.com", id }),
+		).rejects.toThrow("already has a password");
+		expect(sent).toEqual([]);
+	});
+
+	test("the emailed code sets the password through better-auth and verifies the address", async () => {
+		applyInstanceSettings(SMTP);
+		const user = passwordless();
+		await AccountSetupService.sendPasswordCode(user);
+		expect(sent[0].to).toBe("client@example.com");
+		expect(sent[0].content).toContain("If you didn't try to set a password");
+
+		await AccountSetupService.addPassword({
+			code: lastCode(),
+			headers,
+			password: "long-enough-pw",
+			user,
+		});
+		expect(passwordsSet).toEqual([{ headers, newPassword: "long-enough-pw" }]);
+		expect(userUpdates).toEqual([[user.id, { emailVerified: true }]]);
+		expect(verifications.size).toBe(0);
+	});
+
+	test("a short password, a wrong code or no code at all sets nothing", async () => {
+		applyInstanceSettings(SMTP);
+		const user = passwordless();
+		await expect(
+			AccountSetupService.addPassword({
+				code: "123456",
+				headers,
+				password: "short",
+				user,
+			}),
+		).rejects.toThrow("Use at least 12 characters");
+		await expect(
+			AccountSetupService.addPassword({
+				code: "123456",
+				headers,
+				password: "long-enough-pw",
+				user,
+			}),
+		).rejects.toThrow("That code expired. Send a new one.");
+
+		await AccountSetupService.sendPasswordCode(user);
+		const wrong = lastCode() === "000000" ? "111111" : "000000";
+		await expect(
+			AccountSetupService.addPassword({
+				code: wrong,
+				headers,
+				password: "long-enough-pw",
+				user,
+			}),
+		).rejects.toThrow("That code didn't match.");
+		expect(passwordsSet).toEqual([]);
+		expect(userUpdates).toEqual([]);
 	});
 });

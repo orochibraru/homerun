@@ -114,7 +114,7 @@ class ReleaseChannelServiceClass {
 		settings: ChannelSettings,
 		userId: string,
 	): Promise<void> {
-		const before = parent.toJSON();
+		const before = { ...parent.toJSON() };
 		const existing = await ServiceGitDTO.getCanary(parent.id);
 		const { branch, canaryDomain, tagPattern } = await this.#resolveSettings(
 			parent,
@@ -186,14 +186,8 @@ class ReleaseChannelServiceClass {
 		if (canaryDomain && !DOMAIN_RE.test(canaryDomain)) {
 			throw new ReleaseChannelError(`"${canaryDomain}" isn't a valid domain.`);
 		}
-		if (
-			settings.enabled &&
-			canaryDomain &&
-			(await ServiceDTO.domainTaken([canaryDomain], existing?.id))
-		) {
-			throw new ReleaseChannelError(
-				`${canaryDomain} is already routed to another service.`,
-			);
+		if (settings.enabled && canaryDomain) {
+			await this.#assertCanaryDomainFree(parent, canaryDomain, existing);
 		}
 		const branch =
 			settings.branch?.trim() ||
@@ -250,6 +244,35 @@ class ReleaseChannelServiceClass {
 			userId: options.userId,
 		});
 		return { deploymentId, jobId, serviceId: parent.id, status: "deployed" };
+	}
+
+	/**
+	 * Refuses a canary domain the stable service itself answers at or another
+	 * service already routes.
+	 *
+	 * @throws {ReleaseChannelError} When the domain is taken.
+	 */
+	async #assertCanaryDomainFree(
+		parent: ServiceDTO,
+		canaryDomain: string,
+		existing: ServiceDTO | null,
+	): Promise<void> {
+		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
+		const own = serviceHostnames(
+			parent.toJSON(),
+			stack?.slug,
+			config.baseDomain,
+		);
+		if (own.includes(canaryDomain)) {
+			throw new ReleaseChannelError(
+				`${canaryDomain} is where this service itself answers: pick another domain for the canary.`,
+			);
+		}
+		if (await ServiceDTO.domainTaken([canaryDomain], existing?.id)) {
+			throw new ReleaseChannelError(
+				`${canaryDomain} is already routed to another service.`,
+			);
+		}
 	}
 
 	/** The parent's canary with its mirrored settings, branch and domains brought up to date, created when missing. */

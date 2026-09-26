@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		Bird,
+		Bug,
 		Clock,
 		Container,
 		Cpu,
@@ -107,6 +108,16 @@
 			icon: FileText,
 			id: "observability",
 			label: "Observability",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/errors", {
+				serviceId: svc.id,
+			}),
+			hasWarning: data.openErrors > 0,
+			icon: Bug,
+			id: "errors",
+			label: "Errors",
 		},
 		{
 			exact: false,
@@ -248,6 +259,17 @@
         internal: {maskUrlPassword(internal)}
         <CopyButton class="p-0.5" label="internal URL" value={internal} />
       </span>
+    {/if}
+    {#if data.openErrors > 0}
+      <span aria-hidden="true">·</span>
+      <a
+        class="text-red-600 hover:underline dark:text-red-400"
+        href={resolve("/(protected)/services/[serviceId]/errors", {
+          serviceId: svc.id,
+        })}
+      >
+        {data.openErrors} open {data.openErrors === 1 ? "error" : "errors"}
+      </a>
     {/if}
     {#if data.lastDeployedAt}
       <span aria-hidden="true">·</span>

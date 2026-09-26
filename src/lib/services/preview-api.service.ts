@@ -122,9 +122,11 @@ class PreviewApiServiceClass {
 
 	/**
 	 * Deploys the exact image the preview of pull request `prNumber` runs to
-	 * `parent`, through the rollback path: the deploy points at the preview's
-	 * revision (`rollbackOfDeploymentId`), so nothing is rebuilt, pulled or
-	 * scanned, and its log opens with where the image came from. Refused when
+	 * `parent` as a `promote` deploy: it points at the preview's revision
+	 * (`rollbackOfDeploymentId`) the way a rollback points at its target, so
+	 * nothing is rebuilt, pulled or scanned, yet it's recorded and health-watched
+	 * as a fresh revision (auto-rollback applies), and its log opens with where
+	 * the image came from. Refused when
 	 * the preview has no running revision, its revision isn't healthy (or
 	 * still being watched), or `commit` is given and isn't the commit it runs.
 	 */
@@ -169,6 +171,7 @@ class PreviewApiServiceClass {
 			note,
 			rollbackOfDeploymentId: revision.id,
 			svc: parent,
+			trigger: "promote",
 			userId,
 		});
 		logger.info(

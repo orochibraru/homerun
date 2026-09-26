@@ -20,6 +20,7 @@ const {
 	DashboardIconsServiceClass,
 	MAX_DASHBOARD_ICON_BYTES,
 	parseDashboardIconsMetadata,
+	themedIconFile,
 } = await import("../../../src/lib/services/dashboard-icons.service");
 
 const METADATA = {
@@ -115,6 +116,22 @@ describe("parseDashboardIconsMetadata", () => {
 	});
 });
 
+describe("themedIconFile", () => {
+	const variants = ["umami-light"];
+	test("dark theme gets the -light variant, light theme the -dark one", () => {
+		expect(themedIconFile("umami", variants, "dark")).toBe("umami-light");
+		expect(themedIconFile("umami", variants, "light")).toBe("umami");
+		expect(
+			themedIconFile("dagster", ["dagster-dark", "dagster-light"], "light"),
+		).toBe("dagster-dark");
+	});
+
+	test("an icon without variants, or no theme, keeps its base file", () => {
+		expect(themedIconFile("redis", [], "dark")).toBe("redis");
+		expect(themedIconFile("umami", variants, null)).toBe("umami");
+	});
+});
+
 describe("DashboardIconsService.catalog", () => {
 	test("fetches once, trims entries and saves a disk copy", async () => {
 		const { calls, dir, service } = setup();
@@ -179,6 +196,33 @@ describe("DashboardIconsService.icon", () => {
 	test("falls back to a colour variant when the plain name is missing", async () => {
 		const { service } = setup({ "/svg/dagster-dark.svg": svg });
 		expect((await service.icon("dagster"))?.contentType).toBe("image/svg+xml");
+	});
+
+	test("serves and caches the theme variant under its own name", async () => {
+		const light = new Uint8Array(new TextEncoder().encode("<svg id=l/>"));
+		const { calls, dir, service } = setup({
+			"/svg/dagster-light.svg": light,
+			"/svg/dagster.svg": svg,
+		});
+		const dark = await service.icon("dagster", "dark");
+		expect(new TextDecoder().decode(dark?.body)).toBe("<svg id=l/>");
+		expect(existsSync(join(dir, "icons", "dagster-light.svg"))).toBe(true);
+		const base = await service.icon("dagster");
+		expect(new TextDecoder().decode(base?.body)).toBe("<svg/>");
+		await service.icon("dagster", "dark");
+		expect(calls).toEqual([
+			"/metadata.json",
+			"/svg/dagster-light.svg",
+			"/svg/dagster.svg",
+		]);
+	});
+
+	test("an icon without variants serves its base for a theme", async () => {
+		const { calls, service } = setup({ "/svg/redis.svg": svg });
+		expect((await service.icon("redis", "dark"))?.contentType).toBe(
+			"image/svg+xml",
+		);
+		expect(calls).toEqual(["/metadata.json", "/svg/redis.svg"]);
 	});
 
 	test("serves png icons as png", async () => {

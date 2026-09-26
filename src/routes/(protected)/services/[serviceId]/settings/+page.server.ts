@@ -4,6 +4,7 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
+import { normalizeEnvironmentName } from "$lib/release-channels";
 import { listIconLibrary } from "$lib/server/icon-library";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateGeneralSchema } from "$lib/server/validation/service";
@@ -166,6 +167,7 @@ export const actions = {
 		}
 
 		await svc.update({
+			environmentName: normalizeEnvironmentName(input.environmentName),
 			name: input.name,
 			pullPolicy: input.pullPolicy,
 			restartPolicy: input.restartPolicy,

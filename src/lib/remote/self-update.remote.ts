@@ -1,13 +1,14 @@
+import { z } from "zod";
 import { command, query } from "$app/server";
 import {
 	requireAdmin,
 	requireUser,
 	requireWriter,
 } from "$lib/server/remote-auth";
+import type { UpdatePreflight } from "$lib/services/self-update/preflight";
 import {
 	type ReleaseStatus,
 	SelfUpdateService,
-	type UpdatePreflight,
 } from "$lib/services/self-update.service";
 
 export const getAppVersion = query((): string => {
@@ -33,9 +34,10 @@ export const getUpdatePreflight = query(async (): Promise<UpdatePreflight> => {
 });
 
 export const startSelfUpdate = command(
-	async (): Promise<{ version: string }> => {
+	z.object({ force: z.boolean().default(false) }),
+	async ({ force }): Promise<{ version: string }> => {
 		requireAdmin();
 		requireWriter();
-		return await SelfUpdateService.start();
+		return await SelfUpdateService.start({ force });
 	},
 );

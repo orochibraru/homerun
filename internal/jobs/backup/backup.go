@@ -5,6 +5,7 @@
 package backup
 
 import (
+	"bufio"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/orochibraru/homerun/internal/activity"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/s3"
@@ -22,7 +24,6 @@ import (
 const (
 	preCommandTimeout = 15 * time.Minute
 	outputTailChars   = 2000
-	cleanupTimeout    = 2 * time.Minute
 )
 
 // Service is one service using the volume that is stopped around the work:
@@ -119,9 +120,7 @@ func restore(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec S
 		if _, err := archive.Seek(0, io.SeekStart); err != nil {
 			return err
 		}
-		return WithHelper(ctx, docker, spec, false, func(id string) error {
-			return docker.PutContainerArchive(ctx, id, spec.MountPath, archive)
-		})
+		return unpack(ctx, docker, spec, archive)
 	})
 	if err != nil {
 		return 0, err
@@ -151,73 +150,74 @@ func download(ctx context.Context, spec Spec) (*os.File, int64, error) {
 	return file, size, nil
 }
 
-// EnsureImage pulls image if the daemon doesn't already have it.
-func EnsureImage(ctx context.Context, docker *dockerapi.Client, image string) error {
-	exists, err := docker.ImageExists(ctx, image)
-	if err != nil || exists {
-		return err
+// archiveAndUpload tars the volume through a started helper container that
+// streams `tar -c` to its stdout, gzips it on the fly, and streams it to
+// spec.Destination: nothing is buffered on disk, whatever the volume's size.
+// A helper that exits non-zero fails the run with its stderr, and the upload
+// is aborted rather than left truncated.
+func archiveAndUpload(ctx context.Context, docker *dockerapi.Client, spec Spec) (int64, error) {
+	reader, writer := io.Pipe()
+	archived := make(chan error, 1)
+	go func() {
+		gz := gzip.NewWriter(writer)
+		result, err := docker.RunHelper(ctx, dockerapi.HelperConfig{
+			Binds:  []string{spec.Source + ":" + spec.MountPath + ":ro"},
+			Cmd:    []string{"tar", "-C", spec.MountPath, "--numeric-owner", "-cf", "-", "."},
+			Image:  spec.HelperImage,
+			Labels: spec.HelperLabels,
+			Stdout: gz,
+		})
+		if err == nil && result.ExitCode != 0 {
+			err = fmt.Errorf("Couldn't read the volume %q (tar exited %d)%s", spec.VolumeName, result.ExitCode, detail(result.Stderr))
+		}
+		if err == nil {
+			err = gz.Close()
+		}
+		_ = writer.CloseWithError(err)
+		archived <- err
+	}()
+	size, uploadErr := spec.Destination.Upload(ctx, spec.Key, activity.Reader(ctx, reader))
+	_ = reader.CloseWithError(errors.New("the upload stopped reading the archive"))
+	if err := <-archived; err != nil {
+		return 0, err
 	}
-	return docker.PullImage(ctx, image, nil, nil)
+	return size, uploadErr
 }
 
-// WithHelper runs a throwaway helper container with spec's volume mounted at
-// spec.MountPath (read-only when readOnly), passing its id to work, and
-// always removes it afterward.
-func WithHelper(ctx context.Context, docker *dockerapi.Client, spec Spec, readOnly bool, work func(id string) error) error {
-	if err := EnsureImage(ctx, docker, spec.HelperImage); err != nil {
-		return err
+// unpack extracts archive (a gzipped tar, or a plain one) into the volume
+// through a started helper container running `tar -x` on its stdin, replacing
+// files that exist and leaving everything else alone.
+func unpack(ctx context.Context, docker *dockerapi.Client, spec Spec, archive io.Reader) error {
+	buffered := bufio.NewReader(archive)
+	var stream io.Reader = buffered
+	if magic, err := buffered.Peek(2); err == nil && magic[0] == 0x1f && magic[1] == 0x8b {
+		gz, err := gzip.NewReader(buffered)
+		if err != nil {
+			return fmt.Errorf("couldn't read %s: %w", spec.Key, err)
+		}
+		defer func() { _ = gz.Close() }()
+		stream = gz
 	}
-	bind := spec.Source + ":" + spec.MountPath
-	if readOnly {
-		bind += ":ro"
-	}
-	id, err := docker.CreateContainer(ctx, dockerapi.ContainerConfig{
-		Binds: []string{bind}, Entrypoint: []string{"true"}, Image: spec.HelperImage, Labels: spec.HelperLabels,
+	result, err := docker.RunHelper(ctx, dockerapi.HelperConfig{
+		Binds:  []string{spec.Source + ":" + spec.MountPath},
+		Cmd:    []string{"tar", "-C", spec.MountPath, "--numeric-owner", "-xf", "-"},
+		Image:  spec.HelperImage,
+		Labels: spec.HelperLabels,
+		Stdin:  stream,
 	})
 	if err != nil {
 		return err
 	}
-	defer func() {
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), cleanupTimeout)
-		defer cancel()
-		_ = docker.RemoveContainer(cleanup, id)
-	}()
-	return work(id)
-}
-
-// archiveAndUpload tars the volume through a helper container, gzips it on
-// the fly, and streams it to spec.Destination.
-func archiveAndUpload(ctx context.Context, docker *dockerapi.Client, spec Spec) (int64, error) {
-	var size int64
-	err := WithHelper(ctx, docker, spec, true, func(id string) error {
-		tarball, err := docker.ContainerArchive(ctx, id, spec.MountPath+"/.")
-		if err != nil {
-			return fmt.Errorf("couldn't read the volume %q: %w", spec.VolumeName, err)
-		}
-		defer func() { _ = tarball.Close() }()
-		reader, writer := io.Pipe()
-		defer func() { _ = reader.Close() }()
-		go func() {
-			gz := gzip.NewWriter(writer)
-			_, err := io.Copy(gz, tarball)
-			if err == nil {
-				err = gz.Close()
-			}
-			_ = writer.CloseWithError(err)
-		}()
-		size, err = spec.Destination.Upload(ctx, spec.Key, reader)
-		return err
-	})
-	return size, err
+	if result.ExitCode != 0 {
+		return fmt.Errorf("Couldn't unpack %s into %q (tar exited %d)%s", spec.Key, spec.VolumeName, result.ExitCode, detail(result.Stderr))
+	}
+	return nil
 }
 
 // wipe deletes every file in the volume through a helper container, before a
 // restore that wants a clean slate.
 func wipe(ctx context.Context, docker *dockerapi.Client, spec Spec) error {
-	if err := EnsureImage(ctx, docker, spec.HelperImage); err != nil {
-		return err
-	}
-	id, err := docker.CreateContainer(ctx, dockerapi.ContainerConfig{
+	result, err := docker.RunHelper(ctx, dockerapi.HelperConfig{
 		Binds:  []string{spec.Source + ":" + spec.MountPath},
 		Cmd:    []string{"find", spec.MountPath, "-mindepth", "1", "-delete"},
 		Image:  spec.HelperImage,
@@ -226,27 +226,10 @@ func wipe(ctx context.Context, docker *dockerapi.Client, spec Spec) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), cleanupTimeout)
-		defer cancel()
-		_ = docker.RemoveContainer(cleanup, id)
-	}()
-	if err := docker.StartContainer(ctx, id); err != nil {
-		return err
+	if result.ExitCode != 0 {
+		return fmt.Errorf("Couldn't wipe %q before restoring (exit %d)%s", spec.VolumeName, result.ExitCode, detail(result.Stderr))
 	}
-	code, err := docker.WaitContainer(ctx, id)
-	if err != nil {
-		return err
-	}
-	if code == 0 {
-		return nil
-	}
-	var stderr strings.Builder
-	if logs, err := docker.ContainerLogs(ctx, id, false); err == nil {
-		_ = dockerapi.DemuxSplit(logs, io.Discard, &stderr)
-		_ = logs.Close()
-	}
-	return fmt.Errorf("Couldn't wipe %q before restoring (exit %d)%s", spec.VolumeName, code, detail(stderr.String()))
+	return nil
 }
 
 // runPreCommand runs pre's command inside its container before the backup,

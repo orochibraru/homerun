@@ -180,6 +180,136 @@
 										"preflight": {
 											"additionalProperties": false,
 											"properties": {
+												"blockers": {
+													"description": "The jobs keeping an update from starting: queued or running deploys and every running job, running first",
+													"items": {
+														"additionalProperties": false,
+														"properties": {
+															"attempts": {
+																"description": "How many times it has been claimed",
+																"type": "number"
+															},
+															"createdAt": {
+																"description": "ISO 8601 timestamp",
+																"example": "2026-08-20T12:00:00.000Z",
+																"type": "string"
+															},
+															"heartbeatAt": {
+																"anyOf": [
+																	{
+																		"description": "ISO 8601 timestamp",
+																		"example": "2026-08-20T12:00:00.000Z",
+																		"type": "string"
+																	},
+																	{
+																		"type": "null"
+																	}
+																],
+																"description": "The Go worker's last heartbeat while it executes the job, null when no worker holds it"
+															},
+															"id": {
+																"type": "string"
+															},
+															"serviceId": {
+																"anyOf": [
+																	{
+																		"type": "string"
+																	},
+																	{
+																		"type": "null"
+																	}
+																]
+															},
+															"serviceName": {
+																"anyOf": [
+																	{
+																		"type": "string"
+																	},
+																	{
+																		"type": "null"
+																	}
+																]
+															},
+															"stage": {
+																"anyOf": [
+																	{
+																		"enum": [
+																			"prepare",
+																			"execute",
+																			"finalize",
+																			"finalizing"
+																		],
+																		"type": "string"
+																	},
+																	{
+																		"type": "null"
+																	}
+																],
+																"description": "prepare and finalize(ing) run in the app, execute in the Go worker, null for a job the app runs itself"
+															},
+															"stale": {
+																"description": "Running in execute with no heartbeat (or, never leased, no claim) for over two minutes: no live worker is on it",
+																"type": "boolean"
+															},
+															"startedAt": {
+																"anyOf": [
+																	{
+																		"description": "ISO 8601 timestamp",
+																		"example": "2026-08-20T12:00:00.000Z",
+																		"type": "string"
+																	},
+																	{
+																		"type": "null"
+																	}
+																]
+															},
+															"status": {
+																"enum": [
+																	"queued",
+																	"running",
+																	"succeeded",
+																	"failed",
+																	"cancelled"
+																],
+																"type": "string"
+															},
+															"title": {
+																"type": "string"
+															},
+															"type": {
+																"type": "string"
+															},
+															"workerId": {
+																"anyOf": [
+																	{
+																		"type": "string"
+																	},
+																	{
+																		"type": "null"
+																	}
+																],
+																"description": "The Go worker holding the job's lease"
+															}
+														},
+														"required": [
+															"attempts",
+															"createdAt",
+															"heartbeatAt",
+															"id",
+															"serviceId",
+															"serviceName",
+															"stage",
+															"stale",
+															"startedAt",
+															"status",
+															"title",
+															"type",
+															"workerId"
+														],
+														"type": "object"
+													},
+													"type": "array"
+												},
 												"pendingDeploys": {
 													"type": "number"
 												},
@@ -206,6 +336,7 @@
 												}
 											},
 											"required": [
+												"blockers",
 												"pendingDeploys",
 												"reason",
 												"ready",
@@ -281,9 +412,26 @@
 				"tags": ["Meta"]
 			},
 			"post": {
-				"description": "Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. Admins only.",
+				"description": "Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. force: true updates over queued deploys and running jobs (GET /instance/update lists them in preflight.blockers): the restart interrupts them and the new version resumes or re-runs them. Admins only.",
 				"operationId": "post_instance_update",
 				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"force": {
+										"description": "Update even while deploys are queued or jobs are running. They're interrupted by the restart, then resumed or run again by the new version",
+										"type": "boolean"
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": false
+				},
 				"responses": {
 					"202": {
 						"content": {
@@ -302,6 +450,24 @@
 							}
 						},
 						"description": "Update started"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid request body"
 					},
 					"401": {
 						"content": {
@@ -355,7 +521,7 @@
 								}
 							}
 						},
-						"description": "Already on the latest release, not running under Docker Compose, or a deploy or job is in flight"
+						"description": "Already on the latest release, not running under Docker Compose, or (without force) a deploy or job is in flight"
 					}
 				},
 				"security": [
@@ -581,6 +747,243 @@
 				],
 				"summary": "Instance update progress",
 				"tags": ["Meta"]
+			}
+		},
+		"/jobs": {
+			"get": {
+				"description": "Paginated, running jobs first, then queued and running oldest first, finished newest first. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers. Admins only.",
+				"operationId": "get_jobs",
+				"parameters": [
+					{
+						"description": "Comma-separated statuses to keep: queued, running, succeeded, failed, cancelled (default: all)",
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"attempts": {
+												"description": "How many times it has been claimed",
+												"type": "number"
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"heartbeatAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"example": "2026-08-20T12:00:00.000Z",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The Go worker's last heartbeat while it executes the job, null when no worker holds it"
+											},
+											"id": {
+												"type": "string"
+											},
+											"serviceId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"serviceName": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"stage": {
+												"anyOf": [
+													{
+														"enum": [
+															"prepare",
+															"execute",
+															"finalize",
+															"finalizing"
+														],
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "prepare and finalize(ing) run in the app, execute in the Go worker, null for a job the app runs itself"
+											},
+											"stale": {
+												"description": "Running in execute with no heartbeat (or, never leased, no claim) for over two minutes: no live worker is on it",
+												"type": "boolean"
+											},
+											"startedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"example": "2026-08-20T12:00:00.000Z",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"status": {
+												"enum": [
+													"queued",
+													"running",
+													"succeeded",
+													"failed",
+													"cancelled"
+												],
+												"type": "string"
+											},
+											"title": {
+												"type": "string"
+											},
+											"type": {
+												"type": "string"
+											},
+											"workerId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The Go worker holding the job's lease"
+											}
+										},
+										"required": [
+											"attempts",
+											"createdAt",
+											"heartbeatAt",
+											"id",
+											"serviceId",
+											"serviceName",
+											"stage",
+											"stale",
+											"startedAt",
+											"status",
+											"title",
+											"type",
+											"workerId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "Jobs, with their service's name and a stale flag"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unknown status"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not an admin"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List jobs",
+				"tags": ["Jobs"]
 			}
 		},
 		"/jobs/{jobId}": {
@@ -1070,6 +1473,17 @@
 												},
 												"type": "object"
 											},
+											"environmentName": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it."
+											},
 											"gitBakeFile": {
 												"anyOf": [
 													{
@@ -1531,6 +1945,7 @@
 											"dnsResolvable",
 											"domains",
 											"envVars",
+											"environmentName",
 											"secretEnvKeys",
 											"autoDeployOnPush",
 											"gitBakeFile",
@@ -2071,6 +2486,17 @@
 											},
 											"type": "object"
 										},
+										"environmentName": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it."
+										},
 										"gitBakeFile": {
 											"anyOf": [
 												{
@@ -2527,6 +2953,7 @@
 										"dnsResolvable",
 										"domains",
 										"envVars",
+										"environmentName",
 										"secretEnvKeys",
 										"autoDeployOnPush",
 										"gitBakeFile",
@@ -3020,6 +3447,17 @@
 											},
 											"type": "object"
 										},
+										"environmentName": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it."
+										},
 										"gitBakeFile": {
 											"anyOf": [
 												{
@@ -3476,6 +3914,7 @@
 										"dnsResolvable",
 										"domains",
 										"envVars",
+										"environmentName",
 										"secretEnvKeys",
 										"autoDeployOnPush",
 										"gitBakeFile",
@@ -3709,6 +4148,17 @@
 											"type": "string"
 										},
 										"type": "object"
+									},
+									"environmentName": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "The environment this service's deployments are recorded under, e.g. staging. null or production resets it to production. Canaries and previews keep canary and preview."
 									},
 									"gitBakeFile": {
 										"anyOf": [
@@ -4146,6 +4596,17 @@
 											},
 											"type": "object"
 										},
+										"environmentName": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it."
+										},
 										"gitBakeFile": {
 											"anyOf": [
 												{
@@ -4602,6 +5063,7 @@
 										"dnsResolvable",
 										"domains",
 										"envVars",
+										"environmentName",
 										"secretEnvKeys",
 										"autoDeployOnPush",
 										"gitBakeFile",
@@ -5621,6 +6083,10 @@
 														}
 													]
 												},
+												"environment": {
+													"description": "The environment its deployments are recorded under: production unless renamed, canary or preview for a child service.",
+													"type": "string"
+												},
 												"icon": {
 													"anyOf": [
 														{
@@ -5660,6 +6126,7 @@
 												"autoRedeploy",
 												"autoRollback",
 												"category",
+												"environment",
 												"icon",
 												"stack",
 												"uptimeEnabled"
@@ -5953,6 +6420,320 @@
 					}
 				],
 				"summary": "Get a service's settings, by tab",
+				"tags": ["Services"]
+			}
+		},
+		"/services/{serviceId}/dependencies": {
+			"get": {
+				"description": "What a service depends on and what depends on it, both recorded dependencies (which set start order) and env links (an env value naming the other service's slug as a host).",
+				"operationId": "get_services__serviceId__dependencies",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"dependedOnBy": {
+											"description": "The services that depend on this one",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"slug": {
+														"type": "string"
+													},
+													"source": {
+														"description": "recorded: a stored dependency, the only kind that orders starts; env: one of the depending service's env values points at the other's slug as a host; both: the two at once",
+														"enum": ["recorded", "env", "both"],
+														"type": "string"
+													}
+												},
+												"required": ["id", "name", "slug", "source"],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"dependsOn": {
+											"description": "The services this one depends on",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"slug": {
+														"type": "string"
+													},
+													"source": {
+														"description": "recorded: a stored dependency, the only kind that orders starts; env: one of the depending service's env values points at the other's slug as a host; both: the two at once",
+														"enum": ["recorded", "env", "both"],
+														"type": "string"
+													}
+												},
+												"required": ["id", "name", "slug", "source"],
+												"type": "object"
+											},
+											"type": "array"
+										}
+									},
+									"required": ["dependedOnBy", "dependsOn"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The service's dependencies, both directions"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's dependencies",
+				"tags": ["Services"]
+			},
+			"put": {
+				"description": "Replaces the services this one is recorded as depending on: they're started before it, and a stack deploy queues them first. Env vars aren't touched, so an env link to a service left out still shows as an env dependency.",
+				"operationId": "put_services__serviceId__dependencies",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"dependsOn": {
+										"description": "Ids of the services this one depends on, started before it. An empty list clears the recorded ones; env links are left alone.",
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 200,
+										"type": "array"
+									}
+								},
+								"required": ["dependsOn"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"dependedOnBy": {
+											"description": "The services that depend on this one",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"slug": {
+														"type": "string"
+													},
+													"source": {
+														"description": "recorded: a stored dependency, the only kind that orders starts; env: one of the depending service's env values points at the other's slug as a host; both: the two at once",
+														"enum": ["recorded", "env", "both"],
+														"type": "string"
+													}
+												},
+												"required": ["id", "name", "slug", "source"],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"dependsOn": {
+											"description": "The services this one depends on",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													},
+													"slug": {
+														"type": "string"
+													},
+													"source": {
+														"description": "recorded: a stored dependency, the only kind that orders starts; env: one of the depending service's env values points at the other's slug as a host; both: the two at once",
+														"enum": ["recorded", "env", "both"],
+														"type": "string"
+													}
+												},
+												"required": ["id", "name", "slug", "source"],
+												"type": "object"
+											},
+											"type": "array"
+										}
+									},
+									"required": ["dependedOnBy", "dependsOn"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The service's dependencies after the change"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "An invalid body, an unknown service id, the service itself, or a service that already depends on this one (a loop)"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Set a service's dependencies",
 				"tags": ["Services"]
 			}
 		},
@@ -6257,7 +7038,8 @@
 													{
 														"type": "null"
 													}
-												]
+												],
+												"description": "The deployment whose image this one redeployed: the revision a rollback went back to, or the preview revision a promote deployed"
 											},
 											"startedAt": {
 												"anyOf": [
@@ -6282,6 +7064,24 @@
 													"missing"
 												],
 												"type": "string"
+											},
+											"trigger": {
+												"anyOf": [
+													{
+														"enum": [
+															"manual",
+															"cron",
+															"push",
+															"promote",
+															"rollback"
+														],
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "What started it: manual, cron (scheduled), push (git push), promote (a pull request preview promoted) or rollback; null for a deploy from before triggers were recorded"
 											}
 										},
 										"required": [
@@ -6297,7 +7097,8 @@
 											"log",
 											"rollbackOfDeploymentId",
 											"startedAt",
-											"status"
+											"status",
+											"trigger"
 										],
 										"type": "object"
 									},
@@ -6372,6 +7173,1383 @@
 				],
 				"summary": "List a service's deployments",
 				"tags": ["Revisions"]
+			}
+		},
+		"/services/{serviceId}/errors": {
+			"get": {
+				"description": "A service's error issues, most recently seen first. Paginated like the other lists: the body is the page, x-total-count, x-page and x-per-page carry the rest.",
+				"operationId": "get_services__serviceId__errors",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "unresolved (default), resolved, ignored or all; comma-separated for several",
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "lastSeen, firstSeen or count, with a leading - for descending",
+						"in": "query",
+						"name": "sort",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Search title and culprit",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"count": {
+												"description": "Events received, all time",
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"culprit": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The innermost in-app frame, function (file), or the transaction"
+											},
+											"fingerprint": {
+												"description": "The grouping hash",
+												"type": "string"
+											},
+											"firstRelease": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"firstSeen": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"id": {
+												"type": "string"
+											},
+											"lastEnvironment": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"lastRelease": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"lastSeen": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"level": {
+												"enum": ["fatal", "error", "warning", "info", "debug"],
+												"type": "string"
+											},
+											"platform": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"regressedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "When a resolved issue last happened again"
+											},
+											"resolvedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"serviceId": {
+												"type": "string"
+											},
+											"status": {
+												"enum": ["unresolved", "resolved", "ignored"],
+												"type": "string"
+											},
+											"title": {
+												"type": "string"
+											},
+											"type": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"usersAffected": {
+												"description": "Distinct users named by the retained events",
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"value": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											}
+										},
+										"required": [
+											"count",
+											"culprit",
+											"fingerprint",
+											"firstRelease",
+											"firstSeen",
+											"id",
+											"lastEnvironment",
+											"lastRelease",
+											"lastSeen",
+											"level",
+											"platform",
+											"regressedAt",
+											"resolvedAt",
+											"serviceId",
+											"status",
+											"title",
+											"type",
+											"value",
+											"usersAffected"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of issues"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's error issues",
+				"tags": ["Errors"]
+			}
+		},
+		"/services/{serviceId}/errors/{issueId}": {
+			"get": {
+				"description": "One issue with one of its events: the newest, or the one `event` names. The event carries the exception chain, stack frames with source context, breadcrumbs, tags, request and user, plus repository links for in-app frames of git services.",
+				"operationId": "get_services__serviceId__errors__issueId_",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Issue id",
+						"in": "path",
+						"name": "issueId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "An event id of this issue",
+						"in": "query",
+						"name": "event",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"count": {
+											"description": "Events received, all time",
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"culprit": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The innermost in-app frame, function (file), or the transaction"
+										},
+										"event": {
+											"anyOf": [
+												{
+													"additionalProperties": false,
+													"properties": {
+														"breadcrumbs": {
+															"items": {
+																"additionalProperties": false,
+																"properties": {
+																	"category": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	},
+																	"level": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	},
+																	"message": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	},
+																	"timestamp": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	},
+																	"type": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	}
+																},
+																"required": [
+																	"category",
+																	"level",
+																	"message",
+																	"timestamp",
+																	"type"
+																],
+																"type": "object"
+															},
+															"type": "array"
+														},
+														"contexts": {
+															"additionalProperties": {
+																"additionalProperties": {},
+																"propertyNames": {
+																	"type": "string"
+																},
+																"type": "object"
+															},
+															"propertyNames": {
+																"type": "string"
+															},
+															"type": "object"
+														},
+														"culprit": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"environment": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"eventId": {
+															"description": "The SDK's event id",
+															"type": "string"
+														},
+														"exceptions": {
+															"description": "The exception chain, the raised one last",
+															"items": {
+																"additionalProperties": false,
+																"properties": {
+																	"frames": {
+																		"description": "Oldest call first, the raising frame last",
+																		"items": {
+																			"additionalProperties": false,
+																			"properties": {
+																				"absPath": {
+																					"anyOf": [
+																						{
+																							"type": "string"
+																						},
+																						{
+																							"type": "null"
+																						}
+																					]
+																				},
+																				"colno": {
+																					"anyOf": [
+																						{
+																							"maximum": 9007199254740991,
+																							"minimum": -9007199254740991,
+																							"type": "integer"
+																						},
+																						{
+																							"type": "null"
+																						}
+																					]
+																				},
+																				"contextLine": {
+																					"anyOf": [
+																						{
+																							"type": "string"
+																						},
+																						{
+																							"type": "null"
+																						}
+																					]
+																				},
+																				"filename": {
+																					"anyOf": [
+																						{
+																							"type": "string"
+																						},
+																						{
+																							"type": "null"
+																						}
+																					]
+																				},
+																				"function": {
+																					"anyOf": [
+																						{
+																							"type": "string"
+																						},
+																						{
+																							"type": "null"
+																						}
+																					]
+																				},
+																				"inApp": {
+																					"type": "boolean"
+																				},
+																				"lineno": {
+																					"anyOf": [
+																						{
+																							"maximum": 9007199254740991,
+																							"minimum": -9007199254740991,
+																							"type": "integer"
+																						},
+																						{
+																							"type": "null"
+																						}
+																					]
+																				},
+																				"module": {
+																					"anyOf": [
+																						{
+																							"type": "string"
+																						},
+																						{
+																							"type": "null"
+																						}
+																					]
+																				},
+																				"postContext": {
+																					"items": {
+																						"type": "string"
+																					},
+																					"type": "array"
+																				},
+																				"preContext": {
+																					"items": {
+																						"type": "string"
+																					},
+																					"type": "array"
+																				}
+																			},
+																			"required": [
+																				"absPath",
+																				"colno",
+																				"contextLine",
+																				"filename",
+																				"function",
+																				"inApp",
+																				"lineno",
+																				"module",
+																				"postContext",
+																				"preContext"
+																			],
+																			"type": "object"
+																		},
+																		"type": "array"
+																	},
+																	"handled": {
+																		"anyOf": [
+																			{
+																				"type": "boolean"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	},
+																	"mechanism": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	},
+																	"module": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	},
+																	"type": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	},
+																	"value": {
+																		"anyOf": [
+																			{
+																				"type": "string"
+																			},
+																			{
+																				"type": "null"
+																			}
+																		]
+																	}
+																},
+																"required": [
+																	"frames",
+																	"handled",
+																	"mechanism",
+																	"module",
+																	"type",
+																	"value"
+																],
+																"type": "object"
+															},
+															"type": "array"
+														},
+														"fingerprint": {
+															"anyOf": [
+																{
+																	"items": {
+																		"type": "string"
+																	},
+																	"type": "array"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"id": {
+															"type": "string"
+														},
+														"level": {
+															"type": "string"
+														},
+														"message": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"newerEventId": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"olderEventId": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"platform": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"receivedAt": {
+															"description": "ISO 8601 timestamp",
+															"type": "string"
+														},
+														"release": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"request": {
+															"anyOf": [
+																{
+																	"additionalProperties": false,
+																	"properties": {
+																		"method": {
+																			"anyOf": [
+																				{
+																					"type": "string"
+																				},
+																				{
+																					"type": "null"
+																				}
+																			]
+																		},
+																		"url": {
+																			"anyOf": [
+																				{
+																					"type": "string"
+																				},
+																				{
+																					"type": "null"
+																				}
+																			]
+																		}
+																	},
+																	"required": ["method", "url"],
+																	"type": "object"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"sdk": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"serverName": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"sourceLinks": {
+															"additionalProperties": {
+																"type": "string"
+															},
+															"description": "Repository links of in-app frames at the deployed commit, keyed <exception index>:<frame index>",
+															"propertyNames": {
+																"type": "string"
+															},
+															"type": "object"
+														},
+														"tags": {
+															"items": {
+																"prefixItems": [
+																	{
+																		"type": "string"
+																	},
+																	{
+																		"type": "string"
+																	}
+																],
+																"type": "array"
+															},
+															"type": "array"
+														},
+														"timestamp": {
+															"description": "ISO 8601 timestamp",
+															"type": "string"
+														},
+														"title": {
+															"type": "string"
+														},
+														"transaction": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"user": {
+															"anyOf": [
+																{
+																	"additionalProperties": false,
+																	"properties": {
+																		"email": {
+																			"anyOf": [
+																				{
+																					"type": "string"
+																				},
+																				{
+																					"type": "null"
+																				}
+																			]
+																		},
+																		"id": {
+																			"anyOf": [
+																				{
+																					"type": "string"
+																				},
+																				{
+																					"type": "null"
+																				}
+																			]
+																		},
+																		"ipAddress": {
+																			"anyOf": [
+																				{
+																					"type": "string"
+																				},
+																				{
+																					"type": "null"
+																				}
+																			]
+																		},
+																		"username": {
+																			"anyOf": [
+																				{
+																					"type": "string"
+																				},
+																				{
+																					"type": "null"
+																				}
+																			]
+																		}
+																	},
+																	"required": [
+																		"email",
+																		"id",
+																		"ipAddress",
+																		"username"
+																	],
+																	"type": "object"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														}
+													},
+													"required": [
+														"breadcrumbs",
+														"contexts",
+														"culprit",
+														"environment",
+														"eventId",
+														"exceptions",
+														"fingerprint",
+														"id",
+														"level",
+														"message",
+														"newerEventId",
+														"olderEventId",
+														"platform",
+														"receivedAt",
+														"release",
+														"request",
+														"sdk",
+														"serverName",
+														"sourceLinks",
+														"tags",
+														"timestamp",
+														"title",
+														"transaction",
+														"user"
+													],
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The requested event, the newest by default; null once none is retained"
+										},
+										"eventsRetained": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"fingerprint": {
+											"description": "The grouping hash",
+											"type": "string"
+										},
+										"firstRelease": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"firstSeen": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"lastEnvironment": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"lastRelease": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"lastSeen": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"level": {
+											"enum": ["fatal", "error", "warning", "info", "debug"],
+											"type": "string"
+										},
+										"platform": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"regressedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "When a resolved issue last happened again"
+										},
+										"resolvedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"serviceId": {
+											"type": "string"
+										},
+										"status": {
+											"enum": ["unresolved", "resolved", "ignored"],
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"type": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"usersAffected": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"value": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										}
+									},
+									"required": [
+										"count",
+										"culprit",
+										"fingerprint",
+										"firstRelease",
+										"firstSeen",
+										"id",
+										"lastEnvironment",
+										"lastRelease",
+										"lastSeen",
+										"level",
+										"platform",
+										"regressedAt",
+										"resolvedAt",
+										"serviceId",
+										"status",
+										"title",
+										"type",
+										"value",
+										"event",
+										"eventsRetained",
+										"usersAffected"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The issue"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service or issue not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get an error issue and its latest event",
+				"tags": ["Errors"]
+			},
+			"patch": {
+				"description": "Resolve, ignore or reopen an issue. A resolved issue that happens again reopens as a regression and notifies.",
+				"operationId": "patch_services__serviceId__errors__issueId_",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Issue id",
+						"in": "path",
+						"name": "issueId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"status": {
+										"description": "resolved: marked fixed, a new event reopens it as a regression; ignored: kept counting but never notifies; unresolved: open.",
+										"enum": ["unresolved", "resolved", "ignored"],
+										"type": "string"
+									}
+								},
+								"required": ["status"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"count": {
+											"description": "Events received, all time",
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"culprit": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The innermost in-app frame, function (file), or the transaction"
+										},
+										"fingerprint": {
+											"description": "The grouping hash",
+											"type": "string"
+										},
+										"firstRelease": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"firstSeen": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"lastEnvironment": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"lastRelease": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"lastSeen": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"level": {
+											"enum": ["fatal", "error", "warning", "info", "debug"],
+											"type": "string"
+										},
+										"platform": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"regressedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "When a resolved issue last happened again"
+										},
+										"resolvedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"serviceId": {
+											"type": "string"
+										},
+										"status": {
+											"enum": ["unresolved", "resolved", "ignored"],
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"type": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"value": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										}
+									},
+									"required": [
+										"count",
+										"culprit",
+										"fingerprint",
+										"firstRelease",
+										"firstSeen",
+										"id",
+										"lastEnvironment",
+										"lastRelease",
+										"lastSeen",
+										"level",
+										"platform",
+										"regressedAt",
+										"resolvedAt",
+										"serviceId",
+										"status",
+										"title",
+										"type",
+										"value"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The updated issue"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid request body"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service or issue not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Change an error issue's status",
+				"tags": ["Errors"]
 			}
 		},
 		"/services/{serviceId}/logs": {

@@ -9,6 +9,7 @@ import { WorkerClient } from "$lib/server/worker-client";
 import { traefikExpectation } from "./cron/core-services-watch.ts";
 import { DASHBOARD_ROUTER_FILE } from "./docker/dashboard.ts";
 import { hasTraefikRouterFor } from "./docker/labels.ts";
+import { type WedgedContainer, wedgedMessage } from "./docker/wedged.ts";
 import { DockerService } from "./docker.service.ts";
 
 export interface SetupCheck {
@@ -79,6 +80,10 @@ class AdminServiceClass {
 			await this.#traefikCheck(),
 			await this.#dockerCheck(),
 		];
+		const wedged = await this.#wedgedCheck();
+		if (wedged) {
+			checks.push(wedged);
+		}
 		const traefikConfig = await this.#traefikConfigCheck();
 		if (traefikConfig) {
 			checks.push(traefikConfig);
@@ -173,29 +178,29 @@ class AdminServiceClass {
 	}
 
 	/**
-	 * Whether something actually routes `host` to this container: either a
-	 * Traefik router label already on it, or a router file Homerun itself
-	 * publishes to the Traefik dynamic config directory
-	 * (`DASHBOARD_ROUTER_FILE`). Returns null (no check to show) if this
-	 * container's own labels can't be read at all.
+	 * Whether something actually routes `host` to this container: the router
+	 * file Homerun publishes to the Traefik dynamic config directory
+	 * (`DASHBOARD_ROUTER_FILE`, the one that survives a stalled Docker
+	 * provider), or else a Traefik router label on it. Returns null (no check
+	 * to show) if this container's own labels can't be read at all.
 	 */
 	async #dashboardRouterCheck(host: string): Promise<SetupCheck | null> {
 		const labels = await DockerService.selfContainerLabels().catch(() => null);
 		if (!labels) {
 			return null;
 		}
-		if (hasTraefikRouterFor(labels, host)) {
+		const dir = config.traefik.dynamicConfigDir;
+		if (dir && existsSync(join(dir, DASHBOARD_ROUTER_FILE))) {
 			return {
-				detail: `This container carries a Traefik router for ${host}.`,
+				detail: `Traefik routes ${host} to this container through the dynamic config file Homerun publishes, which keeps working even when Traefik's Docker provider stalls.`,
 				id: "dashboard-router",
 				label: "Dashboard routing",
 				severity: "ok",
 			};
 		}
-		const dir = config.traefik.dynamicConfigDir;
-		if (dir && existsSync(join(dir, DASHBOARD_ROUTER_FILE))) {
+		if (hasTraefikRouterFor(labels, host)) {
 			return {
-				detail: `Traefik routes ${host} to this container through the dynamic config file Homerun publishes.`,
+				detail: `This container carries a Traefik router for ${host}. Set the Traefik dynamic config directory under Settings → Networking too, so the dashboard stays reachable when Traefik's Docker provider stalls.`,
 				id: "dashboard-router",
 				label: "Dashboard routing",
 				severity: "ok",
@@ -302,6 +307,27 @@ class AdminServiceClass {
 			envVar: "DOCKER_SOCKET_PATH",
 			id: "docker",
 			label: "Docker socket",
+			severity: "danger",
+		};
+	}
+
+	/**
+	 * Whether the worker's janitor found helper containers the Docker daemon
+	 * is wedged on (inspect and remove hang), which only a Docker restart
+	 * clears. Null when there are none or the worker can't be asked.
+	 */
+	async #wedgedCheck(): Promise<SetupCheck | null> {
+		const health = await WorkerClient.get<{
+			wedgedContainers?: WedgedContainer[];
+		}>("/v1/health").catch(() => null);
+		const message = wedgedMessage(health?.wedgedContainers ?? []);
+		if (!message) {
+			return null;
+		}
+		return {
+			detail: message,
+			id: "docker-wedged",
+			label: "Docker daemon stuck",
 			severity: "danger",
 		};
 	}

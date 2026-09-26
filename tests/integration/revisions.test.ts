@@ -216,23 +216,29 @@ describe("revisions : health-gated rollout", () => {
 		await patch(id, { tag: "1.26-alpine" });
 		await deploy(id);
 
-		const res = await client.GET("/services/{serviceId}", {
-			params: { path: { serviceId: id } },
-		});
-		const svc = expectOk(res.data, res.response);
-		const proc = Bun.spawn(
-			[
-				"docker",
-				"inspect",
-				"--format",
-				'{{index .Config.Labels "homerun.readiness"}} {{.State.Health.Status}} {{.Config.Image}}',
-				svc.containerId ?? "",
-			],
-			{ stdout: "pipe" },
+		const inspect = async () => {
+			const res = await client.GET("/services/{serviceId}", {
+				params: { path: { serviceId: id } },
+			});
+			const svc = expectOk(res.data, res.response);
+			const proc = Bun.spawn(
+				[
+					"docker",
+					"inspect",
+					"--format",
+					'{{index .Config.Labels "homerun.readiness"}} {{.State.Health.Status}} {{.Config.Image}}',
+					svc.containerId ?? "",
+				],
+				{ stderr: "pipe", stdout: "pipe" },
+			);
+			return (await new Response(proc.stdout).text()).trim();
+		};
+		const state = await waitFor(
+			inspect,
+			(value) => value.startsWith("listening healthy nginx:1.26-alpine"),
+			60_000,
 		);
-		expect((await new Response(proc.stdout).text()).trim()).toStartWith(
-			"listening healthy nginx:1.26-alpine",
-		);
+		expect(state).toStartWith("listening healthy nginx:1.26-alpine");
 	}, 240_000);
 });
 

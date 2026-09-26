@@ -101,10 +101,28 @@ type InstanceUpdateStatus struct {
 		Version string `json:"version"`
 	} `json:"latest"`
 	Preflight struct {
-		Ready  bool   `json:"ready"`
-		Reason string `json:"reason"`
+		Blockers []JobSummary `json:"blockers"`
+		Ready    bool         `json:"ready"`
+		Reason   string       `json:"reason"`
 	} `json:"preflight"`
 	UpdateAvailable bool `json:"updateAvailable"`
+}
+
+// JobSummary is one job as GET /jobs and an update's blockers list it.
+type JobSummary struct {
+	Attempts    int    `json:"attempts"`
+	CreatedAt   string `json:"createdAt"`
+	HeartbeatAt string `json:"heartbeatAt"`
+	ID          string `json:"id"`
+	ServiceID   string `json:"serviceId"`
+	ServiceName string `json:"serviceName"`
+	Stage       string `json:"stage"`
+	Stale       bool   `json:"stale"`
+	StartedAt   string `json:"startedAt"`
+	Status      string `json:"status"`
+	Title       string `json:"title"`
+	Type        string `json:"type"`
+	WorkerID    string `json:"workerId"`
 }
 
 // InstanceUpdateProgress is the update helper container's state and output.
@@ -216,8 +234,42 @@ func InstanceStatusText(status InstanceUpdateStatus) string {
 			reason = "unknown reason"
 		}
 		lines = append(lines, fmt.Sprintf("Update available, but it can't start now: %s", reason))
+		if len(status.Preflight.Blockers) > 0 {
+			lines = append(lines, "In the way:")
+			for _, job := range status.Preflight.Blockers {
+				lines = append(lines, "  "+BlockerLine(job))
+			}
+			lines = append(lines, "Run `homerun instance update --force` to update anyway: they resume or run again after the restart.")
+		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+// BlockerLine renders one job keeping an update from starting: STUCK first
+// when no live worker is on it, then its title, service, status and stage,
+// when it started and last heartbeated, and its id.
+func BlockerLine(job JobSummary) string {
+	parts := []string{}
+	if job.Stale {
+		parts = append(parts, "STUCK")
+	}
+	parts = append(parts, job.Title)
+	if job.ServiceName != "" {
+		parts = append(parts, "(service "+job.ServiceName+")")
+	}
+	state := job.Status
+	if job.Stage != "" {
+		state += "/" + job.Stage
+	}
+	parts = append(parts, "["+job.Type+", "+state+"]")
+	if job.StartedAt != "" {
+		parts = append(parts, "started "+job.StartedAt)
+	}
+	if job.HeartbeatAt != "" {
+		parts = append(parts, "last heartbeat "+job.HeartbeatAt)
+	}
+	parts = append(parts, "job "+job.ID)
+	return strings.Join(parts, " ")
 }
 
 // ServicesList lists services as JSON or a table, with a footer when the page is truncated.
@@ -564,16 +616,17 @@ func InstanceChannel(client *Client, channel string) {
 }
 
 // InstanceUpdate starts a self-update of the instance, the same as the
-// sidebar's Update now. With wait, follows the update helper's output from
+// sidebar's Update now; with force, even over queued deploys and running
+// jobs, which the restart interrupts and the new version resumes. With wait, follows the update helper's output from
 // GET /instance/update/progress until the instance answers with the new
 // version, treating failed requests as the restart in progress. Exits on an
 // API error (a 409 carries why it can't update), when the helper exits
 // non-zero, or once the wait times out.
-func InstanceUpdate(client *Client, wait bool, timeout time.Duration) {
+func InstanceUpdate(client *Client, wait bool, timeout time.Duration, force bool) {
 	var started struct {
 		Version string `json:"version"`
 	}
-	client.decode("POST", "/instance/update", nil, &started)
+	client.decodeJSON("POST", "/instance/update", map[string]bool{"force": force}, &started)
 	if started.Version == "" {
 		Fail("The instance didn't say which version it's updating to.")
 		return

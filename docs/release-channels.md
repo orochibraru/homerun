@@ -92,5 +92,22 @@ Revisions tab and the instance-wide **Deployments** page show it as a badge, and
 the Deployments page filters on it. The API's deployment and revision shapes
 carry it as `environment`.
 
+To record a service under another name, say `staging` or `eu-prod`, fill in
+**Environment** on its **Settings** tab: up to 32 lowercase letters, digits and
+dashes. Leave it blank for `production`; `canary` and `preview` are taken. The
+name only applies to the service's own deployments, a stable service included:
+its canary still records `canary` and its previews `preview`. It takes effect
+from the next deploy, earlier deployments keep the name they were recorded with,
+and every name in use shows up in the Deployments page's filter. From the CLI or
+the API:
+
+```bash
+homerun services environment <service> staging
+homerun services environment <service>
+```
+
+The second form resets it to `production`. `PATCH /api/v1/services/{serviceId}`
+takes `{"environmentName": "staging"}`, or `null` to reset it.
+
 For a full walkthrough with a GitHub Actions release workflow, see
 [Main is canary, tags are stable](main-canary-tags-stable.md).

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/orochibraru/homerun/internal/janitor"
 	"github.com/orochibraru/homerun/internal/logging"
 	"github.com/orochibraru/homerun/internal/workerapi"
 )
@@ -35,13 +36,16 @@ func serveControlAPI(
 	config Config,
 	token string,
 	docker *dockerapi.Client,
+	sweeper *janitor.Janitor,
 ) (func(), error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
 	if err != nil {
 		return nil, fmt.Errorf("couldn't listen on port %d for the Docker control API: %w", config.Port, err)
 	}
+	api := workerapi.NewServer(ctx, token, docker)
+	api.Wedged = sweeper.Wedged
 	server := &http.Server{
-		Handler:           workerapi.NewServer(ctx, token, docker).Handler(),
+		Handler:           api.Handler(),
 		ReadHeaderTimeout: 30 * time.Second,
 	}
 	go func() {
@@ -55,6 +59,10 @@ func serveControlAPI(
 		defer cancel()
 		if err := server.Shutdown(shutdown); err != nil {
 			_ = server.Close()
+		}
+		select {
+		case <-api.TerminalsClosed():
+		case <-shutdown.Done():
 		}
 	}, nil
 }

@@ -1,5 +1,6 @@
 import { historyTrigger } from "$lib/deploy-trigger";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { deploymentEnvironments } from "$lib/release-channels";
 import { parseListQuery } from "$lib/server/list-query";
 import { formatDuration } from "$lib/services/notification-messages";
 
@@ -10,7 +11,10 @@ export const load = async ({ parent, url }) => {
 		{ filterKeys: ["status", "trigger", "environment"] },
 		preferences.perPage,
 	);
-	const result = await DeploymentDTO.listPaged(query);
+	const [result, environments] = await Promise.all([
+		DeploymentDTO.listPaged(query),
+		DeploymentDTO.listEnvironments(),
+	]);
 	return {
 		deployments: result.items.map((item) => {
 			const row = item.deployment.toJSON();
@@ -32,6 +36,7 @@ export const load = async ({ parent, url }) => {
 				userName: item.userName,
 			};
 		}),
+		environments: deploymentEnvironments(environments),
 		filtered: query.active,
 		page: result.page,
 		perPage: result.perPage,

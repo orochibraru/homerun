@@ -14,7 +14,7 @@
 	import { SERVICE_STATUS_CONFIG } from "$lib/constants";
 	import { HISTORY_TRIGGERS, historyTriggerLabel } from "$lib/deploy-trigger";
 	import { timeAgo } from "$lib/formatting";
-	import { DEPLOY_ENVIRONMENTS, environmentLabel } from "$lib/release-channels";
+	import { environmentLabel } from "$lib/release-channels";
 	import { title } from "$lib/store/title";
 
 	const { data } = $props();
@@ -39,7 +39,7 @@
 		return () => clearInterval(timer);
 	});
 
-	const filters: FilterGroup[] = [
+	const filters: FilterGroup[] = $derived([
 		{
 			key: "status",
 			label: "Status",
@@ -65,12 +65,12 @@
 		{
 			key: "environment",
 			label: "Environment",
-			options: DEPLOY_ENVIRONMENTS.map((value) => ({
+			options: data.environments.map((value) => ({
 				label: environmentLabel(value),
 				value,
 			})),
 		},
-	];
+	]);
 </script>
 
 <div class="p-5 md:p-6">
@@ -136,14 +136,16 @@
                           : ''}"
                       />
                     </button>
-                    <a
-                      class="text-text hover:text-accent font-medium"
-                      href="{resolve('/services')}/{dep.serviceId}/revisions?deployment={dep.id}"
-                      onclick={(event) => event.stopPropagation()}
-                    >
-                      {dep.serviceName}
-                    </a>
-                    <EnvironmentBadge environment={dep.environment} />
+                    <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                      <a
+                        class="text-text hover:text-accent font-medium"
+                        href="{resolve('/services')}/{dep.serviceId}/revisions?deployment={dep.id}"
+                        onclick={(event) => event.stopPropagation()}
+                      >
+                        {dep.serviceName}
+                      </a>
+                      <EnvironmentBadge environment={dep.environment} />
+                    </span>
                   </div>
                   <p class="text-text-muted mt-0.5 pl-5 text-xs md:hidden">
                     {timeAgo(dep.startedAt)} · {historyTriggerLabel(dep.trigger)}{dep.userName ? ` · ${dep.userName}` : ""}{dep.duration ? ` · ${dep.duration}` : ""}

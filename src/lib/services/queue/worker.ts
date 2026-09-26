@@ -1,13 +1,14 @@
 import { JobDTO } from "$lib/dto/job-dto";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { jobHandlers } from "./handlers.ts";
+import { STALE_JOB_MS } from "./stale.ts";
 import { workerJobs } from "./worker-jobs/index.ts";
 
 const POLL_MS = 1000;
 const MAX_CONCURRENT_JOBS = 3;
 const RETRY_BASE_MS = 10_000;
-const STALLED_EXECUTION_MS = 2 * 60 * 1000;
 const STALL_CHECK_EVERY_MS = 30_000;
+const ORPHAN_CHECK_EVERY_MS = 30_000;
 
 const holdState = globalThis as unknown as { __job_worker_held?: boolean };
 
@@ -17,7 +18,7 @@ class JobWorkerClass extends BaseScheduler {
 	readonly #inFlight = new Set<string>();
 	readonly #stallWarned = new Set<string>();
 	#nextStallCheck = 0;
-	#orphanCheck: Promise<void> | null = null;
+	#nextOrphanCheck = 0;
 
 	/** Whether the worker is held (see `hold()`): true means no new jobs will be claimed, held state is process-global and HMR-safe. */
 	get held(): boolean {
@@ -52,21 +53,23 @@ class JobWorkerClass extends BaseScheduler {
 		await this.#warnStalledExecutions();
 	}
 
-	/** Runs `#requeueOrphans` at most once per process lifetime, caching the in-flight promise so concurrent ticks don't requeue twice. */
+	/**
+	 * Every `ORPHAN_CHECK_EVERY_MS` (and on the first tick), requeues running
+	 * jobs in the app's own stages that nothing in this process is working on
+	 * (`JobDTO.requeueOrphaned`, which leaves Go-leased executions alone): at
+	 * boot that's whatever a previous process died in the middle of, later it's
+	 * a job whose own bookkeeping failed, which used to sit in `running` until
+	 * the next restart. A failed check is retried on the next tick.
+	 */
 	async #recoverOrphans(): Promise<void> {
-		this.#orphanCheck ??= this.#requeueOrphans().catch((error: unknown) => {
-			this.#orphanCheck = null;
-			throw error;
-		});
-		await this.#orphanCheck;
-	}
-
-	/** Requeues jobs left stuck in "running" by a previous process that died mid-job (`JobDTO.requeueOrphaned`, which leaves Go-leased executions alone), logging how many. */
-	async #requeueOrphans(): Promise<void> {
-		const requeued = await JobDTO.requeueOrphaned();
+		if (Date.now() < this.#nextOrphanCheck) {
+			return;
+		}
+		const requeued = await JobDTO.requeueOrphaned([...this.#inFlight]);
+		this.#nextOrphanCheck = Date.now() + ORPHAN_CHECK_EVERY_MS;
 		if (requeued > 0) {
 			this.logger.warn(
-				`Requeued ${requeued} job(s) left running by a previous process.`,
+				`Requeued ${requeued} job(s) left running with nothing working on them.`,
 			);
 		}
 	}
@@ -171,7 +174,7 @@ class JobWorkerClass extends BaseScheduler {
 		}
 		this.#nextStallCheck = Date.now() + STALL_CHECK_EVERY_MS;
 		const stalled = await JobDTO.listStalledExecutions(
-			new Date(Date.now() - STALLED_EXECUTION_MS),
+			new Date(Date.now() - STALE_JOB_MS),
 		);
 		for (const entry of stalled) {
 			if (this.#stallWarned.has(entry.id)) {

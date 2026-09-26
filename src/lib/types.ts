@@ -29,6 +29,23 @@ export type JobType =
 	| "image_scan"
 	| "notification_delivery";
 
+/** A job as the self-update blockers and `GET /api/v1/jobs` list it. */
+export interface JobSummary {
+	attempts: number;
+	createdAt: Date;
+	heartbeatAt: Date | null;
+	id: string;
+	serviceId: string | null;
+	serviceName: string | null;
+	stage: JobStage | null;
+	stale: boolean;
+	startedAt: Date | null;
+	status: JobStatus;
+	title: string;
+	type: JobType;
+	workerId: string | null;
+}
+
 export type RevisionHealth =
 	| "watching"
 	| "healthy"
@@ -59,6 +76,8 @@ export type NotificationEvent =
 	| "service.up"
 	| "resource.warning"
 	| "resource.critical"
-	| "resource.recovered";
+	| "resource.recovered"
+	| "error.issue.new"
+	| "error.issue.regressed";
 
 export type PullPolicy = "always" | "missing" | "never";

@@ -70,6 +70,12 @@ export interface EnqueueDeployInput {
 	userId: string;
 }
 
+const ENQUEUE_TITLES = {
+	deploy: "Deploy",
+	promote: "Promote to",
+	rollback: "Roll back",
+} as const;
+
 export interface EnqueueDeployResult {
 	deploymentId: string;
 	jobId: string;
@@ -115,8 +121,8 @@ function workerFailure(
 }
 
 /**
- * Builds the `RevisionSource` a rollback deploy should reuse, by loading the
- * deployment being rolled back to. Returns null when `dep` isn't a rollback
+ * Builds the `RevisionSource` a rollback or promote deploy reuses, by loading
+ * the deployment whose image it redeploys. Returns null for a plain deploy
  * (`rollbackOfDeploymentId` unset).
  *
  * @throws When the target deployment's row is gone or never recorded an
@@ -131,7 +137,7 @@ async function revisionSourceFor(
 	const revision = await DeploymentDTO.get(dep.rollbackOfDeploymentId);
 	const row = revision?.toJSON();
 	if (!row?.imageRef) {
-		throw new Error("The revision to roll back to no longer exists.");
+		throw new Error("The revision to redeploy no longer exists.");
 	}
 	return {
 		buildSource: row.buildSource ?? "image",
@@ -571,9 +577,9 @@ class DeploymentServiceClass {
 	}
 
 	/**
-	 * Queues a deploy (or rollback, when `rollbackOfDeploymentId` is set):
-	 * creates the `DeploymentDTO` row, marks the service pending, and enqueues
-	 * a `deploy` job. Concurrent enqueues for the same service coalesce onto
+	 * Queues a deploy (a rollback when `rollbackOfDeploymentId` is set, a
+	 * preview promote when the trigger is `promote` too): creates the `DeploymentDTO` row, marks the service pending, and enqueues
+	 * a `deploy` job deduped per kind (deploy, rollback, promote). Concurrent enqueues for the same service coalesce onto
 	 * one queued job (`dedupeKey`/`lockKey` scoped to `service:${svc.id}`); when
 	 * that happens this deployment's own row is marked `stopped` as superseded
 	 * and the coalesced job's deployment id is returned instead.
@@ -581,32 +587,35 @@ class DeploymentServiceClass {
 	async enqueueDeploy(input: EnqueueDeployInput): Promise<EnqueueDeployResult> {
 		const { svc, userId } = input;
 		const rollbackOf = input.rollbackOfDeploymentId ?? null;
+		const trigger = input.trigger ?? "manual";
+		const kind =
+			trigger === "promote" ? "promote" : rollbackOf ? "rollback" : "deploy";
 		const dep = await DeploymentDTO.create({
 			environment: deployEnvironment(svc.toJSON()),
 			id: input.clientDeploymentId || undefined,
 			log: input.note ? `${input.note}\n` : undefined,
-			restoreConfig: Boolean(rollbackOf && input.restoreConfig),
+			restoreConfig: kind === "rollback" && Boolean(input.restoreConfig),
 			rollbackOfDeploymentId: rollbackOf,
 			serviceId: svc.id,
 			status: "pending",
-			trigger: input.trigger ?? "manual",
+			trigger,
 			userId,
 		});
 		await svc.update({ currentStatus: "pending" });
 
 		const entry = await QueueService.enqueue({
-			dedupeKey: `${rollbackOf ? "rollback" : "deploy"}:${svc.id}`,
+			dedupeKey: `${kind}:${svc.id}`,
 			dependsOnJobId: input.dependsOnJobId ?? null,
 			lockKey: `service:${svc.id}`,
 			payload: {
 				deploymentId: dep.id,
 				noCache: input.noCache ?? false,
 				serviceId: svc.id,
-				trigger: input.trigger ?? "manual",
+				trigger,
 				userId,
 			},
 			serviceId: svc.id,
-			title: `${rollbackOf ? "Roll back" : "Deploy"} ${svc.name}`,
+			title: `${ENQUEUE_TITLES[kind]} ${svc.name}`,
 			type: "deploy",
 			userId,
 		});

@@ -35,6 +35,7 @@
 		SERVICE_ACTION_LABELS,
 		type ServiceAction,
 	} from "$lib/service-actions";
+	import { primaryHostname } from "$lib/service-domains";
 	import {
 		dependencyForest,
 		type GraphServiceInfo,
@@ -354,7 +355,12 @@
                 description: `${svc.image}:${svc.tag}`,
                 href: `${resolve("/services")}/${svc.id}`,
                 id: svc.id,
-                subtitle: `${svc.slug}.${data.baseDomain}`,
+                subtitle:
+                  primaryHostname(
+                    svc,
+                    data.stacks.find((stack) => stack.id === svc.stackId)?.slug,
+                    data.baseDomain,
+                  ) ?? svc.slug,
                 title: svc.name,
               }))}
               onToggleSelect={(id) => selection.toggle(id)}

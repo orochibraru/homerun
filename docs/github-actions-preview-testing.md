@@ -261,16 +261,17 @@ jobs:
 ## How promote picks the image
 
 `homerun previews promote` deploys the image of the revision the preview runs
-now, through the same path as a [rollback](revisions-and-rollback.md): nothing
-is built, pulled from upstream or scanned: the image the preview built is looked
-up on the host, or pulled back by digest when the build pushed it to a build
-cache registry. The service keeps its own env vars, domains, volumes and
-resources: only the image comes from the preview. The deployment's log opens
-with
+now, the way a [rollback](revisions-and-rollback.md) redeploys one: nothing is
+built, pulled from upstream or scanned: the image the preview built is looked up
+on the host, or pulled back by digest when the build pushed it to a build cache
+registry. The service keeps its own env vars, domains, volumes and resources:
+only the image comes from the preview. The deployment's log opens with
 `Promoted from the preview of #<n> (<preview>, revision <id>, commit <sha>)`,
-and the deployment history lists it as a rollback. `--commit` refuses (`409`)
-when the preview runs anything else, and promote also refuses a preview whose
-health check is still running or failed.
+and the deployment history lists it under the **Promote** trigger. It's a new
+revision of the service like any deploy, so its health is watched and
+auto-rollback applies to it. `--commit` refuses (`409`) when the preview runs
+anything else, and promote also refuses a preview whose health check is still
+running or failed.
 
 ## When it goes wrong
 
@@ -290,9 +291,10 @@ health check is still running or failed.
 - **Promote fails.** Production keeps running what it ran. The usual cause is
   the preview's image being gone from the host (pruned by
   [Docker Cleanup](docker-cleanup.md)): push to the pull request to rebuild it.
-- **Production is unhealthy after ship.** A promoted deploy counts as a
-  rollback, and a rollback is never rolled back automatically, so auto-rollback
-  doesn't catch it: `homerun services rollback <id>` does.
+- **Production is unhealthy after ship.** With
+  [auto-rollback](revisions-and-rollback.md) on, Homerun rolls the service back
+  to its previous revision by itself; without it,
+  `homerun services rollback <id>` does.
 - **The pull request closed before ship.** The preview is gone and promote
   answers `404`: reopen the pull request to rebuild it, or deploy the service
   from main.

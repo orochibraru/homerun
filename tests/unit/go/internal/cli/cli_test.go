@@ -187,6 +187,26 @@ func TestInstanceStatusText(t *testing.T) {
 	if !strings.Contains(cli.InstanceStatusText(status), "unknown reason") {
 		t.Errorf("a blocked update with no reason still explains itself, got %q", cli.InstanceStatusText(status))
 	}
+	if strings.Contains(cli.InstanceStatusText(status), "--force") {
+		t.Errorf("no blockers, no force hint, got %q", cli.InstanceStatusText(status))
+	}
+
+	status.Preflight.Blockers = []cli.JobSummary{
+		{ID: "job-1", Title: "Deploy web", ServiceName: "web", Status: "running", Stage: "execute",
+			Type: "deploy", Stale: true, StartedAt: "2026-09-20T10:00:00.000Z", HeartbeatAt: "2026-09-20T10:01:00.000Z"},
+		{ID: "job-2", Title: "Deploy api", Status: "queued", Type: "deploy"},
+	}
+	text := cli.InstanceStatusText(status)
+	for _, want := range []string{
+		"In the way:",
+		"  STUCK Deploy web (service web) [deploy, running/execute] started 2026-09-20T10:00:00.000Z last heartbeat 2026-09-20T10:01:00.000Z job job-1",
+		"  Deploy api [deploy, queued] job job-2",
+		"homerun instance update --force",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("want %q in %q", want, text)
+		}
+	}
 }
 
 func TestPrintPageFooterOnlyWhenTruncated(t *testing.T) {
@@ -965,7 +985,7 @@ func TestInstanceUpdateWaitsForTheNewVersion(t *testing.T) {
 		fmt.Fprint(writer, `{"current":"1.2.0"}`)
 	})
 
-	out, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, time.Minute) })
+	out, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, time.Minute, false) })
 	if failed != "" {
 		t.Fatalf("failed with %q", failed)
 	}
@@ -1007,7 +1027,7 @@ func TestInstanceUpdatePrintsTheHelperOutputOnce(t *testing.T) {
 		fmt.Fprint(writer, `{"current":"1.2.0"}`)
 	})
 
-	out, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, time.Minute) })
+	out, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, time.Minute, false) })
 	if failed != "" {
 		t.Fatalf("failed with %q", failed)
 	}
@@ -1030,7 +1050,7 @@ func TestInstanceUpdateFailsWhenTheHelperFails(t *testing.T) {
 		fmt.Fprint(writer, `{"current":"1.1.0"}`)
 	})
 
-	out, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, time.Minute) })
+	out, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, time.Minute, false) })
 	if !strings.Contains(out, "pull access denied") {
 		t.Errorf("the helper's output should be shown, got %q", out)
 	}
@@ -1042,7 +1062,7 @@ func TestInstanceUpdateFailsWhenTheHelperFails(t *testing.T) {
 func TestInstanceUpdateWithoutWaitReturnsImmediately(t *testing.T) {
 	client, seen := jsonAPI(t, `{"version":"1.2.0"}`)
 
-	out, failed := runCLI(t, func() { cli.InstanceUpdate(client, false, 0) })
+	out, failed := runCLI(t, func() { cli.InstanceUpdate(client, false, 0, false) })
 	if failed != "" {
 		t.Fatalf("failed with %q", failed)
 	}
@@ -1051,6 +1071,36 @@ func TestInstanceUpdateWithoutWaitReturnsImmediately(t *testing.T) {
 	}
 	if len(*seen) != 1 {
 		t.Errorf("want one request, got %d", len(*seen))
+	}
+}
+
+func TestInstanceUpdateSendsForce(t *testing.T) {
+	for _, force := range []bool{true, false} {
+		client, seen := jsonAPI(t, `{"version":"1.2.0"}`)
+		if _, failed := runCLI(t, func() { cli.InstanceUpdate(client, false, 0, force) }); failed != "" {
+			t.Fatalf("failed with %q", failed)
+		}
+		want := fmt.Sprintf(`{"force":%t}`, force)
+		if request := (*seen)[0]; request.Method != http.MethodPost || request.Body != want {
+			t.Errorf("got %s %q, want body %q", request.Method, request.Body, want)
+		}
+	}
+}
+
+func TestInstanceUpdateForceFlag(t *testing.T) {
+	var body string
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		raw, _ := io.ReadAll(request.Body)
+		body = string(raw)
+		fmt.Fprint(writer, `{"version":"1.2.0"}`)
+	}))
+	defer server.Close()
+	global := cli.GlobalFlags{APIKey: "k", BaseURL: server.URL}
+	if _, failed := runCLI(t, func() { cli.RunInstance(global, []string{"update", "--wait=false", "--force"}) }); failed != "" {
+		t.Fatalf("failed with %q", failed)
+	}
+	if body != `{"force":true}` {
+		t.Errorf("--force should reach the API, got %q", body)
 	}
 }
 
@@ -1064,7 +1114,7 @@ func TestInstanceUpdateGivesUp(t *testing.T) {
 		fmt.Fprint(writer, `{"current":"1.1.0"}`)
 	})
 
-	_, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, time.Nanosecond) })
+	_, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, time.Nanosecond, false) })
 	if !strings.Contains(failed, "Timed out waiting for v1.2.0") {
 		t.Errorf("got %q", failed)
 	}
@@ -2115,7 +2165,7 @@ func TestInstanceUpdateRefusesAVersionlessAnswer(t *testing.T) {
 	defer server.Close()
 
 	client := cli.NewClient(homerun.Config{APIKey: "k", BaseURL: server.URL})
-	_, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, 0) })
+	_, failed := runCLI(t, func() { cli.InstanceUpdate(client, true, 0, false) })
 	if !strings.Contains(failed, "didn't say which version") {
 		t.Errorf("an answer with no version must not report success against a dead instance, got %q", failed)
 	}

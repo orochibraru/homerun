@@ -17,14 +17,14 @@ import {
 } from "$lib/server/mcp-redact";
 
 export type ApiCall = (
-	method: "DELETE" | "GET" | "PATCH" | "POST",
+	method: "DELETE" | "GET" | "PATCH" | "POST" | "PUT",
 	path: string,
 	body?: unknown,
 ) => Promise<Response>;
 
 const INSTRUCTIONS = `Homerun is a self-hosted PaaS: each service is one Docker container or swarm service, routed by Traefik at its domains.
 
-To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs, list_deployments (each deploy attempt's error and log, the place to look when a deploy failed) and list_revisions (each revision's health and the reason it failed). Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network.
+To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs, list_deployments (each deploy attempt's error and log, the place to look when a deploy failed) and list_revisions (each revision's health and the reason it failed). When the app reports errors through a Sentry SDK, list_errors and get_error give the grouped exceptions with stack traces and links to the source. Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network.
 
 To fix one: update_service changes settings (applied on the next deploy), deploy_service rolls them out, restart_service restarts without redeploying, rollback_service redeploys an earlier revision. Say what you're about to change before changing it.`;
 
@@ -76,6 +76,104 @@ function registerDeploymentTools(server: McpServer, api: ApiCall): void {
 					"GET",
 					servicePath(id, `/deployments${limit ? `?limit=${limit}` : ""}`),
 				),
+			),
+	);
+}
+
+/** Registers the tools that read the errors a service's apps reported through a Sentry SDK. */
+function registerErrorTools(server: McpServer, api: ApiCall): void {
+	server.registerTool(
+		"list_errors",
+		{
+			annotations: read,
+			description:
+				"A service's error issues from its error tracking (Sentry SDKs reporting to Homerun), most recently seen first: each one's id, title, culprit (the innermost in-app frame), level, event count, users affected, first and last seen, releases and status.",
+			inputSchema: z.object({
+				search: z
+					.string()
+					.optional()
+					.describe("Only issues whose title or culprit matches this term"),
+				serviceId,
+				status: z
+					.enum(["unresolved", "resolved", "ignored", "all"])
+					.optional()
+					.describe("Which issues to list (default unresolved)"),
+			}),
+		},
+		async ({ search, serviceId: id, status }) => {
+			const query = new URLSearchParams({ perPage: "50" });
+			if (search) {
+				query.set("q", search);
+			}
+			if (status) {
+				query.set("status", status);
+			}
+			return asResult(await api("GET", servicePath(id, `/errors?${query}`)));
+		},
+	);
+
+	server.registerTool(
+		"get_error",
+		{
+			annotations: read,
+			description:
+				"One error issue with its newest event: the exception chain, the stack trace (oldest call first, each frame with its file, line, in-app flag and surrounding source lines), breadcrumbs, tags, request, user, release and environment, plus repository links to the in-app frames at the deployed commit. Read this to find where in the code an error comes from.",
+			inputSchema: z.object({
+				eventId: z
+					.string()
+					.optional()
+					.describe(
+						"A specific event of the issue, from olderEventId/newerEventId",
+					),
+				issueId: z.string().describe("The issue's id, from list_errors"),
+				serviceId,
+			}),
+		},
+		async ({ eventId, issueId, serviceId: id }) =>
+			asResult(
+				await api(
+					"GET",
+					servicePath(
+						id,
+						`/errors/${encodeURIComponent(issueId)}${eventId ? `?event=${encodeURIComponent(eventId)}` : ""}`,
+					),
+				),
+			),
+	);
+}
+
+/** Registers the tools that read and replace what a service depends on. */
+function registerDependencyTools(server: McpServer, api: ApiCall): void {
+	server.registerTool(
+		"list_dependencies",
+		{
+			annotations: read,
+			description:
+				"What a service depends on and what depends on it, each with its id, name, slug and source: recorded (a stored dependency, the only kind that sets start order), env (an env value names the other's slug as a host) or both.",
+			inputSchema: z.object({ serviceId }),
+		},
+		async ({ serviceId: id }) =>
+			asResult(await api("GET", servicePath(id, "/dependencies"))),
+	);
+
+	server.registerTool(
+		"set_dependencies",
+		{
+			annotations: change,
+			description:
+				"Replace the services a service is recorded as depending on, which are started before it. Env vars aren't changed. Refused when one of them already depends on this service.",
+			inputSchema: z.object({
+				dependsOn: z
+					.array(z.string())
+					.describe(
+						"Every service id it should depend on, from list_services; an empty list clears them",
+					),
+				serviceId,
+			}),
+		},
+		async ({ dependsOn, serviceId: id }) =>
+			asResult(
+				await api("PUT", servicePath(id, "/dependencies"), { dependsOn }),
 			),
 	);
 }
@@ -381,6 +479,8 @@ export function createHomerunMcpServer(api: ApiCall): McpServer {
 	);
 	registerReadTools(server, api);
 	registerDeploymentTools(server, api);
+	registerDependencyTools(server, api);
+	registerErrorTools(server, api);
 	registerInstanceTools(server, api);
 	registerChangeTools(server, api);
 	return server;

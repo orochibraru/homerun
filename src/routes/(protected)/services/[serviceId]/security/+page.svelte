@@ -3,9 +3,9 @@
 	import { invalidateAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import Alert from "$lib/components/alert.svelte";
+	import LoginWallSection from "$lib/components/login-wall-section.svelte";
 	import { title } from "$lib/store/title";
 	import FindingsTable from "./findings-table.svelte";
-	import LoginWallSection from "./login-wall-section.svelte";
 	import ScanHistoryTable from "./scan-history-table.svelte";
 	import ScanPanel from "./scan-panel.svelte";
 

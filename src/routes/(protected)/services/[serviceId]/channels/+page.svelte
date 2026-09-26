@@ -11,6 +11,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { canarySlug } from "$lib/release-channels";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -83,12 +84,12 @@
           success: "Saved.",
         })}
       >
-        {#if form && "error" in form && form.error}
+        {#if form && "values" in form && "error" in form && form.error}
           <Alert>{form.error}</Alert>
         {/if}
 
         <CheckBox
-          helperText={`The canary is a service named ${svc.slug}-canary, mirroring this one's build, env vars and resources.`}
+          helperText={`The canary is a service named ${canarySlug(svc.slug)}, mirroring this one's build, env vars and resources.`}
           id="channelsEnabled"
           label="Enable release channels"
           name="channelsEnabled"
@@ -170,22 +171,22 @@
         />
         <ul class="divide-border divide-y">
           {#each [{ environment: "stable", icon: Tag, name: svc.name, ref: channels.stableRef, status: svc.currentStatus }, { environment: "canary", icon: GitBranch, name: channels.canary?.name ?? `${svc.name} (canary)`, ref: channels.canary?.gitRef ?? channels.branch, status: channels.canary?.status ?? null }] as env (env.environment)}
-            <li class="flex flex-wrap items-center gap-3 px-5 py-3">
+            <li class="flex items-center gap-3 px-5 py-3">
               <env.icon class="text-text-subtle size-4 shrink-0" />
               <div class="min-w-0 flex-1">
                 <p class="text-text text-sm font-medium capitalize">{env.environment}</p>
                 <p class="text-text-muted truncate font-mono text-xs">{env.ref ?? "—"}</p>
+                {#if env.environment === "canary" && channels.canary}
+                  <a
+                    class="text-text-muted hover:text-accent block truncate text-xs"
+                    href={resolve("/(protected)/services/[serviceId]", {
+                      serviceId: channels.canary.id,
+                    })}
+                  >
+                    {channels.canary.hostname ?? channels.canary.slug}
+                  </a>
+                {/if}
               </div>
-              {#if env.environment === "canary" && channels.canary}
-                <a
-                  class="text-text-muted hover:text-accent text-xs"
-                  href={resolve("/(protected)/services/[serviceId]", {
-                    serviceId: channels.canary.id,
-                  })}
-                >
-                  {channels.canary.hostname ?? channels.canary.slug}
-                </a>
-              {/if}
               {#if env.status}
                 <StatusBadge status={env.status} />
               {/if}

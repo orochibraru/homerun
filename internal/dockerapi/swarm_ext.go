@@ -127,7 +127,7 @@ func (c *Client) SwarmServiceLogs(ctx context.Context, id string, tail int, foll
 	if tail > 0 {
 		query.Set("tail", strconv.Itoa(tail))
 	}
-	response, err := c.request(ctx, http.MethodGet, "/services/"+id+"/logs", query, nil, nil)
+	response, err := c.stream(ctx, http.MethodGet, "/services/"+id+"/logs", query, nil, nil, c.daemonAnswers)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (c *Client) SwarmTaskLogs(ctx context.Context, id string, tail int, follow 
 	if tail > 0 {
 		query.Set("tail", strconv.Itoa(tail))
 	}
-	response, err := c.request(ctx, http.MethodGet, "/tasks/"+id+"/logs", query, nil, nil)
+	response, err := c.stream(ctx, http.MethodGet, "/tasks/"+id+"/logs", query, nil, nil, c.daemonAnswers)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -37,7 +38,7 @@ func (s *Server) mountContainers(r chi.Router) {
 	r.Get("/v1/containers/{id}/inspect", httpapi.H(s.inspectContainer))
 	r.Get("/v1/containers/{id}/stats", httpapi.H(s.containerStats))
 	r.Get("/v1/containers/{id}/logs", httpapi.H(s.containerLogs))
-	r.Put("/v1/containers/{id}/archive", httpapi.H(s.putArchive))
+	r.Put("/v1/volumes/archive", httpapi.H(s.extractIntoVolume))
 	r.Post("/v1/containers/{id}/connect", httpapi.H(s.connectContainer))
 	r.Post("/v1/exec", httpapi.H(s.runExec))
 }
@@ -249,17 +250,36 @@ func (s *Server) containerLogs(w http.ResponseWriter, r *http.Request) error {
 	return streamOut(w, r, logs)
 }
 
-// putArchive unpacks a tar stream into a path inside a container, which is how
-// a file is written into a Docker-managed volume without the app ever touching
-// the host filesystem.
-func (s *Server) putArchive(w http.ResponseWriter, r *http.Request) error {
-	path := r.URL.Query().Get("path")
-	if path == "" {
-		return httpapi.Invalid(w, "Invalid query",
-			[]httpapi.ValidationIssue{{Message: "path is required", Path: []string{"path"}}})
+// extractIntoVolume unpacks the request body, a tar, into a volume or host
+// directory (source) mounted at target inside a throwaway helper running image,
+// which is how a file is written into a Docker-managed volume without the app
+// ever touching the host filesystem. The helper runs `tar -x` on its stdin
+// rather than going through Docker's archive endpoint, which can wedge the
+// daemon on a never-started container.
+func (s *Server) extractIntoVolume(w http.ResponseWriter, r *http.Request) error {
+	query := r.URL.Query()
+	var issues []httpapi.ValidationIssue
+	for _, name := range []string{"source", "target", "image"} {
+		if query.Get(name) == "" {
+			issues = append(issues, httpapi.ValidationIssue{Message: name + " is required", Path: []string{name}})
+		}
 	}
-	if err := s.docker.PutContainerArchive(r.Context(), chi.URLParam(r, "id"), path, r.Body); err != nil {
+	if len(issues) > 0 {
+		return httpapi.Invalid(w, "Invalid query", issues)
+	}
+	target := query.Get("target")
+	result, err := s.docker.RunHelper(r.Context(), dockerapi.HelperConfig{
+		Binds: []string{query.Get("source") + ":" + target},
+		Cmd:   []string{"tar", "-C", target, "--numeric-owner", "-xf", "-"},
+		Image: query.Get("image"),
+		Stdin: r.Body,
+	})
+	if err != nil {
 		return err
+	}
+	if result.ExitCode != 0 {
+		return httpapi.Error(w, http.StatusUnprocessableEntity,
+			"Couldn't unpack the archive (tar exited "+strconv.Itoa(result.ExitCode)+"): "+strings.TrimSpace(result.Stderr))
 	}
 	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})
 }

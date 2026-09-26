@@ -2,6 +2,7 @@ import { error } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { ErrorIssueDTO } from "$lib/dto/error-issue-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { serviceHostname } from "$lib/services/dns.service";
@@ -16,10 +17,11 @@ export const load = async ({ params, parent }) => {
 		error(404, "Service not found");
 	}
 
-	const [stack, [lastDeploy], stacks] = await Promise.all([
+	const [stack, [lastDeploy], stacks, openErrors] = await Promise.all([
 		svc.stackId ? StackDTO.get(svc.stackId) : null,
 		DeploymentDTO.listRevisions(svc.id, 1),
 		svc.stackId ? StackDTO.list() : [],
+		ErrorIssueDTO.countOpenByService([svc.id]),
 	]);
 	const parents = new Map(stacks.map((s) => [s.id, s.parentId]));
 	const trail = stack
@@ -43,6 +45,7 @@ export const load = async ({ params, parent }) => {
 		lastDeployedAt: lastDeploy
 			? (lastDeploy.toJSON().finishedAt ?? lastDeploy.toJSON().createdAt)
 			: null,
+		openErrors: openErrors.get(svc.id) ?? 0,
 		stackSlug: stack?.slug ?? null,
 		publicScheme: config.traefik.entrypoint === "web" ? "http" : "https",
 		service: svc.toJSON(),
