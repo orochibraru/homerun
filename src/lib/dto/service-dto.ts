@@ -399,6 +399,12 @@ export class ServiceDTO extends BaseDTO<Service> {
 			envVars: input.envVars,
 			secretEnvKeys: input.secretEnvKeys ?? [],
 			healthcheckCommand: input.healthcheckCommand ?? null,
+			healthcheckDisabled: input.healthcheckDisabled ?? false,
+			healthcheckIntervalSeconds: input.healthcheckIntervalSeconds ?? null,
+			healthcheckRetries: input.healthcheckRetries ?? null,
+			healthcheckStartPeriodSeconds:
+				input.healthcheckStartPeriodSeconds ?? null,
+			healthcheckTimeoutSeconds: input.healthcheckTimeoutSeconds ?? null,
 			id: crypto.randomUUID(),
 			image: input.image,
 			imageScanEnabled: true,
@@ -507,6 +513,31 @@ export class ServiceDTO extends BaseDTO<Service> {
 	/** The container healthcheck command, if one is set. */
 	get healthcheckCommand(): string | null {
 		return this.row.healthcheckCommand;
+	}
+
+	/** Whether every healthcheck is turned off: the image's, Homerun's generated one and the post-deploy readiness probe. */
+	get healthcheckDisabled(): boolean {
+		return this.row.healthcheckDisabled;
+	}
+
+	/** Seconds between healthcheck probes, null for the default. */
+	get healthcheckIntervalSeconds(): number | null {
+		return this.row.healthcheckIntervalSeconds;
+	}
+
+	/** Consecutive failed probes before unhealthy, null for the default. */
+	get healthcheckRetries(): number | null {
+		return this.row.healthcheckRetries;
+	}
+
+	/** Grace period in seconds before failed probes count, null for the default. */
+	get healthcheckStartPeriodSeconds(): number | null {
+		return this.row.healthcheckStartPeriodSeconds;
+	}
+
+	/** Seconds a single probe may run, null for the default. */
+	get healthcheckTimeoutSeconds(): number | null {
+		return this.row.healthcheckTimeoutSeconds;
 	}
 
 	/** The Docker restart policy. */

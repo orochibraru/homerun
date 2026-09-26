@@ -18,6 +18,7 @@ const ReadinessLabel = "homerun.readiness"
 // resolvable, host networking).
 type ReadinessInput struct {
 	ContainerPort      int    `json:"containerPort"`
+	Disabled           bool   `json:"disabled"`
 	HealthcheckCommand string `json:"healthcheckCommand"`
 	PortProtocol       string `json:"portProtocol"`
 	Routed             bool   `json:"routed"`
@@ -25,7 +26,7 @@ type ReadinessInput struct {
 
 // Readiness is what holds a new container or swarm task back from Traefik:
 // "service-healthcheck", "image-healthcheck", "listening" or "none" (with a
-// Reason: "not-routed", "udp-only", "no-shell" or "image-unknown").
+// Reason: "disabled", "not-routed", "udp-only", "no-shell" or "image-unknown").
 type Readiness struct {
 	Kind   string
 	Reason string
@@ -46,13 +47,15 @@ func (in ReadinessInput) hasCommand() bool {
 // NeedsImage reports whether the check depends on the image: only a routed
 // TCP service without its own healthcheck command depends on the image.
 func (in ReadinessInput) NeedsImage() bool {
-	return !in.hasCommand() && in.Routed && in.PortProtocol != "udp"
+	return !in.Disabled && !in.hasCommand() && in.Routed && in.PortProtocol != "udp"
 }
 
 // ReadinessCheck picks how a new workload proves it's ready. image is nil
 // when the image couldn't be inspected or wasn't looked at.
 func ReadinessCheck(in ReadinessInput, image *ImageFacts) Readiness {
 	switch {
+	case in.Disabled:
+		return Readiness{Kind: "none", Reason: "disabled"}
 	case in.hasCommand():
 		return Readiness{Kind: "service-healthcheck"}
 	case !in.Routed:
@@ -87,6 +90,8 @@ func ReadinessDescription(check Readiness, port int, workload string) string {
 		return fmt.Sprintf("Readiness: no healthcheck configured, so Homerun added one that waits for port %d to be listening; the new %s gets traffic only once it passes.", port, workload)
 	}
 	switch check.Reason {
+	case "disabled":
+		return fmt.Sprintf("Readiness: healthchecks are turned off for this service, so the new %s gets traffic as soon as it runs.", workload)
 	case "not-routed":
 		return "Readiness: not published through Traefik, so there's no traffic to hold back."
 	case "udp-only":
@@ -106,6 +111,9 @@ func (r *run) healthcheck(check Readiness) map[string]any {
 		return r.spec.Healthchecks.Service
 	case "listening":
 		return r.spec.Healthchecks.Listening
+	}
+	if check.Reason == "disabled" {
+		return map[string]any{"Test": []string{"NONE"}}
 	}
 	return nil
 }

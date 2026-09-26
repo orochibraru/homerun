@@ -44,7 +44,9 @@
         <a
             class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2"
             href="{resolve('/services')}/{item.id}"
-            title="Through {item.keys.join(', ')}"
+            title={item.keys.length > 0
+                ? `Through ${item.keys.join(", ")}`
+                : "Dependency only, no env vars"}
         >
             <Server class="text-text-subtle size-3.5 shrink-0" />
             <span class="min-w-0">

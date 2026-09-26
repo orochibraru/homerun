@@ -1,13 +1,19 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
+import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { allowLongRequest } from "$lib/server/long-request";
-import { dependencyMap, toGraphService } from "$lib/service-graph";
+import {
+	dependencyLayers,
+	dependencyMap,
+	mergeDependencies,
+	toGraphService,
+} from "$lib/service-graph";
 import {
 	buildLinkEnv,
 	defaultUrlKey,
@@ -138,6 +144,28 @@ function parseBulk(formData: FormData) {
 	return { ids, op: op as BulkOp } as const;
 }
 
+/**
+ * The selected services grouped into batches that run one after another:
+ * dependencies before the services that need them for a start or restart,
+ * the other way round for a stop, and everything at once for a delete.
+ */
+async function bulkLayers(
+	op: BulkOp,
+	services: ServiceDTO[],
+): Promise<ServiceDTO[][]> {
+	if (op === "delete") {
+		return [services];
+	}
+	const byId = new Map(services.map((svc) => [svc.id, svc]));
+	const layers = dependencyLayers(
+		services.map((svc) => svc.id),
+		await ServiceDependencyDTO.map(),
+	);
+	return (op === "stop" ? layers : layers.reverse()).map((layer) =>
+		layer.flatMap((id) => byId.get(id) ?? []),
+	);
+}
+
 async function runBulk(formData: FormData, userId: string) {
 	const parsed = parseBulk(formData);
 	if ("error" in parsed) {
@@ -148,9 +176,14 @@ async function runBulk(formData: FormData, userId: string) {
 		await Promise.all(parsed.ids.map((id) => ServiceDTO.get(id)))
 	).filter((svc): svc is ServiceDTO => svc !== null);
 
-	const settled = await Promise.allSettled(
-		found.map((svc) => runOp(parsed.op, svc, userId)),
-	);
+	const settled: PromiseSettledResult<void>[] = [];
+	for (const layer of await bulkLayers(parsed.op, found)) {
+		// oxlint-disable-next-line no-await-in-loop -- each layer waits for the services the next one depends on
+		const results = await Promise.allSettled(
+			layer.map((svc) => runOp(parsed.op, svc, userId)),
+		);
+		settled.push(...results);
+	}
 
 	const succeeded = settled.filter((r) => r.status === "fulfilled").length;
 	const failed = parsed.ids.length - succeeded;
@@ -199,12 +232,15 @@ export const load = async ({ parent, platform, url }) => {
 		total,
 		tree: everything && {
 			deps: Object.fromEntries(
-				dependencyMap(
-					everything.map((svc) => ({
-						envVars: svc.envVars,
-						id: svc.id,
-						slug: svc.slug,
-					})),
+				mergeDependencies(
+					dependencyMap(
+						everything.map((svc) => ({
+							envVars: svc.envVars,
+							id: svc.id,
+							slug: svc.slug,
+						})),
+					),
+					await ServiceDependencyDTO.map(),
 				),
 			),
 			services: everything.map((svc) => toGraphService(svc.toJSON())),
@@ -217,7 +253,9 @@ export const actions = {
 	 * Writes the connection variables for `targetId` into `serviceId`'s own
 	 * env, the same values the wizard's link picker would have produced. The
 	 * context menu's "Link to…" : a service that needs a database shouldn't
-	 * mean retyping a URL that Homerun can derive.
+	 * mean retyping a URL that Homerun can derive. Every link also records
+	 * the consumer's dependency on the provider (start order), and format
+	 * `none` records only that.
 	 */
 	link: async ({ request, locals }) => {
 		if (!locals.user) {
@@ -249,22 +287,40 @@ export const actions = {
 			name: target.name,
 			slug: target.slug,
 		};
-		const rows = buildLinkEnv({
-			format:
-				format === "vars" || format === "jdbc" || format === "postgresql"
-					? format
-					: "url",
-			prefix: defaultVarPrefix(engine, linkTarget),
-			target: linkTarget,
-			urlKey: defaultUrlKey(engine, linkTarget),
-		});
+		const dependencyOnly = format === "none";
+		const rows = dependencyOnly
+			? []
+			: buildLinkEnv({
+					format:
+						format === "vars" || format === "jdbc" || format === "postgresql"
+							? format
+							: "url",
+					prefix: defaultVarPrefix(engine, linkTarget),
+					target: linkTarget,
+					urlKey: defaultUrlKey(engine, linkTarget),
+				});
 
-		await svc.update({
-			envVars: {
-				...svc.envVars,
-				...Object.fromEntries(rows.map((row) => [row.key, row.value])),
-			},
-		});
+		try {
+			await ServiceDependencyDTO.add(svc.id, target.id);
+		} catch (error) {
+			if (dependencyOnly) {
+				return fail(400, {
+					error: error instanceof Error ? error.message : "Couldn't link them.",
+				});
+			}
+			logger.warn(
+				`Link recorded without a dependency: service=${svc.id} target=${target.id}`,
+				error,
+			);
+		}
+		if (rows.length > 0) {
+			await svc.update({
+				envVars: {
+					...svc.envVars,
+					...Object.fromEntries(rows.map((row) => [row.key, row.value])),
+				},
+			});
+		}
 
 		const groupedInto =
 			formData.get("alsoGroup") === "on"

@@ -29,7 +29,10 @@
     use:enhance={enhanceToast({
       error: `Couldn't unlink ${link.from.name} from ${link.to.name}.`,
       loading: `Unlinking ${link.from.name} from ${link.to.name}`,
-      success: `${link.from.name} no longer points at ${link.to.name}. Redeploy it to apply.`,
+      success:
+        link.keys.length > 0
+          ? `${link.from.name} no longer points at ${link.to.name}. Redeploy it to apply.`
+          : `${link.from.name} no longer depends on ${link.to.name}.`,
     })}
   >
     <input name="targetId" type="hidden" value={link.to.id} />
@@ -40,7 +43,9 @@
   bind:open
   confirmLabel="Unlink"
   description={link
-    ? `Removes the variables in ${link.from.name} that point at ${link.to.name}. It keeps running as it is until its next deploy.`
+    ? link.keys.length > 0
+      ? `Removes ${link.from.name}'s dependency on ${link.to.name} and the variables in it that point there. It keeps running as it is until its next deploy.`
+      : `Removes ${link.from.name}'s dependency on ${link.to.name}, so it no longer starts after it.`
     : ""}
   onConfirm={() => form?.requestSubmit()}
   title={link ? `Unlink ${link.from.name} from ${link.to.name}` : "Unlink"}

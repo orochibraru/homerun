@@ -322,6 +322,10 @@ OIDC provider in `auth.md`) plus:
 - `service_volume`, join table: one mount of one `storage_volume` into one
   `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by
   being mounted into more than one service, no separate stack-volume concept.
+- `service_dependency` (`ServiceDependencyDTO`), one service explicitly
+  depending on another (`serviceId` → `dependsOnId`, both cascade, unique per
+  pair), written by every service link and by compose import's `depends_on`.
+  Drives start order; see Linking in `services-and-templates.md`.
 - `registry_token` (`RegistryTokenDTO`), a push/pull credential for the built-in
   registry (`homerun-mirror`, see Registry in `docker.md`): `username` (unique)
   plus a bcrypt `secretHash` (`Bun.password.hash`), the only hash registry:2's

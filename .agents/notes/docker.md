@@ -719,6 +719,26 @@ healthcheck command can't help either, it's `CMD-SHELL`); stopping the old
 standalone container still races Traefik's `die` handling, one request timed out
 in the live run when a SIGTERM-ignoring old container was killed.
 
+### Per-service healthcheck overrides and the Health tab
+
+`service.healthcheckDisabled` plus nullable
+`healthcheck{Interval,Timeout,StartPeriod}Seconds`/`healthcheckRetries` (null =
+default, `HEALTHCHECK_DEFAULTS` in `docker/healthcheck.ts`). The timing
+overrides feed both `dockerHealthcheck` (the service's command) and
+`listeningHealthcheck` (Homerun's port check, whose start period stays tied to
+`ROLLOUT_WINDOW`). `readiness.disabled` in the worker spec makes
+`ReadinessCheck` return `none`/`disabled` before anything else, and
+`healthcheck()` then creates the workload with `Test: ["NONE"]` so the image's
+own HEALTHCHECK is off too. `RevisionHealthService.#readiness` skips the HTTP
+answer check for a disabled, non-DNS-resolvable or host-network service, the
+same set the deploy's gate treats as not routed: before that, a queue worker
+with no HTTP server (its `PORT` env notwithstanding) was flagged unhealthy on
+every deploy with "It never became ready: Unable to connect". The Health tab
+(`services/[serviceId]/health/`) reads the live container's
+`Config.Healthcheck`/`State.Health` through `DockerService.containerHealthcheck`
+(the worker's raw `/inspect`), so it shows what's applied, not what's
+configured; swarm tasks aren't inspected.
+
 ## Runtime options (`service.command`/`entrypoint`/`envFiles`/`labels`/`capAdd`/`devices`/`privileged`, Runtime tab)
 
 Stored as jsonb argv lists / string lists / a label map plus a boolean;
@@ -880,13 +900,29 @@ the schema, and the container reconciliation this page drives.
 
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 
-Per-service "Terminal" tab, runs `/bin/sh` in the live container (rejects the
-request if the service isn't `currentStatus: "running"`). No WebSocket, neither
-this app nor the Go worker hangs a `ws` upgrade off anything, so it's chunked
-HTTP end to end: `POST .../terminal/open` creates the session,
-`GET .../terminal/[sessionId]/stream` is one long-lived streamed response for
-output (same `ReadableStream` shape as `streamLogs`),
+Per-service "Terminal" tab, a real xterm.js terminal (`@xterm/xterm` +
+`@xterm/addon-fit`, loaded with a dynamic `import()` in `onMount` so SSR never
+touches it) over a `Tty: true` exec in the live container (rejects the request
+if the service isn't `currentStatus: "running"`). The worker's default command
+is `sh -c 'bash if present, else sh'` (`defaultShell` in
+`internal/workerapi/terminal.go`); TERM is whatever the daemon sets for a TTY
+exec (`xterm`). Output is written to xterm untouched, ANSI and all. Keystrokes
+(`onData`) go raw as a `text/plain` body, never line by line: the page keeps one
+input request in flight and batches whatever is typed meanwhile into the next
+one, which both caps the request count and keeps keystrokes in order (two
+parallel POSTs can land out of order). The fit addon plus a `ResizeObserver`
+refits on element resize, and xterm's `onResize` posts `{cols, rows}` to
+`.../terminal/[sessionId]/resize` → `POST /v1/terminal/<id>/resize` → Docker's
+`/exec/<id>/resize`, once right after the session opens too. Colours come from
+the `--color-bg`/`--color-text`/`--color-accent` tokens, converted to `rgba()`
+through a 1px canvas rather than trusting xterm to parse `oklch()`, and re-read
+by a `MutationObserver` on `<html>`'s class when mode-watcher flips dark mode.
+No WebSocket, neither this app nor the Go worker hangs a `ws` upgrade off
+anything, so it's chunked HTTP end to end: `POST .../terminal/open` creates the
+session, `GET .../terminal/[sessionId]/stream` is one long-lived streamed
+response for output (same `ReadableStream` shape as `streamLogs`),
 `POST .../terminal/[sessionId]/input` sends stdin a chunk at a time,
+`POST .../terminal/[sessionId]/resize` resizes the PTY,
 `POST .../terminal/[sessionId]/close` ends it early. Every app route re-checks
 session ownership (`userId` match) independently, `docker/terminal.ts`
 (`DockerTerminalMixin`) only trusts the `containerId` it's given, it doesn't do

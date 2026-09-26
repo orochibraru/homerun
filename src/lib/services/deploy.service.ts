@@ -8,12 +8,14 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import type { JobDTO } from "$lib/dto/job-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
+import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import type { TrivySummary } from "$lib/image-scan";
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
 import { snapshotRevisionConfig } from "$lib/revision-config";
+import { dependencyLayers } from "$lib/service-graph";
 import { isDeployed } from "$lib/service-state";
 import { syncAutoDns } from "./deploy/helpers.ts";
 import {
@@ -581,9 +583,10 @@ class DeploymentServiceClass {
 	}
 
 	/**
-	 * Enqueues a stack deploy: every linked service first, each one's job
-	 * chained (`dependsOnJobId`) after the previous so they deploy in order,
-	 * then the primary service last, depending on the final linked job.
+	 * Enqueues a stack deploy: every linked service first, dependencies
+	 * (`ServiceDependencyDTO`) before the services that need them, each one's
+	 * job chained (`dependsOnJobId`) after the previous so they deploy in
+	 * order, then the primary service last, depending on the final linked job.
 	 *
 	 * @returns The primary service's enqueue result; linked services' own
 	 *   deployment/job ids aren't surfaced to the caller.
@@ -593,8 +596,16 @@ class DeploymentServiceClass {
 		linked: ServiceDTO[],
 		userId: string,
 	): Promise<EnqueueDeployResult> {
+		const byId = new Map(linked.map((svc) => [svc.id, svc]));
+		const ordered = dependencyLayers(
+			linked.map((svc) => svc.id),
+			await ServiceDependencyDTO.map(),
+		)
+			.reverse()
+			.flat()
+			.flatMap((id) => byId.get(id) ?? []);
 		let dependsOnJobId: string | null = null;
-		for (const svc of linked) {
+		for (const svc of ordered) {
 			// oxlint-disable-next-line no-await-in-loop -- each linked service's job id is the next one's dependency, so the chain is built in order
 			const enqueued = await this.enqueueDeploy({
 				dependsOnJobId,

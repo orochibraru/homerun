@@ -136,13 +136,28 @@ export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 // each validated against only its own subset of baseServiceSchema rather
 // than the full create-time shape.
 export const updateGeneralSchema = baseServiceSchema.pick({
-	healthcheckCommand: true,
 	name: true,
 	pullPolicy: true,
 	restartPolicy: true,
 	slug: true,
 });
 export type UpdateGeneralInput = z.infer<typeof updateGeneralSchema>;
+
+const healthSeconds = optionalNumber(z.coerce.number().int().min(1).max(3600));
+
+export const updateHealthSchema = z.object({
+	healthcheckCommand: z.string().trim().max(2000).optional(),
+	healthcheckDisabled: z.preprocess(
+		(val) => val === "on" || val === true,
+		z.boolean(),
+	),
+	healthcheckIntervalSeconds: healthSeconds,
+	healthcheckRetries: optionalNumber(z.coerce.number().int().min(1).max(100)),
+	healthcheckStartPeriodSeconds: optionalNumber(
+		z.coerce.number().int().min(0).max(3600),
+	),
+	healthcheckTimeoutSeconds: healthSeconds,
+});
 
 // Backs the Compute tab : cpu/memory limits and swarm replica count.
 export const updateComputeSchema = baseServiceSchema.pick({

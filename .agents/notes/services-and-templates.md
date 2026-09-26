@@ -30,6 +30,27 @@ service's own Overview tab, or a stack page's right-click **Unlink from** —
 deletes exactly those keys plus any of them marked in `secretEnvKeys`. It only
 ever touches the consumer, and only takes effect on its next deploy.
 
+**Explicit dependencies** (`service_dependency` table, `ServiceDependencyDTO`)
+sit next to the env-inferred ones: every `link` action records a
+consumer→provider row, and format `none` ("Dependency only") records only that,
+writing no env. `ServiceDependencyDTO.add` is idempotent and refuses a self or
+cyclic edge (`createsCycle` in `service-graph.ts`, checked against recorded rows
+only); `link` turns that refusal into a 400 for dependency-only and just skips
+the row (with a warning log) when env vars are written, since two apps calling
+each other over URLs is legitimate. `unlink` drops the row and the env keys, 400
+only when neither existed. Every graph (stack page deps/links, services tree, a
+service's Connections) is `mergeDependencies(dependencyMap(...), recorded)`, so
+a dependency-only link shows up with empty `keys`. Start order reads the
+recorded rows only, never env inference (a hand-written URL isn't a promise the
+other side must be up): `ServiceLifecycleService.startService` recursively
+starts every deployed, not-running dependency first (a `visited` set makes it
+cycle-safe, an undeployed one is skipped, a failing one fails the start);
+`runBulk` runs start/restart in `dependencyLayers(...).reverse()` batches, stop
+in `dependencyLayers` order, delete all at once; `enqueueStackDeploy` reorders
+`linked` the same way before chaining jobs. Compose import records each draft's
+`depends_on` (compose key → created id) after creating the services, skipping
+targets that weren't imported. Rows cascade on either service's delete.
+
 ## Nested stacks and stack-scoped slugs
 
 `stack.parentId` (self-FK, `onDelete: "set null"`, see Data model in

@@ -6,6 +6,7 @@ import {
 	slugifyComposeKey,
 } from "$lib/compose-import";
 import { NotificationDTO } from "$lib/dto/notification-dto";
+import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
@@ -246,6 +247,38 @@ class ComposeImportServiceClass {
 	}
 
 	/**
+	 * Persists each draft's compose `depends_on` as `service_dependency` rows
+	 * between the services just created from them (`drafts[i]` became
+	 * `services[i]`). A target that wasn't imported, or an edge that would
+	 * close a cycle, is skipped.
+	 */
+	async #recordDependencies(
+		drafts: ComposeServiceDraft[],
+		services: ServiceDTO[],
+	): Promise<void> {
+		const idByKey = new Map(
+			drafts.map((draft, index) => [draft.key, services[index].id]),
+		);
+		for (const [index, draft] of drafts.entries()) {
+			for (const key of draft.dependsOn) {
+				const dependsOnId = idByKey.get(key);
+				if (!dependsOnId) {
+					continue;
+				}
+				// oxlint-disable-next-line no-await-in-loop -- each edge's cycle check reads the rows the previous one inserted
+				await ServiceDependencyDTO.add(services[index].id, dependsOnId).catch(
+					(error) => {
+						logger.warn(
+							`Skipped compose dependency: service=${services[index].id} dependsOn=${dependsOnId}`,
+							error,
+						);
+					},
+				);
+			}
+		}
+	}
+
+	/**
 	 * Creates every service (and their stack, if any) from a parsed compose
 	 * file, in dependency order (`orderByDependencies`) so a `depends_on`
 	 * target already exists by the time a dependent service references it.
@@ -277,6 +310,7 @@ class ComposeImportServiceClass {
 			);
 			services.push(created);
 		}
+		await this.#recordDependencies(ordered, services);
 
 		logger.info(
 			`Compose stack imported: services=${services.length} stack=${stackId ?? "none"} user=${input.userId}`,

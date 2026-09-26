@@ -10,9 +10,9 @@ the recent results as two heartbeat strips with an uptime percentage, latency,
 and the reason for the latest failure plus hints for fixing it:
 
 - **From the network**: the container's own port, reached over the Docker
-  network. It runs the service's [healthcheck command](services.md#settings)
-  when it has one, opens a TCP connection for a database image, and makes an
-  HTTP request otherwise.
+  network. It runs the service's [healthcheck command](services.md#health) when
+  it has one, opens a TCP connection for a database image, and makes an HTTP
+  request otherwise.
 - **From its hostname**: the public hostname Traefik publishes
   (`<slug>.<base domain>` or the service's main domain). It's skipped for a
   service that isn't DNS-resolvable, and while the base domain is a loopback
@@ -60,7 +60,10 @@ goes back to its normal never-deployed state and Deploy works again.
 
 ## Terminal
 
-An interactive `/bin/sh` into the live container, from the browser, only
-available while the service is `running`. Open/close events are logged;
-individual keystrokes/commands are not (that's a deliberate scope cut, not an
-oversight, raw TTY bytes don't map cleanly to discrete commands anyway).
+A real terminal into the live container, from the browser, only available while
+the service is `running`. It runs `bash` when the image has it and `sh`
+otherwise, under a TTY sized to the tab, so colours, tab completion, Ctrl-C and
+full-screen tools like `vim`, `top` or `htop` work as they would over SSH. It
+follows the app's light/dark theme. Open/close events are logged; individual
+keystrokes/commands are not (that's a deliberate scope cut, not an oversight,
+raw TTY bytes don't map cleanly to discrete commands anyway).

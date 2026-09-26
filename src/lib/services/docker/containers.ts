@@ -10,6 +10,7 @@ import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
 import { buildContainerLabels } from "./labels.ts";
+import { READINESS_LABEL } from "./readiness.ts";
 import {
 	type ContainerRuntimeParams,
 	mergeLabels,
@@ -39,6 +40,17 @@ export interface PullImageParams {
 	auth?: RegistryAuth;
 	onProgress?: (line: string) => void;
 	remote?: RemoteHostConnection | null;
+}
+
+export interface AppliedHealthcheck {
+	generated: boolean;
+	interval: number | null;
+	log: { at: string | null; exitCode: number | null; output: string | null }[];
+	retries: number | null;
+	startPeriod: number | null;
+	status: string | null;
+	test: string | null;
+	timeout: number | null;
 }
 
 export interface ContainerSample {
@@ -446,6 +458,65 @@ export function DockerContainerMixin<
 			return health
 				? { output: health.output?.trim() || null, status: health.status }
 				: null;
+		}
+
+		/**
+		 * The healthcheck the running container was actually created with
+		 * (the service's, the image's, or Homerun's generated readiness
+		 * check), timings in seconds, plus its live status and last probes.
+		 * Null when the container can't be inspected.
+		 */
+		async containerHealthcheck(
+			containerId: string,
+		): Promise<AppliedHealthcheck | null> {
+			const inspected = await this.worker
+				.get<{
+					Config?: {
+						Healthcheck?: {
+							Interval?: number;
+							Retries?: number;
+							StartPeriod?: number;
+							Test?: string[];
+							Timeout?: number;
+						};
+						Labels?: Record<string, string> | null;
+					};
+					State?: {
+						Health?: {
+							FailingStreak?: number;
+							Log?: { End?: string; ExitCode?: number; Output?: string }[];
+							Status?: string;
+						};
+					};
+				}>(`v1/containers/${containerId}/inspect`)
+				.catch(() => null);
+			if (!inspected) {
+				return null;
+			}
+			const check = inspected.Config?.Healthcheck;
+			const test = check?.Test ?? [];
+			const health = inspected.State?.Health;
+			const seconds = (ns: number | undefined) =>
+				ns ? Math.round(ns / 1_000_000_000) : null;
+			return {
+				generated: !!inspected.Config?.Labels?.[READINESS_LABEL],
+				interval: seconds(check?.Interval),
+				log: (health?.Log ?? []).map((entry) => ({
+					at: entry.End ?? null,
+					exitCode: entry.ExitCode ?? null,
+					output: entry.Output?.trim() || null,
+				})),
+				retries: check?.Retries ?? null,
+				startPeriod: seconds(check?.StartPeriod),
+				status: health?.Status ?? null,
+				test:
+					test.length === 0 || test[0] === "NONE"
+						? null
+						: test[0] === "CMD-SHELL"
+							? test.slice(1).join(" ")
+							: test.slice(test[0] === "CMD" ? 1 : 0).join(" "),
+				timeout: seconds(check?.Timeout),
+			};
 		}
 
 		/** The container's own IP on the first network it's attached to, for the internal liveness probe. */

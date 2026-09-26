@@ -1217,6 +1217,57 @@
 													}
 												]
 											},
+											"healthcheckDisabled": {
+												"type": "boolean"
+											},
+											"healthcheckIntervalSeconds": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"healthcheckRetries": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"healthcheckStartPeriodSeconds": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"healthcheckTimeoutSeconds": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"icon": {
 												"anyOf": [
 													{
@@ -1491,6 +1542,11 @@
 											"previewPrTitle",
 											"previewBranch",
 											"healthcheckCommand",
+											"healthcheckDisabled",
+											"healthcheckIntervalSeconds",
+											"healthcheckRetries",
+											"healthcheckStartPeriodSeconds",
+											"healthcheckTimeoutSeconds",
 											"id",
 											"image",
 											"imageScanEnabled",
@@ -2147,6 +2203,57 @@
 												}
 											]
 										},
+										"healthcheckDisabled": {
+											"type": "boolean"
+										},
+										"healthcheckIntervalSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckRetries": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckStartPeriodSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckTimeoutSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"icon": {
 											"anyOf": [
 												{
@@ -2416,6 +2523,11 @@
 										"previewPrTitle",
 										"previewBranch",
 										"healthcheckCommand",
+										"healthcheckDisabled",
+										"healthcheckIntervalSeconds",
+										"healthcheckRetries",
+										"healthcheckStartPeriodSeconds",
+										"healthcheckTimeoutSeconds",
 										"id",
 										"image",
 										"imageScanEnabled",
@@ -3025,6 +3137,57 @@
 												}
 											]
 										},
+										"healthcheckDisabled": {
+											"type": "boolean"
+										},
+										"healthcheckIntervalSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckRetries": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckStartPeriodSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckTimeoutSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"icon": {
 											"anyOf": [
 												{
@@ -3294,6 +3457,11 @@
 										"previewPrTitle",
 										"previewBranch",
 										"healthcheckCommand",
+										"healthcheckDisabled",
+										"healthcheckIntervalSeconds",
+										"healthcheckRetries",
+										"healthcheckStartPeriodSeconds",
+										"healthcheckTimeoutSeconds",
 										"id",
 										"image",
 										"imageScanEnabled",
@@ -4080,6 +4248,57 @@
 												}
 											]
 										},
+										"healthcheckDisabled": {
+											"type": "boolean"
+										},
+										"healthcheckIntervalSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckRetries": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckStartPeriodSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"healthcheckTimeoutSeconds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"icon": {
 											"anyOf": [
 												{
@@ -4349,6 +4568,11 @@
 										"previewPrTitle",
 										"previewBranch",
 										"healthcheckCommand",
+										"healthcheckDisabled",
+										"healthcheckIntervalSeconds",
+										"healthcheckRetries",
+										"healthcheckStartPeriodSeconds",
+										"healthcheckTimeoutSeconds",
 										"id",
 										"image",
 										"imageScanEnabled",
@@ -4710,15 +4934,80 @@
 														}
 													]
 												},
-												"healthcheckCommand": {
-													"anyOf": [
-														{
-															"type": "string"
+												"healthcheck": {
+													"additionalProperties": false,
+													"properties": {
+														"command": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
 														},
-														{
-															"type": "null"
+														"disabled": {
+															"type": "boolean"
+														},
+														"intervalSeconds": {
+															"anyOf": [
+																{
+																	"maximum": 9007199254740991,
+																	"minimum": -9007199254740991,
+																	"type": "integer"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"retries": {
+															"anyOf": [
+																{
+																	"maximum": 9007199254740991,
+																	"minimum": -9007199254740991,
+																	"type": "integer"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"startPeriodSeconds": {
+															"anyOf": [
+																{
+																	"maximum": 9007199254740991,
+																	"minimum": -9007199254740991,
+																	"type": "integer"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"timeoutSeconds": {
+															"anyOf": [
+																{
+																	"maximum": 9007199254740991,
+																	"minimum": -9007199254740991,
+																	"type": "integer"
+																},
+																{
+																	"type": "null"
+																}
+															]
 														}
-													]
+													},
+													"required": [
+														"command",
+														"disabled",
+														"intervalSeconds",
+														"retries",
+														"startPeriodSeconds",
+														"timeoutSeconds"
+													],
+													"type": "object"
 												},
 												"labels": {
 													"additionalProperties": {
@@ -4738,7 +5027,7 @@
 												"command",
 												"devices",
 												"entrypoint",
-												"healthcheckCommand",
+												"healthcheck",
 												"labels",
 												"privileged"
 											],

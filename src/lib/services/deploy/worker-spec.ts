@@ -10,7 +10,10 @@ import {
 	containerCreateTemplate,
 	type RegistryAuth,
 } from "../docker/containers.ts";
-import { dockerHealthcheck } from "../docker/healthcheck.ts";
+import {
+	dockerHealthcheck,
+	healthcheckTimingOf,
+} from "../docker/healthcheck.ts";
 import {
 	MIRROR_CONTAINER_NAME,
 	MIRROR_INTERNAL_PORT,
@@ -361,18 +364,20 @@ export async function deployWorkerSpec(
 ): Promise<Record<string, unknown>> {
 	const { dep, mounts, plan, svc } = ctx;
 	const runtime = runtimeOptionsFrom(svc.toJSON());
+	const timing = healthcheckTimingOf(svc);
 	return {
 		deploymentId: dep.id,
 		env: Object.entries(svc.envVars ?? {}),
 		envFiles: runtime.envFiles,
 		healthchecks: {
-			listening: listeningHealthcheck(svc.containerPort),
-			service: dockerHealthcheck(svc.healthcheckCommand) ?? null,
+			listening: listeningHealthcheck(svc.containerPort, timing),
+			service: dockerHealthcheck(svc.healthcheckCommand, timing) ?? null,
 		},
 		image: await imageSpec(ctx, plan.image),
 		network: config.docker.networkName,
 		readiness: {
 			containerPort: svc.containerPort,
+			disabled: svc.healthcheckDisabled,
 			healthcheckCommand: svc.healthcheckCommand ?? "",
 			portProtocol: svc.portProtocol ?? "tcp",
 			routed: svc.dnsResolvable && plan.workload.networkMode !== "host",

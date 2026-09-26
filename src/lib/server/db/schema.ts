@@ -850,6 +850,13 @@ export const service = pgTable(
 		containerPort: integer("container_port").notNull(),
 		cpuLimit: text("cpu_limit"),
 		healthcheckCommand: text("healthcheck_command"),
+		healthcheckDisabled: boolean("healthcheck_disabled")
+			.default(false)
+			.notNull(),
+		healthcheckIntervalSeconds: integer("healthcheck_interval_seconds"),
+		healthcheckRetries: integer("healthcheck_retries"),
+		healthcheckStartPeriodSeconds: integer("healthcheck_start_period_seconds"),
+		healthcheckTimeoutSeconds: integer("healthcheck_timeout_seconds"),
 		// Errors older than this are hidden on the Observability tab. Set by
 		// the "Clear errors" button, and automatically by a deploy that goes
 		// live : errorsDismissedByDeploymentId is that revision.
@@ -1159,6 +1166,27 @@ export const serviceVolume = pgTable(
 	(table) => [
 		index("serviceVolume_serviceId_idx").on(table.serviceId),
 		index("serviceVolume_volumeId_idx").on(table.volumeId),
+	],
+);
+
+export const serviceDependency = pgTable(
+	"service_dependency",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		dependsOnId: text("depends_on_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		id: text("id").primaryKey(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		uniqueIndex("serviceDependency_pair_idx").on(
+			table.serviceId,
+			table.dependsOnId,
+		),
+		index("serviceDependency_dependsOnId_idx").on(table.dependsOnId),
 	],
 );
 
@@ -1577,6 +1605,8 @@ export const templateLinkRelations = relations(templateLink, ({ one }) => ({
 }));
 
 export const serviceRelations = relations(service, ({ one, many }) => ({
+	dependedOnBy: many(serviceDependency, { relationName: "dependedOnBy" }),
+	dependencies: many(serviceDependency, { relationName: "dependencies" }),
 	deployments: many(deployment),
 	stack: one(stack, {
 		fields: [service.stackId],
@@ -1612,6 +1642,22 @@ export const serviceVolumeRelations = relations(serviceVolume, ({ one }) => ({
 		references: [storageVolume.id],
 	}),
 }));
+
+export const serviceDependencyRelations = relations(
+	serviceDependency,
+	({ one }) => ({
+		dependsOn: one(service, {
+			fields: [serviceDependency.dependsOnId],
+			references: [service.id],
+			relationName: "dependedOnBy",
+		}),
+		service: one(service, {
+			fields: [serviceDependency.serviceId],
+			references: [service.id],
+			relationName: "dependencies",
+		}),
+	}),
+);
 
 export type UserRole = "admin" | "developer" | "viewer";
 export const statusPage = pgTable(
@@ -1699,6 +1745,7 @@ export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type S3Destination = typeof s3Destination.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
+export type ServiceDependency = typeof serviceDependency.$inferSelect;
 export type BackupRun = typeof backupRun.$inferSelect;
 export type CronJob = typeof cronJob.$inferSelect;
 export type CronJobRun = typeof cronJobRun.$inferSelect;

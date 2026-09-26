@@ -24,6 +24,18 @@ then choose the shape you want:
   `jdbc:postgresql://db:5432/app?user=app&password=secret`.
 - **One variable per value**, e.g. `DB_HOST`, `DB_PORT`, `DB_USER`,
   `DB_PASSWORD`, `DB_DB`.
+- **Dependency only (no env vars)**, the **Link to** dialog only: writes nothing
+  into the environment, just records the link.
+
+Every link from the **Link to** dialog, whatever its shape, also records that
+the consumer depends on the other service. That's what sets start order:
+starting a service starts whatever it depends on first (if it's deployed and not
+already running), a bulk start or restart on the services list runs dependencies
+before the services that need them and a bulk stop runs the other way round, and
+deploying a stack deploys dependencies first. A link that would make two
+services depend on each other, directly or through others, is refused when it's
+dependency only; with env vars the variables are still written, just without the
+recorded dependency.
 
 The suggested variable name (or prefix) is a default, not a rule, rename it to
 whatever your app expects before adding it. The host in every generated value is
@@ -38,8 +50,9 @@ A service's Overview tab has an **Unlink** button on each row of its
 **Connections** panel (see [Deploying](deploying.md)), and a stack page's
 right-click menu offers the same thing as **Unlink from**. Both list exactly
 which env vars will be removed before you confirm, then delete those rows from
-the service that holds them, same as deleting them by hand. It takes effect on
-that service's next deploy.
+the service that holds them, same as deleting them by hand, and drop the
+recorded dependency. The env change takes effect on that service's next deploy;
+a dependency-only link has no variables and is gone at once.
 
 ## Marking a variable secret
 

@@ -1,10 +1,12 @@
 <script lang="ts">
+	import "@xterm/xterm/css/xterm.css";
 	import {
 		AlertTriangle,
 		Loader2,
 		Terminal as TerminalIcon,
 	} from "@lucide/svelte";
-	import { onDestroy, onMount, tick } from "svelte";
+	import type { ITheme, Terminal } from "@xterm/xterm";
+	import { onDestroy, onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import { title } from "$lib/store/title";
 
@@ -14,33 +16,144 @@
 	onMount(() => title.set(`${svc.name} · Terminal`));
 
 	let sessionId = $state<string | null>(null);
-	let lines = $state<string[]>([]);
 	let connecting = $state(false);
 	let errored = $state<string | null>(null);
-	let command = $state("");
 	let termEl = $state<HTMLElement | undefined>();
-	let inputEl = $state<HTMLInputElement | undefined>();
+	let term: Terminal | undefined;
 	let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 	let cancelled = false;
+	let pendingInput = "";
+	let sending = false;
+	const cleanups: (() => void)[] = [];
 
-	// Strips ANSI escape/color codes for readable plain-text rendering : no
-	// terminal-emulator dependency, this is a REPL-style view, not a full
-	// xterm.js pty. Cursor-movement/clear-screen sequences aren't honored,
-	// just stripped, so full-screen TUIs (vim, top) won't render usefully.
-	const ANSI_RE = new RegExp(
-		`${String.fromCharCode(27)}\\[[0-9;]*[a-zA-Z]`,
-		"g",
+	const running = $derived(
+		Boolean(svc.containerId || svc.swarmServiceId) &&
+			svc.currentStatus === "running",
 	);
-	function stripAnsi(text: string): string {
-		return text.replace(ANSI_RE, "");
+
+	const sessionRoutes = {
+		close: "/(protected)/services/[serviceId]/terminal/[sessionId]/close",
+		input: "/(protected)/services/[serviceId]/terminal/[sessionId]/input",
+		resize: "/(protected)/services/[serviceId]/terminal/[sessionId]/resize",
+		stream: "/(protected)/services/[serviceId]/terminal/[sessionId]/stream",
+	} as const;
+
+	function sessionUrl(action: keyof typeof sessionRoutes) {
+		return resolve(sessionRoutes[action], {
+			serviceId: svc.id,
+			sessionId: sessionId ?? "",
+		});
 	}
 
-	async function connect() {
+	function toRgb(color: string): string {
+		const ctx = document.createElement("canvas").getContext("2d");
+		if (!ctx) {
+			return color;
+		}
+		ctx.fillStyle = color;
+		ctx.fillRect(0, 0, 1, 1);
+		const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+		return `rgba(${r}, ${g}, ${b}, ${(a ?? 255) / 255})`;
+	}
+
+	function readTheme(): ITheme {
+		const css = getComputedStyle(document.documentElement);
+		const token = (name: string) => toRgb(css.getPropertyValue(name).trim());
+		return {
+			background: token("--color-bg"),
+			cursor: token("--color-accent"),
+			cursorAccent: token("--color-bg"),
+			foreground: token("--color-text"),
+			selectionBackground: token("--color-accent-glow"),
+		};
+	}
+
+	function flushInput() {
+		if (sending || !pendingInput || !sessionId) {
+			return;
+		}
+		const chunk = pendingInput;
+		pendingInput = "";
+		sending = true;
+		fetch(sessionUrl("input"), { body: chunk, method: "POST" })
+			.then((res) => {
+				if (!res.ok) {
+					errored = "Session ended.";
+				}
+			})
+			.catch(() => {
+				errored = "Connection lost.";
+			})
+			.finally(() => {
+				sending = false;
+				flushInput();
+			});
+	}
+
+	function sendResize(cols: number, rows: number) {
+		if (!sessionId) {
+			return;
+		}
+		fetch(sessionUrl("resize"), {
+			body: JSON.stringify({ cols, rows }),
+			headers: { "Content-Type": "application/json" },
+			method: "POST",
+		}).catch(() => {
+			errored = "Connection lost.";
+		});
+	}
+
+	async function setupTerminal(el: HTMLElement): Promise<Terminal> {
+		const [{ Terminal: XTerm }, { FitAddon }] = await Promise.all([
+			import("@xterm/xterm"),
+			import("@xterm/addon-fit"),
+		]);
+		const css = getComputedStyle(document.documentElement);
+		const terminal = new XTerm({
+			cursorBlink: true,
+			fontFamily: css.getPropertyValue("--font-mono").trim() || "monospace",
+			fontSize: 12,
+			theme: readTheme(),
+		});
+		const fit = new FitAddon();
+		terminal.loadAddon(fit);
+		terminal.open(el);
+		fit.fit();
+
+		const inputSub = terminal.onData((chunk) => {
+			pendingInput += chunk;
+			flushInput();
+		});
+		const resizeSub = terminal.onResize(({ cols, rows }) =>
+			sendResize(cols, rows),
+		);
+		const resizeObserver = new ResizeObserver(() => fit.fit());
+		resizeObserver.observe(el);
+		const themeObserver = new MutationObserver(() => {
+			terminal.options.theme = readTheme();
+		});
+		themeObserver.observe(document.documentElement, {
+			attributeFilter: ["class", "style"],
+		});
+		cleanups.push(
+			() => inputSub.dispose(),
+			() => resizeSub.dispose(),
+			() => resizeObserver.disconnect(),
+			() => themeObserver.disconnect(),
+			() => terminal.dispose(),
+		);
+		return terminal;
+	}
+
+	async function connect(el: HTMLElement) {
 		connecting = true;
 		errored = null;
-		lines = [];
 
 		try {
+			term = await setupTerminal(el);
+			if (cancelled) {
+				return;
+			}
 			const res = await fetch(
 				resolve("/(protected)/services/[serviceId]/terminal/open", {
 					serviceId: svc.id,
@@ -52,52 +165,32 @@
 				errored = body.error ?? "Couldn't open a session.";
 				return;
 			}
-			const { sessionId: openedSessionId } = await res.json();
-			sessionId = openedSessionId;
-			connecting = false;
-
-			if (!sessionId) {
+			const opened: { sessionId?: string } = await res.json();
+			if (!opened.sessionId) {
 				errored = "Couldn't open a session.";
 				return;
 			}
+			sessionId = opened.sessionId;
+			connecting = false;
 
-			const streamRes = await fetch(
-				resolve(
-					"/(protected)/services/[serviceId]/terminal/[sessionId]/stream",
-					{
-						serviceId: svc.id,
-						sessionId,
-					},
-				),
-			);
+			const streamRes = await fetch(sessionUrl("stream"));
 			if (!(streamRes.ok && streamRes.body)) {
 				errored = "Couldn't connect to the session output.";
 				return;
 			}
+			sendResize(term.cols, term.rows);
+			term.focus();
+			flushInput();
 
-			// Unlike the plain log viewer, a shell prompt often has no trailing
-			// newline while it waits for input : so the in-progress last line
-			// has to render too, not just completed ones. `lines`'s final
-			// element is always that in-progress line, replaced (not appended
-			// to) on every chunk until a "\n" promotes it to a completed line.
-			const decoder = new TextDecoder();
 			reader = streamRes.body.getReader();
-			let pending = "";
-			lines = [""];
-
 			while (!cancelled) {
 				// oxlint-disable-next-line no-await-in-loop -- stream reads are inherently sequential
 				const { done, value } = await reader.read();
 				if (done) {
+					errored ??= "Session ended.";
 					break;
 				}
-				pending += stripAnsi(decoder.decode(value, { stream: true }));
-				const parts = pending.split("\n");
-				pending = parts.pop() ?? "";
-				lines = [...lines.slice(0, -1), ...parts, pending];
-				// oxlint-disable-next-line no-await-in-loop -- each chunk renders before the next is read
-				await tick();
-				termEl?.scrollTo({ top: termEl.scrollHeight });
+				term.write(value);
 			}
 		} catch {
 			if (!cancelled) {
@@ -108,47 +201,22 @@
 		}
 	}
 
-	onMount(connect);
-
-	onDestroy(() => {
-		cancelled = true;
-		reader?.cancel();
-		if (sessionId) {
-			fetch(
-				resolve(
-					"/(protected)/services/[serviceId]/terminal/[sessionId]/close",
-					{
-						serviceId: svc.id,
-						sessionId,
-					},
-				),
-				{ method: "POST" },
-			).catch(() => {
-				// Best-effort : the idle reaper will clean it up regardless.
-			});
+	onMount(() => {
+		if (termEl) {
+			void connect(termEl);
 		}
 	});
 
-	async function sendCommand(e: SubmitEvent) {
-		e.preventDefault();
-		if (!sessionId) {
-			return;
+	onDestroy(() => {
+		cancelled = true;
+		reader?.cancel().catch(() => undefined);
+		for (const cleanup of cleanups) {
+			cleanup();
 		}
-		const toSend = `${command}\n`;
-		command = "";
-		await fetch(
-			resolve("/(protected)/services/[serviceId]/terminal/[sessionId]/input", {
-				serviceId: svc.id,
-				sessionId,
-			}),
-			{
-				body: JSON.stringify({ data: toSend }),
-				headers: { "Content-Type": "application/json" },
-				method: "POST",
-			},
-		);
-		inputEl?.focus();
-	}
+		if (sessionId) {
+			fetch(sessionUrl("close"), { method: "POST" }).catch(() => undefined);
+		}
+	});
 </script>
 
 <section class="rounded-md panel">
@@ -168,16 +236,30 @@
   <div class="flex items-start gap-2.5 border-b border-border bg-amber-50 px-5 py-3 text-xs text-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
     <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
     <p>
-      Runs <code>/bin/sh</code> inside this service's live container, with
-      whatever access that shell has : anything you run here can modify or break
-      the running service. Plain-text output only (ANSI codes are stripped), so
-      full-screen tools like <code>vim</code> or
-      <code>top</code>
-      won't render usefully.
+      Runs a shell (<code>bash</code> if the image has it, <code>sh</code>
+      otherwise) inside this service's live container, with whatever access that
+      shell has : anything you run here can modify or break the running service.
     </p>
   </div>
 
-  {#if (!svc.containerId && !svc.swarmServiceId) || svc.currentStatus !== "running"}
+  {#if running}
+    {#if connecting}
+      <p class="flex items-center gap-2 border-b border-border px-5 py-2 text-xs text-text-muted">
+        <Loader2 class="size-3.5 animate-spin" />
+        Opening session…
+      </p>
+    {:else if errored}
+      <p class="border-b border-border px-5 py-2 text-xs text-destructive">
+        {errored}
+      </p>
+    {/if}
+    <div class="h-[32rem] bg-bg p-3">
+      <div
+        class="size-full"
+        bind:this={termEl}
+      ></div>
+    </div>
+  {:else}
     <div class="flex flex-col items-center justify-center py-16 text-center">
       <p class="text-sm font-medium text-text-muted">
         This service isn't running.
@@ -186,38 +268,5 @@
         Deploy or start it first : a terminal needs a live container.
       </p>
     </div>
-  {:else}
-    <div
-      class="h-96 overflow-y-auto log-output"
-      bind:this={termEl}
-    >
-      {#if connecting}
-        <p class="flex items-center gap-2 text-zinc-500">
-          <Loader2 class="size-3.5 animate-spin" />
-          Opening session…
-        </p>
-      {:else if errored}
-        <p class="text-red-400">{errored}</p>
-      {:else}
-        {#each lines as line, i (i)}
-          <div class="break-all whitespace-pre-wrap">{line}</div>
-        {/each}
-      {/if}
-    </div>
-
-    <form
-      class="flex items-center gap-2 border-t border-border p-3"
-      onsubmit={sendCommand}
-    >
-      <span class="font-mono text-xs text-text-subtle">$</span>
-      <input
-        class="flex-1 bg-transparent font-mono text-sm text-text placeholder:text-text-subtle focus:outline-none"
-        disabled={!sessionId || !!errored}
-        placeholder="type a command, press enter"
-        type="text"
-        bind:this={inputEl}
-        bind:value={command}
-      />
-    </form>
   {/if}
 </section>

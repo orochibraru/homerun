@@ -1000,6 +1000,11 @@ export interface operations {
 						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
+						healthcheckDisabled: boolean;
+						healthcheckIntervalSeconds: number | null;
+						healthcheckRetries: number | null;
+						healthcheckStartPeriodSeconds: number | null;
+						healthcheckTimeoutSeconds: number | null;
 						/** @description A bundled template icon file name, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
@@ -1238,6 +1243,11 @@ export interface operations {
 						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
+						healthcheckDisabled: boolean;
+						healthcheckIntervalSeconds: number | null;
+						healthcheckRetries: number | null;
+						healthcheckStartPeriodSeconds: number | null;
+						healthcheckTimeoutSeconds: number | null;
 						/** @description A bundled template icon file name, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
@@ -1433,6 +1443,11 @@ export interface operations {
 						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
+						healthcheckDisabled: boolean;
+						healthcheckIntervalSeconds: number | null;
+						healthcheckRetries: number | null;
+						healthcheckStartPeriodSeconds: number | null;
+						healthcheckTimeoutSeconds: number | null;
 						/** @description A bundled template icon file name, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
@@ -1742,6 +1757,11 @@ export interface operations {
 						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
+						healthcheckDisabled: boolean;
+						healthcheckIntervalSeconds: number | null;
+						healthcheckRetries: number | null;
+						healthcheckStartPeriodSeconds: number | null;
+						healthcheckTimeoutSeconds: number | null;
 						/** @description A bundled template icon file name, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
@@ -1905,7 +1925,14 @@ export interface operations {
 							command: string[] | null;
 							devices: string[];
 							entrypoint: string[] | null;
-							healthcheckCommand: string | null;
+							healthcheck: {
+								command: string | null;
+								disabled: boolean;
+								intervalSeconds: number | null;
+								retries: number | null;
+								startPeriodSeconds: number | null;
+								timeoutSeconds: number | null;
+							};
 							labels: {
 								[key: string]: string;
 							};

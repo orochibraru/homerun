@@ -6,6 +6,7 @@
 		ExternalLink,
 		FileText,
 		HardDrive,
+		HeartPulse,
 		LayoutGrid,
 		Network,
 		Server,
@@ -127,6 +128,15 @@
 			icon: TerminalSquare,
 			id: "runtime",
 			label: "Runtime",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/health", {
+				serviceId: svc.id,
+			}),
+			icon: HeartPulse,
+			id: "health",
+			label: "Health",
 		},
 		{
 			exact: false,

@@ -15,7 +15,8 @@ the deploy was started somewhere else entirely (a template quick-deploy, cron).
 Below it sit a **Resource usage** chart for the service's own container (CPU,
 memory and network traffic, live or over the last hour, day, week, month, year
 or all of it, sampled every minute), a **Connections** panel listing the
-services it references through env vars and the ones that reference it (same
+services it references through env vars or depends on through a
+[service link](env-vars.md), and the ones that reference or depend on it (same
 detection as a stack's dependency graph, see [Stacks](stacks.md)), each with an
 **Unlink** button (see [Env vars](env-vars.md#unlinking)), and a tail of its
 live logs. Deployment history, every attempt with its status, image and full
@@ -40,6 +41,8 @@ Traefik skips a container whose health isn't `healthy` yet, and swarm keeps a
 task out of `running` (so out of Traefik and out of the service's own DNS) until
 its healthcheck passes. The deploy log says which check applies:
 
+- none at all when healthchecks are [turned off](services.md#health) for the
+  service;
 - the service's **healthcheck command**, when set;
 - otherwise the image's own `HEALTHCHECK`;
 - otherwise a check Homerun adds itself, which passes once something in the

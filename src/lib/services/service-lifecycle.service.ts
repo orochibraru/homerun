@@ -1,4 +1,5 @@
 import { config } from "$lib/config";
+import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceGitDTO } from "$lib/dto/service-git-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
@@ -54,13 +55,49 @@ class ServiceLifecycleServiceClass {
 	}
 
 	/**
-	 * Starts a service: scales its swarm service up (to its configured
-	 * replica count) or starts its single container, then persists
-	 * `desiredState: "running"`.
+	 * Starts a service: first each service it depends on
+	 * (`ServiceDependencyDTO`) that is deployed but not running, recursively,
+	 * then scales its swarm service up (to its configured replica count) or
+	 * starts its single container, and persists `desiredState: "running"`.
 	 *
-	 * @throws When the service has no swarm service and no container yet.
+	 * @throws When the service has no swarm service and no container yet, or a
+	 * dependency fails to start.
 	 */
-	async startService(svc: ServiceDTO): Promise<void> {
+	startService(svc: ServiceDTO): Promise<void> {
+		return this.#startWithDependencies(svc, new Set());
+	}
+
+	/**
+	 * `startService`'s recursion: `visited` holds every service already
+	 * handled in this run, so a dependency shared by two branches starts once
+	 * and a cycle ends where it would loop.
+	 *
+	 * @throws When the service has no swarm service and no container yet, or a
+	 * dependency fails to start.
+	 */
+	async #startWithDependencies(
+		svc: ServiceDTO,
+		visited: Set<string>,
+	): Promise<void> {
+		visited.add(svc.id);
+		for (const id of await ServiceDependencyDTO.listForService(svc.id)) {
+			if (visited.has(id)) {
+				continue;
+			}
+			// oxlint-disable-next-line no-await-in-loop -- dependencies start one after another, each before the service that needs it
+			const dep = await ServiceDTO.get(id);
+			// oxlint-disable-next-line no-await-in-loop -- see above
+			if (!dep || (await this.#isRunningOrUndeployed(dep))) {
+				visited.add(id);
+				continue;
+			}
+			// oxlint-disable-next-line no-await-in-loop -- see above
+			await this.#startWithDependencies(dep, visited).catch((error) => {
+				throw new Error(
+					`Couldn't start ${dep.name}, which ${svc.name} depends on: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			});
+		}
 		if (svc.swarmServiceId) {
 			await DockerService.scaleSwarmService(
 				svc.swarmServiceId,
@@ -207,6 +244,19 @@ class ServiceLifecycleServiceClass {
 		).catch((err) => {
 			logger.warn(`Couldn't remove DNS records for service=${svc.id}`, err);
 		});
+	}
+
+	/** Whether a dependency needs no starting: it's already running, or has never been deployed so there's nothing to start. */
+	async #isRunningOrUndeployed(svc: ServiceDTO): Promise<boolean> {
+		if (svc.swarmServiceId) {
+			return svc.currentStatus === "running";
+		}
+		if (!svc.containerId) {
+			return true;
+		}
+		return (
+			(await this.status(svc.containerId).catch(() => "missing")) === "running"
+		);
 	}
 
 	/**

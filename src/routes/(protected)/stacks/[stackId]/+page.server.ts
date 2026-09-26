@@ -1,13 +1,20 @@
+import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
-import { dependencyMap, linkKeys, toGraphService } from "$lib/service-graph";
+import {
+	dependencyMap,
+	linkKeys,
+	mergeDependencies,
+	toGraphService,
+} from "$lib/service-graph";
 import { descendantIds } from "$lib/stack-tree";
 
 export const load = async ({ params, parent }) => {
 	await parent();
-	const [services, stacks] = await Promise.all([
+	const [services, stacks, recorded] = await Promise.all([
 		ServiceDTO.list(),
 		StackDTO.list(),
+		ServiceDependencyDTO.map(),
 	]);
 	const stackNodes = stacks.map((s) => ({
 		id: s.id,
@@ -19,12 +26,15 @@ export const load = async ({ params, parent }) => {
 		params.stackId,
 		...descendantIds(params.stackId, stackNodes),
 	]);
-	const deps = dependencyMap(
-		services.map((svc) => ({
-			envVars: svc.envVars,
-			id: svc.id,
-			slug: svc.slug,
-		})),
+	const deps = mergeDependencies(
+		dependencyMap(
+			services.map((svc) => ({
+				envVars: svc.envVars,
+				id: svc.id,
+				slug: svc.slug,
+			})),
+		),
+		recorded,
 	);
 	const members = services.filter(
 		(svc) => svc.stackId && inTree.has(svc.stackId),

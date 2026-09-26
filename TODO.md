@@ -11,6 +11,11 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Backfill `service_dependency` rows from existing env-var links (links made
+      before the table existed give no start order until re-linked), and expose
+      dependencies in the REST API and MCP.
+- [ ] Browser-check the xterm.js Terminal tab (vim, top, resize, dark mode).
+
 ## Large
 
 <!--  -->

@@ -54,12 +54,14 @@ as a dependency graph rather than a flat list, in either view:
   variable that looks like it names a host (`*_HOST`, `*_URL`, `*_DSN`,
   `*_BROKER`…) — so `POSTGRES_DB=vortex` no longer counts as pointing at a
   service slugged `vortex`, only a value that actually names it as a host does.
-  Each substack gets its own indented section. A dependency outside the stack is
-  marked "in `<stack>`" or "no stack" rather than expanded further; one already
-  shown elsewhere in the tree is marked "shown above" instead of repeating its
-  own dependencies a second time. Right-click a service for **Unlink from**, a
-  submenu of what it points at; confirming lists the exact env vars it will
-  remove and takes effect on that service's next deploy.
+  A dependency recorded by **Link to** (including a dependency-only link with no
+  env vars, see [Env vars](env-vars.md)) counts too. Each substack gets its own
+  indented section. A dependency outside the stack is marked "in `<stack>`" or
+  "no stack" rather than expanded further; one already shown elsewhere in the
+  tree is marked "shown above" instead of repeating its own dependencies a
+  second time. Right-click a service for **Unlink from**, a submenu of what it
+  points at or depends on; confirming lists the exact env vars it will remove
+  (none for a dependency-only link) and drops the recorded dependency.
 - **Card view** is an architecture diagram: each service is a card, consumers
   sit above what they use with an arrow between them, substacks are nested
   boxes, and anything the stack depends on outside itself sits in its own

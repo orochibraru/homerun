@@ -1,9 +1,9 @@
+import { type HealthcheckTiming, healthcheckTiming } from "./healthcheck.ts";
 import { ROLLOUT_WINDOW } from "./rollout.ts";
 
 export const READINESS_LABEL = "homerun.readiness";
 
 const SECOND_NS = 1_000_000_000;
-const MILLISECOND_NS = 1_000_000;
 
 /**
  * The shell script behind the generated readiness check: passes once a
@@ -31,15 +31,25 @@ export function listeningScript(port: number): string {
 /**
  * The Docker `Healthcheck` spec for the generated readiness check: probed
  * every second while starting, for as long as a rollout waits, then every
- * 30s, unhealthy after 3 misses in a row.
+ * 30s, unhealthy after 3 misses in a row. The service's interval, timeout
+ * and retries overrides apply; its start period doesn't, the rollout window
+ * owns that.
  */
-export function listeningHealthcheck(port: number) {
+export function listeningHealthcheck(
+	port: number,
+	timing: HealthcheckTiming = {},
+) {
 	return {
-		Interval: 30 * SECOND_NS,
-		Retries: 3,
+		...healthcheckTiming(
+			{ ...timing, startPeriodSeconds: null },
+			{
+				intervalSeconds: 30,
+				retries: 3,
+				startPeriodSeconds: ROLLOUT_WINDOW.maxWaitMs / 1000,
+				timeoutSeconds: 5,
+			},
+		),
 		StartInterval: SECOND_NS,
-		StartPeriod: ROLLOUT_WINDOW.maxWaitMs * MILLISECOND_NS,
 		Test: ["CMD-SHELL", listeningScript(port)],
-		Timeout: 5 * SECOND_NS,
 	};
 }

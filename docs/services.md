@@ -54,18 +54,35 @@ default, and the only way a moving tag like `:latest` picks up a new build),
 a moving tag goes stale), or **Never** (for an image built or loaded onto the
 host by hand, the deploy fails if it isn't there).
 
-**Healthcheck command** overrides the image's own Docker healthcheck with a
-shell command run inside the container every 30s (exit 0 = healthy). When a
-service has one, its uptime probe reports the healthcheck instead of knocking on
-the container port, which is what a portless container needs. It is also the
-service's [readiness check](deploying.md): a new container or swarm task gets no
-traffic until it passes. Takes effect on the next deploy.
-
 **Save as template** is here too: it snapshots this service's current image,
 tag, port, env vars, resource limits, healthcheck and
 [runtime options](runtime-and-compute.md#runtime) into a reusable template of
 your own, which then behaves exactly like a built-in one, including being
 linkable as a companion to another template. See [Templates](templates.md).
+
+## Health
+
+The **Health** tab shows the healthcheck the running container was actually
+created with: whether it's the service's own command, the image's `HEALTHCHECK`,
+Homerun's generated port check or none, the command itself, its interval,
+timeout, retries and start period, its live status and the last few probes' exit
+codes and output. A swarm service's tasks aren't shown there.
+
+Below it, the service's own settings, each taking effect on the next deploy:
+
+- **Command** overrides the image's own Docker healthcheck with a shell command
+  run inside the container (exit 0 = healthy). When a service has one, its
+  uptime probe reports the healthcheck instead of knocking on the container
+  port, which is what a portless container needs. It is also the service's
+  [readiness check](deploying.md): a new container or swarm task gets no traffic
+  until it passes.
+- **Interval**, **Timeout**, **Retries** and **Start period** override the
+  defaults (30s, 10s, 3 and 30s). Interval, timeout and retries also apply to
+  Homerun's generated port check.
+- **Turn off healthchecks** removes every check: the image's own is overridden
+  with none, Homerun adds no port check, and the
+  [post-deploy health watch](revisions-and-rollback.md) doesn't wait for an HTTP
+  answer. For a background worker that doesn't listen on anything.
 
 ## Everything else a service does
 

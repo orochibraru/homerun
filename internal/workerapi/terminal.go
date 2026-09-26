@@ -25,7 +25,11 @@ const idleTimeout = 15 * time.Minute
 // reapInterval is how often the hub looks for sessions past idleTimeout.
 const reapInterval = time.Minute
 
-// session is one live `/bin/sh` inside a container, with the hijacked stream
+// defaultShell prefers bash and falls back to sh, so a container with bash
+// gets line editing and completion without one without it failing to open.
+var defaultShell = []string{"/bin/sh", "-c", "if [ -x /bin/bash ]; then exec /bin/bash; fi; exec /bin/sh"}
+
+// session is one live shell inside a container, with the hijacked stream
 // it runs over and the set of readers currently watching its output.
 type session struct {
 	mu           sync.Mutex
@@ -65,7 +69,7 @@ func NewTerminalHub(ctx context.Context, docker *dockerapi.Client) *TerminalHub 
 // Open starts a shell in a running container and returns the new session's id.
 func (h *TerminalHub) Open(ctx context.Context, containerID string, command []string) (string, error) {
 	if len(command) == 0 {
-		command = []string{"/bin/sh"}
+		command = defaultShell
 	}
 	execID, err := h.docker.CreateExec(ctx, containerID, dockerapi.ExecConfig{
 		Cmd: command, Stdin: true, Tty: true,

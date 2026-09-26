@@ -37,7 +37,6 @@
 
 	const values = $derived(
 		(form?.values as Record<string, string> | undefined) ?? {
-			healthcheckCommand: svc.healthcheckCommand ?? "",
 			name: svc.name,
 			pullPolicy: svc.pullPolicy,
 			restartPolicy: svc.restartPolicy,
@@ -190,28 +189,6 @@
             {/each}
           </SelectContent>
         </SelectRoot>
-      </div>
-
-      <div>
-        <label class={label} for="healthcheckCommand">Healthcheck command</label>
-        <Input
-          id="healthcheckCommand"
-          name="healthcheckCommand"
-          placeholder="curl -fsS http://127.0.0.1:8080/health"
-          type="text"
-          value={values.healthcheckCommand ?? ""}
-        />
-        <p class="text-text-subtle mt-1.5 text-xs">
-          Runs inside the container through the shell every 30s, exit 0 means
-          healthy. Overrides the image's own healthcheck, drives this service's
-          uptime probe and gates traffic: a new container or swarm task only
-          gets traffic once it passes. Leave blank to keep the image's; with
-          neither, Homerun waits for the port to be listening instead. Redeploy
-          for changes to take effect.
-        </p>
-        {#if errors?.healthcheckCommand}
-          <p class={errorClass}>{errors.healthcheckCommand[0]}</p>
-        {/if}
       </div>
 
       <p class="text-text-subtle text-xs">

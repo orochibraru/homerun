@@ -20,6 +20,7 @@ func TestReadinessCheck(t *testing.T) {
 		image *deploy.ImageFacts
 		want  deploy.Readiness
 	}{
+		{"turned off beats everything", deploy.ReadinessInput{Disabled: true, HealthcheckCommand: "true", Routed: true}, shell, deploy.Readiness{Kind: "none", Reason: "disabled"}},
 		{"the service's command wins", deploy.ReadinessInput{HealthcheckCommand: "true"}, nil, deploy.Readiness{Kind: "service-healthcheck"}},
 		{"nothing to gate without a route", deploy.ReadinessInput{ContainerPort: 80}, shell, deploy.Readiness{Kind: "none", Reason: "not-routed"}},
 		{"the image's own healthcheck", routed, &deploy.ImageFacts{HasHealthcheck: true}, deploy.Readiness{Kind: "image-healthcheck"}},

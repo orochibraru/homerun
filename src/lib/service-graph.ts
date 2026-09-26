@@ -188,3 +188,37 @@ export function dependencyLayers(
 	}
 	return layers.filter((row) => row.length > 0);
 }
+
+/** Every edge of the given dependency maps together, each service's dependencies listed once. */
+export function mergeDependencies(
+	...maps: Map<string, string[]>[]
+): Map<string, string[]> {
+	const merged = new Map<string, string[]>();
+	for (const map of maps) {
+		for (const [id, deps] of map) {
+			merged.set(id, [...new Set([...(merged.get(id) ?? []), ...deps])]);
+		}
+	}
+	return merged;
+}
+
+/** Whether making `from` depend on `to` would close a loop: `to` is `from`, or already depends on it at any depth. */
+export function createsCycle(
+	from: string,
+	to: string,
+	deps: Map<string, string[]>,
+): boolean {
+	const seen = new Set<string>();
+	const stack = [to];
+	while (stack.length > 0) {
+		const current = stack.pop() as string;
+		if (current === from) {
+			return true;
+		}
+		if (!seen.has(current)) {
+			seen.add(current);
+			stack.push(...(deps.get(current) ?? []));
+		}
+	}
+	return false;
+}

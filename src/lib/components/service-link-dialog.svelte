@@ -39,7 +39,7 @@
 
 	let open = $state(false);
 	let linkTargetId = $state("");
-	let linkFormat = $state<LinkFormat>("url");
+	let linkFormat = $state<LinkFormat | "none">("url");
 	let alsoGroup = $state(true);
 
 	const groupHint = $derived.by(() => {
@@ -60,9 +60,10 @@
 		return service && target ? linkRoles(service, target) : null;
 	});
 
-	const formats = $derived(
-		linkFormatsFor(roles ? detectLinkEngine(roles.provider.image) : null),
-	);
+	const formats = $derived<Array<[LinkFormat | "none", string]>>([
+		...linkFormatsFor(roles ? detectLinkEngine(roles.provider.image) : null),
+		["none", "Dependency only (no env vars)"],
+	]);
 
 	$effect(() => {
 		if (!formats.some(([value]) => value === linkFormat)) {
@@ -84,8 +85,8 @@
 
 <ResponsiveDialog
   description={roles
-    ? `Writes ${roles.provider.name}'s connection variables into ${roles.consumer.name}'s environment. Takes effect on its next deploy.`
-    : "Writes the connection variables into whichever of the two uses the other: a database or cache always goes into the app. Takes effect on its next deploy."}
+    ? `Makes ${roles.consumer.name} depend on ${roles.provider.name}, so it starts after it, and writes the connection variables into its environment unless you pick dependency only. Variables take effect on its next deploy.`
+    : "Makes whichever of the two uses the other depend on it, so it starts second, and writes the connection variables into it: a database or cache always goes into the app. Variables take effect on its next deploy."}
   size="sm"
   title="Link {service?.name ?? 'service'}"
   bind:open

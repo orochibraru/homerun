@@ -29,6 +29,11 @@ export interface NewServiceInput {
 	gitRepo?: string | null;
 	autoDeployOnPush?: boolean;
 	healthcheckCommand?: string | null;
+	healthcheckDisabled?: boolean;
+	healthcheckIntervalSeconds?: number | null;
+	healthcheckRetries?: number | null;
+	healthcheckStartPeriodSeconds?: number | null;
+	healthcheckTimeoutSeconds?: number | null;
 	previewBranch?: string | null;
 	previewParentId?: string | null;
 	previewPrNumber?: number | null;
@@ -105,6 +110,11 @@ export type ServiceUpdateInput = Partial<
 		| "previewPrTitle"
 		| "previewBranch"
 		| "healthcheckCommand"
+		| "healthcheckDisabled"
+		| "healthcheckIntervalSeconds"
+		| "healthcheckRetries"
+		| "healthcheckStartPeriodSeconds"
+		| "healthcheckTimeoutSeconds"
 		| "image"
 		| "imageScanEnabled"
 		| "memoryLimitMb"

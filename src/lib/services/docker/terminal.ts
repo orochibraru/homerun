@@ -101,17 +101,50 @@ export function DockerTerminalMixin<
 			return () => controller.abort();
 		}
 
-		/** Writes to the session's stdin. Returns false if the session doesn't exist / isn't owned by this user. */
-		writeToSession(sessionId: string, userId: string, data: string): boolean {
-			const session = this.#sessions.get(sessionId);
-			if (!session || session.userId !== userId) {
+		/**
+		 * Writes raw keystrokes to the session's stdin, resolving once the worker
+		 * has them so consecutive writes can't overtake each other. Returns false
+		 * if the session doesn't exist / isn't owned by this user.
+		 */
+		async writeToSession(
+			sessionId: string,
+			userId: string,
+			data: string,
+		): Promise<boolean> {
+			if (!this.ownsSession(sessionId, userId)) {
 				return false;
 			}
-			this.worker
-				.postRaw(`/v1/terminal/${sessionId}/input`, data)
-				.catch((error: unknown) => {
-					logger.warn(`Couldn't write to terminal session ${sessionId}`, error);
+			try {
+				await this.worker.postRaw(`/v1/terminal/${sessionId}/input`, data);
+			} catch (error) {
+				logger.warn(`Couldn't write to terminal session ${sessionId}`, error);
+				return false;
+			}
+			return true;
+		}
+
+		/**
+		 * Resizes the session's PTY to `cols`x`rows` character cells. Returns
+		 * false if the session doesn't exist / isn't owned by this user, or the
+		 * worker refused the size.
+		 */
+		async resizeSession(
+			sessionId: string,
+			userId: string,
+			size: { cols: number; rows: number },
+		): Promise<boolean> {
+			if (!this.ownsSession(sessionId, userId)) {
+				return false;
+			}
+			try {
+				await this.worker.post(`/v1/terminal/${sessionId}/resize`, {
+					height: size.rows,
+					width: size.cols,
 				});
+			} catch (error) {
+				logger.warn(`Couldn't resize terminal session ${sessionId}`, error);
+				return false;
+			}
 			return true;
 		}
 

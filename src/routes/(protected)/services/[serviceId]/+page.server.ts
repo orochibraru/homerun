@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { JobDTO } from "$lib/dto/job-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
+import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
@@ -23,9 +24,10 @@ function lifecycleFailure(verb: string, error: unknown) {
 
 export const load = async ({ params, parent }) => {
 	const { service: svc } = await parent();
-	const [deployments, siblings] = await Promise.all([
+	const [deployments, siblings, recorded] = await Promise.all([
 		DeploymentDTO.listForService(params.serviceId),
 		ServiceDTO.list(),
+		ServiceDependencyDTO.map(),
 	]);
 
 	const others = siblings.filter((other) => other.id !== params.serviceId);
@@ -36,7 +38,11 @@ export const load = async ({ params, parent }) => {
 			name: other.name,
 			slug: other.slug,
 		}))
-		.filter((other) => other.keys.length > 0);
+		.filter(
+			(other) =>
+				other.keys.length > 0 ||
+				(recorded.get(params.serviceId) ?? []).includes(other.id),
+		);
 	const usedBy = others
 		.map((other) => ({
 			id: other.id,
@@ -44,7 +50,11 @@ export const load = async ({ params, parent }) => {
 			name: other.name,
 			slug: other.slug,
 		}))
-		.filter((other) => other.keys.length > 0);
+		.filter(
+			(other) =>
+				other.keys.length > 0 ||
+				(recorded.get(other.id) ?? []).includes(params.serviceId),
+		);
 
 	return {
 		dependsOn,
@@ -55,9 +65,10 @@ export const load = async ({ params, parent }) => {
 
 export const actions = {
 	/**
-	 * Unlinks this service from `targetId`: drops every env var whose value
-	 * points at the target's host (and its secret mark), so the two stop
-	 * showing as connected. Applied on the next deploy, like any env change.
+	 * Unlinks this service from `targetId`: drops its recorded dependency on
+	 * the target and every env var whose value points at the target's host
+	 * (and its secret mark), so the two stop showing as connected. The env
+	 * change applies on the next deploy.
 	 */
 	unlink: async ({ params, locals, request }) => {
 		if (!locals.user) {
@@ -72,17 +83,22 @@ export const actions = {
 			return fail(404, { error: "Service not found." });
 		}
 		const removed = linkKeys(svc.envVars, target.slug);
-		if (removed.length === 0) {
+		const hadDependency = await ServiceDependencyDTO.remove(svc.id, target.id);
+		if (removed.length === 0 && !hadDependency) {
 			return fail(400, {
 				error: `${svc.name} doesn't point at ${target.name}.`,
 			});
 		}
-		await svc.update({
-			envVars: Object.fromEntries(
-				Object.entries(svc.envVars).filter(([key]) => !removed.includes(key)),
-			),
-			secretEnvKeys: svc.secretEnvKeys.filter((key) => !removed.includes(key)),
-		});
+		if (removed.length > 0) {
+			await svc.update({
+				envVars: Object.fromEntries(
+					Object.entries(svc.envVars).filter(([key]) => !removed.includes(key)),
+				),
+				secretEnvKeys: svc.secretEnvKeys.filter(
+					(key) => !removed.includes(key),
+				),
+			});
+		}
 		logger.info(
 			`Service unlinked: service=${svc.id} target=${target.id} vars=${removed.join(",")} user=${locals.user.id}`,
 		);

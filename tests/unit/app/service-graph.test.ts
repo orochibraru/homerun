@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
+	createsCycle,
 	dependencyForest,
 	dependencyLayers,
 	dependencyMap,
 	linkKeys,
+	mergeDependencies,
 	referencesHost,
 } from "../../../src/lib/service-graph";
 import {
@@ -196,6 +198,56 @@ describe("nested stacks", () => {
 			["media", 0],
 			["vortex", 1],
 			["cache", 2],
+		]);
+	});
+});
+
+describe("recorded dependencies", () => {
+	const deps = new Map([
+		["app", ["api"]],
+		["api", ["db", "cache"]],
+		["worker", ["db"]],
+	]);
+
+	test("merging keeps every edge once", () => {
+		expect(
+			mergeDependencies(
+				new Map([["app", ["api"]]]),
+				new Map([
+					["app", ["api", "db"]],
+					["db", []],
+				]),
+			),
+		).toEqual(
+			new Map([
+				["app", ["api", "db"]],
+				["db", []],
+			]),
+		);
+	});
+
+	test("a dependency can't point at itself or back up the chain", () => {
+		expect(createsCycle("db", "db", deps)).toBe(true);
+		expect(createsCycle("db", "app", deps)).toBe(true);
+		expect(createsCycle("cache", "api", deps)).toBe(true);
+		expect(createsCycle("worker", "api", deps)).toBe(false);
+		expect(createsCycle("app", "worker", deps)).toBe(false);
+	});
+
+	test("reversed layers start dependencies before what needs them", () => {
+		expect(
+			dependencyLayers(["app", "worker", "api", "db", "cache"], deps).reverse(),
+		).toEqual([["db", "cache"], ["api"], ["app", "worker"]]);
+	});
+
+	test("a cycle still yields every service once", () => {
+		const looped = new Map([
+			["a", ["b"]],
+			["b", ["a"]],
+		]);
+		expect(dependencyLayers(["a", "b"], looped).flat().toSorted()).toEqual([
+			"a",
+			"b",
 		]);
 	});
 });

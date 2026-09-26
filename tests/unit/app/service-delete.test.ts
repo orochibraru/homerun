@@ -47,6 +47,8 @@ const fakeDocker: Record<string, unknown> = {
 };
 
 const webhooksRemoved: string[] = [];
+const dependencies = new Map<string, string[]>();
+const servicesById = new Map<string, unknown>();
 const previewsByParent = new Map<string, unknown[]>();
 
 const { config } = await import("../../../src/lib/config");
@@ -66,6 +68,9 @@ const { GitWebhookService } = await import(
 	"../../../src/lib/services/git-webhook.service"
 );
 const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
+const { ServiceDependencyDTO } = await import(
+	"../../../src/lib/dto/service-dependency-dto"
+);
 const { ServiceLifecycleService } = await import(
 	"../../../src/lib/services/service-lifecycle.service"
 );
@@ -141,8 +146,16 @@ beforeEach(() => {
 	stub(Logger.prototype, "warn", (message: string) => {
 		warnings.push(message);
 	});
+	stub(
+		ServiceDependencyDTO,
+		"listForService",
+		async (id: string) => dependencies.get(id) ?? [],
+	);
+	stub(ServiceDTO, "get", async (id: string) => servicesById.get(id) ?? null);
 	webhooksRemoved.length = 0;
 	previewsByParent.clear();
+	dependencies.clear();
+	servicesById.clear();
 });
 
 afterEach(() => {
@@ -247,6 +260,50 @@ describe("ServiceLifecycleService start/stop/restart", () => {
 		await ServiceLifecycleService.startService(svc);
 		expect(dockerCalls).toEqual([["startContainer", "c1"]]);
 		expect(state.updates).toEqual([{ desiredState: "running" }]);
+	});
+
+	test("startService starts stopped dependencies first, once, and skips running or undeployed ones", async () => {
+		const db = fakeService({ containerId: "db1", id: "db", name: "db" });
+		const cache = fakeService({
+			containerId: null,
+			id: "cache",
+			name: "cache",
+		});
+		const api = fakeService({ containerId: "api1", id: "api", name: "api" });
+		const app = fakeService({ containerId: "app1", id: "app", name: "app" });
+		for (const { svc } of [db, cache, api, app]) {
+			servicesById.set((svc as unknown as { id: string }).id, svc);
+		}
+		dependencies.set("app", ["api", "db", "cache"]);
+		dependencies.set("api", ["db", "app"]);
+		stub(DockerService, "inspectStatus", async (id: string) =>
+			id === "api1" ? "stopped" : id === "db1" ? "stopped" : "running",
+		);
+
+		await ServiceLifecycleService.startService(app.svc);
+
+		expect(dockerCalls).toEqual([
+			["startContainer", "db1"],
+			["startContainer", "api1"],
+			["startContainer", "app1"],
+		]);
+		expect(cache.state.updates).toEqual([]);
+	});
+
+	test("a dependency that fails to start fails the start, naming it", async () => {
+		const db = fakeService({ containerId: "db1", id: "db", name: "db" });
+		servicesById.set("db", db.svc);
+		dependencies.set("s1", ["db"]);
+		stub(DockerService, "inspectStatus", async () => "stopped");
+		stub(DockerService, "startContainer", async () => {
+			throw new Error("boom");
+		});
+		const { state, svc } = fakeService();
+
+		await expect(ServiceLifecycleService.startService(svc)).rejects.toThrow(
+			"Couldn't start db, which web depends on: boom",
+		);
+		expect(state.updates).toEqual([]);
 	});
 
 	test("startService scales a swarm service to its replicas, at least 1", async () => {

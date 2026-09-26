@@ -35,4 +35,6 @@ matches) and is mounted into the service at its declared path. A service that
 published a host port gets a public `<slug>.<domain>` route; one that only
 `expose`d a port stays internal. You can drop individual services from the
 import, put them in a new or existing stack, and optionally deploy everything
-straight away, in `depends_on` order.
+straight away, in `depends_on` order. Each `depends_on` between imported
+services is kept as a recorded dependency, so later starts and stack deploys
+follow the same order (see [Env vars](env-vars.md)).

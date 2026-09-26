@@ -127,9 +127,19 @@ class RevisionHealthServiceClass {
 	 * The service's own HTTP answer on its container port, the uptime probe's
 	 * internal check, or null when that check isn't HTTP (a database's TCP
 	 * connect, or its own Docker healthcheck, which the health sample already
-	 * covers) or couldn't run.
+	 * covers) or couldn't run. Also null for a service with healthchecks
+	 * turned off or nothing routed to it (not DNS resolvable, host
+	 * networking), the same services the deploy's readiness gate skips: a
+	 * background worker with no HTTP server isn't unready for not answering.
 	 */
 	async #readiness(svc: ServiceDTO): Promise<ReadinessSample | null> {
+		if (
+			svc.healthcheckDisabled ||
+			!svc.dnsResolvable ||
+			svc.networkMode === "host"
+		) {
+			return null;
+		}
 		const result = await readinessProbe.probeInternal(svc).catch(() => null);
 		if (!result?.target?.startsWith("http://")) {
 			return null;

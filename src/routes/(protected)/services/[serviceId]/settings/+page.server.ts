@@ -166,7 +166,6 @@ export const actions = {
 		}
 
 		await svc.update({
-			healthcheckCommand: input.healthcheckCommand || null,
 			name: input.name,
 			pullPolicy: input.pullPolicy,
 			restartPolicy: input.restartPolicy,
