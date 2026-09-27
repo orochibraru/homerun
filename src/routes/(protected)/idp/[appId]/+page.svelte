@@ -107,7 +107,7 @@
     </Alert>
   {/if}
 
-  <div class="grid gap-6 lg:grid-cols-2">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <section class="panel rounded-md">
       <PanelHeader
         description="Where Homerun may send someone back after they sign in. Anything else is refused."

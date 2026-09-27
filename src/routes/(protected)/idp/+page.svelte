@@ -92,7 +92,7 @@
     </Alert>
   {:else}
     <section class="panel mb-6 rounded-md p-5">
-      <div class="grid gap-4 md:grid-cols-2">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <p class={labelClass}>Issuer</p>
           <CopyBox label="issuer" truncate value={data.issuer} />
