@@ -9,5 +9,10 @@
 	"tags": ["tasks", "todo", "kanban", "project-management"],
 	"websiteUrl": "https://vikunja.io",
 	"sourceUrl": "https://github.com/go-vikunja/vikunja",
-	"envVars": {}
+	"envVars": {
+		"VIKUNJA_DATABASE_PATH": "/app/vikunja/files/vikunja.db",
+		"VIKUNJA_SERVICE_JWTSECRET": "{{secret}}",
+		"VIKUNJA_SERVICE_PUBLICURL": "{{url}}"
+	},
+	"volumes": ["/app/vikunja/files"]
 }

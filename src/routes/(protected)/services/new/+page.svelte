@@ -219,6 +219,7 @@
           {image}
           {slug}
           {tag}
+          templateVolumes={data.template?.volumes ?? []}
           volumes={data.volumes}
         />
         <ComputeStep

@@ -553,6 +553,13 @@
 			"when": 1790512147163,
 			"tag": "0078_fixed_black_knight",
 			"breakpoints": true
+		},
+		{
+			"idx": 79,
+			"version": "7",
+			"when": 1790521729511,
+			"tag": "0079_deep_prism",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

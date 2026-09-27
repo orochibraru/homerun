@@ -34,6 +34,7 @@ export async function seedBuiltinTemplates(): Promise<void> {
 				ownerId: null,
 				restartPolicy: "unless-stopped" as const,
 				updatedAt: now,
+				volumes: t.volumes ?? [],
 			})),
 		)
 		.onConflictDoUpdate({
@@ -57,6 +58,7 @@ export async function seedBuiltinTemplates(): Promise<void> {
 				tag: sql`excluded.tag`,
 				tags: sql`excluded.tags`,
 				updatedAt: now,
+				volumes: sql`excluded.volumes`,
 				websiteUrl: sql`excluded.website_url`,
 			},
 			target: template.id,

@@ -13,7 +13,7 @@ const { ServiceVolumeDTO } = await import(
 const { StorageVolumeDTO } = await import(
 	"../../../src/lib/dto/storage-volume-dto"
 );
-const { attachDefaultDataVolume } = await import(
+const { attachDefaultDataVolume, attachTemplateVolumes } = await import(
 	"../../../src/lib/services/default-volume"
 );
 
@@ -74,6 +74,30 @@ describe("attachDefaultDataVolume", () => {
 			{ id: "b", image: "redis", slug: "cache", tag: "8" },
 			"user-1",
 		);
+		expect(created).toEqual([]);
+	});
+});
+
+describe("attachTemplateVolumes", () => {
+	test("each declared path gets its own volume, named like the wizard's", async () => {
+		const { attached, created } = record(0);
+		await attachTemplateVolumes(
+			{ id: "svc-1", slug: "npm" },
+			["/data", "/etc/letsencrypt"],
+			"user-1",
+		);
+		expect(created.map((v) => (v as { name: string }).name)).toEqual([
+			"npm-data",
+			"npm-data-1",
+		]);
+		expect(
+			attached.map((m) => (m as { containerPath: string }).containerPath),
+		).toEqual(["/data", "/etc/letsencrypt"]);
+	});
+
+	test("a template with no declared paths gets nothing", async () => {
+		const { created } = record(0);
+		await attachTemplateVolumes({ id: "svc-1", slug: "app" }, [], "user-1");
 		expect(created).toEqual([]);
 	});
 });

@@ -9,5 +9,12 @@
 	"tags": ["cron", "monitoring", "alerts", "heartbeat"],
 	"websiteUrl": "https://healthchecks.io",
 	"sourceUrl": "https://github.com/healthchecks/healthchecks",
-	"envVars": {}
+	"envVars": {
+		"ALLOWED_HOSTS": "*",
+		"DB": "sqlite",
+		"DB_NAME": "/data/hc.sqlite",
+		"SECRET_KEY": "{{secret}}",
+		"SITE_ROOT": "{{url}}"
+	},
+	"volumes": ["/data"]
 }

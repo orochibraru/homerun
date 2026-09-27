@@ -82,7 +82,8 @@ export class OnboardingWizard {
 			return null;
 		}
 		try {
-			return new URL(this.effectiveOrigin).host;
+			const url = new URL(this.effectiveOrigin);
+			return /^[\d.]+$|^\[/.test(url.hostname) ? null : url.host;
 		} catch {
 			return null;
 		}

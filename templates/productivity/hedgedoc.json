@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "HedgeDoc",
-	"description": "Collaborative markdown notes, Notion-alternative-ish.",
+	"description": "Collaborative markdown notes. Uses a linked Postgres database.",
 	"image": "quay.io/hedgedoc/hedgedoc",
 	"tag": "latest",
 	"containerPort": 3000,
@@ -9,5 +9,15 @@
 	"tags": ["notes", "markdown", "collaboration", "writing"],
 	"websiteUrl": "https://hedgedoc.org",
 	"sourceUrl": "https://github.com/hedgedoc/hedgedoc",
-	"envVars": {}
+	"envVars": {
+		"CMD_DB_URL": "postgres://{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}",
+		"CMD_SESSION_SECRET": "{{secret}}"
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		}
+	],
+	"volumes": ["/hedgedoc/public/uploads"]
 }

@@ -9,5 +9,10 @@
 	"tags": ["speedtest", "bandwidth", "network", "monitoring"],
 	"websiteUrl": "https://speedtest-tracker.dev",
 	"sourceUrl": "https://github.com/alexjustesen/speedtest-tracker",
-	"envVars": {}
+	"envVars": {
+		"APP_KEY": "{{secret:hex32}}",
+		"APP_URL": "{{url}}",
+		"DB_CONNECTION": "sqlite"
+	},
+	"volumes": ["/config"]
 }

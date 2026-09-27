@@ -9,5 +9,8 @@
 	"tags": ["dashboard", "start-page", "bookmarks", "widgets"],
 	"websiteUrl": "https://homarr.dev",
 	"sourceUrl": "https://github.com/homarr-labs/homarr",
-	"envVars": {}
+	"envVars": {
+		"SECRET_ENCRYPTION_KEY": "{{secret:hex64}}"
+	},
+	"volumes": ["/appdata"]
 }

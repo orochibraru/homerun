@@ -11,6 +11,13 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Run-as-user (or volume ownership) for services and templates: Vikunja runs
+      as uid 1000 from a `scratch` image, and a fresh named volume at
+      `/app/vikunja/files` comes up root-owned, so it can't write its files or
+      SQLite database. Add the option, set it on
+      `templates/productivity/vikunja.json` and drop its entry from `SKIP` in
+      `tests/e2e/templates/deploy.spec.ts`.
+
 - [ ] Release channels: exercise against a real git provider (a tag push
       deploying stable, a branch push deploying canary); everything else about
       them is built and checked in a browser.

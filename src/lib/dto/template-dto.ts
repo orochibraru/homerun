@@ -210,6 +210,7 @@ export class TemplateDTO extends BaseDTO<Template> {
 			tag: input.tag,
 			tags: input.tags ?? [],
 			updatedAt: now,
+			volumes: [],
 			websiteUrl: input.websiteUrl ?? null,
 		};
 		await db.insert(template).values(row);

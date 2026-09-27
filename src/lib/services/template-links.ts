@@ -1,3 +1,4 @@
+import { config } from "$lib/config";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
@@ -8,6 +9,7 @@ import {
 	templatesNeedingHostAccess,
 } from "$lib/host-access";
 import { Logger } from "$lib/logger";
+import { defaultHostname } from "$lib/service-domains";
 import { isDatabaseImage } from "$lib/service-link";
 import type { ServiceRuntimeOptions } from "$lib/service-runtime";
 import { stackScopedSlug, uniqueSlug } from "$lib/slug";
@@ -17,8 +19,12 @@ import {
 	generateTemplateSecret,
 	secretEnvKeysOf,
 } from "$lib/template-secrets";
+import { fillUrlInEnv } from "$lib/template-url";
 import { CapacityService } from "./capacity.service.ts";
-import { attachDefaultDataVolume } from "./default-volume";
+import {
+	attachDefaultDataVolume,
+	attachTemplateVolumes,
+} from "./default-volume";
 import { DeploymentService } from "./deploy.service";
 
 const logger = new Logger("Templates");
@@ -237,11 +243,18 @@ export async function createServiceFromTemplate(
 			: stackId;
 
 	const secret = generateTemplateSecret();
-	const envVars = fillSecretInEnv(
-		links.length > 0
-			? resolveEnvVarsWithLinks(row.envVars ?? {}, links)
-			: (row.envVars ?? {}),
-		secret,
+	const finalStackSlug =
+		finalStackId && finalStackId !== stackId
+			? (await StackDTO.get(finalStackId))?.slug
+			: stackSlug;
+	const envVars = fillUrlInEnv(
+		fillSecretInEnv(
+			links.length > 0
+				? resolveEnvVarsWithLinks(row.envVars ?? {}, links)
+				: (row.envVars ?? {}),
+			secret,
+		),
+		`https://${defaultHostname(slug, finalStackSlug, config.baseDomain)}`,
 	);
 
 	const svc = await ServiceDTO.create({
@@ -265,6 +278,7 @@ export async function createServiceFromTemplate(
 		tag: row.tag,
 		userId,
 	});
+	await attachTemplateVolumes(svc, row.volumes, userId);
 	await attachDefaultDataVolume(svc, userId);
 
 	const linkedServices =

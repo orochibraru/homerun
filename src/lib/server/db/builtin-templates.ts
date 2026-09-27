@@ -19,6 +19,7 @@ export interface BuiltinTemplate extends Partial<ServiceRuntimeOptions> {
 	sourceUrl: string | null;
 	tag: string;
 	tags: string[];
+	volumes?: string[];
 	websiteUrl: string | null;
 }
 
@@ -47,7 +48,11 @@ export const builtinTemplateFileSchema = z
 		devices: z.array(z.string()).optional(),
 		entrypoint: argv.optional(),
 		envFiles: z.array(z.string()).optional(),
-		envVars: z.record(z.string(), tokenized),
+		envVars: z
+			.record(z.string(), tokenized)
+			.describe(
+				"{{secret}} or {{secret:hex<N>}} for a generated secret, {{url}} for the service's public URL, {{alias}}/{{alias.VAR}} for a linked service.",
+			),
 		healthcheckCommand: z.string().optional(),
 		icon: z
 			.string()
@@ -78,6 +83,12 @@ export const builtinTemplateFileSchema = z
 		sourceUrl: z.url().nullable(),
 		tag: z.string().min(1),
 		tags: z.array(z.string().min(1).max(30)).min(1).max(12),
+		volumes: z
+			.array(z.string().regex(/^\/\S*$/))
+			.optional()
+			.describe(
+				"Container paths that keep data: each gets its own named volume (<slug>-data, <slug>-data-1, …) when the template is deployed.",
+			),
 		websiteUrl: z.url().nullable(),
 	})
 	.describe(

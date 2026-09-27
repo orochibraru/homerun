@@ -38,7 +38,12 @@ not just a new tag.
 
 A database or cache deployed from a template, or pulled in as a linked
 container, gets its own data volume, see
-[Storage volumes](storage-volumes.md#a-databases-data-volume).
+[Storage volumes](storage-volumes.md#a-databases-data-volume). A built-in app
+template that keeps data on disk (Ghost, Vaultwarden, Nginx Proxy Manager, …)
+declares its data paths, and each one gets a named volume too: `<slug>-data`,
+then `<slug>-data-1`, and so on. Quick Deploy creates them straight away; the
+deploy wizard pre-fills them on its Volumes step, where you can rename or drop
+them.
 
 ## Host access
 
@@ -109,6 +114,11 @@ Env vars on the primary template can then reference a companion:
   hex characters. Any length from 1 to 999 works (`{{secret:hex32}}`), and
   unlike `{{secret}}` every occurrence gets its own value. Built-in templates
   fail validation on any other `{{secret:…}}` token.
+- `{{url}}` becomes the service's public URL, `https://<slug>.<base domain>` (or
+  the custom domain you typed in the wizard), for apps that must know their own
+  address, like Vikunja's `VIKUNJA_SERVICE_PUBLICURL` or Joplin Server's
+  `APP_BASE_URL`. The wizard shows the token as is and fills it in when you
+  create the service.
 
 An alias that doesn't resolve is left in the deployed env var verbatim rather
 than silently blanked, so a typo is visible instead of mysterious.

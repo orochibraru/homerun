@@ -1,0 +1,1 @@
+ALTER TABLE "template" ADD COLUMN "volumes" jsonb DEFAULT '[]'::jsonb NOT NULL;

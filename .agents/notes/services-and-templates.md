@@ -860,6 +860,18 @@ chars, and both mark their env var secret. `parseBuiltinTemplates` rejects any
 other `{{secret…}}` spelling, so a typo fails the unit test instead of shipping
 a literal token.
 
+`{{url}}` (`$lib/template-url.ts`) is the service's public URL,
+`https://<defaultHostname>`, filled by `createServiceFromTemplate` (Quick
+Deploy) and by the wizard's create action (which prefers the custom domain it
+was given); the wizard's form shows the raw token. A built-in template's
+`volumes` (container paths, `template.volumes`) get one named volume each
+through `default-volume.ts`'s `attachTemplateVolumes`, named like the wizard's
+new volumes (`<slug>-data`, `<slug>-data-1`), before `attachDefaultDataVolume`
+runs (which then sees a mount and bails); the wizard pre-fills them as "New
+volume" rows instead. Both exist because the templates E2E suite showed ten
+templates crash-looping or 500ing on a fresh deploy for want of a data volume, a
+generated key or their own URL.
+
 `seed.ts` loads them with Vite's `import.meta.glob(..., { eager: true })`, so
 they're bundled into the compiled binary at build time, nothing reads the disk
 at runtime. That also means `seed.ts` can't be imported outside Vite (bun tests

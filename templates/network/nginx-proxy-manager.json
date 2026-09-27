@@ -9,5 +9,6 @@
 	"tags": ["proxy", "reverse-proxy", "ssl", "nginx"],
 	"websiteUrl": "https://nginxproxymanager.com",
 	"sourceUrl": "https://github.com/NginxProxyManager/nginx-proxy-manager",
-	"envVars": {}
+	"envVars": {},
+	"volumes": ["/data", "/etc/letsencrypt"]
 }

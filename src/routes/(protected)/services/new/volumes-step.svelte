@@ -23,10 +23,19 @@
 		image: string;
 		slug: string;
 		tag: string;
+		templateVolumes?: string[];
 		volumes: WizardVolume[];
 	}
 
-	const { errors, hidden, image, slug, tag, volumes }: Props = $props();
+	const {
+		errors,
+		hidden,
+		image,
+		slug,
+		tag,
+		templateVolumes = [],
+		volumes,
+	}: Props = $props();
 
 	const NEW_VOLUME = "new";
 
@@ -37,7 +46,16 @@
 		volumeId: string;
 	}
 
-	const volumeRows = $state<VolumeRow[]>([]);
+	const volumeRows = $state<VolumeRow[]>(
+		untrack(() =>
+			templateVolumes.map((containerPath) => ({
+				containerPath,
+				newName: "",
+				readOnly: false,
+				volumeId: NEW_VOLUME,
+			})),
+		),
+	);
 	let defaultRow: VolumeRow | null = null;
 	let defaultPath = "";
 

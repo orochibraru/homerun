@@ -18,6 +18,7 @@ import {
 	createServiceSchema,
 	parseEnvVars,
 } from "$lib/server/validation/service";
+import { defaultHostname } from "$lib/service-domains";
 import { CapacityService } from "$lib/services/capacity.service";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
@@ -36,6 +37,7 @@ import {
 	secretEnvKeysOf,
 	submittedSecret,
 } from "$lib/template-secrets";
+import { fillUrlInEnv } from "$lib/template-url";
 
 const logger = new Logger("Services");
 
@@ -335,6 +337,29 @@ async function attachVolumeMounts(
 	);
 }
 
+/**
+ * The submitted env vars with `{{alias}}` tokens resolved against the
+ * template's linked services and `{{url}}` filled with the service's public
+ * URL: its custom domain when one was given, else its default hostname.
+ */
+async function formEnvVars(
+	formData: FormData,
+	links: Awaited<ReturnType<typeof buildTemplateLinkContext>>,
+	target: { domain: string | undefined; slug: string; stackId: string | null },
+): Promise<Record<string, string>> {
+	const stackSlug = target.stackId
+		? (await StackDTO.get(target.stackId))?.slug
+		: null;
+	const host =
+		target.domain || defaultHostname(target.slug, stackSlug, config.baseDomain);
+	return fillUrlInEnv(
+		links.length > 0
+			? resolveEnvVarsWithLinks(parseEnvVars(formData), links)
+			: parseEnvVars(formData),
+		`https://${host}`,
+	);
+}
+
 /** The StorageVolume a wizard row points at, created on the spot when the row asks for a new or host volume. */
 function resolveMountVolume(
 	mount: VolumeMountInput,
@@ -441,10 +466,11 @@ async function createServiceFromForm(
 	}
 	const { links, stackId, template } = prepared;
 
-	const envVars =
-		links.length > 0
-			? resolveEnvVarsWithLinks(parseEnvVars(formData), links)
-			: parseEnvVars(formData);
+	const envVars = await formEnvVars(formData, links, {
+		domain: input.domain,
+		slug: input.slug,
+		stackId,
+	});
 
 	const svc = await ServiceDTO.create({
 		...templateIdentity(template),

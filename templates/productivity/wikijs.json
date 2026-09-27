@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Wiki.js",
-	"description": "Wiki platform with a setup wizard on first visit (choose SQLite there for a zero-config start).",
+	"description": "Wiki platform with a setup wizard on first visit. Uses a linked Postgres database.",
 	"image": "requarks/wiki",
 	"tag": "latest",
 	"containerPort": 3000,
@@ -9,5 +9,18 @@
 	"tags": ["wiki", "docs", "knowledge-base"],
 	"websiteUrl": "https://js.wiki",
 	"sourceUrl": "https://github.com/requarks/wiki",
-	"envVars": {}
+	"envVars": {
+		"DB_HOST": "{{db}}",
+		"DB_NAME": "{{db.POSTGRES_DB}}",
+		"DB_PASS": "{{db.POSTGRES_PASSWORD}}",
+		"DB_PORT": "5432",
+		"DB_TYPE": "postgres",
+		"DB_USER": "{{db.POSTGRES_USER}}"
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		}
+	]
 }

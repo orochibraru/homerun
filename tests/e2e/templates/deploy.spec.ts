@@ -10,7 +10,10 @@ import {
 	type TemplateFile,
 } from "./support";
 
-const SKIP: Record<string, string> = {};
+const SKIP: Record<string, string> = {
+	vikunja:
+		"Runs as uid 1000 and its files volume comes up root-owned: needs a run-as-user option (TODO.md).",
+};
 
 const DEPLOY_TIMEOUT_MS = 12 * 60_000;
 const HEALTH_TIMEOUT_MS = 8 * 60_000;

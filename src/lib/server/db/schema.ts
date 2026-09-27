@@ -773,6 +773,7 @@ export const template = pgTable(
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
+		volumes: jsonb("volumes").$type<string[]>().default([]).notNull(),
 		websiteUrl: text("website_url"),
 	},
 	(table) => [index("template_ownerId_idx").on(table.ownerId)],

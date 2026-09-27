@@ -188,6 +188,9 @@ Signing in for the first time drops you into a six-step onboarding wizard:
 
 1. **Core**, your base domain (the DNS suffix deployed services are routed
    under, so a service lands at `<slug>.<your domain>`) and the dashboard URL.
+   The base domain starts as the address you opened the dashboard on, unless
+   that's an IP address: `<slug>.192.168.1.10` isn't a valid hostname, so type a
+   real domain there.
 2. **Docker**, the socket path and the shared network name. The detected
    defaults are almost always right.
 3. **Traefik**, which entrypoint and certificate resolver your services' routes

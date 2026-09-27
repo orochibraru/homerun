@@ -63,6 +63,7 @@
 			"additionalProperties": {
 				"type": "string"
 			},
+			"description": "{{secret}} or {{secret:hex<N>}} for a generated secret, {{url}} for the service's public URL, {{alias}}/{{alias.VAR}} for a linked service.",
 			"propertyNames": {
 				"type": "string"
 			},
@@ -138,6 +139,14 @@
 			},
 			"maxItems": 12,
 			"minItems": 1,
+			"type": "array"
+		},
+		"volumes": {
+			"description": "Container paths that keep data: each gets its own named volume (<slug>-data, <slug>-data-1, …) when the template is deployed.",
+			"items": {
+				"pattern": "^\\/\\S*$",
+				"type": "string"
+			},
 			"type": "array"
 		},
 		"websiteUrl": {

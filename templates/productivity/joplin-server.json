@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Joplin Server",
-	"description": "Sync server for the Joplin note-taking app.",
+	"description": "Sync server for the Joplin note-taking app. Uses a linked Postgres database.",
 	"image": "joplin/server",
 	"tag": "latest",
 	"containerPort": 22300,
@@ -9,5 +9,20 @@
 	"tags": ["notes", "sync", "markdown"],
 	"websiteUrl": "https://joplinapp.org",
 	"sourceUrl": "https://github.com/laurent22/joplin",
-	"envVars": {}
+	"envVars": {
+		"APP_BASE_URL": "{{url}}",
+		"APP_PORT": "22300",
+		"DB_CLIENT": "pg",
+		"POSTGRES_DATABASE": "{{db.POSTGRES_DB}}",
+		"POSTGRES_HOST": "{{db}}",
+		"POSTGRES_PASSWORD": "{{db.POSTGRES_PASSWORD}}",
+		"POSTGRES_PORT": "5432",
+		"POSTGRES_USER": "{{db.POSTGRES_USER}}"
+	},
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		}
+	]
 }
