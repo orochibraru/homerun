@@ -38,7 +38,7 @@ export interface NewStackInput {
 }
 
 export type StackUpdateInput = Partial<
-	Pick<Stack, "description" | "name" | "parentId" | "slug">
+	Pick<Stack, "description" | "icon" | "name" | "parentId" | "slug">
 >;
 
 /** Wraps the `stack` table : see ServiceDTO for the pattern this follows. */
@@ -176,6 +176,7 @@ export class StackDTO extends BaseDTO<Stack> {
 		const row: Stack = {
 			createdAt: now,
 			description: input.description ?? null,
+			icon: null,
 			id: crypto.randomUUID(),
 			name: input.name,
 			parentId: input.parentId ?? null,
@@ -280,6 +281,10 @@ export class StackDTO extends BaseDTO<Stack> {
 	/** The stack's free-text description, if any. */
 	get description(): string | null {
 		return this.row.description;
+	}
+	/** The stack's icon: a bundled library path, a `di:` Dashboard Icons name or an uploaded data URL; null for the default. */
+	get icon(): string | null {
+		return this.row.icon;
 	}
 	/** The stack's URL-safe slug. */
 	get slug(): string {

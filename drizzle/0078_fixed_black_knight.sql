@@ -1,0 +1,1 @@
+ALTER TABLE "stack" ADD COLUMN "icon" text;

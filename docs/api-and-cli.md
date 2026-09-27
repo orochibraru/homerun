@@ -197,12 +197,11 @@ Nothing can connect to it until you allow it: MCP clients can't register
 themselves, an admin creates each one.
 
 - **claude.ai** (and Claude Desktop, which uses the same connectors): on the
-  **Authentication** page's **Sign in with Homerun** tab, click **Register
-  app**, then **Claude connector**, then **Register app**. In Claude, open
-  Settings → Connectors → Add custom connector, paste the MCP URL above, and
-  under Advanced settings the client ID and secret Homerun just showed you.
-  Claude sends you to Homerun's sign-in page, Homerun asks you to allow it, and
-  from then on it acts as you.
+  **IDP** page (under Integrations), click **Register app**, then **Claude
+  connector**, then **Register app**. In Claude, open Settings → Connectors →
+  Add custom connector, paste the MCP URL above, and under Advanced settings the
+  client ID and secret Homerun just showed you. Claude sends you to Homerun's
+  sign-in page, Homerun asks you to allow it, and from then on it acts as you.
 - **Claude Code**, or anything headless: no OAuth client needed, pass an API key
   instead, created under Profile → Authorized Clients. A read-only key gives an
   agent that can diagnose but not change anything.
@@ -240,8 +239,7 @@ doesn't look like one (`TMDB_API`) is caught only once you mark it secret on the
 Env vars tab; an app that prints its own secrets in some other form still leaks
 them in its logs. To disconnect Claude, revoke it under Profile → Authorized
 Clients (it can't refresh its access any more, and the token it holds expires
-within the hour), or delete its app under Authentication → Sign in with Homerun
-to cut it off for everyone.
+within the hour), or delete its app on the IDP page to cut it off for everyone.
 
 ## CLI
 

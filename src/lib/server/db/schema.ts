@@ -406,6 +406,7 @@ export const stack = pgTable(
 	{
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
+		icon: text("icon"),
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
 		parentId: text("parent_id").references((): AnyPgColumn => stack.id, {

@@ -202,8 +202,7 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   live Swagger UI
 - **[MCP server](docs/api-and-cli.md#mcp-server-for-ai-agents)**: let Claude or
   any MCP agent diagnose and fix your services; claude.ai signs in through an
-  OAuth client you register under Authentication → Sign in with Homerun, Claude
-  Code uses an API key instead
+  OAuth client you register on the IDP page, Claude Code uses an API key instead
 - **[The `homerun` CLI](cmd/cli/README.md)**: a small (~6MB) standalone Go
   binary, logs in through a device-code flow and updates itself
 

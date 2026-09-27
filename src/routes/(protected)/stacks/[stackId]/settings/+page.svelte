@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { AlertTriangle, Check, Trash2 } from "@lucide/svelte";
+	import { AlertTriangle, Check, FolderKanban, Trash2 } from "@lucide/svelte";
 	import { onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
+	import IconPicker from "$lib/components/icon-picker.svelte";
+	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -31,6 +33,8 @@
 	let forceDeleteDialogOpen = $state(false);
 	let detachError = $state("");
 	let parentId = $derived(stack.parentId ?? "");
+	let icon = $derived(stack.icon ?? "");
+	let savingIcon = $state(false);
 </script>
 
 <div>
@@ -89,6 +93,42 @@
       <div class="flex justify-end">
         <Button disabled={renaming} type="submit">
           {#if renaming}
+            <Spinner />
+          {:else}
+            <Check class="size-4" />
+          {/if}
+          Save
+        </Button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel mb-4 rounded-xl">
+    <div class="panel-head">
+      <h2 class="eyebrow">Icon</h2>
+    </div>
+    <form
+      action="?/updateIcon"
+      class="space-y-4 p-4"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't save the icon.",
+        loading: "Saving the icon",
+        onSettled: () => {
+          savingIcon = false;
+        },
+        onStart: () => {
+          savingIcon = true;
+        },
+        success: "Saved.",
+      })}
+    >
+      <input name="icon" type="hidden" value={icon}>
+      <TemplateIcon class="size-14" fallback={FolderKanban} icon={icon || null} />
+      <IconPicker icons={data.icons} storedWith="stack" bind:icon />
+      <div class="flex justify-end">
+        <Button disabled={savingIcon} type="submit">
+          {#if savingIcon}
             <Spinner />
           {:else}
             <Check class="size-4" />

@@ -75,7 +75,7 @@
         issuer={data.issuer}
       />
       <div class="flex justify-end">
-        <Button href={resolve("/authentication/apps")}>
+        <Button href={resolve("/idp")}>
           Done
           <ArrowRight class="size-4" />
         </Button>
@@ -120,7 +120,7 @@
         <OauthAppFields {values} />
 
         <div class="flex justify-end gap-2">
-          <Button href={resolve("/authentication/apps")} type="button" variant="ghost">
+          <Button href={resolve("/idp")} type="button" variant="ghost">
             Cancel
           </Button>
           <Button disabled={submitting} type="submit">Register app</Button>

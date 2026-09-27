@@ -7,6 +7,7 @@ import {
 	CloudUpload,
 	Container,
 	Database,
+	Fingerprint,
 	FolderKanban,
 	GitBranch,
 	Globe,
@@ -153,6 +154,14 @@ export const allNavItems = [
 		href: resolve("/dns"),
 		icon: Globe,
 		label: "DNS",
+	},
+	{
+		adminOnly: true,
+		category: "Integrations",
+		exact: false,
+		href: resolve("/idp"),
+		icon: Fingerprint,
+		label: "IDP",
 	},
 	{
 		adminOnly: false,

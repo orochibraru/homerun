@@ -1,4 +1,5 @@
 export interface StackNode {
+	icon?: string | null;
 	id: string;
 	name: string;
 	parentId: string | null;

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		Activity,
+		FolderKanban,
 		FolderPlus,
 		LayoutGrid,
 		Plus,
@@ -10,6 +11,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
+	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 
 	const { data, children } = $props();
@@ -47,11 +49,14 @@
 
 <div class="p-5 md:p-6">
   <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
-    <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">{stack.name}</h1>
-      <p class="text-text-muted mt-0.5 text-xs">
-        {stack.description ?? `Services on the ${stack.slug} network.`}
-      </p>
+    <div class="flex items-center gap-3">
+      <TemplateIcon class="size-10 rounded-lg" fallback={FolderKanban} icon={stack.icon} />
+      <div>
+        <h1 class="text-text text-lg font-semibold tracking-tight">{stack.name}</h1>
+        <p class="text-text-muted mt-0.5 text-xs">
+          {stack.description ?? `Services on the ${stack.slug} network.`}
+        </p>
+      </div>
     </div>
     <div class="flex flex-wrap gap-2">
       <Button

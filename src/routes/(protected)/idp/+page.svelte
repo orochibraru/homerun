@@ -1,18 +1,30 @@
 <script lang="ts">
 	import { AppWindow, ExternalLink, Plus } from "@lucide/svelte";
+	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import CopyBox from "$lib/components/copy-box.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { title } from "$lib/store/title";
 
 	const { data } = $props();
+
+	onMount(() => title.set("IDP"));
 </script>
 
-<div class="space-y-6">
+<div class="p-5 md:p-6">
+  <div class="mb-8">
+    <h1 class="text-text text-lg font-semibold tracking-tight">IDP</h1>
+    <p class="text-text-muted mt-1 text-sm">
+      Homerun as an identity provider: the apps that sign in with Homerun
+      accounts.
+    </p>
+  </div>
+
   <section class="panel rounded-md">
     <div class="border-border flex flex-col items-start gap-3 border-b px-5 py-4 sm:flex-row sm:justify-between sm:gap-4">
       <div>
-        <h2 class="eyebrow">Sign in with Homerun</h2>
+        <h2 class="eyebrow">OpenID Connect apps</h2>
         <p class="text-text-muted text-xs">
           Homerun is also an OpenID Connect provider: apps you host can use these
           accounts, with the same passkey and two-factor rules, instead of their
@@ -20,7 +32,7 @@
         </p>
       </div>
       {#if data.oidcDiscoveryUrl}
-        <Button href={resolve("/authentication/apps/new")} size="sm">
+        <Button href={resolve("/idp/new")} size="sm">
           <Plus class="size-4" />
           Register app
         </Button>
@@ -50,7 +62,7 @@
           {#each data.oauthApps as app (app.id)}
             <a
               class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3"
-              href={resolve("/(protected)/authentication/apps/[appId]", { appId: app.id })}
+              href={resolve("/(protected)/idp/[appId]", { appId: app.id })}
             >
               <div
                 class="flex size-8 shrink-0 items-center justify-center rounded-lg {app.disabled

@@ -9,8 +9,8 @@ sign-in methods) applies to these sign-ins too.
 It needs the **Dashboard URL** set under Settings → General: Homerun signs
 tokens as that address, and apps discover everything else from it.
 
-**Registering an app.** On the Authentication page's **Sign in with Homerun**
-tab, click **Register app**:
+**Registering an app.** On the **IDP** page (Integrations in the sidebar, admins
+only), click **Register app**:
 
 - **Name**: shown on the consent screen.
 - **Redirect URIs**: the callback URL from the app's own OIDC settings, one per

@@ -18,6 +18,7 @@ export const load = async ({ params, parent }) => {
 		ServiceDependencyDTO.map(),
 	]);
 	const stackNodes = stacks.map((s) => ({
+		icon: s.icon,
 		id: s.id,
 		name: s.name,
 		parentId: s.parentId,

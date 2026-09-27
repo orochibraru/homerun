@@ -164,24 +164,21 @@ describe("MCP server", () => {
 			.map((entry) => entry.split(";")[0])
 			.join("; ");
 
-		const createdRes = await nativeFetch(
-			`${origin}/authentication/apps/new?/create`,
-			{
-				body: new URLSearchParams({
-					clientType: "confidential",
-					name: "Claude",
-					redirectUris: redirectUri,
-					requirePkce: "on",
-				}),
-				headers: {
-					accept: "application/json",
-					"content-type": "application/x-www-form-urlencoded",
-					cookie,
-					origin,
-				},
-				method: "POST",
+		const createdRes = await nativeFetch(`${origin}/idp/new?/create`, {
+			body: new URLSearchParams({
+				clientType: "confidential",
+				name: "Claude",
+				redirectUris: redirectUri,
+				requirePkce: "on",
+			}),
+			headers: {
+				accept: "application/json",
+				"content-type": "application/x-www-form-urlencoded",
+				cookie,
+				origin,
 			},
-		);
+			method: "POST",
+		});
 		const envelope = (await createdRes.json()) as {
 			data?: string;
 			type: string;

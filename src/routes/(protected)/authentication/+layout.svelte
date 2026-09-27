@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AppWindow, KeyRound, LockKeyhole, UserRound } from "@lucide/svelte";
+	import { KeyRound, LockKeyhole, UserRound } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -20,12 +20,6 @@
 			icon: KeyRound,
 			id: "providers",
 			label: "Providers",
-		},
-		{
-			href: resolve("/authentication/apps"),
-			icon: AppWindow,
-			id: "apps",
-			label: "Sign in with Homerun",
 		},
 		{
 			href: resolve("/authentication/protected"),
@@ -49,8 +43,8 @@
         Authentication
       </h1>
       <p class="text-text-muted mt-1 text-sm">
-        Who can sign in to Homerun, the apps that sign in with it, and which
-        methods each protected app accepts.
+        Who can sign in to Homerun, and which methods each protected app
+        accepts.
       </p>
     </div>
 

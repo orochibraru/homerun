@@ -546,6 +546,13 @@
 			"when": 1790454330808,
 			"tag": "0077_clear_cloak",
 			"breakpoints": true
+		},
+		{
+			"idx": 78,
+			"version": "7",
+			"when": 1790512147163,
+			"tag": "0078_fixed_black_knight",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

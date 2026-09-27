@@ -21,8 +21,10 @@ clean up by hand.
 Assign a service to a stack on the New Service wizard, or move it later from the
 service's Settings tab. A stack's **Monitoring** tab has the same per-service
 resource usage table as the dashboard, scoped to its members; its **Settings**
-tab renames it (name, slug, description), moves it (see Nesting below) and
-deletes it.
+tab renames it (name, slug, description), sets its icon (the same icon library,
+Dashboard Icons and uploads as a service's), moves it (see Nesting below) and
+deletes it. The icon shows on `/stacks`, the stack's page header and its heading
+inside a parent stack.
 
 ## Nesting
 
@@ -65,9 +67,13 @@ as a dependency graph rather than a flat list, in either view:
 - **Card view** is an architecture diagram: each service is a card, consumers
   sit above what they use with an arrow between them, substacks are nested
   boxes, and anything the stack depends on outside itself sits in its own
-  "Outside this stack" box. Hovering a card highlights only its own arrows. Drag
-  a card to untangle a crossing arrow — the layout is remembered in your browser
-  per stack, and **Reset layout** puts every card back where it started.
+  "Outside this stack" box. Hovering a card highlights only its own arrows. The
+  diagram sits on a canvas you can pan (drag the background, or scroll) and zoom
+  (`Ctrl` or `⌘` and scroll, or the zoom buttons); **Fit** frames the whole
+  diagram. Drag a card to untangle a crossing arrow, or drag a substack's box to
+  move it with everything inside it. The layout is remembered in your browser
+  per stack, and **Reset layout** puts every card and substack back where it
+  started.
 
 Searching drops the graph for a flat, filtered list, since a matched subset
 doesn't have a tree worth drawing. The **Architecture** switch next to the view

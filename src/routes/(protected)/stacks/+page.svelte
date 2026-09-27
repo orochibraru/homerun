@@ -21,6 +21,7 @@
 	import EntityToolbar from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
 	import StackMoveDialog from "$lib/components/stack-move-dialog.svelte";
+	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
@@ -147,10 +148,12 @@
         </ContextMenu.Root>
       {/snippet}
 
-      {#snippet media(_item: { id: string })}
-        <span class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <FolderKanban class="size-4" />
-        </span>
+      {#snippet media(item: { id: string })}
+        <TemplateIcon
+          class="size-8 rounded-lg"
+          fallback={FolderKanban}
+          icon={data.stacks.find((p) => p.id === item.id)?.icon ?? null}
+        />
       {/snippet}
 
       {#snippet meta(item: { id: string })}

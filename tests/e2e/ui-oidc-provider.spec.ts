@@ -27,7 +27,7 @@ async function registerApp(
 	await signIn(page);
 	await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
 
-	await page.goto("/authentication/apps/new");
+	await page.goto("/idp/new");
 	await page.locator("#name").fill(name);
 	await page.locator("#redirectUris").fill(CALLBACK);
 	if (!skipConsent) {

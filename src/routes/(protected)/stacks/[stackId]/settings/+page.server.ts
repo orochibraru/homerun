@@ -2,6 +2,8 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
+import { listIconLibrary } from "$lib/server/icon-library";
+import { iconProblem } from "$lib/service-icon";
 import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 import { descendantIds, stackPath } from "$lib/stack-tree";
@@ -11,7 +13,8 @@ const SLUG_RE = /^[a-z0-9-]{1,63}$/;
 
 export const load = async ({ params, parent }) => {
 	await parent();
-	const stacks = (await StackDTO.list()).map((s) => ({
+	const [all, icons] = await Promise.all([StackDTO.list(), listIconLibrary()]);
+	const stacks = all.map((s) => ({
 		id: s.id,
 		name: s.name,
 		parentId: s.parentId,
@@ -22,6 +25,7 @@ export const load = async ({ params, parent }) => {
 		...descendantIds(params.stackId, stacks),
 	]);
 	return {
+		icons,
 		parentOptions: stacks
 			.filter((s) => !excluded.has(s.id))
 			.map((s) => ({ id: s.id, path: stackPath(s.id, stacks) }))
@@ -30,6 +34,26 @@ export const load = async ({ params, parent }) => {
 };
 
 export const actions = {
+	updateIcon: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const stack = await StackDTO.get(params.stackId);
+		if (!stack) {
+			return fail(404, { error: "Stack not found." });
+		}
+		const icon = String((await request.formData()).get("icon") ?? "");
+		const bundled = (await listIconLibrary()).map((i) => i.icon);
+		const problem = icon === stack.icon ? null : iconProblem(icon, bundled);
+		if (problem) {
+			return fail(400, { error: problem });
+		}
+		await stack.update({ icon: icon || null });
+		logger.info(
+			`Stack icon updated: stack=${stack.id} icon=${icon.startsWith("data:") ? "upload" : icon || "none"} user=${locals.user.id}`,
+		);
+		return { success: true };
+	},
 	move: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

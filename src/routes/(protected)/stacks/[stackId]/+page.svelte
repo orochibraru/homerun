@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { FolderInput, LayoutGrid, Plus, Server } from "@lucide/svelte";
+	import {
+		FolderInput,
+		FolderKanban,
+		LayoutGrid,
+		Plus,
+		Server,
+	} from "@lucide/svelte";
 	import { onMount, type Snippet } from "svelte";
 	import { resolve } from "$app/paths";
 	import EntityList from "$lib/components/entity-list.svelte";
@@ -196,11 +202,16 @@
             <ContextMenu.Root>
               <ContextMenu.Trigger class="mb-2 inline-block">
                 <a
-                  class="eyebrow text-text-muted hover:text-text"
+                  class="eyebrow text-text-muted hover:text-text flex items-center gap-2"
                   href={resolve("/(protected)/stacks/[stackId]", {
                     stackId: section.id,
                   })}
                 >
+                  <TemplateIcon
+                    class="size-7 rounded-md"
+                    fallback={FolderKanban}
+                    icon={section.icon ?? null}
+                  />
                   {section.name}
                 </a>
               </ContextMenu.Trigger>

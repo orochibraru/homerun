@@ -326,6 +326,13 @@ export const SEARCH_PAGES: SearchPage[] = [
 	},
 	{
 		adminOnly: true,
+		href: "/idp",
+		keywords: ["oidc", "openid", "sso", "sign in with homerun", "oauth apps"],
+		label: "IDP",
+		section: "Integrations",
+	},
+	{
+		adminOnly: true,
 		href: "/settings/email",
 		keywords: ["smtp", "mail"],
 		label: "Email Settings",
