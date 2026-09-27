@@ -8,6 +8,7 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
 import { REDIRECT_TO_PARAM, safeRedirectTarget } from "$lib/redirect-target";
 import { withDashboardOrigin } from "$lib/server/canonical-origin";
+import { brandedEmail } from "$lib/server/email-layout";
 import { EmailService } from "./email.service.ts";
 
 const logger = new Logger("EmailSignIn");
@@ -113,41 +114,43 @@ export async function emailSignInAvailability(): Promise<EmailSignIn> {
 	return (await InstanceSettingsDTO.get()).emailSignIn;
 }
 
-/** The plain-text sign-in code email. */
+/** The sign-in code email, branded HTML plus its plain-text twin. */
 export function signInCodeEmail(code: string): {
 	content: string;
+	html: string;
 	subject: string;
 } {
 	const where = config.auth.origin ? ` at ${config.auth.origin}` : "";
 	return {
-		content: [
-			"Your Homerun sign-in code is:",
-			"",
-			`    ${code}`,
-			"",
-			`Enter it on the sign-in page to finish signing in. It expires in ${EMAIL_CODE_TTL_SECONDS / 60} minutes and works once.`,
-			"",
-			`If you didn't try to sign in to Homerun${where}, ignore this email: nobody can sign in without the code.`,
-		].join("\n"),
+		...brandedEmail({
+			code,
+			footnote: `If you didn't try to sign in to Homerun${where}, ignore this email: nobody can sign in without the code.`,
+			heading: "Your sign-in code",
+			paragraphs: [
+				`Enter this code on the sign-in page to finish signing in. It expires in ${EMAIL_CODE_TTL_SECONDS / 60} minutes and works once.`,
+			],
+			preheader: `${code} is your Homerun sign-in code.`,
+		}),
 		subject: `${code} is your Homerun sign-in code`,
 	};
 }
 
-/** The plain-text sign-in link email. */
+/** The sign-in link email. */
 export function signInLinkEmail(link: string): {
 	content: string;
+	html: string;
 	subject: string;
 } {
 	return {
-		content: [
-			"Open this link to sign in to Homerun:",
-			"",
-			link,
-			"",
-			`It expires in ${EMAIL_CODE_TTL_SECONDS / 60} minutes and works once, in whichever browser you open it.`,
-			"",
-			"If you didn't ask to sign in, ignore this email: nobody can sign in without the link.",
-		].join("\n"),
+		...brandedEmail({
+			action: { label: "Sign in to Homerun", url: link },
+			footnote:
+				"If you didn't ask to sign in, ignore this email: nobody can sign in without the link.",
+			heading: "Sign in to Homerun",
+			paragraphs: [
+				`Use the button below to sign in. The link expires in ${EMAIL_CODE_TTL_SECONDS / 60} minutes and works once, in whichever browser you open it.`,
+			],
+		}),
 		subject: "Your Homerun sign-in link",
 	};
 }

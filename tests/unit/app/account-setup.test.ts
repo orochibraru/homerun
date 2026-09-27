@@ -156,7 +156,7 @@ function addUser(email: string, providers: string[], pending = false) {
 }
 
 function lastCode(): string {
-	return /code is (\d{6})/.exec(sent.at(-1)?.content ?? "")?.[1] ?? "";
+	return /^(\d{6}) is/.exec(sent.at(-1)?.subject ?? "")?.[1] ?? "";
 }
 
 beforeEach(() => {

@@ -17,6 +17,13 @@ own hostname, so the app stays reachable for eight hours without signing in
 again. Nothing is shared with your other apps: each one gets its own cookie, and
 a cookie issued for one hostname is rejected on any other.
 
+Only page loads are redirected. A request the app's own page makes in the
+background (a `fetch`, a script, an image) without a session gets a plain 401,
+since it can't follow a redirect to a sign-in page on another address anyway.
+The app's web app manifest (`manifest.json`, `manifest.webmanifest` or
+`site.webmanifest`) is let through without a session: browsers never send
+cookies when they fetch it, and it only holds the app's name, icons and colors.
+
 This needs the **Dashboard URL** set under Settings → General, since that's the
 URL visitors are sent to in order to sign in. Saving the setting is refused with
 an explanation if it isn't set yet. It does **not** need **Cross-subdomain

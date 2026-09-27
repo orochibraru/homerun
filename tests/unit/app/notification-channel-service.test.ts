@@ -8,7 +8,7 @@ mock.module("$app/environment", () => ({
 
 const {
 	discordPayload,
-	messageBody,
+	messageEmail,
 	messageSubject,
 	slackPayload,
 	telegramPayload,
@@ -265,13 +265,19 @@ describe("NotificationChannelService delivery", () => {
 			port: 587,
 			user: "u",
 		};
-		const sent: { content: string; subject: string; to: string }[] = [];
+		const sent: {
+			content: string;
+			html: string | undefined;
+			subject: string;
+			to: string;
+		}[] = [];
 		track(
 			spyOn(EmailService.prototype, "send").mockImplementation(async function (
 				this: InstanceType<typeof EmailService>,
 			) {
 				sent.push({
 					content: this.content,
+					html: this.html,
 					subject: this.subject,
 					to: this.to,
 				});
@@ -288,11 +294,12 @@ describe("NotificationChannelService delivery", () => {
 		).toEqual({ delivered: true });
 		expect(sent).toEqual([
 			{
-				content: messageBody(message),
+				...messageEmail(message),
 				subject: messageSubject(message),
 				to: "ops@example.com",
 			},
 		]);
+		expect(sent[0]?.html).toContain(message.title);
 		expect(channel.updates).toEqual([{ lastError: null }]);
 	});
 });

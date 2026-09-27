@@ -371,9 +371,8 @@ describe("emailSignInPlugins", () => {
 			otp: "123456",
 			type: "sign-in",
 		});
-		expect(sent).toEqual([
-			{ ...signInCodeEmail("123456"), to: "client@example.com" },
-		]);
+		const { content, subject } = signInCodeEmail("123456");
+		expect(sent).toEqual([{ content, subject, to: "client@example.com" }]);
 	});
 
 	test("a link is only emailed to an existing account", async () => {

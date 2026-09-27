@@ -10,6 +10,7 @@ const logger = new Logger("Email");
 
 interface EmailProps {
 	content: string;
+	html?: string;
 	subject: string;
 	to: string;
 }
@@ -19,6 +20,7 @@ export class EmailService {
 	to: string;
 	subject: string;
 	content: string;
+	html: string | undefined;
 	transporter: Transporter<SMTPSentMessageInfo>;
 
 	/**
@@ -26,11 +28,12 @@ export class EmailService {
 	 * SMTP settings.
 	 * @throws When SMTP isn't enabled or has no `from` address configured.
 	 */
-	constructor({ to, subject, content }: EmailProps) {
+	constructor({ to, subject, content, html }: EmailProps) {
 		logger.debug(`Preparing email to: ${to}, subject: ${subject}`);
 		this.to = to;
 		this.subject = subject;
 		this.content = content;
+		this.html = html;
 
 		if (!(isSmtpEnabled() && config.smtp?.from)) {
 			logger.error("SMTP configuration is not defined or not enabled");
@@ -57,6 +60,7 @@ export class EmailService {
 		logger.info(`Sending email to: ${this.to}, subject: ${this.subject}`);
 		return this.transporter.sendMail({
 			from: this.from,
+			html: this.html,
 			subject: this.subject,
 			text: this.content,
 			to: this.to,

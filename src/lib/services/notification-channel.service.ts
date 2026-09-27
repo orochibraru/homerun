@@ -8,6 +8,7 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { parseTelegramTarget } from "$lib/notification-channel-target";
 import { isFailureEvent, NOTIFICATION_EVENTS } from "$lib/notification-events";
+import { brandedEmail } from "$lib/server/email-layout";
 import { primaryHostname } from "$lib/service-domains";
 import { serviceHostname } from "./dns.service";
 import { EmailService } from "./email.service";
@@ -69,7 +70,33 @@ function withService(message: ChannelMessage): MessageField[] {
 		: message.fields;
 }
 
-/** Renders a channel message as plain-text body lines, for email and the generic webhook payload. */
+/** Renders a channel message as a branded email: its fields as a table, its link as a button, its detail as a monospace block. */
+export function messageEmail(message: ChannelMessage): {
+	content: string;
+	html: string;
+} {
+	const label =
+		NOTIFICATION_EVENTS.find((info) => info.event === message.event)?.label ??
+		message.event;
+	return brandedEmail({
+		...(message.link
+			? { action: { label: "Open in Homerun", url: message.link } }
+			: {}),
+		details: [
+			...withService(message),
+			{ name: "Event", value: label },
+			{ name: "At", value: message.timestamp },
+		],
+		heading: message.title,
+		paragraphs: [],
+		...(message.detail ? { pre: message.detail } : {}),
+		preheader: message.serviceName
+			? `${label} · ${message.serviceName}`
+			: label,
+	});
+}
+
+/** Renders a channel message as plain-text body lines, for the generic webhook payload. */
 export function messageBody(message: ChannelMessage): string {
 	const label =
 		NOTIFICATION_EVENTS.find((info) => info.event === message.event)?.label ??
@@ -454,7 +481,7 @@ class NotificationChannelServiceClass {
 			);
 		}
 		await new EmailService({
-			content: messageBody(message),
+			...messageEmail(message),
 			subject: messageSubject(message),
 			to,
 		}).send();

@@ -13,6 +13,7 @@ import {
 	verifyGateToken,
 } from "$lib/server/app-gate";
 import { cachedGateAccess } from "$lib/server/gate-access-cache";
+import { gateChallengeKind } from "$lib/server/gate-request";
 import { gatedService } from "$lib/server/gated-service-cache";
 import { AppAccessService } from "$lib/services/app-access.service";
 
@@ -181,5 +182,12 @@ export const GET = async ({ request, url }) => {
 		});
 	}
 
+	const kind = gateChallengeKind(request.headers, forwarded.path);
+	if (kind === "allow") {
+		return new Response("OK", { status: 200 });
+	}
+	if (kind === "deny") {
+		return deny("Sign in to this app first.", 401);
+	}
 	return challenge(svc, forwarded);
 };

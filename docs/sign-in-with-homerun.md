@@ -28,8 +28,17 @@ only), click **Register app**:
 - **Allow single sign-out**: lets the app sign the user out of Homerun too.
 
 Registering shows the client ID and client secret. **The secret is shown only
-once**; if you lose it, open the app and use **Rotate secret**, then paste the
-new one into the app.
+once**; if you lose it, open the app's **Settings** tab and use **Rotate
+secret**, then paste the new one into the app.
+
+**Managing an app.** The IDP page lists every app with how many people use it
+and when it last signed someone in; right-click one for quick actions, or flip
+its switch to turn it on or off. Each app has three tabs: **Overview** (usage,
+the values to paste into the app, its redirect URIs and how its sign-in
+behaves), **Users** (everyone who has authorized it, with **Revoke** per person
+or **Revoke everyone**: their tokens stop working and the next sign-in asks for
+consent again) and **Settings** (name, redirect URIs, consent and PKCE, secret
+rotation and deletion).
 
 **Connecting Claude.** claude.ai and Claude Desktop reach Homerun's
 [MCP server](api-and-cli.md#mcp-server-for-ai-agents) as an app registered here:
@@ -57,6 +66,7 @@ the issuer, authorization, token, userinfo and JWKS URLs. Request the scopes
 `app-user`). An **App access only** account can sign in to these apps too, it
 just can't reach the Homerun dashboard. Tokens are signed with RS256.
 
-**Turning an app off or deleting it.** **Turn off** stops new sign-ins through
-the app. **Delete app** also revokes every token it holds, so users are signed
-out of it the next time it checks.
+**Turning an app off or deleting it.** Turning it off (the switch on the IDP
+page or at the top of the app's page) stops new sign-ins through the app.
+**Delete app** also revokes every token it holds, so users are signed out of it
+the next time it checks.

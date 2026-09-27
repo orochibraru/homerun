@@ -5,6 +5,7 @@ import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { asAuthRole, isUserRole, roleLabel } from "$lib/permissions";
+import { brandedEmail } from "$lib/server/email-layout";
 import { parseListQuery } from "$lib/server/list-query";
 import { AccountSetupService } from "$lib/services/account-setup.service";
 import { auth } from "$lib/services/auth";
@@ -162,7 +163,16 @@ export const actions = {
 
 		try {
 			const mail = new EmailService({
-				content: `${name}, you've been invited to Homerun with the ${roleLabel(role)} role.\n\nSet up your account: ${link}\n\nThis link expires in 7 days.`,
+				...brandedEmail({
+					action: { label: "Set up my account", url: link },
+					details: [{ name: "Role", value: roleLabel(role) }],
+					footnote:
+						"The invite expires in 7 days. If you weren't expecting it, ignore this email.",
+					heading: "You've been invited to Homerun",
+					paragraphs: [
+						`${name}, you've been invited to join Homerun. Set up your account to get started.`,
+					],
+				}),
 				subject: "You've been invited to Homerun",
 				to: email,
 			});

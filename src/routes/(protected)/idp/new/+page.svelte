@@ -39,7 +39,7 @@
 	}
 </script>
 
-<div class="space-y-6 p-6 md:p-8">
+<div class="space-y-6 p-5 md:p-6">
   <div>
     <h1 class="text-text text-xl font-semibold">
       {form?.created ? `${form.created.name} is registered` : "Register an app"}

@@ -1,10 +1,11 @@
-import { and, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, max, or } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import {
 	oauthAccessToken,
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
+	user,
 } from "$lib/server/db/schema";
 
 export interface AuthorizedApp {
@@ -12,6 +13,19 @@ export interface AuthorizedApp {
 	lastAuthorizedAt: Date | null;
 	name: string;
 	scopes: string[];
+}
+
+export interface ClientActivity {
+	lastUsedAt: Date | null;
+	users: number;
+}
+
+export interface ClientGrantee {
+	email: string;
+	lastAuthorizedAt: Date | null;
+	name: string;
+	scopes: string[];
+	userId: string;
 }
 
 /** Splits better-auth's space-separated scope string, tolerating a JSON array too. */
@@ -108,6 +122,155 @@ class OauthGrantDTOClass {
 				name: names.get(clientId) ?? clientId,
 				scopes: [...entry.scopes].sort(),
 			}))
+			.sort(
+				(a, b) =>
+					(b.lastAuthorizedAt?.getTime() ?? 0) -
+					(a.lastAuthorizedAt?.getTime() ?? 0),
+			);
+	}
+
+	/**
+	 * Per registered app: how many users hold a consent or a live token for it,
+	 * and when it last got a token (its last sign-in or refresh), keyed by
+	 * client id. An app nobody has used is absent.
+	 */
+	async activityByClient(): Promise<Map<string, ClientActivity>> {
+		const now = new Date();
+		const live = <T extends typeof oauthAccessToken | typeof oauthRefreshToken>(
+			table: T,
+		) =>
+			and(
+				isNull(table.revoked),
+				or(isNull(table.expiresAt), gt(table.expiresAt, now)),
+			);
+		const [consents, refreshTokens, accessTokens, lastUsed] = await Promise.all(
+			[
+				db
+					.select({
+						clientId: oauthConsent.clientId,
+						userId: oauthConsent.userId,
+					})
+					.from(oauthConsent),
+				db
+					.select({
+						clientId: oauthRefreshToken.clientId,
+						userId: oauthRefreshToken.userId,
+					})
+					.from(oauthRefreshToken)
+					.where(live(oauthRefreshToken)),
+				db
+					.select({
+						clientId: oauthAccessToken.clientId,
+						userId: oauthAccessToken.userId,
+					})
+					.from(oauthAccessToken)
+					.where(live(oauthAccessToken)),
+				db
+					.select({
+						at: max(oauthAccessToken.createdAt),
+						clientId: oauthAccessToken.clientId,
+					})
+					.from(oauthAccessToken)
+					.groupBy(oauthAccessToken.clientId),
+			],
+		);
+		const users = new Map<string, Set<string>>();
+		for (const grant of [...consents, ...refreshTokens, ...accessTokens]) {
+			if (grant.userId) {
+				users.set(
+					grant.clientId,
+					(users.get(grant.clientId) ?? new Set()).add(grant.userId),
+				);
+			}
+		}
+		const activity = new Map<string, ClientActivity>();
+		for (const [clientId, holders] of users) {
+			activity.set(clientId, { lastUsedAt: null, users: holders.size });
+		}
+		for (const { at, clientId } of lastUsed) {
+			activity.set(clientId, {
+				lastUsedAt: at,
+				users: activity.get(clientId)?.users ?? 0,
+			});
+		}
+		return activity;
+	}
+
+	/**
+	 * The users who have authorized `clientId` (a consent or a live token),
+	 * most recently authorized first, with the scopes they granted it.
+	 */
+	async listForClient(clientId: string): Promise<ClientGrantee[]> {
+		const now = new Date();
+		const live = <T extends typeof oauthAccessToken | typeof oauthRefreshToken>(
+			table: T,
+		) =>
+			and(
+				eq(table.clientId, clientId),
+				isNull(table.revoked),
+				or(isNull(table.expiresAt), gt(table.expiresAt, now)),
+			);
+		const [consents, refreshTokens, accessTokens] = await Promise.all([
+			db
+				.select({
+					at: oauthConsent.updatedAt,
+					scopes: oauthConsent.scopes,
+					userId: oauthConsent.userId,
+				})
+				.from(oauthConsent)
+				.where(eq(oauthConsent.clientId, clientId)),
+			db
+				.select({
+					at: oauthRefreshToken.createdAt,
+					scopes: oauthRefreshToken.scopes,
+					userId: oauthRefreshToken.userId,
+				})
+				.from(oauthRefreshToken)
+				.where(live(oauthRefreshToken)),
+			db
+				.select({
+					at: oauthAccessToken.createdAt,
+					scopes: oauthAccessToken.scopes,
+					userId: oauthAccessToken.userId,
+				})
+				.from(oauthAccessToken)
+				.where(live(oauthAccessToken)),
+		]);
+		const byUser = new Map<string, { at: Date | null; scopes: Set<string> }>();
+		for (const grant of [...consents, ...refreshTokens, ...accessTokens]) {
+			if (!grant.userId) {
+				continue;
+			}
+			const entry = byUser.get(grant.userId) ?? {
+				at: null,
+				scopes: new Set<string>(),
+			};
+			for (const scope of scopeList(grant.scopes)) {
+				entry.scopes.add(scope);
+			}
+			if (grant.at && (!entry.at || grant.at > entry.at)) {
+				entry.at = grant.at;
+			}
+			byUser.set(grant.userId, entry);
+		}
+		if (byUser.size === 0) {
+			return [];
+		}
+		const people = await db
+			.select({ email: user.email, id: user.id, name: user.name })
+			.from(user)
+			.where(inArray(user.id, [...byUser.keys()]));
+		return people
+			.map((person) => {
+				const entry = byUser.get(person.id);
+				return {
+					email: person.email,
+					lastAuthorizedAt: entry?.at ?? null,
+					name: person.name,
+					scopes: [...(entry?.scopes ?? [])].sort(),
+					userId: person.id,
+				};
+			})
 			.sort(
 				(a, b) =>
 					(b.lastAuthorizedAt?.getTime() ?? 0) -

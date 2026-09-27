@@ -14,6 +14,7 @@ import {
 import { config, isSmtpEnabled } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import { brandedEmail } from "$lib/server/email-layout";
 import { auth } from "./auth.ts";
 import { EmailService } from "./email.service.ts";
 import {
@@ -327,7 +328,15 @@ class AccountSetupServiceClass {
 			value: JSON.stringify(stored),
 		});
 		await new EmailService({
-			content: `Your Homerun verification code is ${code}.\n\nIt expires in 10 minutes. If you didn't try to ${purpose}, ignore this email.`,
+			...brandedEmail({
+				code,
+				footnote: `If you didn't try to ${purpose}, ignore this email.`,
+				heading: "Your verification code",
+				paragraphs: [
+					"Enter this code in Homerun to continue. It expires in 10 minutes.",
+				],
+				preheader: `${code} is your Homerun verification code.`,
+			}),
 			subject: `${code} is your Homerun verification code`,
 			to: email,
 		}).send();

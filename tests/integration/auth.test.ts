@@ -238,7 +238,7 @@ describe("emailed sign-in codes", () => {
 			});
 			expect(sent.status, await sent.clone().text()).toBe(200);
 			expect(sink.messages.map((mail) => mail.to)).toEqual([[email]]);
-			const code = /code is:\s+(\d{6})/.exec(sink.messages[0].data)?.[1];
+			const code = /Subject: (\d{6}) is your/.exec(sink.messages[0].data)?.[1];
 			expect(code).toMatch(/^\d{6}$/);
 
 			const wrong = await post("/api/v1/auth/sign-in/email-otp", {
@@ -265,7 +265,9 @@ describe("emailed sign-in codes", () => {
 					.status,
 			).toBe(200);
 			expect(sink.messages).toHaveLength(2);
-			const passwordCode = /code is (\d{6})/.exec(sink.messages[1].data)?.[1];
+			const passwordCode = /Subject: (\d{6}) is your/.exec(
+				sink.messages[1].data,
+			)?.[1];
 			expect(passwordCode).toMatch(/^\d{6}$/);
 			const newPassword = "code-client-password-1234";
 			const set = await formAction("/my-apps?/setPassword", clientCookie, {

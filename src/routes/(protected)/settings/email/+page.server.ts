@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { config, isSmtpEnabled } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import { brandedEmail } from "$lib/server/email-layout";
 import {
 	applyAndRebuild,
 	checkbox,
@@ -29,7 +30,16 @@ export const actions = {
 		const to = locals.user.email;
 		try {
 			await new EmailService({
-				content: `This is a test message from Homerun (${config.baseDomain}). Getting it means the saved SMTP settings work.`,
+				...brandedEmail({
+					details: [
+						{ name: "Instance", value: config.baseDomain },
+						{ name: "SMTP host", value: config.smtp?.host ?? "—" },
+					],
+					heading: "Your email settings work",
+					paragraphs: [
+						"This is a test message from Homerun. Getting it means the saved SMTP settings work, and sign-in codes, invites and notifications will reach people.",
+					],
+				}),
 				subject: "Homerun SMTP test",
 				to,
 			}).send();

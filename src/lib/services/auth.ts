@@ -39,6 +39,7 @@ import { passkeyRpId } from "$lib/security-policy";
 import { withDashboardOrigin } from "$lib/server/canonical-origin";
 import { db } from "$lib/server/db/lib";
 import * as schema from "$lib/server/db/schema";
+import { brandedEmail } from "$lib/server/email-layout";
 import { forgetGateAccess } from "$lib/server/gate-access-cache";
 import { AdminService } from "./admin.service.ts";
 import {
@@ -308,7 +309,18 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 					return;
 				}
 				const email = new EmailService({
-					content: `Click the link to verify your email: ${withDashboardOrigin(params.url)}`,
+					...brandedEmail({
+						action: {
+							label: "Verify my email",
+							url: withDashboardOrigin(params.url),
+						},
+						footnote:
+							"If you didn't create a Homerun account, ignore this email.",
+						heading: "Verify your email address",
+						paragraphs: [
+							"Confirm this is your address to finish setting up your Homerun account.",
+						],
+					}),
 					subject: "Verify your email address",
 					to: params.user.email,
 				});
@@ -414,7 +426,18 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 						return;
 					}
 					const email = new EmailService({
-						content: `Confirm changing your Homerun account email to ${newEmail}: ${withDashboardOrigin(url)}`,
+						...brandedEmail({
+							action: {
+								label: "Confirm the change",
+								url: withDashboardOrigin(url),
+							},
+							footnote:
+								"If you didn't ask for this, ignore this email: your address stays as it is.",
+							heading: "Confirm your new email address",
+							paragraphs: [
+								`Someone asked to change your Homerun account email to ${newEmail}. Confirm it to make the switch.`,
+							],
+						}),
 						subject: "Confirm your new email address",
 						to: user.email,
 					});
