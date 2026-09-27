@@ -1,5 +1,5 @@
 import { REDIRECT_TO_PARAM, safeRedirectTarget } from "$lib/redirect-target";
-import { gatedAppNameFor } from "$lib/server/app-gate-return";
+import { gatedAppFor } from "$lib/server/app-gate-return";
 import { magicLinkEmail } from "$lib/services/email-sign-in";
 
 export const load = async ({ url }) => {
@@ -8,7 +8,7 @@ export const load = async ({ url }) => {
 		url.searchParams.get(REDIRECT_TO_PARAM),
 	);
 	return {
-		appName: await gatedAppNameFor(redirectTo),
+		appName: (await gatedAppFor(redirectTo))?.name ?? null,
 		email: token ? await magicLinkEmail(token) : null,
 		redirectTo,
 		token,

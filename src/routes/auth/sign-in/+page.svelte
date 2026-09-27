@@ -114,7 +114,7 @@
 		e.preventDefault();
 		loading = true;
 		try {
-			const next = await lookupSignIn(email);
+			const next = await lookupSignIn({ email, methods: data.appMethods });
 			loading = false;
 			stepEmail = next.email;
 			if (next.step === "email-only") {

@@ -4,7 +4,13 @@ import {
 	randomInt,
 	timingSafeEqual,
 } from "node:crypto";
-import { type EmailSignIn, oauthMethod } from "$lib/auth-providers";
+import {
+	EMAIL_OTP_METHOD,
+	type EmailSignIn,
+	MAGIC_LINK_METHOD,
+	oauthMethod,
+	PASSWORD_METHOD,
+} from "$lib/auth-providers";
 import { config, isSmtpEnabled } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
@@ -103,20 +109,40 @@ class AccountSetupServiceClass {
 	 * only the emailed code or link for an account with neither a password nor
 	 * a provider. Every step carries which emailed methods are available.
 	 * An unknown email gets the password step, so the form doesn't reveal
-	 * which emails have an account.
+	 * which emails have an account. `allowed`, a login wall's method ids,
+	 * narrows every step to those methods: without the password, an account
+	 * that can get an emailed code or link goes straight to it.
 	 */
-	async lookup(email: string): Promise<SignInLookup> {
-		const providers = enabledProviders();
-		const emailMethods = await emailSignInAvailability();
+	async lookup(
+		email: string,
+		allowed: string[] | null = null,
+	): Promise<SignInLookup> {
+		const providers = enabledProviders().filter(
+			(provider) => !allowed || allowed.includes(oauthMethod(provider.name)),
+		);
+		const available = await emailSignInAvailability();
+		const emailMethods = allowed
+			? {
+					emailOtp: available.emailOtp && allowed.includes(EMAIL_OTP_METHOD),
+					magicLink: available.magicLink && allowed.includes(MAGIC_LINK_METHOD),
+				}
+			: available;
+		const byEmail = emailMethods.emailOtp || emailMethods.magicLink;
+		const noPassword = allowed !== null && !allowed.includes(PASSWORD_METHOD);
 		const ctx = await auth.$context;
 		const found = await ctx.internalAdapter.findUserByEmail(email, {
 			includeAccounts: true,
 		});
 		if (!found) {
-			return { email: emailMethods, providers, step: "password" };
+			return noPassword && byEmail
+				? { email: emailMethods, step: "email-only" }
+				: { email: emailMethods, providers, step: "password" };
 		}
 		if (
-			await ctx.internalAdapter.findVerificationValue(pendingKey(found.user.id))
+			!(noPassword && byEmail) &&
+			(await ctx.internalAdapter.findVerificationValue(
+				pendingKey(found.user.id),
+			))
 		) {
 			const emailed = isSmtpEnabled();
 			if (emailed) {
@@ -131,7 +157,10 @@ class AccountSetupServiceClass {
 		const preferredSso =
 			sso.find((provider) => preferred.includes(oauthMethod(provider.name))) ??
 			null;
-		if (sso.length > 0 && (!linked.has("credential") || preferredSso)) {
+		if (
+			sso.length > 0 &&
+			(!linked.has("credential") || preferredSso || noPassword)
+		) {
 			return {
 				autoRedirect:
 					preferredSso?.name ?? (sso.length === 1 ? sso[0].name : null),
@@ -140,10 +169,7 @@ class AccountSetupServiceClass {
 				step: "sso",
 			};
 		}
-		if (
-			!linked.has("credential") &&
-			(emailMethods.emailOtp || emailMethods.magicLink)
-		) {
+		if ((!linked.has("credential") || noPassword) && byEmail) {
 			return { email: emailMethods, step: "email-only" };
 		}
 		return { email: emailMethods, providers, step: "password" };

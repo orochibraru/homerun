@@ -92,7 +92,9 @@ mock.module("$lib/services/auth", () => ({
 	rebuildAuth: () => undefined,
 }));
 
-const { oauthMethod } = await import("../../../src/lib/auth-providers");
+const { EMAIL_OTP_METHOD, oauthMethod, PASSWORD_METHOD } = await import(
+	"../../../src/lib/auth-providers"
+);
 const { applyInstanceSettings, config } = await import(
 	"../../../src/lib/config"
 );
@@ -293,6 +295,40 @@ describe("AccountSetupService.lookup with emailed sign-in", () => {
 		expect((await AccountSetupService.lookup("client@example.com")).step).toBe(
 			"password",
 		);
+	});
+});
+
+describe("AccountSetupService.lookup narrowed to a login wall's methods", () => {
+	test("without the password, every account goes to the emailed code", async () => {
+		applyInstanceSettings(SMTP);
+		config.auth.oauthProviders = [provider("github")];
+		addUser("pw@example.com", ["credential"]);
+		const allowed = [EMAIL_OTP_METHOD];
+		expect(await AccountSetupService.lookup("pw@example.com", allowed)).toEqual(
+			{ email: { emailOtp: true, magicLink: false }, step: "email-only" },
+		);
+		expect(
+			await AccountSetupService.lookup("nobody@example.com", allowed),
+		).toEqual({
+			email: { emailOtp: true, magicLink: false },
+			step: "email-only",
+		});
+	});
+
+	test("methods the wall doesn't allow are dropped from the password step", async () => {
+		applyInstanceSettings(SMTP);
+		config.auth.oauthProviders = [provider("github"), provider("gitlab")];
+		addUser("pw@example.com", ["credential"]);
+		expect(
+			await AccountSetupService.lookup("pw@example.com", [
+				PASSWORD_METHOD,
+				oauthMethod("gitlab"),
+			]),
+		).toEqual({
+			email: NONE,
+			providers: [{ label: "gitlab", name: "gitlab" }],
+			step: "password",
+		});
 	});
 });
 

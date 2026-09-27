@@ -29,10 +29,10 @@ function throttle(name: string): void {
 const emailField = z.string().trim().toLowerCase().email();
 
 export const lookupSignIn = command(
-	emailField,
-	async (email): Promise<SignInLookup> => {
+	z.object({ email: emailField, methods: z.array(z.string()).nullable() }),
+	async ({ email, methods }): Promise<SignInLookup> => {
 		throttle("lookup");
-		return await AccountSetupService.lookup(email);
+		return await AccountSetupService.lookup(email, methods);
 	},
 );
 

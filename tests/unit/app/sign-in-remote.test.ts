@@ -40,7 +40,11 @@ const { completeAccountSetup, lookupSignIn, resendSetupCode } = await import(
 	"../../../src/lib/remote/sign-in.remote"
 );
 
-const lookup = lookupSignIn as unknown as (email: string) => Promise<unknown>;
+const lookupCommand = lookupSignIn as unknown as (input: {
+	email: string;
+	methods: string[] | null;
+}) => Promise<unknown>;
+const lookup = (email: string) => lookupCommand({ email, methods: null });
 const resend = resendSetupCode as unknown as (email: string) => Promise<void>;
 const complete = completeAccountSetup as unknown as (input: {
 	code: string | null;
