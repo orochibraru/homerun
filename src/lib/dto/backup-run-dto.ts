@@ -126,6 +126,10 @@ export class BackupRunDTO extends BaseDTO<BackupRun> {
 		if (search) {
 			conditions.push(search);
 		}
+		const volumes = query.filters.volume;
+		if (volumes && volumes.length > 0) {
+			conditions.push(inArray(backupRun.volumeId, volumes));
+		}
 		const kinds = query.filters.kind;
 		if (kinds && kinds.length > 0) {
 			conditions.push(inArray(backupRun.kind, kinds as BackupRunKind[]));

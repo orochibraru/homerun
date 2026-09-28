@@ -166,6 +166,29 @@ export class JobDTO extends BaseDTO<Job> {
 	}
 
 	/**
+	 * Where each of these jobs stands (status, attempts, last progress), keyed
+	 * by job id, in one query; null ids are skipped.
+	 */
+	static async progressFor(
+		ids: (string | null)[],
+	): Promise<Map<string, Pick<Job, "attempts" | "progressAt" | "status">>> {
+		const wanted = ids.filter((id): id is string => id !== null);
+		if (wanted.length === 0) {
+			return new Map();
+		}
+		const rows = await db
+			.select({
+				attempts: job.attempts,
+				id: job.id,
+				progressAt: job.progressAt,
+				status: job.status,
+			})
+			.from(job)
+			.where(inArray(job.id, wanted));
+		return new Map(rows.map(({ id, ...rest }) => [id, rest]));
+	}
+
+	/**
 	 * The queued (not yet running) job of this type with this dedupe key, if any.
 	 */
 	static async findQueued(

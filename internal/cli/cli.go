@@ -74,13 +74,22 @@ Commands:
   stacks list                     list stacks
   templates list                  list templates
 
+  backups list [--volume <id|name>] [--outcome running|success|failed]
+                                  list backup and restore runs, newest first: outcome, duration, size, error and, while running, the job's last progress
+  backups volumes                 list storage volumes with their backup schedule, last and next run
+  backups run <id|name> [--wait] [--timeout <seconds>]
+                                  back up a volume now; --wait follows its log and exits non-zero unless it succeeded
+  jobs list [--status queued,running,succeeded,failed,cancelled]
+                                  list queue jobs (deploys, backups, cron jobs...), running first (admins only)
+  jobs get <id> [--json]          show a job's status, attempts, heartbeat, last progress, error and full log
+
   instance status                 show the running version, the channel, its latest release and whether an update can start
   instance update [--wait=false] [--timeout <seconds>] [--force]
                                   update the instance to the latest release on its channel (not the CLI itself, see ` + "`homerun update`" + `); --force updates over queued deploys and running jobs, which resume after the restart
   instance channel stable|canary|nightly
                                   set the release channel the instance updates from (switching to a more stable one never downgrades)
 
-List options (services/stacks/templates/scans list, services errors):
+List options (services/stacks/templates/scans/backups/jobs list, backups volumes, services errors):
   --json                          print raw JSON instead of a table
   --page <n>                      1-based page number (default 1)
   --per-page <n>                  items per page (default 100, max 100)
@@ -134,6 +143,10 @@ func Main() {
 		RunTemplates(global, rest[1:])
 	case "instance":
 		RunInstance(global, rest[1:])
+	case "backups", "backup":
+		RunBackups(func() *Client { return RequireClient(global.BaseURL, global.APIKey) }, rest[1:])
+	case "jobs", "job":
+		RunJobs(func() *Client { return RequireClient(global.BaseURL, global.APIKey) }, rest[1:])
 	default:
 		Fail(fmt.Sprintf("unknown command %q. Run `homerun --help` to see what's available.", rest[0]))
 	}

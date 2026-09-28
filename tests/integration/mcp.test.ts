@@ -108,6 +108,8 @@ describe("MCP server", () => {
 		expect(names).toContain("get_service_config");
 		expect(names).toContain("deploy_service");
 		expect(names).toContain("list_deployments");
+		expect(names).toContain("list_backups");
+		expect(names).toContain("get_job");
 		expect(names).not.toContain("delete_service");
 
 		const called = await readRpc(

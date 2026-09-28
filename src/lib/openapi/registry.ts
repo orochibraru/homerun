@@ -8,6 +8,7 @@ import {
 	updateServiceApiBody,
 } from "$lib/server/validation/api";
 import { serviceConfigSchema } from "$lib/service-config";
+import { backupRoutes } from "./backups";
 import { channelRoutes } from "./channels";
 import { dependencyRoutes } from "./dependencies";
 import { errorRoutes } from "./errors";
@@ -659,4 +660,5 @@ export const routes: RouteDef[] = [
 	...channelRoutes,
 	...dependencyRoutes,
 	...errorRoutes,
+	...backupRoutes,
 ];

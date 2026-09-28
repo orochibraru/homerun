@@ -29,6 +29,21 @@ import (
 // part. S3 needs at least 5 MiB per part but the last, and allows 10000 parts.
 const PartSize = 16 << 20
 
+// RequestTimeout caps one buffered request (a single PUT, one part, a
+// multipart start or completion), so an endpoint that stops answering fails
+// that request instead of holding the job forever.
+var RequestTimeout = 10 * time.Minute
+
+// RequestAttempts is how many times a buffered request is sent before its
+// error is returned: a transport error, a timeout, a 429 or a 5xx is retried.
+const RequestAttempts = 3
+
+// RetryDelay is the pause before retry n (1-based), doubling from 2s.
+var RetryDelay = func(n int) time.Duration { return time.Duration(1<<n) * time.Second }
+
+// progressEvery is the minimum gap between two upload progress lines.
+const progressEvery = 30 * time.Second
+
 // Client is one bucket on one S3-compatible endpoint.
 type Client struct {
 	AccessKeyID     string `json:"accessKeyId"`
@@ -38,7 +53,33 @@ type Client struct {
 	SecretAccessKey string `json:"secretAccessKey"`
 
 	HTTP *http.Client     `json:"-"`
+	Log  func(string)     `json:"-"`
 	Now  func() time.Time `json:"-"`
+}
+
+// StatusError is a non-2xx answer from the endpoint.
+type StatusError struct {
+	Code    int
+	Message string
+}
+
+// Error renders the status and the body S3 sent back.
+func (e *StatusError) Error() string { return e.Message }
+
+// log hands line to c.Log when set.
+func (c *Client) log(line string) {
+	if c.Log != nil {
+		c.Log(line)
+	}
+}
+
+// retryable reports whether a failed request is worth sending again.
+func retryable(err error) bool {
+	var status *StatusError
+	if errors.As(err, &status) {
+		return status.Code == http.StatusTooManyRequests || status.Code >= 500
+	}
+	return true
 }
 
 // httpClient returns c.HTTP, or http.DefaultClient when unset.
@@ -183,18 +224,71 @@ func (c *Client) do(ctx context.Context, method, key string, query url.Values, b
 	}
 	defer func() { _ = response.Body.Close() }()
 	text, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-	return nil, fmt.Errorf("S3 %s failed: %s %s", method, response.Status, strings.TrimSpace(string(text)))
+	return nil, &StatusError{Code: response.StatusCode, Message: fmt.Sprintf("S3 %s failed: %s %s", method, response.Status, strings.TrimSpace(string(text)))}
 }
 
-// send is do plus reading the response body fully.
+// send is do plus reading the response body fully, each attempt capped at
+// RequestTimeout and a retryable failure sent again up to RequestAttempts
+// times, every retry logged.
 func (c *Client) send(ctx context.Context, method, key string, query url.Values, body []byte) (http.Header, []byte, error) {
-	response, err := c.do(ctx, method, key, query, body)
-	if err != nil {
-		return nil, nil, err
+	var err error
+	for attempt := 1; ; attempt++ {
+		var header http.Header
+		var raw []byte
+		header, raw, err = c.sendOnce(ctx, method, key, query, body)
+		if err == nil {
+			return header, raw, nil
+		}
+		if ctx.Err() != nil || attempt >= RequestAttempts || !retryable(err) {
+			return nil, nil, err
+		}
+		delay := RetryDelay(attempt)
+		c.log(fmt.Sprintf("S3 %s %s failed (attempt %d/%d), retrying in %s: %s", method, describe(query), attempt, RequestAttempts, delay, err))
+		select {
+		case <-ctx.Done():
+			return nil, nil, err
+		case <-time.After(delay):
+		}
 	}
-	defer func() { _ = response.Body.Close() }()
-	raw, err := io.ReadAll(response.Body)
-	return response.Header, raw, err
+}
+
+// sendOnce is one attempt of send.
+func (c *Client) sendOnce(ctx context.Context, method, key string, query url.Values, body []byte) (http.Header, []byte, error) {
+	attemptCtx, cancel := context.WithTimeout(ctx, RequestTimeout)
+	defer cancel()
+	response, err := c.do(attemptCtx, method, key, query, body)
+	if err == nil {
+		defer func() { _ = response.Body.Close() }()
+		var raw []byte
+		raw, err = io.ReadAll(response.Body)
+		if err == nil {
+			return response.Header, raw, nil
+		}
+	}
+	if errors.Is(attemptCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
+		return nil, nil, fmt.Errorf("S3 %s %s got no answer within %s: %w", method, describe(query), RequestTimeout, err)
+	}
+	return nil, nil, err
+}
+
+// describe names a request by its query, for a log line: which part, or the
+// multipart start/completion.
+func describe(query url.Values) string {
+	switch {
+	case query.Has("partNumber"):
+		return "part " + query.Get("partNumber")
+	case query.Has("uploads"):
+		return "multipart start"
+	case query.Has("uploadId"):
+		return "multipart completion"
+	default:
+		return "object"
+	}
+}
+
+// mib renders a byte count in MiB.
+func mib(n int64) string {
+	return fmt.Sprintf("%.1f MiB", float64(n)/(1<<20))
 }
 
 // Get opens key for reading. The caller closes the stream.
@@ -222,6 +316,7 @@ func (c *Client) Upload(ctx context.Context, key string, body io.Reader) (int64,
 		}
 		return int64(n), nil
 	}
+	c.log(fmt.Sprintf("Archive is over %s, uploading it in parts", mib(PartSize)))
 	uploadID, err := c.startMultipart(ctx, key)
 	if err != nil {
 		return 0, err
@@ -261,15 +356,23 @@ type completedPart struct {
 func (c *Client) uploadParts(ctx context.Context, key, uploadID string, buffer []byte, body io.Reader) (int64, error) {
 	var parts []completedPart
 	var total int64
+	started := time.Now()
+	lastLog := started
 	n := len(buffer)
 	for number := 1; n > 0; number++ {
 		header, _, err := c.send(ctx, http.MethodPut, key,
 			url.Values{"partNumber": {strconv.Itoa(number)}, "uploadId": {uploadID}}, buffer[:n])
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("part %d (after %s uploaded): %w", number, mib(total), err)
 		}
 		parts = append(parts, completedPart{ETag: header.Get("ETag"), PartNumber: number})
 		total += int64(n)
+		if time.Since(lastLog) >= progressEvery {
+			lastLog = time.Now()
+			elapsed := time.Since(started)
+			c.log(fmt.Sprintf("Uploaded %s in %d parts (%s/s over %s)", mib(total), number,
+				mib(int64(float64(total)/elapsed.Seconds())), elapsed.Round(time.Second)))
+		}
 		var readErr error
 		n, readErr = io.ReadFull(body, buffer)
 		if readErr != nil && !errors.Is(readErr, io.ErrUnexpectedEOF) && !errors.Is(readErr, io.EOF) {

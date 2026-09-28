@@ -560,6 +560,13 @@
 			"when": 1790521729511,
 			"tag": "0079_deep_prism",
 			"breakpoints": true
+		},
+		{
+			"idx": 80,
+			"version": "7",
+			"when": 1790587116263,
+			"tag": "0080_public_nova",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

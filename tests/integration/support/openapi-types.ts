@@ -24,6 +24,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/backups": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List backup runs
+		 * @description Every backup and restore run across volumes, newest first, with its job's status and last progress. Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest.
+		 */
+		get: operations["get_backups"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/instance/update": {
 		parameters: {
 			query?: never;
@@ -654,6 +674,46 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/volumes": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List storage volumes
+		 * @description Storage volumes with their backup settings. Paginated like the other lists.
+		 */
+		get: operations["get_volumes"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/volumes/{volumeId}/backup": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Back up a volume now
+		 * @description Queues a backup of the volume, like its Run now button. A backup already queued for it is returned instead of a second one. Follow it with GET /jobs/{jobId} or GET /backups?volume={volumeId}.
+		 */
+		post: operations["post_volumes__volumeId__backup"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -719,6 +779,75 @@ export interface operations {
 					"application/json": {
 						/** @example This account or API key is read-only: it can view everything but can't change anything. */
 						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_backups: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+				/** @description Comma-separated volume ids */
+				volume?: string;
+				/** @description Comma-separated outcomes: running, success, failed */
+				outcome?: string;
+				/** @description Comma-separated kinds: backup, restore */
+				kind?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of runs */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string | null;
+						finishedAt: string | null;
+						id: string;
+						/** @description How many times its job has been claimed */
+						jobAttempts: number | null;
+						/** @description The queue job running it, GET /jobs/{jobId} has its log */
+						jobId: string | null;
+						/** @description The last time its job moved a byte or got a Docker answer; a running backup whose progressAt stops moving is stuck */
+						jobProgressAt: string | null;
+						jobStatus:
+							| ("queued" | "running" | "succeeded" | "failed" | "cancelled")
+							| null;
+						/** @description The object key in the bucket */
+						key: string | null;
+						/** @enum {string} */
+						kind: "backup" | "restore";
+						sizeBytes: number | null;
+						/** @description ISO 8601 timestamp */
+						startedAt: string;
+						/** @description null while running */
+						success: boolean | null;
+						volumeId: string;
+						volumeName: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};
@@ -1136,6 +1265,8 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
+						/** @description How many times it has been claimed */
+						attempts: number;
 						/**
 						 * @description ISO 8601 timestamp
 						 * @example 2026-08-20T12:00:00.000Z
@@ -1143,11 +1274,19 @@ export interface operations {
 						createdAt: string;
 						error: string | null;
 						finishedAt: string | null;
+						/** @description The Go worker's last heartbeat while it executes the job, null when no worker holds it */
+						heartbeatAt: string | null;
 						id: string;
+						/** @description Its progress log, every attempt appended to the same text */
+						log: string;
+						maxAttempts: number;
+						/** @description The last time it moved a byte or got a Docker answer; the worker fails a job whose progressAt is older than its stall timeout */
+						progressAt: string | null;
 						result: {
 							[key: string]: unknown;
 						} | null;
 						serviceId: string | null;
+						stage: ("prepare" | "execute" | "finalize" | "finalizing") | null;
 						startedAt: string | null;
 						/** @enum {string} */
 						status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
@@ -4836,6 +4975,146 @@ export interface operations {
 			};
 			/** @description Unauthorized */
 			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_volumes: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+				/** @description on or off: only volumes with backups on/off */
+				backup?: string;
+				/** @description Comma-separated kinds: bind, volume */
+				kind?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of volumes */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						backupEnabled: boolean;
+						backupLastRunAt: string | null;
+						/** @description When the schedule fires next, null when backups are off */
+						backupNextRunAt: string | null;
+						backupPreCommand: string | null;
+						backupPreCommandServiceId: string | null;
+						backupPrefix: string | null;
+						/** @description Cron expression */
+						backupSchedule: string | null;
+						backupStopServices: boolean;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						/** @enum {string} */
+						kind: "bind" | "volume";
+						name: string;
+						s3DestinationId: string | null;
+						/** @description A host path for a bind, the Docker volume name otherwise */
+						source: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_volumes__volumeId__backup: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Volume id */
+				volumeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Queued */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						jobId: string;
+					};
+				};
+			};
+			/** @description The volume has no S3 destination */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};

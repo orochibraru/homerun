@@ -111,6 +111,11 @@ homerun previews wait <id> <pr> [--commit <sha>] [--timeout 20m] [--json]
 homerun previews delete <id> <pr>
 homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun backups list [--volume <id|name>] [--outcome running|success|failed] [--json]
+homerun backups volumes [--json]
+homerun backups run <id|name> [--wait] [--timeout <seconds>]
+homerun jobs list [--status queued,running,succeeded,failed,cancelled] [--json]
+homerun jobs get <id> [--json]
 homerun instance status [--json]
 homerun instance update [--wait=false] [--timeout <seconds>] [--force]
 homerun instance channel stable|canary|nightly

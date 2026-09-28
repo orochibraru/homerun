@@ -11,12 +11,18 @@ export const GET = async ({ params, locals }) => {
 	}
 	const row = job.toJSON();
 	return json({
+		attempts: row.attempts,
 		createdAt: row.createdAt,
 		error: row.error,
 		finishedAt: row.finishedAt,
+		heartbeatAt: row.heartbeatAt,
 		id: row.id,
+		log: row.log,
+		maxAttempts: row.maxAttempts,
+		progressAt: row.progressAt,
 		result: row.result,
 		serviceId: row.serviceId,
+		stage: row.stage,
 		startedAt: row.startedAt,
 		status: row.status,
 		title: row.title,

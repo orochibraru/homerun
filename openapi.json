@@ -110,6 +110,255 @@
 				"tags": ["Meta"]
 			}
 		},
+		"/backups": {
+			"get": {
+				"description": "Every backup and restore run across volumes, newest first, with its job's status and last progress. Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest.",
+				"operationId": "get_backups",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Comma-separated volume ids",
+						"in": "query",
+						"name": "volume",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Comma-separated outcomes: running, success, failed",
+						"in": "query",
+						"name": "outcome",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Comma-separated kinds: backup, restore",
+						"in": "query",
+						"name": "kind",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"error": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"finishedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"id": {
+												"type": "string"
+											},
+											"jobAttempts": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "How many times its job has been claimed"
+											},
+											"jobId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The queue job running it, GET /jobs/{jobId} has its log"
+											},
+											"jobProgressAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The last time its job moved a byte or got a Docker answer; a running backup whose progressAt stops moving is stuck"
+											},
+											"jobStatus": {
+												"anyOf": [
+													{
+														"enum": [
+															"queued",
+															"running",
+															"succeeded",
+															"failed",
+															"cancelled"
+														],
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"key": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The object key in the bucket"
+											},
+											"kind": {
+												"enum": ["backup", "restore"],
+												"type": "string"
+											},
+											"sizeBytes": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"startedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"success": {
+												"anyOf": [
+													{
+														"type": "boolean"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "null while running"
+											},
+											"volumeId": {
+												"type": "string"
+											},
+											"volumeName": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"error",
+											"finishedAt",
+											"id",
+											"jobAttempts",
+											"jobId",
+											"jobProgressAt",
+											"jobStatus",
+											"key",
+											"kind",
+											"sizeBytes",
+											"startedAt",
+											"success",
+											"volumeId",
+											"volumeName"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of runs"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List backup runs",
+				"tags": ["Backups"]
+			}
+		},
 		"/instance/update": {
 			"get": {
 				"description": "The running version, the latest GitHub release, and whether a self-update could start now (the same checks as the sidebar's update dialog). Admins only.",
@@ -1007,6 +1256,10 @@
 								"schema": {
 									"additionalProperties": false,
 									"properties": {
+										"attempts": {
+											"description": "How many times it has been claimed",
+											"type": "number"
+										},
 										"createdAt": {
 											"description": "ISO 8601 timestamp",
 											"example": "2026-08-20T12:00:00.000Z",
@@ -1034,8 +1287,41 @@
 												}
 											]
 										},
+										"heartbeatAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"example": "2026-08-20T12:00:00.000Z",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The Go worker's last heartbeat while it executes the job, null when no worker holds it"
+										},
 										"id": {
 											"type": "string"
+										},
+										"log": {
+											"description": "Its progress log, every attempt appended to the same text",
+											"type": "string"
+										},
+										"maxAttempts": {
+											"type": "number"
+										},
+										"progressAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"example": "2026-08-20T12:00:00.000Z",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The last time it moved a byte or got a Docker answer; the worker fails a job whose progressAt is older than its stall timeout"
 										},
 										"result": {
 											"anyOf": [
@@ -1054,6 +1340,22 @@
 										"serviceId": {
 											"anyOf": [
 												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"stage": {
+											"anyOf": [
+												{
+													"enum": [
+														"prepare",
+														"execute",
+														"finalize",
+														"finalizing"
+													],
 													"type": "string"
 												},
 												{
@@ -1091,12 +1393,18 @@
 										}
 									},
 									"required": [
+										"attempts",
 										"createdAt",
 										"error",
 										"finishedAt",
+										"heartbeatAt",
 										"id",
+										"log",
+										"maxAttempts",
+										"progressAt",
 										"result",
 										"serviceId",
+										"stage",
 										"startedAt",
 										"status",
 										"title",
@@ -12394,6 +12702,356 @@
 				],
 				"summary": "List templates usable by the caller",
 				"tags": ["Templates"]
+			}
+		},
+		"/volumes": {
+			"get": {
+				"description": "Storage volumes with their backup settings. Paginated like the other lists.",
+				"operationId": "get_volumes",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "on or off: only volumes with backups on/off",
+						"in": "query",
+						"name": "backup",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Comma-separated kinds: bind, volume",
+						"in": "query",
+						"name": "kind",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"backupEnabled": {
+												"type": "boolean"
+											},
+											"backupLastRunAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"backupNextRunAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "When the schedule fires next, null when backups are off"
+											},
+											"backupPreCommand": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"backupPreCommandServiceId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"backupPrefix": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"backupSchedule": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Cron expression"
+											},
+											"backupStopServices": {
+												"type": "boolean"
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"description": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"id": {
+												"type": "string"
+											},
+											"kind": {
+												"enum": ["bind", "volume"],
+												"type": "string"
+											},
+											"name": {
+												"type": "string"
+											},
+											"s3DestinationId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"source": {
+												"description": "A host path for a bind, the Docker volume name otherwise",
+												"type": "string"
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"userId": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"backupEnabled",
+											"backupLastRunAt",
+											"backupNextRunAt",
+											"backupPreCommand",
+											"backupPreCommandServiceId",
+											"backupPrefix",
+											"backupSchedule",
+											"backupStopServices",
+											"createdAt",
+											"description",
+											"id",
+											"kind",
+											"name",
+											"s3DestinationId",
+											"source",
+											"updatedAt",
+											"userId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of volumes"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List storage volumes",
+				"tags": ["Backups"]
+			}
+		},
+		"/volumes/{volumeId}/backup": {
+			"post": {
+				"description": "Queues a backup of the volume, like its Run now button. A backup already queued for it is returned instead of a second one. Follow it with GET /jobs/{jobId} or GET /backups?volume={volumeId}.",
+				"operationId": "post_volumes__volumeId__backup",
+				"parameters": [
+					{
+						"description": "Volume id",
+						"in": "path",
+						"name": "volumeId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"jobId": {
+											"type": "string"
+										}
+									},
+									"required": ["jobId"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Queued"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The volume has no S3 destination"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Back up a volume now",
+				"tags": ["Backups"]
 			}
 		}
 	},

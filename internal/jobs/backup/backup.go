@@ -26,6 +26,8 @@ const (
 	outputTailChars   = 2000
 )
 
+var errUploadStopped = errors.New("the upload stopped reading the archive")
+
 // Service is one service using the volume that is stopped around the work:
 // its single container, or its swarm service scaled to 0 and back to Replicas.
 type Service struct {
@@ -65,6 +67,7 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 		return nil, fmt.Errorf("invalid backup spec: %w", err)
 	}
 	docker := dockerapi.New(job.DockerSocket)
+	spec.Destination.Log = job.AppendLog
 	var size int64
 	var err error
 	if job.Type == "backup_restore" {
@@ -85,16 +88,19 @@ func backup(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Sp
 		return 0, err
 	}
 	var size int64
+	started := time.Now()
 	err := whileStopped(ctx, job, docker, spec.StopServices, func() error {
 		var err error
-		job.AppendLog(fmt.Sprintf("Archiving %s and uploading it as %s", spec.VolumeName, spec.Key))
+		job.AppendLog(fmt.Sprintf("Archiving %s and uploading it as %s to %s/%s", spec.VolumeName, spec.Key,
+			strings.TrimRight(spec.Destination.Endpoint, "/"), spec.Destination.Bucket))
 		size, err = archiveAndUpload(ctx, docker, spec)
 		return err
 	})
 	if err != nil {
+		job.AppendLog(fmt.Sprintf("Backup failed after %s: %s", time.Since(started).Round(time.Second), err))
 		return 0, err
 	}
-	job.AppendLog(fmt.Sprintf("Uploaded %s (%d bytes)", spec.Key, size))
+	job.AppendLog(fmt.Sprintf("Uploaded %s (%d bytes) in %s", spec.Key, size, time.Since(started).Round(time.Second)))
 	return size, nil
 }
 
@@ -154,7 +160,8 @@ func download(ctx context.Context, spec Spec) (*os.File, int64, error) {
 // streams `tar -c` to its stdout, gzips it on the fly, and streams it to
 // spec.Destination: nothing is buffered on disk, whatever the volume's size.
 // A helper that exits non-zero fails the run with its stderr, and the upload
-// is aborted rather than left truncated.
+// is aborted rather than left truncated. A failed upload wins over the
+// helper's own error, which is then only the broken pipe it caused.
 func archiveAndUpload(ctx context.Context, docker *dockerapi.Client, spec Spec) (int64, error) {
 	reader, writer := io.Pipe()
 	archived := make(chan error, 1)
@@ -177,11 +184,15 @@ func archiveAndUpload(ctx context.Context, docker *dockerapi.Client, spec Spec) 
 		archived <- err
 	}()
 	size, uploadErr := spec.Destination.Upload(ctx, spec.Key, activity.Reader(ctx, reader))
-	_ = reader.CloseWithError(errors.New("the upload stopped reading the archive"))
-	if err := <-archived; err != nil {
-		return 0, err
+	_ = reader.CloseWithError(errUploadStopped)
+	archiveErr := <-archived
+	if uploadErr != nil {
+		return 0, fmt.Errorf("couldn't upload %s: %w", spec.Key, uploadErr)
 	}
-	return size, uploadErr
+	if archiveErr != nil {
+		return 0, archiveErr
+	}
+	return size, nil
 }
 
 // unpack extracts archive (a gzipped tar, or a plain one) into the volume

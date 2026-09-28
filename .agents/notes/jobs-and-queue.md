@@ -316,6 +316,18 @@ upload, no temp file whatever the volume's size). A non-zero exit from the
 helper fails the run with the helper's own stderr attached, and the upload is
 aborted rather than left truncated.
 
+**Real production incident** (2026-09-28): the S3 endpoint answered part PUTs
+with `504 Gateway Timeout`, and every failed run said only "the upload stopped
+reading the archive": `archiveAndUpload` returned the helper's broken-pipe error
+(the upload had stopped reading because it failed) instead of the upload's own.
+The upload error now wins. `internal/s3`'s buffered requests (single PUT, parts,
+multipart start/completion) each get `RequestTimeout` (10m) and
+`RequestAttempts` (3) tries on a transport error, timeout, 429 or 5xx, every
+retry and a throughput line every 30s going to the job log through `Client.Log`.
+The activity watchdog alone couldn't bound these: an endpoint trickling bytes
+counts as progress. `backup_run.size_bytes` is `bigint`, it was `integer` and
+any archive over 2 GiB failed the finalize write.
+
 **Never Docker's archive API on a never-started container.** Backups used to
 create an `alpine` helper with entrypoint `true`, never start it, and read the
 volume out through `GET /containers/<id>/archive` (restores used

@@ -4,11 +4,14 @@ import { type ListQuery, parseListQuery } from "./list-query";
 const API_DEFAULT_PER_PAGE = 100;
 
 /**
- * Parses a REST API list request's paging, search and filter params, defaulting
- * to 100 items a page instead of the dashboard's per-account default.
+ * Parses a REST API list request's paging, search and `filterKeys` params,
+ * defaulting to 100 items a page instead of the dashboard's per-account default.
  */
-export function parseApiListQuery(url: URL): ListQuery {
-	return parseListQuery(url, { perPage: API_DEFAULT_PER_PAGE });
+export function parseApiListQuery(
+	url: URL,
+	filterKeys: string[] = [],
+): ListQuery {
+	return parseListQuery(url, { filterKeys, perPage: API_DEFAULT_PER_PAGE });
 }
 
 /**

@@ -44,6 +44,12 @@ type fakeS3 struct {
 	parts   map[int][]byte
 	aborted bool
 	failAt  int
+	flaky   int
+	tries   map[int]int
+}
+
+func init() {
+	s3.RetryDelay = func(int) time.Duration { return 0 }
 }
 
 // handler is the fake S3 endpoint's HTTP handler, verifying every request's
@@ -69,8 +75,9 @@ func (f *fakeS3) handler(t *testing.T) http.HandlerFunc {
 			fmt.Fprint(w, "<InitiateMultipartUploadResult><UploadId>up-1</UploadId></InitiateMultipartUploadResult>")
 		case r.Method == http.MethodPut && query.Has("partNumber"):
 			number, _ := strconv.Atoi(query.Get("partNumber"))
-			if number == f.failAt {
-				w.WriteHeader(http.StatusInternalServerError)
+			f.tries[number]++
+			if number == f.failAt && (f.flaky == 0 || f.tries[number] <= f.flaky) {
+				w.WriteHeader(http.StatusGatewayTimeout)
 				return
 			}
 			f.parts[number] = body
@@ -104,7 +111,7 @@ func (f *fakeS3) handler(t *testing.T) http.HandlerFunc {
 
 // newFake starts a fake S3 server and returns a client pointed at it.
 func newFake(t *testing.T) (*s3.Client, *fakeS3) {
-	fake := &fakeS3{objects: map[string][]byte{}, parts: map[int][]byte{}}
+	fake := &fakeS3{objects: map[string][]byte{}, parts: map[int][]byte{}, tries: map[int]int{}}
 	server := httptest.NewServer(fake.handler(t))
 	t.Cleanup(server.Close)
 	return &s3.Client{
@@ -153,6 +160,56 @@ func TestUploadAbortsOnFailedPart(t *testing.T) {
 	}
 	if !fake.aborted {
 		t.Fatal("multipart upload wasn't aborted")
+	}
+	if fake.tries[2] != s3.RequestAttempts {
+		t.Fatalf("part 2 sent %d times, want %d", fake.tries[2], s3.RequestAttempts)
+	}
+}
+
+func TestUploadRetriesAFlakyPart(t *testing.T) {
+	client, fake := newFake(t)
+	var logged []string
+	client.Log = func(line string) { logged = append(logged, line) }
+	fake.failAt, fake.flaky = 2, 2
+	data := make([]byte, s3.PartSize+1)
+	size, err := client.Upload(context.Background(), "big.tar.gz", bytes.NewReader(data))
+	if err != nil || size != int64(len(data)) || fake.aborted {
+		t.Fatalf("size=%d err=%v aborted=%v", size, err, fake.aborted)
+	}
+	if retries := strings.Count(strings.Join(logged, "\n"), "retrying"); retries != 2 {
+		t.Fatalf("logged %d retries: %v", retries, logged)
+	}
+}
+
+func TestUploadDoesNotRetryAClientError(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	t.Cleanup(server.Close)
+	client := &s3.Client{Bucket: "bucket", Endpoint: server.URL, Region: "us-east-1"}
+	if _, err := client.Upload(context.Background(), "x", strings.NewReader("x")); err == nil || calls != 1 {
+		t.Fatalf("err=%v calls=%d", err, calls)
+	}
+}
+
+func TestUploadTimesOutASilentEndpoint(t *testing.T) {
+	previous := s3.RequestTimeout
+	s3.RequestTimeout = 50 * time.Millisecond
+	t.Cleanup(func() { s3.RequestTimeout = previous })
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	t.Cleanup(func() { close(release); server.Close() })
+	client := &s3.Client{Bucket: "bucket", Endpoint: server.URL, Region: "us-east-1"}
+	_, err := client.Upload(context.Background(), "x", strings.NewReader("x"))
+	if err == nil || !strings.Contains(err.Error(), "no answer within") {
+		t.Fatalf("err = %v", err)
 	}
 }
 

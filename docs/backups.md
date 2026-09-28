@@ -46,6 +46,11 @@ A backup that stops making progress doesn't hang: if Docker stops answering for
 the helper, the backup fails after about 10 minutes with an error naming the
 container, instead of running (and blocking updates) forever. See
 [Docker stuck on a container](faq-and-limitations.md#docker-stuck-on-a-container).
+The upload is bounded the same way: each request to the S3 endpoint (one 16 MiB
+part of the archive) gets 10 minutes to answer, and a timeout, a `429` or a
+`5xx` is retried twice before the backup fails with the endpoint's own error.
+The run log says where the archive goes, logs every retry, and prints how much
+has been uploaded and at what speed every 30 seconds.
 
 Set a cron schedule alongside the destination to back up automatically; the
 scheduler mirrors the [scheduled-redeploy](scheduling.md#scheduled-redeploy)

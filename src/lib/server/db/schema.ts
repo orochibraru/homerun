@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
 	type AnyPgColumn,
+	bigint,
 	boolean,
 	doublePrecision,
 	index,
@@ -1246,7 +1247,7 @@ export const backupRun = pgTable(
 		jobId: text("job_id"),
 		key: text("key"),
 		kind: text("kind").$type<BackupRunKind>().default("backup").notNull(),
-		sizeBytes: integer("size_bytes"),
+		sizeBytes: bigint("size_bytes", { mode: "number" }),
 		startedAt: timestamp("started_at", { mode: "date" }).notNull(),
 		// null while the run is still in progress (startedAt set, finishedAt
 		// not yet), true/false once finalized.

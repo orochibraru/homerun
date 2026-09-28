@@ -26,6 +26,8 @@ const INSTRUCTIONS = `Homerun is a self-hosted PaaS: each service is one Docker 
 
 To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs, list_deployments (each deploy attempt's error and log, the place to look when a deploy failed) and list_revisions (each revision's health and the reason it failed). When the app reports errors through a Sentry SDK, list_errors and get_error give the grouped exceptions with stack traces and links to the source. Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network.
 
+For backups and other background work: list_volumes gives each volume's backup settings, list_backups every run with its outcome, error and its job's last progress, get_job a job's full log, attempts and progressAt (a running job whose progressAt stops moving is stuck), list_jobs what's queued, running or failed, and run_backup queues a backup now.
+
 To fix one: update_service changes settings (applied on the next deploy), deploy_service rolls them out, restart_service restarts without redeploying, rollback_service redeploys an earlier revision. Say what you're about to change before changing it.`;
 
 const serviceId = z.string().describe("The service's id, from list_services");
@@ -310,6 +312,104 @@ function registerInstanceTools(server: McpServer, api: ApiCall): void {
 	);
 }
 
+/** Registers the tools over volumes, backup runs and queue jobs, and the one that queues a backup. */
+function registerBackupTools(server: McpServer, api: ApiCall): void {
+	server.registerTool(
+		"list_volumes",
+		{
+			annotations: read,
+			description:
+				"List storage volumes with their backup settings: schedule, destination, last and next run.",
+		},
+		async () => asResult(await api("GET", "/volumes?perPage=100")),
+	);
+
+	server.registerTool(
+		"list_backups",
+		{
+			annotations: read,
+			description:
+				"List backup and restore runs, newest first: outcome, error, size, and the job's id, status and last progress.",
+			inputSchema: z.object({
+				outcome: z
+					.enum(["running", "success", "failed"])
+					.optional()
+					.describe("Only runs with this outcome"),
+				volumeId: z
+					.string()
+					.optional()
+					.describe("Only this volume's runs, id from list_volumes"),
+			}),
+		},
+		async ({ outcome, volumeId }) => {
+			const query = new URLSearchParams({ perPage: "50" });
+			if (outcome) {
+				query.set("outcome", outcome);
+			}
+			if (volumeId) {
+				query.set("volume", volumeId);
+			}
+			return asResult(await api("GET", `/backups?${query}`));
+		},
+	);
+
+	server.registerTool(
+		"get_job",
+		{
+			annotations: read,
+			description:
+				"A queue job's status, error, attempts, heartbeat, last progress and full log.",
+			inputSchema: z.object({
+				jobId: z
+					.string()
+					.describe("The job's id, from list_backups or list_jobs"),
+			}),
+		},
+		async ({ jobId }) =>
+			asResult(await api("GET", `/jobs/${encodeURIComponent(jobId)}`)),
+	);
+
+	server.registerTool(
+		"list_jobs",
+		{
+			annotations: read,
+			description:
+				"List queue jobs (deploys, backups, cron jobs, cleanups, scans), running first. Admins only.",
+			inputSchema: z.object({
+				status: z
+					.string()
+					.optional()
+					.describe(
+						"Comma-separated statuses: queued, running, succeeded, failed, cancelled",
+					),
+			}),
+		},
+		async ({ status }) => {
+			const query = new URLSearchParams({ perPage: "50" });
+			if (status) {
+				query.set("status", status);
+			}
+			return asResult(await api("GET", `/jobs?${query}`));
+		},
+	);
+
+	server.registerTool(
+		"run_backup",
+		{
+			annotations: change,
+			description:
+				"Queue a backup of a volume now and return its job id, follow it with get_job.",
+			inputSchema: z.object({
+				volumeId: z.string().describe("The volume's id, from list_volumes"),
+			}),
+		},
+		async ({ volumeId }) =>
+			asResult(
+				await api("POST", `/volumes/${encodeURIComponent(volumeId)}/backup`),
+			),
+	);
+}
+
 /**
  * Patches a service for `update_service`. Env changes are merged into the
  * stored vars (`null` deletes one) rather than replacing them, and anything
@@ -482,6 +582,7 @@ export function createHomerunMcpServer(api: ApiCall): McpServer {
 	registerDependencyTools(server, api);
 	registerErrorTools(server, api);
 	registerInstanceTools(server, api);
+	registerBackupTools(server, api);
 	registerChangeTools(server, api);
 	return server;
 }

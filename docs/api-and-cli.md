@@ -170,6 +170,21 @@ it with `{"status": "resolved" | "ignored" | "unresolved"}` changes its status.
 The MCP server exposes the same as `list_errors` and `get_error`, and the CLI as
 `homerun services errors <id>`.
 
+### Backups and jobs
+
+`GET /api/v1/volumes` lists storage volumes with their backup settings and next
+scheduled run (`?backup=on` for only the ones with backups on),
+`POST /api/v1/volumes/:id/backup` queues a backup now and answers `202` with its
+`jobId`, and `GET /api/v1/backups` lists every backup and restore run, newest
+first (`?volume=<id>`, `?outcome=running|success|failed`,
+`?kind=backup|restore`, `q` and the usual paging), each with its job's status,
+attempt count and `jobProgressAt`. `GET /api/v1/jobs/:id` returns a job's
+status, attempts, heartbeat, `progressAt` and full log: a running job whose
+`progressAt` stops moving is stuck. The MCP server exposes these as
+`list_volumes`, `list_backups`, `run_backup`, `get_job` and `list_jobs`, the CLI
+as `homerun backups list|volumes|run` and `homerun jobs list|get`;
+`homerun backups run <volume> --wait` follows the backup's log until it ends.
+
 ## OpenAPI spec & Swagger UI
 
 `GET /api/v1/openapi.json` is a real, generated OpenAPI 3.1 document:
@@ -213,12 +228,13 @@ claude mcp add --transport http homerun \
 
 It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
 `list_deployments` (each deploy attempt's error and log), `list_revisions`,
-`list_dependencies`, `list_stacks`, `system_stats` and `instance_status`. It
-changes: `update_service`, `set_dependencies`, `deploy_service`,
-`restart_service`, `start_service`, `stop_service` and `rollback_service`.
-Deleting a service is deliberately not a tool. Every tool goes through the REST
-API with your own permissions, so a read-only account or API key can diagnose
-but not change anything.
+`list_dependencies`, `list_stacks`, `system_stats`, `instance_status`,
+`list_volumes`, `list_backups`, `get_job` and `list_jobs`. It changes:
+`update_service`, `set_dependencies`, `deploy_service`, `restart_service`,
+`start_service`, `stop_service`, `rollback_service` and `run_backup`. Deleting a
+service is deliberately not a tool. Every tool goes through the REST API with
+your own permissions, so a read-only account or API key can diagnose but not
+change anything.
 
 Secrets don't reach the agent, the rest stays readable:
 
@@ -338,6 +354,11 @@ homerun previews delete <id> <pr>
 homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list [--json]
 homerun templates list [--json]
+homerun backups list [--volume <id|name>] [--outcome running|success|failed] [--json]
+homerun backups volumes [--json]
+homerun backups run <id|name> [--wait] [--timeout <seconds>]
+homerun jobs list [--status queued,running,succeeded,failed,cancelled] [--json]
+homerun jobs get <id> [--json]
 homerun instance status [--json]
 homerun instance update [--wait=false] [--timeout <seconds>] [--force]
 homerun instance channel stable|canary|nightly

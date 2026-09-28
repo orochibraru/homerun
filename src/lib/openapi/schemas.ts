@@ -520,12 +520,28 @@ export const scanConflictResponse = z.object({
 });
 
 export const jobResponse = z.object({
+	attempts: z
+		.number()
+		.meta({ description: "How many times it has been claimed" }),
 	createdAt: isoTimestamp,
 	error: z.string().nullable(),
 	finishedAt: isoTimestamp.nullable(),
+	heartbeatAt: isoTimestamp.nullable().meta({
+		description:
+			"The Go worker's last heartbeat while it executes the job, null when no worker holds it",
+	}),
 	id: z.string(),
+	log: z.string().meta({
+		description: "Its progress log, every attempt appended to the same text",
+	}),
+	maxAttempts: z.number(),
+	progressAt: isoTimestamp.nullable().meta({
+		description:
+			"The last time it moved a byte or got a Docker answer; the worker fails a job whose progressAt is older than its stall timeout",
+	}),
 	result: z.record(z.string(), z.unknown()).nullable(),
 	serviceId: z.string().nullable(),
+	stage: z.enum(["prepare", "execute", "finalize", "finalizing"]).nullable(),
 	startedAt: isoTimestamp.nullable(),
 	status: z.enum(JOB_STATUSES),
 	title: z.string(),

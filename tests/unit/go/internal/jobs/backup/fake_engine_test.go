@@ -4,11 +4,13 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"sort"
 	"strings"
@@ -19,6 +21,7 @@ import (
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/jobs/backup"
+	"github.com/orochibraru/homerun/internal/s3"
 	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
 )
 
@@ -276,5 +279,30 @@ func TestABackupOnAWedgedContainerFailsInsteadOfHanging(t *testing.T) {
 	}
 	if took := time.Since(started); took > 5*time.Second {
 		t.Fatalf("the stall must be detected within the window, took %s", took)
+	}
+}
+
+func TestAFailedUploadReportsTheS3ErrorNotTheBrokenPipe(t *testing.T) {
+	previous := s3.RetryDelay
+	s3.RetryDelay = func(int) time.Duration { return 0 }
+	t.Cleanup(func() { s3.RetryDelay = previous })
+	noise := make([]byte, s3.PartSize+s3.PartSize/2)
+	_, _ = rand.Read(noise)
+	_, socket := newFakeEngine(t, map[string]string{"big": string(noise)})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Has("uploads") {
+			_, _ = io.WriteString(w, "<InitiateMultipartUploadResult><UploadId>u</UploadId></InitiateMultipartUploadResult>")
+			return
+		}
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.WriteHeader(http.StatusGatewayTimeout)
+	}))
+	t.Cleanup(server.Close)
+	spec := fakeSpec(t)
+	spec.Destination = s3.Client{Bucket: "b", Endpoint: server.URL, Region: "us-east-1"}
+
+	_, err := runJob(t, "backup", socket, spec)
+	if err == nil || !strings.Contains(err.Error(), "504") || strings.Contains(err.Error(), "stopped reading") {
+		t.Fatalf("want the S3 504, got %v", err)
 	}
 }
