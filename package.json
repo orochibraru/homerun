@@ -45,7 +45,7 @@
 		"auth": "^1.7.1",
 		"bits-ui": "^2.19.0",
 		"clsx": "^2.1.1",
-		"devalue": "^5.9.1",
+		"devalue": "^6.0.0",
 		"dockerode": "^5.0.1",
 		"drizzle-kit": "^0.31.10",
 		"markdownlint-cli2": "^0.23.2",
