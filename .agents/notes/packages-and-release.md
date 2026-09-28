@@ -38,33 +38,37 @@ through the redaction so a token can't reach the deployment log.
 `pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
 `docker.yaml` (per image) → `e2e.yaml` → `docker-manifest.yaml` (per image) →
 gate/release. `pull_request.yaml` additionally runs `screenshots.yaml` and
-`templates-e2e.yaml` off `code_quality`, in parallel with the image builds
-rather than after them, because both are the exception to "build the image once"
-: they must run the app and worker as local processes to reach the Docker socket
-(see Screenshots and Template deploys in `testing.md`), so each does its own
-`bun run build` and never touches the image under test. Both feed the CI Gate.
-**On a PR, templates E2E only deploys the templates the PR adds or changes**:
-Detect Changes turns every non-removed `templates/<category>/<slug>.json` in the
-PR's file list into a `templates` output (comma-separated slugs), passed as the
-workflow's `templates` input and on to `TEMPLATES_E2E_ONLY`; no template touched
-skips the job (the gate treats skipped as passing). Deploying all of them took
-over an hour on PRs that never touched one. `publish.yaml` and
-`template-versions.yaml` pass no `templates`, so they still deploy every one.
-`publish.yaml` runs `templates-e2e.yaml` too, off `code_quality` (so only when
-it builds from scratch rather than promoting a PR's images, which already passed
-it), but nothing waits on it : an hour-plus job in front of every canary isn't
-worth it when the PR gate already ran it. The split between `docker.yaml` and
-`docker-manifest.yaml` is the point : `docker.yaml` pushes **by digest only**
-(`push-by-digest=true`, no tag), so `e2e.yaml` can `docker pull` that exact
-digest and run Playwright against the real artefact, and `docker-manifest.yaml`
-only then applies the friendly tag (`pr-<n>`, or `<sha>` + `canary` on `main`).
-Nothing anyone can pull by name is ever published before e2e has passed against
-it, and the app is built once per platform instead of once for the image plus
-again from source for the tests. The per-platform digests and the
-`docker-metadata-action` bake file travel between those workflows as run
-artefacts, which is why they must stay in one workflow run (`uses:`, not a
-separate `workflow_run`). Both arches build natively (`ubuntu-24.04-arm` for
-arm64), never under QEMU.
+`templates-e2e.yaml` (the latter only when the PR touches a template, the suite
+or the deploy pipeline, since a batch of Renovate PRs each pulling ~80 images
+blew through Docker Hub's pull limit) off `code_quality`, in parallel with the
+image builds rather than after them, because both are the exception to "build
+the image once" : they must run the app and worker as local processes to reach
+the Docker socket (see Screenshots and Template deploys in `testing.md`), so
+each does its own `bun run build` and never touches the image under test. Both
+feed the CI Gate. **Detect Changes decides how much of it runs**: a change to
+the suite, its workflows or what a template deploy goes through (the
+deploy/docker/ template services, seeding, the templates routes,
+`internal/jobs/deploy`, `dockerapi`, `agent`) sets `templates=true` with an
+empty `template_slugs`, so every template deploys; a PR that only adds or
+changes template files sets `template_slugs` to their comma-separated slugs
+(every non-removed `templates/<category>/<slug>.json`), passed as the workflow's
+`templates` input and on to `TEMPLATES_E2E_ONLY`, so only those deploy; anything
+else skips the job (the gate treats skipped as passing). `publish.yaml` runs
+`templates-e2e.yaml` on every non-release push to `main`, promoted or not (a
+promoted PR may have skipped it or run a subset), with no `templates`, so every
+one deploys there, but nothing waits on it : an hour-plus job in front of every
+canary isn't worth it when the PR gate already ran it. The split between
+`docker.yaml` and `docker-manifest.yaml` is the point : `docker.yaml` pushes
+**by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
+`docker pull` that exact digest and run Playwright against the real artefact,
+and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`, or
+`<sha>` + `canary` on `main`). Nothing anyone can pull by name is ever published
+before e2e has passed against it, and the app is built once per platform instead
+of once for the image plus again from source for the tests. The per-platform
+digests and the `docker-metadata-action` bake file travel between those
+workflows as run artefacts, which is why they must stay in one workflow run
+(`uses:`, not a separate `workflow_run`). Both arches build natively
+(`ubuntu-24.04-arm` for arm64), never under QEMU.
 
 **`template-versions.yaml` bumps the built-in templates' pinned tags weekly**
 (Monday 05:17, plus `workflow_dispatch`): `scripts/bump-template-versions.ts`

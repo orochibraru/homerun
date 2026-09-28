@@ -13,6 +13,13 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Group scheduled-redeploy notifications: every `cron`-triggered deploy
+      fires its own bell entry and channel message (`DeploymentService`'s
+      `#notifySuccess` and failure path), so a shared schedule floods both.
+      Buffer `cron` outcomes, flush after ~90s quiet (10 min cap) as one success
+      digest (`update.succeeded`) and one failure digest (`update.failed`, each
+      error listed); a batch of one keeps today's single-service message.
+
 - [ ] Run-as-user (or volume ownership) for services and templates: Vikunja runs
       as uid 1000 from a `scratch` image, and a fresh named volume at
       `/app/vikunja/files` comes up root-owned, so it can't write its files or

@@ -26,6 +26,7 @@ jobs:
     outputs:
       code: ${{ steps.diff.outputs.code }}
       templates: ${{ steps.diff.outputs.templates }}
+      template_slugs: ${{ steps.diff.outputs.template_slugs }}
     steps:
       - name: List changed files outside docs
         id: diff
@@ -40,16 +41,27 @@ jobs:
           set -euo pipefail
           listing="$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | "\(.status) \(.filename)"')"
           files="$(printf '%s\n' "$listing" | awk '{print $2}')"
-          templates="$(printf '%s\n' "$listing" | awk '$1 != "removed" {print $2}' \
+          slugs="$(printf '%s\n' "$listing" | awk '$1 != "removed" {print $2}' \
             | sed -nE 's#^templates/[^/]+/([^/]+)\.json$#\1#p' | paste -sd, -)"
-          echo "templates=$templates" >> "$GITHUB_OUTPUT"
-          echo "Templates to deploy: ${templates:-none}"
           code="$(printf '%s\n' "$files" | grep -vE '^(docs/|\.agents/|\.claude/)|\.md$' || true)"
           if [ "$HEAD_REF" = "releaser/release" ] && [ "$code" = "package.json" ] \
             && [ "$(gh api "repos/$REPO/contents/package.json?ref=$BASE_SHA" --jq .content | base64 -d | jq -S 'del(.version)')" \
               = "$(gh api "repos/$REPO/contents/package.json?ref=$HEAD_SHA" --jq .content | base64 -d | jq -S 'del(.version)')" ]; then
             echo "Release PR: only CHANGELOG.md and package.json's version change, nothing to rebuild."
             code=""
+          fi
+          pipeline="$(printf '%s\n' "$code" | grep -E '^(tests/e2e/templates/|playwright\.templates\.config\.ts$|\.github/workflows/(templates-e2e|pull_request)\.yaml$|src/lib/services/(deploy|template|default-volume|docker)|src/lib/server/db/(seed|builtin-templates)\.ts$|src/routes/\(protected\)/templates/|internal/(jobs/deploy|dockerapi|agent)/)' || true)"
+          if [ -n "$pipeline" ]; then
+            echo "templates=true" >> "$GITHUB_OUTPUT"
+            echo "template_slugs=" >> "$GITHUB_OUTPUT"
+            echo "The deploy pipeline or the suite changed: deploying every template."
+          elif [ -n "$slugs" ] && [ -n "$code" ]; then
+            echo "templates=true" >> "$GITHUB_OUTPUT"
+            echo "template_slugs=$slugs" >> "$GITHUB_OUTPUT"
+            echo "Deploying the templates this PR adds or changes: $slugs"
+          else
+            echo "templates=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing a template deploy depends on changed: skipping Templates E2E (main still runs it on merge)."
           fi
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
@@ -122,10 +134,10 @@ jobs:
   templates:
     name: Templates E2E
     needs: [changes, code_quality]
-    if: needs.changes.outputs.templates != ''
+    if: needs.changes.outputs.templates == 'true'
     uses: ./.github/workflows/templates-e2e.yaml
     with:
-      templates: ${{ needs.changes.outputs.templates }}
+      templates: ${{ needs.changes.outputs.template_slugs }}
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
