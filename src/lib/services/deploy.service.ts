@@ -26,7 +26,10 @@ import {
 	type RevisionSource,
 	resolveDeployPlan,
 } from "./deploy/plan.ts";
-import { restoreRevisionConfig } from "./deploy/revision-step.ts";
+import {
+	restoreRevisionConfig,
+	swapRestoredVolume,
+} from "./deploy/revision-step.ts";
 import {
 	notifyStatusChecksFailed,
 	StatusChecksFailedError,
@@ -62,6 +65,7 @@ interface ResolvedImage {
 export interface EnqueueDeployInput {
 	clientDeploymentId?: string | null;
 	dependsOnJobId?: string | null;
+	mountSwap?: { from: string; to: string };
 	noCache?: boolean;
 	note?: string;
 	restoreConfig?: boolean;
@@ -332,7 +336,7 @@ class DeploymentServiceClass {
 	 *   the way a failed deploy always has.
 	 */
 	async prepareWorkerDeploy(job: JobDTO): Promise<Record<string, unknown>> {
-		const { deploymentId, noCache, serviceId, trigger, userId } =
+		const { deploymentId, mountSwap, noCache, serviceId, trigger, userId } =
 			deployJobPayload.parse(job.payload);
 		const svc = await ServiceDTO.get(serviceId);
 		if (!svc) {
@@ -371,12 +375,18 @@ class DeploymentServiceClass {
 			if (revision && dep.restoreConfig) {
 				await restoreRevisionConfig(ctx, revision.id);
 			}
+			if (mountSwap) {
+				await swapRestoredVolume(ctx, mountSwap);
+			}
+			const mounts = await ServiceVolumeDTO.listForService(svc.id);
 			await dep.update({
-				configSnapshot: snapshotRevisionConfig(svc.toJSON()),
+				configSnapshot: {
+					...snapshotRevisionConfig(svc.toJSON()),
+					volumeMounts: mounts.map(({ mount }) => mount.snapshot()),
+				},
 			});
 			const plan = await this.#loadDeployPlan(svc, revision);
 			await dep.appendLog(phaseLine("volumes"));
-			const mounts = await ServiceVolumeDTO.listForService(svc.id);
 			const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 			await dep.appendLog(phaseLine("image"));
 			return await deployWorkerSpec({ ...ctx, mounts, noCache, plan, stack });
@@ -619,11 +629,14 @@ class DeploymentServiceClass {
 		await svc.update({ currentStatus: "pending" });
 
 		const entry = await QueueService.enqueue({
-			dedupeKey: `${kind}:${svc.id}`,
+			dedupeKey: input.mountSwap
+				? `${kind}:${svc.id}:mount:${input.mountSwap.to}`
+				: `${kind}:${svc.id}`,
 			dependsOnJobId: input.dependsOnJobId ?? null,
 			lockKey: `service:${svc.id}`,
 			payload: {
 				deploymentId: dep.id,
+				...(input.mountSwap ? { mountSwap: input.mountSwap } : {}),
 				noCache: input.noCache ?? false,
 				serviceId: svc.id,
 				trigger,

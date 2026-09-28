@@ -6,6 +6,7 @@ import {
 	setSystemTime,
 	test,
 } from "bun:test";
+import type { CancelledJob } from "$lib/dto/job-dto";
 
 interface FakeJob {
 	attempts: number;
@@ -41,7 +42,7 @@ function fakeJob(overrides: Partial<FakeJob> = {}): FakeJob {
 mock.module("$app/environment", () => ({ building: false, dev: false }));
 
 const cancelDependents = mock(
-	async (_id: string, _reason: string) => undefined,
+	async (_id: string, _reason: string) => [] as CancelledJob[],
 );
 const findQueued = mock(async (_type: string, _key: string) => null as unknown);
 const create = mock(async (_input: unknown) => null as unknown);

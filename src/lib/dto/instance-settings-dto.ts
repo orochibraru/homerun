@@ -2,6 +2,10 @@ import { eq } from "drizzle-orm";
 import type { EmailSignIn } from "$lib/auth-providers";
 import type { BlockSeverity, ScanBlockPolicy } from "$lib/image-scan";
 import {
+	DEFAULT_REMINDER_MINUTES,
+	DEFAULT_SUSTAIN_SECONDS,
+} from "$lib/resource-incidents";
+import {
 	type ResourceThresholds,
 	withDefaults,
 } from "$lib/resource-thresholds";
@@ -211,6 +215,8 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			registryPublicHost: null,
 			requirePasskey: null,
 			requireTwoFactor: null,
+			resourceAlertReminderMinutes: null,
+			resourceAlertSustainSeconds: null,
 			resourceThresholds: null,
 			retainedImagesPerService: null,
 			smtpEnabled: null,
@@ -347,6 +353,27 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	/** The soft and hard usage thresholds per resource, the defaults where none is saved. */
 	get resourceThresholds(): ResourceThresholds {
 		return withDefaults(this.row.resourceThresholds);
+	}
+
+	/** How long a resource has to stay past a limit before it alerts, in seconds (60 unless set). */
+	get resourceAlertSustainSeconds(): number {
+		return this.row.resourceAlertSustainSeconds ?? DEFAULT_SUSTAIN_SECONDS;
+	}
+
+	/** Minutes between reminders while a resource stays past a limit, 0 for none (30 unless set). */
+	get resourceAlertReminderMinutes(): number {
+		return this.row.resourceAlertReminderMinutes ?? DEFAULT_REMINDER_MINUTES;
+	}
+
+	/** Persists how long a breach has to last before it alerts and how often an open one reminds. */
+	async updateResourceAlertTiming(timing: {
+		reminderMinutes: number;
+		sustainSeconds: number;
+	}): Promise<void> {
+		await this.persist({
+			resourceAlertReminderMinutes: timing.reminderMinutes,
+			resourceAlertSustainSeconds: timing.sustainSeconds,
+		});
 	}
 
 	/** Persists every resource category's soft and hard threshold. */

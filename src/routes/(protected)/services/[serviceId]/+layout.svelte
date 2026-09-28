@@ -135,7 +135,7 @@
 			}),
 			icon: HardDrive,
 			id: "volumes",
-			label: "Volumes",
+			label: "Storage",
 		},
 		{
 			exact: false,

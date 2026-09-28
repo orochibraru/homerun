@@ -1,5 +1,6 @@
 import { JobDTO } from "$lib/dto/job-dto";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
+import { closeCancelledDeploys } from "./cancelled-deploys.ts";
 import { jobHandlers } from "./handlers.ts";
 import { STALE_JOB_MS } from "./stale.ts";
 import { workerJobs } from "./worker-jobs/index.ts";
@@ -201,9 +202,10 @@ class JobWorkerClass extends BaseScheduler {
 		}
 
 		await entry.markFailed(message);
-		await JobDTO.cancelDependents(
-			entry.id,
-			`Cancelled because "${entry.title}" failed.`,
+		const reason = `Cancelled because "${entry.title}" failed.`;
+		await closeCancelledDeploys(
+			await JobDTO.cancelDependents(entry.id, reason),
+			reason,
 		);
 		this.logger.error(
 			`Job failed: type=${entry.type} job=${entry.id} : ${message}`,

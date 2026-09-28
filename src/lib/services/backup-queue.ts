@@ -1,6 +1,7 @@
 import type { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { JobDTO } from "$lib/dto/job-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { closeCancelledDeploys } from "./queue/cancelled-deploys.ts";
 import { QueueService } from "./queue.service.ts";
 import type { RestoreOptions } from "./s3-backup.service.ts";
 
@@ -20,14 +21,16 @@ export function enqueueVolumeBackup(
 	});
 }
 
-/** Enqueues a restore of backup `key` into `volume`, sharing the per-volume lock with backups so a restore never runs while the same volume is being tarred, and never retried. */
+/** Enqueues a restore of backup `key` into `volume`, sharing the per-volume lock with backups so a restore never runs while the same volume is being tarred, and never retried; `dependsOnJobId` holds it until that job (a backup of the current data) succeeds, and cancels it when that one fails. */
 export function enqueueVolumeRestore(
 	volume: StorageVolumeDTO,
 	key: string,
 	options: RestoreOptions,
+	dependsOnJobId: string | null = null,
 ): Promise<JobDTO> {
 	return QueueService.enqueue({
 		dedupeKey: `restore:${volume.id}`,
+		dependsOnJobId,
 		lockKey: `volume:${volume.id}`,
 		maxAttempts: 1,
 		payload: {
@@ -62,7 +65,7 @@ export async function cancelBackupRun(
 	}
 	const reason = `Cancelled by ${by}.`;
 	if (row.jobId) {
-		await JobDTO.cancel(row.jobId, reason);
+		await closeCancelledDeploys(await JobDTO.cancel(row.jobId, reason), reason);
 	}
 	await run.finish({ error: reason, success: false });
 	return true;

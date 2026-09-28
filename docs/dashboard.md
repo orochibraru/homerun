@@ -11,13 +11,20 @@
   `nvidia-smi`, just means the GPU block doesn't render, it isn't an error.
 - **Resource limits**: each of CPU, memory, disk and GPU has a soft and a hard
   threshold (Settings → General → Resource limits, 85% and 95% by default),
-  checked against the host once a minute. Crossing the soft one sends a
-  **Resource warning**; crossing the hard one sends **Resource critical**, shows
-  a red banner here, and refuses new services (from the wizard, a template, a
-  compose import or migration, the API, or a pull request preview) until usage
-  drops back. Each crossing alerts once, not every minute, and a **Resources
-  recovered** follows when everything is back under its soft threshold. If the
-  host's stats can't be read, nothing is refused.
+  checked against the host once a minute. A resource only alerts once it has
+  stayed past a limit for a while (**Alert after**, 60 seconds by default, so a
+  short spike doesn't page you; the disk alerts at once, it doesn't spike),
+  which opens an incident: past the soft limit it sends a **Resource warning**,
+  past the hard one (or when it climbs there later) a **Resource critical**,
+  shows a red banner here, and refuses new services (from the wizard, a
+  template, a compose import or migration, the API, or a pull request preview)
+  until usage drops back. While the incident lasts it reminds you (**Remind
+  every**, 30 minutes by default, 0 for never), and the first reading back under
+  the soft limit sends a **back to normal** for that resource with how long it
+  lasted and its peak. The last incidents are listed under the limits in
+  Settings, and one still open when Homerun restarts stays open: no second
+  alert, and you still get its recovery. If the host's stats can't be read,
+  nothing is refused.
 - **Resource usage history**, the same host CPU and memory as a chart, live or
   over the last hour, day, week, month, year or all of it, from a sample taken
   every minute and kept for a year, next to a **per-service usage** table of the

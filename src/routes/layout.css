@@ -155,6 +155,96 @@
 	--radius-2xl: calc(var(--radius) * 1.5);
 }
 
+[data-surface="glass"] {
+	--font-sans:
+		-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable",
+		sans-serif;
+	--radius: 0.875rem;
+	--glass-fill: rgba(255, 255, 255, 0.58);
+	--glass-edge: rgba(255, 255, 255, 0.65);
+	--glass-blur: blur(40px) saturate(180%);
+	--panel-bg: var(--glass-fill);
+	--panel-backdrop: var(--glass-blur);
+	--panel-border-width: 1px;
+	--color-border: rgba(255, 255, 255, 0.55);
+	--border: rgba(60, 60, 67, 0.16);
+	--panel-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 0 0 0.5px rgba(0, 0, 0, 0.08),
+		0 12px 32px -12px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.05);
+	--panel-shadow-lg:
+		inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 0 0 0.5px rgba(0, 0, 0, 0.1),
+		0 20px 48px -14px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.06);
+	--panel-rule: rgba(255, 255, 255, 0.7);
+	--popover: rgba(250, 250, 252, 0.72);
+	--page-bg-image:
+		radial-gradient(
+			70vmax 55vmax at 0% 0%,
+			color-mix(in oklab, var(--brand-3) 55%, transparent),
+			transparent 70%
+		),
+		radial-gradient(
+			65vmax 55vmax at 100% 100%,
+			color-mix(in oklab, var(--brand-2) 50%, transparent),
+			transparent 70%
+		),
+		radial-gradient(
+			55vmax 45vmax at 100% 0%,
+			color-mix(in oklab, var(--color-accent) 35%, transparent),
+			transparent 70%
+		);
+	--aurora-opacity: 0.55;
+}
+
+.dark[data-surface="glass"],
+.dark [data-surface="glass"] {
+	--glass-fill: rgba(38, 38, 44, 0.55);
+	--glass-edge: rgba(255, 255, 255, 0.14);
+	--color-border: rgba(255, 255, 255, 0.12);
+	--border: rgba(255, 255, 255, 0.1);
+	--panel-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.6),
+		0 16px 40px -12px rgba(0, 0, 0, 0.6);
+	--panel-shadow-lg:
+		inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.7),
+		0 24px 56px -14px rgba(0, 0, 0, 0.75);
+	--panel-rule: rgba(255, 255, 255, 0.12);
+	--popover: rgba(40, 40, 46, 0.72);
+}
+
+[data-surface="glass"] [data-slot="app-sidebar"] {
+	background-color: color-mix(in oklab, var(--glass-fill) 60%, transparent);
+	backdrop-filter: var(--glass-blur);
+	-webkit-backdrop-filter: var(--glass-blur);
+	border: 1px solid var(--glass-edge);
+	border-radius: var(--radius);
+	box-shadow: var(--panel-shadow);
+}
+
+[data-surface="glass"]
+	:is(
+		[data-slot="popover-content"],
+		[data-slot="dropdown-menu-content"],
+		[data-slot="dropdown-menu-sub-content"],
+		[data-slot="context-menu-content"],
+		[data-slot="context-menu-sub-content"],
+		[data-slot="select-content"],
+		[data-slot="dialog-content"]
+	) {
+	background-color: var(--popover);
+	backdrop-filter: var(--glass-blur);
+	-webkit-backdrop-filter: var(--glass-blur);
+	border: 1px solid var(--glass-edge);
+	box-shadow: var(--panel-shadow-lg);
+}
+
+[data-surface="glass"] [data-slot="button"][data-variant="outline"] {
+	background-color: color-mix(in oklab, var(--glass-fill) 80%, transparent);
+	border-color: var(--glass-edge);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.5),
+		0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
 [data-surface="neumorphism"] {
 	--color-bg: oklch(0.93 0.008 285);
 	--neu-dark: oklch(0.7 0.02 285 / 0.55);
@@ -1079,9 +1169,8 @@ html[data-surface="retro"] {
 }
 
 /**
- * A frosted panel sitting on the aurora : translucent, blurred, hairline
- * border. The blur is deliberately light : anything heavier turns the
- * gradient behind a card into a visible rectangle.
+ * A panel drawn in the current surface style's material: fill, blur,
+ * border and shadow all come from its `--panel-*` tokens.
  */
 @utility panel {
 	background-color: var(--panel-bg);

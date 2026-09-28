@@ -390,6 +390,12 @@ per-user instead of a singleton row.
   `data-surface` on any element restyles its subtree, which is how the
   Appearance page's preview tiles work. A new style is one entry in
   `SURFACE_STYLES` and one token block, nothing reads the style name elsewhere.
+- **Glass** (the default style) is macOS-style material: a `--page-bg-image`
+  wallpaper built from the palette's `--brand-2`/`--brand-3`/accent, panels at
+  `blur(40px) saturate(180%)` over a translucent `--glass-fill` with a bright
+  `--glass-edge` hairline and a specular inset top highlight, a floating
+  translucent sidebar, glass popovers, menus, selects and dialogs, and the
+  system font first (`-apple-system`, then Inter).
 - **Presets** (`preset`, nullable: win95, win98, winxp, win7, msn, retro,
   `PRESETS` in `$lib/surfaces.ts`) ride the same `data-surface` attribute:
   `effectiveSurface()` puts the preset there instead of the style when one is

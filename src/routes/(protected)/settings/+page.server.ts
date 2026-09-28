@@ -2,7 +2,9 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { ResourceIncidentDTO } from "$lib/dto/resource-incident-dto";
 import { Logger } from "$lib/logger";
+import { parseAlertTiming } from "$lib/resource-incidents";
 import { parseThresholds } from "$lib/resource-thresholds";
 import { passkeyRpId } from "$lib/security-policy";
 import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
@@ -18,9 +20,18 @@ const logger = new Logger("InstanceSettings");
 
 export const load = async ({ parent }) => {
 	await parent();
+	const [settings, incidents] = await Promise.all([
+		InstanceSettingsDTO.get(),
+		ResourceIncidentDTO.recent(10),
+	]);
 	return {
 		passkeyCount: await AccountSecurityService.countAllPasskeys(),
-		resourceThresholds: (await InstanceSettingsDTO.get()).resourceThresholds,
+		resourceAlertTiming: {
+			reminderMinutes: settings.resourceAlertReminderMinutes,
+			sustainSeconds: settings.resourceAlertSustainSeconds,
+		},
+		resourceIncidents: incidents.map((incident) => incident.toJSON()),
+		resourceThresholds: settings.resourceThresholds,
 		passkeyRpId: passkeyRpId(config.auth.origin) ?? "localhost",
 	};
 };
@@ -120,8 +131,15 @@ export const actions = {
 		if (typeof parsed === "string") {
 			return fail(400, { error: parsed, savedSection: "resources" });
 		}
+		const timing = parseAlertTiming(
+			(name) => formData.get(name) as string | null,
+		);
+		if (typeof timing === "string") {
+			return fail(400, { error: timing, savedSection: "resources" });
+		}
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateResourceThresholds(parsed);
+		await settings.updateResourceAlertTiming(timing);
 		logger.info(`Resource thresholds saved: user=${locals.user.id}`);
 		return { savedSection: "resources", success: true };
 	},

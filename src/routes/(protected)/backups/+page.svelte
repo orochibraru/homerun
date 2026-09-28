@@ -115,7 +115,7 @@
     {#if backupEnabledVolumes.length === 0}
       <EmptyState
         icon={CloudUpload}
-        subtitle="Flip the backup switch next to a volume on a service's Volumes tab, or on the volume's own page under Storage."
+        subtitle="Flip the backup switch next to a volume on a service's Storage tab, or on the volume's own page under Storage."
         title="No volumes have backups enabled"
       >
         {#snippet children()}

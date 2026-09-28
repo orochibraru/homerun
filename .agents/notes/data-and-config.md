@@ -52,7 +52,7 @@ yet built).
   sources.
 - `service-volume-dto.ts`, `ServiceVolumeDTO`: `listForService` (joined with the
   volume's name/kind/source), `attach`/`detach`, the mounts of a StorageVolume
-  into a service, shown on the service's Volumes tab.
+  into a service, shown on the service's Storage tab.
 - `remote-host-dto.ts`, `RemoteHostDTO`:
   `get`/`list`/`listPaged`/`listBuildServers`/`create`/`update`/`delete`,
   `toConnection()` (decrypts TLS material into what the Go worker's

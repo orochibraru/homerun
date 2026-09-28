@@ -34,7 +34,9 @@ function run(row: { jobId: string | null; success: boolean | null }) {
 
 describe("cancelBackupRun", () => {
 	test("cancels a running run's job and closes the run with who cancelled it", async () => {
-		const cancel = spyOn(JobDTO, "cancel").mockResolvedValue(true);
+		const cancel = spyOn(JobDTO, "cancel").mockResolvedValue([
+			{ id: "job-1", payload: {}, type: "backup" },
+		]);
 		restorers.push(cancel);
 		const { finish, run: target } = run({ jobId: "job-1", success: null });
 
@@ -47,7 +49,7 @@ describe("cancelBackupRun", () => {
 	});
 
 	test("closes a run whose job is gone without touching the queue", async () => {
-		const cancel = spyOn(JobDTO, "cancel").mockResolvedValue(false);
+		const cancel = spyOn(JobDTO, "cancel").mockResolvedValue([]);
 		restorers.push(cancel);
 		const { finish, run: target } = run({ jobId: null, success: null });
 
@@ -57,7 +59,9 @@ describe("cancelBackupRun", () => {
 	});
 
 	test("leaves a finished run alone", async () => {
-		const cancel = spyOn(JobDTO, "cancel").mockResolvedValue(true);
+		const cancel = spyOn(JobDTO, "cancel").mockResolvedValue([
+			{ id: "job-1", payload: {}, type: "backup" },
+		]);
 		restorers.push(cancel);
 		const { finish, run: target } = run({ jobId: "job-1", success: true });
 

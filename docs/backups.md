@@ -21,7 +21,7 @@ nothing.
 ## S3-compatible backups
 
 Off by default, turned on per volume. The quickest way is the **switch** next to
-a mounted volume on a service's Volumes tab: it turns backups on every day at
+a mounted volume on a service's Storage tab: it turns backups on every day at
 03:00, to your S3 destination when you have exactly one. With none, or several,
 it opens the settings instead. The **cog** beside it sets the schedule, the
 destination and an optional key prefix. The volume's own page

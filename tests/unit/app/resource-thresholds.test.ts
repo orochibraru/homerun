@@ -16,8 +16,11 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { ResourceAlertTracker, resourceAlertMessage } = await import(
+const { groupIncidentEvents, resourceAlertMessage } = await import(
 	"../../../src/lib/services/capacity.service"
+);
+const { ResourceIncidentDTO } = await import(
+	"../../../src/lib/dto/resource-incident-dto"
 );
 const { CapacityService, CapacityError } = await import(
 	"../../../src/lib/services/capacity.service"
@@ -105,37 +108,74 @@ describe("resource thresholds", () => {
 	});
 });
 
-describe("ResourceAlertTracker", () => {
-	test("alerts once per escalation and once on recovery, not every minute", () => {
-		const tracker = new ResourceAlertTracker();
-		expect(tracker.next([reading("disk", 87)])).toEqual([
-			{ event: "resource.warning", readings: [reading("disk", 87)] },
+describe("resourceAlertMessage", () => {
+	test("a server-wide message has no service line, and says how long it lasted", () => {
+		const incident = {
+			id: "i1",
+			kind: "memory" as const,
+			lastNotifiedAt: 0,
+			level: "soft" as const,
+			peak: 91,
+			startedAt: Date.parse("2026-09-25T09:58:00.000Z"),
+		};
+		const [alert] = groupIncidentEvents([
+			{ incident, reading: reading("memory", 88), type: "open" },
 		]);
-		expect(tracker.next([reading("disk", 88)])).toEqual([]);
-		expect(tracker.next([reading("disk", 96)])).toEqual([
-			{ event: "resource.critical", readings: [reading("disk", 96)] },
-		]);
-		expect(tracker.next([reading("disk", 90)])).toEqual([]);
-		expect(tracker.next([reading("disk", 50)])).toEqual([
-			{ event: "resource.recovered", readings: [reading("disk", 50)] },
-		]);
-		expect(tracker.next([reading("disk", 50)])).toEqual([]);
-	});
-
-	test("a server-wide message has no service line", () => {
 		const message = resourceAlertMessage(
-			{ event: "resource.critical", readings: [reading("disk", 97)] },
+			alert as never,
 			"https://homerun.example.com",
 			"2026-09-25T10:00:00.000Z",
 		);
 		expect(message.serviceName).toBeNull();
+		expect(message.title).toBe("Server resources running high");
 		expect(messageBody(message)).not.toContain("Service:");
-		expect(messageBody(message)).toContain(
-			"Disk: Disk at 97% (hard limit 95%)",
-		);
 		expect(discordPayload(message).embeds[0]?.fields).toEqual([
-			{ inline: true, name: "Disk", value: "Disk at 97% (hard limit 95%)" },
+			{
+				inline: true,
+				name: "Memory",
+				value: "Memory at 88% (soft limit 85%) for 2 min",
+			},
 		]);
+	});
+
+	test("groups a check's events into critical, warning, reminders, then recoveries", () => {
+		const incident = (
+			kind: "cpu" | "disk" | "memory",
+			level: "hard" | "soft",
+		) => ({
+			id: null,
+			kind,
+			lastNotifiedAt: 0,
+			level,
+			peak: 99,
+			startedAt: 0,
+		});
+		const groups = groupIncidentEvents([
+			{
+				incident: incident("cpu", "soft"),
+				reading: reading("cpu", 40),
+				type: "recover",
+			},
+			{
+				incident: incident("memory", "soft"),
+				reading: reading("memory", 88),
+				type: "remind",
+			},
+			{
+				incident: incident("disk", "hard"),
+				reading: reading("disk", 97),
+				type: "escalate",
+			},
+		]);
+		expect(groups.map((group) => [group.event, group.reminder])).toEqual([
+			["resource.critical", false],
+			["resource.warning", true],
+			["resource.recovered", false],
+		]);
+		expect(
+			resourceAlertMessage(groups[1] as never, null, "2026-09-25T10:00:00.000Z")
+				.title,
+		).toBe("Server resources still running high");
 	});
 });
 
@@ -148,13 +188,39 @@ describe("CapacityService", () => {
 			"get",
 			async () =>
 				({
+					resourceAlertReminderMinutes: 30,
+					resourceAlertSustainSeconds: 60,
 					resourceThresholds: DEFAULT_THRESHOLDS,
 				}) as never,
 		);
 	}
 
-	test("a reading past a hard limit alerts in-app and on channels, and refuses new services", async () => {
+	function stubIncidents() {
+		const opened: string[] = [];
+		const updates: { level: string; resolved: boolean }[] = [];
+		stub(ResourceIncidentDTO, "listOpen", async () => []);
+		stub(ResourceIncidentDTO, "open", async (incident: { kind: string }) => {
+			opened.push(incident.kind);
+			return `incident-${incident.kind}`;
+		});
+		stub(ResourceIncidentDTO, "notificationCount", async () => 1);
+		stub(
+			ResourceIncidentDTO,
+			"notified",
+			async (
+				incident: { level: string },
+				_count: number,
+				resolvedAt: Date | null,
+			) => {
+				updates.push({ level: incident.level, resolved: resolvedAt !== null });
+			},
+		);
+		return { opened, updates };
+	}
+
+	test("a full disk alerts at once, memory only once it's stayed high for a minute, and each recovers", async () => {
 		stubSettings();
+		const incidents = stubIncidents();
 		const inApp: string[] = [];
 		const channels: string[] = [];
 		stub(NotificationDTO, "notify", (input: { message: string }) => {
@@ -164,17 +230,35 @@ describe("CapacityService", () => {
 			channels.push(message.event);
 		});
 
+		const start = Date.now();
+		stub(Date, "now", () => start);
 		await CapacityService.evaluate(host);
-
-		expect(channels).toEqual(["resource.critical", "resource.warning"]);
+		expect(channels).toEqual(["resource.critical"]);
 		expect(inApp[0]).toBe(
 			"Server past a hard resource limit: Disk at 97% (hard limit 95%)",
 		);
+
+		stub(Date, "now", () => start + 30_000);
+		await CapacityService.evaluate(host);
+		expect(channels).toEqual(["resource.critical"]);
+
+		stub(Date, "now", () => start + 61_000);
+		await CapacityService.evaluate(host);
+		expect(channels).toEqual(["resource.critical", "resource.warning"]);
+		expect(incidents.opened).toEqual(["disk", "memory"]);
 		expect(await CapacityService.refusal()).toContain(
 			"Disk at 97% (hard limit 95%)",
 		);
 		await expect(CapacityService.assertRoomForNewService()).rejects.toThrow(
 			CapacityError,
+		);
+
+		stub(Date, "now", () => start + 120_000);
+		await CapacityService.evaluate({ ...host, diskUsedGb: 10, memUsedMb: 100 });
+		expect(channels.at(-1)).toBe("resource.recovered");
+		expect(inApp.at(-1)).toContain("Disk back to");
+		expect(incidents.updates.filter((update) => update.resolved)).toHaveLength(
+			2,
 		);
 	});
 

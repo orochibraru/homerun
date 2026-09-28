@@ -42,16 +42,19 @@ revision's, so a later redeploy starts from there. By default only the image is
 rolled back and environment variables, volumes, networking and resources stay
 the service's current ones, since those are usually edited deliberately.
 
-Tick **Also restore env vars, resources and networking** in the confirm dialog
-(`?restoreConfig=true` on the API, `--restore-config` on the CLI) to put back
-what that revision ran with as well: its environment variables, CPU and memory
-limits, replicas, container port and protocol, network mode and whether it's
-publicly routed, plus its [runtime options](runtime-and-compute.md#runtime).
+Tick **Also restore env vars, resources, networking and volumes** in the confirm
+dialog (`?restoreConfig=true` on the API, `--restore-config` on the CLI) to put
+back what that revision ran with as well: its environment variables, CPU and
+memory limits, replicas, container port and protocol, network mode and whether
+it's publicly routed, plus its [runtime options](runtime-and-compute.md#runtime)
+and which volumes it had mounted where (a volume deleted since is left out).
 Every deploy records those on its revision, so this works for any revision
 deployed since the option existed; an older one logs that it has nothing to
-restore and rolls back the image only. Volumes and domains are never rolled
-back. The restored values are written onto the service, so the next deploy keeps
-them. Auto-rollback only rolls back the image.
+restore and rolls back the image only. The data inside volumes isn't rolled
+back, only which volume is mounted: that's how a
+[backup restored as a revision](storage-volumes.md#restoring-a-backup) is
+undone. Domains are never rolled back. The restored values are written onto the
+service, so the next deploy keeps them. Auto-rollback only rolls back the image.
 
 The last 5 distinct images of every service are **retained** (change the count,
 from 1 to 50, under **Settings → Docker → Retained images**): Docker Cleanup's

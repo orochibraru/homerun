@@ -236,10 +236,10 @@
 >
   <CheckBox
     helperText={pendingRevision?.hasConfigSnapshot
-      ? "Put back the environment variables, CPU, memory, replicas, port and network mode this revision ran with. Off keeps the current ones."
+      ? "Put back the environment variables, CPU, memory, replicas, port, network mode and volumes this revision ran with. Off keeps the current ones."
       : "This revision was deployed before configs were recorded, so only its image can be restored."}
     id="restoreConfig"
-    label="Also restore env vars, resources and networking"
+    label="Also restore env vars, resources, networking and volumes"
     name="restoreConfigToggle"
     bind:checked={restoreConfig}
   />

@@ -136,6 +136,13 @@ function claimableCondition(now: Date) {
 	);
 }
 
+/** A job a cancel just ended: enough to close what it stood for. */
+export interface CancelledJob {
+	id: string;
+	payload: unknown;
+	type: string;
+}
+
 /**
  * Wraps the `job` table : the persistent background job queue, claimed by the
  * worker with row locks.
@@ -548,8 +555,15 @@ export class JobDTO extends BaseDTO<Job> {
 	/**
 	 * Cancels every queued or running job that depends on `jobId`, directly or
 	 * transitively, recording `reason` as their error.
+	 *
+	 * @returns The jobs it cancelled, so a caller can close what they stood
+	 *   for (a deploy's deployment).
 	 */
-	static async cancelDependents(jobId: string, reason: string): Promise<void> {
+	static async cancelDependents(
+		jobId: string,
+		reason: string,
+	): Promise<CancelledJob[]> {
+		const all: CancelledJob[] = [];
 		let frontier = [jobId];
 		while (frontier.length > 0) {
 			// oxlint-disable-next-line no-await-in-loop -- each level of the dependency chain is only known once the previous one is cancelled
@@ -562,9 +576,11 @@ export class JobDTO extends BaseDTO<Job> {
 						inArray(job.status, ["queued", "running"]),
 					),
 				)
-				.returning({ id: job.id });
+				.returning({ id: job.id, payload: job.payload, type: job.type });
+			all.push(...cancelled);
 			frontier = cancelled.map((row) => row.id);
 		}
+		return all;
 	}
 
 	/**
@@ -572,9 +588,10 @@ export class JobDTO extends BaseDTO<Job> {
 	 * never starts; one the Go worker is executing loses its lease on the next
 	 * heartbeat, which cancels its execution and drops its result.
 	 *
-	 * @returns Whether the job was still queued or running.
+	 * @returns The jobs it cancelled, this one first, empty when it had
+	 *   already ended.
 	 */
-	static async cancel(id: string, reason: string): Promise<boolean> {
+	static async cancel(id: string, reason: string): Promise<CancelledJob[]> {
 		const cancelled = await db
 			.update(job)
 			.set({
@@ -584,11 +601,11 @@ export class JobDTO extends BaseDTO<Job> {
 				status: "cancelled",
 			})
 			.where(and(eq(job.id, id), inArray(job.status, ["queued", "running"])))
-			.returning({ id: job.id });
-		if (cancelled.length > 0) {
-			await JobDTO.cancelDependents(id, reason);
+			.returning({ id: job.id, payload: job.payload, type: job.type });
+		if (cancelled.length === 0) {
+			return [];
 		}
-		return cancelled.length > 0;
+		return [...cancelled, ...(await JobDTO.cancelDependents(id, reason))];
 	}
 
 	/**

@@ -411,3 +411,21 @@ with the request body as its stdin.
 Without `wipe` it's a **restore-over** : files in the archive replace what's on
 disk and anything else is left alone. `stopServices` defaults to on in the UI;
 the confirm dialog's text follows both toggles.
+
+**Restoring from a service's Storage tab** (`restoreVolumeBackup` in
+`$lib/services/backup/volume-restore.ts`, the `restoreBackup` action,
+`RESTORE_MODES` in `$lib/restore-modes.ts`): `replace` is a plain restore job;
+`backupFirst` chains the restore on a backup job (`dependsOnJobId`), so a failed
+backup cancels it. `revision` creates a new Docker volume with the old one's
+backup settings, restores into it, and enqueues a deploy that depends on the
+restore and carries `mountSwap` in its payload (its own dedupe key, so it never
+coalesces into another queued deploy and loses the swap). The swap is applied in
+that deploy's prepare step (`swapRestoredVolume`), not when it's queued, so a
+failed restore leaves the service mounted on the old volume. Every deploy's
+`configSnapshot` records `volumeMounts`, and a rollback with `restoreConfig`
+puts them back; the swap also backfills them onto the revision it replaces when
+that one predates the field. A dependent job cancelled by a failure or a cancel
+used to leave a deploy's deployment `pending` forever: `closeCancelledDeploys`
+fails it and re-syncs the service, from the worker's failure path and from
+`cancelBackupRun`. `tests/integration/volume-restore.test.ts` runs the revision
+and backup-first paths end to end against an in-process S3 stub.

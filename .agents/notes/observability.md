@@ -437,3 +437,16 @@ suffix of the URL path, resolved with `@jridgewell/trace-mapping` (position,
 is recomputed. Parsed maps are cached in memory by id (32). Resolving at ingest
 means a late upload doesn't fix stored events; that's the Sentry behavior too.
 Operator doc: `docs/error-tracking.md`.
+
+## Resource incidents (`$lib/resource-incidents.ts`, `CapacityService`, `resource_incident`)
+
+Modelled on baba (github.com/orochibraru/baba, `internal/monitor`): each
+resource has at most one incident. `ResourceIncidentTracker` is pure and
+time-based (the stats sampler calls `CapacityService.evaluate` every minute): a
+breach opens an incident once it has lasted `resourceAlertSustainSeconds` (disk
+at once), escalates soft → hard, reminds every `resourceAlertReminderMinutes` (0
+never) and recovers on the first reading under the soft limit. Incidents are
+rows so a restart restores the open ones (`restore`) instead of alerting again
+or losing the recovery; breach timers live in memory and start over. One check's
+events are grouped into at most five messages (critical, warning, the two
+reminder kinds, recovered) on the existing `resource.*` events.

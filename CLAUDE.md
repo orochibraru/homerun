@@ -45,6 +45,11 @@ a plan in chat, don't keep a task list somewhere else, don't hand back a
   Don't stop, don't ask, don't do it anyway.
 - The `Small`/`Medium`/`Large` headings are rough size, not priority. There is
   no priority ordering, don't add one.
+- **No personal data in `TODO.md`, ever.** It gets committed and pushed. No real
+  Homerun instance (its domain, URL, IP, hostname), no service/stack names,
+  slugs or ids from a live instance, no emails, usernames, tokens or log
+  excerpts carrying any of those. Describe the bug generically ("a swarm service
+  with two replicas"), not by pointing at the instance it was seen on.
 
 ## What this is
 

@@ -4,6 +4,12 @@ import {
 	type ServiceRuntimeOptions,
 } from "$lib/service-runtime";
 
+export interface VolumeMountSnapshot {
+	containerPath: string;
+	readOnly: boolean;
+	volumeId: string;
+}
+
 export interface RevisionConfig extends Partial<ServiceRuntimeOptions> {
 	containerPort: number;
 	cpuLimit: string | null;
@@ -14,12 +20,15 @@ export interface RevisionConfig extends Partial<ServiceRuntimeOptions> {
 	portProtocol: "tcp" | "udp" | "both";
 	publishedPorts?: PublishedPort[];
 	replicas: number;
+	volumeMounts?: VolumeMountSnapshot[];
 }
 
+type SnapshotFields = Required<Omit<RevisionConfig, "volumeMounts">>;
+
 export type RevisionConfigSource = {
-	[Key in keyof RevisionConfig]-?: Key extends "envVars"
+	[Key in keyof SnapshotFields]: Key extends "envVars"
 		? Record<string, string> | null
-		: RevisionConfig[Key];
+		: SnapshotFields[Key];
 };
 
 const RUNTIME_KEYS = [
@@ -74,10 +83,17 @@ export function restorableRuntimeOptions(
 export function changedRevisionConfigFields(
 	current: RevisionConfigSource,
 	snapshot: RevisionConfig,
+	currentMounts: VolumeMountSnapshot[] = [],
 ): Array<keyof RevisionConfig> {
-	const now = snapshotRevisionConfig(current);
+	const now: RevisionConfig = {
+		...snapshotRevisionConfig(current),
+		volumeMounts: sortedMounts(currentMounts),
+	};
+	const recorded: RevisionConfig = snapshot.volumeMounts
+		? { ...snapshot, volumeMounts: sortedMounts(snapshot.volumeMounts) }
+		: snapshot;
 	return (Object.keys(snapshot) as Array<keyof RevisionConfig>)
-		.filter((field) => comparable(now[field]) !== comparable(snapshot[field]))
+		.filter((field) => comparable(now[field]) !== comparable(recorded[field]))
 		.sort((a, b) => a.localeCompare(b));
 }
 
@@ -88,4 +104,15 @@ function comparable(value: RevisionConfig[keyof RevisionConfig]): string {
 		);
 	}
 	return JSON.stringify(value);
+}
+
+/** Mounts in a stable order with stable keys, so two lists of the same mounts compare equal. */
+function sortedMounts(mounts: VolumeMountSnapshot[]): VolumeMountSnapshot[] {
+	return mounts
+		.map(({ containerPath, readOnly, volumeId }) => ({
+			containerPath,
+			readOnly,
+			volumeId,
+		}))
+		.sort((a, b) => a.containerPath.localeCompare(b.containerPath));
 }

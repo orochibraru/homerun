@@ -6,10 +6,12 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import { restoreBackupFormSchema } from "$lib/server/validation/volume-restore";
 import {
 	backupConfigError,
 	DEFAULT_BACKUP_SCHEDULE,
 } from "$lib/server/volume-backup-form";
+import { restoreVolumeBackup } from "$lib/services/backup/volume-restore";
 
 const logger = new Logger("Services");
 
@@ -33,6 +35,59 @@ export const load = async ({ params, parent }) => {
 };
 
 export const actions = {
+	restoreBackup: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const parsed = restoreBackupFormSchema.safeParse(
+			Object.fromEntries(await request.formData()),
+		);
+		if (!parsed.success) {
+			return fail(400, {
+				error: parsed.error.issues[0]?.message ?? "Invalid restore.",
+			});
+		}
+		const [svc, volume, mounts] = await Promise.all([
+			ServiceDTO.get(params.serviceId),
+			StorageVolumeDTO.get(parsed.data.volumeId),
+			ServiceVolumeDTO.listForService(params.serviceId),
+		]);
+		if (
+			!svc ||
+			!volume ||
+			!mounts.some(({ mount }) => mount.toJSON().volumeId === volume.id)
+		) {
+			return fail(404, {
+				error: "That volume isn't mounted into this service.",
+			});
+		}
+		if (parsed.data.confirm !== volume.name) {
+			return fail(400, { error: `Type ${volume.name} to confirm.` });
+		}
+		try {
+			const message = await restoreVolumeBackup({
+				key: parsed.data.key,
+				mode: parsed.data.mode,
+				options: {
+					stopServices: parsed.data.stopServices,
+					wipe: parsed.data.wipe,
+				},
+				svc,
+				userId: locals.user.id,
+				volume,
+			});
+			return { restoreQueued: message };
+		} catch (error) {
+			logger.warn(`Restore couldn't be queued: volume=${volume.id}`, error);
+			return fail(400, {
+				error:
+					error instanceof Error
+						? error.message
+						: "Couldn't queue the restore.",
+			});
+		}
+	},
+
 	toggleBackup: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

@@ -1,13 +1,17 @@
 import { config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
+import { ResourceIncidentDTO } from "$lib/dto/resource-incident-dto";
 import { Logger } from "$lib/logger";
+import {
+	describeIncidentEvent,
+	type IncidentEvent,
+	ResourceIncidentTracker,
+} from "$lib/resource-incidents";
 import {
 	describeReading,
 	type HostUsageInput,
 	RESOURCE_LABELS,
-	type ResourceKind,
-	type ResourceLevel,
 	type ResourceReading,
 	readResources,
 } from "$lib/resource-thresholds";
@@ -19,88 +23,81 @@ const logger = new Logger("Capacity");
 
 const FRESH_MS = 3 * 60 * 1000;
 
-const RANK: Record<ResourceLevel, number> = { hard: 2, ok: 0, soft: 1 };
-
 /** Thrown when a new service is refused because the server is past a hard threshold. */
 export class CapacityError extends Error {}
 
+export type ResourceAlertEvent =
+	| "resource.critical"
+	| "resource.recovered"
+	| "resource.warning";
+
 export interface ResourceAlert {
-	event: "resource.critical" | "resource.recovered" | "resource.warning";
-	readings: ResourceReading[];
+	event: ResourceAlertEvent;
+	events: IncidentEvent[];
+	reminder: boolean;
 }
 
 /**
- * Turns successive readings into the alerts worth sending: one when a
- * resource climbs to a higher level than it was already alerted at, and one
- * "recovered" when every alerted resource is back under its soft threshold.
- * A resource hovering above a threshold alerts once, not every minute.
+ * Groups one check's incident events into the alerts to send: resources that
+ * just opened or escalated past their hard limit (critical) or their soft one
+ * (warning), reminders for each level, then the ones back to normal.
  */
-export class ResourceAlertTracker {
-	readonly #alerted = new Map<ResourceKind, ResourceLevel>();
-
-	/** The alerts this reading calls for, in the order to send them. */
-	next(readings: ResourceReading[]): ResourceAlert[] {
-		const escalated = readings.filter(
-			(reading) =>
-				RANK[reading.level] > RANK[this.#alerted.get(reading.kind) ?? "ok"],
-		);
-		const wasAlerting = [...this.#alerted.values()].some(
-			(level) => level !== "ok",
-		);
-		for (const reading of readings) {
-			const alerted = this.#alerted.get(reading.kind) ?? "ok";
-			if (RANK[reading.level] > RANK[alerted] || reading.level === "ok") {
-				this.#alerted.set(reading.kind, reading.level);
-			}
-		}
-		const alerts: ResourceAlert[] = [];
-		const hard = escalated.filter((reading) => reading.level === "hard");
-		const soft = escalated.filter((reading) => reading.level === "soft");
-		if (hard.length > 0) {
-			alerts.push({ event: "resource.critical", readings: hard });
-		}
-		if (soft.length > 0) {
-			alerts.push({ event: "resource.warning", readings: soft });
-		}
-		const nowAlerting = [...this.#alerted.values()].some(
-			(level) => level !== "ok",
-		);
-		if (wasAlerting && !nowAlerting) {
-			alerts.push({ event: "resource.recovered", readings });
-		}
-		return alerts;
+export function groupIncidentEvents(events: IncidentEvent[]): ResourceAlert[] {
+	const groups: ResourceAlert[] = [
+		{ event: "resource.critical", events: [], reminder: false },
+		{ event: "resource.warning", events: [], reminder: false },
+		{ event: "resource.critical", events: [], reminder: true },
+		{ event: "resource.warning", events: [], reminder: true },
+		{ event: "resource.recovered", events: [], reminder: false },
+	];
+	for (const event of events) {
+		const hard = event.incident.level === "hard";
+		const index =
+			event.type === "recover"
+				? 4
+				: (event.type === "remind" ? 2 : 0) + (hard ? 0 : 1);
+		groups[index]?.events.push(event);
 	}
+	return groups.filter((group) => group.events.length > 0);
 }
+
+const TITLES: Record<ResourceAlertEvent, [string, string]> = {
+	"resource.critical": [
+		"Server past a hard resource limit",
+		"Server still past a hard resource limit",
+	],
+	"resource.recovered": [
+		"Server resources back to normal",
+		"Server resources back to normal",
+	],
+	"resource.warning": [
+		"Server resources running high",
+		"Server resources still running high",
+	],
+};
 
 /** The channel message for a resource alert: a server-wide one, with no service attached. */
 export function resourceAlertMessage(
 	alert: ResourceAlert,
 	origin: string | null,
 	timestamp: string,
+	now: number = Date.parse(timestamp),
 ): ChannelMessage {
-	const titles: Record<ResourceAlert["event"], string> = {
-		"resource.critical": "Server past a hard resource limit",
-		"resource.recovered": "Server resources back to normal",
-		"resource.warning": "Server resources running high",
-	};
 	return {
 		detail:
 			alert.event === "resource.critical"
 				? "New services are refused until usage drops back under the hard limit."
 				: null,
 		event: alert.event,
-		fields: alert.readings.map((reading) => ({
-			name: RESOURCE_LABELS[reading.kind],
-			value:
-				alert.event === "resource.recovered"
-					? `${reading.percent}%`
-					: describeReading(reading),
+		fields: alert.events.map((event) => ({
+			name: RESOURCE_LABELS[event.reading.kind],
+			value: describeIncidentEvent(event, now),
 		})),
 		link: origin ? `${origin.replace(/\/+$/, "")}/` : null,
 		serviceId: null,
 		serviceName: null,
 		timestamp,
-		title: titles[alert.event],
+		title: TITLES[alert.event][alert.reminder ? 1 : 0],
 	};
 }
 
@@ -110,32 +107,70 @@ export function resourceAlertMessage(
  * channels) and refuses new services past a hard one.
  */
 class CapacityServiceClass {
-	readonly #tracker = new ResourceAlertTracker();
+	readonly #tracker = new ResourceIncidentTracker();
+	#restored = false;
 
 	#latest: { at: number; readings: ResourceReading[] } | null = null;
 
 	/**
 	 * Evaluates one host sample, called by the stats sampler every minute:
-	 * remembers it for `hardBreaches`, and sends whatever alerts it calls for.
+	 * remembers it for `hardBreaches`, moves each resource's incident along
+	 * (open once past a limit for the sustain window, escalate, remind,
+	 * recover), records it, and sends the alerts that calls for. Picks up the
+	 * incidents left open by the last run on its first call.
 	 */
 	async evaluate(host: HostUsageInput): Promise<void> {
 		const settings = await InstanceSettingsDTO.get();
 		const readings = readResources(host, settings.resourceThresholds);
-		this.#latest = { at: Date.now(), readings };
-		for (const alert of this.#tracker.next(readings)) {
+		const now = Date.now();
+		this.#latest = { at: now, readings };
+		if (!this.#restored) {
+			this.#tracker.restore(await ResourceIncidentDTO.listOpen());
+			this.#restored = true;
+		}
+		const events = this.#tracker.next(readings, now, {
+			reminderMs: settings.resourceAlertReminderMinutes * 60_000,
+			sustainMs: settings.resourceAlertSustainSeconds * 1000,
+		});
+		await this.#record(events, now);
+		for (const alert of groupIncidentEvents(events)) {
 			const message = resourceAlertMessage(
 				alert,
 				config.auth.origin ?? null,
-				new Date().toISOString(),
+				new Date(now).toISOString(),
+				now,
 			);
 			logger.info(
-				`${message.title}: ${message.fields.map((f) => `${f.name} ${f.value}`).join(", ")}`,
+				`${message.title}: ${message.fields.map((f) => f.value).join(", ")}`,
 			);
 			NotificationDTO.notify({
 				message: `${message.title}: ${message.fields.map((f) => f.value).join(", ")}`,
 				type: "resource_alert",
 			});
 			NotificationChannelService.notify(message);
+		}
+	}
+
+	/** Writes each event onto its incident's row: a new row when it opens, its alert count, level and peak after, its end when it recovers. */
+	async #record(events: IncidentEvent[], now: number): Promise<void> {
+		for (const event of events) {
+			const { incident } = event;
+			if (event.type === "open") {
+				// oxlint-disable-next-line no-await-in-loop -- a check moves a handful of resources at most
+				incident.id = await ResourceIncidentDTO.open(incident);
+				continue;
+			}
+			if (!incident.id) {
+				continue;
+			}
+			// oxlint-disable-next-line no-await-in-loop -- see above
+			const count = await ResourceIncidentDTO.notificationCount(incident.id);
+			// oxlint-disable-next-line no-await-in-loop -- see above
+			await ResourceIncidentDTO.notified(
+				incident,
+				count + 1,
+				event.type === "recover" ? new Date(now) : null,
+			);
 		}
 	}
 

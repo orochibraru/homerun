@@ -19,6 +19,7 @@
 	import { RESOURCE_KINDS, RESOURCE_LABELS } from "$lib/resource-thresholds";
 	import { nextPasskeyRpId, strandedPasskeyCount } from "$lib/security-policy";
 	import { enhanceToast, saveToast } from "$lib/toast";
+	import ResourceIncidents from "./resource-incidents.svelte";
 
 	const { data } = $props();
 
@@ -212,11 +213,13 @@
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Resource limits</h2>
       <p class="text-text-muted text-xs">
-        How full the server gets before Homerun says so. Past the soft limit it
-        sends a <strong>Resource warning</strong>; past the hard limit it sends
-        <strong>Resource critical</strong> and refuses new services until usage
-        drops back. Checked once a minute; the GPU counts only on a host that
-        has one.
+        How full the server gets before Homerun says so, checked once a minute.
+        A resource that stays past its soft limit for the time below sends a
+        <strong>Resource warning</strong>, past its hard one a
+        <strong>Resource critical</strong> (and new services are refused until
+        it drops back); the disk alerts at once. While it lasts it reminds you,
+        and it tells you when it's back to normal. The GPU counts only on a host
+        that has one.
       </p>
     </div>
     <form
@@ -249,10 +252,33 @@
           />
         {/each}
       </div>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label class="grid gap-1.5">
+          <span class={label}>Alert after (seconds past a limit)</span>
+          <Input
+            max="3600"
+            min="0"
+            name="sustainSeconds"
+            type="number"
+            value={data.resourceAlertTiming.sustainSeconds}
+          />
+        </label>
+        <label class="grid gap-1.5">
+          <span class={label}>Remind every (minutes, 0 for never)</span>
+          <Input
+            max="1440"
+            min="0"
+            name="reminderMinutes"
+            type="number"
+            value={data.resourceAlertTiming.reminderMinutes}
+          />
+        </label>
+      </div>
       <div class="flex justify-end">
         <Button type="submit">Save</Button>
       </div>
     </form>
+    <ResourceIncidents incidents={data.resourceIncidents} />
   </section>
 
   <section class="panel rounded-md">

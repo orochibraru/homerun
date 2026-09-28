@@ -711,6 +711,8 @@ export const instanceSettings = pgTable("instance_settings", {
 	preferredSignInMethods: jsonb("preferred_sign_in_methods").$type<string[]>(),
 	requirePasskey: boolean("require_passkey"),
 	requireTwoFactor: boolean("require_two_factor"),
+	resourceAlertReminderMinutes: integer("resource_alert_reminder_minutes"),
+	resourceAlertSustainSeconds: integer("resource_alert_sustain_seconds"),
 	resourceThresholds: jsonb("resource_thresholds").$type<
 		Partial<Record<ResourceKind, Partial<Threshold>>>
 	>(),
@@ -1853,6 +1855,21 @@ export const errorProject = pgTable("error_project", {
 		.references(() => service.id, { onDelete: "cascade" }),
 });
 
+export const resourceIncident = pgTable(
+	"resource_incident",
+	{
+		id: text("id").primaryKey(),
+		kind: text("kind").$type<ResourceKind>().notNull(),
+		lastNotifiedAt: timestamp("last_notified_at", { mode: "date" }).notNull(),
+		level: text("level").$type<"hard" | "soft">().notNull(),
+		notifications: integer("notifications").default(1).notNull(),
+		peakPercent: integer("peak_percent").notNull(),
+		resolvedAt: timestamp("resolved_at", { mode: "date" }),
+		startedAt: timestamp("started_at", { mode: "date" }).notNull(),
+	},
+	(table) => [index("resourceIncident_startedAt_idx").on(table.startedAt)],
+);
+
 export const errorSourceMap = pgTable(
 	"error_source_map",
 	{
@@ -1951,6 +1968,7 @@ export const errorEvent = pgTable(
 export type Stack = typeof stack.$inferSelect;
 export type OauthClient = typeof oauthClient.$inferSelect;
 export type ErrorSourceMap = typeof errorSourceMap.$inferSelect;
+export type ResourceIncident = typeof resourceIncident.$inferSelect;
 export type OauthClientEnvironment = typeof oauthClientEnvironment.$inferSelect;
 export type OauthClientSecret = typeof oauthClientSecret.$inferSelect;
 export type Template = typeof template.$inferSelect;

@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import type { VolumeMountSnapshot } from "$lib/revision-config";
 import { db } from "$lib/server/db/lib";
 import {
 	type ServiceVolume,
@@ -112,6 +113,64 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 		};
 		await db.insert(serviceVolume).values(row);
 		return new ServiceVolumeDTO(row);
+	}
+
+	/**
+	 * Points every mount of `from` in a service at `to` instead, same path and
+	 * mode: how a backup restored into a new volume replaces the old one.
+	 *
+	 * @returns How many mounts moved.
+	 */
+	static async swapVolume(
+		serviceId: string,
+		from: string,
+		to: string,
+	): Promise<number> {
+		const moved = await db
+			.update(serviceVolume)
+			.set({ volumeId: to })
+			.where(
+				and(
+					eq(serviceVolume.serviceId, serviceId),
+					eq(serviceVolume.volumeId, from),
+				),
+			)
+			.returning({ id: serviceVolume.id });
+		return moved.length;
+	}
+
+	/**
+	 * Replaces a service's mounts with `mounts`, as a revision recorded them,
+	 * in one transaction; takes effect on the deploy that's running it.
+	 */
+	static async replaceForService(
+		serviceId: string,
+		mounts: VolumeMountSnapshot[],
+	): Promise<void> {
+		await db.transaction(async (tx) => {
+			await tx
+				.delete(serviceVolume)
+				.where(eq(serviceVolume.serviceId, serviceId));
+			if (mounts.length > 0) {
+				await tx.insert(serviceVolume).values(
+					mounts.map((mount) => ({
+						...mount,
+						createdAt: new Date(),
+						id: crypto.randomUUID(),
+						serviceId,
+					})),
+				);
+			}
+		});
+	}
+
+	/** The mount as a revision records it: volume, path and mode. */
+	snapshot(): VolumeMountSnapshot {
+		return {
+			containerPath: this.row.containerPath,
+			readOnly: this.row.readOnly,
+			volumeId: this.row.volumeId,
+		};
 	}
 
 	/**

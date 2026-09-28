@@ -22,6 +22,7 @@
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import MountBackup from "./mount-backup.svelte";
+	import VolumeBackupsMenu from "./volume-backups-menu.svelte";
 
 	let volumeId = $state("");
 
@@ -35,7 +36,7 @@
 	const unknownHostVolumes = $derived(getUnknownHostVolumes(known));
 	const hostVolumes = $derived(unknownHostVolumes.current ?? []);
 
-	onMount(() => title.set("Volumes"));
+	onMount(() => title.set("Storage"));
 
 	let newVolumeOpen = $state(false);
 	let newVolumeKind = $state<"bind" | "volume">("volume");
@@ -58,7 +59,7 @@
       <HardDrive class="size-4" />
     </div>
     <div>
-      <h2 class="eyebrow">Volumes</h2>
+      <h2 class="eyebrow">Storage</h2>
       <p class="text-text-muted text-xs">
         Mount a storage volume into the container. Takes effect on the next
         deploy.
@@ -94,6 +95,7 @@
             Browse
           </Button>
           {#if vol}
+            <VolumeBackupsMenu volume={vol} />
             <MountBackup destinations={data.destinations} volume={vol} />
           {/if}
           <form

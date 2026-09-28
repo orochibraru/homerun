@@ -147,3 +147,33 @@ describe("runtime options in a snapshot", () => {
 		).toEqual([]);
 	});
 });
+
+describe("changedRevisionConfigFields with mounts", () => {
+	const a = { containerPath: "/data", readOnly: false, volumeId: "vol-1" };
+	const b = { containerPath: "/config", readOnly: true, volumeId: "vol-2" };
+
+	test("the same mounts in another order aren't a change", () => {
+		const snapshot = {
+			...snapshotRevisionConfig(source()),
+			volumeMounts: [a, b],
+		};
+		expect(changedRevisionConfigFields(source(), snapshot, [b, a])).toEqual([]);
+	});
+
+	test("a mount pointing at another volume is", () => {
+		const snapshot = { ...snapshotRevisionConfig(source()), volumeMounts: [a] };
+		expect(
+			changedRevisionConfigFields(source(), snapshot, [
+				{ ...a, volumeId: "vol-3" },
+			]),
+		).toEqual(["volumeMounts"]);
+	});
+
+	test("a snapshot from before mounts were recorded doesn't report them", () => {
+		expect(
+			changedRevisionConfigFields(source(), snapshotRevisionConfig(source()), [
+				a,
+			]),
+		).toEqual([]);
+	});
+});
