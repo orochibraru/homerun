@@ -25,6 +25,7 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      templates: ${{ steps.diff.outputs.templates }}
     steps:
       - name: List changed files outside docs
         id: diff
@@ -44,6 +45,13 @@ jobs:
               = "$(gh api "repos/$REPO/contents/package.json?ref=$HEAD_SHA" --jq .content | base64 -d | jq -S 'del(.version)')" ]; then
             echo "Release PR: only CHANGELOG.md and package.json's version change, nothing to rebuild."
             code=""
+          fi
+          templates="$(printf '%s\n' "$code" | grep -E '^(templates/|tests/e2e/templates/|playwright\.templates\.config\.ts$|\.github/workflows/(templates-e2e|pull_request)\.yaml$|src/lib/services/(deploy|template|default-volume|docker)|src/lib/server/db/(seed|builtin-templates)\.ts$|src/routes/\(protected\)/templates/|internal/(jobs/deploy|dockerapi|agent)/)' || true)"
+          if [ -n "$templates" ]; then
+            echo "templates=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "templates=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing a template deploy depends on changed: skipping Templates E2E (main still runs it on merge)."
           fi
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
@@ -116,7 +124,7 @@ jobs:
   templates:
     name: Templates E2E
     needs: [changes, code_quality]
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.templates == 'true'
     uses: ./.github/workflows/templates-e2e.yaml
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
