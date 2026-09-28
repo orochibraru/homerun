@@ -3,7 +3,7 @@
 	"name": "MongoDB",
 	"description": "Document database. Review the placeholder password before deploying.",
 	"image": "mongo",
-	"tag": "7",
+	"tag": "8",
 	"containerPort": 27017,
 	"icon": "di:mongodb",
 	"tags": ["nosql", "database", "documents"],

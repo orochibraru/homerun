@@ -3,7 +3,7 @@
 	"name": "MySQL",
 	"description": "Relational database. Review the placeholder password before deploying.",
 	"image": "mysql",
-	"tag": "8",
+	"tag": "26",
 	"containerPort": 3306,
 	"icon": "di:mysql",
 	"tags": ["sql", "database", "relational", "mariadb"],
