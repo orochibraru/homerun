@@ -372,9 +372,9 @@ per-user instead of a singleton row.
   block), so no component needs to know about the override. Scoped to
   `(protected)/` only, not pre-login pages, since this is a dashboard
   preference, not a site-wide brand color.
-- **Style** (`surfaceStyle`: glass, neumorphism, boxy, clay, skeuomorphism,
-  material, `$lib/surfaces.ts`): a `data-surface` attribute on `<html>`, and
-  every style is a block of token overrides in `layout.css`
+- **Style** (`surfaceStyle`: glass, sleek, neumorphism, boxy, clay,
+  skeuomorphism, material, `$lib/surfaces.ts`): a `data-surface` attribute on
+  `<html>`, and every style is a block of token overrides in `layout.css`
   (`[data-surface="…"]`, plus a
   `.dark[data-surface="…"], .dark [data-surface="…"]` block for what differs in
   dark). `panel` reads `--panel-bg`/`--panel-bg-image`/`--panel-backdrop`/
@@ -407,6 +407,11 @@ per-user instead of a singleton row.
   capsules (`--glass-control` and `--glass-control-shadow`: a 0.5px dark ring, a
   white top highlight and a drop shadow). The system font comes first
   (`-apple-system`, then Inter).
+- **Sleek** (`sleek`) is flat: the sidebar sits straight on the page with no
+  panel of its own, the content is one solid panel with an accent-derived
+  hairline and no shadow, outline buttons and fields are solid with the same
+  hairline, table headers get a faint tint, and the page behind carries two
+  faint accent washes.
 - **Material You** (`material`) derives tonal surfaces, text and outline colours
   from the accent the same way, with no borders or shadows on panels, pill
   buttons (secondary is the tonal `--m3-tonal`), filled text fields with an

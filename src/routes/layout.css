@@ -30,8 +30,8 @@
 	--color-accent-light: oklch(0.5 0.12 8 / 0.12);
 	--color-accent-glow: oklch(0.43 0.145 8 / 0.35);
 
-	--brand-2: oklch(0.66 0.2 330);
-	--brand-3: oklch(0.7 0.14 225);
+	--brand-2: oklch(0.55 0.13 20);
+	--brand-3: oklch(0.78 0.07 60);
 
 	--color-text: oklch(0.19 0.02 285);
 	--color-text-muted: oklch(0.5 0.03 286);
@@ -101,8 +101,8 @@
 	--color-accent-light: oklch(0.65 0.14 10 / 0.18);
 	--color-accent-glow: oklch(0.7 0.15 10 / 0.4);
 
-	--brand-2: oklch(0.7 0.19 330);
-	--brand-3: oklch(0.74 0.13 225);
+	--brand-2: oklch(0.6 0.13 20);
+	--brand-3: oklch(0.72 0.07 60);
 
 	--color-text: oklch(0.97 0.005 285);
 	--color-text-muted: oklch(0.72 0.03 287);
@@ -161,7 +161,7 @@
 		-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable",
 		sans-serif;
 	--radius: 1.125rem;
-	--color-bg: oklch(from var(--color-accent) 0.965 0.018 h);
+	--color-bg: oklch(from var(--color-accent) 0.965 0.01 calc(h + 30));
 	--color-surface: oklch(1 0 0 / 0.45);
 	--color-surface-2: oklch(from var(--color-accent) 0.5 0.04 h / 0.08);
 	--color-surface-3: oklch(from var(--color-accent) 0.5 0.04 h / 0.14);
@@ -202,17 +202,17 @@
 	--page-bg-image:
 		radial-gradient(
 			70vmax 55vmax at 0% 0%,
-			oklch(from var(--color-accent) 0.8 calc(c * 0.8) calc(h - 20) / 0.7),
+			oklch(from var(--color-accent) 0.84 calc(c * 0.35) calc(h + 25) / 0.55),
 			transparent 70%
 		),
 		radial-gradient(
 			65vmax 55vmax at 100% 100%,
-			oklch(from var(--color-accent) 0.68 c calc(h + 20) / 0.55),
+			oklch(from var(--color-accent) 0.7 calc(c * 0.5) calc(h + 10) / 0.45),
 			transparent 70%
 		),
 		radial-gradient(
 			55vmax 45vmax at 100% 0%,
-			oklch(from var(--color-accent) 0.88 calc(c * 0.5) h / 0.6),
+			oklch(from var(--color-accent) 0.9 calc(c * 0.25) calc(h + 40) / 0.5),
 			transparent 70%
 		);
 	--aurora-opacity: 0.55;
@@ -356,6 +356,101 @@
 	background-color: var(--glass-control);
 	border-color: var(--input);
 	box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.06);
+}
+
+[data-surface="sleek"] {
+	--font-sans: "Inter Variable", -apple-system, system-ui, sans-serif;
+	--radius: 0.5rem;
+	--color-bg: oklch(from var(--color-accent) 0.985 0.006 h);
+	--color-surface: oklch(1 0 0);
+	--color-surface-2: oklch(from var(--color-accent) 0.5 0.02 h / 0.05);
+	--color-surface-3: oklch(from var(--color-accent) 0.5 0.02 h / 0.09);
+	--color-border: oklch(from var(--color-accent) 0.25 0.01 h / 0.11);
+	--color-border-light: oklch(from var(--color-accent) 0.25 0.01 h / 0.18);
+	--border: var(--color-border);
+	--input: oklch(from var(--color-accent) 0.25 0.01 h / 0.14);
+	--panel-bg: var(--color-surface);
+	--panel-bg-image: none;
+	--panel-backdrop: none;
+	--panel-border-width: 1px;
+	--panel-shadow: none;
+	--panel-shadow-lg:
+		0 0 0 1px oklch(0 0 0 / 0.05), 0 12px 32px -12px oklch(0 0 0 / 0.18);
+	--panel-rule: var(--color-border);
+	--button-shadow: none;
+	--background: var(--color-surface);
+	--card: var(--color-surface);
+	--popover: var(--color-surface);
+	--page-bg-image:
+		radial-gradient(
+			60vmax 40vmax at 0% 100%,
+			oklch(from var(--color-accent) 0.9 calc(c * 0.2) calc(h + 20) / 0.5),
+			transparent 70%
+		),
+		radial-gradient(
+			50vmax 30vmax at 100% 0%,
+			oklch(from var(--color-accent) 0.92 calc(c * 0.15) calc(h + 40) / 0.4),
+			transparent 70%
+		);
+	--aurora-opacity: 0;
+	--grain-opacity: 0;
+}
+
+.dark[data-surface="sleek"],
+.dark [data-surface="sleek"] {
+	--color-bg: oklch(from var(--color-accent) 0.15 0.008 h);
+	--color-surface: oklch(from var(--color-accent) 0.19 0.008 h);
+	--color-surface-2: oklch(1 0 0 / 0.05);
+	--color-surface-3: oklch(1 0 0 / 0.09);
+	--color-border: oklch(1 0 0 / 0.09);
+	--color-border-light: oklch(1 0 0 / 0.15);
+	--input: oklch(1 0 0 / 0.12);
+	--panel-shadow-lg:
+		0 0 0 1px oklch(1 0 0 / 0.06), 0 16px 40px -12px oklch(0 0 0 / 0.7);
+	--page-bg-image:
+		radial-gradient(
+			60vmax 40vmax at 0% 100%,
+			oklch(from var(--color-accent) 0.3 calc(c * 0.5) h / 0.45),
+			transparent 70%
+		),
+		radial-gradient(
+			50vmax 30vmax at 100% 0%,
+			oklch(from var(--color-accent) 0.3 calc(c * 0.5) h / 0.35),
+			transparent 70%
+		);
+}
+
+[data-surface="sleek"] [data-slot="app-sidebar"] {
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+}
+
+[data-surface="sleek"] [data-slot="button"][data-variant="outline"] {
+	background-color: var(--color-surface);
+	border-color: var(--input);
+	backdrop-filter: none;
+	box-shadow: 0 1px 1px oklch(0 0 0 / 0.04);
+}
+
+[data-surface="sleek"]
+	:is(
+		input:not(
+			[type="checkbox"],
+			[type="radio"],
+			[type="color"],
+			[type="range"]
+		),
+		textarea,
+		[data-slot="select-trigger"]
+	) {
+	background-color: var(--color-surface);
+	border-color: var(--input);
+	box-shadow: none;
+}
+
+[data-surface="sleek"] thead {
+	background-color: var(--color-surface-2);
 }
 
 [data-surface="material"] {

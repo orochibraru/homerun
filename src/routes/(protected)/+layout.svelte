@@ -120,7 +120,7 @@
 <!-- Fills the full viewport : there's no global navbar above this. -->
 <div class="flex h-dvh overflow-hidden p-2 md:gap-2">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
-  <aside class="hidden w-56 shrink-0 flex-col md:flex" data-slot="app-sidebar">
+  <aside class="hidden w-64 shrink-0 flex-col md:flex" data-slot="app-sidebar">
     <BrandMark class="px-3 py-2.5" />
 
     {#if !data.readOnly}
@@ -152,7 +152,7 @@
     </button>
 
     <div
-      class="panel-strong fixed top-0 left-0 z-50 flex h-dvh w-64 flex-col border-r border-border md:hidden"
+      class="panel-strong fixed top-0 left-0 z-50 flex h-dvh w-72 flex-col border-r border-border md:hidden"
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
       <div class="border-border flex items-center justify-between border-b py-1 pr-2">

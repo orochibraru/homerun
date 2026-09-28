@@ -164,11 +164,16 @@ test.describe
 			await page.screenshot({ path: testInfo.outputPath("glass.png") });
 		});
 
-		test("Material You is rendered server-side", async ({ page }, testInfo) => {
-			await signIn(page);
-			await saveStyle(page, "Material You");
-			const response = await page.goto("/remote-hosts");
-			expect(await response?.text()).toContain('data-surface="material"');
-			await page.screenshot({ path: testInfo.outputPath("material.png") });
-		});
+		for (const [id, name] of [
+			["material", "Material You"],
+			["sleek", "Sleek"],
+		]) {
+			test(`${name} is rendered server-side`, async ({ page }, testInfo) => {
+				await signIn(page);
+				await saveStyle(page, name);
+				const response = await page.goto("/remote-hosts");
+				expect(await response?.text()).toContain(`data-surface="${id}"`);
+				await page.screenshot({ path: testInfo.outputPath(`${id}.png`) });
+			});
+		}
 	});

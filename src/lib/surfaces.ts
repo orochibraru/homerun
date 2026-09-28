@@ -7,6 +7,12 @@ export const SURFACE_STYLES = [
 	},
 	{
 		description:
+			"Flat and crisp: one solid content panel, hairline borders, a faint wash of your colour.",
+		id: "sleek",
+		name: "Sleek",
+	},
+	{
+		description:
 			"One flat tone, panels pushed out of it by soft light and shade.",
 		id: "neumorphism",
 		name: "Neumorphism",

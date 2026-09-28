@@ -100,6 +100,7 @@
 
 <Command.Dialog
   bind:open
+  class="sm:max-w-2xl"
   description="Search pages, services, stacks, templates and more"
   shouldFilter={false}
   title="Search"

@@ -65,13 +65,15 @@ A per-account "Appearance" tab on your profile page controls:
   device, not just the one you set it on.
 - **Style**: how panels, cards and buttons are drawn: **Glass** (the default,
   Apple-style liquid glass: blurred panels with a lit edge and pill buttons, all
-  tinted by your accent), **Neumorphism** (one flat tone, panels raised by soft
-  light and shade), **Boxy** (square corners, solid panels, hard offset
-  shadows), **Claymorphism** (puffy, round panels), **Skeuomorphism** (textured,
-  bevelled panels and buttons) or **Material You** (Google's style: tonal
-  surfaces derived from your accent, pill buttons, filled fields, Roboto Flex).
-  Each choice shows a small preview and previews on the page itself when picked;
-  **Save** keeps it. Works with either theme and any palette.
+  tinted by your accent), **Sleek** (flat and crisp: one solid content panel,
+  hairline borders, a faint wash of your accent), **Neumorphism** (one flat
+  tone, panels raised by soft light and shade), **Boxy** (square corners, solid
+  panels, hard offset shadows), **Claymorphism** (puffy, round panels),
+  **Skeuomorphism** (textured, bevelled panels and buttons) or **Material You**
+  (Google's style: tonal surfaces derived from your accent, pill buttons, filled
+  fields, Roboto Flex). Each choice shows a small preview and previews on the
+  page itself when picked; **Save** keeps it. Works with either theme and any
+  palette.
 - **Colors**: a palette (Bordeaux, the default, Ocean, Forest, Sunset, Grape,
   Rose or Graphite) sets the accent for buttons, links and tab icons plus the
   hues charts, category tiles and the background use, all chosen to go together.

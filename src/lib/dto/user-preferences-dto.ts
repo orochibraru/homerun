@@ -52,7 +52,7 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 		await this.persist({ preset });
 	}
 
-	/** Persists the look of panels and buttons: glass, neumorphism, boxy, clay, skeuomorphism or Material You. */
+	/** Persists the look of panels and buttons: glass, sleek, neumorphism, boxy, clay, skeuomorphism or Material You. */
 	async updateSurfaceStyle(surfaceStyle: SurfaceStyle): Promise<void> {
 		await this.persist({ surfaceStyle });
 	}
