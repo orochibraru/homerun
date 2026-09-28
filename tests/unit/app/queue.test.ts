@@ -1,4 +1,5 @@
 import {
+	afterEach,
 	beforeEach,
 	describe,
 	expect,
@@ -7,6 +8,7 @@ import {
 	test,
 } from "bun:test";
 import type { CancelledJob } from "$lib/dto/job-dto";
+import { restoreStubs, stub } from "../support/stub";
 
 interface FakeJob {
 	attempts: number;
@@ -52,20 +54,8 @@ const claimNext = mock(async () => null as unknown);
 const claimFinalize = mock(async () => null as unknown);
 const listStalledExecutions = mock(async (_since: Date) => [] as unknown[]);
 
-mock.module("../../../src/lib/dto/job-dto", () => ({
-	JobDTO: {
-		cancelDependents,
-		claimFinalize,
-		claimNext,
-		create,
-		findQueued,
-		get,
-		listStalledExecutions,
-		requeueOrphaned,
-	},
-}));
-
 const handler = mock(async (_entry: unknown) => ({ ok: true }) as unknown);
+
 mock.module("../../../src/lib/services/queue/handlers", () => ({
 	jobHandlers: { backup: handler, deploy: handler, docker_cleanup: handler },
 }));
@@ -77,6 +67,7 @@ const finalize = mock(
 	async (_entry: unknown, _result: unknown, _error: unknown) =>
 		({ finalized: true }) as Record<string, unknown> | null,
 );
+
 mock.module("../../../src/lib/services/queue/worker-jobs/index", () => ({
 	workerJobs: { backup: { finalize, prepare }, deploy: null },
 }));
@@ -85,6 +76,7 @@ const { QueueService } = await import(
 	"../../../src/lib/services/queue.service"
 );
 const { JobWorker } = await import("../../../src/lib/services/queue/worker");
+const { JobDTO } = await import("../../../src/lib/dto/job-dto");
 
 type EnqueuedJob = Awaited<ReturnType<typeof QueueService.enqueue>>;
 
@@ -100,6 +92,19 @@ const baseInput = {
 };
 
 beforeEach(() => {
+	for (const [key, fn] of Object.entries({
+		cancelDependents,
+		claimFinalize,
+		claimNext,
+		create,
+		findQueued,
+		get,
+		listStalledExecutions,
+		requeueOrphaned,
+	})) {
+		stub(JobDTO, key, fn);
+	}
+
 	for (const m of [
 		cancelDependents,
 		findQueued,
@@ -116,6 +121,8 @@ beforeEach(() => {
 		m.mockClear();
 	}
 });
+
+afterEach(() => restoreStubs());
 
 describe("QueueService.enqueue", () => {
 	test("coalesces into an already-queued job with the same dedupe key", async () => {
