@@ -71,7 +71,7 @@ func TestPreviewVerdict(t *testing.T) {
 
 func TestRequirePR(t *testing.T) {
 	_, failed := runCLI(t, func() {
-		if got := cli.RequirePR([]string{"svc", "#12"}); got != 12 {
+		if got := cli.RequirePR("#12"); got != 12 {
 			t.Errorf("got %d", got)
 		}
 	})
@@ -79,7 +79,7 @@ func TestRequirePR(t *testing.T) {
 		t.Fatalf("failed with %q", failed)
 	}
 	for _, bad := range []string{"0", "-3", "abc"} {
-		_, failed := runCLI(t, func() { cli.RequirePR([]string{"svc", bad}) })
+		_, failed := runCLI(t, func() { cli.RequirePR(bad) })
 		if !strings.Contains(failed, "isn't a pull request number") {
 			t.Errorf("%q: got %q", bad, failed)
 		}

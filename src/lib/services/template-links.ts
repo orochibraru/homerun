@@ -12,7 +12,7 @@ import { Logger } from "$lib/logger";
 import { defaultHostname } from "$lib/service-domains";
 import { isDatabaseImage } from "$lib/service-link";
 import type { ServiceRuntimeOptions } from "$lib/service-runtime";
-import { stackScopedSlug, uniqueSlug } from "$lib/slug";
+import { slugify, stackScopedSlug, uniqueSlug } from "$lib/slug";
 import {
 	fillSecretInEnv,
 	fillSecretInRuntime,
@@ -44,17 +44,6 @@ export interface ResolvedTemplateLink {
 	slug: string;
 	tag: string;
 	templateName: string;
-}
-
-/** Normalizes a name into a DNS-label-safe slug: lowercased, non-alphanumeric runs collapsed to a single hyphen, trimmed, capped to 63 characters. */
-export function slugify(value: string): string {
-	return value
-		.toLowerCase()
-		.trim()
-		.replace(/[^a-z0-9-]+/g, "-")
-		.replace(/-+/g, "-")
-		.replace(/^-|-$/g, "")
-		.slice(0, 63);
 }
 
 /**

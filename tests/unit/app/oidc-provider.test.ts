@@ -1,12 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import {
+	callbackUrlProblem,
+	matchesCallback,
 	mcpAllowed,
 	mcpResource,
 	oidcClaimsFor,
 	oidcDiscoveryUrl,
+	oidcEndpointBase,
 	oidcIssuer,
-	parseRedirectUris,
+	originProblem,
 	rebaseOnOrigin,
+	registeredCallbacks,
+	tokenRequestCredentials,
 } from "../../../src/lib/oidc-provider";
 
 const ada = {
@@ -38,14 +43,125 @@ describe("mcpResource", () => {
 	});
 });
 
-describe("oidcIssuer / oidcDiscoveryUrl", () => {
-	test("hang off the auth base path, ignoring a trailing slash", () => {
+describe("oidcIssuer / oidcDiscoveryUrl / oidcEndpointBase", () => {
+	test("the issuer is <dashboard>/issuer, the endpoints stay under the auth base path", () => {
 		expect(oidcIssuer("https://homerun.example.com/")).toBe(
-			"https://homerun.example.com/api/v1/auth",
+			"https://homerun.example.com/issuer",
 		);
 		expect(oidcDiscoveryUrl("https://homerun.example.com")).toBe(
-			"https://homerun.example.com/api/v1/auth/.well-known/openid-configuration",
+			"https://homerun.example.com/issuer/.well-known/openid-configuration",
 		);
+		expect(oidcEndpointBase("https://homerun.example.com/")).toBe(
+			"https://homerun.example.com/api/v1/auth",
+		);
+	});
+});
+
+describe("callbackUrlProblem", () => {
+	test("https anywhere, http loopback only where localhost is allowed", () => {
+		expect(callbackUrlProblem("https://app.example.com/cb", false)).toBeNull();
+		expect(callbackUrlProblem("http://app.example.com/cb", false)).toContain(
+			"https",
+		);
+		expect(callbackUrlProblem("http://localhost:3000/cb", false)).toContain(
+			"allows localhost",
+		);
+		expect(callbackUrlProblem("http://127.0.0.1:3000/cb", true)).toBeNull();
+		expect(callbackUrlProblem("https://localhost/cb", true)).toContain("http");
+		expect(callbackUrlProblem("https://app.example.com/cb#x", true)).toContain(
+			"fragment",
+		);
+		expect(callbackUrlProblem("app.example.com/cb", true)).toContain(
+			"full URL",
+		);
+	});
+});
+
+describe("originProblem", () => {
+	test("only scheme, host and port, localhost only where allowed", () => {
+		expect(originProblem("https://app.example.com", false)).toBeNull();
+		expect(originProblem("https://app.example.com/", false)).toBeNull();
+		expect(originProblem("https://app.example.com/path", false)).toContain(
+			"no path",
+		);
+		expect(originProblem("http://localhost:5173", false)).toContain(
+			"allows localhost",
+		);
+		expect(originProblem("http://localhost:5173", true)).toBeNull();
+	});
+});
+
+describe("registeredCallbacks", () => {
+	test("unions the environments and adds the test callback on an https dashboard", () => {
+		expect(
+			registeredCallbacks(
+				[
+					{ redirectUris: ["https://a.example.com/cb"] },
+					{
+						redirectUris: [
+							"https://a.example.com/cb",
+							"https://b.example.com/cb",
+						],
+					},
+				],
+				"https://homerun.example.com",
+			),
+		).toEqual({
+			applicationType: "web",
+			redirectUris: [
+				"https://a.example.com/cb",
+				"https://b.example.com/cb",
+				"https://homerun.example.com/idp/test-callback",
+			],
+		});
+	});
+
+	test("a loopback callback makes it a native client, a plain-http LAN dashboard gets no test callback", () => {
+		expect(
+			registeredCallbacks(
+				[{ redirectUris: ["http://localhost:3000/cb"] }],
+				"http://192.168.1.10:3000",
+			),
+		).toEqual({
+			applicationType: "native",
+			redirectUris: ["http://localhost:3000/cb"],
+		});
+	});
+});
+
+describe("matchesCallback", () => {
+	test("exact, or a loopback IP on another port", () => {
+		expect(
+			matchesCallback("https://a.example.com/cb", "https://a.example.com/cb"),
+		).toBe(true);
+		expect(
+			matchesCallback(
+				"https://a.example.com/cb",
+				"https://a.example.com/other",
+			),
+		).toBe(false);
+		expect(
+			matchesCallback("http://127.0.0.1:3000/cb", "http://127.0.0.1:4000/cb"),
+		).toBe(true);
+		expect(
+			matchesCallback("http://localhost:3000/cb", "http://localhost:4000/cb"),
+		).toBe(false);
+	});
+});
+
+describe("tokenRequestCredentials", () => {
+	test("reads HTTP Basic, form-decoding each half, else the body", () => {
+		const basic = `Basic ${Buffer.from("my%20app:s%3Acret").toString("base64")}`;
+		expect(tokenRequestCredentials(basic, new URLSearchParams())).toEqual({
+			clientId: "my app",
+			secret: "s:cret",
+		});
+		expect(
+			tokenRequestCredentials(
+				null,
+				new URLSearchParams({ client_id: "c", client_secret: "s" }),
+			),
+		).toEqual({ clientId: "c", secret: "s" });
 	});
 });
 
@@ -71,16 +187,6 @@ describe("oidcClaimsFor", () => {
 		expect(oidcClaimsFor({ ...ada, role: null }, ["groups"])).toEqual({
 			groups: [],
 		});
-	});
-});
-
-describe("parseRedirectUris", () => {
-	test("accepts newlines and commas, trims and de-duplicates", () => {
-		expect(
-			parseRedirectUris(
-				" https://a.example.com/cb \nhttps://b.example.com/cb,https://a.example.com/cb\n\n",
-			),
-		).toEqual(["https://a.example.com/cb", "https://b.example.com/cb"]);
 	});
 });
 

@@ -5,10 +5,12 @@
 	const {
 		clientId,
 		clientSecret = null,
+		endpointBase,
 		issuer,
 	}: {
 		clientId: string;
 		clientSecret?: string | null;
+		endpointBase: string;
 		issuer: string;
 	} = $props();
 
@@ -18,10 +20,13 @@
 			label: "Discovery URL",
 			value: `${issuer}/.well-known/openid-configuration`,
 		},
-		{ label: "Authorization endpoint", value: `${issuer}/oauth2/authorize` },
-		{ label: "Token endpoint", value: `${issuer}/oauth2/token` },
-		{ label: "Userinfo endpoint", value: `${issuer}/oauth2/userinfo` },
-		{ label: "JWKS URI", value: `${issuer}/jwks` },
+		{
+			label: "Authorization endpoint",
+			value: `${endpointBase}/oauth2/authorize`,
+		},
+		{ label: "Token endpoint", value: `${endpointBase}/oauth2/token` },
+		{ label: "Userinfo endpoint", value: `${endpointBase}/oauth2/userinfo` },
+		{ label: "JWKS URI", value: `${endpointBase}/jwks` },
 	]);
 </script>
 

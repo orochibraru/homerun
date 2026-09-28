@@ -1096,7 +1096,7 @@ func TestInstanceUpdateForceFlag(t *testing.T) {
 	}))
 	defer server.Close()
 	global := cli.GlobalFlags{APIKey: "k", BaseURL: server.URL}
-	if _, failed := runCLI(t, func() { cli.RunInstance(global, []string{"update", "--wait=false", "--force"}) }); failed != "" {
+	if _, failed := runCLI(t, func() { cli.Execute(cli.NewEnv(global), []string{"instance", "update", "--wait=false", "--force"}) }); failed != "" {
 		t.Fatalf("failed with %q", failed)
 	}
 	if body != `{"force":true}` {
@@ -1682,19 +1682,6 @@ func gzipped(t *testing.T, payload []byte) []byte {
 
 // --- dispatch ------------------------------------------------------------
 
-func TestRequireArg(t *testing.T) {
-	if got := cli.RequireArg([]string{"a", "b"}, 1, "id"); got != "b" {
-		t.Errorf("want b, got %q", got)
-	}
-
-	for name, args := range map[string][]string{"past the end": {"a"}, "empty": {"a", ""}} {
-		_, failed := runCLI(t, func() { cli.RequireArg(args, 1, "id") })
-		if !strings.Contains(failed, "missing <id>") {
-			t.Errorf("%s: got %q", name, failed)
-		}
-	}
-}
-
 func TestRequireClientWithoutALogin(t *testing.T) {
 	isolate(t)
 
@@ -1731,7 +1718,9 @@ func TestRunScansDefaultsToList(t *testing.T) {
 				fmt.Fprint(writer, `{"id":"scan-9","status":"succeeded"}`)
 			})
 
-			out, failed := runCLI(t, func() { cli.RunScans(func() *cli.Client { return client }, test.args) })
+			out, failed := runCLI(t, func() {
+				cli.Execute(cli.Env{Client: func() *cli.Client { return client }}, append([]string{"services", "scans"}, test.args...))
+			})
 			if failed != "" {
 				t.Fatalf("failed with %q", failed)
 			}
@@ -1748,7 +1737,7 @@ func TestRunScansDefaultsToList(t *testing.T) {
 func TestRunScansNeedsAnID(t *testing.T) {
 	for name, args := range map[string][]string{"list": {"list"}, "get": {"get"}, "bare": {}} {
 		_, failed := runCLI(t, func() {
-			cli.RunScans(func() *cli.Client { return cli.NewClient(homerun.Config{BaseURL: "https://example.com"}) }, args)
+			cli.Execute(cli.Env{Client: func() *cli.Client { return cli.NewClient(homerun.Config{BaseURL: "https://example.com"}) }}, append([]string{"services", "scans"}, args...))
 		})
 		if !strings.Contains(failed, "missing <id>") {
 			t.Errorf("%s: got %q", name, failed)
@@ -1759,7 +1748,9 @@ func TestRunScansNeedsAnID(t *testing.T) {
 func TestRunServiceScanValidatesFailOn(t *testing.T) {
 	client := func() *cli.Client { return cli.NewClient(homerun.Config{BaseURL: "https://example.com"}) }
 
-	_, failed := runCLI(t, func() { cli.RunServiceScan(client, []string{"svc-1", "--fail-on", "nope"}) })
+	_, failed := runCLI(t, func() {
+		cli.Execute(cli.Env{Client: client}, []string{"services", "scan", "svc-1", "--fail-on", "nope"})
+	})
 	if !strings.Contains(failed, "--fail-on must be one of critical, high, medium, low") {
 		t.Errorf("got %q", failed)
 	}
@@ -1770,7 +1761,7 @@ func TestRunServiceScanImpliesWait(t *testing.T) {
 	client, seen := scanAPI(t, "succeeded", `{"counts":{},"id":"scan-1","status":"succeeded"}`)
 
 	if _, failed := runCLI(t, func() {
-		cli.RunServiceScan(func() *cli.Client { return client }, []string{"svc-1", "--fail-on", "critical"})
+		cli.Execute(cli.Env{Client: func() *cli.Client { return client }}, []string{"services", "scan", "svc-1", "--fail-on", "critical"})
 	}); failed != "" {
 		t.Fatalf("failed with %q", failed)
 	}
@@ -1808,7 +1799,7 @@ func TestRunServicesDispatch(t *testing.T) {
 			t.Cleanup(server.Close)
 
 			_, failed := runCLI(t, func() {
-				cli.RunServices(cli.GlobalFlags{APIKey: "k", BaseURL: server.URL}, test.args)
+				cli.Execute(cli.NewEnv(cli.GlobalFlags{APIKey: "k", BaseURL: server.URL}), append([]string{"services"}, test.args...))
 			})
 			if failed != "" {
 				t.Fatalf("failed with %q", failed)
@@ -1836,7 +1827,7 @@ func TestRunServicesRejectsBadInput(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			isolate(t)
-			_, failed := runCLI(t, func() { cli.RunServices(cli.GlobalFlags{}, test.args) })
+			_, failed := runCLI(t, func() { cli.Execute(cli.NewEnv(cli.GlobalFlags{}), append([]string{"services"}, test.args...)) })
 			if !strings.Contains(failed, test.want) {
 				t.Errorf("want %q, got %q", test.want, failed)
 			}
@@ -1845,10 +1836,10 @@ func TestRunServicesRejectsBadInput(t *testing.T) {
 }
 
 func TestRunStacksAndTemplates(t *testing.T) {
-	for name, run := range map[string]func(cli.GlobalFlags, []string){
-		"stacks":    cli.RunStacks,
-		"templates": cli.RunTemplates,
-	} {
+	for _, name := range []string{"stacks", "templates"} {
+		run := func(global cli.GlobalFlags, args []string) {
+			cli.Execute(cli.NewEnv(global), append([]string{name}, args...))
+		}
 		t.Run(name, func(t *testing.T) {
 			isolate(t)
 			seenPath := ""
@@ -1869,7 +1860,7 @@ func TestRunStacksAndTemplates(t *testing.T) {
 
 			for _, args := range [][]string{nil, {"delete"}} {
 				_, failed := runCLI(t, func() { run(cli.GlobalFlags{}, args) })
-				if !strings.Contains(failed, "usage: homerun "+name+" list") {
+				if !strings.Contains(failed, name+" subcommand") {
 					t.Errorf("%v: got %q", args, failed)
 				}
 			}
@@ -1887,7 +1878,7 @@ func TestRunInstanceDispatch(t *testing.T) {
 	t.Cleanup(server.Close)
 	global := cli.GlobalFlags{APIKey: "k", BaseURL: server.URL}
 
-	out, failed := runCLI(t, func() { cli.RunInstance(global, []string{"status", "--json"}) })
+	out, failed := runCLI(t, func() { cli.Execute(cli.NewEnv(global), []string{"instance", "status", "--json"}) })
 	if failed != "" || !strings.Contains(out, `"current": "1.0.0"`) {
 		t.Errorf("status --json: %q / %q", out, failed)
 	}
@@ -1895,7 +1886,7 @@ func TestRunInstanceDispatch(t *testing.T) {
 		t.Errorf("status should be a GET, got %s", (*seen)[0].Method)
 	}
 
-	out, failed = runCLI(t, func() { cli.RunInstance(global, []string{"update"}) })
+	out, failed = runCLI(t, func() { cli.Execute(cli.NewEnv(global), []string{"instance", "update"}) })
 	if failed != "" || !strings.Contains(out, "Updating to v1.0.0.") {
 		t.Errorf("update: %q / %q", out, failed)
 	}
@@ -1907,10 +1898,10 @@ func TestRunInstanceDispatch(t *testing.T) {
 		args []string
 		want string
 	}{
-		"no subcommand":      {nil, "usage: homerun instance status|update"},
+		"no subcommand":      {nil, "missing instance subcommand"},
 		"unknown subcommand": {[]string{"reboot"}, `unknown instance subcommand "reboot"`},
 	} {
-		if _, failed := runCLI(t, func() { cli.RunInstance(global, test.args) }); !strings.Contains(failed, test.want) {
+		if _, failed := runCLI(t, func() { cli.Execute(cli.NewEnv(global), append([]string{"instance"}, test.args...)) }); !strings.Contains(failed, test.want) {
 			t.Errorf("%s: got %q", name, failed)
 		}
 	}

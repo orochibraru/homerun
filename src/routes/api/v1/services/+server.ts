@@ -71,6 +71,7 @@ function toCreateInput(
 			envFiles: input.envFiles,
 			labels: input.labels,
 			privileged: input.privileged,
+			runAsUser: input.runAsUser ?? null,
 		},
 		slug: input.slug,
 		userId,

@@ -54,6 +54,7 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 				linkedTemplateEnvFiles: template.envFiles,
 				linkedTemplateLabels: template.labels,
 				linkedTemplatePrivileged: template.privileged,
+				linkedTemplateRunAsUser: template.runAsUser,
 				linkedTemplateContainerPort: template.containerPort,
 				linkedTemplateCpuLimit: template.cpuLimit,
 				linkedTemplateCategory: template.category,
@@ -88,6 +89,7 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 				envFiles: r.linkedTemplateEnvFiles,
 				labels: r.linkedTemplateLabels,
 				privileged: r.linkedTemplatePrivileged,
+				runAsUser: r.linkedTemplateRunAsUser,
 			}),
 			linkedTemplateTag: r.linkedTemplateTag,
 		}));

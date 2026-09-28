@@ -58,6 +58,7 @@ export const serviceResponse = z.object({
 	envFiles: z.array(z.string()),
 	labels: z.record(z.string(), z.string()),
 	privileged: z.boolean(),
+	runAsUser: z.string().nullable(),
 	// Ciphertext (AES-256-GCM), not plaintext : present because `.toJSON()`
 	// returns the raw row as-is. Documented honestly rather than hidden, since
 	// hiding it here would make the spec describe a smaller response than the
@@ -197,6 +198,7 @@ export const templateResponse = z.object({
 			"privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them",
 	}),
 	restartPolicy: z.string(),
+	runAsUser: z.string().nullable(),
 	tag: z.string(),
 	updatedAt: isoTimestamp,
 });

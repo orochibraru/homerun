@@ -1,7 +1,7 @@
 import { config } from "$lib/config";
 import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
 import { OauthGrantDTO } from "$lib/dto/oauth-grant-dto";
-import { oidcIssuer } from "$lib/oidc-provider";
+import { oidcEndpointBase, oidcIssuer } from "$lib/oidc-provider";
 
 export const load = async ({ parent }) => {
 	await parent();
@@ -10,6 +10,9 @@ export const load = async ({ parent }) => {
 		OauthGrantDTO.activityByClient(),
 	]);
 	return {
+		endpointBase: config.auth.origin
+			? oidcEndpointBase(config.auth.origin)
+			: null,
 		issuer: config.auth.origin ? oidcIssuer(config.auth.origin) : null,
 		oauthApps: apps.map((app) => {
 			const summary = app.summary();

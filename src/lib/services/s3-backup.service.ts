@@ -1,6 +1,9 @@
 import { createHash, createHmac } from "node:crypto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
+import type { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { stackPath } from "$lib/stack-tree";
 import {
 	VOLUME_HELPER_IMAGE,
 	VOLUME_HELPER_MOUNT_PATH,
@@ -171,15 +174,14 @@ class S3BackupServiceClass {
 	async backupSpec(volume: StorageVolumeDTO): Promise<Record<string, unknown>> {
 		const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 		const prefix = volume.backupPrefix ? `${volume.backupPrefix}/` : "";
+		const services = await VolumeServices.servicesUsing(volume);
 		return {
-			...this.#helperSpec(volume),
+			...(await this.#helperSpec(volume, services)),
 			destination: await this.destinationFor(volume),
 			key: `${prefix}${volume.name}-${timestamp}.tar.gz`,
 			preCommand: await VolumeServices.preCommandTarget(volume),
 			stopServices: volume.backupStopServices
-				? await VolumeServices.stopTargets(
-						await VolumeServices.servicesUsing(volume),
-					)
+				? await VolumeServices.stopTargets(services)
 				: [],
 		};
 	}
@@ -195,26 +197,39 @@ class S3BackupServiceClass {
 		key: string,
 		options: RestoreOptions,
 	): Promise<Record<string, unknown>> {
+		const services = await VolumeServices.servicesUsing(volume);
 		return {
-			...this.#helperSpec(volume),
+			...(await this.#helperSpec(volume, services)),
 			destination: await this.destinationFor(volume),
 			key,
 			stopServices: options.stopServices
-				? await VolumeServices.stopTargets(
-						await VolumeServices.servicesUsing(volume),
-					)
+				? await VolumeServices.stopTargets(services)
 				: [],
 			wipe: options.wipe,
 		};
 	}
 
-	/** The helper container the worker mounts the volume into, shared by backup and restore specs. */
-	#helperSpec(volume: StorageVolumeDTO): Record<string, unknown> {
+	/**
+	 * The helper container the worker mounts the volume into, shared by backup
+	 * and restore specs, plus the volume's kind and the services using it,
+	 * each with its stack path, for the run log.
+	 */
+	async #helperSpec(
+		volume: StorageVolumeDTO,
+		services: ServiceDTO[],
+	): Promise<Record<string, unknown>> {
+		const stacks = services.some((s) => s.stackId)
+			? (await StackDTO.list()).map((s) => s.toJSON())
+			: [];
 		return {
 			helperImage: `${VOLUME_HELPER_IMAGE}:${VOLUME_HELPER_TAG}`,
 			helperLabels: { [MANAGED_LABEL]: "true" },
+			kind: volume.kind,
 			mountPath: VOLUME_HELPER_MOUNT_PATH,
 			source: volume.source,
+			usedBy: services.map((s) =>
+				s.stackId ? `${s.name} (${stackPath(s.stackId, stacks)})` : s.name,
+			),
 			volumeName: volume.name,
 		};
 	}

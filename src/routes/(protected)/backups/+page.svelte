@@ -60,6 +60,18 @@
 		},
 	];
 
+	function describeOrigin(origin: {
+		services: string[];
+		stacks: string[];
+	}): string {
+		if (origin.services.length === 0) {
+			return "not mounted by any service";
+		}
+		const where =
+			origin.stacks.length > 0 ? `${origin.stacks.join(", ")} · ` : "";
+		return `${where}used by ${origin.services.join(", ")}`;
+	}
+
 	function formatDate(value: Date | string | null): string {
 		if (!value) {
 			return "—";
@@ -122,6 +134,9 @@
               >
                 {vol.name}
               </a>
+              <p class="text-text-muted mt-0.5 truncate text-xs">
+                {describeOrigin(vol.origin)}
+              </p>
               <p class="text-text-muted mt-0.5 truncate text-xs">
                 {describeSchedule(scheduleFromCron(vol.backupSchedule))}
                 · to {vol.destinationName}
@@ -210,7 +225,12 @@
                         ? 'rotate-90'
                         : ''}"
                     />
-                    {run.volumeName}
+                    <span class="flex flex-col">
+                      <span>{run.volumeName}</span>
+                      <span class="text-text-subtle text-xs font-normal">
+                        {describeOrigin(run.origin)}
+                      </span>
+                    </span>
                   </button>
                 </td>
                 <td class="text-text-muted px-4 py-3" title={run.key ?? ""}>

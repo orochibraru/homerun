@@ -25,6 +25,7 @@ import type {
 import type { PublishedPort } from "$lib/published-ports";
 import type { ResourceKind, Threshold } from "$lib/resource-thresholds";
 import type { BackupRunKind, RevisionConfig } from "$lib/revision-config";
+import type { SurfaceStyle } from "$lib/surfaces";
 import type {
 	ContainerStatus,
 	JobStage,
@@ -253,6 +254,54 @@ export const oauthClient = pgTable(
 		userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
 	},
 	(table) => [index("oauthClient_userId_idx").on(table.userId)],
+);
+
+export const oauthClientEnvironment = pgTable(
+	"oauth_client_environment",
+	{
+		allowedOrigins: jsonb("allowed_origins")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		allowLocalhost: boolean("allow_localhost").default(false).notNull(),
+		clientId: text("client_id")
+			.notNull()
+			.references(() => oauthClient.clientId, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		redirectUris: jsonb("redirect_uris")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("oauthClientEnvironment_clientId_name_uidx").on(
+			table.clientId,
+			table.name,
+		),
+	],
+);
+
+export const oauthClientSecret = pgTable(
+	"oauth_client_secret",
+	{
+		clientId: text("client_id")
+			.notNull()
+			.references(() => oauthClient.clientId, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		environmentId: text("environment_id").references(
+			() => oauthClientEnvironment.id,
+			{ onDelete: "cascade" },
+		),
+		expiresAt: timestamp("expires_at", { mode: "date" }),
+		hint: text("hint").notNull(),
+		id: text("id").primaryKey(),
+		label: text("label").notNull(),
+		lastUsedAt: timestamp("last_used_at", { mode: "date" }),
+		secretHash: text("secret_hash").notNull().unique(),
+	},
+	(table) => [index("oauthClientSecret_clientId_idx").on(table.clientId)],
 );
 
 export const oauthResource = pgTable("oauth_resource", {
@@ -750,6 +799,7 @@ export const template = pgTable(
 			.default({})
 			.notNull(),
 		privileged: boolean("privileged").default(false).notNull(),
+		runAsUser: text("run_as_user"),
 		cpuLimit: text("cpu_limit"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
@@ -852,6 +902,7 @@ export const service = pgTable(
 			.default({})
 			.notNull(),
 		privileged: boolean("privileged").default(false).notNull(),
+		runAsUser: text("run_as_user"),
 		// Registry to use as a git-build layer cache (git mode only, see
 		// internal/agent/build.go) : null means no cache-from/cache-to, every
 		// build is from scratch, same as before this existed.
@@ -1598,6 +1649,10 @@ export const userPreferences = pgTable("user_preferences", {
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	palette: text("palette"),
 	perPage: integer("per_page").default(50).notNull(),
+	surfaceStyle: text("surface_style")
+		.$type<SurfaceStyle>()
+		.default("glass")
+		.notNull(),
 	// "system" (default, off the OS's own light/dark preference) | "light" |
 	// "dark" : applied via the mode-watcher package already mounted in the
 	// root layout (src/routes/+layout.svelte), this table is just its
@@ -1797,6 +1852,28 @@ export const errorProject = pgTable("error_project", {
 		.references(() => service.id, { onDelete: "cascade" }),
 });
 
+export const errorSourceMap = pgTable(
+	"error_source_map",
+	{
+		content: text("content").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		release: text("release").notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		sizeBytes: integer("size_bytes").notNull(),
+	},
+	(table) => [
+		uniqueIndex("errorSourceMap_service_release_name_uidx").on(
+			table.serviceId,
+			table.release,
+			table.name,
+		),
+	],
+);
+
 export const errorIssue = pgTable(
 	"error_issue",
 	{
@@ -1872,6 +1949,9 @@ export const errorEvent = pgTable(
 
 export type Stack = typeof stack.$inferSelect;
 export type OauthClient = typeof oauthClient.$inferSelect;
+export type ErrorSourceMap = typeof errorSourceMap.$inferSelect;
+export type OauthClientEnvironment = typeof oauthClientEnvironment.$inferSelect;
+export type OauthClientSecret = typeof oauthClientSecret.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type TemplateLink = typeof templateLink.$inferSelect;
 export type Service = typeof service.$inferSelect;

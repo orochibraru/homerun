@@ -1103,14 +1103,20 @@ scopes `openid profile email offline_access groups`, claims from
 `oidcClaimsFor`: `groups` is `[user.role]`, `preferred_username` the email's
 local part). `@better-auth/oauth-provider` is pinned to the installed
 better-auth version (1.7.1); the two move together. Issuer is
-`<config.auth.origin>/api/v1/auth`, discovery at
-`/api/v1/auth/.well-known/openid-configuration`, which `svelteKitHandler`
-already forwards. **The plugins are only added when `config.auth.origin` is
-set**: `baseURL` is deliberately unset (see the `buildAuth` comment), and the
-provider's `init()` builds `new URL(issuer ?? baseURL)`, which throws on an
-empty base; `rebuildAuth()` adds them once settings supply the origin.
-`sveltekitCookies` must stay the **last** plugin, better-auth warns otherwise
-and the provider's after-hooks set cookies.
+`<config.auth.origin>/issuer` (the `jwt` plugin's `issuer`, `oidcIssuer()`),
+while the endpoints stay under `/api/v1/auth` (`oidcEndpointBase()`): the
+discovery document's `issuer` comes from the jwt option and its endpoints from
+`baseURL`, and the provider's `onRequest` answers
+`<issuer path>/.well-known/openid-configuration` whatever path the request has,
+so `src/routes/issuer/.well-known/[...path]` just hands the request to
+`auth.handler` (as the root `.well-known` route does for
+`/.well-known/oauth-authorization-server/issuer`). **The plugins are only added
+when `config.auth.origin` is set**: `baseURL` is deliberately unset (see the
+`buildAuth` comment), and the provider's `init()` builds
+`new URL(issuer ?? baseURL)`, which throws on an empty base; `rebuildAuth()`
+adds them once settings supply the origin. `sveltekitCookies` must stay the
+**last** plugin, better-auth warns otherwise and the provider's after-hooks set
+cookies.
 
 **Tables** (`jwks`, `oauth_client`, `oauth_access_token`, `oauth_refresh_token`,
 `oauth_consent`, `oauth_client_assertion`, plus the unused `oauth_resource` /
@@ -1131,6 +1137,29 @@ server-only create endpoint still loads the session and runs `clientPrivileges`
 be `https` and not loopback for web clients (the plugin rejects
 `http://localhost`), `parseOauthAppForm` refuses non-https up front with a
 readable message.
+
+**Environments and secrets are Homerun's, not the provider's.**
+`oauth_client_environment` (name, callbacks, authorized origins, allow
+localhost) and `oauth_client_secret` (hash, label, hint, environment, last used;
+a null environment plus `expires_at` is a test-sign-in secret). The client row's
+`redirect_uris` is kept as the union of its environments' callbacks plus the
+test callback (`OauthAppService.syncCallbacks`, after every environment change),
+with `application_type: "native"` when any is loopback, since the provider
+refuses loopback callbacks on `web` clients. Its `client_secret` holds
+`homerun-secrets:<client id>`, and `storeClientSecret: { hash, verify }` in
+`auth.ts` makes the provider's own check look that client's secrets up
+(`OauthClientSecretDTO.verify`); `hash` is the provider's own SHA-256/base64url,
+so a secret it generates at registration is moved into the table as is, and
+pre-existing hashes kept verifying through the migration. `rotateClientSecret`
+isn't used any more (it would overwrite the marker). The environment rules the
+provider can't express are enforced by `guardTokenRequest` in `hooks.server.ts`
+before `/oauth2/token` reaches it: a code is redeemed only with a secret of the
+environment its `redirect_uri` belongs to, a browser `Origin` must be one of
+that environment's authorized origins (which also get CORS headers and a
+preflight answer), and the test callback and test secrets are refused there,
+since only `OauthTestService` uses them, calling `auth.handler` directly. The
+token endpoint auth method is written straight to the row
+(`setTokenEndpointAuthMethod`), the provider's update endpoint doesn't take it.
 
 **Three request-path changes the provider needed**, all verified by
 `tests/e2e/ui-oidc-provider.spec.ts` (register, signed-out authorize → sign-in →

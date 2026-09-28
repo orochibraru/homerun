@@ -8,6 +8,9 @@
 	import OauthAppFields, {
 		type OauthAppFieldValues,
 	} from "$lib/components/oauth-app-fields.svelte";
+	import OauthEnvironmentFields, {
+		type OauthEnvironmentFieldValues,
+	} from "$lib/components/oauth-environment-fields.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { CLAUDE_MCP_CALLBACK } from "$lib/oidc-provider";
 	import { title } from "$lib/store/title";
@@ -20,21 +23,30 @@
 		confidential: true,
 		enableEndSession: true,
 		name: "",
-		redirectUris: "",
 		requirePkce: false,
 		skipConsent: true,
+		tokenAuthMethod: "client_secret_basic",
+	});
+	const environment = $state<OauthEnvironmentFieldValues>({
+		allowedOrigins: [""],
+		allowLocalhost: false,
+		name: "production",
+		redirectUris: [""],
 	});
 
 	onMount(() => title.set("Register an app"));
 
-	const isClaude = $derived(values.redirectUris.includes(CLAUDE_MCP_CALLBACK));
+	const isClaude = $derived(
+		environment.redirectUris.includes(CLAUDE_MCP_CALLBACK),
+	);
 
 	function useClaudePreset() {
 		values.confidential = true;
 		values.enableEndSession = false;
 		values.name = "Claude";
-		values.redirectUris = CLAUDE_MCP_CALLBACK;
+		environment.redirectUris = [CLAUDE_MCP_CALLBACK];
 		values.requirePkce = true;
+		values.tokenAuthMethod = "client_secret_post";
 		values.skipConsent = false;
 	}
 </script>
@@ -72,6 +84,7 @@
       <OauthAppCredentials
         clientId={form.created.clientId}
         clientSecret={form.created.clientSecret}
+        endpointBase={data.endpointBase ?? data.issuer}
         issuer={data.issuer}
       />
       <div class="flex justify-end">
@@ -118,6 +131,15 @@
         {/if}
 
         <OauthAppFields {values} />
+
+        <div class="border-border border-t pt-5">
+          <h2 class="text-text text-sm font-semibold">First environment</h2>
+          <p class="text-text-muted mt-0.5 mb-4 text-xs">
+            Add staging or development environments, with their own callbacks
+            and secrets, from the app's Environments tab afterwards.
+          </p>
+          <OauthEnvironmentFields values={environment} />
+        </div>
 
         <div class="flex justify-end gap-2">
           <Button href={resolve("/idp")} type="button" variant="ghost">

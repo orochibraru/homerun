@@ -17,14 +17,22 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * `url.origin` or the request's own `Host` header: SvelteKit rewrites
  * `url.origin` to `ORIGIN`, so a form posted from the server's IP while
  * `ORIGIN` names a domain would otherwise be refused, which is how a mistyped
- * Dashboard URL locks you out.
+ * Dashboard URL locks you out. A request carrying an `x-api-key` or
+ * `Authorization` header is never one: a browser can't add either to a
+ * cross-site form post without a CORS preflight, so an API client (the CLI
+ * uploading source maps) posting multipart isn't refused.
  */
 export function isForbiddenCrossSiteForm(
 	request: Pick<Request, "headers" | "method">,
 	url: URL,
 	exempt: (pathname: string) => boolean,
 ): boolean {
-	if (!MUTATING_METHODS.has(request.method) || exempt(url.pathname)) {
+	if (
+		!MUTATING_METHODS.has(request.method) ||
+		exempt(url.pathname) ||
+		request.headers.has("x-api-key") ||
+		request.headers.has("authorization")
+	) {
 		return false;
 	}
 	const mediaType = request.headers

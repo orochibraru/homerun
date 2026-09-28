@@ -14,6 +14,7 @@
 	import ProfileMenu from "$lib/components/profile-menu.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { appearanceCss } from "$lib/palettes";
+	import { DEFAULT_SURFACE } from "$lib/surfaces";
 	import { allNavItems } from "./nav-items";
 
 	const { data, children } = $props();
@@ -43,6 +44,13 @@
 	}
 
 	const accentCss = $derived(appearanceCss(data.preferences));
+
+	$effect(() => {
+		document.documentElement.dataset.surface = data.preferences.surfaceStyle;
+		return () => {
+			document.documentElement.dataset.surface = DEFAULT_SURFACE;
+		};
+	});
 
 	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
 	function groupByCategory(items: typeof allNavItems): NavGroup[] {

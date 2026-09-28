@@ -1,4 +1,16 @@
-import { CLAUDE_MCP_CALLBACK, OIDC_SCOPES } from "$lib/oidc-provider";
+import { config } from "$lib/config";
+import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
+import {
+	type EnvironmentInput,
+	OauthClientEnvironmentDTO,
+} from "$lib/dto/oauth-client-environment-dto";
+import { OauthClientSecretDTO } from "$lib/dto/oauth-client-secret-dto";
+import {
+	CLAUDE_MCP_CALLBACK,
+	OIDC_SCOPES,
+	registeredCallbacks,
+} from "$lib/oidc-provider";
+import { hashClientSecret } from "$lib/server/client-secret";
 import { auth } from "./auth.ts";
 
 /**
@@ -15,29 +27,34 @@ export function authErrorMessage(err: unknown, fallback: string): string {
 	return err instanceof Error && err.message ? err.message : fallback;
 }
 
-export interface OauthAppInput {
-	confidential: boolean;
+export interface OauthAppSettings {
 	enableEndSession: boolean;
 	name: string;
-	redirectUris: string[];
-	requirePkce: boolean;
 	skipConsent: boolean;
+}
+
+export type SecretAuthMethod = "client_secret_basic" | "client_secret_post";
+
+export interface OauthAppInput extends OauthAppSettings {
+	confidential: boolean;
+	environment: EnvironmentInput;
+	requirePkce: boolean;
+	tokenAuthMethod: SecretAuthMethod;
 }
 
 /**
  * How a new app authenticates at the token endpoint. better-auth accepts only
- * the method a client registered with, and Claude's connector sends its secret
- * in the request body, so a client with Claude's callback registers for that.
+ * the method a client registered with; Claude's connector sends its secret
+ * in the request body whatever was picked, so a client with Claude's callback
+ * registers for that.
  */
-function tokenAuthMethod(
-	input: OauthAppInput,
-): "client_secret_basic" | "client_secret_post" | "none" {
+function tokenAuthMethod(input: OauthAppInput): SecretAuthMethod | "none" {
 	if (!input.confidential) {
 		return "none";
 	}
-	return input.redirectUris.includes(CLAUDE_MCP_CALLBACK)
+	return input.environment.redirectUris.includes(CLAUDE_MCP_CALLBACK)
 		? "client_secret_post"
-		: "client_secret_basic";
+		: input.tokenAuthMethod;
 }
 
 export interface CreatedOauthApp {
@@ -47,33 +64,38 @@ export interface CreatedOauthApp {
 
 /**
  * Registers and edits the apps allowed to use "Sign in with Homerun",
- * through better-auth's own OAuth provider endpoints so client secrets are
- * generated and hashed the way the token endpoint expects. Reads go through
- * `OauthClientDTO` instead.
+ * through better-auth's own OAuth provider endpoints for the client row,
+ * while environments and secrets live in Homerun's own tables. Reads go
+ * through the DTOs instead.
  */
 class OauthAppServiceClass {
 	/**
-	 * Registers an app. A confidential app gets a client secret, returned here
-	 * once and never readable again; a public one (a SPA or mobile app) gets
-	 * none and must use PKCE. Runs as the signed-in admin whose request
-	 * `headers` are passed: better-auth checks that session against
-	 * `clientPrivileges` even for its server-only admin endpoint.
+	 * Registers an app with its first environment. A confidential app gets a
+	 * client secret in that environment, returned here once and never
+	 * readable again; a public one (a SPA or mobile app) gets none and must
+	 * use PKCE. Runs as the signed-in admin whose request `headers` are
+	 * passed: better-auth checks that session against `clientPrivileges` even
+	 * for its server-only admin endpoint.
 	 *
-	 * @throws When better-auth rejects the input, for example a redirect URI
-	 * that isn't a valid URL, or when the OIDC provider isn't enabled because
-	 * the Dashboard URL isn't set.
+	 * @throws When better-auth rejects the input, or when the OIDC provider
+	 * isn't enabled because the Dashboard URL isn't set.
 	 */
 	async create(
 		input: OauthAppInput,
 		headers: Headers,
 	): Promise<CreatedOauthApp> {
+		const registered = registeredCallbacks(
+			[input.environment],
+			config.auth.origin,
+		);
 		const created = await auth.api.adminCreateOAuthClient({
 			headers,
 			body: {
+				application_type: registered.applicationType,
 				client_name: input.name,
 				enable_end_session: input.enableEndSession,
 				grant_types: ["authorization_code", "refresh_token"],
-				redirect_uris: input.redirectUris,
+				redirect_uris: registered.redirectUris,
 				require_pkce: input.confidential ? input.requirePkce : true,
 				response_types: ["code"],
 				scope: OIDC_SCOPES.join(" "),
@@ -81,26 +103,35 @@ class OauthAppServiceClass {
 				token_endpoint_auth_method: tokenAuthMethod(input),
 			},
 		});
-		return {
-			clientId: created.client_id,
-			clientSecret: created.client_secret ?? null,
-		};
+		const environment = await OauthClientEnvironmentDTO.create(
+			created.client_id,
+			input.environment,
+		);
+		const secret = created.client_secret ?? null;
+		if (secret) {
+			await OauthClientSecretDTO.adoptHash({
+				clientId: created.client_id,
+				environmentId: environment.id,
+				hint: secret.slice(-4),
+				label: "Initial secret",
+				secretHash: hashClientSecret(secret),
+			});
+			await OauthClientDTO.useSecretTable(created.client_id);
+		}
+		return { clientId: created.client_id, clientSecret: secret };
 	}
 
 	/**
-	 * Saves an app's name, redirect URIs and consent/logout options. Whether
-	 * it's confidential is fixed at creation, and its PKCE requirement is
-	 * changed through `OauthClientDTO.setRequirePkce`. Runs as the admin whose
-	 * request `headers` are passed.
+	 * Saves an app's name and consent/logout options. Whether it's
+	 * confidential is fixed at creation, its PKCE requirement is changed
+	 * through `OauthClientDTO.setRequirePkce`, and its callbacks through its
+	 * environments. Runs as the admin whose request `headers` are passed.
 	 *
 	 * @throws When better-auth rejects the update.
 	 */
 	async update(
 		clientId: string,
-		input: Pick<
-			OauthAppInput,
-			"enableEndSession" | "name" | "redirectUris" | "skipConsent"
-		>,
+		input: OauthAppSettings,
 		headers: Headers,
 	): Promise<void> {
 		await auth.api.adminUpdateOAuthClient({
@@ -110,7 +141,6 @@ class OauthAppServiceClass {
 				update: {
 					client_name: input.name,
 					enable_end_session: input.enableEndSession,
-					redirect_uris: input.redirectUris,
 					skip_consent: input.skipConsent,
 				},
 			},
@@ -118,22 +148,33 @@ class OauthAppServiceClass {
 	}
 
 	/**
-	 * Issues a new client secret, invalidating the old one immediately. Runs
-	 * as the signed-in admin whose request `headers` are passed.
+	 * Re-registers the client's callbacks with the provider from its
+	 * environments (plus the test callback), after an environment changed.
 	 *
-	 * @returns The new secret, shown once.
-	 * @throws When the app is public (it has no secret) or the caller isn't
-	 * allowed to manage clients.
+	 * @throws When no callback is left, or better-auth rejects one.
 	 */
-	async rotateSecret(clientId: string, headers: Headers): Promise<string> {
-		const rotated = await auth.api.rotateClientSecret({
-			body: { client_id: clientId },
-			headers,
-		});
-		if (!rotated.client_secret) {
-			throw new Error("This app is public, so it has no secret to rotate.");
+	async syncCallbacks(clientId: string, headers: Headers): Promise<void> {
+		const environments =
+			await OauthClientEnvironmentDTO.listForClient(clientId);
+		const registered = registeredCallbacks(
+			environments.map((env) => ({ redirectUris: env.redirectUris })),
+			config.auth.origin,
+		);
+		if (registered.redirectUris.length === 0) {
+			throw new Error(
+				"The app needs at least one callback URL in one of its environments.",
+			);
 		}
-		return rotated.client_secret;
+		await auth.api.adminUpdateOAuthClient({
+			headers,
+			body: {
+				client_id: clientId,
+				update: {
+					application_type: registered.applicationType,
+					redirect_uris: registered.redirectUris,
+				},
+			},
+		});
 	}
 }
 

@@ -1,5 +1,12 @@
 import { joinShellWords } from "$lib/shell-words";
 
+const RUN_AS_USER_RE = /^[A-Za-z0-9_.-]{1,64}(:[A-Za-z0-9_.-]{1,64})?$/;
+
+/** Whether `value` is a Docker `User` Homerun accepts: `uid`, `uid:gid`, `name` or `name:group`, each part letters, digits, `_`, `.` or `-`. */
+export function isRunAsUser(value: string): boolean {
+	return RUN_AS_USER_RE.test(value);
+}
+
 export interface ServiceRuntimeOptions {
 	capAdd: string[];
 	command: string[] | null;
@@ -8,14 +15,15 @@ export interface ServiceRuntimeOptions {
 	envFiles: string[];
 	labels: Record<string, string>;
 	privileged: boolean;
+	runAsUser: string | null;
 }
 
 /**
  * A service's container runtime overrides (command, entrypoint, env files,
- * labels, added capabilities, devices, privileged mode) read off a service
- * row or a partial create input, with every missing field at its default:
- * the image's own argv, no files, labels, capabilities or devices, and not
- * privileged.
+ * labels, added capabilities, devices, privileged mode, run-as user) read off
+ * a service row or a partial create input, with every missing field at its
+ * default: the image's own argv and user, no files, labels, capabilities or
+ * devices, and not privileged.
  */
 export function runtimeOptionsFrom(
 	source: Partial<ServiceRuntimeOptions> | null | undefined,
@@ -28,6 +36,7 @@ export function runtimeOptionsFrom(
 		envFiles: source?.envFiles ?? [],
 		labels: source?.labels ?? {},
 		privileged: source?.privileged ?? false,
+		runAsUser: source?.runAsUser ?? null,
 	};
 }
 
@@ -62,6 +71,9 @@ export function runtimeOptionsSummary(
 	}
 	if (options.privileged) {
 		lines.push("Runs privileged");
+	}
+	if (options.runAsUser) {
+		lines.push(`Runs as user ${options.runAsUser}`);
 	}
 	return lines;
 }

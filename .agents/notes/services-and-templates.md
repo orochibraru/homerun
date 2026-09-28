@@ -472,11 +472,12 @@ and the long `{target, protocol}` form), `restart` (`on-failure:3` →
 `network_mode: host`, `container_name`, `deploy.resources.limits.cpus`/`memory`
 (and the legacy `cpus`/`mem_limit`), and the runtime options (`command`,
 `entrypoint` via `$lib/shell-words.ts`'s `argvFrom`, `labels` minus `traefik.*`/
-`homerun.*`, `cap_add`, `devices` short and long form, `privileged`). Everything
-else is a **warning on the preview, not a silent drop**: `build:`,
-`healthcheck`, `cap_drop`, secrets/configs, top-level extra networks, relative
-bind mounts (Homerun needs an absolute host path), anonymous volumes, and the
-host side of every port mapping.
+`homerun.*`, `cap_add`, `devices` short and long form, `privileged`, `user` when
+it passes `isRunAsUser`, otherwise a warning). Everything else is a **warning on
+the preview, not a silent drop**: `build:`, `healthcheck`, `cap_drop`,
+secrets/configs, top-level extra networks, relative bind mounts (Homerun needs
+an absolute host path), anonymous volumes, and the host side of every port
+mapping.
 
 `env_file` goes through `resolveEnvFiles`:
 `parseComposeFile(text, { envFiles })` takes a path → content map, a supplied
@@ -808,9 +809,9 @@ a linked service to be _healthy_, just created and started.
 ## Template runtime options and host access
 
 `template` carries the same runtime columns as `service` (`capAdd`, `command`,
-`devices`, `entrypoint`, `envFiles`, `labels`, `privileged`), typed through
-`ServiceRuntimeOptions` (`$lib/service-runtime.ts`): `NewTemplateInput` and
-`BuiltinTemplate` both extend `Partial<ServiceRuntimeOptions>`, and
+`devices`, `entrypoint`, `envFiles`, `labels`, `privileged`, `runAsUser`), typed
+through `ServiceRuntimeOptions` (`$lib/service-runtime.ts`): `NewTemplateInput`
+and `BuiltinTemplate` both extend `Partial<ServiceRuntimeOptions>`, and
 `TemplateDTO.create`/`seedBuiltinTemplates` normalize through
 `runtimeOptionsFrom`. `TemplateDTO.runtimeOptions` and
 `TemplateLinkWithTemplate.linkedTemplateRuntime` are what the deploy paths read.
@@ -1640,6 +1641,6 @@ to `persistent_storages`/`file_storages` on the row itself (`coolifyStorages` in
 `host_path` bind, `LocalFileVolume` → file draft or directory bind), and warns
 when neither says anything. `custom_docker_run_options` is parsed by
 `parseDockerRunOptions` (`--cap-add`, `--device`, `--privileged`, `--label`/
-`-l`, `--entrypoint`, others warned), `start_command` becomes an `sh -c`
-command, and a Redis/KeyDB/Dragonfly password becomes a `--requirepass` command.
-First real Coolify migration is the real test.
+`-l`, `--entrypoint`, `--user`/`-u`, others warned), `start_command` becomes an
+`sh -c` command, and a Redis/KeyDB/Dragonfly password becomes a `--requirepass`
+command. First real Coolify migration is the real test.

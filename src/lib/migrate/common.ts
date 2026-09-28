@@ -223,6 +223,7 @@ export interface SingleDraftInput {
 	privileged?: boolean;
 	public: boolean;
 	registry?: ComposeRegistryDraft | null;
+	runAsUser?: string | null;
 	volumes?: ComposeVolumeDraft[];
 }
 
@@ -263,6 +264,7 @@ export function singleDraft(input: SingleDraftInput): ComposeServiceDraft {
 		publishedPorts: [],
 		registry: input.registry ?? null,
 		restartPolicy: "unless-stopped",
+		runAsUser: input.runAsUser ?? null,
 		slug,
 		tag: ref.tag,
 		volumes: input.volumes ?? [],

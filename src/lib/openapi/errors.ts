@@ -125,7 +125,87 @@ const issueParams = [
 	{ description: "Issue id", name: "issueId" },
 ];
 
+const sourceMapRelease = z.object({
+	files: z.number().int().meta({ description: "Maps stored for the release" }),
+	release: z.string(),
+	sizeBytes: z.number().int(),
+	uploadedAt: timestamp,
+});
+
+const sourceMapUpload = z
+	.object({
+		file: z.string().meta({
+			description:
+				"Any number of .map files, each under a field named after its path in the build output (`_app/immutable/entry/app.js.map`), or `file` to use its own file name",
+			format: "binary",
+		}),
+		release: z.string().meta({
+			description:
+				"The release the maps belong to, the SENTRY_RELEASE the app reports (a git service's commit SHA)",
+		}),
+	})
+	.meta({ description: "multipart/form-data" });
+
 export const errorRoutes: RouteDef[] = [
+	{
+		description:
+			"The releases a service has source maps for, newest upload first. Only the 10 most recent releases are kept.",
+		method: "get",
+		path: "/services/{serviceId}/sourcemaps",
+		pathParams: [serviceIdParam],
+		responses: {
+			200: {
+				description: "Releases with maps",
+				isArray: true,
+				schema: sourceMapRelease,
+			},
+			401: { description: "Unauthorized", schema: errorResponse },
+			404: { description: "Service not found", schema: errorResponse },
+		},
+		summary: "List a service's source map releases",
+		tags: ["Errors"],
+	},
+	{
+		description:
+			"Uploads a release's source maps (version 3, up to 25 MiB each, 500 per request), replacing ones with the same path. Browser errors of that release then have their minified frames mapped back to the original file, line, function and source lines as they arrive.",
+		method: "post",
+		path: "/services/{serviceId}/sourcemaps",
+		pathParams: [serviceIdParam],
+		requestBody: sourceMapUpload,
+		requestContentType: "multipart/form-data",
+		responses: {
+			201: {
+				description: "The stored map paths",
+				schema: z.object({ files: z.array(z.string()), release: z.string() }),
+			},
+			400: {
+				description: "Missing release or an invalid map",
+				schema: errorResponse,
+			},
+			401: { description: "Unauthorized", schema: errorResponse },
+			404: { description: "Service not found", schema: errorResponse },
+		},
+		summary: "Upload source maps",
+		tags: ["Errors"],
+	},
+	{
+		description: "Deletes the source maps of one release.",
+		method: "delete",
+		path: "/services/{serviceId}/sourcemaps",
+		pathParams: [serviceIdParam],
+		queryParams: [{ description: "The release to delete", name: "release" }],
+		responses: {
+			200: {
+				description: "How many maps were deleted",
+				schema: z.object({ deleted: z.number().int(), release: z.string() }),
+			},
+			400: { description: "Missing release", schema: errorResponse },
+			401: { description: "Unauthorized", schema: errorResponse },
+			404: { description: "Service not found", schema: errorResponse },
+		},
+		summary: "Delete a release's source maps",
+		tags: ["Errors"],
+	},
 	{
 		description:
 			"A service's error issues, most recently seen first. Paginated like the other lists: the body is the page, x-total-count, x-page and x-per-page carry the rest.",

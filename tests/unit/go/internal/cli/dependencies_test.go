@@ -41,7 +41,7 @@ func TestRunDependenciesDispatches(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			client, seen := jsonAPI(t, dependenciesBody)
 			out, failed := runCLI(t, func() {
-				cli.RunDependencies(func() *cli.Client { return client }, test.args)
+				cli.Execute(cli.Env{Client: func() *cli.Client { return client }}, append([]string{"services", "dependencies"}, test.args...))
 			})
 			if failed != "" {
 				t.Fatalf("failed with %q", failed)
@@ -62,9 +62,9 @@ func TestRunDependenciesDispatches(t *testing.T) {
 
 func TestRunDependenciesNeedsArguments(t *testing.T) {
 	_, failed := runCLI(t, func() {
-		cli.RunDependencies(func() *cli.Client { return nil }, nil)
+		cli.Execute(cli.Env{Client: func() *cli.Client { return nil }}, append([]string{"services", "dependencies"}, nil...))
 	})
-	if failed != cli.DependenciesUsage {
+	if !strings.Contains(failed, "missing <id>") {
 		t.Errorf("got %q", failed)
 	}
 }

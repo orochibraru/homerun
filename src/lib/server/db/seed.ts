@@ -54,6 +54,7 @@ export async function seedBuiltinTemplates(): Promise<void> {
 				labels: sql`excluded.labels`,
 				name: sql`excluded.name`,
 				privileged: sql`excluded.privileged`,
+				runAsUser: sql`excluded.run_as_user`,
 				sourceUrl: sql`excluded.source_url`,
 				tag: sql`excluded.tag`,
 				tags: sql`excluded.tags`,

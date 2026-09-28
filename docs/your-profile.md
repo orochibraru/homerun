@@ -55,6 +55,13 @@ A per-account "Appearance" tab on your profile page controls:
 - **Theme**: light, dark, or match system (the default). Changes apply instantly
   and are saved to your account, so the choice follows you to a new browser or
   device, not just the one you set it on.
+- **Style**: how panels, cards and buttons are drawn: **Glass** (the default,
+  frosted panels over the color glow), **Neumorphism** (one flat tone, panels
+  raised by soft light and shade), **Boxy** (square corners, solid panels, hard
+  offset shadows), **Claymorphism** (puffy, round panels) or **Skeuomorphism**
+  (textured, bevelled panels and buttons). Each choice shows a small preview and
+  previews on the page itself when picked; **Save** keeps it. Works with either
+  theme and any palette.
 - **Colors**: a palette (Bordeaux, the default, Ocean, Forest, Sunset, Grape,
   Rose or Graphite) sets the accent for buttons, links and tab icons plus the
   hues charts, category tiles and the background use, all chosen to go together.

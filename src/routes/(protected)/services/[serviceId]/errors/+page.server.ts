@@ -2,6 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { ErrorIssueDTO } from "$lib/dto/error-issue-dto";
 import { ErrorProjectDTO } from "$lib/dto/error-project-dto";
+import { ErrorSourceMapDTO } from "$lib/dto/error-source-map-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
@@ -44,9 +45,10 @@ export const load = async ({ parent, url }) => {
 		{ filterKeys: ["status"], sortKeys: SORT_KEYS },
 		preferences.perPage,
 	);
-	const [issues, dsns] = await Promise.all([
+	const [issues, dsns, sourceMaps] = await Promise.all([
 		ErrorIssueDTO.listPaged(service.id, query),
 		ErrorTrackingService.dsns(project.toJSON(), url.origin),
+		ErrorSourceMapDTO.releases(service.id),
 	]);
 	return {
 		dsns,
@@ -55,6 +57,7 @@ export const load = async ({ parent, url }) => {
 		limits,
 		parentId: null,
 		project: project.toJSON(),
+		sourceMaps,
 	};
 };
 
@@ -131,6 +134,22 @@ export const actions = {
 			`Error tracking key rotated: service=${project.serviceId} user=${locals.user?.id}`,
 		);
 		return { success: true };
+	},
+
+	deleteSourceMaps: async ({ request, params, locals }) => {
+		const svc = await ownService(params.serviceId, locals);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		const release = String((await request.formData()).get("release") ?? "");
+		if (!release) {
+			return fail(400, { error: "Pick a release." });
+		}
+		const deleted = await ErrorSourceMapDTO.deleteRelease(svc.id, release);
+		logger.info(
+			`Source maps deleted: service=${svc.id} release=${release} files=${deleted} user=${locals.user?.id}`,
+		);
+		return { deleted };
 	},
 
 	status: async ({ request, params, locals }) => {

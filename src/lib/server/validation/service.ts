@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
 import { environmentNameField } from "$lib/server/validation/environment-name";
 import { DOMAIN_RE } from "$lib/service-domains";
+import { isRunAsUser } from "$lib/service-runtime";
 import { splitShellWords } from "$lib/shell-words";
 
 // Optional numeric fields that come from a plain <input>: an empty field
@@ -237,8 +238,9 @@ const LABEL_KEY_RE = /^[A-Za-z0-9][\w.-]*$/;
 /**
  * Backs the Runtime tab : command and entrypoint as shell-style command
  * lines, labels as `KEY=VALUE` lines, capabilities separated by commas or
- * spaces, devices one per line, and privileged as a checkbox. Parsed into
- * the stored shapes (argv lists, a label map, string lists).
+ * spaces, devices one per line, privileged as a checkbox and the run-as user
+ * as `uid[:gid]` or `name[:group]` (blank keeps the image's). Parsed into the
+ * stored shapes (argv lists, a label map, string lists).
  */
 export const updateRuntimeSchema = z
 	.object({
@@ -251,6 +253,13 @@ export const updateRuntimeSchema = z
 			(val) => val === "on" || val === true,
 			z.boolean(),
 		),
+		runAsUser: z
+			.string()
+			.trim()
+			.default("")
+			.refine((value) => !value || isRunAsUser(value), {
+				message: "Use uid, uid:gid, name or name:group.",
+			}),
 	})
 	.transform((input, ctx) => {
 		const capAdd = input.capAdd
@@ -288,6 +297,7 @@ export const updateRuntimeSchema = z
 			entrypoint: entrypoint.length > 0 ? entrypoint : null,
 			labels,
 			privileged: input.privileged,
+			runAsUser: input.runAsUser || null,
 		};
 	});
 export type UpdateRuntimeInput = z.infer<typeof updateRuntimeSchema>;

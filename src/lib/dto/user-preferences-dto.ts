@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { DEFAULT_PER_PAGE } from "$lib/list-sorts";
 import { db } from "$lib/server/db/lib";
 import { type UserPreferences, userPreferences } from "$lib/server/db/schema";
+import { DEFAULT_SURFACE, type SurfaceStyle } from "$lib/surfaces";
 import { BaseDTO } from "./base-dto";
 
 export type ThemePreference = "light" | "dark" | "system";
@@ -31,6 +32,7 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 			createdAt: now,
 			palette: null,
 			perPage: DEFAULT_PER_PAGE,
+			surfaceStyle: DEFAULT_SURFACE,
 			theme: "system",
 			updatedAt: now,
 			userId,
@@ -42,6 +44,11 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 	/** Persists the user's light/dark/system theme choice. */
 	async updateTheme(theme: ThemePreference): Promise<void> {
 		await this.persist({ theme });
+	}
+
+	/** Persists the look of panels and buttons: glass, neumorphism, boxy, clay or skeuomorphism. */
+	async updateSurfaceStyle(surfaceStyle: SurfaceStyle): Promise<void> {
+		await this.persist({ surfaceStyle });
 	}
 
 	/** Persists the account's default page size for every paginated list. */

@@ -119,7 +119,11 @@
       </button>
       {#if showEndpoints}
         <div class="border-border mt-4 border-t pt-4">
-          <OauthAppCredentials clientId="<the app's client ID>" issuer={data.issuer} />
+          <OauthAppCredentials
+            clientId="<the app's client ID>"
+            endpointBase={data.endpointBase ?? data.issuer}
+            issuer={data.issuer}
+          />
         </div>
       {/if}
     </section>

@@ -42,6 +42,7 @@ import type { JobResult } from "./queue/handlers.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
 import { RevisionHealthService } from "./revision-health.service.ts";
+import { ScheduledBellDigest } from "./scheduled-bell-digest.ts";
 
 const logger = new Logger(DEPLOY_LOG_SCOPE);
 
@@ -235,11 +236,20 @@ class DeploymentServiceClass {
 			await notifyStatusChecksFailed(svc, err);
 			return errorMessage;
 		}
-		NotificationDTO.notify({
-			message: `"${svc.name}" failed to deploy: ${errorMessage}`,
-			serviceId: svc.id,
-			type: "deploy_failure",
-		});
+		if (trigger === "cron") {
+			ScheduledBellDigest.add({
+				error: errorMessage,
+				ok: false,
+				serviceId: svc.id,
+				serviceName: svc.name,
+			});
+		} else {
+			NotificationDTO.notify({
+				message: `"${svc.name}" failed to deploy: ${errorMessage}`,
+				serviceId: svc.id,
+				type: "deploy_failure",
+			});
+		}
 		NotificationChannelService.notifyDeploy({ dep, ok: false, svc, trigger });
 		return errorMessage;
 	}
@@ -293,14 +303,19 @@ class DeploymentServiceClass {
 
 	/** Sends the in-app and channel notifications for a deploy that reached "running". */
 	#notifySuccess(dep: DeploymentDTO, svc: ServiceDTO, trigger: DeployTrigger) {
-		NotificationDTO.notify({
-			message:
-				trigger === "cron"
-					? `"${svc.name}" was auto-redeployed.`
-					: `"${svc.name}" deployed successfully.`,
-			serviceId: svc.id,
-			type: trigger === "cron" ? "auto_redeploy" : "deploy_success",
-		});
+		if (trigger === "cron") {
+			ScheduledBellDigest.add({
+				ok: true,
+				serviceId: svc.id,
+				serviceName: svc.name,
+			});
+		} else {
+			NotificationDTO.notify({
+				message: `"${svc.name}" deployed successfully.`,
+				serviceId: svc.id,
+				type: "deploy_success",
+			});
+		}
 		NotificationChannelService.notifyDeploy({ dep, ok: true, svc, trigger });
 	}
 

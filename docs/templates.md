@@ -2,8 +2,9 @@
 
 A template is a saved service config (image, tag, container port, env vars, CPU/
 memory, and the [runtime options](runtime-and-compute.md#runtime): entrypoint,
-command, labels, env files, added capabilities, devices and privileged mode) you
-can deploy from repeatedly without re-entering everything. Two kinds:
+command, labels, run-as user, env files, added capabilities, devices and
+privileged mode) you can deploy from repeatedly without re-entering everything.
+Two kinds:
 
 - **Built-in**, a catalog of ~70 common self-hosted apps, media (Jellyfin,
   Navidrome, the *arr stack, qBittorrent), databases and caches (PostgreSQL,

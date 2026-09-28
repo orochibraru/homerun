@@ -59,8 +59,9 @@ the same builder, along with their start commands, Dokploy's private registry
 credentials and file mounts; static build packs can't. Persistent storage isn't
 always listed by the other side's API, so check volumes after importing. A
 pasted compose file works too, including `command`, `entrypoint`, `env_file`,
-labels, `cap_add`, devices and `privileged`; `healthcheck`, secrets and configs
-are dropped with a warning. See [Importing a compose file](compose-import.md).
+labels, `user`, `cap_add`, devices and `privileged`; `healthcheck`, secrets and
+configs are dropped with a warning. See
+[Importing a compose file](compose-import.md).
 
 ## Docker stuck on a container
 

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { runtimeOptionsFrom } from "../../../src/lib/service-runtime";
+import {
+	isRunAsUser,
+	runtimeOptionsFrom,
+	runtimeOptionsSummary,
+} from "../../../src/lib/service-runtime";
 import {
 	capabilityName,
 	deviceMappingFor,
@@ -49,6 +53,7 @@ describe("runtime options", () => {
 		expect(runtimeArgv(defaults)).toEqual({
 			Cmd: undefined,
 			Entrypoint: undefined,
+			User: undefined,
 		});
 		expect(runtimeHostConfig(defaults)).toEqual({
 			CapAdd: undefined,
@@ -64,15 +69,52 @@ describe("runtime options", () => {
 			devices: ["/dev/dri"],
 			entrypoint: ["/bin/sh", "-c"],
 			privileged: true,
+			runAsUser: "1000:1000",
 		});
 		expect(runtimeArgv(runtime)).toEqual({
 			Cmd: ["--port", "80"],
 			Entrypoint: ["/bin/sh", "-c"],
+			User: "1000:1000",
 		});
 		expect(runtimeHostConfig(runtime)).toMatchObject({
 			CapAdd: ["CAP_NET_ADMIN"],
 			Devices: [{ PathOnHost: "/dev/dri" }],
 			Privileged: true,
 		});
+	});
+});
+
+describe("run-as user", () => {
+	test("accepts uid, uid:gid, name and name:group", () => {
+		for (const value of [
+			"0",
+			"1000",
+			"1000:1000",
+			"node",
+			"www-data:www.data_1",
+		]) {
+			expect(isRunAsUser(value)).toBe(true);
+		}
+	});
+
+	test("rejects anything Docker's User can't take", () => {
+		for (const value of [
+			"",
+			"1000:",
+			":1000",
+			"a:b:c",
+			"user name",
+			"root;rm",
+			"a".repeat(65),
+		]) {
+			expect(isRunAsUser(value)).toBe(false);
+		}
+	});
+
+	test("shows up in the runtime summary only when set", () => {
+		expect(runtimeOptionsSummary({ runAsUser: "1000:1000" })).toEqual([
+			"Runs as user 1000:1000",
+		]);
+		expect(runtimeOptionsSummary({ runAsUser: null })).toEqual([]);
 	});
 });

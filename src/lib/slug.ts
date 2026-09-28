@@ -1,5 +1,16 @@
 const MAX_SLUG_LENGTH = 63;
 
+/** Normalizes a name into a DNS-label-safe slug: lowercased, non-alphanumeric runs collapsed to a single hyphen, trimmed, capped to 63 characters. */
+export function slugify(value: string): string {
+	return value
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9-]+/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^-|-$/g, "")
+		.slice(0, 63);
+}
+
 /**
  * Builds the `attempt`-th fallback for a taken slug by appending `-<attempt>`,
  * truncating `base` first so the result stays within 63 characters and never

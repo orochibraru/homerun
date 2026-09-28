@@ -1,8 +1,10 @@
+import type { TraceMap } from "@jridgewell/trace-mapping";
 import { config } from "$lib/config";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ErrorEventDTO } from "$lib/dto/error-event-dto";
 import { ErrorIssueDTO } from "$lib/dto/error-issue-dto";
 import { ErrorProjectDTO } from "$lib/dto/error-project-dto";
+import { ErrorSourceMapDTO } from "$lib/dto/error-source-map-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
@@ -31,6 +33,12 @@ import {
 	repoWebUrl,
 	type SourceProvider,
 } from "$lib/error-tracking/source-links";
+import {
+	applySourceMaps,
+	isMinifiedFrame,
+	matchMapName,
+	parseSourceMap,
+} from "$lib/error-tracking/source-maps";
 import { providerForGitUrl } from "$lib/git-clone-url";
 import { Logger } from "$lib/logger";
 import { deployEnvironment } from "$lib/release-channels";
@@ -47,6 +55,7 @@ export const EVENTS_PER_MINUTE = 120;
 export const EVENTS_KEPT_PER_ISSUE = 100;
 export const RETENTION_DAYS = 30;
 export const NOTIFICATIONS_PER_HOUR = 10;
+const SOURCE_MAP_CACHE_SIZE = 32;
 const PRUNE_ISSUE_EVERY = 20;
 const HOST_CACHE_MS = 5 * 60 * 1000;
 
@@ -112,6 +121,7 @@ class ErrorTrackingServiceClass {
 		60 * 60 * 1000,
 	);
 	#host: { at: number; value: string | null } | null = null;
+	readonly #sourceMaps = new Map<string, TraceMap>();
 
 	/** The CORS preflight answer browser SDKs get before posting. */
 	preflight(): Response {
@@ -202,11 +212,78 @@ class ErrorTrackingServiceClass {
 			const event = normalizeEvent(payload, new Date());
 			if (event) {
 				// oxlint-disable-next-line no-await-in-loop -- events of one envelope are recorded in order
-				await this.#record(project.serviceId, event);
+				const mapped = await this.#withSourceMaps(project.serviceId, event);
+				// oxlint-disable-next-line no-await-in-loop -- events of one envelope are recorded in order
+				await this.#record(project.serviceId, mapped);
 				lastId = event.eventId;
 			}
 		}
 		return reply(200, lastId ? { id: lastId } : {});
+	}
+
+	/**
+	 * `event` with its minified browser frames mapped back to their source
+	 * through the maps uploaded for its release, before it's grouped, so
+	 * issues group on real function names. Parsed maps are cached by id (the
+	 * last `SOURCE_MAP_CACHE_SIZE`); a map that doesn't parse is skipped and
+	 * logged, and an event without a release or minified frames is untouched.
+	 */
+	async #withSourceMaps(
+		serviceId: string,
+		event: StoredErrorEvent,
+	): Promise<StoredErrorEvent> {
+		const urls = [
+			...new Set(
+				event.exceptions.flatMap((exception) =>
+					exception.frames
+						.filter(isMinifiedFrame)
+						.map((frame) => frame.absPath ?? ""),
+				),
+			),
+		];
+		if (!event.release || urls.length === 0) {
+			return event;
+		}
+		const rows = await ErrorSourceMapDTO.namesFor(serviceId, event.release);
+		const names = rows.map((row) => row.name);
+		const wanted = new Set(urls.map((url) => matchMapName(url, names)));
+		const maps = new Map<string, TraceMap>();
+		for (const row of rows.filter((entry) => wanted.has(entry.name))) {
+			// oxlint-disable-next-line no-await-in-loop -- an event rarely spans more than a couple of bundles
+			const map = await this.#loadSourceMap(row.id);
+			if (map) {
+				maps.set(row.name, map);
+			}
+		}
+		return maps.size > 0 ? applySourceMaps(event, maps) : event;
+	}
+
+	/** A stored map, parsed and cached, null when it's gone or doesn't parse. */
+	async #loadSourceMap(id: string): Promise<TraceMap | null> {
+		const cached = this.#sourceMaps.get(id);
+		if (cached) {
+			this.#sourceMaps.delete(id);
+			this.#sourceMaps.set(id, cached);
+			return cached;
+		}
+		const content = await ErrorSourceMapDTO.content(id);
+		if (!content) {
+			return null;
+		}
+		try {
+			const map = parseSourceMap(content);
+			this.#sourceMaps.set(id, map);
+			if (this.#sourceMaps.size > SOURCE_MAP_CACHE_SIZE) {
+				const oldest = this.#sourceMaps.keys().next().value;
+				if (oldest) {
+					this.#sourceMaps.delete(oldest);
+				}
+			}
+			return map;
+		} catch (error) {
+			logger.warn(`Unreadable source map skipped: id=${id}`, error);
+			return null;
+		}
 	}
 
 	/** Stores one event: skips a duplicate event id, upserts its issue, stores the event, trims the issue's history and notifies on a new or regressed issue. */

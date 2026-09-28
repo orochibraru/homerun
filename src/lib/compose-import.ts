@@ -3,6 +3,7 @@ import type { BuildMethod } from "$lib/build-methods";
 import { parseDotEnv } from "$lib/env-parse";
 import { splitImageRef } from "$lib/image-ref";
 import type { PublishedPort } from "$lib/published-ports";
+import { isRunAsUser } from "$lib/service-runtime";
 import { argvFrom } from "$lib/shell-words";
 
 export type ComposeRestartPolicy =
@@ -64,6 +65,7 @@ export interface ComposeServiceDraft {
 	privileged: boolean;
 	registry: ComposeRegistryDraft | null;
 	restartPolicy: ComposeRestartPolicy;
+	runAsUser: string | null;
 	slug: string;
 	tag: string;
 	volumes: ComposeVolumeDraft[];
@@ -93,7 +95,6 @@ const UNSUPPORTED_KEYS: Record<string, string> = {
 	secrets: "secrets are not applied",
 	sysctls: "sysctls are not applied",
 	tmpfs: "tmpfs mounts are not applied",
-	user: "a custom user is not applied",
 };
 
 const GIT_CONTEXT_RE = /^(https?:\/\/|git@|ssh:\/\/|git:\/\/)/i;
@@ -440,6 +441,24 @@ function parseRestart(raw: unknown): ComposeRestartPolicy {
 	}
 }
 
+/** Reads compose's `user:` (a name or uid, optionally `:group`), warning about and dropping one Homerun can't take. */
+function parseUser(raw: unknown, warnings: string[]): string | null {
+	if (typeof raw !== "string" && typeof raw !== "number") {
+		return null;
+	}
+	const value = String(raw).trim();
+	if (!value) {
+		return null;
+	}
+	if (!isRunAsUser(value)) {
+		warnings.push(
+			`Skipped the user "${value}": use uid, uid:gid, name or name:group.`,
+		);
+		return null;
+	}
+	return value;
+}
+
 function parseDependsOn(raw: unknown): string[] {
 	if (Array.isArray(raw)) {
 		return raw.map(String);
@@ -668,6 +687,7 @@ function draftFor(
 		privileged: raw.privileged === true,
 		registry: null,
 		restartPolicy: parseRestart(raw.restart),
+		runAsUser: parseUser(raw.user, warnings),
 		slug,
 		tag,
 		volumes,

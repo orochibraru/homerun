@@ -25,6 +25,7 @@ import { building, dev } from "$app/environment";
 import { getRequestEvent } from "$app/server";
 import { resolveAdvertisedTokenAuth } from "$lib/auth-providers";
 import { config, isSmtpEnabled } from "$lib/config";
+import { OauthClientSecretDTO } from "$lib/dto/oauth-client-secret-dto";
 import { Logger } from "$lib/logger";
 import {
 	mcpAllowed,
@@ -37,6 +38,7 @@ import {
 } from "$lib/oidc-provider";
 import { passkeyRpId } from "$lib/security-policy";
 import { withDashboardOrigin } from "$lib/server/canonical-origin";
+import { hashClientSecret } from "$lib/server/client-secret";
 import { db } from "$lib/server/db/lib";
 import * as schema from "$lib/server/db/schema";
 import { brandedEmail } from "$lib/server/email-layout";
@@ -122,6 +124,10 @@ function oidcProviderPlugins(origin: string | undefined) {
 			oidcClaimsFor(user as OidcUser, scopes),
 		loginPage: "/auth/sign-in",
 		scopes: [...OIDC_SCOPES],
+		storeClientSecret: {
+			hash: hashClientSecret,
+			verify: (secret, stored) => OauthClientSecretDTO.verify(secret, stored),
+		},
 	};
 	return [
 		jwt({

@@ -96,4 +96,22 @@ describe("isForbiddenCrossSiteForm", () => {
 			),
 		).toBe(false);
 	});
+
+	test("lets a header-authenticated API client post a form, which a browser can't forge cross-site", () => {
+		const multipart = "multipart/form-data; boundary=x";
+		expect(
+			isForbiddenCrossSiteForm(
+				request({ "content-type": multipart, "x-api-key": "k" }),
+				url,
+				exempt,
+			),
+		).toBe(false);
+		expect(
+			isForbiddenCrossSiteForm(
+				request({ authorization: "Bearer t", "content-type": multipart }),
+				url,
+				exempt,
+			),
+		).toBe(false);
+	});
 });

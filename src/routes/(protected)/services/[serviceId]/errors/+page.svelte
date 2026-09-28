@@ -33,6 +33,7 @@
 	import { title } from "$lib/store/title";
 	import { enhanceToast, saveToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
+	import SourceMapsPanel from "./source-maps-panel.svelte";
 
 	const { data } = $props();
 	const svc = $derived(data.service);
@@ -269,13 +270,15 @@
             </div>
             <p class="text-text-subtle text-xs">
               Up to {data.limits.eventsPerMinute} events a minute, the newest {data.limits.eventsKept}
-              kept per issue, {data.limits.retentionDays} days of history. No source map upload,
-              performance tracing or session replay: those items are accepted and dropped.
+              kept per issue, {data.limits.retentionDays} days of history. No performance
+              tracing or session replay: those items are accepted and dropped.
             </p>
           </div>
         </details>
       </div>
     </section>
+
+    <SourceMapsPanel releases={data.sourceMaps ?? []} serviceId={data.service.id} />
 
     <section class="space-y-3">
       <EntityToolbar {filters} placeholder="Search issues by title or culprit…" {sorts} />

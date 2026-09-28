@@ -65,7 +65,8 @@ sync by hand.
 - **[DNS automation](dns-automation.md)**: keeping Cloudflare records or
   Pangolin resources in sync with your services.
 - **[Runtime and compute](runtime-and-compute.md)**: entrypoint, command,
-  labels, capabilities, devices, privileged mode, and CPU/memory limits.
+  labels, run-as user, capabilities, devices, privileged mode, and CPU/memory
+  limits.
 - **[Swarm mode](swarm-mode.md)**: replicas, what swarm mode changes, and adding
   a node.
 - **[Observability](observability.md)**: uptime probes, live logs, failed

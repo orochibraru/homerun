@@ -116,6 +116,10 @@
 		"privileged": {
 			"type": "boolean"
 		},
+		"runAsUser": {
+			"description": "Docker User the container runs as: uid, uid:gid, name or name:group. Unset keeps the image's.",
+			"type": "string"
+		},
 		"sourceUrl": {
 			"anyOf": [
 				{

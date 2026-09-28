@@ -26,6 +26,7 @@ function source(
 		privileged: false,
 		publishedPorts: [],
 		replicas: 1,
+		runAsUser: null,
 		...overrides,
 	};
 }
@@ -98,6 +99,7 @@ describe("runtime options in a snapshot", () => {
 			command: ["serve", "--port", "80"],
 			labels: { team: "a" },
 			privileged: true,
+			runAsUser: "1000:1000",
 		});
 		const snapshot = snapshotRevisionConfig(service);
 		service.command?.push("--verbose");
@@ -107,7 +109,14 @@ describe("runtime options in a snapshot", () => {
 				source({ entrypoint: ["/init"], privileged: false }),
 				snapshot,
 			),
-		).toEqual(["capAdd", "command", "entrypoint", "labels", "privileged"]);
+		).toEqual([
+			"capAdd",
+			"command",
+			"entrypoint",
+			"labels",
+			"privileged",
+			"runAsUser",
+		]);
 		expect(restorableRuntimeOptions(snapshot)).toEqual({
 			capAdd: ["NET_ADMIN"],
 			command: ["serve", "--port", "80"],
@@ -116,6 +125,7 @@ describe("runtime options in a snapshot", () => {
 			envFiles: [],
 			labels: { team: "a" },
 			privileged: true,
+			runAsUser: "1000:1000",
 		});
 	});
 
@@ -128,6 +138,7 @@ describe("runtime options in a snapshot", () => {
 			envFiles,
 			labels,
 			privileged,
+			runAsUser,
 			...older
 		} = snapshotRevisionConfig(source());
 		expect(restorableRuntimeOptions(older)).toEqual({});

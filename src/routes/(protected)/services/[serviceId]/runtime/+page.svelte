@@ -25,6 +25,7 @@
 				.map(([key, value]) => `${key}=${value}`)
 				.join("\n"),
 			privileged: svc.privileged ? "on" : "",
+			runAsUser: svc.runAsUser ?? "",
 		},
 	);
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);

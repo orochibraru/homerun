@@ -286,8 +286,8 @@ func describe(query url.Values) string {
 	}
 }
 
-// mib renders a byte count in MiB.
-func mib(n int64) string {
+// MiB renders a byte count in MiB.
+func MiB(n int64) string {
 	return fmt.Sprintf("%.1f MiB", float64(n)/(1<<20))
 }
 
@@ -316,7 +316,7 @@ func (c *Client) Upload(ctx context.Context, key string, body io.Reader) (int64,
 		}
 		return int64(n), nil
 	}
-	c.log(fmt.Sprintf("Archive is over %s, uploading it in parts", mib(PartSize)))
+	c.log(fmt.Sprintf("Archive is over %s, uploading it in parts", MiB(PartSize)))
 	uploadID, err := c.startMultipart(ctx, key)
 	if err != nil {
 		return 0, err
@@ -363,15 +363,15 @@ func (c *Client) uploadParts(ctx context.Context, key, uploadID string, buffer [
 		header, _, err := c.send(ctx, http.MethodPut, key,
 			url.Values{"partNumber": {strconv.Itoa(number)}, "uploadId": {uploadID}}, buffer[:n])
 		if err != nil {
-			return 0, fmt.Errorf("part %d (after %s uploaded): %w", number, mib(total), err)
+			return 0, fmt.Errorf("part %d (after %s uploaded): %w", number, MiB(total), err)
 		}
 		parts = append(parts, completedPart{ETag: header.Get("ETag"), PartNumber: number})
 		total += int64(n)
 		if time.Since(lastLog) >= progressEvery {
 			lastLog = time.Now()
 			elapsed := time.Since(started)
-			c.log(fmt.Sprintf("Uploaded %s in %d parts (%s/s over %s)", mib(total), number,
-				mib(int64(float64(total)/elapsed.Seconds())), elapsed.Round(time.Second)))
+			c.log(fmt.Sprintf("Uploaded %s in %d parts (%s/s over %s)", MiB(total), number,
+				MiB(int64(float64(total)/elapsed.Seconds())), elapsed.Round(time.Second)))
 		}
 		var readErr error
 		n, readErr = io.ReadFull(body, buffer)

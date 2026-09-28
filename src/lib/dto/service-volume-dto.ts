@@ -2,10 +2,17 @@ import { and, eq } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import {
 	type ServiceVolume,
+	service,
 	serviceVolume,
 	storageVolume,
 } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
+
+export interface VolumeUser {
+	serviceId: string;
+	serviceName: string;
+	stackId: string | null;
+}
 
 export interface NewServiceVolumeInput {
 	containerPath: string;
@@ -50,6 +57,25 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 			.from(serviceVolume)
 			.where(eq(serviceVolume.volumeId, volumeId));
 		return rows.map((row) => row.serviceId);
+	}
+
+	/** Every service each storage volume is mounted into, keyed by volume id, with the service's stack for showing where a volume comes from. */
+	static async usersByVolume(): Promise<Map<string, VolumeUser[]>> {
+		const rows = await db
+			.selectDistinct({
+				serviceId: service.id,
+				serviceName: service.name,
+				stackId: service.stackId,
+				volumeId: serviceVolume.volumeId,
+			})
+			.from(serviceVolume)
+			.innerJoin(service, eq(serviceVolume.serviceId, service.id))
+			.orderBy(service.name);
+		const users = new Map<string, VolumeUser[]>();
+		for (const { volumeId, ...user } of rows) {
+			users.set(volumeId, [...(users.get(volumeId) ?? []), user]);
+		}
+		return users;
 	}
 
 	/**

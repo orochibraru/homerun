@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ServiceRuntimeOptions } from "$lib/service-runtime";
+import { isRunAsUser, type ServiceRuntimeOptions } from "$lib/service-runtime";
 import {
 	TEMPLATE_CATEGORIES,
 	type TemplateCategory,
@@ -80,6 +80,13 @@ export const builtinTemplateFileSchema = z
 			.optional(),
 		name: z.string().min(1).max(100),
 		privileged: z.boolean().optional(),
+		runAsUser: z
+			.string()
+			.refine(isRunAsUser)
+			.optional()
+			.describe(
+				"Docker User the container runs as: uid, uid:gid, name or name:group. Unset keeps the image's.",
+			),
 		sourceUrl: z.url().nullable(),
 		tag: z.string().min(1),
 		tags: z.array(z.string().min(1).max(30)).min(1).max(12),

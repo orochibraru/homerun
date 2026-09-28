@@ -168,7 +168,9 @@ default, `resolved`, `ignored` or `all`, `q` to search, `sort` by `lastSeen`,
 event (stack trace, source context, request, tags, breadcrumbs), and `PATCH` on
 it with `{"status": "resolved" | "ignored" | "unresolved"}` changes its status.
 The MCP server exposes the same as `list_errors` and `get_error`, and the CLI as
-`homerun services errors <id>`.
+`homerun services errors <id>`. `GET`, `POST` (multipart) and `DELETE ?release=`
+on `/api/v1/services/:id/sourcemaps` list, upload and delete a release's
+[source maps](error-tracking.md#source-maps).
 
 ### Backups and jobs
 
@@ -343,6 +345,9 @@ homerun services dependencies <id> [--json]
 homerun services dependencies set <id> [<dependsOnId>...]
 homerun services scans <id> [--json]
 homerun services scans get <id> [scanId] [--json]
+homerun services sourcemaps upload <id> <dir> --release <release>
+homerun services sourcemaps list <id> [--json]
+homerun services sourcemaps delete <id> <release>
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
 homerun services logs <id> [--tail <lines>] [--follow]
 homerun services revisions <id> [--json]

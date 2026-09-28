@@ -118,3 +118,34 @@ describe("swarmRestartCondition", () => {
 		expect(swarmRestartCondition("unless-stopped")).toBe("any");
 	});
 });
+
+describe("swarmServiceTemplate", () => {
+	test("puts the run-as user on the container spec, and leaves it unset otherwise", async () => {
+		const { runtimeOptionsFrom } = await import(
+			"../../../src/lib/service-runtime"
+		);
+		const { swarmServiceTemplate } = await import(
+			"../../../src/lib/services/docker/swarm"
+		);
+		const params = {
+			containerPort: 80,
+			envVars: {},
+			image: "nginx",
+			replicas: 1,
+			restartPolicy: "unless-stopped",
+			serviceId: "svc-1",
+			slug: "web",
+			tag: "latest",
+		};
+		expect(
+			swarmServiceTemplate({
+				...params,
+				runtime: runtimeOptionsFrom({ runAsUser: "1000:1000" }),
+			}).TaskTemplate.ContainerSpec.User,
+		).toBe("1000:1000");
+		expect(
+			swarmServiceTemplate({ ...params, runtime: runtimeOptionsFrom({}) })
+				.TaskTemplate.ContainerSpec.User,
+		).toBeUndefined();
+	});
+});

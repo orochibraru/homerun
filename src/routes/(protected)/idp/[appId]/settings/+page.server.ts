@@ -2,7 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
 import { Logger } from "$lib/logger";
-import { parseOauthAppForm } from "$lib/server/oauth-app-form";
+import { parseOauthAppSettings } from "$lib/server/oauth-app-form";
 import {
 	authErrorMessage,
 	OauthAppService,
@@ -22,7 +22,7 @@ export const actions = {
 		if (!app) {
 			return fail(404, { error: "That app isn't registered." });
 		}
-		const parsed = parseOauthAppForm(await request.formData());
+		const parsed = parseOauthAppSettings(await request.formData());
 		if (!parsed.input) {
 			return fail(400, { error: parsed.error });
 		}
@@ -30,6 +30,7 @@ export const actions = {
 			await OauthAppService.update(app.clientId, parsed.input, request.headers);
 			if (app.summary().confidential) {
 				await app.setRequirePkce(parsed.input.requirePkce);
+				await app.setTokenEndpointAuthMethod(parsed.input.tokenAuthMethod);
 			}
 		} catch (err) {
 			return fail(400, {
@@ -40,33 +41,6 @@ export const actions = {
 			`OAuth app updated: client=${app.clientId} user=${locals.user.id}`,
 		);
 		return { saved: true };
-	},
-
-	rotate: async ({ locals, params, request }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
-		}
-		const app = await OauthClientDTO.get(params.appId);
-		if (!app) {
-			return fail(404, { error: "That app isn't registered." });
-		}
-		try {
-			const clientSecret = await OauthAppService.rotateSecret(
-				app.clientId,
-				request.headers,
-			);
-			logger.info(
-				`OAuth app secret rotated: client=${app.clientId} user=${locals.user.id}`,
-			);
-			return { clientSecret };
-		} catch (err) {
-			return fail(400, {
-				error: authErrorMessage(err, "Couldn't rotate the secret."),
-			});
-		}
 	},
 
 	delete: async ({ locals, params }) => {

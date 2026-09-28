@@ -142,3 +142,18 @@ describe("updateServiceApiBody environmentName", () => {
 		).toBe(false);
 	});
 });
+
+describe("runAsUser", () => {
+	test("the API takes a valid user, null, or nothing, and rejects a bad one", () => {
+		expect(
+			createServiceApiBody.parse({ ...imageBody, runAsUser: "1000:1000" })
+				.runAsUser,
+		).toBe("1000:1000");
+		expect(updateServiceApiBody.parse({ runAsUser: null }).runAsUser).toBe(
+			null,
+		);
+		expect(createServiceApiBody.parse(imageBody).runAsUser).toBeUndefined();
+		const bad = updateServiceApiBody.safeParse({ runAsUser: "a b" });
+		expect(issuePaths(bad)).toEqual(["runAsUser"]);
+	});
+});

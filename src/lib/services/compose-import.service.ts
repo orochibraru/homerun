@@ -215,6 +215,7 @@ class ComposeImportServiceClass {
 				envFiles: draft.envFiles,
 				labels: draft.labels,
 				privileged: draft.privileged,
+				runAsUser: draft.runAsUser,
 			},
 			slug: await uniqueSlug(draft.slug, (slug) => ServiceDTO.slugTaken(slug)),
 			tag: draft.tag,

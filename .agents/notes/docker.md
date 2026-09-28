@@ -740,19 +740,25 @@ every deploy with "It never became ready: Unable to connect". The Health tab
 (the worker's raw `/inspect`), so it shows what's applied, not what's
 configured; swarm tasks aren't inspected.
 
-## Runtime options (`service.command`/`entrypoint`/`envFiles`/`labels`/`capAdd`/`devices`/`privileged`, Runtime tab)
+## Runtime options (`service.command`/`entrypoint`/`envFiles`/`labels`/`capAdd`/`devices`/`privileged`/`runAsUser`, Runtime tab)
 
-Stored as jsonb argv lists / string lists / a label map plus a boolean;
-`$lib/service-runtime.ts`'s `runtimeOptionsFrom` reads them off a row with
-defaults, and `deploy.service.ts`'s `#startWorkload` passes them as `runtime` to
-both workload paths. The pure mapping is `docker/runtime-options.ts`
-(`runtimeArgv` → `Cmd`/`Entrypoint`, `runtimeHostConfig` → `CapAdd` with the
-`CAP_` prefix, `Devices` from `host[:container[:perms]]`, `Privileged`), tested
-in `tests/unit/app/docker-runtime-options.test.ts`. Swarm maps entrypoint to
-`ContainerSpec.Command`, command to `Args`, capabilities to `CapabilityAdd`, and
-logs that privileged/devices are ignored (the swarm API has neither). Custom
-labels go through `mergeLabels`, Homerun's own labels winning on a key clash, on
-the container and on both the swarm service and its task spec.
+Stored as jsonb argv lists / string lists / a label map plus a boolean and a
+nullable text `run_as_user`; `$lib/service-runtime.ts`'s `runtimeOptionsFrom`
+reads them off a row with defaults, and `deploy.service.ts`'s `#startWorkload`
+passes them as `runtime` to both workload paths. The pure mapping is
+`docker/runtime-options.ts` (`runtimeArgv` → `Cmd`/`Entrypoint`/`User`,
+`runtimeHostConfig` → `CapAdd` with the `CAP_` prefix, `Devices` from
+`host[:container[:perms]]`, `Privileged`), tested in
+`tests/unit/app/docker-runtime-options.test.ts`. Swarm maps entrypoint to
+`ContainerSpec.Command`, command to `Args`, capabilities to `CapabilityAdd`, the
+run-as user to `User`, and logs that privileged/devices are ignored (the swarm
+API has neither). Custom labels go through `mergeLabels`, Homerun's own labels
+winning on a key clash, on the container and on both the swarm service and its
+task spec. `runAsUser` is validated by `isRunAsUser` (`uid`, `uid:gid`, `name`,
+`name:group`) everywhere it comes in (Runtime tab, API, template JSON, compose
+`user:`, Coolify `--user`/`-u`) and isn't host access: it's what fixes an image
+whose non-root `USER` can't write a fresh, root-owned named volume (Vikunja runs
+as `0`).
 
 Env files are **host** paths, but the app runs in a container, so
 `deploy/env-file-step.ts` reads each one with an `alpine:3` `runOneOff` that

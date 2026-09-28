@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	slugify,
 	stackScopedSlug,
 	suffixedSlug,
 	uniqueSlug,
@@ -57,5 +58,13 @@ describe("stackScopedSlug", () => {
 		expect(stackScopedSlug("vortex", "vortex")).toBe("vortex");
 		expect(stackScopedSlug(null, "redis")).toBe("redis");
 		expect(stackScopedSlug("a".repeat(40), "b".repeat(40))).toHaveLength(63);
+	});
+});
+
+describe("slugify", () => {
+	test("lowercases, collapses anything else into single hyphens and trims them", () => {
+		expect(slugify("  Media Library!! ")).toBe("media-library");
+		expect(slugify("a--b__c")).toBe("a-b-c");
+		expect(slugify("x".repeat(80))).toHaveLength(63);
 	});
 });

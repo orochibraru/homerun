@@ -81,7 +81,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 			requestBody: route.requestBody
 				? {
 						content: {
-							"application/json": {
+							[route.requestContentType ?? "application/json"]: {
 								schema: toEmbeddedSchema(route.requestBody),
 							},
 						},

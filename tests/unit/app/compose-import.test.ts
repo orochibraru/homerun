@@ -246,6 +246,35 @@ services:
 	});
 });
 
+describe("user", () => {
+	test("maps compose user, numeric or named, and drops one it can't take", () => {
+		const { services } = parseComposeFile(`
+services:
+  a:
+    image: vikunja/vikunja
+    user: "1000:1000"
+  b:
+    image: nginx
+    user: 101
+  c:
+    image: nginx
+    user: "bad user"
+  d:
+    image: nginx
+`);
+		expect(services.map((s) => s.runAsUser)).toEqual([
+			"1000:1000",
+			"101",
+			null,
+			null,
+		]);
+		expect(services[0]?.warnings.some((w) => w.includes("user"))).toBe(false);
+		expect(services[2]?.warnings.some((w) => w.includes("bad user"))).toBe(
+			true,
+		);
+	});
+});
+
 describe("runtime options", () => {
 	const RUNTIME = `
 services:

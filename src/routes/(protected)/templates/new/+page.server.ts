@@ -13,7 +13,7 @@ import {
 	createTemplateSchema,
 	parseTags,
 } from "$lib/server/validation/template";
-import { slugify } from "$lib/services/template-links";
+import { slugify } from "$lib/slug";
 
 const logger = new Logger("Templates");
 

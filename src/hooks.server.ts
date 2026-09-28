@@ -23,6 +23,11 @@ import { isForbiddenCrossSiteForm } from "$lib/server/csrf";
 import { db as appDb, getDb, resetDb } from "$lib/server/db";
 import { user as userTable } from "$lib/server/db/schema";
 import { seedBuiltinTemplates } from "$lib/server/db/seed";
+import {
+	guardTokenRequest,
+	OIDC_TOKEN_PATH,
+	withTokenCors,
+} from "$lib/server/oidc-client-guard";
 import { appOnlyRejection, readOnlyRejection } from "$lib/server/read-only";
 import { AdminService } from "$lib/services/admin.service";
 import {
@@ -36,6 +41,7 @@ import { CronService } from "$lib/services/cron.service";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { OrchestrationService } from "$lib/services/orchestration.service";
 import { JobWorker } from "$lib/services/queue/worker";
+import { DEFAULT_SURFACE } from "$lib/surfaces";
 
 const logger = new Logger("Hooks");
 
@@ -527,6 +533,16 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		config.auth.origin &&
 		isOidcProviderPath(event.url.pathname)
 	) {
+		if (event.url.pathname === OIDC_TOKEN_PATH) {
+			const refused = await guardTokenRequest(event.request);
+			if (refused) {
+				return refused;
+			}
+			return await withTokenCors(
+				event.request,
+				await auth.handler(rebaseOnOrigin(event.request, config.auth.origin)),
+			);
+		}
 		return auth.handler(rebaseOnOrigin(event.request, config.auth.origin));
 	}
 
@@ -562,6 +578,11 @@ const generalHandler: Handle = async ({ event, resolve }) => {
 		filterSerializedResponseHeaders(name) {
 			return name === "content-length" || name === "content-type";
 		},
+		transformPageChunk: ({ html }) =>
+			html.replace(
+				"%homerun.surface%",
+				event.locals.surface ?? DEFAULT_SURFACE,
+			),
 	});
 
 	if (isUpload) {

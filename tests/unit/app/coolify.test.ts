@@ -206,7 +206,7 @@ describe("coolify runtime carry-over", () => {
 	test("reads the docker run options Homerun can apply", () => {
 		expect(
 			parseDockerRunOptions(
-				"--cap-add=net_admin --device /dev/dri --privileged -l com.example=1 --ulimit nofile=1024 --entrypoint '/bin/sh -c'",
+				"--cap-add=net_admin --device /dev/dri --privileged -l com.example=1 --ulimit nofile=1024 --entrypoint '/bin/sh -c' -u 1000:1000",
 			),
 		).toEqual({
 			capAdd: ["NET_ADMIN"],
@@ -214,6 +214,7 @@ describe("coolify runtime carry-over", () => {
 			entrypoint: ["/bin/sh", "-c"],
 			labels: { "com.example": "1" },
 			privileged: true,
+			runAsUser: "1000:1000",
 			unsupported: ["--ulimit"],
 		});
 	});

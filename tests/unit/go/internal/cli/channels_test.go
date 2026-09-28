@@ -80,7 +80,7 @@ func TestRunChannelsDispatches(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			client, seen := jsonAPI(t, `{"enabled":false}`)
 			_, failed := runCLI(t, func() {
-				cli.RunChannels(func() *cli.Client { return client }, test.args)
+				cli.Execute(cli.Env{Client: func() *cli.Client { return client }}, append([]string{"services", "channels"}, test.args...))
 			})
 			if failed != "" {
 				t.Fatalf("failed with %q", failed)
@@ -98,15 +98,15 @@ func TestRunChannelsDispatches(t *testing.T) {
 
 func TestRunChannelsRejectsAnUnknownSubcommand(t *testing.T) {
 	_, failed := runCLI(t, func() {
-		cli.RunChannels(func() *cli.Client { return nil }, []string{"toggle", "svc-1"})
+		cli.Execute(cli.Env{Client: func() *cli.Client { return nil }}, append([]string{"services", "channels"}, []string{"toggle", "svc-1"}...))
 	})
-	if failed != cli.ChannelsUsage {
+	if !strings.Contains(failed, `unknown services channels subcommand "toggle"`) {
 		t.Errorf("got %q", failed)
 	}
 	_, failed = runCLI(t, func() {
-		cli.RunChannels(func() *cli.Client { return nil }, nil)
+		cli.Execute(cli.Env{Client: func() *cli.Client { return nil }}, append([]string{"services", "channels"}, nil...))
 	})
-	if failed != cli.ChannelsUsage {
+	if !strings.Contains(failed, "missing services channels subcommand") {
 		t.Errorf("got %q", failed)
 	}
 }

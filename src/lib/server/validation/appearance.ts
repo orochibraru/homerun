@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
 import { PALETTES } from "$lib/palettes";
+import { SURFACE_STYLES } from "$lib/surfaces";
 
 /** A bare "#rrggbb" hex color, the shape a native `<input type="color">` always submits. */
 const hexColorSchema = z
@@ -9,6 +10,10 @@ const hexColorSchema = z
 
 export const themeSchema = z.object({
 	theme: z.enum(["light", "dark", "system"]),
+});
+
+export const surfaceSchema = z.object({
+	surfaceStyle: z.enum(SURFACE_STYLES.map((s) => s.id)),
 });
 
 /** The appearance page's colour choice: `palette` is a palette id, "custom" (then `accentColor` is used) or "" for the default. */

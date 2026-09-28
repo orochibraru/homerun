@@ -6,9 +6,9 @@
 		confidential: boolean;
 		enableEndSession: boolean;
 		name: string;
-		redirectUris: string;
 		requirePkce: boolean;
 		skipConsent: boolean;
+		tokenAuthMethod: string;
 	}
 
 	const {
@@ -33,23 +33,6 @@
     />
     <p class="text-text-subtle mt-1.5 text-xs">
       Shown on the consent screen and in this list.
-    </p>
-  </div>
-
-  <div>
-    <label class={labelClass} for="redirectUris">Redirect URIs</label>
-    <textarea
-      class="{inputClass} min-h-24 font-mono text-xs"
-      id="redirectUris"
-      name="redirectUris"
-      placeholder="https://grafana.example.com/login/generic_oauth"
-      required
-      bind:value={values.redirectUris}
-    ></textarea>
-    <p class="text-text-subtle mt-1.5 text-xs">
-      One per line, exactly as the app sends it, and https only. The app's own
-      OIDC or OAuth settings page usually shows it as the callback or redirect
-      URL.
     </p>
   </div>
 
@@ -98,6 +81,31 @@
   {/if}
 
   {#if values.confidential}
+    <fieldset class="space-y-2">
+      <legend class={labelClass}>How the app sends its secret</legend>
+      {#each [
+        { hint: "In an Authorization: Basic header. What most OIDC libraries do by default.", label: "HTTP Basic (client_secret_basic)", value: "client_secret_basic" },
+        { hint: "As client_id and client_secret fields in the request body. Pick this when the app's logs say it can't use client_secret_basic, or \"cannot use client_secret_post\" shows up here.", label: "Request body (client_secret_post)", value: "client_secret_post" },
+      ] as option (option.value)}
+        <label class="flex items-start gap-3 rounded-md border p-3">
+          <input
+            checked={values.tokenAuthMethod === option.value}
+            class="mt-0.5"
+            name="tokenAuthMethod"
+            onchange={() => {
+              values.tokenAuthMethod = option.value;
+            }}
+            type="radio"
+            value={option.value}
+          />
+          <span class="grid gap-1">
+            <span class="text-sm font-medium">{option.label}</span>
+            <span class="text-text-muted text-xs">{option.hint}</span>
+          </span>
+        </label>
+      {/each}
+    </fieldset>
+
     <CheckBox
       helperText="Reject sign-ins that don't send a PKCE challenge. Leave off unless you know the app supports PKCE: many self-hosted apps don't."
       id="requirePkce"

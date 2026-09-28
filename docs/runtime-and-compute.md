@@ -15,14 +15,18 @@ the host, all applied on the next deploy:
   service in swarm mode). Homerun's own tracking and Traefik labels win on a
   clash, so a custom label can add a Traefik middleware but can't break the
   service's route.
+- **Run as user**, the user the container runs as instead of the image's: `uid`,
+  `uid:gid`, `name` or `name:group`, like `docker run --user`. Blank keeps the
+  image's. Useful when a fresh named volume comes up root-owned and the image's
+  own non-root user can't write to it: run it as `0`. Applies in swarm mode too.
 - **Added capabilities** (`NET_ADMIN, SYS_TIME`), **Devices**
   (`host[:container[:rwm]]`, like `docker run --device`) and **Run privileged**.
   Only an admin can set or change these three: they give the container access to
   the host, so other roles see them read-only, and the REST API and compose
   import refuse them with a 403. Only an admin can deploy a template that sets
   them either. Swarm services can't run privileged or map devices, so those two
-  are ignored in [swarm mode](swarm-mode.md); capabilities, labels, command and
-  entrypoint apply there too.
+  are ignored in [swarm mode](swarm-mode.md); capabilities, labels, command,
+  entrypoint and the run-as user apply there too.
 
 ## Compute
 

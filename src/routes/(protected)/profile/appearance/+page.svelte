@@ -12,6 +12,7 @@
 	import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
 	import { PALETTES } from "$lib/palettes";
 	import { title } from "$lib/store/title.js";
+	import { SURFACE_STYLES } from "$lib/surfaces";
 	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
@@ -36,6 +37,7 @@
 		),
 	);
 	let perPage = $state(untrack(() => String(data.preferences.perPage)));
+	let surfaceStyle = $state(untrack(() => data.preferences.surfaceStyle));
 	let accentColor = $state(
 		untrack(() => data.preferences.accentColor ?? DEFAULT_ACCENT),
 	);
@@ -90,6 +92,66 @@
                     <SelectItem label="Dark" value="dark" />
                 </SelectContent>
             </SelectRoot>
+            <div class="flex justify-end">
+                <Button type="submit">Save</Button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel rounded-md">
+        <div class="border-border border-b px-5 py-4">
+            <h2 class="eyebrow">Style</h2>
+            <p class="text-text-muted text-xs">
+                How panels, cards and buttons are drawn. Picking one previews
+                it on this page; save to keep it.
+            </p>
+        </div>
+        <form
+            action="?/updateSurface"
+            class="space-y-4 p-5"
+            method="POST"
+            use:enhance={saveToast("Style")}
+        >
+            <input name="surfaceStyle" type="hidden" value={surfaceStyle} />
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
+                {#each SURFACE_STYLES as style (style.id)}
+                    <button
+                        aria-pressed={surfaceStyle === style.id}
+                        class="flex flex-col gap-3 rounded-md border p-3 text-left transition-colors {surfaceStyle ===
+                        style.id
+                            ? 'border-accent bg-accent-light'
+                            : 'border-border hover:bg-surface-2'}"
+                        onclick={() => {
+                            surfaceStyle = style.id;
+                            document.documentElement.dataset.surface = style.id;
+                        }}
+                        type="button"
+                    >
+                        <span
+                            class="bg-bg block w-full rounded-md p-3"
+                            data-surface={style.id}
+                        >
+                            <span class="panel flex items-center justify-between gap-2 rounded-md p-3">
+                                <span class="bg-text-subtle/40 h-2 w-12 rounded-full"></span>
+                                <span
+                                    class="bg-primary rounded-md px-2 py-1 text-[0.625rem] text-white"
+                                    data-slot="button"
+                                >
+                                    Deploy
+                                </span>
+                            </span>
+                        </span>
+                        <span>
+                            <span class="text-text block text-sm font-medium">
+                                {style.name}{style.id === "glass" ? " (default)" : ""}
+                            </span>
+                            <span class="text-text-muted block text-xs">
+                                {style.description}
+                            </span>
+                        </span>
+                    </button>
+                {/each}
+            </div>
             <div class="flex justify-end">
                 <Button type="submit">Save</Button>
             </div>

@@ -29,7 +29,7 @@ async function registerApp(
 
 	await page.goto("/idp/new");
 	await page.locator("#name").fill(name);
-	await page.locator("#redirectUris").fill(CALLBACK);
+	await page.locator("#env-redirectUris").fill(CALLBACK);
 	if (!skipConsent) {
 		await page.getByText("Skip the consent screen").click();
 	}
@@ -78,11 +78,11 @@ test.describe
 			request,
 		}) => {
 			const res = await request.get(
-				`${AUTH_BASE}/.well-known/openid-configuration`,
+				`${E2E_BASE_URL}/issuer/.well-known/openid-configuration`,
 			);
 			expect(res.ok()).toBe(true);
 			const body = await res.json();
-			expect(body.issuer).toMatch(/^https?:\/\/[^/]+\/api\/v1\/auth$/);
+			expect(body.issuer).toMatch(/^https?:\/\/[^/]+\/issuer$/);
 			expect(body.authorization_endpoint).toMatch(
 				/\/api\/v1\/auth\/oauth2\/authorize$/,
 			);
@@ -111,6 +111,26 @@ test.describe
 			trusted = await registerApp(browser, "E2E Grafana", true);
 			expect(trusted.clientId).not.toBe("");
 			expect(trusted.clientSecret).not.toBe("");
+		});
+
+		test("a browser token request from an origin the environment doesn't authorize is refused", async ({
+			request,
+		}) => {
+			const res = await request.post(`${AUTH_BASE}/oauth2/token`, {
+				form: {
+					code: "nope",
+					grant_type: "authorization_code",
+					redirect_uri: CALLBACK,
+				},
+				headers: {
+					authorization: `Basic ${Buffer.from(`${trusted.clientId}:${trusted.clientSecret}`).toString("base64")}`,
+					origin: "https://evil.example.com",
+				},
+			});
+			expect(res.status()).toBe(403);
+			expect((await res.json()).error_description).toContain(
+				"authorized origin",
+			);
 		});
 
 		test("a signed-out user signs in on Homerun and the app gets working tokens", async ({

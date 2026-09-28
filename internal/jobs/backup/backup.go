@@ -51,10 +51,12 @@ type Spec struct {
 	HelperImage  string            `json:"helperImage"`
 	HelperLabels map[string]string `json:"helperLabels"`
 	Key          string            `json:"key"`
+	Kind         string            `json:"kind"`
 	MountPath    string            `json:"mountPath"`
 	PreCommand   *PreCommand       `json:"preCommand"`
 	Source       string            `json:"source"`
 	StopServices []Service         `json:"stopServices"`
+	UsedBy       []string          `json:"usedBy"`
 	VolumeName   string            `json:"volumeName"`
 	Wipe         bool              `json:"wipe"`
 }
@@ -84,15 +86,18 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 // backup stops spec's services, archives and uploads the volume, then starts
 // them again.
 func backup(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Spec) (int64, error) {
+	started := time.Now()
+	job.AppendLog(fmt.Sprintf("Backing up %s", describeVolume(spec)))
+	job.AppendLog(fmt.Sprintf("Destination: %s", destination(spec)))
+	logStopPlan(job, spec)
 	if err := runPreCommand(ctx, job, docker, spec.PreCommand); err != nil {
+		job.AppendLog(fmt.Sprintf("Backup failed after %s: %s", time.Since(started).Round(time.Second), err))
 		return 0, err
 	}
 	var size int64
-	started := time.Now()
 	err := whileStopped(ctx, job, docker, spec.StopServices, func() error {
 		var err error
-		job.AppendLog(fmt.Sprintf("Archiving %s and uploading it as %s to %s/%s", spec.VolumeName, spec.Key,
-			strings.TrimRight(spec.Destination.Endpoint, "/"), spec.Destination.Bucket))
+		job.AppendLog(fmt.Sprintf("Archiving %s through a %s helper container and streaming it gzipped to S3", spec.VolumeName, spec.HelperImage))
 		size, err = archiveAndUpload(ctx, docker, spec)
 		return err
 	})
@@ -100,22 +105,70 @@ func backup(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Sp
 		job.AppendLog(fmt.Sprintf("Backup failed after %s: %s", time.Since(started).Round(time.Second), err))
 		return 0, err
 	}
-	job.AppendLog(fmt.Sprintf("Uploaded %s (%d bytes) in %s", spec.Key, size, time.Since(started).Round(time.Second)))
+	job.AppendLog(fmt.Sprintf("Uploaded %s: %s", spec.Key, transferred(size, time.Since(started))))
 	return size, nil
+}
+
+// describeVolume names the volume, what it is on the host and the services
+// (with their stacks) using it, for the first line of a run's log.
+func describeVolume(spec Spec) string {
+	what := "Docker volume"
+	if spec.Kind == "bind" {
+		what = "host path"
+	}
+	users := "not mounted by any service"
+	if len(spec.UsedBy) > 0 {
+		users = "used by " + strings.Join(spec.UsedBy, ", ")
+	}
+	return fmt.Sprintf("%s (%s %s), %s", spec.VolumeName, what, spec.Source, users)
+}
+
+// destination is where spec's archive lives: endpoint, bucket and key.
+func destination(spec Spec) string {
+	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(spec.Destination.Endpoint, "/"), spec.Destination.Bucket, spec.Key)
+}
+
+// transferred is a size, how long it took and the resulting throughput.
+func transferred(size int64, took time.Duration) string {
+	rate := ""
+	if seconds := took.Seconds(); seconds >= 1 {
+		rate = fmt.Sprintf(", %s/s", s3.MiB(int64(float64(size)/seconds)))
+	}
+	return fmt.Sprintf("%s (%d bytes) in %s%s", s3.MiB(size), size, took.Round(time.Second), rate)
+}
+
+// logStopPlan says which services are stopped around the work, or that the
+// ones using the volume keep running through it.
+func logStopPlan(job jobs.Job, spec Spec) {
+	switch {
+	case len(spec.StopServices) > 0:
+		names := make([]string, 0, len(spec.StopServices))
+		for _, service := range spec.StopServices {
+			names = append(names, service.Name)
+		}
+		job.AppendLog(fmt.Sprintf("Stopping %s while it runs, started again afterwards", strings.Join(names, ", ")))
+	case len(spec.UsedBy) > 0:
+		job.AppendLog("The services using it keep running: files written meanwhile may be copied half-written")
+	}
 }
 
 // restore downloads spec's backup and extracts it into the volume, wiping it
 // first when spec.Wipe is set, with services stopped throughout.
 func restore(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Spec) (int64, error) {
+	started := time.Now()
+	job.AppendLog(fmt.Sprintf("Restoring into %s", describeVolume(spec)))
+	job.AppendLog(fmt.Sprintf("Downloading %s", destination(spec)))
+	logStopPlan(job, spec)
 	archive, size, err := download(ctx, spec)
 	if err != nil {
+		job.AppendLog(fmt.Sprintf("Restore failed after %s: %s", time.Since(started).Round(time.Second), err))
 		return 0, err
 	}
 	defer func() {
 		_ = archive.Close()
 		_ = os.Remove(archive.Name())
 	}()
-	job.AppendLog(fmt.Sprintf("Downloaded %s (%d bytes)", spec.Key, size))
+	job.AppendLog(fmt.Sprintf("Downloaded %s: %s", spec.Key, transferred(size, time.Since(started))))
 	err = whileStopped(ctx, job, docker, spec.StopServices, func() error {
 		if spec.Wipe {
 			if err := wipe(ctx, docker, spec); err != nil {
@@ -126,12 +179,14 @@ func restore(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec S
 		if _, err := archive.Seek(0, io.SeekStart); err != nil {
 			return err
 		}
+		job.AppendLog(fmt.Sprintf("Unpacking into %s through a %s helper container", spec.VolumeName, spec.HelperImage))
 		return unpack(ctx, docker, spec, archive)
 	})
 	if err != nil {
+		job.AppendLog(fmt.Sprintf("Restore failed after %s: %s", time.Since(started).Round(time.Second), err))
 		return 0, err
 	}
-	job.AppendLog(fmt.Sprintf("Restored %s into %s (wipe=%t)", spec.Key, spec.VolumeName, spec.Wipe))
+	job.AppendLog(fmt.Sprintf("Restored %s into %s in %s (wiped first: %t)", spec.Key, spec.VolumeName, time.Since(started).Round(time.Second), spec.Wipe))
 	return size, nil
 }
 

@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { AppWindow, LayoutDashboard, Settings, Users } from "@lucide/svelte";
+	import {
+		AppWindow,
+		Layers,
+		LayoutDashboard,
+		Settings,
+		Users,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -20,6 +26,14 @@
 			icon: LayoutDashboard,
 			id: "overview",
 			label: "Overview",
+		},
+		{
+			href: resolve("/(protected)/idp/[appId]/environments", {
+				appId: app.id,
+			}),
+			icon: Layers,
+			id: "environments",
+			label: `Environments (${data.environmentCount})`,
 		},
 		{
 			href: resolve("/(protected)/idp/[appId]/users", { appId: app.id }),

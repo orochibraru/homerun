@@ -3,11 +3,14 @@ import { resolve } from "$app/paths";
 import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { JobDTO } from "$lib/dto/job-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
+import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { enqueueVolumeBackup } from "$lib/services/backup-queue";
 import { nextCronRun } from "$lib/services/cron/cron-expression";
+import { stackPath } from "$lib/stack-tree";
 
 const logger = new Logger("Backups");
 
@@ -18,11 +21,28 @@ export const load = async ({ parent, url }) => {
 		{ filterKeys: ["kind", "outcome"] },
 		preferences.perPage,
 	);
-	const [volumes, runs, destinations] = await Promise.all([
-		StorageVolumeDTO.list(),
-		BackupRunDTO.listPaged(query),
-		S3DestinationDTO.list(),
-	]);
+	const [volumes, runs, destinations, volumeUsers, stackRows] =
+		await Promise.all([
+			StorageVolumeDTO.list(),
+			BackupRunDTO.listPaged(query),
+			S3DestinationDTO.list(),
+			ServiceVolumeDTO.usersByVolume(),
+			StackDTO.list(),
+		]);
+	const stacks = stackRows.map((s) => s.toJSON());
+	const origin = (volumeId: string) => {
+		const users = volumeUsers.get(volumeId) ?? [];
+		return {
+			services: users.map((u) => u.serviceName),
+			stacks: [
+				...new Set(
+					users.flatMap((u) =>
+						u.stackId ? [stackPath(u.stackId, stacks)] : [],
+					),
+				),
+			],
+		};
+	};
 	const destinationNames = new Map(destinations.map((d) => [d.id, d.name]));
 	const logs = await JobDTO.logsFor(
 		runs.items.map(({ run }) => run.toJSON().jobId),
@@ -37,6 +57,7 @@ export const load = async ({ parent, url }) => {
 			return {
 				...row,
 				log: (row.jobId && logs.get(row.jobId)) || "",
+				origin: origin(row.volumeId),
 				volumeName,
 			};
 		}),
@@ -49,6 +70,7 @@ export const load = async ({ parent, url }) => {
 				v.backupEnabled && v.backupSchedule
 					? nextCronRun(v.backupSchedule, new Date())
 					: null,
+			origin: origin(v.id),
 			...v.toJSON(),
 		})),
 	};

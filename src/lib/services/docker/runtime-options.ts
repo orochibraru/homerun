@@ -5,6 +5,7 @@ export interface ContainerRuntimeParams {
 	entrypoint: string[] | null;
 	labels: Record<string, string>;
 	privileged: boolean;
+	runAsUser: string | null;
 }
 
 export interface DeviceMapping {
@@ -63,14 +64,16 @@ export function mergeLabels(
 	return { ...custom, ...own };
 }
 
-/** The `Cmd`/`Entrypoint` overrides for a container create, leaving either unset (the image's own) when the service doesn't override it. */
+/** The `Cmd`/`Entrypoint`/`User` overrides for a container create, leaving each unset (the image's own) when the service doesn't override it. */
 export function runtimeArgv(runtime: ContainerRuntimeParams | undefined): {
 	Cmd?: string[];
 	Entrypoint?: string[];
+	User?: string;
 } {
 	return {
 		Cmd: runtime?.command ?? undefined,
 		Entrypoint: runtime?.entrypoint ?? undefined,
+		User: runtime?.runAsUser || undefined,
 	};
 }
 

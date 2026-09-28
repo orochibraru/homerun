@@ -306,3 +306,31 @@ func TestAFailedUploadReportsTheS3ErrorNotTheBrokenPipe(t *testing.T) {
 		t.Fatalf("want the S3 504, got %v", err)
 	}
 }
+
+func TestTheBackupLogSaysWhereTheVolumeComesFromAndHowItWent(t *testing.T) {
+	_, socket := newFakeEngine(t, map[string]string{"a.txt": "hi"})
+	spec := fakeSpec(t)
+	spec.Kind = "volume"
+	spec.UsedBy = []string{"postgres (Gitea / Tools)"}
+	job, lines, err := jobs.Recorder("backup", spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job.DockerSocket = socket
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	if _, err := backup.Run(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+	log := strings.Join(lines(), "\n")
+	for _, want := range []string{
+		"Backing up data (Docker volume data), used by postgres (Gitea / Tools)",
+		"Destination: " + spec.Destination.Endpoint + "/b/p/data.tar.gz",
+		"keep running",
+		"Uploaded p/data.tar.gz: ",
+	} {
+		if !strings.Contains(log, want) {
+			t.Errorf("log should contain %q, got:\n%s", want, log)
+		}
+	}
+}

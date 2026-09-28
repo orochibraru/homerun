@@ -58,6 +58,7 @@ export interface RouteDef {
 	queryParams?: ParamDef[];
 	requestBody?: z.ZodType;
 	requestBodyOptional?: boolean;
+	requestContentType?: "application/json" | "multipart/form-data";
 	responses: Record<number, ResponseDef>;
 }
 

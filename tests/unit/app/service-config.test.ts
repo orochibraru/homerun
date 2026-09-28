@@ -61,6 +61,7 @@ function row(overrides: Partial<Service> = {}): Service {
 		previewsEnabled: false,
 		primaryDomain: null,
 		privileged: false,
+		runAsUser: null,
 		publishedPorts: [{ containerPort: 5432, hostPort: 5432, protocol: "tcp" }],
 		pullPolicy: "always",
 		registryPasswordEnc: "password-ciphertext",

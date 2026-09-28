@@ -4,13 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"slices"
 	"strconv"
-	"strings"
 )
-
-// ErrorsUsage is the help for `services errors`, printed on a bad call.
-const ErrorsUsage = "usage: homerun services errors <id> [--status unresolved|resolved|ignored|all] [--json] [--page <n>] [--per-page <n>] [--search <term>]"
 
 var errorStatuses = []string{"unresolved", "resolved", "ignored", "all"}
 
@@ -44,21 +39,6 @@ func ErrorRows(issues []ErrorIssue) []map[string]string {
 		})
 	}
 	return rows
-}
-
-// RunErrors dispatches `services errors <id>`.
-func RunErrors(client func() *Client, args []string) {
-	set := NewFlagSet("services errors")
-	options := ListFlags(set)
-	status := set.String("status", "", "unresolved (default), resolved, ignored or all")
-	rest := Parse(set, args)
-	if len(rest) == 0 {
-		Fail(ErrorsUsage)
-	}
-	if *status != "" && !slices.Contains(errorStatuses, *status) {
-		Fail(fmt.Sprintf("--status must be one of %s", strings.Join(errorStatuses, ", ")))
-	}
-	ErrorsList(client(), rest[0], *status, *options)
 }
 
 // ErrorsList prints a service's error issues, most recently seen first, as a

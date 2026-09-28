@@ -18,6 +18,7 @@ const runtime = {
 	envFiles: [],
 	labels: {},
 	privileged: false,
+	runAsUser: null,
 };
 
 describe("template secrets", () => {

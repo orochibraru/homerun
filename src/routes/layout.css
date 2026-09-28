@@ -32,6 +32,12 @@
 	--color-text-subtle: oklch(0.58 0.03 286);
 
 	--panel-rule: oklch(1 0 0 / 0.5);
+	--panel-bg: var(--color-surface);
+	--panel-bg-image: none;
+	--panel-backdrop: blur(10px);
+	--panel-border-width: 1px;
+	--button-shadow: none;
+	--button-bg-image: none;
 	--panel-shadow: 0 1px 2px oklch(0.45 0.05 290 / 0.08);
 	--panel-shadow-lg: 0 18px 40px -24px oklch(0.35 0.1 8 / 0.45);
 	--aurora-opacity: 0.85;
@@ -136,6 +142,157 @@
 	--sidebar-ring: oklch(0.6 0.17 10 / 0.55);
 }
 
+[data-surface] {
+	--radius-sm: calc(var(--radius) * 0.5);
+	--radius-md: calc(var(--radius) * 0.75);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.25);
+	--radius-2xl: calc(var(--radius) * 1.5);
+}
+
+[data-surface="neumorphism"] {
+	--color-bg: oklch(0.93 0.008 285);
+	--neu-dark: oklch(0.7 0.02 285 / 0.55);
+	--neu-light: oklch(1 0 0 / 0.95);
+	--radius: 1rem;
+	--panel-bg: var(--color-bg);
+	--panel-backdrop: none;
+	--panel-border-width: 0px;
+	--panel-shadow: 6px 6px 14px var(--neu-dark), -6px -6px 14px var(--neu-light);
+	--panel-shadow-lg:
+		10px 10px 22px var(--neu-dark), -10px -10px 22px var(--neu-light);
+	--panel-rule: transparent;
+	--button-shadow: 3px 3px 7px var(--neu-dark), -3px -3px 7px var(--neu-light);
+	--background: var(--color-bg);
+	--card: var(--color-bg);
+	--popover: var(--color-bg);
+	--aurora-opacity: 0;
+	--grain-opacity: 0;
+}
+
+.dark[data-surface="neumorphism"],
+.dark [data-surface="neumorphism"] {
+	--color-bg: oklch(0.25 0.012 285);
+	--neu-dark: oklch(0.12 0.01 285 / 0.85);
+	--neu-light: oklch(0.36 0.014 285 / 0.6);
+}
+
+[data-surface="boxy"] {
+	--radius: 0.125rem;
+	--panel-bg: oklch(1 0 0);
+	--panel-backdrop: none;
+	--panel-border-width: 1px;
+	--panel-shadow: 3px 3px 0 var(--color-border-light);
+	--panel-shadow-lg: 5px 5px 0 var(--color-text-subtle);
+	--button-shadow: 2px 2px 0 var(--color-border-light);
+	--color-border: oklch(0.45 0.05 290 / 0.5);
+	--popover: oklch(1 0 0);
+	--aurora-opacity: 0;
+	--grain-opacity: 0;
+}
+
+.dark[data-surface="boxy"],
+.dark [data-surface="boxy"] {
+	--panel-bg: oklch(0.21 0.018 288);
+	--color-border: oklch(0.85 0.05 290 / 0.35);
+	--popover: oklch(0.21 0.018 288);
+}
+
+[data-surface="clay"] {
+	--color-bg: oklch(0.955 0.02 300);
+	--radius: 1.5rem;
+	--panel-bg: oklch(0.99 0.012 300);
+	--panel-backdrop: none;
+	--panel-border-width: 0px;
+	--panel-shadow:
+		inset -6px -8px 14px oklch(0.6 0.08 300 / 0.16), inset 6px 6px
+		12px oklch(1 0 0 / 0.9), 0 18px 32px -14px oklch(0.45 0.12 300 / 0.35);
+	--panel-shadow-lg:
+		inset -6px -8px 14px oklch(0.6 0.08 300 / 0.16), inset 6px
+		6px 12px oklch(1 0 0 / 0.9), 0 24px 40px -14px oklch(0.45 0.12 300 / 0.45);
+	--button-shadow:
+		inset -2px -3px 6px oklch(0 0 0 / 0.14), inset 2px 2px 4px
+		oklch(1 0 0 / 0.45), 0 6px 12px -6px var(--color-accent-glow);
+	--popover: oklch(0.99 0.012 300);
+	--aurora-opacity: 0.35;
+	--grain-opacity: 0;
+}
+
+.dark[data-surface="clay"],
+.dark [data-surface="clay"] {
+	--color-bg: oklch(0.22 0.03 295);
+	--panel-bg: oklch(0.28 0.035 295);
+	--panel-shadow:
+		inset -6px -8px 14px oklch(0 0 0 / 0.35), inset 6px 6px 12px
+		oklch(1 0 0 / 0.08), 0 18px 32px -14px oklch(0 0 0 / 0.7);
+	--panel-shadow-lg:
+		inset -6px -8px 14px oklch(0 0 0 / 0.35), inset 6px 6px
+		12px oklch(1 0 0 / 0.08), 0 24px 40px -14px oklch(0 0 0 / 0.8);
+	--popover: oklch(0.28 0.035 295);
+}
+
+[data-surface="skeuomorphism"] {
+	--color-bg: oklch(0.9 0.012 80);
+	--radius: 0.5rem;
+	--panel-bg: oklch(0.95 0.008 80);
+	--panel-bg-image: linear-gradient(
+		to bottom,
+		oklch(1 0 0 / 0.7),
+		oklch(1 0 0 / 0) 40%,
+		oklch(0 0 0 / 0.04)
+	);
+	--panel-backdrop: none;
+	--panel-border-width: 1px;
+	--color-border: oklch(0.55 0.02 80 / 0.55);
+	--panel-shadow:
+		inset 0 1px 0 oklch(1 0 0 / 0.9), 0 1px 1px oklch(0 0 0 / 0.12),
+		0 4px 10px -2px oklch(0 0 0 / 0.18);
+	--panel-shadow-lg:
+		inset 0 1px 0 oklch(1 0 0 / 0.9), 0 2px 2px oklch(0 0 0 / 0.14),
+		0 10px 22px -6px oklch(0 0 0 / 0.28);
+	--button-bg-image: linear-gradient(
+		to bottom,
+		oklch(1 0 0 / 0.28),
+		oklch(0 0 0 / 0.08)
+	);
+	--button-shadow:
+		inset 0 1px 0 oklch(1 0 0 / 0.4), 0 1px 2px oklch(0 0 0 / 0.3);
+	--popover: oklch(0.95 0.008 80);
+	--aurora-opacity: 0;
+	--grain-opacity: 0.09;
+}
+
+.dark[data-surface="skeuomorphism"],
+.dark [data-surface="skeuomorphism"] {
+	--color-bg: oklch(0.19 0.01 60);
+	--panel-bg: oklch(0.26 0.01 60);
+	--panel-bg-image: linear-gradient(
+		to bottom,
+		oklch(1 0 0 / 0.06),
+		oklch(1 0 0 / 0) 40%,
+		oklch(0 0 0 / 0.12)
+	);
+	--color-border: oklch(0 0 0 / 0.6);
+	--panel-shadow:
+		inset 0 1px 0 oklch(1 0 0 / 0.08), 0 4px 10px -2px oklch(0 0 0 / 0.6);
+	--panel-shadow-lg:
+		inset 0 1px 0 oklch(1 0 0 / 0.08), 0 12px 24px -6px oklch(0 0 0 / 0.75);
+	--button-shadow:
+		inset 0 1px 0 oklch(1 0 0 / 0.12), 0 1px 2px oklch(0 0 0 / 0.6);
+	--popover: oklch(0.26 0.01 60);
+}
+
+[data-surface] [data-slot="button"] {
+	background-image: var(--button-bg-image);
+	box-shadow: var(--button-shadow);
+}
+
+[data-surface="neumorphism"] [data-slot="button"]:active {
+	box-shadow:
+		inset 3px 3px 7px var(--neu-dark),
+		inset -3px -3px 7px var(--neu-light);
+}
+
 /* ─── Tailwind theme ─────────────────────────────────────────── */
 /* Static values (never change between themes) */
 @theme {
@@ -230,10 +387,11 @@
  * gradient behind a card into a visible rectangle.
  */
 @utility panel {
-	background-color: var(--color-surface);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	border: 1px solid var(--color-border);
+	background-color: var(--panel-bg);
+	background-image: var(--panel-bg-image);
+	backdrop-filter: var(--panel-backdrop);
+	-webkit-backdrop-filter: var(--panel-backdrop);
+	border: var(--panel-border-width) solid var(--color-border);
 	box-shadow: var(--panel-shadow);
 }
 

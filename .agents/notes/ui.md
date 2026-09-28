@@ -372,6 +372,24 @@ per-user instead of a singleton row.
   block), so no component needs to know about the override. Scoped to
   `(protected)/` only, not pre-login pages, since this is a dashboard
   preference, not a site-wide brand color.
+- **Style** (`surfaceStyle`: glass, neumorphism, boxy, clay, skeuomorphism,
+  `$lib/surfaces.ts`): a `data-surface` attribute on `<html>`, and every style
+  is a block of token overrides in `layout.css` (`[data-surface="…"]`, plus a
+  `.dark[data-surface="…"], .dark [data-surface="…"]` block for what differs in
+  dark). `panel` reads `--panel-bg`/`--panel-bg-image`/`--panel-backdrop`/
+  `--panel-border-width`/`--panel-shadow`, buttons (`[data-slot="button"]`)
+  `--button-shadow`/`--button-bg-image`, and `--radius-*` are re-derived under
+  `[data-surface]` so a style's `--radius` takes. It's an attribute on `<html>`,
+  not a class on the layout wrapper, for the same portal reason as the accent
+  CSS above. It's rendered server-side: `app.html` has
+  `data-surface="%homerun.surface%"`, the protected layout's `load` sets
+  `locals.surface` and `hooks.server.ts`'s `transformPageChunk` fills it in, so
+  there's no flash of glass on load; the protected layout's `$effect` keeps it
+  in sync on client navigation and resets it when leaving, and the Appearance
+  page sets it directly to preview. Because the selectors aren't `:root`-only, a
+  `data-surface` on any element restyles its subtree, which is how the
+  Appearance page's preview tiles work. A new style is one entry in
+  `SURFACE_STYLES` and one token block, nothing reads the style name elsewhere.
 - `(protected)/+layout.server.ts`'s shared `load` (same one that fetches
   notifications, see above) now also fetches `UserPreferencesDTO.get(...)` and
   returns `preferences: preferences.toJSON()`, since the sidebar itself, not

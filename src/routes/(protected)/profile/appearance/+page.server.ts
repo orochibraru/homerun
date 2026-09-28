@@ -5,6 +5,7 @@ import { Logger } from "$lib/logger";
 import {
 	colorsSchema,
 	perPageSchema,
+	surfaceSchema,
 	themeSchema,
 } from "$lib/server/validation/appearance";
 
@@ -25,6 +26,23 @@ export const actions = {
 		const prefs = await UserPreferencesDTO.get(locals.user.id);
 		await prefs.updateTheme(parsed.data.theme);
 		logger.info("Theme preference updated", { userId: locals.user.id });
+		return { success: true };
+	},
+
+	/** Saves the surface style panels and buttons are drawn in. */
+	updateSurface: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const parsed = surfaceSchema.safeParse(
+			Object.fromEntries(await request.formData()),
+		);
+		if (!parsed.success) {
+			return fail(400, { error: "Pick one of the listed styles." });
+		}
+		const prefs = await UserPreferencesDTO.get(locals.user.id);
+		await prefs.updateSurfaceStyle(parsed.data.surfaceStyle);
+		logger.info("Surface style updated", { userId: locals.user.id });
 		return { success: true };
 	},
 

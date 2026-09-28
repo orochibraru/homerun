@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { gzipSync } from "node:zlib";
+import {
+	addMapping,
+	GenMapping,
+	setSourceContent,
+	toEncodedMap,
+} from "@jridgewell/gen-mapping";
 
 mock.module("$app/environment", () => ({
 	browser: false,
@@ -18,6 +24,9 @@ const { ErrorProjectDTO } = await import(
 );
 const { ErrorIssueDTO } = await import("../../../src/lib/dto/error-issue-dto");
 const { ErrorEventDTO } = await import("../../../src/lib/dto/error-event-dto");
+const { ErrorSourceMapDTO } = await import(
+	"../../../src/lib/dto/error-source-map-dto"
+);
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { NotificationDTO } = await import(
 	"../../../src/lib/dto/notification-dto"
@@ -469,5 +478,104 @@ describe("retention", () => {
 			29 * 24 * 60 * 60 * 1000,
 		);
 		expect(issues).toHaveBeenCalledWith(cutoff);
+	});
+});
+
+describe("ingest with source maps", () => {
+	const generated = new GenMapping({ file: "app.js" });
+	setSourceContent(
+		generated,
+		"webpack://app/./src/lib/math.ts",
+		"export function add(a, b) {\n  return a.b + b;\n}",
+	);
+	addMapping(generated, {
+		generated: { column: 42, line: 1 },
+		name: "add",
+		original: { column: 9, line: 2 },
+		source: "webpack://app/./src/lib/math.ts",
+	});
+	const MAP = JSON.stringify(toEncodedMap(generated));
+	const BROWSER_EVENT = {
+		event_id: "22222222222222222222222222222222",
+		exception: {
+			values: [
+				{
+					stacktrace: {
+						frames: [
+							{
+								abs_path: "https://app.example.com/_app/app.js",
+								colno: 43,
+								filename: "/_app/app.js",
+								function: "t",
+								in_app: true,
+								lineno: 1,
+							},
+						],
+					},
+					type: "TypeError",
+					value: "a is undefined",
+				},
+			],
+		},
+		release: "abc123",
+	};
+
+	test("maps a release's minified frames back to source before storing, caching the parsed map", async () => {
+		track(
+			spyOn(ErrorProjectDTO, "getByProjectId").mockResolvedValue(project()),
+		);
+		stubStore();
+		const stored = track(spyOn(ErrorEventDTO, "create").mockResolvedValue());
+		track(
+			spyOn(ErrorSourceMapDTO, "namesFor").mockResolvedValue([
+				{ id: "map-cached", name: "_app/app.js" },
+			]),
+		);
+		const content = track(
+			spyOn(ErrorSourceMapDTO, "content").mockResolvedValue(MAP),
+		);
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const { request, url } = post(
+				envelope([{ ...BROWSER_EVENT, event_id: `${attempt}`.repeat(32) }]),
+				AUTH,
+			);
+			expect(
+				(await ErrorTrackingService.ingest(request, url, "7", "envelope"))
+					.status,
+			).toBe(200);
+		}
+		const event = stored.mock.calls[0]?.[2] as {
+			culprit: string;
+			exceptions: { frames: { function: string; lineno: number }[] }[];
+		};
+		expect(event.exceptions[0]?.frames[0]).toMatchObject({
+			function: "add",
+			lineno: 2,
+		});
+		expect(event.culprit).toBe("add (src/lib/math.ts)");
+		expect(content).toHaveBeenCalledTimes(1);
+	});
+
+	test("skips a map that doesn't parse and stores the frames as sent", async () => {
+		track(
+			spyOn(ErrorProjectDTO, "getByProjectId").mockResolvedValue(project()),
+		);
+		stubStore();
+		const stored = track(spyOn(ErrorEventDTO, "create").mockResolvedValue());
+		track(
+			spyOn(ErrorSourceMapDTO, "namesFor").mockResolvedValue([
+				{ id: "map-broken", name: "_app/app.js" },
+			]),
+		);
+		track(spyOn(ErrorSourceMapDTO, "content").mockResolvedValue("not json"));
+		const { request, url } = post(
+			envelope([{ ...BROWSER_EVENT, event_id: "3".repeat(32) }]),
+			AUTH,
+		);
+		await ErrorTrackingService.ingest(request, url, "7", "envelope");
+		const event = stored.mock.calls[0]?.[2] as {
+			exceptions: { frames: { function: string }[] }[];
+		};
+		expect(event.exceptions[0]?.frames[0]?.function).toBe("t");
 	});
 });

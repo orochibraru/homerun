@@ -15,7 +15,7 @@ routes to, every other host mapping becomes a
 `network_mode: host`, `container_name`, `deploy.resources.limits.cpus`/`memory`,
 and everything on the [Runtime tab](runtime-and-compute.md#runtime): `command`
 and `entrypoint` (string or list form), `labels` (Traefik and `homerun.*` labels
-are dropped, Homerun writes its own routing), `cap_add`, `devices` and
+are dropped, Homerun writes its own routing), `user`, `cap_add`, `devices` and
 `privileged`.
 
 `env_file` is resolved into env vars where it can be: the preview asks you to
@@ -26,7 +26,7 @@ and read from the host at every deploy. A relative one left blank is skipped.
 
 What comes back as a warning instead of being applied: `build:` (import it, then
 point the service's Source tab at a git repository), `healthcheck`, `cap_drop`,
-`extra_hosts`, `sysctls`, `tmpfs`, `user`, secrets/configs, relative bind mounts
+`extra_hosts`, `sysctls`, `tmpfs`, secrets/configs, relative bind mounts
 (Homerun needs an absolute host path), and anonymous volumes.
 
 Every named volume and absolute bind mount becomes a

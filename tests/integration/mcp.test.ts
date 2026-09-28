@@ -88,7 +88,7 @@ describe("MCP server", () => {
 		expect(resourceBody.resource).toBe(`${origin}/api/v1/mcp`);
 
 		const server = await nativeFetch(
-			`${origin}/.well-known/oauth-authorization-server/api/v1/auth`,
+			`${origin}/.well-known/oauth-authorization-server/issuer`,
 		);
 		expect(server.status).toBe(200);
 		const serverBody = (await server.json()) as {
@@ -169,6 +169,7 @@ describe("MCP server", () => {
 		const createdRes = await nativeFetch(`${origin}/idp/new?/create`, {
 			body: new URLSearchParams({
 				clientType: "confidential",
+				environmentName: "production",
 				name: "Claude",
 				redirectUris: redirectUri,
 				requirePkce: "on",

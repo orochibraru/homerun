@@ -2,7 +2,12 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
-import { mcpAllowed, mcpResource, oidcIssuer } from "$lib/oidc-provider";
+import {
+	mcpAllowed,
+	mcpResource,
+	oidcEndpointBase,
+	oidcIssuer,
+} from "$lib/oidc-provider";
 import { parseOauthAppForm } from "$lib/server/oauth-app-form";
 import {
 	authErrorMessage,
@@ -17,6 +22,7 @@ export const load = ({ locals }) => {
 	}
 	const origin = config.auth.origin;
 	return {
+		endpointBase: origin ? oidcEndpointBase(origin) : null,
 		issuer: origin ? oidcIssuer(origin) : null,
 		mcpUrl: origin && mcpAllowed(origin) ? mcpResource(origin) : null,
 	};

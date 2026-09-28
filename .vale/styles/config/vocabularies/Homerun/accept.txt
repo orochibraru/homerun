@@ -128,3 +128,8 @@ ruleset
 [Mm]ergeability
 walkthrough
 SDKs
+Neumorphism
+Claymorphism
+Skeuomorphism
+Vue
+webpack

@@ -425,4 +425,15 @@ channel subscriptions) are capped at 10 per service per hour per kind
 (`WindowRateLimiter` keyed `serviceId:new|regressed`), so a burst of new issues
 can't hide a regression. `error-retention-scheduler.ts` prunes hourly: 100
 events kept per issue, 30 days of events, closed issues with nothing newer.
+Source maps (`error_source_map`, `ErrorSourceMapDTO`,
+`$lib/error-tracking/source-maps.ts`): uploaded per service and release through
+`POST /api/v1/services/:id/sourcemaps` (multipart, a field per map named after
+its path in the build output, `homerun services sourcemaps upload` walks a
+directory and batches), stored as text in Postgres, 10 releases kept. They're
+applied at ingest, before grouping, so issues group on real names: a frame whose
+`abs_path` is an http(s) URL is matched to the map whose name is the longest
+suffix of the URL path, resolved with `@jridgewell/trace-mapping` (position,
+`names` for the function, `sourcesContent` for context lines), and the culprit
+is recomputed. Parsed maps are cached in memory by id (32). Resolving at ingest
+means a late upload doesn't fix stored events; that's the Sentry behavior too.
 Operator doc: `docs/error-tracking.md`.

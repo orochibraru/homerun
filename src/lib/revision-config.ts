@@ -30,6 +30,7 @@ const RUNTIME_KEYS = [
 	"envFiles",
 	"labels",
 	"privileged",
+	"runAsUser",
 ] as const satisfies ReadonlyArray<keyof ServiceRuntimeOptions>;
 
 export type BackupRunKind = "backup" | "restore";

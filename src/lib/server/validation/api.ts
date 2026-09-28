@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
 import { environmentNameField } from "$lib/server/validation/environment-name";
 import { DOMAIN_RE } from "$lib/service-domains";
+import { isRunAsUser } from "$lib/service-runtime";
 import { UPDATE_CHANNELS } from "$lib/update-channel";
 
 /**
@@ -36,6 +37,14 @@ const runtimeFields = {
 		.meta({ description: "Absolute host paths of .env files read at deploy" }),
 	labels: z.record(z.string(), z.string()),
 	privileged: z.boolean(),
+	runAsUser: z
+		.string()
+		.refine(isRunAsUser, "Use uid, uid:gid, name or name:group.")
+		.nullable()
+		.meta({
+			description:
+				"Docker User (uid, uid:gid, name or name:group), null keeps the image's",
+		}),
 };
 
 export const createServiceApiBody = z
@@ -66,6 +75,7 @@ export const createServiceApiBody = z
 		memoryLimitMb: z.number().int().positive().optional(),
 		name: z.string().min(1).max(100),
 		privileged: runtimeFields.privileged.default(false),
+		runAsUser: runtimeFields.runAsUser.optional(),
 		stackId: z.string().optional(),
 		pullPolicy: z.enum(["always", "missing", "never"]).default("always"),
 		registryPassword: z.string().optional(),
@@ -129,6 +139,7 @@ export const updateServiceApiBody = z.object({
 	memoryLimitMb: z.number().int().positive().nullable().optional(),
 	name: z.string().min(1).max(100).optional(),
 	privileged: runtimeFields.privileged.optional(),
+	runAsUser: runtimeFields.runAsUser.optional(),
 	pullPolicy: z.enum(["always", "missing", "never"]).optional(),
 	registryPassword: z.string().optional(),
 	registryUrl: z.string().nullable().optional(),
@@ -244,3 +255,9 @@ export const errorIssueStatusApiBody = z.object({
 			"resolved: marked fixed, a new event reopens it as a regression; ignored: kept counting but never notifies; unresolved: open.",
 		),
 });
+
+export const sourceMapReleaseParam = z
+	.string()
+	.trim()
+	.min(1, "Name the release the maps belong to.")
+	.max(200);

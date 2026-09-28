@@ -60,3 +60,10 @@ func (c *Client) decodeJSON(method, path string, payload, out any) {
 		Fail(err.Error())
 	}
 }
+
+// decodeBody sends body with the given content type and unmarshals the answer into out, exiting on failure.
+func (c *Client) decodeBody(method, path, contentType string, body []byte, out any) {
+	if err := c.api.DecodeBody(method, path, contentType, body, out); err != nil {
+		Fail(err.Error())
+	}
+}

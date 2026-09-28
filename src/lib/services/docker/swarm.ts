@@ -169,6 +169,7 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 					"homerun.managed": "true",
 				}),
 				Mounts: (params.volumes ?? []).map(swarmMount),
+				User: params.runtime?.runAsUser || undefined,
 			},
 			Networks: swarmNetworksFor(
 				params.networkMode,

@@ -226,12 +226,19 @@ everything else through as raw JSON. `cmd/cli/generated/` is gone; `bun run gen`
 still regenerates OpenAPI types (`tests/integration/support/openapi-types.ts`),
 but they now feed only `tests/integration/support/client.ts`, not this CLI. Auth
 is `x-api-key`/`--api-key`, same header the REST API's own hooks check first for
-a non-cookie caller. Commands:
-`services {list,get,deploy,start,stop,restart,scan}`,
-`services scans {list,get}` (`list` is the group's `isDefault` subcommand, so
-`services scans <id>` works), `stacks list`, `templates list`, no
-`create`/`update`/`delete` yet, straightforward to add the same way. See
-`cmd/cli/README.md` for the full command reference and what's verified.
+a non-cookie caller.
+
+Every command is one entry in `Commands` (`internal/cli/registry.go`): its full
+name, aliases, positional `Args` synopsis (`<required>`, then `[optional]`, then
+one last `[variadic...]`), a one-line summary, and a `Setup` that registers its
+flags and returns the runner reading them. Dispatch, the missing/extra argument
+checks, `<command> --help`, `<group> --help` and the top-level usage are all
+generated from that table, so there's no usage text to keep in sync by hand.
+`help_test.go` walks every entry (summary set, synopsis well-formed, every flag
+described, `--help` prints them, a missing required argument fails before any
+API call). A new command is one entry, nothing else. `services scans <id>` is
+`services scans list`'s alias. See `cmd/cli/README.md` for the full command
+reference and what's verified.
 
 Every `list` command also takes `--page <n>`, `--per-page <n>` (default 100, max
 100, same clamp as the API) and `--search <term>`, threaded through as the same

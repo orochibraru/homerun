@@ -1,8 +1,27 @@
 <script lang="ts">
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { slugify } from "$lib/slug";
 
 	let { kind = $bindable("volume") }: { kind?: "bind" | "volume" } = $props();
+
+	let name = $state("");
+	let source = $state("");
+	let sourceEdited = $state(false);
+
+	const suggested = $derived(
+		slugify(name)
+			? kind === "bind"
+				? `/mnt/data/${slugify(name)}`
+				: `homerun-${slugify(name)}`
+			: "",
+	);
+
+	$effect(() => {
+		if (!sourceEdited) {
+			source = suggested;
+		}
+	});
 
 	const label = "block mb-1.5 text-sm font-medium text-text";
 </script>
@@ -24,6 +43,7 @@
     placeholder="e.g. Media library"
     required
     type="text"
+    bind:value={name}
   />
 </div>
 
@@ -76,16 +96,21 @@
     class=""
     id="source"
     name="source"
+    oninput={() => {
+      sourceEdited = source !== "";
+    }}
     placeholder={kind === "bind" ? "/mnt/data/media" : "homerun-media"}
     required
     type="text"
+    bind:value={source}
   />
   <p class="text-text-subtle mt-1 text-xs">
     {#if kind === "bind"}
       An absolute directory on this host : created automatically if it doesn't
-      exist.
+      exist. Filled in from the name until you change it.
     {:else}
       A Docker-managed named volume : created automatically on first use.
+      Filled in from the name until you change it.
     {/if}
   </p>
 </div>

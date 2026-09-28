@@ -4,6 +4,7 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { UserPreferencesDTO } from "$lib/dto/user-preferences-dto";
 import { AccountSecurityService } from "$lib/services/account-security.service";
 import { AdminService } from "$lib/services/admin.service";
+import { DEFAULT_SURFACE, isSurfaceStyle } from "$lib/surfaces";
 
 export const load = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -46,6 +47,10 @@ export const load = async ({ locals, url }) => {
 	// notification feed itself is a remote query the bell owns, see
 	// $lib/remote/notifications.remote.ts.
 	const preferences = await UserPreferencesDTO.get(locals.user.id);
+	const { surfaceStyle } = preferences.toJSON();
+	locals.surface = isSurfaceStyle(surfaceStyle)
+		? surfaceStyle
+		: DEFAULT_SURFACE;
 
 	return {
 		onboardingDone,

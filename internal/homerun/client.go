@@ -35,11 +35,19 @@ func NewClient(config Config) *Client {
 // x-api-key is the header the instance checks first for a non-cookie caller.
 // The caller closes the body.
 func (c *Client) Send(method, path string, query url.Values) (*http.Response, error) {
-	return c.send(method, path, query, nil)
+	return c.sendBody(method, path, query, "", nil)
 }
 
 // send is Send with an optional JSON request body.
 func (c *Client) send(method, path string, query url.Values, body []byte) (*http.Response, error) {
+	if body == nil {
+		return c.sendBody(method, path, query, "", nil)
+	}
+	return c.sendBody(method, path, query, "application/json", body)
+}
+
+// sendBody performs one API call with a body of the given content type, none when body is nil.
+func (c *Client) sendBody(method, path string, query url.Values, contentType string, body []byte) (*http.Response, error) {
 	endpoint := c.baseURL + "/api/v1" + path
 	if len(query) > 0 {
 		endpoint += "?" + query.Encode()
@@ -53,10 +61,32 @@ func (c *Client) send(method, path string, query url.Values, body []byte) (*http
 		return nil, err
 	}
 	request.Header.Set("x-api-key", c.apiKey)
-	if body != nil {
-		request.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		request.Header.Set("Content-Type", contentType)
 	}
 	return c.http.Do(request)
+}
+
+// DecodeBody sends body with the given content type (a multipart upload) and
+// decodes a 2xx answer into out. A non-2xx answer is an *APIError carrying
+// the status and body.
+func (c *Client) DecodeBody(method, path, contentType string, body []byte, out any) error {
+	response, err := c.sendBody(method, path, nil, contentType, body)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = response.Body.Close() }()
+	answer, _, err := readResponse(response)
+	if err != nil {
+		return err
+	}
+	if out == nil {
+		return nil
+	}
+	if err := json.Unmarshal(answer, out); err != nil {
+		return fmt.Errorf("couldn't read the instance's answer: %w", err)
+	}
+	return nil
 }
 
 // Do performs one API call and reads its body. A non-2xx answer is an

@@ -5,17 +5,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
-
-// BackupsUsage is the help for `backups`, printed on a bad call.
-const BackupsUsage = "usage: homerun backups list [--volume <id|name>] [--outcome running|success|failed] | volumes | run <id|name> [--wait] [--timeout <seconds>]"
-
-// JobsUsage is the help for `jobs`, printed on a bad call.
-const JobsUsage = "usage: homerun jobs list [--status <s,...>] | get <id> [--json]"
 
 const defaultBackupTimeout = 6 * time.Hour
 
@@ -141,51 +134,6 @@ func BackupRows(runs []BackupRun, now time.Time) []map[string]string {
 	return rows
 }
 
-// RunBackups dispatches a `backups` subcommand.
-func RunBackups(client func() *Client, args []string) {
-	if len(args) == 0 {
-		Fail(BackupsUsage)
-	}
-	switch args[0] {
-	case "list":
-		set := NewFlagSet("backups list")
-		options := ListFlags(set)
-		volume := set.String("volume", "", "only this volume's runs, by id or name")
-		outcome := set.String("outcome", "", "running, success or failed")
-		Parse(set, args[1:])
-		if *outcome != "" && !slices.Contains(backupOutcomes, *outcome) {
-			Fail(fmt.Sprintf("--outcome must be one of %s", strings.Join(backupOutcomes, ", ")))
-		}
-		c := client()
-		volumeID := ""
-		if *volume != "" {
-			volumeID = ResolveVolume(c, *volume).ID
-		}
-		BackupsList(c, volumeID, *outcome, *options)
-	case "volumes":
-		set := NewFlagSet("backups volumes")
-		options := ListFlags(set)
-		Parse(set, args[1:])
-		VolumesList(client(), *options)
-	case "run":
-		set := NewFlagSet("backups run")
-		wait := set.Bool("wait", false, "follow the backup's log until it finishes, non-zero exit when it fails")
-		timeout := set.Int("timeout", 0, "with --wait, how long to wait before giving up, in seconds (default 6h)")
-		rest := Parse(set, args[1:])
-		if len(rest) != 1 {
-			Fail(BackupsUsage)
-		}
-		RequirePositiveTimeout(*timeout)
-		limit := defaultBackupTimeout
-		if *timeout > 0 {
-			limit = time.Duration(*timeout) * time.Second
-		}
-		BackupRunNow(client(), rest[0], *wait, limit)
-	default:
-		Fail(fmt.Sprintf("unknown backups subcommand %q. %s", args[0], BackupsUsage))
-	}
-}
-
 // BackupsList prints backup runs, newest first, as a table or raw JSON.
 func BackupsList(client *Client, volumeID, outcome string, args ListArgs) {
 	query := ListQuery(args)
@@ -299,31 +247,6 @@ func FollowJob(client *Client, jobID string, pollEvery, timeout time.Duration) J
 			Fail(fmt.Sprintf("Timed out waiting for job %s (still %s).", jobID, job.Status))
 		}
 		Sleep(pollEvery)
-	}
-}
-
-// RunJobs dispatches a `jobs` subcommand.
-func RunJobs(client func() *Client, args []string) {
-	if len(args) == 0 {
-		Fail(JobsUsage)
-	}
-	switch args[0] {
-	case "list":
-		set := NewFlagSet("jobs list")
-		options := ListFlags(set)
-		status := set.String("status", "", "comma-separated: queued, running, succeeded, failed, cancelled")
-		Parse(set, args[1:])
-		JobsList(client(), *status, *options)
-	case "get":
-		set := NewFlagSet("jobs get")
-		asJSON := set.Bool("json", false, "print raw JSON instead of a summary")
-		rest := Parse(set, args[1:])
-		if len(rest) != 1 {
-			Fail(JobsUsage)
-		}
-		JobGet(client(), rest[0], *asJSON)
-	default:
-		Fail(fmt.Sprintf("unknown jobs subcommand %q. %s", args[0], JobsUsage))
 	}
 }
 

@@ -52,6 +52,7 @@ export const serviceConfigSchema = z.object({
 		}),
 		labels: z.record(z.string(), z.string()),
 		privileged: z.boolean(),
+		runAsUser: z.string().nullable(),
 	}),
 	security: z.object({
 		allowedEmails: z.array(z.string()),
@@ -185,6 +186,7 @@ export function serviceConfig(
 			},
 			labels: row.labels,
 			privileged: row.privileged,
+			runAsUser: row.runAsUser,
 		},
 		security: {
 			allowedEmails: row.authAllowedEmails,

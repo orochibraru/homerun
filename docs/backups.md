@@ -49,8 +49,14 @@ container, instead of running (and blocking updates) forever. See
 The upload is bounded the same way: each request to the S3 endpoint (one 16 MiB
 part of the archive) gets 10 minutes to answer, and a timeout, a `429` or a
 `5xx` is retried twice before the backup fails with the endpoint's own error.
-The run log says where the archive goes, logs every retry, and prints how much
-has been uploaded and at what speed every 30 seconds.
+The run log opens with the volume, what it is on the host (a Docker volume or a
+host path) and the services using it with their stack
+(`used by postgres (Gitea / Tools)`), then where the archive goes, which
+services are stopped around it (or that they keep running), every retry, how
+much has been uploaded and at what speed every 30 seconds, and the final size,
+duration and throughput. The log of a restore reads the same way. On `/backups`,
+each volume and each run also shows the stacks and services it belongs to under
+its name.
 
 Set a cron schedule alongside the destination to back up automatically; the
 scheduler mirrors the [scheduled-redeploy](scheduling.md#scheduled-redeploy)

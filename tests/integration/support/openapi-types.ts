@@ -562,6 +562,34 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/services/{serviceId}/sourcemaps": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's source map releases
+		 * @description The releases a service has source maps for, newest upload first. Only the 10 most recent releases are kept.
+		 */
+		get: operations["get_services__serviceId__sourcemaps"];
+		put?: never;
+		/**
+		 * Upload source maps
+		 * @description Uploads a release's source maps (version 3, up to 25 MiB each, 500 per request), replacing ones with the same path. Browser errors of that release then have their minified frames mapped back to the original file, line, function and source lines as they arrive.
+		 */
+		post: operations["post_services__serviceId__sourcemaps"];
+		/**
+		 * Delete a release's source maps
+		 * @description Deletes the source maps of one release.
+		 */
+		delete: operations["delete_services__serviceId__sourcemaps"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/start": {
 		parameters: {
 			query?: never;
@@ -1500,6 +1528,7 @@ export interface operations {
 						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+						runAsUser: string | null;
 						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
@@ -1613,6 +1642,8 @@ export interface operations {
 					 * @enum {string}
 					 */
 					restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+					/** @description Docker User (uid, uid:gid, name or name:group), null keeps the image's */
+					runAsUser?: string | null;
 					slug: string;
 					stackId?: string;
 					tag?: string;
@@ -1747,6 +1778,7 @@ export interface operations {
 						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+						runAsUser: string | null;
 						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
@@ -1951,6 +1983,7 @@ export interface operations {
 						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+						runAsUser: string | null;
 						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
@@ -2138,6 +2171,8 @@ export interface operations {
 					requiredStatusChecks?: string[];
 					/** @enum {string} */
 					restartPolicy?: "no" | "always" | "on-failure" | "unless-stopped";
+					/** @description Docker User (uid, uid:gid, name or name:group), null keeps the image's */
+					runAsUser?: string | null;
 					tag?: string;
 					uptimeEnabled?: boolean;
 				};
@@ -2271,6 +2306,7 @@ export interface operations {
 						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+						runAsUser: string | null;
 						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
@@ -2592,6 +2628,7 @@ export interface operations {
 								[key: string]: string;
 							};
 							privileged: boolean;
+							runAsUser: string | null;
 						};
 						security: {
 							allowedEmails: string[];
@@ -4504,6 +4541,223 @@ export interface operations {
 			};
 		};
 	};
+	get_services__serviceId__sourcemaps: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Releases with maps */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Maps stored for the release */
+						files: number;
+						release: string;
+						sizeBytes: number;
+						/** @description ISO 8601 timestamp */
+						uploadedAt: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_services__serviceId__sourcemaps: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"multipart/form-data": {
+					/**
+					 * Format: binary
+					 * @description Any number of .map files, each under a field named after its path in the build output (`_app/immutable/entry/app.js.map`), or `file` to use its own file name
+					 */
+					file: string;
+					/** @description The release the maps belong to, the SENTRY_RELEASE the app reports (a git service's commit SHA) */
+					release: string;
+				};
+			};
+		};
+		responses: {
+			/** @description The stored map paths */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						files: string[];
+						release: string;
+					};
+				};
+			};
+			/** @description Missing release or an invalid map */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_services__serviceId__sourcemaps: {
+		parameters: {
+			query?: {
+				/** @description The release to delete */
+				release?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description How many maps were deleted */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						deleted: number;
+						release: string;
+					};
+				};
+			};
+			/** @description Missing release */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	post_services__serviceId__start: {
 		parameters: {
 			query?: never;
@@ -4964,6 +5218,7 @@ export interface operations {
 						/** @description privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them */
 						privileged: boolean;
 						restartPolicy: string;
+						runAsUser: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp

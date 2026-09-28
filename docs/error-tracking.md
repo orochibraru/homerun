@@ -70,6 +70,37 @@ event happened. Build directories such as `/app/`, `/usr/src/app/` or
 `/workspace/repo/` are stripped to get the path inside the repository. GitHub,
 GitLab, Gitea and Bitbucket URLs are supported.
 
+## Source maps
+
+Browser JavaScript is minified, so its stack traces point at
+`https://app.example.com/_app/immutable/app.3f2a.js:1:48213` in a function named
+`t`. Upload the build's source maps and Homerun maps those frames back to the
+original file, line, function name and surrounding source as each error arrives
+(and groups issues on the real function names).
+
+1. Build with source maps on: `build.sourcemap: true` in Vite (SvelteKit, Vue,
+   React with Vite), `productionBrowserSourceMaps: true` in Next.js,
+   `devtool: "source-map"` in webpack.
+2. Upload the build output under the release the app reports, the
+   `SENTRY_RELEASE` it sends (Homerun injects the commit SHA for a git service):
+
+   ```sh
+   homerun services sourcemaps upload <service id> ./build --release <release>
+   ```
+
+   Every `.map` file under the directory is sent under its path relative to it,
+   which has to be the path the minified file is served at
+   (`./build/_app/x.js.map` covers `https://<app>/_app/x.js`). The API
+   equivalent is a multipart `POST /api/v1/services/{id}/sourcemaps` with a
+   `release` field and one field per map named after its path.
+
+Maps apply to errors that arrive after the upload; errors already stored keep
+their minified frames. The service's **Errors** tab lists the releases with
+maps, and deletes one; `homerun services sourcemaps list <id>` and
+`homerun services sourcemaps delete <id> <release>` do the same. Only the 10
+most recent releases are kept, and a map can be at most 25 MiB. A map doesn't
+need to be served publicly, so you can keep it out of the deployed image.
+
 ## Notifications
 
 A new issue sends the `error.issue.new` event and a regression sends
@@ -91,8 +122,9 @@ issues never hides a regression.
   and so are resolved or ignored issues with nothing newer.
 - Only errors are stored. Performance traces, sessions, replays and attachments
   are accepted and dropped, so SDKs that send them don't retry.
-- Minified browser JavaScript isn't mapped back to its source: there's no source
-  map upload. Server-side stack traces are shown as sent.
+- Minified browser JavaScript is only mapped back to its source once its
+  [source maps](#source-maps) are uploaded. Server-side stack traces are shown
+  as sent.
 
 ## From the API, CLI and MCP server
 

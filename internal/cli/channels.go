@@ -6,9 +6,6 @@ import (
 	"net/url"
 )
 
-// ChannelsUsage is the help for `services channels`, printed on a bad call.
-const ChannelsUsage = "usage: homerun services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>] | disable <id> | status <id>"
-
 // ChannelArgs are the release channel settings `services channels enable` sends,
 // each one left out of the request when its flag wasn't passed.
 type ChannelArgs struct {
@@ -37,34 +34,6 @@ func ChannelsBody(enabled bool, args ChannelArgs) map[string]any {
 		}
 	}
 	return body
-}
-
-// RunChannels dispatches `services channels enable|disable|status`.
-func RunChannels(client func() *Client, args []string) {
-	if len(args) == 0 {
-		Fail(ChannelsUsage)
-	}
-	switch args[0] {
-	case "enable":
-		set := NewFlagSet("services channels enable")
-		branch := set.String("branch", "", "the branch whose pushes deploy the canary (default: the service's branch)")
-		tags := set.String("tags", "", "glob a pushed tag must match to deploy stable (default v*)")
-		canaryDomain := set.String("canary-domain", "", "a custom domain for the canary, empty to clear it")
-		rest := Parse(set, args[1:])
-		id := RequireArg(rest, 0, "id")
-		ChannelsConfigure(client(), id, true, ChannelArgs{
-			Branch:          *branch,
-			CanaryDomain:    *canaryDomain,
-			CanaryDomainSet: flagSet(set, "canary-domain"),
-			TagPattern:      *tags,
-		})
-	case "disable":
-		ChannelsConfigure(client(), RequireArg(args, 1, "id"), false, ChannelArgs{})
-	case "status":
-		ChannelsStatus(client(), RequireArg(args, 1, "id"))
-	default:
-		Fail(ChannelsUsage)
-	}
 }
 
 // flagSet reports whether a flag was passed at all, so an explicit empty value can mean "clear".

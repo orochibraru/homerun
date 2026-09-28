@@ -4,6 +4,7 @@ import {
 	type ComposeServiceDraft,
 	type ComposeVolumeDraft,
 } from "$lib/compose-import";
+import { isRunAsUser } from "$lib/service-runtime";
 import { splitShellWords } from "$lib/shell-words";
 import { isRow, type RawRow, rows, str } from "./common";
 
@@ -115,6 +116,7 @@ export interface DockerRunOptions {
 	entrypoint: string[] | null;
 	labels: Record<string, string>;
 	privileged: boolean;
+	runAsUser: string | null;
 	unsupported: string[];
 }
 
@@ -137,6 +139,10 @@ const RUN_FLAGS: Record<string, RunFlagHandler> = {
 	},
 };
 RUN_FLAGS["-l"] = RUN_FLAGS["--label"];
+RUN_FLAGS["--user"] = (options, value) => {
+	options.runAsUser = isRunAsUser(value) ? value : null;
+};
+RUN_FLAGS["-u"] = RUN_FLAGS["--user"];
 
 /** Splits a `--flag=value` word into its flag and inline value; any other word comes back with no inline value. */
 function splitFlag(word: string): [string, string | undefined] {
@@ -147,7 +153,7 @@ function splitFlag(word: string): [string, string | undefined] {
 /**
  * Reads Coolify's `custom_docker_run_options` (`docker run` flags as one
  * string) into the options Homerun can apply: `--cap-add`, `--device`,
- * `--privileged`, `--label`/`-l` and `--entrypoint`, in both `--flag value`
+ * `--privileged`, `--label`/`-l`, `--entrypoint` and `--user`/`-u`, in both `--flag value`
  * and `--flag=value` forms. Every other flag is listed under `unsupported`.
  */
 export function parseDockerRunOptions(text: string | null): DockerRunOptions {
@@ -157,6 +163,7 @@ export function parseDockerRunOptions(text: string | null): DockerRunOptions {
 		entrypoint: null,
 		labels: {},
 		privileged: false,
+		runAsUser: null,
 		unsupported: [],
 	};
 	const words = splitShellWords(text ?? "");

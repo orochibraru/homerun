@@ -14,5 +14,6 @@
 		"VIKUNJA_SERVICE_JWTSECRET": "{{secret}}",
 		"VIKUNJA_SERVICE_PUBLICURL": "{{url}}"
 	},
-	"volumes": ["/app/vikunja/files"]
+	"volumes": ["/app/vikunja/files"],
+	"runAsUser": "0"
 }

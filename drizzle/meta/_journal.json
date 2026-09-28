@@ -574,6 +574,34 @@
 			"when": 1790590308962,
 			"tag": "0081_amusing_lilandra",
 			"breakpoints": true
+		},
+		{
+			"idx": 82,
+			"version": "7",
+			"when": 1790595758495,
+			"tag": "0082_boring_gabe_jones",
+			"breakpoints": true
+		},
+		{
+			"idx": 83,
+			"version": "7",
+			"when": 1790596290487,
+			"tag": "0083_cultured_living_tribunal",
+			"breakpoints": true
+		},
+		{
+			"idx": 84,
+			"version": "7",
+			"when": 1790597361075,
+			"tag": "0084_melodic_skin",
+			"breakpoints": true
+		},
+		{
+			"idx": 85,
+			"version": "7",
+			"when": 1790598636453,
+			"tag": "0085_lethal_patch",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

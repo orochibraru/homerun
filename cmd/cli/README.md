@@ -57,7 +57,9 @@ restarts, deletes or scans.
 latest one.
 
 `homerun --help` (or `-h`, or no arguments at all) prints the full usage for
-every command.
+every command. `--help` after a command prints just that command's usage and its
+flags (`homerun services deploy --help`), after a group every command in it
+(`homerun services --help`).
 
 To work on the CLI itself instead of just using it: it's `package main` in the
 repo root's single Go module (`go.mod`), so there's nothing to install beyond Go
@@ -101,6 +103,9 @@ homerun services dependencies <id> [--json]
 homerun services dependencies set <id> [<dependsOnId>...]
 homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services scans get <id> [scanId] [--json]
+homerun services sourcemaps upload <id> <dir> --release <release>
+homerun services sourcemaps list <id> [--json]
+homerun services sourcemaps delete <id> <release>
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
 homerun services logs <id> [--tail <lines>] [--follow]
 homerun services revisions <id> [--json]

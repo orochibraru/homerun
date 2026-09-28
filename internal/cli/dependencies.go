@@ -5,9 +5,6 @@ import (
 	"net/url"
 )
 
-// DependenciesUsage is the help for `services dependencies`, printed on a bad call.
-const DependenciesUsage = "usage: homerun services dependencies <id> [--json] | set <id> [<dependsOnId>...]"
-
 var dependencyColumns = []string{"direction", "name", "slug", "id", "source"}
 
 // DependencyRef is one service on either side of a dependency, as GET /services/{id}/dependencies returns it.
@@ -37,21 +34,6 @@ func DependencyRows(deps ServiceDependencies) []map[string]string {
 		}
 	}
 	return rows
-}
-
-// RunDependencies dispatches `services dependencies <id>` and `services dependencies set`.
-func RunDependencies(client func() *Client, args []string) {
-	if len(args) == 0 {
-		Fail(DependenciesUsage)
-	}
-	if args[0] == "set" {
-		DependenciesSet(client(), RequireArg(args, 1, "id"), args[2:])
-		return
-	}
-	set := NewFlagSet("services dependencies")
-	asJSON := set.Bool("json", false, "print raw JSON instead of a table")
-	rest := Parse(set, args)
-	DependenciesList(client(), RequireArg(rest, 0, "id"), *asJSON)
 }
 
 // DependenciesList prints what a service depends on and what depends on it,

@@ -1,4 +1,8 @@
 import { desc, eq } from "drizzle-orm";
+import {
+	CLIENT_SECRET_MARKER,
+	OIDC_TEST_CALLBACK_PATH,
+} from "$lib/oidc-provider";
 import { db } from "$lib/server/db/lib";
 import { type OauthClient, oauthClient } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -30,6 +34,7 @@ export interface OauthClientSummary {
 	requirePkce: boolean;
 	scopes: string[];
 	skipConsent: boolean;
+	tokenAuthMethod: string;
 }
 
 /**
@@ -68,6 +73,22 @@ export class OauthClientDTO extends BaseDTO<OauthClient> {
 		return row ? new OauthClientDTO(row) : null;
 	}
 
+	/**
+	 * Points the client's `client_secret` at the `oauth_client_secret` table
+	 * (`homerun-secrets:<client id>`), which `OauthClientSecretDTO.verify`
+	 * reads, so its secrets can be several, per environment, and revoked one
+	 * by one. Written here because better-auth would store a hash instead.
+	 */
+	static async useSecretTable(clientId: string): Promise<void> {
+		await db
+			.update(oauthClient)
+			.set({
+				clientSecret: `${CLIENT_SECRET_MARKER}${clientId}`,
+				updatedAt: new Date(),
+			})
+			.where(eq(oauthClient.clientId, clientId));
+	}
+
 	/** Turns the app on or off; a disabled app can't start new sign-ins. */
 	async setDisabled(disabled: boolean): Promise<void> {
 		await db
@@ -88,6 +109,22 @@ export class OauthClientDTO extends BaseDTO<OauthClient> {
 			.set({ requirePKCE: requirePkce, updatedAt: new Date() })
 			.where(eq(oauthClient.id, this.row.id));
 		this.row.requirePKCE = requirePkce;
+	}
+
+	/**
+	 * Sets how a confidential app sends its secret to the token endpoint:
+	 * `client_secret_basic` (HTTP Basic header) or `client_secret_post`
+	 * (request body). The provider only accepts the registered one, and its
+	 * update endpoint doesn't take it, so it's written here.
+	 */
+	async setTokenEndpointAuthMethod(
+		method: "client_secret_basic" | "client_secret_post",
+	): Promise<void> {
+		await db
+			.update(oauthClient)
+			.set({ tokenEndpointAuthMethod: method, updatedAt: new Date() })
+			.where(eq(oauthClient.id, this.row.id));
+		this.row.tokenEndpointAuthMethod = method;
 	}
 
 	/**
@@ -113,6 +150,11 @@ export class OauthClientDTO extends BaseDTO<OauthClient> {
 		return this.row.name || this.row.clientId;
 	}
 
+	/** How the app authenticates at the token endpoint: `client_secret_basic`, `client_secret_post` or `none`. */
+	get tokenEndpointAuthMethod(): string {
+		return this.row.tokenEndpointAuthMethod ?? "client_secret_basic";
+	}
+
 	/** The plain, serializable view the admin pages render. */
 	summary(): OauthClientSummary {
 		return {
@@ -123,10 +165,13 @@ export class OauthClientDTO extends BaseDTO<OauthClient> {
 			enableEndSession: this.row.enableEndSession ?? false,
 			id: this.row.id,
 			name: this.name,
-			redirectUris: jsonList(this.row.redirectUris),
+			redirectUris: jsonList(this.row.redirectUris).filter(
+				(uri) => !uri.endsWith(OIDC_TEST_CALLBACK_PATH),
+			),
 			requirePkce: this.row.requirePKCE ?? true,
 			scopes: jsonList(this.row.scopes),
 			skipConsent: this.row.skipConsent ?? false,
+			tokenAuthMethod: this.tokenEndpointAuthMethod,
 		};
 	}
 }

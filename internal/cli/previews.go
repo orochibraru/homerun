@@ -74,55 +74,10 @@ type PreviewPromoteArgs struct {
 	Wait    bool
 }
 
-// RunPreviews dispatches a `previews` subcommand.
-func RunPreviews(global GlobalFlags, args []string) {
-	if len(args) == 0 {
-		Fail("usage: homerun previews list|get|wait|delete|promote <service> [pr]")
-	}
-	client := func() *Client { return RequireClient(global.BaseURL, global.APIKey) }
-	switch args[0] {
-	case "list":
-		set := NewFlagSet("previews list")
-		asJSON := set.Bool("json", false, "print raw JSON instead of a table")
-		rest := Parse(set, args[1:])
-		PreviewsList(client(), RequireArg(rest, 0, "service"), *asJSON)
-	case "get":
-		rest := Parse(NewFlagSet("previews get"), args[1:])
-		service := RequireArg(rest, 0, "service")
-		PreviewGet(client(), service, RequirePR(rest))
-	case "wait":
-		set := NewFlagSet("previews wait")
-		commit := set.String("commit", "", "wait until the preview runs this commit")
-		timeout := set.Duration("timeout", defaultPreviewWait, "give up after this long, e.g. 20m")
-		asJSON := set.Bool("json", false, "print the preview as JSON instead of its URL")
-		rest := Parse(set, args[1:])
-		service := RequireArg(rest, 0, "service")
-		pr := RequirePR(rest)
-		requireCommit(*commit)
-		PreviewWait(client(), service, pr, PreviewWaitArgs{Commit: *commit, JSON: *asJSON, Timeout: *timeout})
-	case "delete":
-		rest := Parse(NewFlagSet("previews delete"), args[1:])
-		service := RequireArg(rest, 0, "service")
-		PreviewDelete(client(), service, RequirePR(rest))
-	case "promote":
-		set := NewFlagSet("previews promote")
-		commit := set.String("commit", "", "refuse unless the preview runs this commit")
-		wait := set.Bool("wait", false, "wait for the deploy to finish")
-		timeout := set.Duration("timeout", defaultPromoteWait, "with --wait, give up after this long")
-		rest := Parse(set, args[1:])
-		service := RequireArg(rest, 0, "service")
-		pr := RequirePR(rest)
-		requireCommit(*commit)
-		PreviewPromote(client(), service, pr, PreviewPromoteArgs{Commit: *commit, Timeout: *timeout, Wait: *wait})
-	default:
-		Fail(fmt.Sprintf("unknown previews subcommand %q. Run `homerun --help` to see what's available.", args[0]))
-	}
-}
-
-// RequirePR returns the pull request number, the second positional argument,
+// RequirePR parses a pull request number, with or without a leading #,
 // failing unless it's a positive whole number.
-func RequirePR(args []string) int {
-	raw := strings.TrimPrefix(RequireArg(args, 1, "pr"), "#")
+func RequirePR(arg string) int {
+	raw := strings.TrimPrefix(arg, "#")
 	pr, err := strconv.Atoi(raw)
 	if err != nil || pr <= 0 {
 		Fail(fmt.Sprintf("%q isn't a pull request number.", raw))

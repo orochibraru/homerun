@@ -1,0 +1,1 @@
+ALTER TABLE "user_preferences" ADD COLUMN "surface_style" text DEFAULT 'glass' NOT NULL;

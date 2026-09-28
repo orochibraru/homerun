@@ -67,6 +67,28 @@
 </div>
 
 <div>
+  <label class={label} for="runAsUser">Run as user</label>
+  <Input
+    class="font-mono"
+    id="runAsUser"
+    name="runAsUser"
+    pattern={"[A-Za-z0-9_.\\-]{1,64}(:[A-Za-z0-9_.\\-]{1,64})?"}
+    placeholder="1000:1000"
+    title="uid, uid:gid, name or name:group"
+    type="text"
+    value={values.runAsUser ?? ""}
+  />
+  <p class={helpClass}>
+    The user the container runs as : <code>uid</code>, <code>uid:gid</code>,
+    <code>name</code> or <code>name:group</code>, like
+    <code>docker run --user</code>. Leave blank to keep the image's.
+  </p>
+  {#if errors?.runAsUser}
+    <p class={errorClass}>{errors.runAsUser[0]}</p>
+  {/if}
+</div>
+
+<div>
   <label class={label} for="labels">Labels</label>
   <Textarea
     class="min-h-24 font-mono text-xs"

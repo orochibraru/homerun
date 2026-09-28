@@ -8,7 +8,6 @@ import (
 	"os"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/orochibraru/homerun/internal/buildinfo"
 )
@@ -20,141 +19,313 @@ type GlobalFlags struct {
 	BaseURL string
 }
 
-// Usage is the CLI's top-level help text, printed with no arguments, --help or an unknown command.
-const Usage = `homerun - CLI for the Homerun REST API.
+// Env is what a command runs against: the global flags and a lazy client, so
+// a command that fails on its arguments never needs a login.
+type Env struct {
+	Client func() *Client
+	Global GlobalFlags
+}
 
-Usage: homerun [--base-url <url>] [--api-key <key>] <command> [options]
+// Runner runs a command with its positional arguments, already checked
+// against the command's Args.
+type Runner func(env Env, args []string)
 
-Commands:
-  login [--base-url <url>]        log in via a device-code flow and save the resulting API key
-  logout                          clear the saved login
-  update [--channel stable|canary|nightly]
-                                  self-update the installed binary to the newest release on a channel (default stable, never downgrades)
+// Command is one CLI command. Everything the CLI prints about it (the
+// top-level usage, `--help`, a missing-argument error) is generated from it:
+// Name is the full command ("services deploy"), Aliases other full names it
+// answers to, Args its positional synopsis (<required>, then [optional], then
+// one last [variadic...]), Summary one line saying what it does, and Setup
+// registers its flags and returns the Runner reading them.
+type Command struct {
+	Aliases []string
+	Args    string
+	Name    string
+	Setup   func(set *flag.FlagSet) Runner
+	Summary string
+}
 
-  services list                   list services
-  services get <id>               get a service by id
-  services config <id>            print a service's settings as JSON, grouped by dashboard tab (also: services <id> config)
-  services deploy <id> [--tag <tag>] [--environment canary|stable]
-                                  deploy a service and wait for it, optionally switching its image tag first
-                                  (also: deploy <id>); --environment picks the release channel to deploy
-  services start|stop|restart <id>
-                                  start, stop or restart a service
-  services delete <id> [--force]  delete a service
-  services webhook <id>           show a service's push-to-deploy webhook URL and secret
-  services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>]
-                                  turn release channels on or change them: branch pushes deploy a <slug>-canary service, matching tags deploy this one
-  services channels disable <id>  turn release channels off and delete the canary
-  services channels status <id>   show a service's release channel settings and canary
-  services environment <id> [name]
-                                  name the environment its deployments are recorded under, e.g. staging; no name resets it to production
-  services dependencies <id> [--json]
-                                  list what a service depends on and what depends on it (recorded, env or both)
-  services dependencies set <id> [<dependsOnId>...]
-                                  replace the services it depends on, started before it (none clears them)
-  services errors <id> [--status unresolved|resolved|ignored|all]
-                                  list the error issues its apps reported through a Sentry SDK, most recently seen first
-  services revisions <id>         list a service's revisions, newest first by first deploy
-  services logs <id> [--tail <n>] [-f|--follow]
-                                  print a service's logs (the last 200 lines by default)
-  services rollback <id> [revisionId] [--restore-config]
-                                  redeploy a revision's exact image and wait for it
-  services scan <id> [--wait] [--fail-on <level>] [--timeout <seconds>]
-                                  queue a vulnerability scan of a service's deployed image
-  services scans list <id>        list a service's image scans, newest first
-  services scans get <id> [scanId]
-                                  show one scan's counts and findings (default: the latest)
+// Arg is one positional argument parsed from a Command's Args.
+type Arg struct {
+	Name     string
+	Required bool
+	Variadic bool
+}
 
-  previews list <service>         list a git service's open pull request previews
-  previews get <service> <pr>     show one preview: URL, the revision it runs, its latest deploy
-  previews wait <service> <pr> [--commit <sha>] [--timeout 20m] [--json]
-                                  wait until the preview runs that commit and is healthy, then print its URL (non-zero on failure or timeout)
-  previews delete <service> <pr>  delete a preview (the next push to the pull request recreates it)
-  previews promote <service> <pr> [--commit <sha>] [--wait] [--timeout 30m]
-                                  deploy the preview's exact image to <service>, no rebuild
-  stacks list                     list stacks
-  templates list                  list templates
+type option struct {
+	description string
+	name        string
+}
 
-  backups list [--volume <id|name>] [--outcome running|success|failed]
-                                  list backup and restore runs, newest first: outcome, duration, size, error and, while running, the job's last progress
-  backups volumes                 list storage volumes with their backup schedule, last and next run
-  backups run <id|name> [--wait] [--timeout <seconds>]
-                                  back up a volume now; --wait follows its log and exits non-zero unless it succeeded
-  jobs list [--status queued,running,succeeded,failed,cancelled]
-                                  list queue jobs (deploys, backups, cron jobs...), running first (admins only)
-  jobs get <id> [--json]          show a job's status, attempts, heartbeat, last progress, error and full log
+var groupAliases = map[string]string{"backup": "backups", "job": "jobs", "service": "services"}
 
-  instance status                 show the running version, the channel, its latest release and whether an update can start
-  instance update [--wait=false] [--timeout <seconds>] [--force]
-                                  update the instance to the latest release on its channel (not the CLI itself, see ` + "`homerun update`" + `); --force updates over queued deploys and running jobs, which resume after the restart
-  instance channel stable|canary|nightly
-                                  set the release channel the instance updates from (switching to a more stable one never downgrades)
-
-List options (services/stacks/templates/scans/backups/jobs list, backups volumes, services errors):
-  --json                          print raw JSON instead of a table
-  --page <n>                      1-based page number (default 1)
-  --per-page <n>                  items per page (default 100, max 100)
-  --search <term>                 only rows matching this term
-
-Global options:
-  --base-url <url>                instance URL, overrides the saved login (or HOMERUN_BASE_URL)
-  --api-key <key>                 API key, overrides the saved login (or HOMERUN_API_KEY)
-  -v, --version                   print the CLI version
-  -h, --help                      print this help
-
-Auth/target: run ` + "`homerun login`" + ` once (stores your instance URL and a
-CLI-scoped API key in ~/.config/homerun/config.json), or override per-call
-with --base-url/--api-key above or their HOMERUN_BASE_URL/HOMERUN_API_KEY
-env var equivalents.
-`
+// Exit ends the process with a status code; tests swap it to observe a help exit.
+var Exit = os.Exit
 
 // Main runs homerun-cli with the process's own arguments, exiting non-zero on failure.
 func Main() {
-	args := os.Args[1:]
-	if len(args) == 0 {
-		fmt.Print(Usage)
+	global, rest := SplitGlobalFlags(os.Args[1:])
+	if len(rest) == 0 || IsHelp(rest[0]) {
+		fmt.Print(Usage())
 		return
 	}
+	Execute(NewEnv(global), rest)
+}
 
-	global, rest := SplitGlobalFlags(args)
-	if len(rest) == 0 {
-		fmt.Print(Usage)
-		return
+// NewEnv is the Env of a real run: its client comes from the global flags or the saved login.
+func NewEnv(global GlobalFlags) Env {
+	return Env{Client: func() *Client { return RequireClient(global.BaseURL, global.APIKey) }, Global: global}
+}
+
+// Execute resolves a command from args and runs it, printing its help instead
+// when --help is anywhere in its arguments, or a group's help after a group.
+// It fails on an unknown command, a bad flag or a missing argument.
+func Execute(env Env, args []string) {
+	args = slices.Clone(args)
+	if alias, found := groupAliases[args[0]]; found {
+		args[0] = alias
+	}
+	if len(args) >= 3 && args[0] == "services" && args[2] == "config" {
+		args[1], args[2] = args[2], args[1]
 	}
 
-	switch rest[0] {
-	case "login":
-		Login(global.BaseURL)
-	case "logout":
-		Logout()
-	case "update":
-		set := NewFlagSet("update")
-		channel := set.String("channel", "stable", "release channel to update from: stable, canary or nightly")
-		Parse(set, rest[1:])
-		SelfUpdate(*channel)
-	case "services", "service":
-		RunServices(global, rest[1:])
-	case "deploy":
-		RunServices(global, append([]string{"deploy"}, rest[1:]...))
-	case "previews":
-		RunPreviews(global, rest[1:])
-	case "stacks":
-		RunStacks(global, rest[1:])
-	case "templates":
-		RunTemplates(global, rest[1:])
-	case "instance":
-		RunInstance(global, rest[1:])
-	case "backups", "backup":
-		RunBackups(func() *Client { return RequireClient(global.BaseURL, global.APIKey) }, rest[1:])
-	case "jobs", "job":
-		RunJobs(func() *Client { return RequireClient(global.BaseURL, global.APIKey) }, rest[1:])
+	command, rest := Lookup(args)
+	if command == nil {
+		runGroup(args)
+		return
+	}
+	if slices.ContainsFunc(rest, IsHelp) {
+		fmt.Print(CommandHelp(*command))
+		Exit(0)
+		return
+	}
+	set := NewFlagSet(command.Name)
+	run := command.Setup(set)
+	positionals := Parse(set, rest)
+	checkArgs(*command, positionals)
+	run(env, positionals)
+}
+
+// Lookup finds the command the leading words of args name, the longest match
+// first, and returns it with the arguments after its name, nil when none does.
+func Lookup(args []string) (*Command, []string) {
+	words := 0
+	for words < len(args) && words < 3 && !strings.HasPrefix(args[words], "-") {
+		words++
+	}
+	for count := words; count > 0; count-- {
+		name := strings.Join(args[:count], " ")
+		for index := range Commands {
+			if Commands[index].Name == name || slices.Contains(Commands[index].Aliases, name) {
+				return &Commands[index], args[count:]
+			}
+		}
+	}
+	return nil, args
+}
+
+func runGroup(args []string) {
+	group := ""
+	for count := 1; count <= len(args) && !strings.HasPrefix(args[count-1], "-"); count++ {
+		if name := strings.Join(args[:count], " "); len(groupCommands(name)) > 0 {
+			group = name
+		}
+	}
+	if group == "" {
+		Fail(fmt.Sprintf("unknown command %q. Run `homerun --help` to see what's available.", args[0]))
+		return
+	}
+	next := ""
+	if words := len(strings.Fields(group)); words < len(args) {
+		next = args[words]
+	}
+	switch {
+	case IsHelp(next):
+		fmt.Print(GroupHelp(group))
+		Exit(0)
+	case next == "":
+		Fail(fmt.Sprintf("missing %s subcommand. Run `homerun %s --help` to see what's available.", group, group))
 	default:
-		Fail(fmt.Sprintf("unknown command %q. Run `homerun --help` to see what's available.", rest[0]))
+		Fail(fmt.Sprintf("unknown %s subcommand %q. Run `homerun %s --help` to see what's available.", group, next, group))
 	}
 }
 
-// SplitGlobalFlags pulls --base-url/--api-key (and --help/--version) out of the
+func groupCommands(group string) []Command {
+	commands := []Command{}
+	for _, command := range Commands {
+		if strings.HasPrefix(command.Name, group+" ") {
+			commands = append(commands, command)
+		}
+	}
+	return commands
+}
+
+// ParseArgs parses a Command's Args synopsis, failing on anything but
+// <required> names, then [optional] ones, then at most one last [variadic...].
+func ParseArgs(synopsis string) ([]Arg, error) {
+	args := []Arg{}
+	for _, token := range strings.Fields(synopsis) {
+		var arg Arg
+		switch {
+		case strings.HasPrefix(token, "<") && strings.HasSuffix(token, ">"):
+			arg = Arg{Name: token[1 : len(token)-1], Required: true}
+		case strings.HasPrefix(token, "[") && strings.HasSuffix(token, "...]"):
+			arg = Arg{Name: token[1 : len(token)-4], Variadic: true}
+		case strings.HasPrefix(token, "[") && strings.HasSuffix(token, "]"):
+			arg = Arg{Name: token[1 : len(token)-1]}
+		default:
+			return nil, fmt.Errorf("%q is neither <required>, [optional] nor [variadic...]", token)
+		}
+		if arg.Name == "" {
+			return nil, fmt.Errorf("%q has no name", token)
+		}
+		if len(args) > 0 {
+			last := args[len(args)-1]
+			if last.Variadic {
+				return nil, fmt.Errorf("%q comes after the variadic [%s...]", token, last.Name)
+			}
+			if arg.Required && !last.Required {
+				return nil, fmt.Errorf("required %q comes after an optional argument", token)
+			}
+		}
+		args = append(args, arg)
+	}
+	return args, nil
+}
+
+func checkArgs(command Command, positionals []string) {
+	args, err := ParseArgs(command.Args)
+	if err != nil {
+		Fail(fmt.Sprintf("%s: %s", command.Name, err))
+		return
+	}
+	for index, arg := range args {
+		if arg.Required && (index >= len(positionals) || positionals[index] == "") {
+			Fail(fmt.Sprintf("missing <%s>. Run `homerun %s --help` to see the usage.", arg.Name, command.Name))
+			return
+		}
+	}
+	if len(positionals) > len(args) && (len(args) == 0 || !args[len(args)-1].Variadic) {
+		Fail(fmt.Sprintf("unexpected argument %q. Run `homerun %s --help` to see the usage.", positionals[len(args)], command.Name))
+	}
+}
+
+// Synopsis is a command's name and arguments, then every flag it accepts.
+func Synopsis(command Command) string {
+	parts := []string{command.Name}
+	if command.Args != "" {
+		parts = append(parts, command.Args)
+	}
+	for _, option := range options(command) {
+		parts = append(parts, "["+option.name+"]")
+	}
+	return strings.Join(parts, " ")
+}
+
+func options(command Command) []option {
+	set := NewFlagSet(command.Name)
+	command.Setup(set)
+	all := []option{}
+	set.VisitAll(func(f *flag.Flag) {
+		kind, description := flag.UnquoteUsage(f)
+		name := "--" + f.Name
+		if len(f.Name) == 1 {
+			name = "-" + f.Name
+		}
+		if kind != "" {
+			name += " <" + kind + ">"
+		}
+		if !slices.Contains([]string{"", "0", "false", "0s"}, f.DefValue) {
+			description += fmt.Sprintf(" (default %s)", f.DefValue)
+		}
+		all = append(all, option{description: description, name: name})
+	})
+	return all
+}
+
+// CommandHelp is what `<command> --help` prints: the synopsis, the summary,
+// the aliases and every flag with its description and default.
+func CommandHelp(command Command) string {
+	var builder strings.Builder
+	builder.WriteString("Usage: homerun " + Synopsis(command) + "\n\n" + command.Summary + "\n")
+	if len(command.Aliases) > 0 {
+		builder.WriteString("\nAlso: homerun " + strings.Join(command.Aliases, ", homerun ") + "\n")
+	}
+	if all := options(command); len(all) > 0 {
+		builder.WriteString("\nOptions:\n")
+		for _, option := range all {
+			builder.WriteString(helpLine(option.name, option.description))
+		}
+	}
+	builder.WriteString("\nRun `homerun --help` for the global options and every command.\n")
+	return builder.String()
+}
+
+// GroupHelp is what `<group> --help` prints: every command in the group.
+func GroupHelp(group string) string {
+	var builder strings.Builder
+	builder.WriteString("Usage: homerun " + group + " <command> [options]\n\nCommands:\n")
+	for _, command := range groupCommands(group) {
+		builder.WriteString(commandLine(command))
+	}
+	builder.WriteString("\nRun `homerun " + group + " <command> --help` for a command's options.\n")
+	return builder.String()
+}
+
+func commandLine(command Command) string {
+	name := strings.TrimSpace(command.Name + " " + command.Args)
+	if len(options(command)) > 0 {
+		name += " [options]"
+	}
+	summary := command.Summary
+	if len(command.Aliases) > 0 {
+		summary += " (also: " + strings.Join(command.Aliases, ", ") + ")"
+	}
+	return helpLine(name, summary)
+}
+
+func helpLine(name, description string) string {
+	if len(name) > 31 {
+		return fmt.Sprintf("  %s\n  %-31s %s\n", name, "", description)
+	}
+	return fmt.Sprintf("  %-31s %s\n", name, description)
+}
+
+// Usage is the CLI's top-level help, printed with no arguments or --help.
+func Usage() string {
+	var builder strings.Builder
+	builder.WriteString("homerun - CLI for the Homerun REST API.\n\n" +
+		"Usage: homerun [--base-url <url>] [--api-key <key>] <command> [options]\n\nCommands:\n")
+	group := ""
+	for index, command := range Commands {
+		first, _, grouped := strings.Cut(command.Name, " ")
+		if !grouped {
+			first = ""
+		}
+		if first != group {
+			if index > 0 {
+				builder.WriteString("\n")
+			}
+			group = first
+		}
+		builder.WriteString(commandLine(command))
+	}
+	builder.WriteString("\nGlobal options:\n" +
+		helpLine("--base-url <url>", "instance URL, overrides the saved login (or HOMERUN_BASE_URL)") +
+		helpLine("--api-key <key>", "API key, overrides the saved login (or HOMERUN_API_KEY)") +
+		helpLine("-v, --version", "print the CLI version") +
+		helpLine("-h, --help", "print this help, or a command's or group's own after it") +
+		"\nRun `homerun <command> --help` for a command's options.\n\n" +
+		"Auth/target: run `homerun login` once (stores your instance URL and a\n" +
+		"CLI-scoped API key in ~/.config/homerun/config.json), or override per-call\n" +
+		"with --base-url/--api-key above or their HOMERUN_BASE_URL/HOMERUN_API_KEY\n" +
+		"env var equivalents.\n")
+	return builder.String()
+}
+
+// SplitGlobalFlags pulls --base-url/--api-key (and --version) out of the
 // argument list wherever they appear, so they work before or after the
-// subcommand, and returns everything else in order.
+// subcommand, and returns everything else in order. --help stays in, so the
+// command it follows prints its own help.
 func SplitGlobalFlags(args []string) (GlobalFlags, []string) {
 	global := GlobalFlags{}
 	rest := make([]string, 0, len(args))
@@ -182,9 +353,6 @@ func SplitGlobalFlags(args []string) (GlobalFlags, []string) {
 			global.BaseURL = takeValue()
 		case "--api-key":
 			global.APIKey = takeValue()
-		case "-h", "--help":
-			fmt.Print(Usage)
-			os.Exit(0)
 		case "-v", "--version":
 			fmt.Println(buildinfo.Version)
 			os.Exit(0)
@@ -193,6 +361,11 @@ func SplitGlobalFlags(args []string) (GlobalFlags, []string) {
 		}
 	}
 	return global, rest
+}
+
+// IsHelp reports whether an argument asks for help.
+func IsHelp(arg string) bool {
+	return arg == "-h" || arg == "--help" || arg == "-help"
 }
 
 // NewFlagSet builds a flag set that reports a bad flag the same way every other
@@ -228,9 +401,9 @@ func Parse(set *flag.FlagSet, args []string) []string {
 func ListFlags(set *flag.FlagSet) *ListArgs {
 	args := &ListArgs{}
 	set.BoolVar(&args.JSON, "json", false, "print raw JSON instead of a table")
-	set.IntVar(&args.Page, "page", 0, "1-based page number")
-	set.IntVar(&args.PerPage, "per-page", 0, "items per page")
-	set.StringVar(&args.Search, "search", "", "only rows matching this term")
+	set.IntVar(&args.Page, "page", 0, "1-based page `number` (default 1)")
+	set.IntVar(&args.PerPage, "per-page", 0, "items per page, at most 100 (default 100)")
+	set.StringVar(&args.Search, "search", "", "only rows matching this `term`")
 	return args
 }
 
@@ -242,207 +415,9 @@ func RequirePositiveTimeout(seconds int) {
 	}
 }
 
-// RequireArg returns the positional argument at index, failing with what the command expected.
-func RequireArg(args []string, index int, what string) string {
-	if index >= len(args) || args[index] == "" {
-		Fail(fmt.Sprintf("missing <%s>. Run `homerun --help` to see the usage.", what))
-	}
-	return args[index]
-}
-
-// RunServices dispatches a `services` subcommand.
-func RunServices(global GlobalFlags, args []string) {
-	if len(args) == 0 {
-		Fail("missing services subcommand. Run `homerun --help` to see what's available.")
-	}
-	client := func() *Client { return RequireClient(global.BaseURL, global.APIKey) }
-
-	if len(args) >= 2 && args[1] == "config" {
-		args = []string{"config", args[0]}
-	}
-	switch args[0] {
-	case "config":
-		id := RequireArg(args, 1, "id")
-		ServiceConfig(client(), id)
-	case "list":
-		set := NewFlagSet("services list")
-		options := ListFlags(set)
-		Parse(set, args[1:])
-		ServicesList(client(), *options)
-	case "get":
-		id := RequireArg(args, 1, "id")
-		ServiceGet(client(), id)
-	case "deploy":
-		set := NewFlagSet("services deploy")
-		tag := set.String("tag", "", "switch an image-based service to this image tag before deploying")
-		environment := set.String("environment", "", "with release channels on, deploy canary or stable")
-		rest := Parse(set, args[1:])
-		id := RequireArg(rest, 0, "id")
-		if *environment != "" && *tag != "" {
-			Fail("--tag and --environment can't be combined.")
-		}
-		if *environment != "" {
-			ServiceDeployEnvironment(client(), id, *environment)
-			return
-		}
-		ServiceDeploy(client(), id, *tag)
-	case "start", "stop", "restart":
-		id := RequireArg(args, 1, "id")
-		ServiceAction(client(), args[0], id)
-	case "delete":
-		set := NewFlagSet("services delete")
-		force := set.Bool("force", false, "delete Homerun's record even if the workload couldn't be removed")
-		rest := Parse(set, args[1:])
-		id := RequireArg(rest, 0, "id")
-		ServiceDelete(client(), id, *force)
-	case "webhook":
-		id := RequireArg(args, 1, "id")
-		ServiceWebhook(client(), id)
-	case "channels":
-		RunChannels(client, args[1:])
-	case "environment":
-		id := RequireArg(args, 1, "id")
-		name := ""
-		if len(args) > 2 {
-			name = args[2]
-		}
-		ServiceSetEnvironment(client(), id, name)
-	case "dependencies":
-		RunDependencies(client, args[1:])
-	case "errors":
-		RunErrors(client, args[1:])
-	case "revisions":
-		set := NewFlagSet("services revisions")
-		asJSON := set.Bool("json", false, "print raw JSON instead of a table")
-		rest := Parse(set, args[1:])
-		id := RequireArg(rest, 0, "id")
-		RevisionsList(client(), id, *asJSON)
-	case "logs":
-		set := NewFlagSet("services logs")
-		tail := set.Int("tail", 0, "how many lines of backlog to print, 1 to 10000")
-		follow := set.Bool("follow", false, "keep streaming new lines until interrupted")
-		set.BoolVar(follow, "f", false, "keep streaming new lines until interrupted")
-		rest := Parse(set, args[1:])
-		id := RequireArg(rest, 0, "id")
-		ServiceLogs(client(), id, *follow, *tail)
-	case "rollback":
-		set := NewFlagSet("services rollback")
-		restoreConfig := set.Bool("restore-config", false, "also restore that revision's env vars, resources and networking")
-		rest := Parse(set, args[1:])
-		revisionID := ""
-		if len(rest) > 1 {
-			revisionID = rest[1]
-		}
-		id := RequireArg(rest, 0, "id")
-		ServiceRollback(client(), id, revisionID, *restoreConfig)
-	case "scan":
-		RunServiceScan(client, args[1:])
-	case "scans":
-		RunScans(client, args[1:])
-	default:
-		Fail(fmt.Sprintf("unknown services subcommand %q. Run `homerun --help` to see what's available.", args[0]))
-	}
-}
-
-// RunServiceScan dispatches `services scan`.
-func RunServiceScan(client func() *Client, args []string) {
-	set := NewFlagSet("services scan")
-	wait := set.Bool("wait", false, "wait for the scan to finish and print its findings")
-	failOn := set.String("fail-on", "", "exit non-zero at or above this severity (implies --wait)")
-	timeout := set.Int("timeout", 0, "give up waiting after this long, in seconds")
-	asJSON := set.Bool("json", false, "print raw JSON instead of a summary")
-	rest := Parse(set, args)
-	if *failOn != "" && !slices.Contains(failOnLevels, *failOn) {
-		Fail(fmt.Sprintf("--fail-on must be one of %s", strings.Join(failOnLevels, ", ")))
-	}
-	RequirePositiveTimeout(*timeout)
-	id := RequireArg(rest, 0, "id")
-	ServiceScan(client(), id, ScanArgs{
-		FailOn:  *failOn,
-		JSON:    *asJSON,
-		Timeout: time.Duration(*timeout) * time.Second,
-		Wait:    *wait || *failOn != "",
-	})
-}
-
-// RunScans dispatches `services scans list|get`.
-func RunScans(client func() *Client, args []string) {
-	subcommand := "list"
-	rest := args
-	if len(args) > 0 && (args[0] == "list" || args[0] == "get") {
-		subcommand, rest = args[0], args[1:]
-	}
-	if subcommand == "get" {
-		set := NewFlagSet("services scans get")
-		asJSON := set.Bool("json", false, "print raw JSON instead of a summary")
-		positional := Parse(set, rest)
-		scanID := "latest"
-		if len(positional) > 1 {
-			scanID = positional[1]
-		}
-		id := RequireArg(positional, 0, "id")
-		ScanGet(client(), id, scanID, *asJSON)
-		return
-	}
-	set := NewFlagSet("services scans list")
-	options := ListFlags(set)
-	positional := Parse(set, rest)
-	id := RequireArg(positional, 0, "id")
-	ScansList(client(), id, *options)
-}
-
-// RunStacks dispatches a `stacks` subcommand.
-func RunStacks(global GlobalFlags, args []string) {
-	if len(args) == 0 || args[0] != "list" {
-		Fail("usage: homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]")
-	}
-	set := NewFlagSet("stacks list")
-	options := ListFlags(set)
-	Parse(set, args[1:])
-	StacksList(RequireClient(global.BaseURL, global.APIKey), *options)
-}
-
-// RunTemplates dispatches a `templates` subcommand.
-func RunTemplates(global GlobalFlags, args []string) {
-	if len(args) == 0 || args[0] != "list" {
-		Fail("usage: homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]")
-	}
-	set := NewFlagSet("templates list")
-	options := ListFlags(set)
-	Parse(set, args[1:])
-	TemplatesList(RequireClient(global.BaseURL, global.APIKey), *options)
-}
-
-// RunInstance dispatches an `instance` subcommand.
-func RunInstance(global GlobalFlags, args []string) {
-	if len(args) == 0 {
-		Fail("usage: homerun instance status|update|channel")
-	}
-	switch args[0] {
-	case "status":
-		set := NewFlagSet("instance status")
-		asJSON := set.Bool("json", false, "print raw JSON instead of a summary")
-		Parse(set, args[1:])
-		InstanceStatus(RequireClient(global.BaseURL, global.APIKey), *asJSON)
-	case "update":
-		set := NewFlagSet("instance update")
-		wait := set.Bool("wait", true, "follow the update until the instance is back on the new version, --wait=false to return once it starts")
-		timeout := set.Int("timeout", 0, "with --wait, how long to wait before giving up, in seconds")
-		force := set.Bool("force", false, "update even while deploys are queued or jobs are running (homerun instance status lists them); the restart interrupts them and the new version resumes or re-runs them")
-		Parse(set, args[1:])
-		RequirePositiveTimeout(*timeout)
-		InstanceUpdate(
-			RequireClient(global.BaseURL, global.APIKey),
-			*wait,
-			time.Duration(*timeout)*time.Second,
-			*force,
-		)
-	case "channel":
-		if len(args) != 2 {
-			Fail("usage: homerun instance channel stable|canary|nightly")
-		}
-		InstanceChannel(RequireClient(global.BaseURL, global.APIKey), args[1])
-	default:
-		Fail(fmt.Sprintf("unknown instance subcommand %q. Run `homerun --help` to see what's available.", args[0]))
+// RequireOneOf fails unless value is empty or one of allowed, naming the flag it came from.
+func RequireOneOf(flagName, value string, allowed []string) {
+	if value != "" && !slices.Contains(allowed, value) {
+		Fail(fmt.Sprintf("--%s must be one of %s", flagName, strings.Join(allowed, ", ")))
 	}
 }

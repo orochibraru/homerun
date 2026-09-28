@@ -332,18 +332,27 @@ function titleOf(
 	return message?.split("\n")[0].slice(0, 200) || "<unlabeled event>";
 }
 
+/** A frame as the culprit shows it, `function (file)`, null when it names nothing. */
+export function frameLabel(frame: StoredFrame): string | null {
+	if (!(frame.function || frame.filename || frame.module)) {
+		return null;
+	}
+	const where = frame.filename ?? frame.module;
+	return str(
+		frame.function ? `${frame.function}${where ? ` (${where})` : ""}` : where,
+	);
+}
+
 function culpritOf(
 	exception: StoredException | null,
 	event: Json,
 ): string | null {
 	const frame = exception ? culpritFrame(exception.frames) : null;
-	if (frame && (frame.function || frame.filename || frame.module)) {
-		const where = frame.filename ?? frame.module;
-		return str(
-			frame.function ? `${frame.function}${where ? ` (${where})` : ""}` : where,
-		);
-	}
-	return str(event.transaction) ?? str(event.culprit);
+	return (
+		(frame ? frameLabel(frame) : null) ??
+		str(event.transaction) ??
+		str(event.culprit)
+	);
 }
 
 /**

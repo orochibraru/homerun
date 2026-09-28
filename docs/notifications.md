@@ -9,6 +9,11 @@ attributed to a service, plus the server crossing a resource limit. Click an
 entry to jump to its service, mark everything read from the dropdown, or hover a
 row and use the `x` to drop it.
 
+Scheduled redeploys are grouped in the bell too: their outcomes are held until
+90 seconds pass without another one (10 minutes at most), then show up as one "N
+services were auto-redeployed: …" entry and one "N scheduled redeploys failed:
+…" entry with each error. A single redeploy keeps its own entry.
+
 It's deliberately a short curated list, not a log: everything Homerun logs at
 warn or error level is persisted separately and shown on the relevant service's
 [Observability tab](observability.md#errors). Old notifications are trimmed

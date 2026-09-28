@@ -2188,6 +2188,16 @@
 												],
 												"type": "string"
 											},
+											"runAsUser": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"secretEnvKeys": {
 												"items": {
 													"type": "string"
@@ -2246,6 +2256,7 @@
 											"envFiles",
 											"labels",
 											"privileged",
+											"runAsUser",
 											"customSslCertEnc",
 											"customSslKeyEnc",
 											"defaultDomainEnabled",
@@ -2533,6 +2544,17 @@
 										"default": "unless-stopped",
 										"enum": ["no", "always", "on-failure", "unless-stopped"],
 										"type": "string"
+									},
+									"runAsUser": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "Docker User (uid, uid:gid, name or name:group), null keeps the image's"
 									},
 									"slug": {
 										"pattern": "^[a-z0-9-]{1,63}$",
@@ -3196,6 +3218,16 @@
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
+										"runAsUser": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"secretEnvKeys": {
 											"items": {
 												"type": "string"
@@ -3254,6 +3286,7 @@
 										"envFiles",
 										"labels",
 										"privileged",
+										"runAsUser",
 										"customSslCertEnc",
 										"customSslKeyEnc",
 										"defaultDomainEnabled",
@@ -4157,6 +4190,16 @@
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
+										"runAsUser": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"secretEnvKeys": {
 											"items": {
 												"type": "string"
@@ -4215,6 +4258,7 @@
 										"envFiles",
 										"labels",
 										"privileged",
+										"runAsUser",
 										"customSslCertEnc",
 										"customSslKeyEnc",
 										"defaultDomainEnabled",
@@ -4665,6 +4709,17 @@
 									"restartPolicy": {
 										"enum": ["no", "always", "on-failure", "unless-stopped"],
 										"type": "string"
+									},
+									"runAsUser": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "Docker User (uid, uid:gid, name or name:group), null keeps the image's"
 									},
 									"tag": {
 										"minLength": 1,
@@ -5306,6 +5361,16 @@
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
+										"runAsUser": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"secretEnvKeys": {
 											"items": {
 												"type": "string"
@@ -5364,6 +5429,7 @@
 										"envFiles",
 										"labels",
 										"privileged",
+										"runAsUser",
 										"customSslCertEnc",
 										"customSslKeyEnc",
 										"defaultDomainEnabled",
@@ -6298,6 +6364,16 @@
 												},
 												"privileged": {
 													"type": "boolean"
+												},
+												"runAsUser": {
+													"anyOf": [
+														{
+															"type": "string"
+														},
+														{
+															"type": "null"
+														}
+													]
 												}
 											},
 											"required": [
@@ -6307,7 +6383,8 @@
 												"entrypoint",
 												"healthcheck",
 												"labels",
-												"privileged"
+												"privileged",
+												"runAsUser"
 											],
 											"type": "object"
 										},
@@ -11604,6 +11681,380 @@
 				"tags": ["Image scans"]
 			}
 		},
+		"/services/{serviceId}/sourcemaps": {
+			"delete": {
+				"description": "Deletes the source maps of one release.",
+				"operationId": "delete_services__serviceId__sourcemaps",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The release to delete",
+						"in": "query",
+						"name": "release",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"deleted": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"release": {
+											"type": "string"
+										}
+									},
+									"required": ["deleted", "release"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "How many maps were deleted"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Missing release"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Delete a release's source maps",
+				"tags": ["Errors"]
+			},
+			"get": {
+				"description": "The releases a service has source maps for, newest upload first. Only the 10 most recent releases are kept.",
+				"operationId": "get_services__serviceId__sourcemaps",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"files": {
+												"description": "Maps stored for the release",
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"release": {
+												"type": "string"
+											},
+											"sizeBytes": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"uploadedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											}
+										},
+										"required": ["files", "release", "sizeBytes", "uploadedAt"],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "Releases with maps"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's source map releases",
+				"tags": ["Errors"]
+			},
+			"post": {
+				"description": "Uploads a release's source maps (version 3, up to 25 MiB each, 500 per request), replacing ones with the same path. Browser errors of that release then have their minified frames mapped back to the original file, line, function and source lines as they arrive.",
+				"operationId": "post_services__serviceId__sourcemaps",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"additionalProperties": false,
+								"description": "multipart/form-data",
+								"properties": {
+									"file": {
+										"description": "Any number of .map files, each under a field named after its path in the build output (`_app/immutable/entry/app.js.map`), or `file` to use its own file name",
+										"format": "binary",
+										"type": "string"
+									},
+									"release": {
+										"description": "The release the maps belong to, the SENTRY_RELEASE the app reports (a git service's commit SHA)",
+										"type": "string"
+									}
+								},
+								"required": ["file", "release"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"files": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"release": {
+											"type": "string"
+										}
+									},
+									"required": ["files", "release"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The stored map paths"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Missing release or an invalid map"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Upload source maps",
+				"tags": ["Errors"]
+			}
+		},
 		"/services/{serviceId}/start": {
 			"post": {
 				"operationId": "post_services__serviceId__start",
@@ -12632,6 +13083,16 @@
 											"restartPolicy": {
 												"type": "string"
 											},
+											"runAsUser": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"tag": {
 												"type": "string"
 											},
@@ -12662,6 +13123,7 @@
 											"ownerId",
 											"privileged",
 											"restartPolicy",
+											"runAsUser",
 											"tag",
 											"updatedAt"
 										],
