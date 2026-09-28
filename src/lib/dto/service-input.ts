@@ -115,6 +115,8 @@ export type ServiceUpdateInput = Partial<
 		| "previewAuthProviders"
 		| "previewAuthRequired"
 		| "previewDefaultDomain"
+		| "previewBranchExclude"
+		| "previewBranchInclude"
 		| "previewDomainTemplate"
 		| "previewBranch"
 		| "channelsEnabled"

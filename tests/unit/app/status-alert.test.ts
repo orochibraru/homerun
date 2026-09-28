@@ -191,7 +191,7 @@ describe("StatusAlertService.dispatch", () => {
 				{ name: "Probe", value: "External (public URL)" },
 				{ name: "Host", value: "web.example.com" },
 			],
-			link: "https://homerun.example.com/services/web/observability",
+			link: "https://homerun.example.com/services/web/observability/events",
 			serviceId: "web",
 			serviceName: "Web",
 			title: "Web is down",

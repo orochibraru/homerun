@@ -5,6 +5,7 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { isCommitSha } from "$lib/git-ref";
 import { type PullRequestEvent, previewSlug } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
+import { previewBranchAllowed } from "$lib/preview-branches";
 import { invalidateGatedService } from "$lib/server/gated-service-cache";
 import {
 	defaultHostname,
@@ -134,7 +135,9 @@ async function previewDomains(
 /**
  * Pull request preview deployments: a git service with previews on gets one
  * extra service per open pull request, `<slug>-pr-<n>`, built from the pull
- * request's head and torn down when it closes or merges.
+ * request's head and torn down when it closes or merges. The parent's
+ * branch filter (include and exclude glob patterns) decides which pull
+ * requests get one.
  */
 class PreviewServiceClass {
 	/**
@@ -161,6 +164,15 @@ class PreviewServiceClass {
 		}
 		if (event.action === "close") {
 			return await this.#remove(parent, event.number);
+		}
+		if (!this.#branchAllowed(parent, event.branch)) {
+			const removed = await this.#remove(parent, event.number);
+			return removed.status === "removed"
+				? removed
+				: {
+						reason: `${event.branch ?? "A pull request with no branch"} doesn't pass this service's preview branch filter.`,
+						status: "ignored",
+					};
 		}
 		const ref = previewRef(event);
 		if (!ref) {
@@ -193,6 +205,40 @@ class PreviewServiceClass {
 					);
 				}),
 			),
+		);
+	}
+
+	/**
+	 * Deletes the open previews whose branch the service's branch filter no
+	 * longer lets through, after the filter changed. Best effort, like
+	 * `removeAll`.
+	 *
+	 * @returns How many previews were removed.
+	 */
+	async applyBranchFilter(parent: ServiceDTO): Promise<number> {
+		const excluded = (await ServiceGitDTO.listPreviews(parent.id)).filter(
+			(preview) => !this.#branchAllowed(parent, preview.toJSON().previewBranch),
+		);
+		await Promise.all(
+			excluded.map((preview) =>
+				ServiceLifecycleService.deleteService(preview).catch((err) => {
+					logger.warn(
+						`Couldn't remove filtered-out preview: service=${preview.id} parent=${parent.id}`,
+						err,
+					);
+				}),
+			),
+		);
+		return excluded.length;
+	}
+
+	/** Whether the parent's include and exclude patterns let a pull request from `branch` have a preview. */
+	#branchAllowed(parent: ServiceDTO, branch: string | null): boolean {
+		const row = parent.toJSON();
+		return previewBranchAllowed(
+			branch,
+			row.previewBranchInclude,
+			row.previewBranchExclude,
 		);
 	}
 

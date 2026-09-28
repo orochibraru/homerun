@@ -124,7 +124,7 @@
               {#if entry.serviceId}
                 <a
                   class="text-accent truncate text-xs hover:underline"
-                  href="{resolve('/services')}/{entry.serviceId}/observability"
+                  href="{resolve('/services')}/{entry.serviceId}/observability/events"
                 >
                   {entry.serviceName ?? "Deleted service"}
                 </a>

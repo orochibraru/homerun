@@ -1504,6 +1504,8 @@ export interface operations {
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
 						previewBranch: string | null;
+						previewBranchExclude: string[];
+						previewBranchInclude: string[];
 						previewDefaultDomain: boolean;
 						previewDomainTemplate: string | null;
 						previewParentId: string | null;
@@ -1754,6 +1756,8 @@ export interface operations {
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
 						previewBranch: string | null;
+						previewBranchExclude: string[];
+						previewBranchInclude: string[];
 						previewDefaultDomain: boolean;
 						previewDomainTemplate: string | null;
 						previewParentId: string | null;
@@ -1959,6 +1963,8 @@ export interface operations {
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
 						previewBranch: string | null;
+						previewBranchExclude: string[];
+						previewBranchInclude: string[];
 						previewDefaultDomain: boolean;
 						previewDomainTemplate: string | null;
 						previewParentId: string | null;
@@ -2159,6 +2165,10 @@ export interface operations {
 					};
 					memoryLimitMb?: number | null;
 					name?: string;
+					/** @description Glob patterns whose matching branches never get a preview, even when included. */
+					previewBranchExclude?: string[];
+					/** @description Glob patterns (* any run, ? one character) a pull request's head branch must match one of to get a preview. Empty lets every branch through. */
+					previewBranchInclude?: string[];
 					previewsEnabled?: boolean;
 					primaryDomain?: string | null;
 					privileged?: boolean;
@@ -2282,6 +2292,8 @@ export interface operations {
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
 						previewBranch: string | null;
+						previewBranchExclude: string[];
+						previewBranchInclude: string[];
 						previewDefaultDomain: boolean;
 						previewDomainTemplate: string | null;
 						previewParentId: string | null;
@@ -2669,6 +2681,8 @@ export interface operations {
 								buildTarget: string | null;
 								dockerfilePath: string | null;
 								pollEnabled: boolean;
+								previewBranchExclude: string[];
+								previewBranchInclude: string[];
 								previewsEnabled: boolean;
 								ref: string | null;
 								requireStatusChecks: boolean;

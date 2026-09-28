@@ -1,8 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
+import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import process from "node:process";
 import { expect, type Page, test } from "@playwright/test";
 import { E2E_BASE_URL } from "../support/config";
+import { TRAEFIK_PORT } from "../templates/support";
+import startTraefik from "../templates/traefik";
 
 const OUT_DIR = join(process.cwd(), "docs", "images");
 const AUTH_STATE = join(process.cwd(), "test-results", "screenshots-auth.json");
@@ -72,6 +75,17 @@ interface Shot {
 const SHOTS: Shot[] = [
 	{ doc: "/", expect: /Welcome back/i, name: "hero", path: () => "/" },
 	{
+		doc: "/ (Ctrl+K)",
+		expect: /Welcome back/i,
+		name: "search",
+		path: () => "/",
+		prepare: async (page) => {
+			await page.keyboard.press("ControlOrMeta+k");
+			await page.getByPlaceholder("Search pages and content…").fill("cache");
+			await expect(page.getByText("Cache").first()).toBeVisible();
+		},
+	},
+	{
 		doc: "/services",
 		expect: /Marketing site/i,
 		name: "services",
@@ -84,10 +98,10 @@ const SHOTS: Shot[] = [
 		path: () => `/services/${seeded.serviceIds.web}`,
 	},
 	{
-		doc: "/services/:id/observability",
+		doc: "/services/:id/observability/events",
 		expect: /Reconnect/i,
 		name: "logs",
-		path: () => `/services/${seeded.serviceIds.web}/observability`,
+		path: () => `/services/${seeded.serviceIds.web}/observability/events`,
 	},
 	{
 		doc: "/services/:id/revisions",
@@ -114,6 +128,12 @@ const SHOTS: Shot[] = [
 		path: () => `/services/${seeded.serviceIds.web}/compute`,
 	},
 	{
+		doc: "/deployments",
+		expect: /Deployments/i,
+		name: "deployments",
+		path: () => "/deployments",
+	},
+	{
 		doc: "/services/new",
 		expect: /Deploy a Service/i,
 		name: "deploy",
@@ -132,6 +152,40 @@ const SHOTS: Shot[] = [
 		path: () => `/stacks/${seeded.stackId}`,
 	},
 	{
+		doc: "/dns",
+		expect: /example\.com/i,
+		name: "dns",
+		path: () => "/dns",
+	},
+	{
+		doc: "/dns/providers",
+		expect: /Connect a provider/i,
+		name: "dns-providers",
+		path: () => "/dns/providers",
+	},
+	{
+		doc: "/remote-hosts (Add a server)",
+		expect: /Remote Hosts/i,
+		name: "remote-hosts",
+		path: () => "/remote-hosts",
+		prepare: async (page) => {
+			await page.getByRole("button", { name: "Add a server" }).click();
+			await expect(page.getByText("Build server").first()).toBeVisible();
+		},
+	},
+	{
+		doc: "/api-docs",
+		expect: /API Docs/i,
+		name: "api-docs",
+		path: () => "/api-docs",
+	},
+	{
+		doc: "/profile/appearance",
+		expect: /Material You/i,
+		name: "appearance",
+		path: () => "/profile/appearance",
+	},
+	{
 		doc: "/settings",
 		expect: /Base domain/i,
 		name: "settings",
@@ -143,7 +197,50 @@ const SHOTS: Shot[] = [
 		name: "users",
 		path: () => "/users",
 	},
+	{
+		doc: "/services/:id/observability",
+		expect: /Avg response time/i,
+		name: "analytics",
+		path: () => `/services/${seeded.serviceIds.web}/observability`,
+		prepare: waitForAnalytics,
+	},
 ];
+
+const METRICS_FLAGS = [
+	"--entrypoints.metrics.address=:8082",
+	"--metrics.prometheus=true",
+	"--metrics.prometheus.entrypoint=metrics",
+	"--metrics.prometheus.addserviceslabels=true",
+];
+
+let stopTraefik: (() => Promise<void>) | null = null;
+let traffic: ReturnType<typeof setInterval> | null = null;
+
+/** One HTTPS request through the throwaway Traefik to the marketing site, whatever it answers. */
+function visit(path: string): void {
+	const req = httpsRequest({
+		headers: { host: `acme-web.${BASE_DOMAIN}` },
+		host: "127.0.0.1",
+		path,
+		port: TRAEFIK_PORT,
+		rejectUnauthorized: false,
+	});
+	req.on("response", (res) => res.resume());
+	req.on("error", () => undefined);
+	req.end();
+}
+
+/** Reloads the Analytics page until the sampler has recorded requests and a resource sample, so the shot shows real numbers. */
+async function waitForAnalytics(page: Page): Promise<void> {
+	await expect(async () => {
+		await page.reload();
+		await expect(page.getByText("Avg CPU").first()).toBeVisible();
+		await expect(page.getByText("No samples in this range")).toHaveCount(0);
+		await expect(
+			page.getByText("No requests recorded in this range"),
+		).toHaveCount(0);
+	}).toPass({ intervals: [5000], timeout: 150_000 });
+}
 
 async function capture(page: Page, name: string): Promise<void> {
 	const png = await page.screenshot({ fullPage: false });
@@ -171,9 +268,14 @@ test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
 	await mkdir(OUT_DIR, { recursive: true });
+	stopTraefik = await startTraefik(METRICS_FLAGS);
 });
 
 test.afterAll(async ({ browser }) => {
+	if (traffic) {
+		clearInterval(traffic);
+	}
+	await stopTraefik?.();
 	if (!seeded.stackId) {
 		return;
 	}
@@ -249,6 +351,14 @@ test.describe("signed in", () => {
 		}
 	});
 
+	test("adds a domain", async ({ page }) => {
+		const added = await page.request.post("/dns?/addDomain", {
+			form: { autoRecords: "on", name: BASE_DOMAIN },
+			headers: { origin: E2E_BASE_URL, "x-sveltekit-action": "true" },
+		});
+		expect(added.ok(), `adding ${BASE_DOMAIN}: ${added.status()}`).toBeTruthy();
+	});
+
 	test("deploys the ones that should be running", async ({ page }) => {
 		for (const seed of SEEDS.filter((s) => s.deploy)) {
 			const deployed = await page.request.post(
@@ -260,6 +370,15 @@ test.describe("signed in", () => {
 				`deploying ${seed.slug}: ${await deployed.text()}`,
 			).toBeTruthy();
 		}
+	});
+
+	test("keeps traffic flowing to the marketing site", () => {
+		const paths = ["/", "/", "/", "/index.html", "/missing", "/"];
+		let tick = 0;
+		traffic = setInterval(() => {
+			visit(paths[tick % paths.length] ?? "/");
+			tick += 1;
+		}, 400);
 	});
 
 	for (const shot of SHOTS) {
@@ -302,7 +421,7 @@ test("writes an index of what was captured", async () => {
 	const lines = [...SHOTS, { doc: "/auth/sign-in", name: "sign-in" }].flatMap(
 		(shot) =>
 			["", "-dark"].map(
-				(suffix) => `- \`${shot.name}${suffix}.webp\` — ${shot.doc}`,
+				(suffix) => `- \`${shot.name}${suffix}.webp\` — \`${shot.doc}\``,
 			),
 	);
 	await writeFile(

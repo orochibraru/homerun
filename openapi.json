@@ -15,7 +15,7 @@
 		}
 	},
 	"info": {
-		"description": "Homerun's REST API : a thin JSON wrapper over the DTO layer, meant for a future CLI (see the `cli/` sub-project) and any other external client. Requests are the same zod schemas that validate them server-side; every route also requires a cookie session or an `x-api-key`/`Authorization: Bearer` API key (see hooks.server.ts). Writes (POST, PATCH, DELETE) answer 403 for a read-only caller: a user holding the read-only role, or any request authenticated with a read-only API key.",
+		"description": "Homerun's REST API, used by the `homerun` CLI, CI pipelines and any other client. Request bodies are validated against the schemas described here; every route requires a signed-in session or an API key, sent as `x-api-key` or `Authorization: Bearer`. Writes (POST, PATCH, DELETE) answer 403 for a read-only caller: a user holding the read-only role, or any request authenticated with a read-only API key.",
 		"title": "Homerun API",
 		"version": "1.0.0"
 	},
@@ -2052,6 +2052,18 @@
 													}
 												]
 											},
+											"previewBranchExclude": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"previewBranchInclude": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"previewDefaultDomain": {
 												"type": "boolean"
 											},
@@ -2284,6 +2296,8 @@
 											"gitPollEnabled",
 											"gitLastSeenCommit",
 											"previewDefaultDomain",
+											"previewBranchExclude",
+											"previewBranchInclude",
 											"previewDomainTemplate",
 											"previewsEnabled",
 											"previewParentId",
@@ -3087,6 +3101,18 @@
 												}
 											]
 										},
+										"previewBranchExclude": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"previewBranchInclude": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"previewDefaultDomain": {
 											"type": "boolean"
 										},
@@ -3314,6 +3340,8 @@
 										"gitPollEnabled",
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
+										"previewBranchExclude",
+										"previewBranchInclude",
 										"previewDomainTemplate",
 										"previewsEnabled",
 										"previewParentId",
@@ -4059,6 +4087,18 @@
 												}
 											]
 										},
+										"previewBranchExclude": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"previewBranchInclude": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"previewDefaultDomain": {
 											"type": "boolean"
 										},
@@ -4286,6 +4326,8 @@
 										"gitPollEnabled",
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
+										"previewBranchExclude",
+										"previewBranchInclude",
 										"previewDomainTemplate",
 										"previewsEnabled",
 										"previewParentId",
@@ -4650,6 +4692,24 @@
 										"maxLength": 100,
 										"minLength": 1,
 										"type": "string"
+									},
+									"previewBranchExclude": {
+										"description": "Glob patterns whose matching branches never get a preview, even when included.",
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
+									},
+									"previewBranchInclude": {
+										"description": "Glob patterns (* any run, ? one character) a pull request's head branch must match one of to get a preview. Empty lets every branch through.",
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
 									},
 									"previewsEnabled": {
 										"type": "boolean"
@@ -5230,6 +5290,18 @@
 												}
 											]
 										},
+										"previewBranchExclude": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"previewBranchInclude": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"previewDefaultDomain": {
 											"type": "boolean"
 										},
@@ -5457,6 +5529,8 @@
 										"gitPollEnabled",
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
+										"previewBranchExclude",
+										"previewBranchInclude",
 										"previewDomainTemplate",
 										"previewsEnabled",
 										"previewParentId",
@@ -6602,6 +6676,18 @@
 																"pollEnabled": {
 																	"type": "boolean"
 																},
+																"previewBranchExclude": {
+																	"items": {
+																		"type": "string"
+																	},
+																	"type": "array"
+																},
+																"previewBranchInclude": {
+																	"items": {
+																		"type": "string"
+																	},
+																	"type": "array"
+																},
 																"previewsEnabled": {
 																	"type": "boolean"
 																},
@@ -6645,6 +6731,8 @@
 																"buildServerRemoteHostId",
 																"dockerfilePath",
 																"pollEnabled",
+																"previewBranchExclude",
+																"previewBranchInclude",
 																"previewsEnabled",
 																"ref",
 																"requireStatusChecks",

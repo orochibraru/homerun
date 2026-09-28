@@ -13,6 +13,13 @@ const {
 	missingTraefikFlags,
 } = await import("../../../src/lib/services/docker/core-services");
 
+const METRICS = [
+	"--entrypoints.metrics.address=:8082",
+	"--metrics.prometheus=true",
+	"--metrics.prometheus.entrypoint=metrics",
+	"--metrics.prometheus.addserviceslabels=true",
+];
+
 const CMD = [
 	"--providers.docker=true",
 	"--providers.docker.exposedbydefault=false",
@@ -65,6 +72,7 @@ describe("Traefik drift", () => {
 
 	test("a Traefik recreated from the compose file misses what the settings added", () => {
 		expect(missingTraefikFlags(CMD, everything)).toEqual([
+			"the request metrics",
 			"the swarm provider",
 			"the HTTP cache plugin",
 			"the ACME email",
@@ -81,22 +89,25 @@ describe("Traefik drift", () => {
 			"--experimental.plugins.souin.modulename=github.com/darkweak/souin",
 			"--experimental.plugins.souin.version=v1.7.9",
 			"--certificatesresolvers.letsencrypt.acme.email=me@example.com",
+			...METRICS,
 		];
 		expect(missingTraefikFlags(cmd, everything)).toEqual([]);
 	});
 
-	test("a setting that's off expects nothing, and an old value is drift", () => {
+	test("a setting that's off expects only the request metrics, and an old value is drift", () => {
 		expect(
-			expectedTraefikFlags({
-				acmeEmail: null,
-				certResolver: "letsencrypt",
-				httpCache: false,
-				swarm: false,
-			}),
-		).toEqual({});
+			Object.keys(
+				expectedTraefikFlags({
+					acmeEmail: null,
+					certResolver: "letsencrypt",
+					httpCache: false,
+					swarm: false,
+				}),
+			),
+		).toEqual(["the request metrics"]);
 		expect(
 			missingTraefikFlags(
-				CMD,
+				[...CMD, ...METRICS],
 				expectedTraefikFlags({
 					acmeEmail: "new@example.com",
 					certResolver: "letsencrypt",
@@ -158,6 +169,7 @@ describe("applyFlags on a Traefik that already has them", () => {
 		"--experimental.plugins.souin.modulename=github.com/darkweak/souin",
 		"--experimental.plugins.souin.version=v1.7.9",
 		"--certificatesresolvers.letsencrypt.acme.email=me@example.com",
+		...METRICS,
 	];
 
 	test("comes back identical, so nothing gets recreated on boot", () => {

@@ -94,6 +94,8 @@ export const PATCH = async ({ params, request, locals }) => {
 	await GitWebhookService.sync(svc, previousWebhook);
 	if (previousWebhook.previewsEnabled && !svc.toJSON().previewsEnabled) {
 		await PreviewService.removeAll(svc);
+	} else if (rest.previewBranchInclude || rest.previewBranchExclude) {
+		await PreviewService.applyBranchFilter(svc);
 	}
 	invalidateGatedService(svc.id);
 	await DeploymentService.redeployIfLoginWallChanged(

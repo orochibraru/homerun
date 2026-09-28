@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, min, sql } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type StatSample, statSample } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -18,6 +18,22 @@ export interface StatPoint {
 	memUsedMb: number;
 	netRxBytesPerSec: number;
 	netTxBytesPerSec: number;
+}
+
+/** A service's resource use over a range. */
+export interface ResourceTotals {
+	avgCpuPercent: number | null;
+	avgMemUsedMb: number | null;
+	memLimitMb: number | null;
+	peakCpuPercent: number | null;
+	peakMemUsedMb: number | null;
+}
+
+/** One chart bucket of resource use. */
+export interface ResourcePoint {
+	at: Date;
+	cpuPercent: number;
+	memUsedMb: number;
 }
 
 export interface NewStatSampleInput {
@@ -50,6 +66,13 @@ const RANGES: Record<
 
 /** Samples older than this are pruned by the sampler : a year of minute samples is the retention ceiling. */
 const RETENTION_SECONDS = 31_536_000;
+
+/** One service's samples from `since` on, all of them when null. */
+function sinceScope(serviceId: string, since: Date | null) {
+	return since
+		? and(eq(statSample.serviceId, serviceId), gte(statSample.createdAt, since))
+		: eq(statSample.serviceId, serviceId);
+}
 
 /** Wraps `stat_sample` : the resource history behind the dashboard's and a service's own graphs. */
 export class StatSampleDTO extends BaseDTO<StatSample> {
@@ -148,6 +171,65 @@ export class StatSampleDTO extends BaseDTO<StatSample> {
 			netTxBytesPerSec:
 				Math.max(0, Number(row.txRange ?? 0)) / Number(row.spanSeconds),
 		}));
+	}
+
+	/** Average and peak CPU and memory of one service from `since` on (all of its history when null). */
+	static async totals(
+		serviceId: string,
+		since: Date | null,
+	): Promise<ResourceTotals> {
+		const [row] = await db
+			.select({
+				avgCpu: sql<number | null>`avg(${statSample.cpuPercent})`,
+				avgMem: sql<number | null>`avg(${statSample.memUsedMb})`,
+				limit: sql<number | null>`max(${statSample.memLimitMb})`,
+				peakCpu: sql<number | null>`max(${statSample.cpuPercent})`,
+				peakMem: sql<number | null>`max(${statSample.memUsedMb})`,
+			})
+			.from(statSample)
+			.where(sinceScope(serviceId, since));
+		const numberOrNull = (value: unknown) =>
+			value === null || value === undefined ? null : Number(value);
+		return {
+			avgCpuPercent: numberOrNull(row?.avgCpu),
+			avgMemUsedMb: numberOrNull(row?.avgMem),
+			memLimitMb: numberOrNull(row?.limit),
+			peakCpuPercent: numberOrNull(row?.peakCpu),
+			peakMemUsedMb: numberOrNull(row?.peakMem),
+		};
+	}
+
+	/** Average CPU and memory per bucket from `since` on, `bucketSeconds` inlined like `history`'s. */
+	static async series(
+		serviceId: string,
+		since: Date | null,
+		bucketSeconds: number,
+	): Promise<ResourcePoint[]> {
+		const bucket = sql<number>`floor(extract(epoch from ${statSample.createdAt}) / ${sql.raw(String(Math.trunc(bucketSeconds)))})`;
+		const rows = await db
+			.select({
+				bucket,
+				cpuPercent: sql<number>`avg(${statSample.cpuPercent})`,
+				memUsedMb: sql<number>`avg(${statSample.memUsedMb})`,
+			})
+			.from(statSample)
+			.where(sinceScope(serviceId, since))
+			.groupBy(bucket)
+			.orderBy(bucket);
+		return rows.map((row) => ({
+			at: new Date(Number(row.bucket) * bucketSeconds * 1000),
+			cpuPercent: Number(row.cpuPercent ?? 0),
+			memUsedMb: Number(row.memUsedMb ?? 0),
+		}));
+	}
+
+	/** When a service's first sample was written, null when it has none. */
+	static async firstAt(serviceId: string): Promise<Date | null> {
+		const [row] = await db
+			.select({ first: min(statSample.createdAt) })
+			.from(statSample)
+			.where(eq(statSample.serviceId, serviceId));
+		return row?.first ?? null;
 	}
 
 	/** The newest sample for every service that has one, for the dashboard's sortable usage table. */

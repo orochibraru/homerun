@@ -230,7 +230,10 @@ export function uptimeMessage(
 		detail: input.detail,
 		event: input.ok ? "service.up" : "service.down",
 		fields,
-		link: dashboardLink(input.origin, `/services/${service.id}/observability`),
+		link: dashboardLink(
+			input.origin,
+			`/services/${service.id}/observability/events`,
+		),
 		serviceId: service.id,
 		serviceName: service.name,
 		timestamp,

@@ -1,9 +1,20 @@
 import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
+import { branchPatternProblem } from "$lib/preview-branches";
 import { environmentNameField } from "$lib/server/validation/environment-name";
 import { DOMAIN_RE } from "$lib/service-domains";
 import { isRunAsUser } from "$lib/service-runtime";
 import { UPDATE_CHANNELS } from "$lib/update-channel";
+
+const branchPatterns = z
+	.array(z.string().trim().min(1))
+	.max(50)
+	.superRefine((patterns, ctx) => {
+		const problem = patterns.map(branchPatternProblem).find(Boolean);
+		if (problem) {
+			ctx.addIssue({ code: "custom", message: problem });
+		}
+	});
 
 /**
  * Request-body schemas for the JSON REST API (`src/routes/api/v1/**`) : kept
@@ -135,6 +146,16 @@ export const updateServiceApiBody = z.object({
 	image: z.string().min(1).optional(),
 	imageScanEnabled: z.boolean().optional(),
 	previewsEnabled: z.boolean().optional(),
+	previewBranchInclude: branchPatterns
+		.optional()
+		.describe(
+			"Glob patterns (* any run, ? one character) a pull request's head branch must match one of to get a preview. Empty lets every branch through.",
+		),
+	previewBranchExclude: branchPatterns
+		.optional()
+		.describe(
+			"Glob patterns whose matching branches never get a preview, even when included.",
+		),
 	labels: runtimeFields.labels.optional(),
 	memoryLimitMb: z.number().int().positive().nullable().optional(),
 	name: z.string().min(1).max(100).optional(),

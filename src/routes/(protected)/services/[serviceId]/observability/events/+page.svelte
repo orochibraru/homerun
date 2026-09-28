@@ -1,0 +1,320 @@
+<script lang="ts">
+	import {
+		AlertTriangle,
+		ChevronDown,
+		Eraser,
+		Ghost,
+		Loader2,
+		Power,
+	} from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
+	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
+	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import UptimePanel from "$lib/components/uptime-panel.svelte";
+	import { timeAgo } from "$lib/formatting";
+	import { workloadId } from "$lib/service-state";
+	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
+
+	const { data, form } = $props();
+
+	onMount(() => title.set(`${data.service.name} · Events`));
+
+	let expandedDeploymentId = $state<string | null>(null);
+	let resolving = $state(false);
+	let togglingUptime = $state(false);
+	let clearing = $state<"errors" | "heartbeats" | null>(null);
+
+	const dismissedLabel = $derived(
+		data.dismissedBy
+			? (data.dismissedBy.gitCommit?.slice(0, 7) ??
+					data.dismissedBy.imageRef ??
+					"a later revision")
+			: null,
+	);
+</script>
+
+<div class="mb-4">
+  <UptimePanel
+    beats={data.uptime}
+    enabled={data.service.uptimeEnabled}
+    externalSkipped={data.externalSkipped}
+  >
+    {#snippet headerAction()}
+      <form
+        action="?/setUptime"
+        method="POST"
+        use:enhance={enhanceToast({
+          error: "Couldn't change uptime probing.",
+          loading: "Saving uptime probing",
+          onSettled: () => {
+            togglingUptime = false;
+          },
+          onStart: () => {
+            togglingUptime = true;
+          },
+          success: (result) =>
+            result?.uptimeEnabled
+              ? "Uptime probing is on."
+              : "Uptime probing is off.",
+        })}
+      >
+        <input
+          name="uptimeEnabled"
+          type="hidden"
+          value={data.service.uptimeEnabled ? "false" : "true"}
+        />
+        <Button disabled={togglingUptime} size="sm" type="submit" variant="outline">
+          {#if togglingUptime}
+            <Loader2 class="size-3.5 animate-spin" />
+          {:else}
+            <Power class="size-3.5" />
+          {/if}
+          {data.service.uptimeEnabled ? "Turn off" : "Turn on"}
+        </Button>
+      </form>
+    {/snippet}
+  </UptimePanel>
+  {#if data.uptime.internal.length > 0 || data.uptime.external.length > 0}
+    <form
+      action="?/clearHeartbeats"
+      class="mt-2 flex justify-end"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't clear the heartbeats.",
+        loading: "Clearing heartbeats",
+        onSettled: () => {
+          clearing = null;
+        },
+        onStart: () => {
+          clearing = "heartbeats";
+        },
+        success: "Heartbeats cleared.",
+      })}
+    >
+      <Button
+        disabled={clearing !== null}
+        size="sm"
+        type="submit"
+        variant="ghost"
+      >
+        <Eraser class="size-3.5" />
+        Clear heartbeats
+      </Button>
+    </form>
+  {/if}
+</div>
+
+<div class="mb-4">
+  <LiveLogViewer workloadId={workloadId(data.service)} serviceId={data.service.id} heightClass="h-96" />
+</div>
+
+{#if data.service.currentStatus === "failed"}
+  <Alert class="mb-6" title="This service's container is currently down.">
+    The crash output is in the log stream above.
+  </Alert>
+{:else if data.service.currentStatus === "missing"}
+  <div class="mb-6 flex items-start gap-3 rounded-md border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300">
+    <Ghost class="mt-0.5 size-4 shrink-0" />
+    <div class="flex-1">
+      <p class="font-medium">This service's container is gone.</p>
+      <p class="mt-0.5 text-xs opacity-80">
+        Homerun can't find it on the host anymore, it was likely removed
+        manually (e.g. `docker rm`) rather than through this app. Resolve to
+        clear the stale reference so you can deploy it again.
+      </p>
+    </div>
+    <form
+      action="?/resolveOrphan"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't resolve the orphaned container.",
+        loading: "Resolving the container",
+        onSettled: () => {
+          resolving = false;
+        },
+        onStart: () => {
+          resolving = true;
+        },
+        success: "Container reference cleared.",
+      })}
+    >
+      <Button disabled={resolving} size="sm" type="submit" variant="outline">
+        {#if resolving}
+          <Loader2 class="size-3.5 animate-spin" />
+        {/if}
+        Resolve
+      </Button>
+    </form>
+  </div>
+{/if}
+
+{#if data.dismissedCount > 0}
+  <div class="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2.5 text-xs">
+    <span class="text-text-muted">
+      {data.dismissedCount}
+      {data.dismissedCount === 1 ? "earlier error is" : "earlier errors are"}
+      hidden
+      {#if data.dismissedBy}
+        — cleared by revision
+        <a
+          class="text-accent underline"
+          href={resolve("/(protected)/services/[serviceId]/revisions", {
+            serviceId: data.service.id,
+          })}
+        >{dismissedLabel}</a>
+      {:else}
+        — cleared by hand
+      {/if}
+    </span>
+    <a
+      class="text-text-subtle hover:text-text ml-auto underline"
+      href="?dismissed={data.showDismissed ? '0' : '1'}"
+    >
+      {data.showDismissed ? "Hide them" : "Show them"}
+    </a>
+  </div>
+{/if}
+
+<section class="panel rounded-md">
+  <div class="border-border flex items-center gap-2 border-b px-5 py-4">
+    <AlertTriangle class="text-text-muted size-4" />
+    <h2 class="eyebrow">
+      Failed deployments
+      {#if data.failedDeployments.length > 0}
+        <span class="text-text-muted ml-1 text-xs font-normal"
+        >({data.failedDeployments.length})</span>
+      {/if}
+    </h2>
+  </div>
+
+  {#if data.failedDeployments.length === 0}
+    <div class="flex flex-col items-center justify-center py-12 text-center">
+      <p class="text-text-muted text-sm font-medium">No deploy failures 🎉</p>
+    </div>
+  {:else}
+    <div class="divide-border divide-y">
+      {#each data.failedDeployments as dep (dep.id)}
+        <div>
+          <button
+            class="flex w-full items-center gap-4 px-5 py-3 text-left"
+            onclick={() => {
+              expandedDeploymentId = expandedDeploymentId === dep.id ? null : dep.id;
+            }}
+            type="button"
+          >
+            <div class="min-w-0 flex-1">
+              <p class="text-text-muted truncate text-xs">
+                {timeAgo(dep.createdAt)}
+              </p>
+              {#if dep.errorMessage}
+                <p class="mt-0.5 truncate text-xs text-red-500">
+                  {dep.errorMessage}
+                </p>
+              {/if}
+            </div>
+            {#if dep.log}
+              <ChevronDown
+                class="
+                  text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
+                  dep.id
+                  ? 'rotate-180'
+                  : ''}
+                "
+              />
+            {/if}
+          </button>
+          {#if expandedDeploymentId === dep.id && dep.log}
+            <DeployLogPanel errorMessage={dep.errorMessage} log={dep.log} />
+          {/if}
+        </div>
+      {/each}
+    </div>
+  {/if}
+</section>
+
+<!--
+  App-level warn/error logs attributed to this service (see schema.ts's
+  `appLog` docstring for how the attribution works) : not just deployment
+  failures, a lightweight Sentry-adjacent view of "things this service's
+  own code logged as wrong" (a failed Docker call, a rejected reconcile,
+  etc.), independent of whether a deploy was even in flight when it happened.
+-->
+<section class="panel mt-6 rounded-md">
+  <div class="border-border flex items-center gap-2 border-b px-5 py-4">
+    <AlertTriangle class="text-text-muted size-4" />
+    <h2 class="eyebrow">
+      Application errors
+      {#if data.appLogs.length > 0}
+        <span class="text-text-muted ml-1 text-xs font-normal"
+        >({data.appLogs.length})</span>
+      {/if}
+    </h2>
+  </div>
+
+  {#if data.appLogs.length === 0}
+    <div class="flex flex-col items-center justify-center py-12 text-center">
+      <p class="text-text-muted text-sm font-medium">
+        No app-level errors logged for this service 🎉
+      </p>
+    </div>
+  {:else}
+    <div class="divide-border divide-y">
+      {#each data.appLogs as log (log.id)}
+        <div class="px-5 py-3">
+          <div class="flex items-center gap-2">
+            <span
+              class="
+                rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase {log.level ===
+                'error'
+                ? 'bg-red-500/10 text-red-500'
+                : 'bg-yellow-500/10 text-yellow-600'}
+              "
+            >
+              {log.level}
+            </span>
+            {#if log.scope}
+              <span class="text-text-muted text-xs font-medium">{
+                log.scope
+              }</span>
+            {/if}
+            <span class="text-text-subtle text-xs">{
+              timeAgo(log.createdAt)
+            }</span>
+          </div>
+          <p class="text-text mt-1 font-mono text-xs break-all">
+            {log.message}
+          </p>
+        </div>
+      {/each}
+    </div>
+  {/if}
+</section>
+
+{#if data.failedDeployments.length > 0 || data.appLogs.length > 0}
+  <form
+    action="?/clearErrors"
+    class="mt-2 flex justify-end"
+    method="POST"
+    use:enhance={enhanceToast({
+      error: "Couldn't clear the errors.",
+      loading: "Clearing errors",
+      onSettled: () => {
+        clearing = null;
+      },
+      onStart: () => {
+        clearing = "errors";
+      },
+      success: "Errors cleared.",
+    })}
+  >
+    <Button disabled={clearing !== null} size="sm" type="submit" variant="ghost">
+      <Eraser class="size-3.5" />
+      Clear errors
+    </Button>
+  </form>
+{/if}

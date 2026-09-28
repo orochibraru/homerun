@@ -26,6 +26,10 @@ import {
 	newtSwarmServiceSpec,
 } from "./newt.ts";
 import { SWARM_REFRESH_SECONDS, swarmNetworkName } from "./swarm.ts";
+import {
+	TRAEFIK_METRICS_COMMAND,
+	TRAEFIK_METRICS_FLAGS,
+} from "./traefik-metrics.ts";
 import { tunnelTargetHostFrom } from "./tunnel.ts";
 
 const LEADING_SLASH_RE = /^\//;
@@ -123,7 +127,9 @@ export interface TraefikExpectation {
 export function expectedTraefikFlags(
 	expectation: TraefikExpectation,
 ): Record<string, Record<string, string>> {
-	const groups: Record<string, Record<string, string>> = {};
+	const groups: Record<string, Record<string, string>> = {
+		"the request metrics": TRAEFIK_METRICS_FLAGS,
+	};
 	if (expectation.swarm) {
 		groups["the swarm provider"] = {
 			"providers.swarm": "true",
@@ -823,7 +829,8 @@ export function DockerCoreServicesMixin<
 		/**
 		 * Puts every Traefik flag the settings call for back onto the running
 		 * container: swarm mode (network attachments included) when that's the
-		 * orchestration mode, then the HTTP cache plugin and the ACME email.
+		 * orchestration mode, then the request metrics, the HTTP cache plugin
+		 * and the ACME email.
 		 * Recreating Traefik from the compose file (`docker compose up
 		 * --force-recreate`, a self-update) drops all of them. Each step is
 		 * independent: one failing is reported and the others still run.
@@ -844,6 +851,9 @@ export function DockerCoreServicesMixin<
 			if (expectation.swarm) {
 				await attempt("swarm mode", () => this.enableSwarmMode());
 			}
+			await attempt("request metrics", () =>
+				this.applyTraefikFlags(TRAEFIK_METRICS_FLAGS),
+			);
 			await attempt("HTTP cache plugin", () =>
 				this.applyHttpCache(expectation.httpCache),
 			);
@@ -852,6 +862,21 @@ export function DockerCoreServicesMixin<
 				await attempt("ACME email", () => this.applyAcmeEmail(email));
 			}
 			return failures;
+		}
+
+		/** Traefik's Prometheus metrics, read inside its container so nothing is published; null when unreadable. */
+		async traefikMetrics(): Promise<string | null> {
+			const traefik = await this.findTraefikContainer();
+			if (!traefik) {
+				return null;
+			}
+			const result = await this.worker
+				.post<{ exitCode: number; stdout: string }>("/v1/exec", {
+					cmd: TRAEFIK_METRICS_COMMAND,
+					container: traefik.id,
+				})
+				.catch(() => null);
+			return result?.exitCode === 0 ? result.stdout : null;
 		}
 
 		/**

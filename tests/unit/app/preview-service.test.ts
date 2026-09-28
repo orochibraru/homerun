@@ -49,6 +49,8 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 			authProviders: [],
 			authRequired: false,
 		},
+		previewBranchExclude: [],
+		previewBranchInclude: [],
 		previewDefaultDomain: true,
 		previewDomainTemplate: null,
 		primaryDomain: null,
@@ -453,5 +455,42 @@ describe("PreviewService preview access policy", () => {
 			{ id: "p1", wasRequired: true },
 			{ id: "p2", wasRequired: false },
 		]);
+	});
+});
+
+describe("preview branch filter", () => {
+	test("a branch outside the filter gets no preview, and loses one it had", async () => {
+		const { svc } = fakeService({
+			previewBranchExclude: ["dependabot/*"],
+			previewBranchInclude: ["feat*", "fix/*"],
+		});
+		expect(
+			(await PreviewService.handle(svc, event({ branch: "chore/x" }))).status,
+		).toBe("ignored");
+		expect(
+			(await PreviewService.handle(svc, event({ branch: "dependabot/npm" })))
+				.status,
+		).toBe("ignored");
+		expect(enqueued).toHaveLength(0);
+
+		existing = fakeService({ id: "old", previewBranch: "chore/x" }).svc;
+		expect(
+			await PreviewService.handle(svc, event({ branch: "chore/x" })),
+		).toEqual({ serviceId: "old", status: "removed" });
+
+		existing = null;
+		expect(
+			(await PreviewService.handle(svc, event({ branch: "feature" }))).status,
+		).toBe("deployed");
+	});
+
+	test("applyBranchFilter removes only the previews the filter now leaves out", async () => {
+		const { svc } = fakeService({ previewBranchExclude: ["wip/*"] });
+		previews = [
+			fakeService({ id: "p1", previewBranch: "wip/draft" }).svc,
+			fakeService({ id: "p2", previewBranch: "feature" }).svc,
+		];
+		expect(await PreviewService.applyBranchFilter(svc)).toBe(1);
+		expect(deleted).toEqual(["p1"]);
 	});
 });

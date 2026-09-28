@@ -25,15 +25,15 @@
 	});
 </script>
 
-<div class="flex h-full flex-col gap-4">
+<div class="flex h-full flex-col gap-4 p-5 md:p-6">
   <div>
     <h1 class="text-text text-lg font-semibold tracking-tight">API Docs</h1>
     <p class="text-text-muted text-sm">
       The REST API's live OpenAPI spec, served at <code
         class="bg-surface-2 rounded px-1 py-0.5 text-xs"
-      >/api/v1/openapi.json</code>, generated straight from the same zod schemas
-      that validate each request (see CLAUDE.md's OpenAPI section). Every
-      request here needs your own <code
+      >/api/v1/openapi.json</code>, generated from the same schemas that validate
+      each request. The CLI and your own scripts use it. Every request here
+      needs your own <code
         class="bg-surface-2 rounded px-1 py-0.5 text-xs"
       >x-api-key</code> header to actually succeed, "Try it out" won't be
       authenticated by your browser session.

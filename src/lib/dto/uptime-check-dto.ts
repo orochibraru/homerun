@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type UptimeCheck, uptimeCheck } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -15,10 +15,17 @@ export interface ProbeResult {
 }
 
 /** How many beats the heartbeat strip draws, and therefore how many are read back. */
+/** How a probe did over a range. */
+export interface Availability {
+	avgLatencyMs: number | null;
+	checks: number;
+	ok: number;
+}
+
 export const BEAT_WINDOW = 40;
 
 /** A week at one beat a minute is ~10k rows per service per probe. */
-const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
 
 /** Wraps `uptime_check` : the appended liveness history behind the heartbeat strips, see schema.ts. */
 export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
@@ -113,12 +120,48 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 		return new Map(rows.map((row) => [`${row.serviceId}:${row.kind}`, row]));
 	}
 
+	/** Per probe kind, how many checks ran and passed from `since` on (all history when null), and their average latency. */
+	static async availability(
+		serviceId: string,
+		since: Date | null,
+	): Promise<Record<ProbeKind, Availability>> {
+		const rows = await db
+			.select({
+				avgLatencyMs: sql<number | null>`avg(${uptimeCheck.latencyMs})`,
+				checks: sql<number>`count(*)`,
+				kind: uptimeCheck.kind,
+				ok: sql<number>`count(*) filter (where ${uptimeCheck.ok})`,
+			})
+			.from(uptimeCheck)
+			.where(
+				since
+					? and(
+							eq(uptimeCheck.serviceId, serviceId),
+							gte(uptimeCheck.checkedAt, since),
+						)
+					: eq(uptimeCheck.serviceId, serviceId),
+			)
+			.groupBy(uptimeCheck.kind);
+		const of = (kind: ProbeKind): Availability => {
+			const row = rows.find((candidate) => candidate.kind === kind);
+			return {
+				avgLatencyMs:
+					row?.avgLatencyMs === null || row?.avgLatencyMs === undefined
+						? null
+						: Number(row.avgLatencyMs),
+				checks: Number(row?.checks ?? 0),
+				ok: Number(row?.ok ?? 0),
+			};
+		};
+		return { external: of("external"), internal: of("internal") };
+	}
+
 	/** Deletes a service's whole uptime history. */
 	static async clearForService(serviceId: string): Promise<void> {
 		await db.delete(uptimeCheck).where(eq(uptimeCheck.serviceId, serviceId));
 	}
 
-	/** Deletes beats older than a week. */
+	/** Deletes beats older than a year. */
 	static async prune(): Promise<void> {
 		await db
 			.delete(uptimeCheck)

@@ -1004,6 +1004,14 @@ export const service = pgTable(
 		gitLastSeenCommit: text("git_last_seen_commit"),
 		previewsEnabled: boolean("previews_enabled").default(false).notNull(),
 		previewDomainTemplate: text("preview_domain_template"),
+		previewBranchInclude: jsonb("preview_branch_include")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		previewBranchExclude: jsonb("preview_branch_exclude")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
 		previewDefaultDomain: boolean("preview_default_domain")
 			.default(true)
 			.notNull(),
@@ -1491,6 +1499,29 @@ export const statSample = pgTable(
  * independently and for different reasons, which is the whole point of probing
  * both. Retention is a week, pruned by the probe itself.
  */
+export const trafficSample = pgTable(
+	"traffic_sample",
+	{
+		bytesIn: doublePrecision("bytes_in").notNull(),
+		bytesOut: doublePrecision("bytes_out").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		durationMs: doublePrecision("duration_ms").notNull(),
+		id: text("id").primaryKey(),
+		requests: integer("requests").notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		status4xx: integer("status_4xx").notNull(),
+		status5xx: integer("status_5xx").notNull(),
+	},
+	(table) => [
+		index("trafficSample_serviceId_createdAt_idx").on(
+			table.serviceId,
+			table.createdAt,
+		),
+	],
+);
+
 export const uptimeCheck = pgTable(
 	"uptime_check",
 	{
@@ -2071,6 +2102,7 @@ export type Invitation = InvitationRefactored & {
 };
 export type User = typeof user.$inferSelect;
 export type NodeEnrollment = typeof nodeEnrollment.$inferSelect;
+export type TrafficSample = typeof trafficSample.$inferSelect;
 
 export const sessionRelations = relations(session, ({ one }) => ({
 	user: one(user, {

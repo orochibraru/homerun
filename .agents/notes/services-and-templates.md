@@ -1475,6 +1475,16 @@ category are mirrored from the parent. The finders live in `ServiceGitDTO`
 protected constructor, to keep `service-dto.ts` under the file length limit.
 **Not verified against real providers**, same caveat as push-to-deploy.
 
+The branch filter is `previewBranchInclude`/`previewBranchExclude` (jsonb glob
+lists, `$lib/preview-branches.ts`'s `previewBranchAllowed`, reusing
+`matchesTagPattern`): exclusions win, an empty include list lets everything
+through, and an event with no branch only passes when both lists are empty.
+`handle` checks it after the fork check and the close branch, and a filtered
+event deletes an existing preview for that pull request (`#remove`), so an
+update after the filter changed cleans up. `applyBranchFilter` does the same for
+every open preview when the Previews tab or `PATCH /api/v1/services/:id` changes
+the lists.
+
 ## Release channels (`service.channels*` columns, `channelCanary`, `ReleaseChannelService`, `$lib/release-channels.ts`)
 
 Opt-in per git service (`channelsEnabled`, off by default): the service itself

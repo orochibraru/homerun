@@ -191,7 +191,7 @@
         {#each data.uptimeDown as check (check.serviceId + check.kind)}
           <a
             class="flex items-center gap-3 px-4 py-2 text-xs transition-colors hover:bg-red-500/10"
-            href="{resolve('/services')}/{check.serviceId}/observability"
+            href="{resolve('/services')}/{check.serviceId}/observability/events"
           >
             <span class="text-text truncate font-medium">{check.serviceName}</span>
             <span class="text-text-muted">
@@ -343,7 +343,7 @@
         <div class="divide-border divide-y">
           {#each data.recentErrors as entry (entry.id)}
             {@const href = entry.serviceId
-            ? `${resolve("/services")}/${entry.serviceId}/observability`
+            ? `${resolve("/services")}/${entry.serviceId}/observability/events`
             : resolve("/system-logs")}
             <a class="hover:bg-surface-2 block px-4 py-2.5 transition-colors" {href}>
               <span class="flex items-center gap-2">

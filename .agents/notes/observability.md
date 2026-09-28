@@ -450,3 +450,33 @@ rows so a restart restores the open ones (`restore`) instead of alerting again
 or losing the recovery; breach timers live in memory and start over. One check's
 events are grouped into at most five messages (critical, warning, the two
 reminder kinds, recovered) on the existing `resource.*` events.
+
+## Service analytics (`traffic_sample`, `TrafficSampleDTO`, `AnalyticsService`, Observability → Analytics)
+
+Traefik runs with Prometheus metrics on an entrypoint only reachable inside its
+container (`TRAEFIK_METRICS_FLAGS`, `:8082`): in every compose file, and in
+`expectedTraefikFlags` as "the request metrics" so the core-services watch and
+`reassertTraefikConfig` put them back on a Traefik that lacks them (which
+recreates it once on an existing instance). `DockerService.traefikMetrics` reads
+them with `wget` through the worker's `/v1/exec` inside the Traefik container,
+so nothing gets published and it works where the app can't reach container IPs
+(a dev machine on macOS). `StatsSampler` parses them each tick
+(`$lib/traffic-metrics.ts`: summed per Traefik service over code, method and
+protocol, mapped back to a slug, `<slug>-<port>` included for a domain on
+another port) and writes the delta against its previous read per running
+service; the first read after a start is only a baseline, a counter going down
+means Traefik restarted, and a minute without requests writes no row. Pruned
+past a year with `stat_sample`, and uptime beats are now kept a year too (they
+were a week) so availability covers the long ranges.
+
+`AnalyticsService.forService(serviceId, range, zone)` sums a range: totals and a
+series from `traffic_sample`, `stat_sample` and `uptime_check`, bucketed by
+`bucketSecondsFor` (about 48 points, five-minute steps; inlined into the SQL
+like `StatSampleDTO.history`). `$lib/analytics-ranges.ts` owns the ranges:
+**Today** starts at midnight in the viewer's time zone (`startOfDay`, via `Intl`
+offsets, DST-safe), read from a `tz` cookie the Analytics page sets on mount (it
+invalidates once when the cookie was missing or different, so a first visit
+briefly shows UTC). The Observability tab is a sub-nav
+(`observability/+layout.svelte`): the bare route is Analytics, `events/` is what
+the tab used to be (uptime, logs, failed deploys), and every link that meant the
+old content points at `events` now.

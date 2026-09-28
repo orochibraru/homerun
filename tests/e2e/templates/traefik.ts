@@ -9,9 +9,12 @@ import {
  * Starts a throwaway Traefik on the shared `homerun` network, reading the
  * same Docker labels a real install's Traefik does, so each deployed
  * template's route can be checked end to end. Replaces a container left by a
- * crashed run, and returns the teardown that removes it.
+ * crashed run, and returns the teardown that removes it. `extraFlags` are
+ * appended to its command line.
  */
-export default async function startTraefik(): Promise<() => Promise<void>> {
+export default async function startTraefik(
+	extraFlags: string[] = [],
+): Promise<() => Promise<void>> {
 	await dockerQuiet(["rm", "-f", TRAEFIK_CONTAINER]);
 	await dockerQuiet(["network", "create", "homerun"]);
 	await docker(
@@ -32,6 +35,7 @@ export default async function startTraefik(): Promise<() => Promise<void>> {
 			"--providers.docker.network=homerun",
 			"--entrypoints.web.address=:80",
 			"--entrypoints.websecure.address=:443",
+			...extraFlags,
 		],
 		300_000,
 	);

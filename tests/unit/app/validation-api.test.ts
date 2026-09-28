@@ -157,3 +157,19 @@ describe("runAsUser", () => {
 		expect(issuePaths(bad)).toEqual(["runAsUser"]);
 	});
 });
+
+describe("updateServiceApiBody preview branch filter", () => {
+	test("takes glob lists and refuses a pattern with whitespace", () => {
+		expect(
+			updateServiceApiBody.safeParse({
+				previewBranchExclude: ["dependabot/*"],
+				previewBranchInclude: ["feat/*"],
+			}).success,
+		).toBe(true);
+		const bad = updateServiceApiBody.safeParse({
+			previewBranchExclude: ["a b"],
+		});
+		expect(bad.success).toBe(false);
+		expect(issuePaths(bad)).toEqual(["previewBranchExclude"]);
+	});
+});

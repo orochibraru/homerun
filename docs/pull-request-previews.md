@@ -34,6 +34,23 @@ public URL) are replaced with the preview's main hostname, so a preview doesn't
 send its visitors, cookies or CSRF checks to the real site. Turning previews
 off, or deleting the service, deletes every preview.
 
+## Choosing which branches get previews
+
+**Only branches matching** and **Never branches matching**, on the Previews tab,
+filter pull requests by their head branch, one glob pattern per line: `*` is any
+run of characters, slashes included, and `?` is exactly one. With nothing in the
+first list every branch qualifies; with patterns there, a branch has to match
+one. A branch matching the second list never gets a preview, even when the first
+one lets it through, so `feat/*` in the first and `*/wip` in the second previews
+`feat/login` but not `feat/wip`. A typical use is keeping bots out:
+`dependabot/*` and `renovate/*` in the second list.
+
+The filter applies to every pull request event: an update to a pull request
+whose branch is left out deletes its preview if it had one. Saving a changed
+filter deletes the open previews it now leaves out straight away. The API's
+`PATCH /api/v1/services/{id}` takes the same lists as `previewBranchInclude` and
+`previewBranchExclude`.
+
 ## Sharing a preview with a client
 
 **Who can open previews**, on the Previews tab, is a login wall for every

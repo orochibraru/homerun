@@ -1,320 +1,204 @@
 <script lang="ts">
-	import {
-		AlertTriangle,
-		ChevronDown,
-		Eraser,
-		Ghost,
-		Loader2,
-		Power,
-	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
-	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import UptimePanel from "$lib/components/uptime-panel.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { workloadId } from "$lib/service-state";
+	import { invalidateAll } from "$app/navigation";
+	import { page } from "$app/state";
+	import { ANALYTICS_RANGES } from "$lib/analytics-ranges";
+	import { formatBytes } from "$lib/formatting";
 	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	import AnalyticsChart from "./analytics-chart.svelte";
 
-	const { data, form } = $props();
+	const { data } = $props();
 
-	onMount(() => title.set(`${data.service.name} · Observability`));
+	const analytics = $derived(data.analytics);
+	const traffic = $derived(analytics.traffic);
+	const resources = $derived(analytics.resources);
 
-	let expandedDeploymentId = $state<string | null>(null);
-	let resolving = $state(false);
-	let togglingUptime = $state(false);
-	let clearing = $state<"errors" | "heartbeats" | null>(null);
+	onMount(() => {
+		title.set(`${data.service.name} · Analytics`);
+		const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		if (zone && zone !== data.zone) {
+			document.cookie = `tz=${encodeURIComponent(zone)}; path=/; max-age=31536000; samesite=lax`;
+			void invalidateAll();
+		}
+	});
 
-	const dismissedLabel = $derived(
-		data.dismissedBy
-			? (data.dismissedBy.gitCommit?.slice(0, 7) ??
-					data.dismissedBy.imageRef ??
-					"a later revision")
-			: null,
-	);
+	function rangeHref(range: string): string {
+		const url = new URL(page.url);
+		url.searchParams.set("range", range);
+		return `${url.pathname}${url.search}`;
+	}
+
+	function count(value: number): string {
+		return new Intl.NumberFormat(undefined, {
+			maximumFractionDigits: 1,
+			notation: value >= 10_000 ? "compact" : "standard",
+		}).format(value);
+	}
+
+	function ms(value: number | null): string {
+		if (value === null) {
+			return "—";
+		}
+		return value >= 1000
+			? `${(value / 1000).toFixed(2)} s`
+			: `${Math.round(value)} ms`;
+	}
+
+	function percent(part: number, whole: number, digits = 1): string {
+		return whole ? `${((part / whole) * 100).toFixed(digits)}%` : "—";
+	}
+
+	function mb(value: number | null): string {
+		if (value === null) {
+			return "—";
+		}
+		return value >= 1024
+			? `${(value / 1024).toFixed(2)} GB`
+			: `${Math.round(value)} MB`;
+	}
+
+	const errors = $derived(traffic.status4xx + traffic.status5xx);
+	const external = $derived(analytics.availability.external);
+	const internal = $derived(analytics.availability.internal);
+
+	const cards = $derived([
+		{
+			hint: `${count((traffic.requests / analytics.spanSeconds) * 3600)} an hour on average`,
+			label: "Requests",
+			value: count(traffic.requests),
+		},
+		{
+			hint: "Time Traefik waited on the service, per request",
+			label: "Avg response time",
+			value: ms(traffic.avgResponseMs),
+		},
+		{
+			hint: `${count(traffic.status5xx)} server errors, ${count(traffic.status4xx)} client errors`,
+			label: "Error rate",
+			value: percent(errors, traffic.requests),
+		},
+		{
+			hint: `${formatBytes(traffic.bytesIn)} received`,
+			label: "Bandwidth served",
+			value: formatBytes(traffic.bytesOut),
+		},
+		{
+			hint: external.checks
+				? `${count(external.checks)} checks, ${ms(external.avgLatencyMs)} on average`
+				: "No public checks in this range",
+			label: "Uptime (public)",
+			value: percent(external.ok, external.checks, 2),
+		},
+		{
+			hint: internal.checks
+				? `${count(internal.checks)} checks, ${ms(internal.avgLatencyMs)} on average`
+				: "No network checks in this range",
+			label: "Uptime (network)",
+			value: percent(internal.ok, internal.checks, 2),
+		},
+		{
+			hint:
+				resources.peakCpuPercent === null
+					? "No samples in this range"
+					: `peak ${resources.peakCpuPercent.toFixed(0)}%`,
+			label: "Avg CPU",
+			value:
+				resources.avgCpuPercent === null
+					? "—"
+					: `${resources.avgCpuPercent.toFixed(1)}%`,
+		},
+		{
+			hint:
+				resources.peakMemUsedMb === null
+					? "No samples in this range"
+					: `peak ${mb(resources.peakMemUsedMb)}${resources.memLimitMb ? ` of ${mb(resources.memLimitMb)}` : ""}`,
+			label: "Avg memory",
+			value: mb(resources.avgMemUsedMb),
+		},
+	]);
 </script>
 
-<div class="mb-4">
-  <UptimePanel
-    beats={data.uptime}
-    enabled={data.service.uptimeEnabled}
-    externalSkipped={data.externalSkipped}
-  >
-    {#snippet headerAction()}
-      <form
-        action="?/setUptime"
-        method="POST"
-        use:enhance={enhanceToast({
-          error: "Couldn't change uptime probing.",
-          loading: "Saving uptime probing",
-          onSettled: () => {
-            togglingUptime = false;
-          },
-          onStart: () => {
-            togglingUptime = true;
-          },
-          success: (result) =>
-            result?.uptimeEnabled
-              ? "Uptime probing is on."
-              : "Uptime probing is off.",
+<div class="space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-text-muted text-sm">
+      {#if analytics.since}
+        Since {new Date(analytics.since).toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: analytics.range === "today" ? "short" : undefined,
         })}
-      >
-        <input
-          name="uptimeEnabled"
-          type="hidden"
-          value={data.service.uptimeEnabled ? "false" : "true"}
-        />
-        <Button disabled={togglingUptime} size="sm" type="submit" variant="outline">
-          {#if togglingUptime}
-            <Loader2 class="size-3.5 animate-spin" />
-          {:else}
-            <Power class="size-3.5" />
-          {/if}
-          {data.service.uptimeEnabled ? "Turn off" : "Turn on"}
-        </Button>
-      </form>
-    {/snippet}
-  </UptimePanel>
-  {#if data.uptime.internal.length > 0 || data.uptime.external.length > 0}
-    <form
-      action="?/clearHeartbeats"
-      class="mt-2 flex justify-end"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't clear the heartbeats.",
-        loading: "Clearing heartbeats",
-        onSettled: () => {
-          clearing = null;
-        },
-        onStart: () => {
-          clearing = "heartbeats";
-        },
-        success: "Heartbeats cleared.",
-      })}
-    >
-      <Button
-        disabled={clearing !== null}
-        size="sm"
-        type="submit"
-        variant="ghost"
-      >
-        <Eraser class="size-3.5" />
-        Clear heartbeats
-      </Button>
-    </form>
-  {/if}
-</div>
-
-<div class="mb-4">
-  <LiveLogViewer workloadId={workloadId(data.service)} serviceId={data.service.id} heightClass="h-96" />
-</div>
-
-{#if data.service.currentStatus === "failed"}
-  <Alert class="mb-6" title="This service's container is currently down.">
-    The crash output is in the log stream above.
-  </Alert>
-{:else if data.service.currentStatus === "missing"}
-  <div class="mb-6 flex items-start gap-3 rounded-md border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300">
-    <Ghost class="mt-0.5 size-4 shrink-0" />
-    <div class="flex-1">
-      <p class="font-medium">This service's container is gone.</p>
-      <p class="mt-0.5 text-xs opacity-80">
-        Homerun can't find it on the host anymore, it was likely removed
-        manually (e.g. `docker rm`) rather than through this app. Resolve to
-        clear the stale reference so you can deploy it again.
-      </p>
-    </div>
-    <form
-      action="?/resolveOrphan"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't resolve the orphaned container.",
-        loading: "Resolving the container",
-        onSettled: () => {
-          resolving = false;
-        },
-        onStart: () => {
-          resolving = true;
-        },
-        success: "Container reference cleared.",
-      })}
-    >
-      <Button disabled={resolving} size="sm" type="submit" variant="outline">
-        {#if resolving}
-          <Loader2 class="size-3.5 animate-spin" />
-        {/if}
-        Resolve
-      </Button>
-    </form>
-  </div>
-{/if}
-
-{#if data.dismissedCount > 0}
-  <div class="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2.5 text-xs">
-    <span class="text-text-muted">
-      {data.dismissedCount}
-      {data.dismissedCount === 1 ? "earlier error is" : "earlier errors are"}
-      hidden
-      {#if data.dismissedBy}
-        — cleared by revision
-        <a
-          class="text-accent underline"
-          href={resolve("/(protected)/services/[serviceId]/revisions", {
-            serviceId: data.service.id,
-          })}
-        >{dismissedLabel}</a>
       {:else}
-        — cleared by hand
+        Everything recorded, up to a year back
       {/if}
-    </span>
-    <a
-      class="text-text-subtle hover:text-text ml-auto underline"
-      href="?dismissed={data.showDismissed ? '0' : '1'}"
+    </p>
+    <nav
+      aria-label="Range"
+      class="border-border inline-flex flex-wrap rounded-lg border p-0.5"
     >
-      {data.showDismissed ? "Hide them" : "Show them"}
-    </a>
-  </div>
-{/if}
-
-<section class="panel rounded-md">
-  <div class="border-border flex items-center gap-2 border-b px-5 py-4">
-    <AlertTriangle class="text-text-muted size-4" />
-    <h2 class="eyebrow">
-      Failed deployments
-      {#if data.failedDeployments.length > 0}
-        <span class="text-text-muted ml-1 text-xs font-normal"
-        >({data.failedDeployments.length})</span>
-      {/if}
-    </h2>
-  </div>
-
-  {#if data.failedDeployments.length === 0}
-    <div class="flex flex-col items-center justify-center py-12 text-center">
-      <p class="text-text-muted text-sm font-medium">No deploy failures 🎉</p>
-    </div>
-  {:else}
-    <div class="divide-border divide-y">
-      {#each data.failedDeployments as dep (dep.id)}
-        <div>
-          <button
-            class="flex w-full items-center gap-4 px-5 py-3 text-left"
-            onclick={() => {
-              expandedDeploymentId = expandedDeploymentId === dep.id ? null : dep.id;
-            }}
-            type="button"
-          >
-            <div class="min-w-0 flex-1">
-              <p class="text-text-muted truncate text-xs">
-                {timeAgo(dep.createdAt)}
-              </p>
-              {#if dep.errorMessage}
-                <p class="mt-0.5 truncate text-xs text-red-500">
-                  {dep.errorMessage}
-                </p>
-              {/if}
-            </div>
-            {#if dep.log}
-              <ChevronDown
-                class="
-                  text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
-                  dep.id
-                  ? 'rotate-180'
-                  : ''}
-                "
-              />
-            {/if}
-          </button>
-          {#if expandedDeploymentId === dep.id && dep.log}
-            <DeployLogPanel errorMessage={dep.errorMessage} log={dep.log} />
-          {/if}
-        </div>
+      {#each ANALYTICS_RANGES as range (range.id)}
+        <a
+          aria-current={analytics.range === range.id ? "page" : undefined}
+          class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors {analytics.range ===
+          range.id
+            ? 'bg-accent-light text-accent'
+            : 'text-text-muted hover:text-text'}"
+          data-sveltekit-noscroll
+          href={rangeHref(range.id)}
+        >
+          {range.label}
+        </a>
       {/each}
-    </div>
-  {/if}
-</section>
-
-<!--
-  App-level warn/error logs attributed to this service (see schema.ts's
-  `appLog` docstring for how the attribution works) : not just deployment
-  failures, a lightweight Sentry-adjacent view of "things this service's
-  own code logged as wrong" (a failed Docker call, a rejected reconcile,
-  etc.), independent of whether a deploy was even in flight when it happened.
--->
-<section class="panel mt-6 rounded-md">
-  <div class="border-border flex items-center gap-2 border-b px-5 py-4">
-    <AlertTriangle class="text-text-muted size-4" />
-    <h2 class="eyebrow">
-      Application errors
-      {#if data.appLogs.length > 0}
-        <span class="text-text-muted ml-1 text-xs font-normal"
-        >({data.appLogs.length})</span>
-      {/if}
-    </h2>
+    </nav>
   </div>
 
-  {#if data.appLogs.length === 0}
-    <div class="flex flex-col items-center justify-center py-12 text-center">
-      <p class="text-text-muted text-sm font-medium">
-        No app-level errors logged for this service 🎉
-      </p>
-    </div>
-  {:else}
-    <div class="divide-border divide-y">
-      {#each data.appLogs as log (log.id)}
-        <div class="px-5 py-3">
-          <div class="flex items-center gap-2">
-            <span
-              class="
-                rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase {log.level ===
-                'error'
-                ? 'bg-red-500/10 text-red-500'
-                : 'bg-yellow-500/10 text-yellow-600'}
-              "
-            >
-              {log.level}
-            </span>
-            {#if log.scope}
-              <span class="text-text-muted text-xs font-medium">{
-                log.scope
-              }</span>
-            {/if}
-            <span class="text-text-subtle text-xs">{
-              timeAgo(log.createdAt)
-            }</span>
-          </div>
-          <p class="text-text mt-1 font-mono text-xs break-all">
-            {log.message}
-          </p>
-        </div>
-      {/each}
-    </div>
-  {/if}
-</section>
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    {#each cards as card (card.label)}
+      <div class="panel rounded-md p-4">
+        <p class="text-text-muted text-xs">{card.label}</p>
+        <p class="metric text-text mt-1">{card.value}</p>
+        <p class="text-text-subtle mt-1 truncate text-xs" title={card.hint}>
+          {card.hint}
+        </p>
+      </div>
+    {/each}
+  </div>
 
-{#if data.failedDeployments.length > 0 || data.appLogs.length > 0}
-  <form
-    action="?/clearErrors"
-    class="mt-2 flex justify-end"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Couldn't clear the errors.",
-      loading: "Clearing errors",
-      onSettled: () => {
-        clearing = null;
-      },
-      onStart: () => {
-        clearing = "errors";
-      },
-      success: "Errors cleared.",
-    })}
-  >
-    <Button disabled={clearing !== null} size="sm" type="submit" variant="ghost">
-      <Eraser class="size-3.5" />
-      Clear errors
-    </Button>
-  </form>
-{/if}
+  <div class="grid gap-3 xl:grid-cols-2">
+    <AnalyticsChart
+      bucketSeconds={analytics.bucketSeconds}
+      empty={data.service.dnsResolvable
+        ? "No requests recorded in this range. Traffic is counted from Traefik's metrics, one reading a minute."
+        : "This service isn't publicly routed, so Traefik sees no requests for it."}
+      format={count}
+      kind="bar"
+      points={analytics.trafficSeries.map((p) => ({ at: p.at, value: p.requests }))}
+      title="Requests"
+    />
+    <AnalyticsChart
+      bucketSeconds={analytics.bucketSeconds}
+      format={(value) => ms(value)}
+      points={analytics.trafficSeries.map((p) => ({
+        at: p.at,
+        value: p.avgResponseMs,
+      }))}
+      title="Avg response time"
+    />
+    <AnalyticsChart
+      bucketSeconds={analytics.bucketSeconds}
+      format={(value) => `${value.toFixed(1)}%`}
+      points={analytics.resourceSeries.map((p) => ({
+        at: p.at,
+        value: p.cpuPercent,
+      }))}
+      title="CPU"
+    />
+    <AnalyticsChart
+      bucketSeconds={analytics.bucketSeconds}
+      format={mb}
+      points={analytics.resourceSeries.map((p) => ({
+        at: p.at,
+        value: p.memUsedMb,
+      }))}
+      title="Memory"
+    />
+  </div>
+</div>

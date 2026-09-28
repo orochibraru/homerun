@@ -355,6 +355,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 			previewAuthProviders: [],
 			previewAuthRequired: false,
 			previewDefaultDomain: true,
+			previewBranchExclude: [],
+			previewBranchInclude: [],
 			previewDomainTemplate: null,
 			previewsEnabled: false,
 			channelsEnabled: false,

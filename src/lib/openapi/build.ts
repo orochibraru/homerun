@@ -114,7 +114,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 		},
 		info: {
 			description:
-				"Homerun's REST API : a thin JSON wrapper over the DTO layer, meant for a future CLI (see the `cli/` sub-project) and any other external client. Requests are the same zod schemas that validate them server-side; every route also requires a cookie session or an `x-api-key`/`Authorization: Bearer` API key (see hooks.server.ts). Writes (POST, PATCH, DELETE) answer 403 for a read-only caller: a user holding the read-only role, or any request authenticated with a read-only API key.",
+				"Homerun's REST API, used by the `homerun` CLI, CI pipelines and any other client. Request bodies are validated against the schemas described here; every route requires a signed-in session or an API key, sent as `x-api-key` or `Authorization: Bearer`. Writes (POST, PATCH, DELETE) answer 403 for a read-only caller: a user holding the read-only role, or any request authenticated with a read-only API key.",
 			title: "Homerun API",
 			version: "1.0.0",
 		},

@@ -1,7 +1,32 @@
 # Observability
 
-The **Observability** tab is where a service tells you whether it's healthy:
-uptime probes, live logs, failed deploys and the errors Homerun logged about it.
+The **Observability** tab is where a service tells you how it's doing. It has
+two sections: **Analytics**, its traffic, availability and resource use summed
+up over a range like a website's analytics, and **Events**, its uptime probes,
+live logs, failed deploys and the errors Homerun logged about it.
+
+## Analytics
+
+Pick a range, **Today** (from midnight in your browser's time zone), **7 days**,
+**30 days**, **12 months** or **All time**, and the section shows:
+
+- **Requests**, **Avg response time**, **Error rate** (4xx and 5xx responses)
+  and **Bandwidth served**, from Traefik's own metrics. Homerun reads them once
+  a minute and keeps what each service served that minute; a minute without
+  requests stores nothing. The response time is how long Traefik waited on the
+  service, so it leaves out the visitor's own network. Only publicly routed
+  services have traffic: a service reached only over the Docker network never
+  goes through Traefik.
+- **Uptime (public)** and **Uptime (network)**: the share of
+  [uptime probes](#uptime) that passed in the range, with their average latency.
+- **Avg CPU** and **Avg memory**, with their peaks, from the per-minute resource
+  samples.
+
+Below them, charts of requests, response time, CPU and memory over the range;
+hover one to read a single point. Everything is kept for a year, so **All time**
+reaches back at most that far. Traffic starts being recorded when an instance
+runs this version: Homerun turns Traefik's metrics on by itself (an entrypoint
+inside the Traefik container, never published), which restarts Traefik once.
 
 ## Uptime
 

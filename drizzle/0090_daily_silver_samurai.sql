@@ -1,0 +1,2 @@
+ALTER TABLE "service" ADD COLUMN "preview_branch_include" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "service" ADD COLUMN "preview_branch_exclude" jsonb DEFAULT '[]'::jsonb NOT NULL;

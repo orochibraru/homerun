@@ -5,6 +5,10 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import {
+	branchPatternProblem,
+	parseBranchPatterns,
+} from "$lib/preview-branches";
+import {
 	loginWallAvailability,
 	loginWallOptions,
 	parseLoginWallForm,
@@ -107,6 +111,23 @@ export const actions = {
 				values,
 			});
 		}
+		const include = parseBranchPatterns(
+			String(formData.get("previewBranchInclude") ?? ""),
+		);
+		const exclude = parseBranchPatterns(
+			String(formData.get("previewBranchExclude") ?? ""),
+		);
+		const includeProblem = include.map(branchPatternProblem).find(Boolean);
+		const excludeProblem = exclude.map(branchPatternProblem).find(Boolean);
+		if (includeProblem || excludeProblem) {
+			return fail(400, {
+				errors: {
+					...(includeProblem ? { previewBranchInclude: [includeProblem] } : {}),
+					...(excludeProblem ? { previewBranchExclude: [excludeProblem] } : {}),
+				},
+				values,
+			});
+		}
 		if (!(template || previewDefaultDomain)) {
 			return fail(400, {
 				errors: {
@@ -126,6 +147,8 @@ export const actions = {
 			previewsEnabled: before.previewsEnabled,
 		};
 		await svc.update({
+			previewBranchExclude: exclude,
+			previewBranchInclude: include,
 			previewDefaultDomain,
 			previewDomainTemplate: template || null,
 			previewsEnabled,
@@ -140,10 +163,18 @@ export const actions = {
 			await PreviewService.applyDomains(svc);
 		}
 
+		const filterChanged =
+			before.previewBranchInclude.join("\n") !== include.join("\n") ||
+			before.previewBranchExclude.join("\n") !== exclude.join("\n");
+		const filteredOut =
+			previewsEnabled && filterChanged
+				? await PreviewService.applyBranchFilter(svc)
+				: 0;
+
 		logger.info(
 			`Preview settings updated: service=${svc.id} enabled=${previewsEnabled} template=${template || "-"} user=${locals.user.id}`,
 		);
-		return { success: true };
+		return { filteredOut, success: true };
 	},
 
 	redeploy: async ({ request, params, locals }) => {

@@ -93,6 +93,8 @@ export const serviceResponse = z.object({
 	gitPollEnabled: z.boolean(),
 	gitLastSeenCommit: z.string().nullable(),
 	previewDefaultDomain: z.boolean(),
+	previewBranchExclude: z.array(z.string()),
+	previewBranchInclude: z.array(z.string()),
 	previewDomainTemplate: z.string().nullable(),
 	previewsEnabled: z.boolean(),
 	previewParentId: z.string().nullable(),

@@ -70,8 +70,9 @@ sync by hand.
   limits.
 - **[Swarm mode](swarm-mode.md)**: replicas, what swarm mode changes, and adding
   a node.
-- **[Observability](observability.md)**: uptime probes, live logs, failed
-  deploys and errors, and the web terminal.
+- **[Observability](observability.md)**: per-service analytics (requests,
+  response time, errors, uptime, CPU and memory from today to all time), uptime
+  probes, live logs, failed deploys and errors, and the web terminal.
 - **[Error tracking](error-tracking.md)**: Sentry-compatible error collection
   per service, issues, stack traces linked to the source, and alerts.
 - **[Scheduling and the job queue](scheduling.md)**: scheduled redeploys, cron
