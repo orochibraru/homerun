@@ -63,9 +63,9 @@ A per-account "Appearance" tab on your profile page controls:
 - **Theme**: light, dark, or match system (the default). Changes apply instantly
   and are saved to your account, so the choice follows you to a new browser or
   device, not just the one you set it on.
-- **Style**: how panels, cards and buttons are drawn: **Glass** (the default,
-  Apple-style liquid glass: blurred panels with a lit edge and pill buttons, all
-  tinted by your accent), **Sleek** (flat and crisp: one solid content panel,
+- **Style**: how panels, cards and buttons are drawn: **Glass** (Apple-style
+  liquid glass: blurred panels with a lit edge and pill buttons, all tinted by
+  your accent), **Sleek** (the default, flat and crisp: one solid content panel,
   hairline borders, a faint wash of your accent), **Neumorphism** (one flat
   tone, panels raised by soft light and shade), **Boxy** (square corners, solid
   panels, hard offset shadows), **Claymorphism** (puffy, round panels),

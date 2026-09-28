@@ -12,8 +12,8 @@ import {
  * crashed run, and returns the teardown that removes it. `extraFlags` are
  * appended to its command line.
  */
-export default async function startTraefik(
-	extraFlags: string[] = [],
+export async function startTraefikWith(
+	extraFlags: string[],
 ): Promise<() => Promise<void>> {
 	await dockerQuiet(["rm", "-f", TRAEFIK_CONTAINER]);
 	await dockerQuiet(["network", "create", "homerun"]);
@@ -42,4 +42,9 @@ export default async function startTraefik(
 	return async () => {
 		await dockerQuiet(["rm", "-f", TRAEFIK_CONTAINER]);
 	};
+}
+
+/** Playwright's global setup for the templates suite: the Traefik with no extra flags. */
+export default async function startTraefik(): Promise<() => Promise<void>> {
+	return await startTraefikWith([]);
 }

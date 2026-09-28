@@ -41,6 +41,14 @@ there is no demo instance.
 - `api-docs-dark.webp` — `/api-docs`
 - `appearance.webp` — `/profile/appearance`
 - `appearance-dark.webp` — `/profile/appearance`
+- `appearance-glass.webp` — `/profile/appearance (Glass picked)`
+- `appearance-glass-dark.webp` — `/profile/appearance (Glass picked)`
+- `appearance-material.webp` — `/profile/appearance (Material You picked)`
+- `appearance-material-dark.webp` — `/profile/appearance (Material You picked)`
+- `appearance-winxp.webp` — `/profile/appearance (Windows XP picked)`
+- `appearance-winxp-dark.webp` — `/profile/appearance (Windows XP picked)`
+- `appearance-retro.webp` — `/profile/appearance (Retro picked)`
+- `appearance-retro-dark.webp` — `/profile/appearance (Retro picked)`
 - `settings.webp` — `/settings`
 - `settings-dark.webp` — `/settings`
 - `users.webp` — `/users`

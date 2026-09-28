@@ -5,7 +5,7 @@ import process from "node:process";
 import { expect, type Page, test } from "@playwright/test";
 import { E2E_BASE_URL } from "../support/config";
 import { TRAEFIK_PORT } from "../templates/support";
-import startTraefik from "../templates/traefik";
+import { startTraefikWith } from "../templates/traefik";
 
 const OUT_DIR = join(process.cwd(), "docs", "images");
 const AUTH_STATE = join(process.cwd(), "test-results", "screenshots-auth.json");
@@ -186,6 +186,34 @@ const SHOTS: Shot[] = [
 		path: () => "/profile/appearance",
 	},
 	{
+		doc: "/profile/appearance (Glass picked)",
+		expect: /Material You/i,
+		name: "appearance-glass",
+		path: () => "/profile/appearance",
+		prepare: pick("updateSurface", "Glass"),
+	},
+	{
+		doc: "/profile/appearance (Material You picked)",
+		expect: /Material You/i,
+		name: "appearance-material",
+		path: () => "/profile/appearance",
+		prepare: pick("updateSurface", "Material You"),
+	},
+	{
+		doc: "/profile/appearance (Windows XP picked)",
+		expect: /Material You/i,
+		name: "appearance-winxp",
+		path: () => "/profile/appearance",
+		prepare: pick("updatePreset", "Windows XP"),
+	},
+	{
+		doc: "/profile/appearance (Retro picked)",
+		expect: /Material You/i,
+		name: "appearance-retro",
+		path: () => "/profile/appearance",
+		prepare: pick("updatePreset", "Retro"),
+	},
+	{
 		doc: "/settings",
 		expect: /Base domain/i,
 		name: "settings",
@@ -230,6 +258,19 @@ function visit(path: string): void {
 	req.end();
 }
 
+/** Clicks a style or preset tile on the appearance page, which previews it on the whole page without saving. */
+function pick(form: string, name: string): (page: Page) => Promise<void> {
+	return async (page) => {
+		const tile = page
+			.locator(`form[action='?/${form}']`)
+			.getByRole("button", { name })
+			.first();
+		await tile.scrollIntoViewIfNeeded();
+		await tile.click();
+		await expect(tile).toHaveAttribute("aria-pressed", "true");
+	};
+}
+
 /** Reloads the Analytics page until the sampler has recorded requests and a resource sample, so the shot shows real numbers. */
 async function waitForAnalytics(page: Page): Promise<void> {
 	await expect(async () => {
@@ -268,7 +309,7 @@ test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
 	await mkdir(OUT_DIR, { recursive: true });
-	stopTraefik = await startTraefik(METRICS_FLAGS);
+	stopTraefik = await startTraefikWith(METRICS_FLAGS);
 });
 
 test.afterAll(async ({ browser }) => {

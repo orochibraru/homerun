@@ -1675,7 +1675,7 @@ export const userPreferences = pgTable("user_preferences", {
 	preset: text("preset").$type<Preset>(),
 	surfaceStyle: text("surface_style")
 		.$type<SurfaceStyle>()
-		.default("glass")
+		.default("sleek")
 		.notNull(),
 	// "system" (default, off the OS's own light/dark preference) | "light" |
 	// "dark" : applied via the mode-watcher package already mounted in the

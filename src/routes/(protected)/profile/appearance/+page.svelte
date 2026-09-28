@@ -13,7 +13,7 @@
 	import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
 	import { PALETTES } from "$lib/palettes";
 	import { title } from "$lib/store/title.js";
-	import { PRESETS, SURFACE_STYLES } from "$lib/surfaces";
+	import { DEFAULT_SURFACE, PRESETS, SURFACE_STYLES } from "$lib/surfaces";
 	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
@@ -198,7 +198,7 @@
                         <SurfacePreview surface={style.id} />
                         <span>
                             <span class="text-text block text-sm font-medium">
-                                {style.name}{style.id === "glass" ? " (default)" : ""}
+                                {style.name}{style.id === DEFAULT_SURFACE ? " (default)" : ""}
                             </span>
                             <span class="text-text-muted block text-xs">
                                 {style.description}

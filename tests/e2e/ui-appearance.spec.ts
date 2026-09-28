@@ -119,7 +119,7 @@ test.describe
 			await page.goto("/");
 			await expect(page.locator("html")).toHaveAttribute(
 				"data-surface",
-				"glass",
+				"sleek",
 			);
 		});
 	});
@@ -137,7 +137,7 @@ test.describe
 		test.afterAll(async ({ browser }) => {
 			const page = await browser.newPage();
 			await signIn(page);
-			await saveStyle(page, "Glass (default)");
+			await saveStyle(page, "Sleek (default)");
 			await page.close();
 		});
 
@@ -145,7 +145,7 @@ test.describe
 			page,
 		}, testInfo) => {
 			await signIn(page);
-			await saveStyle(page, "Glass (default)");
+			await saveStyle(page, "Glass");
 			await page.goto("/remote-hosts");
 			await expect(page.locator("html")).toHaveAttribute(
 				"data-surface",

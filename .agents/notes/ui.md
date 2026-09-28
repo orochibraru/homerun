@@ -385,14 +385,15 @@ per-user instead of a singleton row.
   CSS above. It's rendered server-side: `app.html` has
   `data-surface="%homerun.surface%"`, the protected layout's `load` sets
   `locals.surface` and `hooks.server.ts`'s `transformPageChunk` fills it in, so
-  there's no flash of glass on load; the protected layout's `$effect` keeps it
-  in sync on client navigation and resets it when leaving, and the Appearance
-  page sets it directly to preview. Because the selectors aren't `:root`-only, a
-  `data-surface` on any element restyles its subtree, which is how the
-  Appearance page's preview tiles work. A new style is one entry in
-  `SURFACE_STYLES` and one token block, nothing reads the style name elsewhere.
-- **Glass** (the default style) is Apple liquid glass, and every colour in it
-  derives from `--color-accent` through CSS relative colours
+  there's no flash of the default style on load; the protected layout's
+  `$effect` keeps it in sync on client navigation and resets it when leaving,
+  and the Appearance page sets it directly to preview. Because the selectors
+  aren't `:root`-only, a `data-surface` on any element restyles its subtree,
+  which is how the Appearance page's preview tiles work. A new style is one
+  entry in `SURFACE_STYLES` and one token block, nothing reads the style name
+  elsewhere.
+- **Glass** is Apple liquid glass, and every colour in it derives from
+  `--color-accent` through CSS relative colours
   (`oklch(from var(--color-accent) L C h)`): the page tint, the
   `--page-bg-image` wallpaper and the hairlines. It used to mix in the default
   `--brand-2`/`--brand-3` (pink and a hue-225 blue) and hue-290 greys, which a
@@ -407,11 +408,12 @@ per-user instead of a singleton row.
   capsules (`--glass-control` and `--glass-control-shadow`: a 0.5px dark ring, a
   white top highlight and a drop shadow). The system font comes first
   (`-apple-system`, then Inter).
-- **Sleek** (`sleek`) is flat: the sidebar sits straight on the page with no
-  panel of its own, the content is one solid panel with an accent-derived
-  hairline and no shadow, outline buttons and fields are solid with the same
-  hairline, table headers get a faint tint, and the page behind carries two
-  faint accent washes.
+- **Sleek** (`sleek`, the default since migration 0092, which also moved every
+  stored `glass` to it, since a deliberate Glass pick and the old default look
+  the same) is flat: the sidebar sits straight on the page with no panel of its
+  own, the content is one solid panel with an accent-derived hairline and no
+  shadow, outline buttons and fields are solid with the same hairline, table
+  headers get a faint tint, and the page behind carries two faint accent washes.
 - **Material You** (`material`) derives tonal surfaces, text and outline colours
   from the accent the same way, with no borders or shadows on panels, pill
   buttons (secondary is the tonal `--m3-tonal`), filled text fields with an
