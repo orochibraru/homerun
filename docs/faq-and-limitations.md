@@ -116,7 +116,9 @@ check the dashboard for anything that didn't.
   hasn't been run against a real alias drop on a live swarm; if a service can't
   reach another by slug right after a rolling update, that's the known window,
   not a new bug.
-- **Cloudflare DNS automation hasn't been tried against a real account yet.**
+- **The DNS providers haven't been tried against real accounts yet.** Each is
+  built from its provider's documented API and tested against a stub of it;
+  **Save and test** on a connection lists its zones, the first real check.
   Pangolin's has, live, against a real org and site, and passed. Every deploy
   writes what each provider did into its log, so read the first one. Point
   Pangolin at its **Integration API** (its own port, base path `/v1`), not the

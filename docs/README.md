@@ -62,8 +62,9 @@ sync by hand.
   connection details, and env files on the host.
 - **[Networking](networking.md)**: container port, network mode,
   DNS-resolvability, extra domains and your own SSL certificates.
-- **[DNS automation](dns-automation.md)**: keeping Cloudflare records or
-  Pangolin resources in sync with your services.
+- **[DNS automation](dns-automation.md)**: your domains and their records at 16
+  DNS providers (Cloudflare, Route 53, Google, Azure, Hetzner, Namecheap…), kept
+  in sync with your services, or Pangolin resources.
 - **[Runtime and compute](runtime-and-compute.md)**: entrypoint, command,
   labels, run-as user, capabilities, devices, privileged mode, and CPU/memory
   limits.

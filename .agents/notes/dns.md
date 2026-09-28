@@ -6,7 +6,32 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
-## DNS automation: Cloudflare and Pangolin (`src/lib/services/cloudflare.service.ts`, `src/lib/services/pangolin.service.ts`)
+## Domains and DNS providers (`$lib/services/dns-providers/`, `DomainDnsService`, `/dns`)
+
+DNS is managed through **connections** (`dns_connection`: a provider id, a name,
+credentials stored per field with the secret ones `encryptSecret`ed) and
+**domains** (`domain`: a name, the connection and zone it lives in, a `target`
+its services' records point at, `autoRecords`). Every provider implements one
+`DnsProviderClient` (`types.ts`: list zones, list/create/update/delete records,
+full names in and out, CNAME/MX targets without the trailing dot, TXT unquoted)
+and registers a `DnsProviderDefinition` in `index.ts` (its credential fields
+drive the connection form). Shared helpers: `http.ts` (`providerRequest`, name
+conversion), `rrset.ts` (for rrset APIs: one `DnsRecord` per value with a
+composite id, rewriting the set on change), `sigv4.ts` (Route 53). Each has a
+stubbed-API test under `tests/unit/app/dns-providers/`; none has run against a
+real account. Hetzner targets the Hetzner Cloud API: the old dns.hetzner.com API
+was shut down in May 2026.
+
+`DomainDnsService.syncHostname`/`deleteHostname` replace Cloudflare's entry in
+`dns.service.ts`'s fan-out: the most specific domain covering a hostname
+decides; a record Homerun creates is tracked in `dns_managed_record`, and only
+tracked records are ever updated or deleted (most providers have no comment
+field to mark ownership). A record someone made on the name is reported and left
+alone. Migration 0088 turned the old `cloudflare_api_token_enc`/`zone_id`
+instance settings into a connection plus the base domain (the ciphertext moved
+as is, it's the same scheme), and `dns_provider` is now just Pangolin on/off.
+
+## Pangolin, and the history of the Cloudflare integration (`src/lib/services/pangolin.service.ts`)
 
 The DNS-provider automation gap this doc used to list under Planned features is
 closed: two optional integrations, configured on the admin-only `/dns` page

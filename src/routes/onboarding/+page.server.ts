@@ -9,9 +9,9 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
 import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
 import {
-	cloudflareInputFromForm,
 	newtFieldsError,
 	pangolinInputFromForm,
+	saveCloudflareFromForm,
 	testCloudflareFromForm,
 	testPangolinFromForm,
 } from "$lib/server/validation/dns-settings-form";
@@ -78,10 +78,7 @@ function missingDnsTokens(
 ): Record<string, string[]> | null {
 	const current = settings.toJSON();
 	const errors: Record<string, string[]> = {};
-	if (
-		input.cloudflareEnabled &&
-		!(input.cloudflareApiToken?.trim() || current.cloudflareApiTokenEnc)
-	) {
+	if (input.cloudflareEnabled && !input.cloudflareApiToken?.trim()) {
 		errors.cloudflareApiToken = [
 			"API token is required when Cloudflare is enabled.",
 		];
@@ -108,9 +105,10 @@ async function saveDnsSettings(
 	input: OnboardingInput,
 	formData: FormData,
 	settings: InstanceSettingsDTO,
+	userId: string,
 ): Promise<void> {
 	if (input.cloudflareEnabled) {
-		await settings.updateCloudflare(cloudflareInputFromForm(formData));
+		await saveCloudflareFromForm(formData, wizardBaseDomain(formData), userId);
 	}
 	if (input.pangolinEnabled) {
 		const current = settings.toJSON();
@@ -135,7 +133,6 @@ export const actions = {
 		const formData = await request.formData();
 		const outcome = await testCloudflareFromForm(
 			formData,
-			await InstanceSettingsDTO.get(),
 			wizardBaseDomain(formData),
 		);
 		if (!outcome.ok) {
@@ -243,7 +240,7 @@ export const actions = {
 			smtpSecure: input.smtpSecure,
 			smtpUser: blankToNull(input.smtpUser),
 		});
-		await saveDnsSettings(input, formData, settings);
+		await saveDnsSettings(input, formData, settings, locals.user.id);
 		await settings.markOnboardingComplete();
 
 		applyAndRebuild(settings);

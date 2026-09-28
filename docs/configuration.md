@@ -34,7 +34,7 @@ The built-in registry's own auth toggle and public hostname live on its own
 **Registry** page's Settings tab, see [Registry](registry.md#settings).
 Per-account preferences (theme, accent colour) live on your profile, not here.
 
-Secrets you enter here, SMTP passwords, OAuth client secrets, Cloudflare and
+Secrets you enter here, SMTP passwords, OAuth client secrets, DNS provider and
 Pangolin tokens, are encrypted at rest with a key derived from `AUTH_SECRET`.
 
 ### Base domain vs. Dashboard URL
@@ -190,12 +190,12 @@ Settings → Docker.
 
 Signing in for the first time drops you into a six-step wizard (Core / Docker /
 Traefik / Email / DNS / Review) that sets exactly the fields above, once. The
-DNS step turns on Cloudflare or Pangolin automation with the same fields and
-**Test** checks as the DNS page, including the optional Newt credentials that
-have Homerun run the tunnel client itself; Pangolin's target host, target port
-and sign-in option keep their defaults there. It calls the same code `/settings`
-does, so there's nothing it can set that you can't change afterwards, and
-nothing it leaves out that you have to go find in a file.
+DNS step connects a Cloudflare zone for the base domain, or turns Pangolin on,
+with the same fields and **Test** checks as the DNS page, including the optional
+Newt credentials that have Homerun run the tunnel client itself; Pangolin's
+target host, target port and sign-in option keep their defaults there. It calls
+the same code `/settings` does, so there's nothing it can set that you can't
+change afterwards, and nothing it leaves out that you have to go find in a file.
 
 ## A note on lockout
 

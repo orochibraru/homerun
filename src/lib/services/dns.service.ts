@@ -1,9 +1,9 @@
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import { defaultHostname } from "$lib/service-domains";
-import { CloudflareService } from "./cloudflare.service.ts";
 import type { DnsSyncResult } from "./dns-result.ts";
 import { dashboardHostFrom } from "./docker/dashboard.ts";
+import { DomainDnsService } from "./domain-dns.service.ts";
 import { PangolinService } from "./pangolin.service.ts";
 
 const logger = new Logger("DNS");
@@ -16,15 +16,14 @@ export interface DnsSyncOptions {
 
 const providers = [
 	{
-		delete: (hostname: string) =>
-			CloudflareService.deleteDnsRecord(hostname, config.baseDomain),
-		name: "cloudflare" as const,
+		delete: (hostname: string) => DomainDnsService.deleteHostname(hostname),
+		name: "dns",
 		sync: (hostname: string, _opts: DnsSyncOptions) =>
-			CloudflareService.syncDnsRecord(hostname, config.baseDomain),
+			DomainDnsService.syncHostname(hostname),
 	},
 	{
 		delete: (hostname: string) => PangolinService.deleteDnsRecord(hostname),
-		name: "pangolin" as const,
+		name: "pangolin",
 		sync: (hostname: string, opts: DnsSyncOptions) =>
 			PangolinService.syncDnsRecord(hostname, opts),
 	},

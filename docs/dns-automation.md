@@ -1,54 +1,82 @@
 # DNS automation
 
-If your instance's DNS is on Cloudflare, or you front it with a self-hosted
-[Pangolin](https://github.com/fosrl/pangolin) tunnel instead, pick it on the
-**DNS** page (sidebar → Integrations, admins only) and Homerun keeps DNS in sync
-on its own for any service with **DNS-resolvable** on: a deploy creates or
-updates a record per routed hostname (a Cloudflare CNAME, or a Pangolin
-Resource + Target), deleting the service removes them, including any extra
-domains it has.
+The **DNS** page (sidebar → Integrations, admins only) is where Homerun manages
+your domains' DNS. It has three tabs: **Domains**, **Providers** and
+**Pangolin**.
 
-**Only one provider is ever active.** Two providers writing records for the same
-hostnames would fight each other, so the DNS page is a choice: None, Cloudflare
-or Pangolin. Only the chosen one's settings show, and only it syncs anything;
-switching keeps the other's settings saved but inert, and leaves the records and
-resources it already made alone. Choosing Cloudflare also stops Homerun's own
-Newt tunnel client and Pangolin's handling of sign-in. The first time you save
-one provider's settings with none chosen, it becomes the provider. Once one is
-active and set up, the page lists its domains (the zones your Cloudflare token
-can see, or your Pangolin org's domains): a service's domain has to sit under
-one of them to be published.
+## Providers
 
-Both are best-effort and fire only after a successful deploy, a DNS failure
-never fails the deploy itself. **What each provider did is written into that
-deploy's own log**, so a sync that was skipped or rejected says so where you're
-already looking, rather than only in the server's log. An empty result means no
-DNS automation is configured, which is the default.
+A provider connection is an account at a DNS host Homerun can manage records
+through. Add as many as you like, from any of these:
 
-Neither is required. This is purely a convenience over pointing DNS at your
-instance yourself.
+| Provider         | What to create                                                                                                                   |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare       | An API token with Zone → Zone → Read and Zone → DNS → Edit                                                                       |
+| AWS Route 53     | An access key for an IAM user or role allowed `route53:ListHostedZones`, `ListResourceRecordSets` and `ChangeResourceRecordSets` |
+| Google Cloud DNS | A service account JSON key with the DNS Administrator role                                                                       |
+| Azure DNS        | An app registration (tenant, client id and secret) with DNS Zone Contributor                                                     |
+| DigitalOcean     | A personal access token with the domain scopes                                                                                   |
+| Hetzner          | A Hetzner Console API token (read & write) in the project holding the zones                                                      |
+| Linode (Akamai)  | A personal access token with Domains read/write                                                                                  |
+| Vultr            | An API key, with this server's IP on its access control list                                                                     |
+| Namecheap        | API access enabled on the account, its API key, and this server's IP whitelisted                                                 |
+| GoDaddy          | A production API key and secret (GoDaddy limits API access on small accounts)                                                    |
+| Porkbun          | An API key and secret, with API access turned on for each domain                                                                 |
+| Gandi            | A personal access token allowed to manage domains' technical configuration                                                       |
+| OVHcloud         | An application key, application secret and consumer key for the `/domain` API                                                    |
+| DNSimple         | An account access token                                                                                                          |
+| deSEC            | A token                                                                                                                          |
+| Scaleway         | An API secret key with DNS permissions                                                                                           |
 
-**Cloudflare** needs an API token with the **Zone / DNS / Edit** permission on
-the zone, plus the zone id. **Test connection** on the settings page checks that
-the token can read the zone and list its DNS records, and that the zone actually
-holds your base domain. It can't prove the token can write without writing, so a
-read-only token still passes: the first deploy log is the real test.
+Each connection's form links to the provider's own page on creating the
+credentials, and says which permissions to grant. **Save and test** stores the
+credentials encrypted and lists the zones they can see; **Test** does it again
+later. Removing a connection keeps its domains, without their records being
+managed any more.
 
-What a sync does to a hostname's records, so re-running it is always safe:
+## Domains
 
-- No record: creates a CNAME to your base domain, unproxied, automatic TTL, with
-  the comment `Managed by Homerun`.
-- A CNAME already pointing at your base domain: leaves it alone.
-- A CNAME pointing elsewhere: changes only its target, so a proxy toggle, TTL or
-  comment you set by hand survives.
-- An A or AAAA record on that name: leaves it alone and says so in the deploy
-  log, since Cloudflare won't allow a CNAME next to one.
-- A hostname outside the zone (a domain on another DNS provider), or the base
-  domain itself: skipped.
+A domain is one you own, added to Homerun. Link it to a connection and pick the
+zone it lives in, and:
 
-Deleting a service removes its CNAME only when it points at your base domain or
-carries the `Managed by Homerun` comment, so a record you created by hand for
-something else is never deleted.
+- **Every service hostname under it gets its record.** A deploy creates it, a
+  change of target fixes it, deleting the service or dropping the domain from it
+  removes it. Turn **Manage service records** off to keep the domain listed
+  without that.
+- **Records point where you say.** **Records point at** takes this server's IP
+  (an A or AAAA record) or a hostname that already reaches it (a CNAME). Blank
+  uses the base domain, the way Homerun always did.
+- **Its page lists every record under it** at the provider, live, with the ones
+  Homerun created marked **managed**. Add, edit and delete records there, any
+  type among A, AAAA, CNAME, TXT, MX and CAA.
+- **Point at this server** creates the domain's apex and a wildcard
+  (`*.example.com`) record in one go, so every name under it reaches the server
+  without a record each. The apex needs an IP target, since DNS doesn't allow a
+  CNAME there.
+
+Homerun only ever changes or deletes the records it created itself. A record you
+made by hand on a service's hostname is left alone and the deploy log says so;
+removing a domain from Homerun deletes nothing at the provider.
+
+Buying a domain isn't something Homerun does: register it at your registrar,
+then add it here.
+
+What a sync did is written into each deploy's own log
+(`DNS (Cloudflare): app.example.com: created A → 203.0.113.10`), and a DNS
+failure never fails the deploy itself.
+
+Setting up Cloudflare during onboarding creates a Cloudflare connection and adds
+your base domain in that zone. An instance that had Cloudflare configured before
+this page existed gets the same, automatically, on upgrade.
+
+## Pangolin
+
+If you front the instance with a self-hosted
+[Pangolin](https://github.com/fosrl/pangolin) tunnel, turn it on in the
+**Pangolin** tab. Homerun then publishes every routed service through it (a
+Pangolin Resource and Target per hostname) and runs its Newt tunnel client. Your
+domains' records under **Domains** keep being managed either way, so don't link
+a domain there whose names Pangolin serves.
 
 **Pangolin** needs all of its fields, with any one blank the integration stays
 off:

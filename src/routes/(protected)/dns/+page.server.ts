@@ -1,151 +1,85 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { config, envDefaultsForDisplay } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { config } from "$lib/config";
+import { DnsConnectionDTO } from "$lib/dto/dns-connection-dto";
+import { DnsManagedRecordDTO } from "$lib/dto/dns-managed-record-dto";
+import { DomainDTO } from "$lib/dto/domain-dto";
 import { Logger } from "$lib/logger";
-import {
-	cloudflareInputFromForm,
-	newtFieldsError,
-	pangolinInputFromForm,
-	testCloudflareFromForm,
-	testPangolinFromForm,
-} from "$lib/server/validation/dns-settings-form";
-import { applyAndRebuild } from "$lib/server/validation/instance-settings-form";
-import { CloudflareService } from "$lib/services/cloudflare.service";
-import { PangolinService } from "$lib/services/pangolin.service";
+import { parseDomainForm } from "$lib/server/validation/dns-forms";
 
-const logger = new Logger("InstanceSettings");
+const logger = new Logger("DNS");
 
-/** The active provider's domains, or the reason they couldn't be listed. */
-async function providerDomains(
-	provider: "cloudflare" | "pangolin" | null,
-): Promise<{ domains: string[]; error: string | null }> {
-	if (!provider) {
-		return { domains: [], error: null };
-	}
-	try {
-		const domains =
-			provider === "cloudflare"
-				? await CloudflareService.listZoneNames()
-				: await PangolinService.listDomainNames();
-		return {
-			domains: domains ?? [],
-			error: domains ? null : "Finish the settings below to list domains.",
-		};
-	} catch (err) {
-		return {
-			domains: [],
-			error: err instanceof Error ? err.message : "Couldn't list domains.",
-		};
-	}
-}
-
-export const load = async ({ locals, parent }) => {
-	await parent();
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
-	}
-	const settings = await InstanceSettingsDTO.get();
+export const load = async () => {
+	const [domains, connections] = await Promise.all([
+		DomainDTO.list(),
+		DnsConnectionDTO.list(),
+	]);
+	const names = new Map(
+		connections.map((connection) => [connection.id, connection.summary()]),
+	);
 	return {
-		domains: providerDomains(settings.dnsProvider),
-		envDefaults: envDefaultsForDisplay(),
-		provider: settings.dnsProvider,
-		settings: settings.toJSON(),
+		baseDomain: config.baseDomain,
+		connections: connections.map((connection) => connection.summary()),
+		domains: await Promise.all(
+			domains.map(async (domain) => ({
+				...domain.toJSON(),
+				connection: domain.connectionId
+					? (names.get(domain.connectionId) ?? null)
+					: null,
+				managedRecords: (await DnsManagedRecordDTO.listForDomain(domain.id))
+					.length,
+			})),
+		),
 	};
 };
 
 export const actions = {
-	setProvider: async ({ request, locals }) => {
+	addDomain: async ({ locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			throw redirect(302, resolve("/"));
 		}
-		const raw = String((await request.formData()).get("provider") ?? "");
-		if (raw !== "" && raw !== "cloudflare" && raw !== "pangolin") {
-			return fail(400, { error: "Pick Cloudflare, Pangolin or none." });
+		const parsed = parseDomainForm(await request.formData(), true);
+		if (parsed.error !== null) {
+			return fail(400, { error: parsed.error });
 		}
-		const settings = await InstanceSettingsDTO.get();
-		await settings.updateDnsProvider(raw === "" ? null : raw);
-		applyAndRebuild(settings);
+		if (
+			(await DomainDTO.list()).some(
+				(domain) => domain.name === parsed.value.name,
+			)
+		) {
+			return fail(400, { error: `${parsed.value.name} is already added.` });
+		}
+		const domain = await DomainDTO.create({
+			...parsed.value,
+			userId: locals.user.id,
+		});
 		logger.info(
-			`DNS provider set: provider=${raw || "none"} user=${locals.user.id}`,
+			`Domain added: ${domain.name} connection=${parsed.value.connectionId ?? "none"} user=${locals.user.id}`,
 		);
-		return { success: true };
+		throw redirect(
+			303,
+			resolve("/(protected)/dns/domains/[domainId]", { domainId: domain.id }),
+		);
 	},
 
-	testCloudflare: async ({ request, locals }) => {
+	deleteDomain: async ({ locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			throw redirect(302, resolve("/"));
 		}
-		const outcome = await testCloudflareFromForm(
-			await request.formData(),
-			await InstanceSettingsDTO.get(),
-			config.baseDomain,
+		const domain = await DomainDTO.get(
+			String((await request.formData()).get("domainId") ?? ""),
 		);
-		if (!outcome.ok) {
-			return fail(400, { error: outcome.error });
+		if (!domain) {
+			return fail(404, { error: "That domain doesn't exist any more." });
 		}
-		return {
-			cloudflareTestDetail: outcome.detail,
-			cloudflareTestOk: true,
-			success: true,
-		};
-	},
-	testPangolin: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
-		}
-		const outcome = await testPangolinFromForm(
-			await request.formData(),
-			await InstanceSettingsDTO.get(),
-			config.baseDomain,
-		);
-		if (!outcome.ok) {
-			return fail(400, { error: outcome.error });
-		}
-		return {
-			pangolinTestDetail: outcome.detail,
-			pangolinTestOk: true,
-			success: true,
-		};
-	},
-	updateCloudflare: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
-		}
-		const formData = await request.formData();
-		const settings = await InstanceSettingsDTO.get();
-		await settings.updateCloudflare(cloudflareInputFromForm(formData));
-		logger.info(`Cloudflare instance settings updated: user=${locals.user.id}`);
-		return { savedSection: "cloudflare", success: true };
-	},
-	updatePangolin: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
-		}
-		const formData = await request.formData();
-		const settings = await InstanceSettingsDTO.get();
-		const newtError = newtFieldsError(formData, settings);
-		if (newtError) {
-			return fail(400, { error: newtError });
-		}
-		await settings.updatePangolin(pangolinInputFromForm(formData));
-		applyAndRebuild(settings);
-		logger.info(`Pangolin instance settings updated: user=${locals.user.id}`);
-		return { savedSection: "pangolin", success: true };
+		await domain.delete();
+		logger.info(`Domain removed: ${domain.name} user=${locals.user.id}`);
+		return { deleted: domain.name };
 	},
 };

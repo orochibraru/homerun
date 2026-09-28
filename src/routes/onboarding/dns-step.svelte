@@ -24,7 +24,7 @@
   title="DNS"
 >
   <CheckBox
-    helperText="Upsert a CNAME in a Cloudflare zone for every deployed hostname"
+    helperText="Connect a Cloudflare zone for the base domain: every deployed hostname gets its record. Other providers are under Integrations → DNS afterwards."
     id="cloudflareEnabled"
     label="Cloudflare"
     name="cloudflareEnabled"
@@ -51,9 +51,7 @@
           class={input}
           id="cloudflareApiToken"
           name="cloudflareApiToken"
-          placeholder={wizard.settings?.cloudflareApiTokenEnc
-          ? "Leave blank to keep current"
-          : "Zone:DNS:Edit scope"}
+          placeholder="Zone:Read and DNS:Edit"
           type="password"
           bind:value={wizard.cloudflareApiToken}
         >

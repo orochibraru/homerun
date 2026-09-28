@@ -1,0 +1,121 @@
+import { fail, redirect } from "@sveltejs/kit";
+import { resolve } from "$app/paths";
+import { DnsConnectionDTO } from "$lib/dto/dns-connection-dto";
+import { Logger } from "$lib/logger";
+import { parseConnectionForm } from "$lib/server/validation/dns-forms";
+import { DNS_PROVIDERS, dnsProviderById } from "$lib/services/dns-providers";
+
+const logger = new Logger("DNS");
+
+export const load = async () => {
+	const connections = await DnsConnectionDTO.list();
+	return {
+		connections: connections.map((connection) => connection.summary()),
+		providers: DNS_PROVIDERS.map(({ docsUrl, fields, id, name }) => ({
+			docsUrl,
+			fields,
+			id,
+			name,
+		})),
+	};
+};
+
+export const actions = {
+	saveConnection: async ({ locals, request }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const formData = await request.formData();
+		const existing = await DnsConnectionDTO.get(
+			String(formData.get("connectionId") ?? ""),
+		);
+		const provider = dnsProviderById(
+			existing?.summary().provider ?? String(formData.get("provider") ?? ""),
+		);
+		if (!provider) {
+			return fail(400, { error: "Pick a DNS provider." });
+		}
+		const parsed = parseConnectionForm(formData, provider, existing !== null);
+		if (parsed.error !== null) {
+			return fail(400, { error: parsed.error });
+		}
+		const connection =
+			existing ??
+			(await DnsConnectionDTO.create({
+				...parsed.value,
+				provider: provider.id,
+				userId: locals.user.id,
+			}));
+		if (existing) {
+			await existing.update(parsed.value);
+		}
+		try {
+			const zones = await connection.client().listZones();
+			logger.info(
+				`DNS connection saved: ${provider.id} "${connection.name}" zones=${zones.length} user=${locals.user.id}`,
+			);
+			return {
+				saved: `${connection.name} is connected: ${zones.length} ${zones.length === 1 ? "zone" : "zones"} visible.`,
+			};
+		} catch (err) {
+			logger.warn(
+				`DNS connection saved but its test failed: ${provider.id} "${connection.name}"`,
+				err,
+			);
+			return fail(400, {
+				error: `Saved, but ${provider.name} refused the credentials: ${err instanceof Error ? err.message : String(err)}`,
+			});
+		}
+	},
+
+	testConnection: async ({ locals, request }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const connection = await DnsConnectionDTO.get(
+			String((await request.formData()).get("connectionId") ?? ""),
+		);
+		if (!connection) {
+			return fail(404, { error: "That connection doesn't exist any more." });
+		}
+		try {
+			const zones = await connection.client().listZones();
+			return {
+				tested: `${connection.name}: ${zones.length} ${zones.length === 1 ? "zone" : "zones"} (${zones
+					.slice(0, 5)
+					.map((zone) => zone.name)
+					.join(", ")}${zones.length > 5 ? ", …" : ""})`,
+			};
+		} catch (err) {
+			return fail(400, {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+	},
+
+	deleteConnection: async ({ locals, request }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const connection = await DnsConnectionDTO.get(
+			String((await request.formData()).get("connectionId") ?? ""),
+		);
+		if (!connection) {
+			return fail(404, { error: "That connection doesn't exist any more." });
+		}
+		await connection.delete();
+		logger.info(
+			`DNS connection removed: "${connection.name}" user=${locals.user.id}`,
+		);
+		return { deleted: connection.name };
+	},
+};

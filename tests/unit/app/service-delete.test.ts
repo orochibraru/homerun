@@ -55,8 +55,8 @@ const { config } = await import("../../../src/lib/config");
 const { Logger } = await import("../../../src/lib/logger");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
-const { CloudflareService } = await import(
-	"../../../src/lib/services/cloudflare.service"
+const { DomainDnsService } = await import(
+	"../../../src/lib/services/domain-dns.service"
 );
 const { PangolinService } = await import(
 	"../../../src/lib/services/pangolin.service"
@@ -135,7 +135,7 @@ beforeEach(() => {
 		"listChildren",
 		async (parentId: string) => previewsByParent.get(parentId) ?? [],
 	);
-	stub(CloudflareService, "deleteDnsRecord", async (host: string) => {
+	stub(DomainDnsService, "deleteHostname", async (host: string) => {
 		if (dnsFailure) {
 			throw dnsFailure;
 		}

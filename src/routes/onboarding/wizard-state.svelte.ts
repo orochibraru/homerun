@@ -168,10 +168,8 @@ export class OnboardingWizard {
 		this.settings?.smtpSecure ?? this.envDefaults?.smtpSecure ?? false,
 	);
 
-	cloudflareEnabled = $derived(!!this.settings?.cloudflareZoneId);
-	cloudflareZoneId = $derived(
-		this.#echo("cloudflareZoneId") ?? this.settings?.cloudflareZoneId ?? "",
-	);
+	cloudflareEnabled = $state(false);
+	cloudflareZoneId = $derived(this.#echo("cloudflareZoneId") ?? "");
 	cloudflareApiToken = $state("");
 	pangolinEnabled = $derived(!!this.settings?.pangolinApiBaseUrl);
 	pangolinApiBaseUrl = $derived(
@@ -271,12 +269,7 @@ export class OnboardingWizard {
 			...this.#validateNewt(),
 			...requireDnsFields(this.cloudflareEnabled, "Cloudflare", [
 				["cloudflareZoneId", "Zone ID", this.cloudflareZoneId],
-				[
-					"cloudflareApiToken",
-					"API token",
-					this.cloudflareApiToken,
-					!!this.settings?.cloudflareApiTokenEnc,
-				],
+				["cloudflareApiToken", "API token", this.cloudflareApiToken, false],
 			]),
 			...requireDnsFields(this.pangolinEnabled, "Pangolin", [
 				["pangolinApiBaseUrl", "API base URL", this.pangolinApiBaseUrl],

@@ -140,3 +140,13 @@ scanlines
 MSN
 Pixelify
 Segoe
+Akamai
+DNSimple
+Gandi
+Hetzner
+Linode
+Namecheap
+OVHcloud
+Porkbun
+Scaleway
+Vultr

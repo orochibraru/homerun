@@ -126,9 +126,11 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   for domains outside Traefik's automatic ACME coverage
 - **[Host networking](docs/networking.md)**: for apps that need the host's
   network directly (mDNS/SSDP discovery)
-- **[DNS automation](docs/dns-automation.md)**: Cloudflare CNAMEs or Pangolin
-  resources created and removed as services come and go, and Homerun can run the
-  Pangolin Newt tunnel client for you, set up straight from onboarding
+- **[DNS automation](docs/dns-automation.md)**: your domains' records at 16 DNS
+  providers (Cloudflare, Route 53, Google Cloud DNS, Azure, Hetzner, Namecheap,
+  GoDaddy, OVH…), managed from the dashboard and created and removed as services
+  come and go, or Pangolin resources, and Homerun can run the Pangolin Newt
+  tunnel client for you, set up straight from onboarding
 - **[Per-app login wall](docs/login-wall.md)**: put any deployed service behind
   a Homerun login (passkeys and 2FA included) through Traefik forwardAuth
 

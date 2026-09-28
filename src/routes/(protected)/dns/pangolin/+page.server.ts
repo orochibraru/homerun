@@ -1,0 +1,103 @@
+import { fail, redirect } from "@sveltejs/kit";
+import { resolve } from "$app/paths";
+import { config } from "$lib/config";
+import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { Logger } from "$lib/logger";
+import {
+	newtFieldsError,
+	pangolinInputFromForm,
+	testPangolinFromForm,
+} from "$lib/server/validation/dns-settings-form";
+import { applyAndRebuild } from "$lib/server/validation/instance-settings-form";
+import { PangolinService } from "$lib/services/pangolin.service";
+
+const logger = new Logger("InstanceSettings");
+
+/** Pangolin's registered domains, or the reason they couldn't be listed. */
+async function pangolinDomains(): Promise<{
+	domains: string[];
+	error: string | null;
+}> {
+	try {
+		const domains = await PangolinService.listDomainNames();
+		return {
+			domains: domains ?? [],
+			error: domains ? null : "Finish the settings below to list domains.",
+		};
+	} catch (err) {
+		return {
+			domains: [],
+			error: err instanceof Error ? err.message : "Couldn't list domains.",
+		};
+	}
+}
+
+export const load = async () => {
+	const settings = await InstanceSettingsDTO.get();
+	return {
+		domains:
+			settings.dnsProvider === "pangolin"
+				? pangolinDomains()
+				: Promise.resolve({ domains: [], error: null }),
+		enabled: settings.dnsProvider === "pangolin",
+		settings: settings.toJSON(),
+	};
+};
+
+export const actions = {
+	setEnabled: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const enabled = (await request.formData()).get("enabled") === "on";
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateDnsProvider(enabled ? "pangolin" : null);
+		applyAndRebuild(settings);
+		logger.info(`Pangolin ${enabled ? "on" : "off"}: user=${locals.user.id}`);
+		return { enabled };
+	},
+
+	testPangolin: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const outcome = await testPangolinFromForm(
+			await request.formData(),
+			await InstanceSettingsDTO.get(),
+			config.baseDomain,
+		);
+		if (!outcome.ok) {
+			return fail(400, { error: outcome.error });
+		}
+		return {
+			pangolinTestDetail: outcome.detail,
+			pangolinTestOk: true,
+			success: true,
+		};
+	},
+
+	updatePangolin: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const formData = await request.formData();
+		const settings = await InstanceSettingsDTO.get();
+		const newtError = newtFieldsError(formData, settings);
+		if (newtError) {
+			return fail(400, { error: newtError });
+		}
+		await settings.updatePangolin(pangolinInputFromForm(formData));
+		applyAndRebuild(settings);
+		logger.info(`Pangolin instance settings updated: user=${locals.user.id}`);
+		return { savedSection: "pangolin", success: true };
+	},
+};

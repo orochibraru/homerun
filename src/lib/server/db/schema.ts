@@ -592,17 +592,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	authCrossSubdomainCookies: boolean("auth_cross_subdomain_cookies"),
 	authOrigin: text("auth_origin"),
 	baseDomain: text("base_domain"),
-	// Cloudflare API token (Zone:DNS:Edit scope) + the zone id `baseDomain`
-	// lives in : when both are set, a deployed service with `dnsResolvable`
-	// gets its `<slug>.<baseDomain>` hostname auto-created/updated as a
-	// CNAME record pointing at `baseDomain` itself (see
-	// $lib/services/cloudflare.service.ts), instead of the admin adding one
-	// by hand for every new service. Unset (the default) : no-op, same
-	// "background automation defaults inert" posture as autoscaling/backups.
-	// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
-	cloudflareApiTokenEnc: text("cloudflare_api_token_enc"),
-	dnsProvider: text("dns_provider").$type<"cloudflare" | "pangolin">(),
-	cloudflareZoneId: text("cloudflare_zone_id"),
+	dnsProvider: text("dns_provider").$type<"pangolin">(),
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	dockerNetworkName: text("docker_network_name"),
 	dockerSocketPath: text("docker_socket_path"),
@@ -1855,6 +1845,59 @@ export const errorProject = pgTable("error_project", {
 		.references(() => service.id, { onDelete: "cascade" }),
 });
 
+export const dnsConnection = pgTable("dns_connection", {
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	credentials: jsonb("credentials")
+		.$type<Record<string, string>>()
+		.default({})
+		.notNull(),
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	provider: text("provider").notNull(),
+	updatedAt: timestamp("updated_at", { mode: "date" }).notNull(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+});
+
+export const domain = pgTable("domain", {
+	autoRecords: boolean("auto_records").default(true).notNull(),
+	connectionId: text("connection_id").references(() => dnsConnection.id, {
+		onDelete: "set null",
+	}),
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	id: text("id").primaryKey(),
+	name: text("name").notNull().unique(),
+	target: text("target"),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	zoneId: text("zone_id"),
+	zoneName: text("zone_name"),
+});
+
+export const dnsManagedRecord = pgTable(
+	"dns_managed_record",
+	{
+		content: text("content").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		domainId: text("domain_id")
+			.notNull()
+			.references(() => domain.id, { onDelete: "cascade" }),
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		recordId: text("record_id").notNull(),
+		type: text("type").notNull(),
+	},
+	(table) => [
+		uniqueIndex("dnsManagedRecord_domain_name_type_uidx").on(
+			table.domainId,
+			table.name,
+			table.type,
+		),
+	],
+);
+
 export const resourceIncident = pgTable(
 	"resource_incident",
 	{
@@ -1969,6 +2012,9 @@ export type Stack = typeof stack.$inferSelect;
 export type OauthClient = typeof oauthClient.$inferSelect;
 export type ErrorSourceMap = typeof errorSourceMap.$inferSelect;
 export type ResourceIncident = typeof resourceIncident.$inferSelect;
+export type DnsConnection = typeof dnsConnection.$inferSelect;
+export type Domain = typeof domain.$inferSelect;
+export type DnsManagedRecord = typeof dnsManagedRecord.$inferSelect;
 export type OauthClientEnvironment = typeof oauthClientEnvironment.$inferSelect;
 export type OauthClientSecret = typeof oauthClientSecret.$inferSelect;
 export type Template = typeof template.$inferSelect;

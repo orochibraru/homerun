@@ -9,8 +9,8 @@ mock.module("$app/environment", () => ({
 
 const { config } = await import("../../../src/lib/config");
 const { Logger } = await import("../../../src/lib/logger");
-const { CloudflareService } = await import(
-	"../../../src/lib/services/cloudflare.service"
+const { DomainDnsService } = await import(
+	"../../../src/lib/services/domain-dns.service"
 );
 const { PangolinService } = await import(
 	"../../../src/lib/services/pangolin.service"
@@ -20,7 +20,7 @@ const { deleteDns, serviceHostname, syncDashboardDns, syncDns } = await import(
 );
 
 type Verdict =
-	| { detail: string; ok: boolean; provider: "cloudflare" | "pangolin" }
+	| { detail: string; ok: boolean; provider: string }
 	| null
 	| Error
 	| string;
@@ -44,12 +44,12 @@ beforeEach(() => {
 	cloudflare = () => null;
 	pangolin = () => null;
 	config.baseDomain = "example.com";
-	stub(CloudflareService, "syncDnsRecord", (host: string, zone: string) => {
-		calls.push(["cloudflare.sync", host, zone]);
+	stub(DomainDnsService, "syncHostname", (host: string) => {
+		calls.push(["cloudflare.sync", host, "example.com"]);
 		return settle(cloudflare(host));
 	});
-	stub(CloudflareService, "deleteDnsRecord", (host: string, zone: string) => {
-		calls.push(["cloudflare.delete", host, zone]);
+	stub(DomainDnsService, "deleteHostname", (host: string) => {
+		calls.push(["cloudflare.delete", host, "example.com"]);
 		return settle(cloudflare(host));
 	});
 	stub(PangolinService, "syncDnsRecord", (host: string, opts: unknown) => {
@@ -139,7 +139,7 @@ describe("syncDns / deleteDns", () => {
 			{
 				detail: "x.example.com: zone not found",
 				ok: false,
-				provider: "cloudflare",
+				provider: "dns",
 			},
 			{ detail: "x.example.com: api down", ok: false, provider: "pangolin" },
 		]);

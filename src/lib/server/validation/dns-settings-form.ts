@@ -1,9 +1,11 @@
+import { DnsConnectionDTO } from "$lib/dto/dns-connection-dto";
+import { DomainDTO } from "$lib/dto/domain-dto";
 import type {
-	InstanceSettingsCloudflareInput,
 	InstanceSettingsDTO,
 	InstanceSettingsPangolinInput,
 } from "$lib/dto/instance-settings-dto";
-import { CloudflareService } from "$lib/services/cloudflare.service";
+import { cloudflareClient } from "$lib/services/dns-providers/cloudflare";
+import { inZone } from "$lib/services/dns-providers/http";
 import { PangolinService } from "$lib/services/pangolin.service";
 import { checkbox, nullableText } from "./instance-settings-form";
 
@@ -51,16 +53,6 @@ export function newtFieldsError(
 	return null;
 }
 
-/** The Cloudflare section of a settings or onboarding form, ready for `updateCloudflare`. */
-export function cloudflareInputFromForm(
-	formData: FormData,
-): InstanceSettingsCloudflareInput {
-	return {
-		cloudflareApiToken: secretField(formData, "cloudflareApiToken"),
-		cloudflareZoneId: nullableText(formData, "cloudflareZoneId"),
-	};
-}
-
 /**
  * The Pangolin section of a settings or onboarding form, ready for
  * `updatePangolin`. The target host, target port and SSO ownership come from
@@ -89,37 +81,85 @@ export function pangolinInputFromForm(
 }
 
 /**
- * Checks the Cloudflare zone id and token typed into a form, falling back to
- * the stored token when the field is blank: the token must read the zone and
- * its DNS records, and the zone must hold `baseDomain`.
+ * Checks the Cloudflare zone id and token typed into the onboarding form:
+ * the token must list the zone, and the zone must hold `baseDomain`.
+ *
+ * @returns The zone's name on success.
  */
 export async function testCloudflareFromForm(
 	formData: FormData,
-	settings: InstanceSettingsDTO,
 	baseDomain: string,
 ): Promise<DnsTestOutcome> {
 	const zoneId = nullableText(formData, "cloudflareZoneId");
+	const token = secretField(formData, "cloudflareApiToken");
 	if (!zoneId) {
 		return { error: "Enter a zone id first.", ok: false };
 	}
-	const token =
-		secretField(formData, "cloudflareApiToken") ??
-		settings.decryptCloudflareApiToken();
 	if (!token) {
 		return { error: "Enter an API token first.", ok: false };
 	}
-	const result = await CloudflareService.verifyZoneAccess(
-		token,
-		zoneId,
-		baseDomain,
-	);
-	if (!result.success) {
+	try {
+		const zone = (await cloudflareClient(token).listZones()).find(
+			(candidate) => candidate.id === zoneId,
+		);
+		if (!zone) {
+			return { error: `The token can't see zone ${zoneId}.`, ok: false };
+		}
+		if (baseDomain && !inZone(baseDomain, zone.name)) {
+			return {
+				error: `Zone ${zone.name} doesn't hold ${baseDomain}.`,
+				ok: false,
+			};
+		}
+		return { detail: `zone ${zone.name}`, ok: true };
+	} catch (err) {
 		return {
-			error: `Couldn't verify zone access: ${result.error}`,
+			error: `Couldn't verify zone access: ${err instanceof Error ? err.message : String(err)}`,
 			ok: false,
 		};
 	}
-	return { detail: result.detail ?? null, ok: true };
+}
+
+/**
+ * Saves the onboarding form's Cloudflare token and zone the new way: a
+ * Cloudflare DNS connection, and the base domain as a managed domain in that
+ * zone, so services' hostnames get their records like any other domain's.
+ * A domain already registered under that name is re-linked instead.
+ *
+ * @throws When the token can't list its zones.
+ */
+export async function saveCloudflareFromForm(
+	formData: FormData,
+	baseDomain: string,
+	userId: string,
+): Promise<void> {
+	const zoneId = nullableText(formData, "cloudflareZoneId");
+	const token = secretField(formData, "cloudflareApiToken");
+	if (!(zoneId && token && baseDomain)) {
+		return;
+	}
+	const zone = (await cloudflareClient(token).listZones()).find(
+		(candidate) => candidate.id === zoneId,
+	);
+	const connection = await DnsConnectionDTO.create({
+		credentials: { apiToken: token },
+		name: "Cloudflare",
+		provider: "cloudflare",
+		userId,
+	});
+	const link = {
+		autoRecords: true,
+		connectionId: connection.id,
+		target: null,
+		zoneId,
+		zoneName: zone?.name ?? baseDomain,
+	};
+	const existing = await DomainDTO.forHostname(baseDomain);
+	if (existing && existing.name === baseDomain) {
+		await existing.update(link);
+		return;
+	}
+	await DomainDTO.create({ ...link, name: baseDomain, userId });
 }
 
 /**

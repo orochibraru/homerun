@@ -48,12 +48,6 @@ export interface InstanceSettingsTraefikInput {
 	traefikHttpCache?: boolean;
 }
 
-export interface InstanceSettingsCloudflareInput {
-	cloudflareZoneId: string | null;
-	/** Blank/undefined means "keep the currently stored token". */
-	cloudflareApiToken?: string;
-}
-
 export interface InstanceSettingsPangolinInput {
 	pangolinApiBaseUrl: string | null;
 	pangolinOwnsAuth: boolean;
@@ -180,9 +174,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			authCrossSubdomainCookies: null,
 			authOrigin: null,
 			baseDomain: null,
-			cloudflareApiTokenEnc: null,
 			dnsProvider: null,
-			cloudflareZoneId: null,
 			createdAt: now,
 			dockerNetworkName: null,
 			dockerSocketPath: null,
@@ -470,60 +462,14 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		await this.persist(input);
 	}
 
-	/** The Cloudflare zone DNS records are managed in, if configured. */
-	get cloudflareZoneId(): string | null {
-		return this.row.cloudflareZoneId;
-	}
-
-	/** Whether both the token and zone id are set : CloudflareService treats anything less as "feature off". */
-	get cloudflareConfigured(): boolean {
-		return (
-			this.row.dnsProvider === "cloudflare" && this.cloudflareCredentialsSet
-		);
-	}
-
-	/** Whether a Cloudflare token and zone are stored, whichever provider is chosen. */
-	get cloudflareCredentialsSet(): boolean {
-		return !!(this.row.cloudflareApiTokenEnc && this.row.cloudflareZoneId);
-	}
-
-	/** The one DNS provider Homerun drives, null for none : the other's stored settings stay inert. */
-	get dnsProvider(): "cloudflare" | "pangolin" | null {
+	/** Whether Pangolin fronts the instance (its tunnel and resources), null for none. */
+	get dnsProvider(): "pangolin" | null {
 		return this.row.dnsProvider ?? null;
 	}
 
-	/** Makes `provider` the only DNS integration Homerun drives, or none. */
-	async updateDnsProvider(
-		provider: "cloudflare" | "pangolin" | null,
-	): Promise<void> {
+	/** Turns Pangolin on as the instance's tunnel, or off. */
+	async updateDnsProvider(provider: "pangolin" | null): Promise<void> {
 		await this.persist({ dnsProvider: provider });
-	}
-
-	/** Decrypted API token, for CloudflareService's own HTTP calls only : never exposed to a `load` return value. */
-	decryptCloudflareApiToken(): string | null {
-		return this.row.cloudflareApiTokenEnc
-			? decryptSecret(this.row.cloudflareApiTokenEnc)
-			: null;
-	}
-
-	/**
-	 * Persists the Cloudflare zone id and, when a new token was typed, the
-	 * re-encrypted API token; a blank token keeps the stored one. Becomes the
-	 * DNS provider when none is chosen yet.
-	 */
-	async updateCloudflare(
-		input: InstanceSettingsCloudflareInput,
-	): Promise<void> {
-		const { cloudflareApiToken, ...rest } = input;
-		await this.persist({
-			...rest,
-			// Blank token field means "leave unchanged" : same convention as
-			// smtpPassword/registryPassword elsewhere.
-			...(cloudflareApiToken
-				? { cloudflareApiTokenEnc: encryptSecret(cloudflareApiToken) }
-				: {}),
-			...(this.row.dnsProvider ? {} : { dnsProvider: "cloudflare" as const }),
-		});
 	}
 
 	/** The Pangolin API base URL, if configured. */
