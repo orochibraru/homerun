@@ -53,7 +53,7 @@ repos:
         name: Look for hardcoded secrets
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1.50.1
+    rev: v1.50.3
     hooks:
       - id: typos
         name: Look for typos
