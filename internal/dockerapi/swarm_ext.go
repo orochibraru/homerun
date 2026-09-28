@@ -33,13 +33,80 @@ type SwarmTask struct {
 	UpdatedAt string `json:"UpdatedAt"`
 }
 
-// SwarmNode is one node of the swarm, reduced to what the replicas panel needs
-// to label a row with the host it runs on.
+// SwarmNode is one node of the swarm, reduced to what the replicas panel and
+// the Remote Hosts page show about it.
 type SwarmNode struct {
 	Description struct {
+		Engine struct {
+			EngineVersion string `json:"EngineVersion"`
+		} `json:"Engine"`
 		Hostname string `json:"Hostname"`
+		Platform struct {
+			Architecture string `json:"Architecture"`
+			OS           string `json:"OS"`
+		} `json:"Platform"`
+		Resources struct {
+			MemoryBytes int64 `json:"MemoryBytes"`
+			NanoCPUs    int64 `json:"NanoCPUs"`
+		} `json:"Resources"`
 	} `json:"Description"`
-	ID string `json:"ID"`
+	ID            string `json:"ID"`
+	ManagerStatus *struct {
+		Leader bool `json:"Leader"`
+	} `json:"ManagerStatus,omitempty"`
+	Spec struct {
+		Availability string `json:"Availability"`
+		Role         string `json:"Role"`
+	} `json:"Spec"`
+	Status struct {
+		Addr  string `json:"Addr"`
+		State string `json:"State"`
+	} `json:"Status"`
+}
+
+// SwarmJoin is what a new worker node needs to join this swarm.
+type SwarmJoin struct {
+	ManagerAddress string `json:"managerAddress"`
+	Token          string `json:"token"`
+}
+
+// SwarmJoinInfo reads the worker join token and the address this manager
+// listens on for joins.
+func (c *Client) SwarmJoinInfo(ctx context.Context) (*SwarmJoin, error) {
+	var swarm struct {
+		JoinTokens struct {
+			Worker string `json:"Worker"`
+		} `json:"JoinTokens"`
+	}
+	if err := c.decode(ctx, http.MethodGet, "/swarm", nil, nil, &swarm); err != nil {
+		return nil, err
+	}
+	var info struct {
+		Swarm struct {
+			NodeAddr       string `json:"NodeAddr"`
+			NodeID         string `json:"NodeID"`
+			RemoteManagers []struct {
+				Addr   string `json:"Addr"`
+				NodeID string `json:"NodeID"`
+			} `json:"RemoteManagers"`
+		} `json:"Swarm"`
+	}
+	if err := c.decode(ctx, http.MethodGet, "/info", nil, nil, &info); err != nil {
+		return nil, err
+	}
+	address := info.Swarm.NodeAddr + ":2377"
+	for _, manager := range info.Swarm.RemoteManagers {
+		if manager.NodeID == info.Swarm.NodeID {
+			address = manager.Addr
+		}
+	}
+	return &SwarmJoin{ManagerAddress: address, Token: swarm.JoinTokens.Worker}, nil
+}
+
+// RemoveSwarmNode forcibly removes a node from the swarm. The node itself
+// still believes it's joined until someone runs `docker swarm leave` on it.
+func (c *Client) RemoveSwarmNode(ctx context.Context, id string) error {
+	return c.Call(ctx, http.MethodDelete, "/nodes/"+url.PathEscape(id), url.Values{"force": {"true"}}, nil)
 }
 
 // InitSwarm turns this daemon into a single-node swarm manager. A daemon

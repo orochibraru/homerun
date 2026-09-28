@@ -1158,3 +1158,31 @@ container into a volume on that daemon
 implementation for a local build too, see Git-based builds in
 `services-and-templates.md`), so the repo has to be reachable from the build
 server.
+
+## Server enrollment (`node_enrollment`, `NodeEnrollmentService`, `/api/v1/nodes/`)
+
+"Add a server" on `/remote-hosts` (admin only) creates a `node_enrollment` row:
+the roles (`buildServer`, `swarmNode`), an optional name and the SHA-256 of a
+one-time `hrn_` token, valid for an hour. The page shows
+`enrollCommand(origin, token)`, which pipes `GET /api/v1/nodes/install.sh`
+(`$lib/server/node-install-script.ts`, generated with this instance's origin and
+its own release tag so the agent matches the app) into bash. The script is plain
+bash on purpose, a barebones server has no `jq`: it asks
+`POST /api/v1/nodes/enroll` with `plan: true` what to install (the token decides
+the roles, not script flags), installs Docker, runs the release installer in
+`--mode=agent` for a build server and reads the worker's token file, then posts
+again for real. `NodeEnrollmentService.enroll` verifies the agent
+(`AgentClientService.verifyToken`) and swarm mode before claiming the token
+(`claim` is a conditional `UPDATE ... WHERE used_at IS NULL`), so a failed
+attempt can be rerun with the same token; losing the claim race deletes the
+remote host it just created. A swarm-node enrollment answers with the worker's
+`GET /v1/swarm/join` (`dockerapi.SwarmJoinInfo`: the worker join token and this
+manager's own `RemoteManagers` address), and the script runs
+`docker swarm join --advertise-addr`. The endpoints aren't in the OpenAPI
+registry, same as the git webhook: they're machine-to-machine, token in the JSON
+body (not `Authorization`, which `hooks.server.ts` reads as an API key).
+
+The page's Swarm nodes table reads `DockerService.listSwarmNodes` (the worker's
+`GET /v1/swarm/nodes`, flattened by `toSwarmNodeInfo`) and removes a worker node
+with `DELETE /v1/swarm/nodes/{id}` (`force=true`). There's no load-based
+autoscaling: capacity is added by running the command.

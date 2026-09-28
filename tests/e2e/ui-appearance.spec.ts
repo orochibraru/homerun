@@ -123,3 +123,52 @@ test.describe
 			);
 		});
 	});
+
+async function saveStyle(page: Page, name: string): Promise<void> {
+	await page.goto("/profile/appearance");
+	const form = page.locator("form[action='?/updateSurface']");
+	await form.getByRole("button", { name }).click();
+	await form.getByRole("button", { name: "Save" }).click();
+	await expect(page.getByText("Style saved.")).toBeVisible();
+}
+
+test.describe
+	.serial("styles", () => {
+		test.afterAll(async ({ browser }) => {
+			const page = await browser.newPage();
+			await signIn(page);
+			await saveStyle(page, "Glass (default)");
+			await page.close();
+		});
+
+		test("glass tints the page with the accent, bordeaux stays warm", async ({
+			page,
+		}, testInfo) => {
+			await signIn(page);
+			await saveStyle(page, "Glass (default)");
+			await page.goto("/remote-hosts");
+			await expect(page.locator("html")).toHaveAttribute(
+				"data-surface",
+				"glass",
+			);
+			const [red, , blue] = await page.locator("html").evaluate((el) => {
+				const canvas = document.createElement("canvas").getContext("2d");
+				if (!canvas) {
+					return [0, 0, 0];
+				}
+				canvas.fillStyle = getComputedStyle(el).backgroundColor;
+				canvas.fillRect(0, 0, 1, 1);
+				return [...canvas.getImageData(0, 0, 1, 1).data];
+			});
+			expect(red).toBeGreaterThan(blue);
+			await page.screenshot({ path: testInfo.outputPath("glass.png") });
+		});
+
+		test("Material You is rendered server-side", async ({ page }, testInfo) => {
+			await signIn(page);
+			await saveStyle(page, "Material You");
+			const response = await page.goto("/remote-hosts");
+			expect(await response?.text()).toContain('data-surface="material"');
+			await page.screenshot({ path: testInfo.outputPath("material.png") });
+		});
+	});

@@ -1845,6 +1845,24 @@ export const errorProject = pgTable("error_project", {
 		.references(() => service.id, { onDelete: "cascade" }),
 });
 
+export const nodeEnrollment = pgTable("node_enrollment", {
+	buildServer: boolean("build_server").default(true).notNull(),
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+	hostname: text("hostname"),
+	id: text("id").primaryKey(),
+	name: text("name"),
+	remoteHostId: text("remote_host_id").references(() => remoteHost.id, {
+		onDelete: "set null",
+	}),
+	swarmNode: boolean("swarm_node").default(false).notNull(),
+	tokenHash: text("token_hash").notNull().unique(),
+	usedAt: timestamp("used_at", { mode: "date" }),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+});
+
 export const dnsConnection = pgTable("dns_connection", {
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	credentials: jsonb("credentials")
@@ -2052,6 +2070,7 @@ export type Invitation = InvitationRefactored & {
 	role: UserRole;
 };
 export type User = typeof user.$inferSelect;
+export type NodeEnrollment = typeof nodeEnrollment.$inferSelect;
 
 export const sessionRelations = relations(session, ({ one }) => ({
 	user: one(user, {

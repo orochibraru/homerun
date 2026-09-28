@@ -16,6 +16,8 @@ import (
 func (s *Server) mountSwarm(r chi.Router) {
 	r.Post("/v1/swarm/init", httpapi.H(s.initSwarm))
 	r.Get("/v1/swarm/nodes", httpapi.H(s.listSwarmNodes))
+	r.Delete("/v1/swarm/nodes/{id}", httpapi.H(s.removeSwarmNode))
+	r.Get("/v1/swarm/join", httpapi.H(s.swarmJoin))
 	r.Post("/v1/swarm/overlay", httpapi.H(s.ensureOverlay))
 	r.Post("/v1/swarm/services", httpapi.H(s.createSwarmService))
 	r.Get("/v1/swarm/services/{id}", httpapi.H(s.inspectSwarmService))
@@ -265,4 +267,22 @@ func (s *Server) removeSwarmService(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// removeSwarmNode forcibly removes a node from the swarm.
+func (s *Server) removeSwarmNode(w http.ResponseWriter, r *http.Request) error {
+	if err := s.docker.RemoveSwarmNode(r.Context(), chi.URLParam(r, "id")); err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// swarmJoin answers with the worker join token and manager address a new node
+// needs to join this swarm.
+func (s *Server) swarmJoin(w http.ResponseWriter, r *http.Request) error {
+	join, err := s.docker.SwarmJoinInfo(r.Context())
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, join)
 }

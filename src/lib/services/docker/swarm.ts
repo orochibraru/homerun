@@ -203,6 +203,53 @@ interface DaemonInfo {
 	};
 }
 
+interface RawSwarmNode {
+	Description?: {
+		Engine?: { EngineVersion?: string };
+		Hostname?: string;
+		Platform?: { Architecture?: string; OS?: string };
+		Resources?: { MemoryBytes?: number; NanoCPUs?: number };
+	};
+	ID?: string;
+	ManagerStatus?: { Leader?: boolean } | null;
+	Spec?: { Availability?: string; Role?: string };
+	Status?: { Addr?: string; State?: string };
+}
+
+/** One swarm node as the Remote Hosts page lists it. */
+export interface SwarmNodeInfo {
+	address: string;
+	architecture: string;
+	availability: string;
+	cpus: number;
+	engineVersion: string;
+	hostname: string;
+	id: string;
+	leader: boolean;
+	memoryBytes: number;
+	role: string;
+	state: string;
+}
+
+/** Flattens the daemon's node inspect into what the page shows. */
+export function toSwarmNodeInfo(node: RawSwarmNode): SwarmNodeInfo {
+	const description = node.Description ?? {};
+	const resources = description.Resources ?? {};
+	return {
+		address: node.Status?.Addr ?? "",
+		architecture: description.Platform?.Architecture ?? "",
+		availability: node.Spec?.Availability ?? "",
+		cpus: (resources.NanoCPUs ?? 0) / 1e9,
+		engineVersion: description.Engine?.EngineVersion ?? "",
+		hostname: description.Hostname ?? node.ID ?? "",
+		id: node.ID ?? "",
+		leader: node.ManagerStatus?.Leader ?? false,
+		memoryBytes: resources.MemoryBytes ?? 0,
+		role: node.Spec?.Role ?? "",
+		state: node.Status?.State ?? "",
+	};
+}
+
 export interface SwarmTask {
 	DesiredState?: string;
 	ID?: string;
@@ -380,6 +427,41 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 		async ensureSwarmNetwork(name: string): Promise<void> {
 			await this.worker.post<{ ok: boolean }>("/v1/swarm/overlay", { name });
 			logger.info(`Swarm overlay network ready: ${name}`);
+		}
+
+		/** The swarm's nodes, managers first. */
+		async listSwarmNodes(): Promise<SwarmNodeInfo[]> {
+			const nodes = await this.worker.get<RawSwarmNode[]>("/v1/swarm/nodes");
+			return nodes
+				.map(toSwarmNodeInfo)
+				.sort(
+					(a, b) =>
+						Number(b.role === "manager") - Number(a.role === "manager") ||
+						a.hostname.localeCompare(b.hostname),
+				);
+		}
+
+		/**
+		 * Forcibly removes a node from the swarm; its tasks are rescheduled
+		 * elsewhere. The node still thinks it's joined until `docker swarm
+		 * leave` runs on it.
+		 */
+		async removeSwarmNode(nodeId: string): Promise<void> {
+			await this.worker.delete<{ ok: boolean }>(
+				`/v1/swarm/nodes/${encodeURIComponent(nodeId)}`,
+			);
+			logger.info(`Swarm node removed: ${nodeId}`);
+		}
+
+		/**
+		 * The worker join token and manager address a new node joins with.
+		 *
+		 * @throws When this daemon isn't a swarm manager.
+		 */
+		async swarmJoinInfo(): Promise<{ managerAddress: string; token: string }> {
+			return await this.worker.get<{ managerAddress: string; token: string }>(
+				"/v1/swarm/join",
+			);
 		}
 
 		/** Removes a swarm service. One already gone isn't an error. */

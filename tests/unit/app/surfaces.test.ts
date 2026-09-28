@@ -12,7 +12,7 @@ describe("isSurfaceStyle", () => {
 		for (const style of SURFACE_STYLES) {
 			expect(isSurfaceStyle(style.id)).toBe(true);
 		}
-		expect(isSurfaceStyle("material")).toBe(false);
+		expect(isSurfaceStyle("flat")).toBe(false);
 		expect(isSurfaceStyle(null)).toBe(false);
 	});
 });

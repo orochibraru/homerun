@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronDown, Plus, PlusIcon, Server, Trash2 } from "@lucide/svelte";
+	import { Plus, PlusIcon, Server, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -9,16 +9,15 @@
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
 	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { BASE_SORTS } from "$lib/list-sorts";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
+	import EnrollDialog from "./enroll-dialog.svelte";
+	import SwarmNodes from "./swarm-nodes.svelte";
 
 	const { data, form } = $props();
 
@@ -50,8 +49,7 @@
 		},
 	];
 
-	let showTls = $state(false);
-	let submitting = $state(false);
+	let enrollOpen = $state(false);
 
 	let deleteDialogOpen = $state(false);
 	let pendingDeleteName = $state("");
@@ -123,22 +121,27 @@
     <div>
       <h1 class="text-text text-lg font-semibold tracking-tight">Remote Hosts</h1>
       <p class="text-text-muted mt-1 text-sm">
-        Other Docker daemons a service can be deployed to instead of this host.
-        A remote-hosted service isn't on the shared network or routed through
-        Traefik : see the docs on the Networking tab for what that means in
-        practice.
+        Build servers git builds can run on, and the swarm nodes swarm services
+        are scheduled on. Add a server with one command and it becomes either.
       </p>
     </div>
-    <Button href={resolve("/remote-hosts/new")}>
-      <Plus class="size-4" />
-      Add Host
-    </Button>
+    <div class="flex gap-2">
+      {#if data.isAdmin}
+        <Button onclick={() => (enrollOpen = true)}>
+          <Plus class="size-4" />
+          Add a server
+        </Button>
+      {/if}
+      <Button href={resolve("/remote-hosts/new")} variant="outline">
+        Register by hand
+      </Button>
+    </div>
   </div>
 
   {#if data.total === 0 && !data.filtered}
     <EmptyState
       icon={Server}
-      subtitle="Every service deploys to this host until you add one."
+      subtitle="Git builds run on this host until you add a build server."
       title="No remote hosts yet"
     >
       <Button href={resolve("/remote-hosts/new")}>
@@ -168,12 +171,16 @@
     />
     {/if}
   {/if}
+
+  <SwarmNodes enrollments={data.enrollments} nodes={data.swarmNodes} />
 </div>
+
+<EnrollDialog bind:open={enrollOpen} swarmMode={data.swarmMode} />
 
 <ConfirmDialog
   bind:open={deleteDialogOpen}
   confirmLabel="Delete"
-  description={`Delete "${pendingDeleteName}"? Services deployed to it keep running there : they just won't be manageable from here anymore.`}
+  description={`Delete "${pendingDeleteName}"? Services that build on it fall back to building on this host.`}
   onConfirm={() => pendingDeleteForm?.requestSubmit()}
   title="Delete remote host"
 />

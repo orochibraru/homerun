@@ -518,3 +518,29 @@ func TestSplitRefDigestPinned(t *testing.T) {
 		}
 	}
 }
+
+func TestSwarmJoinInfoPrefersThisManagersAddress(t *testing.T) {
+	client, d := newDaemon(t, 200, `{"JoinTokens":{"Worker":"SWMTKN-1-abc"},"Swarm":{"NodeAddr":"10.0.0.1","NodeID":"me","RemoteManagers":[{"Addr":"10.0.0.9:2377","NodeID":"other"},{"Addr":"10.0.0.1:2377","NodeID":"me"}]}}`)
+	join, err := client.SwarmJoinInfo(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if join.Token != "SWMTKN-1-abc" || join.ManagerAddress != "10.0.0.1:2377" {
+		t.Errorf("join = %+v", join)
+	}
+	d.expect(t, http.MethodGet, "/info", nil)
+
+	d.set(200, `{"JoinTokens":{"Worker":"t"},"Swarm":{"NodeAddr":"192.0.2.4","NodeID":"me"}}`)
+	join, err = client.SwarmJoinInfo(context.Background())
+	if err != nil || join.ManagerAddress != "192.0.2.4:2377" {
+		t.Errorf("fallback join = %+v, %v", join, err)
+	}
+}
+
+func TestRemoveSwarmNodeForces(t *testing.T) {
+	client, d := newDaemon(t, 200, ``)
+	if err := client.RemoveSwarmNode(context.Background(), "n1"); err != nil {
+		t.Fatal(err)
+	}
+	d.expect(t, http.MethodDelete, "/nodes/n1", map[string][]string{"force": {"true"}})
+}

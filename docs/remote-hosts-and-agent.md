@@ -2,15 +2,46 @@
 
 Services always deploy to this host's own Docker daemon. Placement across
 machines is [swarm mode](swarm-mode.md)'s job: a second machine joins the swarm
-as a worker (`cmd/installer/swarm-join.sh`) rather than being registered
-separately.
+as a worker rather than being registered separately, see
+[Adding a server with one command](#adding-a-server-with-one-command).
 
 A **remote host** is therefore a _build server_: somewhere a git-based service's
 image gets built instead of on this machine, then brought back here to run.
 
-## Registering a build server
+## Adding a server with one command
 
-From `/remote-hosts`: a name, plus a connection type:
+On `/remote-hosts`, **Add a server** (admins only) turns any fresh Linux server
+into a build server, a [swarm](swarm-mode.md) node, or both. Pick the roles and
+an optional name, and Homerun hands you a command:
+
+```sh
+curl -fsSL https://<your instance>/api/v1/nodes/install.sh | sudo bash -s -- --token=hrn_...
+```
+
+Run it as root on the server. It installs Docker, then:
+
+- as a **build server**, installs the Homerun worker in agent mode (the same
+  release as your instance) and registers it under Remote Hosts, named after the
+  server unless you gave a name;
+- as a **swarm node**, joins your swarm as a worker. Swarm nodes need swarm mode
+  on (Settings → Docker).
+
+The token works once and expires after an hour; pending ones are listed under
+**Waiting to enroll**, where you can revoke them. The server has to reach your
+instance, and for a build server your instance has to reach port 7420 on the
+server. Homerun and the other nodes reach the server at its default route's
+address; pass `--address=<ip>` when that's the wrong interface.
+
+In swarm mode, the **Swarm nodes** table lists every node with its state,
+address and resources. Removing a worker there moves its replicas to the other
+nodes; run `docker swarm leave` on it afterwards.
+
+Homerun doesn't add or remove servers by itself when load changes: you add
+capacity with the command above.
+
+## Registering a build server by hand
+
+From `/remote-hosts` → **Register by hand**: a name, plus a connection type:
 
 - **Direct Docker connection**: `tcp://host:port` (+ optional TLS client cert
   for a secured Docker API), or `ssh://user@host`, pointed at the target daemon

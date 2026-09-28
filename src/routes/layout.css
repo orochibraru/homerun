@@ -5,6 +5,7 @@
 @import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource-variable/open-sans";
 @import "@fontsource-variable/pixelify-sans";
+@import "@fontsource-variable/roboto-flex";
 @import "@fontsource/dejavu-sans/400.css";
 @import "@fontsource/dejavu-sans/700.css";
 @import "@fontsource/vt323";
@@ -159,37 +160,59 @@
 	--font-sans:
 		-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable",
 		sans-serif;
-	--radius: 0.875rem;
-	--glass-fill: rgba(255, 255, 255, 0.58);
-	--glass-edge: rgba(255, 255, 255, 0.65);
-	--glass-blur: blur(40px) saturate(180%);
+	--radius: 1.125rem;
+	--color-bg: oklch(from var(--color-accent) 0.965 0.018 h);
+	--color-surface: oklch(1 0 0 / 0.45);
+	--color-surface-2: oklch(from var(--color-accent) 0.5 0.04 h / 0.08);
+	--color-surface-3: oklch(from var(--color-accent) 0.5 0.04 h / 0.14);
+	--glass-fill: oklch(1 0 0 / 0.42);
+	--glass-sheen: linear-gradient(
+		135deg,
+		oklch(1 0 0 / 0.5),
+		oklch(1 0 0 / 0.08) 40%,
+		oklch(1 0 0 / 0) 60%,
+		oklch(1 0 0 / 0.18)
+	);
+	--glass-edge: oklch(1 0 0 / 0.85);
+	--glass-blur: blur(26px) saturate(190%) brightness(1.03);
+	--glass-control: oklch(1 0 0 / 0.55);
+	--glass-control-hover: oklch(1 0 0 / 0.8);
+	--glass-control-shadow:
+		0 0 0 0.5px oklch(0 0 0 / 0.14), inset 0 1px 0 oklch(1 0 0 / 0.95),
+		inset 0 -1px 1px oklch(0 0 0 / 0.06), 0 2px 8px -2px oklch(0 0 0 / 0.16);
 	--panel-bg: var(--glass-fill);
+	--panel-bg-image: var(--glass-sheen);
 	--panel-backdrop: var(--glass-blur);
 	--panel-border-width: 1px;
-	--color-border: rgba(255, 255, 255, 0.55);
-	--border: rgba(60, 60, 67, 0.16);
+	--panel-border-color: var(--glass-edge);
+	--color-border: oklch(from var(--color-accent) 0.3 0.03 h / 0.16);
+	--color-border-light: oklch(from var(--color-accent) 0.3 0.03 h / 0.26);
+	--border: var(--color-border);
+	--input: oklch(from var(--color-accent) 0.3 0.03 h / 0.2);
 	--panel-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 0 0 0.5px rgba(0, 0, 0, 0.08),
-		0 12px 32px -12px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.05);
+		inset 0 1px 1px oklch(1 0 0 / 0.95), inset 0 -1px 1px oklch(1 0 0 / 0.4),
+		0 0 0 0.5px oklch(0 0 0 / 0.1), 0 18px 40px -18px oklch(0 0 0 / 0.28),
+		0 2px 6px oklch(0 0 0 / 0.05);
 	--panel-shadow-lg:
-		inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 0 0 0.5px rgba(0, 0, 0, 0.1),
-		0 20px 48px -14px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.06);
-	--panel-rule: rgba(255, 255, 255, 0.7);
-	--popover: rgba(250, 250, 252, 0.72);
+		inset 0 1px 1px oklch(1 0 0 / 0.95), inset 0 -1px 1px oklch(1 0 0 / 0.4),
+		0 0 0 0.5px oklch(0 0 0 / 0.12), 0 28px 60px -18px oklch(0 0 0 / 0.35),
+		0 4px 10px oklch(0 0 0 / 0.06);
+	--panel-rule: oklch(1 0 0 / 0.7);
+	--popover: oklch(from var(--color-accent) 0.985 0.01 h / 0.62);
 	--page-bg-image:
 		radial-gradient(
 			70vmax 55vmax at 0% 0%,
-			color-mix(in oklab, var(--brand-3) 55%, transparent),
+			oklch(from var(--color-accent) 0.8 calc(c * 0.8) calc(h - 20) / 0.7),
 			transparent 70%
 		),
 		radial-gradient(
 			65vmax 55vmax at 100% 100%,
-			color-mix(in oklab, var(--brand-2) 50%, transparent),
+			oklch(from var(--color-accent) 0.68 c calc(h + 20) / 0.55),
 			transparent 70%
 		),
 		radial-gradient(
 			55vmax 45vmax at 100% 0%,
-			color-mix(in oklab, var(--color-accent) 35%, transparent),
+			oklch(from var(--color-accent) 0.88 calc(c * 0.5) h / 0.6),
 			transparent 70%
 		);
 	--aurora-opacity: 0.55;
@@ -197,22 +220,56 @@
 
 .dark[data-surface="glass"],
 .dark [data-surface="glass"] {
-	--glass-fill: rgba(38, 38, 44, 0.55);
-	--glass-edge: rgba(255, 255, 255, 0.14);
-	--color-border: rgba(255, 255, 255, 0.12);
-	--border: rgba(255, 255, 255, 0.1);
+	--color-bg: oklch(from var(--color-accent) 0.17 0.02 h);
+	--color-surface: oklch(1 0 0 / 0.05);
+	--color-surface-2: oklch(1 0 0 / 0.07);
+	--color-surface-3: oklch(1 0 0 / 0.12);
+	--glass-fill: oklch(from var(--color-accent) 0.26 0.02 h / 0.5);
+	--glass-sheen: linear-gradient(
+		135deg,
+		oklch(1 0 0 / 0.12),
+		oklch(1 0 0 / 0.02) 40%,
+		oklch(1 0 0 / 0) 60%,
+		oklch(1 0 0 / 0.05)
+	);
+	--glass-edge: oklch(1 0 0 / 0.18);
+	--glass-control: oklch(1 0 0 / 0.1);
+	--glass-control-hover: oklch(1 0 0 / 0.16);
+	--glass-control-shadow:
+		0 0 0 0.5px oklch(0 0 0 / 0.6), inset 0 1px 0 oklch(1 0 0 / 0.22),
+		inset 0 -1px 1px oklch(0 0 0 / 0.25), 0 2px 8px -2px oklch(0 0 0 / 0.5);
+	--color-border: oklch(1 0 0 / 0.12);
+	--color-border-light: oklch(1 0 0 / 0.2);
+	--input: oklch(1 0 0 / 0.16);
 	--panel-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.6),
-		0 16px 40px -12px rgba(0, 0, 0, 0.6);
+		inset 0 1px 1px oklch(1 0 0 / 0.16), inset 0 -1px 1px oklch(1 0 0 / 0.05),
+		0 0 0 0.5px oklch(0 0 0 / 0.6), 0 18px 44px -14px oklch(0 0 0 / 0.65);
 	--panel-shadow-lg:
-		inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.7),
-		0 24px 56px -14px rgba(0, 0, 0, 0.75);
-	--panel-rule: rgba(255, 255, 255, 0.12);
-	--popover: rgba(40, 40, 46, 0.72);
+		inset 0 1px 1px oklch(1 0 0 / 0.18), inset 0 -1px 1px oklch(1 0 0 / 0.06),
+		0 0 0 0.5px oklch(0 0 0 / 0.7), 0 28px 64px -16px oklch(0 0 0 / 0.8);
+	--panel-rule: oklch(1 0 0 / 0.12);
+	--popover: oklch(from var(--color-accent) 0.24 0.02 h / 0.7);
+	--page-bg-image:
+		radial-gradient(
+			70vmax 55vmax at 0% 0%,
+			oklch(from var(--color-accent) 0.42 c calc(h - 20) / 0.55),
+			transparent 70%
+		),
+		radial-gradient(
+			65vmax 55vmax at 100% 100%,
+			oklch(from var(--color-accent) 0.36 c calc(h + 20) / 0.5),
+			transparent 70%
+		),
+		radial-gradient(
+			55vmax 45vmax at 100% 0%,
+			oklch(from var(--color-accent) 0.3 calc(c * 0.6) h / 0.5),
+			transparent 70%
+		);
 }
 
 [data-surface="glass"] [data-slot="app-sidebar"] {
-	background-color: color-mix(in oklab, var(--glass-fill) 60%, transparent);
+	background-color: var(--glass-fill);
+	background-image: var(--glass-sheen);
 	backdrop-filter: var(--glass-blur);
 	-webkit-backdrop-filter: var(--glass-blur);
 	border: 1px solid var(--glass-edge);
@@ -231,18 +288,207 @@
 		[data-slot="dialog-content"]
 	) {
 	background-color: var(--popover);
+	background-image: var(--glass-sheen);
 	backdrop-filter: var(--glass-blur);
 	-webkit-backdrop-filter: var(--glass-blur);
 	border: 1px solid var(--glass-edge);
 	box-shadow: var(--panel-shadow-lg);
 }
 
-[data-surface="glass"] [data-slot="button"][data-variant="outline"] {
-	background-color: color-mix(in oklab, var(--glass-fill) 80%, transparent);
+[data-surface="glass"] [data-slot="button"] {
+	border-radius: 9999px;
+}
+
+[data-surface="glass"]
+	[data-slot="button"]:is(
+		[data-variant="outline"],
+		[data-variant="secondary"],
+		[data-variant="destructive"]
+	) {
+	background-color: var(--glass-control);
+	background-image: linear-gradient(
+		to bottom,
+		oklch(1 0 0 / 0.35),
+		oklch(1 0 0 / 0)
+	);
+	backdrop-filter: blur(12px) saturate(180%);
+	-webkit-backdrop-filter: blur(12px) saturate(180%);
 	border-color: var(--glass-edge);
+	box-shadow: var(--glass-control-shadow);
+}
+
+[data-surface="glass"]
+	[data-slot="button"]:is(
+		[data-variant="outline"],
+		[data-variant="secondary"]
+	):hover {
+	background-color: var(--glass-control-hover);
+}
+
+[data-surface="glass"] [data-slot="button"][data-variant="destructive"] {
+	color: var(--color-destructive, var(--destructive));
+}
+
+[data-surface="glass"] [data-slot="button"][data-variant="default"] {
+	background-image: linear-gradient(
+		to bottom,
+		oklch(1 0 0 / 0.3),
+		oklch(1 0 0 / 0) 55%
+	);
 	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.5),
-		0 1px 2px rgba(0, 0, 0, 0.08);
+		0 0 0 0.5px oklch(0 0 0 / 0.25),
+		inset 0 1px 0 oklch(1 0 0 / 0.45),
+		inset 0 -1px 1px oklch(0 0 0 / 0.18),
+		0 4px 14px -4px var(--color-accent-glow);
+}
+
+[data-surface="glass"]
+	:is(
+		input:not(
+			[type="checkbox"],
+			[type="radio"],
+			[type="color"],
+			[type="range"]
+		),
+		textarea,
+		[data-slot="select-trigger"]
+	) {
+	background-color: var(--glass-control);
+	border-color: var(--input);
+	box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.06);
+}
+
+[data-surface="material"] {
+	--font-sans: "Roboto Flex Variable", Roboto, system-ui, sans-serif;
+	--radius: 1.5rem;
+	--color-bg: oklch(from var(--color-accent) 0.98 0.012 h);
+	--color-surface: oklch(from var(--color-accent) 0.95 0.022 h);
+	--color-surface-2: oklch(from var(--color-accent) 0.92 0.03 h);
+	--color-surface-3: oklch(from var(--color-accent) 0.89 0.036 h);
+	--color-border: oklch(from var(--color-accent) 0.8 0.03 h);
+	--color-border-light: oklch(from var(--color-accent) 0.7 0.035 h);
+	--color-text: oklch(from var(--color-accent) 0.2 0.02 h);
+	--color-text-muted: oklch(from var(--color-accent) 0.42 0.03 h);
+	--color-text-subtle: oklch(from var(--color-accent) 0.5 0.03 h);
+	--m3-tonal: oklch(from var(--color-accent) 0.9 0.06 h);
+	--m3-on-tonal: oklch(from var(--color-accent) 0.28 0.08 h);
+	--panel-bg: var(--color-surface);
+	--panel-bg-image: none;
+	--panel-backdrop: none;
+	--panel-border-width: 0px;
+	--panel-shadow: none;
+	--panel-shadow-lg:
+		0 1px 3px oklch(0 0 0 / 0.12), 0 6px 16px -4px oklch(0 0 0 / 0.14);
+	--panel-rule: var(--color-border);
+	--button-shadow: none;
+	--background: var(--color-bg);
+	--card: var(--color-surface);
+	--popover: var(--color-surface-2);
+	--border: var(--color-border);
+	--input: oklch(from var(--color-accent) 0.5 0.03 h);
+	--secondary: var(--m3-tonal);
+	--secondary-foreground: var(--m3-on-tonal);
+	--page-bg-image: none;
+	--aurora-opacity: 0;
+	--grain-opacity: 0;
+}
+
+.dark[data-surface="material"],
+.dark [data-surface="material"] {
+	--color-bg: oklch(from var(--color-accent) 0.16 0.014 h);
+	--color-surface: oklch(from var(--color-accent) 0.21 0.022 h);
+	--color-surface-2: oklch(from var(--color-accent) 0.25 0.028 h);
+	--color-surface-3: oklch(from var(--color-accent) 0.29 0.032 h);
+	--color-border: oklch(from var(--color-accent) 0.36 0.03 h);
+	--color-border-light: oklch(from var(--color-accent) 0.46 0.035 h);
+	--color-text: oklch(from var(--color-accent) 0.92 0.015 h);
+	--color-text-muted: oklch(from var(--color-accent) 0.78 0.025 h);
+	--color-text-subtle: oklch(from var(--color-accent) 0.68 0.025 h);
+	--m3-tonal: oklch(from var(--color-accent) 0.34 0.06 h);
+	--m3-on-tonal: oklch(from var(--color-accent) 0.9 0.05 h);
+	--input: oklch(from var(--color-accent) 0.62 0.03 h);
+	--panel-shadow-lg:
+		0 1px 3px oklch(0 0 0 / 0.5), 0 8px 20px -4px oklch(0 0 0 / 0.55);
+}
+
+[data-surface="material"] [data-slot="button"] {
+	border-radius: 9999px;
+	font-weight: 500;
+	letter-spacing: 0.01em;
+}
+
+[data-surface="material"] [data-slot="button"][data-variant="outline"] {
+	background-color: transparent;
+	border-color: var(--input);
+	color: var(--color-accent);
+}
+
+[data-surface="material"]
+	[data-slot="button"]:is(
+		[data-variant="outline"],
+		[data-variant="ghost"]
+	):hover {
+	background-color: color-mix(in oklab, var(--color-accent) 8%, transparent);
+}
+
+[data-surface="material"] [data-slot="button"][data-variant="secondary"] {
+	background-color: var(--m3-tonal);
+	color: var(--m3-on-tonal);
+}
+
+[data-surface="material"] [data-slot="button"][data-variant="default"]:hover {
+	box-shadow:
+		0 1px 2px oklch(0 0 0 / 0.2),
+		0 1px 3px 1px oklch(0 0 0 / 0.1);
+	filter: none;
+}
+
+[data-surface="material"]
+	:is(
+		input:not(
+			[type="checkbox"],
+			[type="radio"],
+			[type="color"],
+			[type="range"]
+		),
+		textarea,
+		[data-slot="select-trigger"]
+	) {
+	background-color: var(--color-surface-3);
+	border-color: transparent;
+	border-bottom-color: var(--input);
+	border-radius: 0.25rem 0.25rem 0 0;
+	box-shadow: none;
+}
+
+[data-surface="material"]
+	:is(
+		input:not(
+			[type="checkbox"],
+			[type="radio"],
+			[type="color"],
+			[type="range"]
+		),
+		textarea,
+		[data-slot="select-trigger"]
+	):focus-visible {
+	border-bottom-color: var(--color-accent);
+	box-shadow: inset 0 -1px 0 var(--color-accent);
+}
+
+[data-surface="material"]
+	:is(
+		[data-slot="popover-content"],
+		[data-slot="dropdown-menu-content"],
+		[data-slot="select-content"],
+		[data-slot="dialog-content"]
+	) {
+	border-color: transparent;
+	box-shadow: var(--panel-shadow-lg);
+}
+
+[data-surface="material"] [data-slot="dialog-content"] {
+	border-radius: 1.75rem;
 }
 
 [data-surface="neumorphism"] {
@@ -1177,7 +1423,8 @@ html[data-surface="retro"] {
 	background-image: var(--panel-bg-image);
 	backdrop-filter: var(--panel-backdrop);
 	-webkit-backdrop-filter: var(--panel-backdrop);
-	border: var(--panel-border-width) solid var(--color-border);
+	border: var(--panel-border-width) solid
+		var(--panel-border-color, var(--color-border));
 	box-shadow: var(--panel-shadow);
 }
 

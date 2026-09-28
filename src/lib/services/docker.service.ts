@@ -36,6 +36,7 @@ export type {
 	OneOffRunParams,
 	OneOffRunResult,
 } from "./docker/one-off.ts";
+export type { SwarmNodeInfo } from "./docker/swarm.ts";
 export type { SwarmReplica } from "./docker/swarm-replicas.ts";
 
 import { BaseDockerService } from "./docker/base.ts";

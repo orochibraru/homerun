@@ -1,6 +1,7 @@
 export const SURFACE_STYLES = [
 	{
-		description: "Frosted, translucent panels over the colour glow.",
+		description:
+			"Liquid glass: blurred, sheened panels and pill buttons with lit edges over your colour.",
 		id: "glass",
 		name: "Glass",
 	},
@@ -25,6 +26,12 @@ export const SURFACE_STYLES = [
 		description: "Textured, bevelled panels and buttons with a lit top edge.",
 		id: "skeuomorphism",
 		name: "Skeuomorphism",
+	},
+	{
+		description:
+			"Google's Material You: tonal surfaces from your colour, pill buttons, filled fields.",
+		id: "material",
+		name: "Material You",
 	},
 ] as const;
 

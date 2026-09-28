@@ -4,6 +4,8 @@
 click-config form**: a minimal Dokploy / Cloud Run alternative for your own
 hardware.
 
+[![Homerun | AlternativeTo](https://alternativeto.net/static/badges/badge-compact-color.svg)](https://alternativeto.net/software/homerun/about/?utm_source=badge&utm_medium=referral)
+
 Point at an image (or a git repo), fill in env vars / port / resources, hit
 deploy: Traefik routes it to `<slug>.yourdomain.com` with TLS, automatically.
 Single host, local Docker socket, no Kubernetes, no multi-node orchestration to

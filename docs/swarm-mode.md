@@ -84,18 +84,13 @@ and memory use. A replica scheduled on another node shows its state but no
 usage, since Homerun only talks to this host's Docker daemon. The resource graph
 below the list records the sum over the replicas running here.
 
-**Adding a node**: a second machine joins the swarm as a worker rather than
-being registered separately. On the manager, `docker swarm join-token worker`
-prints the token and address; on the new machine:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/swarm-join.sh \
-  | sudo bash -s -- --token=<SWMTKN-...> --manager=<manager-ip>:2377
-```
-
-It installs Docker if needed, joins the swarm on the system daemon and installs
-the Homerun Agent; the swarm scheduler places tasks there from then on and
-Traefik on the manager routes to them over the overlay network. The machines
+**Adding a node**: on `/remote-hosts`, **Add a server** with the swarm node role
+hands you a one-time command to run on the new machine, see
+[Adding a server with one command](remote-hosts-and-agent.md#adding-a-server-with-one-command).
+It installs Docker and joins the swarm on the system daemon; the swarm scheduler
+places tasks there from then on and Traefik on the manager routes to them over
+the overlay network. By hand, `docker swarm join-token worker` on the manager
+and `cmd/installer/swarm-join.sh` on the new machine do the same. The machines
 need to reach each other on 2377/tcp, 7946/tcp+udp and 4789/udp. Traefik picks
 up new replicas within about 2 seconds. See
 [`cmd/installer/README.md`](../cmd/installer/README.md) for the flags.

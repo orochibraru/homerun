@@ -373,8 +373,9 @@ per-user instead of a singleton row.
   `(protected)/` only, not pre-login pages, since this is a dashboard
   preference, not a site-wide brand color.
 - **Style** (`surfaceStyle`: glass, neumorphism, boxy, clay, skeuomorphism,
-  `$lib/surfaces.ts`): a `data-surface` attribute on `<html>`, and every style
-  is a block of token overrides in `layout.css` (`[data-surface="…"]`, plus a
+  material, `$lib/surfaces.ts`): a `data-surface` attribute on `<html>`, and
+  every style is a block of token overrides in `layout.css`
+  (`[data-surface="…"]`, plus a
   `.dark[data-surface="…"], .dark [data-surface="…"]` block for what differs in
   dark). `panel` reads `--panel-bg`/`--panel-bg-image`/`--panel-backdrop`/
   `--panel-border-width`/`--panel-shadow`, buttons (`[data-slot="button"]`)
@@ -390,12 +391,26 @@ per-user instead of a singleton row.
   `data-surface` on any element restyles its subtree, which is how the
   Appearance page's preview tiles work. A new style is one entry in
   `SURFACE_STYLES` and one token block, nothing reads the style name elsewhere.
-- **Glass** (the default style) is macOS-style material: a `--page-bg-image`
-  wallpaper built from the palette's `--brand-2`/`--brand-3`/accent, panels at
-  `blur(40px) saturate(180%)` over a translucent `--glass-fill` with a bright
-  `--glass-edge` hairline and a specular inset top highlight, a floating
-  translucent sidebar, glass popovers, menus, selects and dialogs, and the
-  system font first (`-apple-system`, then Inter).
+- **Glass** (the default style) is Apple liquid glass, and every colour in it
+  derives from `--color-accent` through CSS relative colours
+  (`oklch(from var(--color-accent) L C h)`): the page tint, the
+  `--page-bg-image` wallpaper and the hairlines. It used to mix in the default
+  `--brand-2`/`--brand-3` (pink and a hue-225 blue) and hue-290 greys, which a
+  custom accent never overrides, so the default bordeaux read blue. Panels are
+  `--glass-fill` plus a diagonal `--glass-sheen` at `blur(26px) saturate(190%)`,
+  bordered by the bright `--glass-edge` through `--panel-border-color` (a token
+  the `panel` utility reads, falling back to `--color-border`), with inset top
+  and bottom highlights. `--color-border` itself is a dark translucent hairline:
+  it used to be translucent white, which left every `border-border` control
+  (outline buttons, segmented toggles, inputs) with no visible edge on a white
+  panel. Buttons are pills; outline, secondary and destructive ones are glass
+  capsules (`--glass-control` and `--glass-control-shadow`: a 0.5px dark ring, a
+  white top highlight and a drop shadow). The system font comes first
+  (`-apple-system`, then Inter).
+- **Material You** (`material`) derives tonal surfaces, text and outline colours
+  from the accent the same way, with no borders or shadows on panels, pill
+  buttons (secondary is the tonal `--m3-tonal`), filled text fields with an
+  underline, and Roboto Flex (`@fontsource-variable/roboto-flex`).
 - **Presets** (`preset`, nullable: win95, win98, winxp, win7, msn, retro,
   `PRESETS` in `$lib/surfaces.ts`) ride the same `data-surface` attribute:
   `effectiveSurface()` puts the preset there instead of the style when one is
