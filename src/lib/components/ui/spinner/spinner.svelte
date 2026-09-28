@@ -18,9 +18,9 @@
 <Loader2Icon
   aria-label={ariaLabel}
   class={cn("size-4 animate-spin", className)}
-  color={color === null ? undefined : color}
-  name={name === null ? undefined : name}
+  color={color ?? undefined}
   {role}
-  stroke={stroke === null ? undefined : stroke}
+  {...name == null ? {} : { name }}
+  {...stroke == null ? {} : { stroke }}
   {...restProps}
 />
