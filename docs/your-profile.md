@@ -54,10 +54,12 @@ A per-account "Appearance" tab on your profile page controls:
 
 - **Presets**: a complete look from another era, with its own theme, style and
   colors: **Windows 95**, **Windows 98**, **Windows XP**, **Windows 7**, **MSN**
-  or **Retro** (a green phosphor terminal). While one is on it overrides the
-  theme, style and colors below, which stay saved for when you pick **None**
-  again. Each has a preview, and picking one previews it on the page until you
-  save.
+  or **Retro** (a green phosphor terminal), each with its own fonts: a pixel
+  sans for Windows 95/98, Tahoma for XP, Segoe UI for Windows 7 and MSN (with
+  bundled substitutes where they aren't installed) and VT323 for Retro. While
+  one is on it overrides the theme, style and colors below, which stay saved for
+  when you pick **None** again. Each has a preview, and picking one previews it
+  on the page until you save.
 - **Theme**: light, dark, or match system (the default). Changes apply instantly
   and are saved to your account, so the choice follows you to a new browser or
   device, not just the one you set it on.

@@ -400,7 +400,15 @@ per-user instead of a singleton row.
   (`[data-slot="panel-header"]`/`.panel-head`, `--panel-head-bg`/`-fg`), fields
   (`--field-*`) and buttons: only `data-variant` default, outline and secondary
   get the preset's button look (the button component sets `data-variant`), ghost
-  and link stay flat.
+  and link stay flat. The protected layout's sidebar (`data-slot="app-sidebar"`)
+  becomes a window and its top bar (`data-slot="app-header"`) a title bar: the
+  sidebar otherwise sits on the preset's desktop background, which made Windows
+  95/98/XP unreadable. Fonts are bundled (`@fontsource`: Pixelify Sans for
+  95/98, DejaVu Sans behind Tahoma for XP, Open Sans behind Segoe UI for 7 and
+  MSN, VT323 for Retro, whose root font size is bumped since VT323 runs small);
+  their `@font-face`s only download when a preset uses them.
+  `tests/e2e/ui-appearance.spec.ts` saves every preset and checks it's
+  server-rendered, leaving a screenshot of each in `test-results/`.
 - `(protected)/+layout.server.ts`'s shared `load` (same one that fetches
   notifications, see above) now also fetches `UserPreferencesDTO.get(...)` and
   returns `preferences: preferences.toJSON()`, since the sidebar itself, not

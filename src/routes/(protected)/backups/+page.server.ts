@@ -8,7 +8,10 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
-import { enqueueVolumeBackup } from "$lib/services/backup-queue";
+import {
+	cancelBackupRun,
+	enqueueVolumeBackup,
+} from "$lib/services/backup-queue";
 import { nextCronRun } from "$lib/services/cron/cron-expression";
 import { stackPath } from "$lib/stack-tree";
 
@@ -77,6 +80,25 @@ export const load = async ({ parent, url }) => {
 };
 
 export const actions = {
+	cancelRun: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const run = await BackupRunDTO.get(
+			String((await request.formData()).get("runId") ?? ""),
+		);
+		if (!run) {
+			return fail(404, { error: "That run doesn't exist any more." });
+		}
+		if (!(await cancelBackupRun(run, locals.user.name || locals.user.email))) {
+			return fail(400, { error: "That run already finished." });
+		}
+		logger.info(
+			`Backup run cancelled: run=${run.toJSON().id} user=${locals.user.id}`,
+		);
+		return { cancelled: true };
+	},
+
 	run: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

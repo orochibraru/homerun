@@ -1,4 +1,5 @@
-import type { JobDTO } from "$lib/dto/job-dto";
+import type { BackupRunDTO } from "$lib/dto/backup-run-dto";
+import { JobDTO } from "$lib/dto/job-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { QueueService } from "./queue.service.ts";
 import type { RestoreOptions } from "./s3-backup.service.ts";
@@ -40,4 +41,29 @@ export function enqueueVolumeRestore(
 		type: "backup_restore",
 		userId: volume.userId,
 	});
+}
+
+/**
+ * Cancels a backup or restore run: its job, when still queued or running
+ * (the Go worker stops it at its next heartbeat, aborting the upload and
+ * starting any services it stopped again), and the run itself, closed as
+ * failed with `Cancelled by <who>`. A run whose job already ended but that
+ * still shows as running (its outcome was never recorded) is just closed.
+ *
+ * @returns False when the run had already finished.
+ */
+export async function cancelBackupRun(
+	run: BackupRunDTO,
+	by: string,
+): Promise<boolean> {
+	const row = run.toJSON();
+	if (row.success !== null) {
+		return false;
+	}
+	const reason = `Cancelled by ${by}.`;
+	if (row.jobId) {
+		await JobDTO.cancel(row.jobId, reason);
+	}
+	await run.finish({ error: reason, success: false });
+	return true;
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
 	import { invalidateAll } from "$app/navigation";
+	import BackupCancelButton from "$lib/components/backup-cancel-button.svelte";
 	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
 	import PanelHeader from "$lib/components/panel-header.svelte";
 	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
@@ -76,7 +77,12 @@
               {run.kind === "restore" ? "Restore" : "Backup"}
             </td>
             <td class="px-5 py-3">
-              <RunStatusBadge error={run.error} success={run.success} />
+              <div class="flex items-center gap-2">
+                <RunStatusBadge error={run.error} success={run.success} />
+                {#if run.success === null}
+                  <BackupCancelButton kind={run.kind} runId={run.id} />
+                {/if}
+              </div>
             </td>
           </tr>
           {#if expandedRunId === run.id}

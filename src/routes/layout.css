@@ -3,6 +3,11 @@
 @import "shadcn-svelte/tailwind.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/open-sans";
+@import "@fontsource-variable/pixelify-sans";
+@import "@fontsource/dejavu-sans/400.css";
+@import "@fontsource/dejavu-sans/700.css";
+@import "@fontsource/vt323";
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 
@@ -296,8 +301,7 @@
 [data-surface="win95"] {
 	--field-bg: #ffffff;
 	color-scheme: light;
-	--font-sans:
-		"MS Sans Serif", "Microsoft Sans Serif", Tahoma, Geneva, sans-serif;
+	--font-sans: "Pixelify Sans Variable", "MS Sans Serif", Tahoma, sans-serif;
 	--color-bg: #008080;
 	--page-bg-image: none;
 	--color-surface: #c0c0c0;
@@ -371,7 +375,7 @@
 [data-surface="win98"] {
 	--field-bg: #ffffff;
 	color-scheme: light;
-	--font-sans: Tahoma, "MS Sans Serif", Geneva, sans-serif;
+	--font-sans: "Pixelify Sans Variable", Tahoma, "MS Sans Serif", sans-serif;
 	--color-bg: #3a6ea5;
 	--page-bg-image: none;
 	--color-surface: #c0c0c0;
@@ -445,7 +449,7 @@
 [data-surface="winxp"] {
 	--field-bg: #ffffff;
 	color-scheme: light;
-	--font-sans: Tahoma, "Trebuchet MS", Verdana, sans-serif;
+	--font-sans: Tahoma, "DejaVu Sans", Verdana, sans-serif;
 	--color-bg: #3a6ea5;
 	--page-bg-image: linear-gradient(
 		180deg,
@@ -523,7 +527,7 @@
 [data-surface="win7"] {
 	--field-bg: #ffffff;
 	color-scheme: light;
-	--font-sans: "Segoe UI", Tahoma, "Helvetica Neue", sans-serif;
+	--font-sans: "Segoe UI", "Open Sans Variable", "Helvetica Neue", sans-serif;
 	--color-bg: #0b3d70;
 	--page-bg-image: radial-gradient(
 		ellipse at 30% 0%,
@@ -606,7 +610,7 @@
 [data-surface="msn"] {
 	--field-bg: #ffffff;
 	color-scheme: light;
-	--font-sans: "Segoe UI", Tahoma, Verdana, sans-serif;
+	--font-sans: "Segoe UI", "Open Sans Variable", Tahoma, sans-serif;
 	--color-bg: #dbeaf8;
 	--page-bg-image: linear-gradient(
 		180deg,
@@ -687,7 +691,7 @@
 [data-surface="retro"] {
 	--field-bg: #050a05;
 	color-scheme: dark;
-	--font-sans: "JetBrains Mono Variable", ui-monospace, Menlo, monospace;
+	--font-sans: VT323, "JetBrains Mono Variable", ui-monospace, monospace;
 	--color-bg: #050a05;
 	--page-bg-image: repeating-linear-gradient(
 		0deg,
@@ -764,21 +768,39 @@
 	background-image: var(--page-bg-image);
 }
 
-[data-surface="win95"] :is([data-slot="panel-header"], .panel-head),
-[data-surface="win98"] :is([data-slot="panel-header"], .panel-head),
-[data-surface="winxp"] :is([data-slot="panel-header"], .panel-head),
-[data-surface="win7"] :is([data-slot="panel-header"], .panel-head),
-[data-surface="msn"] :is([data-slot="panel-header"], .panel-head),
-[data-surface="retro"] :is([data-slot="panel-header"], .panel-head) {
+[data-surface="win95"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head),
+[data-surface="win98"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head),
+[data-surface="winxp"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head),
+[data-surface="win7"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head),
+[data-surface="msn"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head),
+[data-surface="retro"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head) {
 	background: var(--panel-head-bg);
 }
 
-[data-surface="win95"] :is([data-slot="panel-header"], .panel-head) *,
-[data-surface="win98"] :is([data-slot="panel-header"], .panel-head) *,
-[data-surface="winxp"] :is([data-slot="panel-header"], .panel-head) *,
-[data-surface="win7"] :is([data-slot="panel-header"], .panel-head) *,
-[data-surface="msn"] :is([data-slot="panel-header"], .panel-head) *,
-[data-surface="retro"] :is([data-slot="panel-header"], .panel-head) * {
+[data-surface="win95"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head)
+	*,
+[data-surface="win98"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head)
+	*,
+[data-surface="winxp"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head)
+	*,
+[data-surface="win7"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head)
+	*,
+[data-surface="msn"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head)
+	*,
+[data-surface="retro"]
+	:is([data-slot="panel-header"], [data-slot="app-header"], .panel-head)
+	* {
 	color: var(--panel-head-fg);
 }
 
@@ -919,6 +941,26 @@
 	[data-slot="button"]:is([data-variant="ghost"], [data-variant="link"]) {
 	background-image: none;
 	box-shadow: none;
+}
+
+[data-surface="win95"] [data-slot="app-sidebar"],
+[data-surface="win98"] [data-slot="app-sidebar"],
+[data-surface="winxp"] [data-slot="app-sidebar"],
+[data-surface="win7"] [data-slot="app-sidebar"],
+[data-surface="msn"] [data-slot="app-sidebar"],
+[data-surface="retro"] [data-slot="app-sidebar"] {
+	background-color: var(--panel-bg);
+	background-image: var(--panel-bg-image);
+	backdrop-filter: var(--panel-backdrop);
+	-webkit-backdrop-filter: var(--panel-backdrop);
+	border: var(--panel-border-width) solid var(--color-border);
+	border-radius: var(--radius);
+	box-shadow: var(--panel-shadow);
+	color: var(--color-text);
+}
+
+html[data-surface="retro"] {
+	font-size: 118%;
 }
 
 [data-surface="retro"] {

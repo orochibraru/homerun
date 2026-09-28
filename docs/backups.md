@@ -42,6 +42,15 @@ pipes it into `tar` in the same kind of helper. Backups made by older versions
 (which read the volume through Docker's archive API) restore the same way: the
 file format didn't change.
 
+A running backup or restore has a **Cancel** button in the run log, on
+`/backups` and on the volume's page. The job stops within a few seconds, a
+multipart upload in progress is aborted so nothing is left in the bucket, any
+services stopped for it are started again, and the run is recorded as failed
+with who cancelled it. Cancelling a restore leaves the files already unpacked in
+place, so the volume is half-restored until you restore again. A run that still
+shows as running although its job is long gone (after a crash, say) can be
+cancelled the same way to close it.
+
 A backup that stops making progress doesn't hang: if Docker stops answering for
 the helper, the backup fails after about 10 minutes with an error naming the
 container, instead of running (and blocking updates) forever. See

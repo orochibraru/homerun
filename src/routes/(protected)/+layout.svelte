@@ -120,7 +120,7 @@
 <!-- Fills the full viewport : there's no global navbar above this. -->
 <div class="flex h-dvh overflow-hidden p-2 md:gap-2">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
-  <aside class="hidden w-56 shrink-0 flex-col md:flex">
+  <aside class="hidden w-56 shrink-0 flex-col md:flex" data-slot="app-sidebar">
     <BrandMark class="px-3 py-2.5" />
 
     {#if !data.readOnly}
@@ -169,7 +169,10 @@
     <!-- Sticky header, every page, both breakpoints : hamburger (mobile
          only) + page title on the left, notifications + account menu on
          the right. -->
-    <header class="border-border sticky top-0 z-30 flex h-12 shrink-0 items-center gap-1.5 border-b px-2 sm:gap-2 sm:px-3 md:px-5">
+    <header
+      class="border-border sticky top-0 z-30 flex h-12 shrink-0 items-center gap-1.5 border-b px-2 sm:gap-2 sm:px-3 md:px-5"
+      data-slot="app-header"
+    >
       <Button
         aria-label="Toggle sidebar"
         class="md:hidden"

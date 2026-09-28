@@ -11,6 +11,7 @@ import {
 } from "$lib/server/volume-backup-form";
 import { VolumeServices } from "$lib/services/backup/volume-services";
 import {
+	cancelBackupRun,
 	enqueueVolumeBackup,
 	enqueueVolumeRestore,
 } from "$lib/services/backup-queue";
@@ -43,6 +44,25 @@ export const load = async ({ params, parent }) => {
 };
 
 export const actions = {
+	cancelRun: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const run = await BackupRunDTO.get(
+			String((await request.formData()).get("runId") ?? ""),
+		);
+		if (!run || run.toJSON().volumeId !== params.volumeId) {
+			return fail(404, { error: "That run doesn't exist any more." });
+		}
+		if (!(await cancelBackupRun(run, locals.user.name || locals.user.email))) {
+			return fail(400, { error: "That run already finished." });
+		}
+		logger.info(
+			`Backup run cancelled: volume=${params.volumeId} run=${run.toJSON().id} user=${locals.user.id}`,
+		);
+		return { cancelled: true };
+	},
+
 	backupNow: async ({ params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

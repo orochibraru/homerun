@@ -138,3 +138,5 @@ Luna
 Tahoma
 scanlines
 MSN
+Pixelify
+Segoe

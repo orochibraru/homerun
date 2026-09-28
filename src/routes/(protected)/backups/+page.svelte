@@ -4,6 +4,7 @@
 	import { enhance } from "$app/forms";
 	import { invalidateAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import BackupCancelButton from "$lib/components/backup-cancel-button.svelte";
 	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import EntityToolbar, {
@@ -242,14 +243,19 @@
                 </td>
                 <td class="text-text-muted px-4 py-3">{formatSize(run.sizeBytes)}</td>
                 <td class="px-4 py-3">
-                  <RunStatusBadge error={run.error} success={run.success}>
-                    {#snippet running()}
-                      <span class="text-text-muted flex items-center gap-1 text-xs">
-                        <Spinner class="size-3" />
-                        Running
-                      </span>
-                    {/snippet}
-                  </RunStatusBadge>
+                  <div class="flex items-center gap-2">
+                    <RunStatusBadge error={run.error} success={run.success}>
+                      {#snippet running()}
+                        <span class="text-text-muted flex items-center gap-1 text-xs">
+                          <Spinner class="size-3" />
+                          Running
+                        </span>
+                      {/snippet}
+                    </RunStatusBadge>
+                    {#if run.success === null}
+                      <BackupCancelButton kind={run.kind} runId={run.id} />
+                    {/if}
+                  </div>
                 </td>
               </tr>
               {#if expandedRunId === run.id}

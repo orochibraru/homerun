@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "Gladys Assistant",
+	"description": "Privacy-first home automation, with scenes, a dashboard and integrations for Zigbee, MQTT, Philips Hue and more. USB dongles and the integrations Gladys runs as their own containers need the host's /dev and Docker socket, which this deploy doesn't give it : integrations reached over the network work.",
+	"image": "gladysassistant/gladys",
+	"tag": "v5",
+	"containerPort": 80,
+	"icon": "di:gladys-assistant",
+	"tags": ["home", "automation", "iot", "smart-home"],
+	"websiteUrl": "https://gladysassistant.com",
+	"sourceUrl": "https://github.com/GladysAssistant/Gladys",
+	"envVars": {
+		"NODE_ENV": "production",
+		"SERVER_PORT": "80",
+		"SQLITE_FILE_PATH": "/var/lib/gladysassistant/gladys-production.db",
+		"TZ": "UTC"
+	},
+	"volumes": ["/var/lib/gladysassistant"]
+}

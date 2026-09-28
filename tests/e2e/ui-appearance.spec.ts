@@ -71,3 +71,55 @@ test.describe
 			expect(await cssVarOf(page, "html")).not.toBe(ACCENT);
 		});
 	});
+
+async function savePreset(page: Page, name: string): Promise<void> {
+	await page.goto("/profile/appearance");
+	const form = page.locator("form[action='?/updatePreset']");
+	await form.getByRole("button", { name }).click();
+	await form.getByRole("button", { name: "Save" }).click();
+	await expect(page.getByText("Preset saved.")).toBeVisible();
+}
+
+test.describe
+	.serial("presets", () => {
+		test.afterAll(async ({ browser }) => {
+			const page = await browser.newPage();
+			await signIn(page);
+			await savePreset(page, "None");
+			await page.close();
+		});
+
+		for (const [id, name] of [
+			["win95", "Windows 95"],
+			["win98", "Windows 98"],
+			["winxp", "Windows XP"],
+			["win7", "Windows 7"],
+			["msn", "MSN"],
+			["retro", "Retro"],
+		]) {
+			test(`${name} is rendered server-side and overrides the theme, style and colors`, async ({
+				page,
+			}, testInfo) => {
+				await signIn(page);
+				await savePreset(page, name);
+				await expect(
+					page.getByText(`The ${name} preset overrides this`).first(),
+				).toBeVisible();
+
+				const response = await page.goto("/");
+				expect(await response?.text()).toContain(`data-surface="${id}"`);
+				await expect(page.locator("html")).toHaveAttribute("data-surface", id);
+				await page.screenshot({ path: testInfo.outputPath(`${id}.png`) });
+			});
+		}
+
+		test("None goes back to the chosen style", async ({ page }) => {
+			await signIn(page);
+			await savePreset(page, "None");
+			await page.goto("/");
+			await expect(page.locator("html")).toHaveAttribute(
+				"data-surface",
+				"glass",
+			);
+		});
+	});
