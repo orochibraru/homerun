@@ -133,3 +133,8 @@ Claymorphism
 Skeuomorphism
 Vue
 webpack
+Aero
+Luna
+Tahoma
+scanlines
+MSN

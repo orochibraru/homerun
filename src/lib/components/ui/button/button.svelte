@@ -74,6 +74,7 @@ let {
     aria-disabled={disabled}
     class={cn(buttonVariants({ size, variant }), className)}
     data-slot="button"
+    data-variant={variant}
     href={disabled ? undefined : href}
     role={disabled ? "link" : undefined}
     tabindex={disabled ? -1 : undefined}
@@ -90,6 +91,7 @@ let {
   <button
     class={cn(buttonVariants({ size, variant }), className)}
     data-slot="button"
+    data-variant={variant}
     {disabled}
     {type}
     bind:this={ref}

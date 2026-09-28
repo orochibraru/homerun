@@ -5,6 +5,7 @@ import { Logger } from "$lib/logger";
 import {
 	colorsSchema,
 	perPageSchema,
+	presetSchema,
 	surfaceSchema,
 	themeSchema,
 } from "$lib/server/validation/appearance";
@@ -26,6 +27,23 @@ export const actions = {
 		const prefs = await UserPreferencesDTO.get(locals.user.id);
 		await prefs.updateTheme(parsed.data.theme);
 		logger.info("Theme preference updated", { userId: locals.user.id });
+		return { success: true };
+	},
+
+	/** Saves the preset that overrides theme, style and colors, or clears it. */
+	updatePreset: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const parsed = presetSchema.safeParse(
+			Object.fromEntries(await request.formData()),
+		);
+		if (!parsed.success) {
+			return fail(400, { error: "Pick one of the listed presets." });
+		}
+		const prefs = await UserPreferencesDTO.get(locals.user.id);
+		await prefs.updatePreset(parsed.data.preset || null);
+		logger.info("Preset updated", { userId: locals.user.id });
 		return { success: true };
 	},
 

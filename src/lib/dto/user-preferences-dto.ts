@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { DEFAULT_PER_PAGE } from "$lib/list-sorts";
 import { db } from "$lib/server/db/lib";
 import { type UserPreferences, userPreferences } from "$lib/server/db/schema";
-import { DEFAULT_SURFACE, type SurfaceStyle } from "$lib/surfaces";
+import { DEFAULT_SURFACE, type Preset, type SurfaceStyle } from "$lib/surfaces";
 import { BaseDTO } from "./base-dto";
 
 export type ThemePreference = "light" | "dark" | "system";
@@ -32,6 +32,7 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 			createdAt: now,
 			palette: null,
 			perPage: DEFAULT_PER_PAGE,
+			preset: null,
 			surfaceStyle: DEFAULT_SURFACE,
 			theme: "system",
 			updatedAt: now,
@@ -44,6 +45,11 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 	/** Persists the user's light/dark/system theme choice. */
 	async updateTheme(theme: ThemePreference): Promise<void> {
 		await this.persist({ theme });
+	}
+
+	/** Persists the preset (Windows 95, MSN, Retro…) that overrides theme, style and colors, or none. */
+	async updatePreset(preset: Preset | null): Promise<void> {
+		await this.persist({ preset });
 	}
 
 	/** Persists the look of panels and buttons: glass, neumorphism, boxy, clay or skeuomorphism. */

@@ -2,6 +2,7 @@
 	import { setMode } from "mode-watcher";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
+	import SurfacePreview from "$lib/components/surface-preview.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import {
 		SelectContent,
@@ -12,7 +13,7 @@
 	import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
 	import { PALETTES } from "$lib/palettes";
 	import { title } from "$lib/store/title.js";
-	import { SURFACE_STYLES } from "$lib/surfaces";
+	import { PRESETS, SURFACE_STYLES } from "$lib/surfaces";
 	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
@@ -38,6 +39,14 @@
 	);
 	let perPage = $state(untrack(() => String(data.preferences.perPage)));
 	let surfaceStyle = $state(untrack(() => data.preferences.surfaceStyle));
+	let preset = $state<string>(untrack(() => data.preferences.preset ?? ""));
+
+	const presetName = $derived(PRESETS.find((p) => p.id === preset)?.name);
+
+	/** Shows the picked preset, or the picked style when there's none, on this page before it's saved. */
+	function preview() {
+		document.documentElement.dataset.surface = preset || surfaceStyle;
+	}
 	let accentColor = $state(
 		untrack(() => data.preferences.accentColor ?? DEFAULT_ACCENT),
 	);
@@ -61,7 +70,64 @@
 	onMount(() => title.set("Appearance"));
 </script>
 
+{#snippet overridden()}
+    {#if presetName}
+        <p class="text-accent mt-1 text-xs font-medium">
+            The {presetName} preset overrides this while it's on. It's kept
+            for when you pick None.
+        </p>
+    {/if}
+{/snippet}
+
 <div class="space-y-6">
+    <section class="panel rounded-md">
+        <div class="border-border border-b px-5 py-4">
+            <h2 class="eyebrow">Presets</h2>
+            <p class="text-text-muted text-xs">
+                A complete look from another era: its own theme, style and
+                colors, overriding the ones below while it's on. Picking one
+                previews it on this page; save to keep it.
+            </p>
+        </div>
+        <form
+            action="?/updatePreset"
+            class="space-y-4 p-5"
+            method="POST"
+            use:enhance={saveToast("Preset")}
+        >
+            <input name="preset" type="hidden" value={preset} />
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
+                {#each [{ description: "Your own theme, style and colors below.", id: "", name: "None" }, ...PRESETS] as option (option.id)}
+                    <button
+                        aria-pressed={preset === option.id}
+                        class="flex flex-col gap-3 rounded-md border p-3 text-left transition-colors {preset ===
+                        option.id
+                            ? 'border-accent bg-accent-light'
+                            : 'border-border hover:bg-surface-2'}"
+                        onclick={() => {
+                            preset = option.id;
+                            preview();
+                        }}
+                        type="button"
+                    >
+                        <SurfacePreview surface={option.id || surfaceStyle} />
+                        <span>
+                            <span class="text-text block text-sm font-medium">
+                                {option.name}
+                            </span>
+                            <span class="text-text-muted block text-xs">
+                                {option.description}
+                            </span>
+                        </span>
+                    </button>
+                {/each}
+            </div>
+            <div class="flex justify-end">
+                <Button type="submit">Save</Button>
+            </div>
+        </form>
+    </section>
+
     <!-- ═══ Theme ═══ -->
     <section class="panel rounded-md">
         <div class="border-border border-b px-5 py-4">
@@ -70,6 +136,7 @@
                 "Match system" follows your OS's own light/dark setting and
                 updates live if it changes.
             </p>
+            {@render overridden()}
         </div>
         <form
             action="?/updateTheme"
@@ -105,6 +172,7 @@
                 How panels, cards and buttons are drawn. Picking one previews
                 it on this page; save to keep it.
             </p>
+            {@render overridden()}
         </div>
         <form
             action="?/updateSurface"
@@ -123,24 +191,11 @@
                             : 'border-border hover:bg-surface-2'}"
                         onclick={() => {
                             surfaceStyle = style.id;
-                            document.documentElement.dataset.surface = style.id;
+                            preview();
                         }}
                         type="button"
                     >
-                        <span
-                            class="bg-bg block w-full rounded-md p-3"
-                            data-surface={style.id}
-                        >
-                            <span class="panel flex items-center justify-between gap-2 rounded-md p-3">
-                                <span class="bg-text-subtle/40 h-2 w-12 rounded-full"></span>
-                                <span
-                                    class="bg-primary rounded-md px-2 py-1 text-[0.625rem] text-white"
-                                    data-slot="button"
-                                >
-                                    Deploy
-                                </span>
-                            </span>
-                        </span>
+                        <SurfacePreview surface={style.id} />
                         <span>
                             <span class="text-text block text-sm font-medium">
                                 {style.name}{style.id === "glass" ? " (default)" : ""}
@@ -167,6 +222,7 @@
                 hues charts, category tiles and the background use, all
                 picked to go together. Custom sets the accent alone.
             </p>
+            {@render overridden()}
         </div>
         <form
             action="?/updateColors"

@@ -52,6 +52,12 @@ making you copy-paste, and it shows up in this list like any other.
 
 A per-account "Appearance" tab on your profile page controls:
 
+- **Presets**: a complete look from another era, with its own theme, style and
+  colors: **Windows 95**, **Windows 98**, **Windows XP**, **Windows 7**, **MSN**
+  or **Retro** (a green phosphor terminal). While one is on it overrides the
+  theme, style and colors below, which stay saved for when you pick **None**
+  again. Each has a preview, and picking one previews it on the page until you
+  save.
 - **Theme**: light, dark, or match system (the default). Changes apply instantly
   and are saved to your account, so the choice follows you to a new browser or
   device, not just the one you set it on.

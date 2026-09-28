@@ -25,7 +25,7 @@ import type {
 import type { PublishedPort } from "$lib/published-ports";
 import type { ResourceKind, Threshold } from "$lib/resource-thresholds";
 import type { BackupRunKind, RevisionConfig } from "$lib/revision-config";
-import type { SurfaceStyle } from "$lib/surfaces";
+import type { Preset, SurfaceStyle } from "$lib/surfaces";
 import type {
 	ContainerStatus,
 	JobStage,
@@ -1649,6 +1649,7 @@ export const userPreferences = pgTable("user_preferences", {
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	palette: text("palette"),
 	perPage: integer("per_page").default(50).notNull(),
+	preset: text("preset").$type<Preset>(),
 	surfaceStyle: text("surface_style")
 		.$type<SurfaceStyle>()
 		.default("glass")

@@ -18,7 +18,10 @@
 	}: Props = $props();
 </script>
 
-<div class="border-border flex flex-wrap items-center gap-3 border-b px-5 py-4 sm:flex-nowrap {className}">
+<div
+  class="border-border flex flex-wrap items-center gap-3 border-b px-5 py-4 sm:flex-nowrap {className}"
+  data-slot="panel-header"
+>
   {#if Icon}
     <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
       <Icon class="size-4" />

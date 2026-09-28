@@ -390,6 +390,17 @@ per-user instead of a singleton row.
   `data-surface` on any element restyles its subtree, which is how the
   Appearance page's preview tiles work. A new style is one entry in
   `SURFACE_STYLES` and one token block, nothing reads the style name elsewhere.
+- **Presets** (`preset`, nullable: win95, win98, winxp, win7, msn, retro,
+  `PRESETS` in `$lib/surfaces.ts`) ride the same `data-surface` attribute:
+  `effectiveSurface()` puts the preset there instead of the style when one is
+  set, so nothing of the style leaks in, and the protected layout drops the
+  palette's accent CSS. A preset block forces a whole palette (text, surfaces,
+  borders, accent, `color-scheme`, `--font-sans`, `--page-bg-image` for the
+  desktop behind the page) regardless of light/dark, plus the title-bar strip
+  (`[data-slot="panel-header"]`/`.panel-head`, `--panel-head-bg`/`-fg`), fields
+  (`--field-*`) and buttons: only `data-variant` default, outline and secondary
+  get the preset's button look (the button component sets `data-variant`), ghost
+  and link stay flat.
 - `(protected)/+layout.server.ts`'s shared `load` (same one that fetches
   notifications, see above) now also fetches `UserPreferencesDTO.get(...)` and
   returns `preferences: preferences.toJSON()`, since the sidebar itself, not

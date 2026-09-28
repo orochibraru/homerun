@@ -14,7 +14,7 @@
 	import ProfileMenu from "$lib/components/profile-menu.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { appearanceCss } from "$lib/palettes";
-	import { DEFAULT_SURFACE } from "$lib/surfaces";
+	import { DEFAULT_SURFACE, effectiveSurface } from "$lib/surfaces";
 	import { allNavItems } from "./nav-items";
 
 	const { data, children } = $props();
@@ -43,10 +43,14 @@
 		items: (typeof allNavItems)[number][];
 	}
 
-	const accentCss = $derived(appearanceCss(data.preferences));
+	const accentCss = $derived(
+		data.preferences.preset ? "" : appearanceCss(data.preferences),
+	);
 
 	$effect(() => {
-		document.documentElement.dataset.surface = data.preferences.surfaceStyle;
+		document.documentElement.dataset.surface = effectiveSurface(
+			data.preferences,
+		);
 		return () => {
 			document.documentElement.dataset.surface = DEFAULT_SURFACE;
 		};

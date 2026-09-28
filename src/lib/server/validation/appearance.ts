@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
 import { PALETTES } from "$lib/palettes";
-import { SURFACE_STYLES } from "$lib/surfaces";
+import { PRESETS, SURFACE_STYLES } from "$lib/surfaces";
 
 /** A bare "#rrggbb" hex color, the shape a native `<input type="color">` always submits. */
 const hexColorSchema = z
@@ -10,6 +10,11 @@ const hexColorSchema = z
 
 export const themeSchema = z.object({
 	theme: z.enum(["light", "dark", "system"]),
+});
+
+/** The preset choice: a preset id, or "" for none. */
+export const presetSchema = z.object({
+	preset: z.enum(["", ...PRESETS.map((p) => p.id)]),
 });
 
 export const surfaceSchema = z.object({

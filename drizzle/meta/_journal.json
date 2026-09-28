@@ -602,6 +602,13 @@
 			"when": 1790598636453,
 			"tag": "0085_lethal_patch",
 			"breakpoints": true
+		},
+		{
+			"idx": 86,
+			"version": "7",
+			"when": 1790602398545,
+			"tag": "0086_charming_talos",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

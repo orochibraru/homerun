@@ -3,7 +3,7 @@ import type { Pathname } from "$app/types";
 import type { Logger } from "$lib/logger";
 import type { ApiKeyScope } from "$lib/permissions";
 import type { AuthType } from "$lib/services/auth";
-import type { SurfaceStyle } from "$lib/surfaces";
+import type { SurfaceId } from "$lib/surfaces";
 
 /// <reference types="vite-plugin-pwa/client" />
 /// <reference types="vite-plugin-pwa/info" />
@@ -25,7 +25,7 @@ declare global {
 			message: unknown;
 			readOnly: boolean;
 			session: AuthType["session"];
-			surface?: SurfaceStyle;
+			surface?: SurfaceId;
 			user: AuthType["user"];
 			userAgent: string;
 		}
