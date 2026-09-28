@@ -157,7 +157,8 @@ new files up on its next build and seeds them at boot.
   `scripts/bump-template-versions.ts`, keeping its shape; a floating one
   (`latest`, `stable`) is left alone.
 - Every template must deploy and turn healthy with its defaults: the Templates
-  E2E job deploys each one on a real Docker daemon. Run it locally on yours with
+  E2E job deploys the ones your pull request adds or changes on a real Docker
+  daemon, and every one of them on `main`. Run it locally on yours with
   `bun run build && TEMPLATES_E2E_ONLY=<slug> bunx playwright test --config playwright.templates.config.ts`.
   One that genuinely can't run headless (needs hardware, host networking or an
   external account) goes in that spec's skip list with the reason.

@@ -3,13 +3,16 @@ import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { QueueService } from "./queue.service.ts";
 import type { RestoreOptions } from "./s3-backup.service.ts";
 
-/** Enqueues a backup job for `volume`, deduped and lock-scoped per volume so a second backup can't be queued (or run) while one is already pending. */
-export function enqueueVolumeBackup(volume: StorageVolumeDTO): Promise<JobDTO> {
+/** Enqueues a backup job for `volume`, deduped and lock-scoped per volume so a second backup can't be queued (or run) while one is already pending; `scheduled` marks one fired by the backup scheduler, whose outcome notification is grouped with the rest of that run. */
+export function enqueueVolumeBackup(
+	volume: StorageVolumeDTO,
+	scheduled = false,
+): Promise<JobDTO> {
 	return QueueService.enqueue({
 		dedupeKey: `backup:${volume.id}`,
 		lockKey: `volume:${volume.id}`,
 		maxAttempts: 2,
-		payload: { userId: volume.userId, volumeId: volume.id },
+		payload: { scheduled, userId: volume.userId, volumeId: volume.id },
 		title: `Back up ${volume.name}`,
 		type: "backup",
 		userId: volume.userId,

@@ -43,6 +43,13 @@ rather than after them, because both are the exception to "build the image once"
 : they must run the app and worker as local processes to reach the Docker socket
 (see Screenshots and Template deploys in `testing.md`), so each does its own
 `bun run build` and never touches the image under test. Both feed the CI Gate.
+**On a PR, templates E2E only deploys the templates the PR adds or changes**:
+Detect Changes turns every non-removed `templates/<category>/<slug>.json` in the
+PR's file list into a `templates` output (comma-separated slugs), passed as the
+workflow's `templates` input and on to `TEMPLATES_E2E_ONLY`; no template touched
+skips the job (the gate treats skipped as passing). Deploying all of them took
+over an hour on PRs that never touched one. `publish.yaml` and
+`template-versions.yaml` pass no `templates`, so they still deploy every one.
 `publish.yaml` runs `templates-e2e.yaml` too, off `code_quality` (so only when
 it builds from scratch rather than promoting a PR's images, which already passed
 it), but nothing waits on it : an hour-plus job in front of every canary isn't

@@ -231,6 +231,25 @@ never the request URL that carries the token. The payload builders
 `slackPayload`/`telegramPayload`) and `deployEvent`/`isFailureEvent` are pure
 and unit-tested in `tests/unit/app/notification-channel.test.ts`.
 
+**Grouping** (`$lib/services/notification-grouping.ts`).
+`dispatch(message, { scheduled })` hands every message to a
+`NotificationGrouper` (pure, driven by timestamps so tests pass a clock): a
+message with nothing sent in the last 60s goes out at once, later ones are held
+until 60s of quiet (5 min cap), and `scheduled` ones (a `cron`-triggered deploy,
+a backup or cron job enqueued by its scheduler, the `scheduled` payload flag)
+are always held until 60s of quiet _and_ `JobDTO.hasActiveScheduledWork()` is
+false (1h cap). That check filters payloads in code because of the
+double-encoded jsonb trap in `data-and-config.md`. A 10s ticker (`flushDue`,
+public so tests drive it with `setSystemTime`) runs only while something is
+held. `#deliverGroup` resolves each channel once across the group's events and
+sends it only its subscribed messages: one as itself, several folded by
+`groupedMessage` (counts in the title, first failure's event, link and colour,
+failures' detail tails). Held messages are in memory; a restart drops them.
+Tests call `discardPending()` in `afterEach`, since otherwise consecutive
+dispatches in one test file group. Backup outcomes are notified from
+`worker-jobs/backup.ts`'s finalize (a failure only once no retry is left), cron
+jobs from `worker-jobs/cron_job.ts`'s.
+
 **A message is built once, in `notification-messages.ts`, and every channel
 renders the same shape**: `title`, `detail`, a list of `fields` (name/value) and
 a dashboard `link` (only when `auth.origin` is set). `deployMessage` fills the

@@ -464,7 +464,9 @@ TEMPLATES_E2E_ONLY=redis,umami bunx playwright test --config playwright.template
   appends the same table to `$GITHUB_STEP_SUMMARY`. A failure also attaches the
   last 150 log lines of each container.
 
-In CI it's `templates-e2e.yaml` (`workflow_call`, optional `ref` input), called
-from `pull_request.yaml`, `publish.yaml` and `template-versions.yaml`; see
-`packages-and-release.md`. It frees ~30GB of preinstalled toolchains first and
-logs in to Docker Hub when the registry secret is there.
+In CI it's `templates-e2e.yaml` (`workflow_call`, optional `ref` input and
+`templates` slug list, every template when empty; an empty `TEMPLATES_E2E_ONLY`
+means all too), called from `pull_request.yaml`, `publish.yaml` and
+`template-versions.yaml`; see `packages-and-release.md`. It frees ~30GB of
+preinstalled toolchains first and logs in to Docker Hub when the registry secret
+is there.

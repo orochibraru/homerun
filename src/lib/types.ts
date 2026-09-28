@@ -78,6 +78,10 @@ export type NotificationEvent =
 	| "resource.critical"
 	| "resource.recovered"
 	| "error.issue.new"
-	| "error.issue.regressed";
+	| "error.issue.regressed"
+	| "backup.failed"
+	| "backup.succeeded"
+	| "cron_job.failed"
+	| "cron_job.succeeded";
 
 export type PullPolicy = "always" | "missing" | "never";

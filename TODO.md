@@ -9,6 +9,8 @@ When done delete the entry, no bloat.
       breaks. Pangolin's half ran live against `homelab` (site
       `homerun-live-test`, `chibre.space`) and passes; Cloudflare needs a token.
 
+- [ ] When creating a new volume pre-fill the volume name from its pretty name
+
 ## Medium
 
 - [ ] Run-as-user (or volume ownership) for services and templates: Vikunja runs

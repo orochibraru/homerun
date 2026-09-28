@@ -25,6 +25,7 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      templates: ${{ steps.diff.outputs.templates }}
     steps:
       - name: List changed files outside docs
         id: diff
@@ -37,7 +38,12 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          files="$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')"
+          listing="$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | "\(.status) \(.filename)"')"
+          files="$(printf '%s\n' "$listing" | awk '{print $2}')"
+          templates="$(printf '%s\n' "$listing" | awk '$1 != "removed" {print $2}' \
+            | sed -nE 's#^templates/[^/]+/([^/]+)\.json$#\1#p' | paste -sd, -)"
+          echo "templates=$templates" >> "$GITHUB_OUTPUT"
+          echo "Templates to deploy: ${templates:-none}"
           code="$(printf '%s\n' "$files" | grep -vE '^(docs/|\.agents/|\.claude/)|\.md$' || true)"
           if [ "$HEAD_REF" = "releaser/release" ] && [ "$code" = "package.json" ] \
             && [ "$(gh api "repos/$REPO/contents/package.json?ref=$BASE_SHA" --jq .content | base64 -d | jq -S 'del(.version)')" \
@@ -116,8 +122,10 @@ jobs:
   templates:
     name: Templates E2E
     needs: [changes, code_quality]
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.templates != ''
     uses: ./.github/workflows/templates-e2e.yaml
+    with:
+      templates: ${{ needs.changes.outputs.templates }}
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 

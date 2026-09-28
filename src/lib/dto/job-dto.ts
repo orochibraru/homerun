@@ -189,6 +189,29 @@ export class JobDTO extends BaseDTO<Job> {
 	}
 
 	/**
+	 * Whether a scheduler-fired job (a cron redeploy, a scheduled backup or
+	 * cron job run) is still queued or running, retries included. The payload
+	 * is checked in code: bun-sql stores jsonb double-encoded, so a SQL jsonb
+	 * operator never matches.
+	 */
+	static async hasActiveScheduledWork(): Promise<boolean> {
+		const rows = await db
+			.select({ payload: job.payload, type: job.type })
+			.from(job)
+			.where(
+				and(
+					inArray(job.status, ["queued", "running"]),
+					inArray(job.type, ["backup", "cron_job", "deploy"]),
+				),
+			);
+		return rows.some(({ payload, type }) =>
+			type === "deploy"
+				? payload.trigger === "cron"
+				: payload.scheduled === true,
+		);
+	}
+
+	/**
 	 * The queued (not yet running) job of this type with this dedupe key, if any.
 	 */
 	static async findQueued(

@@ -1,7 +1,7 @@
 import { config, isSmtpEnabled } from "$lib/config";
 import type { DeployTrigger } from "$lib/deploy-trigger";
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
-import type { NewJobInput } from "$lib/dto/job-dto";
+import { JobDTO, type NewJobInput } from "$lib/dto/job-dto";
 import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
@@ -13,6 +13,11 @@ import { primaryHostname } from "$lib/service-domains";
 import { serviceHostname } from "./dns.service";
 import { EmailService } from "./email.service";
 import {
+	groupedMessage,
+	type MessageGroup,
+	NotificationGrouper,
+} from "./notification-grouping";
+import {
 	type ChannelMessage,
 	deployMessage,
 	type MessageField,
@@ -23,6 +28,8 @@ import { QueueService } from "./queue.service";
 const logger = new Logger("NotificationChannels");
 
 const WEBHOOK_TIMEOUT_MS = 10_000;
+
+const GROUP_TICK_MS = 10_000;
 
 const DELIVERY_RETRY_ATTEMPTS = 4;
 const DELIVERY_RETRY_DELAY_MS = 30_000;
@@ -42,6 +49,11 @@ const DISCORD_INLINE_MAX = 40;
 
 const DISCORD_RED = 0xef_44_44;
 const DISCORD_GREEN = 0x10_b9_81;
+
+export interface DispatchOptions {
+	/** Fired by a scheduler: held and reported with the rest of its run. */
+	scheduled?: boolean;
+}
 
 export interface DeployNotification {
 	dep: DeploymentDTO;
@@ -227,13 +239,16 @@ export function deliveryRetryJob(
 }
 
 class NotificationChannelServiceClass {
+	readonly #grouper = new NotificationGrouper();
+	#ticker: ReturnType<typeof setInterval> | null = null;
+
 	/**
 	 * Fire-and-forget dispatch of `message` to every account's channels
-	 * subscribed to that event. Failures are logged, never thrown to the
-	 * caller.
+	 * subscribed to that event, grouped like `dispatch`. Failures are logged,
+	 * never thrown to the caller.
 	 */
-	notify(message: ChannelMessage): void {
-		this.dispatch(message).catch((err) => {
+	notify(message: ChannelMessage, options: DispatchOptions = {}): void {
+		this.dispatch(message, options).catch((err) => {
 			logger.warn(
 				`Channel dispatch failed: event=${message.event} : ${err instanceof Error ? err.message : String(err)}`,
 			);
@@ -247,7 +262,11 @@ class NotificationChannelServiceClass {
 	 */
 	notifyDeploy(notification: DeployNotification): void {
 		this.#deployMessage(notification)
-			.then((message) => this.dispatch(message))
+			.then((message) =>
+				this.dispatch(message, {
+					scheduled: notification.trigger === "cron",
+				}),
+			)
 			.catch((err) => {
 				logger.warn(
 					`Deploy notification failed: service=${notification.svc.id} : ${err instanceof Error ? err.message : String(err)}`,
@@ -281,17 +300,105 @@ class NotificationChannelServiceClass {
 		);
 	}
 
-	/** Delivers `message` to every account's enabled channels subscribed to that event, in parallel. Per-channel failures don't reject; see `#send`. */
-	async dispatch(message: ChannelMessage): Promise<void> {
-		const channels = await NotificationChannelDTO.listSubscribed(message.event);
-		if (channels.length === 0) {
+	/**
+	 * Delivers `message` to every account's enabled channels subscribed to
+	 * that event, or holds it to go out grouped with the ones around it (see
+	 * `NotificationGrouper`): sent now when nothing went out in the last
+	 * minute, otherwise with the next group, and always with the rest of its
+	 * run when `options.scheduled`. Per-channel failures don't reject; see
+	 * `#send`.
+	 */
+	async dispatch(
+		message: ChannelMessage,
+		options: DispatchOptions = {},
+	): Promise<void> {
+		const immediate = this.#grouper.add(
+			message,
+			options.scheduled ?? false,
+			Date.now(),
+		);
+		if (immediate) {
+			await this.#deliverGroup({ messages: [immediate], scheduled: false });
 			return;
 		}
-		const titled = withStackTitle(
-			message,
-			message.serviceId ? await this.#stackNameOf(message.serviceId) : null,
+		this.#startTicker();
+	}
+
+	/** Drops every message held for grouping, and stops the flush ticker. */
+	discardPending(): void {
+		this.#grouper.clear();
+		this.#stopTicker();
+	}
+
+	/** Starts the ticker that flushes held groups once they're due, if it isn't running. */
+	#startTicker(): void {
+		if (this.#ticker) {
+			return;
+		}
+		this.#ticker = setInterval(() => {
+			this.flushDue().catch((err) => {
+				logger.warn(
+					`Grouped notification flush failed: ${err instanceof Error ? err.message : String(err)}`,
+				);
+			});
+		}, GROUP_TICK_MS);
+		this.#ticker.unref?.();
+	}
+
+	/** Stops the flush ticker. */
+	#stopTicker(): void {
+		if (this.#ticker) {
+			clearInterval(this.#ticker);
+			this.#ticker = null;
+		}
+	}
+
+	/** Sends every held group that's due, checking for running scheduled work only when a scheduled outcome is waiting, and stops the ticker once nothing is held. The ticker calls it every 10s. */
+	async flushDue(): Promise<void> {
+		const scheduledActive = this.#grouper.holdsScheduled
+			? await JobDTO.hasActiveScheduledWork()
+			: false;
+		const groups = this.#grouper.due(Date.now(), scheduledActive);
+		if (!this.#grouper.pending) {
+			this.#stopTicker();
+		}
+		await Promise.all(groups.map((group) => this.#deliverGroup(group)));
+	}
+
+	/** Delivers a group to every channel subscribed to any of its events: each channel gets the messages it subscribes to, one as itself, several folded by `groupedMessage`. */
+	async #deliverGroup(group: MessageGroup): Promise<void> {
+		const events = [...new Set(group.messages.map((m) => m.event))];
+		const subscribed = await Promise.all(
+			events.map((event) => NotificationChannelDTO.listSubscribed(event)),
 		);
-		await Promise.all(channels.map((channel) => this.#send(channel, titled)));
+		const byId = new Map(
+			subscribed.flat().map((channel) => [channel.id, channel]),
+		);
+		if (byId.size === 0) {
+			return;
+		}
+		const titled = await Promise.all(
+			group.messages.map(async (message) =>
+				withStackTitle(
+					message,
+					message.serviceId ? await this.#stackNameOf(message.serviceId) : null,
+				),
+			),
+		);
+		const deliveries = [...byId.values()].map((channel) => ({
+			channel,
+			mine: titled.filter((m) => channel.events.includes(m.event)),
+		}));
+		await Promise.all(
+			deliveries
+				.filter(({ mine }) => mine.length > 0)
+				.map(({ channel, mine }) =>
+					this.#send(
+						channel,
+						mine.length === 1 ? mine[0] : groupedMessage(mine, group.scheduled),
+					),
+				),
+		);
 	}
 
 	/** The name of the stack `serviceId` belongs to, null for an ungrouped or unknown service, or when the lookup fails. */

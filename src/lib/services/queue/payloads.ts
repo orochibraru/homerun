@@ -13,6 +13,7 @@ export const deployJobPayload = z.object({
 
 export const cronJobPayload = z.object({
 	cronJobId: z.string(),
+	scheduled: z.boolean().default(false),
 	userId: z.string(),
 });
 
@@ -22,6 +23,7 @@ export const imageScanJobPayload = z.object({
 });
 
 export const backupJobPayload = z.object({
+	scheduled: z.boolean().default(false),
 	userId: z.string(),
 	volumeId: z.string(),
 });

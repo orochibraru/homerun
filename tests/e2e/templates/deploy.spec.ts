@@ -44,7 +44,7 @@ const bySlug = new Map(all.map((template) => [template.slug, template]));
 const only = process.env.TEMPLATES_E2E_ONLY?.split(",")
 	.map((slug) => slug.trim())
 	.filter(Boolean);
-const selected = only
+const selected = only?.length
 	? all.filter((template) => only.includes(template.slug))
 	: all;
 

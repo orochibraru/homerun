@@ -1,7 +1,10 @@
+import { config } from "$lib/config";
 import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import type { JobDTO } from "$lib/dto/job-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import { NotificationChannelService } from "../../notification-channel.service.ts";
+import { backupMessage } from "../../notification-messages.ts";
 import { S3BackupService } from "../../s3-backup.service.ts";
 import { backupJobPayload } from "../payloads.ts";
 import type { WorkerJob } from "./types.ts";
@@ -77,13 +80,54 @@ export async function withRun(
 	}
 }
 
+/**
+ * Sends a backup's outcome to the notification channels, skipping a failure
+ * the queue is about to retry; a scheduled backup's is grouped with the rest
+ * of its run.
+ */
+function notifyBackup(
+	job: JobDTO,
+	volume: StorageVolumeDTO | null,
+	scheduled: boolean,
+	outcome: { error: string } | { key: string | null; sizeBytes: number | null },
+): void {
+	const ok = !("error" in outcome);
+	if (!volume || (!ok && job.attempts < job.maxAttempts)) {
+		return;
+	}
+	NotificationChannelService.notify(
+		backupMessage(
+			{
+				attempts: job.attempts,
+				error: ok ? null : outcome.error,
+				key: ok ? outcome.key : null,
+				ok,
+				origin: config.auth.origin ?? null,
+				scheduled,
+				sizeBytes: ok ? outcome.sizeBytes : null,
+				volume: { id: volume.id, name: volume.name },
+			},
+			new Date().toISOString(),
+		),
+		{ scheduled },
+	);
+}
+
 export const backupWorkerJob: WorkerJob | null = {
 	async finalize(job, result, error) {
-		const { volumeId } = backupJobPayload.parse(job.payload);
-		await (await StorageVolumeDTO.get(volumeId))?.update({
-			backupLastRunAt: new Date(),
-		});
-		return await finishRun(job, result, error, "Backup failed.");
+		const { scheduled, volumeId } = backupJobPayload.parse(job.payload);
+		const volume = await StorageVolumeDTO.get(volumeId);
+		await volume?.update({ backupLastRunAt: new Date() });
+		try {
+			const done = await finishRun(job, result, error, "Backup failed.");
+			notifyBackup(job, volume, scheduled, done);
+			return done;
+		} catch (err) {
+			notifyBackup(job, volume, scheduled, {
+				error: err instanceof Error ? err.message : String(err),
+			});
+			throw err;
+		}
 	},
 	async prepare(job) {
 		const { volumeId } = backupJobPayload.parse(job.payload);

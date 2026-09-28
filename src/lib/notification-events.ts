@@ -122,6 +122,32 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 		group: "Errors",
 		label: "Error regressed",
 	},
+	{
+		description:
+			"A volume backup failed, after its retry. Scheduled ones are grouped into one message per run.",
+		event: "backup.failed",
+		group: "Scheduled tasks",
+		label: "Backup failed",
+	},
+	{
+		description: "A volume was backed up to its S3 destination.",
+		event: "backup.succeeded",
+		group: "Scheduled tasks",
+		label: "Backup succeeded",
+	},
+	{
+		description:
+			"A cron job exited non-zero, timed out or couldn't start. Scheduled ones are grouped into one message per run.",
+		event: "cron_job.failed",
+		group: "Scheduled tasks",
+		label: "Cron job failed",
+	},
+	{
+		description: "A cron job exited 0.",
+		event: "cron_job.succeeded",
+		group: "Scheduled tasks",
+		label: "Cron job succeeded",
+	},
 ];
 
 export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
@@ -134,6 +160,8 @@ export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
 	"resource.critical",
 	"error.issue.new",
 	"error.issue.regressed",
+	"backup.failed",
+	"cron_job.failed",
 ];
 
 const EVENT_SET = new Set<string>(

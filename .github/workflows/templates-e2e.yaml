@@ -8,6 +8,11 @@ on:
         default: ""
         description: "Commit or branch to test, the triggering commit when empty"
         type: string
+      templates:
+        required: false
+        default: ""
+        description: "Comma-separated template slugs to deploy, every template when empty"
+        type: string
     secrets:
       registry_password:
         required: false
@@ -27,7 +32,7 @@ env:
 
 jobs:
   templates:
-    name: Deploy every template
+    name: Deploy templates
     runs-on: ubuntu-latest
     timeout-minutes: 150
     outputs:
@@ -87,9 +92,10 @@ jobs:
       - name: Install Playwright's Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Deploy every template
+      - name: Deploy ${{ inputs.templates || 'every template' }}
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
+          TEMPLATES_E2E_ONLY: ${{ inputs.templates }}
         timeout-minutes: 130
         run: bunx playwright test --config playwright.templates.config.ts --reporter=list,json,./tests/e2e/templates/report.ts
 

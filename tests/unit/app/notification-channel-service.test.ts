@@ -1,4 +1,12 @@
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
+import {
+	afterEach,
+	describe,
+	expect,
+	mock,
+	setSystemTime,
+	spyOn,
+	test,
+} from "bun:test";
 
 mock.module("$app/environment", () => ({
 	browser: false,
@@ -44,6 +52,7 @@ const { EmailService } = await import(
 	"../../../src/lib/services/email.service"
 );
 const { config } = await import("../../../src/lib/config");
+const { JobDTO } = await import("../../../src/lib/dto/job-dto");
 
 type Channel = Parameters<typeof NotificationChannelService.sendTest>[0];
 type Message = Parameters<typeof NotificationChannelService.dispatch>[0];
@@ -109,6 +118,8 @@ function stubFetch(
 }
 
 afterEach(() => {
+	NotificationChannelService.discardPending();
+	setSystemTime();
 	globalThis.fetch = realFetch;
 	config.smtp = realSmtp;
 	config.auth.origin = realOrigin;
@@ -152,8 +163,12 @@ describe("NotificationChannelService delivery", () => {
 	});
 
 	test("a failed channel records the error and queues a retry without failing the rest", async () => {
-		const bad = fakeChannel("webhook", "https://bad.example.com/hook");
-		const good = fakeChannel("webhook", "https://good.example.com/hook");
+		const bad = fakeChannel("webhook", "https://bad.example.com/hook", {
+			id: "ch-bad",
+		});
+		const good = fakeChannel("webhook", "https://good.example.com/hook", {
+			id: "ch-good",
+		});
 		track(
 			spyOn(NotificationChannelDTO, "listSubscribed").mockResolvedValue([
 				bad,
@@ -338,6 +353,88 @@ describe("NotificationChannelService.retryDelivery", () => {
 		expect(channel.updates).toEqual([
 			{ lastError: "Webhook returned HTTP 404" },
 		]);
+	});
+});
+
+describe("grouped delivery", () => {
+	function channelsFor(...channels: (FakeChannel & Channel)[]) {
+		track(
+			spyOn(NotificationChannelDTO, "listSubscribed").mockImplementation(
+				async (event: string) =>
+					channels.filter((c) => c.events.includes(event)),
+			),
+		);
+	}
+
+	test("messages under a minute apart go out as one, each channel getting only its events", async () => {
+		const narrow = fakeChannel("webhook", "https://narrow.example.com", {
+			events: ["build.failed"],
+			id: "ch-narrow",
+		});
+		const wide = fakeChannel("webhook", "https://wide.example.com", {
+			events: ["build.failed", "update.succeeded"],
+			id: "ch-wide",
+		});
+		channelsFor(narrow, wide);
+		const posted = stubFetch(() => new Response("ok"));
+		const updated = {
+			...message,
+			event: "update.succeeded" as const,
+			title: "web was updated",
+		};
+
+		setSystemTime(new Date("2026-09-28T03:00:00Z"));
+		await NotificationChannelService.dispatch(message);
+		expect(posted).toHaveLength(2);
+
+		setSystemTime(new Date("2026-09-28T03:00:20Z"));
+		await NotificationChannelService.dispatch(updated);
+		await NotificationChannelService.dispatch(message);
+		await NotificationChannelService.flushDue();
+		expect(posted).toHaveLength(2);
+
+		setSystemTime(new Date("2026-09-28T03:01:21Z"));
+		await NotificationChannelService.flushDue();
+		const later = posted.slice(2);
+		expect(later).toHaveLength(2);
+		expect(later.find((p) => p.url.includes("narrow"))?.body).toEqual(message);
+		expect(later.find((p) => p.url.includes("wide"))?.body).toMatchObject({
+			title: "2 notifications: 1 ok, 1 failed",
+		});
+	});
+
+	test("a scheduled outcome waits until no scheduled job is still queued or running", async () => {
+		const channel = fakeChannel("webhook", "https://hook.example.com", {
+			events: ["update.succeeded", "backup.failed"],
+		});
+		channelsFor(channel);
+		const posted = stubFetch(() => new Response("ok"));
+		const active = track(
+			spyOn(JobDTO, "hasActiveScheduledWork").mockResolvedValue(true),
+		);
+
+		setSystemTime(new Date("2026-09-28T03:00:00Z"));
+		await NotificationChannelService.dispatch(
+			{ ...message, event: "update.succeeded", title: "web was updated" },
+			{ scheduled: true },
+		);
+		expect(posted).toHaveLength(0);
+		setSystemTime(new Date("2026-09-28T03:05:00Z"));
+		await NotificationChannelService.dispatch(
+			{ ...message, event: "backup.failed", title: "Backup of db failed" },
+			{ scheduled: true },
+		);
+		setSystemTime(new Date("2026-09-28T03:20:00Z"));
+		await NotificationChannelService.flushDue();
+		expect(posted).toHaveLength(0);
+
+		active.mockResolvedValue(false);
+		await NotificationChannelService.flushDue();
+		expect(posted).toHaveLength(1);
+		expect(posted[0].body).toMatchObject({
+			event: "backup.failed",
+			title: "Scheduled tasks: 1 ok, 1 failed",
+		});
 	});
 });
 

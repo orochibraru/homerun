@@ -1765,6 +1765,8 @@ export const notificationChannel = pgTable(
 				"deploy.rolled_back",
 				"resource.warning",
 				"resource.critical",
+				"backup.failed",
+				"cron_job.failed",
 			]),
 		id: text("id").primaryKey(),
 		kind: text("kind").$type<NotificationChannelKind>().notNull(),

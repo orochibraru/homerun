@@ -51,7 +51,7 @@ class CronServiceClass {
 	private readonly backupScheduler = new DueScheduler<StorageVolumeDTO>({
 		describe: (volume) =>
 			`scheduled backup: volume=${volume.id} schedule="${volume.backupSchedule}"`,
-		fire: (volume) => enqueueVolumeBackup(volume),
+		fire: (volume) => enqueueVolumeBackup(volume, true),
 		label: "Backup",
 		lastRunAt: (volume) => volume.backupLastRunAt,
 		list: () => StorageVolumeDTO.listBackupEnabled(),
@@ -61,7 +61,7 @@ class CronServiceClass {
 
 	private readonly cronJobScheduler = new DueScheduler<CronJobDTO>({
 		describe: (job) => `cron job: job=${job.id} schedule="${job.schedule}"`,
-		fire: (job) => enqueueCronJobRun(job),
+		fire: (job) => enqueueCronJobRun(job, true),
 		label: "Cron job",
 		lastRunAt: (job) => job.lastRunAt,
 		list: () => CronJobDTO.listEnabled(),

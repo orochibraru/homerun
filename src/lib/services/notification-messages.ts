@@ -397,3 +397,100 @@ export function errorIssueMessage(
 		title: `${service.name}: ${input.regressed ? "error regressed" : "new error"}`,
 	};
 }
+
+export interface BackupMessageInput {
+	attempts: number;
+	error: string | null;
+	key: string | null;
+	ok: boolean;
+	origin: string | null;
+	scheduled: boolean;
+	sizeBytes: number | null;
+	volume: { id: string; name: string };
+}
+
+/** Formats a byte count as MiB or GiB for a message field. */
+function formatSize(bytes: number): string {
+	const mib = bytes / (1 << 20);
+	return mib >= 1024
+		? `${(mib / 1024).toFixed(1)} GiB`
+		: `${mib.toFixed(1)} MiB`;
+}
+
+/** Builds the notification channel message for a volume backup's final outcome, its error as the detail when it failed. */
+export function backupMessage(
+	input: BackupMessageInput,
+	timestamp: string,
+): ChannelMessage {
+	const { volume } = input;
+	const fields: MessageField[] = [
+		{ name: "Trigger", value: input.scheduled ? "Scheduled" : "Manual" },
+	];
+	if (input.key) {
+		fields.push({ name: "Key", value: input.key });
+	}
+	if (input.sizeBytes !== null) {
+		fields.push({ name: "Size", value: formatSize(input.sizeBytes) });
+	}
+	if (input.attempts > 1) {
+		fields.push({ name: "Attempts", value: String(input.attempts) });
+	}
+	return {
+		detail: input.ok ? null : (input.error ?? "Backup failed."),
+		event: input.ok ? "backup.succeeded" : "backup.failed",
+		fields,
+		link: dashboardLink(input.origin, `/storage/${volume.id}`),
+		serviceId: null,
+		serviceName: null,
+		timestamp,
+		title: input.ok
+			? `${volume.name} was backed up`
+			: `Backup of ${volume.name} failed`,
+	};
+}
+
+export interface CronJobMessageInput {
+	job: { id: string; name: string };
+	origin: string | null;
+	outcome: {
+		error: string | null;
+		exitCode: number | null;
+		output: string;
+		success: boolean;
+	};
+	scheduled: boolean;
+}
+
+/** Builds the notification channel message for a cron job run, the error and the tail of its output as the detail when it failed. */
+export function cronJobMessage(
+	input: CronJobMessageInput,
+	timestamp: string,
+): ChannelMessage {
+	const { job, outcome } = input;
+	const fields: MessageField[] = [
+		{ name: "Trigger", value: input.scheduled ? "Scheduled" : "Manual" },
+	];
+	if (outcome.exitCode !== null) {
+		fields.push({ name: "Exit code", value: String(outcome.exitCode) });
+	}
+	const tail = stripAnsi(outcome.output)
+		.split("\n")
+		.map((line) => line.trimEnd())
+		.filter(Boolean)
+		.slice(-LOG_TAIL_LINES)
+		.join("\n");
+	return {
+		detail: outcome.success
+			? null
+			: [outcome.error ?? "The cron job failed.", tail]
+					.filter(Boolean)
+					.join("\n\n"),
+		event: outcome.success ? "cron_job.succeeded" : "cron_job.failed",
+		fields,
+		link: dashboardLink(input.origin, `/cron-jobs/${job.id}`),
+		serviceId: null,
+		serviceName: null,
+		timestamp,
+		title: outcome.success ? `${job.name} ran` : `${job.name} failed`,
+	};
+}
