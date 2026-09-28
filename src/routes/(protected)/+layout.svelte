@@ -155,7 +155,20 @@
       class="panel-strong fixed top-0 left-0 z-50 flex h-dvh w-64 flex-col border-r border-border md:hidden"
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
-      <nav class="flex-1 overflow-y-auto px-2.5 pt-3 pb-4">
+      <div class="border-border flex items-center justify-between border-b py-1 pr-2">
+        <BrandMark class="px-3 py-2.5" />
+        <Button
+          aria-label="Close sidebar"
+          onclick={() => {
+            sidebarOpen = false;
+          }}
+          size="icon-sm"
+          variant="ghost"
+        >
+          <X class="size-5" />
+        </Button>
+      </div>
+      <nav class="flex-1 overflow-y-auto px-2.5 pt-1 pb-4">
         {@render navGroups(navItemGroups, () => {
           sidebarOpen = false;
         })}
