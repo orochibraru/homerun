@@ -1,7 +1,13 @@
+import { connect } from "node:tls";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { RegistryTokenDTO } from "$lib/dto/registry-token-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
+import {
+	certificateCheck,
+	publicProbeCheck,
+	type RegistryCheck,
+} from "$lib/registry-self-test";
 import {
 	MIRROR_HOST_PORT,
 	mirrorRepository,
@@ -52,6 +58,7 @@ export interface CreatedToken {
 }
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{2,31}$/;
+const CERT_ERROR_RE = /certificate|cert_|self[- ]signed|verify/i;
 
 /**
  * The built-in registry: the same `homerun-mirror` container image scanning
@@ -65,6 +72,84 @@ const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{2,31}$/;
  * credentials, Homerun's own mirror copies and scans need them too.
  */
 class RegistryServiceClass {
+	/**
+	 * Checks the registry end to end: the internal API answers with Homerun's
+	 * own credentials, and, when it's published, `https://<host>/v2/` answers
+	 * over a certificate that verifies and demands a token. Never throws: every
+	 * failure comes back as a failed check with its reason.
+	 */
+	async selfTest(): Promise<RegistryCheck[]> {
+		const checks: RegistryCheck[] = [];
+		try {
+			await DockerService.imageMirrorClient();
+			checks.push({
+				detail: "The registry API answers Homerun's own credentials.",
+				label: "Internal registry",
+				ok: true,
+			});
+		} catch (error) {
+			checks.push({
+				detail: error instanceof Error ? error.message : String(error),
+				label: "Internal registry",
+				ok: false,
+			});
+		}
+		const host = (await InstanceSettingsDTO.get()).toJSON().registryPublicHost;
+		if (host) {
+			checks.push(await this.#probePublic(host));
+		}
+		return checks;
+	}
+
+	/** Fetches `https://<host>/v2/`, reading the served certificate when it doesn't verify. */
+	async #probePublic(host: string): Promise<RegistryCheck> {
+		try {
+			const response = await fetch(`https://${host}/v2/`, {
+				redirect: "manual",
+				signal: AbortSignal.timeout(10_000),
+			});
+			return publicProbeCheck(host, response.status);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			const subject = CERT_ERROR_RE.test(message)
+				? await this.#servedCertificate(host)
+				: undefined;
+			return subject === undefined
+				? {
+						detail: `Unreachable: ${message}`,
+						label: `https://${host}`,
+						ok: false,
+					}
+				: certificateCheck(host, message, subject);
+		}
+	}
+
+	/** The subject of the certificate `host` serves, null when it has none readable, undefined when no TLS connection could be made. */
+	#servedCertificate(host: string): Promise<string | null | undefined> {
+		return new Promise((resolve) => {
+			const socket = connect({
+				host,
+				port: 443,
+				rejectUnauthorized: false,
+				servername: host,
+			});
+			socket.setTimeout(5000, () => {
+				socket.destroy();
+				resolve(undefined);
+			});
+			socket.once("error", () => resolve(undefined));
+			socket.once("secureConnect", () => {
+				const cert = socket.getPeerCertificate();
+				socket.end();
+				resolve(
+					cert?.subject?.CN
+						? String(cert.subject.CN)
+						: (cert?.subjectaltname ?? null),
+				);
+			});
+		});
+	}
+
 	/** Whether a username is well-formed and not reserved for Homerun's own token. */
 	validateUsername(username: string): string | null {
 		if (!USERNAME_RE.test(username)) {

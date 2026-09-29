@@ -67,7 +67,8 @@ export class CoreServicesWatch extends BaseScheduler {
 	 * Polls the worker's health and, whenever its boot id differs from the
 	 * last one seen (the first successful contact included), re-asserts the
 	 * core services onto it: the forward-auth URL detection, the dashboard's
-	 * Traefik router and DNS record, the Newt tunnel, swarm mode when
+	 * Traefik router and DNS record, the Newt tunnel, the published
+	 * registry's Traefik labels, swarm mode when
 	 * that's the orchestration mode, and the Traefik flags Settings →
 	 * Networking adds (the HTTP cache plugin, the ACME email), which a
 	 * `docker compose up --force-recreate` or a self-update wipes by
@@ -112,6 +113,11 @@ export class CoreServicesWatch extends BaseScheduler {
 			settings.newtCredentials(),
 			settings.orchestrationMode === "swarm",
 		);
+		if (settings.toJSON().registryPublicHost) {
+			await DockerService.ensureImageMirror().catch((err) => {
+				this.logger.warn("Couldn't re-assert the published registry", err);
+			});
+		}
 		const failures = await DockerService.reassertTraefikConfig(
 			traefikExpectation(settings.orchestrationMode === "swarm"),
 		);

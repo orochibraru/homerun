@@ -57,7 +57,11 @@ so you don't have to go hunting for them —
 ## Settings
 
 - **Status**: whether the container is running, disk used, its internal address,
-  and how many tokens exist.
+  and how many tokens exist. **Self-test** checks that the registry answers
+  Homerun's own credentials and, once it's published, that `https://<host>/v2/`
+  answers over a certificate that verifies and asks for a token. A failure says
+  why, including when Traefik serves its own default certificate because no
+  HTTPS router matches the host.
 - **Require authentication**: turns on htpasswd auth, so only a Tokens-tab
   credential can pull or push. The moment this turns on, Homerun mints itself a
   reserved internal token so its own mirror-and-scan pipeline keeps working
