@@ -78,8 +78,10 @@ jobs:
     with:
       tests: ${{ needs.changes.outputs.code == 'true' }}
     secrets:
-      s3_access_key_id: ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
-      s3_secret_access_key: ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
+      HOMERUN_TEST_S3_ACCESS_KEY_ID:
+        ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
+      HOMERUN_TEST_S3_SECRET_ACCESS_KEY:
+        ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
 
   go:
     name: Go

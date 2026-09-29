@@ -1506,8 +1506,13 @@ export interface operations {
 						previewBranch: string | null;
 						previewBranchExclude: string[];
 						previewBranchInclude: string[];
+						previewCopyVolumes: boolean;
 						previewDefaultDomain: boolean;
 						previewDomainTemplate: string | null;
+						previewEnvOverrides: {
+							[key: string]: string;
+						};
+						previewInheritEnv: boolean;
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
@@ -1758,8 +1763,13 @@ export interface operations {
 						previewBranch: string | null;
 						previewBranchExclude: string[];
 						previewBranchInclude: string[];
+						previewCopyVolumes: boolean;
 						previewDefaultDomain: boolean;
 						previewDomainTemplate: string | null;
+						previewEnvOverrides: {
+							[key: string]: string;
+						};
+						previewInheritEnv: boolean;
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
@@ -1965,8 +1975,13 @@ export interface operations {
 						previewBranch: string | null;
 						previewBranchExclude: string[];
 						previewBranchInclude: string[];
+						previewCopyVolumes: boolean;
 						previewDefaultDomain: boolean;
 						previewDomainTemplate: string | null;
+						previewEnvOverrides: {
+							[key: string]: string;
+						};
+						previewInheritEnv: boolean;
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
@@ -2169,6 +2184,14 @@ export interface operations {
 					previewBranchExclude?: string[];
 					/** @description Glob patterns (* any run, ? one character) a pull request's head branch must match one of to get a preview. Empty lets every branch through. */
 					previewBranchInclude?: string[];
+					/** @description Whether each new preview gets its own copy of this service's volumes. */
+					previewCopyVolumes?: boolean;
+					/** @description Environment variables set on every preview over what it inherited; {pr}, {branch} and {slug} are filled in. */
+					previewEnvOverrides?: {
+						[key: string]: string;
+					};
+					/** @description Whether pull request previews start from this service's environment variables. */
+					previewInheritEnv?: boolean;
 					previewsEnabled?: boolean;
 					primaryDomain?: string | null;
 					privileged?: boolean;
@@ -2294,8 +2317,13 @@ export interface operations {
 						previewBranch: string | null;
 						previewBranchExclude: string[];
 						previewBranchInclude: string[];
+						previewCopyVolumes: boolean;
 						previewDefaultDomain: boolean;
 						previewDomainTemplate: string | null;
+						previewEnvOverrides: {
+							[key: string]: string;
+						};
+						previewInheritEnv: boolean;
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;

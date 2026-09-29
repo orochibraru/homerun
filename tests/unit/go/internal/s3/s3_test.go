@@ -264,3 +264,22 @@ func TestUploadSendsPartsConcurrently(t *testing.T) {
 		t.Fatal("parts don't reassemble into the upload")
 	}
 }
+
+func TestPartSizeGrowsToStayUnderThePartLimit(t *testing.T) {
+	if s3.PartSizeFor(1) != s3.PartSize || s3.PartSizeFor(s3.PartsPerStep) != s3.PartSize {
+		t.Fatal("the first step should use PartSize")
+	}
+	if s3.PartSizeFor(s3.PartsPerStep+1) != 2*s3.PartSize {
+		t.Fatal("the second step should double")
+	}
+	if s3.PartSizeFor(10_000) != s3.MaxPartSize {
+		t.Fatalf("part 10000 is %d, want the cap", s3.PartSizeFor(10_000))
+	}
+	var total int64
+	for number := 1; number <= 10_000; number++ {
+		total += int64(s3.PartSizeFor(number))
+	}
+	if total < 200<<30 {
+		t.Fatalf("10000 parts only hold %d GiB", total>>30)
+	}
+}

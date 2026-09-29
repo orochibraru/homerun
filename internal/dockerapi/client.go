@@ -358,6 +358,15 @@ func (c *Client) CreateVolume(ctx context.Context, name string, labels map[strin
 		map[string]any{"Labels": labels, "Name": name})
 }
 
+// VolumeExists reports whether a named volume exists on the daemon.
+func (c *Client) VolumeExists(ctx context.Context, name string) (bool, error) {
+	err := c.Call(ctx, http.MethodGet, "/volumes/"+url.PathEscape(name), nil, nil)
+	if errors.Is(err, ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
 // RemoveVolume force-removes a volume. One that's already gone isn't an error.
 func (c *Client) RemoveVolume(ctx context.Context, name string) error {
 	err := c.Call(ctx, http.MethodDelete, "/volumes/"+name, url.Values{"force": {"1"}}, nil)

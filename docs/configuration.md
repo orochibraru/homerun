@@ -20,6 +20,7 @@ for people who'd rather manage settings as code.
 | **General**    | Base domain, Use HTTPS, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies, [resource limits](dashboard.md), and the [release channel](upgrading.md#release-channels)                                            |
 | **Docker**     | Docker socket path, the shared network name, [image scanning](image-scanning.md) and its block policy, orchestration mode ([swarm](swarm-mode.md) or standalone)                                                                      |
 | **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and the [HTTP cache](networking.md#response-cache). [DNS automation](dns-automation.md) (Cloudflare or Pangolin) has its own DNS page under Integrations |
+| **TLS**        | One certificate for the base domain and its subdomains, served instead of Let's Encrypt (a Cloudflare origin certificate, say), see [One certificate for the whole instance](networking.md#one-certificate-for-the-whole-instance)    |
 | **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved                                                                                      |
 | **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Migrating from Dokploy or Coolify](migrating-from-dokploy-or-coolify.md)                                                                              |
 

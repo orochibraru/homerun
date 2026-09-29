@@ -8,6 +8,10 @@ import { splitImageRef } from "$lib/image-ref";
 import { runtimeOptionsFrom } from "$lib/service-runtime";
 import { stackScopedSlug } from "$lib/slug";
 import {
+	VOLUME_HELPER_IMAGE,
+	VOLUME_HELPER_TAG,
+} from "../backup/volume-services.ts";
+import {
 	containerCreateTemplate,
 	type RegistryAuth,
 } from "../docker/containers.ts";
@@ -401,6 +405,18 @@ export async function deployWorkerSpec(
 			routed: svc.dnsResolvable && plan.workload.networkMode !== "host",
 		},
 		releaseEnv: sentry?.releaseFromBuild ? RELEASE_ENV : "",
+		seeds: mounts.flatMap((m) =>
+			m.volumeSeedFrom
+				? [
+						{
+							from: m.volumeSeedFrom,
+							image: `${VOLUME_HELPER_IMAGE}:${VOLUME_HELPER_TAG}`,
+							name: m.volumeName,
+							source: m.volumeSource,
+						},
+					]
+				: [],
+		),
 		serviceId: svc.id,
 		socketPath: config.docker.socketPath,
 		volumes: mounts.map((m) => ({ readOnly: m.mount.toJSON().readOnly })),

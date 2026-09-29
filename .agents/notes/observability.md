@@ -491,3 +491,11 @@ in `StatSampleDTO`, grouping on `created_at`, which every row of one tick
 shares), so a stack's peak is a real simultaneous peak. A stack's scope is the
 stack plus `descendantIds`; `breakdown` returns one row per service in the
 scope, busiest first, for the **By service** table.
+
+Every range but all time also carries `previous`: the same totals over
+`previousWindow` (yesterday up to this time for today, the span right before for
+the fixed windows), through the DTOs' optional `until`.
+`$lib/monitoring-changes.ts` turns the pair into a `Change` per metric
+(`formatChange`: relative for counts, times and sizes, percentage points for
+error rate and uptime; `HIGHER_IS_BETTER` decides the colour, null for requests
+and bandwidth, which are neither good nor bad news).

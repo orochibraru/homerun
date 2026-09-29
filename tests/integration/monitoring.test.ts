@@ -107,6 +107,14 @@ describe("monitoring", () => {
 		expect(html).toContain("Monitored api");
 		expect(html).toContain("Monitored child");
 
+		const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000);
+		await sql`insert into traffic_sample (id, service_id, created_at, requests, status_4xx, status_5xx, duration_ms, bytes_in, bytes_out)
+			values (${crypto.randomUUID()}, ${web}, ${tenDaysAgo}, 583, 0, 0, 5830, 0, 10),
+			       (${crypto.randomUUID()}, ${api}, ${tenDaysAgo}, 34, 0, 0, 340, 0, 10)`;
+		const week = await page(`/stacks/${parent}/monitoring?range=week`);
+		expect(week).toContain("changes vs the 7 days before");
+		expect(week).toContain("+100.0%");
+
 		const global = await page("/monitoring?range=all");
 		expect(global).toContain("Monitored web");
 		expect(global).toContain("Monitored api");

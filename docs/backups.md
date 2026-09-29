@@ -29,9 +29,12 @@ destination and an optional key prefix. The volume's own page
 during the backup, and a pre-backup command. The homerun worker tars the
 volume's contents and streams it, gzipped, to
 `<prefix/>volumeName-<timestamp>.tar.gz` through a hand-rolled Signature V4
-client (multipart upload in 16 MiB parts, four sent at once while the next ones
-are archived, archives up to about 160 GB, at most five parts in memory, no
-SDK). The run's log reports the throughput every 30 seconds.
+client (a multipart upload of 8 MiB parts, sixteen sent at once while the next
+ones are archived, the parts growing to 32 MiB for the largest archives, up to
+about 240 GB; no SDK). Parallel parts matter: some providers cap one connection
+well below what the link carries, Hetzner's object storage at about 1.3 MiB/s,
+so a 256 MiB archive that took over three minutes one part at a time uploads in
+about 16 seconds. The run's log reports the throughput every 30 seconds.
 
 **Both volume kinds are backed up the same way.** The volume (a bind mount's
 host path or a Docker-managed volume) is mounted read-only into a short-lived

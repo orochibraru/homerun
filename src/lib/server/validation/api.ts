@@ -151,6 +151,24 @@ export const updateServiceApiBody = z.object({
 		.describe(
 			"Glob patterns (* any run, ? one character) a pull request's head branch must match one of to get a preview. Empty lets every branch through.",
 		),
+	previewInheritEnv: z
+		.boolean()
+		.optional()
+		.describe(
+			"Whether pull request previews start from this service's environment variables.",
+		),
+	previewEnvOverrides: z
+		.record(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), z.string())
+		.optional()
+		.describe(
+			"Environment variables set on every preview over what it inherited; {pr}, {branch} and {slug} are filled in.",
+		),
+	previewCopyVolumes: z
+		.boolean()
+		.optional()
+		.describe(
+			"Whether each new preview gets its own copy of this service's volumes.",
+		),
 	previewBranchExclude: branchPatterns
 		.optional()
 		.describe(

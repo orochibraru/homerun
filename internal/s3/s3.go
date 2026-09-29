@@ -26,17 +26,31 @@ import (
 	"github.com/orochibraru/homerun/internal/activity"
 )
 
-// PartSize is one multipart part. S3 needs at least 5 MiB per part but the
-// last, and allows 10000 parts, so an upload tops out at about 160 GiB.
-// ponytail: fixed size, grow it after the first thousand parts if volumes that
-// big show up.
-const PartSize = 16 << 20
+// PartSize is the size of an upload's first parts. S3 needs at least 5 MiB
+// per part but the last, and allows 10000 parts, so the size doubles every
+// PartsPerStep parts up to MaxPartSize (see PartSizeFor): small parts keep a
+// normal backup's memory low, bigger ones keep a huge one under the part cap,
+// about 240 GiB in all.
+const PartSize = 8 << 20
 
-// UploadConcurrency is how many parts are sent at once. One part at a time
-// leaves the upload waiting on every round trip and the archive waiting on
-// the upload; several in flight keep both busy. At most UploadConcurrency+1
-// parts are held in memory.
-const UploadConcurrency = 4
+// MaxPartSize is the largest part PartSizeFor hands out.
+const MaxPartSize = 32 << 20
+
+// PartsPerStep is how many parts are sent at one size before it doubles.
+const PartsPerStep = 2000
+
+// UploadConcurrency is how many parts are sent at once. Measured against
+// Hetzner's object storage, one connection carries about 1.3 MiB/s and the
+// total grows almost linearly with parallel parts (4 at a time was 3.6 times
+// faster, 16 about 12 times), so several in flight also keep the archive from
+// waiting on the upload. At most UploadConcurrency+1 parts are held in memory.
+const UploadConcurrency = 16
+
+// PartSizeFor is the size of multipart part number (1-based).
+func PartSizeFor(number int) int {
+	steps := min((number-1)/PartsPerStep, 8)
+	return min(PartSize<<steps, MaxPartSize)
+}
 
 // RequestTimeout caps one buffered request (a single PUT, one part, a
 // multipart start or completion), so an endpoint that stops answering fails
@@ -319,9 +333,9 @@ func (c *Client) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	return response.Body, nil
 }
 
-// Upload streams body to key and returns how many bytes it stored. At most one
-// PartSize chunk is held in memory: a body that fits in one is a single PUT,
-// anything larger a multipart upload, aborted if any part fails.
+// Upload streams body to key and returns how many bytes it stored. A body that
+// fits in PartSize is a single PUT, anything larger a multipart upload of
+// UploadConcurrency parts at a time, aborted if any part fails.
 func (c *Client) Upload(ctx context.Context, key string, body io.Reader) (int64, error) {
 	first := make([]byte, PartSize)
 	n, err := io.ReadFull(body, first)
@@ -443,16 +457,17 @@ func (c *Client) uploadParts(ctx context.Context, key, uploadID string, buffer [
 	return progress.total(), nil
 }
 
-// feedParts hands buffer and then every further PartSize chunk of body to
-// send, numbered from 1, taking a buffer from free for each read. It stops at
-// the end of body, when send refuses (the upload failed), or on a read error.
+// feedParts hands buffer and then every further chunk of body to send, each
+// PartSizeFor its number, taking a buffer from free for each read (a bigger
+// one once parts grow). It stops at the end of body, when send refuses (the
+// upload failed), or on a read error.
 func (c *Client) feedParts(ctx context.Context, body io.Reader, buffer []byte, free chan []byte, send func(int, []byte) bool) error {
-	n := len(buffer)
+	n, want := len(buffer), len(buffer)
 	for number := 1; n > 0; number++ {
 		if !send(number, buffer[:n]) {
 			return nil
 		}
-		if n < PartSize {
+		if n < want {
 			return nil
 		}
 		select {
@@ -460,8 +475,12 @@ func (c *Client) feedParts(ctx context.Context, body io.Reader, buffer []byte, f
 		case <-ctx.Done():
 			return nil
 		}
+		want = PartSizeFor(number + 1)
+		if cap(buffer) < want {
+			buffer = make([]byte, want)
+		}
 		var err error
-		n, err = io.ReadFull(body, buffer)
+		n, err = io.ReadFull(body, buffer[:want])
 		if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
 			return err
 		}

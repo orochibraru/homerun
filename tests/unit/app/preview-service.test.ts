@@ -18,8 +18,14 @@ const { DeploymentService } = await import(
 const { ServiceLifecycleService } = await import(
 	"../../../src/lib/services/service-lifecycle.service"
 );
-const { PreviewService } = await import(
+const { PreviewService, previewVolumeSource, renderEnvOverride } = await import(
 	"../../../src/lib/services/preview.service"
+);
+const { ServiceVolumeDTO } = await import(
+	"../../../src/lib/dto/service-volume-dto"
+);
+const { StorageVolumeDTO } = await import(
+	"../../../src/lib/dto/storage-volume-dto"
 );
 
 type Svc = Parameters<typeof PreviewService.handle>[0];
@@ -51,6 +57,9 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		},
 		previewBranchExclude: [],
 		previewBranchInclude: [],
+		previewCopyVolumes: false,
+		previewEnvOverrides: {},
+		previewInheritEnv: true,
 		previewDefaultDomain: true,
 		previewDomainTemplate: null,
 		primaryDomain: null,
@@ -492,5 +501,87 @@ describe("preview branch filter", () => {
 		];
 		expect(await PreviewService.applyBranchFilter(svc)).toBe(1);
 		expect(deleted).toEqual(["p1"]);
+	});
+});
+
+describe("preview environment and volumes", () => {
+	test("overrides go over the inherited env, with placeholders filled in", async () => {
+		const { svc } = fakeService({
+			envVars: { KEEP: "1", MODE: "prod" },
+			previewEnvOverrides: {
+				DB: "postgres://db/app_pr_{pr}",
+				MODE: "preview-{branch}-{slug}",
+			},
+		});
+		await PreviewService.handle(svc, event({ branch: "feat/x", number: 12 }));
+		expect(created[0]?.envVars).toEqual({
+			DB: "postgres://db/app_pr_12",
+			KEEP: "1",
+			MODE: "preview-feat/x-web-pr-12",
+		});
+	});
+
+	test("without inheritance a preview only gets the overrides", async () => {
+		const { svc } = fakeService({
+			envVars: { SECRET: "parent-only" },
+			previewEnvOverrides: { ONLY: "this" },
+			previewInheritEnv: false,
+		});
+		await PreviewService.handle(svc, event());
+		expect(created[0]?.envVars).toEqual({ ONLY: "this" });
+	});
+
+	test("copying volumes makes a seeded copy of every mount, mounted at the same path", async () => {
+		const volumes: Record<string, unknown>[] = [];
+		const mounts: Record<string, unknown>[] = [];
+		stub(ServiceVolumeDTO, "listForService", async () => [
+			{
+				mount: {
+					toJSON: () => ({ containerPath: "/data", readOnly: false }),
+				},
+				volumeKind: "volume",
+				volumeName: "App Data",
+				volumeSeedFrom: null,
+				volumeSource: "app-data",
+			},
+		]);
+		stub(StorageVolumeDTO, "create", async (input: Record<string, unknown>) => {
+			volumes.push(input);
+			return { id: "copy-1" };
+		});
+		stub(ServiceVolumeDTO, "attach", async (input: Record<string, unknown>) => {
+			mounts.push(input);
+		});
+		const { svc } = fakeService({ previewCopyVolumes: true });
+		await PreviewService.handle(svc, event());
+		expect(volumes).toEqual([
+			expect.objectContaining({
+				kind: "volume",
+				previewServiceId: "preview",
+				seedFrom: "app-data",
+				source: "homerun-web-pr-7-app-data",
+			}),
+		]);
+		expect(mounts).toEqual([
+			{
+				containerPath: "/data",
+				readOnly: false,
+				serviceId: "preview",
+				volumeId: "copy-1",
+			},
+		]);
+	});
+
+	test("names and placeholders", () => {
+		expect(previewVolumeSource("web-pr-3", "My Data/1")).toBe(
+			"homerun-web-pr-3-my-data-1",
+		);
+		expect(
+			renderEnvOverride("{slug}:{pr}:{branch}", {
+				branch: null,
+				pr: 3,
+				slug: "s",
+			}),
+		).toBe("s:3:");
 	});
 });

@@ -2064,6 +2064,9 @@
 												},
 												"type": "array"
 											},
+											"previewCopyVolumes": {
+												"type": "boolean"
+											},
 											"previewDefaultDomain": {
 												"type": "boolean"
 											},
@@ -2076,6 +2079,18 @@
 														"type": "null"
 													}
 												]
+											},
+											"previewEnvOverrides": {
+												"additionalProperties": {
+													"type": "string"
+												},
+												"propertyNames": {
+													"type": "string"
+												},
+												"type": "object"
+											},
+											"previewInheritEnv": {
+												"type": "boolean"
 											},
 											"previewParentId": {
 												"anyOf": [
@@ -2297,6 +2312,9 @@
 											"gitLastSeenCommit",
 											"previewDefaultDomain",
 											"previewBranchExclude",
+											"previewCopyVolumes",
+											"previewEnvOverrides",
+											"previewInheritEnv",
 											"previewBranchInclude",
 											"previewDomainTemplate",
 											"previewsEnabled",
@@ -3113,6 +3131,9 @@
 											},
 											"type": "array"
 										},
+										"previewCopyVolumes": {
+											"type": "boolean"
+										},
 										"previewDefaultDomain": {
 											"type": "boolean"
 										},
@@ -3125,6 +3146,18 @@
 													"type": "null"
 												}
 											]
+										},
+										"previewEnvOverrides": {
+											"additionalProperties": {
+												"type": "string"
+											},
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
+										},
+										"previewInheritEnv": {
+											"type": "boolean"
 										},
 										"previewParentId": {
 											"anyOf": [
@@ -3341,6 +3374,9 @@
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
 										"previewBranchExclude",
+										"previewCopyVolumes",
+										"previewEnvOverrides",
+										"previewInheritEnv",
 										"previewBranchInclude",
 										"previewDomainTemplate",
 										"previewsEnabled",
@@ -4099,6 +4135,9 @@
 											},
 											"type": "array"
 										},
+										"previewCopyVolumes": {
+											"type": "boolean"
+										},
 										"previewDefaultDomain": {
 											"type": "boolean"
 										},
@@ -4111,6 +4150,18 @@
 													"type": "null"
 												}
 											]
+										},
+										"previewEnvOverrides": {
+											"additionalProperties": {
+												"type": "string"
+											},
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
+										},
+										"previewInheritEnv": {
+											"type": "boolean"
 										},
 										"previewParentId": {
 											"anyOf": [
@@ -4327,6 +4378,9 @@
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
 										"previewBranchExclude",
+										"previewCopyVolumes",
+										"previewEnvOverrides",
+										"previewInheritEnv",
 										"previewBranchInclude",
 										"previewDomainTemplate",
 										"previewsEnabled",
@@ -4710,6 +4764,25 @@
 										},
 										"maxItems": 50,
 										"type": "array"
+									},
+									"previewCopyVolumes": {
+										"description": "Whether each new preview gets its own copy of this service's volumes.",
+										"type": "boolean"
+									},
+									"previewEnvOverrides": {
+										"additionalProperties": {
+											"type": "string"
+										},
+										"description": "Environment variables set on every preview over what it inherited; {pr}, {branch} and {slug} are filled in.",
+										"propertyNames": {
+											"pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+											"type": "string"
+										},
+										"type": "object"
+									},
+									"previewInheritEnv": {
+										"description": "Whether pull request previews start from this service's environment variables.",
+										"type": "boolean"
 									},
 									"previewsEnabled": {
 										"type": "boolean"
@@ -5302,6 +5375,9 @@
 											},
 											"type": "array"
 										},
+										"previewCopyVolumes": {
+											"type": "boolean"
+										},
 										"previewDefaultDomain": {
 											"type": "boolean"
 										},
@@ -5314,6 +5390,18 @@
 													"type": "null"
 												}
 											]
+										},
+										"previewEnvOverrides": {
+											"additionalProperties": {
+												"type": "string"
+											},
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
+										},
+										"previewInheritEnv": {
+											"type": "boolean"
 										},
 										"previewParentId": {
 											"anyOf": [
@@ -5530,6 +5618,9 @@
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
 										"previewBranchExclude",
+										"previewCopyVolumes",
+										"previewEnvOverrides",
+										"previewInheritEnv",
 										"previewBranchInclude",
 										"previewDomainTemplate",
 										"previewsEnabled",

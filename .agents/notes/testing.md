@@ -476,8 +476,16 @@ TEMPLATES_E2E_ONLY=redis,umami bunx playwright test --config playwright.template
   last 150 log lines of each container.
 
 In CI it's `templates-e2e.yaml` (`workflow_call`, optional `ref` input and
-`templates` slug list, every template when empty; an empty `TEMPLATES_E2E_ONLY`
-means all too), called from `pull_request.yaml`, `publish.yaml` and
-`template-versions.yaml`; see `packages-and-release.md`. It frees ~30GB of
-preinstalled toolchains first and logs in to Docker Hub when the registry secret
-is there.
+`templates` slug list, every template when empty), called from
+`pull_request.yaml`, `publish.yaml` and `template-versions.yaml`; see
+`packages-and-release.md`. It's a matrix, one job per template: `plan` builds
+the app once, uploads it as a tarball (an artifact loses the binaries' exec bit)
+and lists the slugs; each `deploy` job downloads it and runs the suite with
+`TEMPLATES_E2E_ONLY` set to its one slug and one worker, so every template gets
+its own log, its own trace artifact on failure and its own pass/fail in the
+run's UI; `summary` adds the jobs' Playwright JSON results back into the
+`summary` output the callers read, counting only the `templates` project (each
+job's `setup` test isn't a template). `max-parallel: 20` is the free plan's
+concurrency cap; public repositories don't pay for standard runners. A job pulls
+one template's images, so the "free 30GB" step the single job needed is gone. A
+job logs in to Docker Hub when the registry secret is there.

@@ -9,8 +9,10 @@
 		formatMs as ms,
 		formatPercent as percent,
 	} from "$lib/metrics-format";
+	import { monitoringChanges } from "$lib/monitoring-changes";
 	import { MONITORING_RANGES } from "$lib/monitoring-ranges";
 	import type { MonitoringSummary } from "$lib/services/monitoring.service";
+	import ChangeBadge from "./change-badge.svelte";
 	import MetricChart from "./metric-chart.svelte";
 
 	interface Props {
@@ -52,8 +54,11 @@
 
 	const suffix = $derived(resourceSubject ? ` (${resourceSubject})` : "");
 
+	const changes = $derived(monitoringChanges(monitoring));
+
 	const cards = $derived([
 		{
+			metric: "requests" as const,
 			hint: `${count((traffic.requests / monitoring.spanSeconds) * 3600)} an hour on average`,
 			label: "Requests",
 			value: count(traffic.requests),
@@ -61,16 +66,19 @@
 		{
 			hint: "Time Traefik waited on the service, per request",
 			label: "Avg response time",
+			metric: "avgResponse" as const,
 			value: ms(traffic.avgResponseMs),
 		},
 		{
 			hint: `${count(traffic.status5xx)} server errors, ${count(traffic.status4xx)} client errors`,
 			label: "Error rate",
+			metric: "errorRate" as const,
 			value: percent(errors, traffic.requests),
 		},
 		{
 			hint: `${formatBytes(traffic.bytesIn)} received`,
 			label: "Bandwidth served",
+			metric: "bandwidth" as const,
 			value: formatBytes(traffic.bytesOut),
 		},
 		{
@@ -78,6 +86,7 @@
 				? `${count(external.checks)} checks, ${ms(external.avgLatencyMs)} on average`
 				: "No public checks in this range",
 			label: "Uptime (public)",
+			metric: "uptimePublic" as const,
 			value: percent(external.ok, external.checks, 2),
 		},
 		{
@@ -85,6 +94,7 @@
 				? `${count(internal.checks)} checks, ${ms(internal.avgLatencyMs)} on average`
 				: "No network checks in this range",
 			label: "Uptime (network)",
+			metric: "uptimeNetwork" as const,
 			value: percent(internal.ok, internal.checks, 2),
 		},
 		{
@@ -93,6 +103,7 @@
 					? "No samples in this range"
 					: `peak ${resources.peakCpuPercent.toFixed(0)}%`,
 			label: `Avg CPU${suffix}`,
+			metric: "avgCpu" as const,
 			value:
 				resources.avgCpuPercent === null
 					? "—"
@@ -104,6 +115,7 @@
 					? "No samples in this range"
 					: `peak ${mb(resources.peakMemUsedMb)}${resources.memLimitMb ? ` of ${mb(resources.memLimitMb)}` : ""}`,
 			label: `Avg memory${suffix}`,
+			metric: "avgMemory" as const,
 			value: mb(resources.avgMemUsedMb),
 		},
 	]);
@@ -119,6 +131,9 @@
         })}
       {:else}
         Everything recorded, up to a year back
+      {/if}
+      {#if monitoring.previous}
+        <span class="text-text-subtle">· changes {monitoring.previous.label}</span>
       {/if}
     </p>
     <nav
@@ -145,7 +160,10 @@
     {#each cards as card (card.label)}
       <div class="panel rounded-md p-4">
         <p class="text-text-muted text-xs">{card.label}</p>
-        <p class="metric text-text mt-1">{card.value}</p>
+        <p class="mt-1 flex items-baseline gap-2">
+          <span class="metric text-text">{card.value}</span>
+          <ChangeBadge change={changes[card.metric]} label={monitoring.previous?.label} />
+        </p>
         <p class="text-text-subtle mt-1 truncate text-xs" title={card.hint}>
           {card.hint}
         </p>

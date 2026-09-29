@@ -25,10 +25,17 @@ export interface TrafficPoint {
 	requests: number;
 }
 
-/** The scope a query reads: these services, from `since` on (everything when null). */
-function scope(serviceIds: string[], since: Date | null) {
-	const services = inArray(trafficSample.serviceId, serviceIds);
-	return since ? and(services, gte(trafficSample.createdAt, since)) : services;
+/** The scope a query reads: these services, from `since` on (everything when null) and before `until` when set. */
+function scope(
+	serviceIds: string[],
+	since: Date | null,
+	until: Date | null = null,
+) {
+	return and(
+		inArray(trafficSample.serviceId, serviceIds),
+		since ? gte(trafficSample.createdAt, since) : undefined,
+		until ? lt(trafficSample.createdAt, until) : undefined,
+	);
 }
 
 const NO_TRAFFIC: TrafficTotals = {
@@ -94,10 +101,11 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 		);
 	}
 
-	/** Totals and the average response time of some services over a range. */
+	/** Totals and the average response time of some services from `since` on, up to `until` when set. */
 	static async totals(
 		serviceIds: string[],
 		since: Date | null,
+		until: Date | null = null,
 	): Promise<TrafficTotals> {
 		if (serviceIds.length === 0) {
 			return NO_TRAFFIC;
@@ -105,7 +113,7 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 		const [row] = await db
 			.select(TOTAL_COLUMNS)
 			.from(trafficSample)
-			.where(scope(serviceIds, since));
+			.where(scope(serviceIds, since, until));
 		return toTotals(row);
 	}
 

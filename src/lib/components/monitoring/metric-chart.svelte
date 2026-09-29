@@ -11,6 +11,8 @@
 		points: Point[];
 		title: string;
 		empty?: string;
+		/** Drops the chart's own panel, for a chart that sits inside another one. */
+		plain?: boolean;
 	}
 
 	const {
@@ -20,6 +22,7 @@
 		points,
 		title,
 		empty = "Nothing recorded in this range yet.",
+		plain = false,
 	}: Props = $props();
 
 	let hovered = $state<number | null>(null);
@@ -67,7 +70,7 @@
 	const shown = $derived(hovered === null ? null : points[hovered]);
 </script>
 
-<section class="panel rounded-md p-4">
+<section class={plain ? "" : "panel rounded-md p-4"}>
   <div class="mb-3 flex items-baseline justify-between gap-2">
     <h3 class="text-text text-sm font-medium">{title}</h3>
     <span class="text-text-subtle text-xs tabular-nums">

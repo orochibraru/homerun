@@ -318,6 +318,9 @@ describe("scoped monitoring", () => {
 			["stat.totals", "host"],
 			["stat.series", "host"],
 			["uptime", ["a", "b"]],
+			["traffic.totals", ["a", "b"]],
+			["stat.totals", "host"],
+			["uptime", ["a", "b"]],
 		]);
 	});
 
@@ -401,5 +404,91 @@ describe("monitoring formatting and requests", () => {
 				cookies("Mars/Base"),
 			),
 		).toEqual({ range: "week", zone: "UTC" });
+	});
+});
+
+describe("period comparison", () => {
+	test("formats relative and point changes with a good or bad direction", async () => {
+		const { formatChange } = await import("../../../src/lib/metrics-format");
+		expect(formatChange(120, 100, { higherIsBetter: false })).toEqual({
+			direction: "worse",
+			text: "+20.0%",
+		});
+		expect(formatChange(80, 100, { higherIsBetter: false })).toEqual({
+			direction: "better",
+			text: "−20.0%",
+		});
+		expect(formatChange(150, 100, { higherIsBetter: null })?.direction).toBe(
+			"same",
+		);
+		expect(
+			formatChange(99.9, 99.5, { higherIsBetter: true, points: true }),
+		).toEqual({ direction: "better", text: "+0.40 pts" });
+		expect(formatChange(5, 5, { higherIsBetter: true })).toEqual({
+			direction: "same",
+			text: "±0.0%",
+		});
+		expect(formatChange(5, 0, { higherIsBetter: true })).toBeNull();
+		expect(formatChange(null, 3, { higherIsBetter: true })).toBeNull();
+	});
+
+	test("the previous window is yesterday so far, or the span right before", async () => {
+		const { previousWindow } = await import(
+			"../../../src/lib/monitoring-ranges"
+		);
+		const now = new Date("2026-09-29T15:00:00Z");
+		expect(previousWindow("all", null, now)).toBeNull();
+		expect(
+			previousWindow("today", new Date("2026-09-29T00:00:00Z"), now),
+		).toMatchObject({
+			end: new Date("2026-09-28T15:00:00Z"),
+			start: new Date("2026-09-28T00:00:00Z"),
+		});
+		expect(
+			previousWindow("week", new Date("2026-09-22T15:00:00Z"), now),
+		).toMatchObject({
+			end: new Date("2026-09-22T15:00:00Z"),
+			start: new Date("2026-09-15T15:00:00Z"),
+		});
+	});
+
+	test("each metric compares in its own terms", async () => {
+		const { monitoringChanges } = await import(
+			"../../../src/lib/monitoring-changes"
+		);
+		const totals = (requests: number, ok: number, cpu: number) => ({
+			availability: {
+				external: { avgLatencyMs: 10, checks: 100, ok },
+				internal: { avgLatencyMs: 1, checks: 0, ok: 0 },
+			},
+			resources: {
+				avgCpuPercent: cpu,
+				avgMemUsedMb: 100,
+				memLimitMb: null,
+				peakCpuPercent: cpu,
+				peakMemUsedMb: 100,
+			},
+			traffic: {
+				avgResponseMs: 50,
+				bytesIn: 0,
+				bytesOut: 10,
+				requests,
+				status4xx: requests / 10,
+				status5xx: 0,
+			},
+		});
+		const changes = monitoringChanges({
+			...totals(200, 100, 10),
+			previous: { ...totals(100, 98, 20), label: "vs the 7 days before" },
+		} as never);
+		expect(changes.requests).toEqual({ direction: "same", text: "+100.0%" });
+		expect(changes.uptimePublic).toEqual({
+			direction: "better",
+			text: "+2.00 pts",
+		});
+		expect(changes.avgCpu).toEqual({ direction: "better", text: "−50.0%" });
+		expect(changes.errorRate?.direction).toBe("same");
+		expect(changes.uptimeNetwork).toBeNull();
+		expect(monitoringChanges({ previous: null } as never)).toEqual({});
 	});
 });

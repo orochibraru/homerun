@@ -136,6 +136,7 @@ export interface InstanceSettingsOverride {
 	traefikDynamicConfigDir?: string | null;
 	traefikEntrypoint?: string | null;
 	traefikHttpCache?: boolean;
+	traefikInstanceCertNames?: string[];
 }
 
 /**
@@ -223,6 +224,11 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			traefikDynamicConfigDir: null,
 			traefikEntrypoint: null,
 			traefikHttpCache: false,
+			tlsCertEnc: null,
+			tlsCertExpiresAt: null,
+			tlsCertIssuer: null,
+			tlsCertNames: [],
+			tlsKeyEnc: null,
 			updateChannel: null,
 			updatedAt: now,
 		};
@@ -713,6 +719,62 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			traefikDynamicConfigDir: this.row.traefikDynamicConfigDir,
 			traefikEntrypoint: this.row.traefikEntrypoint,
 			traefikHttpCache: this.row.traefikHttpCache,
+			traefikInstanceCertNames: this.row.tlsCertEnc
+				? this.row.tlsCertNames
+				: [],
 		};
+	}
+
+	/** The instance certificate's details for the TLS tab, null when none is installed. */
+	get instanceCertificate(): {
+		expiresAt: Date | null;
+		issuer: string | null;
+		names: string[];
+	} | null {
+		return this.row.tlsCertEnc
+			? {
+					expiresAt: this.row.tlsCertExpiresAt,
+					issuer: this.row.tlsCertIssuer,
+					names: this.row.tlsCertNames,
+				}
+			: null;
+	}
+
+	/** The instance certificate and key PEMs, decrypted, null when none is installed or they can't be decrypted. */
+	instanceCertificatePem(): { cert: string; key: string } | null {
+		const cert = this.row.tlsCertEnc
+			? decryptSecret(this.row.tlsCertEnc)
+			: null;
+		const key = this.row.tlsKeyEnc ? decryptSecret(this.row.tlsKeyEnc) : null;
+		return cert && key ? { cert, key } : null;
+	}
+
+	/** Stores an instance certificate (already checked), or removes it when `input` is null. */
+	async updateInstanceCertificate(
+		input: {
+			cert: string;
+			expiresAt: Date;
+			issuer: string;
+			key: string;
+			names: string[];
+		} | null,
+	): Promise<void> {
+		await this.persist(
+			input
+				? {
+						tlsCertEnc: encryptSecret(input.cert),
+						tlsCertExpiresAt: input.expiresAt,
+						tlsCertIssuer: input.issuer,
+						tlsCertNames: input.names,
+						tlsKeyEnc: encryptSecret(input.key),
+					}
+				: {
+						tlsCertEnc: null,
+						tlsCertExpiresAt: null,
+						tlsCertIssuer: null,
+						tlsCertNames: [],
+						tlsKeyEnc: null,
+					},
+		);
 	}
 }

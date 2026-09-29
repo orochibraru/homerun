@@ -151,6 +151,7 @@ export function buildContainerLabels(params: {
 			hostname,
 			config.traefik.certResolver,
 			config.pangolinEnabled,
+			config.traefik.instanceCertNames,
 		);
 		if (resolver) {
 			labels[`traefik.http.routers.${router}.tls.certresolver`] = resolver;

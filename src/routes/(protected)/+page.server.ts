@@ -5,13 +5,46 @@ import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 import { Logger } from "$lib/logger";
+import { rangeStart } from "$lib/monitoring-ranges";
 import { describeReading } from "$lib/resource-thresholds";
+import { monitoringRequest } from "$lib/server/monitoring-request";
 import { CapacityService } from "$lib/services/capacity.service";
+import { MonitoringService } from "$lib/services/monitoring.service";
 import { isProbed } from "$lib/services/uptime/uptime-probe";
 
 const logger = new Logger("Dashboard");
 
-export const load = async ({ locals, parent }) => {
+/** Today's traffic, uptime and host use, and the five busiest services, for the dashboard's summary. */
+async function todaysMonitoring(services: ServiceDTO[], zone: string) {
+	const serviceIds = services.map((svc) => svc.id);
+	const [monitoring, breakdown] = await Promise.all([
+		MonitoringService.forScope(
+			{ resources: "host", serviceIds },
+			"today",
+			zone,
+		),
+		MonitoringService.breakdown(
+			serviceIds,
+			rangeStart("today", new Date(), zone),
+		),
+	]);
+	const names = new Map(services.map((svc) => [svc.id, svc.name]));
+	return {
+		busiest: breakdown
+			.filter((row) => row.requests > 0)
+			.slice(0, 5)
+			.map((row) => ({
+				...row,
+				href: resolve("/(protected)/services/[serviceId]/observability", {
+					serviceId: row.serviceId,
+				}),
+				name: names.get(row.serviceId) ?? row.serviceId,
+			})),
+		monitoring,
+	};
+}
+
+export const load = async ({ cookies, locals, parent, url }) => {
 	// (protected)/+layout.server.ts already redirects unauthenticated users
 	// before this load runs : parent() gives the already-guaranteed user.
 	await parent();
@@ -38,6 +71,10 @@ export const load = async ({ locals, parent }) => {
 
 	return {
 		isAdmin: locals.isAdmin,
+		monitoring: todaysMonitoring(
+			services,
+			monitoringRequest(url, cookies).zone,
+		),
 		overCapacity: hardBreaches.map(describeReading),
 		recentDeployments: recentDeployments.map((r) => ({
 			...r.deployment.toJSON(),

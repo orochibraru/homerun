@@ -12,10 +12,11 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import HostResources from "$lib/components/host-resources.svelte";
+	import MonitoringSummary from "$lib/components/monitoring/monitoring-summary.svelte";
 	import ServiceUsageTable from "$lib/components/service-usage-table.svelte";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button";
-	import UsageChart from "$lib/components/usage-chart.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import {
 		getSetupStatus,
@@ -223,7 +224,21 @@
   </div>
 
   <div class="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-    <UsageChart title="Host resources" />
+    {#await data.monitoring}
+      <div class="panel rounded-xl p-4">
+        <Skeleton class="h-56 w-full" />
+      </div>
+    {:then summary}
+      <MonitoringSummary
+        busiest={summary.busiest}
+        href={resolve("/monitoring")}
+        monitoring={summary.monitoring}
+      />
+    {:catch}
+      <div class="panel text-text-muted rounded-xl p-4 text-sm">
+        Couldn't load today's monitoring.
+      </div>
+    {/await}
     <ServiceUsageTable limit={5} />
   </div>
 

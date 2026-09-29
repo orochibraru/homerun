@@ -1485,6 +1485,22 @@ update after the filter changed cleans up. `applyBranchFilter` does the same for
 every open preview when the Previews tab or `PATCH /api/v1/services/:id` changes
 the lists.
 
+Env: `previewEnv` starts from the parent's env with its hostnames rewritten
+(unless `previewInheritEnv` is off, then empty) and lays `previewEnvOverrides`
+on top, `renderEnvOverride` filling `{pr}`, `{branch}` and `{slug}`; both
+`#create` and `#refresh` go through it. Volumes: `previewCopyVolumes` makes
+`#create` add, for each parent mount, a `storage_volume` with `previewServiceId`
+(cascade, so the row goes with the preview) and `seedFrom` = the parent volume's
+source, plus a mount at the same path. The copy happens in the deploy job, not
+the webhook request (GitHub gives up after 10 seconds): `deployWorkerSpec`'s
+`seeds` lists every mount with a `seedFrom`, and the Go deploy's `seedVolumes`
+copies (`dockerapi.CopyVolume`, `cp -a` in a helper) into each target that
+doesn't exist yet, removing a half copied one on failure so the next deploy
+retries. Existing previews never get copies.
+`ServiceLifecycleService.deleteService` removes a preview's copied Docker
+volumes (`#removePreviewVolumes`, best effort) before the row goes.
+`tests/integration/volume-seed.test.ts` covers the seed end to end.
+
 ## Release channels (`service.channels*` columns, `channelCanary`, `ReleaseChannelService`, `$lib/release-channels.ts`)
 
 Opt-in per git service (`channelsEnabled`, off by default): the service itself

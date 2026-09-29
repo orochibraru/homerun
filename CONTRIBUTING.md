@@ -54,13 +54,20 @@ cp .env.example .env          # set AUTH_SECRET, and ORIGIN=http://localhost:517
 bun run dev
 ```
 
-Open `http://localhost:5173`. Migrations in `drizzle/` apply themselves at boot;
-`bun run db:generate` is only for when you change `src/lib/server/db/schema.ts`.
-The app runs directly on the host (not in a container) so it can reach the
-Docker socket without any socket-forwarding; [`compose.yaml`](compose.yaml) only
-runs Traefik and Postgres. The first account you create becomes admin
-automatically; signing in for the first time drops you into the onboarding
-wizard (base domain / Docker / Traefik / email / DNS).
+Open `http://localhost:5173`. `docker compose up -d` publishes ports 80, 443 and
+5432; Traefik also gets the request-metrics flags the Monitoring tab reads and a
+bind mount of `./traefik-dynamic` (ignored by git, where the app writes the
+instance and per-service TLS config, via `TRAEFIK_DYNAMIC_CONFIG_DIR` in
+`.env.example`). A Traefik container created before those flags existed needs
+`docker compose up -d --force-recreate traefik`. The app itself creates the
+image mirror (`homerun-mirror`, `127.0.0.1:5055`) on first deploy, so that port
+has to be free; compose doesn't run it. Migrations in `drizzle/` apply
+themselves at boot; `bun run db:generate` is only for when you change
+`src/lib/server/db/schema.ts`. The app runs directly on the host (not in a
+container) so it can reach the Docker socket without any socket-forwarding;
+[`compose.yaml`](compose.yaml) only runs Traefik and Postgres. The first account
+you create becomes admin automatically; signing in for the first time drops you
+into the onboarding wizard (base domain / Docker / Traefik / email / DNS).
 
 `bun run dev` also runs the job worker (`cmd/worker`, Go), with its output
 prefixed `[worker]`. Deploys, builds, scans, backups, cron jobs and Docker
@@ -126,7 +133,8 @@ the regenerated `openapi.json`, `homerun.schema.json` and
 tests plus the `bun:test` unit suite. `bun run test:integration` needs a real
 Postgres and Docker daemon, see `CLAUDE.md`'s "Commands" section for the full
 breakdown of `test`/`test:*` scripts and `.agents/notes/testing.md` for what
-integration and E2E need.
+integration and E2E need (the S3 backup test skips unless the
+`HOMERUN_TEST_S3_*` variables from `.env.example` are set).
 
 Two real-infrastructure suites live outside that (Multipass + Docker locally,
 never in CI): `bun scripts/e2e-multipass.ts` drives the installer/worker/CLI

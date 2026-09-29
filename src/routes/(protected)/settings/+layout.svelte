@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { Container, Globe, Mail, MoveRight, Network } from "@lucide/svelte";
+	import {
+		Container,
+		Globe,
+		Lock,
+		Mail,
+		MoveRight,
+		Network,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -69,6 +76,13 @@
 				icon: Network,
 				id: "networking",
 				label: "Networking",
+			},
+			{
+				exact: false,
+				href: resolve("/settings/tls"),
+				icon: Lock,
+				id: "tls",
+				label: "TLS",
 			},
 			{
 				exact: false,

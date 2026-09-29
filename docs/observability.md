@@ -22,6 +22,14 @@ Pick a range, **Today** (from midnight in your browser's time zone), **7 days**,
 - **Avg CPU** and **Avg memory**, with their peaks, from the per-minute resource
   samples.
 
+Each number also shows how it moved against the previous period of the same
+length: yesterday up to the same time for **Today**, the 7, 30 or 365 days
+before for the others (**All time** has nothing to compare with). The change is
+green when it's good news, red when it isn't (a slower response time, a higher
+error rate, lower uptime, more CPU or memory) and grey when it's neither (more
+requests or bandwidth). Error rate and uptime move in percentage points, the
+rest by a relative share.
+
 Below them, charts of requests, response time, CPU and memory over the range;
 hover one to read a single point. Everything is kept for a year, so **All time**
 reaches back at most that far. Traffic starts being recorded when an instance

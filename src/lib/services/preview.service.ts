@@ -1,7 +1,9 @@
 import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceGitDTO } from "$lib/dto/service-git-dto";
+import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
+import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { isCommitSha } from "$lib/git-ref";
 import { type PullRequestEvent, previewSlug } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
@@ -46,21 +48,60 @@ function previewRef(event: PullRequestEvent): string | null {
 	return isCommitSha(event.commit) ? event.commit : event.branch;
 }
 
+/** What a preview's env overrides can refer to: `{pr}`, `{branch}` and `{slug}`. */
+interface PreviewValues {
+	branch: string | null;
+	pr: number;
+	slug: string;
+}
+
+/** An override's value with `{pr}`, `{branch}` and `{slug}` filled in. */
+export function renderEnvOverride(
+	value: string,
+	values: PreviewValues,
+): string {
+	return value
+		.replaceAll("{pr}", String(values.pr))
+		.replaceAll("{branch}", values.branch ?? "")
+		.replaceAll("{slug}", values.slug);
+}
+
 /**
- * The parent's env for a preview whose main hostname is `previewHost`: any
+ * A preview's env: the parent's (unless its previews start empty), where any
  * of the parent's own hostnames in a value (an `ORIGIN`, a public URL) point
- * at the preview instead, so the preview doesn't claim to be the parent.
+ * at the preview instead so it doesn't claim to be the parent, then the
+ * parent's preview overrides on top.
  */
 async function previewEnv(
 	parent: ServiceDTO,
 	previewHost: string | null,
+	values: PreviewValues,
 ): Promise<Record<string, string>> {
+	const row = parent.toJSON();
 	const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
-	return rewriteHostnames(
-		parent.envVars ?? {},
-		serviceHostnames(parent.toJSON(), stack?.slug, config.baseDomain),
-		previewHost,
+	const inherited = row.previewInheritEnv
+		? rewriteHostnames(
+				parent.envVars ?? {},
+				serviceHostnames(row, stack?.slug, config.baseDomain),
+				previewHost,
+			)
+		: {};
+	const overrides = Object.fromEntries(
+		Object.entries(row.previewEnvOverrides).map(([key, value]) => [
+			key,
+			renderEnvOverride(value, values),
+		]),
 	);
+	return { ...inherited, ...overrides };
+}
+
+/** A Docker volume name for a preview's copy of `volumeName`. */
+export function previewVolumeSource(
+	previewSlug: string,
+	volumeName: string,
+): string {
+	const safe = volumeName.toLowerCase().replaceAll(/[^a-z0-9_.-]+/g, "-");
+	return `homerun-${previewSlug}-${safe}`.slice(0, 200);
 }
 
 /** The parent's build and runtime settings a preview or a release channel canary mirrors, refreshed on every pull request update or canary deploy. */
@@ -397,6 +438,7 @@ class PreviewServiceClass {
 				parent,
 				domains.primaryDomain ??
 					defaultHostname(slug, stack?.slug, config.baseDomain),
+				{ branch: event.branch, pr: event.number, slug },
 			),
 			domains: domains.domains,
 			buildSource: "git",
@@ -424,6 +466,9 @@ class PreviewServiceClass {
 			authAllowedUserIds: policy.authAllowedUserIds,
 			authProviders: policy.authProviders,
 		});
+		if (parent.toJSON().previewCopyVolumes) {
+			await this.#copyVolumes(parent, preview);
+		}
 		logger.info(
 			`Preview created: parent=${parent.id} pr=${event.number} service=${preview.id} ref=${ref}`,
 		);
@@ -445,6 +490,7 @@ class PreviewServiceClass {
 			envVars: await previewEnv(
 				parent,
 				primaryHostname(preview.toJSON(), stack?.slug, config.baseDomain),
+				{ branch: event.branch, pr: event.number, slug: preview.slug },
 			),
 			gitRef: ref,
 			previewBranch: event.branch,
@@ -457,6 +503,33 @@ class PreviewServiceClass {
 			};
 		}
 		return await this.#deploy(parent, preview);
+	}
+
+	/**
+	 * Gives a new preview its own copy of each of the parent's volumes,
+	 * mounted where the parent mounts them. The copy itself happens in the
+	 * preview's first deploy (the volume's `seedFrom`), so a large volume
+	 * doesn't hold up the pull request webhook.
+	 */
+	async #copyVolumes(parent: ServiceDTO, preview: ServiceDTO): Promise<void> {
+		for (const mount of await ServiceVolumeDTO.listForService(parent.id)) {
+			// oxlint-disable-next-line no-await-in-loop -- one volume row then its mount, in order
+			const copy = await StorageVolumeDTO.create({
+				kind: "volume",
+				name: `${mount.volumeName} (PR #${preview.toJSON().previewPrNumber})`,
+				previewServiceId: preview.id,
+				seedFrom: mount.volumeSource,
+				source: previewVolumeSource(preview.slug, mount.volumeName),
+				userId: parent.userId,
+			});
+			// oxlint-disable-next-line no-await-in-loop -- see above
+			await ServiceVolumeDTO.attach({
+				containerPath: mount.mount.toJSON().containerPath,
+				readOnly: mount.mount.toJSON().readOnly,
+				serviceId: preview.id,
+				volumeId: copy.id,
+			});
+		}
 	}
 
 	/** Enqueues a deploy of a preview as the parent service's owner. */

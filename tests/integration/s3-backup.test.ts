@@ -5,10 +5,17 @@ import { SQL } from "bun";
 import { nativeFetch, TEST_AUTH_SECRET } from "./support/config";
 import { integrationContext } from "./support/context";
 
+/** The endpoint as a URL, https assumed when it's given as a bare host. */
+function withScheme(endpoint: string): string {
+	return !endpoint || endpoint.includes("://")
+		? endpoint
+		: `https://${endpoint}`;
+}
+
 const env = {
 	accessKeyId: process.env.HOMERUN_TEST_S3_ACCESS_KEY_ID ?? "",
 	bucket: process.env.HOMERUN_TEST_S3_BUCKET ?? "",
-	endpoint: process.env.HOMERUN_TEST_S3_ENDPOINT ?? "",
+	endpoint: withScheme(process.env.HOMERUN_TEST_S3_ENDPOINT ?? ""),
 	prefix: process.env.HOMERUN_TEST_S3_PREFIX || "homerun-it",
 	region: process.env.HOMERUN_TEST_S3_REGION || "us-east-1",
 	secretAccessKey: process.env.HOMERUN_TEST_S3_SECRET_ACCESS_KEY ?? "",

@@ -349,6 +349,11 @@ export function DockerCleanupMixin<
 			};
 		}
 
+		/** Force-removes one named volume; one that's already gone isn't an error. */
+		async removeVolume(name: string): Promise<void> {
+			await this.worker.delete(`/v1/volumes/${encodeURIComponent(name)}`);
+		}
+
 		/**
 		 * Removes every unused volume on the host, including named ones, not
 		 * scoped to Homerun-managed volumes. With an empty `keepVolumeNames`

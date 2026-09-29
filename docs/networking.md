@@ -81,8 +81,27 @@ scheme as registry credentials). It works out of the box: `compose.prod.yaml`
 and the installer's stack share a `traefik-dynamic` volume between Homerun and
 Traefik, turn on Traefik's file provider over it, and set
 `TRAEFIK_DYNAMIC_CONFIG_DIR` (see [Configuration](configuration.md)) so Homerun
-knows where to write. Saving a cert writes the cert, key and a dynamic-config
-file into that directory, and Traefik's file provider picks them up on its own
-(no restart per certificate). An instance started from an older compose file
-without that volume and those flags has to add them once; until then, saving a
-cert does nothing.
+knows where to write. Saving a cert writes a dynamic-config file holding it into
+that directory, and Traefik's file provider picks it up on its own (no restart
+per certificate). An instance started from an older compose file without that
+volume and those flags has to add them once; until then, saving a cert does
+nothing.
+
+### One certificate for the whole instance
+
+**Settings → TLS** installs a certificate for the base domain and its
+subdomains, served by Traefik instead of Let's Encrypt. The typical case is
+Cloudflare's proxy: create an origin certificate (SSL/TLS → Origin Server →
+Create Certificate) for `yourdomain` and `*.yourdomain`, paste it with its key,
+and set Cloudflare's SSL/TLS mode to Full (strict). Homerun checks that the key
+belongs to the certificate and that it hasn't expired, stores both encrypted,
+and writes it as Traefik's default certificate.
+
+A route that asks Let's Encrypt for a certificate gets that one rather than the
+default, so every service on a hostname the certificate covers stops asking from
+its next deploy. The TLS tab lists the deployed services still asking and
+redeploys them in one click. A wildcard covers one level only: `*.example.com`
+covers `app.example.com` but not `a.b.example.com`, which keeps using Let's
+Encrypt. Removing the certificate puts Let's Encrypt back, again from each
+service's next deploy. The tab shows the expiry date and warns in the last 30
+days; Homerun doesn't renew a certificate it didn't issue.

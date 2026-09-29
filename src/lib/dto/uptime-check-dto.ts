@@ -124,6 +124,7 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 	static async availability(
 		serviceIds: string[],
 		since: Date | null,
+		until: Date | null = null,
 	): Promise<Record<ProbeKind, Availability>> {
 		const services = inArray(uptimeCheck.serviceId, serviceIds);
 		const rows = serviceIds.length
@@ -136,7 +137,11 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 					})
 					.from(uptimeCheck)
 					.where(
-						since ? and(services, gte(uptimeCheck.checkedAt, since)) : services,
+						and(
+							services,
+							since ? gte(uptimeCheck.checkedAt, since) : undefined,
+							until ? lt(uptimeCheck.checkedAt, until) : undefined,
+						),
 					)
 					.groupBy(uptimeCheck.kind)
 			: [];

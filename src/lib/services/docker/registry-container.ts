@@ -43,6 +43,7 @@ export function registryLabels(
 		state.publicHost,
 		config.traefik.certResolver,
 		config.pangolinOwnsAuth,
+		config.traefik.instanceCertNames,
 	);
 	labels["traefik.enable"] = "true";
 	labels[`traefik.http.routers.${MIRROR_ROUTER}.rule`] =

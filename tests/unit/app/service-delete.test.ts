@@ -68,6 +68,9 @@ const { GitWebhookService } = await import(
 	"../../../src/lib/services/git-webhook.service"
 );
 const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
+const { StorageVolumeDTO } = await import(
+	"../../../src/lib/dto/storage-volume-dto"
+);
 const { ServiceDependencyDTO } = await import(
 	"../../../src/lib/dto/service-dependency-dto"
 );
@@ -491,5 +494,29 @@ describe("ServiceLifecycleService kill/pull", () => {
 		await expect(ServiceLifecycleService.pullServiceImage(svc)).rejects.toThrow(
 			"builds from git",
 		);
+	});
+});
+
+describe("deleting a preview", () => {
+	test("removes the volumes it copied, even when one can't be removed", async () => {
+		const attempted: string[] = [];
+		stub(StorageVolumeDTO, "listForPreview", async () => [
+			{ source: "homerun-web-pr-1-a" },
+			{ source: "homerun-web-pr-1-b" },
+		]);
+		stub(DockerService, "removeVolume", async (name: string) => {
+			attempted.push(name);
+			if (name.endsWith("-a")) {
+				throw new Error("volume in use");
+			}
+		});
+		const { state, svc } = fakeService({
+			containerId: null,
+			id: "p1",
+			previewParentId: "s1",
+		});
+		await ServiceLifecycleService.deleteService(svc);
+		expect(attempted).toEqual(["homerun-web-pr-1-a", "homerun-web-pr-1-b"]);
+		expect(state.deleted).toBe(true);
 	});
 });

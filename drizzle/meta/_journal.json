@@ -651,6 +651,20 @@
 			"when": 1790626665073,
 			"tag": "0092_big_landau",
 			"breakpoints": true
+		},
+		{
+			"idx": 93,
+			"version": "7",
+			"when": 1790675285490,
+			"tag": "0093_motionless_namorita",
+			"breakpoints": true
+		},
+		{
+			"idx": 94,
+			"version": "7",
+			"when": 1790676110328,
+			"tag": "0094_colossal_grandmaster",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

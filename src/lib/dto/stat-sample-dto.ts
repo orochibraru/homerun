@@ -76,8 +76,12 @@ const RANGES: Record<
 /** Samples older than this are pruned by the sampler : a year of minute samples is the retention ceiling. */
 const RETENTION_SECONDS = 31_536_000;
 
-/** The samples a scope covers from `since` on, all of them when null; null when the scope is no services at all. */
-function scopeFilter(scope: ResourceScope, since: Date | null) {
+/** The samples a scope covers from `since` on (all of them when null) and before `until` when set; null when the scope is no services at all. */
+function scopeFilter(
+	scope: ResourceScope,
+	since: Date | null,
+	until: Date | null = null,
+) {
 	if (scope !== "host" && scope.serviceIds.length === 0) {
 		return null;
 	}
@@ -85,7 +89,11 @@ function scopeFilter(scope: ResourceScope, since: Date | null) {
 		scope === "host"
 			? isNull(statSample.serviceId)
 			: inArray(statSample.serviceId, scope.serviceIds);
-	return since ? and(who, gte(statSample.createdAt, since)) : who;
+	return and(
+		who,
+		since ? gte(statSample.createdAt, since) : undefined,
+		until ? lt(statSample.createdAt, until) : undefined,
+	);
 }
 
 /**
@@ -217,8 +225,9 @@ export class StatSampleDTO extends BaseDTO<StatSample> {
 	static async totals(
 		scope: ResourceScope,
 		since: Date | null,
+		until: Date | null = null,
 	): Promise<ResourceTotals> {
-		const filter = scopeFilter(scope, since);
+		const filter = scopeFilter(scope, since, until);
 		if (!filter) {
 			return NO_RESOURCES;
 		}

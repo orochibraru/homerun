@@ -30,6 +30,7 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 			mount: ServiceVolumeDTO;
 			volumeKind: string;
 			volumeName: string;
+			volumeSeedFrom: string | null;
 			volumeSource: string;
 		}>
 	> {
@@ -38,6 +39,7 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 				row: serviceVolume,
 				volumeKind: storageVolume.kind,
 				volumeName: storageVolume.name,
+				volumeSeedFrom: storageVolume.seedFrom,
 				volumeSource: storageVolume.source,
 			})
 			.from(serviceVolume)
@@ -47,6 +49,7 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 			mount: new ServiceVolumeDTO(r.row),
 			volumeKind: r.volumeKind,
 			volumeName: r.volumeName,
+			volumeSeedFrom: r.volumeSeedFrom,
 			volumeSource: r.volumeSource,
 		}));
 	}

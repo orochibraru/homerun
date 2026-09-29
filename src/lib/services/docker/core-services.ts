@@ -387,6 +387,7 @@ export function DockerCoreServicesMixin<
 							host,
 							config.traefik.certResolver,
 							config.pangolinEnabled,
+							config.traefik.instanceCertNames,
 						),
 						entrypoint: config.traefik.entrypoint,
 						host,

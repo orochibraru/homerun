@@ -13,6 +13,7 @@ import { type Availability, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 import {
 	bucketSecondsFor,
 	type MonitoringRange,
+	previousWindow,
 	rangeStart,
 } from "$lib/monitoring-ranges";
 
@@ -21,9 +22,18 @@ type ResourceSlot = {
 	[K in keyof ResourcePoint]: K extends "at" ? Date : number | null;
 };
 
+/** The previous period's totals, what the view compares the range with. */
+export interface PreviousTotals {
+	availability: { external: Availability; internal: Availability };
+	label: string;
+	resources: ResourceTotals;
+	traffic: TrafficTotals;
+}
+
 /** Everything a service's Monitoring view shows for one range. */
 export interface MonitoringSummary {
 	availability: { external: Availability; internal: Availability };
+	previous: PreviousTotals | null;
 	bucketSeconds: number;
 	spanSeconds: number;
 	range: MonitoringRange;
@@ -108,16 +118,24 @@ class MonitoringServiceClass {
 		const since = rangeStart(range, now, zone);
 		const start = since ?? (await this.#firstRecord(scope)) ?? now;
 		const bucketSeconds = bucketSecondsFor(now.getTime() - start.getTime());
-		const [traffic, trafficSeries, resources, resourceSeries, availability] =
-			await Promise.all([
-				TrafficSampleDTO.totals(scope.serviceIds, since),
-				TrafficSampleDTO.series(scope.serviceIds, since, bucketSeconds),
-				StatSampleDTO.totals(scope.resources, since),
-				StatSampleDTO.series(scope.resources, since, bucketSeconds),
-				UptimeCheckDTO.availability(scope.serviceIds, since),
-			]);
+		const [
+			traffic,
+			trafficSeries,
+			resources,
+			resourceSeries,
+			availability,
+			previous,
+		] = await Promise.all([
+			TrafficSampleDTO.totals(scope.serviceIds, since),
+			TrafficSampleDTO.series(scope.serviceIds, since, bucketSeconds),
+			StatSampleDTO.totals(scope.resources, since),
+			StatSampleDTO.series(scope.resources, since, bucketSeconds),
+			UptimeCheckDTO.availability(scope.serviceIds, since),
+			this.#previous(scope, previousWindow(range, since, now)),
+		]);
 		return {
 			availability,
+			previous,
 			bucketSeconds,
 			range,
 			resourceSeries: padBuckets<ResourceSlot>(
@@ -165,6 +183,22 @@ class MonitoringServiceClass {
 					b.requests - a.requests ||
 					(b.avgCpuPercent ?? 0) - (a.avgCpuPercent ?? 0),
 			);
+	}
+
+	/** A scope's totals over the previous window, null when the range has none. */
+	async #previous(
+		scope: MonitoringScope,
+		window: ReturnType<typeof previousWindow>,
+	): Promise<PreviousTotals | null> {
+		if (!window) {
+			return null;
+		}
+		const [traffic, resources, availability] = await Promise.all([
+			TrafficSampleDTO.totals(scope.serviceIds, window.start, window.end),
+			StatSampleDTO.totals(scope.resources, window.start, window.end),
+			UptimeCheckDTO.availability(scope.serviceIds, window.start, window.end),
+		]);
+		return { availability, label: window.label, resources, traffic };
 	}
 
 	/** The oldest thing recorded in a scope, where "all time" starts. */

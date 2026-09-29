@@ -121,7 +121,8 @@ describe("OAuth state", () => {
 			GitProviderService.createState("p1", "u1"),
 			"base64url",
 		).toString("utf8");
-		const forged = Buffer.from(`${decoded.slice(0, -2)}00`).toString(
+		const last = decoded.at(-1) === "0" ? "1" : "0";
+		const forged = Buffer.from(`${decoded.slice(0, -1)}${last}`).toString(
 			"base64url",
 		);
 		expect(GitProviderService.verifyState(forged, "p1", "u1")).toBe(false);

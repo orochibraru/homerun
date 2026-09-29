@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
+import { parseDotEnv } from "$lib/env-parse";
 import { Logger } from "$lib/logger";
 import {
 	branchPatternProblem,
@@ -146,7 +147,15 @@ export const actions = {
 			gitWebhookId: svc.gitWebhookId,
 			previewsEnabled: before.previewsEnabled,
 		};
+		const previewEnvOverrides = Object.fromEntries(
+			parseDotEnv(String(formData.get("previewEnvOverrides") ?? "")).map(
+				(row) => [row.key, row.value],
+			),
+		);
 		await svc.update({
+			previewCopyVolumes: formData.get("previewCopyVolumes") === "on",
+			previewEnvOverrides,
+			previewInheritEnv: formData.get("previewInheritEnv") === "on",
 			previewBranchExclude: exclude,
 			previewBranchInclude: include,
 			previewDefaultDomain,

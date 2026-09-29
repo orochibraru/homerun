@@ -20,9 +20,10 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import PreviewBranchFields from "./preview-branch-fields.svelte";
+	import PreviewEnvironmentFields from "./preview-environment-fields.svelte";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);
@@ -37,6 +38,11 @@
 			? (form.values as Record<string, string>)
 			: undefined) ?? {
 			previewBranchExclude: svc.previewBranchExclude.join("\n"),
+			previewCopyVolumes: svc.previewCopyVolumes ? "on" : "",
+			previewEnvOverrides: Object.entries(svc.previewEnvOverrides)
+				.map(([key, value]) => `${key}=${value}`)
+				.join("\n"),
+			previewInheritEnv: svc.previewInheritEnv ? "on" : "",
 			previewBranchInclude: svc.previewBranchInclude.join("\n"),
 			previewDefaultDomain: svc.previewDefaultDomain ? "on" : "",
 			previewDomainTemplate: svc.previewDomainTemplate ?? "",
@@ -164,51 +170,17 @@
             bind:checked={previewDefaultDomain}
           />
 
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <label class={label} for="previewBranchInclude">
-                Only branches matching
-              </label>
-              <Textarea
-                class="font-mono text-xs"
-                id="previewBranchInclude"
-                name="previewBranchInclude"
-                placeholder={"feature/*\nfix/*"}
-                rows={3}
-                value={values.previewBranchInclude}
-              />
-              <p class="text-text-subtle mt-1.5 text-xs">
-                One pattern per line. Empty lets every branch through.
-              </p>
-              {#if errors?.previewBranchInclude}
-                <p class={errorClass}>{errors.previewBranchInclude[0]}</p>
-              {/if}
-            </div>
-            <div>
-              <label class={label} for="previewBranchExclude">
-                Never branches matching
-              </label>
-              <Textarea
-                class="font-mono text-xs"
-                id="previewBranchExclude"
-                name="previewBranchExclude"
-                placeholder={"dependabot/*\nrenovate/*"}
-                rows={3}
-                value={values.previewBranchExclude}
-              />
-              <p class="text-text-subtle mt-1.5 text-xs">
-                Wins over the list on the left.
-              </p>
-              {#if errors?.previewBranchExclude}
-                <p class={errorClass}>{errors.previewBranchExclude[0]}</p>
-              {/if}
-            </div>
-          </div>
-          <p class="text-text-subtle -mt-2 text-xs">
-            Matched against the pull request's head branch: <code>*</code> is
-            any run of characters, slashes included, <code>?</code> exactly one.
-            Saving a filter deletes the open previews it now leaves out.
-          </p>
+          <PreviewBranchFields
+            errors={errors}
+            exclude={values.previewBranchExclude}
+            include={values.previewBranchInclude}
+          />
+
+          <PreviewEnvironmentFields
+            copyVolumes={values.previewCopyVolumes === "on"}
+            inheritEnv={values.previewInheritEnv === "on"}
+            overrides={values.previewEnvOverrides}
+          />
         </div>
 
         {#if data.pushWebhook}

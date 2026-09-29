@@ -13,6 +13,8 @@ export interface NewStorageVolumeInput {
 	description?: string | null;
 	kind: "bind" | "volume";
 	name: string;
+	previewServiceId?: string | null;
+	seedFrom?: string | null;
 	source: string;
 	userId: string;
 }
@@ -104,6 +106,15 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 		};
 	}
 
+	/** The volumes copied for a pull request preview, which go when it goes. */
+	static async listForPreview(serviceId: string): Promise<StorageVolumeDTO[]> {
+		const rows = await db
+			.select()
+			.from(storageVolume)
+			.where(eq(storageVolume.previewServiceId, serviceId));
+		return rows.map((row) => new StorageVolumeDTO(row));
+	}
+
 	/** Every volume (across all users) with scheduled backups turned on : for the scheduler tick, same pattern as ServiceDTO.listCronEnabled. */
 	static async listBackupEnabled(): Promise<StorageVolumeDTO[]> {
 		const rows = await db
@@ -152,7 +163,9 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 			id: crypto.randomUUID(),
 			kind: input.kind,
 			name: input.name,
+			previewServiceId: input.previewServiceId ?? null,
 			s3DestinationId: null,
+			seedFrom: input.seedFrom ?? null,
 			source: input.source,
 			updatedAt: now,
 			userId: input.userId,

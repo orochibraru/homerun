@@ -34,6 +34,29 @@ public URL) are replaced with the preview's main hostname, so a preview doesn't
 send its visitors, cookies or CSRF checks to the real site. Turning previews
 off, or deleting the service, deletes every preview.
 
+## Environment variables and data
+
+A preview starts from the service's environment variables, with any of the
+service's own hostnames in them pointed at the preview. Turn off **Start from
+this service's environment variables** and a preview starts with none of them,
+which is the safe choice when the service's env holds production credentials.
+
+**Environment overrides**, one `KEY=value` per line, are set on every preview on
+top of whatever it inherited: point it at a preview database, turn a feature
+flag on. `{pr}`, `{branch}` and `{slug}` in a value are filled in per preview,
+so `DATABASE_URL=postgres://app@db/app_pr_{pr}` gives each pull request its own
+database. Overrides are applied when a preview is created and whenever its pull
+request is updated.
+
+**Copy this service's volumes into each new preview** gives a new preview its
+own copy of every volume the service mounts, mounted at the same path, so it
+starts with real data without touching the service's. The copy is made during
+the preview's first deploy (a large volume makes that deploy slower, and takes
+the space a second time) and never again, so what the preview writes survives
+its redeploys. The copies show on the Storage page as the volume's name with
+`(PR #n)`, and are deleted with the preview. Turning the option on doesn't copy
+anything into previews that already exist.
+
 ## Choosing which branches get previews
 
 **Only branches matching** and **Never branches matching**, on the Previews tab,

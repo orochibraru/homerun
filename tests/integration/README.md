@@ -176,19 +176,19 @@ Skipped unless these are set. It backs a Docker volume holding a random file up
 to the bucket, wipes the volume, restores it and compares every file's sha256,
 its ownership and a symlink, printing how long each half took.
 
-| Variable                            | Required | Default      |
-| ----------------------------------- | -------- | ------------ |
-| `HOMERUN_TEST_S3_ENDPOINT`          | yes      |              |
-| `HOMERUN_TEST_S3_BUCKET`            | yes      |              |
-| `HOMERUN_TEST_S3_ACCESS_KEY_ID`     | yes      |              |
-| `HOMERUN_TEST_S3_SECRET_ACCESS_KEY` | yes      |              |
-| `HOMERUN_TEST_S3_REGION`            | no       | `us-east-1`  |
-| `HOMERUN_TEST_S3_PREFIX`            | no       | `homerun-it` |
-| `HOMERUN_TEST_S3_SIZE_MB`           | no       | `96`         |
+| Variable                            | Required | Default                         |
+| ----------------------------------- | -------- | ------------------------------- |
+| `HOMERUN_TEST_S3_ENDPOINT`          | yes      | `https://` added to a bare host |
+| `HOMERUN_TEST_S3_BUCKET`            | yes      |                                 |
+| `HOMERUN_TEST_S3_ACCESS_KEY_ID`     | yes      |                                 |
+| `HOMERUN_TEST_S3_SECRET_ACCESS_KEY` | yes      |                                 |
+| `HOMERUN_TEST_S3_REGION`            | no       | `us-east-1`                     |
+| `HOMERUN_TEST_S3_PREFIX`            | no       | `homerun-it`                    |
+| `HOMERUN_TEST_S3_SIZE_MB`           | no       | `96`                            |
 
 Each run writes one archive under `<prefix>/<run id>/` and leaves it there: give
-the bucket a lifecycle rule that expires that prefix. In CI the endpoint,
-bucket, region and prefix are repository variables and the two keys are
-repository secrets (`HOMERUN_TEST_S3_ACCESS_KEY_ID`,
-`HOMERUN_TEST_S3_SECRET_ACCESS_KEY`), passed to `code_quality.yaml` by its
-callers; forks get neither, so the test skips there.
+the bucket a lifecycle rule that expires that prefix. In CI the endpoint and
+bucket are repository variables and the two keys are repository secrets
+(`HOMERUN_TEST_S3_ACCESS_KEY_ID`, `HOMERUN_TEST_S3_SECRET_ACCESS_KEY`), passed
+to `code_quality.yaml` by its callers; forks get neither, so the test skips
+there.

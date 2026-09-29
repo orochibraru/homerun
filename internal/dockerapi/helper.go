@@ -230,3 +230,22 @@ func ParseDuKilobytes(output string) (int64, error) {
 	}
 	return kilobytes * 1024, nil
 }
+
+// CopyVolume creates the named volume to (or fills the host path) with a copy
+// of from, owners, modes and links kept, through a helper container that
+// mounts from read-only.
+func (c *Client) CopyVolume(ctx context.Context, from, to, image string) error {
+	result, err := c.RunHelper(ctx, HelperConfig{
+		Binds:           []string{from + ":/from:ro", to + ":/to"},
+		Cmd:             []string{"cp", "-a", "/from/.", "/to/"},
+		Image:           image,
+		NetworkDisabled: true,
+	})
+	if err != nil {
+		return err
+	}
+	if result.ExitCode != 0 {
+		return fmt.Errorf("cp exited %d: %s", result.ExitCode, strings.TrimSpace(result.Stderr))
+	}
+	return nil
+}

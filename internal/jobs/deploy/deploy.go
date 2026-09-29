@@ -10,6 +10,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/orochibraru/homerun/internal/agent"
 	"github.com/orochibraru/homerun/internal/dockerapi"
@@ -27,6 +29,7 @@ type Spec struct {
 	Network      string         `json:"network"`
 	Readiness    ReadinessInput `json:"readiness"`
 	ReleaseEnv   string         `json:"releaseEnv"`
+	Seeds        []VolumeSeed   `json:"seeds"`
 	ServiceID    string         `json:"serviceId"`
 	SocketPath   string         `json:"socketPath"`
 	Volumes      []Volume       `json:"volumes"`
@@ -38,6 +41,15 @@ type Spec struct {
 type Healthchecks struct {
 	Listening map[string]any `json:"listening"`
 	Service   map[string]any `json:"service"`
+}
+
+// VolumeSeed is a volume that starts as a copy of another the first time it's
+// deployed: a pull request preview's copy of its parent's data.
+type VolumeSeed struct {
+	From   string `json:"from"`
+	Image  string `json:"image"`
+	Source string `json:"source"`
+	Name   string `json:"name"`
 }
 
 // Volume is a mounted volume, as far as the rollout strategy cares.
@@ -222,6 +234,9 @@ func (r *run) deploy(ctx context.Context) error {
 		return err
 	}
 	r.result.Image, r.result.Tag, r.result.Digest = resolved.image, resolved.tag, resolved.digest
+	if err := r.seedVolumes(ctx); err != nil {
+		return err
+	}
 	r.progress.serviceStatus(ctx, "starting")
 
 	r.progress.line(PhaseContainer)
@@ -242,6 +257,30 @@ func (r *run) deploy(ctx context.Context) error {
 	r.progress.line(PhaseNetwork)
 	if inspected, err := r.docker.InspectImage(ctx, resolved.ref()); err == nil {
 		r.result.ImageID = inspected.ID
+	}
+	return nil
+}
+
+// seedVolumes fills each seeded volume that doesn't exist yet with a copy of
+// its origin, so a preview's first deploy starts from its parent's data and
+// later deploys keep what the preview wrote. A failed copy removes the half
+// copied volume so the next deploy tries again.
+func (r *run) seedVolumes(ctx context.Context) error {
+	for _, seed := range r.spec.Seeds {
+		exists, err := r.docker.VolumeExists(ctx, seed.Source)
+		if err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		r.progress.line(fmt.Sprintf("Copying %s into %s for this preview", seed.Name, seed.Source))
+		started := time.Now()
+		if err := r.docker.CopyVolume(ctx, seed.From, seed.Source, seed.Image); err != nil {
+			_ = r.docker.RemoveVolume(context.WithoutCancel(ctx), seed.Source)
+			return fmt.Errorf("couldn't copy %s into %s: %w", seed.Name, seed.Source, err)
+		}
+		r.progress.line(fmt.Sprintf("Copied %s in %s", seed.Name, time.Since(started).Round(time.Second)))
 	}
 	return nil
 }

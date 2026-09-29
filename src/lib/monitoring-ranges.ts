@@ -92,3 +92,45 @@ export function bucketSecondsFor(spanMs: number): number {
 	const step = 300;
 	return Math.max(step, Math.ceil(spanMs / 1000 / 48 / step) * step);
 }
+
+/** The window a range is compared with, and how the comparison reads. */
+export interface PreviousWindow {
+	end: Date;
+	label: string;
+	start: Date;
+}
+
+const PREVIOUS_LABELS: Record<Exclude<MonitoringRange, "all">, string> = {
+	month: "vs the 30 days before",
+	today: "vs yesterday at this time",
+	week: "vs the 7 days before",
+	year: "vs the 12 months before",
+};
+
+/**
+ * The same span just before a range, for its numbers to be compared with:
+ * yesterday up to this time of day for today, the window right before it for
+ * the fixed ones. Null for all time, which has nothing before it.
+ */
+export function previousWindow(
+	range: MonitoringRange,
+	since: Date | null,
+	now: Date,
+): PreviousWindow | null {
+	if (range === "all" || !since) {
+		return null;
+	}
+	const label = PREVIOUS_LABELS[range];
+	if (range === "today") {
+		return {
+			end: new Date(now.getTime() - DAY_MS),
+			label,
+			start: new Date(since.getTime() - DAY_MS),
+		};
+	}
+	return {
+		end: since,
+		label,
+		start: new Date(since.getTime() - (now.getTime() - since.getTime())),
+	};
+}

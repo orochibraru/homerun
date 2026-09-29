@@ -3,6 +3,7 @@ import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceGitDTO } from "$lib/dto/service-git-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
+import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { serviceHostnames } from "$lib/service-domains";
 import type { ContainerStatus } from "$lib/types";
@@ -203,6 +204,9 @@ class ServiceLifecycleServiceClass {
 				`Couldn't remove the ${svc.swarmServiceId ? "swarm service" : "container"} for "${svc.name}": ${failure}. Nothing was deleted.`,
 			);
 		}
+		if (svc.toJSON().previewParentId) {
+			await this.#removePreviewVolumes(svc);
+		}
 		const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 		await this.#cleanUpOutside(svc, stack?.slug ?? null);
 		await svc.delete();
@@ -225,6 +229,23 @@ class ServiceLifecycleServiceClass {
 		await Promise.all(
 			members.map((svc) => this.#cleanUpOutside(svc, stack.slug)),
 		);
+	}
+
+	/**
+	 * Removes the Docker volumes a pull request preview copied from its parent;
+	 * their rows go with the preview's. Best effort: a volume the daemon
+	 * refuses is logged and left behind for Docker Cleanup.
+	 */
+	async #removePreviewVolumes(svc: ServiceDTO): Promise<void> {
+		for (const volume of await StorageVolumeDTO.listForPreview(svc.id)) {
+			// oxlint-disable-next-line no-await-in-loop -- a handful of volumes, one at a time
+			await DockerService.removeVolume(volume.source).catch((err) => {
+				logger.warn(
+					`Couldn't remove a preview's volume copy: volume=${volume.source} service=${svc.id}`,
+					err,
+				);
+			});
+		}
 	}
 
 	/**

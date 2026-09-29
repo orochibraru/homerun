@@ -4,8 +4,12 @@ import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
+import { tlsConfigYaml } from "./tls-config.ts";
 
 const logger = new Logger("CustomSsl");
+
+/** The instance certificate's file in the dynamic config directory. */
+export const INSTANCE_TLS_FILE = "homerun-instance-tls.yml";
 
 export interface CustomSslService {
 	customSslCertEnc: string | null;
@@ -79,12 +83,18 @@ export function DockerCustomSslMixin<
 			}
 
 			try {
-				await mkdir(join(dir, "certs"), { recursive: true });
-				await Promise.all([writeFile(certPath, cert), writeFile(keyPath, key)]);
+				await mkdir(dir, { recursive: true });
 				await writeFile(
 					configPath,
-					`# Written by Homerun for service "${svc.slug}" : do not edit by hand.\ntls:\n  certificates:\n    - certFile: ${certPath}\n      keyFile: ${keyPath}\n`,
+					tlsConfigYaml(
+						{ cert, key },
+						{ asDefault: false, owner: `service "${svc.slug}"` },
+					),
 				);
+				await Promise.all([
+					rm(certPath, { force: true }),
+					rm(keyPath, { force: true }),
+				]);
 				logger.info(`Wrote dynamic TLS config: service=${svc.slug}`);
 			} catch (err) {
 				logger.error(
@@ -92,6 +102,37 @@ export function DockerCustomSslMixin<
 					err,
 				);
 			}
+		}
+
+		/**
+		 * Writes the instance certificate as Traefik's default certificate
+		 * (`homerun-instance-tls.yml` in the dynamic config directory, picked up
+		 * without a restart), or removes the file when `pair` is null.
+		 *
+		 * @throws When there's no dynamic config directory to write to, or the
+		 *   write fails.
+		 */
+		async syncInstanceCertificate(
+			pair: { cert: string; key: string } | null,
+		): Promise<void> {
+			const dir = config.traefik.dynamicConfigDir;
+			if (!dir) {
+				throw new Error(
+					"Traefik's dynamic config directory isn't set (Settings → Networking), so there's nowhere to put the certificate.",
+				);
+			}
+			const path = join(dir, INSTANCE_TLS_FILE);
+			if (!pair) {
+				await rm(path, { force: true });
+				logger.info("Removed the instance certificate from Traefik");
+				return;
+			}
+			await mkdir(dir, { recursive: true });
+			await writeFile(
+				path,
+				tlsConfigYaml(pair, { asDefault: true, owner: "the instance" }),
+			);
+			logger.info("Wrote the instance certificate for Traefik");
 		}
 	};
 }

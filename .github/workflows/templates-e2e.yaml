@@ -19,7 +19,7 @@ on:
     outputs:
       summary:
         description: "Pass/fail counts over the built-in templates"
-        value: ${{ jobs.templates.outputs.summary }}
+        value: ${{ jobs.summary.outputs.summary }}
 
 permissions:
   contents: read
@@ -31,12 +31,63 @@ env:
   NO_COLOR: "1"
 
 jobs:
-  templates:
-    name: Deploy templates
+  plan:
+    name: Build and list templates
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 20
     outputs:
-      summary: ${{ steps.stats.outputs.summary }}
+      slugs: ${{ steps.slugs.outputs.slugs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: List the templates to deploy
+        id: slugs
+        env:
+          TEMPLATES: ${{ inputs.templates }}
+        run: |
+          if [ -n "$TEMPLATES" ]; then
+            slugs="$(printf '%s' "$TEMPLATES" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')"
+          else
+            slugs="$(find templates -mindepth 2 -maxdepth 2 -name '*.json' -exec basename {} .json \; | sort | jq -Rsc 'split("\n") | map(select(length > 0))')"
+          fi
+          echo "slugs=$slugs" >> "$GITHUB_OUTPUT"
+          echo "Deploying $(printf '%s' "$slugs" | jq length) template(s)"
+
+      - name: Build app from source
+        run: bun run build
+
+      - name: Pack the build
+        run: tar -czf homerun-build.tgz build
+
+      - name: Upload the build
+        uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
+        with:
+          name: templates-e2e-build
+          path: homerun-build.tgz
+          retention-days: 1
+
+  deploy:
+    name: ${{ matrix.slug }}
+    needs: [plan]
+    if: needs.plan.outputs.slugs != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        slug: ${{ fromJSON(needs.plan.outputs.slugs) }}
     services:
       postgres:
         image: postgres:18-alpine
@@ -57,12 +108,6 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
 
-      - name: Free disk space for the template images
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          docker system prune -af
-          df -h /
-
       - name: Setup bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -76,6 +121,14 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
+      - name: Download the build
+        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        with:
+          name: templates-e2e-build
+
+      - name: Unpack the build
+        run: tar -xzf homerun-build.tgz
+
       - name: Log in to Docker Hub for pull limits
         env:
           REGISTRY_PASSWORD: ${{ secrets.registry_password }}
@@ -86,35 +139,62 @@ jobs:
             echo "No registry secret: pulling anonymously."
           fi
 
-      - name: Build app from source
-        run: bun run build
-
       - name: Install Playwright's Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Deploy ${{ inputs.templates || 'every template' }}
+      - name: Deploy ${{ matrix.slug }}
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
-          TEMPLATES_E2E_ONLY: ${{ inputs.templates }}
-        timeout-minutes: 130
+          TEMPLATES_E2E_ONLY: ${{ matrix.slug }}
+          TEMPLATES_E2E_WORKERS: "1"
+        timeout-minutes: 35
         run: bunx playwright test --config playwright.templates.config.ts --reporter=list,json,./tests/e2e/templates/report.ts
 
-      - name: Summarise the run
-        id: stats
+      - name: Keep the result for the summary
         if: always()
-        run: |
-          if [ -f playwright-results.json ]; then
-            jq -r '.stats | "summary=\(.expected) passed" + (if .flaky > 0 then ", \(.flaky) flaky" else "" end) + (if .unexpected > 0 then ", \(.unexpected) failed" else "" end) + (if .skipped > 0 then ", \(.skipped) skipped" else "" end)' \
-              playwright-results.json >> "$GITHUB_OUTPUT"
-          fi
+        uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
+        with:
+          name: templates-e2e-result-${{ matrix.slug }}
+          path: playwright-results.json
+          if-no-files-found: ignore
+          retention-days: 1
 
-      - name: Upload Playwright report
+      - name: Upload the trace
         if: failure()
         uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
         with:
-          name: playwright-report-templates
+          name: playwright-report-templates-${{ matrix.slug }}
           path: |
             playwright-report
             test-results
           if-no-files-found: ignore
           retention-days: 7
+
+  summary:
+    name: Summarise the templates
+    needs: [plan, deploy]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      summary: ${{ steps.stats.outputs.summary }}
+    steps:
+      - name: Download every result
+        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        with:
+          pattern: templates-e2e-result-*
+          path: results
+
+      - name: Add them up
+        id: stats
+        run: |
+          if [ -z "$(find results -name playwright-results.json 2>/dev/null)" ]; then
+            echo "summary=no results" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          find results -name playwright-results.json -print0 | xargs -0 jq -rs '
+            [.[] | .. | objects | select(.projectName? == "templates") | .status]
+            | {passed: map(select(. == "expected")) | length, flaky: map(select(. == "flaky")) | length, failed: map(select(. == "unexpected")) | length, skipped: map(select(. == "skipped")) | length}
+            | "summary=\(.passed) passed" + (if .flaky > 0 then ", \(.flaky) flaky" else "" end) + (if .failed > 0 then ", \(.failed) failed" else "" end) + (if .skipped > 0 then ", \(.skipped) skipped" else "" end)
+          ' >> "$GITHUB_OUTPUT"
+          grep '^summary=' "$GITHUB_OUTPUT" | tail -1 | sed 's/^summary=/### Templates: /' >> "$GITHUB_STEP_SUMMARY"

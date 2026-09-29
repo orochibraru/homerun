@@ -73,7 +73,15 @@ interface Shot {
 }
 
 const SHOTS: Shot[] = [
-	{ doc: "/", expect: /Welcome back/i, name: "hero", path: () => "/" },
+	{
+		doc: "/",
+		expect: /Welcome back/i,
+		name: "hero",
+		path: () => "/",
+		prepare: async (page) => {
+			await expect(page.getByText("Monitoring · today")).toBeVisible();
+		},
+	},
 	{
 		doc: "/ (Ctrl+K)",
 		expect: /Welcome back/i,

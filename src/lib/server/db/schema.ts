@@ -718,6 +718,11 @@ export const instanceSettings = pgTable("instance_settings", {
 	traefikDynamicConfigDir: text("traefik_dynamic_config_dir"),
 	traefikEntrypoint: text("traefik_entrypoint"),
 	traefikHttpCache: boolean("traefik_http_cache").default(false).notNull(),
+	tlsCertEnc: text("tls_cert_enc"),
+	tlsKeyEnc: text("tls_key_enc"),
+	tlsCertNames: jsonb("tls_cert_names").$type<string[]>().default([]).notNull(),
+	tlsCertExpiresAt: timestamp("tls_cert_expires_at", { mode: "date" }),
+	tlsCertIssuer: text("tls_cert_issuer"),
 	updatedAt: timestamp("updated_at", { mode: "date" })
 		.$onUpdate(() => new Date())
 		.notNull(),
@@ -1004,6 +1009,14 @@ export const service = pgTable(
 		gitLastSeenCommit: text("git_last_seen_commit"),
 		previewsEnabled: boolean("previews_enabled").default(false).notNull(),
 		previewDomainTemplate: text("preview_domain_template"),
+		previewInheritEnv: boolean("preview_inherit_env").default(true).notNull(),
+		previewEnvOverrides: jsonb("preview_env_overrides")
+			.$type<Record<string, string>>()
+			.default({})
+			.notNull(),
+		previewCopyVolumes: boolean("preview_copy_volumes")
+			.default(false)
+			.notNull(),
 		previewBranchInclude: jsonb("preview_branch_include")
 			.$type<string[]>()
 			.default([])
@@ -1224,6 +1237,11 @@ export const storageVolume = pgTable(
 		// "bind" | "volume"
 		kind: text("kind").notNull(),
 		name: text("name").notNull(),
+		previewServiceId: text("preview_service_id").references(
+			(): AnyPgColumn => service.id,
+			{ onDelete: "cascade" },
+		),
+		seedFrom: text("seed_from"),
 		s3DestinationId: text("s3_destination_id").references(
 			() => s3Destination.id,
 			{ onDelete: "set null" },

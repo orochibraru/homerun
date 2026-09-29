@@ -1050,6 +1050,24 @@ wire a bind mount themselves, which meant custom SSL did nothing on a default
 install. Traefik's file provider picks up changes on its own (`watch=true`), no
 restart needed per certificate.
 
+**Both certificate files hold the PEM inline** (`docker/tls-config.ts`'s
+`tlsConfigYaml`, Traefik accepts the content itself in `certFile`/`keyFile`).
+They used to point at `certs/<slug>.crt` paths as the _app_ saw them
+(`/app/traefik-dynamic/...`), which Traefik, mounting the same volume at
+`/etc/traefik/dynamic`, couldn't open; the old cert files are removed on the
+next save.
+
+**The instance certificate** (Settings → TLS, `instance_settings.tlsCertEnc`/
+`tlsKeyEnc` plus `tlsCertNames`/`tlsCertExpiresAt`/`tlsCertIssuer` read off it
+by `$lib/tls-certificate.ts`'s `inspectCertificate`, which also checks the key
+matches) is written by `syncInstanceCertificate` as `homerun-instance-tls.yml`,
+the store's `defaultCertificate`. Traefik prefers a router's resolver
+certificate over the default, so `certResolverFor` returns null for any host
+`certificateCovers` (`config.traefik.instanceCertNames`, applied from the
+settings row), which every label builder passes; routes change on redeploy, and
+the tab offers `redeployCovered`. Verified against a real `traefik:v3`: the
+inline default certificate is what `openssl s_client` gets for a covered host.
+
 ## The dashboard's own route (`syncDashboardRouter`, `docker/dashboard.ts`)
 
 The same file provider is what makes the **Dashboard URL a real setting rather
