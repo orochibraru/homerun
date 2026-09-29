@@ -290,31 +290,38 @@ func helpLine(name, description string) string {
 	return fmt.Sprintf("  %-31s %s\n", name, description)
 }
 
-// Usage is the CLI's top-level help, printed with no arguments or --help.
+// Usage is the CLI's top-level help, printed with no arguments or --help:
+// the ungrouped commands, then one line per group naming its subcommands.
 func Usage() string {
 	var builder strings.Builder
 	builder.WriteString("homerun - CLI for the Homerun REST API.\n\n" +
 		"Usage: homerun [--base-url <url>] [--api-key <key>] <command> [options]\n\nCommands:\n")
-	group := ""
-	for index, command := range Commands {
-		first, _, grouped := strings.Cut(command.Name, " ")
+	seen := map[string]bool{}
+	for _, command := range Commands {
+		group, _, grouped := strings.Cut(command.Name, " ")
 		if !grouped {
-			first = ""
+			builder.WriteString(commandLine(command))
+			continue
 		}
-		if first != group {
-			if index > 0 {
-				builder.WriteString("\n")
+		if seen[group] {
+			continue
+		}
+		seen[group] = true
+		names := []string{}
+		for _, sub := range groupCommands(group) {
+			name, _, _ := strings.Cut(strings.TrimPrefix(sub.Name, group+" "), " ")
+			if !slices.Contains(names, name) {
+				names = append(names, name)
 			}
-			group = first
 		}
-		builder.WriteString(commandLine(command))
+		builder.WriteString(helpLine(group+" <command>", strings.Join(names, ", ")))
 	}
 	builder.WriteString("\nGlobal options:\n" +
 		helpLine("--base-url <url>", "instance URL, overrides the saved login (or HOMERUN_BASE_URL)") +
 		helpLine("--api-key <key>", "API key, overrides the saved login (or HOMERUN_API_KEY)") +
 		helpLine("-v, --version", "print the CLI version") +
 		helpLine("-h, --help", "print this help, or a command's or group's own after it") +
-		"\nRun `homerun <command> --help` for a command's options.\n\n" +
+		"\nRun `homerun <command> --help` for a command's or group's own help.\n\n" +
 		"Auth/target: run `homerun login` once (stores your instance URL and a\n" +
 		"CLI-scoped API key in ~/.config/homerun/config.json), or override per-call\n" +
 		"with --base-url/--api-key above or their HOMERUN_BASE_URL/HOMERUN_API_KEY\n" +

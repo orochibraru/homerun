@@ -111,6 +111,13 @@ export class RedirectDTO extends BaseDTO<Redirect> {
 		Object.assign(this.row, patch);
 	}
 
+	/** Turns this redirect on or off. */
+	async setEnabled(enabled: boolean): Promise<void> {
+		const patch = { enabled, updatedAt: new Date() };
+		await db.update(redirect).set(patch).where(eq(redirect.id, this.row.id));
+		Object.assign(this.row, patch);
+	}
+
 	/** Deletes this redirect row. */
 	async delete(): Promise<void> {
 		await db.delete(redirect).where(eq(redirect.id, this.row.id));

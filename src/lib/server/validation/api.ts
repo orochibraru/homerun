@@ -300,3 +300,21 @@ export const sourceMapReleaseParam = z
 	.trim()
 	.min(1, "Name the release the maps belong to.")
 	.max(200);
+
+export const redirectApiBody = z.object({
+	destination: z.string().optional().meta({
+		description: "The full http(s) URL to send requests to",
+	}),
+	enabled: z.boolean().optional(),
+	keepPath: z.boolean().optional().meta({
+		description:
+			"Append the rest of the path and the query string to the destination",
+	}),
+	permanent: z.boolean().optional().meta({
+		description: "308 when true, 307 otherwise",
+	}),
+	source: z.string().optional().meta({
+		description:
+			'A hostname with an optional path prefix, e.g. "old.example.com" or "example.com/blog"',
+	}),
+});

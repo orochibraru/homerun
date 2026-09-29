@@ -28,6 +28,21 @@ on boot. Traefik watches the directory, so a change is live within moments with
 no restart. On an instance with no dynamic config directory, nothing is written
 (see [Networking](networking.md)).
 
-Point the source hostname's DNS at this server yourself: redirects don't create
-DNS records. Traefik requests a certificate for the source like it does for any
-domain, unless your instance certificate already covers it.
+The source hostname also goes through the same DNS automation as a service's
+domains (see [DNS automation](dns-automation.md)): a record under a managed
+domain, or a Pangolin resource, is created when the redirect is enabled and
+removed when it's disabled or deleted, and every redirect is synced again on
+boot. A hostname a service already routes is left to that service. Without DNS
+automation, point the hostname at this server yourself. Traefik requests a
+certificate for the source like it does for any domain, unless your instance
+certificate already covers it.
+
+The list has a switch per redirect to turn it on or off without opening it.
+
+## API, CLI and MCP
+
+`GET|POST /api/v1/redirects` and `GET|PATCH|DELETE /api/v1/redirects/:id` manage
+them (`PATCH` changes only the fields sent, `{"enabled": false}` turns one off).
+The CLI has `homerun redirects list|get|create|update|enable|disable|delete`,
+and the MCP server `list_redirects`, `create_redirect`, `update_redirect` and
+`delete_redirect`.

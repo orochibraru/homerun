@@ -28,6 +28,8 @@ To diagnose a service: find its id with list_services, read get_service (status,
 
 For backups and other background work: list_volumes gives each volume's backup settings, list_backups every run with its outcome, error and its job's last progress, get_job a job's full log, attempts and progressAt (a running job whose progressAt stops moving is stuck), list_jobs what's queued, running or failed, and run_backup queues a backup now.
 
+Redirects send a hostname, or a path under it, to another URL through Traefik, with no container: list_redirects shows them, create_redirect, update_redirect (enabled: false turns one off) and delete_redirect change them.
+
 To fix one: update_service changes settings (applied on the next deploy), deploy_service rolls them out, restart_service restarts without redeploying, rollback_service redeploys an earlier revision. Say what you're about to change before changing it.`;
 
 const serviceId = z.string().describe("The service's id, from list_services");
@@ -466,6 +468,89 @@ async function updateService(
 	}
 }
 
+/** Registers the tools that list, create, change and delete redirects. */
+function registerRedirectTools(server: McpServer, api: ApiCall): void {
+	const redirectId = z
+		.string()
+		.describe("The redirect's id, from list_redirects");
+	const fields = {
+		destination: z
+			.string()
+			.describe("The full http(s) URL to send requests to"),
+		enabled: z.boolean().describe("Whether Traefik serves it"),
+		keepPath: z
+			.boolean()
+			.describe(
+				"Append the rest of the path and the query string to the destination",
+			),
+		permanent: z
+			.boolean()
+			.describe("A permanent (308) rather than temporary (307) redirect"),
+		source: z
+			.string()
+			.describe(
+				'A hostname with an optional path prefix, e.g. "old.example.com" or "example.com/blog"',
+			),
+	};
+	const path = (id: string) => `/redirects/${encodeURIComponent(id)}`;
+
+	server.registerTool(
+		"list_redirects",
+		{
+			annotations: read,
+			description:
+				"List redirects: source, destination, whether they're on, permanent and keep the path.",
+		},
+		async () => asResult(await api("GET", "/redirects?perPage=100")),
+	);
+
+	server.registerTool(
+		"create_redirect",
+		{
+			annotations: change,
+			description:
+				"Add a redirect. enabled, keepPath and permanent default to true.",
+			inputSchema: z.object({
+				destination: fields.destination,
+				enabled: fields.enabled.optional(),
+				keepPath: fields.keepPath.optional(),
+				permanent: fields.permanent.optional(),
+				source: fields.source,
+			}),
+		},
+		async (input) => asResult(await api("POST", "/redirects", input)),
+	);
+
+	server.registerTool(
+		"update_redirect",
+		{
+			annotations: change,
+			description:
+				"Change a redirect's fields, keeping the ones left out. enabled: false turns it off.",
+			inputSchema: z.object({
+				destination: fields.destination.optional(),
+				enabled: fields.enabled.optional(),
+				keepPath: fields.keepPath.optional(),
+				permanent: fields.permanent.optional(),
+				redirectId,
+				source: fields.source.optional(),
+			}),
+		},
+		async ({ redirectId: id, ...changes }) =>
+			asResult(await api("PATCH", path(id), changes)),
+	);
+
+	server.registerTool(
+		"delete_redirect",
+		{
+			annotations: { destructiveHint: true, openWorldHint: false },
+			description: "Delete a redirect.",
+			inputSchema: z.object({ redirectId }),
+		},
+		async ({ redirectId: id }) => asResult(await api("DELETE", path(id))),
+	);
+}
+
 /** Registers the tools that change a service: settings, deploy, restart/start/stop and rollback. */
 function registerChangeTools(server: McpServer, api: ApiCall): void {
 	server.registerTool(
@@ -583,6 +668,7 @@ export function createHomerunMcpServer(api: ApiCall): McpServer {
 	registerErrorTools(server, api);
 	registerInstanceTools(server, api);
 	registerBackupTools(server, api);
+	registerRedirectTools(server, api);
 	registerChangeTools(server, api);
 	return server;
 }

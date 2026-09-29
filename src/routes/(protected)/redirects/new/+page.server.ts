@@ -2,7 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { RedirectDTO } from "$lib/dto/redirect-dto";
 import { Logger } from "$lib/logger";
-import { parseRedirectForm } from "$lib/server/redirect-form";
+import { parseRedirectInput } from "$lib/server/redirect-form";
 import { RedirectService } from "$lib/services/redirect.service";
 
 const logger = new Logger("Redirects");
@@ -13,7 +13,9 @@ export const actions = {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 
-		const result = await parseRedirectForm(await request.formData());
+		const result = await parseRedirectInput(
+			Object.fromEntries(await request.formData()),
+		);
 		if ("error" in result) {
 			return fail(400, { error: result.error });
 		}

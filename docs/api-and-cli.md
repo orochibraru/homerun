@@ -231,12 +231,13 @@ claude mcp add --transport http homerun \
 It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
 `list_deployments` (each deploy attempt's error and log), `list_revisions`,
 `list_dependencies`, `list_stacks`, `system_stats`, `instance_status`,
-`list_volumes`, `list_backups`, `get_job` and `list_jobs`. It changes:
-`update_service`, `set_dependencies`, `deploy_service`, `restart_service`,
-`start_service`, `stop_service`, `rollback_service` and `run_backup`. Deleting a
-service is deliberately not a tool. Every tool goes through the REST API with
-your own permissions, so a read-only account or API key can diagnose but not
-change anything.
+`list_volumes`, `list_backups`, `get_job`, `list_jobs` and `list_redirects`. It
+changes: `update_service`, `set_dependencies`, `deploy_service`,
+`restart_service`, `start_service`, `stop_service`, `rollback_service`,
+`run_backup`, `create_redirect`, `update_redirect` and `delete_redirect`.
+Deleting a service is deliberately not a tool. Every tool goes through the REST
+API with your own permissions, so a read-only account or API key can diagnose
+but not change anything.
 
 Secrets don't reach the agent, the rest stays readable:
 

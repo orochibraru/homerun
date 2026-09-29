@@ -119,6 +119,12 @@ homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun backups list [--volume <id|name>] [--outcome running|success|failed] [--json]
 homerun backups volumes [--json]
 homerun backups run <id|name> [--wait] [--timeout <seconds>]
+homerun redirects list [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun redirects get <id>
+homerun redirects create <source> <destination> [--enabled=false] [--keep-path=false] [--permanent=false]
+homerun redirects update <id> [--source <host[/path]>] [--destination <url>] [--enabled=<bool>] [--keep-path=<bool>] [--permanent=<bool>]
+homerun redirects enable|disable <id>
+homerun redirects delete <id>
 homerun jobs list [--status queued,running,succeeded,failed,cancelled] [--json]
 homerun jobs get <id> [--json]
 homerun instance status [--json]

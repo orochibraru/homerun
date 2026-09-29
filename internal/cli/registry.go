@@ -2,6 +2,7 @@ package cli
 
 import (
 	"flag"
+	"slices"
 	"time"
 )
 
@@ -10,7 +11,9 @@ var instanceChannels = []string{"stable", "canary", "nightly"}
 var deployEnvironments = []string{"canary", "stable"}
 
 // Commands is every command the CLI has, in the order the top-level usage lists them.
-var Commands = []Command{
+var Commands = slices.Concat(baseCommands, redirectCommands, adminCommands)
+
+var baseCommands = []Command{
 	{
 		Name:    "login",
 		Summary: "log in via a device-code flow and save the resulting API key (pass --base-url for the instance)",
@@ -401,7 +404,9 @@ var Commands = []Command{
 			}
 		},
 	},
+}
 
+var adminCommands = []Command{
 	{
 		Name:    "jobs list",
 		Summary: "list queue jobs (deploys, backups, cron jobs...), running first (admins only)",

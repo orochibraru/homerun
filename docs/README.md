@@ -21,6 +21,9 @@ sync by hand.
   optional YAML file for config-as-code setups.
 - **[FAQ & limitations](faq-and-limitations.md)**: what's genuinely finished,
   what's a known gap, and what's on the roadmap.
+- **[Architecture](architecture.md)**: every component (app, worker, Traefik,
+  Postgres, Docker, build servers, external services) and who talks to whom,
+  over what, and why, as a generated diagram and table.
 
 ## Services
 

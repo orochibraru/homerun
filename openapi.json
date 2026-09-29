@@ -1523,6 +1523,682 @@
 				"tags": ["Meta"]
 			}
 		},
+		"/redirects": {
+			"get": {
+				"description": "Every redirect, newest first. Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest.",
+				"operationId": "get_redirects",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"destination": {
+												"type": "string"
+											},
+											"enabled": {
+												"type": "boolean"
+											},
+											"id": {
+												"type": "string"
+											},
+											"keepPath": {
+												"type": "boolean"
+											},
+											"permanent": {
+												"type": "boolean"
+											},
+											"source": {
+												"description": "Lowercase hostname plus an optional path prefix",
+												"type": "string"
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"userId": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"createdAt",
+											"destination",
+											"enabled",
+											"id",
+											"keepPath",
+											"permanent",
+											"source",
+											"updatedAt",
+											"userId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of redirects"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List redirects",
+				"tags": ["Redirects"]
+			},
+			"post": {
+				"description": "Adds a redirect and publishes it to Traefik and the DNS automation. source and destination are required; enabled, keepPath and permanent default to true, like the dashboard form.",
+				"operationId": "post_redirects",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"destination": {
+										"description": "The full http(s) URL to send requests to",
+										"type": "string"
+									},
+									"enabled": {
+										"type": "boolean"
+									},
+									"keepPath": {
+										"description": "Append the rest of the path and the query string to the destination",
+										"type": "boolean"
+									},
+									"permanent": {
+										"description": "308 when true, 307 otherwise",
+										"type": "boolean"
+									},
+									"source": {
+										"description": "A hostname with an optional path prefix, e.g. \"old.example.com\" or \"example.com/blog\"",
+										"type": "string"
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"destination": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"keepPath": {
+											"type": "boolean"
+										},
+										"permanent": {
+											"type": "boolean"
+										},
+										"source": {
+											"description": "Lowercase hostname plus an optional path prefix",
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"userId": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"createdAt",
+										"destination",
+										"enabled",
+										"id",
+										"keepPath",
+										"permanent",
+										"source",
+										"updatedAt",
+										"userId"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Created"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, or the source already has a redirect"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Create a redirect",
+				"tags": ["Redirects"]
+			}
+		},
+		"/redirects/{redirectId}": {
+			"delete": {
+				"operationId": "delete_redirects__redirectId_",
+				"parameters": [
+					{
+						"description": "Redirect id",
+						"in": "path",
+						"name": "redirectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Deleted"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Delete a redirect",
+				"tags": ["Redirects"]
+			},
+			"get": {
+				"operationId": "get_redirects__redirectId_",
+				"parameters": [
+					{
+						"description": "Redirect id",
+						"in": "path",
+						"name": "redirectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"destination": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"keepPath": {
+											"type": "boolean"
+										},
+										"permanent": {
+											"type": "boolean"
+										},
+										"source": {
+											"description": "Lowercase hostname plus an optional path prefix",
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"userId": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"createdAt",
+										"destination",
+										"enabled",
+										"id",
+										"keepPath",
+										"permanent",
+										"source",
+										"updatedAt",
+										"userId"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The redirect"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a redirect",
+				"tags": ["Redirects"]
+			},
+			"patch": {
+				"description": "Changes the fields sent, keeping the rest, and republishes. Send {\"enabled\": false} to turn one off.",
+				"operationId": "patch_redirects__redirectId_",
+				"parameters": [
+					{
+						"description": "Redirect id",
+						"in": "path",
+						"name": "redirectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"destination": {
+										"description": "The full http(s) URL to send requests to",
+										"type": "string"
+									},
+									"enabled": {
+										"type": "boolean"
+									},
+									"keepPath": {
+										"description": "Append the rest of the path and the query string to the destination",
+										"type": "boolean"
+									},
+									"permanent": {
+										"description": "308 when true, 307 otherwise",
+										"type": "boolean"
+									},
+									"source": {
+										"description": "A hostname with an optional path prefix, e.g. \"old.example.com\" or \"example.com/blog\"",
+										"type": "string"
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"destination": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"keepPath": {
+											"type": "boolean"
+										},
+										"permanent": {
+											"type": "boolean"
+										},
+										"source": {
+											"description": "Lowercase hostname plus an optional path prefix",
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"userId": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"createdAt",
+										"destination",
+										"enabled",
+										"id",
+										"keepPath",
+										"permanent",
+										"source",
+										"updatedAt",
+										"userId"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Updated"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, or the source already has a redirect"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Update a redirect",
+				"tags": ["Redirects"]
+			}
+		},
 		"/services": {
 			"get": {
 				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",

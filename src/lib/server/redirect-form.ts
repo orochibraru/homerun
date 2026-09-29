@@ -2,12 +2,16 @@ import { RedirectDTO } from "$lib/dto/redirect-dto";
 import { redirectSchema } from "$lib/server/validation/redirect";
 
 /**
- * Validates the redirect form and checks its source isn't taken by another
- * redirect (`selfId` is the one being edited). Returns the first error
- * message, or the normalized fields.
+ * Validates a redirect (the form's entries, or an API body merged over the
+ * stored row) and checks its source isn't taken by another redirect (`selfId`
+ * is the one being edited). Returns the first error message, or the
+ * normalized fields.
  */
-export async function parseRedirectForm(formData: FormData, selfId?: string) {
-	const result = redirectSchema.safeParse(Object.fromEntries(formData));
+export async function parseRedirectInput(
+	input: Record<string, unknown>,
+	selfId?: string,
+) {
+	const result = redirectSchema.safeParse(input);
 	if (!result.success) {
 		return { error: result.error.issues[0]?.message ?? "Invalid redirect." };
 	}

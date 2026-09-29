@@ -97,7 +97,7 @@ jobs:
       - name: Codegen is current
         run: |
           bun run gen
-          if ! git diff --exit-code -- openapi.json homerun.schema.json tests/integration/support/openapi-types.ts; then
+          if ! git diff --exit-code -- openapi.json homerun.schema.json tests/integration/support/openapi-types.ts docs/architecture.md; then
             echo "::error::Generated files are stale : run 'bun run gen' and commit the result."
             exit 1
           fi

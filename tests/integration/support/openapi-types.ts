@@ -165,6 +165,52 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/redirects": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List redirects
+		 * @description Every redirect, newest first. Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest.
+		 */
+		get: operations["get_redirects"];
+		put?: never;
+		/**
+		 * Create a redirect
+		 * @description Adds a redirect and publishes it to Traefik and the DNS automation. source and destination are required; enabled, keepPath and permanent default to true, like the dashboard form.
+		 */
+		post: operations["post_redirects"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/redirects/{redirectId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a redirect */
+		get: operations["get_redirects__redirectId_"];
+		put?: never;
+		post?: never;
+		/** Delete a redirect */
+		delete: operations["delete_redirects__redirectId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a redirect
+		 * @description Changes the fields sent, keeping the rest, and republishes. Send {"enabled": false} to turn one off.
+		 */
+		patch: operations["patch_redirects__redirectId_"];
+		trace?: never;
+	};
 	"/services": {
 		parameters: {
 			query?: never;
@@ -1380,6 +1426,360 @@ export interface operations {
 						error: string;
 						/** @constant */
 						status: "error";
+					};
+				};
+			};
+		};
+	};
+	get_redirects: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of redirects */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						destination: string;
+						enabled: boolean;
+						id: string;
+						keepPath: boolean;
+						permanent: boolean;
+						/** @description Lowercase hostname plus an optional path prefix */
+						source: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_redirects: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The full http(s) URL to send requests to */
+					destination?: string;
+					enabled?: boolean;
+					/** @description Append the rest of the path and the query string to the destination */
+					keepPath?: boolean;
+					/** @description 308 when true, 307 otherwise */
+					permanent?: boolean;
+					/** @description A hostname with an optional path prefix, e.g. "old.example.com" or "example.com/blog" */
+					source?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						destination: string;
+						enabled: boolean;
+						id: string;
+						keepPath: boolean;
+						permanent: boolean;
+						/** @description Lowercase hostname plus an optional path prefix */
+						source: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or the source already has a redirect */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_redirects__redirectId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Redirect id */
+				redirectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The redirect */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						destination: string;
+						enabled: boolean;
+						id: string;
+						keepPath: boolean;
+						permanent: boolean;
+						/** @description Lowercase hostname plus an optional path prefix */
+						source: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_redirects__redirectId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Redirect id */
+				redirectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						success: boolean;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_redirects__redirectId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Redirect id */
+				redirectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The full http(s) URL to send requests to */
+					destination?: string;
+					enabled?: boolean;
+					/** @description Append the rest of the path and the query string to the destination */
+					keepPath?: boolean;
+					/** @description 308 when true, 307 otherwise */
+					permanent?: boolean;
+					/** @description A hostname with an optional path prefix, e.g. "old.example.com" or "example.com/blog" */
+					source?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						destination: string;
+						enabled: boolean;
+						id: string;
+						keepPath: boolean;
+						permanent: boolean;
+						/** @description Lowercase hostname plus an optional path prefix */
+						source: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or the source already has a redirect */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};

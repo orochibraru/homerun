@@ -71,7 +71,7 @@ func TestEveryCommandDocumentsItself(t *testing.T) {
 					t.Errorf("--help doesn't list --%s: %q", f.Name, out)
 				}
 			})
-			if !strings.Contains(cli.Usage(), "  "+command.Name) {
+			if group, _, _ := strings.Cut(command.Name, " "); !strings.Contains(cli.Usage(), "  "+group) {
 				t.Error("missing from the top-level usage")
 			}
 		})

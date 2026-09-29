@@ -59,6 +59,13 @@
 		color: var(--color-text);
 		tab-size: 4;
 	}
+	.code textarea,
+	.code textarea:focus {
+		background: transparent;
+		border: 0;
+		border-radius: 0;
+		box-shadow: none;
+	}
 	.code textarea::selection {
 		background: var(--color-accent-glow);
 	}

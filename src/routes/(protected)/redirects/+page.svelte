@@ -9,6 +9,7 @@
 	import EntityToolbar from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { Switch } from "$lib/components/ui/switch/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { BASE_SORTS } from "$lib/list-sorts";
 	import { title } from "$lib/store/title";
@@ -65,6 +66,26 @@
 {/snippet}
 
 {#snippet actions(item: RedirectRow)}
+  <form
+    action="?/toggle"
+    id="toggle-{item.id}"
+    method="POST"
+    use:enhance={enhanceToast({
+      error: "Couldn't change the redirect.",
+      loading: item.enabled ? "Disabling the redirect" : "Enabling the redirect",
+      success: (data) => (data?.enabled ? "Redirect enabled." : "Redirect disabled."),
+    })}
+  >
+    <input name="redirectId" type="hidden" value={item.id}>
+    <Switch
+      aria-label={item.enabled ? "Disable redirect" : "Enable redirect"}
+      checked={item.enabled}
+      class="mx-1"
+      onCheckedChange={() =>
+        (document.getElementById(`toggle-${item.id}`) as HTMLFormElement | null)?.requestSubmit()}
+      title={item.enabled ? "Disable" : "Enable"}
+    />
+  </form>
   <Button href={item.href} size="icon-sm" title="Edit" variant="ghost">
     <Pencil class="size-4" />
   </Button>

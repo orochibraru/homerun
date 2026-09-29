@@ -13,6 +13,7 @@ import { channelRoutes } from "./channels";
 import { dependencyRoutes } from "./dependencies";
 import { errorRoutes } from "./errors";
 import { previewRoutes } from "./previews";
+import { redirectRoutes } from "./redirects";
 import {
 	deploymentResponse,
 	deployResultResponse,
@@ -667,4 +668,5 @@ export const routes: RouteDef[] = [
 	...dependencyRoutes,
 	...errorRoutes,
 	...backupRoutes,
+	...redirectRoutes,
 ];

@@ -104,7 +104,7 @@ repos:
         entry: bun run gen
         language: system
         pass_filenames: false
-        files: ^(src/routes/api/|src/lib/openapi/|src/lib/config\.ts$|scripts/generate-)
+        files: ^(src/routes/api/|src/lib/openapi/|src/lib/config\.ts$|scripts/generate-|internal/installer/compose\.yaml$)
 
       - id: oxlint
         name: Lint (oxlint)

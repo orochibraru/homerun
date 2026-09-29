@@ -4,7 +4,7 @@ import { RedirectDTO } from "$lib/dto/redirect-dto";
 import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
-import { RedirectService } from "$lib/services/redirect.service";
+import { RedirectService, redirectHost } from "$lib/services/redirect.service";
 
 const logger = new Logger("Redirects");
 
@@ -41,11 +41,36 @@ export const actions = {
 			return fail(404, { error: "Redirect not found." });
 		}
 
+		const host = redirectHost(found.toJSON().source);
 		await found.delete();
-		await RedirectService.sync();
+		await RedirectService.sync(host ? [host] : []);
 		logger.info(
 			`Redirect deleted: redirect=${redirectId} user=${locals.user.id}`,
 		);
 		return { success: true };
+	},
+	toggle: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const redirectId = formData.get("redirectId") as string | null;
+		if (!redirectId) {
+			return fail(400, { error: "Missing redirect id." });
+		}
+
+		const found = await RedirectDTO.get(redirectId);
+		if (!found) {
+			return fail(404, { error: "Redirect not found." });
+		}
+
+		const { enabled, source } = found.toJSON();
+		await found.setEnabled(!enabled);
+		const host = redirectHost(source);
+		await RedirectService.sync(host ? [host] : []);
+		logger.info(
+			`Redirect ${enabled ? "disabled" : "enabled"}: redirect=${redirectId} user=${locals.user.id}`,
+		);
+		return { enabled: !enabled, success: true };
 	},
 };
