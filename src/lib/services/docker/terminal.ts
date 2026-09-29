@@ -50,6 +50,23 @@ export function DockerTerminalMixin<
 		}
 
 		/**
+		 * Remembers a session the worker opened some other way (a machine's
+		 * SSH shell), so it streams, takes input, resizes and closes through
+		 * the same checks as a container's. `containerId` is the worker's label
+		 * for it.
+		 */
+		registerTerminalSession(
+			sessionId: string,
+			params: OpenSessionParams,
+		): void {
+			this.#sessions.set(sessionId, {
+				containerId: params.containerId,
+				serviceId: params.serviceId,
+				userId: params.userId,
+			});
+		}
+
+		/**
 		 * Pumps the worker's output stream into `onChunk` until the shell ends,
 		 * the reader cancels through `signal`, or the connection drops, then
 		 * forgets the session so a dead one stops reading as open.

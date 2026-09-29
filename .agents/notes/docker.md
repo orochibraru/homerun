@@ -942,6 +942,26 @@ Opening a session is `POST /v1/terminal {containerId}` on the worker, which
 returns a session id the app then streams/writes/closes by hitting
 `/v1/terminal/<id>/stream`\|`/input`\|itself for `DELETE`.
 
+**Machine terminals** (`/terminal`, `MachineTerminalService`) reuse all of the
+above for a shell on a machine rather than a container: the worker's
+`POST /v1/ssh` dials SSH itself (`internal/sshterm`, `golang.org/x/crypto/ssh`,
+PTY + login shell) and hands the connection to `TerminalHub.Adopt`, after which
+stream/input/resize/close are the same routes and the same hub (`Adopt` closes
+`pidReady` up front, so there's no PID marker and no kill step: closing the SSH
+channel hangs the shell up). The app keeps one ed25519 key pair in
+`instance_settings` (`ssh_private_key_enc`, generated lazily, PKCS#8 PEM because
+that's what `ssh.ParsePrivateKey` reads) and each machine's host/port/user/host
+key on `instance_settings` (this server) or `remote_host`. Host keys are
+trust-on-first-use: an empty recorded key accepts whatever is presented and the
+app stores it, a mismatch is a 409; changing the host clears the key. "This
+server" is reached as `host.docker.internal`, which every compose file maps to
+`host-gateway` on the worker. **The hub buffers output (up to 64 KiB) while a
+session has no listener and replays it to the first subscriber**: an SSH shell
+prints its banner and prompt the instant it opens, before the browser's stream
+request lands, and Bun doesn't send a streamed response's headers until its
+first chunk, so without the replay the page sat on "connecting" forever with a
+shell waiting for input nobody could send.
+
 **Closing a session kills its processes; detaching doesn't.** Docker leaves an
 exec's process running when its hijacked stream closes, and the pty's master
 stays open in the shim, so the shell never gets SIGHUP: before this, every

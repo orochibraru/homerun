@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "Homebox",
+	"description": "Home inventory: what you own, where it is, warranties, receipts and labels.",
+	"image": "ghcr.io/sysadminsmedia/homebox",
+	"tag": "latest",
+	"containerPort": 7745,
+	"icon": "di:homebox",
+	"tags": ["inventory", "home", "organization"],
+	"websiteUrl": "https://homebox.software",
+	"sourceUrl": "https://github.com/sysadminsmedia/homebox",
+	"envVars": {
+		"TZ": "UTC"
+	},
+	"volumes": ["/data"]
+}

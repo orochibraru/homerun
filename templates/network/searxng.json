@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "SearXNG",
+	"description": "Private metasearch engine: results from dozens of engines, no tracking, no profiling.",
+	"image": "searxng/searxng",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:searxng",
+	"tags": ["search", "privacy", "metasearch"],
+	"websiteUrl": "https://docs.searxng.org",
+	"sourceUrl": "https://github.com/searxng/searxng",
+	"envVars": {
+		"SEARXNG_BASE_URL": "{{url}}/",
+		"SEARXNG_SECRET": "{{secret}}"
+	},
+	"volumes": ["/etc/searxng"]
+}

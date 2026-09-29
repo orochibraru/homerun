@@ -1,0 +1,31 @@
+{
+	"$schema": "../schema.json",
+	"name": "Firefly III",
+	"description": "Personal finance manager: accounts, budgets, categories, recurring transactions and reports. Comes with a linked Postgres.",
+	"image": "fireflyiii/core",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:firefly-iii",
+	"tags": ["finance", "budget", "money", "accounting"],
+	"websiteUrl": "https://www.firefly-iii.org",
+	"sourceUrl": "https://github.com/firefly-iii/firefly-iii",
+	"envVars": {
+		"APP_KEY": "{{secret:hex32}}",
+		"APP_URL": "{{url}}",
+		"DB_CONNECTION": "pgsql",
+		"DB_DATABASE": "{{db.POSTGRES_DB}}",
+		"DB_HOST": "{{db}}",
+		"DB_PASSWORD": "{{db.POSTGRES_PASSWORD}}",
+		"DB_PORT": "5432",
+		"DB_USERNAME": "{{db.POSTGRES_USER}}",
+		"TRUSTED_PROXIES": "**",
+		"TZ": "UTC"
+	},
+	"volumes": ["/var/www/html/storage/upload"],
+	"links": [
+		{
+			"alias": "db",
+			"template": "postgres"
+		}
+	]
+}

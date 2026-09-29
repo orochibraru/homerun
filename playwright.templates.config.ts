@@ -9,7 +9,7 @@ export default defineConfig({
 		"./tests/e2e/templates/traefik.ts",
 	],
 	projects: [
-		{ name: "setup", testMatch: /setup\.ts$/ },
+		{ name: "setup", testMatch: /setup\.ts$/, timeout: 3 * 60_000 },
 		{
 			dependencies: ["setup"],
 			name: "templates",
@@ -18,11 +18,13 @@ export default defineConfig({
 		},
 	],
 	reporter: [["list"], ["./tests/e2e/templates/report.ts"]],
-	retries: 1,
+	retries: 0,
 	testDir: "./tests/e2e/templates",
-	timeout: 30 * 60_000,
+	timeout: 20 * 60_000,
 	use: {
+		actionTimeout: 30_000,
 		baseURL: E2E_BASE_URL,
+		navigationTimeout: 60_000,
 		trace: "retain-on-failure",
 	},
 	workers: Number(process.env.TEMPLATES_E2E_WORKERS ?? 3),

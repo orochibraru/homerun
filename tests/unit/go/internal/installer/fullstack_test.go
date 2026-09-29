@@ -92,7 +92,8 @@ func TestComposeSwarmFile(t *testing.T) {
 		}
 	}
 	base := installer.ComposeFile
-	baseCommand := base[strings.Index(base, "--providers.docker=true"):strings.Index(base, "    extra_hosts:")]
+	start := strings.Index(base, "--providers.docker=true")
+	baseCommand := base[start : start+strings.Index(base[start:], "    extra_hosts:")]
 	if !strings.Contains(installer.ComposeSwarmFile, baseCommand) {
 		t.Error("compose replaces a service's command wholesale, so the overlay must repeat every base Traefik flag")
 	}

@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "Pocket ID",
+	"description": "Simple OIDC provider that signs users in with passkeys only. Set up the first admin at /setup.",
+	"image": "ghcr.io/pocket-id/pocket-id",
+	"tag": "v1",
+	"containerPort": 1411,
+	"icon": "di:pocket-id",
+	"tags": ["oidc", "passkeys", "sso", "auth"],
+	"websiteUrl": "https://pocket-id.org",
+	"sourceUrl": "https://github.com/pocket-id/pocket-id",
+	"envVars": {
+		"APP_URL": "{{url}}",
+		"ENCRYPTION_KEY": "{{secret}}",
+		"TRUST_PROXY": "true"
+	},
+	"volumes": ["/app/data"]
+}

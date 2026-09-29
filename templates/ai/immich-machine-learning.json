@@ -1,0 +1,14 @@
+{
+	"$schema": "../schema.json",
+	"name": "Immich Machine Learning",
+	"description": "Immich's face recognition and smart search worker, CPU build. Deployed as Immich's linked companion, useless on its own.",
+	"image": "ghcr.io/immich-app/immich-machine-learning",
+	"tag": "release",
+	"containerPort": 3003,
+	"icon": "di:immich",
+	"tags": ["immich", "ml", "photos", "ai"],
+	"websiteUrl": "https://immich.app",
+	"sourceUrl": "https://github.com/immich-app/immich",
+	"envVars": {},
+	"volumes": ["/cache"]
+}

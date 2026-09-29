@@ -1,0 +1,14 @@
+{
+	"$schema": "../schema.json",
+	"name": "MeTube",
+	"description": "Web UI for yt-dlp: paste a video or playlist URL, get the file.",
+	"image": "ghcr.io/alexta69/metube",
+	"tag": "latest",
+	"containerPort": 8081,
+	"icon": "di:metube",
+	"tags": ["youtube", "yt-dlp", "downloader", "video"],
+	"websiteUrl": "https://github.com/alexta69/metube",
+	"sourceUrl": "https://github.com/alexta69/metube",
+	"envVars": {},
+	"volumes": ["/downloads"]
+}

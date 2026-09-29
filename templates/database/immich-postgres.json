@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "Immich Postgres",
+	"description": "Postgres with the VectorChord extension Immich searches with. Deployed as Immich's linked database; review the placeholder password before deploying it on its own.",
+	"image": "ghcr.io/immich-app/postgres",
+	"tag": "14-vectorchord0.4.3-pgvectors0.2.0",
+	"containerPort": 5432,
+	"icon": "di:immich",
+	"tags": ["postgres", "database", "immich", "vector"],
+	"websiteUrl": "https://immich.app",
+	"sourceUrl": "https://github.com/immich-app/base-images",
+	"envVars": {
+		"POSTGRES_DB": "immich",
+		"POSTGRES_INITDB_ARGS": "--data-checksums",
+		"POSTGRES_PASSWORD": "{{secret:hex16}}",
+		"POSTGRES_USER": "postgres"
+	},
+	"volumes": ["/var/lib/postgresql/data"]
+}

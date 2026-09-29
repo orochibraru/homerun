@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "NocoDB",
+	"description": "Airtable alternative: spreadsheets over a real database, with forms, kanban, galleries and a REST API.",
+	"image": "nocodb/nocodb",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:nocodb",
+	"tags": ["airtable", "spreadsheet", "database", "no-code"],
+	"websiteUrl": "https://nocodb.com",
+	"sourceUrl": "https://github.com/nocodb/nocodb",
+	"envVars": {
+		"NC_PUBLIC_URL": "{{url}}"
+	},
+	"volumes": ["/usr/app/data"]
+}

@@ -1,13 +1,16 @@
 package workerapi
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/orochibraru/homerun/internal/httpapi"
+	"github.com/orochibraru/homerun/internal/sshterm"
 )
 
 // mountTerminal wires the web terminal routes.
@@ -18,6 +21,7 @@ import (
 // what moved is where the shell actually lives.
 func (s *Server) mountTerminal(r chi.Router) {
 	r.Post("/v1/terminal", httpapi.H(s.openTerminal))
+	r.Post("/v1/ssh", httpapi.H(s.openSSH))
 	r.Get("/v1/terminal/{id}", httpapi.H(s.describeTerminal))
 	r.Get("/v1/terminal/{id}/stream", httpapi.H(s.streamTerminal))
 	r.Post("/v1/terminal/{id}/input", httpapi.H(s.writeTerminal))
@@ -46,6 +50,31 @@ func (s *Server) openTerminal(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpapi.Answer(w, http.StatusOK, map[string]string{"sessionId": id})
+}
+
+// openSSH opens a shell on a machine over SSH and hands it to the terminal hub,
+// so it streams, takes input, resizes and closes through the same routes as a
+// container's. It answers with the session id and the host key the machine
+// presented, which the app records to refuse a changed one next time.
+func (s *Server) openSSH(w http.ResponseWriter, r *http.Request) error {
+	var target sshterm.Target
+	if !httpapi.DecodeJSON(w, r, &target) {
+		return nil
+	}
+	if target.Host == "" || target.User == "" || target.PrivateKey == "" {
+		return httpapi.Invalid(w, "Invalid request body",
+			[]httpapi.ValidationIssue{{Message: "host, user and privateKey are required", Path: []string{}}})
+	}
+	session, hostKey, err := sshterm.Open(context.WithoutCancel(r.Context()), target)
+	if errors.Is(err, sshterm.ErrHostKeyChanged) {
+		return httpapi.Error(w, http.StatusConflict, err.Error())
+	}
+	if err != nil {
+		return httpapi.Error(w, http.StatusBadGateway, err.Error())
+	}
+	label := fmt.Sprintf("ssh://%s@%s", target.User, target.Host)
+	id := s.terminals.Adopt(label, session, session.Resize)
+	return httpapi.Answer(w, http.StatusOK, map[string]string{"hostKey": hostKey, "sessionId": id})
 }
 
 // describeTerminal answers with the container a session runs in, which is what

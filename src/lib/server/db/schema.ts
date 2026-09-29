@@ -510,6 +510,10 @@ export const remoteHost = pgTable(
 		name: text("name").notNull(),
 		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc
 		// : only set when dockerHost uses TLS-secured tcp://.
+		sshHost: text("ssh_host"),
+		sshPort: integer("ssh_port"),
+		sshUser: text("ssh_user"),
+		sshHostKey: text("ssh_host_key"),
 		tlsCaEnc: text("tls_ca_enc"),
 		tlsCertEnc: text("tls_cert_enc"),
 		tlsKeyEnc: text("tls_key_enc"),
@@ -720,6 +724,12 @@ export const instanceSettings = pgTable("instance_settings", {
 	traefikHttpCache: boolean("traefik_http_cache").default(false).notNull(),
 	tlsCertEnc: text("tls_cert_enc"),
 	tlsKeyEnc: text("tls_key_enc"),
+	sshPrivateKeyEnc: text("ssh_private_key_enc"),
+	sshPublicKey: text("ssh_public_key"),
+	sshHost: text("ssh_host"),
+	sshPort: integer("ssh_port"),
+	sshUser: text("ssh_user"),
+	sshHostKey: text("ssh_host_key"),
 	tlsCertNames: jsonb("tls_cert_names").$type<string[]>().default([]).notNull(),
 	tlsCertExpiresAt: timestamp("tls_cert_expires_at", { mode: "date" }),
 	tlsCertIssuer: text("tls_cert_issuer"),

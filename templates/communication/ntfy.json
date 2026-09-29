@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "ntfy",
+	"description": "Push notifications to your phone or desktop from any script, with a plain HTTP PUT/POST.",
+	"image": "binwiederhier/ntfy",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "di:ntfy",
+	"tags": ["notifications", "push", "alerts", "pubsub"],
+	"websiteUrl": "https://ntfy.sh",
+	"sourceUrl": "https://github.com/binwiederhier/ntfy",
+	"envVars": {
+		"NTFY_BASE_URL": "{{url}}",
+		"NTFY_BEHIND_PROXY": "true",
+		"NTFY_CACHE_FILE": "/var/cache/ntfy/cache.db"
+	},
+	"command": ["serve"],
+	"volumes": ["/var/cache/ntfy"]
+}

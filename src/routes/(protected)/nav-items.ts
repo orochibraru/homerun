@@ -22,6 +22,7 @@ import {
 	Send,
 	Server,
 	Settings,
+	TerminalSquare,
 	Trash2,
 	Users,
 } from "@lucide/svelte";
@@ -131,6 +132,14 @@ export const allNavItems = [
 		href: resolve("/scheduling"),
 		icon: CalendarClock,
 		label: "Scheduling",
+	},
+	{
+		adminOnly: true,
+		category: "Infrastructure",
+		exact: false,
+		href: resolve("/terminal"),
+		icon: TerminalSquare,
+		label: "Terminal",
 	},
 	{
 		adminOnly: false,

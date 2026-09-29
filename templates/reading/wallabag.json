@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Wallabag",
+	"description": "Read-it-later: save articles, read them clean, offline, on any device. Signs in as wallabag / wallabag the first time, change it.",
+	"image": "wallabag/wallabag",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "di:wallabag",
+	"tags": ["read-later", "articles", "bookmarks", "pocket"],
+	"websiteUrl": "https://wallabag.org",
+	"sourceUrl": "https://github.com/wallabag/wallabag",
+	"envVars": {
+		"SYMFONY__ENV__DOMAIN_NAME": "{{url}}",
+		"SYMFONY__ENV__SECRET": "{{secret}}"
+	},
+	"volumes": ["/var/www/wallabag/data", "/var/www/wallabag/web/assets/images"]
+}

@@ -223,3 +223,36 @@ func TestTerminalCloseLeavesNoProcessBehindOnRealDocker(t *testing.T) {
 		}
 	}
 }
+
+// pipeShell is an adopted shell whose output the test writes by hand.
+type pipeShell struct {
+	io.Reader
+	io.Writer
+}
+
+// Close ends nothing: the test closes the pipe itself.
+func (pipeShell) Close() error { return nil }
+
+func TestAdoptedShellReplaysOutputPrintedBeforeTheFirstSubscriber(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	hub := workerapi.NewTerminalHub(ctx, nil)
+	reader, writer := io.Pipe()
+	id := hub.Adopt("ssh://me@box", pipeShell{Reader: reader, Writer: io.Discard}, nil)
+	if _, err := writer.Write([]byte("welcome\r\n$ ")); err != nil {
+		t.Fatal(err)
+	}
+	chunks, unsubscribe, err := hub.Subscribe(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unsubscribe()
+	select {
+	case chunk := <-chunks:
+		if string(chunk) != "welcome\r\n$ " {
+			t.Fatalf("first chunk = %q", chunk)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the banner printed before subscribing never arrived")
+	}
+}

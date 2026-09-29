@@ -1,0 +1,36 @@
+{
+	"$schema": "../schema.json",
+	"name": "Immich",
+	"description": "Google Photos alternative: phone backup, timeline, albums, face recognition and smart search. Comes with its own Postgres, a Valkey and the machine-learning worker; the first account you create is the admin.",
+	"image": "ghcr.io/immich-app/immich-server",
+	"tag": "release",
+	"containerPort": 2283,
+	"icon": "di:immich",
+	"tags": ["photos", "videos", "backup", "gallery", "google-photos"],
+	"websiteUrl": "https://immich.app",
+	"sourceUrl": "https://github.com/immich-app/immich",
+	"envVars": {
+		"DB_DATABASE_NAME": "{{db.POSTGRES_DB}}",
+		"DB_HOSTNAME": "{{db}}",
+		"DB_PASSWORD": "{{db.POSTGRES_PASSWORD}}",
+		"DB_USERNAME": "{{db.POSTGRES_USER}}",
+		"IMMICH_MACHINE_LEARNING_URL": "http://{{ml}}:3003",
+		"REDIS_HOSTNAME": "{{redis}}",
+		"REDIS_PASSWORD": "{{redis.REDIS_PASSWORD}}"
+	},
+	"volumes": ["/data"],
+	"links": [
+		{
+			"alias": "db",
+			"template": "immich-postgres"
+		},
+		{
+			"alias": "ml",
+			"template": "immich-machine-learning"
+		},
+		{
+			"alias": "redis",
+			"template": "valkey"
+		}
+	]
+}

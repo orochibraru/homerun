@@ -81,6 +81,7 @@ type session struct {
 	mu           sync.Mutex
 	listeners    map[int]chan []byte
 	nextListener int
+	backlog      []byte
 	closed       bool
 	marker       []byte
 	pid          int
@@ -91,8 +92,13 @@ type session struct {
 	ExecID      string
 	ID          string
 	LastActive  time.Time
-	stream      *dockerapi.HijackedStream
+	resize      func(ctx context.Context, height, width int) error
+	stream      io.ReadWriteCloser
 }
+
+// backlogMax caps the output kept for a session nobody is watching yet, the
+// banner and prompt a shell prints before the browser subscribes.
+const backlogMax = 64 << 10
 
 // TerminalHub owns every open terminal session on this host.
 //
@@ -141,18 +147,46 @@ func (h *TerminalHub) Open(ctx context.Context, containerID string, command []st
 		LastActive:  now,
 		listeners:   map[int]chan []byte{},
 		pidReady:    make(chan struct{}),
-		stream:      stream,
+		resize: func(ctx context.Context, height, width int) error {
+			return h.docker.ResizeExec(ctx, execID, height, width)
+		},
+		stream: stream,
 	}
 	if !marked {
 		close(current.pidReady)
 	}
+	h.register(current)
+	logging.Infof(scope, "%s opened in %s", current.ID, containerID)
+	return current.ID, nil
+}
+
+// Adopt takes over a shell that runs somewhere other than a container on this
+// daemon (an SSH session to a machine), under target, the label ContainerOf
+// reports back. Closing the stream ends the shell, so no kill step runs.
+func (h *TerminalHub) Adopt(target string, stream io.ReadWriteCloser, resize func(ctx context.Context, height, width int) error) string {
+	now := time.Now()
+	current := &session{
+		ContainerID: target,
+		CreatedAt:   now,
+		ID:          randomID(),
+		LastActive:  now,
+		listeners:   map[int]chan []byte{},
+		pidReady:    make(chan struct{}),
+		resize:      resize,
+		stream:      stream,
+	}
+	close(current.pidReady)
+	h.register(current)
+	logging.Infof(scope, "%s opened on %s", current.ID, target)
+	return current.ID
+}
+
+// register adds a session to the hub and starts pumping its output.
+func (h *TerminalHub) register(current *session) {
 	h.mu.Lock()
 	h.sessions[current.ID] = current
 	h.mu.Unlock()
-
 	go h.pump(current)
-	logging.Infof(scope, "%s opened in %s", current.ID, containerID)
-	return current.ID, nil
 }
 
 // pump reads the shell's output until it ends, fanning every chunk out to the
@@ -238,6 +272,10 @@ func (s *session) broadcast(chunk []byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.LastActive = time.Now()
+	if len(s.listeners) == 0 && len(s.backlog) < backlogMax {
+		s.backlog = append(s.backlog, chunk...)
+		return
+	}
 	for _, listener := range s.listeners {
 		select {
 		case listener <- chunk:
@@ -261,6 +299,10 @@ func (h *TerminalHub) Subscribe(id string) (<-chan []byte, func(), error) {
 	key := current.nextListener
 	current.nextListener++
 	channel := make(chan []byte, 256)
+	if len(current.backlog) > 0 {
+		channel <- current.backlog
+		current.backlog = nil
+	}
 	current.listeners[key] = channel
 	return channel, func() {
 		current.mu.Lock()
@@ -295,7 +337,7 @@ func (h *TerminalHub) Resize(ctx context.Context, id string, height, width int) 
 	if err != nil {
 		return err
 	}
-	return h.docker.ResizeExec(ctx, current.ExecID, height, width)
+	return current.resize(ctx, height, width)
 }
 
 // Close ends a session and releases every listener watching it, first killing

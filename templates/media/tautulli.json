@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "Tautulli",
+	"description": "Watch history, stats and notifications for a Plex server.",
+	"image": "lscr.io/linuxserver/tautulli",
+	"tag": "latest",
+	"containerPort": 8181,
+	"icon": "di:tautulli",
+	"tags": ["plex", "stats", "media", "monitoring"],
+	"websiteUrl": "https://tautulli.com",
+	"sourceUrl": "https://github.com/Tautulli/Tautulli",
+	"envVars": {
+		"PGID": "1000",
+		"PUID": "1000",
+		"TZ": "UTC"
+	},
+	"volumes": ["/config"]
+}

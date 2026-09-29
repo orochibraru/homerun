@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "Gotify",
+	"description": "Self-hosted push notification server with an Android app and a REST API. Signs in as admin with the generated GOTIFY_DEFAULTUSER_PASS.",
+	"image": "gotify/server",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "di:gotify",
+	"tags": ["notifications", "push", "alerts"],
+	"websiteUrl": "https://gotify.net",
+	"sourceUrl": "https://github.com/gotify/server",
+	"envVars": {
+		"GOTIFY_DEFAULTUSER_NAME": "admin",
+		"GOTIFY_DEFAULTUSER_PASS": "{{secret:hex16}}",
+		"TZ": "UTC"
+	},
+	"volumes": ["/app/data"]
+}

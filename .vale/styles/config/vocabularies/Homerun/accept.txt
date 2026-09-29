@@ -151,3 +151,5 @@ Porkbun
 Scaleway
 Vultr
 Roboto
+Immich
+Plex

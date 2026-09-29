@@ -1,0 +1,20 @@
+{
+	"$schema": "../schema.json",
+	"name": "Semaphore UI",
+	"description": "Web UI to run Ansible playbooks, Terraform/OpenTofu and scripts, with schedules and history. Signs in as admin with the generated SEMAPHORE_ADMIN_PASSWORD.",
+	"image": "semaphoreui/semaphore",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:semaphore",
+	"tags": ["ansible", "terraform", "automation", "devops"],
+	"websiteUrl": "https://semaphoreui.com",
+	"sourceUrl": "https://github.com/semaphoreui/semaphore",
+	"envVars": {
+		"SEMAPHORE_ADMIN": "admin",
+		"SEMAPHORE_ADMIN_EMAIL": "admin@localhost",
+		"SEMAPHORE_ADMIN_NAME": "Admin",
+		"SEMAPHORE_ADMIN_PASSWORD": "{{secret:hex16}}",
+		"SEMAPHORE_DB_DIALECT": "bolt"
+	},
+	"volumes": ["/var/lib/semaphore", "/etc/semaphore"]
+}

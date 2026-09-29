@@ -97,7 +97,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   auto-rollback per service
 - **[Live logs](docs/observability.md#logs) &
   [a web terminal](docs/observability.md#terminal)**: tail stdout/stderr or open
-  an interactive shell into a running container from the browser
+  an interactive shell into a running container from the browser, or
+  [on the machines themselves](docs/machine-terminals.md) over SSH
 - **[The services list](docs/services.md#the-services-list)**: server-side
   search, filters and paging on every list page, a list/card toggle, a
   dependency-tree view across every service, and bulk Start/Stop/Restart/Delete
@@ -109,10 +110,10 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   network so they reach each other by slug (`http://api:8080`), with prefixed
   subdomains, nested substacks, a dependency tree/diagram of a stack's services,
   and one-step delete of the whole stack
-- **[~70 built-in templates](docs/templates.md)**: Jellyfin, the *arr stack,
-  Pi-hole, Vaultwarden, Grafana, Uptime Kuma, PostgreSQL, Redis, n8n and more,
-  with real app logos, one-click **Quick Deploy**, and a details page that pulls
-  in the project's GitHub README, stars and latest release
+- **[~100 built-in templates](docs/templates.md)**: Immich, Jellyfin, Plex, the
+  *arr stack, Pi-hole, Vaultwarden, Grafana, Uptime Kuma, PostgreSQL, Redis, n8n
+  and more, with real app logos, one-click **Quick Deploy**, and a details page
+  that pulls in the project's GitHub README, stars and latest release
 - **[Linked containers](docs/templates.md#linked-containers)**: companions
   deploy with the primary (WordPress brings MySQL), and env vars like
   `{{db.POSTGRES_PASSWORD}}` wire them together without retyping

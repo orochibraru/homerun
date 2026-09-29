@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "Node-RED",
+	"description": "Flow-based programming for wiring together devices, APIs and online services. The editor has no password until you set one in settings.js.",
+	"image": "nodered/node-red",
+	"tag": "latest",
+	"containerPort": 1880,
+	"icon": "di:node-red",
+	"tags": ["automation", "iot", "flows", "low-code"],
+	"websiteUrl": "https://nodered.org",
+	"sourceUrl": "https://github.com/node-red/node-red",
+	"envVars": {
+		"TZ": "UTC"
+	},
+	"volumes": ["/data"]
+}

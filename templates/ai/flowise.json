@@ -1,0 +1,14 @@
+{
+	"$schema": "../schema.json",
+	"name": "Flowise",
+	"description": "Drag-and-drop builder for LLM apps, agents and RAG pipelines.",
+	"image": "flowiseai/flowise",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:flowise",
+	"tags": ["llm", "ai", "agents", "low-code"],
+	"websiteUrl": "https://flowiseai.com",
+	"sourceUrl": "https://github.com/FlowiseAI/Flowise",
+	"envVars": {},
+	"volumes": ["/root/.flowise"]
+}

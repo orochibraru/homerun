@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "Keycloak",
+	"description": "Identity and access management: SSO, OIDC, SAML, user federation. Runs in development mode with a generated admin password; switch to `start` with a database for production.",
+	"image": "quay.io/keycloak/keycloak",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:keycloak",
+	"tags": ["sso", "oidc", "saml", "auth", "identity"],
+	"websiteUrl": "https://www.keycloak.org",
+	"sourceUrl": "https://github.com/keycloak/keycloak",
+	"envVars": {
+		"KC_BOOTSTRAP_ADMIN_PASSWORD": "{{secret:hex16}}",
+		"KC_BOOTSTRAP_ADMIN_USERNAME": "admin",
+		"KC_PROXY_HEADERS": "xforwarded"
+	},
+	"command": ["start-dev"],
+	"volumes": ["/opt/keycloak/data"]
+}

@@ -12,9 +12,9 @@ import {
 
 const SKIP: Record<string, string> = {};
 
-const DEPLOY_TIMEOUT_MS = 12 * 60_000;
-const HEALTH_TIMEOUT_MS = 8 * 60_000;
-const ROUTE_TIMEOUT_MS = 3 * 60_000;
+const DEPLOY_TIMEOUT_MS = 8 * 60_000;
+const HEALTH_TIMEOUT_MS = 5 * 60_000;
+const ROUTE_TIMEOUT_MS = 2 * 60_000;
 const PULL_ATTEMPTS = 3;
 const DEPLOY_RETRIES = 2;
 const POLL_MS = 3000;
@@ -378,7 +378,7 @@ async function cleanUp(page: Page, deployed: Deployed): Promise<void> {
 	}
 }
 
-const CLEANUP_TIMEOUT_MS = 10 * 60_000;
+const CLEANUP_TIMEOUT_MS = 5 * 60_000;
 let deployed: Deployed = { pulled: [], services: [], stackId: null };
 
 test.describe.configure({ mode: "parallel" });

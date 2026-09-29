@@ -4,6 +4,8 @@ services:
     command: ["/usr/local/bin/homerun-worker"]
     labels:
       - "homerun.role=worker"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     stop_grace_period: 65s
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

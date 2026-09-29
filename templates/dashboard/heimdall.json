@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "Heimdall",
+	"description": "Application dashboard: a tidy grid of links to your services, some with live stats.",
+	"image": "lscr.io/linuxserver/heimdall",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "di:heimdall",
+	"tags": ["dashboard", "startpage", "links"],
+	"websiteUrl": "https://heimdall.site",
+	"sourceUrl": "https://github.com/linuxserver/Heimdall",
+	"envVars": {
+		"PGID": "1000",
+		"PUID": "1000",
+		"TZ": "UTC"
+	},
+	"volumes": ["/config"]
+}

@@ -7,7 +7,13 @@ When done delete the entry, no bloat.
 
 ## Small
 
-<!--  -->
+- [ ] Syntax highlighting in the volume file browser's file view.
+- [ ] Templates can publish ports (`publishedPorts` in the template file, table
+      and form), so Gitea's and GitLab's templates can expose SSH for git out of
+      the box.
+- [ ] Integration/E2E bootstrap always `docker pull`s `postgres:18-alpine`, so a
+      Docker Hub rate limit fails the run even with the image already local:
+      fall back to the local image when the pull fails.
 
 ## Medium
 
@@ -15,7 +21,4 @@ When done delete the entry, no bloat.
 
 ## Large
 
-- [ ] Dedicated SSH routing, would be useful to SSH into the main Homerun
-      machine remotely as well as the agent connected machines, a dedicated page
-      through xtermjs would be useful as well. This would especially be nice for
-      git self hosters for Gitea, Gitlab and such.
+<!--  -->

@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "draw.io",
+	"description": "Diagram editor (flowcharts, network and architecture diagrams, UML) running entirely in the browser.",
+	"image": "jgraph/drawio",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:draw-io",
+	"tags": ["diagrams", "whiteboard", "uml", "flowchart"],
+	"websiteUrl": "https://www.drawio.com",
+	"sourceUrl": "https://github.com/jgraph/docker-drawio",
+	"envVars": {}
+}

@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Plex",
+	"description": "Media server with apps on every TV and phone. Claim it from https://plex.tv/claim into PLEX_CLAIM (valid 4 minutes) before the first deploy, and mount your library.",
+	"image": "plexinc/pms-docker",
+	"tag": "latest",
+	"containerPort": 32400,
+	"icon": "di:plex",
+	"tags": ["media", "streaming", "movies", "tv", "music"],
+	"websiteUrl": "https://www.plex.tv",
+	"sourceUrl": "https://github.com/plexinc/pms-docker",
+	"envVars": {
+		"PLEX_CLAIM": "",
+		"TZ": "UTC"
+	},
+	"volumes": ["/config", "/transcode"]
+}

@@ -1,0 +1,14 @@
+{
+	"$schema": "../schema.json",
+	"name": "Prometheus",
+	"description": "Metrics database and alerting. Scrapes itself out of the box; edit prometheus.yml in the config volume to add targets.",
+	"image": "prom/prometheus",
+	"tag": "latest",
+	"containerPort": 9090,
+	"icon": "di:prometheus",
+	"tags": ["metrics", "monitoring", "alerting", "timeseries"],
+	"websiteUrl": "https://prometheus.io",
+	"sourceUrl": "https://github.com/prometheus/prometheus",
+	"envVars": {},
+	"volumes": ["/prometheus"]
+}

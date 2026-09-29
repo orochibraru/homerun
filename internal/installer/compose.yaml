@@ -41,6 +41,8 @@ services:
     restart: unless-stopped
     stop_grace_period: 75s
     command: ["/usr/local/bin/homerun-worker"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy

@@ -224,6 +224,12 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			traefikDynamicConfigDir: null,
 			traefikEntrypoint: null,
 			traefikHttpCache: false,
+			sshHost: null,
+			sshHostKey: null,
+			sshPort: null,
+			sshPrivateKeyEnc: null,
+			sshPublicKey: null,
+			sshUser: null,
 			tlsCertEnc: null,
 			tlsCertExpiresAt: null,
 			tlsCertIssuer: null,
@@ -723,6 +729,63 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 				? this.row.tlsCertNames
 				: [],
 		};
+	}
+
+	/** The SSH key pair machine terminals sign in with: the public half in authorized_keys form and the decrypted private one; null until generated. */
+	get sshKeyPair(): { privateKey: string; publicKey: string } | null {
+		const privateKey = this.row.sshPrivateKeyEnc
+			? decryptSecret(this.row.sshPrivateKeyEnc)
+			: null;
+		return privateKey && this.row.sshPublicKey
+			? { privateKey, publicKey: this.row.sshPublicKey }
+			: null;
+	}
+
+	/** Stores the machine terminals' SSH key pair, the private key encrypted. */
+	async saveSshKeyPair(pair: {
+		privateKey: string;
+		publicKey: string;
+	}): Promise<void> {
+		await this.persist({
+			sshPrivateKeyEnc: encryptSecret(pair.privateKey),
+			sshPublicKey: pair.publicKey,
+		});
+	}
+
+	/** Where this server's own terminal connects, null until it's been set. */
+	get sshTarget(): {
+		host: string;
+		hostKey: string | null;
+		port: number;
+		user: string;
+	} | null {
+		return this.row.sshHost && this.row.sshUser
+			? {
+					host: this.row.sshHost,
+					hostKey: this.row.sshHostKey,
+					port: this.row.sshPort ?? 22,
+					user: this.row.sshUser,
+				}
+			: null;
+	}
+
+	/** Sets where this server's terminal connects; a changed host forgets the recorded host key. */
+	async updateSshTarget(input: {
+		host: string | null;
+		port: number | null;
+		user: string | null;
+	}): Promise<void> {
+		await this.persist({
+			sshHost: input.host,
+			sshHostKey: input.host === this.row.sshHost ? this.row.sshHostKey : null,
+			sshPort: input.port,
+			sshUser: input.user,
+		});
+	}
+
+	/** Records the host key this server presented, trusted from then on. */
+	async recordSshHostKey(hostKey: string): Promise<void> {
+		await this.persist({ sshHostKey: hostKey });
 	}
 
 	/** The instance certificate's details for the TLS tab, null when none is installed. */

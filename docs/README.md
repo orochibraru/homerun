@@ -90,6 +90,8 @@ sync by hand.
   either volume kind, the backup history, and restoring.
 - **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
   images on a second machine, the standalone agent and installer.
+- **[Machine terminals](machine-terminals.md)**: a browser shell on this server
+  and every remote host over SSH, Homerun's key and host-key checking.
 
 ## Users and access
 

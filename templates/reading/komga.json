@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "Komga",
+	"description": "Comics and manga server with a web reader, OPDS and Tachiyomi/Mihon support. Mount your library and add it after creating the admin account.",
+	"image": "gotson/komga",
+	"tag": "latest",
+	"containerPort": 25600,
+	"icon": "di:komga",
+	"tags": ["comics", "manga", "ebooks", "opds"],
+	"websiteUrl": "https://komga.org",
+	"sourceUrl": "https://github.com/gotson/komga",
+	"envVars": {
+		"TZ": "UTC"
+	},
+	"volumes": ["/config", "/data"]
+}

@@ -1,0 +1,30 @@
+{
+	"$schema": "../schema.json",
+	"name": "BookStack",
+	"description": "Wiki organized as shelves, books, chapters and pages. Comes with a linked MySQL; signs in as admin@admin.com / password the first time, change it.",
+	"image": "lscr.io/linuxserver/bookstack",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "di:bookstack",
+	"tags": ["wiki", "documentation", "knowledge-base"],
+	"websiteUrl": "https://www.bookstackapp.com",
+	"sourceUrl": "https://github.com/BookStackApp/BookStack",
+	"envVars": {
+		"APP_KEY": "{{secret:hex32}}",
+		"APP_URL": "{{url}}",
+		"DB_DATABASE": "{{db.MYSQL_DATABASE}}",
+		"DB_HOST": "{{db}}",
+		"DB_PASSWORD": "{{db.MYSQL_ROOT_PASSWORD}}",
+		"DB_PORT": "3306",
+		"DB_USERNAME": "root",
+		"PGID": "1000",
+		"PUID": "1000"
+	},
+	"volumes": ["/config"],
+	"links": [
+		{
+			"alias": "db",
+			"template": "mysql"
+		}
+	]
+}

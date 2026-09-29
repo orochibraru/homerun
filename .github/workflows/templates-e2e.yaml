@@ -82,7 +82,7 @@ jobs:
     needs: [plan]
     if: needs.plan.outputs.slugs != '[]'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -147,7 +147,7 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
           TEMPLATES_E2E_ONLY: ${{ matrix.slug }}
           TEMPLATES_E2E_WORKERS: "1"
-        timeout-minutes: 35
+        timeout-minutes: 22
         run: bunx playwright test --config playwright.templates.config.ts --reporter=list,json,./tests/e2e/templates/report.ts
 
       - name: Keep the result for the summary

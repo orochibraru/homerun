@@ -33,6 +33,10 @@ export type RemoteHostUpdateInput = Partial<
 		| "dockerHost"
 		| "kind"
 		| "name"
+		| "sshHost"
+		| "sshHostKey"
+		| "sshPort"
+		| "sshUser"
 		| "tlsCaEnc"
 		| "tlsCertEnc"
 		| "tlsKeyEnc"
@@ -157,6 +161,10 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 			id: crypto.randomUUID(),
 			kind,
 			name: input.name,
+			sshHost: null,
+			sshHostKey: null,
+			sshPort: null,
+			sshUser: null,
 			tlsCaEnc: input.tlsCaEnc ?? null,
 			tlsCertEnc: input.tlsCertEnc ?? null,
 			tlsKeyEnc: input.tlsKeyEnc ?? null,
