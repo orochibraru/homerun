@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import CopyBox from "$lib/components/copy-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
@@ -21,7 +22,7 @@
 		if (open) {
 			command = null;
 			buildServer = true;
-			swarmNode = swarmMode;
+			swarmNode = untrack(() => swarmMode);
 		}
 	});
 </script>

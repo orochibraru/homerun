@@ -14,6 +14,9 @@ When done delete the entry, no bloat.
 - [ ] Integration/E2E bootstrap always `docker pull`s `postgres:18-alpine`, so a
       Docker Hub rate limit fails the run even with the image already local:
       fall back to the local image when the pull fails.
+- [ ] `ui-registry.spec.ts` expects "The registry isn't answering", so it fails
+      locally whenever the dev `homerun-mirror` container is running: point the
+      E2E app at a registry address nothing listens on.
 
 ## Medium
 
