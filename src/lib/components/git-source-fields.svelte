@@ -6,9 +6,11 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { isCommitSha } from "$lib/git-ref";
 	import { listRepoBranches } from "$lib/remote/git-repos.remote";
+	import type { GitProviderKind } from "$lib/server/db/schema";
 
 	interface ConnectedProvider {
 		id: string;
+		kind: GitProviderKind;
 		name: string;
 		providerUsername: string;
 	}

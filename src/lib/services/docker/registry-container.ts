@@ -42,7 +42,7 @@ export function registryLabels(
 	const resolver = certResolverFor(
 		state.publicHost,
 		config.traefik.certResolver,
-		config.pangolinOwnsAuth,
+		config.pangolinEnabled,
 		config.traefik.instanceCertNames,
 	);
 	labels["traefik.enable"] = "true";
@@ -52,8 +52,8 @@ export function registryLabels(
 		config.traefik.entrypoint;
 	labels[`traefik.http.services.${MIRROR_ROUTER}.loadbalancer.server.port`] =
 		String(MIRROR_INTERNAL_PORT);
+	labels[`traefik.http.routers.${MIRROR_ROUTER}.tls`] = "true";
 	if (resolver) {
-		labels[`traefik.http.routers.${MIRROR_ROUTER}.tls`] = "true";
 		labels[`traefik.http.routers.${MIRROR_ROUTER}.tls.certresolver`] = resolver;
 	}
 	return labels;

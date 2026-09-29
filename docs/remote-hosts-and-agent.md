@@ -47,10 +47,13 @@ From `/remote-hosts` → **Register by hand**: a name, plus a connection type:
   for a secured Docker API), or `ssh://user@host`, pointed at the target daemon
   directly.
 - **Homerun Agent**: a URL + bearer token for a host running the standalone
-  agent binary instead, see [Homerun Agent](#homerun-agent) below. The token is
-  verified live against the agent before the host is saved. This is the
-  lighter-weight alternative that doesn't require exposing the Docker daemon
-  itself.
+  agent binary instead, see [Homerun Agent](#homerun-agent) below. The form
+  shows copy-ready commands to start the agent (the installer on Linux, or
+  `docker run` anywhere Docker runs, macOS included) and to read its token,
+  pinned to your instance's release. **Test connection** checks the URL and
+  token without saving; the token is verified again before the host is saved.
+  This is the lighter-weight alternative that doesn't require exposing the
+  Docker daemon itself.
 
 Either kind builds: a Docker-connection host runs the build directly against
 that daemon's Docker API, an agent host through its own `POST /v1/build`.

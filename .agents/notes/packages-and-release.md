@@ -118,7 +118,12 @@ instead of `nightly` always sorting above `canary` lexically. Every prerelease
 lookup filters by its label (`-canary.` / `-nightly.`): the app's self-update,
 the CLI's `LatestPrerelease`, `install.sh --version=canary|nightly`, each
 channel's keep-five retention, and the `stable` job's "newest canary" check,
-which would otherwise try to release a nightly.
+which would otherwise try to release a nightly. `scripts/publish-nightly.sh`
+does the publishing: it recreates a `v<version>-nightly.<n>` whose tag points at
+a different commit (a re-run or a force-push keeps `n`, so the old tag would
+otherwise ship new binaries under old code), and fails the job unless the
+release ends up published, a prerelease, with every binary uploaded and its tag
+on the pushed SHA.
 
 **A stable release is merging the release PR.** The `canary` job's last step
 runs `releaser` (v1.5.0+) with `release-pr: true`, which force-pushes a

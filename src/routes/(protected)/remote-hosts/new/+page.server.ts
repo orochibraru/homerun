@@ -2,6 +2,8 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
+import { APP_VERSION } from "$lib/server/app-version";
+import { agentSetupCommands } from "$lib/server/node-install-script";
 import { AgentClientService } from "$lib/services/agent-client.service";
 import { encryptSecret } from "$lib/services/secrets";
 
@@ -86,6 +88,10 @@ async function createDockerHost(formData: FormData, base: NewHostBase) {
 
 	return { hostId: host.id, success: true };
 }
+
+export const load = () => ({
+	agentCommands: agentSetupCommands(APP_VERSION),
+});
 
 export const actions = {
 	create: async ({ request, locals }) => {

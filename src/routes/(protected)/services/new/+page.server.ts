@@ -155,6 +155,7 @@ export const load = async ({ url, parent, locals }) => {
 			.filter((c) => providersById.has(c.providerId))
 			.map((c) => ({
 				id: c.providerId,
+				kind: c.providerKind,
 				name: providersById.get(c.providerId)?.name ?? c.providerKind,
 				providerUsername: c.providerUsername,
 			})),

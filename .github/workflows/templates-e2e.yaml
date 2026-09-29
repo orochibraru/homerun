@@ -88,18 +88,6 @@ jobs:
       max-parallel: 20
       matrix:
         slug: ${{ fromJSON(needs.plan.outputs.slugs) }}
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:18-alpine
-        env:
-          POSTGRES_USER: homerun
-          POSTGRES_PASSWORD: homerun
-          POSTGRES_DB: homerun_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U homerun -d homerun_test" --health-interval
-          5s --health-timeout 5s --health-retries 20
     env:
       HOMERUN_TEST_POSTGRES_URL: postgres://homerun:homerun@127.0.0.1:5432/homerun_test
     steps:
@@ -142,16 +130,35 @@ jobs:
       - name: Seed the infrastructure images from Docker Hub mirrors
         run: |
           trivy="$(grep -oE 'aquasec/trivy:[0-9.]+' internal/jobs/imagescan/scan.go)"
-          seed() {
+          pull() {
             for attempt in 1 2 3; do
               docker pull -q "$1" && docker tag "$1" "$2" && return 0
               sleep $((attempt * 10))
             done
             return 1
           }
-          seed public.ecr.aws/docker/library/traefik:v3 traefik:v3
-          seed public.ecr.aws/docker/library/registry:2 registry:2
-          seed "ghcr.io/aquasecurity/trivy:${trivy#*:}" "$trivy"
+          seed() {
+            for source in mirror.gcr.io/library public.ecr.aws/docker/library docker.io/library; do
+              pull "$source/$1" "$1" && return 0
+            done
+            return 1
+          }
+          seed postgres:18-alpine
+          seed traefik:v3
+          seed registry:2
+          pull "ghcr.io/aquasecurity/trivy:${trivy#*:}" "$trivy"
+
+      - name: Start Postgres
+        run: |
+          docker run -d --name ci-postgres -p 5432:5432 \
+            -e POSTGRES_USER=homerun -e POSTGRES_PASSWORD=homerun -e POSTGRES_DB=homerun_test \
+            postgres:18-alpine
+          for _ in $(seq 60); do
+            docker exec ci-postgres pg_isready -U homerun -d homerun_test && exit 0
+            sleep 2
+          done
+          docker logs ci-postgres
+          exit 1
 
       - name: Install Playwright's Chromium
         run: bunx playwright install --with-deps chromium

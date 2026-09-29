@@ -6,14 +6,17 @@
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { GIT_PROVIDER_KIND_LABELS } from "$lib/git-provider-kinds";
 	import {
 		hasDockerfile,
 		listProviderRepos,
 	} from "$lib/remote/git-repos.remote";
+	import type { GitProviderKind } from "$lib/server/db/schema";
 	import type { GitRepo } from "$lib/services/git-provider.service";
 
 	interface ConnectedProvider {
 		id: string;
+		kind: GitProviderKind;
 		name: string;
 		providerUsername: string;
 	}
@@ -43,8 +46,12 @@
 	let reposPromise = $state<Promise<GitRepo[]> | null>(null);
 	const providerLabel = $derived.by(() => {
 		const current = providers.find((p) => p.id === providerId);
-		return current ? `${current.name} (${current.providerUsername})` : "";
+		return current ? providerOptionLabel(current) : "";
 	});
+
+	function providerOptionLabel(p: ConnectedProvider): string {
+		return `${GIT_PROVIDER_KIND_LABELS[p.kind]} · ${p.name} (${p.providerUsername})`;
+	}
 	let selectedRepo = $state(
 		untrack(() =>
 			providerId === initialProviderId ? (initialRepo ?? "") : "",
@@ -90,7 +97,7 @@
         <Select.Trigger>{providerLabel}</Select.Trigger>
         <Select.Content>
           {#each providers as p (p.id)}
-            <Select.Item label="{p.name} ({p.providerUsername})" value={p.id} />
+            <Select.Item label={providerOptionLabel(p)} value={p.id} />
           {/each}
         </Select.Content>
       </Select.Root>

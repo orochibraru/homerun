@@ -190,11 +190,4 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           SHA: ${{ github.sha }}
           VERSION: ${{ needs.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          gh release view "v$VERSION" >/dev/null 2>&1 || gh release create "v$VERSION" --draft --prerelease --target "$SHA" \
-            --title "Nightly $VERSION" \
-            --notes "Nightly build of $SHA: prek passed, nothing else ran. It may be broken. Run it with HOMERUN_VERSION=nightly."
-          bun scripts/upload-release-assets.ts "v$VERSION" --prerelease
-          gh release list --limit 100 --json tagName,isPrerelease --jq '[.[] | select(.isPrerelease and (.tagName | contains("-nightly.")))] | .[5:] | .[].tagName' \
-            | xargs -r -n1 gh release delete --cleanup-tag --yes
+        run: scripts/publish-nightly.sh

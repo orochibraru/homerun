@@ -34,6 +34,7 @@ describe("registryLabels", () => {
 			publicHost: "registry.example.com",
 		});
 		expect(labels["traefik.enable"]).toBe("true");
+		expect(labels["traefik.http.routers.homerun-registry.tls"]).toBe("true");
 		expect(labels["traefik.http.routers.homerun-registry.rule"]).toBe(
 			"Host(`registry.example.com`)",
 		);

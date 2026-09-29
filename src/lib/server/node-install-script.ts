@@ -3,6 +3,24 @@ export function releaseTagFor(version: string): string {
 	return /^\d+\.\d+\.\d+/.test(version) ? `v${version}` : "latest";
 }
 
+/** Copy-ready commands for running the worker in agent mode by hand, pinned to this instance's release. */
+export function agentSetupCommands(version: string): {
+	docker: string;
+	dockerToken: string;
+	installer: string;
+	installerToken: string;
+} {
+	const tag = releaseTagFor(version);
+	const versionFlag = tag === "latest" ? "" : ` --version=${tag}`;
+	const imageTag = tag === "latest" ? "latest" : tag.slice(1);
+	return {
+		docker: `docker run -d --name homerun-worker --restart unless-stopped -p 7420:7420 -v /var/run/docker.sock:/var/run/docker.sock -v homerun-worker-token:/root/.homerun-worker docker.io/orochibraru/homerun-worker:${imageTag}`,
+		dockerToken: "docker exec homerun-worker cat /root/.homerun-worker/token",
+		installer: `curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh | sudo bash -s -- --mode=agent${versionFlag}`,
+		installerToken: "sudo -u homerun cat /home/homerun/.homerun-worker/token",
+	};
+}
+
 /**
  * The command an admin runs on a fresh server to enroll it,
  * piping the install script into bash with the one-time token.

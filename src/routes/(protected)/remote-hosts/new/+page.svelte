@@ -1,17 +1,18 @@
 <script lang="ts">
 	import { ChevronDown } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
+	import CopyBox from "$lib/components/copy-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { testAgentConnection } from "$lib/remote/remote-hosts.remote";
 	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	import { enhanceToast, toastError } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -20,6 +21,29 @@
 	let kind = $state<"docker" | "agent">("docker");
 	let showTls = $state(false);
 	let submitting = $state(false);
+	let agentUrl = $state("");
+	let agentToken = $state("");
+	let testing = $state(false);
+
+	async function testCallback() {
+		testing = true;
+		try {
+			await testAgentConnection({
+				agentToken: agentToken.trim(),
+				agentUrl: agentUrl.trim(),
+			});
+		} finally {
+			testing = false;
+		}
+	}
+
+	function handleTest() {
+		return toast.promise(testCallback(), {
+			error: (error) => toastError(error, "Couldn't reach the agent."),
+			loading: "Testing the connection",
+			success: "Agent reachable, token accepted.",
+		});
+	}
 </script>
 
 <div class="p-5 md:p-6">
@@ -98,37 +122,59 @@
         </div>
 
         {#if kind === "agent"}
-            <div
-                class="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400"
-            >
-                A remote-hosted service (docker *or* agent) isn't on the shared
-                network or routed through Traefik, see the Networking tab's own
-                docs for what that means in practice.
+            <div class="space-y-3 rounded-md border border-border p-4">
+                <p class="text-text text-sm font-medium">Set up the agent</p>
+                <p class="text-text-muted text-xs">
+                    Fresh Linux server? Skip this form: <b>Add a server</b> on
+                    <a class="text-accent underline" href={resolve("/remote-hosts")}>Remote Hosts</a>
+                    hands you one command that installs and registers it. Otherwise,
+                    on the build host, either:
+                </p>
+                <div class="space-y-1.5">
+                    <p class="text-text-subtle text-xs">
+                        Linux, with the installer (sets up rootless Docker too):
+                    </p>
+                    <CopyBox label="Copy command" value={data.agentCommands.installer} />
+                    <p class="text-text-subtle text-xs">Then read its token:</p>
+                    <CopyBox label="Copy command" value={data.agentCommands.installerToken} />
+                </div>
+                <div class="space-y-1.5">
+                    <p class="text-text-subtle text-xs">
+                        Docker already running (any OS, incl. Docker Desktop on macOS):
+                    </p>
+                    <CopyBox label="Copy command" value={data.agentCommands.docker} />
+                    <p class="text-text-subtle text-xs">Then read its token:</p>
+                    <CopyBox label="Copy command" value={data.agentCommands.dockerToken} />
+                </div>
+                <p class="text-text-subtle text-xs">
+                    This instance has to reach port 7420 on that host. Builds run
+                    there; the resulting service still runs here, behind Traefik.
+                </p>
             </div>
             <div>
                 <label class={label} for="agentUrl">Agent URL</label>
                 <Input
-                    class=""
                     id="agentUrl"
                     name="agentUrl"
                     placeholder="http://192.168.1.50:7420"
                     required
                     type="text"
+                    bind:value={agentUrl}
                 />
                 <p class="mt-1.5 text-xs text-text-subtle">
-                    The worker's reachable base URL, port 7420 unless
+                    The host's address as this instance sees it, port 7420 unless
                     WORKER_PORT says otherwise.
                 </p>
             </div>
             <div>
                 <label class={label} for="agentToken">Agent token</label>
                 <Input
-                    class=""
                     id="agentToken"
                     name="agentToken"
-                    placeholder="printed on boot, or in ~/.homerun-worker/token"
+                    placeholder="Output of the token command above"
                     required
                     type="password"
+                    bind:value={agentToken}
                 />
             </div>
         {:else}
@@ -200,6 +246,16 @@
         {/if}
 
         <div class="flex justify-end gap-3">
+            {#if kind === "agent"}
+                <Button
+                    disabled={testing || !(agentUrl.trim() && agentToken.trim())}
+                    onclick={handleTest}
+                    type="button"
+                    variant="outline"
+                >
+                    Test connection
+                </Button>
+            {/if}
             <Button disabled={submitting} type="submit" variant="outline">
                 Add host
             </Button>
