@@ -1,7 +1,7 @@
 /** Traefik's Prometheus metrics on an entrypoint only reachable inside its container, which the traffic sampler reads. */
 export const TRAEFIK_METRICS_PORT = 8082;
 
-/** The flags that turn on the per-service request metrics behind a service's Analytics. */
+/** The flags that turn on the per-service request metrics behind a service's Monitoring. */
 export const TRAEFIK_METRICS_FLAGS: Record<string, string> = {
 	"entrypoints.metrics.address": `:${TRAEFIK_METRICS_PORT}`,
 	"metrics.prometheus": "true",

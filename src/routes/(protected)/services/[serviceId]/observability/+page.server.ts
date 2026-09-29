@@ -1,19 +1,14 @@
-import {
-	type AnalyticsRange,
-	isAnalyticsRange,
-	isTimeZone,
-} from "$lib/analytics-ranges";
-import { AnalyticsService } from "$lib/services/analytics.service";
+import { monitoringRequest } from "$lib/server/monitoring-request";
+import { MonitoringService } from "$lib/services/monitoring.service";
 
 export const load = async ({ cookies, params, url }) => {
-	const requested = url.searchParams.get("range");
-	const range: AnalyticsRange = isAnalyticsRange(requested)
-		? requested
-		: "week";
-	const cookieZone = cookies.get("tz") ?? "";
-	const zone = isTimeZone(cookieZone) ? cookieZone : "UTC";
+	const { range, zone } = monitoringRequest(url, cookies);
 	return {
-		analytics: await AnalyticsService.forService(params.serviceId, range, zone),
+		monitoring: await MonitoringService.forService(
+			params.serviceId,
+			range,
+			zone,
+		),
 		zone,
 	};
 };

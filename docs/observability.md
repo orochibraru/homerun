@@ -1,11 +1,11 @@
 # Observability
 
 The **Observability** tab is where a service tells you how it's doing. It has
-two sections: **Analytics**, its traffic, availability and resource use summed
-up over a range like a website's analytics, and **Events**, its uptime probes,
-live logs, failed deploys and the errors Homerun logged about it.
+two sections: **Monitoring**, its traffic, response time, error rate, uptime and
+resource use over a range, and **Events**, its uptime probes, live logs, failed
+deploys and the errors Homerun logged about it.
 
-## Analytics
+## Monitoring
 
 Pick a range, **Today** (from midnight in your browser's time zone), **7 days**,
 **30 days**, **12 months** or **All time**, and the section shows:
@@ -27,6 +27,16 @@ hover one to read a single point. Everything is kept for a year, so **All time**
 reaches back at most that far. Traffic starts being recorded when an instance
 runs this version: Homerun turns Traefik's metrics on by itself (an entrypoint
 inside the Traefik container, never published), which restarts Traefik once.
+
+## Stacks and the whole instance
+
+The same view exists one level up. A stack's **Monitoring** tab covers its
+services and every substack's: requests, response time, error rate, bandwidth
+and uptime summed over all of them, and CPU and memory summed minute by minute,
+so the peak is the stack's real peak rather than the sum of each service's.
+**Monitoring** in the sidebar covers every service on the instance, with this
+host's own CPU and memory instead of the sum of the services'. Both add a **By
+service** table, busiest first, that links to each service's own monitoring.
 
 ## Uptime
 

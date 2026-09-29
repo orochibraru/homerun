@@ -152,9 +152,9 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 
 ### Observability & notifications
 
-- **[Service analytics](docs/observability.md#analytics)**: requests, average
-  response time, error rate, bandwidth, uptime and CPU and memory per service,
-  from today to all time, recorded from Traefik's metrics every minute
+- **[Monitoring](docs/observability.md#monitoring)**: requests, average response
+  time, error rate, bandwidth, uptime and CPU and memory per service, from today
+  to all time, recorded from Traefik's metrics every minute
 
 - **[Uptime probes](docs/observability.md#uptime)**: every service probed every
   minute from the Docker network and from its public hostname, with failure

@@ -228,9 +228,21 @@ const SHOTS: Shot[] = [
 	{
 		doc: "/services/:id/observability",
 		expect: /Avg response time/i,
-		name: "analytics",
+		name: "monitoring",
 		path: () => `/services/${seeded.serviceIds.web}/observability`,
-		prepare: waitForAnalytics,
+		prepare: waitForMonitoring,
+	},
+	{
+		doc: "/stacks/:id/monitoring",
+		expect: /By service/i,
+		name: "stack-monitoring",
+		path: () => `/stacks/${seeded.stackId}/monitoring`,
+	},
+	{
+		doc: "/monitoring",
+		expect: /By service/i,
+		name: "instance-monitoring",
+		path: () => "/monitoring",
 	},
 ];
 
@@ -271,8 +283,8 @@ function pick(form: string, name: string): (page: Page) => Promise<void> {
 	};
 }
 
-/** Reloads the Analytics page until the sampler has recorded requests and a resource sample, so the shot shows real numbers. */
-async function waitForAnalytics(page: Page): Promise<void> {
+/** Reloads the Monitoring page until the sampler has recorded requests and a resource sample, so the shot shows real numbers. */
+async function waitForMonitoring(page: Page): Promise<void> {
 	await expect(async () => {
 		await page.reload();
 		await expect(page.getByText("Avg CPU").first()).toBeVisible();

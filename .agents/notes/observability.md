@@ -451,7 +451,7 @@ or losing the recovery; breach timers live in memory and start over. One check's
 events are grouped into at most five messages (critical, warning, the two
 reminder kinds, recovered) on the existing `resource.*` events.
 
-## Service analytics (`traffic_sample`, `TrafficSampleDTO`, `AnalyticsService`, Observability → Analytics)
+## Monitoring (`traffic_sample`, `TrafficSampleDTO`, `MonitoringService`, Observability → Monitoring, stack Monitoring, `/monitoring`)
 
 Traefik runs with Prometheus metrics on an entrypoint only reachable inside its
 container (`TRAEFIK_METRICS_FLAGS`, `:8082`): in every compose file, and in
@@ -469,14 +469,25 @@ means Traefik restarted, and a minute without requests writes no row. Pruned
 past a year with `stat_sample`, and uptime beats are now kept a year too (they
 were a week) so availability covers the long ranges.
 
-`AnalyticsService.forService(serviceId, range, zone)` sums a range: totals and a
-series from `traffic_sample`, `stat_sample` and `uptime_check`, bucketed by
+`MonitoringService.forService(serviceId, range, zone)` sums a range: totals and
+a series from `traffic_sample`, `stat_sample` and `uptime_check`, bucketed by
 `bucketSecondsFor` (about 48 points, five-minute steps; inlined into the SQL
-like `StatSampleDTO.history`). `$lib/analytics-ranges.ts` owns the ranges:
+like `StatSampleDTO.history`). `$lib/monitoring-ranges.ts` owns the ranges:
 **Today** starts at midnight in the viewer's time zone (`startOfDay`, via `Intl`
-offsets, DST-safe), read from a `tz` cookie the Analytics page sets on mount (it
-invalidates once when the cookie was missing or different, so a first visit
+offsets, DST-safe), read from a `tz` cookie the Monitoring view sets on mount
+(it invalidates once when the cookie was missing or different, so a first visit
 briefly shows UTC). The Observability tab is a sub-nav
-(`observability/+layout.svelte`): the bare route is Analytics, `events/` is what
-the tab used to be (uptime, logs, failed deploys), and every link that meant the
-old content points at `events` now.
+(`observability/+layout.svelte`): the bare route is Monitoring, `events/` is
+what the tab used to be (uptime, logs, failed deploys), and every link that
+meant the old content points at `events` now.
+
+It's called monitoring, never analytics: these are SRE numbers (response time,
+error rate, uptime, resource use), not visitor analytics, and "analytics" would
+read as the latter. `MonitoringService.forScope` takes a `MonitoringScope`: the
+service ids whose traffic and uptime count, and a `ResourceScope` for CPU and
+memory (the same ids, or `"host"` for the instance page, which reads the host's
+own samples). Several services' resources are summed per sampler tick (`ticks()`
+in `StatSampleDTO`, grouping on `created_at`, which every row of one tick
+shares), so a stack's peak is a real simultaneous peak. A stack's scope is the
+stack plus `descendantIds`; `breakdown` returns one row per service in the
+scope, busiest first, for the **By service** table.

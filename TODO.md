@@ -11,7 +11,12 @@ When done delete the entry, no bloat.
 
 ## Medium
 
-<!--  -->
+- [ ] A TLS tab in Settings to install an instance-wide certificate, e.g. a
+      Cloudflare origin certificate for the base domain.
+- [ ] DX pass on spinning Homerun up locally: the compose files and setup steps
+      against what runs now (image mirror, registry, worker, Traefik metrics).
+- [ ] Templates E2E in CI as a matrix, one job per template, for speed and a
+      trace per template.
 
 ## Large
 

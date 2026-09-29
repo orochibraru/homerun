@@ -1,4 +1,4 @@
-export const ANALYTICS_RANGES = [
+export const MONITORING_RANGES = [
 	{ id: "today", label: "Today" },
 	{ id: "week", label: "7 days" },
 	{ id: "month", label: "30 days" },
@@ -6,19 +6,19 @@ export const ANALYTICS_RANGES = [
 	{ id: "all", label: "All time" },
 ] as const;
 
-export type AnalyticsRange = (typeof ANALYTICS_RANGES)[number]["id"];
+export type MonitoringRange = (typeof MONITORING_RANGES)[number]["id"];
 
 const DAY_MS = 86_400_000;
 
-const WINDOW_DAYS: Record<Exclude<AnalyticsRange, "today" | "all">, number> = {
+const WINDOW_DAYS: Record<Exclude<MonitoringRange, "today" | "all">, number> = {
 	month: 30,
 	week: 7,
 	year: 365,
 };
 
 /** Whether `value` is one of the ranges, for a query parameter that might not be. */
-export function isAnalyticsRange(value: unknown): value is AnalyticsRange {
-	return ANALYTICS_RANGES.some((range) => range.id === value);
+export function isMonitoringRange(value: unknown): value is MonitoringRange {
+	return MONITORING_RANGES.some((range) => range.id === value);
 }
 
 /** Whether `zone` is an IANA time zone this runtime knows. */
@@ -74,7 +74,7 @@ export function startOfDay(now: Date, zone: string): Date {
 
 /** Where a range starts: midnight in `zone` for today, a fixed window back otherwise, null for all time. */
 export function rangeStart(
-	range: AnalyticsRange,
+	range: MonitoringRange,
 	now: Date,
 	zone: string,
 ): Date | null {

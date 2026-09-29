@@ -99,6 +99,6 @@ Each part of a service has its own page:
 - [Networking](networking.md), [DNS automation](dns-automation.md) and the
   [per-app login wall](login-wall.md)
 - [Runtime and compute](runtime-and-compute.md) and [swarm mode](swarm-mode.md)
-- [Observability](observability.md): analytics, uptime, logs, errors and the
+- [Observability](observability.md): monitoring, uptime, logs, errors and the
   terminal
 - [Scheduling and the job queue](scheduling.md)

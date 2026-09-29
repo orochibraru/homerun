@@ -1,4 +1,4 @@
-import { and, eq, gte, lt, min, sql } from "drizzle-orm";
+import { and, gte, inArray, lt, min, sql } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type TrafficSample, trafficSample } from "$lib/server/db/schema";
 import type { TrafficCounters } from "$lib/traffic-metrics";
@@ -25,14 +25,43 @@ export interface TrafficPoint {
 	requests: number;
 }
 
-/** The scope a query reads: one service, from `since` on (everything when null). */
-function scope(serviceId: string, since: Date | null) {
-	return since
-		? and(
-				eq(trafficSample.serviceId, serviceId),
-				gte(trafficSample.createdAt, since),
-			)
-		: eq(trafficSample.serviceId, serviceId);
+/** The scope a query reads: these services, from `since` on (everything when null). */
+function scope(serviceIds: string[], since: Date | null) {
+	const services = inArray(trafficSample.serviceId, serviceIds);
+	return since ? and(services, gte(trafficSample.createdAt, since)) : services;
+}
+
+const NO_TRAFFIC: TrafficTotals = {
+	avgResponseMs: null,
+	bytesIn: 0,
+	bytesOut: 0,
+	requests: 0,
+	status4xx: 0,
+	status5xx: 0,
+};
+
+const TOTAL_COLUMNS = {
+	bytesIn: sql<number>`coalesce(sum(${trafficSample.bytesIn}), 0)`,
+	bytesOut: sql<number>`coalesce(sum(${trafficSample.bytesOut}), 0)`,
+	durationMs: sql<number>`coalesce(sum(${trafficSample.durationMs}), 0)`,
+	requests: sql<number>`coalesce(sum(${trafficSample.requests}), 0)`,
+	status4xx: sql<number>`coalesce(sum(${trafficSample.status4xx}), 0)`,
+	status5xx: sql<number>`coalesce(sum(${trafficSample.status5xx}), 0)`,
+};
+
+/** One row of `TOTAL_COLUMNS` as numbers, with the average response time worked out. */
+function toTotals(
+	row: Record<keyof typeof TOTAL_COLUMNS, unknown> | undefined,
+): TrafficTotals {
+	const requests = Number(row?.requests ?? 0);
+	return {
+		avgResponseMs: requests ? Number(row?.durationMs) / requests : null,
+		bytesIn: Number(row?.bytesIn ?? 0),
+		bytesOut: Number(row?.bytesOut ?? 0),
+		requests,
+		status4xx: Number(row?.status4xx ?? 0),
+		status5xx: Number(row?.status5xx ?? 0),
+	};
 }
 
 /**
@@ -65,31 +94,35 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 		);
 	}
 
-	/** Totals and the average response time over a range. */
+	/** Totals and the average response time of some services over a range. */
 	static async totals(
-		serviceId: string,
+		serviceIds: string[],
 		since: Date | null,
 	): Promise<TrafficTotals> {
+		if (serviceIds.length === 0) {
+			return NO_TRAFFIC;
+		}
 		const [row] = await db
-			.select({
-				bytesIn: sql<number>`coalesce(sum(${trafficSample.bytesIn}), 0)`,
-				bytesOut: sql<number>`coalesce(sum(${trafficSample.bytesOut}), 0)`,
-				durationMs: sql<number>`coalesce(sum(${trafficSample.durationMs}), 0)`,
-				requests: sql<number>`coalesce(sum(${trafficSample.requests}), 0)`,
-				status4xx: sql<number>`coalesce(sum(${trafficSample.status4xx}), 0)`,
-				status5xx: sql<number>`coalesce(sum(${trafficSample.status5xx}), 0)`,
-			})
+			.select(TOTAL_COLUMNS)
 			.from(trafficSample)
-			.where(scope(serviceId, since));
-		const requests = Number(row?.requests ?? 0);
-		return {
-			avgResponseMs: requests ? Number(row?.durationMs) / requests : null,
-			bytesIn: Number(row?.bytesIn ?? 0),
-			bytesOut: Number(row?.bytesOut ?? 0),
-			requests,
-			status4xx: Number(row?.status4xx ?? 0),
-			status5xx: Number(row?.status5xx ?? 0),
-		};
+			.where(scope(serviceIds, since));
+		return toTotals(row);
+	}
+
+	/** The same totals for each of the services, keyed by service id; services without traffic are left out. */
+	static async totalsByService(
+		serviceIds: string[],
+		since: Date | null,
+	): Promise<Map<string, TrafficTotals>> {
+		if (serviceIds.length === 0) {
+			return new Map();
+		}
+		const rows = await db
+			.select({ ...TOTAL_COLUMNS, serviceId: trafficSample.serviceId })
+			.from(trafficSample)
+			.where(scope(serviceIds, since))
+			.groupBy(trafficSample.serviceId);
+		return new Map(rows.map((row) => [row.serviceId, toTotals(row)]));
 	}
 
 	/**
@@ -99,10 +132,13 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 	 * bind parameter.
 	 */
 	static async series(
-		serviceId: string,
+		serviceIds: string[],
 		since: Date | null,
 		bucketSeconds: number,
 	): Promise<TrafficPoint[]> {
+		if (serviceIds.length === 0) {
+			return [];
+		}
 		const bucket = sql<number>`floor(extract(epoch from ${trafficSample.createdAt}) / ${sql.raw(String(Math.trunc(bucketSeconds)))})`;
 		const rows = await db
 			.select({
@@ -112,7 +148,7 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 				requests: sql<number>`sum(${trafficSample.requests})`,
 			})
 			.from(trafficSample)
-			.where(scope(serviceId, since))
+			.where(scope(serviceIds, since))
 			.groupBy(bucket)
 			.orderBy(bucket);
 		return rows.map((row) => {
@@ -126,12 +162,15 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 		});
 	}
 
-	/** When a service's first traffic row was written, null when it has none. */
-	static async firstAt(serviceId: string): Promise<Date | null> {
+	/** When the first traffic row of any of the services was written, null when there's none. */
+	static async firstAt(serviceIds: string[]): Promise<Date | null> {
+		if (serviceIds.length === 0) {
+			return null;
+		}
 		const [row] = await db
 			.select({ first: min(trafficSample.createdAt) })
 			.from(trafficSample)
-			.where(eq(trafficSample.serviceId, serviceId));
+			.where(inArray(trafficSample.serviceId, serviceIds));
 		return row?.first ?? null;
 	}
 

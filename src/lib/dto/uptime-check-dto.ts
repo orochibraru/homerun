@@ -120,28 +120,26 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 		return new Map(rows.map((row) => [`${row.serviceId}:${row.kind}`, row]));
 	}
 
-	/** Per probe kind, how many checks ran and passed from `since` on (all history when null), and their average latency. */
+	/** Per probe kind, how many checks of these services ran and passed from `since` on (all history when null), and their average latency. */
 	static async availability(
-		serviceId: string,
+		serviceIds: string[],
 		since: Date | null,
 	): Promise<Record<ProbeKind, Availability>> {
-		const rows = await db
-			.select({
-				avgLatencyMs: sql<number | null>`avg(${uptimeCheck.latencyMs})`,
-				checks: sql<number>`count(*)`,
-				kind: uptimeCheck.kind,
-				ok: sql<number>`count(*) filter (where ${uptimeCheck.ok})`,
-			})
-			.from(uptimeCheck)
-			.where(
-				since
-					? and(
-							eq(uptimeCheck.serviceId, serviceId),
-							gte(uptimeCheck.checkedAt, since),
-						)
-					: eq(uptimeCheck.serviceId, serviceId),
-			)
-			.groupBy(uptimeCheck.kind);
+		const services = inArray(uptimeCheck.serviceId, serviceIds);
+		const rows = serviceIds.length
+			? await db
+					.select({
+						avgLatencyMs: sql<number | null>`avg(${uptimeCheck.latencyMs})`,
+						checks: sql<number>`count(*)`,
+						kind: uptimeCheck.kind,
+						ok: sql<number>`count(*) filter (where ${uptimeCheck.ok})`,
+					})
+					.from(uptimeCheck)
+					.where(
+						since ? and(services, gte(uptimeCheck.checkedAt, since)) : services,
+					)
+					.groupBy(uptimeCheck.kind)
+			: [];
 		const of = (kind: ProbeKind): Availability => {
 			const row = rows.find((candidate) => candidate.kind === kind);
 			return {

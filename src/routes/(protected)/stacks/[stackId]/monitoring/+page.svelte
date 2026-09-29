@@ -2,6 +2,8 @@
 	import { Clock } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
+	import MonitoringView from "$lib/components/monitoring/monitoring-view.svelte";
+	import ServiceBreakdownTable from "$lib/components/monitoring/service-breakdown.svelte";
 	import ServiceUsageTable from "$lib/components/service-usage-table.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { timeAgo } from "$lib/formatting";
@@ -12,10 +14,22 @@
 	onMount(() => title.set(`${data.stack.name} · Monitoring`));
 
 	const running = $derived(
-		data.services.filter((svc) => svc.currentStatus === "running").length,
+		data.scopedServices.filter((svc) => svc.currentStatus === "running").length,
 	);
-	const serviceIds = $derived(data.services.map((svc) => svc.id));
+	const serviceIds = $derived(data.scopedServices.map((svc) => svc.id));
 </script>
+
+<div class="mb-5 space-y-5">
+  {#if data.substackCount > 0}
+    <p class="text-text-muted text-sm">
+      Covers this stack and its {data.substackCount} substack{data.substackCount === 1
+        ? ""
+        : "s"}.
+    </p>
+  {/if}
+  <MonitoringView monitoring={data.monitoring} zone={data.zone} />
+  <ServiceBreakdownTable rows={data.breakdown} />
+</div>
 
 <div class="mb-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
   <div class="panel divide-border flex divide-x rounded-xl">
@@ -24,7 +38,7 @@
         <span class="bg-accent size-1.5 rounded-full"></span>
         Services
       </p>
-      <p class="metric mt-2">{data.services.length}</p>
+      <p class="metric mt-2">{data.scopedServices.length}</p>
     </div>
     <div class="min-w-0 flex-1 px-4 py-3">
       <p class="eyebrow flex items-center gap-1.5">

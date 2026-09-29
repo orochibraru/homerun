@@ -53,7 +53,11 @@ there is no demo instance.
 - `settings-dark.webp` — `/settings`
 - `users.webp` — `/users`
 - `users-dark.webp` — `/users`
-- `analytics.webp` — `/services/:id/observability`
-- `analytics-dark.webp` — `/services/:id/observability`
+- `monitoring.webp` — `/services/:id/observability`
+- `monitoring-dark.webp` — `/services/:id/observability`
+- `stack-monitoring.webp` — `/stacks/:id/monitoring`
+- `stack-monitoring-dark.webp` — `/stacks/:id/monitoring`
+- `instance-monitoring.webp` — `/monitoring`
+- `instance-monitoring-dark.webp` — `/monitoring`
 - `sign-in.webp` — `/auth/sign-in`
 - `sign-in-dark.webp` — `/auth/sign-in`

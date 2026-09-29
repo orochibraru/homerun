@@ -329,13 +329,13 @@ config's `testDir` points at the subfolder.
   as a **local process** sharing the host's Docker daemon. It would not work
   under `E2E_IMAGE`, where the app runs in a container with no socket mounted :
   don't set that variable for this pipeline.
-- **The Analytics shot has real traffic behind it.** `beforeAll` starts the
+- **The Monitoring shot has real traffic behind it.** `beforeAll` starts the
   templates suite's throwaway Traefik (`tests/e2e/templates/traefik.ts`'s
   `startTraefikWith`, with the Prometheus metrics flags), which the app finds by
   image like a real install's. After the deploys, a timer sends HTTPS requests
-  (a few of them 404s) through it to the marketing site, and the Analytics shot
+  (a few of them 404s) through it to the marketing site, and the Monitoring shot
   runs last, reloading until the sampler has recorded requests and a resource
-  sample (`waitForAnalytics`, up to 150s). The timer and Traefik are stopped in
+  sample (`waitForMonitoring`, up to 150s). The timer and Traefik are stopped in
   `afterAll`.
 - **Nothing that shows the host running the pipeline.** Docker Cleanup was tried
   and dropped: it lists every image, container and volume on the machine, which

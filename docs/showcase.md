@@ -42,15 +42,24 @@ and its log tail.
 ![A service's overview](images/service.webp)
 ![A service's overview, dark](images/service-dark.webp)
 
-## Analytics
+## Monitoring
 
 A service's traffic and health over today, the last week, month or year, or all
 time: requests, average response time, error rate and bandwidth read from
 Traefik's metrics every minute, uptime from the probes, and CPU and memory from
 the resource samples, with a chart for each.
 
-![A service's analytics](images/analytics.webp)
-![A service's analytics, dark](images/analytics-dark.webp)
+![A service's monitoring](images/monitoring.webp)
+![A service's monitoring, dark](images/monitoring-dark.webp)
+
+The same for a whole stack, its substacks included, and for the instance, with a
+table of every service in it, busiest first:
+
+![A stack's monitoring](images/stack-monitoring.webp)
+![A stack's monitoring, dark](images/stack-monitoring-dark.webp)
+
+![The instance's monitoring](images/instance-monitoring.webp)
+![The instance's monitoring, dark](images/instance-monitoring-dark.webp)
 
 ## Live logs
 

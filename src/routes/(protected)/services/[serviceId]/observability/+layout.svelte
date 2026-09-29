@@ -11,7 +11,7 @@
 				serviceId: data.service.id,
 			}),
 			icon: BarChart3,
-			label: "Analytics",
+			label: "Monitoring",
 		},
 		{
 			href: resolve("/(protected)/services/[serviceId]/observability/events", {

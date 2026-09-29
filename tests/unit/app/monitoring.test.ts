@@ -9,19 +9,19 @@ mock.module("$app/environment", () => ({
 
 const {
 	bucketSecondsFor,
-	isAnalyticsRange,
+	isMonitoringRange,
 	isTimeZone,
 	rangeStart,
 	startOfDay,
-} = await import("../../../src/lib/analytics-ranges");
+} = await import("../../../src/lib/monitoring-ranges");
 const {
 	counterDelta,
 	countersBySlug,
 	parseTraefikMetrics,
 	slugForTraefikService,
 } = await import("../../../src/lib/traffic-metrics");
-const { AnalyticsService, padBuckets } = await import(
-	"../../../src/lib/services/analytics.service"
+const { MonitoringService, padBuckets } = await import(
+	"../../../src/lib/services/monitoring.service"
 );
 const { StatsSampler } = await import(
 	"../../../src/lib/services/stats/stats-sampler"
@@ -107,7 +107,7 @@ describe("traffic metrics", () => {
 	});
 });
 
-describe("analytics ranges", () => {
+describe("monitoring ranges", () => {
 	const now = new Date("2026-09-28T22:30:00Z");
 
 	test("today starts at local midnight, DST included", () => {
@@ -136,8 +136,8 @@ describe("analytics ranges", () => {
 		expect(bucketSecondsFor(0)).toBe(300);
 		expect(bucketSecondsFor(86_400_000)).toBe(1800);
 		expect(bucketSecondsFor(365 * 86_400_000) % 300).toBe(0);
-		expect(isAnalyticsRange("month")).toBe(true);
-		expect(isAnalyticsRange("decade")).toBe(false);
+		expect(isMonitoringRange("month")).toBe(true);
+		expect(isMonitoringRange("decade")).toBe(false);
 		expect(isTimeZone("Europe/Paris")).toBe(true);
 		expect(isTimeZone("Mars/Olympus")).toBe(false);
 	});
@@ -156,7 +156,7 @@ describe("padBuckets", () => {
 	});
 });
 
-describe("AnalyticsService", () => {
+describe("MonitoringService", () => {
 	afterEach(() => restoreStubs());
 
 	test("all time starts at the oldest record and asks every source", async () => {
@@ -178,7 +178,7 @@ describe("AnalyticsService", () => {
 		stub(StatSampleDTO, "totals", async () => ({ avgCpuPercent: 1 }));
 		stub(StatSampleDTO, "series", async () => []);
 		stub(UptimeCheckDTO, "availability", async () => ({}));
-		const result = await AnalyticsService.forService(
+		const result = await MonitoringService.forService(
 			"s1",
 			"all",
 			"UTC",
@@ -203,7 +203,7 @@ describe("AnalyticsService", () => {
 			stub(target, key, async () => []);
 		}
 		expect(
-			(await AnalyticsService.forService("s1", "all", "UTC")).bucketSeconds,
+			(await MonitoringService.forService("s1", "all", "UTC")).bucketSeconds,
 		).toBe(300);
 	});
 });
@@ -288,5 +288,118 @@ describe("StatsSampler traffic", () => {
 			await sampler.tick();
 		}
 		expect(pruned).toBe(1);
+	});
+});
+
+describe("scoped monitoring", () => {
+	afterEach(() => restoreStubs());
+
+	test("a scope asks each source for its own services, the host for resources", async () => {
+		const asked: unknown[] = [];
+		const record =
+			(name: string) =>
+			async (...args: unknown[]) => {
+				asked.push([name, args[0]]);
+				return name.endsWith("series") ? [] : {};
+			};
+		stub(TrafficSampleDTO, "totals", record("traffic.totals"));
+		stub(TrafficSampleDTO, "series", record("traffic.series"));
+		stub(StatSampleDTO, "totals", record("stat.totals"));
+		stub(StatSampleDTO, "series", record("stat.series"));
+		stub(UptimeCheckDTO, "availability", record("uptime"));
+		await MonitoringService.forScope(
+			{ resources: "host", serviceIds: ["a", "b"] },
+			"week",
+			"UTC",
+		);
+		expect(asked).toEqual([
+			["traffic.totals", ["a", "b"]],
+			["traffic.series", ["a", "b"]],
+			["stat.totals", "host"],
+			["stat.series", "host"],
+			["uptime", ["a", "b"]],
+		]);
+	});
+
+	test("the breakdown lists every service, busiest first, idle ones with zeros", async () => {
+		stub(
+			TrafficSampleDTO,
+			"totalsByService",
+			async () =>
+				new Map([
+					[
+						"b",
+						{
+							avgResponseMs: 5,
+							bytesIn: 0,
+							bytesOut: 10,
+							requests: 40,
+							status4xx: 1,
+							status5xx: 0,
+						},
+					],
+					[
+						"c",
+						{
+							avgResponseMs: 9,
+							bytesIn: 0,
+							bytesOut: 1,
+							requests: 2,
+							status4xx: 0,
+							status5xx: 0,
+						},
+					],
+				]),
+		);
+		stub(
+			StatSampleDTO,
+			"averagesByService",
+			async () =>
+				new Map([
+					["a", { avgCpuPercent: 3, avgMemUsedMb: 20 }],
+					["d", { avgCpuPercent: 9, avgMemUsedMb: 20 }],
+				]),
+		);
+		const rows = await MonitoringService.breakdown(["a", "b", "c", "d"], null);
+		expect(rows.map((row) => row.serviceId)).toEqual(["b", "c", "d", "a"]);
+		expect(rows[3]).toMatchObject({ avgCpuPercent: 3, requests: 0 });
+		expect(rows[1]?.avgCpuPercent).toBeNull();
+	});
+});
+
+describe("monitoring formatting and requests", () => {
+	test("formats counts, durations, shares and sizes", async () => {
+		const { formatCount, formatMb, formatMs, formatPercent } = await import(
+			"../../../src/lib/metrics-format"
+		);
+		expect(formatCount(1234)).toBe((1234).toLocaleString());
+		expect(formatCount(25_000)).not.toContain("25,000");
+		expect(formatMs(null)).toBe("—");
+		expect(formatMs(42.4)).toBe("42 ms");
+		expect(formatMs(1500)).toBe("1.50 s");
+		expect(formatPercent(1, 4)).toBe("25.0%");
+		expect(formatPercent(1, 0)).toBe("—");
+		expect(formatMb(null)).toBe("—");
+		expect(formatMb(512)).toBe("512 MB");
+		expect(formatMb(2048)).toBe("2.00 GB");
+	});
+
+	test("reads the range and time zone, falling back to a week in UTC", async () => {
+		const { monitoringRequest } = await import(
+			"../../../src/lib/server/monitoring-request"
+		);
+		const cookies = (tz?: string) => ({ get: () => tz });
+		expect(
+			monitoringRequest(
+				new URL("http://x/?range=today"),
+				cookies("Europe/Paris"),
+			),
+		).toEqual({ range: "today", zone: "Europe/Paris" });
+		expect(
+			monitoringRequest(
+				new URL("http://x/?range=decade"),
+				cookies("Mars/Base"),
+			),
+		).toEqual({ range: "week", zone: "UTC" });
 	});
 });

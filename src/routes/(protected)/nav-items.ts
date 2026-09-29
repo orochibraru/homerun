@@ -1,5 +1,6 @@
 import {
 	Activity,
+	BarChart3,
 	BookOpen,
 	Boxes,
 	CalendarClock,
@@ -50,6 +51,14 @@ export const allNavItems = [
 		href: resolve("/deployments"),
 		icon: History,
 		label: "Deployments",
+	},
+	{
+		adminOnly: false,
+		category: "Workspace",
+		exact: false,
+		href: resolve("/monitoring"),
+		icon: BarChart3,
+		label: "Monitoring",
 	},
 	{
 		adminOnly: false,

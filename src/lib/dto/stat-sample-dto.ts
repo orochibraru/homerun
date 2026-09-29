@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lt, min, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, min, sql } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type StatSample, statSample } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -27,6 +27,15 @@ export interface ResourceTotals {
 	memLimitMb: number | null;
 	peakCpuPercent: number | null;
 	peakMemUsedMb: number | null;
+}
+
+/** Whose resource use a query sums: some services, or the host itself. */
+export type ResourceScope = { serviceIds: string[] } | "host";
+
+/** A service's average CPU and memory over a range, for a breakdown table. */
+export interface ServiceResourceAverages {
+	avgCpuPercent: number;
+	avgMemUsedMb: number;
 }
 
 /** One chart bucket of resource use. */
@@ -67,12 +76,43 @@ const RANGES: Record<
 /** Samples older than this are pruned by the sampler : a year of minute samples is the retention ceiling. */
 const RETENTION_SECONDS = 31_536_000;
 
-/** One service's samples from `since` on, all of them when null. */
-function sinceScope(serviceId: string, since: Date | null) {
-	return since
-		? and(eq(statSample.serviceId, serviceId), gte(statSample.createdAt, since))
-		: eq(statSample.serviceId, serviceId);
+/** The samples a scope covers from `since` on, all of them when null; null when the scope is no services at all. */
+function scopeFilter(scope: ResourceScope, since: Date | null) {
+	if (scope !== "host" && scope.serviceIds.length === 0) {
+		return null;
+	}
+	const who =
+		scope === "host"
+			? isNull(statSample.serviceId)
+			: inArray(statSample.serviceId, scope.serviceIds);
+	return since ? and(who, gte(statSample.createdAt, since)) : who;
 }
+
+/**
+ * One row per sampler tick summing the scope's samples: every row of a tick
+ * carries the same timestamp, so the sum is the scope's use at that minute.
+ */
+function ticks(filter: NonNullable<ReturnType<typeof scopeFilter>>) {
+	return db
+		.select({
+			at: statSample.createdAt,
+			cpu: sql<number>`sum(${statSample.cpuPercent})`.as("cpu"),
+			limit: sql<number | null>`sum(${statSample.memLimitMb})`.as("mem_limit"),
+			mem: sql<number>`sum(${statSample.memUsedMb})`.as("mem"),
+		})
+		.from(statSample)
+		.where(filter)
+		.groupBy(statSample.createdAt)
+		.as("ticks");
+}
+
+const NO_RESOURCES: ResourceTotals = {
+	avgCpuPercent: null,
+	avgMemUsedMb: null,
+	memLimitMb: null,
+	peakCpuPercent: null,
+	peakMemUsedMb: null,
+};
 
 /** Wraps `stat_sample` : the resource history behind the dashboard's and a service's own graphs. */
 export class StatSampleDTO extends BaseDTO<StatSample> {
@@ -173,21 +213,25 @@ export class StatSampleDTO extends BaseDTO<StatSample> {
 		}));
 	}
 
-	/** Average and peak CPU and memory of one service from `since` on (all of its history when null). */
+	/** Average and peak CPU and memory of a scope from `since` on (all of its history when null), summed over its services each minute. */
 	static async totals(
-		serviceId: string,
+		scope: ResourceScope,
 		since: Date | null,
 	): Promise<ResourceTotals> {
+		const filter = scopeFilter(scope, since);
+		if (!filter) {
+			return NO_RESOURCES;
+		}
+		const sums = ticks(filter);
 		const [row] = await db
 			.select({
-				avgCpu: sql<number | null>`avg(${statSample.cpuPercent})`,
-				avgMem: sql<number | null>`avg(${statSample.memUsedMb})`,
-				limit: sql<number | null>`max(${statSample.memLimitMb})`,
-				peakCpu: sql<number | null>`max(${statSample.cpuPercent})`,
-				peakMem: sql<number | null>`max(${statSample.memUsedMb})`,
+				avgCpu: sql<number | null>`avg(${sums.cpu})`,
+				avgMem: sql<number | null>`avg(${sums.mem})`,
+				limit: sql<number | null>`max(${sums.limit})`,
+				peakCpu: sql<number | null>`max(${sums.cpu})`,
+				peakMem: sql<number | null>`max(${sums.mem})`,
 			})
-			.from(statSample)
-			.where(sinceScope(serviceId, since));
+			.from(sums);
 		const numberOrNull = (value: unknown) =>
 			value === null || value === undefined ? null : Number(value);
 		return {
@@ -199,21 +243,25 @@ export class StatSampleDTO extends BaseDTO<StatSample> {
 		};
 	}
 
-	/** Average CPU and memory per bucket from `since` on, `bucketSeconds` inlined like `history`'s. */
+	/** A scope's CPU and memory per bucket from `since` on, averaging its per-minute sums; `bucketSeconds` inlined like `history`'s. */
 	static async series(
-		serviceId: string,
+		scope: ResourceScope,
 		since: Date | null,
 		bucketSeconds: number,
 	): Promise<ResourcePoint[]> {
-		const bucket = sql<number>`floor(extract(epoch from ${statSample.createdAt}) / ${sql.raw(String(Math.trunc(bucketSeconds)))})`;
+		const filter = scopeFilter(scope, since);
+		if (!filter) {
+			return [];
+		}
+		const sums = ticks(filter);
+		const bucket = sql<number>`floor(extract(epoch from ${sums.at}) / ${sql.raw(String(Math.trunc(bucketSeconds)))})`;
 		const rows = await db
 			.select({
 				bucket,
-				cpuPercent: sql<number>`avg(${statSample.cpuPercent})`,
-				memUsedMb: sql<number>`avg(${statSample.memUsedMb})`,
+				cpuPercent: sql<number>`avg(${sums.cpu})`,
+				memUsedMb: sql<number>`avg(${sums.mem})`,
 			})
-			.from(statSample)
-			.where(sinceScope(serviceId, since))
+			.from(sums)
 			.groupBy(bucket)
 			.orderBy(bucket);
 		return rows.map((row) => ({
@@ -223,12 +271,42 @@ export class StatSampleDTO extends BaseDTO<StatSample> {
 		}));
 	}
 
-	/** When a service's first sample was written, null when it has none. */
-	static async firstAt(serviceId: string): Promise<Date | null> {
+	/** Each service's average CPU and memory from `since` on, keyed by service id. */
+	static async averagesByService(
+		serviceIds: string[],
+		since: Date | null,
+	): Promise<Map<string, ServiceResourceAverages>> {
+		const filter = scopeFilter({ serviceIds }, since);
+		if (!filter) {
+			return new Map();
+		}
+		const rows = await db
+			.select({
+				cpu: sql<number>`avg(${statSample.cpuPercent})`,
+				mem: sql<number>`avg(${statSample.memUsedMb})`,
+				serviceId: statSample.serviceId,
+			})
+			.from(statSample)
+			.where(filter)
+			.groupBy(statSample.serviceId);
+		return new Map(
+			rows.map((row) => [
+				row.serviceId ?? "",
+				{ avgCpuPercent: Number(row.cpu), avgMemUsedMb: Number(row.mem) },
+			]),
+		);
+	}
+
+	/** When a scope's first sample was written, null when it has none. */
+	static async firstAt(scope: ResourceScope): Promise<Date | null> {
+		const filter = scopeFilter(scope, null);
+		if (!filter) {
+			return null;
+		}
 		const [row] = await db
 			.select({ first: min(statSample.createdAt) })
 			.from(statSample)
-			.where(eq(statSample.serviceId, serviceId));
+			.where(filter);
 		return row?.first ?? null;
 	}
 
