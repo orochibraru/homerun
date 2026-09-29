@@ -272,10 +272,10 @@ jobs:
           set -euo pipefail
           app=docker.io/orochibraru/homerun
           printf 'FROM %s:pr-%s\nENV HOMERUN_APP_VERSION=%s\n' "$app" "$PR" "$VERSION" \
-            | docker buildx build --platform linux/amd64,linux/arm64 -t "$app:$TAG" -t "$app:canary" --push -
+            | docker buildx build --platform linux/amd64,linux/arm64 -t "$app:$TAG" -t "$app:v$VERSION" -t "$app:canary" --push -
           docker buildx imagetools inspect "$app:$TAG"
           worker=docker.io/orochibraru/homerun-worker
-          docker buildx imagetools create -t "$worker:$TAG" -t "$worker:canary" "$worker:pr-$PR"
+          docker buildx imagetools create -t "$worker:$TAG" -t "$worker:v$VERSION" -t "$worker:canary" "$worker:pr-$PR"
           docker buildx imagetools inspect "$worker:$TAG"
 
   cleanup:

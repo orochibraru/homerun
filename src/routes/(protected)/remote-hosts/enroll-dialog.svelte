@@ -45,9 +45,6 @@
         Pass <code>--address=&lt;ip&gt;</code> when the server has several
         interfaces and the default route's isn't the one to use.
       </p>
-      <div class="flex justify-end">
-        <Button onclick={() => (open = false)} variant="outline">Done</Button>
-      </div>
     </div>
   {:else}
     <form

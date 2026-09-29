@@ -88,15 +88,16 @@ Pick one on **Settings → General → Release channel**:
   cut by hand from a canary that's already been running), the same ones the
   installer, `install.sh` and `homerun update` follow.
 - **Canary**: the notice offers every build merged to `main` once it passed the
-  end-to-end tests, published as the `:canary` image and a `vX.Y.Z-canary.N`
+  end-to-end tests, published as the `:canary` and `:vX.Y.Z-canary.N` images and
+  a `vX.Y.Z-canary.N`
   [prerelease](https://github.com/orochibraru/homerun/releases). Updating moves
   your install to the `canary` tag (`HOMERUN_VERSION=canary`).
-- **Nightly**: the same builds as canary, published as the `:nightly` image and
-  a `vX.Y.Z-nightly.N` prerelease as soon as they're built, before the
-  end-to-end tests run. A build that fails them still ships here, so expect
-  breakage. Updating moves your install to the `nightly` tag
-  (`HOMERUN_VERSION=nightly`). The update's own pre-switch check still keeps a
-  build that can't boot off your instance.
+- **Nightly**: the same builds as canary, published as the `:nightly` and
+  `:vX.Y.Z-nightly.N` images and a `vX.Y.Z-nightly.N` prerelease as soon as
+  they're built, before the end-to-end tests run. A build that fails them still
+  ships here, so expect breakage. Updating moves your install to the `nightly`
+  tag (`HOMERUN_VERSION=nightly`). The update's own pre-switch check still keeps
+  a build that can't boot off your instance.
 
 Canary and nightly builds of the same merge share their number `N`, so switching
 between them works both ways. Switching to a more stable channel never

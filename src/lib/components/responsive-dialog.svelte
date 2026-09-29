@@ -34,8 +34,8 @@
 	const sizeClasses: Record<DialogSize, string> = {
 		fullscreen: "!max-w-none !w-screen !h-screen !rounded-none",
 		lg: "md:max-w-3xl lg:max-w-5xl xl:max-w-7xl",
-		md: "max-w-2xl",
-		sm: "max-w-md",
+		md: "sm:max-w-2xl",
+		sm: "sm:max-w-md",
 	};
 </script>
 
@@ -122,7 +122,7 @@ const isDesktop = new MediaQuery("(min-width: 768px)");
       onsubmit={form.onsubmit}
       use:enhance
     >
-      <fieldset class="flex flex-col gap-4" disabled={loading}>
+      <fieldset class="flex min-w-0 flex-col gap-4" disabled={loading}>
         <div class="max-h-[40vh] overflow-y-auto md:max-h-[50vh]">
           {@render content()}
         </div>
@@ -132,7 +132,7 @@ const isDesktop = new MediaQuery("(min-width: 768px)");
   {:else}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <fieldset
-      class="flex flex-col gap-4"
+      class="flex min-w-0 flex-col gap-4"
       disabled={loading}
       onkeydown={(e) => {
         if (e.key === "Enter" && onsubmit && !submitDisabled && !loading) {

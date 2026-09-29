@@ -41,8 +41,8 @@ on:
         required: false
         default: ""
         description:
-          "Release version baked into the app image as HOMERUN_APP_VERSION,
-          empty outside a release"
+          "Release version baked into the app image as HOMERUN_APP_VERSION and
+          tagged v<version> on both images, empty outside a release"
         type: string
       push:
         required: false
@@ -91,6 +91,7 @@ jobs:
           tags: |
             type=raw,value=${{ inputs.image_tag }}
             type=raw,value=${{ inputs.extra_tag }},enable=${{ inputs.extra_tag != '' }}
+            type=raw,value=v${{ inputs.app_version }},enable=${{ inputs.app_version != '' }}
 
       - name: Rename meta bake definition file
         env:
