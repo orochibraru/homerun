@@ -61,8 +61,10 @@
         value={registry.registryUrl}
       />
       <p class="mt-1.5 text-xs text-text-subtle">
-        No scheme : just the host (and port, if not 443), same as what goes
-        before the first slash in an image ref.
+        No scheme : the host (and port, if not 443), plus the namespace your
+        registry keeps images under when it needs one, e.g.
+        <code>git.example.com/&lt;owner&gt;</code> for Gitea or
+        <code>ghcr.io/&lt;user&gt;</code>.
       </p>
     </div>
     <div class="grid gap-4 sm:grid-cols-2">

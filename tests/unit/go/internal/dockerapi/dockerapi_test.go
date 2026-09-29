@@ -188,6 +188,20 @@ func TestSplitRef(t *testing.T) {
 	}
 }
 
+func TestRegistryHost(t *testing.T) {
+	tests := []struct{ address, host string }{
+		{"registry.example.com", "registry.example.com"},
+		{"registry.example.com:5000", "registry.example.com:5000"},
+		{"git.example.com/owner", "git.example.com"},
+		{"https://ghcr.io/owner/team/", "ghcr.io"},
+	}
+	for _, tt := range tests {
+		if got := dockerapi.RegistryHost(tt.address); got != tt.host {
+			t.Errorf("RegistryHost(%q) = %q; want %q", tt.address, got, tt.host)
+		}
+	}
+}
+
 // progress joins lines as a Docker pull/push progress stream body.
 func progress(lines ...string) string {
 	return strings.Join(lines, "\n")

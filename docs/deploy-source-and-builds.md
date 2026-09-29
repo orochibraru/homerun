@@ -86,6 +86,14 @@ change that:
   container on the building daemon, host networking, created on first use), and
   the image is loaded into the daemon afterwards. Builds without a cache
   registry use the daemon's own builder and its local cache.
+
+  `<registry>` is the credential's Registry URL as entered: a host, plus the
+  namespace a registry needs in front of every repository. Gitea, GitHub
+  (`ghcr.io`), GitLab and Docker Hub all refuse a bare `homerun-build-<slug>` (a
+  push fails with `404` on `/v2/.../blobs/uploads/`), so enter
+  `git.example.com/<owner>` or `ghcr.io/<user>` there; a plain `registry:2`
+  takes the host alone.
+
 - **Build server**, a second machine that compiles the image instead of this
   one, see [Build servers](remote-hosts-and-agent.md). With a cache registry the
   built image is published there and pulled back; without one it's streamed

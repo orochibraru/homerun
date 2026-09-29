@@ -43,7 +43,7 @@ fetch() {
 }
 use_cache_builder() {
   if [ -n "$CACHE_USERNAME" ]; then
-    printf '%s' "$CACHE_PASSWORD" | docker login "$CACHE_REGISTRY" --username "$CACHE_USERNAME" --password-stdin >/dev/null
+    printf '%s' "$CACHE_PASSWORD" | docker login "${CACHE_REGISTRY%%/*}" --username "$CACHE_USERNAME" --password-stdin >/dev/null
   fi
   export BUILDX_CONFIG=/tools/buildx
   if ! docker buildx inspect --bootstrap homerun-cache >/dev/null 2>&1; then

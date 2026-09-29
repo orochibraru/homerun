@@ -414,7 +414,7 @@ func (b *Builder) push(ctx context.Context, localTag string, target PushTarget) 
 	}
 	return b.docker.PushImage(ctx, repository, tag, dockerapi.AuthConfig{
 		Password:      target.Password,
-		ServerAddress: target.RegistryURL,
+		ServerAddress: dockerapi.RegistryHost(target.RegistryURL),
 		Username:      target.Username,
 	}, nil)
 }

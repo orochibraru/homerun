@@ -117,7 +117,7 @@ type Registry struct {
 
 // auth converts Registry to the dockerapi.AuthConfig shape.
 func (r Registry) auth() dockerapi.AuthConfig {
-	return dockerapi.AuthConfig{Password: r.Password, ServerAddress: r.RegistryURL, Username: r.Username}
+	return dockerapi.AuthConfig{Password: r.Password, ServerAddress: dockerapi.RegistryHost(r.RegistryURL), Username: r.Username}
 }
 
 // BuildServer is the remote host a git build runs on: a Docker daemon over TCP

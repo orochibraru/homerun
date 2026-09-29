@@ -225,6 +225,15 @@ func SplitRef(ref string) (string, string) {
 	return ref[:lastColon], ref[lastColon+1:]
 }
 
+// RegistryHost is the host (and port) a registry address logs in against,
+// without any scheme or the namespace path a registry like Gitea or GHCR needs
+// in front of every repository.
+func RegistryHost(address string) string {
+	host := strings.TrimPrefix(strings.TrimPrefix(address, "https://"), "http://")
+	host, _, _ = strings.Cut(host, "/")
+	return host
+}
+
 // PullImage pulls ref, forwarding each progress status line to onProgress when
 // given. A failure the daemon only reports inside the progress stream is
 // returned as an error, as it would be by the docker CLI.
