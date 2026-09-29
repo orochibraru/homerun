@@ -3,17 +3,14 @@ import { ADMIN, AUTH_STATE } from "./support";
 
 setup("creates the admin and finishes onboarding", async ({ page }) => {
 	await page.goto("/auth/sign-up");
-	await expect(async () => {
-		if (page.url().endsWith("/onboarding")) {
-			return;
-		}
-		await page.locator("#name").fill(ADMIN.name);
-		await page.locator("#email").fill(ADMIN.email);
-		await page.locator("#password").fill(ADMIN.password);
-		await page.locator("#confirm").fill(ADMIN.password);
-		await page.getByRole("button", { name: "Create account" }).click();
-		await expect(page).toHaveURL(/\/onboarding$/, { timeout: 5000 });
-	}).toPass({ timeout: 60_000 });
+	await page.waitForLoadState("networkidle");
+	await page.locator("#name").fill(ADMIN.name);
+	await page.locator("#email").fill(ADMIN.email);
+	await page.locator("#password").fill(ADMIN.password);
+	await page.locator("#confirm").fill(ADMIN.password);
+	await page.getByRole("button", { name: "Create account" }).click();
+	await expect(page).toHaveURL(/\/onboarding$/, { timeout: 60_000 });
+	await page.waitForLoadState("networkidle");
 
 	const finish = page.getByRole("button", { name: "Finish setup" });
 	await expect(async () => {

@@ -10,6 +10,7 @@
 	"websiteUrl": "https://homebox.software",
 	"sourceUrl": "https://github.com/sysadminsmedia/homebox",
 	"envVars": {
+		"HBOX_AUTH_API_KEY_PEPPER": "{{secret}}",
 		"TZ": "UTC"
 	},
 	"volumes": ["/data"]

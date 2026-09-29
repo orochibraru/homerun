@@ -234,17 +234,6 @@
   <p class="text-text-subtle mt-10 text-center text-xs">
     App icons by <a
       class="hover:text-text-muted underline"
-      href="https://selfh.st/icons/"
-      rel="noopener noreferrer"
-      target="_blank">selfh.st/icons</a
-    >, licensed under
-    <a
-      class="hover:text-text-muted underline"
-      href="https://creativecommons.org/licenses/by/4.0/"
-      rel="noopener noreferrer"
-      target="_blank">CC BY 4.0</a
-    >, and <a
-      class="hover:text-text-muted underline"
       href="https://dashboardicons.com"
       rel="noopener noreferrer"
       target="_blank">Dashboard Icons</a
@@ -254,6 +243,18 @@
       href="https://www.apache.org/licenses/LICENSE-2.0"
       rel="noopener noreferrer"
       target="_blank">Apache 2.0</a
-    >. Logos are their owners' trademarks.
+    >; language and framework logos from
+    <a
+      class="hover:text-text-muted underline"
+      href="https://devicon.dev"
+      rel="noopener noreferrer"
+      target="_blank">Devicon</a
+    > (MIT) and
+    <a
+      class="hover:text-text-muted underline"
+      href="https://simpleicons.org"
+      rel="noopener noreferrer"
+      target="_blank">Simple Icons</a
+    > (CC0). Logos are their owners' trademarks.
   </p>
 </div>

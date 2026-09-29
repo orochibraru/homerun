@@ -4,6 +4,7 @@ import { nativeFetch } from "./support/config";
 import { integrationContext } from "./support/context";
 
 const CONTAINER = `homerun-it-sshd-${process.pid}`;
+const SSHD_IMAGE = "lscr.io/linuxserver/openssh-server:latest";
 const PORT = 12_222;
 let sql: SQL;
 
@@ -40,6 +41,12 @@ describe("machine terminals", () => {
 		expect(publicKey).toStartWith("ssh-ed25519 ");
 
 		Bun.spawnSync(["docker", "rm", "-f", CONTAINER]);
+		let pulled = Bun.spawnSync(["docker", "pull", "-q", SSHD_IMAGE]);
+		for (let attempt = 1; attempt < 3 && !pulled.success; attempt++) {
+			await Bun.sleep(attempt * 10_000);
+			pulled = Bun.spawnSync(["docker", "pull", "-q", SSHD_IMAGE]);
+		}
+		expect(pulled.success, pulled.stderr.toString()).toBe(true);
 		const started = Bun.spawnSync([
 			"docker",
 			"run",
@@ -52,9 +59,9 @@ describe("machine terminals", () => {
 			`PUBLIC_KEY=${publicKey}`,
 			"-e",
 			"USER_NAME=homerun",
-			"lscr.io/linuxserver/openssh-server:latest",
+			SSHD_IMAGE,
 		]);
-		expect(started.exitCode).toBe(0);
+		expect(started.success, started.stderr.toString()).toBe(true);
 		await sql`update instance_settings set ssh_host = '127.0.0.1', ssh_port = ${PORT}, ssh_user = 'homerun', ssh_host_key = null`;
 
 		let opened = new Response(null, { status: 599 });

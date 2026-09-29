@@ -172,8 +172,8 @@ created from it afterwards), never an existing service.
 
 ## Icon credits
 
-App logos come from [Dashboard Icons](https://dashboardicons.com) (Apache 2.0)
-and [selfh.st/icons](https://selfh.st/icons/) (CC BY 4.0). The language,
-framework and server logos come from [Devicon](https://devicon.dev) (MIT) and
-[Simple Icons](https://simpleicons.org) (CC0). Every logo is a trademark of its
-owner.
+App logos come from [Dashboard Icons](https://dashboardicons.com) (Apache 2.0),
+apart from a handful of apps it doesn't have, whose logos come from their own
+projects. The language, framework and server logos it lacks come from
+[Devicon](https://devicon.dev) (MIT) and [Simple Icons](https://simpleicons.org)
+(CC0). Every logo is a trademark of its owner.

@@ -185,9 +185,11 @@ describe("templateCategoryLabel", () => {
 });
 
 describe("EXTRA_ICONS", () => {
-	test("every library icon exists under static/template-icons, once", () => {
-		const missing = EXTRA_ICONS.filter(
-			(entry) => !existsSync(join(root, "static/template-icons", entry.icon)),
+	test("every library icon is a Dashboard Icon or exists under static/template-icons, once", () => {
+		const missing = EXTRA_ICONS.filter((entry) =>
+			entry.icon.startsWith("di:")
+				? iconProblem(entry.icon, []) !== null
+				: !existsSync(join(root, "static/template-icons", entry.icon)),
 		).map((entry) => entry.icon);
 		expect(missing).toEqual([]);
 		expect(new Set(EXTRA_ICONS.map((entry) => entry.icon)).size).toBe(

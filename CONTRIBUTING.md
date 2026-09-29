@@ -177,9 +177,11 @@ new files up on its next build and seeds them at boot.
   deploying (a public URL, a key format) in one or two sentences.
 - `tags` (1 to 12, lowercase) are what the gallery search matches besides the
   name.
-- `icon` is a file name under `static/template-icons/` (SVG preferred, PNG at
-  128px max), or `""` for the category's generic icon. Take it from the
-  project's own repo.
+- `icon` is `di:<name>` for a [Dashboard Icons](https://dashboardicons.com) logo
+  whenever it has the app. Only when it doesn't, add a file under
+  `static/template-icons/` (SVG preferred, PNG at 128px max) taken from the
+  project's own repo, and use its file name. `""` is the category's generic
+  icon.
 - A template needing a database or cache links to another built-in instead of
   bundling it: `"links": [{ "alias": "db", "template": "postgres" }]`. Its env
   vars then reference the linked service as `{{db}}` (its hostname) and

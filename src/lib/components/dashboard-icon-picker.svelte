@@ -54,6 +54,9 @@
         rel="noopener noreferrer"
         target="_blank"
       >dashboardicons.com</a>
+      <span class="text-text-subtle font-normal">
+        · Apache 2.0, logos are their owners' trademarks
+      </span>
     </span>
     <div class="flex w-full flex-wrap gap-2 sm:w-auto">
       <SelectRoot

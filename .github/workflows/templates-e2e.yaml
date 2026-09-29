@@ -90,7 +90,7 @@ jobs:
         slug: ${{ fromJSON(needs.plan.outputs.slugs) }}
     services:
       postgres:
-        image: postgres:18-alpine
+        image: public.ecr.aws/docker/library/postgres:18-alpine
         env:
           POSTGRES_USER: homerun
           POSTGRES_PASSWORD: homerun
@@ -138,6 +138,20 @@ jobs:
           else
             echo "No registry secret: pulling anonymously."
           fi
+
+      - name: Seed the infrastructure images from Docker Hub mirrors
+        run: |
+          trivy="$(grep -oE 'aquasec/trivy:[0-9.]+' internal/jobs/imagescan/scan.go)"
+          seed() {
+            for attempt in 1 2 3; do
+              docker pull -q "$1" && docker tag "$1" "$2" && return 0
+              sleep $((attempt * 10))
+            done
+            return 1
+          }
+          seed public.ecr.aws/docker/library/traefik:v3 traefik:v3
+          seed public.ecr.aws/docker/library/registry:2 registry:2
+          seed "ghcr.io/aquasecurity/trivy:${trivy#*:}" "$trivy"
 
       - name: Install Playwright's Chromium
         run: bunx playwright install --with-deps chromium

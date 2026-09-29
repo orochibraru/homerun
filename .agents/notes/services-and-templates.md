@@ -929,14 +929,17 @@ bundled file name under `static/template-icons/` (`"redis.svg"`), an uploaded
 for the category's generic icon. Built-ins use `di:` wherever Dashboard Icons
 has the exact app (checked against the real `metadata.json`, not guessed); the
 bundled files stay for the handful it lacks (aiometadata, aiostreams, bercail,
-comet, mediaflow-proxy, nuvio, penombre), for `icon-library.ts`'s
-servers/languages/ frameworks set, and **are never deleted**: services created
-before the switch still reference them. The seed upserts `icon` like every other
-display field, so a boot moves every install's built-ins to the new value, while
-a service copied its template's icon at creation and keeps it. Because of that,
-the settings action only runs `iconProblem` when the icon actually changed, so
-re-saving a service still on a bundled file that's no longer in the library
-isn't refused.
+comet, mediaflow-proxy, nuvio, penombre) and for `icon-library.ts`'s
+servers/languages/frameworks set where it lacks the logo; the library points at
+`di:` for the rest. A bundled file that duplicates a Dashboard Icon gets deleted
+together with a migration rewriting `service`/`stack`/`template.icon` from the
+file name to `di:<name>` (`0096_dashboard_icons_for_bundled.sql` is the
+precedent), otherwise every service still on it shows a broken image. The seed
+upserts `icon` like every other display field, so a boot moves every install's
+built-ins to the new value, while a service copied its template's icon at
+creation and keeps it. Because of that, the settings action only runs
+`iconProblem` when the icon actually changed, so re-saving a service whose
+stored icon is no longer in the library isn't refused.
 
 **No browser ever calls jsDelivr.** `/icons/dashboard/[name]` (public, outside
 `(protected)`, since status pages and `/my-apps` render icons too) serves the

@@ -672,6 +672,13 @@
 			"when": 1790684267072,
 			"tag": "0095_funny_madame_web",
 			"breakpoints": true
+		},
+		{
+			"idx": 96,
+			"version": "7",
+			"when": 1790686720178,
+			"tag": "0096_dashboard_icons_for_bundled",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

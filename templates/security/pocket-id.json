@@ -12,6 +12,8 @@
 	"envVars": {
 		"APP_URL": "{{url}}",
 		"ENCRYPTION_KEY": "{{secret}}",
+		"PGID": "65534",
+		"PUID": "65534",
 		"TRUST_PROXY": "true"
 	},
 	"volumes": ["/app/data"]
