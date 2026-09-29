@@ -146,6 +146,19 @@
                     <dt class="text-text-muted">Port</dt>
                     <dd class="text-text">{tmpl.containerPort}</dd>
                 </div>
+                {#if tmpl.publishedPorts.length > 0}
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-text-muted">Published</dt>
+                        <dd class="text-text font-mono text-xs">
+                            {tmpl.publishedPorts
+                                .map(
+                                    (p) =>
+                                        `${p.hostPort}:${p.containerPort}/${p.protocol}`,
+                                )
+                                .join(" · ")}
+                        </dd>
+                    </div>
+                {/if}
                 {#if tmpl.category}
                     <div class="flex justify-between gap-4 capitalize">
                         <dt class="text-text-muted">Category</dt>

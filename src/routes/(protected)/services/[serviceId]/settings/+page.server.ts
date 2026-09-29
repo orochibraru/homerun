@@ -38,9 +38,14 @@ export const actions = {
 			return fail(404, { error: "Service not found." });
 		}
 
-		const force = (await request.formData()).get("force") === "true";
+		const form = await request.formData();
+		const force = form.get("force") === "true";
+		const deleteVolumes = form.get("deleteVolumes") === "true";
 		try {
-			await ServiceLifecycleService.deleteService(svc, { force });
+			await ServiceLifecycleService.deleteService(svc, {
+				deleteVolumes,
+				force,
+			});
 		} catch (error) {
 			if (error instanceof WorkloadDetachError) {
 				return fail(409, { detachFailed: true, error: error.message });
@@ -48,7 +53,7 @@ export const actions = {
 			throw error;
 		}
 		logger.info(
-			`Service deleted: service=${svc.id} force=${force} user=${locals.user.id}`,
+			`Service deleted: service=${svc.id} force=${force} deleteVolumes=${deleteVolumes} user=${locals.user.id}`,
 		);
 		throw redirect(303, resolve("/services"));
 	},
@@ -128,6 +133,7 @@ export const actions = {
 			memoryLimitMb: svc.memoryLimitMb,
 			name: svc.name,
 			ownerId: locals.user.id,
+			publishedPorts: svc.publishedPorts,
 			restartPolicy: svc.restartPolicy,
 			tag: svc.tag,
 		});

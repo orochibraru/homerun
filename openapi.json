@@ -3526,6 +3526,15 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"description": "true also deletes the volumes no other service mounts: the record, and the Docker volume behind a named one (a bind mount's host directory is left alone)",
+						"in": "query",
+						"name": "deleteVolumes",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
 					}
 				],
 				"responses": {
@@ -13259,6 +13268,31 @@
 												"description": "privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them",
 												"type": "boolean"
 											},
+											"publishedPorts": {
+												"description": "Host ports bound straight to the container, for UDP and non-HTTP TCP",
+												"items": {
+													"additionalProperties": false,
+													"properties": {
+														"containerPort": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"hostPort": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"protocol": {
+															"enum": ["tcp", "udp"],
+															"type": "string"
+														}
+													},
+													"required": ["containerPort", "hostPort", "protocol"],
+													"type": "object"
+												},
+												"type": "array"
+											},
 											"restartPolicy": {
 												"type": "string"
 											},
@@ -13301,6 +13335,7 @@
 											"name",
 											"ownerId",
 											"privileged",
+											"publishedPorts",
 											"restartPolicy",
 											"runAsUser",
 											"tag",

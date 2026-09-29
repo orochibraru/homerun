@@ -339,10 +339,14 @@ func ServiceDeploy(client *Client, id, tag string) {
 // ServiceDelete deletes a service, the same danger-zone action as the Settings
 // tab's Delete button. Exits on an API error, including the 409 the API answers
 // (without force) when the container or swarm service couldn't be removed.
-func ServiceDelete(client *Client, id string, force bool) {
+// With volumes, the volumes no other service mounts go too.
+func ServiceDelete(client *Client, id string, force, volumes bool) {
 	query := url.Values{}
 	if force {
 		query.Set("force", "true")
+	}
+	if volumes {
+		query.Set("deleteVolumes", "true")
 	}
 	client.do("DELETE", "/services/"+url.PathEscape(id), query)
 	PrintValue(map[string]any{"deleted": true, "id": id})

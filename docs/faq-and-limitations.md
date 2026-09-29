@@ -155,8 +155,8 @@ check the dashboard for anything that didn't.
   Docker. See [Image scanning](image-scanning.md).
 - **Health-gated redeploys need a healthcheck to really gate.** Without one the
   new container takes traffic as soon as it's been running a few seconds, and a
-  service on host networking or with a writable volume still stops the old
-  container first. See [Deploying](deploying.md).
+  service on host networking, or with a writable volume and no domain, still
+  stops the old container first. See [Deploying](deploying.md).
 - **Changing your own verified email needs SMTP configured**, since the change
   is confirmed from the current address. Without SMTP, an admin can change it
   directly from `/users`. See [Your profile](your-profile.md).

@@ -85,7 +85,8 @@ var Commands = []Command{
 		Summary: "delete a service",
 		Setup: func(set *flag.FlagSet) Runner {
 			force := set.Bool("force", false, "delete Homerun's record even if the workload couldn't be removed")
-			return func(env Env, args []string) { ServiceDelete(env.Client(), args[0], *force) }
+			volumes := set.Bool("volumes", false, "also delete the volumes no other service mounts")
+			return func(env Env, args []string) { ServiceDelete(env.Client(), args[0], *force, *volumes) }
 		},
 	},
 	{

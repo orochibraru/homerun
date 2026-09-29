@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Forgejo",
-	"description": "Community-run Gitea fork: repositories, issues, pull requests, packages and Actions. Shows a setup wizard on first visit (SQLite works out of the box). Publish a port to 22 for git over SSH.",
+	"description": "Community-run Gitea fork: repositories, issues, pull requests, packages and Actions. Shows a setup wizard on first visit (SQLite works out of the box). Git over SSH on host port 2223.",
 	"image": "codeberg.org/forgejo/forgejo",
 	"tag": "11",
 	"containerPort": 3000,
@@ -10,7 +10,15 @@
 	"websiteUrl": "https://forgejo.org",
 	"sourceUrl": "https://codeberg.org/forgejo/forgejo",
 	"envVars": {
-		"FORGEJO__server__ROOT_URL": "{{url}}"
+		"FORGEJO__server__ROOT_URL": "{{url}}",
+		"FORGEJO__server__SSH_PORT": "2223"
 	},
-	"volumes": ["/data"]
+	"volumes": ["/data"],
+	"publishedPorts": [
+		{
+			"containerPort": 22,
+			"hostPort": 2223,
+			"protocol": "tcp"
+		}
+	]
 }

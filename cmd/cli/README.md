@@ -93,7 +93,7 @@ homerun services deploy <id> [--tag <tag>] [--environment canary|stable]
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
-homerun services delete <id> [--force]
+homerun services delete <id> [--force] [--volumes]
 homerun services webhook <id>
 homerun services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>]
 homerun services channels disable <id>
@@ -141,7 +141,8 @@ straightforward to add the same way as the existing commands in
 danger-zone action as the Settings tab's Delete button; `--force` adds
 `?force=true`, which deletes Homerun's record even when the container or swarm
 service itself couldn't be removed (without it, that case answers a 409 and
-deletes nothing). `homerun services webhook <id>` calls
+deletes nothing); `--volumes` adds `?deleteVolumes=true`, which also deletes the
+volumes no other service mounts. `homerun services webhook <id>` calls
 `GET /services/{serviceId}/webhook` and prints the push-to-deploy URL and secret
 for that service (a 404 when neither Deploy on push nor pull request previews
 are turned on).

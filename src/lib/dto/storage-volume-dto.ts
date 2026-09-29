@@ -1,6 +1,19 @@
-import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	inArray,
+	ne,
+	notExists,
+	type SQL,
+} from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
-import { type StorageVolume, storageVolume } from "$lib/server/db/schema";
+import {
+	type StorageVolume,
+	serviceVolume,
+	storageVolume,
+} from "$lib/server/db/schema";
 import {
 	type ListQuery,
 	type PagedResult,
@@ -113,6 +126,25 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 			.from(storageVolume)
 			.where(eq(storageVolume.previewServiceId, serviceId));
 		return rows.map((row) => new StorageVolumeDTO(row));
+	}
+
+	/** The volumes `serviceId` mounts that no other service mounts too, the ones safe to delete along with it. */
+	static async listExclusiveTo(serviceId: string): Promise<StorageVolumeDTO[]> {
+		const others = db
+			.select({ id: serviceVolume.id })
+			.from(serviceVolume)
+			.where(
+				and(
+					eq(serviceVolume.volumeId, storageVolume.id),
+					ne(serviceVolume.serviceId, serviceId),
+				),
+			);
+		const rows = await db
+			.selectDistinct({ volume: storageVolume })
+			.from(storageVolume)
+			.innerJoin(serviceVolume, eq(serviceVolume.volumeId, storageVolume.id))
+			.where(and(eq(serviceVolume.serviceId, serviceId), notExists(others)));
+		return rows.map((row) => new StorageVolumeDTO(row.volume));
 	}
 
 	/** Every volume (across all users) with scheduled backups turned on : for the scheduler tick, same pattern as ServiceDTO.listCronEnabled. */

@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import type { PublishedPort } from "$lib/published-ports";
 import { db } from "$lib/server/db/lib";
 import {
 	type TemplateLink,
@@ -27,6 +28,7 @@ export interface TemplateLinkWithTemplate {
 	linkedTemplateImage: string;
 	linkedTemplateMemoryLimitMb: number | null;
 	linkedTemplateName: string;
+	linkedTemplatePublishedPorts: PublishedPort[];
 	linkedTemplateRestartPolicy: string;
 	linkedTemplateRuntime: ServiceRuntimeOptions;
 	linkedTemplateTag: string;
@@ -63,6 +65,7 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 				linkedTemplateImage: template.image,
 				linkedTemplateMemoryLimitMb: template.memoryLimitMb,
 				linkedTemplateName: template.name,
+				linkedTemplatePublishedPorts: template.publishedPorts,
 				linkedTemplateRestartPolicy: template.restartPolicy,
 				linkedTemplateTag: template.tag,
 				row: templateLink,
@@ -80,6 +83,7 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 			linkedTemplateImage: r.linkedTemplateImage,
 			linkedTemplateMemoryLimitMb: r.linkedTemplateMemoryLimitMb,
 			linkedTemplateName: r.linkedTemplateName,
+			linkedTemplatePublishedPorts: r.linkedTemplatePublishedPorts,
 			linkedTemplateRestartPolicy: r.linkedTemplateRestartPolicy,
 			linkedTemplateRuntime: runtimeOptionsFrom({
 				capAdd: r.linkedTemplateCapAdd,

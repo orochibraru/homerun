@@ -125,3 +125,64 @@ func anyStrings(value any) []string {
 	}
 	return out
 }
+
+type lockedVolumeDaemon struct {
+	fakeDaemon
+}
+
+// ServeHTTP answers like fakeDaemon, except the previous container is running
+// and the new one exits at once, like an app whose data directory is locked
+// by the copy still running.
+func (d *lockedVolumeDaemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.Method == http.MethodGet && r.URL.Path == "/containers/json":
+		_, _ = io.WriteString(w, `[{"Id":"old-container","State":"running"}]`)
+	case r.Method == http.MethodGet && r.URL.Path == "/containers/new-container/json":
+		_, _ = io.WriteString(w, `{"Id":"new-container","State":{"Status":"exited","ExitCode":1}}`)
+	default:
+		d.fakeDaemon.ServeHTTP(w, r)
+	}
+}
+
+func TestRunRetriesStopFirstWhenARoutedVolumeCantBeShared(t *testing.T) {
+	daemon := &lockedVolumeDaemon{}
+	socket := testsupport.ServeUnixSocket(t, daemon)
+	spec := deploy.Spec{
+		DeploymentID: "dep",
+		Image:        deploy.ImageSpec{Image: "nginx", Kind: "pull", PullPolicy: "always", Tag: "alpine"},
+		Network:      "homerun",
+		Readiness:    deploy.ReadinessInput{ContainerPort: 80, Routed: true},
+		ServiceID:    "svc",
+		Volumes:      []deploy.Volume{{}},
+		Workload: deploy.WorkloadSpec{
+			ContainerPort: 80,
+			Kind:          "container",
+			NamePrefix:    "homerun-web",
+			Slug:          "web",
+			Template:      map[string]any{"Labels": map[string]any{"traefik.enable": "true"}},
+		},
+	}
+	job, lines, err := jobs.Recorder("deploy", spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job.DockerSocket = socket
+
+	result, err := deploy.Run(context.Background(), job)
+	if err != nil {
+		t.Fatalf("Run: %s (log %v)", err, lines())
+	}
+	if result["containerId"] != "new-container" {
+		t.Errorf("result %v", result)
+	}
+	log := strings.Join(lines(), "\n")
+	keep := strings.Index(log, "Keeping the previous container serving")
+	retry := strings.Index(log, "trying again with the old container stopped first")
+	remove := strings.LastIndex(log, "Removing the previous container...")
+	if keep < 0 || retry < keep || remove < retry {
+		t.Errorf("want blue-green, then a stop-first retry, got log\n%s", log)
+	}
+	if !slices.Contains(daemon.calls, "DELETE /containers/old-container") {
+		t.Errorf("the retry should remove the old container, calls %v", daemon.calls)
+	}
+}

@@ -78,7 +78,7 @@ func withLabels(labels any, extra map[string]string) map[string]any {
 // nor a writable volume rules it out) the new one starts next to it and the
 // previous one is removed only once the new one is ready; otherwise the
 // previous one is removed first.
-func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, error) {
+func (r *run) startContainer(ctx context.Context, image resolvedImage, recreate bool) (string, error) {
 	workload := r.spec.Workload
 	env, err := r.workloadEnv(ctx)
 	if err != nil {
@@ -93,7 +93,10 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, 
 	for _, container := range previous {
 		running = running || container.State == "running"
 	}
-	plan := RolloutStrategy(running, workload.HostNetwork, workload.PublishesPorts, r.spec.Volumes)
+	plan := RolloutStrategy(running, workload.HostNetwork, workload.PublishesPorts, Routed(workload.Template), r.spec.Volumes)
+	if recreate {
+		plan = RolloutPlan{}
+	}
 	if plan.BlueGreen {
 		r.progress.line("Keeping the previous container serving until the new one is ready...")
 	} else {
@@ -134,7 +137,11 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, 
 	r.joinStackNetwork(ctx, id)
 	if plan.BlueGreen {
 		if err := r.awaitReadyOrDiscard(ctx, id, check); err != nil {
-			return "", err
+			if !RetryStopFirst(Routed(workload.Template), r.spec.Volumes) {
+				return "", err
+			}
+			r.progress.line(fmt.Sprintf("The new container failed next to the old one (%s). It may not share its writable volume with a running copy, so trying again with the old container stopped first...", err))
+			return r.startContainer(ctx, image, true)
 		}
 		r.removePrevious(ctx, previous)
 	}

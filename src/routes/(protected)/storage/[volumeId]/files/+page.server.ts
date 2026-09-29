@@ -3,9 +3,17 @@ import { resolve } from "$app/paths";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { VolumeFilesService } from "$lib/services/volume-files.service";
-import { MAX_EDITABLE_BYTES, normalizeVolumePath } from "$lib/volume-files";
+import {
+	isEntryName,
+	isOctalMode,
+	MAX_EDITABLE_BYTES,
+	normalizeVolumePath,
+} from "$lib/volume-files";
 
 const logger = new Logger("Storage");
+
+const failure = (err: unknown, fallback: string) =>
+	fail(500, { error: err instanceof Error ? err.message : fallback });
 
 export const load = async ({ params, parent, url }) => {
 	await parent();
@@ -76,5 +84,87 @@ export const actions = {
 			`Volume file saved: volume=${volume.id} path=/${path} user=${locals.user.id}`,
 		);
 		return { success: true };
+	},
+	create: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const volume = await StorageVolumeDTO.get(params.volumeId);
+		if (!volume) {
+			return fail(404, { error: "Volume not found." });
+		}
+		const formData = await request.formData();
+		const kind = formData.get("kind") === "directory" ? "directory" : "file";
+		const name = String(formData.get("name") ?? "").trim();
+		if (!isEntryName(name)) {
+			return fail(400, { error: "Give it a plain name, without slashes." });
+		}
+		const path = normalizeVolumePath(
+			`${String(formData.get("dir") ?? "")}/${name}`,
+		);
+		if (path === null) {
+			return fail(400, { error: "That path leaves the volume." });
+		}
+		try {
+			await VolumeFilesService.create(volume, path, kind);
+		} catch (err) {
+			return failure(err, "Couldn't create it.");
+		}
+		logger.info(
+			`Volume ${kind} created: volume=${volume.id} path=/${path} user=${locals.user.id}`,
+		);
+		return { kind, path };
+	},
+	delete: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const volume = await StorageVolumeDTO.get(params.volumeId);
+		if (!volume) {
+			return fail(404, { error: "Volume not found." });
+		}
+		const formData = await request.formData();
+		const path = normalizeVolumePath(String(formData.get("path") ?? ""));
+		if (!path) {
+			return fail(400, { error: "That path can't be deleted." });
+		}
+		try {
+			await VolumeFilesService.remove(volume, path);
+		} catch (err) {
+			return failure(err, "Couldn't delete it.");
+		}
+		logger.info(
+			`Volume entry deleted: volume=${volume.id} path=/${path} user=${locals.user.id}`,
+		);
+		return { success: true };
+	},
+	chmod: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const volume = await StorageVolumeDTO.get(params.volumeId);
+		if (!volume) {
+			return fail(404, { error: "Volume not found." });
+		}
+		const formData = await request.formData();
+		const path = normalizeVolumePath(String(formData.get("path") ?? ""));
+		const mode = String(formData.get("mode") ?? "").trim();
+		if (path === null) {
+			return fail(400, { error: "That path leaves the volume." });
+		}
+		if (!isOctalMode(mode)) {
+			return fail(400, {
+				error: "The mode must be 3 or 4 octal digits, like 644.",
+			});
+		}
+		try {
+			await VolumeFilesService.chmod(volume, path, mode);
+		} catch (err) {
+			return failure(err, "Couldn't change the permissions.");
+		}
+		logger.info(
+			`Volume entry chmod ${mode}: volume=${volume.id} path=/${path} user=${locals.user.id}`,
+		);
+		return { mode };
 	},
 };

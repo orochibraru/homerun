@@ -100,9 +100,11 @@ type RolloutPlan struct {
 }
 
 // RolloutStrategy runs the new container alongside the running previous one,
-// unless host networking, a published host port or a writable volume forces a
-// recreate.
-func RolloutStrategy(hasRunningPrevious, hostNetwork, publishesPorts bool, volumes []Volume) RolloutPlan {
+// unless host networking, a published host port or, on a service Traefik
+// doesn't route to, a writable volume forces a recreate. A routed service
+// shares its volume for the seconds both copies run rather than 404ing until
+// the new one is up.
+func RolloutStrategy(hasRunningPrevious, hostNetwork, publishesPorts, routed bool, volumes []Volume) RolloutPlan {
 	switch {
 	case !hasRunningPrevious:
 		return RolloutPlan{}
@@ -110,7 +112,7 @@ func RolloutStrategy(hasRunningPrevious, hostNetwork, publishesPorts bool, volum
 		return RolloutPlan{Reason: "Host networking can't run two copies side by side, so the previous container stops first."}
 	case publishesPorts:
 		return RolloutPlan{Reason: "A published host port can't be bound by two copies at once, so the previous container stops first."}
-	case anyWritable(volumes):
+	case !routed && anyWritable(volumes):
 		return RolloutPlan{Reason: "A writable volume can't safely be shared by two copies, so the previous container stops first."}
 	}
 	return RolloutPlan{BlueGreen: true}
@@ -206,7 +208,16 @@ func ReadyLine(check Readiness, seconds int) string {
 	return fmt.Sprintf("New container passed its readiness check after %ds: Traefik now routes to it, removing the previous one.", seconds)
 }
 
-// Routed reports whether a swarm service spec carries Traefik routing labels.
+// RetryStopFirst reports whether a failed start-first rollout should be tried
+// again stopping the old copy first: only when the overlap itself may be what
+// failed, a routed service sharing a writable volume, as an app holding an
+// exclusive lock on its data directory exits when a second copy starts.
+func RetryStopFirst(routed bool, volumes []Volume) bool {
+	return routed && anyWritable(volumes)
+}
+
+// Routed reports whether a container or swarm service spec carries Traefik
+// routing labels.
 func Routed(spec map[string]any) bool {
 	labels, _ := spec["Labels"].(map[string]any)
 	enabled, _ := labels["traefik.enable"].(string)

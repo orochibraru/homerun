@@ -184,6 +184,11 @@ export const routes: RouteDef[] = [
 					"true deletes the service record even when its container or swarm service couldn't be removed",
 				name: "force",
 			},
+			{
+				description:
+					"true also deletes the volumes no other service mounts: the record, and the Docker volume behind a named one (a bind mount's host directory is left alone)",
+				name: "deleteVolumes",
+			},
 		],
 		responses: {
 			204: { description: "Deleted" },

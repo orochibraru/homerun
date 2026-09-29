@@ -3,6 +3,7 @@
 	import type { SubmitFunction } from "@sveltejs/kit";
 	import BulkActionBar from "$lib/components/bulk-action-bar.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import DeleteVolumesOption from "$lib/components/delete-volumes-option.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import type { ListSelection } from "$lib/list-selection.svelte";
 	import {
@@ -23,6 +24,7 @@
 	let bulkDeleteDialogOpen = $state(false);
 	let bulkForm = $state<HTMLFormElement | null>(null);
 	let bulkDeleteSubmitter = $state<HTMLButtonElement | null>(null);
+	let deleteVolumes = $state(false);
 
 	const bulkSubmit: SubmitFunction = (input) => {
 		const label = SERVICE_ACTION_LABELS[bulkOp];
@@ -61,6 +63,7 @@
   submit={bulkSubmit}
   bind:form={bulkForm}
 >
+  <input name="deleteVolumes" type="hidden" value={deleteVolumes ? "true" : "false"}>
   <button
     class="hidden"
     name="op"
@@ -117,6 +120,7 @@
     disabled={bulkPending}
     onclick={() => {
       bulkOp = "delete";
+      deleteVolumes = false;
       bulkDeleteDialogOpen = true;
     }}
     size="sm"
@@ -135,4 +139,6 @@
   description={`Delete ${selection.count} selected ${plural(selection.count)}? Their containers are removed and this can't be undone.`}
   onConfirm={() => bulkForm?.requestSubmit(bulkDeleteSubmitter ?? undefined)}
   title="Delete selected services"
-/>
+>
+  <DeleteVolumesOption bind:checked={deleteVolumes} />
+</ConfirmDialog>

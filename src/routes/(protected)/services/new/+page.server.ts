@@ -27,6 +27,7 @@ import {
 	buildTemplateLinkContext,
 	createLinkedServices,
 	createStackForLinkedServices,
+	freeTemplatePorts,
 	resolveEnvVarsWithLinks,
 	templateHostAccessRefusal,
 } from "$lib/services/template-links";
@@ -101,6 +102,16 @@ function wizardRuntime(
 		submittedSecret(template.toJSON().envVars ?? {}, envVars) ??
 		generateTemplateSecret();
 	return fillSecretInRuntime(template.runtimeOptions, secret);
+}
+
+/** The template's published ports still free on this host, none without a template or under host networking. */
+function wizardPorts(
+	template: TemplateDTO | null,
+	networkMode: "bridge" | "host",
+) {
+	return template && networkMode !== "host"
+		? freeTemplatePorts(template.publishedPorts)
+		: [];
 }
 
 function templateIdentity(template: TemplateDTO | null): {
@@ -493,6 +504,7 @@ async function createServiceFromForm(
 			input.healthcheckCommand || template?.healthcheckCommand || null,
 		memoryLimitMb: input.memoryLimitMb ?? null,
 		name: input.name,
+		publishedPorts: await wizardPorts(template, input.networkMode),
 		stackId,
 		registryPasswordEnc: input.registryPassword
 			? encryptSecret(input.registryPassword)

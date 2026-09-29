@@ -6,6 +6,7 @@ import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
 import { Logger } from "$lib/logger";
 import {
 	parseEnvVars,
+	parsePublishedPortsField,
 	updateEnvFilesSchema,
 	updateRuntimeSchema,
 } from "$lib/server/validation/service";
@@ -105,6 +106,11 @@ export const actions = {
 			return fail(403, { error: HOST_ACCESS_MESSAGE, values: fields });
 		}
 
+		const ports = parsePublishedPortsField(formData.get("publishedPorts"));
+		if ("error" in ports) {
+			return fail(400, { error: ports.error, values: fields });
+		}
+
 		const links = await parseLinks(formData);
 		if ("error" in links) {
 			return fail(400, { error: links.error, values: fields });
@@ -122,6 +128,7 @@ export const actions = {
 			memoryLimitMb: input.memoryLimitMb ?? null,
 			name: input.name,
 			ownerId: locals.user.id,
+			publishedPorts: ports.ports,
 			restartPolicy: input.restartPolicy,
 			tag: input.tag,
 			tags: parseTags(input.tags),

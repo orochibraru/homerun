@@ -103,23 +103,29 @@ func TestSampleFromInspect(t *testing.T) {
 }
 
 func TestRolloutStrategy(t *testing.T) {
-	if !deploy.RolloutStrategy(true, false, false, []deploy.Volume{{ReadOnly: true}}).BlueGreen {
+	if !deploy.RolloutStrategy(true, false, false, false, []deploy.Volume{{ReadOnly: true}}).BlueGreen {
 		t.Error("a running previous container on bridge networking rolls out blue-green")
 	}
-	if got := deploy.RolloutStrategy(false, false, false, nil); got.BlueGreen || got.Reason != "" {
+	if got := deploy.RolloutStrategy(false, false, false, false, nil); got.BlueGreen || got.Reason != "" {
 		t.Errorf("nothing running is a plain recreate, got %+v", got)
 	}
-	if got := deploy.RolloutStrategy(true, true, false, nil); !strings.Contains(got.Reason, "Host networking") {
+	if got := deploy.RolloutStrategy(true, true, false, false, nil); !strings.Contains(got.Reason, "Host networking") {
 		t.Errorf("host: %+v", got)
 	}
-	if got := deploy.RolloutStrategy(true, false, true, nil); !strings.Contains(got.Reason, "published host port") {
+	if got := deploy.RolloutStrategy(true, false, true, false, nil); !strings.Contains(got.Reason, "published host port") {
 		t.Errorf("published port: %+v", got)
 	}
-	if got := deploy.RolloutStrategy(true, false, false, []deploy.Volume{{}}); !strings.Contains(got.Reason, "writable volume") {
+	if got := deploy.RolloutStrategy(true, false, false, false, []deploy.Volume{{}}); !strings.Contains(got.Reason, "writable volume") {
 		t.Errorf("volume: %+v", got)
+	}
+	if !deploy.RolloutStrategy(true, false, false, true, []deploy.Volume{{}}).BlueGreen {
+		t.Error("routed service with a writable volume should still go blue-green")
 	}
 	if deploy.SwarmUpdateOrder([]deploy.Volume{{ReadOnly: true}}, false) != "start-first" || deploy.SwarmUpdateOrder([]deploy.Volume{{}}, false) != "stop-first" || deploy.SwarmUpdateOrder([]deploy.Volume{{}}, true) != "start-first" {
 		t.Error("start-first unless a mount is writable")
+	}
+	if !deploy.RetryStopFirst(true, []deploy.Volume{{}}) || deploy.RetryStopFirst(false, []deploy.Volume{{}}) || deploy.RetryStopFirst(true, []deploy.Volume{{ReadOnly: true}}) {
+		t.Error("retry stop-first only for a routed service with a writable volume")
 	}
 	if !deploy.Routed(map[string]any{"Labels": map[string]any{"traefik.enable": "true"}}) || deploy.Routed(map[string]any{"Labels": map[string]any{}}) || deploy.Routed(map[string]any{}) {
 		t.Error("routed only with traefik.enable")

@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
 	contentChunks,
 	isEditableText,
+	isEntryName,
+	isOctalMode,
 	normalizeVolumePath,
 	parentPath,
 	parseListing,
@@ -31,10 +33,10 @@ describe("parseListing", () => {
 	test("reads stat lines, directories first, names with pipes intact", () => {
 		const entries = parseListing(
 			[
-				"regular file|12|1700000000|./z.conf",
-				"directory|4096|1700000000|conf.d",
-				"regular empty file|0|1700000000|weird|name",
-				"symbolic link|7|1700000000|latest",
+				"regular file|12|1700000000|644|./z.conf",
+				"directory|4096|1700000000|755|conf.d",
+				"regular empty file|0|1700000000|600|weird|name",
+				"symbolic link|7|1700000000|777|latest",
 				"",
 			].join("\n"),
 		);
@@ -45,6 +47,8 @@ describe("parseListing", () => {
 			["file", "z.conf"],
 		]);
 		expect(entries[3]?.size).toBe(12);
+		expect(entries[3]?.mode).toBe("644");
+		expect(entries[2]?.mode).toBe("600");
 		expect(entries[0]?.modifiedAt).toBe("2023-11-14T22:13:20.000Z");
 	});
 });
@@ -69,5 +73,25 @@ describe("isEditableText and contentChunks", () => {
 			.join("");
 		expect(Buffer.from(joined, "base64").toString("utf8")).toBe(content);
 		expect(contentChunks("")).toEqual({});
+	});
+});
+
+describe("isEntryName and isOctalMode", () => {
+	test("accept one plain name and refuse anything that isn't", () => {
+		expect(isEntryName("nginx.conf")).toBe(true);
+		expect(isEntryName(".env")).toBe(true);
+		for (const bad of ["", ".", "..", "a/b", "/x", "a\0b", "x".repeat(256)]) {
+			expect(isEntryName(bad)).toBe(false);
+		}
+		expect(isEntryName("é".repeat(128))).toBe(false);
+	});
+
+	test("accept 3 or 4 octal digits only", () => {
+		for (const good of ["644", "755", "0600", "2775"]) {
+			expect(isOctalMode(good)).toBe(true);
+		}
+		for (const bad of ["", "64", "888", "12345", "u+x", "644;rm", " 644"]) {
+			expect(isOctalMode(bad)).toBe(false);
+		}
 	});
 });

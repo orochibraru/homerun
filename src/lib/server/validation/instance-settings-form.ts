@@ -3,6 +3,7 @@ import type { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { rebuildAuth } from "$lib/services/auth";
 import { syncDashboardDns } from "$lib/services/dns.service";
 import { DockerService } from "$lib/services/docker.service";
+import { RedirectService } from "$lib/services/redirect.service";
 
 /** A trimmed text field from the form, or null when it is missing or blank. */
 export function nullableText(formData: FormData, key: string): string | null {
@@ -25,6 +26,7 @@ export function applyAndRebuild(settings: InstanceSettingsDTO) {
 	applyInstanceSettings(settings.toConfigOverride());
 	rebuildAuth();
 	void DockerService.syncDashboardRouter();
+	void RedirectService.sync();
 	void syncDashboardDns();
 	void DockerService.syncNewt(
 		settings.newtCredentials(),

@@ -62,7 +62,15 @@ func (r *run) startSwarm(ctx context.Context, image resolvedImage) (string, erro
 	spec["Name"] = workload.NamePrefix + "-" + randomSuffix()
 
 	if len(existing) > 0 {
-		return r.rollOutSwarm(ctx, existing[0].ID, spec)
+		order := SwarmUpdateOrder(r.spec.Volumes, Routed(spec))
+		id, err := r.rollOutSwarm(ctx, existing[0].ID, spec, order)
+		var failed *kindError
+		if err == nil || order != "start-first" || !RetryStopFirst(Routed(spec), r.spec.Volumes) ||
+			!errors.As(err, &failed) || failed.kind != FailureRolloutFailed {
+			return id, err
+		}
+		r.progress.line(fmt.Sprintf("The new task failed next to the old one (%s). It may not share its writable volume with a running copy, so trying again with the old task stopped first...", err))
+		return r.rollOutSwarm(ctx, existing[0].ID, spec, "stop-first")
 	}
 	r.progress.line("Creating swarm service...")
 	id, err := r.docker.CreateSwarmService(ctx, spec)
@@ -123,7 +131,7 @@ func (r *run) multiNodeWarnings(ctx context.Context, image resolvedImage) {
 
 // rollOutSwarm updates an existing swarm service to spec in place (keeping its
 // name, forcing new tasks) and waits for swarm to finish.
-func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any) (string, error) {
+func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any, order string) (string, error) {
 	inspected, err := r.docker.InspectSwarmService(ctx, id)
 	if err != nil {
 		return "", err
@@ -136,11 +144,10 @@ func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any) 
 	if failureAction == "pause" {
 		r.progress.line("None of the current tasks is running, so a failed update keeps the new tasks instead of rolling back to the broken ones.")
 	}
-	order := SwarmUpdateOrder(r.spec.Volumes, Routed(spec))
 	if order == "start-first" {
 		r.progress.line("Updating the swarm service : each new task starts first, and swarm stops the old one once the new one is running (healthy, when it has a healthcheck)...")
 	} else {
-		r.progress.line("Updating the swarm service : a writable volume on a service with no domain means each old task stops before its replacement starts...")
+		r.progress.line("Updating the swarm service : each old task stops before its replacement starts, since a writable volume can't be shared...")
 	}
 	task, _ := spec["TaskTemplate"].(map[string]any)
 	task = maps.Clone(task)

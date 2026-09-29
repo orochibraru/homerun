@@ -116,6 +116,20 @@ export const SEARCH_PAGES: SearchPage[] = [
 	},
 	{
 		adminOnly: false,
+		href: "/redirects",
+		keywords: ["forward", "301", "308", "domain", "url"],
+		label: "Redirects",
+		section: "Infrastructure",
+	},
+	{
+		adminOnly: false,
+		href: "/redirects/new",
+		keywords: ["create", "add"],
+		label: "New redirect",
+		section: "Redirects",
+	},
+	{
+		adminOnly: false,
 		href: "/cron-jobs",
 		keywords: ["scheduled", "tasks"],
 		label: "Cron Jobs",

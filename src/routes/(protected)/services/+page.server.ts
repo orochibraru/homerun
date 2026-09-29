@@ -99,9 +99,14 @@ async function loadServices(query: ListQuery) {
 	};
 }
 
-async function runOp(op: BulkOp, svc: ServiceDTO, userId: string) {
+async function runOp(
+	op: BulkOp,
+	svc: ServiceDTO,
+	userId: string,
+	deleteVolumes = false,
+) {
 	if (op === "delete") {
-		await ServiceLifecycleService.deleteService(svc);
+		await ServiceLifecycleService.deleteService(svc, { deleteVolumes });
 	} else if (op === "start") {
 		await ServiceLifecycleService.startService(svc);
 	} else if (op === "stop") {
@@ -124,7 +129,7 @@ async function runSingle(op: BulkOp, formData: FormData, userId: string) {
 	}
 
 	try {
-		await runOp(op, svc, userId);
+		await runOp(op, svc, userId, formData.get("deleteVolumes") === "true");
 	} catch (error) {
 		return fail(400, {
 			error:
@@ -184,7 +189,9 @@ async function runBulk(formData: FormData, userId: string) {
 	for (const layer of await bulkLayers(parsed.op, found)) {
 		// oxlint-disable-next-line no-await-in-loop -- each layer waits for the services the next one depends on
 		const results = await Promise.allSettled(
-			layer.map((svc) => runOp(parsed.op, svc, userId)),
+			layer.map((svc) =>
+				runOp(parsed.op, svc, userId, formData.get("deleteVolumes") === "true"),
+			),
 		);
 		settled.push(...results);
 	}

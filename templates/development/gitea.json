@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Gitea",
-	"description": "Self-hosted Git service, GitHub-alike. Shows a setup wizard on first visit (choose SQLite there for a zero-config start).",
+	"description": "Self-hosted Git service, GitHub-alike. Shows a setup wizard on first visit (choose SQLite there for a zero-config start). Git over SSH on host port 2222.",
 	"image": "gitea/gitea",
 	"tag": "latest",
 	"containerPort": 3000,
@@ -9,5 +9,14 @@
 	"tags": ["git", "forge", "ci", "code"],
 	"websiteUrl": "https://about.gitea.com",
 	"sourceUrl": "https://github.com/go-gitea/gitea",
-	"envVars": {}
+	"envVars": {
+		"GITEA__server__SSH_PORT": "2222"
+	},
+	"publishedPorts": [
+		{
+			"containerPort": 22,
+			"hostPort": 2222,
+			"protocol": "tcp"
+		}
+	]
 }

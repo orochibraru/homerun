@@ -3,6 +3,7 @@
 	import { tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import DeleteVolumesOption from "$lib/components/delete-volumes-option.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { enhanceToast } from "$lib/toast";
@@ -17,6 +18,7 @@
 	let deleteForm = $state<HTMLFormElement | null>(null);
 	let deleting = $state(false);
 	let forceDelete = $state(false);
+	let deleteVolumes = $state(false);
 	let forceDeleteDialogOpen = $state(false);
 	let detachError = $state("");
 </script>
@@ -59,6 +61,7 @@
       })}
     >
       <input name="force" type="hidden" value={forceDelete ? "true" : "false"} />
+      <input name="deleteVolumes" type="hidden" value={deleteVolumes ? "true" : "false"} />
       <div>
         <p class="text-text text-sm font-medium">Delete this service</p>
         <p class="text-text-muted mt-0.5 text-xs">
@@ -68,6 +71,7 @@
       <Button
         disabled={deleting}
         onclick={() => {
+          deleteVolumes = false;
           deleteDialogOpen = true;
         }}
         type="button"
@@ -92,7 +96,9 @@
   description={`Deleting "${name}" stops and removes its container and erases its deployment history. This can't be undone.`}
   onConfirm={() => deleteForm?.requestSubmit()}
   title="Delete service"
-/>
+>
+  <DeleteVolumesOption bind:checked={deleteVolumes} />
+</ConfirmDialog>
 
 <ConfirmDialog
   bind:open={forceDeleteDialogOpen}

@@ -247,7 +247,7 @@ func (r *run) deploy(ctx context.Context) error {
 		}
 		r.result.SwarmServiceID = id
 	} else {
-		id, err := r.startContainer(ctx, resolved)
+		id, err := r.startContainer(ctx, resolved, false)
 		if err != nil {
 			return err
 		}

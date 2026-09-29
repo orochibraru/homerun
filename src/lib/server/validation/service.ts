@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
+import {
+	type PublishedPort,
+	publishedPortsProblem,
+} from "$lib/published-ports";
 import { environmentNameField } from "$lib/server/validation/environment-name";
 import { DOMAIN_RE } from "$lib/service-domains";
 import { isRunAsUser } from "$lib/service-runtime";
@@ -328,3 +332,25 @@ export const publishedPortsSchema = z.array(
 		protocol: z.enum(["tcp", "udp"]),
 	}),
 );
+
+/**
+ * Reads a published ports list posted as one JSON array form field, empty
+ * when the field is missing, or the first problem with it: unreadable JSON,
+ * a port outside 1-65535, a reused host port or one of Traefik's.
+ */
+export function parsePublishedPortsField(
+	value: FormDataEntryValue | null,
+): { ports: PublishedPort[] } | { error: string } {
+	let raw: unknown;
+	try {
+		raw = JSON.parse(String(value ?? "[]"));
+	} catch {
+		return { error: "Couldn't read the port list." };
+	}
+	const result = publishedPortsSchema.safeParse(raw);
+	if (!result.success) {
+		return { error: "Every port must be a number between 1 and 65535." };
+	}
+	const problem = publishedPortsProblem(result.data);
+	return problem ? { error: problem } : { ports: result.data };
+}

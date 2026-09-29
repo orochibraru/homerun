@@ -6,13 +6,20 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 
 	interface Props {
+		deleteVolumes: boolean;
 		ondelete: (e: MouseEvent) => void;
 		pending: boolean;
 		service: { containerId: string | null; desiredState: string; id: string };
 		submit: (action: "delete" | "restart" | "start" | "stop") => SubmitFunction;
 	}
 
-	const { ondelete, pending, service: svc, submit }: Props = $props();
+	const {
+		deleteVolumes,
+		ondelete,
+		pending,
+		service: svc,
+		submit,
+	}: Props = $props();
 </script>
 
 <div class="flex shrink-0 items-center gap-1.5">
@@ -93,6 +100,7 @@
     use:enhance={submit("delete")}
   >
     <input name="serviceId" type="hidden" value={svc.id}>
+    <input name="deleteVolumes" type="hidden" value={deleteVolumes ? "true" : "false"}>
     <Button
       class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
       disabled={pending}

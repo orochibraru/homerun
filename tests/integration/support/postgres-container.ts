@@ -53,9 +53,18 @@ export async function startPostgresContainer(): Promise<PgContainer> {
 		stdout: "inherit",
 	});
 	if (!pull.success) {
-		throw new Error(
-			`docker pull postgres:18-alpine failed (exit code ${pull.exitCode})`,
-		);
+		const local = Bun.spawnSync([
+			"docker",
+			"image",
+			"inspect",
+			"postgres:18-alpine",
+		]);
+		if (!local.success) {
+			throw new Error(
+				`docker pull postgres:18-alpine failed (exit code ${pull.exitCode}) and no local copy exists`,
+			);
+		}
+		stepLog("Pull failed, using the local postgres:18-alpine image.");
 	}
 
 	const network = await ownDockerNetwork();

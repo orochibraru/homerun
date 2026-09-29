@@ -62,6 +62,8 @@ sync by hand.
   connection details, and env files on the host.
 - **[Networking](networking.md)**: container port, network mode,
   DNS-resolvability, extra domains and your own SSL certificates.
+- **[Redirects](redirects.md)**: send a hostname or path to another URL, served
+  by Traefik with no container.
 - **[DNS automation](dns-automation.md)**: your domains and their records at 16
   DNS providers (Cloudflare, Route 53, Google, Azure, Hetzner, Namecheap…), kept
   in sync with your services, or Pangolin resources.

@@ -2051,6 +2051,8 @@ export interface operations {
 			query?: {
 				/** @description true deletes the service record even when its container or swarm service couldn't be removed */
 				force?: string;
+				/** @description true also deletes the volumes no other service mounts: the record, and the Docker volume behind a named one (a bind mount's host directory is left alone) */
+				deleteVolumes?: string;
 			};
 			header?: never;
 			path: {
@@ -5259,6 +5261,13 @@ export interface operations {
 						ownerId: string | null;
 						/** @description privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them */
 						privileged: boolean;
+						/** @description Host ports bound straight to the container, for UDP and non-HTTP TCP */
+						publishedPorts: {
+							containerPort: number;
+							hostPort: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						restartPolicy: string;
 						runAsUser: string | null;
 						tag: string;

@@ -3,6 +3,7 @@
 	import { tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import DeleteVolumesOption from "$lib/components/delete-volumes-option.svelte";
 	import GroupDialog from "$lib/components/service-group-dialog.svelte";
 	import LinkDialog from "$lib/components/service-link-dialog.svelte";
 	import {
@@ -31,6 +32,7 @@
 	let opForm = $state<HTMLFormElement | null>(null);
 	let ungroupForm = $state<HTMLFormElement | null>(null);
 	let deleteOpen = $state(false);
+	let deleteVolumes = $state(false);
 	let linkDialog = $state<ReturnType<typeof LinkDialog>>();
 	let groupDialog = $state<ReturnType<typeof GroupDialog>>();
 
@@ -56,6 +58,7 @@
 		}
 		op = action;
 		if (action === "delete") {
+			deleteVolumes = false;
 			deleteOpen = true;
 			return;
 		}
@@ -92,6 +95,7 @@
   use:enhance={submitOp}
 >
   <input name="serviceId" type="hidden" value={target?.id ?? ""}>
+  <input name="deleteVolumes" type="hidden" value={deleteVolumes ? "true" : "false"}>
 </form>
 
 <form
@@ -116,7 +120,9 @@
   onConfirm={() => opForm?.requestSubmit()}
   title="Delete service"
   bind:open={deleteOpen}
-/>
+>
+  <DeleteVolumesOption bind:checked={deleteVolumes} />
+</ConfirmDialog>
 
 <LinkDialog
   bind:this={linkDialog}

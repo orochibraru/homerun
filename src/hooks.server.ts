@@ -41,6 +41,7 @@ import { CronService } from "$lib/services/cron.service";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { OrchestrationService } from "$lib/services/orchestration.service";
 import { JobWorker } from "$lib/services/queue/worker";
+import { RedirectService } from "$lib/services/redirect.service";
 import { DEFAULT_SURFACE } from "$lib/surfaces";
 
 const logger = new Logger("Hooks");
@@ -282,6 +283,7 @@ export const init = async () => {
 	CronService.startErrorRetention();
 	CronService.startCoreServicesWatch();
 	CronService.startSwarmDnsWatch();
+	void RedirectService.sync();
 };
 
 /**

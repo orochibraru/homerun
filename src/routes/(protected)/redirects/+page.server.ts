@@ -1,0 +1,51 @@
+import { fail, redirect } from "@sveltejs/kit";
+import { resolve } from "$app/paths";
+import { RedirectDTO } from "$lib/dto/redirect-dto";
+import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
+import { Logger } from "$lib/logger";
+import { parseListQuery } from "$lib/server/list-query";
+import { RedirectService } from "$lib/services/redirect.service";
+
+const logger = new Logger("Redirects");
+
+export const load = async ({ parent, url }) => {
+	const { preferences } = await parent();
+	const query = parseListQuery(
+		url,
+		{ sortKeys: sortKeysOf(BASE_SORTS) },
+		preferences.perPage,
+	);
+	const paged = await RedirectDTO.listPaged(query);
+	return {
+		filtered: query.active,
+		page: paged.page,
+		perPage: paged.perPage,
+		redirects: paged.items.map((r) => r.toJSON()),
+		total: paged.total,
+	};
+};
+
+export const actions = {
+	delete: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const redirectId = formData.get("redirectId") as string | null;
+		if (!redirectId) {
+			return fail(400, { error: "Missing redirect id." });
+		}
+
+		const found = await RedirectDTO.get(redirectId);
+		if (!found) {
+			return fail(404, { error: "Redirect not found." });
+		}
+
+		await found.delete();
+		await RedirectService.sync();
+		logger.info(
+			`Redirect deleted: redirect=${redirectId} user=${locals.user.id}`,
+		);
+		return { success: true };
+	},
+};

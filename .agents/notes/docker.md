@@ -164,11 +164,15 @@ they now fail for different reasons with different fixes, see
     health-gated**: `RolloutStrategy` (`internal/jobs/deploy/rollout.go`, tested
     in `tests/unit/go/internal/jobs/deploy/logic_test.go`, the same pure
     decision `docker/rollout.ts`'s `rolloutStrategy` used to make) picks
-    blue-green or recreate — recreate (nothing running, host networking, or any
-    writable volume) removes the previous containers first; blue-green starts
-    the new one alongside, `awaitReadyOrDiscard` polls `ReadinessVerdict` every
-    2s (healthy healthcheck, or running 5s with none; failed on exit, any
-    restart, disappearance, `unhealthy`, or not ready in 5 minutes), then
+    blue-green or recreate — recreate (nothing running, host networking, or a
+    writable volume on a service with no Traefik labels, `Routed`; a routed one
+    whose blue-green fails is retried once as a recreate, `RetryStopFirst`,
+    since an embedded database locking its data dir exits when a second copy
+    starts, and swarm's start-first update gets the same stop-first retry)
+    removes the previous containers first; blue-green starts the new one
+    alongside, `awaitReadyOrDiscard` polls `ReadinessVerdict` every 2s (healthy
+    healthcheck, or running 5s with none; failed on exit, any restart,
+    disappearance, `unhealthy`, or not ready in 5 minutes), then
     `removePrevious`. On failure it logs the new container's last 20 lines,
     removes it and reports a `rollout-failed` outcome, which
     `deploy.service.ts`'s `workerFailure` turns back into a `RolloutFailedError`
@@ -1087,6 +1091,17 @@ certificate over the default, so `certResolverFor` returns null for any host
 settings row), which every label builder passes; routes change on redeploy, and
 the tab offers `redeployCovered`. Verified against a real `traefik:v3`: the
 inline default certificate is what `openssl s_client` gets for a covered host.
+
+## Redirects (`$lib/redirects.ts`, `services/redirect.service.ts`)
+
+The `redirect` table (source host plus optional path prefix, destination,
+keepPath, permanent, enabled) is published as one file-provider file,
+`homerun-redirects.yml`, rewritten whole by `RedirectService.sync()` after every
+create/update/delete, on boot and on every instance-settings save. Pure
+generation is `redirectsConfig` (JSON, valid YAML, so no serializer): a router
+per enabled row with `noop@internal` and a `redirectRegex` middleware; a `$` in
+the destination is doubled. No DNS automation: the operator points the source at
+the server.
 
 ## The dashboard's own route (`syncDashboardRouter`, `docker/dashboard.ts`)
 

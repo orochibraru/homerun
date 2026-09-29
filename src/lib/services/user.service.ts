@@ -94,6 +94,10 @@ class UserServiceClass {
 				.set(reassign)
 				.where(eq(schema.buildCacheRegistry.userId, userId)),
 			db
+				.update(schema.redirect)
+				.set(reassign)
+				.where(eq(schema.redirect.userId, userId)),
+			db
 				.update(schema.remoteHost)
 				.set(reassign)
 				.where(eq(schema.remoteHost.userId, userId)),

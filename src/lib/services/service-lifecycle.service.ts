@@ -187,17 +187,22 @@ class ServiceLifecycleServiceClass {
 	 *
 	 * @param options.force Deletes the row even when the workload couldn't be
 	 * removed, for a daemon that will never answer for it again.
+	 * @param options.deleteVolumes Also deletes the volumes only this service
+	 * mounts (see `#deleteVolumes`).
 	 * @throws {WorkloadDetachError} When the workload couldn't be removed and
 	 * `force` isn't set; nothing is deleted then.
 	 */
 	async deleteService(
 		svc: ServiceDTO,
-		options: { force?: boolean } = {},
+		options: { deleteVolumes?: boolean; force?: boolean } = {},
 	): Promise<void> {
 		for (const preview of await ServiceGitDTO.listChildren(svc.id)) {
 			// oxlint-disable-next-line no-await-in-loop -- each preview's workload removal can fail the whole delete
-			await this.deleteService(preview, options);
+			await this.deleteService(preview, { force: options.force });
 		}
+		const volumes = options.deleteVolumes
+			? await StorageVolumeDTO.listExclusiveTo(svc.id)
+			: [];
 		const failure = await this.#detachWorkload(svc);
 		if (failure && !options.force) {
 			throw new WorkloadDetachError(
@@ -210,6 +215,32 @@ class ServiceLifecycleServiceClass {
 		const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 		await this.#cleanUpOutside(svc, stack?.slug ?? null);
 		await svc.delete();
+		await this.#deleteVolumes(svc, volumes);
+	}
+
+	/**
+	 * Deletes a deleted service's volumes: each row, and the Docker volume
+	 * behind a named one. A bind mount's host directory is never touched.
+	 * Best effort: a volume the daemon refuses (a swarm task still holding it)
+	 * is logged and left behind for Docker Cleanup.
+	 */
+	async #deleteVolumes(
+		svc: ServiceDTO,
+		volumes: StorageVolumeDTO[],
+	): Promise<void> {
+		for (const volume of volumes) {
+			// oxlint-disable-next-line no-await-in-loop -- a handful of volumes, one at a time
+			await volume.delete();
+			if (volume.kind === "volume") {
+				// oxlint-disable-next-line no-await-in-loop -- a handful of volumes, one at a time
+				await DockerService.removeVolume(volume.source).catch((err) => {
+					logger.warn(
+						`Couldn't remove a deleted service's volume: volume=${volume.source} service=${svc.id}`,
+						err,
+					);
+				});
+			}
+		}
 	}
 
 	/**

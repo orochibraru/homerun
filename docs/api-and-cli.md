@@ -335,7 +335,7 @@ homerun services deploy <id> [--tag <tag>] [--environment canary|stable]
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
-homerun services delete <id> [--force]
+homerun services delete <id> [--force] [--volumes]
 homerun services webhook <id>
 homerun services channels enable <id> [--branch <branch>] [--tags <glob>] [--canary-domain <domain>]
 homerun services channels disable <id>
@@ -373,10 +373,11 @@ No `create`/`update` yet (`homerun update` above is the CLI's own self-updater,
 unrelated). `homerun services delete <id>` is the same danger-zone action as the
 Settings tab's Delete button, and `--force` deletes Homerun's record even when
 the container or swarm service couldn't be removed (the API's `?force=true`,
-without it that case is a `409` and deletes nothing).
-`homerun services webhook <id>` prints a service's push-to-deploy payload URL
-and secret (a `404` when none of Deploy on push, pull request previews or
-release channels are turned on).
+without it that case is a `409` and deletes nothing). `--volumes` also deletes
+the volumes no other service mounts (the API's `?deleteVolumes=true`), like the
+checkbox in the delete dialog. `homerun services webhook <id>` prints a
+service's push-to-deploy payload URL and secret (a `404` when none of Deploy on
+push, pull request previews or release channels are turned on).
 
 Every `list` command also accepts `--page`, `--per-page` (default 100, max 100)
 and `--search <term>` for a large result set; if what's printed is only part of

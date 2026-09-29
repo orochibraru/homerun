@@ -60,13 +60,20 @@ nginx `default.conf`, an app's `config.yaml`). Folders open by clicking them; a
 text file up to 1 MB opens in an editor, and **Save** writes it in place,
 keeping its owner and permissions. A volume that is a single bound file, the way
 Dokploy file mounts are imported, shows that one file. Binary files can be
-browsed but not edited.
+browsed but not edited. The editor highlights syntax for common config and code
+files, picked from the file's extension (`.yaml`, `.json`, `.conf`, `.env`,
+`Dockerfile`, …).
+
+**New file** and **New folder** create an empty file (opened straight in the
+editor) or a folder in the folder you're looking at. Right-click an entry for
+**Change permissions**, which takes an octal mode like `644` or `0755`, and
+**Delete**, which asks first and removes a folder with everything in it.
 
 Each action runs a short-lived Alpine container with the volume mounted
-(read-only, except while saving), so it works the same for bind mounts and
-Docker volumes and needs nothing installed on the host. A saved file is picked
-up the next time the services using it read it; most apps only read their config
-at start, so restart them after saving.
+(read-only, except while saving, creating, deleting or changing permissions), so
+it works the same for bind mounts and Docker volumes and needs nothing installed
+on the host. A saved file is picked up the next time the services using it read
+it; most apps only read their config at start, so restart them after saving.
 
 ## The Storage tab
 

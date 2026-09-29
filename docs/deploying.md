@@ -29,13 +29,16 @@ restarts, reports unhealthy or isn't ready within 5 minutes, it's removed
 instead, its last log lines go into the deploy log, the deploy is marked failed
 and the old container carries on untouched. Two cases stop the old container
 first: **host networking** (both copies would bind the same ports) and a
-**writable volume** (two copies writing the same data, a database's data
-directory for instance). In [swarm mode](swarm-mode.md) the service is updated
-in place through swarm's own rolling update, start-first, and swarm rolls back
-to the previous tasks on its own when a new one fails. A writable volume only
-forces stop-first there on a service with no domain: a routed service always
-starts its new task first, sharing the volume for the few seconds both run,
-since stopping its only task would 404 every request until the new one is up.
+**writable volume on a service with no domain** (two copies writing the same
+data, a database's data directory for instance). A service with a domain always
+starts its new copy first, sharing the volume for the few seconds both run,
+since stopping the old one first would 404 every request until the new one is
+up. An app that can't share its data directory with a running copy (an embedded
+database holding a lock on it, say) fails that way; the deploy then tries once
+more with the old copy stopped first, so it goes through with the brief gap
+instead of failing. In [swarm mode](swarm-mode.md) the service is updated in
+place through swarm's own rolling update, following the same rule, and swarm
+rolls back to the previous tasks on its own when a new one fails.
 
 **Readiness: no traffic before the new copy is ready.** Like a Kubernetes
 readiness probe, a new container or swarm task gets no traffic from Traefik

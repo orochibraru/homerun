@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+	type PublishedPort,
+	publishedPortsProblem,
+} from "$lib/published-ports";
 import { isRunAsUser, type ServiceRuntimeOptions } from "$lib/service-runtime";
 import {
 	TEMPLATE_CATEGORIES,
@@ -16,6 +20,7 @@ export interface BuiltinTemplate extends Partial<ServiceRuntimeOptions> {
 	id: string;
 	image: string;
 	name: string;
+	publishedPorts?: PublishedPort[];
 	sourceUrl: string | null;
 	tag: string;
 	tags: string[];
@@ -80,6 +85,21 @@ export const builtinTemplateFileSchema = z
 			.optional(),
 		name: z.string().min(1).max(100),
 		privileged: z.boolean().optional(),
+		publishedPorts: z
+			.array(
+				z.strictObject({
+					containerPort: z.number().int().min(1).max(65_535),
+					hostPort: z.number().int().min(1).max(65_535),
+					protocol: z.enum(["tcp", "udp"]),
+				}),
+			)
+			.refine((ports) => publishedPortsProblem(ports) === null, {
+				message: "Published ports reuse a host port or take 80/443.",
+			})
+			.optional()
+			.describe(
+				"Host ports bound straight to the container, for what Traefik can't route by domain (SSH, UDP). A port another service already publishes is dropped at deploy.",
+			),
 		runAsUser: z
 			.string()
 			.refine(isRunAsUser)

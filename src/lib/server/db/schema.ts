@@ -527,6 +527,29 @@ export const remoteHost = pgTable(
 	(table) => [index("remoteHost_userId_idx").on(table.userId)],
 );
 
+export const redirect = pgTable(
+	"redirect",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		destination: text("destination").notNull(),
+		enabled: boolean("enabled").notNull().default(true),
+		id: text("id").primaryKey(),
+		keepPath: boolean("keep_path").notNull().default(true),
+		permanent: boolean("permanent").notNull().default(true),
+		source: text("source").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		uniqueIndex("redirect_source_idx").on(table.source),
+		index("redirect_userId_idx").on(table.userId),
+	],
+);
+
 // A named Docker registry used as a *build cache* for git-based builds (see
 // internal/agent/build.go), not a deploy target : the build pulls
 // `<registryUrl>/<cacheRepository>:cache-<slug>` as a `--cache-from` source
@@ -806,6 +829,10 @@ export const template = pgTable(
 			.default({})
 			.notNull(),
 		privileged: boolean("privileged").default(false).notNull(),
+		publishedPorts: jsonb("published_ports")
+			.$type<PublishedPort[]>()
+			.default([])
+			.notNull(),
 		runAsUser: text("run_as_user"),
 		cpuLimit: text("cpu_limit"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
@@ -2107,6 +2134,7 @@ export type BackupRun = typeof backupRun.$inferSelect;
 export type CronJob = typeof cronJob.$inferSelect;
 export type CronJobRun = typeof cronJobRun.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
+export type Redirect = typeof redirect.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type RegistryToken = typeof registryToken.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;

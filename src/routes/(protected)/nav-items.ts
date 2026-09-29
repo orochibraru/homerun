@@ -1,5 +1,6 @@
 import {
 	Activity,
+	ArrowRightLeft,
 	BarChart3,
 	BookOpen,
 	Boxes,
@@ -124,6 +125,14 @@ export const allNavItems = [
 		href: resolve("/remote-hosts"),
 		icon: Network,
 		label: "Remote Hosts",
+	},
+	{
+		adminOnly: false,
+		category: "Infrastructure",
+		exact: false,
+		href: resolve("/redirects"),
+		icon: ArrowRightLeft,
+		label: "Redirects",
 	},
 	{
 		adminOnly: false,

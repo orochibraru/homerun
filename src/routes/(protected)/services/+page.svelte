@@ -11,6 +11,7 @@
 	import { onMount, type Snippet } from "svelte";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import DeleteVolumesOption from "$lib/components/delete-volumes-option.svelte";
 	import EntityList, {
 		type EntityRow,
 	} from "$lib/components/entity-list.svelte";
@@ -158,10 +159,12 @@
 	let deleteDialogOpen = $state(false);
 	let pendingDeleteName = $state("");
 	let pendingDeleteForm: HTMLFormElement | null = null;
+	let deleteVolumes = $state(false);
 
 	function requestDelete(e: MouseEvent, name: string) {
 		pendingDeleteForm = (e.currentTarget as HTMLElement).closest("form");
 		pendingDeleteName = name;
+		deleteVolumes = false;
 		deleteDialogOpen = true;
 	}
 
@@ -324,6 +327,7 @@
         {@const svc = byId(item.id)}
         {#if svc}
           <ServiceRowActions
+            {deleteVolumes}
             ondelete={(e) => requestDelete(e, svc.name)}
             pending={pending[svc.id] ?? false}
             service={svc}
@@ -405,7 +409,9 @@
   description={`Delete "${pendingDeleteName}"? This removes its container and can't be undone.`}
   onConfirm={() => pendingDeleteForm?.requestSubmit()}
   title="Delete service"
-/>
+>
+  <DeleteVolumesOption bind:checked={deleteVolumes} />
+</ConfirmDialog>
 
 <ServiceMenuHost
   bind:this={menuHost}

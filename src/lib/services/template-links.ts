@@ -9,6 +9,7 @@ import {
 	templatesNeedingHostAccess,
 } from "$lib/host-access";
 import { Logger } from "$lib/logger";
+import type { PublishedPort } from "$lib/published-ports";
 import { defaultHostname } from "$lib/service-domains";
 import { isDatabaseImage } from "$lib/service-link";
 import type { ServiceRuntimeOptions } from "$lib/service-runtime";
@@ -38,6 +39,7 @@ export interface ResolvedTemplateLink {
 	icon: string | null;
 	image: string;
 	memoryLimitMb: number | null;
+	publishedPorts: PublishedPort[];
 	restartPolicy: string;
 	runtime: ServiceRuntimeOptions;
 	secretEnvKeys: string[];
@@ -99,6 +101,7 @@ export async function buildTemplateLinkContext(
 			icon: linkedTemplate.linkedTemplateIcon,
 			image: linkedTemplate.linkedTemplateImage,
 			memoryLimitMb: linkedTemplate.linkedTemplateMemoryLimitMb,
+			publishedPorts: linkedTemplate.linkedTemplatePublishedPorts,
 			restartPolicy: linkedTemplate.linkedTemplateRestartPolicy,
 			runtime: fillSecretInRuntime(
 				linkedTemplate.linkedTemplateRuntime,
@@ -131,6 +134,28 @@ export function templateHostAccessRefusal(
 		...links.map((link) => ({ ...link.runtime, name: link.templateName })),
 	]);
 	return names.length > 0 ? templateHostAccessMessage(names) : null;
+}
+
+/**
+ * The ports of a template a new service can actually publish: `ports` minus
+ * any host port and protocol another service already publishes, each dropped
+ * one logged, so deploying the same template twice doesn't fail on a bind.
+ */
+export async function freeTemplatePorts(
+	ports: PublishedPort[],
+): Promise<PublishedPort[]> {
+	const taken = await Promise.all(
+		ports.map((port) => ServiceDTO.publishedPortTaken([port], "")),
+	);
+	return ports.filter((port, i) => {
+		const owner = taken[i];
+		if (owner) {
+			logger.warn(
+				`Template port skipped: host port ${port.hostPort}/${port.protocol} is already published by ${owner.serviceName}`,
+			);
+		}
+		return !owner;
+	});
 }
 
 /** Resolves every `{{alias}}`/`{{alias.KEY}}` token in `envVars`' values against the given resolved links. */
@@ -168,6 +193,8 @@ export async function createLinkedServices(
 ): Promise<ServiceDTO[]> {
 	const created: ServiceDTO[] = [];
 	for (const link of links) {
+		// oxlint-disable-next-line no-await-in-loop -- each companion's ports are checked against the services already created before it
+		const publishedPorts = await freeTemplatePorts(link.publishedPorts);
 		// oxlint-disable-next-line no-await-in-loop -- services are created one at a time so each gets a fresh slug-uniqueness check against the ones already committed
 		const svc = await ServiceDTO.create({
 			category: link.category,
@@ -178,6 +205,7 @@ export async function createLinkedServices(
 			icon: link.icon,
 			memoryLimitMb: link.memoryLimitMb,
 			name: link.templateName,
+			publishedPorts,
 			stackId: params.stackId,
 			restartPolicy: link.restartPolicy,
 			runtime: link.runtime,
@@ -259,6 +287,7 @@ export async function createServiceFromTemplate(
 		image: row.image,
 		memoryLimitMb: row.memoryLimitMb,
 		name: row.name,
+		publishedPorts: await freeTemplatePorts(template.publishedPorts),
 		stackId: finalStackId,
 		restartPolicy: row.restartPolicy,
 		runtime: fillSecretInRuntime(template.runtimeOptions, secret),

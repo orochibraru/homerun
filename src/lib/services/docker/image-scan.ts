@@ -286,16 +286,20 @@ export function DockerImageScanMixin<
 		 * token when registry auth is on. Tries the loopback address
 		 * first, unless this app is itself running in a container (see
 		 * `selfContainer`), in which case the in-network address is tried
-		 * first.
+		 * first. `HOMERUN_MIRROR_URL`, when set, replaces both, so the E2E
+		 * suite can point the app at an address nothing listens on.
 		 *
 		 * @throws When neither address responds.
 		 */
 		async imageMirrorClient(): Promise<MirrorRegistryClient> {
-			const candidates = [
-				`http://127.0.0.1:${MIRROR_HOST_PORT}`,
-				`http://${MIRROR_CONTAINER_NAME}:${MIRROR_INTERNAL_PORT}`,
-			];
-			if (await this.selfContainer()) {
+			const override = process.env.HOMERUN_MIRROR_URL;
+			const candidates = override
+				? [override]
+				: [
+						`http://127.0.0.1:${MIRROR_HOST_PORT}`,
+						`http://${MIRROR_CONTAINER_NAME}:${MIRROR_INTERNAL_PORT}`,
+					];
+			if (!override && (await this.selfContainer())) {
 				candidates.reverse();
 			}
 			const auth = await this.registryInternalAuth();

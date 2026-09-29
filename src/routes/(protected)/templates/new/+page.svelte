@@ -3,6 +3,7 @@
 		Check,
 		LayoutGrid,
 		Link2,
+		Plug,
 		Plus,
 		TerminalSquare,
 		Trash2,
@@ -11,6 +12,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
+	import PublishedPortsFields from "$lib/components/published-ports-fields.svelte";
 	import RuntimeFields from "$lib/components/runtime-fields.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -286,6 +288,25 @@
           showEnvFiles
           values={values ?? {}}
         />
+      </div>
+    </section>
+
+    <section class="rounded-md panel">
+      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+        <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
+          <Plug class="size-4" />
+        </div>
+        <div>
+          <h2 class="eyebrow">Published ports</h2>
+          <p class="text-xs text-text-muted">
+            Host ports bound straight to the container, for what Traefik can't
+            route by domain : SSH, UDP, raw TCP. A host port another service
+            already publishes is skipped when the template is deployed.
+          </p>
+        </div>
+      </div>
+      <div class="p-5">
+        <PublishedPortsFields />
       </div>
     </section>
 

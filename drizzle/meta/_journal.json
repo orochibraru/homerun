@@ -679,6 +679,20 @@
 			"when": 1790686720178,
 			"tag": "0096_dashboard_icons_for_bundled",
 			"breakpoints": true
+		},
+		{
+			"idx": 97,
+			"version": "7",
+			"when": 1790711307896,
+			"tag": "0097_easy_ego",
+			"breakpoints": true
+		},
+		{
+			"idx": 98,
+			"version": "7",
+			"when": 1790712112020,
+			"tag": "0098_wooden_captain_midlands",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

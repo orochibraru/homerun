@@ -2,6 +2,7 @@ import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import {
 	contentChunks,
 	isEditableText,
+	isOctalMode,
 	MAX_EDITABLE_BYTES,
 	parseListing,
 	type VolumeEntry,
@@ -14,12 +15,17 @@ import { DockerService } from "./docker.service.ts";
 
 const MOUNT = "/vol/t";
 const TARGET = `T="${MOUNT}\${P:+/$P}"`;
-const STAT = `stat -c '%F|%s|%Y|%n'`;
+const STAT = `stat -c '%F|%s|%Y|%a|%n'`;
+const EXISTS = `{ [ -e "$T" ] || [ -L "$T" ]; }`;
 const TIMEOUT_MS = 30_000;
 
 export const LIST_SCRIPT = `${TARGET}; if [ -f "$T" ]; then ${STAT} "$T"; exit 0; fi; cd "$T" 2>/dev/null || exit 3; for f in .[!.]* ..?* *; do if [ -e "$f" ] || [ -L "$f" ]; then ${STAT} "$f"; fi; done`;
 export const READ_SCRIPT = `${TARGET}; [ -f "$T" ] || exit 3; [ "$(stat -c %s "$T")" -le ${MAX_EDITABLE_BYTES} ] || exit 4; cat "$T"`;
 export const WRITE_SCRIPT = `${TARGET}; [ -d "$T" ] && exit 5; i=0; while [ "$i" -lt "$N" ]; do eval "printf '%s' \\"\\$C$i\\""; i=$((i+1)); done | base64 -d > /tmp/homerun-new || exit 6; cat /tmp/homerun-new > "$T" || exit 7`;
+
+export const CREATE_SCRIPT = `${TARGET}; ${EXISTS} && exit 8; if [ "$K" = directory ]; then mkdir -- "$T"; else touch -- "$T"; fi || exit 9`;
+export const DELETE_SCRIPT = `${TARGET}; [ -n "$P" ] || exit 10; ${EXISTS} || exit 3; rm -rf -- "$T" || exit 11`;
+export const CHMOD_SCRIPT = `${TARGET}; ${EXISTS} || exit 3; chmod "$M" "$T" || exit 12`;
 
 const FAILURES: Record<number, string> = {
 	3: "That path doesn't exist in the volume.",
@@ -27,6 +33,11 @@ const FAILURES: Record<number, string> = {
 	5: "That path is a directory.",
 	6: "Couldn't decode the new content.",
 	7: "Couldn't write the file : check the volume isn't read-only.",
+	8: "Something with that name already exists.",
+	9: "Couldn't create it : check the folder exists and the volume isn't read-only.",
+	10: "The volume's root can't be deleted.",
+	11: "Couldn't delete it : check the volume isn't read-only.",
+	12: "Couldn't change the permissions : check the volume isn't read-only.",
 };
 
 export interface VolumeListing {
@@ -128,6 +139,49 @@ class VolumeFilesServiceClass {
 			{ ...chunks, N: String(Object.keys(chunks).length), P: path },
 			true,
 		);
+	}
+
+	/**
+	 * Creates an empty file or a folder at `path`, inside a folder that must
+	 * already exist.
+	 *
+	 * @throws Error when something already sits at that path or the create fails.
+	 */
+	async create(
+		volume: StorageVolumeDTO,
+		path: string,
+		kind: "directory" | "file",
+	): Promise<void> {
+		await this.#run(volume, CREATE_SCRIPT, { K: kind, P: path }, true);
+	}
+
+	/**
+	 * Deletes the file, link or folder (with everything in it) at `path`.
+	 *
+	 * @throws Error for the volume's root, a missing path, or a failed delete.
+	 */
+	async remove(volume: StorageVolumeDTO, path: string): Promise<void> {
+		if (path === "") {
+			throw new Error(FAILURES[10]);
+		}
+		await this.#run(volume, DELETE_SCRIPT, { P: path }, true);
+	}
+
+	/**
+	 * Sets the octal permission `mode` of the entry at `path`.
+	 *
+	 * @throws Error when the mode isn't octal, the path is missing, or chmod
+	 *   fails.
+	 */
+	async chmod(
+		volume: StorageVolumeDTO,
+		path: string,
+		mode: string,
+	): Promise<void> {
+		if (!isOctalMode(mode)) {
+			throw new Error("The mode must be 3 or 4 octal digits, like 644.");
+		}
+		await this.#run(volume, CHMOD_SCRIPT, { M: mode, P: path }, true);
 	}
 }
 

@@ -116,6 +116,31 @@
 		"privileged": {
 			"type": "boolean"
 		},
+		"publishedPorts": {
+			"description": "Host ports bound straight to the container, for what Traefik can't route by domain (SSH, UDP). A port another service already publishes is dropped at deploy.",
+			"items": {
+				"additionalProperties": false,
+				"properties": {
+					"containerPort": {
+						"maximum": 65535,
+						"minimum": 1,
+						"type": "integer"
+					},
+					"hostPort": {
+						"maximum": 65535,
+						"minimum": 1,
+						"type": "integer"
+					},
+					"protocol": {
+						"enum": ["tcp", "udp"],
+						"type": "string"
+					}
+				},
+				"required": ["containerPort", "hostPort", "protocol"],
+				"type": "object"
+			},
+			"type": "array"
+		},
 		"runAsUser": {
 			"description": "Docker User the container runs as: uid, uid:gid, name or name:group. Unset keeps the image's.",
 			"type": "string"

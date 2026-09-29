@@ -4,6 +4,7 @@ const ENV_CHUNK = 96 * 1024;
 
 export interface VolumeEntry {
 	kind: "directory" | "file" | "link" | "other";
+	mode: string;
 	modifiedAt: string;
 	name: string;
 	size: number;
@@ -22,6 +23,25 @@ export function normalizeVolumePath(raw: string): string | null {
 	return segments.includes("..") ? null : segments.join("/");
 }
 
+/**
+ * Whether `name` is a single entry name to create inside a folder: not empty,
+ * no slash or NUL, not `.`/`..`, and within Linux's 255-byte limit.
+ */
+export function isEntryName(name: string): boolean {
+	return (
+		name !== "" &&
+		name !== "." &&
+		name !== ".." &&
+		!/[/\0]/.test(name) &&
+		new TextEncoder().encode(name).length <= 255
+	);
+}
+
+/** Whether `mode` is an octal permission mode `chmod` takes, like `644` or `2775`. */
+export function isOctalMode(mode: string): boolean {
+	return /^[0-7]{3,4}$/.test(mode);
+}
+
 /** The parent of a normalized volume path, "" at the root. */
 export function parentPath(path: string): string {
 	return path.split("/").slice(0, -1).join("/");
@@ -38,20 +58,21 @@ function kindOf(type: string): VolumeEntry["kind"] {
 }
 
 /**
- * Parses the helper's `stat -c '%F|%s|%Y|%n'` lines into entries, directories
+ * Parses the helper's `stat -c '%F|%s|%Y|%a|%n'` lines into entries, directories
  * first then by name. The name is the last field, so one containing `|` still
  * parses.
  */
 export function parseListing(output: string): VolumeEntry[] {
 	const entries: VolumeEntry[] = [];
 	for (const line of output.split("\n")) {
-		const [type, size, mtime, ...rest] = line.split("|");
+		const [type, size, mtime, mode, ...rest] = line.split("|");
 		const name = rest.join("|").split("/").pop() ?? "";
 		if (!(type && name) || name === "." || name === "..") {
 			continue;
 		}
 		entries.push({
 			kind: kindOf(type),
+			mode: mode ?? "",
 			modifiedAt: new Date(Number(mtime) * 1000).toISOString(),
 			name,
 			size: Number(size) || 0,

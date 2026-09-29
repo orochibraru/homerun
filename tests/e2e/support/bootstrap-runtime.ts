@@ -22,6 +22,7 @@ async function main(): Promise<void> {
 	await runMigrations(pg.databaseUrl);
 
 	process.env.HOMERUN_DISABLE_AUTH_RATE_LIMIT = "1";
+	process.env.HOMERUN_MIRROR_URL = `http://127.0.0.1:${getFreePort()}`;
 
 	const workerPort = getFreePort();
 	const options = {

@@ -24,6 +24,19 @@ export const errorResponse = z.object({
 	issues: z.unknown().optional(),
 });
 
+const publishedPortsField = z
+	.array(
+		z.object({
+			containerPort: z.number().int(),
+			hostPort: z.number().int(),
+			protocol: z.enum(["tcp", "udp"]),
+		}),
+	)
+	.meta({
+		description:
+			"Host ports bound straight to the container, for UDP and non-HTTP TCP",
+	});
+
 export const serviceResponse = z.object({
 	authAllowedEmails: z.array(z.string()),
 	authAllowedGroups: z.array(z.string()),
@@ -117,18 +130,7 @@ export const serviceResponse = z.object({
 	name: z.string(),
 	networkMode: z.enum(["bridge", "host"]),
 	portProtocol: z.enum(["tcp", "udp", "both"]),
-	publishedPorts: z
-		.array(
-			z.object({
-				containerPort: z.number().int(),
-				hostPort: z.number().int(),
-				protocol: z.enum(["tcp", "udp"]),
-			}),
-		)
-		.meta({
-			description:
-				"Host ports bound straight to the container, for UDP and non-HTTP TCP",
-		}),
+	publishedPorts: publishedPortsField,
 	domainPorts: z.record(z.string(), z.number().int()).meta({
 		description:
 			"Per custom domain, the container port it routes to instead of containerPort",
@@ -202,6 +204,7 @@ export const templateResponse = z.object({
 		description:
 			"privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them",
 	}),
+	publishedPorts: publishedPortsField,
 	restartPolicy: z.string(),
 	runAsUser: z.string().nullable(),
 	tag: z.string(),

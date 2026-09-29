@@ -107,6 +107,8 @@ export async function startAppContainer(
 			`WORKER_URL=${workerUrlForContainer(options.workerUrl)}`,
 			"-e",
 			"HOMERUN_DISABLE_AUTH_RATE_LIMIT=1",
+			"-e",
+			"HOMERUN_MIRROR_URL",
 			image,
 		],
 		{ stderr: "pipe", stdout: "pipe" },

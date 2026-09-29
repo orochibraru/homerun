@@ -10,6 +10,7 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
+import type { PublishedPort } from "$lib/published-ports";
 import { db } from "$lib/server/db/lib";
 import { type Template, template } from "$lib/server/db/schema";
 import {
@@ -37,6 +38,7 @@ export interface NewTemplateInput extends Partial<ServiceRuntimeOptions> {
 	memoryLimitMb?: number | null;
 	name: string;
 	ownerId: string;
+	publishedPorts?: PublishedPort[];
 	restartPolicy: string;
 	sourceUrl?: string | null;
 	tag: string;
@@ -205,6 +207,7 @@ export class TemplateDTO extends BaseDTO<Template> {
 			memoryLimitMb: input.memoryLimitMb ?? null,
 			name: input.name,
 			ownerId: input.ownerId,
+			publishedPorts: input.publishedPorts ?? [],
 			restartPolicy: input.restartPolicy,
 			sourceUrl: input.sourceUrl ?? null,
 			tag: input.tag,
@@ -235,6 +238,10 @@ export class TemplateDTO extends BaseDTO<Template> {
 	/** The command, entrypoint, env files, labels and host access services created from the template start with. */
 	get runtimeOptions(): ServiceRuntimeOptions {
 		return runtimeOptionsFrom(this.row);
+	}
+	/** Host ports services created from the template publish straight to their container. */
+	get publishedPorts(): PublishedPort[] {
+		return this.row.publishedPorts;
 	}
 	/** The template's display name. */
 	get name(): string {

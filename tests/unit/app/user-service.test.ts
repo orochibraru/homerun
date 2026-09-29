@@ -100,6 +100,7 @@ describe("UserService.cleanupUserResources", () => {
 		schema.storageVolume,
 		schema.s3Destination,
 		schema.buildCacheRegistry,
+		schema.redirect,
 		schema.remoteHost,
 		schema.cronJob,
 		schema.statusPage,
@@ -111,7 +112,7 @@ describe("UserService.cleanupUserResources", () => {
 
 		expect(chains.some((calls) => calls[0]?.method === "select")).toBe(false);
 		const updates = chains.filter((calls) => calls[0]?.method === "update");
-		expect(updates).toHaveLength(13);
+		expect(updates).toHaveLength(14);
 		for (const table of reassignedTables) {
 			const calls = updates.find((c) => c[0]?.args[0] === table);
 			expect(calls).toBeDefined();
@@ -136,7 +137,7 @@ describe("UserService.cleanupUserResources", () => {
 		expect(rendered(lookup ?? [])?.params).toEqual(["self"]);
 		expect(arg(lookup ?? [], "limit")).toBe(1);
 		const updates = chains.filter((calls) => calls[0]?.method === "update");
-		expect(updates).toHaveLength(13);
+		expect(updates).toHaveLength(14);
 		expect(arg(updates[0] ?? [], "set")).toEqual({ userId: "oldest-admin" });
 	});
 

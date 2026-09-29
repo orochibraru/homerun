@@ -151,6 +151,41 @@ describe("parseBuiltinTemplates", () => {
 		).toThrow(/bad\.json/);
 	});
 
+	test("carries published ports through, and rejects a reused or Traefik host port", () => {
+		const ssh = { containerPort: 22, hostPort: 2222, protocol: "tcp" as const };
+		const { templates } = parseBuiltinTemplates({
+			"/templates/other/forge.json": { ...leaf, publishedPorts: [ssh] },
+		});
+		expect(templates[0]?.publishedPorts).toEqual([ssh]);
+		expect(() =>
+			parseBuiltinTemplates({
+				"/templates/other/bad.json": {
+					...leaf,
+					publishedPorts: [ssh, { ...ssh, containerPort: 23 }],
+				},
+			}),
+		).toThrow(/bad\.json[\s\S]*publishedPorts/);
+		expect(() =>
+			parseBuiltinTemplates({
+				"/templates/other/bad.json": {
+					...leaf,
+					publishedPorts: [{ ...ssh, hostPort: 443 }],
+				},
+			}),
+		).toThrow(/bad\.json[\s\S]*publishedPorts/);
+	});
+
+	test("the built-in forges publish their SSH port", async () => {
+		const { templates } = parseBuiltinTemplates(await readTemplateFiles());
+		const forges = templates.filter((t) =>
+			["builtin-gitea", "builtin-forgejo"].includes(t.id),
+		);
+		expect(forges).toHaveLength(2);
+		for (const forge of forges) {
+			expect(forge.publishedPorts?.map((p) => p.containerPort)).toEqual([22]);
+		}
+	});
+
 	test("rejects a link to a missing or non-leaf template", () => {
 		expect(() =>
 			parseBuiltinTemplates({

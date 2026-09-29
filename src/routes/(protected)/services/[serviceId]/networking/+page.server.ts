@@ -4,9 +4,8 @@ import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
-import { publishedPortsProblem } from "$lib/published-ports";
 import {
-	publishedPortsSchema,
+	parsePublishedPortsField,
 	updatePortsSchema,
 } from "$lib/server/validation/service";
 import {
@@ -228,25 +227,13 @@ export const actions = {
 			return fail(404, { error: "Service not found." });
 		}
 
-		let raw: unknown;
-		try {
-			raw = JSON.parse(
-				String((await request.formData()).get("publishedPorts") ?? "[]"),
-			);
-		} catch {
-			return fail(400, { error: "Couldn't read the port list." });
+		const parsed = parsePublishedPortsField(
+			(await request.formData()).get("publishedPorts"),
+		);
+		if ("error" in parsed) {
+			return fail(400, { error: parsed.error });
 		}
-		const result = publishedPortsSchema.safeParse(raw);
-		if (!result.success) {
-			return fail(400, {
-				error: "Every port must be a number between 1 and 65535.",
-			});
-		}
-		const ports = result.data;
-		const problem = publishedPortsProblem(ports);
-		if (problem) {
-			return fail(400, { error: problem });
-		}
+		const { ports } = parsed;
 		const taken = await ServiceDTO.publishedPortTaken(ports, svc.id);
 		if (taken) {
 			return fail(400, {

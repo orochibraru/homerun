@@ -65,6 +65,13 @@ independent of this app's own `rateLimit.max`/`window` config.
 app to avoid tripping it across specs (see `src/lib/services/auth.ts`); never
 set in production.
 
+## The registry is never reachable
+
+`bootstrap-runtime.ts` also sets `HOMERUN_MIRROR_URL` to a free local port, so
+the app never finds a registry even when a dev `homerun-mirror` container is
+running on this machine, and `ui-registry.spec.ts` sees "The registry isn't
+answering." either way.
+
 ## Coverage
 
 - [x] Blank instance → `/` redirects to `/auth/sign-up` (bootstrap-admin

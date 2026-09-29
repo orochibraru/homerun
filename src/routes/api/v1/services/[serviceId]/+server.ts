@@ -121,8 +121,9 @@ export const DELETE = async ({ params, locals, platform, url }) => {
 	}
 
 	const force = url.searchParams.get("force") === "true";
+	const deleteVolumes = url.searchParams.get("deleteVolumes") === "true";
 	try {
-		await ServiceLifecycleService.deleteService(svc, { force });
+		await ServiceLifecycleService.deleteService(svc, { deleteVolumes, force });
 	} catch (error) {
 		if (error instanceof WorkloadDetachError) {
 			return json({ error: error.message }, { status: 409 });

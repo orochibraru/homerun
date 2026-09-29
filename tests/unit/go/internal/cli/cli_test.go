@@ -503,7 +503,7 @@ func TestServiceDelete(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			client, seen := jsonAPI(t, `{}`)
 
-			out, failed := runCLI(t, func() { cli.ServiceDelete(client, "svc-1", force) })
+			out, failed := runCLI(t, func() { cli.ServiceDelete(client, "svc-1", force, force) })
 			if failed != "" {
 				t.Fatalf("failed with %q", failed)
 			}
@@ -520,6 +520,9 @@ func TestServiceDelete(t *testing.T) {
 			if !force && got != "" {
 				t.Errorf("without --force nothing should be sent, got query %v", (*seen)[0].Query)
 			}
+			if volumes := (*seen)[0].Query.Get("deleteVolumes"); (volumes == "true") != force {
+				t.Errorf("--volumes should send deleteVolumes only when set, got query %v", (*seen)[0].Query)
+			}
 		})
 	}
 }
@@ -530,7 +533,7 @@ func TestServiceDeleteSurfacesTheAPIError(t *testing.T) {
 		fmt.Fprint(writer, `{"error":"container still running"}`)
 	})
 
-	_, failed := runCLI(t, func() { cli.ServiceDelete(client, "svc-1", false) })
+	_, failed := runCLI(t, func() { cli.ServiceDelete(client, "svc-1", false, false) })
 	if !strings.Contains(failed, "409") || !strings.Contains(failed, "container still running") {
 		t.Errorf("the API's 409 should be reported verbatim, got %q", failed)
 	}
