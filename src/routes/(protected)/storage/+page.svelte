@@ -22,8 +22,10 @@
 	import SelectAllRow from "$lib/components/select-all-row.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
+	import VolumeSizeLabel from "$lib/components/volume-size-label.svelte";
 	import { ListSelection } from "$lib/list-selection.svelte";
 	import { BASE_SORTS } from "$lib/list-sorts";
+	import { getVolumeSizes } from "$lib/remote/volume-sizes.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
@@ -54,6 +56,7 @@
 	];
 
 	const selection = new ListSelection(() => data.volumes.map((vol) => vol.id));
+	const sizes = $derived(getVolumeSizes(data.volumes.map((vol) => vol.id)));
 
 	type BulkOp = "delete" | "disableBackup" | "enableBackup";
 
@@ -213,6 +216,7 @@
 
     {#snippet meta(item: { id: string })}
       {@const vol = data.volumes.find((v) => v.id === item.id)}
+      <VolumeSizeLabel size={sizes.current?.find((row) => row.id === item.id)} />
       {#if vol?.backupEnabled}
         <span class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
           <CloudUpload class="size-3" />

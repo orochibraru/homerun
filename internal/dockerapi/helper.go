@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/orochibraru/homerun/internal/logging"
@@ -195,4 +198,35 @@ func (c *Client) removeHelper(ctx context.Context, id string) {
 	if err := c.RemoveContainer(context.WithoutCancel(ctx), id); err != nil && !errors.Is(err, ErrNotFound) {
 		logging.Warnf(engineScope, "couldn't remove helper %s, leaving it to the janitor: %s", shortID(id), err)
 	}
+}
+
+// VolumeSize measures what a volume or host path holds, in bytes, with
+// `du -sk` in a helper container that mounts it read-only.
+func (c *Client) VolumeSize(ctx context.Context, source, image string) (int64, error) {
+	result, err := c.RunHelper(ctx, HelperConfig{
+		Binds:           []string{source + ":/volume:ro"},
+		Cmd:             []string{"du", "-sk", "/volume"},
+		Image:           image,
+		NetworkDisabled: true,
+	})
+	if err != nil {
+		return 0, err
+	}
+	if result.ExitCode != 0 {
+		return 0, fmt.Errorf("du exited %d: %s", result.ExitCode, strings.TrimSpace(result.Stderr))
+	}
+	return ParseDuKilobytes(result.Stdout)
+}
+
+// ParseDuKilobytes reads the first field of `du -sk`'s output as bytes.
+func ParseDuKilobytes(output string) (int64, error) {
+	fields := strings.Fields(output)
+	if len(fields) == 0 {
+		return 0, errors.New("du printed nothing")
+	}
+	kilobytes, err := strconv.ParseInt(fields[0], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("unexpected du output %q", strings.TrimSpace(output))
+	}
+	return kilobytes * 1024, nil
 }

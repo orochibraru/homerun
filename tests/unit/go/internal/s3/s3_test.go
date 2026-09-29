@@ -219,3 +219,48 @@ func TestGetMissingIsAnError(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestUploadSendsPartsConcurrently(t *testing.T) {
+	var mu sync.Mutex
+	inFlight, peak := 0, 0
+	parts := map[string][]byte{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		query := r.URL.Query()
+		switch {
+		case query.Has("uploads"):
+			fmt.Fprint(w, "<InitiateMultipartUploadResult><UploadId>up</UploadId></InitiateMultipartUploadResult>")
+		case query.Has("partNumber"):
+			mu.Lock()
+			inFlight++
+			peak = max(peak, inFlight)
+			mu.Unlock()
+			time.Sleep(50 * time.Millisecond)
+			mu.Lock()
+			inFlight--
+			parts[query.Get("partNumber")] = body
+			mu.Unlock()
+			w.Header().Set("ETag", `"e"`)
+		default:
+			fmt.Fprint(w, "<CompleteMultipartUploadResult/>")
+		}
+	}))
+	t.Cleanup(server.Close)
+	client := &s3.Client{Bucket: "b", Endpoint: server.URL, Region: "us-east-1"}
+	data := make([]byte, 6*s3.PartSize+7)
+	_, _ = rand.Read(data)
+	size, err := client.Upload(context.Background(), "big", bytes.NewReader(data))
+	if err != nil || size != int64(len(data)) {
+		t.Fatalf("size=%d err=%v", size, err)
+	}
+	if peak < 2 || peak > s3.UploadConcurrency {
+		t.Fatalf("peak parts in flight = %d, want 2..%d", peak, s3.UploadConcurrency)
+	}
+	var joined []byte
+	for i := 1; i <= len(parts); i++ {
+		joined = append(joined, parts[strconv.Itoa(i)]...)
+	}
+	if !bytes.Equal(joined, data) {
+		t.Fatal("parts don't reassemble into the upload")
+	}
+}

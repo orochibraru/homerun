@@ -328,6 +328,19 @@ The activity watchdog alone couldn't bound these: an endpoint trickling bytes
 counts as progress. `backup_run.size_bytes` is `bigint`, it was `integer` and
 any archive over 2 GiB failed the finalize write.
 
+**Uploads send several parts at once** (`internal/s3`'s `uploadParts`,
+`UploadConcurrency` parts of `PartSize` in flight, from a pool of
+`UploadConcurrency+1` buffers so memory stays bounded) and the archive is
+gzipped at `BestSpeed`. **Real production incident** (2026-09-29): a backup to
+Hetzner's object storage ran for five hours before being cancelled. Parts went
+up strictly one at a time: tar and gzip waited on each part's round trip, the
+upload waited on each 16 MiB refill, and the default gzip level was
+single-threaded and slow on top of that. The shared HTTP client keeps
+`UploadConcurrency+2` idle connections per host, because `http.DefaultTransport`
+keeps two and the rest would redo TLS per part.
+`tests/integration/s3-backup.test.ts` runs a backup and a restore against a real
+bucket when `HOMERUN_TEST_S3_*` is set (see `tests/integration/README.md`).
+
 **Never Docker's archive API on a never-started container.** Backups used to
 create an `alpine` helper with entrypoint `true`, never start it, and read the
 volume out through `GET /containers/<id>/archive` (restores used

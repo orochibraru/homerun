@@ -212,8 +212,10 @@ func download(ctx context.Context, spec Spec) (*os.File, int64, error) {
 }
 
 // archiveAndUpload tars the volume through a started helper container that
-// streams `tar -c` to its stdout, gzips it on the fly, and streams it to
-// spec.Destination: nothing is buffered on disk, whatever the volume's size.
+// streams `tar -c` to its stdout, gzips it on the fly at the fastest level
+// (the default one is CPU-bound well under what an upload sustains), and
+// streams it to spec.Destination, several parts at a time: nothing is
+// buffered on disk, whatever the volume's size.
 // A helper that exits non-zero fails the run with its stderr, and the upload
 // is aborted rather than left truncated. A failed upload wins over the
 // helper's own error, which is then only the broken pipe it caused.
@@ -221,7 +223,7 @@ func archiveAndUpload(ctx context.Context, docker *dockerapi.Client, spec Spec) 
 	reader, writer := io.Pipe()
 	archived := make(chan error, 1)
 	go func() {
-		gz := gzip.NewWriter(writer)
+		gz, _ := gzip.NewWriterLevel(writer, gzip.BestSpeed)
 		result, err := docker.RunHelper(ctx, dockerapi.HelperConfig{
 			Binds:  []string{spec.Source + ":" + spec.MountPath + ":ro"},
 			Cmd:    []string{"tar", "-C", spec.MountPath, "--numeric-owner", "-cf", "-", "."},

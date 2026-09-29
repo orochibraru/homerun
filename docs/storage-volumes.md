@@ -12,6 +12,12 @@ hood; you just pick a kind and a source when creating one. A volume becomes
 "shared" simply by being mounted into more than one service, there's no separate
 "shared volume" concept to configure.
 
+Each volume shows how much it holds on disk, on `/storage` and next to every
+mount on a service's Storage tab. Homerun measures it with `du` in a throwaway
+read-only container, the same way for both kinds, and keeps the number for ten
+minutes: measuring a large volume reads its whole tree. Hover the size for the
+error when a volume couldn't be measured.
+
 `/storage` has a search box, Kind and Backups filters, a list/card view toggle,
 and a pager once you have more than a page's worth, same toolkit as the
 [services list](services.md#the-services-list), searched/paginated server-side

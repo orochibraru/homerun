@@ -29,8 +29,9 @@ destination and an optional key prefix. The volume's own page
 during the backup, and a pre-backup command. The homerun worker tars the
 volume's contents and streams it, gzipped, to
 `<prefix/>volumeName-<timestamp>.tar.gz` through a hand-rolled Signature V4
-client (multipart upload in 16 MiB parts, archives up to about 160 GB, never a
-whole archive in memory, no SDK).
+client (multipart upload in 16 MiB parts, four sent at once while the next ones
+are archived, archives up to about 160 GB, at most five parts in memory, no
+SDK). The run's log reports the throughput every 30 seconds.
 
 **Both volume kinds are backed up the same way.** The volume (a bind mount's
 host path or a Docker-managed volume) is mounted read-only into a short-lived

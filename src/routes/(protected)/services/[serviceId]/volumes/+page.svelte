@@ -17,8 +17,10 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import VolumeSizeLabel from "$lib/components/volume-size-label.svelte";
 	import { HOST_VOLUME_PREFIX } from "$lib/constants";
 	import { getUnknownHostVolumes } from "$lib/remote/docker-infra.remote";
+	import { getVolumeSizes } from "$lib/remote/volume-sizes.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import MountBackup from "./mount-backup.svelte";
@@ -35,6 +37,10 @@
 	);
 	const unknownHostVolumes = $derived(getUnknownHostVolumes(known));
 	const hostVolumes = $derived(unknownHostVolumes.current ?? []);
+
+	const sizes = $derived(
+		getVolumeSizes(data.mounts.map((mount) => mount.volumeId)),
+	);
 
 	onMount(() => title.set("Storage"));
 
@@ -80,8 +86,11 @@
                 >(read-only)</span>
               {/if}
             </p>
-            <p class="text-text-muted truncate text-xs">
-              {mount.containerPath}
+            <p class="text-text-muted flex items-center gap-3 truncate text-xs">
+              <span class="truncate">{mount.containerPath}</span>
+              <VolumeSizeLabel
+                size={sizes.current?.find((row) => row.id === mount.volumeId)}
+              />
             </p>
           </div>
           <Button

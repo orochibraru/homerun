@@ -10,6 +10,11 @@ on:
         description:
           "Run the unit + integration suite. False for docs-only changes."
         type: boolean
+    secrets:
+      s3_access_key_id:
+        required: false
+      s3_secret_access_key:
+        required: false
     outputs:
       lint:
         description: "Result of the lint/type-check/codegen job"
@@ -124,6 +129,12 @@ jobs:
           5s --health-timeout 5s --health-retries 20
     env:
       HOMERUN_TEST_POSTGRES_URL: postgres://homerun:homerun@127.0.0.1:5432/homerun_test
+      HOMERUN_TEST_S3_ENDPOINT: ${{ vars.HOMERUN_TEST_S3_ENDPOINT }}
+      HOMERUN_TEST_S3_REGION: ${{ vars.HOMERUN_TEST_S3_REGION }}
+      HOMERUN_TEST_S3_BUCKET: ${{ vars.HOMERUN_TEST_S3_BUCKET }}
+      HOMERUN_TEST_S3_PREFIX: ${{ vars.HOMERUN_TEST_S3_PREFIX }}
+      HOMERUN_TEST_S3_ACCESS_KEY_ID: ${{ secrets.s3_access_key_id }}
+      HOMERUN_TEST_S3_SECRET_ACCESS_KEY: ${{ secrets.s3_secret_access_key }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

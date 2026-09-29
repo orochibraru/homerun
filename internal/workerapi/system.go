@@ -2,6 +2,7 @@ package workerapi
 
 import (
 	"net/http"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 
@@ -16,6 +17,54 @@ func (s *Server) mountNetworks(r chi.Router) {
 	r.Delete("/v1/networks/{id}", httpapi.H(s.removeNetwork))
 	r.Get("/v1/volumes", httpapi.H(s.listVolumes))
 	r.Delete("/v1/volumes/{name}", httpapi.H(s.removeVolume))
+	r.Post("/v1/volumes/sizes", httpapi.H(s.volumeSizes))
+}
+
+// volumeSizesBody lists the volumes or host paths to measure and the helper
+// image that measures them.
+type volumeSizesBody struct {
+	Image   string   `json:"image"`
+	Sources []string `json:"sources"`
+}
+
+// volumeSize is one source's size, or why it couldn't be measured.
+type volumeSize struct {
+	Bytes  *int64 `json:"bytes"`
+	Error  string `json:"error,omitempty"`
+	Source string `json:"source"`
+}
+
+// volumeSizes measures each source with `du` in a read-only helper, three at a
+// time, reporting a failure per source rather than failing the request.
+func (s *Server) volumeSizes(w http.ResponseWriter, r *http.Request) error {
+	var input volumeSizesBody
+	if !httpapi.DecodeJSON(w, r, &input) {
+		return nil
+	}
+	if input.Image == "" {
+		return httpapi.Invalid(w, "Invalid request body",
+			[]httpapi.ValidationIssue{{Message: "image is required", Path: []string{"image"}}})
+	}
+	sizes := make([]volumeSize, len(input.Sources))
+	limit := make(chan struct{}, 3)
+	var wg sync.WaitGroup
+	for i, source := range input.Sources {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			limit <- struct{}{}
+			defer func() { <-limit }()
+			sizes[i] = volumeSize{Source: source}
+			bytes, err := s.docker.VolumeSize(r.Context(), source, input.Image)
+			if err != nil {
+				sizes[i].Error = err.Error()
+				return
+			}
+			sizes[i].Bytes = &bytes
+		}()
+	}
+	wg.Wait()
+	return httpapi.Answer(w, http.StatusOK, sizes)
 }
 
 // mountSystem wires the daemon-wide routes: info, disk usage, prunes and this

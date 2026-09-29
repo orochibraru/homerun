@@ -544,3 +544,16 @@ func TestRemoveSwarmNodeForces(t *testing.T) {
 	}
 	d.expect(t, http.MethodDelete, "/nodes/n1", map[string][]string{"force": {"true"}})
 }
+
+func TestParseDuKilobytes(t *testing.T) {
+	got, err := dockerapi.ParseDuKilobytes("2048\t/volume\n")
+	if err != nil || got != 2048*1024 {
+		t.Errorf("ParseDuKilobytes = %d, %v", got, err)
+	}
+	if _, err := dockerapi.ParseDuKilobytes(""); err == nil {
+		t.Error("empty output should fail")
+	}
+	if _, err := dockerapi.ParseDuKilobytes("du: /volume: No such file"); err == nil {
+		t.Error("non-numeric output should fail")
+	}
+}
