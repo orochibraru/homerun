@@ -32,7 +32,10 @@ first: **host networking** (both copies would bind the same ports) and a
 **writable volume** (two copies writing the same data, a database's data
 directory for instance). In [swarm mode](swarm-mode.md) the service is updated
 in place through swarm's own rolling update, start-first, and swarm rolls back
-to the previous tasks on its own when a new one fails.
+to the previous tasks on its own when a new one fails. A writable volume only
+forces stop-first there on a service with no domain: a routed service always
+starts its new task first, sharing the volume for the few seconds both run,
+since stopping its only task would 404 every request until the new one is up.
 
 **Readiness: no traffic before the new copy is ready.** Like a Kubernetes
 readiness probe, a new container or swarm task gets no traffic from Traefik

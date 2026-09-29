@@ -126,10 +126,12 @@ func anyWritable(volumes []Volume) bool {
 	return false
 }
 
-// SwarmUpdateOrder is stop-first when a writable volume can't be shared by
-// two tasks, start-first otherwise.
-func SwarmUpdateOrder(volumes []Volume) string {
-	if anyWritable(volumes) {
+// SwarmUpdateOrder is start-first unless an unrouted service has a writable
+// volume. A service Traefik routes to always starts first, since stopping its
+// only task drops the router and every request 404s until the new one runs;
+// the old and new task share the volume for the few seconds they overlap.
+func SwarmUpdateOrder(volumes []Volume, routed bool) string {
+	if !routed && anyWritable(volumes) {
 		return "stop-first"
 	}
 	return "start-first"
@@ -202,4 +204,11 @@ func ReadyLine(check Readiness, seconds int) string {
 		return fmt.Sprintf("New container kept running for %ds, removing the previous one (Traefik was already sending it traffic).", seconds)
 	}
 	return fmt.Sprintf("New container passed its readiness check after %ds: Traefik now routes to it, removing the previous one.", seconds)
+}
+
+// Routed reports whether a swarm service spec carries Traefik routing labels.
+func Routed(spec map[string]any) bool {
+	labels, _ := spec["Labels"].(map[string]any)
+	enabled, _ := labels["traefik.enable"].(string)
+	return enabled == "true"
 }

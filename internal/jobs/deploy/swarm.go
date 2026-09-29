@@ -136,11 +136,11 @@ func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any) 
 	if failureAction == "pause" {
 		r.progress.line("None of the current tasks is running, so a failed update keeps the new tasks instead of rolling back to the broken ones.")
 	}
-	order := SwarmUpdateOrder(r.spec.Volumes)
+	order := SwarmUpdateOrder(r.spec.Volumes, Routed(spec))
 	if order == "start-first" {
 		r.progress.line("Updating the swarm service : each new task starts first, and swarm stops the old one once the new one is running (healthy, when it has a healthcheck)...")
 	} else {
-		r.progress.line("Updating the swarm service : a writable volume means each old task stops before its replacement starts...")
+		r.progress.line("Updating the swarm service : a writable volume on a service with no domain means each old task stops before its replacement starts...")
 	}
 	task, _ := spec["TaskTemplate"].(map[string]any)
 	task = maps.Clone(task)

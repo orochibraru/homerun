@@ -118,8 +118,11 @@ func TestRolloutStrategy(t *testing.T) {
 	if got := deploy.RolloutStrategy(true, false, false, []deploy.Volume{{}}); !strings.Contains(got.Reason, "writable volume") {
 		t.Errorf("volume: %+v", got)
 	}
-	if deploy.SwarmUpdateOrder([]deploy.Volume{{ReadOnly: true}}) != "start-first" || deploy.SwarmUpdateOrder([]deploy.Volume{{}}) != "stop-first" {
+	if deploy.SwarmUpdateOrder([]deploy.Volume{{ReadOnly: true}}, false) != "start-first" || deploy.SwarmUpdateOrder([]deploy.Volume{{}}, false) != "stop-first" || deploy.SwarmUpdateOrder([]deploy.Volume{{}}, true) != "start-first" {
 		t.Error("start-first unless a mount is writable")
+	}
+	if !deploy.Routed(map[string]any{"Labels": map[string]any{"traefik.enable": "true"}}) || deploy.Routed(map[string]any{"Labels": map[string]any{}}) || deploy.Routed(map[string]any{}) {
+		t.Error("routed only with traefik.enable")
 	}
 }
 
