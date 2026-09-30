@@ -61,24 +61,46 @@ test.describe
 			await expect(page.getByText("tcp://10.0.0.5:2375")).toBeVisible();
 		});
 
-		test("an S3 destination lists with endpoint, bucket and region", async ({
+		test("a backup destination lists, shows its details, edits and reports a failed test", async ({
 			page,
 		}) => {
 			await page.goto("/s3-destinations/new");
 			await page.locator("#name").fill("Backups");
-			await page.locator("#endpoint").fill("https://s3.example.com");
+			await page.locator("#endpoint").fill("http://127.0.0.1:9");
 			await page.locator("#bucket").fill("homerun");
 			await page.locator("#region").fill("eu-central-1");
 			await page.locator("#accessKeyId").fill("key");
 			await page.locator("#secretAccessKey").fill("secret");
 			await page.getByRole("button", { name: /Add destination/i }).click();
 			await expect(page.getByText("Destination added.")).toBeVisible();
+			await expect(page).toHaveURL(/\/s3-destinations\/[0-9a-f-]{36}$/);
 
 			await page.goto("/s3-destinations");
 			const listPanel = page.locator(".panel");
 			await expect(listPanel.getByText("Backups")).toBeVisible();
 			await expect(
-				page.getByText("https://s3.example.com · homerun · eu-central-1"),
+				page.getByText("http://127.0.0.1:9 · homerun · eu-central-1"),
+			).toBeVisible();
+
+			await page.getByTitle("Details").first().click();
+			await expect(page.locator("#name")).toHaveValue("Backups");
+			await expect(page.locator("#secretAccessKey")).toHaveAttribute(
+				"placeholder",
+				"Leave blank to keep current",
+			);
+			await expect(
+				page.getByText("No volume uses this destination yet."),
+			).toBeVisible();
+			await page.locator("#bucket").fill("homerun-two");
+			await page.getByRole("button", { name: "Save changes" }).click();
+			await expect(page.getByText("Destination saved.")).toBeVisible();
+
+			await page.getByRole("button", { name: "Test destination" }).click();
+			await expect(page.getByText("The test failed")).toBeVisible();
+
+			await page.goto("/s3-destinations");
+			await expect(
+				page.getByText("http://127.0.0.1:9 · homerun-two · eu-central-1"),
 			).toBeVisible();
 		});
 

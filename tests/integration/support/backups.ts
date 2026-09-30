@@ -39,6 +39,40 @@ export function docker(...args: string[]): string {
 	return run.stdout.toString().trim();
 }
 
+/** Inserts a destination row the way the form saves one and returns its id. */
+export async function insertDestination(
+	sql: SQL,
+	destination: TestDestination,
+): Promise<string> {
+	const { userId } = integrationContext();
+	const id = crypto.randomUUID();
+	const now = new Date();
+	await sql`insert into s3_destination (id, name, type, endpoint, region, bucket, access_key_id, secret_access_key_enc, user_id, created_at, updated_at)
+		values (${id}, ${`it-${id.slice(0, 8)}`}, ${destination.type}, ${destination.endpoint}, ${destination.region}, ${destination.bucket}, ${destination.accessKeyId}, ${encryptSecret(destination.secret)}, ${userId}, ${now}, ${now})`;
+	return id;
+}
+
+/** Runs the destination page's Test action and returns the action's result. */
+export async function testDestination(
+	destinationId: string,
+): Promise<{ data?: string; type: string }> {
+	const { apiKey, origin } = integrationContext();
+	const response = await nativeFetch(
+		`${origin}/s3-destinations/${destinationId}?/test`,
+		{
+			body: new URLSearchParams(),
+			headers: {
+				"content-type": "application/x-www-form-urlencoded",
+				origin,
+				"x-api-key": apiKey,
+				"x-sveltekit-action": "true",
+			},
+			method: "POST",
+		},
+	);
+	return await response.json();
+}
+
 /** A sha256 per file of a volume, sorted by path, read through a throwaway container. */
 function manifest(volume: string): string {
 	return docker(
@@ -127,11 +161,9 @@ export async function backupRoundTrip(
 		);
 		const before = manifest(source);
 
-		const destinationId = crypto.randomUUID();
+		const destinationId = await insertDestination(sql, destination);
 		const volumeId = crypto.randomUUID();
 		const now = new Date();
-		await sql`insert into s3_destination (id, name, type, endpoint, region, bucket, access_key_id, secret_access_key_enc, user_id, created_at, updated_at)
-		values (${destinationId}, ${`it-${suffix}`}, ${destination.type}, ${destination.endpoint}, ${destination.region}, ${destination.bucket}, ${destination.accessKeyId}, ${encryptSecret(destination.secret)}, ${userId}, ${now}, ${now})`;
 		await sql`insert into storage_volume (id, name, kind, source, s3_destination_id, backup_prefix, user_id, created_at, updated_at)
 		values (${volumeId}, ${`backup-${suffix}`}, 'volume', ${source}, ${destinationId}, ${`${prefix}/${suffix}`}, ${userId}, ${now}, ${now})`;
 

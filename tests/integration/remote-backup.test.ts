@@ -1,6 +1,11 @@
-import { afterAll, beforeAll, describe, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
-import { backupRoundTrip, docker } from "./support/backups";
+import {
+	backupRoundTrip,
+	docker,
+	insertDestination,
+	testDestination,
+} from "./support/backups";
 import { integrationContext } from "./support/context";
 
 const RCLONE_IMAGE = "rclone/rclone:1.75.1";
@@ -70,4 +75,25 @@ describe("volume backups to an SFTP server through rclone", () => {
 		},
 		10 * 60_000,
 	);
+
+	test("the destination test passes with the right password and fails with rclone's error on a wrong one", async () => {
+		const destination = {
+			accessKeyId: "bob",
+			bucket: "backups",
+			endpoint: `${address}:2022`,
+			region: "",
+			secret: PASSWORD,
+			type: "sftp" as const,
+		};
+		const good = await testDestination(
+			await insertDestination(sql, destination),
+		);
+		expect(good.type).toBe("success");
+
+		const bad = await testDestination(
+			await insertDestination(sql, { ...destination, secret: "wrong" }),
+		);
+		expect(bad.type).toBe("failure");
+		expect(bad.data).toContain("unable to authenticate");
+	}, 120_000);
 });

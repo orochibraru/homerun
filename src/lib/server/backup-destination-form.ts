@@ -27,12 +27,22 @@ function normalisePath(type: DestinationType, path: string): string {
 	return type === "sftp" ? trimmed : trimmed.replace(/^\/+/, "");
 }
 
-function validate(parsed: ParsedDestinationForm): string | null {
+function validate(
+	parsed: ParsedDestinationForm,
+	keepSecret: boolean,
+): string | null {
 	const { accessKeyId, bucket, endpoint, name, region, secretAccessKey, type } =
 		parsed;
 	if (type === "s3") {
 		if (
-			!(name && endpoint && bucket && region && accessKeyId && secretAccessKey)
+			!(
+				name &&
+				endpoint &&
+				bucket &&
+				region &&
+				accessKeyId &&
+				(secretAccessKey || keepSecret)
+			)
 		) {
 			return "Every field is required.";
 		}
@@ -41,7 +51,7 @@ function validate(parsed: ParsedDestinationForm): string | null {
 	if (!(name && endpoint && accessKeyId)) {
 		return "Name, host and username are required.";
 	}
-	if (!secretAccessKey) {
+	if (!(secretAccessKey || keepSecret)) {
 		return type === "sftp"
 			? "Give a password or a private key."
 			: "The password is required.";
@@ -67,10 +77,13 @@ function validate(parsed: ParsedDestinationForm): string | null {
  * `accessKeyId` and its password, or an SFTP private key when one was
  * pasted, in `secretAccessKey`.
  *
+ * @param options.keepSecret Editing an existing destination: a blank secret
+ *   is allowed and means the stored one stays.
  * @returns The parsed fields, or the first validation error message.
  */
 export function parseDestinationForm(
 	formData: FormData,
+	options: { keepSecret?: boolean } = {},
 ): DestinationFormResult {
 	const type = parseDestinationType(field(formData, "type") || "s3");
 	if (!type) {
@@ -88,6 +101,6 @@ export function parseDestinationForm(
 			field(formData, "secretAccessKey"),
 		type,
 	};
-	const error = validate(parsed);
+	const error = validate(parsed, options.keepSecret ?? false);
 	return error ? { error } : { parsed };
 }

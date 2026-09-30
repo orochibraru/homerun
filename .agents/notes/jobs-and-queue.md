@@ -286,11 +286,20 @@ reusable row (`s3_destination`, `S3DestinationDTO`, managed on
 `storageVolume.s3DestinationId`, so several volumes can share one
 bucket/credential pair; the volume only owns
 `backupEnabled`/`backupSchedule`/`backupPrefix`, edited on `storage/[volumeId]`.
-Every attempt, scheduled or manual, writes a `backup_run` row (`BackupRunDTO`,
-opened by the `backup`/`backup_restore` worker jobs' `prepare` step and
-finalized on every return path including a spec that couldn't be built), and
-`/backups` is the page over that history, plus a "Run now" action per volume,
-the same one `storage/[volumeId]` offers.
+`/s3-destinations/[destinationId]` is the detail page: the volumes using it
+(`StorageVolumeDTO.listForDestination`), the same fields as the create form
+(`$lib/components/backup-destination-fields.svelte`, parsed with
+`keepSecret: true` so a blank secret keeps the stored one; the type can't
+change) and a **Test destination** action. `S3BackupService.testDestination`
+writes `.homerun-test-<uuid>` and deletes it, against the saved row: a signed
+`PUT` then `DELETE` for S3, `rclone touch` then `rclone deletefile` through
+`runOneOff` for the rest (`testRemote`). Listing alone would pass a read-only
+key that every backup then fails with. Every attempt, scheduled or manual,
+writes a `backup_run` row (`BackupRunDTO`, opened by the
+`backup`/`backup_restore` worker jobs' `prepare` step and finalized on every
+return path including a spec that couldn't be built), and `/backups` is the page
+over that history, plus a "Run now" action per volume, the same one
+`storage/[volumeId]` offers.
 
 **The tar-then-upload (and download-then-unpack) pipeline itself runs in the Go
 worker now**: `S3BackupService` (`s3-backup.service.ts`) only resolves and

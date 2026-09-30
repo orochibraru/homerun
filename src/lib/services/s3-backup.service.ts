@@ -8,6 +8,7 @@ import {
 	listRemoteBackups,
 	type RcloneRemote,
 	rcloneRemote,
+	testRemote,
 } from "./backup/rclone.ts";
 import {
 	VOLUME_HELPER_IMAGE,
@@ -57,19 +58,25 @@ function signingKey(
 	return hmac(kService, "aws4_request");
 }
 
-/** One signed S3 request : the same SigV4 dance `putObject` does, for the verbs restore needs. */
+interface SignedRequest {
+	body?: string;
+	method: "DELETE" | "GET" | "PUT";
+	path: string;
+	queryString?: string;
+}
+
+/** One signed S3 request : the same SigV4 dance `putObject` does, for the verbs restore and the destination test need. */
 async function signedRequest(
 	config: S3Config,
-	method: "GET",
-	path: string,
-	queryString = "",
+	request: SignedRequest,
 ): Promise<Response> {
+	const { body = "", method, path, queryString = "" } = request;
 	const url = new URL(config.endpoint);
 	url.pathname = path.replace(/\/+/g, "/");
 	url.search = queryString;
 
 	const { amzDate: amz, dateStamp } = amzDate(new Date());
-	const payloadHash = sha256Hex("");
+	const payloadHash = sha256Hex(body);
 
 	const headers: Record<string, string> = {
 		host: url.host,
@@ -111,10 +118,20 @@ async function signedRequest(
 				`SignedHeaders=${signedHeaders}, Signature=${signature}`,
 		},
 		method,
+		...(body ? { body } : {}),
 	});
 }
 
 export type BackupTarget = { destination: S3Config } | { remote: RcloneRemote };
+
+async function expectOk(res: Response, what: string): Promise<void> {
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throw new Error(
+			`S3 ${what} failed: ${res.status} ${res.statusText} ${text}`.trim(),
+		);
+	}
+}
 
 export interface BackupObject {
 	key: string;
@@ -140,16 +157,12 @@ async function listObjects(
 		prefix,
 	});
 	query.sort();
-	const res = await signedRequest(
-		config,
-		"GET",
-		`/${config.bucket}`,
-		query.toString(),
-	);
-	if (!res.ok) {
-		const text = await res.text().catch(() => "");
-		throw new Error(`S3 LIST failed: ${res.status} ${res.statusText} ${text}`);
-	}
+	const res = await signedRequest(config, {
+		method: "GET",
+		path: `/${config.bucket}`,
+		queryString: query.toString(),
+	});
+	await expectOk(res, "LIST");
 	const xml = await res.text();
 	const objects: BackupObject[] = [];
 	CONTENTS_RE.lastIndex = 0;
@@ -267,6 +280,45 @@ class S3BackupServiceClass {
 		if (!row) {
 			throw new Error("The picked backup destination no longer exists.");
 		}
+		return this.#targetOf(row);
+	}
+
+	/**
+	 * Proves a destination works with its saved settings by writing a small
+	 * test file to it and deleting it again: a signed PUT and DELETE for an S3
+	 * one, a one-off rclone container for an SFTP, SMB or WebDAV one.
+	 *
+	 * @throws With the endpoint's or rclone's own error when it can't be
+	 *   reached, logged into or written to.
+	 */
+	async testDestination(row: S3DestinationDTO): Promise<void> {
+		const target = this.#targetOf(row);
+		if ("remote" in target) {
+			await testRemote(target.remote);
+			return;
+		}
+		const path = `/${target.destination.bucket}/.homerun-test-${crypto.randomUUID()}`;
+		await expectOk(
+			await signedRequest(target.destination, {
+				body: "homerun",
+				method: "PUT",
+				path,
+			}),
+			"PUT",
+		);
+		await expectOk(
+			await signedRequest(target.destination, { method: "DELETE", path }),
+			"DELETE",
+		);
+	}
+
+	/**
+	 * Decrypts a destination row into what reaches it: an `S3Config`, or the
+	 * rclone helper for an SFTP, SMB or WebDAV one.
+	 *
+	 * @throws When its secret can't be decrypted.
+	 */
+	#targetOf(row: S3DestinationDTO): BackupTarget {
 		const secretAccessKey = row.decryptSecretAccessKey();
 		if (!secretAccessKey) {
 			throw new Error("Couldn't decrypt the destination's stored secret.");

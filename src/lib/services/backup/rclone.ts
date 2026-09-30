@@ -2,13 +2,14 @@ import {
 	type DestinationType,
 	describeDestination,
 } from "$lib/backup-destinations";
+import type { OneOffRunResult } from "../docker/one-off.ts";
 import { DockerService } from "../docker.service.ts";
 import type { BackupObject } from "../s3-backup.service.ts";
 
 export const RCLONE_IMAGE = "rclone/rclone";
 export const RCLONE_TAG = "1.75.1";
 
-const LIST_TIMEOUT_MS = 2 * 60 * 1000;
+const COMMAND_TIMEOUT_MS = 2 * 60 * 1000;
 const DIRECTORY_NOT_FOUND = 3;
 const ERROR_TAIL_CHARS = 500;
 
@@ -105,6 +106,48 @@ export function rcloneRemote(destination: RcloneDestination): RcloneRemote {
 	};
 }
 
+function run(remote: RcloneRemote, cmd: string[]): Promise<OneOffRunResult> {
+	return DockerService.runOneOff({
+		cmd,
+		entrypoint: remote.entrypoint,
+		envVars: remote.env,
+		image: RCLONE_IMAGE,
+		tag: RCLONE_TAG,
+		timeoutMs: COMMAND_TIMEOUT_MS,
+	});
+}
+
+function failed(result: OneOffRunResult): boolean {
+	return result.timedOut || result.exitCode !== 0;
+}
+
+function detail(result: OneOffRunResult): string {
+	return result.timedOut
+		? "no answer within 2 minutes"
+		: result.stderr.toString("utf8").trim().slice(-ERROR_TAIL_CHARS);
+}
+
+/**
+ * Proves `remote` can be reached, logged into and written to: a one-off
+ * rclone container creates an empty test file under its path, then another
+ * deletes it. Directories it had to create are left in place.
+ *
+ * @throws With rclone's own error when either step fails.
+ */
+export async function testRemote(remote: RcloneRemote): Promise<void> {
+	const file = target(remote.path, `.homerun-test-${crypto.randomUUID()}`);
+	const written = await run(remote, ["touch", file]);
+	if (failed(written)) {
+		throw new Error(`Couldn't write to ${remote.label}: ${detail(written)}`);
+	}
+	const deleted = await run(remote, ["deletefile", file]);
+	if (failed(deleted)) {
+		throw new Error(
+			`Wrote a test file to ${remote.label} but couldn't delete it: ${detail(deleted)}`,
+		);
+	}
+}
+
 /**
  * The `.tar.gz` files under `remote` whose key starts with `prefix`, newest
  * first, listed by a one-off rclone container. A directory that doesn't
@@ -119,27 +162,19 @@ export async function listRemoteBackups(
 	const cut = prefix.lastIndexOf("/") + 1;
 	const directory = prefix.slice(0, cut);
 	const namePrefix = prefix.slice(cut);
-	const result = await DockerService.runOneOff({
-		cmd: [
-			"lsjson",
-			"--files-only",
-			"--no-mimetype",
-			target(remote.path, directory.replace(/\/$/, "")),
-		],
-		entrypoint: remote.entrypoint,
-		envVars: remote.env,
-		image: RCLONE_IMAGE,
-		tag: RCLONE_TAG,
-		timeoutMs: LIST_TIMEOUT_MS,
-	});
+	const result = await run(remote, [
+		"lsjson",
+		"--files-only",
+		"--no-mimetype",
+		target(remote.path, directory.replace(/\/$/, "")),
+	]);
 	if (result.exitCode === DIRECTORY_NOT_FOUND) {
 		return [];
 	}
-	if (result.timedOut || result.exitCode !== 0) {
-		const detail = result.timedOut
-			? "no answer within 2 minutes"
-			: result.stderr.toString("utf8").trim().slice(-ERROR_TAIL_CHARS);
-		throw new Error(`Couldn't list the backups on ${remote.label}: ${detail}`);
+	if (failed(result)) {
+		throw new Error(
+			`Couldn't list the backups on ${remote.label}: ${detail(result)}`,
+		);
 	}
 	const entries: RcloneEntry[] = JSON.parse(result.stdout.toString("utf8"));
 	return entries

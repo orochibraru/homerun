@@ -26,6 +26,6 @@ export const actions = {
 			`Backup destination added: destination=${destination.id} type=${destination.type} user=${locals.user.id}`,
 		);
 
-		return { success: true };
+		return { destinationId: destination.id, success: true };
 	},
 };

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CloudUpload, Plus, Trash2 } from "@lucide/svelte";
+	import { CloudUpload, Pencil, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -24,6 +24,9 @@
 
 	const rows = $derived(
 		data.destinations.map((dest) => ({
+			href: resolve("/(protected)/s3-destinations/[destinationId]", {
+				destinationId: dest.id,
+			}),
 			id: dest.id,
 			name: dest.name,
 			subtitle: describeDestination(dest),
@@ -50,6 +53,9 @@
 {/snippet}
 
 {#snippet actions(dest: DestinationRow)}
+  <Button href={dest.href} size="icon-sm" title="Details" variant="ghost">
+    <Pencil class="size-4" />
+  </Button>
   <form
     action="?/delete"
     method="POST"

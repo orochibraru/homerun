@@ -12,9 +12,8 @@ const { describeDestination } = await import(
 const { parseDestinationForm } = await import(
 	"../../../src/lib/server/backup-destination-form"
 );
-const { listRemoteBackups, rcloneRemote, splitHostPort } = await import(
-	"../../../src/lib/services/backup/rclone"
-);
+const { listRemoteBackups, rcloneRemote, splitHostPort, testRemote } =
+	await import("../../../src/lib/services/backup/rclone");
 const { DockerService } = await import(
 	"../../../src/lib/services/docker.service"
 );
@@ -142,6 +141,50 @@ describe("parseDestinationForm", () => {
 		],
 	])("rejects %j", (fields, error) => {
 		expect(parseDestinationForm(form(fields))).toEqual({ error });
+	});
+});
+
+describe("parseDestinationForm on an edit", () => {
+	test("a blank secret is allowed and stays blank, so the stored one is kept", () => {
+		const result = parseDestinationForm(
+			form({
+				accessKeyId: "u1",
+				bucket: "share/homerun",
+				endpoint: "nas.local",
+				name: "NAS",
+				type: "smb",
+			}),
+			{ keepSecret: true },
+		);
+		expect("parsed" in result && result.parsed.secretAccessKey).toBe("");
+	});
+
+	test("the other fields are still required", () => {
+		expect(
+			parseDestinationForm(
+				form({ accessKeyId: "u1", endpoint: "nas.local", type: "smb" }),
+				{ keepSecret: true },
+			),
+		).toEqual({ error: "Name, host and username are required." });
+	});
+});
+
+describe("testRemote", () => {
+	test("writes a test file under the destination's path, then deletes that same file", async () => {
+		const spy = listing(0, "");
+		await testRemote(REMOTE);
+		const commands = spy.mock.calls.map((call) => call[0].cmd ?? []);
+		expect(commands.map((cmd) => cmd[0])).toEqual(["touch", "deletefile"]);
+		expect(commands[0]?.[1]).toStartWith("dest:backups/.homerun-test-");
+		expect(commands[1]?.[1]).toBe(commands[0]?.[1]);
+	});
+
+	test("a failed write carries rclone's own error and deletes nothing", async () => {
+		const spy = listing(1, "", "ssh: unable to authenticate");
+		await expect(testRemote(REMOTE)).rejects.toThrow(
+			"Couldn't write to sftp://bob@nas.local:2222/backups: ssh: unable to authenticate",
+		);
+		expect(spy).toHaveBeenCalledTimes(1);
 	});
 });
 

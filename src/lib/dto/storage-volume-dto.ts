@@ -156,6 +156,18 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 		return rows.map((row) => new StorageVolumeDTO(row));
 	}
 
+	/** Every volume whose backups go to this destination, by name. */
+	static async listForDestination(
+		destinationId: string,
+	): Promise<StorageVolumeDTO[]> {
+		const rows = await db
+			.select()
+			.from(storageVolume)
+			.where(eq(storageVolume.s3DestinationId, destinationId))
+			.orderBy(storageVolume.name);
+		return rows.map((row) => new StorageVolumeDTO(row));
+	}
+
 	/**
 	 * Up to `limit` volumes whose name, source or description
 	 * matches `q`, newest first, for global search.

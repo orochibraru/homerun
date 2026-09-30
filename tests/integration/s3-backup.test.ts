@@ -1,7 +1,11 @@
-import { afterAll, beforeAll, describe, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import process from "node:process";
 import { SQL } from "bun";
-import { backupRoundTrip } from "./support/backups";
+import {
+	backupRoundTrip,
+	insertDestination,
+	testDestination,
+} from "./support/backups";
 import { integrationContext } from "./support/context";
 
 /** The endpoint as a URL, https assumed when it's given as a bare host. */
@@ -55,4 +59,18 @@ describe.skipIf(!configured)("S3 volume backups against a real bucket", () => {
 		},
 		40 * 60_000,
 	);
+
+	test("the destination test writes to the bucket and cleans up", async () => {
+		const result = await testDestination(
+			await insertDestination(sql, {
+				accessKeyId: env.accessKeyId,
+				bucket: env.bucket,
+				endpoint: env.endpoint,
+				region: env.region,
+				secret: env.secretAccessKey,
+				type: "s3",
+			}),
+		);
+		expect(result.type).toBe("success");
+	}, 120_000);
 });

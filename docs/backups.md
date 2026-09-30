@@ -41,7 +41,22 @@ Box, so treat a Storage Box as not verified.
 **A NAS** is usually easiest over SMB (the share it already exports) or SFTP
 when SSH is on.
 
-The page has the same search box and pager as every other list page. A
+Adding a destination lands on its own page, which the pencil on a list row opens
+too. It shows the type and address, when it was added and last changed, and
+every volume whose backups go there, and it has the same form to change the
+settings. The type is fixed once a destination exists, and a blank secret field
+keeps the stored secret.
+
+**Test destination**, on that page, proves the saved settings work before a
+backup depends on them: it writes a small test file to the destination and
+deletes it again, so it checks the address, the credentials and write access in
+one go. An S3 destination gets a signed `PUT` and `DELETE` of
+`.homerun-test-<id>` in the bucket; an SFTP, SMB or WebDAV one gets the same
+through rclone, under the destination's path (directories it had to create stay
+there). A failure shows the endpoint's or rclone's own error on the page. The
+test uses what is saved, so save a change before testing it.
+
+The list page has the same search box and pager as every other list page. A
 destination can't be deleted out from under a volume without the volume simply
 losing its target, so a volume whose destination is gone reports "no
 destination" and its backups fail with a config error rather than silently doing
