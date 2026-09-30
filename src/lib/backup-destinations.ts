@@ -77,3 +77,93 @@ export const DESTINATION_FIELDS: Record<
 		pathRequired: false,
 	},
 };
+
+export interface DestinationPreset {
+	endpoint?: string;
+	/** Derives the endpoint from the username, for providers whose host carries the account name. */
+	endpointFor?: (username: string) => string;
+	endpointPlaceholder?: string;
+	hint?: string;
+	id: string;
+	label: string;
+	path?: string;
+	region?: string;
+	type: DestinationType;
+}
+
+export const DESTINATION_PRESETS: DestinationPreset[] = [
+	{
+		endpointFor: (username) =>
+			username ? `${username}.your-storagebox.de:23` : "",
+		hint: "Turn on SSH support for the box in Hetzner's console, and External reachability when Homerun runs outside Hetzner's network. The username is the box's (u123456) or a sub-account's (u123456-sub1); the host follows from it.",
+		id: "hetzner-storage-box",
+		label: "Hetzner Storage Box",
+		path: "backups/homerun",
+		type: "sftp",
+	},
+	{
+		endpoint: "https://fsn1.your-objectstorage.com",
+		hint: "Replace fsn1 with the bucket's own location in both the endpoint and the region.",
+		id: "hetzner-object-storage",
+		label: "Hetzner Object Storage",
+		region: "fsn1",
+		type: "s3",
+	},
+	{
+		endpoint: "https://s3.us-east-1.amazonaws.com",
+		hint: "Use the bucket's own region in both the endpoint and the region.",
+		id: "aws-s3",
+		label: "AWS S3",
+		region: "us-east-1",
+		type: "s3",
+	},
+	{
+		endpointPlaceholder: "https://<account-id>.r2.cloudflarestorage.com",
+		hint: "The endpoint carries your Cloudflare account id. The region is always auto.",
+		id: "cloudflare-r2",
+		label: "Cloudflare R2",
+		region: "auto",
+		type: "s3",
+	},
+	{
+		endpoint: "https://s3.us-west-004.backblazeb2.com",
+		hint: "The bucket's page shows its endpoint; the region is the part after s3.",
+		id: "backblaze-b2",
+		label: "Backblaze B2",
+		region: "us-west-004",
+		type: "s3",
+	},
+	{
+		endpointPlaceholder: "http://minio:9000",
+		hint: "The MinIO server's API address, not its console.",
+		id: "minio",
+		label: "MinIO",
+		region: "us-east-1",
+		type: "s3",
+	},
+	{
+		endpointPlaceholder: "nas.local",
+		hint: "The share's name comes first in the path, then a folder under it. The user needs write access to the share.",
+		id: "nas-smb",
+		label: "NAS share (SMB)",
+		path: "backups/homerun",
+		type: "smb",
+	},
+	{
+		endpointPlaceholder: "nas.local:22",
+		hint: "Turn on SSH or SFTP on the NAS first. On Synology the path starts with the shared folder, without /volume1.",
+		id: "nas-sftp",
+		label: "NAS over SFTP",
+		path: "backups/homerun",
+		type: "sftp",
+	},
+	{
+		endpointPlaceholder:
+			"https://cloud.example.com/remote.php/dav/files/<username>",
+		hint: "Use an app password rather than your account's own.",
+		id: "nextcloud",
+		label: "Nextcloud (WebDAV)",
+		path: "backups/homerun",
+		type: "webdav",
+	},
+];

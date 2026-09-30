@@ -104,6 +104,26 @@ test.describe
 			).toBeVisible();
 		});
 
+		test("the Hetzner Storage Box preset derives the host from the username", async ({
+			page,
+		}) => {
+			await page.goto("/s3-destinations/new");
+			await page.locator("#preset").click();
+			await page.getByRole("option", { name: "Hetzner Storage Box" }).click();
+			await expect(page.locator("#name")).toHaveValue("Hetzner Storage Box");
+			await expect(page.locator("#bucket")).toHaveValue("backups/homerun");
+			await expect(page.locator("#region")).toHaveCount(0);
+			await page.locator("#accessKeyId").fill("u123456-sub1");
+			await expect(page.locator("#endpoint")).toHaveValue(
+				"u123456-sub1.your-storagebox.de:23",
+			);
+
+			await page.locator("#preset").click();
+			await page.getByRole("option", { name: "Cloudflare R2" }).click();
+			await expect(page.locator("#region")).toHaveValue("auto");
+			await expect(page.locator("#endpoint")).toHaveValue("");
+		});
+
 		test("the cron jobs page lists a job with its schedule", async ({
 			page,
 		}) => {

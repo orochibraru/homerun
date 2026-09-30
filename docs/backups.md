@@ -31,15 +31,36 @@ as registry passwords.
   `homerun` folder inside the share `backups`.
 - **WebDAV**: any WebDAV server, Nextcloud included.
 
-**Hetzner Storage Box** works three ways. SFTP: host `uXXXXX.your-storagebox.de`
-on **port 23** (`uXXXXX.your-storagebox.de:23`), your box username and password
-or key. WebDAV: URL `https://uXXXXX.your-storagebox.de`, once WebDAV is turned
-on for the box in Hetzner's console. SMB: also possible once Samba is enabled on
-the box. SFTP and WebDAV were tested against generic servers, not a real Storage
-Box, so treat a Storage Box as not verified.
+**Hetzner Storage Box** works three ways, all three tested against a real box
+(the destination test, then a backup and a byte-for-byte restore). The **Hetzner
+Storage Box** preset sets up the first one.
+
+- SFTP: host `uXXXXX.your-storagebox.de` on **port 23**
+  (`uXXXXX.your-storagebox.de:23`), the box's username and its password or a
+  key.
+- WebDAV: URL `https://uXXXXX.your-storagebox.de`.
+- SMB: host `uXXXXX.your-storagebox.de`, and a path starting with the share
+  `backup`, for example `backup/backups/homerun`.
+
+Each protocol is a separate switch on the box in Hetzner's console (**SSH
+Support**, **WebDAV Support**, **SMB Support**), all off on a new box, and
+**External Reachability** has to be on as well when Homerun runs outside
+Hetzner's network. With them off the box refuses in ways that look like a wrong
+password: WebDAV answers `403 Forbidden` whatever you type, SSH offers no way to
+log in at all, and SMB says the account is disabled. After a handful of failed
+logins the box also refuses every connection from your address for a while (it
+was about a quarter of an hour in testing), on all ports, which shows up as
+`connection refused`. Fix the settings, then wait rather than retrying.
 
 **A NAS** is usually easiest over SMB (the share it already exports) or SFTP
 when SSH is on.
+
+The form's **Preset** picker fills in what a provider fixes, so only the
+account-specific fields are left: Hetzner Storage Box (SFTP on port 23, the host
+derived from the username as you type it), Hetzner Object Storage, AWS S3,
+Cloudflare R2, Backblaze B2, MinIO, a NAS over SMB or SFTP, and Nextcloud. A
+preset only fills fields in: every field stays editable, and **Custom** leaves
+them all to you.
 
 Adding a destination lands on its own page, which the pencil on a list row opens
 too. It shows the type and address, when it was added and last changed, and

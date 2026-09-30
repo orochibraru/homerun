@@ -6,9 +6,8 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { describeDestination } = await import(
-	"../../../src/lib/backup-destinations"
-);
+const { DESTINATION_PRESETS, DESTINATION_TYPES, describeDestination } =
+	await import("../../../src/lib/backup-destinations");
 const { parseDestinationForm } = await import(
 	"../../../src/lib/server/backup-destination-form"
 );
@@ -302,5 +301,26 @@ describe("describeDestination", () => {
 				type: "s3",
 			}),
 		).toBe("https://s3.example.com · homerun · eu-central-1");
+	});
+});
+
+describe("DESTINATION_PRESETS", () => {
+	test("the Hetzner Storage Box preset is SFTP on port 23 of a host named after the account", () => {
+		const preset = DESTINATION_PRESETS.find(
+			(candidate) => candidate.id === "hetzner-storage-box",
+		);
+		expect(preset?.type).toBe("sftp");
+		expect(preset?.endpointFor?.("u123456-sub1")).toBe(
+			"u123456-sub1.your-storagebox.de:23",
+		);
+		expect(preset?.endpointFor?.("")).toBe("");
+	});
+
+	test("every preset has its own id and a known type", () => {
+		const ids = DESTINATION_PRESETS.map((preset) => preset.id);
+		expect(new Set(ids).size).toBe(ids.length);
+		for (const preset of DESTINATION_PRESETS) {
+			expect(DESTINATION_TYPES).toContain(preset.type);
+		}
 	});
 });

@@ -177,6 +177,39 @@ the same backup, wipe, restore and sha256 comparison as below runs against it
 through the rclone helper (so the first run pulls the `rclone/rclone` image).
 The round trip itself is shared with the S3 test in `support/backups.ts`.
 
+## Backups to a Hetzner Storage Box (`storagebox-backup.test.ts`)
+
+Skipped unless these are set. For each of SFTP, SMB and WebDAV it runs the
+destination test, then the same round trip as the SFTP test, against a real
+Storage Box through the rclone helper.
+
+| Variable                      | Required | Notes                                           |
+| ----------------------------- | -------- | ----------------------------------------------- |
+| `HETZNER_STORAGEBOX_URL`      | yes      | `https://uXXXXX.your-storagebox.de`             |
+| `HETZNER_STORAGEBOX_USERNAME` | yes      |                                                 |
+| `HETZNER_STORAGEBOX_PASSWORD` | yes      | Quote it in `.env`, see below                   |
+| `HETZNER_STORAGEBOX_LOCATION` | no       | Directory on the box, the box's root when empty |
+| `HETZNER_STORAGEBOX_SIZE_MB`  | no       | `16`                                            |
+
+The URL's host is reused for every type: SFTP goes to port 23 and SMB to the
+box's `backup` share. Each run leaves one archive per type under
+`<location>/homerun-it/<type>/<run id>/`. Not wired into CI.
+
+Three things that fail this test without anything being wrong in Homerun:
+
+- **A protocol is off on the box.** WebDAV, SSH and Samba are separate switches
+  in Hetzner's console, all off on a new box, plus **External reachability**
+  when the machine running the test sits outside Hetzner's network. With them
+  off the box answers a WebDAV request with `403 Forbidden` whatever the
+  password, offers no SSH authentication method at all, and tells SMB the
+  account is disabled.
+- **An unquoted password in `.env`.** Bun reads a `#` in an unquoted value as
+  the start of a comment and hands the test a truncated password. Wrap it in
+  single quotes.
+- **A blocked address.** After a handful of failed logins the box refuses every
+  connection from that IPv4 address, on all ports, for a while
+  (`connection refused` from rclone). Wait it out, a retry only extends it.
+
 ## S3 backups against a real bucket (`s3-backup.test.ts`)
 
 Skipped unless these are set. It backs a Docker volume holding a random file up

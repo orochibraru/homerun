@@ -146,8 +146,9 @@ check the dashboard for anything that didn't.
   SFTP, SMB and WebDAV uploads are a single connection with no parallel parts,
   so they run at the speed of that one connection. SFTP does not verify the
   server's host key, and only unencrypted private keys are accepted. They were
-  tested against generic OpenSSH, Samba and Apache WebDAV servers, not a real
-  Hetzner Storage Box. See [Volume backups](backups.md#backup-destinations).
+  tested against generic OpenSSH, Samba and Apache WebDAV servers and against a
+  real Hetzner Storage Box over all three. See
+  [Volume backups](backups.md#backup-destinations).
 - **A rollback only restores the image.** Env vars, volumes and networking stay
   as they are now, and only the last 5 images of a service are kept on the host
   (configurable under Settings → Docker). Auto-rollback is off by default and
