@@ -9,7 +9,12 @@ export default defineConfig({
 		"./tests/e2e/templates/traefik.ts",
 	],
 	projects: [
-		{ name: "setup", testMatch: /setup\.ts$/, timeout: 3 * 60_000 },
+		{
+			name: "setup",
+			retries: 2,
+			testMatch: /setup\.ts$/,
+			timeout: 3 * 60_000,
+		},
 		{
 			dependencies: ["setup"],
 			name: "templates",

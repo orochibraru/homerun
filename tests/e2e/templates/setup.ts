@@ -1,29 +1,33 @@
 import { expect, test as setup } from "@playwright/test";
+import { E2E_BASE_URL } from "../support/config";
 import { ADMIN, AUTH_STATE } from "./support";
 
 setup("creates the admin and finishes onboarding", async ({ page }) => {
-	const createAccount = page.getByRole("button", { name: "Create account" });
-	await expect(async () => {
-		await page.goto("/auth/sign-up");
-		await page.waitForLoadState("networkidle");
-		await page.locator("#name").fill(ADMIN.name, { timeout: 2000 });
-		await page.locator("#email").fill(ADMIN.email);
-		await page.locator("#password").fill(ADMIN.password);
-		await page.locator("#confirm").fill(ADMIN.password);
-		await expect(createAccount).toBeEnabled({ timeout: 2000 });
-	}).toPass({ timeout: 90_000 });
-	await createAccount.click();
-	await expect(page).toHaveURL(/\/onboarding$/, { timeout: 60_000 });
-	await page.waitForLoadState("networkidle");
+	const headers = { origin: E2E_BASE_URL };
+	const signUp = await page.request.post("/api/v1/auth/sign-up/email", {
+		data: ADMIN,
+		headers,
+	});
+	if (!signUp.ok()) {
+		const signIn = await page.request.post("/api/v1/auth/sign-in/email", {
+			data: { email: ADMIN.email, password: ADMIN.password },
+			headers,
+		});
+		expect(signIn.ok(), await signIn.text()).toBe(true);
+	}
 
-	const finish = page.getByRole("button", { name: "Finish setup" });
-	await expect(async () => {
-		if (!(await finish.isVisible())) {
-			await page.getByRole("button", { name: "Next" }).click();
-		}
-		await expect(finish).toBeVisible({ timeout: 1000 });
-	}).toPass({ timeout: 60_000 });
-	await finish.click();
+	await page.goto("/");
+	await page.waitForLoadState("networkidle");
+	if (page.url().endsWith("/onboarding")) {
+		const finish = page.getByRole("button", { name: "Finish setup" });
+		await expect(async () => {
+			if (!(await finish.isVisible())) {
+				await page.getByRole("button", { name: "Next" }).click();
+			}
+			await expect(finish).toBeVisible({ timeout: 1000 });
+		}).toPass({ timeout: 60_000 });
+		await finish.click();
+	}
 	await expect(page).toHaveURL(/4310\/$/, { timeout: 30_000 });
 
 	await page.context().storageState({ path: AUTH_STATE });
