@@ -204,6 +204,7 @@ test.describe
 				page.getByRole("heading", { name: "Allow E2E Outline?" }),
 			).toBeVisible();
 			await expect(page.getByText("Your email address")).toBeVisible();
+			await page.waitForLoadState("networkidle");
 			await page.getByRole("button", { name: "Allow" }).click();
 
 			const landed = await callback;

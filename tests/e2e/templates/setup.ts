@@ -2,16 +2,17 @@ import { expect, test as setup } from "@playwright/test";
 import { ADMIN, AUTH_STATE } from "./support";
 
 setup("creates the admin and finishes onboarding", async ({ page }) => {
+	const createAccount = page.getByRole("button", { name: "Create account" });
 	await expect(async () => {
 		await page.goto("/auth/sign-up");
 		await page.waitForLoadState("networkidle");
-		await expect(page.locator("#name")).toBeVisible({ timeout: 1000 });
+		await page.locator("#name").fill(ADMIN.name, { timeout: 2000 });
+		await page.locator("#email").fill(ADMIN.email);
+		await page.locator("#password").fill(ADMIN.password);
+		await page.locator("#confirm").fill(ADMIN.password);
+		await expect(createAccount).toBeEnabled({ timeout: 2000 });
 	}).toPass({ timeout: 90_000 });
-	await page.locator("#name").fill(ADMIN.name);
-	await page.locator("#email").fill(ADMIN.email);
-	await page.locator("#password").fill(ADMIN.password);
-	await page.locator("#confirm").fill(ADMIN.password);
-	await page.getByRole("button", { name: "Create account" }).click();
+	await createAccount.click();
 	await expect(page).toHaveURL(/\/onboarding$/, { timeout: 60_000 });
 	await page.waitForLoadState("networkidle");
 
