@@ -13,7 +13,8 @@ import (
 
 // ImageInspect is the part of an image's inspect a deploy reads.
 type ImageInspect struct {
-	Config struct {
+	Architecture string `json:"Architecture"`
+	Config       struct {
 		Healthcheck *struct {
 			Test []string `json:"Test"`
 		} `json:"Healthcheck"`

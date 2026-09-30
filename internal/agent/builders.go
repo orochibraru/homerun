@@ -30,6 +30,7 @@ type BuilderChecksum struct {
 // supported methods, the tool versions and their checksums.
 type BuilderTools struct {
 	BakeTargetPattern string                                `json:"bakeTargetPattern"`
+	BinfmtImage       string                                `json:"binfmtImage"`
 	BuildMethods      []string                              `json:"buildMethods"`
 	Checksums         map[string]map[string]BuilderChecksum `json:"checksums"`
 	DefaultBakeFile   string                                `json:"defaultBakeFile"`
@@ -47,6 +48,9 @@ var Tools = MustParseTools(builderToolsJSON)
 
 // bakeTargetPattern is tools.BakeTargetPattern, compiled once.
 var bakeTargetPattern = regexp.MustCompile(Tools.BakeTargetPattern)
+
+// platformPattern is an os/arch pair, which reaches the shell as a variable.
+var platformPattern = regexp.MustCompile(`^[a-z0-9]+/[a-z0-9]+$`)
 
 // MustParseTools parses builder-tools.json, panicking on invalid data since a
 // broken embed should stop the agent at startup, not at build time.
@@ -80,8 +84,11 @@ type BuilderInput struct {
 	DockerfilePath string
 	Method         string
 	NoCache        bool
-	RepoDir        string
-	Tag            string
+	// Platform is the os/arch the image has to run on, empty for the building
+	// daemon's own.
+	Platform string
+	RepoDir  string
+	Tag      string
 }
 
 // BuilderBuildDir is the directory the builder is pointed at: the repository,
@@ -161,6 +168,13 @@ func BuilderEnv(input BuilderInput) ([]string, error) {
 	if input.NoCache {
 		env["NO_CACHE"] = "1"
 	}
+	if input.Platform != "" {
+		if !platformPattern.MatchString(input.Platform) {
+			return nil, fmt.Errorf("The build platform %s isn't valid, use an os/arch pair like linux/amd64.", input.Platform)
+		}
+		env["BINFMT_IMAGE"] = Tools.BinfmtImage
+		env["BUILD_PLATFORM"] = input.Platform
+	}
 	switch input.Method {
 	case "dockerfile":
 		file, err := builderFilePath(input.RepoDir, buildDir, input.DockerfilePath, "Dockerfile")
@@ -199,6 +213,7 @@ var envOrder = []string{
 	"BUILD_DIR", "BUILD_METHOD", "CACHE_PASSWORD", "CACHE_REF", "CACHE_REGISTRY",
 	"CACHE_USERNAME", "IMAGE_TAG", "NIXPACKS_VERSION", "PACK_VERSION",
 	"PACK_VOLUME_KEY", "RAILPACK_VERSION", "BUILD_FILE", "BUILD_TARGET", "PACK_BUILDER", "NO_CACHE",
+	"BINFMT_IMAGE", "BUILD_PLATFORM",
 }
 
 // orderedEnv renders env as KEY=value strings in envOrder.

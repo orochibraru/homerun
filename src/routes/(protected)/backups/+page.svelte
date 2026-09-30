@@ -14,6 +14,7 @@
 	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { formatDuration } from "$lib/resource-incidents";
 	import { describeSchedule, scheduleFromCron } from "$lib/schedule";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -239,7 +240,7 @@
                 </td>
                 <td class="text-text-muted px-4 py-3 whitespace-nowrap">{formatDate(run.startedAt)}</td>
                 <td class="text-text-muted px-4 py-3">
-                  {durationMs != null ? `${(durationMs / 1000).toFixed(1)}s` : "—"}
+                  {durationMs != null ? formatDuration(durationMs) : "—"}
                 </td>
                 <td class="text-text-muted px-4 py-3">{formatSize(run.sizeBytes)}</td>
                 <td class="px-4 py-3">

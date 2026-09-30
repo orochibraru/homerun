@@ -109,7 +109,7 @@ export class ResourceIncidentTracker {
 	}
 }
 
-/** A duration in plain words: `45s`, `12 min`, `3 h 5 min`. */
+/** A duration in plain words: `45s`, `12 min`, `3 h 5 min`, `2 d 4 h`. */
 export function formatDuration(ms: number): string {
 	const minutes = Math.floor(ms / 60_000);
 	if (minutes < 1) {
@@ -118,10 +118,13 @@ export function formatDuration(ms: number): string {
 	if (minutes < 60) {
 		return `${minutes} min`;
 	}
+	const hours = Math.floor(minutes / 60);
+	if (hours >= 24) {
+		const days = Math.floor(hours / 24);
+		return hours % 24 ? `${days} d ${hours % 24} h` : `${days} d`;
+	}
 	const rest = minutes % 60;
-	return rest
-		? `${Math.floor(minutes / 60)} h ${rest} min`
-		: `${Math.floor(minutes / 60)} h`;
+	return rest ? `${hours} h ${rest} min` : `${hours} h`;
 }
 
 /** One line about an incident event for its resource, as the alert shows it. */

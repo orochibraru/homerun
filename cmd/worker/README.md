@@ -124,8 +124,12 @@ Every route requires `Authorization: Bearer <token>` except `/v1/health` and
   `internal/agent/builders.go`. With `push`, the BuildKit layer cache is read
   from and written to that registry (`<registry>/<image>:buildcache`) and the
   image is pushed there afterward. A `commit` pins the build to that commit even
-  when the branch has moved on. Returns `{success, commit?, error?}`, where a
-  failed build's `error` carries its most telling output line.
+  when the branch has moved on. With `platform` (an os/arch pair, `linux/amd64`)
+  naming another CPU architecture than this host's, the build installs QEMU
+  (`tonistiigi/binfmt`, pinned in `builder-tools.json`, one privileged
+  container) and runs emulated, so the image runs where it's deployed. Returns
+  `{success, commit?, error?}`, where a failed build's `error` carries its most
+  telling output line.
 - `GET /v1/images/save?ref=<image:tag>`, streams a local image as a
   `docker save` tarball (`application/x-tar`, 404 when the image isn't there).
   The main app `docker load`s it when a build server has no cache registry.

@@ -98,3 +98,13 @@ change that:
   one, see [Build servers](remote-hosts-and-agent.md). With a cache registry the
   built image is published there and pulled back; without one it's streamed
   straight back from the build server (`docker save` into `docker load`).
+
+  A build server doesn't need the same CPU architecture as this host. The image
+  is always built for this host's platform: an `arm64` build server building for
+  an `amd64` host installs QEMU on itself on first use (one privileged
+  `tonistiigi/binfmt` container, so its Docker daemon has to allow those, which
+  a rootless one doesn't) and builds emulated. That works with every build
+  method but is several times slower than a native build, so prefer a build
+  server with this host's architecture when there's a choice. An agent older
+  than this feature still builds for its own CPU, and the deploy then fails once
+  the image arrives, naming both architectures: update the agent.

@@ -33,6 +33,13 @@ func (r *run) buildImage(ctx context.Context) (resolvedImage, error) {
 	spec := r.spec.Image
 	built := resolvedImage{image: spec.Image, tag: spec.Tag}
 	var err error
+	var host *dockerapi.Version
+	if spec.Kind != "local-build" {
+		if host, err = r.docker.ServerVersion(ctx); err != nil {
+			return resolvedImage{}, err
+		}
+		r.platform = host.Os + "/" + host.Arch
+	}
 	switch spec.Kind {
 	case "local-build":
 		err = r.dockerBuild(ctx, r.docker, r.spec.SocketPath, spec.Build.Registry)
@@ -50,6 +57,9 @@ func (r *run) buildImage(ctx context.Context) (resolvedImage, error) {
 		if err == nil {
 			built, err = r.transfer(ctx, built, nil)
 		}
+	}
+	if err == nil && host != nil {
+		err = r.checkArchitecture(ctx, built.ref(), host.Arch)
 	}
 	if err != nil {
 		return resolvedImage{}, err
@@ -78,6 +88,9 @@ func (r *run) buildInput(tag string) agent.BuildInput {
 	}
 	if build.Commit != "" {
 		input.Commit = &build.Commit
+	}
+	if r.platform != "" {
+		input.Platform = &r.platform
 	}
 	return input
 }
@@ -202,6 +215,32 @@ func (r *run) agentRequest(ctx context.Context, method, path string, query url.V
 		return nil, errors.New(decoded.Error)
 	}
 	return nil, fmt.Errorf("Agent returned %d.", response.StatusCode)
+}
+
+// checkArchitecture fails a deploy whose image was built for another CPU
+// architecture than host, this daemon's, which a build server with a different
+// CPU hands back when it ignored the platform it was asked for.
+func (r *run) checkArchitecture(ctx context.Context, ref, host string) error {
+	image, err := r.docker.InspectImage(ctx, ref)
+	if err != nil {
+		return err
+	}
+	if message := ArchitectureMismatch(image.Architecture, host); message != "" {
+		return errors.New(message)
+	}
+	return nil
+}
+
+// ArchitectureMismatch is the error for an image built for another CPU
+// architecture than the host's, empty when they match or either is unknown.
+func ArchitectureMismatch(image, host string) string {
+	if image == host || image == "" || host == "" {
+		return ""
+	}
+	return fmt.Sprintf(
+		"The build server built this image for %s, but this host runs %s, so its containers can't start here. Update the build server's agent: an older one can't build for another architecture.",
+		image, host,
+	)
 }
 
 // publishedRef is built's ref rewritten to live under registry.

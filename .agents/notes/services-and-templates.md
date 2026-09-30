@@ -172,11 +172,25 @@ the workload starts (`internal/jobs/deploy/deploy.go`'s `deploy()`:
 needs to know which path produced the image; a cross-host build
 (`docker-build`/`agent-build`) pushes to `<registry>/homerun-build-<slug>:<tag>`
 and pulls that published ref back onto this host first (`build.go`'s
-`transfer`). The resolved `image`/`tag` only reaches `svc.image`/`svc.tag` in
-the database once the whole job succeeds and reports back :
-`deploy.service.ts`'s `finalizeWorkerDeploy` writes `outcome.serviceImage` (the
-`ImageRef` in the worker's `Result`) as part of recording success, not
-mid-deploy the way the old in-process pipeline did.
+`transfer`). A build server builds for this host, not for itself: `buildImage`
+reads this daemon's os/arch (`/version`) and sends it as `BuildInput.Platform`,
+`BuilderEnv` turns it into `BUILD_PLATFORM` plus `BINFMT_IMAGE`, and
+`builder.sh` only acts when the arch differs from its own `uname -m`: it runs
+the pinned `tonistiigi/binfmt --install <arch>` privileged container
+(kernel-wide and idempotent, so the `homerun-cache` BuildKit container gets it
+too) and adds `--platform` to whichever tool builds (`--set <target>.platform`
+for bake). A native build gets no flag at all, so it's byte-identical to before.
+Verified live on an arm64 daemon: `linux/amd64` produced an amd64 image whose
+`uname -m` says `x86_64`. **Real finding behind it**: with no platform passed an
+arm64 agent handed an amd64 host an image whose tasks just exit 255, which swarm
+reports as an unhealthy rollout with no hint of the cause. An agent older than
+the `platform` field ignores it, so `checkArchitecture` still compares the
+arrived image's architecture with the daemon's and fails the deploy naming both.
+The resolved `image`/`tag` only reaches `svc.image`/`svc.tag` in the database
+once the whole job succeeds and reports back : `deploy.service.ts`'s
+`finalizeWorkerDeploy` writes `outcome.serviceImage` (the `ImageRef` in the
+worker's `Result`) as part of recording success, not mid-deploy the way the old
+in-process pipeline did.
 
 ## Deploys run in the Go worker (`deploy/worker-spec.ts`, `internal/jobs/deploy`)
 

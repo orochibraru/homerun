@@ -1,12 +1,14 @@
 set -eu
 case "$(uname -m)" in
   x86_64|amd64)
+    native=amd64
     nix=x86_64-unknown-linux-musl; rail=x86_64-unknown-linux-musl; pk=linux
     nix_archive=0f55de7874507b9cf7502113120bd96f2ab6979f78d10eaf2eb2ade9207b3af6; nix_binary=c3b5165797767ba461ffdf10628913a3459f0331ba887e1a514cc0ef8dce3512
     rail_archive=728407f5cdb9e9bc1cdd07f568419344a20e71b0a5a9fd90a9cfbaca0a6c94f7; rail_binary=4f27a5ad95d146b291eb967cbb7bb85758ac79be7425c7417fa289339feaaf4a
     pk_archive=dc0ee1e931cf8a106d7555a01a214864f9acb60b77adf15d69b74df4404758e9; pk_binary=2f85c3ec624f73f2d3c4a680a2c48fe6755197844730cc4ea5ed05f950fe05a3
     ;;
   aarch64|arm64)
+    native=arm64
     nix=aarch64-unknown-linux-musl; rail=arm64-unknown-linux-musl; pk=linux-arm64
     nix_archive=912bd02dd2bb6f9c3a9ed965fe8a68b4aa318dc7a2546e2eca6f2806a894ba39; nix_binary=e528215fc8e1a15672cdeb19734fca4432d085f353d9d77712adc41ace980316
     rail_archive=42eb3fa68e38f44be3610a7d74f714ec0d808d70c105fbe35e053b6e6cfb20be; rail_binary=a11c65a6cd293c4d6b11c53aa6752810d2e31c11f1410e5f23a7329601cd3af4
@@ -51,6 +53,15 @@ use_cache_builder() {
     docker buildx inspect --bootstrap homerun-cache >/dev/null
   fi
 }
+platform=""
+if [ -n "${BUILD_PLATFORM:-}" ] && [ "${BUILD_PLATFORM#*/}" != "$native" ]; then
+  echo "This build server runs $native: building for $BUILD_PLATFORM through QEMU emulation, slower than a native build."
+  if ! docker run --rm --privileged "$BINFMT_IMAGE" --install "${BUILD_PLATFORM#*/}" >/dev/null; then
+    echo "Couldn't install QEMU on this build server to build for $BUILD_PLATFORM, its Docker daemon has to allow privileged containers." >&2
+    exit 1
+  fi
+  platform=$BUILD_PLATFORM
+fi
 if [ ! -d "$BUILD_DIR" ]; then
   echo "Build context $BUILD_DIR doesn't exist in the repository." >&2
   exit 1
@@ -67,6 +78,9 @@ case "$BUILD_METHOD" in
     fi
     if [ -n "${NO_CACHE:-}" ]; then
       set -- "$@" --no-cache
+    fi
+    if [ -n "$platform" ]; then
+      set -- "$@" --platform "$platform"
     fi
     if [ -n "$CACHE_REF" ]; then
       use_cache_builder
@@ -91,6 +105,9 @@ case "$BUILD_METHOD" in
     if [ -n "${NO_CACHE:-}" ]; then
       set -- "$@" --no-cache
     fi
+    if [ -n "$platform" ]; then
+      set -- "$@" --set "$targets.platform=$platform"
+    fi
     if [ -n "$CACHE_REF" ]; then
       use_cache_builder
       set -- "$@" --builder homerun-cache --set "$targets.cache-from=type=registry,ref=$CACHE_REF" --set "$targets.cache-to=type=registry,ref=$CACHE_REF,mode=max,ignore-error=true"
@@ -103,6 +120,9 @@ case "$BUILD_METHOD" in
     if [ -n "${NO_CACHE:-}" ]; then
       set -- "$@" --no-cache
     fi
+    if [ -n "$platform" ]; then
+      set -- "$@" --platform "$platform"
+    fi
     exec "/tools/nixpacks-$NIXPACKS_VERSION" "$@"
     ;;
   railpack)
@@ -111,6 +131,9 @@ case "$BUILD_METHOD" in
     set -- build --progress plain --build-arg "BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend:v$RAILPACK_VERSION" -f /tmp/railpack-plan.json -t "$IMAGE_TAG" --load
     if [ -n "${NO_CACHE:-}" ]; then
       set -- "$@" --no-cache
+    fi
+    if [ -n "$platform" ]; then
+      set -- "$@" --platform "$platform"
     fi
     if [ -n "$CACHE_REF" ]; then
       use_cache_builder
@@ -123,6 +146,9 @@ case "$BUILD_METHOD" in
     set -- build "$IMAGE_TAG" --builder "$PACK_BUILDER" --path "$BUILD_DIR" --trust-builder --pull-policy if-not-present --network bridge
     if [ -n "${NO_CACHE:-}" ]; then
       set -- "$@" --clear-cache
+    fi
+    if [ -n "$platform" ]; then
+      set -- "$@" --platform "$platform"
     fi
     exec "/tools/pack-$PACK_VERSION" "$@"
     ;;

@@ -102,11 +102,13 @@ describe("ResourceIncidentTracker", () => {
 });
 
 describe("formatDuration", () => {
-	test("seconds, minutes, hours", () => {
+	test("seconds, minutes, hours, days", () => {
 		expect(formatDuration(45_000)).toBe("45s");
 		expect(formatDuration(12 * MIN)).toBe("12 min");
 		expect(formatDuration(185 * MIN)).toBe("3 h 5 min");
 		expect(formatDuration(120 * MIN)).toBe("2 h");
+		expect(formatDuration(52 * 60 * MIN)).toBe("2 d 4 h");
+		expect(formatDuration(48 * 60 * MIN)).toBe("2 d");
 	});
 });
 

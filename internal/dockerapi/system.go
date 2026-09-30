@@ -65,6 +65,22 @@ func (c *Client) SystemInfo(ctx context.Context) (*Info, error) {
 	return &info, nil
 }
 
+// Version is the part of `docker version` this app reads: the platform the
+// daemon runs containers on, spelled like an image's own (linux, amd64).
+type Version struct {
+	Arch string `json:"Arch"`
+	Os   string `json:"Os"`
+}
+
+// ServerVersion reads `docker version`.
+func (c *Client) ServerVersion(ctx context.Context) (*Version, error) {
+	var version Version
+	if err := c.decode(ctx, http.MethodGet, "/version", nil, nil, &version); err != nil {
+		return nil, err
+	}
+	return &version, nil
+}
+
 // ListVolumes lists every volume on the daemon.
 func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
 	var listed struct {

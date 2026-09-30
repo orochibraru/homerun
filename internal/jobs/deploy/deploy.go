@@ -193,7 +193,10 @@ func (e *kindError) Error() string { return e.err.Error() }
 func (e *kindError) Unwrap() error { return e.err }
 
 type run struct {
-	docker   *dockerapi.Client
+	docker *dockerapi.Client
+	// platform is this daemon's os/arch, set when a build server has to build
+	// for it.
+	platform string
 	progress progress
 	result   Result
 	scanner  func(ctx context.Context, target imagescan.Target) (imagescan.Summary, error)

@@ -141,6 +141,9 @@ func validateBuildInput(input BuildInput) []httpapi.ValidationIssue {
 	if input.BuildTarget != nil && *input.BuildTarget != "" && !bakeTargetPattern.MatchString(*input.BuildTarget) {
 		add("buildTarget must be a plain target name", "buildTarget")
 	}
+	if input.Platform != nil && *input.Platform != "" && !platformPattern.MatchString(*input.Platform) {
+		add("platform must be an os/arch pair like linux/amd64", "platform")
+	}
 	if input.Credential != nil && input.Credential.Token == "" {
 		add("credential.token is required", "credential", "token")
 	}

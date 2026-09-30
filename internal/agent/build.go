@@ -65,7 +65,8 @@ type PushTarget struct {
 // cache registry: the layer cache is imported from and exported to it, and the
 // built image is published to it afterward. It's left out when the build and
 // the deploy target are this same agent, since the deploy then references the
-// local tag directly.
+// local tag directly. Platform is the os/arch of the daemon the image deploys
+// to: when this one's differs, the build runs emulated through QEMU.
 type BuildInput struct {
 	BakeFile       *string        `json:"bakeFile"`
 	BuildTarget    *string        `json:"buildTarget"`
@@ -77,6 +78,7 @@ type BuildInput struct {
 	GitRef         *string        `json:"gitRef"`
 	GitURL         string         `json:"gitUrl"`
 	NoCache        bool           `json:"noCache"`
+	Platform       *string        `json:"platform"`
 	Push           *PushTarget    `json:"push"`
 	Tag            string         `json:"tag"`
 
@@ -170,6 +172,7 @@ func (b *Builder) BuildWithProgress(ctx context.Context, input BuildInput, progr
 		DockerfilePath: valueOr(input.DockerfilePath, ""),
 		Method:         valueOr(input.BuildMethod, "dockerfile"),
 		NoCache:        input.NoCache,
+		Platform:       valueOr(input.Platform, ""),
 		RepoDir:        repoDir,
 		Tag:            input.Tag,
 	}

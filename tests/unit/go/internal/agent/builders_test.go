@@ -187,6 +187,26 @@ func TestBuilderBuildDir(t *testing.T) {
 	}
 }
 
+func TestBuilderEnvPlatform(t *testing.T) {
+	input := agent.BuilderInput{Method: "dockerfile", RepoDir: "/workspace/repo", Tag: "svc:abc"}
+	env, err := agent.BuilderEnv(input)
+	if err != nil || slices.ContainsFunc(env, func(entry string) bool { return strings.HasPrefix(entry, "BUILD_PLATFORM=") }) {
+		t.Errorf("no platform leaves the build native, got %v %v", env, err)
+	}
+	input.Platform = "linux/amd64"
+	env, err = agent.BuilderEnv(input)
+	if err != nil || !slices.Contains(env, "BUILD_PLATFORM=linux/amd64") || !slices.Contains(env, "BINFMT_IMAGE="+agent.Tools.BinfmtImage) {
+		t.Errorf("got %v %v", env, err)
+	}
+	if !strings.Contains(agent.Tools.BinfmtImage, "@sha256:") {
+		t.Errorf("the binfmt image must be pinned by digest, got %q", agent.Tools.BinfmtImage)
+	}
+	input.Platform = "linux/amd64; rm -rf /"
+	if _, err := agent.BuilderEnv(input); err == nil {
+		t.Error("a platform that isn't an os/arch pair is refused")
+	}
+}
+
 func TestBuildCacheRef(t *testing.T) {
 	got := agent.BuildCacheRef(agent.CacheRegistry{RegistryURL: "registry.example.com/"}, "svc:abc")
 	if got != "registry.example.com/svc:buildcache" {

@@ -244,6 +244,19 @@ func TestBlockReason(t *testing.T) {
 	}
 }
 
+func TestArchitectureMismatch(t *testing.T) {
+	if got := deploy.ArchitectureMismatch("amd64", "amd64"); got != "" {
+		t.Errorf("matching architectures pass, got %q", got)
+	}
+	if got := deploy.ArchitectureMismatch("", "amd64"); got != "" {
+		t.Errorf("an unknown architecture passes, got %q", got)
+	}
+	got := deploy.ArchitectureMismatch("arm64", "amd64")
+	if !strings.HasPrefix(got, "The build server built this image for arm64, but this host runs amd64") {
+		t.Errorf("got %q", got)
+	}
+}
+
 func TestDescribeRevision(t *testing.T) {
 	got := deploy.DescribeRevision(deploy.Revision{
 		Digest:    "sha256:0123456789abcdef0123",

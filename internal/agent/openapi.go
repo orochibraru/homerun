@@ -76,6 +76,7 @@ var (
 			"gitRef":         nullableString,
 			"gitUrl":         object{"minLength": 1, "type": "string"},
 			"noCache":        object{"type": "boolean"},
+			"platform":       object{"pattern": "^[a-z0-9]+/[a-z0-9]+$", "type": []string{"string", "null"}},
 			"push": object{
 				"properties": object{
 					"password":    object{"type": "string"},
