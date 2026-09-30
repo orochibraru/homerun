@@ -2,8 +2,11 @@ import { expect, test as setup } from "@playwright/test";
 import { ADMIN, AUTH_STATE } from "./support";
 
 setup("creates the admin and finishes onboarding", async ({ page }) => {
-	await page.goto("/auth/sign-up");
-	await page.waitForLoadState("networkidle");
+	await expect(async () => {
+		await page.goto("/auth/sign-up");
+		await page.waitForLoadState("networkidle");
+		await expect(page.locator("#name")).toBeVisible({ timeout: 1000 });
+	}).toPass({ timeout: 90_000 });
 	await page.locator("#name").fill(ADMIN.name);
 	await page.locator("#email").fill(ADMIN.email);
 	await page.locator("#password").fill(ADMIN.password);
