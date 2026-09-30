@@ -1,5 +1,111 @@
 # Changelog
 
+## [1.0.50](https://github.com/orochibraru/homerun/compare/v1.0.49...v1.0.50) (2026-09-30)
+
+### Features
+
+- build servers build for the deploy host's architecture through QEMU, backup
+  durations in minutes/hours/days
+  ([6368848](https://github.com/orochibraru/homerun/commit/63688481f5006fe595288594ad2d4d1a1342106f))
+- destination presets including Hetzner Storage Box, and an integration test
+  against a real box over SFTP, SMB and WebDAV
+  ([fa44121](https://github.com/orochibraru/homerun/commit/fa4412153745e4f7b9851792424a4b63da9a0edd))
+- backup destination page to view details, edit and test a destination
+  ([2bad820](https://github.com/orochibraru/homerun/commit/2bad820094e0b2d6bd214101964bc12cf763efc2))
+- back volumes up to SFTP, SMB and WebDAV destinations through an rclone helper,
+  lock every better-auth package to one version, fix a flaky S3 upload test
+  ([3535b56](https://github.com/orochibraru/homerun/commit/3535b56b3aee5b9a9c3bcd86bdabcf3630b83f2b))
+- redirects sync DNS/Pangolin with a list toggle and REST/MCP/CLI support,
+  generated architecture diagram, slimmer CLI help, fix invisible code editor
+  text on opaque themes
+  ([89e8fc9](https://github.com/orochibraru/homerun/commit/89e8fc9f452ef49283a17e30091327a4ccec4ec2))
+- registry self-test and boot-time registry reconcile; CI builds pull base
+  images through mirror.gcr.io
+  ([06822ce](https://github.com/orochibraru/homerun/commit/06822ce451b39846230b7c48f08bb0d3fb08baaf))
+- SSH machine terminals, 25 new templates incl. Immich, and templates E2E fails
+  fast instead of hanging
+  ([5fa1326](https://github.com/orochibraru/homerun/commit/5fa1326bbd147bbf995ea10b8dfb2190a4a6efa6))
+- SSH machine terminals, 25 new templates incl. Immich, and templates E2E fails
+  fast instead of hanging
+  ([7c7051e](https://github.com/orochibraru/homerun/commit/7c7051ea30351525c57ab2b947f2688b40528464))
+- monitoring vs previous period, preview env overrides and volume copies,
+  instance TLS certificate tab, per-template CI matrix, preview breadcrumbs,
+  local setup docs
+  ([a5b475c](https://github.com/orochibraru/homerun/commit/a5b475c6dc4a1fff51e73adf8e5b56992ec2f668))
+- stack (with substacks) and instance-wide monitoring with a per-service
+  breakdown; rename analytics to monitoring
+  ([4f89c85](https://github.com/orochibraru/homerun/commit/4f89c85c0491635e720778cb0185a58520d3ba1e))
+- service analytics (traffic from Traefik metrics, uptime, resources over today
+  to all time), preview branch filters, refreshed showcase screenshots
+  ([f0dede6](https://github.com/orochibraru/homerun/commit/f0dede652e04f0100b273aa333ff1a46365d83e3))
+- Sleek style, wider sidebar and search palette, warmer less-pink bordeaux
+  ([1b69a22](https://github.com/orochibraru/homerun/commit/1b69a226bc9cf02e2abe51907a5a2a6e23cda831))
+- Homerun branding and a close button in the mobile sidebar drawer
+  ([2a7b87d](https://github.com/orochibraru/homerun/commit/2a7b87d9c0bb4e5f293437f1fe32115ccd55f0f9))
+- one-command server enrollment as build server or swarm node, liquid glass
+  tinted by the accent, Material You style
+  ([30035fd](https://github.com/orochibraru/homerun/commit/30035fd4dd3cbcc32a5315c6592bfb79580132a5))
+- domains and DNS providers (16 APIs incl. Cloudflare, Route 53, Hetzner,
+  Namecheap) managed from Homerun, with tracked auto-records per service
+  hostname
+  ([5401224](https://github.com/orochibraru/homerun/commit/540122461fa224b9c4a0cb477e5a89ed6c356104))
+- restore a volume backup from a service's Storage tab (replace, back up first,
+  or as a revision with rollback), macOS-style glass, baba-style resource
+  incidents with a sustain window, reminders and per-resource recovery
+  ([19f8580](https://github.com/orochibraru/homerun/commit/19f8580ea4f4fed4bff0d18ce2a7527f595cccb9))
+- cancel running backups and restores, presets get a windowed sidebar, title-bar
+  header and bundled era fonts
+  ([7c3cf3b](https://github.com/orochibraru/homerun/commit/7c3cf3bda56164bb19321a7e471983f94dff86bd))
+- appearance presets (Windows 95/98/XP/7, MSN, Retro) overriding theme, style
+  and colors
+  ([d24fe18](https://github.com/orochibraru/homerun/commit/d24fe18b52ea9b4aa52f0828f9d21d575f1f3b42))
+- error tracking source maps (upload API, CLI and Errors tab, frames mapped back
+  to source at ingest), header-authenticated API clients pass the form CSRF
+  check
+  ([059fef9](https://github.com/orochibraru/homerun/commit/059fef928e2fb4d4cbc88f7f5138de2e2fd84ae8))
+- group notifications and report scheduled runs once, backup and cron job
+  events, S3 upload timeouts/retries/progress, backups and jobs in the
+  API/CLI/MCP, and PR CI deploys only touched templates
+  ([e1fbd82](https://github.com/orochibraru/homerun/commit/e1fbd822aefd1230b9bd2ff0a398e0dcae218a3e))
+
+### Bug Fixes
+
+- retry a failed start-first rollout stop-first when a routed service's writable
+  volume can't be shared
+  ([486a96f](https://github.com/orochibraru/homerun/commit/486a96fd82981858040a3fff735b68df8a3fd365))
+- swarm updates routed services start-first even with a writable volume, so
+  redeploys stop 404ing
+  ([3fe30a7](https://github.com/orochibraru/homerun/commit/3fe30a73add6eb8848fd5cf646d6f818f600acb8))
+- build cache registries accept a namespace path so cross-host builds can push
+  to Gitea/GHCR, logging in against the bare host
+  ([9a25de3](https://github.com/orochibraru/homerun/commit/9a25de3503bae7c4f7221350ec82f770f671f17a))
+- tag every channel's images with their release tag so the agent setup command
+  pins a real image; wider dialogs
+  ([440fc58](https://github.com/orochibraru/homerun/commit/440fc587d10d3dafcee083a3b51a5f3dbf4d1455))
+- agent setup
+  ([ed96a60](https://github.com/orochibraru/homerun/commit/ed96a606abf11e8cfbc80f990f86e57868934895))
+- registry TLS, agent setup commands with a connection test, git provider type
+  in the repo picker, templates E2E infra pulls via mirrors, and a checked
+  nightly publish script
+  ([0c027c1](https://github.com/orochibraru/homerun/commit/0c027c187a09b5139311305c476747dcfca06c31))
+- templates E2E setup hook takes no args again; Sleek is the default style,
+  showcase the style picker with several styles picked
+  ([b36e0bd](https://github.com/orochibraru/homerun/commit/b36e0bd70060cccf3f0183d7d820136b394042f2))
+- stop queue.test's JobDTO mock leaking into other test files and breaking CI
+  ([3edc1bd](https://github.com/orochibraru/homerun/commit/3edc1bd59ed87abd693ad0bd6d16296a7d2e2205))
+- **deps:** update module golang.org/x/crypto to v0.57.0 (#38)
+  ([95991b0](https://github.com/orochibraru/homerun/commit/95991b0f2c546ae2f7f15a57e3ebc6548c570431))
+- backups fail loudly instead of hanging (S3 request timeout and retries, real
+  upload error, progress log, bigint size) and are listed and triggered from the
+  API, CLI and MCP
+  ([28c66dc](https://github.com/orochibraru/homerun/commit/28c66dce92e405c0e276a95bd2072a278a6dac01))
+
+### Performance Improvements
+
+- upload backup parts four at a time with fast gzip; show volume sizes on disk;
+  real-bucket S3 backup/restore integration test
+  ([51a22ea](https://github.com/orochibraru/homerun/commit/51a22eaee830cecd957646aa1523c4ddb690effe))
+
 ## [1.0.49](https://github.com/orochibraru/homerun/compare/v1.0.48...v1.0.49) (2026-09-27)
 
 ### Features
