@@ -13,6 +13,7 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { DestinationType } from "$lib/backup-destinations";
 import type { BuildMethod } from "$lib/build-methods";
 import type { DeployTrigger } from "$lib/deploy-trigger";
 import type { StoredErrorEvent } from "$lib/error-tracking/event";
@@ -1215,11 +1216,11 @@ export const deployment = pgTable(
 	],
 );
 
-// A named, reusable S3-compatible backup destination (bucket/endpoint/region
-// + credentials), configured once on the S3 Destinations page and picked by
-// id from any number of volumes, instead of every volume duplicating its own
-// copy of the same bucket/keys (the old shape : see storageVolume's
-// s3DestinationId below).
+// A named, reusable backup destination, configured once on the Backup
+// Destinations page and picked by id from any number of volumes. The columns
+// are named for S3, the first type; an sftp/smb/webdav row reuses them:
+// endpoint is the host[:port] or URL, bucket the path, accessKeyId the
+// username, secretAccessKeyEnc the password or private key, region is empty.
 export const s3Destination = pgTable(
 	"s3_destination",
 	{
@@ -1234,6 +1235,7 @@ export const s3Destination = pgTable(
 		region: text("region").notNull(),
 		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
 		secretAccessKeyEnc: text("secret_access_key_enc").notNull(),
+		type: text("type").$type<DestinationType>().default("s3").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),

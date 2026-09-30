@@ -33,6 +33,7 @@ flowchart LR
     dns["DNS provider APIs"]
     pangolin["Pangolin"]
     s3["S3 storage"]
+    fileserver["SFTP, SMB and WebDAV storage (NAS, Storage Box)"]
     notify["Notification targets (Discord, Slack, Telegram, webhook, SMTP)"]
     acme["Let's Encrypt"]
     registries["Container registries (Docker Hub, GHCR, build cache)"]
@@ -82,6 +83,7 @@ flowchart LR
   newt -->|"HTTPS on the homerun network"| traefik
   worker -->|"S3 API multipart PUT and GET"| s3
   app -->|"S3 ListObjectsV2 (SigV4)"| s3
+  worker -->|"SFTP, SMB or WebDAV from an rclone helper container"| fileserver
   app -->|"HTTPS webhooks, Telegram Bot API, SMTP"| notify
   cli -->|"HTTPS REST /api/v1 + x-api-key"| app
   mcp -->|"Streamable HTTP /api/v1/mcp + OAuth access token or API key"| app
@@ -122,6 +124,7 @@ flowchart LR
 | Newt tunnel (homerun-newt)                       | Traefik (`traefik:v3`)                                         | HTTPS on the homerun network                                                          | Hand tunnelled requests to the usual Traefik routers.                                                                |
 | Go worker (homerun-worker)                       | S3 storage                                                     | S3 API multipart PUT and GET                                                          | Stream volume backups up and restores down.                                                                          |
 | SvelteKit app                                    | S3 storage                                                     | S3 ListObjectsV2 (SigV4)                                                              | List existing backups for the restore picker.                                                                        |
+| Go worker (homerun-worker)                       | SFTP, SMB and WebDAV storage (NAS, Storage Box)                | SFTP, SMB or WebDAV from an rclone helper container                                   | Stream volume backups up and restores down, and list them for the restore picker.                                    |
 | SvelteKit app                                    | Notification targets (Discord, Slack, Telegram, webhook, SMTP) | HTTPS webhooks, Telegram Bot API, SMTP                                                | Notifications, invites and emailed sign-in codes.                                                                    |
 | homerun CLI                                      | SvelteKit app                                                  | HTTPS REST `/api/v1` + `x-api-key`                                                    | Deploy, inspect and manage from a terminal or CI.                                                                    |
 | MCP clients (Claude, agents)                     | SvelteKit app                                                  | Streamable HTTP `/api/v1/mcp` + OAuth access token or API key                         | AI agents manage services; each tool calls the REST API as the caller.                                               |

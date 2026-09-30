@@ -118,7 +118,7 @@ which took raw `row`/`card` snippets : every page drew its own row chrome, so
 each list had different padding, and once the shared container became a panel
 the pages that still drew a `panel` per row showed **double borders with no gap
 between items**. Services, templates, stacks and storage go through it; the
-remaining five list pages (remote hosts, S3 destinations, cron jobs, build
+remaining five list pages (remote hosts, backup destinations, cron jobs, build
 cache, git providers) still hand-roll their row internals inside the same
 panel/divider shell, see `TODO.md`.
 
@@ -254,8 +254,8 @@ users, backups):
   `action`, with the page's own buttons as children (a destructive op submits
   through a hidden `name="op"` button after a `ConfirmDialog`). The page's
   `?/bulk` action returns `{ succeeded, failed }` (storage adds `skipped`: bulk
-  enable only turns on volumes that already have a schedule and S3 destination)
-  for the toast.
+  enable only turns on volumes that already have a schedule and destination) for
+  the toast.
 
 **The signed-out surfaces** (`auth/sign-in`, `auth/sign-up`,
 `auth/sign-up/confirm`, `auth/accept-invite`, `auth/error`) all render through
@@ -277,9 +277,9 @@ that predated this also carried stale `LocalRun` branding and a hand-rolled
 `inputClass`, both gone.
 
 **Every list page now renders its rows through `entity-list.svelte`.** Remote
-hosts, S3 destinations, cron jobs, build cache registries and git providers used
-to hand-roll their row internals inside the same panel/divider shell, which is
-how they drifted : different title weights, different subtitle separators, a
+hosts, backup destinations, cron jobs, build cache registries and git providers
+used to hand-roll their row internals inside the same panel/divider shell, which
+is how they drifted : different title weights, different subtitle separators, a
 status line in one and a badge in another. They map their rows to `EntityRow`
 (`id`/`title`/`subtitle`/`description`/`href`) and pass the page-specific parts
 as `media`/`badge`/`meta`/`actions` snippets, which is what those snippets are

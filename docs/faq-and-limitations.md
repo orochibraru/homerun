@@ -138,10 +138,16 @@ check the dashboard for anything that didn't.
 - **Backups aren't paused for writes.** A volume is tarred while its service
   keeps running, which can tear a database mid-write. Dump the database into a
   bind mount with a [cron job](scheduling.md#cron-jobs) and back that up
-  instead. See [S3 backups](backups.md#s3-compatible-backups).
+  instead. See [Volume backups](backups.md#backups).
 - **Restoring a backup unpacks over the volume** without wiping it or stopping
   anything. Stop the services using it first. See
-  [S3 backups](backups.md#restoring-a-backup).
+  [Volume backups](backups.md#restoring-a-backup).
+- **Non-S3 backup destinations are one stream, and SFTP skips host key checks.**
+  SFTP, SMB and WebDAV uploads are a single connection with no parallel parts,
+  so they run at the speed of that one connection. SFTP does not verify the
+  server's host key, and only unencrypted private keys are accepted. They were
+  tested against generic OpenSSH, Samba and Apache WebDAV servers, not a real
+  Hetzner Storage Box. See [Volume backups](backups.md#backup-destinations).
 - **A rollback only restores the image.** Env vars, volumes and networking stay
   as they are now, and only the last 5 images of a service are kept on the host
   (configurable under Settings → Docker). Auto-rollback is off by default and

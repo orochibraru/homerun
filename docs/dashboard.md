@@ -44,8 +44,8 @@
 ## List pages
 
 Every list page (services, stacks, templates, cron jobs, storage, remote hosts,
-build cache registries, S3 destinations, users) has the same toolbar: a search
-box, a sort (newest, oldest, name A–Z or Z–A, recently updated, and most
+build cache registries, backup destinations, users) has the same toolbar: a
+search box, a sort (newest, oldest, name A–Z or Z–A, recently updated, and most
 services on stacks), filters where the list has any, and a pager. All of them
 run on the server over everything you can see, and live in the URL.
 
@@ -54,9 +54,9 @@ run on the server over everything you can see, and live in the URL.
 The **Search…** button in the header, or `⌘K` / `Ctrl+K` anywhere, opens a
 command palette. It jumps to any dashboard page by name, and once you've typed
 two characters it also searches the instance's services, stacks, templates, cron
-jobs, storage volumes, S3 destinations, remote hosts, build cache registries,
-git providers, notification channels and status pages, plus users and
-authentication providers for an admin.
+jobs, storage volumes, backup destinations, remote hosts, build cache
+registries, git providers, notification channels and status pages, plus users
+and authentication providers for an admin.
 
 ## Setup diagnostics
 

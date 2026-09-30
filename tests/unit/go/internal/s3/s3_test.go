@@ -53,10 +53,14 @@ func init() {
 }
 
 // handler is the fake S3 endpoint's HTTP handler, verifying every request's
-// signature before serving it.
+// signature before serving it. A request whose body stops short was cancelled
+// by the client (a part still in flight when another one failed) and is dropped.
 func (f *fakeS3) handler(t *testing.T) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			return
+		}
 		headers := map[string]string{
 			"host":                 r.Host,
 			"x-amz-content-sha256": r.Header.Get("x-amz-content-sha256"),

@@ -117,7 +117,7 @@ test.describe
 			await page.getByRole("button", { name: "Enable backups" }).click();
 			await expect(
 				page.getByText(
-					"0 volumes now backed up, 2 skipped (set a schedule and S3 destination first).",
+					"0 volumes now backed up, 2 skipped (set a schedule and destination first).",
 				),
 			).toBeVisible();
 

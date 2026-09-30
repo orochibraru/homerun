@@ -116,7 +116,7 @@
       {#if data.backupVolumes.length === 0}
         <EmptyState
           icon={CloudUpload}
-          subtitle="Configure an S3 destination and schedule from a volume's page."
+          subtitle="Configure a destination and schedule from a volume's page."
           title="No volumes have scheduled backups enabled"
         />
       {:else}

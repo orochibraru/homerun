@@ -42,6 +42,19 @@ has to touch every copy: Bun in `package.json`'s `packageManager` and the
 tag, prek via `j178/prek-action` in `code_quality.yaml`. Renovate updates
 `mise.toml` along with the rest.
 
+**Every better-auth package runs one version: `better-auth`'s own.** Its plugins
+declare each other with ranges (`@better-auth/mcp` asks for
+`@better-auth/oauth-provider@^1.7.1`), so with only the direct dependencies
+pinned a plugin can resolve a newer sibling than the pinned `@better-auth/core`,
+and the build dies on an export that core doesn't have yet. `package.json`'s
+`overrides` therefore sets every `@better-auth/*` package to `$better-auth`,
+including the ones only pulled in transitively. To upgrade, bump `better-auth`
+and the `@better-auth/*` entries in `dependencies` to the same version in one
+change (Renovate groups them) and run `bun install`. A new `@better-auth/*`
+package gets an override too. `@better-auth/utils` is versioned on its own and
+stays out of it. `tests/unit/app/better-auth-versions.test.ts` fails on any of
+these being out of line, in `package.json` or in `bun.lock`.
+
 ## Setup
 
 ```sh

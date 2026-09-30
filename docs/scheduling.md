@@ -44,9 +44,8 @@ the background:
   [scheduled redeploy](#scheduled-redeploy) turned on, with its schedule and
   when it last fired.
 - **Cron jobs**, every enabled [cron job](#cron-jobs).
-- **Backups**, every volume with a
-  [backup schedule](backups.md#s3-compatible-backups), and which S3 destination
-  it writes to.
+- **Backups**, every volume with a [backup schedule](backups.md#backups), and
+  which backup destination it writes to.
 - **The job queue**, what's running right now, what's waiting, and how the last
   handful of jobs finished, refreshing itself every few seconds while anything
   is active.

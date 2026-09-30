@@ -116,7 +116,7 @@ export const allNavItems = [
 		exact: false,
 		href: resolve("/s3-destinations"),
 		icon: Database,
-		label: "S3 Destinations",
+		label: "Backup Destinations",
 	},
 	{
 		adminOnly: false,

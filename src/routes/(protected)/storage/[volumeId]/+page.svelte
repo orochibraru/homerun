@@ -91,7 +91,7 @@
 
       <CheckBox
         checked={vol.backupEnabled}
-        helperText="Tar this volume and upload it to the S3 destination below on schedule"
+        helperText="Tar this volume and upload it to the destination below on schedule"
         id="backupEnabled"
         label="Enable scheduled backups"
         name="backupEnabled"
@@ -160,7 +160,7 @@
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label class={label} for="s3DestinationId">S3 destination</label>
+          <label class={label} for="s3DestinationId">Destination</label>
           {#if data.destinations.length === 0}
             <p class="text-xs text-text-muted">
               No destinations configured yet.

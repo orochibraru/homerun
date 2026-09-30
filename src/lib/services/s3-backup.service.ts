@@ -5,6 +5,11 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { stackPath } from "$lib/stack-tree";
 import {
+	listRemoteBackups,
+	type RcloneRemote,
+	rcloneRemote,
+} from "./backup/rclone.ts";
+import {
 	VOLUME_HELPER_IMAGE,
 	VOLUME_HELPER_MOUNT_PATH,
 	VOLUME_HELPER_TAG,
@@ -109,6 +114,8 @@ async function signedRequest(
 	});
 }
 
+export type BackupTarget = { destination: S3Config } | { remote: RcloneRemote };
+
 export interface BackupObject {
 	key: string;
 	lastModified: string | null;
@@ -177,7 +184,7 @@ class S3BackupServiceClass {
 		const services = await VolumeServices.servicesUsing(volume);
 		return {
 			...(await this.#helperSpec(volume, services)),
-			destination: await this.destinationFor(volume),
+			...(await this.destinationFor(volume)),
 			key: `${prefix}${volume.name}-${timestamp}.tar.gz`,
 			preCommand: await VolumeServices.preCommandTarget(volume),
 			stopServices: volume.backupStopServices
@@ -200,7 +207,7 @@ class S3BackupServiceClass {
 		const services = await VolumeServices.servicesUsing(volume);
 		return {
 			...(await this.#helperSpec(volume, services)),
-			destination: await this.destinationFor(volume),
+			...(await this.destinationFor(volume)),
 			key,
 			stopServices: options.stopServices
 				? await VolumeServices.stopTargets(services)
@@ -236,37 +243,53 @@ class S3BackupServiceClass {
 
 	/** The backups that exist for this volume, newest first : what the Restore picker lists. */
 	async listBackups(volume: StorageVolumeDTO): Promise<BackupObject[]> {
-		const destination = await this.destinationFor(volume);
+		const target = await this.destinationFor(volume);
 		const prefix = volume.backupPrefix
 			? `${volume.backupPrefix}/${volume.name}-`
 			: `${volume.name}-`;
-		return await listObjects(destination, prefix);
+		return "remote" in target
+			? await listRemoteBackups(target.remote, prefix)
+			: await listObjects(target.destination, prefix);
 	}
 
 	/**
-	 * Resolves and decrypts a volume's S3 destination into an `S3Config`.
+	 * Resolves and decrypts a volume's destination: an `S3Config` for an S3
+	 * one, the rclone helper that reaches it for an SFTP, SMB or WebDAV one.
 	 *
 	 * @throws When the volume has no destination picked, the destination row
-	 *   no longer exists, or its secret key can't be decrypted.
+	 *   no longer exists, or its secret can't be decrypted.
 	 */
-	async destinationFor(volume: StorageVolumeDTO): Promise<S3Config> {
+	async destinationFor(volume: StorageVolumeDTO): Promise<BackupTarget> {
 		if (!volume.s3DestinationId) {
-			throw new Error("No S3 destination picked for this volume.");
+			throw new Error("No backup destination picked for this volume.");
 		}
 		const row = await S3DestinationDTO.get(volume.s3DestinationId);
 		if (!row) {
-			throw new Error("The picked S3 destination no longer exists.");
+			throw new Error("The picked backup destination no longer exists.");
 		}
 		const secretAccessKey = row.decryptSecretAccessKey();
 		if (!secretAccessKey) {
-			throw new Error("Couldn't decrypt the destination's stored secret key.");
+			throw new Error("Couldn't decrypt the destination's stored secret.");
+		}
+		if (row.type !== "s3") {
+			return {
+				remote: rcloneRemote({
+					host: row.endpoint,
+					path: row.bucket,
+					secret: secretAccessKey,
+					type: row.type,
+					username: row.accessKeyId,
+				}),
+			};
 		}
 		return {
-			accessKeyId: row.accessKeyId,
-			bucket: row.bucket,
-			endpoint: row.endpoint,
-			region: row.region,
-			secretAccessKey,
+			destination: {
+				accessKeyId: row.accessKeyId,
+				bucket: row.bucket,
+				endpoint: row.endpoint,
+				region: row.region,
+				secretAccessKey,
+			},
 		};
 	}
 }

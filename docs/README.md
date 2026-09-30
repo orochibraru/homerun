@@ -91,8 +91,9 @@ sync by hand.
   access, linked companion containers, and saving your own.
 - **[Storage volumes](storage-volumes.md)**: bind-mount and Docker-managed
   volumes, and mounting them into services.
-- **[S3 backups](backups.md)**: reusable S3 destinations, scheduled backups of
-  either volume kind, the backup history, and restoring.
+- **[Volume backups](backups.md)**: reusable backup destinations (S3, SFTP, SMB,
+  WebDAV), scheduled backups of either volume kind, the backup history, and
+  restoring.
 - **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
   images on a second machine, the standalone agent and installer.
 - **[Machine terminals](machine-terminals.md)**: a browser shell on this server

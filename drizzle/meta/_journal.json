@@ -693,6 +693,13 @@
 			"when": 1790712112020,
 			"tag": "0098_wooden_captain_midlands",
 			"breakpoints": true
+		},
+		{
+			"idx": 99,
+			"version": "7",
+			"when": 1790758964103,
+			"tag": "0099_mean_shatterstar",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

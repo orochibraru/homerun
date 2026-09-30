@@ -5783,7 +5783,7 @@ export interface operations {
 					};
 				};
 			};
-			/** @description The volume has no S3 destination */
+			/** @description The volume has no backup destination */
 			400: {
 				headers: {
 					[name: string]: unknown;

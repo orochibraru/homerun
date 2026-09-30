@@ -155,3 +155,6 @@ Immich
 Plex
 APIs
 Streamable
+Nextcloud
+rclone
+unencrypted

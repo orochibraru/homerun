@@ -91,6 +91,19 @@
   "patchedDependencies": {
     "cpu-features@0.0.10": "patches/cpu-features@0.0.10.patch",
   },
+  "overrides": {
+    "@better-auth/api-key": "1.7.1",
+    "@better-auth/core": "1.7.1",
+    "@better-auth/drizzle-adapter": "1.7.1",
+    "@better-auth/kysely-adapter": "1.7.1",
+    "@better-auth/mcp": "1.7.1",
+    "@better-auth/memory-adapter": "1.7.1",
+    "@better-auth/mongo-adapter": "1.7.1",
+    "@better-auth/oauth-provider": "1.7.1",
+    "@better-auth/passkey": "1.7.1",
+    "@better-auth/prisma-adapter": "1.7.1",
+    "@better-auth/telemetry": "1.7.1",
+  },
   "packages": {
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 
@@ -1302,8 +1315,6 @@
 
     "@better-auth/core/zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
 
-    "@better-auth/mcp/@better-auth/oauth-provider": ["@better-auth/oauth-provider@1.7.6", "", { "dependencies": { "jose": "^6.2.3", "zod": "^4.5.4" }, "peerDependencies": { "@better-auth/core": "^1.7.6", "@better-auth/utils": "0.4.2", "@better-fetch/fetch": "1.3.2", "better-auth": "^1.7.6", "better-call": "1.4.0" } }, "sha512-pti0J8B9gM5Z7Jq571tJ4A/2kBIRgtwQuNPjVHfI+zGa9qOaCA6n6mmm9sOCOwMgBOuHWrAgXpTbWArAIaUsdQ=="],
-
     "@better-auth/mcp/jose": ["jose@6.2.12", "", {}, "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw=="],
 
     "@better-auth/oauth-provider/jose": ["jose@6.2.12", "", {}, "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw=="],
@@ -1463,10 +1474,6 @@
     "wrap-ansi/strip-ansi": ["strip-ansi@6.0.1", "", { "dependencies": { "ansi-regex": "^5.0.1" } }, "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A=="],
 
     "yargs/string-width": ["string-width@4.2.3", "", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g=="],
-
-    "@better-auth/mcp/@better-auth/oauth-provider/@better-fetch/fetch": ["@better-fetch/fetch@1.3.2", "", {}, "sha512-Gs7n99b5tqUC6cQAPbV0uED3IraHB6xQbHLQ/C3l7ZFafHScOx9pQ+DYmP5blbLFShVWLqxNUlI9wi4xU/X+ow=="],
-
-    "@better-auth/mcp/@better-auth/oauth-provider/zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
 
     "@esbuild-kit/core-utils/esbuild/@esbuild/android-arm": ["@esbuild/android-arm@0.18.20", "", { "os": "android", "cpu": "arm" }, "sha512-fyi7TDI/ijKKNZTUJAQqiG5T7YjJXgnzkURqmGj13C6dCqckZBLdl4h7bkhHt/t0WP+zO9/zwroDvANaOqO5Sw=="],
 

@@ -2,6 +2,7 @@ package backup_test
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -35,12 +36,14 @@ type fakeContainer struct {
 }
 
 // fakeEngine is a Docker daemon that runs helper containers' tar, find and
-// failing commands against in-memory volumes, over a real hijacked attach.
+// failing commands against in-memory volumes, and rclone's rcat, moveto,
+// deletefile and cat against an in-memory remote, over a real hijacked attach.
 type fakeEngine struct {
 	mu         sync.Mutex
 	containers map[string]*fakeContainer
 	failTar    bool
 	hang       bool
+	remote     map[string]string
 	removed    []string
 	volumes    map[string]map[string]string
 }
@@ -96,8 +99,12 @@ func (e *fakeEngine) create(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&body)
 	e.mu.Lock()
 	id := fmt.Sprintf("helper%d", len(e.containers)+1)
+	bind := ""
+	if len(body.HostConfig.Binds) > 0 {
+		bind = body.HostConfig.Binds[0]
+	}
 	e.containers[id] = &fakeContainer{
-		bind: body.HostConfig.Binds[0], cmd: body.Cmd, exited: make(chan struct{}),
+		bind: bind, cmd: body.Cmd, exited: make(chan struct{}),
 		labels: body.Labels, started: make(chan struct{}),
 	}
 	e.mu.Unlock()
@@ -135,8 +142,39 @@ func (e *fakeEngine) attach(w http.ResponseWriter, c *fakeContainer) {
 		e.mu.Lock()
 		e.volumes[source] = map[string]string{}
 		e.mu.Unlock()
+	default:
+		e.rclone(c, buffered)
 	}
 	_ = buffered.Flush()
+}
+
+// rclone runs one rclone command against the in-memory remote: rcat stores
+// stdin, moveto renames, deletefile removes and cat streams an object out.
+func (e *fakeEngine) rclone(c *fakeContainer, stream *bufio.ReadWriter) {
+	last := c.cmd[len(c.cmd)-1]
+	var body []byte
+	if c.cmd[0] == "rcat" {
+		body, _ = io.ReadAll(stream)
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	switch c.cmd[0] {
+	case "rcat":
+		e.remote[last] = string(body)
+	case "moveto":
+		e.remote[last] = e.remote[c.cmd[1]]
+		delete(e.remote, c.cmd[1])
+	case "deletefile":
+		delete(e.remote, last)
+	case "cat":
+		object, found := e.remote[last]
+		if !found {
+			_, _ = stream.Write(testsupport.DockerFrame(2, "object not found"))
+			c.code = 4
+			return
+		}
+		_, _ = stream.Write(testsupport.DockerFrame(1, object))
+	}
 }
 
 // pack tars a volume's files the way `tar -C mount -cf - .` names them.
@@ -186,7 +224,7 @@ func (e *fakeEngine) files(source string) []string {
 
 // newFakeEngine serves a fakeEngine holding volume "data" on a unix socket.
 func newFakeEngine(t *testing.T, files map[string]string) (*fakeEngine, string) {
-	engine := &fakeEngine{containers: map[string]*fakeContainer{}, volumes: map[string]map[string]string{"data": files}}
+	engine := &fakeEngine{containers: map[string]*fakeContainer{}, remote: map[string]string{}, volumes: map[string]map[string]string{"data": files}}
 	return engine, testsupport.ServeUnixSocket(t, engine)
 }
 

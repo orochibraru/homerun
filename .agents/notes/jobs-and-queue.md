@@ -175,12 +175,12 @@ queue, and the policy layer by `tests/unit/app/queue.test.ts`.
 `CronService` (`cron.service.ts`) composes three instances of one generic
 `DueScheduler<T>` (`cron/due-scheduler.ts`), one per scheduled concern: cron
 redeploy (`ServiceDTO.listCronEnabled()` → `DeploymentService.enqueueDeploy`),
-S3 backup (`StorageVolumeDTO.listBackupEnabled()` → `enqueueVolumeBackup`) and
-user cron jobs (`CronJobDTO.listEnabled()` → `enqueueCronJobRun`, see Cron jobs
-above). All three were separate near-identical classes before; the config object
-(`list`/`schedule`/`lastRunAt`/`markRun`/`fire`/`describe`/`label`) is the only
-thing that actually differed. Each `list()` is unscoped by user, since a
-scheduler isn't running on behalf of a request. Due-checking is
+volume backup (`StorageVolumeDTO.listBackupEnabled()` → `enqueueVolumeBackup`)
+and user cron jobs (`CronJobDTO.listEnabled()` → `enqueueCronJobRun`, see Cron
+jobs above). All three were separate near-identical classes before; the config
+object (`list`/`schedule`/`lastRunAt`/`markRun`/`fire`/`describe`/`label`) is
+the only thing that actually differed. Each `list()` is unscoped by user, since
+a scheduler isn't running on behalf of a request. Due-checking is
 `cronMatches(schedule, now)` plus a `sameMinute(lastRunAt, now)` guard against a
 double-fire within one matching minute.
 
@@ -282,8 +282,9 @@ from the app entirely, not just dead code kept around.
 
 Per-volume, off by default. The destination itself is a separate, named,
 reusable row (`s3_destination`, `S3DestinationDTO`, managed on
-`/s3-destinations`) that a volume points at via `storageVolume.s3DestinationId`,
-so several volumes can share one bucket/credential pair; the volume only owns
+`/s3-destinations`, shown as "Backup Destinations") that a volume points at via
+`storageVolume.s3DestinationId`, so several volumes can share one
+bucket/credential pair; the volume only owns
 `backupEnabled`/`backupSchedule`/`backupPrefix`, edited on `storage/[volumeId]`.
 Every attempt, scheduled or manual, writes a `backup_run` row (`BackupRunDTO`,
 opened by the `backup`/`backup_restore` worker jobs' `prepare` step and
@@ -303,8 +304,24 @@ running services to stop (all resolved by
 below). `S3Config`'s hand-rolled AWS Signature V4 client (`signedRequest`,
 `listBackups`'s `ListObjectsV2`) is the one part still in TS, since the app
 itself lists backups for the Restore picker; the Go side has its own S3 client
-(`internal/s3`) for the actual PUT/GET. **Both volume kinds are supported**:
-`kind: "bind"` is tar'd straight off the host, and `kind: "volume"`
+(`internal/s3`) for the actual PUT/GET. **A destination has a `type`**
+(`src/lib/backup-destinations.ts`: `s3`, `sftp`, `smb`, `webdav`), and
+`destinationFor` returns either `{ destination: S3Config }` or
+`{ remote: RcloneRemote }` (`$lib/services/backup/rclone.ts`), so the spec's
+`Spec.Remote` is set instead of the S3 fields. A non-S3 row reuses the S3
+columns (`endpoint` = `host[:port]` or the WebDAV URL, `bucket` = the path, for
+smb the share then an optional path, `accessKeyId` = username,
+`secretAccessKeyEnc` = password or an sftp PEM key, `region` empty), parsed by
+`$lib/server/backup-destination-form.ts`. `backup.go`'s `archives()` picks
+`internal/rclone` when `Spec.Remote` is set, else `internal/s3`. **rclone
+transport**: a throwaway `rclone/rclone` helper (`RCLONE_TAG`), one remote named
+`dest` configured only through `RCLONE_CONFIG_DEST_*` env vars, an `sh -c`
+entrypoint running `rclone obscure` on the password inside the container, sftp
+with `shell_type = none` and no host key check. `Remote.Upload` is `rclone rcat`
+of the gzip stream to `<key>.partial`, then `rclone moveto` to the key, and
+`deletefile` of the partial on any failure; one stream, no parallel parts, a
+progress line every 30s. `Remote.Get` is `rclone cat`. **Both volume kinds are
+supported**: `kind: "bind"` is tar'd straight off the host, and `kind: "volume"`
 (Docker-managed, whose content isn't visible on the host filesystem the same
 way) is mounted read-only into a throwaway helper container that tars it to
 stdout — both `internal/jobs/backup/backup.go`'s `archiveAndUpload`, one code
@@ -399,10 +416,12 @@ a wall of text.
 
 `S3BackupService.listBackups(volume)` is ListObjectsV2 against the volume's own
 prefix (same hand-rolled SigV4 as the app-side upload listing, `signedRequest`
-shared between GET and LIST), and
-`restoreSpec(volume, key, { wipe, stopServices })` is what the `backup_restore`
-worker job hands the Go worker to download `key` and unpack it back into the
-volume.
+shared between GET and LIST) for an S3 destination; for sftp/smb/webdav it is
+`listRemoteBackups` (`rclone lsjson` through `DockerService.runOneOff`, the
+worker's one-off endpoint; exit 3, a directory that doesn't exist yet, is an
+empty list). And `restoreSpec(volume, key, { wipe, stopServices })` is what the
+`backup_restore` worker job hands the Go worker to download `key` and unpack it
+back into the volume.
 
 **It's a queue job**, `backup_restore` (`enqueueVolumeRestore` in
 `backup-queue.ts`, payload `backupRestoreJobPayload`), deduped on

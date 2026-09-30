@@ -42,7 +42,7 @@ export const actions = {
 
 		await destination.delete();
 		logger.info(
-			`S3 destination deleted: destination=${destinationId} user=${locals.user.id}`,
+			`Backup destination deleted: destination=${destinationId} user=${locals.user.id}`,
 		);
 		return { success: true };
 	},

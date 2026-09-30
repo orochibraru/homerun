@@ -1,4 +1,5 @@
 import { and, count, desc, eq, type SQL } from "drizzle-orm";
+import type { DestinationType } from "$lib/backup-destinations";
 import { db } from "$lib/server/db/lib";
 import { type S3Destination, s3Destination } from "$lib/server/db/schema";
 import {
@@ -17,6 +18,7 @@ export interface NewS3DestinationInput {
 	name: string;
 	region: string;
 	secretAccessKey: string;
+	type: DestinationType;
 	userId: string;
 }
 
@@ -129,6 +131,7 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 			name: input.name,
 			region: input.region,
 			secretAccessKeyEnc: encryptSecret(input.secretAccessKey),
+			type: input.type,
 			updatedAt: now,
 			userId: input.userId,
 		};
@@ -168,11 +171,15 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 	get name(): string {
 		return this.row.name;
 	}
-	/** The S3-compatible endpoint URL. */
+	/** Which protocol the destination speaks. */
+	get type(): DestinationType {
+		return this.row.type;
+	}
+	/** The S3-compatible endpoint URL, or a non-S3 destination's host or URL. */
 	get endpoint(): string {
 		return this.row.endpoint;
 	}
-	/** The bucket backups are uploaded to. */
+	/** The bucket backups are uploaded to, or a non-S3 destination's path. */
 	get bucket(): string {
 		return this.row.bucket;
 	}
@@ -180,12 +187,12 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 	get region(): string {
 		return this.row.region;
 	}
-	/** The access key id used to authenticate (not secret). */
+	/** The access key id, or a non-S3 destination's username (not secret). */
 	get accessKeyId(): string {
 		return this.row.accessKeyId;
 	}
 
-	/** Decrypted secret access key, for the S3 client only : never exposed to a `load` return value. */
+	/** Decrypted secret access key, password or private key, for the backup client only : never exposed to a `load` return value. */
 	decryptSecretAccessKey(): string {
 		return decryptSecret(this.row.secretAccessKeyEnc) ?? "";
 	}

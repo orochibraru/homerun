@@ -105,7 +105,7 @@
       </p>
     </div>
     <Button href={resolve("/s3-destinations")} variant="outline">
-      Manage S3 destinations
+      Manage destinations
     </Button>
   </div>
 

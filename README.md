@@ -143,13 +143,13 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   volumes defined once, mounted into one or more services, read-write or
   read-only, with a database or cache getting one at its data directory
   automatically
-- **[S3 backups](docs/backups.md#s3-compatible-backups)**: scheduled or
-  on-demand backups of both volume kinds to any S3-compatible endpoint, with
-  optional service stop or a pre-backup command (`pg_dump`, `mysqldump`) for
-  consistent database copies
+- **[Volume backups](docs/backups.md#backups)**: scheduled or on-demand backups
+  of both volume kinds to any S3-compatible bucket, or over SFTP, SMB or WebDAV
+  (a Hetzner Storage Box, a NAS), with optional service stop or a pre-backup
+  command (`pg_dump`, `mysqldump`) for consistent database copies
 - **[Restore from the dashboard](docs/backups.md#restoring-a-backup)**: browse a
-  volume's backups in the bucket and restore one, optionally wiping the volume
-  first, with a searchable history of every run
+  volume's backups at its destination and restore one, optionally wiping the
+  volume first, with a searchable history of every run
 
 ### Observability & notifications
 

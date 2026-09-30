@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import { describeDestination } from "$lib/backup-destinations";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import EntityList from "$lib/components/entity-list.svelte";
@@ -17,7 +18,7 @@
 
 	const { data } = $props();
 
-	onMount(() => title.set("S3 Destinations"));
+	onMount(() => title.set("Backup Destinations"));
 
 	const view = new ViewMode("s3-destinations");
 
@@ -25,7 +26,7 @@
 		data.destinations.map((dest) => ({
 			id: dest.id,
 			name: dest.name,
-			subtitle: `${dest.endpoint} · ${dest.bucket} · ${dest.region}`,
+			subtitle: describeDestination(dest),
 			title: dest.name,
 		})),
 	);
@@ -75,10 +76,11 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">S3 Destinations</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Backup Destinations</h1>
       <p class="text-text-muted mt-1 text-sm">
-        Reusable S3-compatible backup destinations. Pick one from any volume's
-        page instead of retyping the same bucket/keys everywhere.
+        Reusable backup destinations: S3-compatible buckets, and servers reached
+        over SFTP, SMB or WebDAV. Pick one from any volume's page instead of
+        retyping the same credentials everywhere.
       </p>
     </div>
     <Button href={resolve("/s3-destinations/new")}>
@@ -91,7 +93,7 @@
     <EmptyState
       icon={CloudUpload}
       subtitle="Add one, then pick it from a volume's backup config."
-      title="No S3 destinations yet"
+      title="No backup destinations yet"
     >
       <Button href={resolve("/s3-destinations/new")}>
         <Plus class="size-4" />
@@ -100,7 +102,7 @@
     </EmptyState>
   {:else}
     <EntityToolbar
-    sorts={BASE_SORTS} placeholder="Search destinations by name, endpoint or bucket…">
+    sorts={BASE_SORTS} placeholder="Search destinations by name, host or path…">
       {#snippet trailing()}
         <ViewModeToggle {view} />
       {/snippet}
@@ -127,5 +129,5 @@
   confirmLabel="Delete"
   description={`Delete "${pendingDeleteName}"? Any volume still picking it will fall back to no destination.`}
   onConfirm={() => pendingDeleteForm?.requestSubmit()}
-  title="Delete S3 destination"
+  title="Delete backup destination"
 />

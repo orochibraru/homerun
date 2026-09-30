@@ -15,7 +15,7 @@ export const POST = async ({ params, locals }) => {
 	}
 	if (!volume.s3DestinationId) {
 		return json(
-			{ error: "This volume has no S3 destination to back up to." },
+			{ error: "This volume has no destination to back up to." },
 			{ status: 400 },
 		);
 	}

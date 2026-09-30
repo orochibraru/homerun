@@ -109,7 +109,7 @@
       <p class="text-text-muted text-sm">
         There's nowhere to send backups yet :
         <a class="text-accent underline" href={resolve("/s3-destinations/new")}>
-          add an S3 destination
+          add a backup destination
         </a>
         first.
       </p>
@@ -135,7 +135,7 @@
         />
         <div>
           <label class={label} for="s3DestinationId-{volume.id}">
-            S3 destination
+            Destination
           </label>
           <input name="s3DestinationId" type="hidden" value={destinationId}>
           <SelectRoot type="single" bind:value={destinationId}>

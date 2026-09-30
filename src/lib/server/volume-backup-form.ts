@@ -61,13 +61,13 @@ export async function backupConfigError(input: {
 		return "Invalid schedule : pick one, or use standard 5-field cron.";
 	}
 	if (input.enabled && !input.s3DestinationId) {
-		return "Pick an S3 destination.";
+		return "Pick a backup destination.";
 	}
 	if (
 		input.s3DestinationId &&
 		!(await S3DestinationDTO.get(input.s3DestinationId))
 	) {
-		return "That S3 destination wasn't found.";
+		return "That backup destination wasn't found.";
 	}
 	return null;
 }

@@ -1,0 +1,263 @@
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
+
+mock.module("$app/environment", () => ({
+	browser: false,
+	building: false,
+	dev: false,
+}));
+
+const { describeDestination } = await import(
+	"../../../src/lib/backup-destinations"
+);
+const { parseDestinationForm } = await import(
+	"../../../src/lib/server/backup-destination-form"
+);
+const { listRemoteBackups, rcloneRemote, splitHostPort } = await import(
+	"../../../src/lib/services/backup/rclone"
+);
+const { DockerService } = await import(
+	"../../../src/lib/services/docker.service"
+);
+
+const FAKE_KEY = ["-----BEGIN OPENSSH", "PRIVATE KEY-----\nabc\n-----END"].join(
+	" ",
+);
+
+const restorers: { mockRestore: () => void }[] = [];
+
+afterEach(() => {
+	for (const spy of restorers.splice(0)) {
+		spy.mockRestore();
+	}
+});
+
+function form(fields: Record<string, string>): FormData {
+	const data = new FormData();
+	for (const [name, value] of Object.entries(fields)) {
+		data.set(name, value);
+	}
+	return data;
+}
+
+function listing(exitCode: number, stdout: string, stderr = "") {
+	const spy = spyOn(DockerService, "runOneOff").mockResolvedValue({
+		exitCode,
+		stderr: Buffer.from(stderr),
+		stdout: Buffer.from(stdout),
+		timedOut: false,
+	});
+	restorers.push(spy);
+	return spy;
+}
+
+const REMOTE = rcloneRemote({
+	host: "nas.local:2222",
+	path: "backups",
+	secret: "hunter2",
+	type: "sftp",
+	username: "bob",
+});
+
+describe("parseDestinationForm", () => {
+	test("an S3 form without a type stays an S3 destination", () => {
+		expect(
+			parseDestinationForm(
+				form({
+					accessKeyId: "key",
+					bucket: "homerun",
+					endpoint: "https://s3.example.com",
+					name: "B2",
+					region: "eu-central-1",
+					secretAccessKey: "secret",
+				}),
+			),
+		).toEqual({
+			parsed: {
+				accessKeyId: "key",
+				bucket: "homerun",
+				endpoint: "https://s3.example.com",
+				name: "B2",
+				region: "eu-central-1",
+				secretAccessKey: "secret",
+				type: "s3",
+			},
+		});
+	});
+
+	test("an SFTP private key wins over the password and the path loses its trailing slash", () => {
+		const result = parseDestinationForm(
+			form({
+				accessKeyId: "u1",
+				bucket: "/volume1/backups/",
+				endpoint: "box.example.com:23",
+				name: "Box",
+				privateKey: FAKE_KEY,
+				secretAccessKey: "ignored",
+				type: "sftp",
+			}),
+		);
+		expect("parsed" in result && result.parsed).toMatchObject({
+			bucket: "/volume1/backups",
+			region: "",
+			secretAccessKey: FAKE_KEY,
+			type: "sftp",
+		});
+	});
+
+	test.each([
+		[{ type: "ftp" }, "Unknown destination type."],
+		[
+			{ accessKeyId: "u", endpoint: "nas", name: "n", type: "sftp" },
+			"Give a password or a private key.",
+		],
+		[
+			{
+				accessKeyId: "u",
+				endpoint: "smb://nas",
+				name: "n",
+				secretAccessKey: "p",
+				type: "smb",
+			},
+			"Host is a hostname or an address, with an optional :port.",
+		],
+		[
+			{
+				accessKeyId: "u",
+				endpoint: "nas",
+				name: "n",
+				secretAccessKey: "p",
+				type: "smb",
+			},
+			"Give the share's name, then an optional path under it.",
+		],
+		[
+			{
+				accessKeyId: "u",
+				endpoint: "box.example.com",
+				name: "n",
+				secretAccessKey: "p",
+				type: "webdav",
+			},
+			"URL must start with http:// or https://.",
+		],
+	])("rejects %j", (fields, error) => {
+		expect(parseDestinationForm(form(fields))).toEqual({ error });
+	});
+});
+
+describe("rcloneRemote", () => {
+	test("an SFTP password goes through the obscuring wrapper, the port is split off the host", () => {
+		expect(REMOTE.env).toEqual({
+			HOMERUN_PASS: "hunter2",
+			RCLONE_CONFIG_DEST_HOST: "nas.local",
+			RCLONE_CONFIG_DEST_PORT: "2222",
+			RCLONE_CONFIG_DEST_SHELL_TYPE: "none",
+			RCLONE_CONFIG_DEST_TYPE: "sftp",
+			RCLONE_CONFIG_DEST_USER: "bob",
+			RCLONE_LOG_LEVEL: "ERROR",
+		});
+		expect(REMOTE.entrypoint.slice(0, 2)).toEqual(["sh", "-c"]);
+		expect(REMOTE.label).toBe("sftp://bob@nas.local:2222/backups");
+	});
+
+	test("an SFTP private key is passed on one line instead of a password", () => {
+		const { env } = rcloneRemote({
+			host: "nas.local",
+			path: "",
+			secret: `${FAKE_KEY}\n`,
+			type: "sftp",
+			username: "bob",
+		});
+		expect(env.RCLONE_CONFIG_DEST_KEY_PEM).toBe(
+			FAKE_KEY.replaceAll("\n", "\\n"),
+		);
+		expect(env.HOMERUN_PASS).toBeUndefined();
+		expect(env.RCLONE_CONFIG_DEST_PORT).toBeUndefined();
+	});
+
+	test("WebDAV takes a URL and SMB a bare host", () => {
+		const webdav = rcloneRemote({
+			host: "https://box.example.com",
+			path: "",
+			secret: "p",
+			type: "webdav",
+			username: "u1",
+		});
+		expect(webdav.env.RCLONE_CONFIG_DEST_URL).toBe("https://box.example.com");
+		expect(webdav.env.RCLONE_CONFIG_DEST_VENDOR).toBe("other");
+		expect(webdav.label).toBe("https://box.example.com");
+		const smb = rcloneRemote({
+			host: "nas.local",
+			path: "share/homerun",
+			secret: "p",
+			type: "smb",
+			username: "u1",
+		});
+		expect(smb.env.RCLONE_CONFIG_DEST_HOST).toBe("nas.local");
+		expect(smb.env.RCLONE_CONFIG_DEST_SHELL_TYPE).toBeUndefined();
+	});
+
+	test("splitHostPort unwraps a bracketed IPv6 address", () => {
+		expect(splitHostPort("[fd00::1]:23")).toEqual({
+			host: "fd00::1",
+			port: "23",
+		});
+		expect(splitHostPort("nas.local")).toEqual({
+			host: "nas.local",
+			port: null,
+		});
+	});
+});
+
+describe("listRemoteBackups", () => {
+	test("lists the prefix's directory and keeps this volume's archives, newest first", async () => {
+		const spy = listing(
+			0,
+			JSON.stringify([
+				{ ModTime: "2026-01-01T00:00:00Z", Name: "db-1.tar.gz", Size: 10 },
+				{ ModTime: "2026-01-02T00:00:00Z", Name: "db-2.tar.gz", Size: 20 },
+				{ Name: "db-3.tar.gz.partial", Size: 5 },
+				{ Name: "other-1.tar.gz", Size: 7 },
+			]),
+		);
+		expect(await listRemoteBackups(REMOTE, "pfx/db-")).toEqual([
+			{
+				key: "pfx/db-2.tar.gz",
+				lastModified: "2026-01-02T00:00:00Z",
+				sizeBytes: 20,
+			},
+			{
+				key: "pfx/db-1.tar.gz",
+				lastModified: "2026-01-01T00:00:00Z",
+				sizeBytes: 10,
+			},
+		]);
+		expect(spy.mock.calls[0]?.[0].cmd?.at(-1)).toBe("dest:backups/pfx");
+	});
+
+	test("a directory that doesn't exist yet is an empty list", async () => {
+		listing(3, "[\n", "directory not found");
+		expect(await listRemoteBackups(REMOTE, "db-")).toEqual([]);
+	});
+
+	test("any other failure carries rclone's own error", async () => {
+		listing(1, "", "ssh: handshake failed");
+		await expect(listRemoteBackups(REMOTE, "db-")).rejects.toThrow(
+			"Couldn't list the backups on sftp://bob@nas.local:2222/backups: ssh: handshake failed",
+		);
+	});
+});
+
+describe("describeDestination", () => {
+	test("an S3 row keeps its endpoint, bucket and region", () => {
+		expect(
+			describeDestination({
+				accessKeyId: "key",
+				bucket: "homerun",
+				endpoint: "https://s3.example.com",
+				region: "eu-central-1",
+				type: "s3",
+			}),
+		).toBe("https://s3.example.com · homerun · eu-central-1");
+	});
+});

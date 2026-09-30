@@ -1,16 +1,45 @@
-# S3 backups
+# Volume backups
 
-Back up storage volumes to any S3-compatible bucket, on a schedule or on demand,
-and restore them from the dashboard.
+Back up storage volumes to an S3-compatible bucket, an SFTP server, an SMB share
+or a WebDAV server, on a schedule or on demand, and restore them from the
+dashboard.
 
-## S3 destinations
+## Backup destinations
 
-A **destination** (`/s3-destinations`) is a named, reusable S3 target, defined
-once and pointed at by as many volumes as you like, rather than retyping a
-bucket and credentials per volume. Each one is a name, an endpoint URL, a
-bucket, a region, an access key id and a secret access key (stored encrypted at
-rest, same scheme as registry passwords). Anything S3-compatible works: AWS S3,
-MinIO, Cloudflare R2, Backblaze B2, Wasabi, and so on, addressed path-style.
+A **backup destination** (`/s3-destinations`, **Backup Destinations** in the
+sidebar) is a named, reusable target, defined once and pointed at by as many
+volumes as you like, rather than retyping a host and credentials per volume.
+Pick its **Type** when you create it; the fields relabel to match. Secrets (the
+secret key, password or private key) are stored encrypted at rest, same scheme
+as registry passwords.
+
+| Type   | Host or URL                      | Path                                                  | Username      | Secret                            |
+| ------ | -------------------------------- | ----------------------------------------------------- | ------------- | --------------------------------- |
+| S3     | Endpoint URL (path-style)        | Bucket                                                | Access key id | Secret access key (plus a region) |
+| SFTP   | `host` or `host:port`            | Directory on the server, optional                     | SSH username  | Password, or a pasted private key |
+| SMB    | `host` or `host:port`            | Share name, then an optional path under it (required) | SMB username  | Password                          |
+| WebDAV | Full `http://` or `https://` URL | Directory under the URL, optional                     | Username      | Password                          |
+
+- **S3**: anything S3-compatible works: AWS S3, MinIO, Cloudflare R2, Backblaze
+  B2, Wasabi, and so on.
+- **SFTP**: anything with SSH access, a NAS or a VPS. For a private key, paste
+  it into "Private key, instead of a password"; it must be **unencrypted** (no
+  passphrase), and when both are filled the key wins. Homerun does **not verify
+  the server's host key**, so it trusts whatever answers at that address.
+- **SMB**: a Windows or Samba share, the kind a NAS exports. SMB 2 and 3 only.
+  The path starts with the share's name, for example `backups/homerun` is the
+  `homerun` folder inside the share `backups`.
+- **WebDAV**: any WebDAV server, Nextcloud included.
+
+**Hetzner Storage Box** works three ways. SFTP: host `uXXXXX.your-storagebox.de`
+on **port 23** (`uXXXXX.your-storagebox.de:23`), your box username and password
+or key. WebDAV: URL `https://uXXXXX.your-storagebox.de`, once WebDAV is turned
+on for the box in Hetzner's console. SMB: also possible once Samba is enabled on
+the box. SFTP and WebDAV were tested against generic servers, not a real Storage
+Box, so treat a Storage Box as not verified.
+
+**A NAS** is usually easiest over SMB (the share it already exports) or SFTP
+when SSH is on.
 
 The page has the same search box and pager as every other list page. A
 destination can't be deleted out from under a volume without the volume simply
@@ -18,23 +47,35 @@ losing its target, so a volume whose destination is gone reports "no
 destination" and its backups fail with a config error rather than silently doing
 nothing.
 
-## S3-compatible backups
+## Backups
 
 Off by default, turned on per volume. The quickest way is the **switch** next to
 a mounted volume on a service's Storage tab: it turns backups on every day at
-03:00, to your S3 destination when you have exactly one. With none, or several,
-it opens the settings instead. The **cog** beside it sets the schedule, the
-destination and an optional key prefix. The volume's own page
+03:00, to your backup destination when you have exactly one. With none, or
+several, it opens the settings instead. The **cog** beside it sets the schedule,
+the destination and an optional key prefix. The volume's own page
 (`storage/[volumeId]`) has the same settings plus restores, stopping services
 during the backup, and a pre-backup command. The homerun worker tars the
 volume's contents and streams it, gzipped, to
-`<prefix/>volumeName-<timestamp>.tar.gz` through a hand-rolled Signature V4
-client (a multipart upload of 8 MiB parts, sixteen sent at once while the next
-ones are archived, the parts growing to 32 MiB for the largest archives, up to
-about 240 GB; no SDK). Parallel parts matter: some providers cap one connection
-well below what the link carries, Hetzner's object storage at about 1.3 MiB/s,
-so a 256 MiB archive that took over three minutes one part at a time uploads in
-about 16 seconds. The run's log reports the throughput every 30 seconds.
+`<prefix/>volumeName-<timestamp>.tar.gz`.
+
+**S3 uploads** go through a hand-rolled Signature V4 client (a multipart upload
+of 8 MiB parts, sixteen sent at once while the next ones are archived, the parts
+growing to 32 MiB for the largest archives, up to about 240 GB; no SDK).
+Parallel parts matter: some providers cap one connection well below what the
+link carries, Hetzner's object storage at about 1.3 MiB/s, so a 256 MiB archive
+that took over three minutes one part at a time uploads in about 16 seconds. The
+run's log reports the throughput every 30 seconds.
+
+**SFTP, SMB and WebDAV uploads** go through [rclone](https://rclone.org) running
+in a throwaway helper container (the official `rclone/rclone` image, pulled the
+first time a backup or a restore listing needs it, so that first run needs
+registry access and is a little slower). The archive is written as one stream,
+with no parallel parts, to `<key>.partial` on the server and renamed to its real
+name only once it is complete, so a half-finished or cancelled backup never
+leaves a file that looks like a valid backup; a failed run deletes its
+`.partial`. The log reports progress every 30 seconds here too. Expect the speed
+of a single connection to your server.
 
 **Both volume kinds are backed up the same way.** The volume (a bind mount's
 host path or a Docker-managed volume) is mounted read-only into a short-lived
@@ -48,7 +89,7 @@ file format didn't change.
 
 A running backup or restore has a **Cancel** button in the run log, on
 `/backups` and on the volume's page. The job stops within a few seconds, a
-multipart upload in progress is aborted so nothing is left in the bucket, any
+upload in progress is aborted so nothing is left on the destination, any
 services stopped for it are started again, and the run is recorded as failed
 with who cancelled it. Cancelling a restore leaves the files already unpacked in
 place, so the volume is half-restored until you restore again. A run that still
@@ -59,8 +100,8 @@ A backup that stops making progress doesn't hang: if Docker stops answering for
 the helper, the backup fails after about 10 minutes with an error naming the
 container, instead of running (and blocking updates) forever. See
 [Docker stuck on a container](faq-and-limitations.md#docker-stuck-on-a-container).
-The upload is bounded the same way: each request to the S3 endpoint (one 16 MiB
-part of the archive) gets 10 minutes to answer, and a timeout, a `429` or a
+An S3 upload is bounded the same way: each request to the S3 endpoint (one 16
+MiB part of the archive) gets 10 minutes to answer, and a timeout, a `429` or a
 `5xx` is retried twice before the backup fails with the endpoint's own error.
 The run log opens with the volume, what it is on the host (a Docker volume or a
 host path) and the services using it with their stack
@@ -121,10 +162,11 @@ page.
 ## Restoring a backup
 
 A volume with a destination has a **Restore** panel on its own page. **List
-backups** reads what's in the bucket for that volume (under its key prefix),
-newest first with date and size, and **Restore** on one of them queues a restore
-that downloads it and unpacks it back into the volume, for both volume kinds,
-through the same kind of short-lived `alpine` helper container.
+backups** reads what's at the destination for that volume (under its key prefix,
+or path), newest first with date and size (for SFTP, SMB and WebDAV, a directory
+that doesn't exist yet just lists as empty), and **Restore** on one of them
+queues a restore that downloads it and unpacks it back into the volume, for both
+volume kinds, through the same kind of short-lived `alpine` helper container.
 
 Two options sit above the list and apply to whichever backup you restore:
 
@@ -145,5 +187,6 @@ lock with backups (it never runs while the same volume is being backed up), is
 never retried, and shows up in the run log on the volume's page and on
 `/backups` as a `Restore` row.
 
-You can still fetch a backup from the bucket yourself (`aws s3 cp`, `rclone`,
-your provider's console) if you'd rather unpack it somewhere else.
+You can still fetch a backup yourself if you'd rather unpack it somewhere else:
+`aws s3 cp`, `rclone` or your provider's console for S3, and `rclone`, `sftp` or
+a file browser for SFTP, SMB and WebDAV. It's a plain gzipped tar.

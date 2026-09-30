@@ -114,7 +114,7 @@
 				const parts = [`${ok} ${plural(ok)} ${label.done}`];
 				if (summary?.skipped) {
 					parts.push(
-						`${summary.skipped} skipped (set a schedule and S3 destination first)`,
+						`${summary.skipped} skipped (set a schedule and destination first)`,
 					);
 				}
 				if (summary?.failed) {

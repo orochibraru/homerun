@@ -295,9 +295,14 @@ OIDC provider in `auth.md`) plus:
   region/credentials themselves live on `s3_destination`, not here, so several
   volumes can share one target, see S3 backups below.
 - `s3_destination` (`S3DestinationDTO`), a named, reusable S3-compatible target:
-  `name`/`endpoint`/`bucket`/`region`/`accessKeyId`/`secretAccessKeyEnc`
-  (AES-256-GCM, same scheme as `registryPasswordEnc`), shared by every account,
-  managed on `/s3-destinations`.
+  `name`/`type` (`s3` default, `sftp`, `smb`, `webdav`)/`endpoint`/`bucket`/
+  `region`/`accessKeyId`/`secretAccessKeyEnc` (AES-256-GCM, same scheme as
+  `registryPasswordEnc`), shared by every account, managed on `/s3-destinations`
+  (labelled "Backup Destinations"; table, DTO, route and `s3DestinationId` kept
+  their names). A non-S3 row reuses the S3 columns: `endpoint` is `host[:port]`
+  or the WebDAV URL, `bucket` the path (smb: share, then optional path),
+  `accessKeyId` the username, `secretAccessKeyEnc` the password or an sftp PEM
+  key, `region` empty, see S3 backups in `jobs-and-queue.md`.
 - `backup_run` (`BackupRunDTO`), one row per backup attempt (scheduled or manual
   "Run now"): `volumeId`, `startedAt`/`finishedAt`, `success` (null while still
   running), `sizeBytes`, `error`. Opened by the `backup`/`backup_restore` worker

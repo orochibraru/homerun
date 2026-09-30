@@ -2,11 +2,11 @@
 
 Homerun has four roles, **admin**, **developer**, **read-only** and **app access
 only**. Every dashboard account sees every resource on the instance, and every
-admin or developer account manages it: services, stacks, volumes, backups, S3
-destinations, build cache registries, remote hosts, cron jobs, status pages,
-custom templates and the job queue are shared, whoever created them. Each one
-still records who created it. What stays personal is your sessions, API keys,
-preferences, git provider connections, terminal sessions, bell feed and
+admin or developer account manages it: services, stacks, volumes, backups,
+backup destinations, build cache registries, remote hosts, cron jobs, status
+pages, custom templates and the job queue are shared, whoever created them. Each
+one still records who created it. What stays personal is your sessions, API
+keys, preferences, git provider connections, terminal sessions, bell feed and
 notification channels. Every account gets a copy of each bell notification, and
 every account's own notification channels hear about every event. Between admin
 and developer, the only difference is a few admin-only pages, **Users**,

@@ -70,9 +70,10 @@ preferences below for the per-user "single accent color" override):
   tasks, see Cron jobs below), **Status Page** (service health and the public
   pages themselves, see Status pages in `services-and-templates.md`).
 - **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",
-  see S3 backups below), **S3 Destinations** (reusable, named backup targets),
-  **Remote Hosts**, **Scheduling** (one instance-wide view of every cron
-  redeploy, enabled cron job and backup schedule, plus the job queue).
+  see S3 backups below), **Backup Destinations** (`/s3-destinations`, reusable
+  named targets: S3, SFTP, SMB, WebDAV), **Remote Hosts**, **Scheduling** (one
+  instance-wide view of every cron redeploy, enabled cron job and backup
+  schedule, plus the job queue).
 - **Integrations**: **Git Providers**, **Build Cache** (registry credentials for
   cross-build cache reuse, see Git-based builds below), **Notification
   Channels** (webhook/Discord/email destinations, see Outbound notification

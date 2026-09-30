@@ -80,6 +80,19 @@
 		"zod": "4.4.3"
 	},
 	"name": "homerun",
+	"overrides": {
+		"@better-auth/api-key": "$better-auth",
+		"@better-auth/core": "$better-auth",
+		"@better-auth/drizzle-adapter": "$better-auth",
+		"@better-auth/kysely-adapter": "$better-auth",
+		"@better-auth/mcp": "$better-auth",
+		"@better-auth/memory-adapter": "$better-auth",
+		"@better-auth/mongo-adapter": "$better-auth",
+		"@better-auth/oauth-provider": "$better-auth",
+		"@better-auth/passkey": "$better-auth",
+		"@better-auth/prisma-adapter": "$better-auth",
+		"@better-auth/telemetry": "$better-auth"
+	},
 	"packageManager": "bun@1.4.2",
 	"patchedDependencies": {
 		"cpu-features@0.0.10": "patches/cpu-features@0.0.10.patch"

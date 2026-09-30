@@ -128,7 +128,7 @@ export const backupRoutes: RouteDef[] = [
 				schema: z.object({ jobId: z.string() }),
 			},
 			400: {
-				description: "The volume has no S3 destination",
+				description: "The volume has no backup destination",
 				schema: errorResponse,
 			},
 			401: { description: "Unauthorized", schema: errorResponse },

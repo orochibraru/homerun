@@ -1,7 +1,8 @@
 // Package backup executes backup and backup_restore jobs for the homerun
 // worker: a volume's contents streamed as a gzipped tar to S3-compatible
-// storage, and a stored archive unpacked back into the volume, with the
-// services using it optionally stopped around the work.
+// storage or, through rclone, to an SFTP, SMB or WebDAV destination, and a
+// stored archive unpacked back into the volume, with the services using it
+// optionally stopped around the work.
 package backup
 
 import (
@@ -18,6 +19,7 @@ import (
 	"github.com/orochibraru/homerun/internal/activity"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/jobs"
+	"github.com/orochibraru/homerun/internal/rclone"
 	"github.com/orochibraru/homerun/internal/s3"
 )
 
@@ -45,7 +47,14 @@ type PreCommand struct {
 	ServiceName string `json:"serviceName"`
 }
 
+// store is where archives go: an S3 bucket or an rclone remote.
+type store interface {
+	Get(ctx context.Context, key string) (io.ReadCloser, error)
+	Upload(ctx context.Context, key string, body io.Reader) (int64, error)
+}
+
 // Spec is what the app's prepare step resolves for one backup or restore.
+// Remote, when set, is used instead of Destination.
 type Spec struct {
 	Destination  s3.Client         `json:"destination"`
 	HelperImage  string            `json:"helperImage"`
@@ -54,6 +63,7 @@ type Spec struct {
 	Kind         string            `json:"kind"`
 	MountPath    string            `json:"mountPath"`
 	PreCommand   *PreCommand       `json:"preCommand"`
+	Remote       *rclone.Remote    `json:"remote"`
 	Source       string            `json:"source"`
 	StopServices []Service         `json:"stopServices"`
 	UsedBy       []string          `json:"usedBy"`
@@ -70,6 +80,11 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 	}
 	docker := dockerapi.New(job.DockerSocket)
 	spec.Destination.Log = job.AppendLog
+	if spec.Remote != nil {
+		spec.Remote.Docker = docker
+		spec.Remote.Labels = spec.HelperLabels
+		spec.Remote.Log = job.AppendLog
+	}
 	var size int64
 	var err error
 	if job.Type == "backup_restore" {
@@ -97,7 +112,7 @@ func backup(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Sp
 	var size int64
 	err := whileStopped(ctx, job, docker, spec.StopServices, func() error {
 		var err error
-		job.AppendLog(fmt.Sprintf("Archiving %s through a %s helper container and streaming it gzipped to S3", spec.VolumeName, spec.HelperImage))
+		job.AppendLog(fmt.Sprintf("Archiving %s through a %s helper container and streaming it gzipped to %s", spec.VolumeName, spec.HelperImage, via(spec)))
 		size, err = archiveAndUpload(ctx, docker, spec)
 		return err
 	})
@@ -123,8 +138,28 @@ func describeVolume(spec Spec) string {
 	return fmt.Sprintf("%s (%s %s), %s", spec.VolumeName, what, spec.Source, users)
 }
 
-// destination is where spec's archive lives: endpoint, bucket and key.
+// archives is the store spec's archive goes to or comes from.
+func archives(spec *Spec) store {
+	if spec.Remote != nil {
+		return spec.Remote
+	}
+	return &spec.Destination
+}
+
+// via names how spec's archive travels: S3, or an rclone helper container.
+func via(spec Spec) string {
+	if spec.Remote != nil {
+		return "a " + spec.Remote.Image + " helper container"
+	}
+	return "S3"
+}
+
+// destination is where spec's archive lives: endpoint, bucket and key, or an
+// rclone remote's address, path and key.
 func destination(spec Spec) string {
+	if spec.Remote != nil {
+		return strings.TrimRight(spec.Remote.Label, "/") + "/" + spec.Key
+	}
 	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(spec.Destination.Endpoint, "/"), spec.Destination.Bucket, spec.Key)
 }
 
@@ -193,7 +228,7 @@ func restore(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec S
 // download fetches spec's backup into a temp file and returns it along with
 // its size.
 func download(ctx context.Context, spec Spec) (*os.File, int64, error) {
-	stream, err := spec.Destination.Get(ctx, spec.Key)
+	stream, err := archives(&spec).Get(ctx, spec.Key)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -240,7 +275,7 @@ func archiveAndUpload(ctx context.Context, docker *dockerapi.Client, spec Spec) 
 		_ = writer.CloseWithError(err)
 		archived <- err
 	}()
-	size, uploadErr := spec.Destination.Upload(ctx, spec.Key, activity.Reader(ctx, reader))
+	size, uploadErr := archives(&spec).Upload(ctx, spec.Key, activity.Reader(ctx, reader))
 	_ = reader.CloseWithError(errUploadStopped)
 	archiveErr := <-archived
 	if uploadErr != nil {

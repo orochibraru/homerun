@@ -130,7 +130,7 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 		label: "Backup failed",
 	},
 	{
-		description: "A volume was backed up to its S3 destination.",
+		description: "A volume was backed up to its destination.",
 		event: "backup.succeeded",
 		group: "Scheduled tasks",
 		label: "Backup succeeded",

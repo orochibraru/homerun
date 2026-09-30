@@ -166,6 +166,11 @@ const components: Component[] = [
 	{ group: "external", id: "s3", label: "S3 storage" },
 	{
 		group: "external",
+		id: "fileserver",
+		label: "SFTP, SMB and WebDAV storage (NAS, Storage Box)",
+	},
+	{
+		group: "external",
 		id: "notify",
 		label: "Notification targets (Discord, Slack, Telegram, webhook, SMTP)",
 	},
@@ -363,6 +368,12 @@ const edges: Edge[] = [
 		to: "s3",
 		via: "S3 ListObjectsV2 (SigV4)",
 		why: "List existing backups for the restore picker.",
+	},
+	{
+		from: "worker",
+		to: "fileserver",
+		via: "SFTP, SMB or WebDAV from an rclone helper container",
+		why: "Stream volume backups up and restores down, and list them for the restore picker.",
 	},
 	{
 		from: "app",

@@ -170,6 +170,13 @@ UI/component behavior and anything client-side-interactive : that's
 `tests/unit/app/`'s job (component tests) and `tests/e2e/`'s (real-browser
 Playwright tests), not duplicated here.
 
+## Backups to SFTP (`remote-backup.test.ts`)
+
+Always runs, no variables: an `rclone serve sftp` container is the server, and
+the same backup, wipe, restore and sha256 comparison as below runs against it
+through the rclone helper (so the first run pulls the `rclone/rclone` image).
+The round trip itself is shared with the S3 test in `support/backups.ts`.
+
 ## S3 backups against a real bucket (`s3-backup.test.ts`)
 
 Skipped unless these are set. It backs a Docker volume holding a random file up
