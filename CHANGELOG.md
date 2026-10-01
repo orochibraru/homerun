@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.51](https://github.com/orochibraru/homerun/compare/v1.0.50...v1.0.51) (2026-09-30)
+
+### Documentation
+
+- use the feature graphic as the README hero
+  ([939fe0b](https://github.com/orochibraru/homerun/commit/939fe0bd9470ad4736a29115b290513cf2e449eb))
+
 ## [1.0.50](https://github.com/orochibraru/homerun/compare/v1.0.49...v1.0.50) (2026-09-30)
 
 ### Features
