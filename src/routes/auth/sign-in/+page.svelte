@@ -565,12 +565,6 @@
     {/if}
 
     {#snippet footer()}
-        Don't have an account?
-        <a
-            class="text-accent font-medium hover:underline"
-            href={resolve("/auth/sign-up")}
-        >
-            Create one
-        </a>
+        Don't have an account? Too bad.
     {/snippet}
 </AuthShell>
