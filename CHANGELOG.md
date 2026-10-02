@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.52](https://github.com/orochibraru/homerun/compare/v1.0.51...v1.0.52) (2026-10-01)
+
+### Bug Fixes
+
+- **docs:** list the six unlisted pages in docs/config.json and test that every
+  page is listed
+  ([d2c8b0b](https://github.com/orochibraru/homerun/commit/d2c8b0bebe939d8d8b8ccf5ca24c8d8392ae64af))
+
 ## [1.0.51](https://github.com/orochibraru/homerun/compare/v1.0.50...v1.0.51) (2026-09-30)
 
 ### Documentation
