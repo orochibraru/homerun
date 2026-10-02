@@ -27,8 +27,7 @@
 		]
 	},
 	"enabledPlugins": {
-		"svelte@svelte": true,
-		"ponytail@ponytail": true
+		"svelte@svelte": true
 	},
 	"extraKnownMarketplaces": {
 		"svelte": {
