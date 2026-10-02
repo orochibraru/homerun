@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.53](https://github.com/orochibraru/homerun/compare/v1.0.52...v1.0.53) (2026-10-02)
+
+### Bug Fixes
+
+- **auth:** drop the dead sign-up link from the sign-in footer
+  ([e255598](https://github.com/orochibraru/homerun/commit/e255598a337c09b33dcbaae271e7873d7399eaae))
+
 ## [1.0.52](https://github.com/orochibraru/homerun/compare/v1.0.51...v1.0.52) (2026-10-01)
 
 ### Bug Fixes
