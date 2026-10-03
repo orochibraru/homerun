@@ -1,14 +1,14 @@
-import { config } from "$lib/config";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { DEPLOY_LOG_SCOPE, Logger } from "#lib/logger.js";
 import {
 	type CheckEvaluation,
 	describeEvaluation,
 	waitForChecks,
-} from "$lib/status-checks";
+} from "#lib/status-checks.js";
 import { NotificationChannelService } from "../notification-channel.service.ts";
 import { statusChecksMessage } from "../notification-messages.ts";
 import { StatusCheckService } from "../status-check.service.ts";

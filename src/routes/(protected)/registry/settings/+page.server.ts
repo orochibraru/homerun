@@ -1,7 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { config } from "#lib/config.js";
+import { RegistryService } from "#lib/services/registry.service.js";
 import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { RegistryService } from "$lib/services/registry.service";
 
 function reason(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
@@ -14,10 +14,10 @@ export const load = () => ({
 export const actions = {
 	setAuth: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const enabled = (await request.formData()).get("enabled") === "true";
 		try {
@@ -30,10 +30,10 @@ export const actions = {
 
 	setPublicHost: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const host = String((await request.formData()).get("publicHost") ?? "");
 		try {

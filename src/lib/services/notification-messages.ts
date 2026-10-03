@@ -1,14 +1,14 @@
-import { stripAnsi } from "$lib/ansi";
-import { isPhaseLine } from "$lib/deploy-phases";
-import { type DeployTrigger, deployTriggerLabel } from "$lib/deploy-trigger";
+import { stripAnsi } from "#lib/ansi.js";
+import { isPhaseLine } from "#lib/deploy-phases.js";
+import { type DeployTrigger, deployTriggerLabel } from "#lib/deploy-trigger.js";
 import {
 	countsLine,
 	type ImageScanFinding,
 	type SeverityCounts,
-} from "$lib/image-scan";
-import { deployEvent, deployTitle } from "$lib/notification-events";
-import type { Deployment, Service } from "$lib/server/db/schema";
-import type { NotificationEvent } from "$lib/types";
+} from "#lib/image-scan.js";
+import { deployEvent, deployTitle } from "#lib/notification-events.js";
+import type { Deployment, Service } from "#lib/server/db/schema.js";
+import type { NotificationEvent } from "#lib/types.js";
 
 const LOG_TAIL_LINES = 15;
 

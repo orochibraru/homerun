@@ -1,7 +1,7 @@
 <script lang="ts">
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 
 	interface RedirectValues {
 		destination: string;

@@ -1,6 +1,6 @@
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import type { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { DockerService } from "../docker.service.ts";
 
 export const VOLUME_HELPER_IMAGE = "alpine";

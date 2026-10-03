@@ -13,27 +13,27 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import { DEPLOY_TRIGGERS, type DeployTrigger } from "$lib/deploy-trigger";
-import type { RevisionConfig } from "$lib/revision-config";
+import { DEPLOY_TRIGGERS, type DeployTrigger } from "#lib/deploy-trigger.js";
+import type { RevisionConfig } from "#lib/revision-config.js";
 import {
 	CLEARED_ON_SUPERSEDE,
 	type RevisionLike,
 	retainedRevisions,
-} from "$lib/revisions";
-import { db } from "$lib/server/db/lib";
+} from "#lib/revisions.js";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type Deployment,
 	deployment,
 	service,
 	user,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	narrowFilter,
 	type PagedResult,
 	searchCondition,
-} from "$lib/server/list-query";
-import type { ContainerStatus, RevisionHealth } from "$lib/types";
+} from "#lib/server/list-query.js";
+import type { ContainerStatus, RevisionHealth } from "#lib/types.js";
 import { BaseDTO } from "./base-dto";
 import { InstanceSettingsDTO } from "./instance-settings-dto";
 

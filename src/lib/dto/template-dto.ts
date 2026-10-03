@@ -10,20 +10,20 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import type { PublishedPort } from "$lib/published-ports";
-import { db } from "$lib/server/db/lib";
-import { type Template, template } from "$lib/server/db/schema";
+import type { PublishedPort } from "#lib/published-ports.js";
+import { db } from "#lib/server/db/lib.js";
+import { type Template, template } from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
-import { hasIconImage } from "$lib/service-icon";
+} from "#lib/server/list-query.js";
+import { hasIconImage } from "#lib/service-icon.js";
 import {
 	runtimeOptionsFrom,
 	type ServiceRuntimeOptions,
-} from "$lib/service-runtime";
+} from "#lib/service-runtime.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewTemplateInput extends Partial<ServiceRuntimeOptions> {

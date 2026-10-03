@@ -1,4 +1,4 @@
-import { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 
 export const load = async ({ parent }) => {
 	await parent();

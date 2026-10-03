@@ -1,12 +1,12 @@
-import { DnsConnectionDTO } from "$lib/dto/dns-connection-dto";
-import { DomainDTO } from "$lib/dto/domain-dto";
+import { DnsConnectionDTO } from "#lib/dto/dns-connection-dto.js";
+import { DomainDTO } from "#lib/dto/domain-dto.js";
 import type {
 	InstanceSettingsDTO,
 	InstanceSettingsPangolinInput,
-} from "$lib/dto/instance-settings-dto";
-import { cloudflareClient } from "$lib/services/dns-providers/cloudflare";
-import { inZone } from "$lib/services/dns-providers/http";
-import { PangolinService } from "$lib/services/pangolin.service";
+} from "#lib/dto/instance-settings-dto.js";
+import { cloudflareClient } from "#lib/services/dns-providers/cloudflare.js";
+import { inZone } from "#lib/services/dns-providers/http.js";
+import { PangolinService } from "#lib/services/pangolin.service.js";
 import { checkbox, nullableText } from "./instance-settings-form";
 
 export type DnsTestOutcome =

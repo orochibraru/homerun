@@ -1,6 +1,6 @@
 <script lang="ts" generics="T">
-	import type { RemoteQuery } from "@sveltejs/kit";
 	import type { Snippet } from "svelte";
+	import type { RemoteQuery } from "$app/server";
 	import Alert from "./alert.svelte";
 	import { Button } from "./ui/button/index.js";
 

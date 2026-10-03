@@ -1,4 +1,4 @@
-import type { JobStage, JobStatus } from "$lib/types";
+import type { JobStage, JobStatus } from "#lib/types.js";
 
 export const STALE_JOB_MS = 2 * 60 * 1000;
 

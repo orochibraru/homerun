@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { Plus } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import { OAUTH_PRESETS, type OauthPreset } from "$lib/auth-providers";
-	import { labelClass as label } from "$lib/components/form-styles";
+	import { OAUTH_PRESETS, type OauthPreset } from "#lib/auth-providers.js";
+	import { labelClass as label } from "#lib/components/form-styles.js";
 	import OauthProviderFields, {
 		type ProviderFieldValues,
-	} from "$lib/components/oauth-provider-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/oauth-provider-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -96,12 +96,15 @@
         </p>
       {/if}
 
-      <OauthProviderFields callbackBase={data.callbackBase} {values} />
+      <OauthProviderFields callbackBase={data.callbackBase} values={values} />
 
       <div class="flex justify-end gap-2">
-        <Button href={resolve("/authentication/providers")} type="button" variant="ghost">
-          Cancel
-        </Button>
+        <Button
+          href={resolve('authentication/providers')}
+          type="button"
+          variant="ghost"
+        >Cancel</Button>
+
         <Button disabled={submitting} type="submit">Add provider</Button>
       </div>
     </form>

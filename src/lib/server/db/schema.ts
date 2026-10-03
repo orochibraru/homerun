@@ -13,20 +13,20 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { DestinationType } from "$lib/backup-destinations";
-import type { BuildMethod } from "$lib/build-methods";
-import type { DeployTrigger } from "$lib/deploy-trigger";
-import type { StoredErrorEvent } from "$lib/error-tracking/event";
+import type { DestinationType } from "#lib/backup-destinations.js";
+import type { BuildMethod } from "#lib/build-methods.js";
+import type { DeployTrigger } from "#lib/deploy-trigger.js";
+import type { StoredErrorEvent } from "#lib/error-tracking/event.js";
 import type {
 	BlockSeverity,
 	ImageScanFinding,
 	ImageScanStatus,
 	SeverityCounts,
-} from "$lib/image-scan";
-import type { PublishedPort } from "$lib/published-ports";
-import type { ResourceKind, Threshold } from "$lib/resource-thresholds";
-import type { BackupRunKind, RevisionConfig } from "$lib/revision-config";
-import type { Preset, SurfaceStyle } from "$lib/surfaces";
+} from "#lib/image-scan.js";
+import type { PublishedPort } from "#lib/published-ports.js";
+import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
+import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
+import type { Preset, SurfaceStyle } from "#lib/surfaces.js";
 import type {
 	ContainerStatus,
 	JobStage,
@@ -37,7 +37,7 @@ import type {
 	PullPolicy,
 	RevisionHealth,
 	StatusPageScope,
-} from "$lib/types";
+} from "#lib/types.js";
 
 export const user = pgTable("user", {
 	banExpires: timestamp("ban_expires", { mode: "date" }),

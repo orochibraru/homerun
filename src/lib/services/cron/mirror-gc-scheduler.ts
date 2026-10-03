@@ -1,4 +1,4 @@
-import { JobDTO } from "$lib/dto/job-dto";
+import { JobDTO } from "#lib/dto/job-dto.js";
 import { DockerService } from "../docker.service.ts";
 import { enqueueCleanup } from "../docker-cleanup-queue.ts";
 import { UserService } from "../user.service.ts";

@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { Mail, UserPlus } from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
-	import { enhance } from "$app/forms";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import { ROLE_OPTIONS } from "$lib/permissions";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import { ROLE_OPTIONS } from "#lib/permissions.js";
+	import { enhance, type SubmitFunction } from "$app/forms";
 
 	interface Props {
 		error?: string;

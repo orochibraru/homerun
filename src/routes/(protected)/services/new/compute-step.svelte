@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Cpu } from "@lucide/svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
+	} from "#lib/components/ui/select/index.js";
 	import { errorClass, label } from "./field-classes";
 	import type { WizardTemplate } from "./wizard-types";
 

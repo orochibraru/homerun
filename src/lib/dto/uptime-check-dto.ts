@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type UptimeCheck, uptimeCheck } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/lib.js";
+import { type UptimeCheck, uptimeCheck } from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 export type ProbeKind = "internal" | "external";

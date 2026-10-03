@@ -1,7 +1,7 @@
 import {
 	type DestinationType,
 	parseDestinationType,
-} from "$lib/backup-destinations";
+} from "#lib/backup-destinations.js";
 
 export interface ParsedDestinationForm {
 	accessKeyId: string;

@@ -7,31 +7,31 @@
 		Server,
 	} from "@lucide/svelte";
 	import { onMount, type Snippet } from "svelte";
-	import { resolve } from "$app/paths";
-	import EntityList from "$lib/components/entity-list.svelte";
-	import PreviewRows from "$lib/components/preview-rows.svelte";
-	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
-	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
-	import ServiceTree from "$lib/components/service-tree.svelte";
-	import StackDiagram from "$lib/components/stack-diagram.svelte";
-	import StackMoveDialog from "$lib/components/stack-move-dialog.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { Switch } from "$lib/components/ui/switch/index.js";
+	import EntityList from "#lib/components/entity-list.svelte";
+	import PreviewRows from "#lib/components/preview-rows.svelte";
+	import ServiceContextMenu from "#lib/components/service-context-menu.svelte";
+	import ServiceMenuHost from "#lib/components/service-menu-host.svelte";
+	import ServiceTree from "#lib/components/service-tree.svelte";
+	import StackDiagram from "#lib/components/stack-diagram.svelte";
+	import StackMoveDialog from "#lib/components/stack-move-dialog.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { Switch } from "#lib/components/ui/switch/index.js";
 	import UnlinkDialog, {
 		type UnlinkTarget,
-	} from "$lib/components/unlink-dialog.svelte";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
+	} from "#lib/components/unlink-dialog.svelte";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import {
 		dependencyForest,
 		type GraphServiceInfo,
 		previewsByParent,
-	} from "$lib/service-graph";
-	import { flattenStackTree, type StackNode } from "$lib/stack-tree";
-	import { title } from "$lib/store/title";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/service-graph.js";
+	import { flattenStackTree, type StackNode } from "#lib/stack-tree.js";
+	import { title } from "#lib/store/title.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 	const stack = $derived(data.stack);
@@ -118,14 +118,14 @@
       No services in this stack yet
     </p>
     <div class="mt-5 flex flex-wrap justify-center gap-2">
-      <Button href="{resolve('/templates')}?stackId={stack.id}" variant="outline">
-        <LayoutGrid class="size-4" />
-        From Template
-      </Button>
-      <Button href="{resolve('/services/new')}?stackId={stack.id}">
-        <Plus class="size-4" />
-        Add Service
-      </Button>
+      <Button
+        href="{resolve('templates')}?stackId={stack.id}"
+        variant="outline"
+      ><LayoutGrid class="size-4" />From Template</Button>
+
+      <Button
+        href="{resolve('services/new')}?stackId={stack.id}"
+      ><Plus class="size-4" />Add Service</Button>
     </div>
   </div>
 {:else}
@@ -147,7 +147,7 @@
         <Switch checked={architecture} onCheckedChange={setArchitecture} />
         Architecture
       </label>
-      <ViewModeToggle {view} />
+      <ViewModeToggle view={view} />
     </div>
   </div>
 
@@ -160,12 +160,12 @@
       <EntityList
         items={matches.map((svc) => ({
           description: svc.image,
-          href: `${resolve("/services")}/${svc.id}`,
+          href: `${resolve('services')}/${svc.id}`,
           id: svc.id,
           subtitle: svc.slug,
           title: svc.name,
         }))}
-        {view}
+        view={view}
       >
         {#snippet details(item: { id: string })}
           <PreviewRows class="ml-4 sm:ml-11" previews={previews.get(item.id) ?? []} />
@@ -186,9 +186,9 @@
       deps={data.graph.deps}
       rootStackId={stack.id}
       services={data.graph.services}
-      {stackNames}
+      stackNames={stackNames}
       stacks={data.graph.stacks}
-      {wrapper}
+      wrapper={wrapper}
     />
   {:else}
     <div class="space-y-6">
@@ -232,10 +232,10 @@
             <ServiceTree
               localStackIds={new Set([section.id])}
               nodes={forest}
-              {previews}
-              {services}
-              {stackNames}
-              {wrapper}
+              previews={previews}
+              services={services}
+              stackNames={stackNames}
+              wrapper={wrapper}
             />
           {:else if !sections.some(({ stack: s }) => s.parentId === section.id)}
             <p class="text-text-subtle text-xs">No services yet.</p>
@@ -273,7 +273,7 @@
 
 <ServiceMenuHost
   bind:this={menuHost}
-  actionBase={resolve("/services")}
+  actionBase={resolve('services')}
   services={data.allServices}
   stacks={data.stacks}
 />

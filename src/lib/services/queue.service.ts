@@ -1,5 +1,5 @@
-import { JobDTO, type NewJobInput } from "$lib/dto/job-dto";
-import { Logger } from "$lib/logger";
+import { JobDTO, type NewJobInput } from "#lib/dto/job-dto.js";
+import { Logger } from "#lib/logger.js";
 
 const logger = new Logger("Queue");
 

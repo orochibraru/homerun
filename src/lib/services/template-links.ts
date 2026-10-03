@@ -1,26 +1,26 @@
-import { config } from "$lib/config";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { TemplateDTO } from "$lib/dto/template-dto";
-import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
+import { config } from "#lib/config.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
 import {
 	templateHostAccessMessage,
 	templatesNeedingHostAccess,
-} from "$lib/host-access";
-import { Logger } from "$lib/logger";
-import type { PublishedPort } from "$lib/published-ports";
-import { defaultHostname } from "$lib/service-domains";
-import { isDatabaseImage } from "$lib/service-link";
-import type { ServiceRuntimeOptions } from "$lib/service-runtime";
-import { slugify, stackScopedSlug, uniqueSlug } from "$lib/slug";
+} from "#lib/host-access.js";
+import { Logger } from "#lib/logger.js";
+import type { PublishedPort } from "#lib/published-ports.js";
+import { defaultHostname } from "#lib/service-domains.js";
+import { isDatabaseImage } from "#lib/service-link.js";
+import type { ServiceRuntimeOptions } from "#lib/service-runtime.js";
+import { slugify, stackScopedSlug, uniqueSlug } from "#lib/slug.js";
 import {
 	fillSecretInEnv,
 	fillSecretInRuntime,
 	generateTemplateSecret,
 	secretEnvKeysOf,
-} from "$lib/template-secrets";
-import { fillUrlInEnv } from "$lib/template-url";
+} from "#lib/template-secrets.js";
+import { fillUrlInEnv } from "#lib/template-url.js";
 import { CapacityService } from "./capacity.service.ts";
 import {
 	attachDefaultDataVolume,

@@ -1,18 +1,18 @@
 import { redirect } from "@sveltejs/kit";
+import { isSmtpEnabled } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { APP_ONLY_HOME } from "#lib/permissions.js";
+import { setPasswordActions } from "#lib/server/set-password-actions.js";
+import { AccountSecurityService } from "#lib/services/account-security.service.js";
+import { AppAccessService } from "#lib/services/app-access.service.js";
 import { resolve } from "$app/paths";
-import { isSmtpEnabled } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { APP_ONLY_HOME } from "$lib/permissions";
-import { setPasswordActions } from "$lib/server/set-password-actions";
-import { AccountSecurityService } from "$lib/services/account-security.service";
-import { AppAccessService } from "$lib/services/app-access.service";
 
 export const load = async ({ locals }) => {
 	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 	if (!locals.appOnly) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 
 	const userId = locals.user.id;
@@ -25,7 +25,7 @@ export const load = async ({ locals }) => {
 		if (unmet.length > 0) {
 			throw redirect(
 				302,
-				`${resolve("/security-setup")}?next=${encodeURIComponent(APP_ONLY_HOME)}`,
+				`${resolve("security-setup")}?next=${encodeURIComponent(APP_ONLY_HOME)}`,
 			);
 		}
 	}

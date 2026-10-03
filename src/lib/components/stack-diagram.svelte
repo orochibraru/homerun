@@ -8,14 +8,17 @@
 		Server,
 	} from "@lucide/svelte";
 	import { type Snippet, tick } from "svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { type Box, edgePaths } from "#lib/diagram-edges.js";
+	import {
+		dependencyLayers,
+		type GraphServiceInfo,
+	} from "#lib/service-graph.js";
+	import type { StackNode } from "#lib/stack-tree.js";
+	import type { ContainerStatus } from "#lib/types.js";
 	import { resolve } from "$app/paths";
-	import StatusBadge from "$lib/components/status-badge.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { type Box, edgePaths } from "$lib/diagram-edges";
-	import { dependencyLayers, type GraphServiceInfo } from "$lib/service-graph";
-	import type { StackNode } from "$lib/stack-tree";
-	import type { ContainerStatus } from "$lib/types";
 
 	interface Props {
 		deps: Record<string, string[]>;
@@ -283,39 +286,43 @@
 </script>
 
 {#snippet card(svc: GraphServiceInfo)}
-  {#snippet body()}
-    <a
-      class="border-border bg-bg hover:border-border-light relative flex w-72 cursor-grab items-center gap-2.5 rounded-lg border px-3 py-2 shadow-sm transition-colors"
-      data-node={svc.id}
-      draggable="false"
-      href={`${resolve("/services")}/${svc.id}`}
-      onpointerdown={(event) => beginDrag(event, svc.id)}
-      style:transform={offsetOf(svc.id)}
-      onblur={() => (focused = null)}
-      onfocus={() => (focused = svc.id)}
-      onmouseenter={() => (focused = svc.id)}
-      onmouseleave={() => (focused = null)}
-    >
-      <TemplateIcon
-        category={svc.category}
-        class="size-7 rounded-md"
-        fallback={Server}
-        icon={svc.icon}
-      />
-      <span class="min-w-0 flex-1">
-        <span class="text-text block truncate text-sm font-medium">{svc.name}</span>
-        <span class="text-text-subtle block truncate font-mono text-[0.6875rem]">
-          {svc.slug}
-        </span>
-      </span>
-      <StatusBadge status={svc.currentStatus as ContainerStatus} />
-    </a>
-  {/snippet}
-  {#if wrapper}
-    {@render wrapper(svc, body)}
-  {:else}
-    {@render body()}
-  {/if}
+	{#snippet body()}
+		<a
+			class="border-border bg-bg hover:border-border-light relative flex w-72 cursor-grab items-center gap-2.5 rounded-lg border px-3 py-2 shadow-sm transition-colors"
+			data-node={svc.id}
+			draggable="false"
+			href={`${resolve('services')}/${svc.id}`}
+			onpointerdown={(event) => beginDrag(event, svc.id)}
+			style:transform={offsetOf(svc.id)}
+			onblur={() => focused = null}
+			onfocus={() => focused = svc.id}
+			onmouseenter={() => focused = svc.id}
+			onmouseleave={() => focused = null}
+		>
+			<TemplateIcon
+				category={svc.category}
+				class="size-7 rounded-md"
+				fallback={Server}
+				icon={svc.icon}
+			/>
+			<span class="min-w-0 flex-1">
+				<span
+					class="text-text block truncate text-sm font-medium"
+				>{svc.name}</span>
+
+				<span
+					class="text-text-subtle block truncate font-mono text-[0.6875rem]"
+				>{svc.slug}</span>
+			</span>
+
+			<StatusBadge status={svc.currentStatus as ContainerStatus} />
+		</a>
+	{/snippet}
+	{#if wrapper}
+		{@render wrapper(svc, body)}
+	{:else}
+		{@render body()}
+	{/if}
 {/snippet}
 
 {#snippet layers(ids: string[])}
@@ -428,72 +435,70 @@
   role="presentation"
   bind:this={viewport}
 >
-  <div
-    class="absolute top-0 left-0 w-full origin-top-left"
-    style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})"
-    bind:this={canvas}
-  >
-    <svg
-      class="text-text-subtle pointer-events-none absolute top-0 left-0 overflow-visible"
-      aria-hidden="true"
-      height={size.height}
-      width={size.width}
-    >
-      <defs>
-        <marker
-          id="stack-diagram-arrow"
-          markerHeight="6"
-          markerWidth="6"
-          orient="auto-start-reverse"
-          refX="5"
-          refY="3"
-          viewBox="0 0 6 6"
-        >
-          <path d="M0,0 L6,3 L0,6 z" fill="currentColor" />
-        </marker>
-      </defs>
-      {#each edges as edge (edge.key)}
-        {@const lit = focused === edge.from || focused === edge.to}
-        <path
+	<div
+		class="absolute top-0 left-0 w-full origin-top-left"
+		style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})"
+		bind:this={canvas}
+	>
+		<svg
+			class="text-text-subtle pointer-events-none absolute top-0 left-0 overflow-visible"
+			aria-hidden="true"
+			height={size.height}
+			width={size.width}
+		>
+			<defs>
+				<marker
+					id="stack-diagram-arrow"
+					markerHeight="6"
+					markerWidth="6"
+					orient="auto-start-reverse"
+					refX="5"
+					refY="3"
+					viewBox="0 0 6 6"
+				><path d="M0,0 L6,3 L0,6 z" fill="currentColor"></path></marker>
+			</defs>
+			{#each edges as edge (edge.key)}
+				{@const lit = focused === edge.from || focused === edge.to}
+				<path
           class="transition-opacity {lit ? 'text-accent' : ''} {focused && !lit
             ? 'opacity-15'
             : ''}"
-          d={edge.d}
-          fill="none"
-          marker-end="url(#stack-diagram-arrow)"
-          stroke="currentColor"
-          stroke-width="1.5"
-        />
-      {/each}
-    </svg>
-    <div class="relative space-y-8 p-1">
-      {#each stacks.filter((s) => s.id === rootStackId) as root (root.id)}
-        {@render group(root, 0)}
-      {/each}
-      {#if outside.length > 0}
-        <section
-          class="border-border cursor-grab rounded-xl border border-dashed p-4"
-          aria-label="Outside this stack"
-          data-group="outside"
-          onpointerdown={(event) => beginDrag(event, "outside")}
-          role="group"
-          style:transform={offsetOf("outside")}
-        >
-          <p class="eyebrow text-text-muted mb-3">Outside this stack</p>
-          <div class="flex flex-wrap justify-center gap-4">
-            {#each outside as svc (svc.id)}
-              <div class="flex flex-col items-center gap-1">
-                {@render card(svc)}
-                <span class="text-text-subtle text-[0.6875rem]">
-                  {svc.stackId
-                    ? (stackNames.get(svc.stackId) ?? "another stack")
-                    : "no stack"}
-                </span>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-    </div>
-  </div>
+					d={edge.d}
+					fill="none"
+					marker-end="url(#stack-diagram-arrow)"
+					stroke="currentColor"
+					stroke-width="1.5"
+				></path>
+			{/each}
+		</svg>
+		<div class="relative space-y-8 p-1">
+			{#each stacks.filter((s) => s.id === rootStackId) as root (root.id)}
+				{@render group(root, 0)}
+			{/each}
+			{#if outside.length > 0}
+				<section
+					class="border-border cursor-grab rounded-xl border border-dashed p-4"
+					aria-label="Outside this stack"
+					data-group="outside"
+					onpointerdown={(event) => beginDrag(event, "outside")}
+					role="group"
+					style:transform={offsetOf("outside")}
+				>
+					<p class="eyebrow text-text-muted mb-3">Outside this stack</p>
+					<div class="flex flex-wrap justify-center gap-4">
+						{#each outside as svc (svc.id)}
+							<div class="flex flex-col items-center gap-1">
+								{@render card(svc)}
+								<span class="text-text-subtle text-[0.6875rem]">
+									{svc.stackId
+										? stackNames.get(svc.stackId) ?? "another stack"
+										: "no stack"}
+								</span>
+							</div>
+						{/each}
+					</div>
+				</section>
+			{/if}
+		</div>
+	</div>
 </div>

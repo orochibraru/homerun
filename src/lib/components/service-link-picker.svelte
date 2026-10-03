@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { Link2 } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
-	import { labelClass } from "$lib/components/form-styles";
-	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
+	import { labelClass } from "#lib/components/form-styles.js";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
 	import ServicePicker, {
 		type PickableService,
-	} from "$lib/components/service-picker.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	} from "#lib/components/service-picker.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import type { ParsedEnvVar } from "$lib/env-parse";
+	} from "#lib/components/ui/select/index.js";
+	import type { ParsedEnvVar } from "#lib/env-parse.js";
 	import {
 		buildLinkEnv,
 		defaultUrlKey,
@@ -23,7 +23,7 @@
 		type LinkFormat,
 		type LinkTargetService,
 		linkFormatsFor,
-	} from "$lib/service-link";
+	} from "#lib/service-link.js";
 
 	const {
 		onImport,

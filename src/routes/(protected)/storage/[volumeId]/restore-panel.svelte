@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { RotateCcw } from "@lucide/svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { formatBytes } from "#lib/formatting.js";
+	import { getVolumeBackups } from "#lib/remote/backups.remote.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { formatBytes } from "$lib/formatting";
-	import { getVolumeBackups } from "$lib/remote/backups.remote";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		destinationName: string;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { deflateSync, gzipSync } from "node:zlib";
-import { internalDsn, publicDsn, sentryEnv } from "$lib/error-tracking/dsn";
+import { internalDsn, publicDsn, sentryEnv } from "#lib/error-tracking/dsn.js";
 import {
 	decodeBody,
 	EnvelopeError,
@@ -8,28 +8,28 @@ import {
 	jsonPayload,
 	parseEnvelope,
 	sentryKeyOf,
-} from "$lib/error-tracking/envelope";
+} from "#lib/error-tracking/envelope.js";
 import {
 	culpritFrame,
 	normalizeEvent,
 	userKeyOf,
-} from "$lib/error-tracking/event";
-import { frameLinks } from "$lib/error-tracking/frame-links";
+} from "#lib/error-tracking/event.js";
+import { frameLinks } from "#lib/error-tracking/frame-links.js";
 import {
 	defaultGroupingComponents,
 	groupingHash,
 	normalizeMessage,
-} from "$lib/error-tracking/grouping";
-import { WindowRateLimiter } from "$lib/error-tracking/rate-limit";
-import { sdkSnippets } from "$lib/error-tracking/snippets";
+} from "#lib/error-tracking/grouping.js";
+import { WindowRateLimiter } from "#lib/error-tracking/rate-limit.js";
+import { sdkSnippets } from "#lib/error-tracking/snippets.js";
 import {
 	isCommitSha,
 	providerFromHost,
 	repoRelativePath,
 	repoWebUrl,
 	sourceFileUrl,
-} from "$lib/error-tracking/source-links";
-import { errorIssueMessage } from "$lib/services/notification-messages";
+} from "#lib/error-tracking/source-links.js";
+import { errorIssueMessage } from "#lib/services/notification-messages.js";
 
 const encoder = new TextEncoder();
 const NOW = new Date("2026-09-26T12:00:00.000Z");

@@ -1,16 +1,9 @@
 {
 	"compilerOptions": {
-		"allowJs": true,
-		"checkJs": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"moduleResolution": "bundler",
-		"resolveJsonModule": true,
 		"rewriteRelativeImportExtensions": true,
-		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"types": ["bun-types"]
+		"types": ["bun-types", "$app/types"]
 	},
 	"exclude": [
 		"node_modules/**",
@@ -21,5 +14,6 @@
 		"src/service-worker.d.ts",
 		"src/service-worker/**/*.d.ts"
 	],
-	"extends": "./.svelte-kit/tsconfig.json"
+	"extends": "$app/tsconfig",
+	"include": ["src", "tests", "*"]
 }

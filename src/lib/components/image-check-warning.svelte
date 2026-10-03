@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { AlertTriangle } from "@lucide/svelte";
-	import { checkImage, type ImageCheck } from "$lib/remote/image-check.remote";
+	import {
+		checkImage,
+		type ImageCheck,
+	} from "#lib/remote/image-check.remote.js";
 
 	const DEBOUNCE_MS = 600;
 

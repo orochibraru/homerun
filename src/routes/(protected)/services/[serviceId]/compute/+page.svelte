@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Check, Cpu } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);

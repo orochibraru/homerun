@@ -3,7 +3,7 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { restoreStubs, stub } from "../support/stub";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,

@@ -5,7 +5,7 @@ import {
 	appOnlyMayRequest,
 	READ_ONLY_MESSAGE,
 	readOnlyMayRequest,
-} from "$lib/permissions";
+} from "#lib/permissions.js";
 
 type RefusedRequest = Pick<Request, "headers" | "method">;
 

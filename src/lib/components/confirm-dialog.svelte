@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Dialog from "$lib/components/ui/dialog/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 
 	let {
 		open = $bindable(false),

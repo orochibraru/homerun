@@ -9,7 +9,7 @@ import {
 } from "bun:test";
 import { createHash } from "node:crypto";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,
@@ -40,7 +40,7 @@ const adapter = {
 	},
 };
 
-mock.module("$lib/services/auth", () => ({
+mock.module("#lib/services/auth.js", () => ({
 	auth: { $context: Promise.resolve({ internalAdapter: adapter }) },
 	rebuildAuth: () => undefined,
 }));

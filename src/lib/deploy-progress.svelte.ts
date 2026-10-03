@@ -1,8 +1,8 @@
 import { toast } from "svelte-sonner";
+import { randomId } from "#lib/random-id.js";
+import { enhanceToast } from "#lib/toast.js";
 import { goto, refreshAll } from "$app/navigation";
 import { resolve } from "$app/paths";
-import { randomId } from "$lib/random-id";
-import { enhanceToast } from "$lib/toast";
 
 const IN_FLIGHT_STATUSES = new Set(["pending", "pulling", "starting"]);
 

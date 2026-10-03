@@ -1,6 +1,6 @@
-import type { ActionResult, SubmitFunction } from "@sveltejs/kit";
 import type { ExternalToast } from "svelte-sonner";
 import { toast } from "svelte-sonner";
+import type { ActionResult, SubmitFunction } from "$app/forms";
 
 export type ActionData = Record<string, unknown> | undefined;
 
@@ -51,9 +51,11 @@ function resultError(
 	const data = result.data as
 		| { error?: string; errors?: Record<string, string[]> }
 		| undefined;
+
 	const firstFieldError = data?.errors
 		? Object.values(data.errors).flat()[0]
 		: undefined;
+
 	return new Error(firstFieldError ?? data?.error ?? fallback);
 }
 
@@ -64,7 +66,8 @@ function resultError(
  * first entry of its `errors` field map.
  *
  * @returns A SubmitFunction that calls `update()` with `reset: false` unless
- * `options.reset` says otherwise.
+ * `options.reset` says otherwise, and `navigate: false` so a form posting to
+ * another route's action stays on the current page.
  */
 export function enhanceToast(options: EnhanceToastOptions): SubmitFunction {
 	const fallback = options.error ?? DEFAULT_ERROR;
@@ -97,10 +100,11 @@ export function enhanceToast(options: EnhanceToastOptions): SubmitFunction {
 			} else {
 				const data =
 					result.type === "success" ? (result.data as ActionData) : undefined;
+
 				await options.onSuccess?.(data);
 				settle(data);
 			}
-			await update({ reset: options.reset ?? false });
+			await update({ navigate: false, reset: options.reset ?? false });
 			await options.onComplete?.();
 		};
 	};

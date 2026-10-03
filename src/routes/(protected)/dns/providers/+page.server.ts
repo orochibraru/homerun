@@ -1,9 +1,12 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { DnsConnectionDTO } from "#lib/dto/dns-connection-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseConnectionForm } from "#lib/server/validation/dns-forms.js";
+import {
+	DNS_PROVIDERS,
+	dnsProviderById,
+} from "#lib/services/dns-providers/index.js";
 import { resolve } from "$app/paths";
-import { DnsConnectionDTO } from "$lib/dto/dns-connection-dto";
-import { Logger } from "$lib/logger";
-import { parseConnectionForm } from "$lib/server/validation/dns-forms";
-import { DNS_PROVIDERS, dnsProviderById } from "$lib/services/dns-providers";
 
 const logger = new Logger("DNS");
 
@@ -23,10 +26,10 @@ export const load = async () => {
 export const actions = {
 	saveConnection: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const existing = await DnsConnectionDTO.get(
@@ -42,6 +45,7 @@ export const actions = {
 		if (parsed.error !== null) {
 			return fail(400, { error: parsed.error });
 		}
+
 		const connection =
 			existing ??
 			(await DnsConnectionDTO.create({
@@ -73,10 +77,10 @@ export const actions = {
 
 	testConnection: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const connection = await DnsConnectionDTO.get(
 			String((await request.formData()).get("connectionId") ?? ""),
@@ -101,10 +105,10 @@ export const actions = {
 
 	deleteConnection: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const connection = await DnsConnectionDTO.get(
 			String((await request.formData()).get("connectionId") ?? ""),

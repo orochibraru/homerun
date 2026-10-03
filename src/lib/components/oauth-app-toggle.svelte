@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { Switch } from "#lib/components/ui/switch/index.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import { Switch } from "$lib/components/ui/switch/index.js";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		app: { disabled: boolean; id: string; name: string };

@@ -1,16 +1,16 @@
-import { config } from "$lib/config";
-import type { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { ImageScanDTO } from "$lib/dto/image-scan-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { JobDTO } from "$lib/dto/job-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
+import { config } from "#lib/config.js";
+import type { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { ImageScanDTO } from "#lib/dto/image-scan-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { JobDTO } from "#lib/dto/job-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
 import {
 	countsLine,
 	type ScanBlockPolicy,
 	type TrivySummary,
-} from "$lib/image-scan";
-import { Logger } from "$lib/logger";
+} from "#lib/image-scan.js";
+import { Logger } from "#lib/logger.js";
 import { type ScanTarget } from "./deploy/scan-targets.ts";
 import { isMirrorRef } from "./docker/image-scan-refs.ts";
 import { DockerService } from "./docker.service.ts";

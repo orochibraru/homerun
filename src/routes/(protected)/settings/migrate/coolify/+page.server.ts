@@ -1,4 +1,4 @@
-import { migrationActions } from "$lib/server/migrate-actions";
-import { CoolifyService } from "$lib/services/coolify.service";
+import { migrationActions } from "#lib/server/migrate-actions.js";
+import { CoolifyService } from "#lib/services/coolify.service.js";
 
 export const actions = migrationActions(CoolifyService);

@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { Check, Globe, Plus, Trash2 } from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		defaultHostname,
 		primaryHostname,
 		type ServiceDomainFields,
 		serviceHostnames,
-	} from "$lib/service-domains";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/service-domains.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	interface Props {
 		baseDomain: string;

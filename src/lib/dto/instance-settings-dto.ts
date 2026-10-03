@@ -1,17 +1,17 @@
 import { eq } from "drizzle-orm";
-import type { EmailSignIn } from "$lib/auth-providers";
-import type { BlockSeverity, ScanBlockPolicy } from "$lib/image-scan";
+import type { EmailSignIn } from "#lib/auth-providers.js";
+import type { BlockSeverity, ScanBlockPolicy } from "#lib/image-scan.js";
 import {
 	DEFAULT_REMINDER_MINUTES,
 	DEFAULT_SUSTAIN_SECONDS,
-} from "$lib/resource-incidents";
+} from "#lib/resource-incidents.js";
 import {
 	type ResourceThresholds,
 	withDefaults,
-} from "$lib/resource-thresholds";
-import { RETAINED_REVISIONS } from "$lib/revisions";
-import type { SecurityPolicy } from "$lib/security-policy";
-import { db } from "$lib/server/db/lib";
+} from "#lib/resource-thresholds.js";
+import { RETAINED_REVISIONS } from "#lib/revisions.js";
+import type { SecurityPolicy } from "#lib/security-policy.js";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type GitProviderConfig,
 	type GitProviderKind,
@@ -19,10 +19,10 @@ import {
 	type InstanceSettings,
 	instanceSettings,
 	type OauthTokenAuthMethod,
-} from "$lib/server/db/schema";
-import type { NewtCredentials } from "$lib/services/docker/newt";
-import { decryptSecret, encryptSecret } from "$lib/services/secrets";
-import type { UpdateChannel } from "$lib/update-channel";
+} from "#lib/server/db/schema.js";
+import type { NewtCredentials } from "#lib/services/docker/newt.js";
+import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
+import type { UpdateChannel } from "#lib/update-channel.js";
 import { BaseDTO } from "./base-dto";
 
 /** Fixed id : this table only ever holds one row. */

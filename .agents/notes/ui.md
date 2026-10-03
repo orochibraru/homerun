@@ -65,7 +65,7 @@ a blur/shadow stack, route it through a token here instead.
   document into a second scrollbar.
 - **Colours come from palettes, and they have to move more than one variable, on
   the document root.** `/profile/appearance` picks a palette
-  (`$lib/palettes.ts`: an accent plus five chart hues) or a custom accent;
+  (`src/lib/palettes.ts`: an accent plus five chart hues) or a custom accent;
   `appearanceCss` turns that into `--color-accent`, `--color-ink`, `--primary`,
   `--ring`, the `--chart-*` hues and the aurora's `--brand-2/3`, and only ever
   emits a known palette or a validated hex. Category tiles use the `chart-*`
@@ -130,8 +130,8 @@ body snippet; that shape is deliberate, a `Snippet<[T]>` body can't be assigned
 across the generic boundary.
 
 **The resource graphs** (`usage-chart.svelte`, `service-usage-table.svelte`)
-read `stat_sample` through `$lib/remote/stats.remote.ts`. The chart is a plain
-inline SVG path over a `0 0 100 40` viewBox — no chart library, same "a
+read `stat_sample` through `src/lib/remote/stats.remote.ts`. The chart is a
+plain inline SVG path over a `0 0 100 40` viewBox — no chart library, same "a
 self-hosted app shouldn't need a CDN" reasoning as the bundled fonts — with
 metric (CPU/memory/traffic) and range (live…all) switches, and it refreshes
 itself every 5s only on the live range. `service-graph.svelte` is the service
@@ -207,7 +207,7 @@ users, backups):
 
 - `entity-toolbar.svelte` is **URL-driven**, not prop-bound: it reads the
   current `q` and each filter group's value straight off `page.url.searchParams`
-  and writes changes back with `goto(url, {keepFocus, noScroll, replaceState})`,
+  and writes changes back with `goto(url, {reset: false, replace: true})`,
   debounced 300ms for the search box, clearing every page param in `pageParams`
   (default `["page"]`) on every change so a new search/filter always lands back
   on page 1. Props are `filters` (`FilterGroup[]`, each
@@ -239,10 +239,10 @@ users, backups):
 - `entity-list.svelte` takes `view: ViewMode` plus an optional `cardGridClass`
   (defaults to a 3-column grid; templates passes a 4-column one). Its old
   `viewKey` string prop and its module-block `EntityViewMode` export are gone,
-  that type now lives on `$lib/view-mode.svelte.ts`. Every list page now renders
-  straight from `data` (already one page, already filtered/searched) rather than
-  deriving a client-side `filtered` array, and tells a true empty state apart
-  from a no-match one via `data.total === 0 && !data.filtered`.
+  that type now lives on `src/lib/view-mode.svelte.ts`. Every list page now
+  renders straight from `data` (already one page, already filtered/searched)
+  rather than deriving a client-side `filtered` array, and tells a true empty
+  state apart from a no-match one via `data.total === 0 && !data.filtered`.
 - Multi-select (services, storage): `list-selection.svelte.ts`'s `ListSelection`
   class holds the selected ids and, constructed during component init with a
   `() => visibleIds` getter, drops any id that leaves the visible page
@@ -337,7 +337,7 @@ Information/Security/Sessions/Authorized Clients/Notifications, the last of
 which sets the event x channel matrix for Outbound notification channels, see
 `observability.md`), backed by `profile/appearance/+page.server.ts`'s three
 actions (`updateTheme`/`updateAccent`, each validated by its own zod schema in
-`$lib/server/validation/appearance.ts`) calling
+`src/lib/server/validation/appearance.ts`) calling
 `UserPreferencesDTO.get(userId)`'s `updateTheme`/`updateAccentColor`, which
 share `InstanceSettingsDTO`'s private-`persist()` -per-section shape but
 per-user instead of a singleton row.
@@ -373,7 +373,7 @@ per-user instead of a singleton row.
   `(protected)/` only, not pre-login pages, since this is a dashboard
   preference, not a site-wide brand color.
 - **Style** (`surfaceStyle`: glass, sleek, neumorphism, boxy, clay,
-  skeuomorphism, material, `$lib/surfaces.ts`): a `data-surface` attribute on
+  skeuomorphism, material, `src/lib/surfaces.ts`): a `data-surface` attribute on
   `<html>`, and every style is a block of token overrides in `layout.css`
   (`[data-surface="…"]`, plus a
   `.dark[data-surface="…"], .dark [data-surface="…"]` block for what differs in
@@ -419,7 +419,7 @@ per-user instead of a singleton row.
   buttons (secondary is the tonal `--m3-tonal`), filled text fields with an
   underline, and Roboto Flex (`@fontsource-variable/roboto-flex`).
 - **Presets** (`preset`, nullable: win95, win98, winxp, win7, msn, retro,
-  `PRESETS` in `$lib/surfaces.ts`) ride the same `data-surface` attribute:
+  `PRESETS` in `src/lib/surfaces.ts`) ride the same `data-surface` attribute:
   `effectiveSurface()` puts the preset there instead of the style when one is
   set, so nothing of the style leaks in, and the protected layout drops the
   palette's accent CSS. A preset block forces a whole palette (text, surfaces,

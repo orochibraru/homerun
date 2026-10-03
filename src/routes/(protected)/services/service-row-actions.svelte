@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { Play, RotateCw, Square, Trash2 } from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
-	import { enhance } from "$app/forms";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { enhance, type SubmitFunction } from "$app/forms";
 
 	interface Props {
 		deleteVolumes: boolean;
@@ -31,7 +30,7 @@
       method="POST"
       use:enhance={submit("stop")}
     >
-      <input name="serviceId" type="hidden" value={svc.id}>
+      <input name="serviceId" type="hidden" value={svc.id} />
       <Button
         disabled={pending}
         size="icon-sm"
@@ -54,7 +53,7 @@
       method="POST"
       use:enhance={submit("start")}
     >
-      <input name="serviceId" type="hidden" value={svc.id}>
+      <input name="serviceId" type="hidden" value={svc.id} />
       <Button
         disabled={pending || !svc.containerId}
         size="icon-sm"
@@ -80,7 +79,7 @@
     method="POST"
     use:enhance={submit("restart")}
   >
-    <input name="serviceId" type="hidden" value={svc.id}>
+    <input name="serviceId" type="hidden" value={svc.id} />
     <Button
       disabled={pending || !svc.containerId}
       size="icon-sm"
@@ -99,8 +98,14 @@
     method="POST"
     use:enhance={submit("delete")}
   >
-    <input name="serviceId" type="hidden" value={svc.id}>
-    <input name="deleteVolumes" type="hidden" value={deleteVolumes ? "true" : "false"}>
+    <input name="serviceId" type="hidden" value={svc.id} />
+
+    <input
+      name="deleteVolumes"
+      type="hidden"
+      value={deleteVolumes ? "true" : "false"}
+    />
+
     <Button
       class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
       disabled={pending}

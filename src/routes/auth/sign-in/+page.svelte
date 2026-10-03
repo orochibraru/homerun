@@ -8,25 +8,25 @@
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { goto, onNavigate, refreshAll } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { authClient, signIn, useSession } from "$lib/auth-client";
+	import { authClient, signIn, useSession } from "#lib/auth-client.js";
 	import {
 		type EmailSignIn,
 		emailOnlyStep,
 		NO_EMAIL_SIGN_IN,
-	} from "$lib/auth-providers";
-	import Alert from "$lib/components/alert.svelte";
-	import AuthShell from "$lib/components/auth-shell.svelte";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { rememberOauthAttempt } from "$lib/oauth-attempt";
-	import { lookupSignIn } from "$lib/remote/sign-in.remote";
-	import type { SignInProvider } from "$lib/services/account-setup.service";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
+	} from "#lib/auth-providers.js";
+	import Alert from "#lib/components/alert.svelte";
+	import AuthShell from "#lib/components/auth-shell.svelte";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { rememberOauthAttempt } from "#lib/oauth-attempt.js";
+	import { lookupSignIn } from "#lib/remote/sign-in.remote.js";
+	import type { SignInProvider } from "#lib/services/account-setup.service.js";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
+	import { goto, onNavigate, refreshAll } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import EmailSignInForm from "./email-sign-in-form.svelte";
 	import SetupForm from "./setup-form.svelte";
 	import TwoFactorForm from "./two-factor-form.svelte";
@@ -50,7 +50,7 @@
 			$session.data?.user
 		) {
 			loading = true;
-			goto(resolve("/"));
+			goto(resolve(""));
 		}
 	});
 
@@ -76,7 +76,7 @@
 			return;
 		}
 		if (!data.redirectTo) {
-			await refreshAll({ includeLoadFunctions: true });
+			await refreshAll();
 			return;
 		}
 		const target = data.redirectTo;
@@ -85,6 +85,7 @@
 		const timer = setInterval(() => {
 			redirectCountdown = Math.max(redirectCountdown - 1, 0);
 		}, 1000);
+
 		await new Promise((done) =>
 			setTimeout(done, REDIRECT_DELAY_SECONDS * 1000),
 		);
@@ -286,7 +287,11 @@
 		});
 	}
 
-	onNavigate(() => {
+	onNavigate(({ shallow }) => {
+		if (shallow) {
+			return;
+		}
+
 		loading = false;
 	});
 
@@ -295,7 +300,7 @@
 		rememberOauthAttempt(providerId);
 		try {
 			const { error } = await signIn.social({
-				callbackURL: data.redirectTo ?? resolve("/"),
+				callbackURL: data.redirectTo ?? resolve(""),
 				provider: providerId as never,
 			});
 			if (error) {
@@ -414,157 +419,157 @@
           ? `${data.appName} is behind Homerun's login. Sign in to continue.`
           : "Sign in to manage your services."}
 >
-    {#if signInError}
-        <Alert class="mb-4" title="Sign-in failed">{signInError}</Alert>
-    {/if}
-    {#if redirecting}
-        <div
-            aria-live="polite"
-            class="flex flex-col items-center gap-3 py-6 text-center"
-            role="status"
-        >
-            <Spinner class="text-accent size-6" />
-            <p class="text-text text-sm font-medium">You're signed in</p>
-            <p class="text-text-muted text-sm">
-                {#if data.oauthSignIn}
-                    Taking you back to {destinationName}…
-                {:else}
+	{#if signInError}
+		<Alert class="mb-4" title="Sign-in failed">{signInError}</Alert>
+	{/if}
+	{#if redirecting}
+		<div
+			aria-live="polite"
+			class="flex flex-col items-center gap-3 py-6 text-center"
+			role="status"
+		>
+			<Spinner class="text-accent size-6" />
+			<p class="text-text text-sm font-medium">You're signed in</p>
+			<p class="text-text-muted text-sm">
+				{#if data.oauthSignIn}
+					Taking you back to {destinationName}…
+				{:else}
                     Taking you to {destinationName} in {redirectCountdown}
                     {redirectCountdown === 1 ? "second" : "seconds"}…
-                {/if}
-            </p>
-        </div>
-    {:else if twoFactorStep}
-        <TwoFactorForm
-            onBack={() => {
-                twoFactorStep = false;
-            }}
-            onVerified={finishSignIn}
-            successMessage={signedInToast("Signed in successfully").success}
-            bind:loading
-        />
-    {:else}
-        {#if step === "email"}
+				{/if}
+			</p>
+		</div>
+	{:else if twoFactorStep}
+		<TwoFactorForm
+			onBack={() => {
+				twoFactorStep = false;
+			}}
+			onVerified={finishSignIn}
+			successMessage={signedInToast("Signed in successfully").success}
+			bind:loading
+		/>
+	{:else}
+		{#if step === "email"}
             <form class="space-y-4" novalidate onsubmit={handleContinue}>
-                <div>
+				<div>
                     <label class="text-text mb-1.5 block text-sm font-medium" for="email">
                         Email
                     </label>
-                    <Input
-                        autocomplete="email webauthn"
-                        class="h-10"
-                        disabled={loading}
-                        id="email"
-                        placeholder="you@example.com"
-                        required
-                        type="email"
-                        bind:value={email}
-                    />
-                </div>
+					<Input
+						autocomplete="email webauthn"
+						class="h-10"
+						disabled={loading}
+						id="email"
+						placeholder="you@example.com"
+						required
+						type="email"
+						bind:value={email}
+					/>
+				</div>
                 <Button class="h-10 w-full" disabled={loading || !email} type="submit">
-                    {#if loading}
+					{#if loading}
                         <Spinner />
                         Checking…
-                    {:else}
+					{:else}
                         Continue
                         <ArrowRight class="size-4 opacity-70" />
-                    {/if}
-                </Button>
-            </form>
-            {#if data.passkeyAvailable}
-                {@render orDivider()}
-                <Button
-                    class="h-10 w-full"
-                    disabled={loading}
-                    onclick={handlePasskeySignIn}
-                    variant="outline"
-                >
-                    <Fingerprint class="size-4" />
-                    Continue with a passkey
-                </Button>
-            {/if}
-        {:else if step === "password"}
+					{/if}
+				</Button>
+			</form>
+			{#if data.passkeyAvailable}
+				{@render orDivider()}
+				<Button
+					class="h-10 w-full"
+					disabled={loading}
+					onclick={handlePasskeySignIn}
+					variant="outline"
+				>
+					<Fingerprint class="size-4" />
+					Continue with a passkey
+				</Button>
+			{/if}
+		{:else if step === "password"}
             <form class="space-y-4" novalidate onsubmit={handleSignIn}>
-                {@render emailSummary()}
-                <PasswordField
-                    autocomplete="current-password"
-                    disabled={loading}
-                    id="password"
-                    label="Password"
-                    bind:value={password}
-                />
+				{@render emailSummary()}
+				<PasswordField
+					autocomplete="current-password"
+					disabled={loading}
+					id="password"
+					label="Password"
+					bind:value={password}
+				/>
                 <Button class="h-10 w-full" disabled={loading || !password} type="submit">
-                    {#if loading}
+					{#if loading}
                         <Spinner />
                         Signing in…
-                    {:else}
+					{:else}
                         Sign in
                         <ArrowRight class="size-4 opacity-70" />
-                    {/if}
-                </Button>
-            </form>
-            {#if stepProviders.length > 0 || stepEmail.emailOtp || offerLink}
-                {@render orDivider()}
-                <div class="space-y-2">
-                    {@render emailButtons()}
-                    {#if stepProviders.length > 0}
-                        {@render oauthButtons(stepProviders)}
-                    {/if}
-                </div>
-            {/if}
-        {:else if step === "sso"}
-            <div class="space-y-4">
-                {@render emailSummary()}
+					{/if}
+				</Button>
+			</form>
+			{#if stepProviders.length > 0 || stepEmail.emailOtp || offerLink}
+				{@render orDivider()}
+				<div class="space-y-2">
+					{@render emailButtons()}
+					{#if stepProviders.length > 0}
+						{@render oauthButtons(stepProviders)}
+					{/if}
+				</div>
+			{/if}
+		{:else if step === "sso"}
+			<div class="space-y-4">
+				{@render emailSummary()}
                 <p class="text-text-muted text-sm">
                     This account signs in through single sign-on.
                 </p>
-                {@render oauthButtons(stepProviders)}
-            </div>
-            {#if stepEmail.emailOtp || offerLink}
+				{@render oauthButtons(stepProviders)}
+			</div>
+			{#if stepEmail.emailOtp || offerLink}
                 {@render orDivider()}
                 {@render emailButtons()}
-            {/if}
-        {:else if step === "choose"}
-            <div class="space-y-4">
-                {@render emailSummary()}
+			{/if}
+		{:else if step === "choose"}
+			<div class="space-y-4">
+				{@render emailSummary()}
                 <p class="text-text-muted text-sm">
                     This account signs in by email. How should we send it?
                 </p>
-                {@render emailButtons()}
-            </div>
-        {:else if step === "code" || step === "link"}
-            {#key step}
-                <EmailSignInForm
-                    {email}
-                    mode={step}
-                    onSignedIn={finishSignIn}
-                    onTwoFactor={() => {
-                        twoFactorStep = true;
-                    }}
-                    redirectTo={data.redirectTo}
-                    successMessage={signedInToast("Signed in successfully").success}
-                    summary={emailSummary}
-                    bind:loading
-                />
-            {/key}
-        {:else}
-            <SetupForm
-                {email}
-                emailed={setupEmailed}
-                onEmailCode={stepEmail.emailOtp
-                    ? () => {
-                          step = "code";
-                      }
-                    : undefined}
-                onSignedIn={finishSignIn}
-                successMessage={signedInToast("Your account is ready").success}
-                summary={emailSummary}
-                bind:loading
-            />
-        {/if}
-    {/if}
+				{@render emailButtons()}
+			</div>
+		{:else if step === "code" || step === "link"}
+			{#key step}
+				<EmailSignInForm
+					email={email}
+					mode={step}
+					onSignedIn={finishSignIn}
+					onTwoFactor={() => {
+						twoFactorStep = true;
+					}}
+					redirectTo={data.redirectTo}
+					successMessage={signedInToast("Signed in successfully").success}
+					summary={emailSummary}
+					bind:loading
+				/>
+			{/key}
+		{:else}
+			<SetupForm
+				email={email}
+				emailed={setupEmailed}
+				onEmailCode={stepEmail.emailOtp
+					? () => {
+						step = "code";
+					}
+					: undefined}
+				onSignedIn={finishSignIn}
+				successMessage={signedInToast("Your account is ready").success}
+				summary={emailSummary}
+				bind:loading
+			/>
+		{/if}
+	{/if}
 
-    {#snippet footer()}
-        Don't have an account? Too bad.
-    {/snippet}
+	{#snippet footer()}
+		Don't have an account? Too bad.
+	{/snippet}
 </AuthShell>

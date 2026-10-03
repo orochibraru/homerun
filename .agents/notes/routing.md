@@ -19,7 +19,7 @@ the common path. `logs/` still exists as a **route without a page**: its
 
 Overview now leads with the service's own resource chart and a **Connections**
 panel (what it needs, what needs it, derived from env vars naming another
-service's slug as a host: `$lib/service-graph.ts`'s `hostsIn` reads a URL's
+service's slug as a host: `src/lib/service-graph.ts`'s `hostsIn` reads a URL's
 host, a `host:port`, or a bare name only under a host-ish key (`*_HOST`,
 `*_URL`, `*_DSN`, `*_BROKER(S)`…), so `POSTGRES_DB=stremthru` no longer counts
 as a link to a service slugged `stremthru` — see Stacks' Services tab below,
@@ -128,9 +128,7 @@ deep-linking into `/settings`.
   result, or `fail(400)` with the first rejection's message if every one failed.
   Bulk delete is gated behind `ConfirmDialog`'s typed-phrase confirm
   (`delete N services`); single-row delete requires typing the service's own
-  name. `load` also now calls `allowLongRequest(platform)` (it didn't before,
-  see Server-side list pagination above for the status-sync fix that came with
-  it and Long-running requests below for why that matters).
+  name.
 - `import/+page.svelte`, paste a compose file, preview what it maps onto, then
   create (and optionally deploy) the stack : see Compose import below. Reached
   from the "Import compose" button next to "Deploy a Service" on the list.
@@ -148,11 +146,11 @@ deep-linking into `/settings`.
   share one `createServiceFromForm()` helper (`new/+page.server.ts`) that
   validates + creates the row: `create` (secondary button, "Create service",
   persists config only, same as before) and `createAndDeploy` (primary button,
-  "Create and Deploy", calls `allowLongRequest(platform)` then
-  `DeploymentService.deployService()` before redirecting straight to the new
-  service's Overview tab instead of the services/stack list). A min-height
-  wrapper around the step content keeps the Next/Back button row's vertical
-  position stable as steps of different heights swap in.
+  "Create and Deploy", calls `DeploymentService.deployService()` before
+  redirecting straight to the new service's Overview tab instead of the
+  services/stack list). A min-height wrapper around the step content keeps the
+  Next/Back button row's vertical position stable as steps of different heights
+  swap in.
 - `[serviceId]/+layout.server.ts`, existence guard (unknown id, 404) + syncs
   live Docker status on every visit. Tabs: **Overview**
   (deploy/start/stop/restart, live deploy progress panel, deployment history
@@ -162,15 +160,15 @@ deep-linking into `/settings`.
   private registry, `updateSourceSchema`, its own `updateSource` action; split
   off Settings so "what gets deployed" has its own tab), **Logs** (live-streamed
   via a `+server.ts` GET returning a chunked `ReadableStream`, rendered through
-  `$lib/components/live-log-viewer.svelte`, the same component embedded in
+  `src/lib/components/live-log-viewer.svelte`, the same component embedded in
   Overview), **Env Vars**, **Volumes** (mount/unmount StorageVolumes, including
-  a "New volume" modal, `$lib/components/new-volume-fields.svelte` shared with
-  `/storage/new`, so a volume can be created and mounted without leaving the
-  service), **Networking** (a **Domains** card: the default
+  a "New volume" modal, `src/lib/components/new-volume-fields.svelte` shared
+  with `/storage/new`, so a volume can be created and mounted without leaving
+  the service), **Networking** (a **Domains** card: the default
   `<slug>.<baseDomain>` hostname with a "Routed" toggle, a list of extra domains
   and a radio picking the main one, `updateDomains` action, pure helpers in
-  `$lib/service-domains.ts`; an **Access** section holds the per-app login wall,
-  its allowed sign-in methods and its user/email/group allowlists,
+  `src/lib/service-domains.ts`; an **Access** section holds the per-app login
+  wall, its allowed sign-in methods and its user/email/group allowlists,
   `updateAppAuth`, see Per-app login wall below; a **Network** section holds
   container port, protocol (tcp/udp/both), network mode (bridge/host, see
   below), and DNS-resolvability, `updatePortsSchema`, its own `updatePorts`
@@ -201,14 +199,15 @@ deep-linking into `/settings`.
   Overview tab listens on while a deploy is in flight (see Live progress below),
   and `.../progress/+server.ts`, the older `{log, status}` JSON endpoint, now
   the client's fallback when the stream can't be held open. The client
-  pre-generates the deployment id itself (`randomId()` from `$lib/random-id.ts`,
-  set on the form via `formData.set("deploymentId", ...)` in `use:enhance`'s
-  pre-submit callback) so it can start listening _before_ the deploy request
-  even resolves, which is why the stream waits for the row instead of 404ing.
-  **It must not call `crypto.randomUUID()` directly, and that's a real reported
-  bug, not a style preference**: that API is secure-context-gated in browsers,
-  so on a plain-HTTP instance at a bare IP (exactly what the installer's
-  `--mode=full` produces) it's `undefined`, the pre-submit callback threw
+  pre-generates the deployment id itself (`randomId()` from
+  `src/lib/random-id.ts`, set on the form via
+  `formData.set("deploymentId", ...)` in `use:enhance`'s pre-submit callback) so
+  it can start listening _before_ the deploy request even resolves, which is why
+  the stream waits for the row instead of 404ing. **It must not call
+  `crypto.randomUUID()` directly, and that's a real reported bug, not a style
+  preference**: that API is secure-context-gated in browsers, so on a plain-HTTP
+  instance at a bare IP (exactly what the installer's `--mode=full` produces)
+  it's `undefined`, the pre-submit callback threw
   `TypeError: crypto.randomUUID is not a function` before the submission ever
   reached the server, and since `onStart` had already set `pendingAction`,
   Deploy spun forever with nothing queued and no toast (`toast.promise` is
@@ -246,16 +245,16 @@ descendants, `?/move` action calling `StackDTO.setParent`).
 `[stackId]/+page.svelte`'s Services tab is a dependency graph over the whole
 subtree (this stack plus every nested one, `descendantIds`), not a flat list:
 `+page.server.ts` builds `dependencyMap`/`dependencyForest` (list view) and
-`dependencyLayers` (card view) from `$lib/service-graph.ts` once for the page,
-over every member service plus anything they reference outside the tree, using
-the shared `toGraphService` row mapper (also behind `/services`' own tree view,
-see below) and a `links` map (`linkKeys` per dependency) that feeds the
+`dependencyLayers` (card view) from `src/lib/service-graph.ts` once for the
+page, over every member service plus anything they reference outside the tree,
+using the shared `toGraphService` row mapper (also behind `/services`' own tree
+view, see below) and a `links` map (`linkKeys` per dependency) that feeds the
 right-click **Unlink from** submenu. List view (`ServiceTree`, one instance per
 substack section via `flattenStackTree`) nests each service's dependencies
 underneath it, marking one outside the tree "in `<stack>`"/"no stack" and one
 already expanded elsewhere "shown above" rather than repeating its subtree. Card
 view (`StackDiagram`) is the same graph as nested boxes per substack, arrows
-drawn from consumer to dependency with `$lib/diagram-edges.ts`'s `edgePaths`
+drawn from consumer to dependency with `src/lib/diagram-edges.ts`'s `edgePaths`
 (measures each rendered card, spreads same-side arrows so none overlap, redrawn
 on `ResizeObserver`), everything outside the tree collected into one "Outside
 this stack" box, hovering a card highlighting only its own edges. A card can

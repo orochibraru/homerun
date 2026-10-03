@@ -3,7 +3,7 @@ import {
 	isMirrorRef,
 	registryAuthFileFor,
 	skopeoCopyCommand,
-} from "$lib/services/docker/image-scan-refs";
+} from "#lib/services/docker/image-scan-refs.js";
 
 describe("registryAuthFileFor", () => {
 	test("covers the upstream registry and the mirror in one file", () => {

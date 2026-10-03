@@ -1,4 +1,4 @@
-import { Logger } from "$lib/logger";
+import { Logger } from "#lib/logger.js";
 import {
 	isRow,
 	listFrom,
@@ -6,13 +6,13 @@ import {
 	type MigrationEntry,
 	MigrationHttpClient,
 	mapLimit,
-} from "$lib/migrate/common";
+} from "#lib/migrate/common.js";
 import {
 	type DokployRef,
 	dokployEntry,
 	dokployIdKey,
 	dokployRefs,
-} from "$lib/migrate/dokploy";
+} from "#lib/migrate/dokploy.js";
 
 const logger = new Logger("Dokploy");
 

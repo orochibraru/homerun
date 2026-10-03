@@ -12,21 +12,21 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import CodeEditor from "#lib/components/code-editor.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
+	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { formatBytes, timeAgo } from "#lib/formatting.js";
+	import { languageFor } from "#lib/highlight.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { parentPath } from "#lib/volume-files.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
-	import Alert from "$lib/components/alert.svelte";
-	import CodeEditor from "$lib/components/code-editor.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { inputClass, labelClass } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
-	import * as Dialog from "$lib/components/ui/dialog/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { formatBytes, timeAgo } from "$lib/formatting";
-	import { languageFor } from "$lib/highlight";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import { parentPath } from "$lib/volume-files";
 
 	const { data } = $props();
 	const vol = $derived(data.volume);

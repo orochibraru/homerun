@@ -1,25 +1,24 @@
-import { json } from "@sveltejs/kit";
-import { historyTrigger } from "$lib/deploy-trigger";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
+import { historyTrigger } from "#lib/deploy-trigger.js";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 
 export const GET = async ({ params, locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const limit = Number(url.searchParams.get("limit") ?? 10);
 	if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
-		return json(
+		return Response.json(
 			{ error: "limit must be a whole number from 1 to 50." },
 			{ status: 400 },
 		);
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	const deployments = await DeploymentDTO.listForService(svc.id, limit);
-	return json(
+	return Response.json(
 		deployments
 			.map((deployment) => deployment.toJSON())
 			.map((row) => ({

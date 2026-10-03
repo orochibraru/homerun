@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Check } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import NewVolumeFields from "#lib/components/new-volume-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import NewVolumeFields from "$lib/components/new-volume-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { form } = $props();
 
@@ -51,7 +51,7 @@
     <NewVolumeFields bind:kind />
 
     <div class="flex justify-end gap-3">
-      <Button href={resolve("/storage")} variant="outline">Cancel</Button>
+      <Button href={resolve('storage')} variant="outline">Cancel</Button>
       <Button disabled={submitting} type="submit">
         {#if submitting}
           <Spinner />

@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { HardDrive, Plus, Trash2 } from "@lucide/svelte";
 	import { untrack } from "svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { HOST_VOLUME_PREFIX } from "$lib/constants";
-	import { getUnknownHostVolumes } from "$lib/remote/docker-infra.remote";
-	import { dataPathFor } from "$lib/service-link";
+	} from "#lib/components/ui/select/index.js";
+	import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
+	import { getUnknownHostVolumes } from "#lib/remote/docker-infra.remote.js";
+	import { dataPathFor } from "#lib/service-link.js";
 	import { errorClass, label } from "./field-classes";
 	import type { WizardVolume } from "./wizard-types";
 

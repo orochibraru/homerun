@@ -1,13 +1,13 @@
 import { fail } from "@sveltejs/kit";
-import { OauthClientEnvironmentDTO } from "$lib/dto/oauth-client-environment-dto";
-import { OauthClientSecretDTO } from "$lib/dto/oauth-client-secret-dto";
-import { Logger } from "$lib/logger";
-import { adminApp } from "$lib/server/oauth-app-admin";
-import { parseEnvironmentForm } from "$lib/server/oauth-app-form";
+import { OauthClientEnvironmentDTO } from "#lib/dto/oauth-client-environment-dto.js";
+import { OauthClientSecretDTO } from "#lib/dto/oauth-client-secret-dto.js";
+import { Logger } from "#lib/logger.js";
+import { adminApp } from "#lib/server/oauth-app-admin.js";
+import { parseEnvironmentForm } from "#lib/server/oauth-app-form.js";
 import {
 	authErrorMessage,
 	OauthAppService,
-} from "$lib/services/oauth-app.service";
+} from "#lib/services/oauth-app.service.js";
 
 const logger = new Logger("OidcProvider");
 

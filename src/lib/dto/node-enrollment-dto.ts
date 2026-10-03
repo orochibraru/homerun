@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type NodeEnrollment, nodeEnrollment } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/lib.js";
+import { type NodeEnrollment, nodeEnrollment } from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 const LIFETIME_MS = 60 * 60 * 1000;

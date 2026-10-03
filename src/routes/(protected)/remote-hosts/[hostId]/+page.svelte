@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { ChevronDown, ChevronLeft, Server, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -26,11 +26,8 @@
 <div class="p-5 md:p-6">
   <a
     class="mb-4 inline-flex items-center gap-1 text-sm text-text-muted hover:text-text"
-    href={resolve("/remote-hosts")}
-  >
-    <ChevronLeft class="size-4" />
-    Remote Hosts
-  </a>
+    href={resolve('remote-hosts')}
+  ><ChevronLeft class="size-4" />Remote Hosts</a>
 
   <div class="mb-6 flex items-center gap-3">
     <div class="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">

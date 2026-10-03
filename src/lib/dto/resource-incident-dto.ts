@@ -1,7 +1,10 @@
 import { desc, eq, isNull } from "drizzle-orm";
-import type { ResourceIncidentState } from "$lib/resource-incidents";
-import { db } from "$lib/server/db/lib";
-import { type ResourceIncident, resourceIncident } from "$lib/server/db/schema";
+import type { ResourceIncidentState } from "#lib/resource-incidents.js";
+import { db } from "#lib/server/db/lib.js";
+import {
+	type ResourceIncident,
+	resourceIncident,
+} from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 /**

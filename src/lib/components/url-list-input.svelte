@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Plus, X } from "@lucide/svelte";
-	import { errorClass, inputClass } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import { errorClass, inputClass } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
 
 	interface Props {
 		addLabel: string;

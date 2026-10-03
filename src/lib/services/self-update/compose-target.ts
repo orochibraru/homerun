@@ -1,5 +1,5 @@
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import type { UpdateChannel } from "$lib/update-channel";
+import type { UpdateChannel } from "#lib/update-channel.js";
 
 export const COMPOSE_PROJECT_LABEL = "com.docker.compose.project";
 export const COMPOSE_SERVICE_LABEL = "com.docker.compose.service";

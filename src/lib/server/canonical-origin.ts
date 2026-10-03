@@ -1,4 +1,4 @@
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 
 /**
  * The origin the browser actually used, honouring `X-Forwarded-Host` and

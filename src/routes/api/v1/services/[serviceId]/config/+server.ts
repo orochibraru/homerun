@@ -1,22 +1,21 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { serviceConfig } from "$lib/service-config";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { serviceConfig } from "#lib/service-config.js";
 
 export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	const [stack, mounts] = await Promise.all([
 		svc.stackId ? StackDTO.get(svc.stackId) : null,
 		ServiceVolumeDTO.listForService(svc.id),
 	]);
-	return json(
+	return Response.json(
 		serviceConfig(svc.toJSON(), {
 			mounts: mounts.map((m) => ({
 				containerPath: m.mount.toJSON().containerPath,

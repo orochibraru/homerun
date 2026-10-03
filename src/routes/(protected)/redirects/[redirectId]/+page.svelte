@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import RedirectFields from "#lib/components/redirect-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import RedirectFields from "$lib/components/redirect-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 

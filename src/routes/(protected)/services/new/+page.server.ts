@@ -1,28 +1,27 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { HOST_VOLUME_PREFIX } from "$lib/constants";
-import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
-import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { TemplateDTO } from "$lib/dto/template-dto";
-import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
+import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
+import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	type CreateServiceInput,
 	createServiceSchema,
 	parseEnvVars,
-} from "$lib/server/validation/service";
-import { defaultHostname } from "$lib/service-domains";
-import { CapacityService } from "$lib/services/capacity.service";
-import { DeploymentService } from "$lib/services/deploy.service";
-import { GitWebhookService } from "$lib/services/git-webhook.service";
-import { encryptSecret } from "$lib/services/secrets";
+} from "#lib/server/validation/service.js";
+import { defaultHostname } from "#lib/service-domains.js";
+import { CapacityService } from "#lib/services/capacity.service.js";
+import { DeploymentService } from "#lib/services/deploy.service.js";
+import { GitWebhookService } from "#lib/services/git-webhook.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
 import {
 	buildTemplateLinkContext,
 	createLinkedServices,
@@ -30,15 +29,16 @@ import {
 	freeTemplatePorts,
 	resolveEnvVarsWithLinks,
 	templateHostAccessRefusal,
-} from "$lib/services/template-links";
+} from "#lib/services/template-links.js";
 import {
 	fillSecretInEnv,
 	fillSecretInRuntime,
 	generateTemplateSecret,
 	secretEnvKeysOf,
 	submittedSecret,
-} from "$lib/template-secrets";
-import { fillUrlInEnv } from "$lib/template-url";
+} from "#lib/template-secrets.js";
+import { fillUrlInEnv } from "#lib/template-url.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
 
@@ -427,7 +427,6 @@ async function createServiceFromForm(
 	const rawStackId = formData.get("stackId") as string | null;
 	const initialStackId =
 		rawStackId && (await StackDTO.get(rawStackId)) ? rawStackId : null;
-
 	const result = createServiceSchema.safeParse(Object.fromEntries(formData));
 
 	if (!result.success) {
@@ -541,7 +540,7 @@ async function createServiceFromForm(
 export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const formData = await request.formData();
@@ -560,14 +559,14 @@ export const actions = {
 		redirect(
 			303,
 			result.stackId && result.linkedServices.length > 0
-				? `${resolve("/stacks")}/${result.stackId}`
-				: `${resolve("/services")}/${result.svc.id}`,
+				? `${resolve("stacks")}/${result.stackId}`
+				: `${resolve("services")}/${result.svc.id}`,
 		);
 	},
 
 	createAndDeploy: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const formData = await request.formData();
@@ -588,8 +587,8 @@ export const actions = {
 		redirect(
 			303,
 			result.stackId && result.linkedServices.length > 0
-				? `${resolve("/stacks")}/${result.stackId}`
-				: `${resolve("/services")}/${result.svc.id}`,
+				? `${resolve("stacks")}/${result.stackId}`
+				: `${resolve("services")}/${result.svc.id}`,
 		);
 	},
 };

@@ -1,12 +1,12 @@
 import { and, count, desc, eq, type SQL } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type Redirect, redirect } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/lib.js";
+import { type Redirect, redirect } from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
+} from "#lib/server/list-query.js";
 import { BaseDTO } from "./base-dto";
 
 export interface RedirectFields {

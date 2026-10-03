@@ -1,8 +1,8 @@
-import { parseCommand } from "$lib/command-parse";
-import type { CronJobDTO } from "$lib/dto/cron-job-dto";
-import { CronJobRunDTO } from "$lib/dto/cron-job-run-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { Logger } from "$lib/logger";
+import { parseCommand } from "#lib/command-parse.js";
+import type { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { CronJobRunDTO } from "#lib/dto/cron-job-run-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	HOST_COMMAND_IMAGE,
 	HOST_COMMAND_TAG,

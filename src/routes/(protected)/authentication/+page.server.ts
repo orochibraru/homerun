@@ -1,10 +1,10 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { oauthMethod } from "#lib/auth-providers.js";
+import { isSmtpEnabled } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { checkbox } from "#lib/server/validation/instance-settings-form.js";
+import { PASSKEY_SIGN_IN, PASSWORD_SIGN_IN } from "#lib/sign-in-methods.js";
 import { resolve } from "$app/paths";
-import { oauthMethod } from "$lib/auth-providers";
-import { isSmtpEnabled } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { checkbox } from "$lib/server/validation/instance-settings-form";
-import { PASSKEY_SIGN_IN, PASSWORD_SIGN_IN } from "$lib/sign-in-methods";
 
 const PREFERRED_FIELD_PREFIX = "preferred:";
 
@@ -42,7 +42,7 @@ export const load = async ({ parent }) => {
 export const actions = {
 	emailSignIn: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			return fail(403, {
@@ -59,7 +59,7 @@ export const actions = {
 	},
 	preferredSignIn: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			return fail(403, {
@@ -78,7 +78,7 @@ export const actions = {
 	},
 	securityPolicy: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			return fail(403, {

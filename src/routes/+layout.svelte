@@ -1,15 +1,19 @@
 <script lang="ts">
 	import "./layout.css";
 	import { ModeWatcher } from "mode-watcher";
-	import { browser } from "$app/environment";
+	import TopLoadingBar from "#lib/components/top-loading-bar.svelte";
+	import { Toaster } from "#lib/components/ui/sonner/index.js";
+	import { title } from "#lib/store/title.js";
+	import { browser } from "$app/env";
 	import { onNavigate } from "$app/navigation";
-	import TopLoadingBar from "$lib/components/top-loading-bar.svelte";
-	import { Toaster } from "$lib/components/ui/sonner";
-	import { title } from "$lib/store/title";
 
 	const { children } = $props();
 
 	onNavigate((navigation) => {
+		if (navigation.shallow) {
+			return;
+		}
+
 		if (!browser) {
 			return;
 		}

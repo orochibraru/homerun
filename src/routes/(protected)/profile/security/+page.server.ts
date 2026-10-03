@@ -1,6 +1,6 @@
-import { config, isSmtpEnabled } from "$lib/config";
-import { setPasswordActions } from "$lib/server/set-password-actions";
-import { AccountSecurityService } from "$lib/services/account-security.service";
+import { config, isSmtpEnabled } from "#lib/config.js";
+import { setPasswordActions } from "#lib/server/set-password-actions.js";
+import { AccountSecurityService } from "#lib/services/account-security.service.js";
 
 export const load = async ({ parent }) => {
 	const { user } = await parent();

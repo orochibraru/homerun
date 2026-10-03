@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Loader2, RefreshCw, Terminal } from "@lucide/svelte";
 	import { onDestroy, tick } from "svelte";
+	import AnsiLine from "#lib/components/ansi-line.svelte";
 	import { resolve } from "$app/paths";
-	import AnsiLine from "$lib/components/ansi-line.svelte";
 
 	// Extracted from the Logs tab (services/[serviceId]/logs/+page.svelte) so
 	// the same live-streamed, ANSI-colored log panel can also be embedded

@@ -9,22 +9,22 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import HostResources from "$lib/components/host-resources.svelte";
-	import MonitoringSummary from "$lib/components/monitoring/monitoring-summary.svelte";
-	import ServiceUsageTable from "$lib/components/service-usage-table.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import StatusBadge from "$lib/components/status-badge.svelte";
-	import { Button } from "$lib/components/ui/button";
-	import { timeAgo } from "$lib/formatting";
+	import HostResources from "#lib/components/host-resources.svelte";
+	import MonitoringSummary from "#lib/components/monitoring/monitoring-summary.svelte";
+	import ServiceUsageTable from "#lib/components/service-usage-table.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { timeAgo } from "#lib/formatting.js";
 	import {
 		getSetupStatus,
 		reapplyTraefikConfig,
-	} from "$lib/remote/setup.remote";
-	import { title } from "$lib/store/title";
-	import { enhanceToast, toastError } from "$lib/toast";
-	import type { ContainerStatus } from "$lib/types";
+	} from "#lib/remote/setup.remote.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast, toastError } from "#lib/toast.js";
+	import type { ContainerStatus } from "#lib/types.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -148,10 +148,8 @@
               {#if fields.length > 0}
                 <a
                   class="eyebrow shrink-0 text-amber-700 hover:underline dark:text-amber-400"
-                  href="{resolve('/settings')}?highlight={fields.join(',')}"
-                >
-                  Fix in settings
-                </a>
+                  href="{resolve('settings')}?highlight={fields.join(',')}"
+                >Fix in settings</a>
               {/if}
             </li>
           {/each}
@@ -171,10 +169,8 @@
       {#if data.isAdmin}
         <a
           class="eyebrow shrink-0 text-red-700 hover:underline dark:text-red-400"
-          href={resolve("/settings")}
-        >
-          Limits
-        </a>
+          href={resolve('settings')}
+        >Limits</a>
       {/if}
     </div>
   {/if}
@@ -192,7 +188,7 @@
         {#each data.uptimeDown as check (check.serviceId + check.kind)}
           <a
             class="flex items-center gap-3 px-4 py-2 text-xs transition-colors hover:bg-red-500/10"
-            href="{resolve('/services')}/{check.serviceId}/observability/events"
+            href="{resolve('services')}/{check.serviceId}/observability/events"
           >
             <span class="text-text truncate font-medium">{check.serviceName}</span>
             <span class="text-text-muted">
@@ -231,7 +227,7 @@
     {:then summary}
       <MonitoringSummary
         busiest={summary.busiest}
-        href={resolve("/monitoring")}
+        href={resolve('monitoring')}
         monitoring={summary.monitoring}
       />
     {:catch}
@@ -251,10 +247,8 @@
         </h2>
         <a
           class="text-accent text-xs font-medium hover:underline"
-          href={resolve("/deployments")}
-        >
-          View all
-        </a>
+          href={resolve('deployments')}
+        >View all</a>
       </div>
 
       {#if data.recentDeployments.length === 0}
@@ -270,7 +264,7 @@
           {#each data.recentDeployments as dep (dep.id)}
             <a
               class="hover:bg-surface-2 flex items-start gap-3 px-4 py-2.5 transition-colors"
-              href="{resolve('/services')}/{dep.serviceId}"
+              href="{resolve('services')}/{dep.serviceId}"
             >
               <span class="mt-1.5 size-1.5 shrink-0 rounded-full {statusDot(dep.status)}"></span>
               <span class="min-w-0 flex-1">
@@ -344,9 +338,10 @@
             </form>
           {/if}
           {#if data.isAdmin}
-            <a class="text-accent text-xs font-medium hover:underline" href={resolve("/system-logs")}>
-              System logs
-            </a>
+            <a
+              class="text-accent text-xs font-medium hover:underline"
+              href={resolve('system-logs')}
+            >System logs</a>
           {/if}
         </div>
       </div>
@@ -358,9 +353,13 @@
         <div class="divide-border divide-y">
           {#each data.recentErrors as entry (entry.id)}
             {@const href = entry.serviceId
-            ? `${resolve("/services")}/${entry.serviceId}/observability/events`
-            : resolve("/system-logs")}
-            <a class="hover:bg-surface-2 block px-4 py-2.5 transition-colors" {href}>
+              ? `${resolve('services')}/${entry.serviceId}/observability/events`
+              : resolve('system-logs')}
+
+            <a
+              class="hover:bg-surface-2 block px-4 py-2.5 transition-colors"
+              href={href}
+            >
               <span class="flex items-center gap-2">
                 <span
                   class="size-1.5 shrink-0 rounded-full {entry.level === 'error'
@@ -390,7 +389,7 @@
       <div class="divide-border divide-y">
         <a
           class="hover:bg-surface-2 group/qa flex items-center gap-3 px-3.5 py-2.5 transition-colors"
-          href={resolve("/services/new")}
+          href={resolve('services/new')}
         >
           <Server class="text-text-subtle group-hover/qa:text-accent size-4 shrink-0" />
           <span class="min-w-0 flex-1">
@@ -405,7 +404,7 @@
         {#if data.stats.totalServices > 0}
           <a
             class="hover:bg-surface-2 group/qa flex items-center gap-3 px-3.5 py-2.5 transition-colors"
-            href={resolve("/services")}
+            href={resolve('services')}
           >
             <Server class="text-text-subtle group-hover/qa:text-accent size-4 shrink-0" />
             <span class="min-w-0 flex-1">

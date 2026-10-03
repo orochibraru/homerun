@@ -1,4 +1,4 @@
-import type { WorkloadHealthSample } from "$lib/revisions";
+import type { WorkloadHealthSample } from "#lib/revisions.js";
 
 export type ContainerHealthSample = Extract<
 	WorkloadHealthSample,

@@ -1,9 +1,9 @@
 import { createHash, createHmac } from "node:crypto";
-import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { stackPath } from "$lib/stack-tree";
+import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import type { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { stackPath } from "#lib/stack-tree.js";
 import {
 	listRemoteBackups,
 	type RcloneRemote,

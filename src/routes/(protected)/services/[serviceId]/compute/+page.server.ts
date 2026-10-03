@@ -1,9 +1,9 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { updateComputeSchema } from "#lib/server/validation/service.js";
 import { resolve } from "$app/paths";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { updateComputeSchema } from "$lib/server/validation/service";
 
 const logger = new Logger("Services");
 
@@ -17,7 +17,7 @@ export const load = async () => {
 export const actions = {
 	updateCompute: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {

@@ -1,11 +1,10 @@
-import { json } from "@sveltejs/kit";
-import { ErrorEventDTO } from "$lib/dto/error-event-dto";
-import { ErrorIssueDTO } from "$lib/dto/error-issue-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { frameLinks } from "$lib/error-tracking/frame-links";
-import { Logger } from "$lib/logger";
-import { errorIssueStatusApiBody } from "$lib/server/validation/api";
-import { ErrorTrackingService } from "$lib/services/error-tracking.service";
+import { ErrorEventDTO } from "#lib/dto/error-event-dto.js";
+import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { frameLinks } from "#lib/error-tracking/frame-links.js";
+import { Logger } from "#lib/logger.js";
+import { errorIssueStatusApiBody } from "#lib/server/validation/api.js";
+import { ErrorTrackingService } from "#lib/services/error-tracking.service.js";
 
 const logger = new Logger("ErrorTracking");
 
@@ -17,11 +16,11 @@ async function findIssue(serviceId: string, issueId: string) {
 
 export const GET = async ({ params, locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const found = await findIssue(params.serviceId, params.issueId);
 	if (!found) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	const { issue, svc } = found;
 	const event = await ErrorEventDTO.getForIssue(
@@ -34,7 +33,7 @@ export const GET = async ({ params, locals, url }) => {
 		issue.usersAffected(),
 		row ? ErrorTrackingService.sourceRepo(svc.toJSON(), row.payload) : null,
 	]);
-	return json({
+	return Response.json({
 		...issue.toJSON(),
 		event: row
 			? {
@@ -53,17 +52,17 @@ export const GET = async ({ params, locals, url }) => {
 
 export const PATCH = async ({ params, locals, request }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const found = await findIssue(params.serviceId, params.issueId);
 	if (!found) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	const result = errorIssueStatusApiBody.safeParse(
 		await request.json().catch(() => null),
 	);
 	if (!result.success) {
-		return json(
+		return Response.json(
 			{ error: "Invalid request body", issues: result.error.flatten() },
 			{ status: 400 },
 		);
@@ -80,5 +79,5 @@ export const PATCH = async ({ params, locals, request }) => {
 		found.svc.id,
 		found.issue.id,
 	);
-	return json(updated?.toJSON() ?? null);
+	return Response.json(updated?.toJSON() ?? null);
 };

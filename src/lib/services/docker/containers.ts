@@ -1,11 +1,11 @@
-import { config } from "$lib/config";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { Logger } from "#lib/logger.js";
 import {
 	type PublishedPort,
 	portBindings,
 	portKey,
-} from "$lib/published-ports";
-import type { ContainerStatus } from "$lib/types";
+} from "#lib/published-ports.js";
+import type { ContainerStatus } from "#lib/types.js";
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
@@ -18,7 +18,7 @@ import {
 	runtimeHostConfig,
 } from "./runtime-options.ts";
 
-export type { ContainerStatus } from "$lib/types";
+export type { ContainerStatus } from "#lib/types.js";
 export type { RemoteHostConnection } from "./client.ts";
 
 const logger = new Logger("Docker");

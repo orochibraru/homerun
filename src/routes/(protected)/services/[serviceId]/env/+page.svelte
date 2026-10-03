@@ -9,15 +9,15 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { mergeEnvRows, type ParsedEnvVar } from "#lib/env-parse.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
-	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Clock, CloudUpload, Gauge, RefreshCw } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import JobQueuePanel from "#lib/components/job-queue-panel.svelte";
+	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import JobQueuePanel from "$lib/components/job-queue-panel.svelte";
-	import { title } from "$lib/store/title";
 
 	const { data } = $props();
 
@@ -48,7 +48,7 @@
           {#each data.cronServices as { stackName, service } (service.id)}
             <a
               class="panel hover:border-accent/40 flex flex-col gap-1 rounded-md p-4 transition-colors sm:flex-row sm:items-center sm:gap-4"
-              href="{resolve('/services')}/{service.id}/settings"
+              href="{resolve('services')}/{service.id}/settings"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-text truncate text-sm font-semibold">
@@ -87,7 +87,7 @@
           {#each data.cronJobs as job (job.id)}
             <a
               class="panel hover:border-accent/40 flex flex-col gap-1 rounded-md p-4 transition-colors sm:flex-row sm:items-center sm:gap-4"
-              href="{resolve('/cron-jobs')}/{job.id}"
+              href="{resolve('cron-jobs')}/{job.id}"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-text truncate text-sm font-semibold">
@@ -124,7 +124,7 @@
           {#each data.backupVolumes as vol (vol.id)}
             <a
               class="panel hover:border-accent/40 flex flex-col gap-1 rounded-md p-4 transition-colors sm:flex-row sm:items-center sm:gap-4"
-              href="{resolve('/storage')}/{vol.id}"
+              href="{resolve('storage')}/{vol.id}"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-text truncate text-sm font-semibold">

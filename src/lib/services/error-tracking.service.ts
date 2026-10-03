@@ -1,48 +1,48 @@
 import type { TraceMap } from "@jridgewell/trace-mapping";
-import { config } from "$lib/config";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { ErrorEventDTO } from "$lib/dto/error-event-dto";
-import { ErrorIssueDTO } from "$lib/dto/error-issue-dto";
-import { ErrorProjectDTO } from "$lib/dto/error-project-dto";
-import { ErrorSourceMapDTO } from "$lib/dto/error-source-map-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
+import { config } from "#lib/config.js";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { ErrorEventDTO } from "#lib/dto/error-event-dto.js";
+import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
+import { ErrorProjectDTO } from "#lib/dto/error-project-dto.js";
+import { ErrorSourceMapDTO } from "#lib/dto/error-source-map-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 import {
 	type DsnProject,
 	internalDsn,
 	publicDsn,
 	sentryEnv,
-} from "$lib/error-tracking/dsn";
+} from "#lib/error-tracking/dsn.js";
 import {
 	decodeBody,
 	EnvelopeError,
 	jsonPayload,
 	parseEnvelope,
 	sentryKeyOf,
-} from "$lib/error-tracking/envelope";
+} from "#lib/error-tracking/envelope.js";
 import {
 	normalizeEvent,
 	type StoredErrorEvent,
-} from "$lib/error-tracking/event";
-import { groupingHash } from "$lib/error-tracking/grouping";
-import { WindowRateLimiter } from "$lib/error-tracking/rate-limit";
+} from "#lib/error-tracking/event.js";
+import { groupingHash } from "#lib/error-tracking/grouping.js";
+import { WindowRateLimiter } from "#lib/error-tracking/rate-limit.js";
 import {
 	isCommitSha,
 	providerFromHost,
 	repoWebUrl,
 	type SourceProvider,
-} from "$lib/error-tracking/source-links";
+} from "#lib/error-tracking/source-links.js";
 import {
 	applySourceMaps,
 	isMinifiedFrame,
 	matchMapName,
 	parseSourceMap,
-} from "$lib/error-tracking/source-maps";
-import { providerForGitUrl } from "$lib/git-clone-url";
-import { Logger } from "$lib/logger";
-import { deployEnvironment } from "$lib/release-channels";
-import type { ErrorIssue, Service } from "$lib/server/db/schema";
+} from "#lib/error-tracking/source-maps.js";
+import { providerForGitUrl } from "#lib/git-clone-url.js";
+import { Logger } from "#lib/logger.js";
+import { deployEnvironment } from "#lib/release-channels.js";
+import type { ErrorIssue, Service } from "#lib/server/db/schema.js";
 import { dashboardRouterPlan } from "./docker/dashboard.ts";
 import { DockerService } from "./docker.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";

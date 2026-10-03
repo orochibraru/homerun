@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { LogOut, UserCircle } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
+	import { signOut } from "#lib/auth-client.js";
+	import { headerControlClass } from "#lib/components/header-styles.js";
+	import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
 	import { goto, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { signOut } from "$lib/auth-client";
-	import { headerControlClass } from "$lib/components/header-styles";
-	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
 
 	interface ProfileUser {
 		email?: string | null;
@@ -45,7 +45,7 @@
             alt={user.name ?? ""}
             class="size-5 rounded-full object-cover"
             src={user.image}
-          >
+          />
         {:else}
           <span class="bg-accent text-bg flex size-5 items-center justify-center rounded-full text-[0.625rem] font-semibold">
             {userInitial}
@@ -60,10 +60,7 @@
       <p class="text-text-muted truncate text-xs">{user?.email}</p>
     </DropdownMenu.Label>
     <DropdownMenu.Separator />
-    <DropdownMenu.Item onSelect={() => goto(resolve("/profile"))}>
-      <UserCircle class="size-4" />
-      Account settings
-    </DropdownMenu.Item>
+    <DropdownMenu.Item onSelect={() => goto(resolve('profile'))}><UserCircle class="size-4" />Account settings</DropdownMenu.Item>
     <DropdownMenu.Separator />
     <DropdownMenu.Item onSelect={handleSignOut} variant="destructive">
       <LogOut class="size-4" />

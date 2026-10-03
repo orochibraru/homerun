@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Check, Plug } from "@lucide/svelte";
+	import PublishedPortsFields from "#lib/components/published-ports-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import type { PublishedPort } from "#lib/published-ports.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import PublishedPortsFields from "$lib/components/published-ports-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import type { PublishedPort } from "$lib/published-ports";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		svc: {

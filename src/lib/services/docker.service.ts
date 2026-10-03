@@ -13,7 +13,7 @@
 // real inherited instance methods on it (`DockerService.pullImage(...)`),
 // not static delegates to loose functions.
 
-export type { ContainerStatus } from "$lib/types";
+export type { ContainerStatus } from "#lib/types.js";
 export type {
 	CleanupCategory,
 	CleanupItem,

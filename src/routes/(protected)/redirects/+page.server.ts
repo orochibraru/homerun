@@ -1,10 +1,13 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { RedirectDTO } from "#lib/dto/redirect-dto.js";
+import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { Logger } from "#lib/logger.js";
+import { parseListQuery } from "#lib/server/list-query.js";
+import {
+	RedirectService,
+	redirectHost,
+} from "#lib/services/redirect.service.js";
 import { resolve } from "$app/paths";
-import { RedirectDTO } from "$lib/dto/redirect-dto";
-import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
-import { Logger } from "$lib/logger";
-import { parseListQuery } from "$lib/server/list-query";
-import { RedirectService, redirectHost } from "$lib/services/redirect.service";
 
 const logger = new Logger("Redirects");
 
@@ -28,7 +31,7 @@ export const load = async ({ parent, url }) => {
 export const actions = {
 	delete: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const redirectId = formData.get("redirectId") as string | null;
@@ -51,7 +54,7 @@ export const actions = {
 	},
 	toggle: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const redirectId = formData.get("redirectId") as string | null;

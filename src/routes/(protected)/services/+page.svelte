@@ -9,44 +9,44 @@
 		Server,
 	} from "@lucide/svelte";
 	import { onMount, type Snippet } from "svelte";
-	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import DeleteVolumesOption from "$lib/components/delete-volumes-option.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
 	import EntityList, {
 		type EntityRow,
-	} from "$lib/components/entity-list.svelte";
+	} from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
-	} from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import PreviewRows from "$lib/components/preview-rows.svelte";
-	import SelectAllRow from "$lib/components/select-all-row.svelte";
-	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
-	import ServiceMenuHost from "$lib/components/service-menu-host.svelte";
-	import ServiceTree from "$lib/components/service-tree.svelte";
-	import StatusBadge from "$lib/components/status-badge.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
-	import { ListSelection } from "$lib/list-selection.svelte";
-	import { BASE_SORTS } from "$lib/list-sorts";
-	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
+	} from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import PreviewRows from "#lib/components/preview-rows.svelte";
+	import SelectAllRow from "#lib/components/select-all-row.svelte";
+	import ServiceContextMenu from "#lib/components/service-context-menu.svelte";
+	import ServiceMenuHost from "#lib/components/service-menu-host.svelte";
+	import ServiceTree from "#lib/components/service-tree.svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "#lib/constants.js";
+	import { ListSelection } from "#lib/list-selection.svelte.js";
+	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
 	import {
 		SERVICE_ACTION_LABELS,
 		type ServiceAction,
-	} from "$lib/service-actions";
-	import { primaryHostname } from "$lib/service-domains";
+	} from "#lib/service-actions.js";
+	import { primaryHostname } from "#lib/service-domains.js";
 	import {
 		dependencyForest,
 		type GraphServiceInfo,
 		previewsByParent,
-	} from "$lib/service-graph";
-	import { ancestorIds, flattenStackTree } from "$lib/stack-tree";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import type { ContainerStatus } from "$lib/types";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/service-graph.js";
+	import { ancestorIds, flattenStackTree } from "#lib/stack-tree.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import type { ContainerStatus } from "#lib/types.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { resolve } from "$app/paths";
 	import BulkBar from "./bulk-bar.svelte";
 	import ServiceRowActions from "./service-row-actions.svelte";
 
@@ -192,17 +192,12 @@
     </div>
     <div class="flex items-center gap-2">
       <Button
-        href={resolve("/services/import")}
+        href={resolve('services/import')}
         size="sm"
         variant="outline"
-      >
-        <FileUp class="size-4" />
-        Import compose
-      </Button>
-      <Button href={resolve("/services/new")} size="sm">
-        <Plus class="size-4" />
-        Deploy a Service
-      </Button>
+      ><FileUp class="size-4" />Import compose</Button>
+
+      <Button href={resolve('services/new')} size="sm"><Plus class="size-4" />Deploy a Service</Button>
     </div>
   </div>
 
@@ -210,17 +205,20 @@
     <div class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-20 text-center">
       <Server class="text-text-muted mb-3 size-10 opacity-40" />
       <p class="text-text-muted text-sm font-medium">No services yet</p>
-      <p class="text-text-subtle mt-1 text-xs">
-        Point at an image, fill in a config, and deploy.
-      </p>
-      <div class="flex flex-wrap items-center justify-center gap-2">
-        <Button class="mt-5" href={resolve("/services/new")} size="sm">
-          <Plus class="size-4" />
-          Deploy your first service
-        </Button>
+      <p class="text-text-subtle mt-1 text-xs">Point at an image, fill in a config, and deploy.</p>
+
+      <div
+        class="flex flex-wrap items-center justify-center gap-2"
+      >
         <Button
           class="mt-5"
-          href={resolve("/templates")}
+          href={resolve('services/new')}
+          size="sm"
+        ><Plus class="size-4" />Deploy your first service</Button>
+
+        <Button
+          class="mt-5"
+          href={resolve('templates')}
           size="sm"
           variant="outline"
         >
@@ -237,7 +235,7 @@
       </p>
       <Button
         class="ml-auto"
-        href={resolve("/services")}
+        href={resolve('services')}
         size="sm"
         variant="outline"
       >
@@ -254,20 +252,18 @@
     />
   {:else}
     <EntityToolbar
-    sorts={BASE_SORTS}
-      {filters}
+      sorts={BASE_SORTS}
+      filters={filters}
       placeholder="Search services by name, image or domain…"
     >
       {#snippet trailing()}
         <Button
-          href="{resolve('/services')}?view=tree"
+          href="{resolve('services')}?view=tree"
           size="sm"
           variant="outline"
-        >
-          <Network class="size-4" />
-          Dependencies
-        </Button>
-        <ViewModeToggle {view} />
+        ><Network class="size-4" />Dependencies</Button>
+
+        <ViewModeToggle view={view} />
       {/snippet}
     </EntityToolbar>
 
@@ -278,7 +274,7 @@
     {:else}
       <SelectAllRow
         noun="services"
-        {selection}
+        selection={selection}
         visibleCount={data.services.length}
       />
 
@@ -327,7 +323,7 @@
         {@const svc = byId(item.id)}
         {#if svc}
           <ServiceRowActions
-            {deleteVolumes}
+            deleteVolumes={deleteVolumes}
             ondelete={(e) => requestDelete(e, svc.name)}
             pending={pending[svc.id] ?? false}
             service={svc}
@@ -351,14 +347,14 @@
               </h2>
             {/if}
             {#if services.length > 0}
-            <EntityList
-              {actions}
-              {details}
-              {wrapper}
-              items={services.map((svc) => ({
-                description: `${svc.image}:${svc.tag}`,
-                href: `${resolve("/services")}/${svc.id}`,
-                id: svc.id,
+              <EntityList
+                actions={actions}
+                details={details}
+                wrapper={wrapper}
+                items={services.map((svc) => ({
+                  description: `${svc.image}:${svc.tag}`,
+                  href: `${resolve('services')}/${svc.id}`,
+                  id: svc.id,
                 subtitle:
                   primaryHostname(
                     svc,
@@ -366,13 +362,13 @@
                     data.baseDomain,
                   ) ?? svc.slug,
                 title: svc.name,
-              }))}
-              onToggleSelect={(id) => selection.toggle(id)}
-              {badge}
-              {media}
-              selectedIds={selection.ids}
-              {view}
-            />
+                }))}
+                onToggleSelect={(id) => selection.toggle(id)}
+                badge={badge}
+                media={media}
+                selectedIds={selection.ids}
+                view={view}
+              />
             {/if}
           </div>
         {/each}
@@ -400,7 +396,7 @@
   </ServiceContextMenu>
 {/snippet}
 
-<BulkBar {selection} />
+<BulkBar selection={selection} />
 
 <ConfirmDialog
   bind:open={deleteDialogOpen}

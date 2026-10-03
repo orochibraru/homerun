@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { GitProviderKind } from "$lib/server/db/schema";
+import type { GitProviderKind } from "#lib/server/db/schema.js";
 
 export const GIT_WEBHOOK_PATH = "/api/v1/webhooks/git";
 

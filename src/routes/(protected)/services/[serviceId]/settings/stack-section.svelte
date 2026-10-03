@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { FolderKanban } from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	interface Props {
 		stackId: string | null;

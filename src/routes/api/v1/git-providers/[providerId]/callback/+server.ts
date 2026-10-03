@@ -1,26 +1,26 @@
 import { redirect } from "@sveltejs/kit";
+import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { GIT_CONNECT_RETURN_COOKIE } from "#lib/git-webhooks.js";
+import { Logger } from "#lib/logger.js";
+import { safeRedirectTarget } from "#lib/redirect-target.js";
+import { browserOrigin } from "#lib/server/canonical-origin.js";
+import { GitProviderService } from "#lib/services/git-provider.service.js";
+import { GitWebhookService } from "#lib/services/git-webhook.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
 import { resolve } from "$app/paths";
-import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { GIT_CONNECT_RETURN_COOKIE } from "$lib/git-webhooks";
-import { Logger } from "$lib/logger";
-import { safeRedirectTarget } from "$lib/redirect-target";
-import { browserOrigin } from "$lib/server/canonical-origin";
-import { GitProviderService } from "$lib/services/git-provider.service";
-import { GitWebhookService } from "$lib/services/git-webhook.service";
-import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("GitProviders");
 
 export const GET = async ({ cookies, params, locals, request, url }) => {
 	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 	const returnTo = safeRedirectTarget(
 		cookies.get(GIT_CONNECT_RETURN_COOKIE) ?? null,
 	);
 	cookies.delete(GIT_CONNECT_RETURN_COOKIE, { path: "/" });
-	const done = returnTo ?? resolve("/git-providers");
+	const done = returnTo ?? resolve("git-providers");
 
 	const code = url.searchParams.get("code");
 	const state = url.searchParams.get("state");

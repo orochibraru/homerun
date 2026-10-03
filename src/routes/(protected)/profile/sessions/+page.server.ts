@@ -1,7 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { Logger } from "#lib/logger.js";
+import { auth } from "#lib/services/auth.js";
 import { resolve } from "$app/paths";
-import { Logger } from "$lib/logger";
-import { auth } from "$lib/services/auth";
 
 const logger = new Logger("Sessions");
 
@@ -51,7 +51,7 @@ export const load = async ({ request, locals }) => {
 export const actions = {
 	revoke: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const sessionId = (formData.get("sessionId") as string | null)?.trim();

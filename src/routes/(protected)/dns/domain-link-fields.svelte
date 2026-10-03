@@ -1,14 +1,14 @@
 <script lang="ts">
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { inputClass, labelClass } from "$lib/components/form-styles";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import type { DnsConnectionSummary } from "$lib/dto/dns-connection-dto";
-	import { getConnectionZones } from "$lib/remote/dns.remote";
+	} from "#lib/components/ui/select/index.js";
+	import type { DnsConnectionSummary } from "#lib/dto/dns-connection-dto.js";
+	import { getConnectionZones } from "#lib/remote/dns.remote.js";
 
 	interface Props {
 		baseDomain: string;

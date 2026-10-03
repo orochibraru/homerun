@@ -1,4 +1,4 @@
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 
 /**
  * How long a plain control call may take before it's abandoned. Generous

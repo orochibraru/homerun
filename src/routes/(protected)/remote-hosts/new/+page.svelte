@@ -2,17 +2,17 @@
 	import { ChevronDown } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { testAgentConnection } from "#lib/remote/remote-hosts.remote.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast, toastError } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
-	import { testAgentConnection } from "$lib/remote/remote-hosts.remote";
-	import { title } from "$lib/store/title";
-	import { enhanceToast, toastError } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -61,19 +61,16 @@
         class="mb-6 space-y-4 rounded-md panel p-5"
         method="POST"
         use:enhance={enhanceToast({
-          error: "Check the form for errors.",
-          loading: "Adding the host",
-          onSettled: () => {
-            submitting = false;
-          },
-          onStart: () => {
-            submitting = true;
-          },
-          onSuccess: () =>
-            goto(resolve("/remote-hosts"), {
-              invalidateAll: true,
-            }),
-          success: "Remote host added.",
+            error: "Check the form for errors.",
+            loading: "Adding the host",
+            onSettled: () => {
+                submitting = false;
+            },
+            onStart: () => {
+                submitting = true;
+            },
+            onSuccess: () => goto(resolve('remote-hosts'), { refreshAll: true }),
+            success: "Remote host added."
         })}
     >
         {#if form?.error}
@@ -125,10 +122,16 @@
             <div class="space-y-3 rounded-md border border-border p-4">
                 <p class="text-text text-sm font-medium">Set up the agent</p>
                 <p class="text-text-muted text-xs">
-                    Fresh Linux server? Skip this form: <b>Add a server</b> on
-                    <a class="text-accent underline" href={resolve("/remote-hosts")}>Remote Hosts</a>
-                    hands you one command that installs and registers it. Otherwise,
-                    on the build host, either:
+                    Fresh Linux server? Skip this form:
+                    <b>Add a server</b>
+                    on
+
+                    <a
+                        class="text-accent underline"
+                        href={resolve('remote-hosts')}
+                    >Remote Hosts</a>
+
+                    hands you one command that installs and registers it. Otherwise, on the build host, either:
                 </p>
                 <div class="space-y-1.5">
                     <p class="text-text-subtle text-xs">

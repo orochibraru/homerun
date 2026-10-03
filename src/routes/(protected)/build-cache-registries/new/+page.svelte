@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { form } = $props();
 
@@ -31,19 +31,16 @@
         class="mb-6 space-y-4 rounded-md panel p-5"
         method="POST"
         use:enhance={enhanceToast({
-          error: "Check the form for errors.",
-          loading: "Adding the registry",
-          onSettled: () => {
-            submitting = false;
-          },
-          onStart: () => {
-            submitting = true;
-          },
-          onSuccess: () =>
-            goto(resolve("/build-cache-registries"), {
-              invalidateAll: true,
-            }),
-          success: "Registry added.",
+            error: "Check the form for errors.",
+            loading: "Adding the registry",
+            onSettled: () => {
+                submitting = false;
+            },
+            onStart: () => {
+                submitting = true;
+            },
+            onSuccess: () => goto(resolve('build-cache-registries'), { refreshAll: true }),
+            success: "Registry added."
         })}
     >
         {#if form?.error}
@@ -70,10 +67,11 @@
                 type="text"
             />
             <p class="mt-1.5 text-xs text-text-subtle">
-                No scheme : the host (and port, if not 443), plus the namespace your
-        registry keeps images under when it needs one, e.g.
-        <code>git.example.com/&lt;owner&gt;</code> for Gitea or
-        <code>ghcr.io/&lt;user&gt;</code>.
+                No scheme : the host (and port, if not 443), plus the namespace your registry keeps images under when it needs one, e.g.
+                <code>git.example.com/&lt;owner&gt;</code>
+                for Gitea or
+                <code>ghcr.io/&lt;user&gt;</code>
+                .
             </p>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">

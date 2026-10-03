@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { KeyRound } from "@lucide/svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import { resolve } from "$app/paths";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
 
 	const { data } = $props();
 </script>

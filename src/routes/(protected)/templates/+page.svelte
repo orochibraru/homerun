@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { LayoutGrid, Plus, Rocket, SettingsIcon } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import EntityList from "$lib/components/entity-list.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
-	} from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { BASE_SORTS } from "$lib/list-sorts";
-	import { title } from "$lib/store/title";
-	import { templateCategoryLabel } from "$lib/template-categories";
-	import { enhanceToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { title } from "#lib/store/title.js";
+	import { templateCategoryLabel } from "#lib/template-categories.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -50,9 +50,7 @@
 	}
 
 	function configureHref(tmpl: Template): string {
-		return `${resolve("/services/new")}?templateId=${tmpl.id}${
-			data.stack ? `&stackId=${data.stack.id}` : ""
-		}`;
+		return `${resolve("services/new")}?templateId=${tmpl.id}${data.stack ? `&stackId=${data.stack.id}` : ""}`;
 	}
 
 	function quickDeployEnhance(tmpl: Template) {
@@ -145,20 +143,18 @@
         One-click configs for common services.
       </p>
     </div>
-    <Button href={resolve("/templates/new")} size="sm">
-      <Plus class="size-4" />
-      New Template
-    </Button>
+
+    <Button href={resolve('templates/new')} size="sm"><Plus class="size-4" />New Template</Button>
   </div>
 
   <EntityToolbar
     sorts={BASE_SORTS}
-    {filters}
+    filters={filters}
     pageParams={["bpage", "cpage"]}
     placeholder="Search templates by name or image…"
   >
     {#snippet trailing()}
-      <ViewModeToggle {view} />
+      <ViewModeToggle view={view} />
     {/snippet}
   </EntityToolbar>
 
@@ -168,7 +164,7 @@
       <p class="text-text-subtle text-sm">No built-in templates match.</p>
     {:else}
       <EntityList
-        {actions}
+        actions={actions}
         cardGridClass={CARD_GRID}
         items={data.builtins.map((tmpl) => ({
           description: tmpl.description,
@@ -177,9 +173,9 @@
           subtitle: `${tmpl.image}:${tmpl.tag}`,
           title: tmpl.name,
         }))}
-        {media}
-        {meta}
-        {view}
+        media={media}
+        meta={meta}
+        view={view}
       />
       <Pagination
         label="built-in templates"
@@ -208,7 +204,7 @@
       <p class="text-text-subtle text-sm">No custom templates match.</p>
     {:else}
       <EntityList
-        {actions}
+        actions={actions}
         cardGridClass={CARD_GRID}
         items={data.custom.map((tmpl) => ({
           description: tmpl.description,
@@ -217,9 +213,9 @@
           subtitle: `${tmpl.image}:${tmpl.tag}`,
           title: tmpl.name,
         }))}
-        {media}
-        {meta}
-        {view}
+        media={media}
+        meta={meta}
+        view={view}
       />
       <Pagination
         label="custom templates"

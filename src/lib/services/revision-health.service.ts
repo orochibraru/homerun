@@ -1,9 +1,9 @@
-import { config } from "$lib/config";
-import { isRollback } from "$lib/deploy-trigger";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { isRollback } from "#lib/deploy-trigger.js";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	HEALTH_WINDOW,
 	type HealthVerdict,
@@ -13,8 +13,8 @@ import {
 	revisionRoot,
 	type WorkloadHealthSample,
 	withReadiness,
-} from "$lib/revisions";
-import type { Deployment } from "$lib/server/db/schema";
+} from "#lib/revisions.js";
+import type { Deployment } from "#lib/server/db/schema.js";
 import { DockerService } from "./docker.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { revisionHealthMessage } from "./notification-messages.ts";

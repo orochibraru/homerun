@@ -1,9 +1,9 @@
 import { error, fail, redirect } from "@sveltejs/kit";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { Logger } from "#lib/logger.js";
+import { AgentClientService } from "#lib/services/agent-client.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
 import { resolve } from "$app/paths";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { Logger } from "$lib/logger";
-import { AgentClientService } from "$lib/services/agent-client.service";
-import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("RemoteHosts");
 
@@ -141,7 +141,7 @@ async function updateDockerHost(
 export const actions = {
 	delete: async ({ params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const host = await RemoteHostDTO.get(params.hostId);
 		if (!host) {
@@ -149,12 +149,12 @@ export const actions = {
 		}
 		await host.delete();
 		logger.info(`Remote host deleted: host=${host.id} user=${locals.user.id}`);
-		throw redirect(302, resolve("/remote-hosts"));
+		throw redirect(302, resolve("remote-hosts"));
 	},
 
 	update: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const host = await RemoteHostDTO.get(params.hostId);
 		if (!host) {

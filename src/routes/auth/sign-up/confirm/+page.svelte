@@ -9,14 +9,14 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+	import { authClient } from "#lib/auth-client.js";
+	import AuthShell from "#lib/components/auth-shell.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { authClient } from "$lib/auth-client";
-	import AuthShell from "$lib/components/auth-shell.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -38,7 +38,7 @@
 		resent = false;
 		try {
 			await authClient.sendVerificationEmail({
-				callbackURL: resolve("/"),
+				callbackURL: resolve(""),
 				email: data.email,
 			});
 			resent = true;
@@ -68,7 +68,7 @@
 					"Not verified yet : check your inbox and click the link.",
 				);
 			}
-			goto(resolve("/"));
+			goto(resolve(""));
 		} finally {
 			checking = false;
 		}
@@ -85,7 +85,7 @@
 
 	// ── Dev bypass ─────────────────────────────────────────────────────
 	function devBypass() {
-		goto(resolve("/"));
+		goto(resolve(""));
 	}
 </script>
 
@@ -168,12 +168,14 @@
             class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
           />
           <div>
-            <p class="text-xs font-semibold text-amber-800 dark:text-amber-300">
-              Development mode
-            </p>
-            <p class="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
-              SMTP is not configured, so no email was sent. You can bypass
-              verification to continue working locally.
+            <p
+              class="text-xs font-semibold text-amber-800 dark:text-amber-300"
+            >Development mode</p>
+
+            <p
+              class="mt-0.5 text-xs text-amber-700 dark:text-amber-400"
+            >
+              SMTP is not configured, so no email was sent. You can bypass verification to continue working locally.
             </p>
           </div>
           <span
@@ -200,12 +202,19 @@
 
   {#snippet footer()}
     Wrong email?
-    <a class="text-accent hover:underline" href={resolve("/auth/sign-up")}>
-      Create a new account
-    </a>
+
+    <a
+      class="text-accent hover:underline"
+      href={resolve('auth/sign-up')}
+    >Create a new account</a>
+
     or
-    <a class="text-accent hover:underline" href={resolve("/auth/sign-in")}>
-      sign in to a different one
-    </a>.
+
+    <a
+      class="text-accent hover:underline"
+      href={resolve('auth/sign-in')}
+    >sign in to a different one</a>
+
+    .
   {/snippet}
 </AuthShell>

@@ -1,6 +1,6 @@
-import { config } from "$lib/config";
-import { rebaseOnOrigin } from "$lib/oidc-provider";
-import { auth } from "$lib/services/auth";
+import { config } from "#lib/config.js";
+import { rebaseOnOrigin } from "#lib/oidc-provider.js";
+import { auth } from "#lib/services/auth.js";
 
 export const GET = async ({ request }) =>
 	await auth.handler(

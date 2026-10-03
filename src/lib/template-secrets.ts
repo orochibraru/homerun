@@ -1,4 +1,4 @@
-import type { ServiceRuntimeOptions } from "$lib/service-runtime";
+import type { ServiceRuntimeOptions } from "#lib/service-runtime.js";
 
 export const SECRET_TOKEN = "{{secret}}";
 

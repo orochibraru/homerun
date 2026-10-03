@@ -1,28 +1,28 @@
 <script lang="ts">
 	import { FolderOpen, HardDrive, Plus, X } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { refreshAll } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import NewVolumeFields from "$lib/components/new-volume-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Dialog from "$lib/components/ui/dialog/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import Alert from "#lib/components/alert.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import NewVolumeFields from "#lib/components/new-volume-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import VolumeSizeLabel from "$lib/components/volume-size-label.svelte";
-	import { HOST_VOLUME_PREFIX } from "$lib/constants";
-	import { getUnknownHostVolumes } from "$lib/remote/docker-infra.remote";
-	import { getVolumeSizes } from "$lib/remote/volume-sizes.remote";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import VolumeSizeLabel from "#lib/components/volume-size-label.svelte";
+	import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
+	import { getUnknownHostVolumes } from "#lib/remote/docker-infra.remote.js";
+	import { getVolumeSizes } from "#lib/remote/volume-sizes.remote.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { refreshAll } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import MountBackup from "./mount-backup.svelte";
 	import VolumeBackupsMenu from "./volume-backups-menu.svelte";
 

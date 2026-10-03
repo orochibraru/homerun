@@ -98,7 +98,7 @@ SvelteKit serializes `load` return values with devalue, which can't serialize a
 class instance. Every `load` maps DTOs to plain objects via `.toJSON()` (or
 `.map(d => d.toJSON())`) before returning.
 
-## Server-side list pagination (`$lib/server/list-query.ts`, `$lib/server/api-pagination.ts`)
+## Server-side list pagination (`src/lib/server/list-query.ts`, `src/lib/server/api-pagination.ts`)
 
 Every list page, and the three paginated REST endpoints below, share one
 query-parsing layer instead of loading a user's entire table and
@@ -116,7 +116,7 @@ paging through.
   (the REST API's fixed 100), then `userPerPage`, the signed-in account's
   `user_preferences.per_page` that every dashboard list `load` passes from
   `(await parent()).preferences.perPage`, run through `resolvePerPage` (one of
-  `PER_PAGE_OPTIONS`, 25/50/100/200 in `$lib/list-sorts.ts`, else
+  `PER_PAGE_OPTIONS`, 25/50/100/200 in `src/lib/list-sorts.ts`, else
   `DEFAULT_PER_PAGE`, 50). Hard-capped at 200 regardless of what's requested;
   malformed/negative `page`/`perPage` fall back rather than erroring.
   `PagedResult<T>` (`{items, page, perPage, total}`) is the shape every paged
@@ -128,7 +128,7 @@ paging through.
   column) both reject a bare `string[]` passed to `inArray`.
 - `api-pagination.ts`'s `parseApiListQuery(url)` is the same parser with a
   100/page default (API callers don't get the dashboard's per-account one);
-  `jsonPage(items, meta)` wraps `json()` and stamps
+  `jsonPage(items, meta)` wraps `Response.json()` and stamps
   `x-total-count`/`x-page`/`x-per-page` response headers, see REST API below for
   why the body itself stays a plain array rather than growing an envelope.
 - Every paged DTO finder does its search/filter/count in SQL, not in memory, the
@@ -153,10 +153,7 @@ paging through.
   `services-and-templates.md`): `load` just pages
   `ServiceDTO.listWithStackNamesPaged`, renders the stored `currentStatus`
   immediately, and the client patches it once the sync round-trips, rather than
-  the page itself blocking on a Docker call. `load` still calls
-  `allowLongRequest(platform)` (see Long-running requests below), which it never
-  did before that first pagination-era change, leaving it exposed to Bun's 10s
-  idle-timeout cut on Linux until then.
+  the page itself blocking on a Docker call.
 
 **Verified live** against a seeded Postgres, in a real browser and over the REST
 API/CLI: every list page pages correctly, search and filters reach the whole
@@ -226,9 +223,10 @@ OIDC provider in `auth.md`) plus:
   whether `<slug>.<baseDomain>` is still routed) and `primaryDomain` (nullable,
   the main one), replacing the old single `customDomain`. Each routed hostname
   gets its own Traefik router sharing the primary router's backend service, see
-  labels.ts below. Pure helpers in `$lib/service-domains.ts` (`defaultHostname`,
-  `serviceHostnames`, `primaryHostname`, `isUnderDomain`, `normalizeDomains`).
-  Configured on the service's Networking tab (Domains card).
+  labels.ts below. Pure helpers in `src/lib/service-domains.ts`
+  (`defaultHostname`, `serviceHostnames`, `primaryHostname`, `isUnderDomain`,
+  `normalizeDomains`). Configured on the service's Networking tab (Domains
+  card).
 - `stack`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
   member service's container name and public subdomain, see Docker integration
   below). Every stack has a matching Docker network (see below), created
@@ -237,7 +235,7 @@ OIDC provider in `auth.md`) plus:
   resources below); only the last account's deletion removes their networks
   before `stack.userId`'s `onDelete: "cascade"` drops the rows. `parentId`
   (nullable self-FK, `onDelete: "set null"`) nests a stack inside another, to
-  any depth; `StackDTO.setParent` refuses a cycle (`$lib/stack-tree.ts`'s
+  any depth; `StackDTO.setParent` refuses a cycle (`src/lib/stack-tree.ts`'s
   `wouldCycle`/`ancestorIds`). Nesting is purely a grouping/display
   relationship, not a network one: a substack keeps its own Docker network and
   its members' slugs are unprefixed by the parent, see Stack-scoped slugs in
@@ -357,10 +355,10 @@ OIDC provider in `auth.md`) plus:
   tab's "Application errors" section, a lightweight Sentry-adjacent view of
   app-level failures alongside deployment failures (see
   `services/[serviceId]/errors/` below). `Logger.warn()`/`.error()`
-  (`$lib/logger.ts`) fire-and-forget a `AppLogDTO.create()` call on every
+  (`src/lib/logger.ts`) fire-and-forget a `AppLogDTO.create()` call on every
   warn/error log, dynamically imported (not a top-level import) since
-  `logger.ts` isn't under `$lib/server/`, keeping server-only db code out of the
-  module graph unless a warn/error call actually fires; never awaited, never
+  `logger.ts` isn't under `src/lib/server/`, keeping server-only db code out of
+  the module graph unless a warn/error call actually fires; never awaited, never
   throws, so a logging call can't fail the operation it's logging. `serviceId`
   is extracted by regex-matching this codebase's own `service=<uuid>` convention
   already present in most Docker/deploy log messages, rather than threading an
@@ -399,7 +397,7 @@ below, SQLite's `PRAGMA foreign_keys` was intentionally left off there, making
 `onDelete` decorative for row data; Postgres has no equivalent global disable,
 so it's now a genuine DB-level safety net, not just documentation.) Explicit
 app-level cascade logic still exists and is still required,
-`StackDTO.cascadeDelete()` and `$lib/services/user.service.ts`'s
+`StackDTO.cascadeDelete()` and `src/lib/services/user.service.ts`'s
 `UserService.cleanupUserResources()` (account deletion, see User roles &
 invitations in `auth.md` for why that had to be pulled out of `auth.ts`'s
 `beforeDelete` into its own method rather than left inline), because a DB
@@ -528,7 +526,7 @@ has four tabs now (General, Docker, Networking, Email), not five.
 meaning "fall back to the env default", a non-null value overriding it. Secrets
 (`smtpPasswordEnc`, each OAuth provider's `clientSecretEnc` inside the
 `oauthProviders` JSON array) use the same AES-256-GCM scheme as
-`service.registryPasswordEnc` (`$lib/services/secrets.ts`, reused as-is).
+`service.registryPasswordEnc` (`src/lib/services/secrets.ts`, reused as-is).
 
 **Not DB-backed**, `databaseUrl`/`port`/`auth.secret`/`logLevel`/`logFormat`
 stay env-only: `databaseUrl` has to be known before the DB is even reachable,
@@ -546,9 +544,9 @@ live). `/settings` itself is split into one route per tab (bare `+page.svelte` =
 General/Core, `docker/`, `networking/`, `email/`, see the tabs convention under
 Conventions above), so this apply-plus-rebuild pair is pulled into a shared
 `applyAndRebuild(settings)` helper
-(`$lib/server/validation/instance-settings-form.ts`, alongside `nullableText`/
-`checkbox` form-parsing helpers every tab's actions use), each tab's own action
-calls it rather than duplicating the two calls per file.
+(`src/lib/server/validation/instance-settings-form.ts`, alongside
+`nullableText`/ `checkbox` form-parsing helpers every tab's actions use), each
+tab's own action calls it rather than duplicating the two calls per file.
 
 `config.ts` deliberately never imports the DTO or `db` itself, `db/lib.ts`
 imports `config.ts` for `databaseUrl`, so `config.ts` has to stay a leaf module

@@ -1,12 +1,12 @@
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StatSampleDTO } from "$lib/dto/stat-sample-dto";
-import { TrafficSampleDTO } from "$lib/dto/traffic-sample-dto";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StatSampleDTO } from "#lib/dto/stat-sample-dto.js";
+import { TrafficSampleDTO } from "#lib/dto/traffic-sample-dto.js";
 import {
 	counterDelta,
 	countersBySlug,
 	parseTraefikMetrics,
 	type TrafficCounters,
-} from "$lib/traffic-metrics";
+} from "#lib/traffic-metrics.js";
 import { CapacityService } from "../capacity.service.ts";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import type { ContainerSample } from "../docker/containers.ts";

@@ -2,11 +2,11 @@
 	import { ArrowRight, MailCheck } from "@lucide/svelte";
 	import { onDestroy, onMount, type Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { authClient } from "$lib/auth-client";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { toastError } from "$lib/toast";
+	import { authClient } from "#lib/auth-client.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { toastError } from "#lib/toast.js";
 
 	interface Props {
 		email: string;

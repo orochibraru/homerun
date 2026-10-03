@@ -1,9 +1,9 @@
 import type { HTMLAnchorAttributes } from "svelte/elements";
-import type { Pathname } from "$app/types";
-import type { Logger } from "$lib/logger";
-import type { ApiKeyScope } from "$lib/permissions";
-import type { AuthType } from "$lib/services/auth";
-import type { SurfaceId } from "$lib/surfaces";
+import type { Logger } from "#lib/logger.js";
+import type { ApiKeyScope } from "#lib/permissions.js";
+import type { AuthType } from "#lib/services/auth.js";
+import type { SurfaceId } from "#lib/surfaces.js";
+import type { Path } from "$app/types";
 
 /// <reference types="vite-plugin-pwa/client" />
 /// <reference types="vite-plugin-pwa/info" />
@@ -31,14 +31,6 @@ declare global {
 		}
 		// interface PageData {}
 		// interface PageState {}
-		// Matches the `platform` object @orochibraru/svelte-smol's handler
-		// passes to server.respond(), request is available via event.request too,
-		// server is the underlying Bun.Server for anything needing raw access to
-		// it (e.g. Bun.Server#requestIP).
-		interface Platform {
-			server: Bun.Server;
-			request: Request;
-		}
 		interface Error {
 			code?: string;
 			errorId?: string;
@@ -55,7 +47,7 @@ declare global {
 			a: Omit<HTMLAnchorAttributes, "href"> & {
 				// The (string & {}) trick prevents 'string' from collapsing the union,
 				// preserving Intellisense for your Pathnames.
-				href?: Pathname | (string & {}) | null;
+				href?: Path | (string & {}) | null;
 			};
 		}
 	}

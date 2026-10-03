@@ -7,15 +7,15 @@
 	} from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
 	import { renderSVG } from "uqr";
-	import { invalidateAll } from "$app/navigation";
-	import { authClient } from "$lib/auth-client";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { totpSecretFromUri } from "$lib/security-policy";
-	import { toastError } from "$lib/toast";
+	import { authClient } from "#lib/auth-client.js";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { totpSecretFromUri } from "#lib/security-policy.js";
+	import { toastError } from "#lib/toast.js";
+	import { refreshAll } from "$app/navigation";
 
 	interface Props {
 		enabled: boolean;
@@ -23,7 +23,7 @@
 		onChange?: () => Promise<void> | void;
 	}
 
-	const { enabled, hasPassword, onChange = invalidateAll }: Props = $props();
+	const { enabled, hasPassword, onChange = refreshAll }: Props = $props();
 
 	let password = $state("");
 	let code = $state("");

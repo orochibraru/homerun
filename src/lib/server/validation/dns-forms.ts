@@ -1,12 +1,15 @@
-import type { DomainInput } from "$lib/dto/domain-dto";
-import { absoluteName, normalizeName } from "$lib/services/dns-providers/http";
+import type { DomainInput } from "#lib/dto/domain-dto.js";
+import {
+	absoluteName,
+	normalizeName,
+} from "#lib/services/dns-providers/http.js";
 import {
 	DNS_RECORD_TYPES,
 	type DnsCredentials,
 	type DnsProviderDefinition,
 	type DnsRecordInput,
 	type DnsRecordType,
-} from "$lib/services/dns-providers/types";
+} from "#lib/services/dns-providers/types.js";
 
 type Parsed<T> = { error: string; value: null } | { error: null; value: T };
 

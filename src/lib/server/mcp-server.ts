@@ -5,16 +5,15 @@ import {
 } from "@modelcontextprotocol/server";
 import type { RequestEvent } from "@sveltejs/kit";
 import { z } from "zod";
-import { config } from "$lib/config";
-import { MCP_PATH, mcpAllowed } from "$lib/oidc-provider";
-import { APP_VERSION } from "$lib/server/app-version";
-import { allowLongRequest } from "$lib/server/long-request";
+import { config } from "#lib/config.js";
+import { MCP_PATH, mcpAllowed } from "#lib/oidc-provider.js";
+import { APP_VERSION } from "#lib/server/app-version.js";
 import {
 	mergeEnvChanges,
 	REDACTED,
 	redactText,
 	restoreArgv,
-} from "$lib/server/mcp-redact";
+} from "#lib/server/mcp-redact.js";
 
 export type ApiCall = (
 	method: "DELETE" | "GET" | "PATCH" | "POST" | "PUT",
@@ -684,7 +683,7 @@ const FORWARDED_AUTH_HEADERS = ["authorization", "cookie", "x-api-key"];
  * back through the REST API with the caller's own credentials.
  */
 export async function serveMcp(event: RequestEvent): Promise<Response> {
-	const { fetch, locals, platform, request } = event;
+	const { fetch, locals, request } = event;
 	if (!(config.auth.origin && mcpAllowed(config.auth.origin))) {
 		return new Response(
 			JSON.stringify({
@@ -706,7 +705,6 @@ export async function serveMcp(event: RequestEvent): Promise<Response> {
 			status: 401,
 		});
 	}
-	allowLongRequest(platform);
 	const credentials = new Headers();
 	for (const name of FORWARDED_AUTH_HEADERS) {
 		const value = request.headers.get(name);

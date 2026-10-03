@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { CircleCheck, KeyRound } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
 	import {
 		errorClass,
 		inputClass,
 		labelClass,
-	} from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
+	} from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhance } from "$app/forms";
 
 	const { data, form } = $props();
 

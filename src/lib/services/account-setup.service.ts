@@ -10,11 +10,11 @@ import {
 	MAGIC_LINK_METHOD,
 	oauthMethod,
 	PASSWORD_METHOD,
-} from "$lib/auth-providers";
-import { config, isSmtpEnabled } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { Logger } from "$lib/logger";
-import { brandedEmail } from "$lib/server/email-layout";
+} from "#lib/auth-providers.js";
+import { config, isSmtpEnabled } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { Logger } from "#lib/logger.js";
+import { brandedEmail } from "#lib/server/email-layout.js";
 import { auth } from "./auth.ts";
 import { EmailService } from "./email.service.ts";
 import {

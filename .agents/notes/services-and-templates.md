@@ -13,7 +13,7 @@ A right-click on a service row offers **Link to…** and **group/ungroup**
 provider's connection variables into the consumer's env — the same
 `buildLinkEnv` output the wizard's link picker produces, so a URL, a JDBC URL or
 separate vars depending on the provider's image. Which side is which isn't just
-"the one you right-clicked": `$lib/service-link.ts`'s `linkRoles` makes a
+"the one you right-clicked": `src/lib/service-link.ts`'s `linkRoles` makes a
 database or cache (`isDatabaseImage`) the provider whenever the other side isn't
 one too, whichever service you started from, so linking an app to a database
 from the app's own menu writes the database's vars into the app the same as
@@ -22,11 +22,11 @@ one stack network, since two services only reach each other by slug once they
 share one, and moves them into whichever stack either is already in, creating
 one named after the source (not necessarily the consumer) when neither has one.
 
-**Unlinking** is the reverse, and lives in `$lib/service-graph.ts` rather than
-`service-link.ts`: `linkKeys(envVars, slug)` finds which of a consumer's own env
-vars point at a given provider's slug (via `hostsIn`, see A service's tabs in
-`routing.md` for the detection rule), and the `unlink` form action — on a
-service's own Overview tab, or a stack page's right-click **Unlink from** —
+**Unlinking** is the reverse, and lives in `src/lib/service-graph.ts` rather
+than `service-link.ts`: `linkKeys(envVars, slug)` finds which of a consumer's
+own env vars point at a given provider's slug (via `hostsIn`, see A service's
+tabs in `routing.md` for the detection rule), and the `unlink` form action — on
+a service's own Overview tab, or a stack page's right-click **Unlink from** —
 deletes exactly those keys plus any of them marked in `secretEnvKeys`. It only
 ever touches the consumer, and only takes effect on its next deploy.
 
@@ -80,7 +80,7 @@ loop via `replacementCycle`), wrapped by the MCP
 `data-and-config.md`) nests a stack inside another, to any depth. It's a pure
 grouping/display relationship: a substack keeps its own Docker network, and
 nesting changes nothing about how services reach each other (still plain slug,
-same as any two stacks). `$lib/stack-tree.ts` holds the pure helpers:
+same as any two stacks). `src/lib/stack-tree.ts` holds the pure helpers:
 `ancestorIds`/`wouldCycle` (used by `StackDTO.setParent` to refuse nesting a
 stack inside itself or one of its own descendants), `descendantIds` (a stack's
 own settings page excludes itself and its descendants from the "Nested in"
@@ -95,15 +95,16 @@ moment a search is on, so a nested stack is still findable) with each row's
 
 A service created inside a stack — from the wizard or from a template, including
 a template's linked companions — gets that stack's slug as a prefix:
-`$lib/slug.ts`'s `stackScopedSlug(stackSlug, slug)` is `${stackSlug}-${slug}`,
-unless `slug` already is or already starts with `${stackSlug}-` (so resubmitting
-a form, or a template link building on an already-scoped primary slug, never
-doubles the prefix). `$lib/service-domains.ts`'s `defaultHostname` no longer
-prefixes on its own, it just calls `stackScopedSlug` : the public subdomain is
-`<slug>.<baseDomain>` where `slug` is already scoped, not
-`<stackSlug>-<slug>.<baseDomain>` layered on top. `dns.service.ts`'s
-`serviceHostname` calls the same `defaultHostname` rather than re-deriving the
-prefix, one source of truth for the hostname a service resolves at.
+`src/lib/slug.ts`'s `stackScopedSlug(stackSlug, slug)` is
+`${stackSlug}-${slug}`, unless `slug` already is or already starts with
+`${stackSlug}-` (so resubmitting a form, or a template link building on an
+already-scoped primary slug, never doubles the prefix).
+`src/lib/service-domains.ts`'s `defaultHostname` no longer prefixes on its own,
+it just calls `stackScopedSlug` : the public subdomain is `<slug>.<baseDomain>`
+where `slug` is already scoped, not `<stackSlug>-<slug>.<baseDomain>` layered on
+top. `dns.service.ts`'s `serviceHostname` calls the same `defaultHostname`
+rather than re-deriving the prefix, one source of truth for the hostname a
+service resolves at.
 
 ## Where creating something lands you
 
@@ -212,7 +213,7 @@ failed health-gated rollout left its previous workload in place, via
 `RolloutFailedError`/`ImageScanBlockedError`, mapped from the worker's
 `Result.Failure` by `workerFailure`).
 
-## Required status checks (`$lib/status-checks.ts`, `StatusCheckService`, `deploy/status-check-step.ts`)
+## Required status checks (`src/lib/status-checks.ts`, `StatusCheckService`, `deploy/status-check-step.ts`)
 
 `service.requireStatusChecks` + `requiredStatusChecks` gate a git build. In
 `deploy/worker-spec.ts`'s `buildSpec`, before the spec hands the git build over
@@ -220,7 +221,7 @@ to the Go worker, `enforceStatusChecks` resolves the branch to a SHA through the
 provider API, logs it, writes `gitCommit`/`gitRef` on the deployment and runs
 `waitForChecks`, all still on the TS/prepare side (see "Deploys run in the Go
 worker" above) since it needs the git-provider tables. Everything
-provider-shaped is pure in `$lib/status-checks.ts`, covered by
+provider-shaped is pure in `src/lib/status-checks.ts`, covered by
 `tests/unit/app/status-checks.test.ts` with a fake fetch: `repoPathFromGitUrl`
 (https, scp-style, nested GitLab groups, a self-hosted base path),
 `providerApiBase` (also what `git-provider.service.ts` `endpoints()` uses now),
@@ -268,7 +269,7 @@ that ignores the unrecognized field (Go's `encoding/json` default) and builds
 the branch head.
 
 The Source tab's picker (`status-check-picker.svelte`) loads names through
-`listStatusCheckNames` (`$lib/remote/status-checks.remote.ts`, distinct names
+`listStatusCheckNames` (`src/lib/remote/status-checks.remote.ts`, distinct names
 over the last 5 commits of the branch) as a one-shot `$state` promise and posts
 the selection as repeated `requiredStatusChecks` hidden inputs, read with
 `formData.getAll` since the route's zod parse goes through `Object.fromEntries`.
@@ -278,12 +279,12 @@ answering 403 without a token (a permanent error). **Not verified**: GitLab and
 Bitbucket against real instances, and a full deploy blocked by a real failing
 check.
 
-## Revisions and rollback (`$lib/revisions.ts`, `RevisionService`, `RevisionHealthService`, `deploy/revision-step.ts`)
+## Revisions and rollback (`src/lib/revisions.ts`, `RevisionService`, `RevisionHealthService`, `deploy/revision-step.ts`)
 
 A revision is a `deployment` row (see `data-and-config.md`), recorded by
 `#recordSuccess`: `imageRef` from the resolved `image:tag` with any `@digest`
 split off into `imageDigest`, `imageId` from inspecting the run ref, and
-`health: "watching"`. Pure logic in `$lib/revisions.ts`, covered by
+`health: "watching"`. Pure logic in `src/lib/revisions.ts`, covered by
 `tests/unit/app/revisions.test.ts`: `previousRevision` (newest older revision
 whose image key, `imageId` then digest then ref, differs from the current one,
 skipping `unhealthy`/`rolled_back`), `retainedRevisions` (newest `limit`
@@ -303,11 +304,11 @@ recorded `imageId`, and otherwise fails saying to redeploy. It writes the
 revision's `image`/`tag` back onto the service.
 
 **Config snapshot.** Every deploy writes `deployment.configSnapshot`
-(`RevisionConfig` in `$lib/revision-config.ts`: env vars, cpu/memory, replicas,
-containerPort/portProtocol, networkMode, dnsResolvable) right after the config
-phase, before the plan is built. A rollback enqueued with `restoreConfig`
-(`deployment.restoreConfig`, only ever true on a rollback row) runs
-`restoreRevisionConfig` (`deploy/revision-step.ts`) **before**
+(`RevisionConfig` in `src/lib/revision-config.ts`: env vars, cpu/memory,
+replicas, containerPort/portProtocol, networkMode, dnsResolvable) right after
+the config phase, before the plan is built. A rollback enqueued with
+`restoreConfig` (`deployment.restoreConfig`, only ever true on a rollback row)
+runs `restoreRevisionConfig` (`deploy/revision-step.ts`) **before**
 `#loadDeployPlan`, because the workload plan reads `networkMode`/`replicas`,
 writing the target's snapshot onto the service and logging which fields changed;
 a target with no snapshot (deployed before this existed) logs and rolls back the
@@ -428,24 +429,25 @@ off, `deploy/worker-spec.ts`'s `scanSpec` returns null and
   (`image_scan_critical` bell row + the `image.vulnerable` channel event) — all
   still on the TS side, from the worker's reported `Scans`. The block verdict
   itself (`BlockReason` in `scan.go`, mirroring `evaluateScanPolicy()` in
-  `$lib/image-scan.ts`, still pure TS and still what the Security tab's "would
-  the last scan pass" banner uses) runs in Go: logs the reason (policy, blocking
-  counts per severity, full counts) and returns a `scan-blocked` failure, which
-  `deploy.service.ts`'s `workerFailure` turns into `ImageScanBlockedError` —
-  `#recordFailure` turns that into a normal failed deploy (deploy_failure bell +
-  `notifyDeploy`) **without** marking the service failed when a workload already
-  exists, same as a status-check failure: it `syncServiceStatus`es instead,
-  since the old container is still up. `fixableOnly` counts
-  `image_scan.fixable_counts` (findings with a `FixedVersion`); rows from before
-  that column (null) fall back to `counts`. Unknown severity never blocks. **A
-  scanner failure doesn't block by default**, even with a block policy set:
-  `instance_settings.image_scan_required` (`imageScanRequired`, Settings →
-  Docker, `ScanPolicy.required`) makes `scan.go`'s every-target-failed path
-  throw the same `scan-blocked` failure after recording the failed row. The Scan
-  now job never passes it (below). Rollbacks (`revision-step.ts`) skip the scan
-  and the policy entirely, deliberately, so auto-rollback can always recover.
-  The git `docker-build`/`agent-build` paths push to the cache registry before
-  the scan; the gate is before the workload starts, not before the push.
+  `src/lib/image-scan.ts`, still pure TS and still what the Security tab's
+  "would the last scan pass" banner uses) runs in Go: logs the reason (policy,
+  blocking counts per severity, full counts) and returns a `scan-blocked`
+  failure, which `deploy.service.ts`'s `workerFailure` turns into
+  `ImageScanBlockedError` — `#recordFailure` turns that into a normal failed
+  deploy (deploy_failure bell + `notifyDeploy`) **without** marking the service
+  failed when a workload already exists, same as a status-check failure: it
+  `syncServiceStatus`es instead, since the old container is still up.
+  `fixableOnly` counts `image_scan.fixable_counts` (findings with a
+  `FixedVersion`); rows from before that column (null) fall back to `counts`.
+  Unknown severity never blocks. **A scanner failure doesn't block by default**,
+  even with a block policy set: `instance_settings.image_scan_required`
+  (`imageScanRequired`, Settings → Docker, `ScanPolicy.required`) makes
+  `scan.go`'s every-target-failed path throw the same `scan-blocked` failure
+  after recording the failed row. The Scan now job never passes it (below).
+  Rollbacks (`revision-step.ts`) skip the scan and the policy entirely,
+  deliberately, so auto-rollback can always recover. The git
+  `docker-build`/`agent-build` paths push to the cache registry before the scan;
+  the gate is before the workload starts, not before the push.
 - The Security tab's **Scan now** is its own `image_scan` job (dedupe/lock
   `image_scan:<serviceId>`, `worker-jobs/image_scan.ts`'s prepare/finalize
   around `internal/jobs/imagescan`'s `Run`/`Scan`): Trivy with
@@ -461,10 +463,10 @@ per-service opt-out, and a `missing` pull policy scanning the local image. **Not
 verified live**: swarm pinning, git-build scans, cross-host registry scans,
 rootless Docker's fallback, and the Scan now job through the worker.
 
-## Compose import (`$lib/compose-import.ts`, `$lib/services/compose-import.service.ts`, `(protected)/services/import/`)
+## Compose import (`src/lib/compose-import.ts`, `src/lib/services/compose-import.service.ts`, `(protected)/services/import/`)
 
 Paste a `docker-compose.yaml`, get Homerun rows. Two halves, deliberately split:
-`$lib/compose-import.ts` is a **pure parser** (the `yaml` package, no DB, no
+`src/lib/compose-import.ts` is a **pure parser** (the `yaml` package, no DB, no
 Docker) turning compose text into a `ComposeImportPlan`
 (`services: ComposeServiceDraft[]`, plus file-level `warnings`/`networkNames`/
 `volumeNames`), covered directly by `tests/unit/app/compose-import.test.ts`;
@@ -475,7 +477,7 @@ plain instance singleton) that turns a plan into `StackDTO`/`ServiceDTO`/
 plan) and an `import` action that **re-parses the pasted text server-side**
 rather than trusting a plan round-tripped through the client.
 
-What maps: `image` (split via `$lib/image-ref.ts`'s `splitImageRef`, which
+What maps: `image` (split via `src/lib/image-ref.ts`'s `splitImageRef`, which
 handles a registry port and strips a digest; also the one place
 `deploy/revision-step.ts` and the mirror registry's keep-set logic split an
 image ref, replacing three near-duplicate implementations), `environment` in
@@ -485,13 +487,13 @@ and the long `{target, protocol}` form), `restart` (`on-failure:3` →
 `on-failure`), `volumes` (short and long syntax), `depends_on`,
 `network_mode: host`, `container_name`, `deploy.resources.limits.cpus`/`memory`
 (and the legacy `cpus`/`mem_limit`), and the runtime options (`command`,
-`entrypoint` via `$lib/shell-words.ts`'s `argvFrom`, `labels` minus `traefik.*`/
-`homerun.*`, `cap_add`, `devices` short and long form, `privileged`, `user` when
-it passes `isRunAsUser`, otherwise a warning). Everything else is a **warning on
-the preview, not a silent drop**: `build:`, `healthcheck`, `cap_drop`,
-secrets/configs, top-level extra networks, relative bind mounts (Homerun needs
-an absolute host path), anonymous volumes, and the host side of every port
-mapping.
+`entrypoint` via `src/lib/shell-words.ts`'s `argvFrom`, `labels` minus
+`traefik.*`/ `homerun.*`, `cap_add`, `devices` short and long form,
+`privileged`, `user` when it passes `isRunAsUser`, otherwise a warning).
+Everything else is a **warning on the preview, not a silent drop**: `build:`,
+`healthcheck`, `cap_drop`, secrets/configs, top-level extra networks, relative
+bind mounts (Homerun needs an absolute host path), anonymous volumes, and the
+host side of every port mapping.
 
 `env_file` goes through `resolveEnvFiles`:
 `parseComposeFile(text, { envFiles })` takes a path → content map, a supplied
@@ -506,18 +508,19 @@ writes next to the compose file.
 Drafts also carry `registry` (plaintext credentials, encrypted by
 `ComposeImportService` on insert) and `files` (content to bind-mount): the
 service writes every file to `/var/lib/homerun/files/<slug>/<n>-<name>` as one
-in-memory ustar (`$lib/tar.ts`) through `DockerService.extractIntoVolume`
+in-memory ustar (`src/lib/tar.ts`) through `DockerService.extractIntoVolume`
 (`putArchive` on a stopped `alpine` helper with that host directory bound, no
 size limit) and attaches each as a read-only bind storage volume. Only Migrate
 produces either.
 
-**Host access is admin-only** (`$lib/host-access.ts`): `privileged`, `devices`,
-`capAdd` and `envFiles` are host-root-equivalent. `hostAccessRequested` gates a
-create (REST `POST /services`, compose import, `ComposeImportService.importPlan`
-via its `allowHostAccess` input, which Migrate passes `locals.isAdmin` to) and
-`hostAccessChanged` gates an update (Runtime tab, Env files action, REST
-`PATCH`): a non-admin may save a form that keeps the current values, which is
-why the Runtime tab renders them as hidden inputs for non-admins.
+**Host access is admin-only** (`src/lib/host-access.ts`): `privileged`,
+`devices`, `capAdd` and `envFiles` are host-root-equivalent.
+`hostAccessRequested` gates a create (REST `POST /services`, compose import,
+`ComposeImportService.importPlan` via its `allowHostAccess` input, which Migrate
+passes `locals.isAdmin` to) and `hostAccessChanged` gates an update (Runtime
+tab, Env files action, REST `PATCH`): a non-admin may save a form that keeps the
+current values, which is why the Runtime tab renders them as hidden inputs for
+non-admins.
 
 Two mapping decisions worth not re-litigating: **`dnsResolvable` is true only
 when the compose service published a host port** (`ports:`), false when it only
@@ -535,7 +538,7 @@ ordering implementation. Storage volumes are de-duplicated against the
 instance's existing ones by `(kind, source)`, so importing two files that share
 a named volume mounts the same row twice instead of creating a duplicate.
 
-## Smart service links on create (`$lib/service-link.ts`, `service-link-picker.svelte`)
+## Smart service links on create (`src/lib/service-link.ts`, `service-link-picker.svelte`)
 
 The Environment step of `services/new` has a "Link a service" picker next to
 "Paste .env": pick any service the user already owns (**regardless of stack**,
@@ -544,7 +547,7 @@ and reachable at `<slug>:<port>` anyway, so linking is purely about generating
 the env vars, there's no networking to set up) and it writes connection env rows
 into the existing key/value editor.
 
-`$lib/service-link.ts` is a pure, tested module
+`src/lib/service-link.ts` is a pure, tested module
 (`tests/unit/app/service-link.test.ts`), no DB or Docker:
 `detectLinkEngine(image)` matches the image ref against a small table (postgres
 incl. timescale/postgis, mysql/percona, mariadb, mongo, redis/valkey/dragonfly,
@@ -571,7 +574,7 @@ duplicated. It's a preview-then-add dialog, not an async mutation, which is why
 it's one of the documented `toast.success` exceptions rather than a promise
 toast.
 
-## Default data volume on create (`$lib/service-link.ts`'s `dataPathFor`, `$lib/services/default-volume.ts`)
+## Default data volume on create (`src/lib/service-link.ts`'s `dataPathFor`, `src/lib/services/default-volume.ts`)
 
 A database or cache created with no volume of its own now gets one anyway:
 `dataPathFor(image, tag)` (next to `detectLinkEngine`/`isDatabaseImage` in
@@ -596,14 +599,10 @@ volume on it later still starts from empty, same as any other first mount.
 
 ## Live progress: SSE, streams, and why not WebSockets
 
-**This stack has no WebSocket route API.** SvelteKit 2.70 (the latest stable,
-checked) has no `socket`/upgrade export for `+server.ts`, and grep confirms the
-string "websocket" doesn't appear anywhere in the installed `@sveltejs/kit`;
-`@orochibraru/svelte-smol` is ready for one (`getHandler()` forwards a
-`server.websocket()` to `Bun.serve`, printing "WebSocket: disabled" when the
-framework doesn't provide one), so the gap is SvelteKit's, not the adapter's.
-Kit 3.0.0-next exists but adopting a `next` major for this isn't worth it. So
-the transport ladder here is, in order of preference:
+**This stack has no WebSocket route API.** SvelteKit 3.0.0 (stable, what this
+repo runs) has no `socket`/upgrade export for `+server.ts` either, so the gap is
+SvelteKit's, not the adapter's. So the transport ladder here is, in order of
+preference:
 
 - **A `ReadableStream` response** for one-way server→client byte streams that
   aren't event-shaped : container logs (`services/[serviceId]/logs/+server.ts`)
@@ -611,9 +610,8 @@ the transport ladder here is, in order of preference:
   despite what TODO.md assumed.
 - **Server-sent events** for one-way server→client _event_ streams : deploy
   progress (below). `text/event-stream` is the one content type
-  `@orochibraru/svelte-smol` auto-exempts from Bun's `idleTimeout`, so an SSE
-  route needs no `allowLongRequest()` call, which is a real advantage over a
-  bare chunked stream here.
+  `@sveltejs/adapter-bun` auto-exempts from Bun's `idleTimeout` (now `0`
+  server-wide anyway, see `api-and-cli.md`).
 - **Chunked HTTP both ways** where a client→server channel is genuinely needed :
   only the web terminal, which already does this (`terminal/[sessionId]/input`),
   and whose actual shell now lives in the Go worker's own hijacked exec anyway
@@ -629,25 +627,26 @@ the transport ladder here is, in order of preference:
   second public API. A form that mutates real state still goes through a form
   action with `enhanceToast`, not a command.
 
-**Deploy progress is SSE** (`$lib/server/deploy-progress-stream.ts`, served by
-`services/[serviceId]/deployments/[deploymentId]/events/+server.ts`), replacing
-the Overview tab's 1s `fetch` poll. The server-side loop still reads the
-`deployment` row on an interval, but only _pushes_ when the serialized snapshot
-actually changes, so a client sees a new line the moment it lands instead of up
-to a second later, over one connection instead of one request per second. Two
-details are load-bearing: the stream **waits for the deployment row to appear**
-(up to 60s) instead of 404ing, because the Overview tab starts listening before
-its own deploy POST has been handled and an `EventSource` treats an HTTP error
-as fatal and never reconnects; and the client's `onerror` **falls back to the
-old polling loop** (`pollProgress`, still there, still the resilient path)
-rather than leaving the panel stuck, for a buffering proxy or a dropped
-connection. The JSON `progress/+server.ts` endpoint stays for exactly that
-fallback.
+**Deploy progress is SSE** (`src/lib/server/deploy-progress-stream.ts`, served
+by `services/[serviceId]/deployments/[deploymentId]/events/+server.ts`),
+replacing the Overview tab's 1s `fetch` poll. The server-side loop still reads
+the `deployment` row on an interval, but only _pushes_ when the serialized
+snapshot actually changes, so a client sees a new line the moment it lands
+instead of up to a second later, over one connection instead of one request per
+second. Two details are load-bearing: the stream **waits for the deployment row
+to appear** (up to 60s) instead of 404ing, because the Overview tab starts
+listening before its own deploy POST has been handled and an `EventSource`
+treats an HTTP error as fatal and never reconnects; and the client's `onerror`
+**falls back to the old polling loop** (`pollProgress`, still there, still the
+resilient path) rather than leaving the panel stuck, for a buffering proxy or a
+dropped connection. The JSON `progress/+server.ts` endpoint stays for exactly
+that fallback.
 
-**Deploy phases** (`$lib/deploy-phases.ts`) give that panel structure instead of
-a raw log tail: `deployService` appends a marker line (`phaseLine(id)`, rendered
-`▸ Fetching image`) as it enters each of `config`/`volumes`/`image`/`container`/
-`network`/`ready`, and `deployPhaseStates(log, status)` derives per-phase
+**Deploy phases** (`src/lib/deploy-phases.ts`) give that panel structure instead
+of a raw log tail: `deployService` appends a marker line (`phaseLine(id)`,
+rendered `▸ Fetching image`) as it enters each of
+`config`/`volumes`/`image`/`container`/ `network`/`ready`, and
+`deployPhaseStates(log, status)` derives per-phase
 `done`/`active`/`failed`/`pending` from the last marker in the log plus the
 deployment's status. The markers are ordinary log lines, so the deployment
 history's raw-log panel keeps working untouched and nothing else in the pipeline
@@ -658,7 +657,7 @@ phase and logs its own `Readiness: ...` line (see "Readiness gate" in
 would be a lie. Longer-term health is watched _after_ the deploy finishes (see
 Revisions and rollback above) and shows on the Revisions tab.
 
-## Remote functions (`src/lib/remote/*.remote.ts`, `$lib/server/remote-auth.ts`)
+## Remote functions (`src/lib/remote/*.remote.ts`, `src/lib/server/remote-auth.ts`)
 
 SvelteKit's remote functions are enabled
 (`kit.experimental.remoteFunctions: true`, set inline in `vite.config.ts`, which
@@ -673,10 +672,12 @@ deliberately **not** enabled, nothing here needs `await` in a template.
 isn't `url.origin`, before any hook runs, and the adapter pins `url.origin` to
 `ORIGIN`. Real finding: an installer-set IP `ORIGIN` plus a dashboard domain
 added later made every command (the sidebar's Update button included) a bare 403
-while the CLI, on the REST API, worked. Since svelte-smol 1.6.1 the adapter's
-handler uses the `Origin` as the request base for a remote call whose `Origin`
-host equals the request's own `Host`, the same same-host rule
-`$lib/server/csrf.ts` applies to forms, so don't pin the adapter below that.
+while the CLI, on the REST API, worked. adapter-bun has no runtime `ORIGIN` of
+its own (kit 3 made it build-time `paths.origin`), so the repo patches it
+(`patches/@sveltejs%2Fadapter-bun@1.0.0.patch`, bun `patchedDependencies`) to
+read `ORIGIN` at runtime and to keep a remote call's own origin when its
+`Origin` header names the request's host, the same same-host rule
+`src/lib/server/csrf.ts` applies to forms (svelte-smol's old exemption).
 
 **What is and isn't allowed to move here.** Anything a page's own correctness
 depends on stays in `load` : the signed-in user, their role/`isAdmin`, their
@@ -687,9 +688,9 @@ a skeleton rather than a broken page. Concretely:
 - `system-stats.remote.ts`, `getSystemStats` : the dashboard's Host Resources
   panel, which used to be fetched in the dashboard's `load` (blocking the whole
   page on a `df` + `nvidia-smi` shell-out) _and_ re-fetched every 5s from
-  `/api/v1/system-stats`. `$lib/components/host-resources.svelte` owns the query
-  and the poll now. The REST route stays : it's in the OpenAPI document and is a
-  public API surface, unrelated to the dashboard's own rendering.
+  `/api/v1/system-stats`. `src/lib/components/host-resources.svelte` owns the
+  query and the poll now. The REST route stays : it's in the OpenAPI document
+  and is a public API surface, unrelated to the dashboard's own rendering.
 - `notifications.remote.ts`, `getNotifications` + the
   `markNotificationRead`/`markAllNotificationsRead`/`deleteNotification`
   commands : the bell's feed. It used to be fetched in
@@ -735,18 +736,18 @@ a skeleton rather than a broken page. Concretely:
 **Auth is not inherited.** A remote function is its own endpoint : the
 `(protected)` layout's `load` guard never runs for one, exactly like a
 `+server.ts` route. Every query/command starts with `requireUser()`
-(`$lib/server/remote-auth.ts`), which reads `getRequestEvent().locals.user` and
-`error(401)`s otherwise. `hooks.server.ts` populates `locals` for these requests
-the same as any other, so cookie sessions and API keys both work. Admin-only
-ones use `requireAdmin()` from the same module, which is `requireUser()` plus a
-`locals.isAdmin` check and a `error(403)` — `getCleanupPreview` and
-`getInfraStatus` back admin-only pages, so the guard has to be on the function,
-not only on the route that happens to call it.
+(`src/lib/server/remote-auth.ts`), which reads `getRequestEvent().locals.user`
+and `error(401)`s otherwise. `hooks.server.ts` populates `locals` for these
+requests the same as any other, so cookie sessions and API keys both work.
+Admin-only ones use `requireAdmin()` from the same module, which is
+`requireUser()` plus a `locals.isAdmin` check and a `error(403)` —
+`getCleanupPreview` and `getInfraStatus` back admin-only pages, so the guard has
+to be on the function, not only on the route that happens to call it.
 
 **Arguments are validated, not cast.** A query/command taking an argument passes
 a zod schema as its first parameter (`query(z.string(), ...)`), the same "one
 schema, real runtime validation" posture as the REST API's own
-`$lib/server/validation/api.ts`. Don't reach for `"unchecked"`.
+`src/lib/server/validation/api.ts`. Don't reach for `"unchecked"`.
 
 **Two consumption patterns, and the difference matters.** A `RemoteQuery` is a
 promise, but it's a _stable_ object : `{#await someQuery}` renders once and will
@@ -756,9 +757,9 @@ changes identity. So:
 - A query that refreshes in place (a poll, a command's single-flight update) is
   read through its reactive accessors, `query.ready`/`query.current`/
   `query.error`, with the pending branch rendering
-  `$lib/components/skeleton.svelte`. `host-resources.svelte`,
+  `src/lib/components/skeleton.svelte`. `host-resources.svelte`,
   `job-queue-panel.svelte` and `notification-bell.svelte` are the reference
-  shapes. **`$lib/components/async-block.svelte` is that whole triple as one
+  shapes. **`src/lib/components/async-block.svelte` is that whole triple as one
   component** — `<AsyncBlock {query}>` with a `pending` snippet and a
   `children(value)` snippet, rendering an `Alert` with a working **Retry**
   (`query.refresh()`) on failure. Prefer it to hand-rolling the three branches
@@ -779,7 +780,7 @@ spinner/skeleton and reports failure inline, it doesn't narrate itself through a
 toast. Mutations that a user deliberately submits still belong in a form action
 with `enhanceToast`, not a command.
 
-## Template links (`template_link` table, `TemplateLinkDTO`, `$lib/services/template-links.ts`)
+## Template links (`template_link` table, `TemplateLinkDTO`, `src/lib/services/template-links.ts`)
 
 A template can link to other templates so deploying it deploys its companions
 too, e.g. a WordPress-shaped template linking to a "MySQL" template, or a worker
@@ -798,7 +799,7 @@ An env var on the _primary_ template can reference a linked template via
 hostname on the shared network regardless of stack, same `http://<slug>:<port>`
 addressing every service already gets) or `{{alias.ENV_KEY}}` (resolves to that
 linked service's own resolved value for that env var, e.g.
-`{{db.POSTGRES_PASSWORD}}`). Resolution (`$lib/services/template-links.ts`'s
+`{{db.POSTGRES_PASSWORD}}`). Resolution (`src/lib/services/template-links.ts`'s
 `resolveLinkTokens`) leaves an unknown token untouched rather than stripping it,
 so a typo'd alias fails loud (visible literally in the deployed env var) instead
 of silently producing an empty value. Linked templates' own env vars are used
@@ -810,10 +811,10 @@ actions, via `buildTemplateLinkContext`/`createLinkedServices`) : if the service
 being created has no stack yet, one is auto-created (named after it) so the
 whole stack shows up grouped ; each linked service gets a deterministic slug
 (`<primary-slug>-<alias>`, de-duplicated against existing services via
-`$lib/slug.ts`'s `uniqueSlug`/`suffixedSlug`, the one retry-loop shared by every
-slug-generating caller: compose import, migration import, and stack creation
-here, replacing four near-identical private implementations) and deploys from
-its own template's image/tag/port/envVars/resources, created
+`src/lib/slug.ts`'s `uniqueSlug`/`suffixedSlug`, the one retry-loop shared by
+every slug-generating caller: compose import, migration import, and stack
+creation here, replacing four near-identical private implementations) and
+deploys from its own template's image/tag/port/envVars/resources, created
 `dnsResolvable: false` by default (a database/cache/worker doesn't usually want
 a public subdomain). `createAndDeploy` deploys every linked service before the
 primary, same "bring up dependencies before dependents" ordering
@@ -824,14 +825,15 @@ a linked service to be _healthy_, just created and started.
 
 `template` carries the same runtime columns as `service` (`capAdd`, `command`,
 `devices`, `entrypoint`, `envFiles`, `labels`, `privileged`, `runAsUser`), typed
-through `ServiceRuntimeOptions` (`$lib/service-runtime.ts`): `NewTemplateInput`
-and `BuiltinTemplate` both extend `Partial<ServiceRuntimeOptions>`, and
+through `ServiceRuntimeOptions` (`src/lib/service-runtime.ts`):
+`NewTemplateInput` and `BuiltinTemplate` both extend
+`Partial<ServiceRuntimeOptions>`, and
 `TemplateDTO.create`/`seedBuiltinTemplates` normalize through
 `runtimeOptionsFrom`. `TemplateDTO.runtimeOptions` and
 `TemplateLinkWithTemplate.linkedTemplateRuntime` are what the deploy paths read.
 Captured by `saveAsTemplate` (the service Settings tab), `templates/new` (a
-**Runtime** section rendering `$lib/components/runtime-fields.svelte`, the same
-component the service Runtime tab uses, with `showEnvFiles`; parsed with
+**Runtime** section rendering `src/lib/components/runtime-fields.svelte`, the
+same component the service Runtime tab uses, with `showEnvFiles`; parsed with
 `updateRuntimeSchema` + `updateEnvFilesSchema`) and returned by
 `GET /api/v1/templates`. There is no template edit, export or import to carry
 them through.
@@ -845,9 +847,9 @@ and only shows them as a `runtimeOptionsSummary` line in its template banner.
 **Host access stays admin-only.** A non-admin can't set privileged, devices,
 capAdd or envFiles on `templates/new` (403, `hostAccessRequested`), and
 `templateHostAccessRefusal(template, links, isAdmin)`
-(`$lib/services/template-links.ts`, built on `templatesNeedingHostAccess` +
-`templateHostAccessMessage` in `$lib/host-access.ts`) refuses a non-admin deploy
-when the primary **or any linked companion** needs it. It runs after
+(`src/lib/services/template-links.ts`, built on `templatesNeedingHostAccess` +
+`templateHostAccessMessage` in `src/lib/host-access.ts`) refuses a non-admin
+deploy when the primary **or any linked companion** needs it. It runs after
 `buildTemplateLinkContext` but before a stack or any service is created, so a
 refusal leaves nothing behind: `quickDeployFromTemplate` returns a 403,
 `services/new`'s `prepareLinkedStack` returns a 403 `fail`. The details page and
@@ -866,16 +868,16 @@ services' `templateId`). Links are declared inline
 (`"links": [{ "alias": "db", "template": "postgres" }]`), their ids are
 `builtin-link-<slug>-<alias>`, and the target must be a leaf.
 
-Generated secrets (`$lib/template-secrets.ts`): `{{secret}}` is one 48-hex value
-per created service, shared by every env var and command arg that uses it (the
-wizard's submitted value wins, so the command matches an edited password).
+Generated secrets (`src/lib/template-secrets.ts`): `{{secret}}` is one 48-hex
+value per created service, shared by every env var and command arg that uses it
+(the wizard's submitted value wins, so the command matches an edited password).
 `{{secret:hex<N>}}` is for apps that validate a key's format (AIOStreams refuses
 to boot without a 64-hex `SECRET_KEY`): each occurrence is its own fresh N hex
 chars, and both mark their env var secret. `parseBuiltinTemplates` rejects any
 other `{{secret…}}` spelling, so a typo fails the unit test instead of shipping
 a literal token.
 
-`{{url}}` (`$lib/template-url.ts`) is the service's public URL,
+`{{url}}` (`src/lib/template-url.ts`) is the service's public URL,
 `https://<defaultHostname>`, filled by `createServiceFromTemplate` (Quick
 Deploy) and by the wizard's create action (which prefers the custom domain it
 was given); the wizard's form shows the raw token. A built-in template's
@@ -923,7 +925,7 @@ the existing name/description/image `searchCondition` —
 `array_to_string(tags, ' ') ILIKE '%q%'` rather than a column list, since
 `searchCondition` only takes text columns and this one is an array. The Tags
 field on `templates/new` is comma-separated text run through `parseTags`
-(`$lib/server/validation/template.ts`: trimmed, lowercased, de-duplicated, 12
+(`src/lib/server/validation/template.ts`: trimmed, lowercased, de-duplicated, 12
 tags of 30 chars max, so one paste can't fill the column), and every built-in
 carries its own set, checked by a test that fails on an untagged one.
 
@@ -935,8 +937,8 @@ external-link buttons on the template details page (below); either can be `null`
 
 **Icons are real app logos, not generic per-category lucide icons.** A
 template's or service's `icon` column holds one of four shapes, all parsed by
-`$lib/service-icon.ts` (`hasIconImage`/`iconSrc`/`iconProblem`): `di:<slug>` for
-a [Dashboard Icons](https://dashboardicons.com) logo
+`src/lib/service-icon.ts` (`hasIconImage`/`iconSrc`/`iconProblem`): `di:<slug>`
+for a [Dashboard Icons](https://dashboardicons.com) logo
 (`homarr-labs/dashboard-icons`, Apache 2.0, slug `^[a-z0-9][a-z0-9-]*$`), a
 bundled file name under `static/template-icons/` (`"redis.svg"`), an uploaded
 `data:image/...;base64` URL, or `null`/a legacy category string (anything else)
@@ -957,33 +959,33 @@ stored icon is no longer in the library isn't refused.
 
 **No browser ever calls jsDelivr.** `/icons/dashboard/[name]` (public, outside
 `(protected)`, since status pages and `/my-apps` render icons too) serves the
-icon from `DashboardIconsService` (`$lib/services/dashboard-icons.service.ts`):
-the catalog (`metadata.json`, ~1.1 MB, trimmed to name/aliases/lowercased
-categories/format/colour variants) is kept in memory and at
-`<STORAGE_BASE_PATH>/dashboard-icons/catalog.json`, refreshed after 24h
-stale-while-revalidate, so it works offline from the disk copy. Icons are
-fetched once in the catalog's `base` format (svg or png, never webp) and written
-to `dashboard-icons/icons/<name>.<ext>`; an entry with `colors` whose plain file
-is missing upstream (e.g. `dagster`, only `-dark`/`-light` exist) falls back to
-its dark then light variant. `?theme=dark|light` picks the variant for the
-viewer's theme (`themedIconFile`): upstream's naming is `<name>-light` for dark
-backgrounds and `<name>-dark` for light ones (checked against the real `colors`
-map, only `apple` breaks it), so that suffix is looked up in the entry's
-`variants` rather than trusting the `colors` keys, and the old on-disk catalog
-keeps working. Each variant is cached under its own file name and falls back to
-the base. `template-icon.svelte` and the picker pass mode-watcher's
-`mode.current`, so the `src` swaps live on a theme change; SSR renders the base
-until hydration. Unknown names 404 without a CDN call, a name upstream doesn't
-have is negative-cached in memory for 10 minutes, bodies over 2 MB are refused.
-**`tree.json` is stale and useless for existence checks** (it misses ~970 names
-that do exist, e.g. `8311`), which is why nothing reads it. Every response
-carries
+icon from `DashboardIconsService`
+(`src/lib/services/dashboard-icons.service.ts`): the catalog (`metadata.json`,
+~1.1 MB, trimmed to name/aliases/lowercased categories/format/colour variants)
+is kept in memory and at `<STORAGE_BASE_PATH>/dashboard-icons/catalog.json`,
+refreshed after 24h stale-while-revalidate, so it works offline from the disk
+copy. Icons are fetched once in the catalog's `base` format (svg or png, never
+webp) and written to `dashboard-icons/icons/<name>.<ext>`; an entry with
+`colors` whose plain file is missing upstream (e.g. `dagster`, only
+`-dark`/`-light` exist) falls back to its dark then light variant.
+`?theme=dark|light` picks the variant for the viewer's theme (`themedIconFile`):
+upstream's naming is `<name>-light` for dark backgrounds and `<name>-dark` for
+light ones (checked against the real `colors` map, only `apple` breaks it), so
+that suffix is looked up in the entry's `variants` rather than trusting the
+`colors` keys, and the old on-disk catalog keeps working. Each variant is cached
+under its own file name and falls back to the base. `template-icon.svelte` and
+the picker pass mode-watcher's `mode.current`, so the `src` swaps live on a
+theme change; SSR renders the base until hydration. Unknown names 404 without a
+CDN call, a name upstream doesn't have is negative-cached in memory for 10
+minutes, bodies over 2 MB are refused. **`tree.json` is stale and useless for
+existence checks** (it misses ~970 names that do exist, e.g. `8311`), which is
+why nothing reads it. Every response carries
 `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`
 and `nosniff`, so opening an SVG directly can't run script on Homerun's origin.
 `config.dataDir` is `STORAGE_BASE_PATH` (`/app/data` in the image, the data
 volume; `./data` in dev, gitignored).
 
-`$lib/components/template-icon.svelte` is the one place that renders an icon
+`src/lib/components/template-icon.svelte` is the one place that renders an icon
 anywhere in the app, and it falls back to the category icon on the `<img>`'s
 `onerror`, so an unreachable CDN or a bogus `di:` name never shows a broken
 image. The picker is `dashboard-icon-picker.svelte` inside the service Settings'
@@ -991,7 +993,7 @@ Type & icon section, fed by the `getDashboardIcons` remote query: search over
 name and aliases, a category select, 48 results at a time with "Show more", lazy
 `<img>`s through the proxy. Otherwise:
 `templateCategoryIcon(category)`/`templateCategoryColor(category)`
-(`$lib/constants.ts`, `TEMPLATE_CATEGORY_ICONS`/`TEMPLATE_CATEGORY_COLORS`,
+(`src/lib/constants.ts`, `TEMPLATE_CATEGORY_ICONS`/`TEMPLATE_CATEGORY_COLORS`,
 keyed by the `category` column) — one lucide icon and one accent color per
 category (e.g. media is rose, database is emerald, monitoring is cyan), not a
 flat single fallback color, so an app without an official logo is still visually
@@ -1004,7 +1006,7 @@ category filter (pills built from whatever categories are actually present
 rather than a hardcoded list, `TemplateDTO.listCategories`), plus a list/card
 `ViewModeToggle` (`new ViewMode("templates", "card")`, card is the default here,
 unlike every other list page). This replaced the page's own earlier bespoke
-search-input-plus-`Drawer` implementation (`$lib/components/ui/drawer`,
+search-input-plus-`Drawer` implementation (`src/lib/components/ui/drawer`,
 vaul-svelte's `direction` prop), now generalized into `entity-toolbar.svelte`
 and shared with every other list page instead of being templates-only. The
 built-in and custom sections paginate **independently**, 24 per page each,
@@ -1018,8 +1020,8 @@ full description, container port/CPU/memory/env vars, the source/website links,
 any linked companion templates (below), and the GitHub repo panel/readme
 (below). Every card and the details page carry two actions instead of one:
 **Quick Deploy** (primary) calls a `quickDeploy` form action
-(`$lib/services/template-links.ts`'s `quickDeployFromTemplate()`, shared by both
-routes) that creates the service straight from the template's defaults
+(`src/lib/services/template-links.ts`'s `quickDeployFromTemplate()`, shared by
+both routes) that creates the service straight from the template's defaults
 (name/slug auto-generated via `slugify`) and deploys it immediately, no wizard;
 **Configure** (secondary) is the old single "Deploy" button, renamed since it
 only navigates into `services/new` (carrying `templateId`, and `stackId` when
@@ -1030,7 +1032,7 @@ the user out of the grid mid-browse, letting several templates get
 quick-deployed back to back; the details page's own action still `redirect()`s
 straight to the new service, no grid to lose there.
 
-**GitHub repo enrichment** (`$lib/services/github-repo.service.ts`): when a
+**GitHub repo enrichment** (`src/lib/services/github-repo.service.ts`): when a
 template's `sourceUrl` is a `github.com` URL, the details page's `load` calls
 `getGitHubRepoInfo()`, which resolves owner/repo from the URL and hits
 `api.github.com`'s repo/releases/readme endpoints (unauthenticated, so the usual
@@ -1155,8 +1157,8 @@ Three things about this shape are load-bearing:
   (`tests/unit/app/git-build.test.ts`) are gone along with
   `docker/git-build.ts`.
 
-**Build methods** (`service.gitBuildMethod`, `$lib/build-methods.ts` on the form
-side): `dockerfile` (default), `bake`, `nixpacks`, `railpack`, `heroku` and
+**Build methods** (`service.gitBuildMethod`, `src/lib/build-methods.ts` on the
+form side): `dockerfile` (default), `bake`, `nixpacks`, `railpack`, `heroku` and
 `paketo` all go through `Builder.runBuilder`, which runs
 `internal/agent/builder.sh` (`//go:embed`-ed by `internal/agent/builders.go`) in
 a throwaway `docker:29.8.1-cli` container (pinned, ships buildx 0.37) on the
@@ -1236,9 +1238,9 @@ methods/versions/checksums/images/bake-defaults) are `//go:embed`-ed by
 TS constants purely so the two sides could be pinned against each other, was
 deleted along with the rest of `docker/git-build.ts`'s TS pipeline. What's left
 of that parity check is narrower: `tests/unit/app/agent-builder-parity.test.ts`
-now only asserts `$lib/build-methods`'s form-facing constants (`BUILD_METHODS`,
-`BAKE_TARGET_PATTERN`, the bake defaults) equal what's checked into
-`builder-tools.json`, so the new-service form and Source tab never offer a
+now only asserts `src/lib/build-methods`'s form-facing constants
+(`BUILD_METHODS`, `BAKE_TARGET_PATTERN`, the bake defaults) equal what's checked
+into `builder-tools.json`, so the new-service form and Source tab never offer a
 method or bake default the builder itself would reject — golden-fixture
 `BuilderEnv`/build-failure-message parity across every recorded input is now
 `tests/unit/go/internal/agent/builders_test.go`'s job alone (`go test`, against
@@ -1284,7 +1286,7 @@ service deploys to (any registered Remote Host, see Build servers below);
 configured too, since publishing through that registry is the only way the built
 image reaches the deploy target.
 
-## Git provider connections (`instance_settings.gitProviders`, `git_connection` table, `$lib/services/git-provider.service.ts`, `/git-providers`)
+## Git provider connections (`instance_settings.gitProviders`, `git_connection` table, `src/lib/services/git-provider.service.ts`, `/git-providers`)
 
 Separate from the git-clone-based builds above, this is what makes the Source
 tab's "Browse repos" picker possible instead of pasting a raw URL. Two layers,
@@ -1299,7 +1301,7 @@ access/refresh token), every developer connects their own account from the same
 page, admin-configuring-the-app is a one-time step separate from each user's own
 connect.
 
-`GitProviderService` (`$lib/services/git-provider.service.ts`) implements one
+`GitProviderService` (`src/lib/services/git-provider.service.ts`) implements one
 standard OAuth2 authorization-code flow, parameterized per provider kind
 (`endpoints()`, authorize/token/API base URLs and scope differ; Bitbucket
 authenticates its token exchange via HTTP Basic instead of body params,
@@ -1310,16 +1312,16 @@ value itself. The OAuth round-trip lives under
 `/api/v1/git-providers/[providerId]/{connect,callback}` (outside `(protected)/`
 for the same reason the REST API is, a provider's own redirect can't carry
 cookies through a page-load auth guard the same way). The Source tab's repo
-picker (`$lib/components/git-repo-picker.svelte`) lists the connected account's
-repos and checks for a `Dockerfile` at a given ref through
-`$lib/remote/git-repos.remote.ts`, not a `+server.ts` route, see Remote
+picker (`src/lib/components/git-repo-picker.svelte`) lists the connected
+account's repos and checks for a `Dockerfile` at a given ref through
+`src/lib/remote/git-repos.remote.ts`, not a `+server.ts` route, see Remote
 functions below; both go through `GitProviderService.listRepos`/`hasDockerfile`,
 which branch per-kind the same way `endpoints()` does.
 
 **GitHub is registered as a GitHub App through the manifest flow, never by
-pasting credentials** (`$lib/github-app.ts`). The `createGithubApp` action picks
-the provider id up front and returns `githubAppRegistration(...)`: a form target
-on `github.com/settings/apps/new` (or an organization's) carrying a
+pasting credentials** (`src/lib/github-app.ts`). The `createGithubApp` action
+picks the provider id up front and returns `githubAppRegistration(...)`: a form
+target on `github.com/settings/apps/new` (or an organization's) carrying a
 `createState(providerId, userId)` state, and the manifest JSON, with
 `redirect_url` = `/api/v1/git-providers/<id>/github-app` and `callback_urls` =
 that provider's usual `/callback`. The page then posts that form to GitHub
@@ -1358,11 +1360,11 @@ real callback URL, which nothing server-side can do standalone. Built carefully
 from each provider's own standard, well-documented OAuth2 + REST API shapes;
 verify the first real connect by hand once an OAuth App exists.
 
-## Push-to-deploy (`service.autoDeployOnPush` + `git*` webhook columns, `$lib/git-webhooks.ts`, `GitWebhookService`, `/api/v1/webhooks/git/[serviceId]`)
+## Push-to-deploy (`service.autoDeployOnPush` + `git*` webhook columns, `src/lib/git-webhooks.ts`, `GitWebhookService`, `/api/v1/webhooks/git/[serviceId]`)
 
 A git service picked from a connected account stores `gitProviderId` + `gitRepo`
 (the provider's `owner/name`, or a GitLab group path) next to `gitUrl`;
-`GitSourceFields` (`$lib/components/git-source-fields.svelte`, used by the
+`GitSourceFields` (`src/lib/components/git-source-fields.svelte`, used by the
 wizard and the Source tab) submits them as hidden fields, with the clone URL
 only shown behind "Use a clone URL instead" and a branch `<select>` fed by
 `listRepoBranches`. Picking a repo turns `autoDeployOnPush` on.
@@ -1393,7 +1395,7 @@ already queued deploy like any other. Responses are 202 for both deployed and
 ignored. The path is exempt from `csrfHandler`, since some providers post form
 bodies.
 
-`DeployTrigger` (`$lib/deploy-trigger.ts`) is now the one definition of
+`DeployTrigger` (`src/lib/deploy-trigger.ts`) is now the one definition of
 `manual | cron | push`, used by the queue payload, `deployService`, both
 notification modules and `deployEvent`; "Git push" is the channel label.
 
@@ -1414,7 +1416,7 @@ two minutes over `ServiceGitDTO.listPushPollable()`: git services with
 deploy-on-push, not previews, with `gitPollEnabled` or no `gitWebhookId`. It
 reads the branch head with `StatusCheckService.clientFor(...).resolveCommit` (so
 the same provider/credential resolution as status checks, and the same "only a
-known provider API" limit), and `pollOutcome` (`$lib/git-ref.ts`) decides: no
+known provider API" limit), and `pollOutcome` (`src/lib/git-ref.ts`) decides: no
 `gitLastSeenCommit` yet records a baseline without deploying, a different head
 enqueues a `push` deploy. A verified push delivery also writes
 `gitLastSeenCommit`, which is what stops a poll right after a webhook deploy
@@ -1448,7 +1450,7 @@ and re-created with PR events (`createWebhookRequest`'s `pullRequests`: GitHub
 and Gitea `pull_request`, GitLab `merge_requests_events`, Bitbucket
 `pullrequest:*`).
 
-`handleDelivery` tries `parsePullRequestEvent` first (`$lib/git-webhooks.ts`,
+`handleDelivery` tries `parsePullRequestEvent` first (`src/lib/git-webhooks.ts`,
 unit-tested per provider): GitHub/Gitea `opened|reopened|synchronize(d)|closed`,
 GitLab `open|reopen|update|close|merge`, Bitbucket
 `created|updated|fulfilled| rejected`. `PreviewService.handle` creates the row
@@ -1471,7 +1473,7 @@ shown only for a git service that isn't a preview itself), which owns the
 `previewsEnabled` toggle (and its `GitWebhookService.sync`/`removeAll`); the
 Source tab only forces it off when the service stops building from git.
 `previewDomainTemplate` (`{pr}`, `{branch}` via `branchLabel`, `{slug}`,
-rendered by `renderPreviewDomain` in `$lib/service-domains.ts`, validated by
+rendered by `renderPreviewDomain` in `src/lib/service-domains.ts`, validated by
 `previewDomainTemplateProblem`) and `previewDefaultDomain` pick a new preview's
 `domains`/`defaultDomainEnabled`/`primaryDomain` in `#create`; a templated
 domain another service already routes is skipped and the default hostname forced
@@ -1485,15 +1487,15 @@ search; the services list attaches each page's previews via
 `ServiceGitDTO.listPreviewsOf`, and the stack page and the services dependency
 tree keep previews out of `graph.services`/`tree.services` and ship them as
 `previews` (`toPreviewRow`, grouped by `previewsByParent` in
-`$lib/service-graph.ts`), drawn by `preview-rows.svelte` under the parent's row
-(EntityList `details`) or tree node (`ServiceTree`'s `previews` prop). Icon and
-category are mirrored from the parent. The finders live in `ServiceGitDTO`
-(`$lib/dto/service-git-dto.ts`), which extends `ServiceDTO` only to reach its
+`src/lib/service-graph.ts`), drawn by `preview-rows.svelte` under the parent's
+row (EntityList `details`) or tree node (`ServiceTree`'s `previews` prop). Icon
+and category are mirrored from the parent. The finders live in `ServiceGitDTO`
+(`src/lib/dto/service-git-dto.ts`), which extends `ServiceDTO` only to reach its
 protected constructor, to keep `service-dto.ts` under the file length limit.
 **Not verified against real providers**, same caveat as push-to-deploy.
 
 The branch filter is `previewBranchInclude`/`previewBranchExclude` (jsonb glob
-lists, `$lib/preview-branches.ts`'s `previewBranchAllowed`, reusing
+lists, `src/lib/preview-branches.ts`'s `previewBranchAllowed`, reusing
 `matchesTagPattern`): exclusions win, an empty include list lets everything
 through, and an event with no branch only passes when both lists are empty.
 `handle` checks it after the fork check and the close branch, and a filtered
@@ -1518,7 +1520,7 @@ retries. Existing previews never get copies.
 volumes (`#removePreviewVolumes`, best effort) before the row goes.
 `tests/integration/volume-seed.test.ts` covers the seed end to end.
 
-## Release channels (`service.channels*` columns, `channelCanary`, `ReleaseChannelService`, `$lib/release-channels.ts`)
+## Release channels (`service.channels*` columns, `channelCanary`, `ReleaseChannelService`, `src/lib/release-channels.ts`)
 
 Opt-in per git service (`channelsEnabled`, off by default): the service itself
 is **stable**, deployed from pushed tags matching `channelTagPattern` (glob,
@@ -1593,21 +1595,21 @@ migration backfills `preview` for existing preview rows. Shown by
 
 Admin-only tab under `/settings`: `settings/migrate/+page.svelte` picks the
 source, `settings/migrate/dokploy/` and `settings/migrate/coolify/` are one
-route each, both rendering `$lib/components/migrate-panel.svelte` with actions
-from `migrationActions(source)` (`$lib/server/migrate-actions.ts`). One form
-carries URL + token; `?/preview` reads and returns a secret-free
+route each, both rendering `src/lib/components/migrate-panel.svelte` with
+actions from `migrationActions(source)` (`src/lib/server/migrate-actions.ts`).
+One form carries URL + token; `?/preview` reads and returns a secret-free
 `MigrationPreview`, the "Import" button posts the same form to `?/import`
 (`formaction`) with the ticked ids as repeated `ids` fields. **The import
 re-reads the source for just those ids** rather than trusting a plan JSON sent
 back from the browser, so env values and passwords never reach the client and
 the token is never stored.
 
-Layering: `$lib/migrate/common.ts` (types, `MigrationHttpClient`, env/compose
-helpers, `previewEntries`), `$lib/migrate/dokploy.ts` and
-`$lib/migrate/coolify.ts` (pure raw-JSON → `MigrationEntry` mappers, no DB),
+Layering: `src/lib/migrate/common.ts` (types, `MigrationHttpClient`, env/compose
+helpers, `previewEntries`), `src/lib/migrate/dokploy.ts` and
+`src/lib/migrate/coolify.ts` (pure raw-JSON → `MigrationEntry` mappers, no DB),
 `DokployService`/`CoolifyService` (the HTTP walk) and `MigrationService`
-(`$lib/services/migration.service.ts`, preview slug check + import). Every entry
-is expressed as `ComposeServiceDraft[]` and imported through
+(`src/lib/services/migration.service.ts`, preview slug check + import). Every
+entry is expressed as `ComposeServiceDraft[]` and imported through
 `ComposeImportService.importPlan`, one call per entry, into a stack matched or
 created by the source project's name, so volumes, slug uniqueness and
 notifications are the compose importer's, not a second copy.
@@ -1653,7 +1655,7 @@ notifications are the compose importer's, not a second copy.
   auto-created data volume. The Redis password is applied by Dokploy through the
   start command, so it's reproduced as entrypoint `/bin/sh`, command
   `-c "exec redis-server --requirepass '<pw>'"`.
-- Runtime carry-over lives in `$lib/migrate/dokploy-runtime.ts`: `username`/
+- Runtime carry-over lives in `src/lib/migrate/dokploy-runtime.ts`: `username`/
   `password`/`registryUrl` → draft `registry`; `command` (string) → `/bin/sh -c`
   and `args[]` replacing the arguments (`dokployStartCommand`, mirroring how
   Dokploy sets `Command`/`Args` on its swarm service, from memory of Dokploy's
@@ -1680,7 +1682,7 @@ map `database_type` + `postgres_*`/`mysql_*`/`mariadb_*`/`mongo_initdb_*`
 fields. The parsing accepts a bare array or a `data` wrapper. Persistent storage
 is tried from `/api/v1/{applications,databases}/{uuid}/storages`, falling back
 to `persistent_storages`/`file_storages` on the row itself (`coolifyStorages` in
-`$lib/migrate/coolify-runtime.ts`: `LocalPersistentVolume` → named volume or
+`src/lib/migrate/coolify-runtime.ts`: `LocalPersistentVolume` → named volume or
 `host_path` bind, `LocalFileVolume` → file draft or directory bind), and warns
 when neither says anything. `custom_docker_run_options` is parsed by
 `parseDockerRunOptions` (`--cap-add`, `--device`, `--privileged`, `--label`/

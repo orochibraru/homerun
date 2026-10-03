@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { Check, LockKeyhole } from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 	import {
 		EMAIL_OTP_METHOD,
 		type EmailSignIn,
 		MAGIC_LINK_METHOD,
-	} from "$lib/auth-providers";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
-	import { roleLabel } from "$lib/permissions";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/auth-providers.js";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { roleLabel } from "#lib/permissions.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	interface Props {
 		action?: string;
@@ -85,7 +85,7 @@
 </script>
 
 <section class="panel rounded-md">
-  <PanelHeader icon={LockKeyhole} {title}>
+  <PanelHeader icon={LockKeyhole} title={title}>
     {#snippet description()}
       {#if subject === "previews"}
         {#if svc.authRequired}
@@ -118,7 +118,7 @@
     </p>
   {:else}
     <form
-      {action}
+      action={action}
       class="space-y-4 p-5"
       method="POST"
       use:enhance={enhanceToast({
@@ -199,15 +199,18 @@
             {#if oauthProviders.length === 0}
               <p class="text-text-subtle text-xs">
                 No OAuth provider is enabled yet. Add one on the
-                <a class="text-accent" href={resolve("/authentication/providers")}>
-                  Authentication
-                </a>
+
+                <a
+                  class="text-accent"
+                  href={resolve('authentication/providers')}
+                >Authentication</a>
+
                 page to offer it here.
               </p>
             {/if}
           </div>
           {#each methods as method (method)}
-            <input name="authProvider" type="hidden" value={method}>
+            <input name="authProvider" type="hidden" value={method} />
           {/each}
         </div>
 
@@ -236,7 +239,11 @@
                 {/each}
               </div>
               {#each allowedUserIds as userId (userId)}
-                <input name="authAllowedUserId" type="hidden" value={userId}>
+                <input
+                  name="authAllowedUserId"
+                  type="hidden"
+                  value={userId}
+                />
               {/each}
             </div>
 

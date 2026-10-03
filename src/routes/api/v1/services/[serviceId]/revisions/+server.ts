@@ -1,17 +1,16 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { RevisionService } from "$lib/services/revision.service";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { RevisionService } from "#lib/services/revision.service.js";
 
 export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	const revisions = await RevisionService.list(svc);
-	return json(
+	return Response.json(
 		revisions.map((revision) => ({
 			buildSource: revision.buildSource,
 			createdAt: revision.createdAt,

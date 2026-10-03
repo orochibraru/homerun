@@ -1,8 +1,8 @@
-import type { BuildMethod } from "$lib/build-methods";
-import type { PublishedPort } from "$lib/published-ports";
-import type { Service } from "$lib/server/db/schema";
-import type { runtimeOptionsFrom } from "$lib/service-runtime";
-import type { PullPolicy } from "$lib/types";
+import type { BuildMethod } from "#lib/build-methods.js";
+import type { PublishedPort } from "#lib/published-ports.js";
+import type { Service } from "#lib/server/db/schema.js";
+import type { runtimeOptionsFrom } from "#lib/service-runtime.js";
+import type { PullPolicy } from "#lib/types.js";
 
 /** Fields a caller supplies to insert a new service row. */
 export interface NewServiceInput {

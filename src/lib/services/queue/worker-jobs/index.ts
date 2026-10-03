@@ -1,4 +1,4 @@
-import type { JobType } from "$lib/types";
+import type { JobType } from "#lib/types.js";
 import { backupWorkerJob } from "./backup.ts";
 import { backupRestoreWorkerJob } from "./backup_restore.ts";
 import { cronJobWorkerJob } from "./cron_job.ts";

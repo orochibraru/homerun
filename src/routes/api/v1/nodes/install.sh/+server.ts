@@ -1,6 +1,6 @@
-import { config } from "$lib/config";
-import { APP_VERSION } from "$lib/server/app-version";
-import { nodeInstallScript } from "$lib/server/node-install-script";
+import { config } from "#lib/config.js";
+import { APP_VERSION } from "#lib/server/app-version.js";
+import { nodeInstallScript } from "#lib/server/node-install-script.js";
 
 export const GET = ({ url }) =>
 	new Response(

@@ -9,12 +9,12 @@
 		Send,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
 	import { resolve } from "$app/paths";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList from "$lib/components/entity-list.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { ViewMode } from "$lib/view-mode.svelte";
 
 	const { data } = $props();
 
@@ -48,14 +48,13 @@
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <Button href={resolve("/notification-channels")} size="sm" variant="outline">
-        <Send class="size-4" />
-        Notification channels
-      </Button>
-      <Button href={resolve("/status-pages/new")} size="sm">
-        <Plus class="size-4" />
-        New status page
-      </Button>
+      <Button
+        href={resolve('notification-channels')}
+        size="sm"
+        variant="outline"
+      ><Send class="size-4" />Notification channels</Button>
+
+      <Button href={resolve('status-pages/new')} size="sm"><Plus class="size-4" />New status page</Button>
     </div>
   </div>
 
@@ -102,7 +101,7 @@
         {#each data.services as svc (svc.id)}
           <a
             class="hover:bg-surface-2 flex items-center gap-3 px-5 py-2.5 transition-colors"
-            href="{resolve('/services')}/{svc.id}"
+            href="{resolve('services')}/{svc.id}"
           >
             {#if svc.health === "up"}
               <CircleCheck class="size-4 shrink-0 text-emerald-500" />
@@ -127,12 +126,7 @@
       icon={Globe}
       subtitle="A status page groups services and gives them one public URL."
       title="No status pages yet"
-    >
-      <Button href={resolve("/status-pages/new")}>
-        <Plus class="size-4" />
-        New status page
-      </Button>
-    </EmptyState>
+    ><Button href={resolve('status-pages/new')}><Plus class="size-4" />New status page</Button></EmptyState>
   {:else}
     {#snippet media(_item: { id: string })}
       <span class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
@@ -165,17 +159,17 @@
     {/snippet}
 
     <EntityList
-      {badge}
+      badge={badge}
       items={data.pages.map((page) => ({
         description: page.description,
-        href: `${resolve("/status-pages")}/${page.id}`,
+        href: `${resolve('status-pages')}/${page.id}`,
         id: page.id,
         subtitle: SCOPE_LABEL[page.scope],
         title: page.name,
       }))}
-      {media}
-      {meta}
-      {view}
+      media={media}
+      meta={meta}
+      view={view}
     />
   {/if}
 </div>

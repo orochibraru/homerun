@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { ArrowRight, Server, Unlink } from "@lucide/svelte";
-	import { resolve } from "$app/paths";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import UnlinkDialog, {
 		type UnlinkTarget,
-	} from "$lib/components/unlink-dialog.svelte";
+	} from "#lib/components/unlink-dialog.svelte";
+	import { resolve } from "$app/paths";
 
 	interface Node {
 		id: string;
@@ -43,7 +43,7 @@
     >
         <a
             class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2"
-            href="{resolve('/services')}/{item.id}"
+            href="{resolve('services')}/{item.id}"
             title={item.keys.length > 0
                 ? `Through ${item.keys.join(", ")}`
                 : "Dependency only, no env vars"}

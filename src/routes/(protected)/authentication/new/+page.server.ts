@@ -1,16 +1,16 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseOauthProviderForm } from "#lib/server/oauth-provider-form.js";
+import { applyAndRebuild } from "#lib/server/validation/instance-settings-form.js";
 import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { Logger } from "$lib/logger";
-import { parseOauthProviderForm } from "$lib/server/oauth-provider-form";
-import { applyAndRebuild } from "$lib/server/validation/instance-settings-form";
 
 const logger = new Logger("InstanceSettings");
 
 export const load = ({ locals }) => {
 	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 	return { callbackBase: config.auth.origin ?? null };
 };
@@ -18,10 +18,10 @@ export const load = ({ locals }) => {
 export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -40,9 +40,10 @@ export const actions = {
 		logger.info(
 			`OAuth provider added: name=${parsed.input.name} user=${locals.user.id}`,
 		);
+
 		throw redirect(
 			303,
-			`${resolve("/authentication")}/${encodeURIComponent(parsed.input.name)}`,
+			`${resolve("authentication")}/${encodeURIComponent(parsed.input.name)}`,
 		);
 	},
 };

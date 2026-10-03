@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { Upload, X } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
-	import DashboardIconPicker from "$lib/components/dashboard-icon-picker.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import DashboardIconPicker from "#lib/components/dashboard-icon-picker.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		ICON_UPLOAD_TYPES,
 		iconSrc,
 		MAX_ICON_BYTES,
-	} from "$lib/service-icon";
+	} from "#lib/service-icon.js";
 
 	interface Props {
 		icon: string;

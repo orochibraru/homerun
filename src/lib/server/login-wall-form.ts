@@ -1,7 +1,7 @@
-import { oauthMethod, signInMethodAvailable } from "$lib/auth-providers";
-import { config } from "$lib/config";
-import { emailSignInAvailability } from "$lib/services/email-sign-in";
-import { UserService } from "$lib/services/user.service";
+import { oauthMethod, signInMethodAvailable } from "#lib/auth-providers.js";
+import { config } from "#lib/config.js";
+import { emailSignInAvailability } from "#lib/services/email-sign-in.js";
+import { UserService } from "#lib/services/user.service.js";
 
 const EMAIL_PATTERN_RE = /^(\*|[^\s@]+)@[^\s@]+\.[^\s@]+$/;
 

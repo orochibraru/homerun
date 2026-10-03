@@ -1,25 +1,25 @@
 import { error, fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { parseDotEnv } from "$lib/env-parse";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { parseDotEnv } from "#lib/env-parse.js";
+import { Logger } from "#lib/logger.js";
 import {
 	branchPatternProblem,
 	parseBranchPatterns,
-} from "$lib/preview-branches";
+} from "#lib/preview-branches.js";
 import {
 	loginWallAvailability,
 	loginWallOptions,
 	parseLoginWallForm,
-} from "$lib/server/login-wall-form";
+} from "#lib/server/login-wall-form.js";
 import {
 	defaultHostname,
 	previewDomainTemplateProblem,
-} from "$lib/service-domains";
-import { GitWebhookService } from "$lib/services/git-webhook.service";
-import { PreviewService } from "$lib/services/preview.service";
+} from "#lib/service-domains.js";
+import { GitWebhookService } from "#lib/services/git-webhook.service.js";
+import { PreviewService } from "#lib/services/preview.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Previews");
 
@@ -58,7 +58,7 @@ async function previewParent(serviceId: string) {
 export const actions = {
 	updatePreviewAccess: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await previewParent(params.serviceId);
 		if (!svc) {
@@ -91,7 +91,7 @@ export const actions = {
 
 	updatePreviews: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await previewParent(params.serviceId);
 		if (!svc) {
@@ -188,7 +188,7 @@ export const actions = {
 
 	redeploy: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await previewParent(params.serviceId);
 		if (!svc) {
@@ -207,7 +207,7 @@ export const actions = {
 
 	delete: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await previewParent(params.serviceId);
 		if (!svc) {

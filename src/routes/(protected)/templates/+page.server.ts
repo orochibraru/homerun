@@ -1,12 +1,11 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
+import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { parseListQuery } from "#lib/server/list-query.js";
+import { quickDeployFromTemplate } from "#lib/services/template-links.js";
 import { resolve } from "$app/paths";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { TemplateDTO } from "$lib/dto/template-dto";
-import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
-import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
-import { parseListQuery } from "$lib/server/list-query";
-import { allowLongRequest } from "$lib/server/long-request";
-import { quickDeployFromTemplate } from "$lib/services/template-links";
 
 async function withLinkedNames(templates: TemplateDTO[]) {
 	const links = await Promise.all(
@@ -69,10 +68,9 @@ export const load = async ({ parent, url }) => {
 };
 
 export const actions = {
-	quickDeploy: async ({ request, locals, platform }) => {
-		allowLongRequest(platform);
+	quickDeploy: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const formData = await request.formData();
@@ -81,14 +79,15 @@ export const actions = {
 		if (!templateId) {
 			return fail(400, { error: "Missing template." });
 		}
+
 		const stackId =
 			rawStackId && (await StackDTO.get(rawStackId)) ? rawStackId : null;
-
 		const result = await quickDeployFromTemplate(templateId, {
 			isAdmin: locals.isAdmin,
 			stackId,
 			userId: locals.user.id,
 		});
+
 		if (!result.ok) {
 			return fail(result.status, { error: result.error });
 		}
@@ -96,8 +95,8 @@ export const actions = {
 		redirect(
 			303,
 			result.stackId
-				? `${resolve("/stacks")}/${result.stackId}`
-				: `${resolve("/services")}/${result.serviceId}`,
+				? `${resolve("stacks")}/${result.stackId}`
+				: `${resolve("services")}/${result.serviceId}`,
 		);
 	},
 };

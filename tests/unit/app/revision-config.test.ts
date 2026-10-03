@@ -4,7 +4,7 @@ import {
 	type RevisionConfigSource,
 	restorableRuntimeOptions,
 	snapshotRevisionConfig,
-} from "$lib/revision-config";
+} from "#lib/revision-config.js";
 
 function source(
 	overrides: Partial<RevisionConfigSource> = {},

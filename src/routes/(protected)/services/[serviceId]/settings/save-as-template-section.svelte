@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { LayoutGrid } from "@lucide/svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { enhanceToast } from "$lib/toast";
 </script>
 
 <section class="panel rounded-md">

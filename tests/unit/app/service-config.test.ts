@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { Service } from "$lib/server/db/schema";
-import { serviceConfig, serviceConfigSchema } from "$lib/service-config";
+import type { Service } from "#lib/server/db/schema.js";
+import { serviceConfig, serviceConfigSchema } from "#lib/service-config.js";
 
 function row(overrides: Partial<Service> = {}): Service {
 	return {

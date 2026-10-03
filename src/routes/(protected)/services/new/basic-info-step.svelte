@@ -16,15 +16,15 @@
 
 <script lang="ts">
 	import { GitBranch, Server } from "@lucide/svelte";
-	import { isBuildMethod } from "$lib/build-methods";
-	import GitBuildFields from "$lib/components/git-build-fields.svelte";
-	import GitSourceFields from "$lib/components/git-source-fields.svelte";
-	import ImageCheckWarning from "$lib/components/image-check-warning.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import RegistryFields from "$lib/components/registry-fields.svelte";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { defaultHostname } from "$lib/service-domains";
-	import { stackScopedSlug } from "$lib/slug";
+	import { isBuildMethod } from "#lib/build-methods.js";
+	import GitBuildFields from "#lib/components/git-build-fields.svelte";
+	import GitSourceFields from "#lib/components/git-source-fields.svelte";
+	import ImageCheckWarning from "#lib/components/image-check-warning.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import RegistryFields from "#lib/components/registry-fields.svelte";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { defaultHostname } from "#lib/service-domains.js";
+	import { stackScopedSlug } from "#lib/slug.js";
 	import type { WizardData } from "./wizard-types";
 	import { errorClass, label } from "./field-classes";
 

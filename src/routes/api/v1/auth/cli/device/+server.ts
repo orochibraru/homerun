@@ -1,6 +1,5 @@
-import { json } from "@sveltejs/kit";
-import { browserOrigin } from "$lib/server/canonical-origin";
-import { CliAuthService } from "$lib/services/cli-auth.service";
+import { browserOrigin } from "#lib/server/canonical-origin.js";
+import { CliAuthService } from "#lib/services/cli-auth.service.js";
 
 /**
  * Deliberately unauthenticated, this is the start of the CLI's login flow,
@@ -12,7 +11,7 @@ export const POST = ({ request, url }) => {
 	const { deviceCode, userCode, expiresIn, interval } =
 		CliAuthService.startDeviceAuth();
 
-	return json({
+	return Response.json({
 		deviceCode,
 		expiresIn,
 		interval,

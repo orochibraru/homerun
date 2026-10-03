@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { parseAnsiLine } from "$lib/ansi";
+	import { parseAnsiLine } from "#lib/ansi.js";
 
 	const { line }: { line: string } = $props();
 

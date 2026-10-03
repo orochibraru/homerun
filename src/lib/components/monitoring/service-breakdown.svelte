@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { formatBytes } from "$lib/formatting";
+	import { formatBytes } from "#lib/formatting.js";
 	import {
 		formatCount as count,
 		formatMb as mb,
 		formatMs as ms,
 		formatPercent as percent,
-	} from "$lib/metrics-format";
-	import type { ServiceBreakdown } from "$lib/services/monitoring.service";
+	} from "#lib/metrics-format.js";
+	import type { ServiceBreakdown } from "#lib/services/monitoring.service.js";
 
 	interface Row extends ServiceBreakdown {
 		href: string;

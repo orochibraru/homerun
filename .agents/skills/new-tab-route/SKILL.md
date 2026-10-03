@@ -30,8 +30,8 @@ the reference shapes.
   layout's `load`, so every action still needs its own explicit
   `if (!locals.user) throw redirect(...)` guard.
 - Add the tab to the parent `+layout.svelte`'s `tabs` array
-  (`{id, label, icon, href: resolve("/<parent>/<tab-name>")}`, see
-  `$lib/components/tab-nav.svelte`'s `NavTab`). Use `hasWarning` if the tab
+  (`{id, label, icon, href: resolve("<parent>/<tab-name>")}`, see
+  `src/lib/components/tab-nav.svelte`'s `NavTab`). Use `hasWarning` if the tab
   needs a "this needs attention" dot even while inactive (Settings' setup-issue
   highlight is the reference).
 

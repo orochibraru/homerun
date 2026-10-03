@@ -1,4 +1,4 @@
-import { ErrorTrackingService } from "$lib/services/error-tracking.service";
+import { ErrorTrackingService } from "#lib/services/error-tracking.service.js";
 
 export const trailingSlash = "ignore";
 

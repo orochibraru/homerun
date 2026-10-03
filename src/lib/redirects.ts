@@ -1,4 +1,4 @@
-import { DOMAIN_RE } from "$lib/service-domains";
+import { DOMAIN_RE } from "#lib/service-domains.js";
 
 export const REDIRECTS_FILE = "homerun-redirects.yml";
 

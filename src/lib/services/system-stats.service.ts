@@ -1,4 +1,4 @@
-import { WorkerClient } from "$lib/server/worker-client";
+import { WorkerClient } from "#lib/server/worker-client.js";
 
 export interface SystemStats {
 	cpuPercent: number;

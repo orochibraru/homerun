@@ -10,20 +10,20 @@
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import AsyncBlock from "$lib/components/async-block.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import AsyncBlock from "#lib/components/async-block.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		getCleanupPreview,
 		getMirrorUsage,
 		getOrphanStackNetworks,
-	} from "$lib/remote/docker-infra.remote";
-	import { title } from "$lib/store/title";
-	import { type EnhanceToastOptions, enhanceToast } from "$lib/toast";
+	} from "#lib/remote/docker-infra.remote.js";
+	import { title } from "#lib/store/title.js";
+	import { type EnhanceToastOptions, enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 	import {
 		type CleanupAction,
 		confirmCopy,

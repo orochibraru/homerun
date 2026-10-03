@@ -1,18 +1,17 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { DockerService } from "$lib/services/docker.service";
-import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
 
 const logger = new Logger("API");
 
 export const POST = async ({ params, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const service = await ServiceDTO.get(params.serviceId);
 	if (!service) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 
 	if (service.swarmServiceId) {
@@ -24,11 +23,11 @@ export const POST = async ({ params, locals }) => {
 		logger.info(
 			`Swarm service started via API: service=${service.id} user=${locals.user.id}`,
 		);
-		return json({ success: true });
+		return Response.json({ success: true });
 	}
 
 	if (!service.containerId) {
-		return json(
+		return Response.json(
 			{ error: "This service hasn't been deployed yet." },
 			{ status: 400 },
 		);
@@ -39,5 +38,5 @@ export const POST = async ({ params, locals }) => {
 	logger.info(
 		`Service started via API: service=${service.id} user=${locals.user.id}`,
 	);
-	return json({ success: true });
+	return Response.json({ success: true });
 };

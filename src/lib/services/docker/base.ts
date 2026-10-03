@@ -1,4 +1,4 @@
-import { WorkerClient } from "$lib/server/worker-client";
+import { WorkerClient } from "#lib/server/worker-client.js";
 
 /**
  * Shared base every Docker concern class extends (containers, networks,

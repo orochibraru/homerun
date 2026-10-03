@@ -10,24 +10,24 @@
 	} from "@lucide/svelte";
 	import { onMount, type Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import CopyButton from "$lib/components/copy-button.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import CopyButton from "#lib/components/copy-button.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityList, {
 		type EntityRow,
-	} from "$lib/components/entity-list.svelte";
-	import { labelClass } from "$lib/components/form-styles";
-	import OauthAppCredentials from "$lib/components/oauth-app-credentials.svelte";
-	import OauthAppToggle from "$lib/components/oauth-app-toggle.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { title } from "$lib/store/title";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/components/entity-list.svelte";
+	import { labelClass } from "#lib/components/form-styles.js";
+	import OauthAppCredentials from "#lib/components/oauth-app-credentials.svelte";
+	import OauthAppToggle from "#lib/components/oauth-app-toggle.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { title } from "#lib/store/title.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -78,10 +78,7 @@
       </p>
     </div>
     {#if data.issuer}
-      <Button href={resolve("/idp/new")} size="sm">
-        <Plus class="size-4" />
-        Register app
-      </Button>
+      <Button href={resolve('idp/new')} size="sm"><Plus class="size-4" />Register app</Button>
     {/if}
   </div>
 
@@ -133,12 +130,7 @@
         icon={AppWindow}
         subtitle="Register an app to get its client ID and secret, then point it at the discovery URL above."
         title="No apps yet"
-      >
-        <Button href={resolve("/idp/new")}>
-          <Plus class="size-4" />
-          Register app
-        </Button>
-      </EmptyState>
+      ><Button href={resolve('idp/new')}><Plus class="size-4" />Register app</Button></EmptyState>
     {:else}
       <div class="mb-3 flex items-center justify-between gap-3">
         <p class="text-text-muted text-xs">
@@ -146,7 +138,7 @@
           {data.oauthApps.length === 1 ? "app" : "apps"} ·
           {data.oauthApps.filter((app) => !app.disabled).length} on
         </p>
-        <ViewModeToggle {view} />
+        <ViewModeToggle view={view} />
       </div>
 
       {#snippet wrapper(item: EntityRow, body: Snippet)}
@@ -228,25 +220,24 @@
             <span class="max-w-40 truncate">{app.clientId}</span>
             <CopyButton label="client ID" value={app.clientId} />
           </span>
-          <span class="ml-auto">
-            <OauthAppToggle {app} />
-          </span>
+
+          <span class="ml-auto"><OauthAppToggle app={app} /></span>
         {/if}
       {/snippet}
 
       <EntityList
-        {actions}
-        {badge}
+        actions={actions}
+        badge={badge}
         items={data.oauthApps.map((app) => ({
           description: hostsOf(app) ? `Signs in on ${hostsOf(app)}` : null,
           href: appHref(app.id),
           id: app.id,
           title: app.name,
         }))}
-        {media}
-        {meta}
-        {view}
-        {wrapper}
+        media={media}
+        meta={meta}
+        view={view}
+        wrapper={wrapper}
       />
     {/if}
   {/if}

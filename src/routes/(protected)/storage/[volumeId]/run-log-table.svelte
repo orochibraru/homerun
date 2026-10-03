@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
-	import { invalidateAll } from "$app/navigation";
-	import BackupCancelButton from "$lib/components/backup-cancel-button.svelte";
-	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
+	import BackupCancelButton from "#lib/components/backup-cancel-button.svelte";
+	import DeployLogPanel from "#lib/components/deploy-log-panel.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
+	import { refreshAll } from "$app/navigation";
 
 	interface Run {
 		error: string | null;
@@ -32,7 +32,7 @@
 		if (!runs.some((run) => run.success === null)) {
 			return;
 		}
-		const timer = setInterval(() => invalidateAll(), 3000);
+		const timer = setInterval(() => refreshAll(), 3000);
 		return () => clearInterval(timer);
 	});
 </script>

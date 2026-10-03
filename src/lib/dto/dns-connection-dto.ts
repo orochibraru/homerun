@@ -1,12 +1,12 @@
 import { asc, eq } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type DnsConnection, dnsConnection } from "$lib/server/db/schema";
-import { dnsProviderById } from "$lib/services/dns-providers";
+import { db } from "#lib/server/db/lib.js";
+import { type DnsConnection, dnsConnection } from "#lib/server/db/schema.js";
+import { dnsProviderById } from "#lib/services/dns-providers/index.js";
 import type {
 	DnsCredentials,
 	DnsProviderClient,
-} from "$lib/services/dns-providers/types";
-import { decryptSecret, encryptSecret } from "$lib/services/secrets";
+} from "#lib/services/dns-providers/types.js";
+import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
 import { BaseDTO } from "./base-dto";
 
 export interface DnsConnectionSummary {

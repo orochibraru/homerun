@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { Activity, ExternalLink, Save, Trash2 } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import HeartbeatStrip from "#lib/components/heartbeat-strip.svelte";
+	import StatusPageFields from "#lib/components/status-page-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import type { StatusPageScope } from "#lib/types.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import HeartbeatStrip from "$lib/components/heartbeat-strip.svelte";
-	import StatusPageFields from "$lib/components/status-page-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import type { StatusPageScope } from "$lib/types";
 
 	const { data, form } = $props();
 
@@ -99,10 +99,9 @@
             <div class="min-w-0 flex-1">
               <a
                 class="text-text truncate text-sm font-medium hover:underline"
-                href="{resolve('/services')}/{svc.id}"
-              >
-                {svc.name}
-              </a>
+                href="{resolve('services')}/{svc.id}"
+              >{svc.name}</a>
+
               <HeartbeatStrip beats={svc.beats} class="mt-2" />
             </div>
             <span class="text-text-muted shrink-0 text-xs tabular-nums">

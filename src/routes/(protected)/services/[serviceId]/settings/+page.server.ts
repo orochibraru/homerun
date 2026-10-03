@@ -1,19 +1,18 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { Logger } from "#lib/logger.js";
+import { normalizeEnvironmentName } from "#lib/release-channels.js";
+import { listIconLibrary } from "#lib/server/icon-library.js";
+import { updateGeneralSchema } from "#lib/server/validation/service.js";
+import { iconProblem } from "#lib/service-icon.js";
+import { runtimeOptionsFrom } from "#lib/service-runtime.js";
+import { CronService } from "#lib/services/cron.service.js";
+import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
+import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
+import { TEMPLATE_CATEGORIES } from "#lib/template-categories.js";
 import { resolve } from "$app/paths";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { TemplateDTO } from "$lib/dto/template-dto";
-import { Logger } from "$lib/logger";
-import { normalizeEnvironmentName } from "$lib/release-channels";
-import { listIconLibrary } from "$lib/server/icon-library";
-import { allowLongRequest } from "$lib/server/long-request";
-import { updateGeneralSchema } from "$lib/server/validation/service";
-import { iconProblem } from "$lib/service-icon";
-import { runtimeOptionsFrom } from "$lib/service-runtime";
-import { CronService } from "$lib/services/cron.service";
-import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
-import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
-import { TEMPLATE_CATEGORIES } from "$lib/template-categories";
 
 const logger = new Logger("Services");
 
@@ -28,10 +27,9 @@ export const load = async ({ parent }) => {
 };
 
 export const actions = {
-	delete: async ({ request, params, locals, platform }) => {
-		allowLongRequest(platform);
+	delete: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -52,14 +50,16 @@ export const actions = {
 			}
 			throw error;
 		}
+
 		logger.info(
 			`Service deleted: service=${svc.id} force=${force} deleteVolumes=${deleteVolumes} user=${locals.user.id}`,
 		);
-		throw redirect(303, resolve("/services"));
+
+		throw redirect(303, resolve("services"));
 	},
 	updateIdentity: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -86,7 +86,7 @@ export const actions = {
 	},
 	moveStack: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -115,7 +115,7 @@ export const actions = {
 	},
 	saveAsTemplate: async ({ params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -145,7 +145,7 @@ export const actions = {
 	},
 	update: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -187,7 +187,7 @@ export const actions = {
 	},
 	updateAutoRollback: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -203,7 +203,7 @@ export const actions = {
 	},
 	updateImageScan: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -219,7 +219,7 @@ export const actions = {
 	},
 	updateCron: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -238,14 +238,11 @@ export const actions = {
 			});
 		}
 
-		await svc.update({
-			cronEnabled,
-			cronSchedule: cronSchedule || null,
-		});
-
+		await svc.update({ cronEnabled, cronSchedule: cronSchedule || null });
 		logger.info(
 			`Cron schedule updated: service=${svc.id} enabled=${cronEnabled} schedule="${cronSchedule}" user=${locals.user.id}`,
 		);
+
 		return { cronSaved: true };
 	},
 };

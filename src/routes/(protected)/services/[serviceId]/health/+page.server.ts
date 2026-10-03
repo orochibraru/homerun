@@ -1,10 +1,10 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { updateHealthSchema } from "#lib/server/validation/service.js";
+import { HEALTHCHECK_DEFAULTS } from "#lib/services/docker/healthcheck.js";
+import { DockerService } from "#lib/services/docker.service.js";
 import { resolve } from "$app/paths";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { updateHealthSchema } from "$lib/server/validation/service";
-import { HEALTHCHECK_DEFAULTS } from "$lib/services/docker/healthcheck";
-import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Services");
 
@@ -22,7 +22,7 @@ export const load = async ({ parent }) => {
 export const actions = {
 	updateHealth: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {

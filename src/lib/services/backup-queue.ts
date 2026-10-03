@@ -1,6 +1,6 @@
-import type { BackupRunDTO } from "$lib/dto/backup-run-dto";
-import { JobDTO } from "$lib/dto/job-dto";
-import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import type { BackupRunDTO } from "#lib/dto/backup-run-dto.js";
+import { JobDTO } from "#lib/dto/job-dto.js";
+import type { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { closeCancelledDeploys } from "./queue/cancelled-deploys.ts";
 import { QueueService } from "./queue.service.ts";
 import type { RestoreOptions } from "./s3-backup.service.ts";

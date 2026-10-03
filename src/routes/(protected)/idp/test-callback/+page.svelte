@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { ArrowLeft, CircleCheck, CircleX } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
 
 	const { data } = $props();
 	const result = $derived(data.result);

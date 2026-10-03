@@ -84,11 +84,11 @@ location.
 If the route accepts a form submission, add/extend a zod schema under
 `src/lib/server/validation/`. If it's also exposed on the REST API
 (`src/routes/api/v1/`), the JSON-body shape is a **separate** schema under
-`$lib/server/validation/api.ts` (form-specific preprocessing like
+`src/lib/server/validation/api.ts` (form-specific preprocessing like
 `envKey[]`/`envValue[]` checkbox handling doesn't belong there) — see the
 OpenAPI section of CLAUDE.md if this route needs to show up in the generated
-spec (`$lib/openapi/registry.ts` + `schemas.ts`, both hand-maintained, keep in
-sync by hand).
+spec (`src/lib/openapi/registry.ts` + `schemas.ts`, both hand-maintained, keep
+in sync by hand).
 
 ## 6. Finish
 

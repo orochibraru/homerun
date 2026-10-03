@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Check } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import CronJobFields from "#lib/components/cron-job-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import CronJobFields from "$lib/components/cron-job-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 

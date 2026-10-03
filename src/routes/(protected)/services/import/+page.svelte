@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { AlertTriangle, FileUp, HardDrive, Rocket } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import { inputClass, labelClass } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import Alert from "#lib/components/alert.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { formatBytes } from "$lib/formatting";
-	import { getReplicaStats } from "$lib/remote/stats.remote";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { formatBytes } from "#lib/formatting.js";
+	import { getReplicaStats } from "#lib/remote/stats.remote.js";
 
 	const POLL_MS = 5000;
 

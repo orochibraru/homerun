@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { CronJobRunDTO } from "#lib/dto/cron-job-run-dto.js";
+import type { CronJobRun } from "#lib/server/db/schema.js";
+import { requireUser } from "#lib/server/remote-auth.js";
 import { query } from "$app/server";
-import { CronJobDTO } from "$lib/dto/cron-job-dto";
-import { CronJobRunDTO } from "$lib/dto/cron-job-run-dto";
-import type { CronJobRun } from "$lib/server/db/schema";
-import { requireUser } from "$lib/server/remote-auth";
 
 /**
  * A cron job's runs, re-read while one is still going : the container's

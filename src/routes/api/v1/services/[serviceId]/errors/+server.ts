@@ -1,16 +1,15 @@
-import { json } from "@sveltejs/kit";
-import { ErrorIssueDTO } from "$lib/dto/error-issue-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { jsonPage } from "$lib/server/api-pagination";
-import { parseListQuery } from "$lib/server/list-query";
+import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { jsonPage } from "#lib/server/api-pagination.js";
+import { parseListQuery } from "#lib/server/list-query.js";
 
 export const GET = async ({ params, locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	const query = parseListQuery(url, {
 		filterKeys: ["status"],

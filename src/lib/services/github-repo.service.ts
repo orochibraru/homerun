@@ -1,6 +1,6 @@
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
-import { Logger } from "$lib/logger";
+import { Logger } from "#lib/logger.js";
 
 const logger = new Logger("GitHubRepo");
 

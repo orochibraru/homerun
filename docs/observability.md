@@ -84,7 +84,7 @@ the same switch as `uptimeEnabled` on `PATCH /api/v1/services/:id`.
 
 The log panel live-streams a running container's stdout/stderr straight from the
 browser: the server pushes each line as the container writes it over a long-
-lived HTTP response, no polling and no WebSocket (SvelteKit 2 has no WebSocket
+lived HTTP response, no polling and no WebSocket (SvelteKit has no WebSocket
 route API; nothing here needs a client-to-server socket anyway). A shorter tail
 of the same viewer is on the Overview tab once a service has deployed at least
 once, so recent output is visible without switching tabs.

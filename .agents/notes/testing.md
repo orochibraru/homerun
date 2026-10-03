@@ -40,9 +40,8 @@ Shared Go libraries under `internal/` (`buildinfo`, `release`, `homerun`,
 (`tests/unit/go/internal/release/release_test.go`, etc.), scoped the same
 path-narrowing way as any of them since there's no dedicated script per
 sub-project. `tests/unit/app/` covers the SvelteKit app itself, a couple of
-component tests plus the pure modules under `$lib` that are worth pinning down
-directly (`long-request.test.ts`, see Long-running requests below;
-`queue.test.ts`; `toast.test.ts`; `compose-import.test.ts`;
+component tests plus the pure modules under `src/lib` that are worth pinning
+down directly (`queue.test.ts`; `toast.test.ts`; `compose-import.test.ts`;
 `service-link.test.ts`; `deploy-phases.test.ts`; `command-parse.test.ts`;
 `auth-providers.test.ts`; `app-gate.test.ts`, the login wall's token
 signing/expiry/tampering, its cookie parsing, and OIDC group-claim extraction) :
@@ -108,17 +107,20 @@ wholesale); that suite is gone along with the Bun agent, replaced by
 standalone `cmd/agent/` any more), which fake the Docker client via a real
 interface instead (`tests/unit/go/internal/agent/fake_docker_test.go`).
 
-`tsconfig.json` type-checks `tests/` as part of `svelte-check` (part of
-`bun run check`), same as `src/`. It used to exclude `tests/` entirely, which
-meant ~115 test files had no type-checking gate at all; re-including them
-surfaced a handful of real bugs (a `[Date, Date]` tuple cast in `queue.test.ts`
-that should've been `[string, Date]`, a `never`-typed `daemon` in
-`git-fixture.ts` from a TS/tsgo control-flow quirk that doesn't re-widen a `let`
-narrowed to `null` across a closure call inside a `catch` block, worked around
-with a `{ daemon: T | null }` object instead of a bare `let`). `bun:test`'s
-`spyOn` needs an explicit `Mock<typeof console.log>` annotation rather than
-`ReturnType<typeof spyOn>`, which resolves to `any` since `spyOn`'s type
-parameters can't be inferred without a call site.
+`tsconfig.json` (`include: ["src", "tests", "*"]`) type-checks `tests/` and the
+root config files as part of `svelte-check` (part of `bun run check`, which no
+longer passes `--tsgo`: tsgo can't resolve `.svelte` files through `#lib`
+subpath imports), same as `src/`. Tests mock `$app/env` (not `$app/environment`)
+and `mock.module` specifiers use the `#lib/...js` form. It used to exclude
+`tests/` entirely, which meant ~115 test files had no type-checking gate at all;
+re-including them surfaced a handful of real bugs (a `[Date, Date]` tuple cast
+in `queue.test.ts` that should've been `[string, Date]`, a `never`-typed
+`daemon` in `git-fixture.ts` from a TS/tsgo control-flow quirk that doesn't
+re-widen a `let` narrowed to `null` across a closure call inside a `catch`
+block, worked around with a `{ daemon: T | null }` object instead of a bare
+`let`). `bun:test`'s `spyOn` needs an explicit `Mock<typeof console.log>`
+annotation rather than `ReturnType<typeof spyOn>`, which resolves to `any` since
+`spyOn`'s type parameters can't be inferred without a call site.
 
 ## `cmd/cli/`'s Go tests set `$HOME` per test, no preload needed
 
@@ -192,13 +194,12 @@ object literal and `mock()`-wrapped methods.
   `[test].rerunEach`'s config key is camelCase only, the CLI flag's own spelling
   (`rerun-each`, kebab-case) is silently ignored as a bunfig key, same failure
   mode as `[test].timeout` above just for a different key. See Retries below.
-- Bun's `Bun.serve()` `idleTimeout` (10s by default, and what
-  `@orochibraru/svelte-smol` ships) kills a request that's still _being
-  handled_, not just an idle socket, and only on Linux — so
-  `POST /services/<id>/stop` died with `ECONNRESET` in CI while passing on every
-  macOS dev machine. Caught by `tests/integration/`, root-caused by reproducing
-  it in `oven/bun:1.4.0`. See Long-running requests and Bun's idle timeout
-  below.
+- Bun's `Bun.serve()` `idleTimeout` (10s by default, now set to `0` in the
+  adapter config) kills a request that's still _being handled_, not just an idle
+  socket, and only on Linux — so `POST /services/<id>/stop` died with
+  `ECONNRESET` in CI while passing on every macOS dev machine. Caught by
+  `tests/integration/`, root-caused by reproducing it in `oven/bun:1.4.0`. See
+  Long-running requests and Bun's idle timeout below.
 
 This section is scoped to what `tests/` itself caught; a sibling finding from
 the same "Bun's own APIs quietly diverge from `node:fs`" family, but caught by

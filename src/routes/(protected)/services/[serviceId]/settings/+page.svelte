@@ -1,24 +1,24 @@
 <script lang="ts">
 	import { Check, Settings } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { PULL_POLICIES } from "$lib/pull-policy";
-	import { defaultHostname } from "$lib/service-domains";
-	import { isDeployed } from "$lib/service-state";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { PULL_POLICIES } from "#lib/pull-policy.js";
+	import { defaultHostname } from "#lib/service-domains.js";
+	import { isDeployed } from "#lib/service-state.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import AutoRedeploySection from "./auto-redeploy-section.svelte";
 	import AutoRollbackSection from "./auto-rollback-section.svelte";
 	import DangerZoneSection from "./danger-zone-section.svelte";

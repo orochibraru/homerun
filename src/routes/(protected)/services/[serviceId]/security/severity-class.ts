@@ -1,4 +1,4 @@
-import type { ScanSeverity } from "$lib/image-scan";
+import type { ScanSeverity } from "#lib/image-scan.js";
 
 export const SEVERITY_CLASS: Record<ScanSeverity, string> = {
 	CRITICAL: "border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400",

@@ -1,12 +1,12 @@
-import { config } from "$lib/config";
-import { OauthClientEnvironmentDTO } from "$lib/dto/oauth-client-environment-dto";
-import { OauthClientSecretDTO } from "$lib/dto/oauth-client-secret-dto";
+import { config } from "#lib/config.js";
+import { OauthClientEnvironmentDTO } from "#lib/dto/oauth-client-environment-dto.js";
+import { OauthClientSecretDTO } from "#lib/dto/oauth-client-secret-dto.js";
 import {
 	matchesCallback,
 	OIDC_BASE_PATH,
 	oidcTestCallback,
 	tokenRequestCredentials,
-} from "$lib/oidc-provider";
+} from "#lib/oidc-provider.js";
 
 export const OIDC_TOKEN_PATH = `${OIDC_BASE_PATH}/oauth2/token`;
 

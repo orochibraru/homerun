@@ -8,18 +8,18 @@ import {
 	notExists,
 	type SQL,
 } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type StorageVolume,
 	serviceVolume,
 	storageVolume,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
+} from "#lib/server/list-query.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewStorageVolumeInput {

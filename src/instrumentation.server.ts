@@ -1,5 +1,5 @@
-// Loaded before anything else in the compiled server bundle (the svelte-smol
-// adapter prepends this file's import to the `bun build --compile` entrypoint).
+// Loaded before anything else in the compiled server bundle (SvelteKit's
+// instrumentation hook, which adapter-bun runs ahead of the server entrypoint).
 //
 // @peculiar/x509 — pulled in transitively by better-auth's passkey plugin via
 // @simplewebauthn/server — initializes a tsyringe DI container at module load

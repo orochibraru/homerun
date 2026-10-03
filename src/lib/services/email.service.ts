@@ -3,8 +3,8 @@ import {
 	type SMTPSentMessageInfo,
 	type Transporter,
 } from "nodemailer";
-import { config, isSmtpEnabled } from "$lib/config";
-import { Logger } from "$lib/logger";
+import { config, isSmtpEnabled } from "#lib/config.js";
+import { Logger } from "#lib/logger.js";
 
 const logger = new Logger("Email");
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { SERVICE_STATUS_CONFIG } from "$lib/constants";
-	import type { ContainerStatus } from "$lib/types";
+	import { SERVICE_STATUS_CONFIG } from "#lib/constants.js";
+	import type { ContainerStatus } from "#lib/types.js";
 
 	const { status }: { status: ContainerStatus } = $props();
 

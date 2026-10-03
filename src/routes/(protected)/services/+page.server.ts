@@ -1,30 +1,29 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceGitDTO } from "$lib/dto/service-git-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
-import { Logger } from "$lib/logger";
-import { type ListQuery, parseListQuery } from "$lib/server/list-query";
-import { allowLongRequest } from "$lib/server/long-request";
+import { config } from "#lib/config.js";
+import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { Logger } from "#lib/logger.js";
+import { type ListQuery, parseListQuery } from "#lib/server/list-query.js";
 import {
 	dependencyLayers,
 	dependencyMap,
 	mergeDependencies,
 	toGraphService,
 	toPreviewRow,
-} from "$lib/service-graph";
+} from "#lib/service-graph.js";
 import {
 	buildLinkEnv,
 	defaultUrlKey,
 	defaultVarPrefix,
 	detectLinkEngine,
 	linkRoles,
-} from "$lib/service-link";
-import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
-import { uniqueSlug } from "$lib/slug";
+} from "#lib/service-link.js";
+import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
+import { uniqueSlug } from "#lib/slug.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
 
@@ -212,8 +211,7 @@ async function runBulk(formData: FormData, userId: string) {
 	return { failed, op: parsed.op, succeeded, success: true };
 }
 
-export const load = async ({ parent, platform, url }) => {
-	allowLongRequest(platform);
+export const load = async ({ parent, url }) => {
 	const { preferences } = await parent();
 	const query = parseListQuery(
 		url,
@@ -277,7 +275,7 @@ export const actions = {
 	 */
 	link: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const serviceId = formData.get("serviceId") as string | null;
@@ -359,13 +357,14 @@ export const actions = {
 	/** Moves a service into a stack, creating one when `newStackName` is given. */
 	group: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const serviceIds = formData.getAll("serviceId").map(String).filter(Boolean);
 		const stackId = (formData.get("stackId") as string | null) || null;
 		const newStackName =
 			(formData.get("newStackName") as string | null)?.trim() || null;
+
 		if (serviceIds.length === 0) {
 			return fail(400, { error: "Nothing to move." });
 		}
@@ -398,41 +397,37 @@ export const actions = {
 		return { grouped: serviceIds.length, success: true };
 	},
 
-	bulk: async ({ request, locals, platform }) => {
-		allowLongRequest(platform);
+	bulk: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		return runBulk(await request.formData(), locals.user.id);
 	},
 
-	delete: async ({ request, locals, platform }) => {
-		allowLongRequest(platform);
+	delete: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		return runSingle("delete", await request.formData(), locals.user.id);
 	},
 
-	restart: async ({ request, locals, platform }) => {
-		allowLongRequest(platform);
+	restart: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		return runSingle("restart", await request.formData(), locals.user.id);
 	},
 
 	start: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		return runSingle("start", await request.formData(), locals.user.id);
 	},
 
-	stop: async ({ request, locals, platform }) => {
-		allowLongRequest(platform);
+	stop: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		return runSingle("stop", await request.formData(), locals.user.id);
 	},

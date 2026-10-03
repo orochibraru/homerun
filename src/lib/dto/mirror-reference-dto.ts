@@ -1,11 +1,11 @@
 import { and, desc, eq, isNotNull } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { imageScan, service } from "$lib/server/db/schema";
-import { MIRROR_SCAN_SOURCE } from "$lib/services/docker/image-scan-refs";
+import { db } from "#lib/server/db/lib.js";
+import { imageScan, service } from "#lib/server/db/schema.js";
+import { MIRROR_SCAN_SOURCE } from "#lib/services/docker/image-scan-refs.js";
 import type {
 	ImageDigestRef,
 	ServiceMirrorReference,
-} from "$lib/services/docker/mirror-registry";
+} from "#lib/services/docker/mirror-registry.js";
 import { DeploymentDTO } from "./deployment-dto";
 
 function groupByService(

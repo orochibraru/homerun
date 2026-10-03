@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { title } from "$lib/store/title";
+	import { title } from "#lib/store/title.js";
 	import CacheSection from "./cache-section.svelte";
 	import DomainsSection from "./domains-section.svelte";
 	import NetworkSection from "./network-section.svelte";
