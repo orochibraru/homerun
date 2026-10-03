@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Boxes, KeyRound, Settings2, Ticket } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
+	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
-	import { title } from "$lib/store/title";
 
 	const { children } = $props();
 

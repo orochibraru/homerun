@@ -8,7 +8,7 @@
 		Toaster as Sonner,
 		type ToasterProps as SonnerProps,
 	} from "svelte-sonner";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 
 	let { ...restProps }: SonnerProps = $props();
 </script>

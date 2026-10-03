@@ -55,7 +55,7 @@ raw Tailwind colors.
 
 ```svelte
 <script lang="ts">
-import { Badge } from "$lib/components/ui/badge";
+import { Badge } from "#lib/components/ui/badge/index.js";
 </script>
 
 <Badge variant="secondary">+20.1%</Badge>
@@ -75,7 +75,7 @@ a Badge variant or ask the user about adding a custom CSS variable to the theme
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
+import { Button } from "#lib/components/ui/button/index.js";
 </script>
 
 <Button class="border-input hover:bg-accent border bg-transparent"
@@ -86,7 +86,7 @@ import { Button } from "$lib/components/ui/button";
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
+import { Button } from "#lib/components/ui/button/index.js";
 </script>
 
 <Button variant="outline">Click me</Button>
@@ -104,7 +104,7 @@ tokens, built-in variants, or CSS variables.
 
 ```svelte
 <script lang="ts">
-import * as Card from "$lib/components/ui/card";
+import * as Card from "#lib/components/ui/card/index.js";
 </script>
 
 <Card.Root class="bg-blue-100 font-bold text-blue-900">
@@ -116,7 +116,7 @@ import * as Card from "$lib/components/ui/card";
 
 ```svelte
 <script lang="ts">
-import * as Card from "$lib/components/ui/card";
+import * as Card from "#lib/components/ui/card/index.js";
 </script>
 
 <Card.Root class="mx-auto max-w-md">
@@ -140,8 +140,8 @@ Use `gap-*` instead. `space-y-4` → `flex flex-col gap-4`. `space-x-2` →
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
-import { Input } from "$lib/components/ui/input";
+import { Button } from "#lib/components/ui/button/index.js";
+import { Input } from "#lib/components/ui/input/index.js";
 </script>
 
 <div class="flex flex-col gap-4">
@@ -191,7 +191,7 @@ Don't write manual ternaries in `class` strings.
 
 ```svelte
 <script lang="ts">
-  import { cn } from "$lib/utils";
+  import { cn } from "#lib/utils.js";
   let isActive = $state(false);
 </script>
 

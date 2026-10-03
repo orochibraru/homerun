@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
-	import { slugify } from "$lib/slug";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { slugify } from "#lib/slug.js";
 
 	let { kind = $bindable("volume") }: { kind?: "bind" | "volume" } = $props();
 

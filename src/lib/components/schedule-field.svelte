@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import { labelClass } from "$lib/components/form-styles";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import { labelClass } from "#lib/components/form-styles.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
+	} from "#lib/components/ui/select/index.js";
 	import {
 		describeSchedule,
 		type ScheduleMode,
 		scheduleFromCron,
 		scheduleToCron,
 		WEEKDAYS,
-	} from "$lib/schedule";
+	} from "#lib/schedule.js";
 
 	interface Props {
 		id: string;

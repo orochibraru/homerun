@@ -1,6 +1,6 @@
 <script lang="ts">
-	import CopyButton from "$lib/components/copy-button.svelte";
-	import { cn } from "$lib/utils";
+	import CopyButton from "#lib/components/copy-button.svelte";
+	import { cn } from "#lib/utils.js";
 
 	const {
 		value,

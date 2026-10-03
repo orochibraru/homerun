@@ -3,7 +3,7 @@
 		errorClass,
 		inputClass as input,
 		labelClass as label,
-	} from "$lib/components/form-styles";
+	} from "#lib/components/form-styles.js";
 	import StepPanel from "./step-panel.svelte";
 	import type { OnboardingWizard } from "./wizard-state.svelte";
 

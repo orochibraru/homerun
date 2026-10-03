@@ -22,8 +22,8 @@ function.
 ## 2. File and auth
 
 New or existing `src/lib/remote/<name>.remote.ts`. Every `query`/`command`
-starts with `requireUser()` (`$lib/server/remote-auth`) — a remote function is
-its own endpoint, it does **not** inherit `(protected)`'s layout guard:
+starts with `requireUser()` (`src/lib/server/remote-auth`) — a remote function
+is its own endpoint, it does **not** inherit `(protected)`'s layout guard:
 
 ```ts
 export const getThing = query(async (): Promise<Thing> => {
@@ -38,7 +38,7 @@ Admin-only data needs its own `locals.isAdmin`-equivalent check on top —
 ## 3. Validate arguments, don't cast
 
 Pass a zod schema as the function's first argument, same posture as the REST
-API's `$lib/server/validation/api.ts`:
+API's `src/lib/server/validation/api.ts`:
 
 ```ts
 export const listThings = query(z.string(), async (id) => {...});
@@ -64,7 +64,7 @@ never changes identity.
 
 - **Refreshes in place** (a poll, a command's single-flight update): read the
   reactive accessors directly, `query.ready` / `query.current` / `query.error`,
-  with the pending branch rendering `$lib/components/skeleton.svelte`.
+  with the pending branch rendering `src/lib/components/skeleton.svelte`.
   Reference: `host-resources.svelte` (`onMount` + `setInterval` calling
   `stats.refresh()`), `job-queue-panel.svelte`, `notification-bell.svelte`.
 - **One-shot, user-triggered lookup** (a button click, a picker's on-demand

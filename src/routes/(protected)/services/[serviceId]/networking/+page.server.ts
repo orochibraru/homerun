@@ -1,22 +1,22 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	parsePublishedPortsField,
 	updatePortsSchema,
-} from "$lib/server/validation/service";
+} from "#lib/server/validation/service.js";
 import {
 	DOMAIN_RE,
 	defaultHostname,
 	normalizeDomains,
 	serviceHostnames,
-} from "$lib/service-domains";
-import { syncServiceDomainsDns } from "$lib/services/dns.service";
-import { DockerService } from "$lib/services/docker.service";
-import { encryptSecret } from "$lib/services/secrets";
+} from "#lib/service-domains.js";
+import { syncServiceDomainsDns } from "#lib/services/dns.service.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
 
@@ -46,7 +46,7 @@ export const load = async ({ parent }) => {
 export const actions = {
 	updateCache: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -70,7 +70,7 @@ export const actions = {
 
 	updateDomains: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -152,7 +152,7 @@ export const actions = {
 
 	updateSsl: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -183,7 +183,7 @@ export const actions = {
 	// updatePortsSchema docstring).
 	updatePorts: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -220,7 +220,7 @@ export const actions = {
 
 	updatePublishedPorts: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {

@@ -1,23 +1,22 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
-import { Logger } from "$lib/logger";
-import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
+import { Logger } from "#lib/logger.js";
+import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
 import {
 	type CreateServiceApiInput,
 	createServiceApiBody,
-} from "$lib/server/validation/api";
-import { CapacityService } from "$lib/services/capacity.service";
-import { attachDefaultDataVolume } from "$lib/services/default-volume";
-import { GitWebhookService } from "$lib/services/git-webhook.service";
-import { encryptSecret } from "$lib/services/secrets";
+} from "#lib/server/validation/api.js";
+import { CapacityService } from "#lib/services/capacity.service.js";
+import { attachDefaultDataVolume } from "#lib/services/default-volume.js";
+import { GitWebhookService } from "#lib/services/git-webhook.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
 
 const logger = new Logger("API");
 
 export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	const paged = await ServiceDTO.listWithStackNamesPaged(
@@ -104,13 +103,13 @@ function toSourceInput(input: CreateServiceApiInput) {
 
 export const POST = async ({ request, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	const body = await request.json().catch(() => null);
 	const result = createServiceApiBody.safeParse(body);
 	if (!result.success) {
-		return json(
+		return Response.json(
 			{ error: "Invalid request body", issues: result.error.flatten() },
 			{ status: 400 },
 		);
@@ -118,16 +117,19 @@ export const POST = async ({ request, locals }) => {
 	const input = result.data;
 
 	if (!locals.isAdmin && hostAccessRequested(input)) {
-		return json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
+		return Response.json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
 	}
 
 	if (await ServiceDTO.slugTaken(input.slug)) {
-		return json({ error: "That slug is already in use." }, { status: 409 });
+		return Response.json(
+			{ error: "That slug is already in use." },
+			{ status: 409 },
+		);
 	}
 
 	const full = await CapacityService.refusal();
 	if (full) {
-		return json({ error: full }, { status: 409 });
+		return Response.json({ error: full }, { status: 409 });
 	}
 
 	const stackId =
@@ -149,5 +151,5 @@ export const POST = async ({ request, locals }) => {
 		`Service created via API: service=${svc.id} slug=${svc.slug} user=${locals.user.id}`,
 	);
 
-	return json(svc.toJSON(), { status: 201 });
+	return Response.json(svc.toJSON(), { status: 201 });
 };

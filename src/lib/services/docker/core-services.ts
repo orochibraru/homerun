@@ -1,9 +1,9 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { config } from "$lib/config";
-import { Logger } from "$lib/logger";
-import { WorkerRequestError } from "$lib/server/worker-client";
+import { config } from "#lib/config.js";
+import { Logger } from "#lib/logger.js";
+import { WorkerRequestError } from "#lib/server/worker-client.js";
 import {
 	quietUptimeProbes,
 	TRAEFIK_RESTART_QUIET_MS,

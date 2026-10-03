@@ -7,13 +7,13 @@
 		Users,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import CopyButton from "#lib/components/copy-button.svelte";
+	import OauthAppToggle from "#lib/components/oauth-app-toggle.svelte";
+	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import CopyButton from "$lib/components/copy-button.svelte";
-	import OauthAppToggle from "$lib/components/oauth-app-toggle.svelte";
-	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { title } from "$lib/store/title";
 
 	const { data, children } = $props();
 	const app = $derived(data.app);

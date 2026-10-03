@@ -1,9 +1,12 @@
 import { z } from "zod";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { type StatPoint, StatSampleDTO } from "#lib/dto/stat-sample-dto.js";
+import { requireUser } from "#lib/server/remote-auth.js";
+import {
+	DockerService,
+	type SwarmReplica,
+} from "#lib/services/docker.service.js";
 import { query } from "$app/server";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { type StatPoint, StatSampleDTO } from "$lib/dto/stat-sample-dto";
-import { requireUser } from "$lib/server/remote-auth";
-import { DockerService, type SwarmReplica } from "$lib/services/docker.service";
 
 const rangeSchema = z.enum([
 	"live",

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown, FolderKanban, Plus } from "@lucide/svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Command from "#lib/components/ui/command/index.js";
+	import * as Popover from "#lib/components/ui/popover/index.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Command from "$lib/components/ui/command/index.js";
-	import * as Popover from "$lib/components/ui/popover/index.js";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		/** Path of the route whose form actions handle this dialog, e.g. `/services`; empty for the current route. */

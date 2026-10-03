@@ -1,9 +1,9 @@
 import { error } from "@sveltejs/kit";
-import { config } from "$lib/config";
-import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
-import { OauthClientEnvironmentDTO } from "$lib/dto/oauth-client-environment-dto";
-import { OauthGrantDTO } from "$lib/dto/oauth-grant-dto";
-import { oidcEndpointBase, oidcIssuer } from "$lib/oidc-provider";
+import { config } from "#lib/config.js";
+import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
+import { OauthClientEnvironmentDTO } from "#lib/dto/oauth-client-environment-dto.js";
+import { OauthGrantDTO } from "#lib/dto/oauth-grant-dto.js";
+import { oidcEndpointBase, oidcIssuer } from "#lib/oidc-provider.js";
 
 export const load = async ({ params, parent }) => {
 	await parent();

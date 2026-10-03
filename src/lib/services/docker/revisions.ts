@@ -2,8 +2,8 @@ import {
 	type SwarmTaskLike,
 	swarmSampleFromTasks,
 	type WorkloadHealthSample,
-} from "$lib/revisions";
-import { isNotFound } from "$lib/server/worker-client";
+} from "#lib/revisions.js";
+import { isNotFound } from "#lib/server/worker-client.js";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import {
 	type ContainerHealthSample,

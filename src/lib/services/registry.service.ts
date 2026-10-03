@@ -1,13 +1,13 @@
 import { connect } from "node:tls";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { RegistryTokenDTO } from "$lib/dto/registry-token-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { RegistryTokenDTO } from "#lib/dto/registry-token-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	certificateCheck,
 	publicProbeCheck,
 	type RegistryCheck,
-} from "$lib/registry-self-test";
+} from "#lib/registry-self-test.js";
 import {
 	MIRROR_HOST_PORT,
 	mirrorRepository,

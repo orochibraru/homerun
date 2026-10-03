@@ -1,18 +1,18 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { ImageScanDTO } from "$lib/dto/image-scan-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { invalidateGatedService } from "$lib/server/gated-service-cache";
+import { config } from "#lib/config.js";
+import { ImageScanDTO } from "#lib/dto/image-scan-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { invalidateGatedService } from "#lib/server/gated-service-cache.js";
 import {
 	loginWallAvailability,
 	loginWallOptions,
 	parseLoginWallForm,
-} from "$lib/server/login-wall-form";
-import { DeploymentService } from "$lib/services/deploy.service";
-import { ImageScanService } from "$lib/services/image-scan.service";
+} from "#lib/server/login-wall-form.js";
+import { DeploymentService } from "#lib/services/deploy.service.js";
+import { ImageScanService } from "#lib/services/image-scan.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("ImageScan");
 const accessLogger = new Logger("Services");
@@ -38,7 +38,7 @@ export const load = async ({ locals, params, parent }) => {
 export const actions = {
 	scan: async ({ params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -57,7 +57,7 @@ export const actions = {
 	},
 	updateAppAuth: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -77,6 +77,7 @@ export const actions = {
 		const wasRequired = svc.authRequired;
 		await svc.update(policy);
 		invalidateGatedService(svc.id);
+
 		const redeploying = await DeploymentService.redeployIfLoginWallChanged(
 			svc,
 			wasRequired,
@@ -84,10 +85,9 @@ export const actions = {
 		);
 
 		accessLogger.info(
-			`App access updated: service=${svc.id} authRequired=${policy.authRequired} methods=${
-				policy.authProviders.join("|") || "none"
-			} user=${locals.user.id}`,
+			`App access updated: service=${svc.id} authRequired=${policy.authRequired} methods=${policy.authProviders.join("|") || "none"} user=${locals.user.id}`,
 		);
+
 		return { authSuccess: true, redeploying };
 	},
 };

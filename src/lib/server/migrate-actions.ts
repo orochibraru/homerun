@@ -1,8 +1,10 @@
 import { fail, type RequestEvent, redirect } from "@sveltejs/kit";
+import type {
+	MigrationConnection,
+	MigrationEntry,
+} from "#lib/migrate/common.js";
+import { MigrationService } from "#lib/services/migration.service.js";
 import { resolve } from "$app/paths";
-import type { MigrationConnection, MigrationEntry } from "$lib/migrate/common";
-import { allowLongRequest } from "$lib/server/long-request";
-import { MigrationService } from "$lib/services/migration.service";
 
 export interface MigrationSource {
 	label: string;
@@ -13,12 +15,11 @@ export interface MigrationSource {
 }
 
 function guard(event: RequestEvent): string {
-	allowLongRequest(event.platform);
 	if (!event.locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 	if (!event.locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 	return event.locals.user.id;
 }

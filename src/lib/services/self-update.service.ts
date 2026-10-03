@@ -1,19 +1,19 @@
 import { readFile } from "node:fs/promises";
 import { hostname } from "node:os";
-import { config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { JobDTO } from "$lib/dto/job-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { Logger } from "$lib/logger";
-import { APP_VERSION } from "$lib/server/app-version";
-import { isNotFound, WorkerClient } from "$lib/server/worker-client";
-import { DockerService } from "$lib/services/docker.service";
-import { JobWorker } from "$lib/services/queue/worker";
+import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { JobDTO } from "#lib/dto/job-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { Logger } from "#lib/logger.js";
+import { APP_VERSION } from "#lib/server/app-version.js";
+import { isNotFound, WorkerClient } from "#lib/server/worker-client.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { JobWorker } from "#lib/services/queue/worker.js";
 import {
 	quietUptimeProbes,
 	resumeUptimeProbes,
-} from "$lib/services/uptime/quiet";
-import type { UpdateChannel } from "$lib/update-channel";
+} from "#lib/services/uptime/quiet.js";
+import type { UpdateChannel } from "#lib/update-channel.js";
 import {
 	COMPOSE_PROJECT_LABEL,
 	COMPOSE_SERVICE_LABEL,

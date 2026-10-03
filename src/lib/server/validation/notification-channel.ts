@@ -2,8 +2,8 @@ import { z } from "zod";
 import {
 	formatTelegramTarget,
 	parseTelegramTarget,
-} from "$lib/notification-channel-target";
-import type { NotificationChannelKind } from "$lib/types";
+} from "#lib/notification-channel-target.js";
+import type { NotificationChannelKind } from "#lib/types.js";
 
 const DISCORD_HOSTS = new Set([
 	"discord.com",
@@ -24,14 +24,21 @@ export const notificationChannelSchema = z.object({
 });
 
 /**
- * Builds the stored `target` from the create form : the `target` field as is,
- * except for Telegram, whose bot token and chat id fields are packed into one.
+ * Builds the stored `target` from the create or edit form : the `target` field
+ * as is, except for Telegram, whose bot token and chat id fields are packed
+ * into one. Given the channel being edited, its kind wins over the form's and a
+ * blank bot token keeps the stored one, since the browser never sees it.
  */
-export function channelTargetFromForm(form: FormData): string {
-	if (form.get("kind") !== "telegram") {
+export function channelTargetFromForm(
+	form: FormData,
+	current?: { kind: NotificationChannelKind; target: string },
+): string {
+	if ((current?.kind ?? form.get("kind")) !== "telegram") {
 		return String(form.get("target") ?? "");
 	}
-	const botToken = String(form.get("telegramBotToken") ?? "").trim();
+	const botToken =
+		String(form.get("telegramBotToken") ?? "").trim() ||
+		(current ? (parseTelegramTarget(current.target)?.botToken ?? "") : "");
 	const chatId = String(form.get("telegramChatId") ?? "").trim();
 	return botToken || chatId ? formatTelegramTarget({ botToken, chatId }) : "";
 }

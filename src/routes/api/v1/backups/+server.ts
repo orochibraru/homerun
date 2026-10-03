@@ -1,11 +1,10 @@
-import { json } from "@sveltejs/kit";
-import { BackupRunDTO } from "$lib/dto/backup-run-dto";
-import { JobDTO } from "$lib/dto/job-dto";
-import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
+import { BackupRunDTO } from "#lib/dto/backup-run-dto.js";
+import { JobDTO } from "#lib/dto/job-dto.js";
+import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
 
 export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const paged = await BackupRunDTO.listPaged(
 		parseApiListQuery(url, ["kind", "outcome", "volume"]),

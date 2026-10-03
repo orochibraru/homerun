@@ -192,13 +192,13 @@ describe("enhanceToast", () => {
 			success: "Deployed.",
 		});
 		await settle({ type: "success", data: {} });
-		expect(update).toHaveBeenCalledWith({ reset: true });
+		expect(update).toHaveBeenCalledWith({ navigate: false, reset: true });
 	});
 
 	test("never resets the form unless a call site asks for it", async () => {
 		const { settle, update } = run({ loading: "Saving", success: "Saved." });
 		await settle({ type: "success", data: {} });
-		expect(update).toHaveBeenCalledWith({ reset: false });
+		expect(update).toHaveBeenCalledWith({ navigate: false, reset: false });
 	});
 });
 

@@ -1,7 +1,7 @@
 import { lookup } from "node:dns/promises";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { DockerService } from "../docker.service.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
 

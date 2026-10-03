@@ -1,9 +1,8 @@
-import { json } from "@sveltejs/kit";
 import { z } from "zod";
 import {
 	EnrollError,
 	NodeEnrollmentService,
-} from "$lib/services/node-enrollment.service";
+} from "#lib/services/node-enrollment.service.js";
 
 const body = z.object({
 	agentToken: z.string().trim().min(1).optional(),
@@ -16,20 +15,20 @@ const body = z.object({
 export const POST = async ({ request }) => {
 	const parsed = body.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) {
-		return json(
+		return Response.json(
 			{ error: "Send a JSON body with token and hostname." },
 			{ status: 400 },
 		);
 	}
 	try {
-		return json(
+		return Response.json(
 			parsed.data.plan
 				? await NodeEnrollmentService.plan(parsed.data.token)
 				: await NodeEnrollmentService.enroll(parsed.data),
 		);
 	} catch (error) {
 		if (error instanceof EnrollError) {
-			return json({ error: error.message }, { status: error.status });
+			return Response.json({ error: error.message }, { status: error.status });
 		}
 		throw error;
 	}

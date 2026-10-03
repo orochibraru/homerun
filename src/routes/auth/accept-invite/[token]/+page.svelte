@@ -7,16 +7,16 @@
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import AuthShell from "#lib/components/auth-shell.svelte";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import PasswordStrength from "#lib/components/password-strength.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import AuthShell from "$lib/components/auth-shell.svelte";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import PasswordStrength from "$lib/components/password-strength.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -38,12 +38,9 @@
     <div class="flex flex-col items-center gap-4 py-2 text-center">
       <span
         class="flex size-12 items-center justify-center rounded-md bg-amber-500/10 text-amber-500"
-      >
-        <MailX class="size-6" />
-      </span>
-      <Button href={resolve("/auth/sign-in")} variant="outline">
-        Back to sign in
-      </Button>
+      ><MailX class="size-6" /></span>
+
+      <Button href={resolve('auth/sign-in')} variant="outline">Back to sign in</Button>
     </div>
   </AuthShell>
 {:else}
@@ -140,44 +137,42 @@
           we'll send a one-time code to {data.email}.
         </p>
       {:else}
-      <div>
-        <PasswordField
-          autocomplete="new-password"
-          disabled={submitting}
-          id="password"
-          label="Password"
-          name="password"
-          placeholder="Min. 12 characters"
-          required
-          bind:value={password}
-        />
-        <PasswordStrength {password} />
-      </div>
+        <div>
+          <PasswordField
+            autocomplete="new-password"
+            disabled={submitting}
+            id="password"
+            label="Password"
+            name="password"
+            placeholder="Min. 12 characters"
+            required
+            bind:value={password}
+          />
+          <PasswordStrength password={password} />
+        </div>
 
-      <div>
-        <PasswordField
-          autocomplete="new-password"
-          disabled={submitting}
-          id="confirm"
-          label="Confirm password"
-          name="confirm"
-          placeholder="Repeat your password"
-          required
-          bind:value={confirm}
-        />
-        {#if confirm && confirm !== password}
+        <div>
+          <PasswordField
+            autocomplete="new-password"
+            disabled={submitting}
+            id="confirm"
+            label="Confirm password"
+            name="confirm"
+            placeholder="Repeat your password"
+            required
+            bind:value={confirm}
+          />
+          {#if confirm && confirm !== password}
           <p class="mt-1.5 text-xs text-red-500">
             Passwords don't match.
           </p>
-        {/if}
-      </div>
+          {/if}
+        </div>
       {/if}
 
       <Button
         class="mt-2 h-10 w-full"
-        disabled={submitting
-        || !name
-        || (!withCodes && (password.length < 12 || password !== confirm))}
+        disabled={submitting || !name || !withCodes && (password.length < 12 || password !== confirm)}
         type="submit"
       >
         {#if submitting}

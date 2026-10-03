@@ -1,5 +1,5 @@
-import { config } from "$lib/config";
-import { serviceHostnames } from "$lib/service-domains";
+import { config } from "#lib/config.js";
+import { serviceHostnames } from "#lib/service-domains.js";
 import { certResolverFor } from "./cert-resolver.ts";
 
 export const GATE_IDENTITY_HEADERS = [

@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { Plus, PlusIcon, Server, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList from "$lib/components/entity-list.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
-	} from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { BASE_SORTS } from "$lib/list-sorts";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import EnrollDialog from "./enroll-dialog.svelte";
 	import SwarmNodes from "./swarm-nodes.svelte";
 
@@ -102,7 +102,7 @@
       success: "Host deleted.",
     })}
   >
-    <input name="hostId" type="hidden" value={host.id}>
+    <input name="hostId" type="hidden" value={host.id} />
     <Button
       class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
       onclick={(e) => requestDelete(e, host.name)}
@@ -127,14 +127,13 @@
     </div>
     <div class="flex gap-2">
       {#if data.isAdmin}
-        <Button onclick={() => (enrollOpen = true)}>
-          <Plus class="size-4" />
-          Add a server
-        </Button>
+        <Button onclick={() => enrollOpen = true}><Plus class="size-4" />Add a server</Button>
       {/if}
-      <Button href={resolve("/remote-hosts/new")} variant="outline">
-        Register by hand
-      </Button>
+
+      <Button
+        href={resolve('remote-hosts/new')}
+        variant="outline"
+      >Register by hand</Button>
     </div>
   </div>
 
@@ -143,17 +142,15 @@
       icon={Server}
       subtitle="Git builds run on this host until you add a build server."
       title="No remote hosts yet"
-    >
-      <Button href={resolve("/remote-hosts/new")}>
-        <PlusIcon />
-        Add your first remote host
-      </Button>
-    </EmptyState>
+    ><Button href={resolve('remote-hosts/new')}><PlusIcon />Add your first remote host</Button></EmptyState>
   {:else}
     <EntityToolbar
-    sorts={BASE_SORTS} {filters} placeholder="Search hosts by name or address…">
+      sorts={BASE_SORTS}
+      filters={filters}
+      placeholder="Search hosts by name or address…"
+    >
       {#snippet trailing()}
-        <ViewModeToggle {view} />
+        <ViewModeToggle view={view} />
       {/snippet}
     </EntityToolbar>
 
@@ -162,13 +159,21 @@
         <p class="text-text-muted text-sm">No hosts match your filters.</p>
       </div>
     {:else}
-    <EntityList {actions} {badge} items={rows} {media} {meta} {view} />
-    <Pagination
-      label="hosts"
-      page={data.page}
-      perPage={data.perPage}
-      total={data.total}
-    />
+      <EntityList
+        actions={actions}
+        badge={badge}
+        items={rows}
+        media={media}
+        meta={meta}
+        view={view}
+      />
+
+      <Pagination
+        label="hosts"
+        page={data.page}
+        perPage={data.perPage}
+        total={data.total}
+      />
     {/if}
   {/if}
 

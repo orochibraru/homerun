@@ -6,7 +6,7 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
-## Job queue and worker (`job` table, `JobDTO`, `$lib/services/queue.service.ts`, `$lib/services/queue/`)
+## Job queue and worker (`job` table, `JobDTO`, `src/lib/services/queue.service.ts`, `src/lib/services/queue/`)
 
 Every long-running, side-effecting operation in this app, deploys (including git
 builds), volume backups, user-defined cron jobs, and host-wide Docker cleanups,
@@ -51,31 +51,31 @@ two deploys of the same service racing each other, and what keeps a
   so two concurrent claimers pick two different rows rather than racing for the
   same one.
 
-- **`QueueService`** (`$lib/services/queue.service.ts`) is the enqueue/wait API
-  every caller uses : `enqueue()` (with the coalescing described above),
+- **`QueueService`** (`src/lib/services/queue.service.ts`) is the enqueue/wait
+  API every caller uses : `enqueue()` (with the coalescing described above),
   `wait(jobId)` (poll to a terminal status, for the two callers that must keep
   their synchronous contract), plus the list helpers the Scheduling page reads.
-- **`JobWorker`** (`$lib/services/queue/worker.ts`) is a fourth `BaseScheduler`
-  subclass alongside the three cron schedulers, overriding `intervalMs` to a 1s
-  poll (`BaseScheduler` gained both that knob and a non-overlapping-tick guard
-  for this). Started from `hooks.server.ts`'s `init()`. Each tick claims up to
-  `MAX_CONCURRENT_JOBS` (3) jobs, claiming _serially_ so each claim sees the
-  previous one's committed `running` row (a parallel batch of claims would each
-  run in its own uncommitted transaction and could hand out two jobs sharing a
-  `lockKey`). On the first tick and every 30s after it calls
-  `JobDTO.requeueOrphaned(inFlightIds)` : this app runs one worker, so a row
-  still `running` in an app-side stage (none, `prepare`, `finalizing`) that
-  isn't in this process's `#inFlight` set was left there by a process that died
-  (at boot) or by a job whose own bookkeeping threw (`markFailed` on a dead
-  connection, later), and is put back on the queue. Before it ran every 30s, the
-  second case sat in `running` until the next restart and blocked self-update
-  ("1 job(s) are running") forever. The sweep is safe against the claim path
-  because ticks never overlap and `#dispatch` adds to `#inFlight` synchronously
-  after `claimNext` returns. `runJob()` is public specifically so
-  `tests/unit/app/queue.test.ts` can drive the succeed/retry/permanently-fail
-  decision without an interval.
+- **`JobWorker`** (`src/lib/services/queue/worker.ts`) is a fourth
+  `BaseScheduler` subclass alongside the three cron schedulers, overriding
+  `intervalMs` to a 1s poll (`BaseScheduler` gained both that knob and a
+  non-overlapping-tick guard for this). Started from `hooks.server.ts`'s
+  `init()`. Each tick claims up to `MAX_CONCURRENT_JOBS` (3) jobs, claiming
+  _serially_ so each claim sees the previous one's committed `running` row (a
+  parallel batch of claims would each run in its own uncommitted transaction and
+  could hand out two jobs sharing a `lockKey`). On the first tick and every 30s
+  after it calls `JobDTO.requeueOrphaned(inFlightIds)` : this app runs one
+  worker, so a row still `running` in an app-side stage (none, `prepare`,
+  `finalizing`) that isn't in this process's `#inFlight` set was left there by a
+  process that died (at boot) or by a job whose own bookkeeping threw
+  (`markFailed` on a dead connection, later), and is put back on the queue.
+  Before it ran every 30s, the second case sat in `running` until the next
+  restart and blocked self-update ("1 job(s) are running") forever. The sweep is
+  safe against the claim path because ticks never overlap and `#dispatch` adds
+  to `#inFlight` synchronously after `claimNext` returns. `runJob()` is public
+  specifically so `tests/unit/app/queue.test.ts` can drive the
+  succeed/retry/permanently-fail decision without an interval.
 - **Go-executed job types** skip any in-process handler: a non-null module in
-  `$lib/services/queue/worker-jobs/`
+  `src/lib/services/queue/worker-jobs/`
   (`src/lib/services/queue/worker-jobs/index.ts`'s `workerJobs`) makes `runJob`
   run its `prepare` step and hand the job to the Go worker, and the tick's
   finalize pass runs its `finalize` step once the worker reports back. See
@@ -84,7 +84,7 @@ two deploys of the same service racing each other, and what keeps a
   `prepareWorkerDeploy`/`finalizeWorkerDeploy`), `backup`/`backup_restore`,
   `cron_job`, `docker_cleanup`, `image_scan`. Only `notification_delivery` still
   runs fully in-process.
-- **`$lib/services/queue/handlers.ts`** maps a `JobType` to an in-process
+- **`src/lib/services/queue/handlers.ts`** maps a `JobType` to an in-process
   handler for whatever's left : today just `notification_delivery` →
   `NotificationChannelService.retryDelivery`
   (`jobHandlers: Partial<Record<JobType, JobHandler>>`, so a Go-executed type
@@ -132,15 +132,15 @@ banner is suppressed during a first deploy.
   `homerun services deploy`) is unchanged, verified by `tests/integration/`'s
   real deploy tests still passing untouched.
 - The Docker Cleanup page's six actions likewise enqueue-and-wait (via
-  `$lib/services/docker-cleanup-queue.ts`, split out of the route file so the
+  `src/lib/services/docker-cleanup-queue.ts`, split out of the route file so the
   route keeps no manual typing), since the page renders the reclaimed-space
-  summary. They also gained `allowLongRequest()`, which they were missing.
+  summary.
 - Backups (`/backups`'s and `storage/[volumeId]`'s "Run now", plus the backup
-  scheduler) enqueue and return : a tar-and-upload could comfortably outlive
-  Bun's idle timeout, and neither route called `allowLongRequest()`. The
-  `backup_run` row is opened by the `backup`/`backup_restore` worker jobs'
-  `prepare` step (`worker-jobs/backup.ts`, `S3BackupService.backupSpec`) when
-  the job is claimed, not when the app enqueues it.
+  scheduler) enqueue and return : a tar-and-upload could comfortably take a
+  while, so the request just returns. The `backup_run` row is opened by the
+  `backup`/`backup_restore` worker jobs' `prepare` step
+  (`worker-jobs/backup.ts`, `S3BackupService.backupSpec`) when the job is
+  claimed, not when the app enqueues it.
 
 **Retries** are per job type (`maxAttempts`, default 1) with exponential backoff
 : backups get 2 attempts, a notification channel delivery retry gets 4 (queued
@@ -151,8 +151,8 @@ retried. Finished rows are amortized-pruned after 7 days on ~2% of inserts, the
 same convention as `AppLogDTO`/`NotificationDTO`.
 
 **Visibility** is the Scheduling page's new "Job queue" section
-(`$lib/components/job-queue-panel.svelte`, which loads itself through
-`$lib/remote/jobs.remote.ts` rather than taking props off that page's `load`,
+(`src/lib/components/job-queue-panel.svelte`, which loads itself through
+`src/lib/remote/jobs.remote.ts` rather than taking props off that page's `load`,
 running/queued plus the last 15 finished, refreshing itself every 3s while
 anything is active).
 
@@ -185,7 +185,7 @@ a scheduler isn't running on behalf of a request. Due-checking is
 double-fire within one matching minute.
 
 A fourth scheduler doesn't fit `DueScheduler` and extends `BaseScheduler`
-directly: `StatsSampler` (`$lib/services/stats/stats-sampler.ts`) has no
+directly: `StatsSampler` (`src/lib/services/stats/stats-sampler.ts`) has no
 schedule expression and no per-row `lastRunAt`, it just samples every tick, see
 Recorded resource history in `observability.md`. It's also the only one with
 `runOnStart = true`.
@@ -214,7 +214,7 @@ when one is a wildcard only the other applies. "Restricted" means the field
 doesn't start with `*`, matching Vixie cron's own star flag, so `*/2` counts as
 unrestricted. Covered by `tests/unit/app/cron-expression.test.ts`.
 
-## Cron jobs (`cron_job`/`cron_job_run` tables, `CronJobDTO`, `$lib/services/cron-job.service.ts`, `/cron-jobs`)
+## Cron jobs (`cron_job`/`cron_job_run` tables, `CronJobDTO`, `src/lib/services/cron-job.service.ts`, `/cron-jobs`)
 
 A user-defined scheduled task that isn't tied to a service, unlike
 `service.cronSchedule` (which redeploys an existing service). Two kinds:
@@ -222,7 +222,7 @@ A user-defined scheduled task that isn't tied to a service, unlike
 - **`kind: "image"`** runs a throwaway container: image + tag, an optional
   command override, env vars, and optional private-registry credentials
   (`registryPasswordEnc`, same AES-256-GCM scheme as everything else). The
-  command override is parsed by `$lib/command-parse.ts`'s `parseCommand`, a
+  command override is parsed by `src/lib/command-parse.ts`'s `parseCommand`, a
   small pure tokenizer (quotes group, backslash escapes, and a leading `[` is
   taken as Docker-style JSON exec form), tested in
   `tests/unit/app/command-parse.test.ts`.
@@ -239,9 +239,9 @@ A user-defined scheduled task that isn't tied to a service, unlike
   with `hostname` prints the host's (OrbStack VM's) hostname. Under rootless
   Docker PID 1 of the daemon's PID namespace is rootlesskit's, so "host" there
   means the rootless user namespace. **Admin-only, enforced in
-  `$lib/server/cron-job-form.ts`** (shared by both the create and edit actions,
-  so neither can skip it) rather than only hidden in the UI : it is root on the
-  host, the same class of power the Docker socket already gives.
+  `src/lib/server/cron-job-form.ts`** (shared by both the create and edit
+  actions, so neither can skip it) rather than only hidden in the UI : it is
+  root on the host, the same class of power the Docker socket already gives.
 
 Both kinds run as a throwaway one-off container **in the Go worker now**, not
 through `DockerService.runOneOff` in-process (see "Executed by the Go worker"
@@ -253,17 +253,17 @@ as the backup/restore worker jobs (see S3 backups below). A run keeps
 since a failure's useful output is at the end).
 
 Wiring follows the existing patterns exactly rather than inventing anything:
-`JobType` gains `"cron_job"` (`$lib/types.ts` + `JOB_TYPE_LABELS`), with its own
-zod payload (`queue/payloads.ts`) and handler (`queue/handlers.ts`), an
+`JobType` gains `"cron_job"` (`src/lib/types.ts` + `JOB_TYPE_LABELS`), with its
+own zod payload (`queue/payloads.ts`) and handler (`queue/handlers.ts`), an
 `enqueueCronJobRun` helper (`cron-job-queue.ts`, mirroring `backup-queue.ts`)
 keyed `cron_job:<id>` for both dedupe and lock so one job never runs twice
 concurrently, and a third `DueScheduler<T>` instance (`cronJobScheduler` in
 `cron.service.ts`, started from `hooks.server.ts`) with the same due-check plus
 same-minute double-fire guard as the redeploy and backup schedulers. Routes are
 the usual list/new/detail trio (`/cron-jobs`, `new/`, `[cronJobId]/`) sharing
-one form component (`$lib/components/cron-job-fields.svelte`) and one
-server-side parser (`$lib/server/cron-job-form.ts`); enabled jobs also render on
-the Scheduling page next to cron redeploys and backups.
+one form component (`src/lib/components/cron-job-fields.svelte`) and one
+server-side parser (`src/lib/server/cron-job-form.ts`); enabled jobs also render
+on the Scheduling page next to cron redeploys and backups.
 
 **Executed by the Go worker** (`worker-jobs/cron_job.ts`,
 `internal/jobs/cronjob`). `CronJobService.prepareRun` creates the run row and
@@ -288,7 +288,7 @@ bucket/credential pair; the volume only owns
 `backupEnabled`/`backupSchedule`/`backupPrefix`, edited on `storage/[volumeId]`.
 `/s3-destinations/[destinationId]` is the detail page: the volumes using it
 (`StorageVolumeDTO.listForDestination`), the same fields as the create form
-(`$lib/components/backup-destination-fields.svelte`, parsed with
+(`src/lib/components/backup-destination-fields.svelte`, parsed with
 `keepSecret: true` so a blank secret keeps the stored one; the type can't
 change) and a **Test destination** action. `S3BackupService.testDestination`
 writes `.homerun-test-<uuid>` and deletes it, against the saved row: a signed
@@ -309,19 +309,19 @@ returns the spec `internal/jobs/backup/backup.go`'s `Run` needs —
 (decrypted via `destinationFor`), the helper image/mount path, the pre-backup
 command's target and, when `backupStopServices`/`options.stopServices`, the
 running services to stop (all resolved by
-`$lib/services/backup/volume-services.ts`'s `VolumeServices`, see Quiescing
+`src/lib/services/backup/volume-services.ts`'s `VolumeServices`, see Quiescing
 below). `S3Config`'s hand-rolled AWS Signature V4 client (`signedRequest`,
 `listBackups`'s `ListObjectsV2`) is the one part still in TS, since the app
 itself lists backups for the Restore picker; the Go side has its own S3 client
 (`internal/s3`) for the actual PUT/GET. **A destination has a `type`**
 (`src/lib/backup-destinations.ts`: `s3`, `sftp`, `smb`, `webdav`), and
 `destinationFor` returns either `{ destination: S3Config }` or
-`{ remote: RcloneRemote }` (`$lib/services/backup/rclone.ts`), so the spec's
+`{ remote: RcloneRemote }` (`src/lib/services/backup/rclone.ts`), so the spec's
 `Spec.Remote` is set instead of the S3 fields. A non-S3 row reuses the S3
 columns (`endpoint` = `host[:port]` or the WebDAV URL, `bucket` = the path, for
 smb the share then an optional path, `accessKeyId` = username,
 `secretAccessKeyEnc` = password or an sftp PEM key, `region` empty), parsed by
-`$lib/server/backup-destination-form.ts`. `backup.go`'s `archives()` picks
+`src/lib/server/backup-destination-form.ts`. `backup.go`'s `archives()` picks
 `internal/rclone` when `Spec.Remote` is set, else `internal/s3`. **rclone
 transport**: a throwaway `rclone/rclone` helper (`RCLONE_TAG`), one remote named
 `dest` configured only through `RCLONE_CONFIG_DEST_*` env vars, an `sh -c`
@@ -385,7 +385,7 @@ through the new `tar -x` (verified with a `docker cp` archive, symlink and uid
 999 file included). Scheduled backups are one `DueScheduler` config over
 `StorageVolumeDTO.listBackupEnabled()`, see Schedulers above.
 
-**Quiescing** is resolved in `$lib/services/backup/volume-services.ts`
+**Quiescing** is resolved in `src/lib/services/backup/volume-services.ts`
 (`VolumeServices`) but executed in Go. `storage_volume.backupStopServices`
 becomes a `stopTargets` list (services mounting the volume,
 `ServiceVolumeDTO.serviceIdsForVolume`, filtered to the ones a live
@@ -456,19 +456,20 @@ disk and anything else is left alone. `stopServices` defaults to on in the UI;
 the confirm dialog's text follows both toggles.
 
 **Restoring from a service's Storage tab** (`restoreVolumeBackup` in
-`$lib/services/backup/volume-restore.ts`, the `restoreBackup` action,
-`RESTORE_MODES` in `$lib/restore-modes.ts`): `replace` is a plain restore job;
-`backupFirst` chains the restore on a backup job (`dependsOnJobId`), so a failed
-backup cancels it. `revision` creates a new Docker volume with the old one's
-backup settings, restores into it, and enqueues a deploy that depends on the
-restore and carries `mountSwap` in its payload (its own dedupe key, so it never
-coalesces into another queued deploy and loses the swap). The swap is applied in
-that deploy's prepare step (`swapRestoredVolume`), not when it's queued, so a
-failed restore leaves the service mounted on the old volume. Every deploy's
-`configSnapshot` records `volumeMounts`, and a rollback with `restoreConfig`
-puts them back; the swap also backfills them onto the revision it replaces when
-that one predates the field. A dependent job cancelled by a failure or a cancel
-used to leave a deploy's deployment `pending` forever: `closeCancelledDeploys`
-fails it and re-syncs the service, from the worker's failure path and from
-`cancelBackupRun`. `tests/integration/volume-restore.test.ts` runs the revision
-and backup-first paths end to end against an in-process S3 stub.
+`src/lib/services/backup/volume-restore.ts`, the `restoreBackup` action,
+`RESTORE_MODES` in `src/lib/restore-modes.ts`): `replace` is a plain restore
+job; `backupFirst` chains the restore on a backup job (`dependsOnJobId`), so a
+failed backup cancels it. `revision` creates a new Docker volume with the old
+one's backup settings, restores into it, and enqueues a deploy that depends on
+the restore and carries `mountSwap` in its payload (its own dedupe key, so it
+never coalesces into another queued deploy and loses the swap). The swap is
+applied in that deploy's prepare step (`swapRestoredVolume`), not when it's
+queued, so a failed restore leaves the service mounted on the old volume. Every
+deploy's `configSnapshot` records `volumeMounts`, and a rollback with
+`restoreConfig` puts them back; the swap also backfills them onto the revision
+it replaces when that one predates the field. A dependent job cancelled by a
+failure or a cancel used to leave a deploy's deployment `pending` forever:
+`closeCancelledDeploys` fails it and re-syncs the service, from the worker's
+failure path and from `cancelBackupRun`.
+`tests/integration/volume-restore.test.ts` runs the revision and backup-first
+paths end to end against an in-process S3 stub.

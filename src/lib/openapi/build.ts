@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { READ_ONLY_MESSAGE } from "$lib/permissions";
+import { READ_ONLY_MESSAGE } from "#lib/permissions.js";
 import { routes } from "./registry";
 
 /** zod's toJSONSchema() emits a top-level `$schema` pointer meant for a standalone document : an embedded OpenAPI schema object shouldn't carry one. */
@@ -34,7 +34,7 @@ function baseResponses(method: string): Record<string, unknown> {
 /**
  * Builds the OpenAPI 3.1 document served at GET /api/v1/openapi.json.
  * Request bodies come straight from the same zod schemas that validate the
- * request at runtime (`$lib/server/validation/api.ts`, via `registry.ts`) :
+ * request at runtime (`#lib/server/validation/api.ts`, via `registry.ts`) :
  * response shapes are hand-mirrored (see schemas.ts's docstring for why).
  */
 export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {

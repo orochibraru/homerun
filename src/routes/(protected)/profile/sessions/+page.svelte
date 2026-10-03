@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { LogOut, Monitor, ShieldCheck, TriangleAlert } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 

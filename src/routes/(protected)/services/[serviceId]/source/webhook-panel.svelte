@@ -1,9 +1,9 @@
 <script lang="ts">
+	import CheckBox from "#lib/components/check-box.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import type { PushWebhookDetails } from "#lib/services/git-webhook.service.js";
 	import { resolve } from "$app/paths";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import type { PushWebhookDetails } from "$lib/services/git-webhook.service";
 
 	interface Props {
 		autoDeployOnPush: boolean;

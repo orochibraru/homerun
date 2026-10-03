@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeDestination, normalizeSource } from "$lib/redirects";
+import { normalizeDestination, normalizeSource } from "#lib/redirects.js";
 
 const checkbox = z.preprocess(
 	(val) => val === "on" || val === true,

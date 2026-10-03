@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
-import { PALETTES } from "$lib/palettes";
-import { PRESETS, SURFACE_STYLES } from "$lib/surfaces";
+import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
+import { PALETTES } from "#lib/palettes.js";
+import { PRESETS, SURFACE_STYLES } from "#lib/surfaces.js";
 
 /** A bare "#rrggbb" hex color, the shape a native `<input type="color">` always submits. */
 const hexColorSchema = z

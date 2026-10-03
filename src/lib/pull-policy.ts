@@ -1,4 +1,4 @@
-import type { PullPolicy } from "$lib/types";
+import type { PullPolicy } from "#lib/types.js";
 
 export const PULL_POLICIES: ReadonlyArray<{
 	description: string;

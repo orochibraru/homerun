@@ -1,16 +1,15 @@
 <script lang="ts">
-	import type { SubmitFunction } from "@sveltejs/kit";
 	import { tick } from "svelte";
-	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import DeleteVolumesOption from "$lib/components/delete-volumes-option.svelte";
-	import GroupDialog from "$lib/components/service-group-dialog.svelte";
-	import LinkDialog from "$lib/components/service-link-dialog.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
+	import GroupDialog from "#lib/components/service-group-dialog.svelte";
+	import LinkDialog from "#lib/components/service-link-dialog.svelte";
 	import {
 		SERVICE_ACTION_LABELS,
 		type ServiceAction,
-	} from "$lib/service-actions";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/service-actions.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance, type SubmitFunction } from "$app/forms";
 
 	interface MenuService {
 		id: string;
@@ -94,8 +93,17 @@
   bind:this={opForm}
   use:enhance={submitOp}
 >
-  <input name="serviceId" type="hidden" value={target?.id ?? ""}>
-  <input name="deleteVolumes" type="hidden" value={deleteVolumes ? "true" : "false"}>
+	<input
+		name="serviceId"
+		type="hidden"
+		value={target?.id ?? ""}
+	/>
+
+	<input
+		name="deleteVolumes"
+		type="hidden"
+		value={deleteVolumes ? "true" : "false"}
+	/>
 </form>
 
 <form
@@ -109,8 +117,13 @@
     success: "Removed from its stack.",
   })}
 >
-  <input name="serviceId" type="hidden" value={target?.id ?? ""}>
-  <input name="stackId" type="hidden" value="">
+	<input
+		name="serviceId"
+		type="hidden"
+		value={target?.id ?? ""}
+	/>
+
+	<input name="stackId" type="hidden" value="" />
 </form>
 
 <ConfirmDialog
@@ -125,11 +138,16 @@
 </ConfirmDialog>
 
 <LinkDialog
-  bind:this={linkDialog}
-  {actionBase}
-  service={target}
-  {services}
-  {stacks}
+	bind:this={linkDialog}
+	actionBase={actionBase}
+	service={target}
+	services={services}
+	stacks={stacks}
 />
 
-<GroupDialog bind:this={groupDialog} {actionBase} service={target} {stacks} />
+<GroupDialog
+	bind:this={groupDialog}
+	actionBase={actionBase}
+	service={target}
+	stacks={stacks}
+/>

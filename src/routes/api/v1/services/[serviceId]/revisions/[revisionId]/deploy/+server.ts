@@ -1,20 +1,17 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { allowLongRequest } from "$lib/server/long-request";
-import { QueueService } from "$lib/services/queue.service";
-import { RevisionService } from "$lib/services/revision.service";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { QueueService } from "#lib/services/queue.service.js";
+import { RevisionService } from "#lib/services/revision.service.js";
 
 const logger = new Logger("API");
 
-export const POST = async ({ params, locals, platform, url }) => {
-	allowLongRequest(platform);
+export const POST = async ({ params, locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 
 	const target = await RevisionService.findTarget(
@@ -22,7 +19,7 @@ export const POST = async ({ params, locals, platform, url }) => {
 		params.revisionId === "previous" ? null : params.revisionId,
 	);
 	if (target.error !== null) {
-		return json({ error: target.error }, { status: target.status });
+		return Response.json({ error: target.error }, { status: target.status });
 	}
 	const { revision } = target;
 
@@ -38,12 +35,12 @@ export const POST = async ({ params, locals, platform, url }) => {
 	);
 	const finished = await QueueService.wait(jobId);
 	if (finished.status !== "succeeded") {
-		return json(
+		return Response.json(
 			{ deploymentId, error: finished.error ?? "Deploy failed." },
 			{ status: 500 },
 		);
 	}
-	return json({
+	return Response.json({
 		containerId: (finished.result?.containerId as string | null) ?? undefined,
 		deploymentId,
 		success: true,

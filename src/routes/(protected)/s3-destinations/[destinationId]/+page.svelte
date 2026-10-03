@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { PlugZap } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 	import {
 		DESTINATION_TYPE_LABELS,
 		describeDestination,
-	} from "$lib/backup-destinations";
-	import BackupDestinationFields from "$lib/components/backup-destination-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { timeAgo } from "$lib/formatting";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/backup-destinations.js";
+	import BackupDestinationFields from "#lib/components/backup-destination-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 

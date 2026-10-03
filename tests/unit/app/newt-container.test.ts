@@ -5,7 +5,7 @@ import {
 	NEWT_CONTAINER_NAME,
 	newtContainerSpec,
 	newtSwarmServiceSpec,
-} from "$lib/services/docker/newt";
+} from "#lib/services/docker/newt.js";
 
 const credentials = {
 	endpoint: "https://pangolin.example.com",

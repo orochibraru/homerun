@@ -48,10 +48,27 @@ test.describe
 			await expect(serviceDown).toBeChecked();
 
 			await page.goto("/notification-channels");
-			await page.getByRole("button", { name: "Remove E2E hook" }).click();
+			await page.getByRole("button", { name: "Edit E2E hook" }).click();
+			await page.locator("#editChannelName").fill("E2E hook renamed");
+			await page
+				.locator("#editChannelTarget")
+				.fill("https://example.com/other-hook");
+			await page.locator("#editChannelEnabled").click();
+			await page.getByRole("button", { exact: true, name: "Save" }).click();
+			await expect(page.getByText("Channel saved.")).toBeVisible();
+			await expect(
+				page.getByText("https://example.com/other-hook"),
+			).toBeVisible();
+			await expect(page.getByText("· Disabled")).toBeVisible();
+
+			await page
+				.getByRole("button", { name: "Remove E2E hook renamed" })
+				.click();
 			await page.getByRole("button", { exact: true, name: "Remove" }).click();
 			await expect(page.getByText("Channel removed.")).toBeVisible();
-			await expect(page.getByText("https://example.com/hook")).toHaveCount(0);
+			await expect(
+				page.getByText("https://example.com/other-hook"),
+			).toHaveCount(0);
 		});
 
 		test("a malformed Discord webhook URL is rejected", async ({ page }) => {

@@ -1,4 +1,3 @@
-import { json } from "@sveltejs/kit";
 import { type ListQuery, parseListQuery } from "./list-query";
 
 const API_DEFAULT_PER_PAGE = 100;
@@ -22,7 +21,7 @@ export function jsonPage<T>(
 	items: T[],
 	meta: { page: number; perPage: number; total: number },
 ): Response {
-	return json(items, {
+	return Response.json(items, {
 		headers: {
 			"x-page": String(meta.page),
 			"x-per-page": String(meta.perPage),

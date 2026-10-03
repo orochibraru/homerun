@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { Network } from "@lucide/svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { isDatabaseImage } from "$lib/service-link";
+	} from "#lib/components/ui/select/index.js";
+	import { isDatabaseImage } from "#lib/service-link.js";
 	import { errorClass, label } from "./field-classes";
 	import type { WizardData } from "./wizard-types";
 

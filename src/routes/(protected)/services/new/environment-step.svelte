@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Plus, Trash2 } from "@lucide/svelte";
-	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import ServiceLinkPicker from "$lib/components/service-link-picker.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
+	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import ServiceLinkPicker from "#lib/components/service-link-picker.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { mergeEnvRows, type ParsedEnvVar } from "#lib/env-parse.js";
 	import type { WizardData } from "./wizard-types";
 
 	interface Props {

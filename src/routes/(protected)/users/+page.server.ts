@@ -1,16 +1,16 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { config, isSmtpEnabled } from "#lib/config.js";
+import { InvitationDTO } from "#lib/dto/invitation-dto.js";
+import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { Logger } from "#lib/logger.js";
+import { asAuthRole, isUserRole, roleLabel } from "#lib/permissions.js";
+import { brandedEmail } from "#lib/server/email-layout.js";
+import { parseListQuery } from "#lib/server/list-query.js";
+import { AccountSetupService } from "#lib/services/account-setup.service.js";
+import { auth } from "#lib/services/auth.js";
+import { EmailService } from "#lib/services/email.service.js";
+import { UserService } from "#lib/services/user.service.js";
 import { resolve } from "$app/paths";
-import { config, isSmtpEnabled } from "$lib/config";
-import { InvitationDTO } from "$lib/dto/invitation-dto";
-import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
-import { Logger } from "$lib/logger";
-import { asAuthRole, isUserRole, roleLabel } from "$lib/permissions";
-import { brandedEmail } from "$lib/server/email-layout";
-import { parseListQuery } from "$lib/server/list-query";
-import { AccountSetupService } from "$lib/services/account-setup.service";
-import { auth } from "$lib/services/auth";
-import { EmailService } from "$lib/services/email.service";
-import { UserService } from "$lib/services/user.service";
 
 const logger = new Logger("Users");
 
@@ -18,7 +18,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const load = async ({ locals, parent, url }) => {
 	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 
 	const { preferences } = await parent();
@@ -56,10 +56,10 @@ async function wouldRemoveLastAdmin(userId: string): Promise<boolean> {
 export const actions = {
 	cancelInvite: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const id = formData.get("id") as string;
@@ -69,10 +69,10 @@ export const actions = {
 
 	createDirect: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -117,10 +117,10 @@ export const actions = {
 
 	invite: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		if (!isSmtpEnabled()) {
 			return fail(400, {
@@ -194,10 +194,10 @@ export const actions = {
 
 	removeUser: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -225,10 +225,10 @@ export const actions = {
 
 	setEmail: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -270,10 +270,10 @@ export const actions = {
 
 	setRole: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -283,6 +283,7 @@ export const actions = {
 		if (!isUserRole(role)) {
 			return fail(400, { action: "setRole", error: "Invalid role." });
 		}
+
 		if (role !== "admin" && (await wouldRemoveLastAdmin(userId))) {
 			return fail(400, {
 				action: "setRole",

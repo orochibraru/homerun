@@ -1,6 +1,6 @@
 <script lang="ts">
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { inputClass, labelClass } from "$lib/components/form-styles";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 
 	export interface OauthAppFieldValues {
 		confidential: boolean;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { HardDrive } from "@lucide/svelte";
-	import { formatBytes } from "$lib/formatting";
-	import type { VolumeSizeRow } from "$lib/remote/volume-sizes.remote";
+	import { formatBytes } from "#lib/formatting.js";
+	import type { VolumeSizeRow } from "#lib/remote/volume-sizes.remote.js";
 
 	interface Props {
 		/** Undefined while the size is still being measured. */

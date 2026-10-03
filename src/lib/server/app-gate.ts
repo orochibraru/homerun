@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 
 export const GATE_COOKIE_NAME = "homerun_app_session";
 export const GATE_CALLBACK_PATH = "/__homerun_auth/callback";

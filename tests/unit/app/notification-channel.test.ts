@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,
@@ -194,6 +194,15 @@ describe("Slack and Telegram formatting", () => {
 		expect(channelTargetFromForm(form)).toBe(`${BOT_TOKEN}/@homerun_alerts`);
 		form.set("kind", "slack");
 		expect(channelTargetFromForm(form)).toBe("ignored");
+
+		const edit = new FormData();
+		edit.set("kind", "slack");
+		edit.set("telegramBotToken", "");
+		edit.set("telegramChatId", "-100999");
+		const current = { kind: "telegram" as const, target };
+		expect(channelTargetFromForm(edit, current)).toBe(`${BOT_TOKEN}/-100999`);
+		edit.set("telegramBotToken", "987:new");
+		expect(channelTargetFromForm(edit, current)).toBe("987:new/-100999");
 	});
 });
 

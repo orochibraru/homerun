@@ -1,9 +1,9 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
+import { statusPageSchema } from "#lib/server/validation/status-page.js";
 import { resolve } from "$app/paths";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { StatusPageDTO } from "$lib/dto/status-page-dto";
-import { statusPageSchema } from "$lib/server/validation/status-page";
 
 export const load = async ({ parent }) => {
 	await parent();
@@ -24,7 +24,7 @@ export const load = async ({ parent }) => {
 export const actions = {
 	default: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const form = await request.formData();
 		const parsed = statusPageSchema.safeParse(Object.fromEntries(form));
@@ -58,6 +58,6 @@ export const actions = {
 			await page.setServiceIds(form.getAll("serviceIds").map(String));
 		}
 
-		throw redirect(303, `${resolve("/status-pages")}/${page.id}`);
+		throw redirect(303, `${resolve("status-pages")}/${page.id}`);
 	},
 };

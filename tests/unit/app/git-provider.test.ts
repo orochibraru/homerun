@@ -3,7 +3,7 @@ import type { GitConnectionDTO } from "../../../src/lib/dto/git-connection-dto";
 import type { GitProviderConfig } from "../../../src/lib/server/db/schema";
 import { encryptSecret } from "../../../src/lib/services/secrets";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,

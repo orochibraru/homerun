@@ -3,7 +3,7 @@ import {
 	registryEnv,
 	registryLabels,
 	registryMatches,
-} from "$lib/services/docker/registry-container";
+} from "#lib/services/docker/registry-container.js";
 
 describe("registryEnv", () => {
 	test("deletes are always on, auth only when asked for", () => {

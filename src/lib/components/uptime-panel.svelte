@@ -7,8 +7,8 @@
 		Network,
 	} from "@lucide/svelte";
 	import type { Snippet } from "svelte";
-	import HeartbeatStrip from "$lib/components/heartbeat-strip.svelte";
-	import { timeAgo } from "$lib/formatting";
+	import HeartbeatStrip from "#lib/components/heartbeat-strip.svelte";
+	import { timeAgo } from "#lib/formatting.js";
 
 	interface Beat {
 		checkedAt: Date;

@@ -14,6 +14,17 @@ When done delete the entry, no bloat.
       rows push the `(fail)` line out. Make the gate print `(fail)` lines first,
       then catch the test.
 
+- [ ] `.markdownlint-cli2.jsonc` sets `"fix": true` and doesn't honour
+      `.gitignore`, so any `markdownlint-cli2` run fixes in place, and one given
+      a directory (`markdownlint-cli2 .`) rewrites every file under it as
+      Markdown, `.git/` and `.env` included (tabs to spaces, `(x)[y]` to
+      `[x](y)`, `#!` to `# !`). Drop `fix` from the config (`lint:fix` and the
+      prek hook already pass `--fix`) and set `"gitignore": true`.
+
+- [ ] `.claude/agents/repo-gate.md`, `scaffold-feature.md` and
+      `subproject-sync.md` still say `$lib` and "SvelteKit 2"; update them to
+      `#lib/...js` imports and SvelteKit 3.
+
 ## Medium
 
 <!--  -->

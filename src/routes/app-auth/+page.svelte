@@ -2,13 +2,13 @@
 	import { LockKeyhole, ShieldX } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { invalidateAll } from "$app/navigation";
+	import { signOut } from "#lib/auth-client.js";
+	import BrandMark from "#lib/components/brand-mark.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
+	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { signOut } from "$lib/auth-client";
-	import BrandMark from "$lib/components/brand-mark.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -23,7 +23,7 @@
 			if (error) {
 				throw new Error(error.message ?? "Couldn't sign you out.");
 			}
-			await invalidateAll();
+			await refreshAll();
 		} catch (err) {
 			loading = false;
 			throw err;
@@ -82,7 +82,7 @@
             >
               Sign in as someone else
             </Button>
-            <Button href={resolve("/")} variant="ghost">Back to Homerun</Button>
+            <Button href={resolve("")} variant="ghost">Back to Homerun</Button>
           </div>
         {/if}
       </div>

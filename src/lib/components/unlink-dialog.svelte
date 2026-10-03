@@ -9,8 +9,8 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { enhanceToast } from "$lib/toast";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { enhanceToast } from "#lib/toast.js";
 
 	let {
 		link,
@@ -24,7 +24,7 @@
   <form
     bind:this={form}
     class="hidden"
-    action="{resolve('/services')}/{link.from.id}?/unlink"
+    action="{resolve('services')}/{link.from.id}?/unlink"
     method="POST"
     use:enhance={enhanceToast({
       error: `Couldn't unlink ${link.from.name} from ${link.to.name}.`,

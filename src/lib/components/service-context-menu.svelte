@@ -10,9 +10,9 @@
 		Wrench,
 	} from "@lucide/svelte";
 	import type { Snippet } from "svelte";
+	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
 
 	interface Service {
 		containerId: string | null;
@@ -110,10 +110,10 @@
 
     <ContextMenu.Separator />
 
-    <ContextMenu.Item onSelect={() => goto(`${resolve("/services")}/${service.id}/settings`)}>
-      <SettingsIcon class="size-4" />
-      Settings
-    </ContextMenu.Item>
+    <ContextMenu.Item
+      onSelect={() => goto(`${resolve('services')}/${service.id}/settings`)}
+    ><SettingsIcon class="size-4" />Settings</ContextMenu.Item>
+
     <ContextMenu.Item
       onSelect={() => onaction("delete", service.id)}
       variant="destructive"

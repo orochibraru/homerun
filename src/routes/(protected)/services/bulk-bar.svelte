@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { Play, RotateCw, Square, Trash2 } from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
-	import BulkActionBar from "$lib/components/bulk-action-bar.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import DeleteVolumesOption from "$lib/components/delete-volumes-option.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import type { ListSelection } from "$lib/list-selection.svelte";
+	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import type { ListSelection } from "#lib/list-selection.svelte.js";
 	import {
 		plural,
 		SERVICE_ACTION_LABELS,
 		type ServiceAction,
-	} from "$lib/service-actions";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/service-actions.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import type { SubmitFunction } from "$app/forms";
 
 	interface Props {
 		selection: ListSelection;
@@ -59,11 +59,16 @@
   idField="serviceId"
   label={plural(selection.count)}
   pending={bulkPending}
-  {selection}
+  selection={selection}
   submit={bulkSubmit}
   bind:form={bulkForm}
 >
-  <input name="deleteVolumes" type="hidden" value={deleteVolumes ? "true" : "false"}>
+  <input
+    name="deleteVolumes"
+    type="hidden"
+    value={deleteVolumes ? "true" : "false"}
+  />
+
   <button
     class="hidden"
     name="op"

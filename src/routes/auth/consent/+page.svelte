@@ -2,12 +2,12 @@
 	import { Check } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { authClient } from "$lib/auth-client";
-	import AuthShell from "$lib/components/auth-shell.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
+	import { authClient } from "#lib/auth-client.js";
+	import AuthShell from "#lib/components/auth-shell.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
 
 	const { data } = $props();
 

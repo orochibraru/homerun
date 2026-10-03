@@ -1,4 +1,4 @@
-import { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 
 const CACHE_TTL_MS = 10_000;
 

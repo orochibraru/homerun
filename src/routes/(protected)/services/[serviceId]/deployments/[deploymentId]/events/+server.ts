@@ -1,5 +1,5 @@
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { deployProgressStream } from "$lib/server/deploy-progress-stream";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { deployProgressStream } from "#lib/server/deploy-progress-stream.js";
 
 export const GET = async ({ params, locals }) => {
 	if (!locals.user) {

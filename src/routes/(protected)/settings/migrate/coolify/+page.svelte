@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MigratePanel from "$lib/components/migrate-panel.svelte";
+	import MigratePanel from "#lib/components/migrate-panel.svelte";
 
 	const { form } = $props();
 </script>

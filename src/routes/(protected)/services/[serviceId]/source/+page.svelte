@@ -1,28 +1,28 @@
 <script lang="ts">
 	import { Check, Container, GitBranch } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { isBuildMethod } from "$lib/build-methods";
-	import GitBuildFields from "$lib/components/git-build-fields.svelte";
-	import GitSourceFields from "$lib/components/git-source-fields.svelte";
-	import ImageCheckWarning from "$lib/components/image-check-warning.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import RegistryFields from "$lib/components/registry-fields.svelte";
-	import StatusCheckPicker from "$lib/components/status-check-picker.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import { isBuildMethod } from "#lib/build-methods.js";
+	import GitBuildFields from "#lib/components/git-build-fields.svelte";
+	import GitSourceFields from "#lib/components/git-source-fields.svelte";
+	import ImageCheckWarning from "#lib/components/image-check-warning.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import RegistryFields from "#lib/components/registry-fields.svelte";
+	import StatusCheckPicker from "#lib/components/status-check-picker.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { isDeployed } from "$lib/service-state";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { isDeployed } from "#lib/service-state.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import WebhookPanel from "./webhook-panel.svelte";
 
 	const { data, form } = $props();
@@ -64,7 +64,6 @@
 
 	let submitting = $state(false);
 	let showRegistry = $derived(!!svc.registryUsername);
-
 	let buildSource = $derived<"image" | "git">(
 		(values.buildSource as "image" | "git" | undefined) ?? "image",
 	);
@@ -157,11 +156,14 @@
           Git repository
         </button>
       </div>
-      <input name="buildSource" type="hidden" value={buildSource}>
-      <p class="text-text-subtle mt-1.5 text-xs">
-        Switching this doesn't redeploy by itself : save, then redeploy from the
-        Overview tab.
-      </p>
+
+      <input
+        name="buildSource"
+        type="hidden"
+        value={buildSource}
+      />
+
+      <p class="text-text-subtle mt-1.5 text-xs">Switching this doesn't redeploy by itself : save, then redeploy from the Overview tab.</p>
     </div>
 
     {#if buildSource === "image"}
@@ -192,11 +194,16 @@
         </div>
       </div>
 
-      <ImageCheckWarning {image} {registryUrl} registryUsername={svc.registryUsername ?? ""} {tag} />
+      <ImageCheckWarning
+        image={image}
+        registryUrl={registryUrl}
+        registryUsername={svc.registryUsername ?? ""}
+        tag={tag}
+      />
     {:else}
       <GitSourceFields
-        {errorClass}
-        {errors}
+        errorClass={errorClass}
+        errors={errors}
         labelClass={label}
         providers={data.connectedGitProviders}
         bind:autoDeployOnPush
@@ -206,8 +213,8 @@
         bind:gitUrl
       />
       <WebhookPanel
-        {autoDeployOnPush}
-        {gitRef}
+        autoDeployOnPush={autoDeployOnPush}
+        gitRef={gitRef}
         labelClass={label}
         previewOf={data.previewOf}
         pushWebhook={data.pushWebhook}
@@ -215,8 +222,8 @@
         bind:gitPollEnabled
       />
       <GitBuildFields
-        {errorClass}
-        {errors}
+        errorClass={errorClass}
+        errors={errors}
         keepHiddenFields
         labelClass={label}
         registries={data.buildCacheRegistries}
@@ -234,9 +241,12 @@
         {#if data.buildServers.length === 0}
           <p class="text-xs text-text-muted">
             No build servers configured.
-            <a class="text-accent underline" href={resolve("/remote-hosts")}>
-              Mark a remote host
-            </a>
+
+            <a
+              class="text-accent underline"
+              href={resolve('remote-hosts')}
+            >Mark a remote host</a>
+
             as one to build there instead of the deploy target.
           </p>
         {:else}
@@ -265,8 +275,8 @@
       <StatusCheckPicker
         enabled={svc.requireStatusChecks}
         error={errors?.requiredStatusChecks?.[0]}
-        {gitRef}
-        {gitUrl}
+        gitRef={gitRef}
+        gitUrl={gitUrl}
         labelClass={label}
         selected={svc.requiredStatusChecks}
       />

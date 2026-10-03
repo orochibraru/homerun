@@ -1,17 +1,17 @@
-import { config } from "$lib/config";
-import type { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
-import type { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import type { StackDTO } from "$lib/dto/stack-dto";
+import { config } from "#lib/config.js";
+import type { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
+import type { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import type { StackDTO } from "#lib/dto/stack-dto.js";
 import {
 	type GitCredential,
 	hasEmbeddedCredentials,
 	providerForGitUrl,
-} from "$lib/git-clone-url";
-import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
-import { serviceHostnames } from "$lib/service-domains";
+} from "#lib/git-clone-url.js";
+import { DEPLOY_LOG_SCOPE, Logger } from "#lib/logger.js";
+import { serviceHostnames } from "#lib/service-domains.js";
 import { syncDns } from "../dns.service.ts";
 import { GitProviderService } from "../git-provider.service.ts";
 

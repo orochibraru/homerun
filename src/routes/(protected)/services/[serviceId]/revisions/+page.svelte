@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { ChevronDown, Clock, RotateCcw } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import DeployLogPanel from "#lib/components/deploy-log-panel.svelte";
+	import EnvironmentBadge from "#lib/components/environment-badge.svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
-	import EnvironmentBadge from "$lib/components/environment-badge.svelte";
-	import StatusBadge from "$lib/components/status-badge.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { timeAgo } from "$lib/formatting";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 

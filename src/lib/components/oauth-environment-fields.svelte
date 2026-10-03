@@ -1,8 +1,8 @@
 <script lang="ts">
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { inputClass, labelClass } from "$lib/components/form-styles";
-	import UrlListInput from "$lib/components/url-list-input.svelte";
-	import { callbackUrlProblem, originProblem } from "$lib/oidc-provider";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import UrlListInput from "#lib/components/url-list-input.svelte";
+	import { callbackUrlProblem, originProblem } from "#lib/oidc-provider.js";
 
 	export interface OauthEnvironmentFieldValues {
 		allowedOrigins: string[];

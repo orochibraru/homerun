@@ -1,7 +1,7 @@
 <script lang="ts">
 	import "swagger-ui-dist/swagger-ui.css";
 	import { onMount } from "svelte";
-	import { title } from "$lib/store/title";
+	import { title } from "#lib/store/title.js";
 
 	let container: HTMLDivElement | undefined = $state();
 

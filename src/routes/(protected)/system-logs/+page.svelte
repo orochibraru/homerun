@@ -8,17 +8,17 @@
 		Wrench,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { getInfraStatus } from "#lib/remote/docker-infra.remote.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { timeAgo } from "$lib/formatting";
-	import { getInfraStatus } from "$lib/remote/docker-infra.remote";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -124,10 +124,8 @@
               {#if entry.serviceId}
                 <a
                   class="text-accent truncate text-xs hover:underline"
-                  href="{resolve('/services')}/{entry.serviceId}/observability/events"
-                >
-                  {entry.serviceName ?? "Deleted service"}
-                </a>
+                  href="{resolve('services')}/{entry.serviceId}/observability/events"
+                >{entry.serviceName ?? "Deleted service"}</a>
               {/if}
               <span class="tabular-nums text-text-subtle ml-auto shrink-0 text-[0.6875rem]">
                 {timeAgo(entry.createdAt)}
@@ -261,7 +259,7 @@
               {/if}
               <LiveLogViewer
                 heightClass="h-96"
-                logsUrl="{resolve('/system-logs')}/containers/{container.id}/logs"
+                logsUrl="{resolve('system-logs')}/containers/{container.id}/logs"
                 serviceId={container.id}
                 workloadId={container.id}
               />

@@ -1,7 +1,7 @@
 import { error } from "@sveltejs/kit";
+import { APP_ONLY_MESSAGE, READ_ONLY_MESSAGE } from "#lib/permissions.js";
+import type { AuthType } from "#lib/services/auth.js";
 import { getRequestEvent } from "$app/server";
-import { APP_ONLY_MESSAGE, READ_ONLY_MESSAGE } from "$lib/permissions";
-import type { AuthType } from "$lib/services/auth";
 
 /**
  * The signed-in user for the current remote function call.

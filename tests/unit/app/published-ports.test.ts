@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { portBindings, publishedPortsProblem } from "$lib/published-ports";
+import { portBindings, publishedPortsProblem } from "#lib/published-ports.js";
 
 describe("portBindings", () => {
 	test("binds each host port under its container port and protocol", () => {

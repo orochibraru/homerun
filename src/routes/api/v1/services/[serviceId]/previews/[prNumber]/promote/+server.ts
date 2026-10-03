@@ -1,19 +1,21 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { promotePreviewApiBody } from "$lib/server/validation/api";
-import { PreviewApiService } from "$lib/services/preview-api.service";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { promotePreviewApiBody } from "#lib/server/validation/api.js";
+import { PreviewApiService } from "#lib/services/preview-api.service.js";
 
 export const POST = async ({ params, locals, request }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const prNumber = Number(params.prNumber);
 	if (!(Number.isInteger(prNumber) && prNumber > 0)) {
-		return json({ error: "Not a pull request number." }, { status: 400 });
+		return Response.json(
+			{ error: "Not a pull request number." },
+			{ status: 400 },
+		);
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	const raw = await request.text();
 	let body: unknown = {};
@@ -21,12 +23,15 @@ export const POST = async ({ params, locals, request }) => {
 		try {
 			body = JSON.parse(raw);
 		} catch {
-			return json({ error: "The body isn't valid JSON." }, { status: 400 });
+			return Response.json(
+				{ error: "The body isn't valid JSON." },
+				{ status: 400 },
+			);
 		}
 	}
 	const parsed = promotePreviewApiBody.safeParse(body);
 	if (!parsed.success) {
-		return json(parsed.error.flatten(), { status: 400 });
+		return Response.json(parsed.error.flatten(), { status: 400 });
 	}
 	const result = await PreviewApiService.promote({
 		commit: parsed.data.commit ?? null,
@@ -35,9 +40,9 @@ export const POST = async ({ params, locals, request }) => {
 		userId: locals.user.id,
 	});
 	if (result.error !== null) {
-		return json({ error: result.error }, { status: result.status });
+		return Response.json({ error: result.error }, { status: result.status });
 	}
-	return json(
+	return Response.json(
 		{
 			deploymentId: result.deploymentId,
 			gitCommit: result.revision.gitCommit,

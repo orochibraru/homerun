@@ -1,49 +1,52 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { allowLongRequest } from "$lib/server/long-request";
-import { PreviewApiService } from "$lib/services/preview-api.service";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { PreviewApiService } from "#lib/services/preview-api.service.js";
 
 const logger = new Logger("API");
 
 export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const prNumber = Number(params.prNumber);
 	if (!(Number.isInteger(prNumber) && prNumber > 0)) {
-		return json({ error: "Not a pull request number." }, { status: 400 });
+		return Response.json(
+			{ error: "Not a pull request number." },
+			{ status: 400 },
+		);
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	const preview = await PreviewApiService.get(svc, prNumber);
 	if (!preview) {
-		return json(
+		return Response.json(
 			{ error: `There's no preview for #${prNumber}.` },
 			{ status: 404 },
 		);
 	}
-	return json(preview);
+	return Response.json(preview);
 };
 
-export const DELETE = async ({ params, locals, platform }) => {
-	allowLongRequest(platform);
+export const DELETE = async ({ params, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const prNumber = Number(params.prNumber);
 	if (!(Number.isInteger(prNumber) && prNumber > 0)) {
-		return json({ error: "Not a pull request number." }, { status: 400 });
+		return Response.json(
+			{ error: "Not a pull request number." },
+			{ status: 400 },
+		);
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	try {
 		if (!(await PreviewApiService.delete(svc, prNumber))) {
-			return json(
+			return Response.json(
 				{ error: `There's no preview for #${prNumber}.` },
 				{ status: 404 },
 			);
@@ -53,7 +56,7 @@ export const DELETE = async ({ params, locals, platform }) => {
 			`Couldn't delete preview via API: service=${svc.id} pr=${prNumber}`,
 			err,
 		);
-		return json(
+		return Response.json(
 			{ error: err instanceof Error ? err.message : String(err) },
 			{ status: 409 },
 		);
@@ -61,5 +64,5 @@ export const DELETE = async ({ params, locals, platform }) => {
 	logger.info(
 		`Preview deleted via API: service=${svc.id} pr=${prNumber} user=${locals.user.id}`,
 	);
-	return json({ success: true });
+	return Response.json({ success: true });
 };

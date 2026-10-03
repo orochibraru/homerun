@@ -54,7 +54,7 @@ COPY --from=deps /app/node_modules /app/node_modules
 
 RUN bun run build
 
-# The svelte-smol adapter compiles the app to a single standalone binary
+# adapter-bun compiles the app to a single standalone binary
 # (`build/server`) that bundles every JS dependency, so the runtime image
 # needs no `node_modules` and no Bun runtime to serve. It stays on
 # `oven/bun:1.4.2-alpine` only because the binary is musl-linked (compiled on the
@@ -71,7 +71,8 @@ COPY --from=app-builder --chown=bun:bun /app/drizzle/ /app/drizzle
 COPY --from=go-builder /out/homerun-worker /usr/local/bin/homerun-worker
 COPY internal/installer/compose.yaml internal/installer/compose.swarm.yaml /app/compose/
 COPY tools/docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY --chown=bun:bun tools/docker/healthcheck.sh /app/build/healthcheck
+RUN chmod +x /entrypoint.sh /app/build/healthcheck
 
 EXPOSE 3000
 

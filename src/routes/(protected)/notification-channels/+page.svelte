@@ -4,6 +4,7 @@
 		Hash,
 		Mail,
 		MessageCircle,
+		Pencil,
 		Plus,
 		Send,
 		SlidersHorizontal,
@@ -11,18 +12,20 @@
 		Webhook,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import { Switch } from "#lib/components/ui/switch/index.js";
+	import { NOTIFICATION_EVENTS } from "#lib/notification-events.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import type { NotificationChannelKind } from "#lib/types.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import { NOTIFICATION_EVENTS } from "$lib/notification-events";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import type { NotificationChannelKind } from "$lib/types";
 
 	const { data, form } = $props();
 
@@ -37,6 +40,14 @@
 		{ label: "Email", value: "email" },
 	];
 	let creating = $state(false);
+
+	let editOpen = $state(false);
+	let editing = $state<(typeof data.channels)[number] | null>(null);
+
+	function requestEdit(channel: (typeof data.channels)[number]) {
+		editing = channel;
+		editOpen = true;
+	}
 
 	let deleteDialogOpen = $state(false);
 	let pendingDeleteName = $state("");
@@ -83,7 +94,12 @@
         events each channel receives in your notification settings.
       </p>
     </div>
-    <Button href={resolve("/profile/notifications")} size="sm" variant="outline">
+
+    <Button
+      href={resolve('profile/notifications')}
+      size="sm"
+      variant="outline"
+    >
       <SlidersHorizontal class="size-4" />
       Notification settings
     </Button>
@@ -221,6 +237,11 @@
                 <span class="text-text-subtle ml-1 text-xs font-normal">
                   {KIND_LABEL[channel.kind]}
                 </span>
+                {#if !channel.enabled}
+                  <span class="text-text-subtle ml-1 text-xs font-normal">
+                    · Disabled
+                  </span>
+                {/if}
               </p>
               <p class="text-text-subtle truncate text-xs">{channel.target}</p>
               <p class="text-text-muted truncate text-xs">
@@ -243,6 +264,15 @@
                 <input name="channelId" type="hidden" value={channel.id} />
                 <Button size="sm" type="submit" variant="outline">Send test</Button>
               </form>
+              <Button
+                aria-label="Edit {channel.name}"
+                onclick={() => requestEdit(channel)}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <Pencil class="size-4" />
+              </Button>
               <form
                 action="?/deleteChannel"
                 method="POST"
@@ -271,6 +301,77 @@
     </section>
   {/if}
 </div>
+
+<ResponsiveDialog
+  size="sm"
+  title="Edit {editing?.name ?? 'channel'}"
+  bind:open={editOpen}
+>
+  {#if editing}
+    <form
+      action="?/updateChannel"
+      class="space-y-4"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't save the channel.",
+        loading: "Saving the channel",
+        onSuccess: () => {
+          editOpen = false;
+        },
+        success: "Channel saved.",
+      })}
+    >
+      <input name="channelId" type="hidden" value={editing.id} />
+      <div>
+        <label class={label} for="editChannelName">Name</label>
+        <Input id="editChannelName" name="name" value={editing.name} />
+      </div>
+      {#if editing.kind === "telegram"}
+        <div>
+          <label class={label} for="editTelegramBotToken">Bot token</label>
+          <Input
+            autocomplete="off"
+            id="editTelegramBotToken"
+            name="telegramBotToken"
+            placeholder="Leave blank to keep the current token"
+            type="password"
+          />
+        </div>
+        <div>
+          <label class={label} for="editTelegramChatId">Chat id</label>
+          <Input
+            id="editTelegramChatId"
+            name="telegramChatId"
+            value={editing.telegramChatId ?? ""}
+          />
+        </div>
+      {:else}
+        <div>
+          <label class={label} for="editChannelTarget">
+            {editing.kind === "email" ? "Address" : "Webhook URL"}
+          </label>
+          <Input
+            id="editChannelTarget"
+            name="target"
+            placeholder={TARGET_PLACEHOLDER[editing.kind]}
+            value={editing.target}
+          />
+        </div>
+      {/if}
+      <label class="flex items-center gap-2 text-sm" for="editChannelEnabled">
+        <Switch
+          checked={editing.enabled}
+          id="editChannelEnabled"
+          name="enabled"
+        />
+        Enabled
+      </label>
+      <div class="flex justify-end">
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
+  {/if}
+</ResponsiveDialog>
 
 <ConfirmDialog
   bind:open={deleteDialogOpen}

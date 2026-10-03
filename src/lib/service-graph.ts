@@ -1,4 +1,4 @@
-import { linkRoles } from "$lib/service-link";
+import { linkRoles } from "#lib/service-link.js";
 
 export interface GraphService {
 	envVars: Record<string, string> | null;

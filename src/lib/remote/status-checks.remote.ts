@@ -1,9 +1,9 @@
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
+import { Logger } from "#lib/logger.js";
+import { requireUser } from "#lib/server/remote-auth.js";
+import { StatusCheckService } from "#lib/services/status-check.service.js";
 import { query } from "$app/server";
-import { Logger } from "$lib/logger";
-import { requireUser } from "$lib/server/remote-auth";
-import { StatusCheckService } from "$lib/services/status-check.service";
 
 const logger = new Logger("StatusChecks");
 

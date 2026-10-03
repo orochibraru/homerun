@@ -15,7 +15,7 @@ the icon. No sizing classes on the icon.
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
+import { Button } from "#lib/components/ui/button/index.js";
 import SearchIcon from "@lucide/svelte/icons/search";
 </script>
 
@@ -29,7 +29,7 @@ import SearchIcon from "@lucide/svelte/icons/search";
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
+import { Button } from "#lib/components/ui/button/index.js";
 import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 import SearchIcon from "@lucide/svelte/icons/search";
 </script>
@@ -58,7 +58,7 @@ for custom icon sizes.
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
+import { Button } from "#lib/components/ui/button/index.js";
 import SearchIcon from "@lucide/svelte/icons/search";
 </script>
 
@@ -72,7 +72,7 @@ import SearchIcon from "@lucide/svelte/icons/search";
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
+import { Button } from "#lib/components/ui/button/index.js";
 import SearchIcon from "@lucide/svelte/icons/search";
 </script>
 

@@ -1,20 +1,20 @@
-import { config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ResourceIncidentDTO } from "$lib/dto/resource-incident-dto";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { ResourceIncidentDTO } from "#lib/dto/resource-incident-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	describeIncidentEvent,
 	type IncidentEvent,
 	ResourceIncidentTracker,
-} from "$lib/resource-incidents";
+} from "#lib/resource-incidents.js";
 import {
 	describeReading,
 	type HostUsageInput,
 	RESOURCE_LABELS,
 	type ResourceReading,
 	readResources,
-} from "$lib/resource-thresholds";
+} from "#lib/resource-thresholds.js";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import type { ChannelMessage } from "./notification-messages.ts";
 import { SystemStatsService } from "./system-stats.service.ts";

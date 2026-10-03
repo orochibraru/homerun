@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { mode } from "mode-watcher";
 	import type { Component } from "svelte";
-	import { templateCategoryColor, templateCategoryIcon } from "$lib/constants";
-	import { hasIconImage, type IconTheme, iconSrc } from "$lib/service-icon";
+	import {
+		templateCategoryColor,
+		templateCategoryIcon,
+	} from "#lib/constants.js";
+	import { hasIconImage, type IconTheme, iconSrc } from "#lib/service-icon.js";
 
 	const {
 		icon,

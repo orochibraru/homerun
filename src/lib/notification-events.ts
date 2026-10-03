@@ -1,5 +1,5 @@
-import type { DeployTrigger } from "$lib/deploy-trigger";
-import type { NotificationEvent } from "$lib/types";
+import type { DeployTrigger } from "#lib/deploy-trigger.js";
+import type { NotificationEvent } from "#lib/types.js";
 
 export interface NotificationEventInfo {
 	description: string;

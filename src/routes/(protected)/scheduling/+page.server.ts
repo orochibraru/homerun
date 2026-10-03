@@ -1,9 +1,9 @@
-import { CronJobDTO } from "$lib/dto/cron-job-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 
 export const load = async ({ parent, locals }) => {
 	await parent();

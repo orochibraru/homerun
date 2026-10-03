@@ -1,4 +1,4 @@
-import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import type { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import {
 	contentChunks,
 	isEditableText,
@@ -6,7 +6,7 @@ import {
 	MAX_EDITABLE_BYTES,
 	parseListing,
 	type VolumeEntry,
-} from "$lib/volume-files";
+} from "#lib/volume-files.js";
 import {
 	VOLUME_HELPER_IMAGE,
 	VOLUME_HELPER_TAG,

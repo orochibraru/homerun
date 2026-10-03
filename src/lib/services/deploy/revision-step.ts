@@ -1,14 +1,14 @@
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { DEPLOY_LOG_SCOPE, Logger } from "#lib/logger.js";
 import {
 	changedRevisionConfigFields,
 	restorableRuntimeOptions,
 	type VolumeMountSnapshot,
-} from "$lib/revision-config";
-import { isRevision } from "$lib/revisions";
+} from "#lib/revision-config.js";
+import { isRevision } from "#lib/revisions.js";
 
 const logger = new Logger(DEPLOY_LOG_SCOPE);
 

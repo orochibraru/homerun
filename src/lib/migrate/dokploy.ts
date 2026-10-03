@@ -1,11 +1,11 @@
 import { parse as parseYaml } from "yaml";
-import type { BuildMethod } from "$lib/build-methods";
+import type { BuildMethod } from "#lib/build-methods.js";
 import {
 	bindVolumeName,
 	type ComposeFileDraft,
 	type ComposeServiceDraft,
 	type ComposeVolumeDraft,
-} from "$lib/compose-import";
+} from "#lib/compose-import.js";
 import {
 	composeDrafts,
 	imageSummary,

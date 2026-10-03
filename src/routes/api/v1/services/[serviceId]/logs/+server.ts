@@ -1,27 +1,24 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { allowLongRequest } from "$lib/server/long-request";
-import { isDeployed } from "$lib/service-state";
-import { DockerService } from "$lib/services/docker.service";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { isDeployed } from "#lib/service-state.js";
+import { DockerService } from "#lib/services/docker.service.js";
 
-export const GET = async ({ params, locals, platform, url }) => {
-	allowLongRequest(platform);
+export const GET = async ({ params, locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const tail = Number(url.searchParams.get("tail") ?? 200);
 	if (!Number.isInteger(tail) || tail < 1 || tail > 10_000) {
-		return json(
+		return Response.json(
 			{ error: "tail must be a whole number from 1 to 10000." },
 			{ status: 400 },
 		);
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	if (!isDeployed(svc)) {
-		return json(
+		return Response.json(
 			{ error: "This service hasn't been deployed yet." },
 			{ status: 400 },
 		);

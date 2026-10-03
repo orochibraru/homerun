@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import { enhance } from "$app/forms";
-	import { inputClass, labelClass } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { DNS_RECORD_TYPES } from "$lib/services/dns-providers/types";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import { DNS_RECORD_TYPES } from "#lib/services/dns-providers/types.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	interface Props {
 		domainName: string;

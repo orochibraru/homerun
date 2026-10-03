@@ -8,7 +8,7 @@ import {
 	test,
 } from "bun:test";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,
@@ -87,7 +87,7 @@ const fakeAuth = {
 	},
 };
 
-mock.module("$lib/services/auth", () => ({
+mock.module("#lib/services/auth.js", () => ({
 	auth: fakeAuth,
 	rebuildAuth: () => undefined,
 }));

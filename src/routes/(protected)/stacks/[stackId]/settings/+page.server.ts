@@ -1,12 +1,12 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { Logger } from "#lib/logger.js";
+import { listIconLibrary } from "#lib/server/icon-library.js";
+import { iconProblem } from "#lib/service-icon.js";
+import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
+import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
+import { descendantIds, stackPath } from "#lib/stack-tree.js";
 import { resolve } from "$app/paths";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { Logger } from "$lib/logger";
-import { listIconLibrary } from "$lib/server/icon-library";
-import { iconProblem } from "$lib/service-icon";
-import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
-import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
-import { descendantIds, stackPath } from "$lib/stack-tree";
 
 const logger = new Logger("Stacks");
 const SLUG_RE = /^[a-z0-9-]{1,63}$/;
@@ -36,7 +36,7 @@ export const load = async ({ params, parent }) => {
 export const actions = {
 	updateIcon: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const stack = await StackDTO.get(params.stackId);
 		if (!stack) {
@@ -56,14 +56,16 @@ export const actions = {
 	},
 	move: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const stack = await StackDTO.get(params.stackId);
 		if (!stack) {
 			return fail(404, { error: "Stack not found." });
 		}
+
 		const parentId =
 			((await request.formData()).get("parentId") as string | null) || null;
+
 		try {
 			await stack.setParent(parentId);
 		} catch (err) {
@@ -78,7 +80,7 @@ export const actions = {
 	},
 	delete: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const stack = await StackDTO.get(params.stackId);
 		if (!stack) {
@@ -93,14 +95,15 @@ export const actions = {
 			}
 			throw error;
 		}
+
 		logger.info(
 			`Stack deleted: stack=${params.stackId} force=${force} user=${locals.user.id}`,
 		);
-		redirect(303, resolve("/stacks"));
+		redirect(303, resolve("stacks"));
 	},
 	rename: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const stack = await StackDTO.get(params.stackId);
 		if (!stack) {

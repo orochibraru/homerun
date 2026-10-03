@@ -2,10 +2,10 @@ import {
 	type CronJobInput,
 	cronJobSchema,
 	DEFAULT_CRON_JOB_TIMEOUT_SECONDS,
-} from "$lib/server/validation/cron-job";
-import { parseEnvVars } from "$lib/server/validation/service";
-import { CronService } from "$lib/services/cron.service";
-import { encryptSecret } from "$lib/services/secrets";
+} from "#lib/server/validation/cron-job.js";
+import { parseEnvVars } from "#lib/server/validation/service.js";
+import { CronService } from "#lib/services/cron.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
 
 export interface ParsedCronJobForm {
 	command: string | null;

@@ -9,17 +9,17 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import type { User } from "$lib/server/db/schema";
-import * as schema from "$lib/server/db/schema";
-import { user as userTable } from "$lib/server/db/schema";
+import { Logger } from "#lib/logger.js";
+import { db } from "#lib/server/db/lib.js";
+import type { User } from "#lib/server/db/schema.js";
+import * as schema from "#lib/server/db/schema.js";
+import { user as userTable } from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
+} from "#lib/server/list-query.js";
 import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("UserCleanup");

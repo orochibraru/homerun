@@ -4,7 +4,7 @@ import {
 	iconProblem,
 	iconSrc,
 	MAX_ICON_BYTES,
-} from "$lib/service-icon";
+} from "#lib/service-icon.js";
 
 const png = (bytes: number) =>
 	`data:image/png;base64,${"A".repeat(Math.ceil((bytes * 4) / 3))}`;

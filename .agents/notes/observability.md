@@ -72,7 +72,7 @@ highlight for either.
 container, and its own `os`/`df` readings would describe that container's limits
 rather than the real machine's, which is exactly why this moved.
 `internal/hoststats`'s `StatsSampler` (Go, not to be confused with the
-`$lib/services/stats/stats-sampler.ts` one below; shared with the agent, see
+`src/lib/services/stats/stats-sampler.ts` one below; shared with the agent, see
 `packages-and-release.md`, so a remote host's row on the dashboard renders from
 the identical shape as the local one) reads `/proc/stat` and `/proc/meminfo`
 directly and shells out to `df -Pk .` for disk and `nvidia-smi` for a
@@ -83,10 +83,10 @@ after the **worker** starts (not the app) always reads 0%. Polled by the
 dashboard's `/system-stats` endpoint every 5s, which now round-trips through the
 worker on every poll rather than reading in-process.
 
-## Recorded resource history (`stat_sample`, `StatSampleDTO`, `$lib/remote/stats.remote.ts`)
+## Recorded resource history (`stat_sample`, `StatSampleDTO`, `src/lib/remote/stats.remote.ts`)
 
 The live poll above keeps nothing, so the graphs read a recorded history
-instead. `StatsSampler` (`$lib/services/stats/stats-sampler.ts`, a
+instead. `StatsSampler` (`src/lib/services/stats/stats-sampler.ts`, a
 `BaseScheduler`) writes one `stat_sample` row a minute for the host and one per
 service with a running container (`DockerService.sampleContainerStats`, a
 non-streaming `docker stats` read), and prunes past a year every sixtieth tick.
@@ -121,8 +121,8 @@ A curated lifecycle event feed, one copy per account, deliberately separate from
 the `app_log`/Errors-tab system above: written explicitly at each event site
 rather than derived from logs, so it stays a short, meaningful list rather than
 every warn/error the app produces. Shown via a bell icon
-(`$lib/components/notification-bell.svelte`, a Popover-based dropdown) in the
-protected layout's header, next to `$lib/components/profile-menu.svelte` (the
+(`src/lib/components/notification-bell.svelte`, a Popover-based dropdown) in the
+protected layout's header, next to `src/lib/components/profile-menu.svelte` (the
 account/sign-out dropdown, pulled out of `+layout.svelte`'s previously-inline
 markup as its own component alongside this feature).
 
@@ -145,12 +145,12 @@ markup as its own component alongside this feature).
   `notifyServiceError(serviceId, message)` broadcasts too, used by
   `Logger.error` to attribute a runtime error notification to a service.
 - Call sites: `deploy.service.ts` (deploy success, auto-redeploy, deploy
-  failure), `$lib/logger.ts` (`Logger.error` → `notifyServiceError`),
+  failure), `src/lib/logger.ts` (`Logger.error` → `notifyServiceError`),
   `services/new/+page.server.ts` (service created), the service Overview page's
   start/stop actions.
 - `notification-bell.svelte` owns its own data end to end through
-  `$lib/remote/notifications.remote.ts` (see Remote functions above) : one query
-  for the feed plus unread count, and one command per
+  `src/lib/remote/notifications.remote.ts` (see Remote functions above) : one
+  query for the feed plus unread count, and one command per
   mark-read/mark-all-read/delete, each refreshing that query server-side so the
   new feed comes back on the mutation's own response. It takes no props. This
   replaced fetching the feed in `(protected)/+layout.server.ts` (paid for on
@@ -172,8 +172,8 @@ and DTO default
 managed on `/notification-channels` (create/test/delete) with the events matrix
 itself edited on `/profile/notifications`.
 
-`NotificationEvent` (`$lib/types.ts`) and its catalog
-(`$lib/notification-events.ts`, `NOTIFICATION_EVENTS`,
+`NotificationEvent` (`src/lib/types.ts`) and its catalog
+(`src/lib/notification-events.ts`, `NOTIFICATION_EVENTS`,
 labels/groups/descriptions for the settings matrix) cover four pairs:
 `build.failed`/`build.succeeded` (a git-source service, any trigger),
 `update.failed`/`update.succeeded` (an image service redeployed by its own cron
@@ -218,11 +218,11 @@ opaquely; a Discord target is validated to look like
 `https://discord.com/api/webhooks/...` (or the `discordapp.com`/`canary`/`ptb`
 variants) and a Slack one to be an https
 `hooks.slack.com/services|triggers|workflows/` URL before it's saved
-(`validateChannelTarget`, `$lib/server/validation/notification-channel.ts`). **A
-Telegram channel has two secrets and one `target` column**: the create form
+(`validateChannelTarget`, `src/lib/server/validation/notification-channel.ts`).
+**A Telegram channel has two secrets and one `target` column**: the create form
 posts `telegramBotToken`/`telegramChatId`, `channelTargetFromForm` packs them as
-`<bot token>/<chat id>` (`$lib/notification-channel-target.ts`, split back with
-`parseTelegramTarget` on the last `/`), validated as `\d+:[\w-]{30,}` and a
+`<bot token>/<chat id>` (`src/lib/notification-channel-target.ts`, split back
+with `parseTelegramTarget` on the last `/`), validated as `\d+:[\w-]{30,}` and a
 numeric chat id or `@name`. `/notification-channels`' `load` swaps every target
 for `channelTargetLabel`, so a Telegram row reaches the browser as `Chat <id>`
 and the token never does; a Telegram error reports Telegram's own `description`,
@@ -231,7 +231,7 @@ never the request URL that carries the token. The payload builders
 `slackPayload`/`telegramPayload`) and `deployEvent`/`isFailureEvent` are pure
 and unit-tested in `tests/unit/app/notification-channel.test.ts`.
 
-**Grouping** (`$lib/services/notification-grouping.ts`).
+**Grouping** (`src/lib/services/notification-grouping.ts`).
 `dispatch(message, { scheduled })` hands every message to a
 `NotificationGrouper` (pure, driven by timestamps so tests pass a clock): a
 message with nothing sent in the last 60s goes out at once, later ones are held
@@ -266,7 +266,7 @@ message would pass its 4096-character limit; email lists them as `Name: value`
 lines; a generic webhook gets the message object as-is. `notifyDeploy` loads the
 stack itself, so both deploy exits pass the same `{dep, ok, svc, trigger}`.
 
-## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `$lib/services/uptime/uptime-probe.ts`)
+## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `src/lib/services/uptime/uptime-probe.ts`)
 
 Two probes a minute per service with `uptimeEnabled` (default
 `!isDatabaseImage(image)` in `ServiceDTO.create`, so off by default for a
@@ -296,9 +296,9 @@ visible without being an outage, and a connection refused or a timeout still
 fails on the first attempt as before.
 
 **The healthcheck detail is stripped of ANSI escapes** (`stripAnsi`,
-`$lib/ansi`) before it's stored. A container whose `HEALTHCHECK` prints coloured
-output put raw `\x1b[32m` sequences into the uptime row, which the panel renders
-as plain text : they showed up on screen as `[32mStatus: 200`.
+`src/lib/ansi`) before it's stored. A container whose `HEALTHCHECK` prints
+coloured output put raw `\x1b[32m` sequences into the uptime row, which the
+panel renders as plain text : they showed up on screen as `[32mStatus: 200`.
 
 **A swarm service gets an internal probe too.** It used to be skipped outright
 (`containerId` is null in swarm mode), so its "From the network" row sat on "No
@@ -370,8 +370,9 @@ for the strip, `latest` uses a `selectDistinctOn` for the "now" view, and
 `prune()` drops anything past a 7-day retention, amortized one tick in 60. The
 service Observability tab renders both probes with per-probe troubleshooting
 steps when one fails; the dashboard shows a banner listing every failing probe,
-linking into the service that owns it. `$lib/components/heartbeat-strip.svelte`
-is the shared strip, also used by both status-page surfaces.
+linking into the service that owns it.
+`src/lib/components/heartbeat-strip.svelte` is the shared strip, also used by
+both status-page surfaces.
 
 **A state change also fires alerts** (`status-alert.service.ts`). The tick reads
 `UptimeCheckDTO.latestByProbe` _before_ recording its own results, and
@@ -390,7 +391,7 @@ notification channels above, no longer scoped to a status page. A channel that
 throws is caught, logged and written to its own `lastError`, never allowed to
 abort the tick.
 
-## Error tracking (`error_project`/`error_issue`/`error_event`, `$lib/error-tracking/`, `ErrorTrackingService`)
+## Error tracking (`error_project`/`error_issue`/`error_event`, `src/lib/error-tracking/`, `ErrorTrackingService`)
 
 Sentry-protocol ingest so official SDKs work unchanged (GlitchTip's approach):
 `POST /api/<projectId>/envelope/` and legacy `/store/`
@@ -399,7 +400,7 @@ Sentry-protocol ingest so official SDKs work unchanged (GlitchTip's approach):
 is a 400), 120 events/min per project (429 +
 `Retry-After`/`X-Sentry-Rate-Limits`). Only `event` items are stored;
 transactions, sessions, replays, attachments and client reports get 200 and are
-dropped so SDKs don't retry. The pure parts live in `$lib/error-tracking/`:
+dropped so SDKs don't retry. The pure parts live in `src/lib/error-tracking/`:
 `envelope.ts` (envelope/auth parsing, `isIngestPath`), `event.ts`
 (`normalizeEvent` trims everything: 60 frames, 5 chained exceptions, 50
 breadcrumbs, capped strings/contexts), `grouping.ts` (SDK `fingerprint` with
@@ -426,9 +427,9 @@ channel subscriptions) are capped at 10 per service per hour per kind
 can't hide a regression. `error-retention-scheduler.ts` prunes hourly: 100
 events kept per issue, 30 days of events, closed issues with nothing newer.
 Source maps (`error_source_map`, `ErrorSourceMapDTO`,
-`$lib/error-tracking/source-maps.ts`): uploaded per service and release through
-`POST /api/v1/services/:id/sourcemaps` (multipart, a field per map named after
-its path in the build output, `homerun services sourcemaps upload` walks a
+`src/lib/error-tracking/source-maps.ts`): uploaded per service and release
+through `POST /api/v1/services/:id/sourcemaps` (multipart, a field per map named
+after its path in the build output, `homerun services sourcemaps upload` walks a
 directory and batches), stored as text in Postgres, 10 releases kept. They're
 applied at ingest, before grouping, so issues group on real names: a frame whose
 `abs_path` is an http(s) URL is matched to the map whose name is the longest
@@ -438,7 +439,7 @@ is recomputed. Parsed maps are cached in memory by id (32). Resolving at ingest
 means a late upload doesn't fix stored events; that's the Sentry behavior too.
 Operator doc: `docs/error-tracking.md`.
 
-## Resource incidents (`$lib/resource-incidents.ts`, `CapacityService`, `resource_incident`)
+## Resource incidents (`src/lib/resource-incidents.ts`, `CapacityService`, `resource_incident`)
 
 Modelled on baba (github.com/orochibraru/baba, `internal/monitor`): each
 resource has at most one incident. `ResourceIncidentTracker` is pure and
@@ -461,7 +462,7 @@ recreates it once on an existing instance). `DockerService.traefikMetrics` reads
 them with `wget` through the worker's `/v1/exec` inside the Traefik container,
 so nothing gets published and it works where the app can't reach container IPs
 (a dev machine on macOS). `StatsSampler` parses them each tick
-(`$lib/traffic-metrics.ts`: summed per Traefik service over code, method and
+(`src/lib/traffic-metrics.ts`: summed per Traefik service over code, method and
 protocol, mapped back to a slug, `<slug>-<port>` included for a domain on
 another port) and writes the delta against its previous read per running
 service; the first read after a start is only a baseline, a counter going down
@@ -472,7 +473,7 @@ were a week) so availability covers the long ranges.
 `MonitoringService.forService(serviceId, range, zone)` sums a range: totals and
 a series from `traffic_sample`, `stat_sample` and `uptime_check`, bucketed by
 `bucketSecondsFor` (about 48 points, five-minute steps; inlined into the SQL
-like `StatSampleDTO.history`). `$lib/monitoring-ranges.ts` owns the ranges:
+like `StatSampleDTO.history`). `src/lib/monitoring-ranges.ts` owns the ranges:
 **Today** starts at midnight in the viewer's time zone (`startOfDay`, via `Intl`
 offsets, DST-safe), read from a `tz` cookie the Monitoring view sets on mount
 (it invalidates once when the cookie was missing or different, so a first visit
@@ -495,7 +496,7 @@ scope, busiest first, for the **By service** table.
 Every range but all time also carries `previous`: the same totals over
 `previousWindow` (yesterday up to this time for today, the span right before for
 the fixed windows), through the DTOs' optional `until`.
-`$lib/monitoring-changes.ts` turns the pair into a `Change` per metric
+`src/lib/monitoring-changes.ts` turns the pair into a `Change` per metric
 (`formatChange`: relative for counts, times and sizes, percentage points for
 error rate and uptime; `HIGHER_IS_BETTER` decides the colour, null for requests
 and bandwidth, which are neither good nor bad news).

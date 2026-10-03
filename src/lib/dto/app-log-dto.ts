@@ -1,6 +1,6 @@
 import { and, count, desc, eq, gt, inArray, lt, lte } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type AppLog, appLog } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/lib.js";
+import { type AppLog, appLog } from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewAppLogInput {

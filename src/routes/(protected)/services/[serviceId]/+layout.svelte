@@ -19,16 +19,16 @@
 		Terminal,
 		TerminalSquare,
 	} from "@lucide/svelte";
+	import CopyButton from "#lib/components/copy-button.svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
+	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
+	import { primaryHostname } from "#lib/service-domains.js";
+	import { internalUrl, maskUrlPassword } from "#lib/service-link.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import CopyButton from "$lib/components/copy-button.svelte";
-	import StatusBadge from "$lib/components/status-badge.svelte";
-	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
-	import { primaryHostname } from "$lib/service-domains";
-	import { internalUrl, maskUrlPassword } from "$lib/service-link";
 
 	const { data, children } = $props();
 

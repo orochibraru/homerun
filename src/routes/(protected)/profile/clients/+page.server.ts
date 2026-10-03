@@ -1,14 +1,14 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { OauthGrantDTO } from "$lib/dto/oauth-grant-dto";
-import { Logger } from "$lib/logger";
+import { OauthGrantDTO } from "#lib/dto/oauth-grant-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	API_KEY_SCOPES,
 	type ApiKeyScope,
 	apiKeyScopeOf,
 	READ_ONLY_ROLE,
-} from "$lib/permissions";
-import { auth } from "$lib/services/auth";
+} from "#lib/permissions.js";
+import { auth } from "#lib/services/auth.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("ApiKeys");
 
@@ -64,7 +64,7 @@ export const load = async ({ parent, request }) => {
 export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const name = (formData.get("name") as string | null)?.trim() || "API key";
@@ -97,7 +97,7 @@ export const actions = {
 
 	revokeApp: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const clientId = (formData.get("clientId") as string | null)?.trim();
@@ -113,7 +113,7 @@ export const actions = {
 
 	revoke: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const keyId = (formData.get("keyId") as string | null)?.trim();

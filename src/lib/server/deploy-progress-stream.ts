@@ -1,4 +1,4 @@
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 
 const POLL_MS = 500;
 const HEARTBEAT_MS = 15_000;

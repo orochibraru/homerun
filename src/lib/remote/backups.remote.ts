@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { query } from "$app/server";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { requireUser } from "$lib/server/remote-auth";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { requireUser } from "#lib/server/remote-auth.js";
 import {
 	type BackupObject,
 	S3BackupService,
-} from "$lib/services/s3-backup.service";
+} from "#lib/services/s3-backup.service.js";
+import { query } from "$app/server";
 
 /** What's actually in the bucket for this volume : listed on demand, since it's a network round-trip the page shouldn't wait on to render. */
 export const getVolumeBackups = query(

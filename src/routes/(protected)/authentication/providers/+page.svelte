@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { ExternalLink, KeyRound, Plus } from "@lucide/svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import { resolve } from "$app/paths";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
 
 	const { data } = $props();
 </script>
@@ -18,13 +18,8 @@
         </p>
       </div>
       <div class="flex shrink-0 items-center gap-3">
-        <span class="text-text-subtle text-xs">
-          {data.providers.length} configured
-        </span>
-        <Button href={resolve("/authentication/new")} size="sm">
-          <Plus class="size-4" />
-          Add provider
-        </Button>
+        <span class="text-text-subtle text-xs">{data.providers.length} configured</span>
+        <Button href={resolve('authentication/new')} size="sm"><Plus class="size-4" />Add provider</Button>
       </div>
     </div>
 
@@ -34,19 +29,14 @@
           icon={KeyRound}
           subtitle="Add one to offer single sign-on alongside email and password."
           title="No providers yet"
-        >
-          <Button href={resolve("/authentication/new")}>
-            <Plus class="size-4" />
-            Add provider
-          </Button>
-        </EmptyState>
+        ><Button href={resolve('authentication/new')}><Plus class="size-4" />Add provider</Button></EmptyState>
       </div>
     {:else}
       <div class="divide-border divide-y">
         {#each data.providers as provider (provider.name)}
           <a
             class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3"
-            href="{resolve('/authentication')}/{provider.name}"
+            href="{resolve('authentication')}/{provider.name}"
           >
             <div
               class="flex size-8 shrink-0 items-center justify-center rounded-lg {provider.enabled

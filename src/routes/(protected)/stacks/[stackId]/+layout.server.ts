@@ -1,8 +1,8 @@
 import { error } from "@sveltejs/kit";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { ancestorIds } from "#lib/stack-tree.js";
 import { resolve } from "$app/paths";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { ancestorIds } from "$lib/stack-tree";
 
 export const load = async ({ params, parent }) => {
 	await parent();
@@ -24,7 +24,7 @@ export const load = async ({ params, parent }) => {
 
 	return {
 		crumbRoot: [
-			{ href: resolve("/stacks"), label: "Stacks" },
+			{ href: resolve("stacks"), label: "Stacks" },
 			...ancestors.map((a) => ({
 				href: resolve("/(protected)/stacks/[stackId]", { stackId: a.id }),
 				label: a.name,

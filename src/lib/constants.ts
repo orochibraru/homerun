@@ -26,7 +26,7 @@ import {
 	Workflow,
 	XCircle,
 } from "@lucide/svelte";
-import type { ContainerStatus, JobStatus, JobType } from "$lib/types";
+import type { ContainerStatus, JobStatus, JobType } from "#lib/types.js";
 
 export const JOB_STATUS_CONFIG: Record<
 	JobStatus,

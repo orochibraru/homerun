@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type RegistryToken, registryToken } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/lib.js";
+import { type RegistryToken, registryToken } from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewRegistryTokenInput {

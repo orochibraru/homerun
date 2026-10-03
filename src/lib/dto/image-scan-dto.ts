@@ -4,14 +4,14 @@ import {
 	type ImageScanFinding,
 	type ImageScanStatus,
 	type SeverityCounts,
-} from "$lib/image-scan";
-import { db } from "$lib/server/db/lib";
-import { type ImageScan, imageScan } from "$lib/server/db/schema";
+} from "#lib/image-scan.js";
+import { db } from "#lib/server/db/lib.js";
+import { type ImageScan, imageScan } from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
-} from "$lib/server/list-query";
+} from "#lib/server/list-query.js";
 import { BaseDTO } from "./base-dto";
 
 const KEEP_PER_SERVICE = 25;

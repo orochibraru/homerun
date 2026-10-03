@@ -1,16 +1,16 @@
 import { redirect } from "@sveltejs/kit";
+import { AppLogDTO } from "#lib/dto/app-log-dto.js";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
+import { Logger } from "#lib/logger.js";
+import { rangeStart } from "#lib/monitoring-ranges.js";
+import { describeReading } from "#lib/resource-thresholds.js";
+import { monitoringRequest } from "#lib/server/monitoring-request.js";
+import { CapacityService } from "#lib/services/capacity.service.js";
+import { MonitoringService } from "#lib/services/monitoring.service.js";
+import { isProbed } from "#lib/services/uptime/uptime-probe.js";
 import { resolve } from "$app/paths";
-import { AppLogDTO } from "$lib/dto/app-log-dto";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
-import { Logger } from "$lib/logger";
-import { rangeStart } from "$lib/monitoring-ranges";
-import { describeReading } from "$lib/resource-thresholds";
-import { monitoringRequest } from "$lib/server/monitoring-request";
-import { CapacityService } from "$lib/services/capacity.service";
-import { MonitoringService } from "$lib/services/monitoring.service";
-import { isProbed } from "$lib/services/uptime/uptime-probe";
 
 const logger = new Logger("Dashboard");
 
@@ -117,7 +117,7 @@ export const load = async ({ cookies, locals, parent, url }) => {
 export const actions = {
 	clearErrors: async ({ locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (locals.isAdmin) {
 			await AppLogDTO.clear();

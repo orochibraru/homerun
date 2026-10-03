@@ -25,7 +25,7 @@
         {#each data.gatedServices as svc (svc.id)}
           <a
             class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3"
-            href="{resolve('/services')}/{svc.id}/security"
+            href="{resolve('services')}/{svc.id}/security"
           >
             <LockKeyhole class="text-accent size-4 shrink-0" />
             <div class="min-w-0 flex-1">

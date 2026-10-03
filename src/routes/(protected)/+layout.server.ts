@@ -1,10 +1,10 @@
 import { redirect } from "@sveltejs/kit";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { UserPreferencesDTO } from "#lib/dto/user-preferences-dto.js";
+import { AccountSecurityService } from "#lib/services/account-security.service.js";
+import { AdminService } from "#lib/services/admin.service.js";
+import { effectiveSurface } from "#lib/surfaces.js";
 import { resolve } from "$app/paths";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { UserPreferencesDTO } from "$lib/dto/user-preferences-dto";
-import { AccountSecurityService } from "$lib/services/account-security.service";
-import { AdminService } from "$lib/services/admin.service";
-import { effectiveSurface } from "$lib/surfaces";
 
 export const load = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -17,14 +17,14 @@ export const load = async ({ locals, url }) => {
 	}
 
 	if (locals.appOnly) {
-		throw redirect(302, resolve("/my-apps"));
+		throw redirect(302, resolve("my-apps"));
 	}
 
 	const settings = await InstanceSettingsDTO.get();
 	const onboardingDone = settings.onboardingComplete;
 
 	if (!onboardingDone) {
-		throw redirect(302, resolve("/onboarding"));
+		throw redirect(302, resolve("onboarding"));
 	}
 
 	const currentPath = url.pathname;
@@ -36,7 +36,7 @@ export const load = async ({ locals, url }) => {
 		if (unmet.length > 0) {
 			throw redirect(
 				302,
-				`${resolve("/security-setup")}?next=${encodeURIComponent(currentPath)}`,
+				`${resolve("security-setup")}?next=${encodeURIComponent(currentPath)}`,
 			);
 		}
 	}

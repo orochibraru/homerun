@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { FileUp } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
-	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { type ParsedEnvVar, parseDotEnv } from "$lib/env-parse";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { type ParsedEnvVar, parseDotEnv } from "#lib/env-parse.js";
 
 	const { onImport }: { onImport: (rows: ParsedEnvVar[]) => void } = $props();
 

@@ -3,9 +3,9 @@ import {
 	type ComposeFileDraft,
 	type ComposeServiceDraft,
 	type ComposeVolumeDraft,
-} from "$lib/compose-import";
-import { isRunAsUser } from "$lib/service-runtime";
-import { splitShellWords } from "$lib/shell-words";
+} from "#lib/compose-import.js";
+import { isRunAsUser } from "#lib/service-runtime.js";
+import { splitShellWords } from "#lib/shell-words.js";
 import { isRow, type RawRow, rows, str } from "./common";
 
 export interface CoolifyStorage {

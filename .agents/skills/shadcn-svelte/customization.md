@@ -155,7 +155,7 @@ Prefer these approaches in order:
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
+import { Button } from "#lib/components/ui/button/index.js";
 </script>
 
 <Button variant="outline" size="sm">Click</Button>
@@ -165,7 +165,7 @@ import { Button } from "$lib/components/ui/button";
 
 ```svelte
 <script lang="ts">
-import * as Card from "$lib/components/ui/card";
+import * as Card from "#lib/components/ui/card/index.js";
 </script>
 
 <Card.Root class="mx-auto max-w-md">
@@ -189,7 +189,7 @@ Compose shadcn-svelte primitives into higher-level `.svelte` files:
 
 ```svelte
 <script lang="ts">
-import * as AlertDialog from "$lib/components/ui/alert-dialog";
+import * as AlertDialog from "#lib/components/ui/alert-dialog/index.js";
 let { title, description, onConfirm, children } = $props();
 let open = $state(false);
 </script>

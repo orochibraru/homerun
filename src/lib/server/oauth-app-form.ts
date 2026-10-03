@@ -1,11 +1,11 @@
-import type { EnvironmentInput } from "$lib/dto/oauth-client-environment-dto";
-import { callbackUrlProblem, originProblem } from "$lib/oidc-provider";
-import { checkbox } from "$lib/server/validation/instance-settings-form";
+import type { EnvironmentInput } from "#lib/dto/oauth-client-environment-dto.js";
+import { callbackUrlProblem, originProblem } from "#lib/oidc-provider.js";
+import { checkbox } from "#lib/server/validation/instance-settings-form.js";
 import type {
 	OauthAppInput,
 	OauthAppSettings,
 	SecretAuthMethod,
-} from "$lib/services/oauth-app.service";
+} from "#lib/services/oauth-app.service.js";
 
 type Parsed<T> = { error: string; input: null } | { error: null; input: T };
 

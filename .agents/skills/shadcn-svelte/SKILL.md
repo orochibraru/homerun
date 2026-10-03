@@ -34,22 +34,23 @@ Each component lives in its own folder with an `index.ts` barrel. Match the
 [installation docs](https://shadcn-svelte.com/docs/installation):
 
 - **Multi-part components** (dialog, select, card, field, tabs, …):
-  `import * as Dialog from "$lib/components/ui/dialog"` then `Dialog.Content`,
-  `Dialog.Title`, `Card.Root`, `Card.Header`, etc., whatever the barrel exports
-  (short names and/or `Root as …` aliases).
+  `import * as Dialog from "#lib/components/ui/dialog/index.js"` then
+  `Dialog.Content`, `Dialog.Title`, `Card.Root`, `Card.Header`, etc., whatever
+  the barrel exports (short names and/or `Root as …` aliases).
 - **Single-component barrels** (only one meaningful component in the folder):
-  **named imports**, `import { Button } from "$lib/components/ui/button"` and
-  `<Button>`, not `import * as Button` + `Button.Root`. Same pattern for
-  `{ Input }`, `{ Badge }`, `{ Spinner }`, `{ Checkbox }`, `{ Separator }`,
-  `{ Skeleton }`, etc.
+  **named imports**,
+  `import { Button } from "#lib/components/ui/button/index.js"` and `<Button>`,
+  not `import * as Button` + `Button.Root`. Same pattern for `{ Input }`,
+  `{ Badge }`, `{ Spinner }`, `{ Checkbox }`, `{ Separator }`, `{ Skeleton }`,
+  etc.
 
 ```ts
-import { Button } from "$lib/components/ui/button";
-import * as Dialog from "$lib/components/ui/dialog";
-import { Separator } from "$lib/components/ui/separator";
+import { Button } from "#lib/components/ui/button/index.js";
+import * as Dialog from "#lib/components/ui/dialog/index.js";
+import { Separator } from "#lib/components/ui/separator/index.js";
 ```
 
-Use the real aliases from `components.json` (often `$lib/components/ui/...`),
+Use the real aliases from `components.json` (often `#lib/components/ui/...`),
 not hardcoded paths.
 
 ## Principles
@@ -155,11 +156,11 @@ code. For edge cases, see the linked rule files above.
 
 ```svelte
 <script lang="ts">
-import * as Avatar from "$lib/components/ui/avatar";
-import { Badge } from "$lib/components/ui/badge";
-import { Button } from "$lib/components/ui/button";
-import * as Field from "$lib/components/ui/field";
-import { Input } from "$lib/components/ui/input";
+import * as Avatar from "#lib/components/ui/avatar/index.js";
+import { Badge } from "#lib/components/ui/badge/index.js";
+import { Button } from "#lib/components/ui/button/index.js";
+import * as Field from "#lib/components/ui/field/index.js";
+import { Input } from "#lib/components/ui/input/index.js";
 import SearchIcon from "@lucide/svelte/icons/search";
 </script>
 
@@ -219,7 +220,7 @@ import SearchIcon from "@lucide/svelte/icons/search";
 
 Use `components.json` and the filesystem, not a separate `info` command:
 
-- **`aliases`** → use the actual alias prefix from config (e.g. `$lib/`), never
+- **`aliases`** → use the actual alias prefix from config (e.g. `#lib/`), never
   hardcode unrelated projects.
 - **`tailwind.css`** → the global CSS file where theme variables live. Edit this
   file for theme tweaks; don't add a second globals file unless the user already

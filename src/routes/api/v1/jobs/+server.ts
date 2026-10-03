@@ -1,8 +1,7 @@
-import { json } from "@sveltejs/kit";
-import { JobDTO } from "$lib/dto/job-dto";
-import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
-import { narrowFilter } from "$lib/server/list-query";
-import type { JobStatus } from "$lib/types";
+import { JobDTO } from "#lib/dto/job-dto.js";
+import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
+import { narrowFilter } from "#lib/server/list-query.js";
+import type { JobStatus } from "#lib/types.js";
 
 const JOB_STATUSES: JobStatus[] = [
 	"queued",
@@ -14,10 +13,10 @@ const JOB_STATUSES: JobStatus[] = [
 
 export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	if (!locals.isAdmin) {
-		return json({ error: "Forbidden" }, { status: 403 });
+		return Response.json({ error: "Forbidden" }, { status: 403 });
 	}
 	const wanted = (url.searchParams.get("status") ?? "")
 		.split(",")
@@ -25,7 +24,7 @@ export const GET = async ({ locals, url }) => {
 		.filter(Boolean);
 	const statuses = narrowFilter(wanted, JOB_STATUSES);
 	if (statuses.length !== wanted.length) {
-		return json(
+		return Response.json(
 			{
 				error: `Unknown status in "${wanted.join(",")}", expected any of ${JOB_STATUSES.join(", ")}.`,
 			},

@@ -1,19 +1,18 @@
 <script lang="ts">
 	import { Plus, TriangleAlert, X } from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
-	} from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { BASE_SORTS } from "$lib/list-sorts";
-	import { ROLE_OPTIONS, roleLabel } from "$lib/permissions";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { ROLE_OPTIONS, roleLabel } from "#lib/permissions.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance, type SubmitFunction } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import AddUserPanel from "./add-user-panel.svelte";
 	import UserRow from "./user-row.svelte";
 
@@ -103,34 +102,37 @@
     error={form?.error}
     open={showAddForm}
     smtpEnabled={data.smtpEnabled}
-    {submitToast}
-    {submitting}
+    submitToast={submitToast}
+    submitting={submitting}
   />
 
   <EntityToolbar
-    sorts={BASE_SORTS} {filters} placeholder="Search users by name or email…" />
+    sorts={BASE_SORTS}
+    filters={filters}
+    placeholder="Search users by name or email…"
+  />
 
   {#if data.users.length === 0}
     <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
       <p class="text-text-muted text-sm">No users match your filters.</p>
     </div>
   {:else}
-  <div class="space-y-3">
-    {#each data.users as u (u.id)}
-      <UserRow
-        isSelf={u.id === data.currentUserId}
-        onRemove={requestRemove}
-        {submitToast}
-        user={u}
-      />
-    {/each}
-  </div>
-  <Pagination
-    label="users"
-    page={data.page}
-    perPage={data.perPage}
-    total={data.total}
-  />
+    <div class="space-y-3">
+      {#each data.users as u (u.id)}
+        <UserRow
+          isSelf={u.id === data.currentUserId}
+          onRemove={requestRemove}
+          submitToast={submitToast}
+          user={u}
+        />
+      {/each}
+    </div>
+    <Pagination
+      label="users"
+      page={data.page}
+      perPage={data.perPage}
+      total={data.total}
+    />
   {/if}
 
   {#if data.invites.length > 0}

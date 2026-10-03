@@ -1,6 +1,5 @@
-import { json } from "@sveltejs/kit";
 import { z } from "zod";
-import { DockerService } from "$lib/services/docker.service";
+import { DockerService } from "#lib/services/docker.service.js";
 
 const sizeSchema = z.object({
 	cols: z.int().min(1).max(1000),
@@ -9,11 +8,11 @@ const sizeSchema = z.object({
 
 export const POST = async ({ params, request, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const size = sizeSchema.safeParse(await request.json().catch(() => null));
 	if (!size.success) {
-		return json({ error: "Invalid size" }, { status: 400 });
+		return Response.json({ error: "Invalid size" }, { status: 400 });
 	}
 	const ok = await DockerService.resizeSession(
 		params.sessionId,
@@ -21,7 +20,7 @@ export const POST = async ({ params, request, locals }) => {
 		size.data,
 	);
 	if (!ok) {
-		return json({ error: "Session not found" }, { status: 404 });
+		return Response.json({ error: "Session not found" }, { status: 404 });
 	}
-	return json({ success: true });
+	return Response.json({ success: true });
 };

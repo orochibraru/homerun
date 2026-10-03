@@ -1,5 +1,5 @@
-import { splitImageRef } from "$lib/image-ref";
-import type { ContainerStatus, RevisionHealth } from "$lib/types";
+import { splitImageRef } from "#lib/image-ref.js";
+import type { ContainerStatus, RevisionHealth } from "#lib/types.js";
 
 export const RETAINED_REVISIONS = 5;
 export const MIN_RETAINED_IMAGES = 1;

@@ -1,9 +1,9 @@
 <script lang="ts">
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { saveToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 </script>
@@ -28,9 +28,12 @@
           Email).
         {/if}
       </p>
-      <Button href={resolve("/users")} size="sm" variant="outline">
-        Manage users
-      </Button>
+
+      <Button
+        href={resolve('users')}
+        size="sm"
+        variant="outline"
+      >Manage users</Button>
     </div>
   </section>
 
@@ -72,13 +75,13 @@
       </form>
     {:else}
       <div class="space-y-2 p-5 text-sm">
-        <p class="text-text-muted">
-          Unavailable until SMTP is configured: Homerun has no way to deliver
-          the codes or links.
-        </p>
-        <Button href={resolve("/settings/email")} size="sm" variant="outline">
-          Configure email
-        </Button>
+        <p class="text-text-muted">Unavailable until SMTP is configured: Homerun has no way to deliver the codes or links.</p>
+
+        <Button
+          href={resolve('settings/email')}
+          size="sm"
+          variant="outline"
+        >Configure email</Button>
       </div>
     {/if}
   </section>

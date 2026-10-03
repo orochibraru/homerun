@@ -9,10 +9,10 @@
 
 <script lang="ts">
 	import { Check, ChevronsUpDown } from "@lucide/svelte";
-	import { labelClass } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Command from "$lib/components/ui/command/index.js";
-	import * as Popover from "$lib/components/ui/popover/index.js";
+	import { labelClass } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Command from "#lib/components/ui/command/index.js";
+	import * as Popover from "#lib/components/ui/popover/index.js";
 
 	interface Props {
 		/** Prefix for the comboboxes' element ids, so a page can hold more than one picker. */

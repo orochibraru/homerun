@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { requireUser } from "#lib/server/remote-auth.js";
 import { command, query } from "$app/server";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { requireUser } from "$lib/server/remote-auth";
 
 const NOTIFICATION_LIMIT = 20;
 

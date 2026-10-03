@@ -3,7 +3,7 @@ import {
 	directAccessOrigins,
 	directAccessScheme,
 	trustedOriginsFor,
-} from "$lib/services/auth-origins";
+} from "#lib/services/auth-origins.js";
 
 describe("trustedOriginsFor", () => {
 	test("trusts the configured domain alongside an IP ORIGIN", () => {

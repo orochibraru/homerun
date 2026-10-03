@@ -1,24 +1,24 @@
 <script lang="ts">
 	import { Clock, Play, Plus, Terminal, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList from "$lib/components/entity-list.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
-	} from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { BASE_SORTS } from "$lib/list-sorts";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -29,7 +29,7 @@
 	const rows = $derived(
 		data.jobs.map((job) => ({
 			enabled: job.enabled,
-			href: `${resolve("/cron-jobs")}/${job.id}`,
+			href: `${resolve("cron-jobs")}/${job.id}`,
 			id: job.id,
 			kind: job.kind,
 			name: job.name,
@@ -103,10 +103,14 @@
       success: "Run queued.",
     })}
   >
-    <input name="jobId" type="hidden" value={job.id}>
-    <Button size="icon-sm" title="Run now" type="submit" variant="ghost">
-      <Play class="size-4" />
-    </Button>
+    <input name="jobId" type="hidden" value={job.id} />
+
+    <Button
+      size="icon-sm"
+      title="Run now"
+      type="submit"
+      variant="ghost"
+    ><Play class="size-4" /></Button>
   </form>
 
   <form
@@ -118,7 +122,7 @@
       success: "Cron job deleted.",
     })}
   >
-    <input name="jobId" type="hidden" value={job.id}>
+    <input name="jobId" type="hidden" value={job.id} />
     <Button
       class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
       onclick={(e) => requestDelete(e, job.name)}
@@ -141,10 +145,8 @@
         this host. Every run goes through the job queue and keeps its output.
       </p>
     </div>
-    <Button href={resolve("/cron-jobs/new")}>
-      <Plus class="size-4" />
-      New Cron Job
-    </Button>
+
+    <Button href={resolve('cron-jobs/new')}><Plus class="size-4" />New Cron Job</Button>
   </div>
 
   {#if data.total === 0 && !data.filtered}
@@ -152,17 +154,15 @@
       icon={Clock}
       subtitle="Run a database dump, a cleanup script, or any image on a schedule."
       title="No cron jobs yet"
-    >
-      <Button href={resolve("/cron-jobs/new")}>
-        <Plus class="size-4" />
-        Create your first cron job
-      </Button>
-    </EmptyState>
+    ><Button href={resolve('cron-jobs/new')}><Plus class="size-4" />Create your first cron job</Button></EmptyState>
   {:else}
     <EntityToolbar
-    sorts={BASE_SORTS} {filters} placeholder="Search cron jobs…">
+      sorts={BASE_SORTS}
+      filters={filters}
+      placeholder="Search cron jobs…"
+    >
       {#snippet trailing()}
-        <ViewModeToggle {view} />
+        <ViewModeToggle view={view} />
       {/snippet}
     </EntityToolbar>
 
@@ -171,7 +171,14 @@
         <p class="text-text-muted text-sm">No cron jobs match your search.</p>
       </div>
     {:else}
-      <EntityList {actions} {badge} items={rows} {media} {view} />
+      <EntityList
+        actions={actions}
+        badge={badge}
+        items={rows}
+        media={media}
+        view={view}
+      />
+
       <Pagination
         label="cron jobs"
         page={data.page}

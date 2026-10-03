@@ -1,8 +1,8 @@
-import type { PublishedPort } from "$lib/published-ports";
+import type { PublishedPort } from "#lib/published-ports.js";
 import {
 	runtimeOptionsFrom,
 	type ServiceRuntimeOptions,
-} from "$lib/service-runtime";
+} from "#lib/service-runtime.js";
 
 export interface VolumeMountSnapshot {
 	containerPath: string;

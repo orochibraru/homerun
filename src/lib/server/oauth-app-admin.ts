@@ -1,6 +1,6 @@
 import { error, redirect } from "@sveltejs/kit";
+import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
 import { resolve } from "$app/paths";
-import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
 
 /**
  * The registered app an admin-only IdP action works on.
@@ -13,10 +13,10 @@ export async function adminApp(
 	appId: string,
 ): Promise<OauthClientDTO> {
 	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 	const app = await OauthClientDTO.get(appId);
 	if (!app) {

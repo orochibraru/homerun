@@ -1,5 +1,5 @@
-import type { envDefaultsForDisplay } from "$lib/config";
-import type { InstanceSettings } from "$lib/server/db/schema";
+import type { envDefaultsForDisplay } from "#lib/config.js";
+import type { InstanceSettings } from "#lib/server/db/schema.js";
 
 export type FieldErrors = Record<string, string>;
 

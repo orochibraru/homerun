@@ -1,8 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { RevisionService } from "#lib/services/revision.service.js";
 import { resolve } from "$app/paths";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { RevisionService } from "$lib/services/revision.service";
 
 const logger = new Logger("Revisions");
 
@@ -14,7 +14,7 @@ export const load = async ({ parent }) => {
 export const actions = {
 	deployRevision: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {

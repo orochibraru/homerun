@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { restoreStubs, stub } from "../support/stub";
 import { stubFetch } from "./dns-providers/stub-fetch";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,

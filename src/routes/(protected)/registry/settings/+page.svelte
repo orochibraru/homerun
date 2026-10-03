@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { CircleCheck, CircleX } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
+	import Alert from "#lib/components/alert.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { formatBytes } from "#lib/formatting.js";
+	import type { RegistryCheck } from "#lib/registry-self-test.js";
+	import { testRegistry } from "#lib/remote/registry.remote.js";
+	import { enhanceToast, toastError } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import Alert from "$lib/components/alert.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { formatBytes } from "$lib/formatting";
-	import type { RegistryCheck } from "$lib/registry-self-test";
-	import { testRegistry } from "$lib/remote/registry.remote";
-	import { enhanceToast, toastError } from "$lib/toast";
 
 	const { data } = $props();
 

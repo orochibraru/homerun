@@ -1,10 +1,10 @@
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import {
 	type EnrollmentRoles,
 	NodeEnrollmentDTO,
-} from "$lib/dto/node-enrollment-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { Logger } from "$lib/logger";
+} from "#lib/dto/node-enrollment-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { Logger } from "#lib/logger.js";
 import { AgentClientService } from "./agent-client.service.ts";
 import { DockerService } from "./docker.service.ts";
 import { encryptSecret } from "./secrets.ts";

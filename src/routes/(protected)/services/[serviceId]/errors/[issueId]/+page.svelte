@@ -9,16 +9,16 @@
 		RotateCcw,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import EnvironmentBadge from "#lib/components/environment-badge.svelte";
+	import ErrorLevelBadge from "#lib/components/error-level-badge.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import type { StoredFrame } from "#lib/error-tracking/event.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import EnvironmentBadge from "$lib/components/environment-badge.svelte";
-	import ErrorLevelBadge from "$lib/components/error-level-badge.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import type { StoredFrame } from "$lib/error-tracking/event";
-	import { timeAgo } from "$lib/formatting";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 	const svc = $derived(data.service);
@@ -32,7 +32,7 @@
 	);
 
 	function eventHref(eventId: string): string {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		url.searchParams.set("event", eventId);
 		return `${url.pathname}${url.search}`;
 	}

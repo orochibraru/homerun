@@ -1,8 +1,6 @@
-import { allowLongRequest } from "$lib/server/long-request";
-import { DockerService } from "$lib/services/docker.service";
+import { DockerService } from "#lib/services/docker.service.js";
 
-export const GET = async ({ params, locals, platform }) => {
-	allowLongRequest(platform);
+export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
 		return new Response("Unauthorized", { status: 401 });
 	}

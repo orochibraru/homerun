@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { FolderOpen, HardDrive } from "@lucide/svelte";
+	import TabNav from "#lib/components/tab-nav.svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import TabNav from "$lib/components/tab-nav.svelte";
 
 	const { data, children } = $props();
 	const vol = $derived(data.volume);

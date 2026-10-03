@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { HTMLTextareaAttributes } from "svelte/elements";
-	import { type HighlightLanguage, loadHighlighter } from "$lib/highlight";
+	import { type HighlightLanguage, loadHighlighter } from "#lib/highlight.js";
 
 	const MAX_HIGHLIGHT_CHARS = 200_000;
 

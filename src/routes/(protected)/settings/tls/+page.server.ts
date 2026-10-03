@@ -1,15 +1,15 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { Logger } from "#lib/logger.js";
+import { applyAndRebuild } from "#lib/server/validation/instance-settings-form.js";
+import { serviceHostnames } from "#lib/service-domains.js";
+import { DeploymentService } from "#lib/services/deploy.service.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { certificateCovers, inspectCertificate } from "#lib/tls-certificate.js";
 import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { Logger } from "$lib/logger";
-import { applyAndRebuild } from "$lib/server/validation/instance-settings-form";
-import { serviceHostnames } from "$lib/service-domains";
-import { DeploymentService } from "$lib/services/deploy.service";
-import { DockerService } from "$lib/services/docker.service";
-import { certificateCovers, inspectCertificate } from "$lib/tls-certificate";
 
 const logger = new Logger("InstanceSettings");
 
@@ -50,10 +50,10 @@ export const load = async () => {
 /** The admin guard every action here shares. */
 function requireAdmin(locals: App.Locals): string {
 	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 	return locals.user.id;
 }

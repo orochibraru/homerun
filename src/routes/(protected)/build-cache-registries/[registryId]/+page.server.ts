@@ -1,7 +1,7 @@
 import { error, fail, redirect } from "@sveltejs/kit";
+import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
+import { Logger } from "#lib/logger.js";
 import { resolve } from "$app/paths";
-import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
-import { Logger } from "$lib/logger";
 
 const logger = new Logger("BuildCacheRegistries");
 
@@ -26,7 +26,7 @@ export const load = async ({ params, parent }) => {
 export const actions = {
 	update: async ({ params, request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const registry = await BuildCacheRegistryDTO.get(params.registryId);

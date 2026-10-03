@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, lt, notInArray, or } from "drizzle-orm";
-import { type StoredErrorEvent, userKeyOf } from "$lib/error-tracking/event";
-import { db } from "$lib/server/db/lib";
-import { type ErrorEvent, errorEvent } from "$lib/server/db/schema";
+import { type StoredErrorEvent, userKeyOf } from "#lib/error-tracking/event.js";
+import { db } from "#lib/server/db/lib.js";
+import { type ErrorEvent, errorEvent } from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 export interface EventNeighbours {

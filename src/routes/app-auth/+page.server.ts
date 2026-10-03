@@ -1,26 +1,28 @@
 import { error, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { signInMethodAvailable } from "$lib/auth-providers";
-import { config } from "$lib/config";
-import { signInUrlFor } from "$lib/redirect-target";
+import { signInMethodAvailable } from "#lib/auth-providers.js";
+import { config } from "#lib/config.js";
+import { signInUrlFor } from "#lib/redirect-target.js";
 import {
 	GATE_CALLBACK_PATH,
 	GATE_GRANT_TTL_MS,
 	signGateToken,
 	verifyGateToken,
-} from "$lib/server/app-gate";
-import { offCanonicalOrigin } from "$lib/server/canonical-origin";
-import { gatedService } from "$lib/server/gated-service-cache";
+} from "#lib/server/app-gate.js";
+import { offCanonicalOrigin } from "#lib/server/canonical-origin.js";
+import { gatedService } from "#lib/server/gated-service-cache.js";
 import {
 	ACCESS_DENIAL_MESSAGES,
 	AppAccessService,
-} from "$lib/services/app-access.service";
-import { emailSignInAvailability } from "$lib/services/email-sign-in";
+} from "#lib/services/app-access.service.js";
+import { emailSignInAvailability } from "#lib/services/email-sign-in.js";
+import { resolve } from "$app/paths";
 
 export const load = async ({ request: incoming, url, locals }) => {
 	const canonicalOrigin = offCanonicalOrigin(incoming, url);
 	if (canonicalOrigin) {
-		redirect(302, `${canonicalOrigin}${url.pathname}${url.search}`);
+		redirect(302, `${canonicalOrigin}${url.pathname}${url.search}`, {
+			external: true,
+		});
 	}
 
 	const rd = url.searchParams.get("rd");
@@ -56,7 +58,7 @@ export const load = async ({ request: incoming, url, locals }) => {
 	if (!locals.user) {
 		redirect(
 			302,
-			signInUrlFor(resolve("/auth/sign-in"), `${url.pathname}${url.search}`),
+			signInUrlFor(resolve("auth/sign-in"), `${url.pathname}${url.search}`),
 		);
 	}
 
@@ -85,5 +87,5 @@ export const load = async ({ request: incoming, url, locals }) => {
 	);
 	const callback = new URL(GATE_CALLBACK_PATH, new URL(request.target).origin);
 	callback.searchParams.set("token", grant);
-	redirect(302, callback.toString());
+	redirect(302, callback.toString(), { external: true });
 };

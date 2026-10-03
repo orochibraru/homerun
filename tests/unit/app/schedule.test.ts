@@ -3,7 +3,7 @@ import {
 	describeSchedule,
 	scheduleFromCron,
 	scheduleToCron,
-} from "$lib/schedule";
+} from "#lib/schedule.js";
 
 describe("scheduleFromCron", () => {
 	test("reads the four simple patterns back", () => {

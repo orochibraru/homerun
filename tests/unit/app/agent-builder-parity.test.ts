@@ -8,7 +8,7 @@ import {
 	DEFAULT_BAKE_FILE,
 	DEFAULT_BAKE_TARGET,
 	isBuildMethod,
-} from "$lib/build-methods";
+} from "#lib/build-methods.js";
 
 describe("the Go builder accepts what the app's forms offer", () => {
 	test("same methods and bake defaults", () => {

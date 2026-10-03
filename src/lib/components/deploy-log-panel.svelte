@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { stripAnsi } from "$lib/ansi";
-	import AnsiLine from "$lib/components/ansi-line.svelte";
-	import CopyButton from "$lib/components/copy-button.svelte";
+	import { stripAnsi } from "#lib/ansi.js";
+	import AnsiLine from "#lib/components/ansi-line.svelte";
+	import CopyButton from "#lib/components/copy-button.svelte";
 
 	const {
 		errorMessage,

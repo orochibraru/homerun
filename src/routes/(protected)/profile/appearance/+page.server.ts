@@ -1,14 +1,14 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { UserPreferencesDTO } from "$lib/dto/user-preferences-dto";
-import { Logger } from "$lib/logger";
+import { UserPreferencesDTO } from "#lib/dto/user-preferences-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	colorsSchema,
 	perPageSchema,
 	presetSchema,
 	surfaceSchema,
 	themeSchema,
-} from "$lib/server/validation/appearance";
+} from "#lib/server/validation/appearance.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Appearance");
 
@@ -16,7 +16,7 @@ export const actions = {
 	/** Saves the site-wide light/dark/system preference. */
 	updateTheme: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const parsed = themeSchema.safeParse(
 			Object.fromEntries(await request.formData()),
@@ -33,7 +33,7 @@ export const actions = {
 	/** Saves the preset that overrides theme, style and colors, or clears it. */
 	updatePreset: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const parsed = presetSchema.safeParse(
 			Object.fromEntries(await request.formData()),
@@ -50,7 +50,7 @@ export const actions = {
 	/** Saves the surface style panels and buttons are drawn in. */
 	updateSurface: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const parsed = surfaceSchema.safeParse(
 			Object.fromEntries(await request.formData()),
@@ -67,7 +67,7 @@ export const actions = {
 	/** Saves the palette, the custom accent colour, or the built-in default. */
 	updateColors: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const parsed = colorsSchema.safeParse(
 			Object.fromEntries(await request.formData()),
@@ -91,7 +91,7 @@ export const actions = {
 	/** Saves the default page size every paginated list opens with. */
 	updatePerPage: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const parsed = perPageSchema.safeParse(
 			Object.fromEntries(await request.formData()),

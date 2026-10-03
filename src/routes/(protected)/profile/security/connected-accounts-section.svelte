@@ -1,19 +1,18 @@
 <script lang="ts">
 	import { KeyRound } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
-	import { invalidateAll } from "$app/navigation";
+	import { authClient } from "#lib/auth-client.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { toastError } from "#lib/toast.js";
+	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { authClient } from "$lib/auth-client";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { toastError } from "$lib/toast";
 
 	interface Provider {
 		accountId: string | null;
 		linked: boolean;
 		name: string;
 	}
-
 	interface Props {
 		hasPassword: boolean;
 		providers: Provider[];
@@ -27,7 +26,7 @@
 		linking = provider;
 		try {
 			const { error } = await authClient.linkSocial({
-				callbackURL: resolve("/profile/security"),
+				callbackURL: resolve("profile/security"),
 				provider: provider as never,
 			});
 			if (error) {
@@ -54,7 +53,7 @@
 			if (error) {
 				throw new Error(error.message ?? "Couldn't disconnect that provider.");
 			}
-			await invalidateAll();
+			await refreshAll();
 		} finally {
 			linking = "";
 		}

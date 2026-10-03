@@ -1,10 +1,10 @@
 import { fail, type RequestEvent, redirect } from "@sveltejs/kit";
+import { AccountSetupService } from "#lib/services/account-setup.service.js";
 import { resolve } from "$app/paths";
-import { AccountSetupService } from "$lib/services/account-setup.service";
 
 function signedInUser(event: RequestEvent): { email: string; id: string } {
 	if (!event.locals.user) {
-		throw redirect(303, resolve("/auth/sign-in"));
+		throw redirect(303, resolve("auth/sign-in"));
 	}
 	return { email: event.locals.user.email, id: event.locals.user.id };
 }

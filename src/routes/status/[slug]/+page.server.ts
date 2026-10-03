@@ -1,7 +1,7 @@
 import { error } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StatusPageDTO } from "$lib/dto/status-page-dto";
-import { BEAT_WINDOW, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
+import { BEAT_WINDOW, UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 
 export const load = async ({ params }) => {
 	const page = await StatusPageDTO.getPublicBySlug(params.slug);

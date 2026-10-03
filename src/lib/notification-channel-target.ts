@@ -1,4 +1,4 @@
-import type { NotificationChannelKind } from "$lib/types";
+import type { NotificationChannelKind } from "#lib/types.js";
 
 export interface TelegramTarget {
 	botToken: string;

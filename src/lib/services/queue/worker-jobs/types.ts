@@ -1,4 +1,4 @@
-import type { JobDTO } from "$lib/dto/job-dto";
+import type { JobDTO } from "#lib/dto/job-dto.js";
 import type { JobResult } from "../handlers.ts";
 
 /**
