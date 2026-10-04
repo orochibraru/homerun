@@ -7,7 +7,7 @@ export const SURFACE_STYLES = [
 	},
 	{
 		description:
-			"Liquid glass: blurred, sheened panels and pill buttons with lit edges over your colour.",
+			"Liquid glass: clear, lit-edged panels floating over your colour, with solid pill buttons.",
 		id: "glass",
 		name: "Glass",
 	},

@@ -1,11 +1,11 @@
 # Authentication providers
 
 The **Authentication** page (Administration, admin-only) is where sign-in
-methods are configured for the whole instance. It has four tabs: **Sign-in**
-(built-in accounts, preferred methods and requirements), **Providers**, **Sign
-in with Homerun** (see [Sign in with Homerun](sign-in-with-homerun.md)) and
+methods are configured for the whole instance. It has three tabs: **Sign-in**
+(built-in accounts, preferred methods and requirements), **Providers** and
 **Protected apps** (every service behind the login wall and the methods it
-accepts).
+accepts). Homerun as a provider for your own apps has its own **IDP** page, see
+[Sign in with Homerun](sign-in-with-homerun.md).
 
 - **Built-in authentication** is Homerun's own email and password accounts,
   managed on the Users page. It's always available for the dashboard.
@@ -25,8 +25,12 @@ accepts).
   fixed once created. Leaving a client secret blank when editing keeps the one
   already stored.
 
+  ![Authentication → Providers, listing the configured OAuth providers](images/auth-providers.webp)
+
 Register `<your-homerun-url>/api/v1/auth/callback/<provider id>` as the redirect
 URI on the provider's side. The Authentication page prints the exact URL to use.
+
+![The Add provider page with the Keycloak preset applied and the redirect URI to register](images/auth-provider-new.webp)
 
 The same page has three instance-wide switches:
 
@@ -47,6 +51,8 @@ The same page has three instance-wide switches:
   meet one is sent to a setup page on their next visit and can't use the
   dashboard until they've enrolled. API keys and CLI tokens aren't affected.
 
+![Authentication → Sign-in, with emailed sign-in, preferred methods and sign-in requirements](images/auth-sign-in.webp)
+
 ## OAuth / OIDC login
 
 Configured per-provider from the Authentication page, not env vars: any
@@ -54,6 +60,8 @@ OIDC-compatible provider via a discovery URL, client ID/secret, and scopes.
 Applies live once saved, no restart. The discovery URL is validated before
 saving specifically because a broken one used to be able to lock the whole
 instance out (see [Configuration](configuration.md#a-note-on-lockout)).
+
+![A provider's page: display name, provider id, client credentials and discovery URL](images/auth-provider.webp)
 
 **Client authentication** on each provider controls how the client id and secret
 are sent when exchanging the login for a token. _Automatic_ reads your
@@ -149,7 +157,11 @@ offers **Link \<provider\> to this account** and **Sign out**. Signed out, it
 gives you an email and password box right there — sign in and the provider is
 connected in the same step, no trip through the sign-in page and your profile.
 
+![The "provider isn't connected to your account yet" page, offering to link it](images/auth-provider-link.webp)
+
 You can also manage this any time from **Profile → Security → Connected
 accounts**, which lists every enabled provider with Connect/Disconnect.
 Disconnect stays unavailable until you have a password set, so you can't remove
 your last way in.
+
+![Profile → Security with Connected accounts at the top](images/profile-security.webp)

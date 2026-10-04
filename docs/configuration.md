@@ -27,6 +27,8 @@ for people who'd rather manage settings as code.
 **Use HTTPS** sets the scheme of the Dashboard URL derived from the base domain,
 and the helper text under it shows the resulting origin.
 
+![Settings → General: Base domain, Use HTTPS and Dashboard URL](images/settings.webp)
+
 Sign-in methods, and the instance-wide two-factor and passkey requirements, live
 on their own **Authentication** page rather than a `/settings` tab, see
 [Authentication providers](authentication-providers.md). Git hosting accounts

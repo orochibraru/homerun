@@ -1,5 +1,7 @@
 # The dashboard
 
+![The Overview page: service counts, host resources, today's monitoring, per-service usage, recent deployments and recent errors](images/hero.webp)
+
 `/` (Overview) is the landing page after sign-in:
 
 - **Service counts**, how many services the instance has and how many are
@@ -41,6 +43,8 @@
 - **Quick actions**, shortcuts to deploy a service and to the services list.
 - **A setup-issues banner**, when applicable, see below.
 
+![Settings → General → Resource limits, with each resource's soft and hard threshold and the alert timing](images/dashboard-resource-limits.webp)
+
 ## List pages
 
 Every list page (services, stacks, templates, cron jobs, storage, remote hosts,
@@ -48,6 +52,8 @@ build cache registries, backup destinations, users) has the same toolbar: a
 search box, a sort (newest, oldest, name A–Z or Z–A, recently updated, and most
 services on stacks), filters where the list has any, and a pager. All of them
 run on the server over everything you can see, and live in the URL.
+
+![The services list, with its search box, sort, filters and view toggle](images/services.webp)
 
 ## Search
 
@@ -57,6 +63,8 @@ two characters it also searches the instance's services, stacks, templates, cron
 jobs, storage volumes, backup destinations, remote hosts, build cache
 registries, git providers, notification channels and status pages, plus users
 and authentication providers for an admin.
+
+![The command palette open on the Overview page, searching for "cache"](images/search.webp)
 
 ## Setup diagnostics
 

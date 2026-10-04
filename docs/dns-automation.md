@@ -4,6 +4,8 @@ The **DNS** page (sidebar → Integrations, admins only) is where Homerun manage
 your domains' DNS. It has three tabs: **Domains**, **Providers** and
 **Pangolin**.
 
+![The DNS page's Domains tab](images/dns.webp)
+
 ## Providers
 
 A provider connection is an account at a DNS host Homerun can manage records
@@ -34,6 +36,8 @@ credentials encrypted and lists the zones they can see; **Test** does it again
 later. Removing a connection keeps its domains, without their records being
 managed any more.
 
+![Connecting a provider: Cloudflare picked, with a link to its docs and the fields it needs](images/dns-automation-provider-form.webp)
+
 ## Domains
 
 A domain is one you own, added to Homerun. Link it to a connection and pick the
@@ -53,6 +57,8 @@ zone it lives in, and:
   (`*.example.com`) record in one go, so every name under it reaches the server
   without a record each. The apex needs an IP target, since DNS doesn't allow a
   CNAME there.
+
+![A domain's page, where it's linked to a connection and zone and told where records point](images/dns-automation-domain.webp)
 
 Homerun only ever changes or deletes the records it created itself. A record you
 made by hand on a service's hostname is left alone and the deploy log says so;
@@ -77,6 +83,8 @@ If you front the instance with a self-hosted
 Pangolin Resource and Target per hostname) and runs its Newt tunnel client. Your
 domains' records under **Domains** keep being managed either way, so don't link
 a domain there whose names Pangolin serves.
+
+![The Pangolin tab, before it's turned on](images/dns-automation-pangolin.webp)
 
 **Pangolin** needs all of its fields, with any one blank the integration stays
 off:

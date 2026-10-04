@@ -14,6 +14,8 @@ dangling images, unused networks and build cache together, the same set as
 `docker system prune`, and never touches volumes. Every action asks for
 confirmation first.
 
+![Docker Cleanup: what each category would free, Quick cleanup, and a panel per category](images/docker-cleanup.webp)
+
 - **Images** prunes only dangling images by default. Tick **Include tagged,
   unused images** to remove any image no container uses. The last few images of
   every service are kept either way, see
@@ -38,6 +40,8 @@ deploys, and holds the queue while it runs, so it can't delete an image or build
 cache out from under a deploy in flight.
 
 ## Image mirror
+
+![The Image mirror panel on Docker Cleanup, with its Clean up mirror button](images/docker-cleanup-mirror.webp)
 
 The **Image mirror** panel shows how much disk the `homerun-mirror` registry
 [image scanning](image-scanning.md) copies images into is using, and **Clean up

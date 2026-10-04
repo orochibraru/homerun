@@ -62,11 +62,15 @@ Cloudflare R2, Backblaze B2, MinIO, a NAS over SMB or SFTP, and Nextcloud. A
 preset only fills fields in: every field stays editable, and **Custom** leaves
 them all to you.
 
+![Adding a backup destination, with the Preset picker open on the providers it knows](images/backups-destination-new.webp)
+
 Adding a destination lands on its own page, which the pencil on a list row opens
 too. It shows the type and address, when it was added and last changed, and
 every volume whose backups go there, and it has the same form to change the
 settings. The type is fixed once a destination exists, and a blank secret field
 keeps the stored secret.
+
+![A backup destination's page: its details, the volumes backed up there, Test destination and its settings](images/backups-destination.webp)
 
 **Test destination**, on that page, proves the saved settings work before a
 backup depends on them: it writes a small test file to the destination and
@@ -94,6 +98,8 @@ the destination and an optional key prefix. The volume's own page
 during the backup, and a pre-backup command. The homerun worker tars the
 volume's contents and streams it, gzipped, to
 `<prefix/>volumeName-<timestamp>.tar.gz`.
+
+![A volume's backup settings: schedule, stopping services, a pre-backup command, the destination and a key prefix](images/backups-volume.webp)
 
 **S3 uploads** go through a hand-rolled Signature V4 client (a multipart upload
 of 8 MiB parts, sixteen sent at once while the next ones are archived, the parts
@@ -185,6 +191,8 @@ The top of `/backups` lists every volume with backups on, as soon as they're
 turned on: its schedule in words, its destination, and when it next and last
 ran, with a **Run now** button.
 
+![Backups, with the volumes on a schedule above the run log](images/backups-history.webp)
+
 `/backups` is one row per attempt across every volume, scheduled or manual,
 backups and restores alike, with its kind, when it started and finished, whether
 it succeeded, the size, and the error if it didn't (hover the kind for the
@@ -203,6 +211,8 @@ or path), newest first with date and size (for SFTP, SMB and WebDAV, a directory
 that doesn't exist yet just lists as empty), and **Restore** on one of them
 queues a restore that downloads it and unpacks it back into the volume, for both
 volume kinds, through the same kind of short-lived `alpine` helper container.
+
+![The Restore panel on a volume's page, before its backups are listed](images/backups-restore.webp)
 
 Two options sit above the list and apply to whichever backup you restore:
 

@@ -23,6 +23,8 @@ Two kinds:
   files. Like every other resource, a custom template is shared with every
   account on the instance, see [Users and roles](users-and-roles.md).
 
+![New Template, for building a custom template from scratch](images/templates-new.webp)
+
 ## Keeping built-ins current
 
 Most built-ins track a floating tag (`latest`, `stable`, `alpine`), so a new
@@ -68,6 +70,8 @@ categories actually present, plus a list/card view toggle that defaults to
 each, so a large custom collection doesn't push the built-in catalog off the
 first screen.
 
+![The Templates gallery in card view](images/templates.webp)
+
 Every card, and the template's own details page, offers two actions:
 
 - **Quick Deploy** creates the service straight from the template's defaults
@@ -90,6 +94,8 @@ without leaving the dashboard. That's fetched unauthenticated and streamed in
 after the rest of the page, so GitHub being slow, rate-limiting you (60 requests
 an hour per IP), or down just means the panel doesn't render.
 
+![WordPress's details page, with the MySQL it deploys alongside](images/templates-details.webp)
+
 ## Linked containers
 
 A template can pull its companions along with it. WordPress ships linked to
@@ -97,6 +103,8 @@ MySQL, Umami and Miniflux to PostgreSQL, Paperless-ngx to Redis, and you can
 link your own the same way from the "Linked containers" section on
 `Templates → New Template`: tick any other template, give it an alias (defaults
 to a slug of its name), and deploying the primary deploys the companions too.
+
+![The Linked containers section of New Template](images/templates-linked-containers.webp)
 
 Env vars on the primary template can then reference a companion:
 
@@ -150,6 +158,8 @@ sources:
   filterable by category.
 - **Upload**, a PNG, JPEG, WebP, GIF or SVG image up to 256 KB, stored with the
   service.
+
+![A service's Type & icon section, with the icon library](images/templates-icons.webp)
 
 Browsers never contact the Dashboard Icons CDN themselves. Homerun fetches the
 catalog and each icon from its CDN once, on first use, and serves them from its

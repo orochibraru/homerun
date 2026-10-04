@@ -14,6 +14,8 @@ on.
 
 ## Turning them on
 
+![The Channels tab with release channels ticked and a canary domain filled in](images/release-channels-tab.webp)
+
 Open a git service's **Channels** tab, tick **Enable release channels**, and
 optionally change:
 
@@ -91,6 +93,10 @@ service and a stable one, `canary`, or `preview` for a pull request preview. The
 Revisions tab and the instance-wide **Deployments** page show it as a badge, and
 the Deployments page filters on it. The API's deployment and revision shapes
 carry it as `environment`.
+
+![The Deployments page, with each deployment's environment badge](images/deployments.webp)
+
+![The Environment field on a service's Settings tab, set to staging](images/release-channels-environment.webp)
 
 To record a service under another name, say `staging` or `eu-prod`, fill in
 **Environment** on its **Settings** tab: up to 32 lowercase letters, digits and

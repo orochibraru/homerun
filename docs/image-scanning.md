@@ -55,6 +55,8 @@ notification channel subscribed to it. The same scans are in the
 [REST API and CLI](api-and-cli.md#image-scans), including a
 `homerun services scan <id> --fail-on high` for failing a CI job on findings.
 
+![The Security tab's image scan panel, with the block policy and the latest scan](images/image-scanning-security.webp)
+
 Scanning is controlled in two places:
 
 - **Settings → Docker → Image scanning**, admin-only: turn it off for every
@@ -63,7 +65,11 @@ Scanning is controlled in two places:
   out. An opted-out service pulls straight from its registry, and the block
   policy doesn't apply to it.
 
+![The Image scanning section of a service's Settings tab](images/image-scanning-service.webp)
+
 ## Blocking deploys on findings
+
+![Settings → Docker → Image scanning, with High and above picked as the block severity](images/image-scanning-settings.webp)
 
 **Block deploys at severity** turns scanning from a report into a gate. Pick
 `Off` (the default), `Critical`, `High and above`, `Medium and above` or

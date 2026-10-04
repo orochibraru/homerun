@@ -53,6 +53,9 @@ admin from `/users`:
   really owns that address; straight to picking a password if it isn't). Works
   with no email setup either way. With emailed codes switched on, that step also
   offers **Skip the password, sign in with emailed codes**.
+
+  ![The Add user panel on /users, creating an account directly with a role](images/users-add.webp)
+
 - **Email invite**, only shown once SMTP is configured (see
   [Configuration](configuration.md)); sends a link to
   `/auth/accept-invite/<token>`, valid for 7 days. The pending list on `/users`
@@ -89,6 +92,8 @@ provider connection from then on, so reconnect the provider under your profile
 if its builds or webhooks start failing. `/users` has a search box (name/email)
 and a Role filter once you have more than a couple of accounts, plus a pager
 once you have more than a page's worth, searched/paginated server-side.
+
+![/users with an admin, a developer, a read-only and an app-access-only account](images/users-list.webp)
 
 ## Onboarding
 

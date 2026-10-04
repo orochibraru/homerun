@@ -28,9 +28,13 @@ the host, all applied on the next deploy:
   are ignored in [swarm mode](swarm-mode.md); capabilities, labels, command,
   entrypoint and the run-as user apply there too.
 
+![A worker's Runtime tab, with its command, run-as user and a label](images/runtime-and-compute-runtime.webp)
+
 ## Compute
 
 CPU and memory limits on the Compute tab, applied as real Docker resource limits
 on the next deploy. The same tab carries the replica count used by
 [swarm mode](swarm-mode.md); it has no effect in standalone mode, where a
 service is always one container.
+
+![The Compute tab, with a memory limit set](images/compute.webp)

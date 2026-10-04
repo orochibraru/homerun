@@ -1,5 +1,7 @@
 # Deploying
 
+![A service's Overview tab with its deploy controls, progress panel and resource usage](images/service.webp)
+
 The Overview tab has Deploy (Rebuild for a git service), Start/Stop, Restart
 and, depending on the service, **Fresh build** (a git rebuild that ignores every
 cached layer), **Pull image** (pulls the configured image and tag without

@@ -3,6 +3,8 @@
 **Redirects** (sidebar, Infrastructure) sends a hostname, or a path under one,
 to another URL. Traefik answers the request itself, no container is involved.
 
+![The Redirects list, with a switch on each row to turn it on or off](images/redirects-list.webp)
+
 Each redirect has:
 
 - **Source**: a hostname (`old.example.com`) or a hostname plus a path prefix
@@ -18,6 +20,8 @@ Each redirect has:
 - **Enabled**: off keeps the redirect around without serving it.
 
 Each source can only have one redirect.
+
+![Editing a redirect: its source, destination and three switches](images/redirects-edit.webp)
 
 ## How it's served
 

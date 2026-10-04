@@ -4,6 +4,8 @@
 depends on, with the same push-based viewer the per-service
 [logs panel](observability.md#logs) uses.
 
+![System Logs, with Homerun's own warnings and errors above the containers of its stack](images/system-logs.webp)
+
 **This instance's stack** lists every container Homerun's own compose file
 starts, Homerun itself, Postgres and Traefik included, plus the Newt tunnel if
 Homerun runs one, with its state. Containers from other compose projects on the

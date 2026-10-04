@@ -4,6 +4,7 @@ import type { PublishedPort } from "#lib/published-ports.js";
 import type { ContainerStatus } from "#lib/types.js";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RegistryAuth, VolumeMountParams } from "./containers.ts";
+import { errorPagesPublished } from "./error-pages.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
 import {
 	type ContainerRuntimeParams,
@@ -139,6 +140,7 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 					params.networkMode === "host" ? false : params.dnsResolvable,
 				domainPorts: params.domainPorts,
 				domains: params.domains,
+				errorPages: errorPagesPublished(),
 				httpCacheTtl: params.httpCacheTtl,
 				networkName: swarmNetworkName(),
 				serviceId: params.serviceId,

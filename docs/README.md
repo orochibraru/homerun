@@ -67,6 +67,9 @@ sync by hand.
   DNS-resolvability, extra domains and your own SSL certificates.
 - **[Redirects](redirects.md)**: send a hostname or path to another URL, served
   by Traefik with no container.
+- **[Error pages](error-pages.md)**: the branded pages shown while an app is
+  still deploying, down, or on an address nothing uses, and how to brand them as
+  your own.
 - **[DNS automation](dns-automation.md)**: your domains and their records at 16
   DNS providers (Cloudflare, Route 53, Google, Azure, Hetzner, Namecheap…), kept
   in sync with your services, or Pangolin resources.

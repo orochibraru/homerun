@@ -16,6 +16,7 @@ import {
 import type { DestinationType } from "#lib/backup-destinations.js";
 import type { BuildMethod } from "#lib/build-methods.js";
 import type { DeployTrigger } from "#lib/deploy-trigger.js";
+import type { ErrorPagesSettings } from "#lib/error-pages.js";
 import type { StoredErrorEvent } from "#lib/error-tracking/event.js";
 import type {
 	BlockSeverity,
@@ -727,6 +728,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	// integration's plain, unproxied CNAME).
 	pangolinTargetPort: integer("pangolin_target_port"),
 	preferredSignInMethods: jsonb("preferred_sign_in_methods").$type<string[]>(),
+	errorPages: jsonb("error_pages").$type<Partial<ErrorPagesSettings>>(),
 	requirePasskey: boolean("require_passkey"),
 	requireTwoFactor: boolean("require_two_factor"),
 	resourceAlertReminderMinutes: integer("resource_alert_reminder_minutes"),

@@ -8,6 +8,8 @@ the stack's slug as a prefix by default: Redis created in stack `vortex` becomes
 `vortex-redis`, routed at `vortex-redis.<baseDomain>`; that prefix isn't added a
 second time on top of an already-prefixed slug.
 
+![A stack's page, listing its services](images/stack.webp)
+
 Every stack gets its network created alongside the stack row and removed on
 delete. Deleting a stack (`cascadeDelete`) is the real "delete a stack"
 operation, it stops and removes every member container, deletes their deployment
@@ -26,6 +28,8 @@ Dashboard Icons and uploads as a service's), moves it (see Nesting below) and
 deletes it. The icon shows on `/stacks`, the stack's page header and its heading
 inside a parent stack.
 
+![A substack's Settings tab, down to the stack it's nested in](images/stacks-settings.webp)
+
 ## Nesting
 
 A stack can be nested inside another, to any depth (a stack can't be nested
@@ -40,6 +44,8 @@ on `/stacks` or on a substack's heading on a stack page. Nesting is purely
 organizational: a substack keeps its own private network, and every service
 still reaches every other by slug whether they share a stack, sit in a
 parent/child pair, or don't share one at all.
+
+![A substack's own page, with the parent stack in its breadcrumbs](images/stacks-substack.webp)
 
 `/stacks` lists only top-level stacks, each with its own substack count;
 searching lists every stack regardless of nesting, so a substack is still
@@ -74,6 +80,10 @@ as a dependency graph rather than a flat list, in either view:
   move it with everything inside it. The layout is remembered in your browser
   per stack, and **Reset layout** puts every card and substack back where it
   started.
+
+![List view: each service with what it connects to underneath, and the Jobs substack in its own section](images/stacks-graph-list.webp)
+
+![Card view: the same stack as an architecture diagram, with the substack as a nested box](images/stacks-graph-cards.webp)
 
 Searching drops the graph for a flat, filtered list, since a matched subset
 doesn't have a tree worth drawing. The **Architecture** switch next to the view

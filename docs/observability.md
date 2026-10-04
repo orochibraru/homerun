@@ -22,6 +22,8 @@ Pick a range, **Today** (from midnight in your browser's time zone), **7 days**,
 - **Avg CPU** and **Avg memory**, with their peaks, from the per-minute resource
   samples.
 
+![A service's Monitoring section: its traffic, response time, error rate, uptime and resource use over the range](images/monitoring.webp)
+
 Each number also shows how it moved against the previous period of the same
 length: yesterday up to the same time for **Today**, the 7, 30 or 365 days
 before for the others (**All time** has nothing to compare with). The change is
@@ -46,6 +48,10 @@ so the peak is the stack's real peak rather than the sum of each service's.
 host's own CPU and memory instead of the sum of the services'. Both add a **By
 service** table, busiest first, that links to each service's own monitoring.
 
+![A stack's Monitoring tab, with its By service table](images/stack-monitoring.webp)
+
+![Monitoring in the sidebar, covering every service on the instance and the host's own CPU and memory](images/instance-monitoring.webp)
+
 ## Uptime
 
 Every minute Homerun probes each deployed service two ways, and the tab draws
@@ -60,6 +66,8 @@ and the reason for the latest failure plus hints for fixing it:
   (`<slug>.<base domain>` or the service's main domain). It's skipped for a
   service that isn't DNS-resolvable, and while the base domain is a loopback
   address like `localhost`, since probing it from this machine proves nothing.
+
+![The Uptime panel on the Events section, with a heartbeat strip per probe](images/observability-uptime.webp)
 
 Over HTTP any response under 500 counts as up, a 401 or 404 included, and a 5xx
 counts as down. Probing pauses while Homerun disrupts routing on purpose, during
@@ -89,6 +97,8 @@ route API; nothing here needs a client-to-server socket anyway). A shorter tail
 of the same viewer is on the Overview tab once a service has deployed at least
 once, so recent output is visible without switching tabs.
 
+![The live log panel streaming a container's output](images/observability-logs.webp)
+
 ## Errors
 
 Below the logs, **Failed deployments** and **Application errors** (persisted
@@ -101,6 +111,8 @@ manual `docker rm`), the tab shows a distinct "container is gone" banner with a
 **Resolve** button instead: click it to clear the stale reference so the service
 goes back to its normal never-deployed state and Deploy works again.
 
+![Failed deployments and Application errors, below the logs](images/observability-errors.webp)
+
 ## Terminal
 
 A real terminal into the live container, from the browser, only available while
@@ -110,6 +122,8 @@ full-screen tools like `vim`, `top` or `htop` work as they would over SSH. It
 follows the app's light/dark theme. Open/close events are logged; individual
 keystrokes/commands are not (that's a deliberate scope cut, not an oversight,
 raw TTY bytes don't map cleanly to discrete commands anyway).
+
+![A terminal into a running nginx container, from the browser](images/observability-terminal.webp)
 
 Leaving the tab (closing it, navigating away, or 15 minutes with no input or
 output) ends the session and kills the shell along with everything started from

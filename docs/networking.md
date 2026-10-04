@@ -26,6 +26,8 @@ DNS-resolvability. The per-app login wall lives on the
   routed, otherwise turn public routing off in the Network section below
   instead.
 
+![A service's Networking tab, with its automatic hostname and domains](images/networking.webp)
+
 ## Response cache
 
 Traefik can cache a service's responses and answer repeat requests itself,
@@ -39,6 +41,8 @@ Homerun loads it back as soon as its worker is up, and until then a cached
 service answers 404; the dashboard's setup banner says so, with a **Re-apply**
 button. Each service then opts in on its Networking tab with **Cache for
 (seconds)**, applied on its next deploy.
+
+![Settings → Networking, with the HTTP cache switch](images/networking-http-cache.webp)
 
 The cache is keyed on each visitor's cookies and credentials, so a logged-in
 page is only ever served back to the session that fetched it, never to someone
@@ -56,6 +60,8 @@ database) carry no hostname, so nothing can route them by domain. For those,
 port, container port, TCP or UDP. A client then reaches it through any hostname
 that points at your server, on the host port: `vpn.example.com:1194` over UDP is
 a published `1194/udp` plus a DNS record for `vpn.example.com`.
+
+![A Gitea service publishing its SSH port: host port 2222 to container port 22 over TCP](images/networking-published-ports.webp)
 
 - Homerun refuses host ports 80 and 443 over TCP (Traefik's), the same host port
   and protocol twice, and one another service already publishes. A port
@@ -87,6 +93,8 @@ per certificate). An instance started from an older compose file without that
 volume and those flags has to add them once; until then, saving a cert does
 nothing.
 
+![The SSL section of a service on a domain outside the base domain, taking a certificate and key](images/networking-custom-ssl.webp)
+
 ### One certificate for the whole instance
 
 **Settings → TLS** installs a certificate for the base domain and its
@@ -96,6 +104,8 @@ Create Certificate) for `yourdomain` and `*.yourdomain`, paste it with its key,
 and set Cloudflare's SSL/TLS mode to Full (strict). Homerun checks that the key
 belongs to the certificate and that it hasn't expired, stores both encrypted,
 and writes it as Traefik's default certificate.
+
+![Settings → TLS, where the instance certificate is pasted](images/networking-instance-certificate.webp)
 
 A route that asks Let's Encrypt for a certificate gets that one rather than the
 default, so every service on a hostname the certificate covers stops asking from

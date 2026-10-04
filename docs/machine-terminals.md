@@ -24,6 +24,8 @@ For **This server**, the connection starts inside the worker container, so
 installer's compose file points at the host. A remote host takes the address the
 worker can reach it on, the same one you'd `ssh` to.
 
+![The Terminal page: Homerun's public key, and This server set up with a host and user](images/machine-terminals-setup.webp)
+
 ## Host keys
 
 The first connection records the key the machine presents, and every connection

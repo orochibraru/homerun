@@ -42,6 +42,8 @@ describe("githubAppRegistration", () => {
 		expect(manifest.public).toBe(false);
 		expect(manifest.default_permissions.repository_hooks).toBe("write");
 		expect(manifest.default_permissions.contents).toBe("read");
+		expect(manifest.default_permissions.pull_requests).toBe("write");
+		expect(manifest.default_permissions.deployments).toBe("write");
 	});
 });
 

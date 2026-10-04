@@ -10,6 +10,8 @@ exact head commit; Bitbucket only sends an abbreviated hash, so its previews
 build the head branch, which covers every pull request previews are made for
 anyway.
 
+![A git service's Previews tab with pull request previews enabled](images/previews-tab.webp)
+
 **Pull requests from forks are never previewed.** On a public repo anyone can
 open one, and a preview builds and runs its code with the service's env vars.
 Homerun only previews a pull request whose head is positively the same
@@ -23,7 +25,11 @@ the header of the tab's **Open previews** section, asks the provider for the
 repo's open pull requests and deploys a preview for each one, with the same fork
 and branch-filter rules; a preview already building its pull request's head is
 left alone. It needs the repo picked from a connected git provider, and reads
-the first page only (100 pull requests, 50 on Gitea and Bitbucket).
+the first page only (100 pull requests, 50 on Gitea and Bitbucket). On GitHub,
+the app needs the **Pull requests** permission, see
+[Connecting a git provider](git-providers.md).
+
+![The Open previews section, with its Deploy open pull requests button](images/previews-open.webp)
 
 A preview copies the service's build settings, env vars, resources, healthcheck
 and stack when it's created and again on every update, but not its volumes,
@@ -44,6 +50,8 @@ off, or deleting the service, deletes every preview.
 
 ## Reporting back to GitHub
 
+![The Report previews on the GitHub pull request option on the Previews tab](images/previews-github-report.webp)
+
 With **Report previews on the GitHub pull request** ticked (the default), a repo
 picked from a connected GitHub provider gets two things on each pull request
 with a preview, posted as the service's owner:
@@ -57,10 +65,16 @@ with a preview, posted as the service's owner:
   environment, which GitHub only allows when the owner is an admin of the repo;
   otherwise the inactive environment stays listed in the repo's settings.
 
+Both need the GitHub app's **Pull requests** and **Deployments** permissions
+(Read and write); see [Connecting a git provider](git-providers.md) for adding
+them to an app created before.
+
 A report that fails (a revoked connection, a rate limit) is logged and never
 holds up the deploy. Other providers get neither.
 
 ## Environment variables and data
+
+![The Previews tab's environment variables, overrides and volume copy options](images/previews-environment.webp)
 
 A preview starts from the service's environment variables, with any of the
 service's own hostnames in them pointed at the preview. Turn off **Start from
@@ -85,6 +99,8 @@ anything into previews that already exist.
 
 ## Choosing which branches get previews
 
+![The Only branches matching and Never branches matching filters](images/previews-branches.webp)
+
 **Only branches matching** and **Never branches matching**, on the Previews tab,
 filter pull requests by their head branch, one glob pattern per line: `*` is any
 run of characters, slashes included, and `?` is exactly one. With nothing in the
@@ -101,6 +117,8 @@ filter deletes the open previews it now leaves out straight away. The API's
 `previewBranchExclude`.
 
 ## Sharing a preview with a client
+
+![Who can open previews, with the login wall turned on for a client's email](images/previews-access.webp)
 
 **Who can open previews**, on the Previews tab, is a login wall for every
 preview of the service, separate from the service's own wall on its Security
@@ -127,6 +145,8 @@ Services that had a login wall before this setting existed start with their own
 wall copied into it, so their previews stay gated as before.
 
 ## Domains
+
+![The Previews tab's domain template and Keep the default hostname option](images/previews-domains.webp)
 
 A preview gets `<slug>-pr-<number>.<baseDomain>` by default. A **domain
 template** gives each one its own domain instead, or as well:

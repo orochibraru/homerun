@@ -13,6 +13,8 @@ dashboard.
   settings with those, sending push events as JSON. On GitLab the secret goes in
   **Secret token**.
 
+![The Source tab with Deploy on push ticked, the webhook URL and secret to add by hand, and the polling option](images/deploy-on-push-webhook.webp)
+
 Pushes to other branches, tags and pings are acknowledged and ignored, and a
 delivery with a wrong signature is refused. A service pinned to a commit SHA
 never matches a push. Webhooks need the **Dashboard URL** set under Settings →

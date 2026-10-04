@@ -23,6 +23,8 @@ and a pager once you have more than a page's worth, same toolkit as the
 [services list](services.md#the-services-list), searched/paginated server-side
 the same way.
 
+![Storage, listing each volume with its size and whether its backups are on](images/storage-volumes-list.webp)
+
 Tick volumes (or the select-all box above the list, which covers the current
 page) to bring up a bottom bar with bulk **Enable backups**, **Disable backups**
 and **Delete**. Enabling only turns backups on for volumes that already have a
@@ -64,6 +66,8 @@ browsed but not edited. The editor highlights syntax for common config and code
 files, picked from the file's extension (`.yaml`, `.json`, `.conf`, `.env`,
 `Dockerfile`, …).
 
+![A volume's Files tab with a compose file open in the editor](images/storage-volumes-files.webp)
+
 **New file** and **New folder** create an empty file (opened straight in the
 editor) or a folder in the folder you're looking at. Right-click an entry for
 **Change permissions**, which takes an octal mode like `644` or `0755`, and
@@ -80,6 +84,8 @@ it; most apps only read their config at start, so restart them after saving.
 Mount a storage volume into the container path of your choice, read-write or
 read-only, from a service's Storage tab, including creating a brand-new volume
 inline without leaving the page.
+
+![A database's Storage tab: its data volume mounted at /var/lib/postgresql, with its size, Browse, Backups, the backup switch and its settings](images/storage-volumes-service-tab.webp)
 
 ### Restoring a backup
 

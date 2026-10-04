@@ -8,10 +8,15 @@ Both live under **Profile → Security**.
   set of **backup codes**; save those, each one signs you in once when the app
   isn't to hand. The sign-in page's code step accepts either. You can generate
   new backup codes or turn it off from the same panel.
+
+  ![Setting up an authenticator app: the QR code, the setup key and the code field](images/two-factor-setup.webp)
+
 - **Passkeys** sign you in with Touch ID, Windows Hello, a security key or your
   password manager instead of a password. Register as many as you like, name
   them, and remove the ones you no longer use. The sign-in page offers a passkey
   button and your browser's passkey autofill.
+
+  ![The Passkeys panel under Profile → Security](images/two-factor-passkeys.webp)
 
 A passkey is bound to the **Dashboard URL**'s hostname (Settings → General), so
 it only works when you open Homerun on that host or a subdomain of it; on any

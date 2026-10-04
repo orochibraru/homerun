@@ -5,6 +5,8 @@ a raw plaintext secret you'd mind leaking in the DB dump into an env var if you
 can avoid it; registry passwords and similar have their own encrypted fields
 instead).
 
+![The Env Vars tab, one row per variable, each with the lock that marks it secret](images/env.webp)
+
 **Link a service** in the new-service wizard's Environment step fills those rows
 in for you from a service you already run, in any stack or none: pick it, and
 Homerun recognises what it is from its image (PostgreSQL, MySQL/MariaDB,
@@ -26,6 +28,8 @@ then choose the shape you want:
   `DB_PASSWORD`, `DB_DB`.
 - **Dependency only (no env vars)**, the **Link to** dialog only: writes nothing
   into the environment, just records the link.
+
+![The new-service wizard's Link a service dialog, with Cache picked and the variable it adds](images/env-vars-link-a-service.webp)
 
 Every link from the **Link to** dialog, whatever its shape, also records that
 the consumer depends on the other service. That's what sets start order:
@@ -64,6 +68,8 @@ the service that holds them, same as deleting them by hand, and drop the
 recorded dependency. The env change takes effect on that service's next deploy;
 a dependency-only link has no variables and is gone at once.
 
+![A service's Connections panel, listing what it needs with an Unlink button on each](images/env-vars-connections.webp)
+
 ## Marking a variable secret
 
 The lock icon next to a row on the Env Vars tab marks that variable secret,
@@ -74,6 +80,8 @@ whatever it's called. A variable a template fills with a generated password
 starts out marked. Only the dashboard can set or clear the mark, the REST API's
 `PATCH` ignores it if sent.
 
+![Two variables marked secret: their values are password fields and their locks are closed](images/env-vars-secret.webp)
+
 ## Env files
 
 Under the variables, **Env files** lists `.env` files on this host, one absolute
@@ -83,3 +91,5 @@ over an earlier one, and the service's own variables win over both. A file that
 can't be read fails the deploy, the same as a missing `env_file` fails
 `docker compose up`. Only an admin can change the list, since the files are read
 off the host.
+
+![The Env files panel under the variables, with one host path](images/env-vars-env-files.webp)

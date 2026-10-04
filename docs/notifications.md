@@ -9,6 +9,8 @@ attributed to a service, plus the server crossing a resource limit. Click an
 entry to jump to its service, mark everything read from the dropdown, or hover a
 row and use the `x` to drop it.
 
+![The notification bell open over the Overview page](images/notifications-bell.webp)
+
 Scheduled redeploys are grouped in the bell too: their outcomes are held until
 90 seconds pass without another one (10 minutes at most), then show up as one "N
 services were auto-redeployed: …" entry and one "N scheduled redeploys failed:
@@ -35,6 +37,10 @@ succeeding or failing. A new channel starts subscribed to build and update
 failures, status checks failures, unhealthy revisions, rollbacks, both resource
 alerts, new and regressed errors, and backup and cron job failures; turn on the
 rest you want from that matrix.
+
+![Notification Channels, with the form to add one above a Discord and an email channel](images/notifications-channels.webp)
+
+![Profile → Notifications, the matrix of which events each channel gets](images/notifications-subscriptions.webp)
 
 Notifications close together are grouped instead of arriving one by one. The
 first one goes out straight away; any that follow within a minute of the

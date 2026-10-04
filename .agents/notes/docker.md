@@ -1152,6 +1152,31 @@ correct byte-for-byte content, plus correct removal on clear. **Not verified**:
 Traefik itself picking up the config, since that requires the live container
 change this app deliberately doesn't make.
 
+## Error pages (`docker/error-pages.ts`, `ErrorPageService`, `/homerun-error/[status]`)
+
+`syncErrorPages` (called next to `syncDashboardRouter`, from settings saves and
+the core-services watch) writes `homerun-error-pages.yml`: a catch-all
+``PathPrefix(`/`)`` router at priority 1 with a `replacePath` to
+`/homerun-error/404`, and the `homerun-errors` middleware (`errors`, `502-504`,
+query `/homerun-error/{status}`). Both point at the forwardAuth origin
+(`errorPagesTarget(config.authCheckUrl)`), not the app container, so it's
+written even when `selfContainer()` can't be found. The file is never removed:
+Traefik drops any router naming a missing middleware, so `buildContainerLabels`
+only adds `homerun-errors@file` when `errorPagesPublished()` sees the file (and
+never for a remote-host container). Existing services get it on their next
+deploy, nothing forces a redeploy. Tested for real against `traefik:v3`: an
+app's own 404 passes through, an app 503 and a dead backend get the page with
+the status kept, and `X-Forwarded-Host` carries the original host on both paths.
+
+The endpoint is a `+server.ts` returning one self-contained HTML document
+(`renderErrorPage`, inline CSS and logo, no script): on an unrouted host every
+path, `/_app` assets included, is rewritten to it. `hooks.server.ts` skips the
+session lookup for it through `isAuthCheckPath`, since bots scanning the IP hit
+it on every random host. A 404 checks whether any service routes the host
+(`ServiceDTO.list` + `serviceHostnames`) to pick "not available yet" over
+"nothing here". Branding lives in `instance_settings.error_pages` (jsonb,
+`withErrorPageDefaults` fills blanks), edited under Settings → Error pages.
+
 ## Build servers (`remote_host` table, `RemoteHostDTO`, `/remote-hosts`)
 
 **A registered remote host is a build server, nothing else.** Placement is

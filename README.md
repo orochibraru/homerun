@@ -8,8 +8,6 @@ hardware.
 
 Point at an image (or a git repo), fill in env vars / port / resources, hit
 deploy: Traefik routes it to `<slug>.yourdomain.com` with TLS, automatically.
-Single host, local Docker socket, no Kubernetes, no multi-node orchestration to
-babysit.
 
 > **Status:** Actively developed, running on real hardware, but still finding
 > its shape: see [`docs/faq-and-limitations.md`](docs/faq-and-limitations.md)

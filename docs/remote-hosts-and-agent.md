@@ -18,6 +18,8 @@ an optional name, and Homerun hands you a command:
 curl -fsSL https://<your instance>/api/v1/nodes/install.sh | sudo bash -s -- --token=hrn_...
 ```
 
+![The command Add a server hands you, ready to copy](images/remote-hosts-enroll-command.webp)
+
 Run it as root on the server. It installs Docker, then:
 
 - as a **build server**, installs the Homerun worker in agent mode (the same
@@ -54,6 +56,8 @@ From `/remote-hosts` → **Register by hand**: a name, plus a connection type:
   token without saving; the token is verified again before the host is saved.
   This is the lighter-weight alternative that doesn't require exposing the
   Docker daemon itself.
+
+![Registering a build server by hand, with the Homerun Agent connection type and its setup commands](images/remote-hosts-register-agent.webp)
 
 Either kind builds: a Docker-connection host runs the build directly against
 that daemon's Docker API, an agent host through its own `POST /v1/build`.

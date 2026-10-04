@@ -204,7 +204,11 @@
   {/if}
 
   <!-- ── Main content ───────────────────────────────────────────── -->
-  <div class="panel flex flex-1 flex-col overflow-hidden rounded-xl" inert={sidebarOpen && !desktop.current}>
+  <div
+    class="panel flex flex-1 flex-col overflow-hidden rounded-xl"
+    data-slot="app-frame"
+    inert={sidebarOpen && !desktop.current}
+  >
     <!-- Sticky header, every page, both breakpoints : hamburger (mobile
          only) + page title on the left, notifications + account menu on
          the right. -->

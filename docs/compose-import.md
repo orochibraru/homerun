@@ -6,6 +6,8 @@ nothing is created until you confirm: the preview lists every service it found
 with the image, port, protocol, network mode, env var count and volume mounts it
 resolved, plus a warning for anything it had to drop.
 
+![A parsed compose file: what couldn't be mapped, then each service with its image, port and volumes](images/compose-import-preview.webp)
+
 What maps across: `image`, `environment` (both the map and the `KEY=VALUE` list
 form), `ports`/`expose` (the first port becomes the container port Traefik
 routes to, every other host mapping becomes a

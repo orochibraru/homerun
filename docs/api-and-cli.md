@@ -201,6 +201,8 @@ from that page makes its own unauthenticated `fetch` calls (it doesn't share
 your dashboard session), so paste an API key there to actually exercise a
 request.
 
+![The API Docs page rendering the OpenAPI spec in Swagger UI](images/api-docs.webp)
+
 ## MCP server for AI agents
 
 Homerun serves an [MCP](https://modelcontextprotocol.io) server at
@@ -293,6 +295,8 @@ open that URL in a browser where you're already signed in to Homerun, approve
 the request, and the CLI picks up an API key of its own. It's saved to
 `~/.config/homerun/config.json` (mode `0600`) alongside the instance URL, so
 every later command just works with no flags.
+
+![The Authorize CLI page, approving the code homerun login printed](images/api-cli-login.webp)
 
 `homerun logout` revokes that API key on the server, then clears the local file
 regardless of whether the server call succeeded (an unreachable instance or an

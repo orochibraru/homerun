@@ -8,7 +8,11 @@ immediately deploys it, landing you on the new service's Overview tab; **Create
 service**, the secondary button, just persists the config, the same as before,
 deploy later from the Overview tab yourself.
 
+![The Deploy a Service wizard](images/deploy.webp)
+
 ## The services list
+
+![The services list, grouped by stack](images/services.webp)
 
 `Services` has a search box (matches name, image, and domain) plus Status/ Stack
 filters, a sort (newest, oldest, name either way, recently updated; it's in the
@@ -42,6 +46,8 @@ combined with the list's own paging.
 
 ## Settings
 
+![A service's Settings tab with its name, slug, pull policy, restart policy and environment](images/services-settings.webp)
+
 Name, slug, restart policy, which stack the service belongs to, the
 [scheduled redeploy](scheduling.md#scheduled-redeploy), the pull policy, whether
 its image is [scanned](image-scanning.md),
@@ -61,6 +67,8 @@ your own, which then behaves exactly like a built-in one, including being
 linkable as a companion to another template. See [Templates](templates.md).
 
 ## Health
+
+![The Health tab, showing the healthcheck the running container was created with](images/services-health.webp)
 
 The **Health** tab shows the healthcheck the running container was actually
 created with: whether it's the service's own command, the image's `HEALTHCHECK`,

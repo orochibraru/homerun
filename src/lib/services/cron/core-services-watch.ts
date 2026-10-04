@@ -9,6 +9,7 @@ import { WorkerClient } from "#lib/server/worker-client.js";
 import { DeploymentService } from "../deploy.service.ts";
 import { syncDashboardDns } from "../dns.service.ts";
 import type { TraefikExpectation } from "../docker/core-services.ts";
+import { syncErrorPages } from "../docker/error-pages.ts";
 import { type WedgedContainer, WedgedReporter } from "../docker/wedged.ts";
 import { DockerService } from "../docker.service.ts";
 import { AUTH_CHECK_ALIAS } from "../self-update/compose-target.ts";
@@ -108,6 +109,7 @@ export class CoreServicesWatch extends BaseScheduler {
 		}
 		const settings = await InstanceSettingsDTO.get();
 		await DockerService.syncDashboardRouter();
+		await syncErrorPages();
 		void syncDashboardDns();
 		await DockerService.syncNewt(
 			settings.newtCredentials(),

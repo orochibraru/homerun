@@ -6,6 +6,8 @@ Login wall, or in the deploy wizard's Networking step. Turning it on in the
 wizard enables the built-in Homerun login as the sign-in method; add OAuth
 providers or an allow-list on the Security tab afterwards.
 
+![A service's Security tab with the login wall on and its sign-in methods picked](images/login-wall-section.webp)
+
 **How it works.** Traefik's forwardAuth middleware asks Homerun about every
 request to that hostname. A visitor without a valid session for that app is
 redirected to Homerun's own sign-in page, the same one as the dashboard's, so
@@ -55,6 +57,13 @@ Leave all three empty to let any signed-in user through, as long as they used an
 allowed method. Filling any of them narrows access to whoever matches at least
 one entry in that list. Changing any of this takes effect immediately, including
 for people already signed in to that app.
+
+![The login wall's Users, Emails and Groups / roles lists](images/login-wall-allowed.webp)
+
+Every service with its wall on is listed under **Authentication → Protected
+apps**, with the sign-in methods it accepts.
+
+![Authentication → Protected apps, listing each walled service and its methods](images/login-wall-protected-apps.webp)
 
 **Turning the wall on or off redeploys the service**, which Homerun starts for
 you when you save (on swarm that's a rolling update, so the app stays up). Only

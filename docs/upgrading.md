@@ -6,6 +6,8 @@ newer GitHub release already exists (checked every ten minutes). A **Check for
 updates** button inside the dialog bypasses that ten-minute cache and asks
 GitHub right away. Once an update is available, the dialog behaves as follows:
 
+![The update-status dialog opened from the version in the sidebar](images/upgrading-dialog.webp)
+
 - It refuses while a deployment is queued or running, or while any other job
   (backup, cron job, cleanup) is running, and lists those jobs: their service
   (linked), stage, when they started and the worker's last heartbeat. A job
@@ -83,6 +85,8 @@ the app puts them back on the queue within 30 seconds.
 ## Release channels
 
 Pick one on **Settings → General → Release channel**:
+
+![Settings → General → Release channel](images/upgrading-channel.webp)
 
 - **Stable** (the default): the update notice offers stable releases (`vX.Y.Z`,
   cut by hand from a canary that's already been running), the same ones the

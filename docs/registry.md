@@ -24,6 +24,8 @@ image, deleting one deletes the other too. A service that's already running a
 deleted image keeps running; it just can't be pulled again until it's
 re-mirrored or pushed back.
 
+![The Images tab, with the repository count and the Collect garbage button](images/registry-images.webp)
+
 ## Tokens
 
 A token is what a `docker login` uses to push or pull. Creating one asks for a
@@ -32,6 +34,8 @@ username and hands back a generated secret and a ready-to-paste
 stored or recoverable, so save it before you navigate away. Revoking a token
 removes it immediately, since revoking rewrites the registry's auth file and
 reloads it.
+
+![A token just created, its one-time docker login line above the token form](images/registry-tokens.webp)
 
 **Every token can both push and pull.** The registry's htpasswd-based auth has
 no concept of scopes or read-only access without running a separate token
@@ -54,6 +58,8 @@ so you don't have to go hunting for them —
 - every service that carries its own pull credentials on its Source tab, with a
   link straight to that service.
 
+![The Credentials tab: stored registry credentials, and a service with its own](images/registry-credentials.webp)
+
 ## Settings
 
 - **Status**: whether the container is running, disk used, its internal address,
@@ -69,6 +75,8 @@ so you don't have to go hunting for them —
 - **Publish it**: routes the registry through Traefik at a hostname of your
   choosing, so another machine can `docker push`/`docker pull` against it over
   the network instead of only from this host.
+
+![The registry's Settings tab: status, Require authentication and Publish it](images/registry-settings.webp)
 
 **The safety rule is enforced by the app, not just the form**: you can't turn
 authentication off while the registry is published at a hostname, and you can't

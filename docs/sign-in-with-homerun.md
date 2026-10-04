@@ -37,9 +37,13 @@ only), click **Register app**:
 - **First environment**: a name (`production` by default) and its callback URLs,
   see Environments below.
 
+![The Register app page: name, client type, how the secret is sent, PKCE and consent](images/idp-register.webp)
+
 Each callback URL gets its own input (**Add callback URL** for more), is checked
 as you type, and shows what the app will receive
 (`→ https://app.example.com/callback?code=…&state=…`).
+
+![A callback URL being typed, with what the app will receive shown under it](images/idp-register-callback.webp)
 
 Registering shows the client ID and a client secret for the first environment.
 **A secret is shown only once**; if you lose it, create a new one under the
@@ -61,6 +65,8 @@ app's **Environments** tab and revoke the old one.
   callback, and the other way round. Rotating without downtime is adding a new
   secret, switching the app over, then revoking the old one.
 
+![An app's Environments tab: callback URLs and client secrets per environment](images/idp-environments.webp)
+
 An app keeps at least one environment. Apps registered before environments
 existed got a `production` environment with their redirect URIs and their secret
 (listed as "Original secret").
@@ -73,6 +79,8 @@ userinfo the app would get, or the step that failed and why. It needs the
 Dashboard URL on `https` (or `localhost`), since the test callback is a Homerun
 page.
 
+![An app's Overview: usage, Test sign-in, the values to paste into the app and its environments](images/idp-app.webp)
+
 **Managing an app.** The IDP page lists every app with how many people use it
 and when it last signed someone in; right-click one for quick actions, or flip
 its switch to turn it on or off. Each app has four tabs: **Overview** (usage,
@@ -82,6 +90,8 @@ environment), **Users** (everyone who has authorized it, with **Revoke** per
 person or **Revoke everyone**: their tokens stop working and the next sign-in
 asks for consent again) and **Settings** (name, consent, PKCE, how the secret is
 sent, and deletion).
+
+![The IDP page listing registered apps with their users, last use and on/off switch](images/idp-apps.webp)
 
 **Connecting Claude.** claude.ai and Claude Desktop reach Homerun's
 [MCP server](api-and-cli.md#mcp-server-for-ai-agents) as an app registered here:
@@ -114,3 +124,5 @@ just can't reach the Homerun dashboard. Tokens are signed with RS256.
 page or at the top of the app's page) stops new sign-ins through the app.
 **Delete app** also revokes every token it holds, so users are signed out of it
 the next time it checks.
+
+![An app's Settings tab, with the on/off switch at the top of the page](images/idp-settings.webp)

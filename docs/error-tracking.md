@@ -17,6 +17,8 @@ SDKs:
 https://<public key>@homerun.example.com/<project id>
 ```
 
+![A service's Errors tab with error tracking on: its DSN, the env injection settings and the SDK setup snippets](images/error-tracking-setup.webp)
+
 With **Inject SENTRY_DSN, SENTRY_RELEASE and SENTRY_ENVIRONMENT** on (the
 default), the next deploy adds those three variables to the service's env, so
 the app only needs to initialise the SDK with no arguments:
@@ -55,6 +57,8 @@ unresolved and you're notified. An ignored issue still counts its events but
 never notifies. The Errors tab lists issues with a status filter and search, and
 resolves or ignores several at once.
 
+![The Errors tab's issue list, each issue with its event count, users affected and when it was last seen](images/error-tracking-issues.webp)
+
 ## Back to the source
 
 An issue's page shows the exception (and the chain of exceptions that caused
@@ -62,6 +66,8 @@ it), its stack trace with your own frames open and library frames folded, the
 lines of code around each frame when the SDK sends them (most server-side SDKs
 do), plus the request, user, tags and breadcrumbs of the event, and the other
 events of the issue.
+
+![An issue's page: the exception and its stack trace, with the source around each of the app's own frames](images/error-tracking-issue.webp)
 
 For a service built from a git repository, each of your own frames has a **View
 in repo** link to that file and line at the exact commit that ran: the event's
@@ -100,6 +106,8 @@ maps, and deletes one; `homerun services sourcemaps list <id>` and
 `homerun services sourcemaps delete <id> <release>` do the same. Only the 10
 most recent releases are kept, and a map can be at most 25 MiB. A map doesn't
 need to be served publicly, so you can keep it out of the deployed image.
+
+![The Source maps panel on the Errors tab, listing the releases with maps](images/error-tracking-source-maps.webp)
 
 ## Notifications
 

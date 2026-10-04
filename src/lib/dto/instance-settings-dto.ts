@@ -1,5 +1,9 @@
 import { eq } from "drizzle-orm";
 import type { EmailSignIn } from "#lib/auth-providers.js";
+import {
+	type ErrorPagesSettings,
+	withErrorPageDefaults,
+} from "#lib/error-pages.js";
 import type { BlockSeverity, ScanBlockPolicy } from "#lib/image-scan.js";
 import {
 	DEFAULT_REMINDER_MINUTES,
@@ -180,6 +184,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			dockerNetworkName: null,
 			dockerSocketPath: null,
 			emailOtpSignIn: null,
+			errorPages: null,
 			gitProviders: [],
 			id: SINGLETON_ID,
 			imageScanBlockFixableOnly: null,
@@ -320,6 +325,16 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	 */
 	async updatePreferredSignInMethods(methods: string[]): Promise<void> {
 		await this.persist({ preferredSignInMethods: [...new Set(methods)] });
+	}
+
+	/** The branded error pages Traefik serves, every unset field at its default. */
+	get errorPages(): ErrorPagesSettings {
+		return withErrorPageDefaults(this.row.errorPages);
+	}
+
+	/** Persists the error pages' branding or text, merged over what's stored. */
+	async updateErrorPages(input: Partial<ErrorPagesSettings>): Promise<void> {
+		await this.persist({ errorPages: { ...this.row.errorPages, ...input } });
 	}
 
 	/** Persists the base domain and auth origin/cookie overrides. */

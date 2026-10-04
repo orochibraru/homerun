@@ -6,6 +6,7 @@
 		Mail,
 		MoveRight,
 		Network,
+		TriangleAlert,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
@@ -83,6 +84,13 @@
 				icon: Lock,
 				id: "tls",
 				label: "TLS",
+			},
+			{
+				exact: false,
+				href: resolve("settings/error-pages"),
+				icon: TriangleAlert,
+				id: "error-pages",
+				label: "Error pages",
 			},
 			{
 				exact: false,

@@ -1,6 +1,7 @@
 import { config } from "#lib/config.js";
 import { serviceHostnames } from "#lib/service-domains.js";
 import { certResolverFor } from "./cert-resolver.ts";
+import { ERROR_PAGES_MIDDLEWARE } from "./error-pages.ts";
 
 export const GATE_IDENTITY_HEADERS = [
 	"X-Homerun-User",
@@ -58,10 +59,12 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
  * reached the backend. With `httpCacheTtl` set and the instance's HTTP cache
  * plugin loaded, a Souin cache middleware follows both, keyed on the Cookie
  * and Authorization headers so one session's pages are never served to
- * another.
+ * another. With `errorPages`, the instance's error pages middleware comes
+ * first, so a 502, 503 or 504 shows the branded page instead of Traefik's.
  */
 export function buildContainerLabels(params: {
 	authRequired?: boolean;
+	errorPages?: boolean;
 	containerPort: number;
 	defaultDomainEnabled?: boolean;
 	domainPorts?: Record<string, number>;
@@ -106,6 +109,7 @@ export function buildContainerLabels(params: {
 	const cached = Boolean(params.httpCacheTtl && config.traefik.httpCache);
 	const gated = params.authRequired === true;
 	const middlewares = [
+		...(params.errorPages ? [ERROR_PAGES_MIDDLEWARE] : []),
 		...(gated ? [authMiddleware] : []),
 		retryMiddleware,
 		...(cached ? [cacheMiddleware] : []),

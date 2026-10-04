@@ -222,6 +222,8 @@ skips is hidden in a file, see [Configuration](configuration.md).
    with no DNS or reverse-proxy work on your side beyond pointing the domain at
    this host.
 
+![The Deploy a Service wizard](images/deploy.webp)
+
 See the [docs index](README.md) for everything the wizard doesn't cover:
 git-based builds, volumes, logs, the web terminal, scheduled redeploys, and the
 per-app login wall.

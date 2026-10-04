@@ -13,6 +13,8 @@ every task (recreating them) instead of restarting one container. Restart reuses
 the service's current settings: a changed environment variable needs a
 **Deploy**.
 
+![Settings → Docker → Orchestration, where the mode is picked and what swarm mode doesn't do is listed](images/swarm-mode-orchestration.webp)
+
 A deploy updates the service in place and waits for the new tasks to be healthy.
 If they aren't, swarm rolls back to the previous tasks, as long as at least one
 of those is actually running. When the service is already broken (its tasks
@@ -94,3 +96,5 @@ and `cmd/installer/swarm-join.sh` on the new machine do the same. The machines
 need to reach each other on 2377/tcp, 7946/tcp+udp and 4789/udp. Traefik picks
 up new replicas within about 2 seconds. See
 [`cmd/installer/README.md`](../cmd/installer/README.md) for the flags.
+
+![Remote Hosts → Add a server, with the build server and swarm node roles](images/remote-hosts.webp)

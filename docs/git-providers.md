@@ -9,16 +9,25 @@ takes two steps, done by different people:
    click **Create GitHub App**: GitHub asks you to confirm the app, then to
    install it on the repositories Homerun should see. Nothing to copy by hand.
    The app only asks for what Homerun uses: read access to code, commit statuses
-   and checks, and write access to repository webhooks. To give it more
-   repositories later, change the installation on GitHub. For GitLab,
-   self-hosted Gitea (which also wants its base URL) or Bitbucket, register an
-   OAuth application on that provider's own site and paste the client id and
-   secret in. The page prints the exact callback URL to register on the
-   provider's side.
+   and checks, and write access to repository webhooks, pull requests and
+   deployments (the last two for
+   [pull request previews](pull-request-previews.md)). To give it more
+   repositories later, change the installation on GitHub. **An app created
+   before previews reported to GitHub** lacks the pull request and deployment
+   permissions, and GitHub answers "Resource not accessible by integration": in
+   the app's settings on GitHub, under **Permissions**, give it **Read and
+   write** on **Pull requests** and **Deployments**, save, then accept the new
+   permissions on its installation (**Settings → Applications → Installed GitHub
+   Apps → Configure**). Reconnecting isn't needed. For GitLab, self-hosted Gitea
+   (which also wants its base URL) or Bitbucket, register an OAuth application
+   on that provider's own site and paste the client id and secret in. The page
+   prints the exact callback URL to register on the provider's side.
 2. **Each person connects their own account** from the same page, one click
    through the provider's consent screen. Connections are per-account: your
    token is yours, and another user connecting to the same provider gets their
    own.
+
+![Git Providers, with the Add provider form open above a registered provider and its Connect button](images/git-providers.webp)
 
 Once connected, a service's Source tab (and the new-service wizard) picks the
 repository and branch from that account instead of asking for a clone URL, and

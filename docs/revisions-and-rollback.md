@@ -1,5 +1,7 @@
 # Revisions and rollback
 
+![A service's Revisions tab, with the current revision marked](images/revisions.webp)
+
 Every deploy that reaches running is a **revision**: the exact image it ran
 (`image:tag` plus the registry digest when there is one, or the local
 `homerun-build-<slug>:<tag>` for a git build), the commit and branch for a git
@@ -27,6 +29,8 @@ gave the service (see
 [Release channels](release-channels.md#environments-in-the-history)). A deploy
 from before triggers were recorded, whose queue job was already pruned by then,
 shows as plain **Deploy** and only matches the Rollback filter.
+
+![The Deployments page, every deploy across the instance with its status, trigger and environment](images/deployments.webp)
 
 The **Healthy** and **Checking health** badges only ever sit on the current
 revision: once another revision is deployed they're cleared from the one it
@@ -61,6 +65,10 @@ from 1 to 50, under **Settings → Docker → Retained images**): Docker Cleanup
 image prune (including **Quick cleanup**) and the image mirror cleanup skip
 them, so rolling back to any of them never needs a rebuild. Older revisions stay
 listed but may need their image pulled or rebuilt.
+
+![Settings → Docker → Retained images](images/revisions-retained-images.webp)
+
+![The Auto-rollback section of a service's Settings tab](images/revisions-auto-rollback.webp)
 
 **Auto-rollback.** After each deploy the new workload is watched for 90 seconds,
 longer while its healthcheck is still starting (up to 5 minutes). It's unhealthy

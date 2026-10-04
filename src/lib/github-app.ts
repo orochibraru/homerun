@@ -35,7 +35,9 @@ export function githubAppRegistration(input: {
 		default_permissions: {
 			checks: "read",
 			contents: "read",
+			deployments: "write",
 			metadata: "read",
+			pull_requests: "write",
 			repository_hooks: "write",
 			statuses: "read",
 		},

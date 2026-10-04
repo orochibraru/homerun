@@ -160,121 +160,159 @@
 	--font-sans:
 		-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable",
 		sans-serif;
-	--radius: 1.125rem;
-	--color-bg: oklch(from var(--color-accent) 0.965 0.01 calc(h + 30));
-	--color-surface: oklch(1 0 0 / 0.45);
-	--color-surface-2: oklch(from var(--color-accent) 0.5 0.04 h / 0.08);
-	--color-surface-3: oklch(from var(--color-accent) 0.5 0.04 h / 0.14);
-	--glass-fill: oklch(1 0 0 / 0.42);
-	--glass-sheen: linear-gradient(
-		135deg,
-		oklch(1 0 0 / 0.5),
-		oklch(1 0 0 / 0.08) 40%,
-		oklch(1 0 0 / 0) 60%,
-		oklch(1 0 0 / 0.18)
-	);
-	--glass-edge: oklch(1 0 0 / 0.85);
-	--glass-blur: blur(26px) saturate(190%) brightness(1.03);
-	--glass-control: oklch(1 0 0 / 0.55);
-	--glass-control-hover: oklch(1 0 0 / 0.8);
+	--radius: 1.375rem;
+	--color-bg: oklch(from var(--color-accent) 0.965 0.012 calc(h + 45));
+	--color-surface: oklch(1 0 0 / 0.38);
+	--color-surface-2: oklch(1 0 0 / 0.32);
+	--color-surface-3: oklch(1 0 0 / 0.5);
+	--glass-fill: oklch(1 0 0 / 0.3);
+	--glass-fill-clear: oklch(1 0 0 / 0.16);
+	--glass-sheen:
+		radial-gradient(
+			120% 80% at 15% -10%,
+			oklch(1 0 0 / 0.5),
+			oklch(1 0 0 / 0) 55%
+		),
+		radial-gradient(
+			90% 60% at 100% 115%,
+			oklch(1 0 0 / 0.22),
+			oklch(1 0 0 / 0) 60%
+		);
+	--glass-edge: oklch(1 0 0 / 0.5);
+	--glass-blur: blur(14px) saturate(210%) brightness(1.06);
+	--glass-blur-clear: blur(8px) saturate(220%) brightness(1.08);
+	--glass-rim:
+		inset 1.5px 1.5px 0 -0.5px oklch(1 0 0 / 0.95),
+		inset -1px -1px 0 -0.5px oklch(1 0 0 / 0.55),
+		inset 0 0 0 0.5px oklch(1 0 0 / 0.35),
+		inset 0 0 16px 0 oklch(1 0 0 / 0.22);
+	--glass-control: oklch(1 0 0 / 0.26);
+	--glass-control-hover: oklch(1 0 0 / 0.42);
 	--glass-control-shadow:
-		0 0 0 0.5px oklch(0 0 0 / 0.14), inset 0 1px 0 oklch(1 0 0 / 0.95),
-		inset 0 -1px 1px oklch(0 0 0 / 0.06), 0 2px 8px -2px oklch(0 0 0 / 0.16);
+		var(--glass-rim), 0 0 0 0.5px oklch(0 0 0 / 0.08),
+		0 4px 14px -6px oklch(0 0 0 / 0.22);
 	--panel-bg: var(--glass-fill);
 	--panel-bg-image: var(--glass-sheen);
 	--panel-backdrop: var(--glass-blur);
-	--panel-border-width: 1px;
-	--panel-border-color: var(--glass-edge);
-	--color-border: oklch(from var(--color-accent) 0.3 0.03 h / 0.16);
-	--color-border-light: oklch(from var(--color-accent) 0.3 0.03 h / 0.26);
+	--panel-border-width: 0px;
+	--panel-border-color: transparent;
+	--color-border: oklch(from var(--color-accent) 0.3 0.03 h / 0.14);
+	--color-border-light: oklch(from var(--color-accent) 0.3 0.03 h / 0.22);
 	--border: var(--color-border);
-	--input: oklch(from var(--color-accent) 0.3 0.03 h / 0.2);
+	--input: oklch(1 0 0 / 0.55);
 	--panel-shadow:
-		inset 0 1px 1px oklch(1 0 0 / 0.95), inset 0 -1px 1px oklch(1 0 0 / 0.4),
-		0 0 0 0.5px oklch(0 0 0 / 0.1), 0 18px 40px -18px oklch(0 0 0 / 0.28),
-		0 2px 6px oklch(0 0 0 / 0.05);
+		var(--glass-rim), 0 0 0 0.5px oklch(0 0 0 / 0.06),
+		0 12px 36px -14px oklch(0 0 0 / 0.24), 0 2px 6px oklch(0 0 0 / 0.04);
 	--panel-shadow-lg:
-		inset 0 1px 1px oklch(1 0 0 / 0.95), inset 0 -1px 1px oklch(1 0 0 / 0.4),
-		0 0 0 0.5px oklch(0 0 0 / 0.12), 0 28px 60px -18px oklch(0 0 0 / 0.35),
-		0 4px 10px oklch(0 0 0 / 0.06);
-	--panel-rule: oklch(1 0 0 / 0.7);
-	--popover: oklch(from var(--color-accent) 0.985 0.01 h / 0.62);
+		var(--glass-rim), 0 0 0 0.5px oklch(0 0 0 / 0.08),
+		0 30px 70px -20px oklch(0 0 0 / 0.38), 0 4px 12px oklch(0 0 0 / 0.06);
+	--panel-rule: oklch(1 0 0 / 0.5);
+	--popover: oklch(1 0 0 / 0.55);
 	--page-bg-image:
 		radial-gradient(
-			70vmax 55vmax at 0% 0%,
-			oklch(from var(--color-accent) 0.84 calc(c * 0.35) calc(h + 25) / 0.55),
+			60vmax 50vmax at 0% 0%,
+			oklch(from var(--color-accent) 0.62 calc(c * 0.85) h / 0.42),
 			transparent 70%
 		),
 		radial-gradient(
-			65vmax 55vmax at 100% 100%,
-			oklch(from var(--color-accent) 0.7 calc(c * 0.5) calc(h + 10) / 0.45),
+			55vmax 50vmax at 100% 100%,
+			oklch(from var(--color-accent) 0.5 c calc(h - 6) / 0.4),
 			transparent 70%
 		),
 		radial-gradient(
-			55vmax 45vmax at 100% 0%,
-			oklch(from var(--color-accent) 0.9 calc(c * 0.25) calc(h + 40) / 0.5),
+			50vmax 40vmax at 100% 0%,
+			oklch(from var(--color-accent) 0.86 0.05 calc(h + 50) / 0.6),
 			transparent 70%
 		);
-	--aurora-opacity: 0.55;
+	--aurora-opacity: 0.3;
 }
 
 .dark[data-surface="glass"],
 .dark [data-surface="glass"] {
-	--color-bg: oklch(from var(--color-accent) 0.17 0.02 h);
-	--color-surface: oklch(1 0 0 / 0.05);
-	--color-surface-2: oklch(1 0 0 / 0.07);
-	--color-surface-3: oklch(1 0 0 / 0.12);
-	--glass-fill: oklch(from var(--color-accent) 0.26 0.02 h / 0.5);
-	--glass-sheen: linear-gradient(
-		135deg,
-		oklch(1 0 0 / 0.12),
-		oklch(1 0 0 / 0.02) 40%,
-		oklch(1 0 0 / 0) 60%,
-		oklch(1 0 0 / 0.05)
-	);
-	--glass-edge: oklch(1 0 0 / 0.18);
-	--glass-control: oklch(1 0 0 / 0.1);
-	--glass-control-hover: oklch(1 0 0 / 0.16);
+	--color-ink: oklch(0.44 0.15 8);
+	--color-bg: oklch(from var(--color-accent) 0.15 0.025 h);
+	--color-surface: oklch(1 0 0 / 0.08);
+	--color-surface-2: oklch(1 0 0 / 0.08);
+	--color-surface-3: oklch(1 0 0 / 0.14);
+	--glass-fill: oklch(from var(--color-accent) 0.22 0.02 h / 0.36);
+	--glass-fill-clear: oklch(from var(--color-accent) 0.22 0.02 h / 0.2);
+	--glass-sheen:
+		radial-gradient(
+			120% 80% at 15% -10%,
+			oklch(1 0 0 / 0.12),
+			oklch(1 0 0 / 0) 55%
+		),
+		radial-gradient(
+			90% 60% at 100% 115%,
+			oklch(1 0 0 / 0.06),
+			oklch(1 0 0 / 0) 60%
+		);
+	--glass-edge: oklch(1 0 0 / 0.16);
+	--glass-blur: blur(16px) saturate(180%) brightness(0.92);
+	--glass-blur-clear: blur(10px) saturate(190%) brightness(0.95);
+	--glass-rim:
+		inset 1.5px 1.5px 0 -0.5px oklch(1 0 0 / 0.38),
+		inset -1px -1px 0 -0.5px oklch(1 0 0 / 0.16),
+		inset 0 0 0 0.5px oklch(1 0 0 / 0.1),
+		inset 0 0 16px 0 oklch(1 0 0 / 0.05);
+	--glass-control: oklch(1 0 0 / 0.08);
+	--glass-control-hover: oklch(1 0 0 / 0.15);
 	--glass-control-shadow:
-		0 0 0 0.5px oklch(0 0 0 / 0.6), inset 0 1px 0 oklch(1 0 0 / 0.22),
-		inset 0 -1px 1px oklch(0 0 0 / 0.25), 0 2px 8px -2px oklch(0 0 0 / 0.5);
-	--color-border: oklch(1 0 0 / 0.12);
-	--color-border-light: oklch(1 0 0 / 0.2);
-	--input: oklch(1 0 0 / 0.16);
+		var(--glass-rim), 0 0 0 0.5px oklch(0 0 0 / 0.5),
+		0 4px 14px -6px oklch(0 0 0 / 0.55);
+	--color-border: oklch(1 0 0 / 0.1);
+	--color-border-light: oklch(1 0 0 / 0.18);
+	--input: oklch(1 0 0 / 0.14);
 	--panel-shadow:
-		inset 0 1px 1px oklch(1 0 0 / 0.16), inset 0 -1px 1px oklch(1 0 0 / 0.05),
-		0 0 0 0.5px oklch(0 0 0 / 0.6), 0 18px 44px -14px oklch(0 0 0 / 0.65);
+		var(--glass-rim), 0 0 0 0.5px oklch(0 0 0 / 0.55),
+		0 16px 44px -14px oklch(0 0 0 / 0.7);
 	--panel-shadow-lg:
-		inset 0 1px 1px oklch(1 0 0 / 0.18), inset 0 -1px 1px oklch(1 0 0 / 0.06),
-		0 0 0 0.5px oklch(0 0 0 / 0.7), 0 28px 64px -16px oklch(0 0 0 / 0.8);
-	--panel-rule: oklch(1 0 0 / 0.12);
-	--popover: oklch(from var(--color-accent) 0.24 0.02 h / 0.7);
+		var(--glass-rim), 0 0 0 0.5px oklch(0 0 0 / 0.65),
+		0 30px 70px -16px oklch(0 0 0 / 0.85);
+	--panel-rule: oklch(1 0 0 / 0.1);
+	--popover: oklch(from var(--color-accent) 0.2 0.02 h / 0.62);
 	--page-bg-image:
 		radial-gradient(
-			70vmax 55vmax at 0% 0%,
-			oklch(from var(--color-accent) 0.42 c calc(h - 20) / 0.55),
+			60vmax 50vmax at 0% 0%,
+			oklch(from var(--color-ink) 0.36 c h / 0.7),
 			transparent 70%
 		),
 		radial-gradient(
-			65vmax 55vmax at 100% 100%,
-			oklch(from var(--color-accent) 0.36 c calc(h + 20) / 0.5),
+			55vmax 50vmax at 100% 100%,
+			oklch(from var(--color-ink) 0.3 c calc(h - 6) / 0.6),
 			transparent 70%
 		),
 		radial-gradient(
-			55vmax 45vmax at 100% 0%,
-			oklch(from var(--color-accent) 0.3 calc(c * 0.6) h / 0.5),
+			50vmax 40vmax at 100% 0%,
+			oklch(from var(--color-ink) 0.28 0.05 calc(h + 40) / 0.5),
 			transparent 70%
 		);
 }
 
 [data-surface="glass"] [data-slot="app-sidebar"] {
-	background-color: var(--glass-fill);
+	background-color: var(--glass-fill-clear);
 	background-image: var(--glass-sheen);
-	backdrop-filter: var(--glass-blur);
-	-webkit-backdrop-filter: var(--glass-blur);
-	border: 1px solid var(--glass-edge);
-	border-radius: var(--radius);
+	backdrop-filter: var(--glass-blur-clear);
+	-webkit-backdrop-filter: var(--glass-blur-clear);
+	border: 0;
+	border-radius: calc(var(--radius) + 0.25rem);
 	box-shadow: var(--panel-shadow);
+}
+
+[data-surface="glass"] [data-slot="app-frame"] {
+	background-color: oklch(1 0 0 / 0.1);
+	background-image: none;
+	backdrop-filter: blur(3px) saturate(150%);
+	-webkit-backdrop-filter: blur(3px) saturate(150%);
+	box-shadow:
+		var(--glass-rim),
+		0 0 0 0.5px oklch(0 0 0 / 0.05),
+		0 24px 60px -28px oklch(0 0 0 / 0.3);
+}
+
+.dark [data-surface="glass"] [data-slot="app-frame"],
+.dark[data-surface="glass"] [data-slot="app-frame"] {
+	background-color: oklch(0 0 0 / 0.14);
 }
 
 [data-surface="glass"]
@@ -289,32 +327,32 @@
 	) {
 	background-color: var(--popover);
 	background-image: var(--glass-sheen);
-	backdrop-filter: var(--glass-blur);
-	-webkit-backdrop-filter: var(--glass-blur);
-	border: 1px solid var(--glass-edge);
+	backdrop-filter: blur(24px) saturate(200%);
+	-webkit-backdrop-filter: blur(24px) saturate(200%);
+	border: 0;
 	box-shadow: var(--panel-shadow-lg);
 }
 
 [data-surface="glass"] [data-slot="button"] {
 	border-radius: 9999px;
+	transition:
+		background-color 0.2s ease,
+		box-shadow 0.2s ease,
+		transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+[data-surface="glass"] [data-slot="button"]:active:not(:disabled) {
+	transform: scale(0.96);
 }
 
 [data-surface="glass"]
 	[data-slot="button"]:is(
 		[data-variant="outline"],
-		[data-variant="secondary"],
-		[data-variant="destructive"]
+		[data-variant="secondary"]
 	) {
-	background-color: var(--glass-control);
-	background-image: linear-gradient(
-		to bottom,
-		oklch(1 0 0 / 0.35),
-		oklch(1 0 0 / 0)
-	);
-	backdrop-filter: blur(12px) saturate(180%);
-	-webkit-backdrop-filter: blur(12px) saturate(180%);
-	border-color: var(--glass-edge);
-	box-shadow: var(--glass-control-shadow);
+	background-color: oklch(from var(--color-accent) 0.5 0.03 h / 0.1);
+	border-color: transparent;
+	box-shadow: none;
 }
 
 [data-surface="glass"]
@@ -322,24 +360,48 @@
 		[data-variant="outline"],
 		[data-variant="secondary"]
 	):hover {
-	background-color: var(--glass-control-hover);
+	background-color: oklch(from var(--color-accent) 0.5 0.03 h / 0.16);
+}
+
+.dark
+	[data-surface="glass"]
+	[data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]),
+.dark[data-surface="glass"]
+	[data-slot="button"]:is(
+		[data-variant="outline"],
+		[data-variant="secondary"]
+	) {
+	background-color: oklch(1 0 0 / 0.1);
+}
+
+.dark
+	[data-surface="glass"]
+	[data-slot="button"]:is(
+		[data-variant="outline"],
+		[data-variant="secondary"]
+	):hover,
+.dark[data-surface="glass"]
+	[data-slot="button"]:is(
+		[data-variant="outline"],
+		[data-variant="secondary"]
+	):hover {
+	background-color: oklch(1 0 0 / 0.16);
 }
 
 [data-surface="glass"] [data-slot="button"][data-variant="destructive"] {
 	color: var(--color-destructive, var(--destructive));
+	box-shadow: none;
 }
 
 [data-surface="glass"] [data-slot="button"][data-variant="default"] {
-	background-image: linear-gradient(
-		to bottom,
-		oklch(1 0 0 / 0.3),
-		oklch(1 0 0 / 0) 55%
-	);
-	box-shadow:
-		0 0 0 0.5px oklch(0 0 0 / 0.25),
-		inset 0 1px 0 oklch(1 0 0 / 0.45),
-		inset 0 -1px 1px oklch(0 0 0 / 0.18),
-		0 4px 14px -4px var(--color-accent-glow);
+	background-color: var(--color-ink);
+	background-image: none;
+	color: var(--color-ink-foreground);
+	box-shadow: none;
+}
+
+[data-surface="glass"] [data-slot="button"][data-variant="default"]:hover {
+	background-color: oklch(from var(--color-ink) calc(l + 0.05) c h);
 }
 
 [data-surface="glass"]
@@ -355,7 +417,9 @@
 	) {
 	background-color: var(--glass-control);
 	border-color: var(--input);
-	box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.06);
+	box-shadow:
+		inset 0 1px 3px oklch(0 0 0 / 0.06),
+		inset 0 -1px 0 oklch(1 0 0 / 0.35);
 }
 
 [data-surface="sleek"] {

@@ -11,6 +11,8 @@ git-mode service you want rebuilt on a schedule rather than manually. A due
 schedule queues a deploy like any other trigger, so a redeploy that's still
 waiting its turn is never queued twice.
 
+![A service's auto-redeploy schedule on its Settings tab](images/scheduling-cron-redeploy.webp)
+
 ## Cron jobs
 
 **Cron Jobs** in the sidebar is the other half of scheduling: a task on a
@@ -27,6 +29,8 @@ schedule that isn't tied to a service. Each job runs one of two ways:
   processes as root. Only the job's own env vars are set. **Admin-only**. With
   rootless Docker "the host" is the rootless daemon's own namespace, and with
   Docker Desktop or OrbStack it's their Linux VM, not your Mac.
+
+![A cron job's page: its schedule, image, command, timeout and Run now](images/scheduling-cron-job.webp)
 
 Give it a 5-field cron schedule, a timeout (default 900s, the job is killed past
 it), and turn the schedule on or off without deleting the job. Runs go through
@@ -53,6 +57,8 @@ the background:
 It's a read-only overview: edit a schedule on the thing that owns it (the
 service's Settings tab, the cron job's own page, the volume's page).
 
+![The Scheduling page's cron redeploys, cron jobs and scheduled backups](images/scheduling-overview.webp)
+
 ## The job queue
 
 Deploys, git builds, image scans, volume backups and Docker cleanups all run
@@ -78,6 +84,8 @@ That buys four things worth knowing about as an operator:
 The **Scheduling** page has a Job queue panel showing what's running, what's
 waiting, and how recent jobs finished. Work that was still running when the app
 was restarted is put back on the queue at next boot.
+
+![The job queue on the Scheduling page, with the latest deploys and how they finished](images/scheduling-job-queue.webp)
 
 A failed deploy is not retried automatically, you'll see it fail and decide;
 backups get one retry.

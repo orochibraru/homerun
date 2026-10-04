@@ -9,6 +9,7 @@ import type { ContainerStatus } from "#lib/types.js";
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
+import { errorPagesPublished } from "./error-pages.ts";
 import { buildContainerLabels } from "./labels.ts";
 import { READINESS_LABEL } from "./readiness.ts";
 import {
@@ -264,6 +265,7 @@ export function containerCreateTemplate(params: CreateContainerParams) {
 				dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
 				domainPorts: params.domainPorts,
 				domains: params.domains,
+				errorPages: !params.remote && errorPagesPublished(),
 				httpCacheTtl: params.httpCacheTtl,
 				serviceId: params.serviceId,
 				slug: params.slug,

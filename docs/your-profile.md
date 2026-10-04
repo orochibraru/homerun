@@ -8,6 +8,9 @@ account:
   the address you're leaving, so it stays locked until SMTP is configured or an
   admin changes it for you from `/users` (see
   [Known, real limitations](faq-and-limitations.md#known-real-limitations-not-hypothetical)).
+
+  ![Profile → Personal Information: avatar, display name and email](images/profile-personal.webp)
+
 - **Security**, change your password, connect or disconnect OAuth providers (see
   [Connecting a provider to an existing account](authentication-providers.md#connecting-a-provider-to-an-existing-account)),
   set up [two-factor authentication and passkeys](two-factor-and-passkeys.md),
@@ -15,9 +18,15 @@ account:
   another admin (or, failing that, the oldest other account), so nothing stops
   running. Only when yours is the last account are its containers removed with
   it.
+
+  ![Profile → Security, starting with Connected accounts and the password form](images/profile-security.webp)
+
 - **Sessions**, every browser currently signed in as you, with the device and
   when it was last seen. Revoke any of them, useful after signing in somewhere
   you don't control.
+
+  ![Profile → Sessions, listing every browser signed in to the account](images/profile-sessions.webp)
+
 - **Authorized Clients**, API keys, including the ones the
   [CLI](api-and-cli.md#logging-in) created for itself through its device-code
   login. Create a key here to use the REST API or CLI without a browser session,
@@ -45,12 +54,16 @@ when you create it:
 A read-only account can only create read-only keys. The key list shows a
 **Read-only** badge on each read-only key.
 
+![Profile → Authorized Clients: generating a key with its access, and the key list](images/profile-api-keys.webp)
+
 `homerun login` creates one for you through a device-code flow rather than
 making you copy-paste, and it shows up in this list like any other.
 
 ## Appearance
 
 A per-account "Appearance" tab on your profile page controls:
+
+![The Appearance tab on your profile](images/appearance.webp)
 
 - **Presets**: a complete look from another era, with its own theme, style and
   colors: **Windows 95**, **Windows 98**, **Windows XP**, **Windows 7**, **MSN**

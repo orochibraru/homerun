@@ -8,6 +8,7 @@ import { migrate } from "drizzle-orm/bun-sql/migrator";
 import { applyInstanceSettings, config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
+import { ERROR_PAGE_PATH } from "#lib/error-pages.js";
 import { isIngestPath } from "#lib/error-tracking/envelope.js";
 import { GIT_WEBHOOK_PATH } from "#lib/git-webhooks.js";
 import { Logger } from "#lib/logger.js";
@@ -362,7 +363,8 @@ function isOidcProviderPath(pathname: string): boolean {
 }
 
 /**
- * Whether this is the login wall's forwardAuth check. It skips the session
+ * Whether this is the login wall's forwardAuth check, or one of the error
+ * pages Traefik fetches for anonymous visitors on every host. It skips the session
  * and API-key lookups entirely: the check reads its own gate cookie, never
  * `locals.user`; an `Authorization: Bearer` there is the gated app's own token
  * (Umami's API calls carry one), not a Homerun API key; and every routed
@@ -370,7 +372,10 @@ function isOidcProviderPath(pathname: string): boolean {
  * (a bad dashboard URL did) must not take every site down with the dashboard.
  */
 function isAuthCheckPath(url: URL): boolean {
-	return url.pathname === "/api/v1/auth-check";
+	return (
+		url.pathname === "/api/v1/auth-check" ||
+		url.pathname.startsWith(`${ERROR_PAGE_PATH}/`)
+	);
 }
 
 /** Whether a bearer credential is a JWT rather than an opaque API key. */

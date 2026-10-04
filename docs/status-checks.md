@@ -8,6 +8,8 @@ commit statuses, GitLab job statuses plus the pipeline itself (as `pipeline`),
 Gitea/Forgejo commit statuses, and Bitbucket build statuses (by key). A check
 that hasn't run recently can be added by name.
 
+![The Source tab's status checks, with the checks reported on the branch to pick from](images/status-checks-picker.webp)
+
 On every deploy of that service, whatever triggered it (Deploy, the API or CLI,
 a scheduled redeploy, a stack or template deploy), Homerun first resolves the
 branch to a commit through the provider API and reads the checks for that exact

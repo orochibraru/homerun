@@ -138,6 +138,18 @@ describe("GitProviderService.accessToken", () => {
 });
 
 describe("refusalFrom", () => {
+	test("a GitHub App missing a permission says which to add, not to reconnect", () => {
+		const refusal = refusalFrom(
+			"homerun-app",
+			403,
+			JSON.stringify({ message: "Resource not accessible by integration" }),
+		);
+		expect(refusal.reconnectHelps).toBe(false);
+		expect(refusal.message).toContain("Pull requests");
+		expect(refusal.message).toContain("Deployments");
+		expect(refusal.message).not.toContain("admin rights");
+	});
+
 	test("tells Gitea's stale-grant scope mismatch to revoke before reconnecting", () => {
 		const refusal = refusalFrom(
 			"Ombrage git",

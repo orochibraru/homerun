@@ -5,6 +5,8 @@ machine builds it.
 
 ## Deploy source: image or git repo
 
+![The Source tab of a service built from a git repository](images/source-git.webp)
+
 Every service is either:
 
 - **Bring-your-own-image** (the default), an image + tag, optionally with
@@ -16,6 +18,8 @@ Every service is either:
   (`homerun-build-<slug>:<timestamp>`) every deploy.
 
 ## Build methods
+
+![The Source tab's build method picker, open on the six methods](images/source-build-methods.webp)
 
 A git-based service picks how it's built on the Source tab (and in the wizard):
 
@@ -70,6 +74,8 @@ fall back to a token embedded directly in the URL (`https://TOKEN@host/...`)
 without connecting a provider at all.
 
 ## Build servers and build cache
+
+![The Source tab's build context, build cache registry and build server fields](images/source-build-servers.webp)
 
 By default a git build runs on this host. Two optional pickers on the Source tab
 change that:
