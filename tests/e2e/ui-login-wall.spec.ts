@@ -197,10 +197,7 @@ test.describe
 			await page
 				.getByRole("checkbox", { name: /Require login to access this app/ })
 				.click();
-			await page
-				.locator("form[action='?/updateAppAuth']")
-				.getByRole("button", { name: "Save" })
-				.click();
+			await page.locator("button[form='login-wall-app']").click();
 
 			await expect(
 				page.getByText(/Pick at least one sign-in method/),

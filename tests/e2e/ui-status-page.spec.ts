@@ -71,7 +71,7 @@ test.describe
 			await page.goto("/status-pages");
 			await page.getByRole("link", { name: PAGE_NAME }).click();
 			await page.getByLabel("Publish this page").uncheck();
-			await page.getByRole("button", { name: "Save changes" }).click();
+			await page.locator("button[form='status-page-settings']").click();
 			await expect(page.getByText("Status page saved.")).toBeVisible();
 
 			const anon = await browser.newContext();

@@ -38,10 +38,7 @@ test.describe
 			});
 			await expect(toggle).not.toBeChecked();
 			await toggle.click();
-			await page
-				.locator('form[action="?/updateAutoRollback"]')
-				.getByRole("button", { exact: true, name: "Save" })
-				.click();
+			await page.locator("button[form='auto-rollback']").click();
 			await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
 			await page.reload();
 			await expect(

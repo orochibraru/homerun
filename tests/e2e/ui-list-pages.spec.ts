@@ -38,7 +38,7 @@ test.describe
 				"Leave blank to keep current",
 			);
 			await page.locator("#registryUrl").fill("registry.internal:5000");
-			await page.getByRole("button", { name: "Save changes" }).click();
+			await page.locator("button[form='build-cache-registry']").click();
 			await expect(page.getByText("Registry saved.")).toBeVisible();
 
 			await page.goto("/build-cache-registries");
@@ -92,7 +92,7 @@ test.describe
 				page.getByText("No volume uses this destination yet."),
 			).toBeVisible();
 			await page.locator("#bucket").fill("homerun-two");
-			await page.getByRole("button", { name: "Save changes" }).click();
+			await page.locator("button[form='destination-settings']").click();
 			await expect(page.getByText("Destination saved.")).toBeVisible();
 
 			await page.getByRole("button", { name: "Test destination" }).click();
