@@ -2,7 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import {
 	convertGithubAppManifest,
 	githubAppRegistration,
-} from "$lib/github-app";
+} from "#lib/github-app.js";
 
 const realFetch = globalThis.fetch;
 

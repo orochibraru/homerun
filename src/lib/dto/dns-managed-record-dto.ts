@@ -1,8 +1,11 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type DnsManagedRecord, dnsManagedRecord } from "$lib/server/db/schema";
-import { normalizeName } from "$lib/services/dns-providers/http";
-import type { DnsRecord } from "$lib/services/dns-providers/types";
+import { db } from "#lib/server/db/lib.js";
+import {
+	type DnsManagedRecord,
+	dnsManagedRecord,
+} from "#lib/server/db/schema.js";
+import { normalizeName } from "#lib/services/dns-providers/http.js";
+import type { DnsRecord } from "#lib/services/dns-providers/types.js";
 import { BaseDTO } from "./base-dto";
 
 /**

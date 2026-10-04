@@ -88,7 +88,7 @@ jobs:
       - name: Type check
         run:
           bunx svelte-kit sync && bunx svelte-check --tsconfig ./tsconfig.json
-          --fail-on-warnings --tsgo && bunx tsc --noEmit --project
+          --fail-on-warnings && bunx tsc --noEmit --project
           tsconfig.scripts.json
 
       # openapi.json, the integration suite's generated types and the config

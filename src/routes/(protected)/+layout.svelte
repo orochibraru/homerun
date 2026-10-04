@@ -3,18 +3,18 @@
 	import { modeStorageKey, setMode } from "mode-watcher";
 	import { onMount } from "svelte";
 	import { fly } from "svelte/transition";
+	import AppVersion from "#lib/components/app-version.svelte";
+	import BrandMark from "#lib/components/brand-mark.svelte";
+	import Breadcrumbs from "#lib/components/breadcrumbs.svelte";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
+	import GlobalSearch from "#lib/components/global-search.svelte";
+	import NotificationBell from "#lib/components/notification-bell.svelte";
+	import ProfileMenu from "#lib/components/profile-menu.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { appearanceCss } from "#lib/palettes.js";
+	import { DEFAULT_SURFACE, effectiveSurface } from "#lib/surfaces.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import AppVersion from "$lib/components/app-version.svelte";
-	import BrandMark from "$lib/components/brand-mark.svelte";
-	import Breadcrumbs from "$lib/components/breadcrumbs.svelte";
-	import ErrorBoundary from "$lib/components/error-boundary.svelte";
-	import GlobalSearch from "$lib/components/global-search.svelte";
-	import NotificationBell from "$lib/components/notification-bell.svelte";
-	import ProfileMenu from "$lib/components/profile-menu.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { appearanceCss } from "$lib/palettes";
-	import { DEFAULT_SURFACE, effectiveSurface } from "$lib/surfaces";
 	import { allNavItems } from "./nav-items";
 
 	const { data, children } = $props();
@@ -125,10 +125,7 @@
 
     {#if !data.readOnly}
       <div class="px-2 pb-2">
-        <Button class="w-full" href={resolve("/services/new")}>
-          <Plus class="size-4" />
-          Deploy a service
-        </Button>
+        <Button class="w-full" href={resolve('services/new')}><Plus class="size-4" />Deploy a service</Button>
       </div>
     {/if}
 

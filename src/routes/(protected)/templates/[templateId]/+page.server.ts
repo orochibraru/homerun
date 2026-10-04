@@ -1,14 +1,13 @@
 import { error, fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { TemplateDTO } from "$lib/dto/template-dto";
-import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
-import { allowLongRequest } from "$lib/server/long-request";
-import { getGitHubRepoInfo } from "$lib/services/github-repo.service";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
+import { getGitHubRepoInfo } from "#lib/services/github-repo.service.js";
 import {
 	quickDeployFromTemplate,
 	templateHostAccessRefusal,
-} from "$lib/services/template-links";
+} from "#lib/services/template-links.js";
+import { resolve } from "$app/paths";
 
 export const load = async ({ params, parent, url, locals }) => {
 	await parent();
@@ -48,22 +47,21 @@ export const load = async ({ params, parent, url, locals }) => {
 };
 
 export const actions = {
-	quickDeploy: async ({ params, request, locals, platform }) => {
-		allowLongRequest(platform);
+	quickDeploy: async ({ params, request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const formData = await request.formData();
 		const rawStackId = formData.get("stackId") as string | null;
 		const stackId =
 			rawStackId && (await StackDTO.get(rawStackId)) ? rawStackId : null;
-
 		const result = await quickDeployFromTemplate(params.templateId, {
 			isAdmin: locals.isAdmin,
 			stackId,
 			userId: locals.user.id,
 		});
+
 		if (!result.ok) {
 			return fail(result.status, { error: result.error });
 		}
@@ -71,8 +69,8 @@ export const actions = {
 		redirect(
 			303,
 			result.stackId
-				? `${resolve("/stacks")}/${result.stackId}`
-				: `${resolve("/services")}/${result.serviceId}`,
+				? `${resolve("stacks")}/${result.stackId}`
+				: `${resolve("services")}/${result.serviceId}`,
 		);
 	},
 };

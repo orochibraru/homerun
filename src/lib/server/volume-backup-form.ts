@@ -1,7 +1,7 @@
-import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
-import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { VolumeServices } from "$lib/services/backup/volume-services";
-import { CronService } from "$lib/services/cron.service";
+import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
+import type { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { VolumeServices } from "#lib/services/backup/volume-services.js";
+import { CronService } from "#lib/services/cron.service.js";
 
 export interface VolumeBackupGuardFields {
 	backupPreCommand: string | null;

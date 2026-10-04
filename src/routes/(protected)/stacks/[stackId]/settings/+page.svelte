@@ -1,24 +1,24 @@
 <script lang="ts">
 	import { AlertTriangle, Check, FolderKanban, Trash2 } from "@lucide/svelte";
 	import { onMount, tick } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import IconPicker from "$lib/components/icon-picker.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import IconPicker from "#lib/components/icon-picker.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 	const stack = $derived(data.stack);

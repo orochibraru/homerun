@@ -3,19 +3,22 @@ import {
 	type ResourceScope,
 	type ResourceTotals,
 	StatSampleDTO,
-} from "$lib/dto/stat-sample-dto";
+} from "#lib/dto/stat-sample-dto.js";
 import {
 	type TrafficPoint,
 	TrafficSampleDTO,
 	type TrafficTotals,
-} from "$lib/dto/traffic-sample-dto";
-import { type Availability, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
+} from "#lib/dto/traffic-sample-dto.js";
+import {
+	type Availability,
+	UptimeCheckDTO,
+} from "#lib/dto/uptime-check-dto.js";
 import {
 	bucketSecondsFor,
 	type MonitoringRange,
 	previousWindow,
 	rangeStart,
-} from "$lib/monitoring-ranges";
+} from "#lib/monitoring-ranges.js";
 
 /** A resource chart bucket, null where nothing was sampled. */
 type ResourceSlot = {

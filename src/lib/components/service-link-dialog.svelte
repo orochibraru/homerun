@@ -1,24 +1,24 @@
 <script lang="ts">
 	import { Link2 } from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
-	import ServicePicker from "$lib/components/service-picker.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
+	import ServicePicker from "#lib/components/service-picker.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
+	} from "#lib/components/ui/select/index.js";
 	import {
 		detectLinkEngine,
 		type LinkFormat,
 		linkFormatsFor,
 		linkRoles,
-	} from "$lib/service-link";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/service-link.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	interface LinkableService {
 		id: string;

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Database } from "@lucide/svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
 	import {
 		buildLinkUrl,
 		detectLinkEngine,
 		type LinkTargetService,
-	} from "$lib/service-link";
+	} from "#lib/service-link.js";
 
 	const { service }: { service: LinkTargetService } = $props();
 

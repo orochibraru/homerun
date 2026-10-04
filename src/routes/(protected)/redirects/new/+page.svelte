@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import RedirectFields from "#lib/components/redirect-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import RedirectFields from "$lib/components/redirect-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { form } = $props();
 
@@ -36,8 +36,8 @@
       onStart: () => {
         submitting = true;
       },
-      onSuccess: () => goto(resolve("/redirects"), { invalidateAll: true }),
-      success: "Redirect added.",
+      onSuccess: () => goto(resolve('redirects'), { refreshAll: true }),
+      success: "Redirect added."
     })}
   >
     {#if form?.error}

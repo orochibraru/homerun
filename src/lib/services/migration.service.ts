@@ -1,14 +1,14 @@
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { Logger } from "$lib/logger";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	type MigrationEntry,
 	type MigrationImportResult,
 	type MigrationPreview,
 	previewEntries,
 	sourceSlug,
-} from "$lib/migrate/common";
-import { uniqueSlug } from "$lib/slug";
+} from "#lib/migrate/common.js";
+import { uniqueSlug } from "#lib/slug.js";
 import { ComposeImportService } from "./compose-import.service.ts";
 
 const logger = new Logger("Migration");

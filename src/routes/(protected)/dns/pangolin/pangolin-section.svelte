@@ -1,13 +1,13 @@
 <script lang="ts">
+	import AsyncBlock from "#lib/components/async-block.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { getNewtContainer } from "#lib/remote/setup.remote.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import AsyncBlock from "$lib/components/async-block.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { getNewtContainer } from "$lib/remote/setup.remote";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		settings: {

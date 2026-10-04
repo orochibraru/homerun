@@ -5,15 +5,12 @@
 		ShieldCheck,
 		XCircle,
 	} from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import { invalidateAll } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { timeAgo } from "$lib/formatting";
+	import Alert from "#lib/components/alert.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { timeAgo } from "#lib/formatting.js";
 	import {
 		BLOCK_SEVERITY_OPTIONS,
 		evaluateScanPolicy,
@@ -22,8 +19,11 @@
 		type ScanBlockPolicy,
 		type ScanSeverity,
 		type SeverityCounts,
-	} from "$lib/image-scan";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/image-scan.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { refreshAll } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { SEVERITY_CLASS } from "./severity-class";
 
 	interface Scan {
@@ -71,8 +71,14 @@
       Every deploy scans the image with Trivy before the workload starts.
       Block policy: <span class="text-text font-medium">{policyLabel}</span>
       {#if isAdmin}
-        (<a class="text-accent underline" href={resolve("/settings/docker")}
-        >change</a>).
+        (
+
+        <a
+          class="text-accent underline"
+          href={resolve('settings/docker')}
+        >change</a>
+
+        ).
       {:else}
         (set by an admin).
       {/if}
@@ -84,7 +90,7 @@
         use:enhance={enhanceToast({
           error: "Couldn't queue the scan.",
           loading: "Queueing a scan",
-          onComplete: () => invalidateAll(),
+          onComplete: () => refreshAll(),
           onSettled: () => {
             submitting = false;
           },

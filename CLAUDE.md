@@ -62,13 +62,13 @@ service is either "bring-your-own-image" (the original/default) or "build from a
 git repo" (clones + builds a Dockerfile locally, no registry involved), see
 Git-based builds below.
 
-Stack: SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over
-Postgres (via Bun's built-in `SQL` client, `drizzle-orm/bun-sql`, no `pg`
-dependency needed), Tailwind v4 + shadcn-svelte ("vega" style). The app holds no
-Docker socket itself: every Docker call goes over HTTP to the Go worker
-(`cmd/worker`), which is the only process that opens one, see
-`.agents/notes/docker.md` and `.agents/notes/worker.md`. `dockerode` is a
-devDependency now, used only by an integration-test fixture, not by the app.
+Stack: SvelteKit 3 (Svelte 5 runes, `@sveltejs/adapter-bun`) + Bun runtime,
+better-auth, Drizzle ORM over Postgres (via Bun's built-in `SQL` client,
+`drizzle-orm/bun-sql`, no `pg` dependency needed), Tailwind v4 + shadcn-svelte
+("vega" style). The app holds no Docker socket itself: every Docker call goes
+over HTTP to the Go worker (`cmd/worker`), which is the only process that opens
+one, see `.agents/notes/docker.md` and `.agents/notes/worker.md`. `dockerode` is
+a devDependency now, used only by an integration-test fixture, not by the app.
 
 ## Commands
 
@@ -85,9 +85,9 @@ bump it with
 ```bash
 bun run dev              # scripts/dev.ts: vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change; `--only=app`/`--only=worker` runs one half alone
 bun run build            # bun run gen && vite build
-bun run start            # ./build/server (the binary @orochibraru/svelte-smol compiles, serve the built app)
+bun run start            # ./build/server (the standalone binary adapter-bun compiles, serve the built app)
 bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts and homerun.schema.json from source, CI fails if the result isn't committed
-bun run check            # svelte-check --fail-on-warnings --tsgo, tsc over scripts/, go vet, and golangci-lint (`go tool -modfile=tools/go/go.mod`), the whole gate in one command, see `.agents/notes/testing.md`
+bun run check            # svelte-check --fail-on-warnings (no `--tsgo`: tsgo can't resolve `.svelte` files through `#lib` subpath imports), tsc over scripts/, go vet, and golangci-lint (`go tool -modfile=tools/go/go.mod`), the whole gate in one command, see `.agents/notes/testing.md`
 bun run lint             # markdownlint-cli2, scripts/lint-tailwind.ts (Tailwind class sorting) and oxlint --type-aware --deny-warnings (`.oxlintrc.json`; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
 bun run lint:fix         # the --fix half of all three
 bun run lint:ai          # agnix --strict over CLAUDE.md, AGENTS.md, .agents/ and .claude/ (`.agnix.toml` disables its prose heuristics), also a prek hook; agnix is a trusted dependency because its postinstall downloads the binary
@@ -212,6 +212,23 @@ that pattern for any new skill.
 
 ## Conventions (strict, apply to every change)
 
+- **SvelteKit 3 idioms, not the 2.x ones.** There is no `$lib` alias: imports
+  are `#lib/...` Node subpath imports (`package.json` `imports`) written _with_
+  the file extension, `.ts` module → `#lib/foo.js`, `.svelte.ts` →
+  `#lib/foo.svelte.js`, component → `#lib/components/x.svelte`, directory index
+  → `#lib/components/ui/button/index.js`; tests' `mock.module(...)` specifiers
+  use the same form. `$app/environment` is `$app/env`. `resolve()` takes
+  pathnames with no leading slash (`resolve("services")`, home is
+  `resolve("")`); only route ids start with `/`
+  (`resolve("/(protected)/services/[serviceId]", { serviceId })`).
+  `invalidateAll()` is `refreshAll()`, and `goto`'s `keepFocus`/`noScroll` are
+  `reset: false`, `replaceState` is `replace`, `invalidateAll: true` is
+  `refreshAll: true`. `json()`/`text()` from `@sveltejs/kit` aren't used:
+  `Response.json(...)` / `new Response(...)`. An off-origin `redirect` needs
+  `redirect(status, url, { external: true })` (kit 3 throws a 500 otherwise).
+  `handleError` in `hooks.server.ts` and `hooks.client.ts` receives every error
+  with a `kind` (`"app" | "framework" | "validation" | "unknown"`); both only
+  log/transform `kind === "unknown"` and return nothing otherwise.
 - **Never manually type anything in a route file**, `+page.svelte`,
   `+layout.svelte`, `+page.server.ts`, `+layout.server.ts`, `+server.ts`. This
   covers `$props()` (`data`/`form`/`children`/`params`) in the `.svelte` files
@@ -230,10 +247,10 @@ that pattern for any new skill.
     never `: RequestHandler`. No `import type {...} from "./$types"` for any of
     these at all.
   - This rule is specific to route files. Non-route components
-    (`$lib/components/**`) and shared server modules (`$lib/services/**`,
-    `$lib/server/db/**`, `$lib/server/validation/**`, `$lib/dto/**`) are normal
-    TypeScript/Svelte code and should still be typed explicitly as usual,
-    there's no route-based inference for those.
+    (`src/lib/components/**`) and shared server modules (`src/lib/services/**`,
+    `src/lib/server/db/**`, `src/lib/server/validation/**`, `src/lib/dto/**`)
+    are normal TypeScript/Svelte code and should still be typed explicitly as
+    usual, there's no route-based inference for those.
 - **Nested `load` functions under `(protected)/` must not re-check
   `!locals.user`.** The parent `+layout.server.ts` already redirects
   unauthenticated users before any child `load` runs, so re-checking is dead
@@ -245,7 +262,7 @@ that pattern for any new skill.
   `+page.server.ts`) per tab, not one big file with a client-side `activeTab`
   switch.** `services/[serviceId]/` is the reference shape: a `+layout.svelte`
   owns the tab bar (`TabNav` with `href`-based tabs, see
-  `$lib/components/tab-nav.svelte`) and renders `{@render children()}`; a
+  `src/lib/components/tab-nav.svelte`) and renders `{@render children()}`; a
   `+layout.server.ts` holds the shared guard/load every tab needs (a child
   route's own `load`, if it needs one at all, calls `parent()` rather than
   re-fetching); the first/default tab is the bare `+page.svelte` at that route's
@@ -284,24 +301,27 @@ that pattern for any new skill.
     `toast.promise(<name>Callback(...), { error, loading, success })`, with
     `error` a function mapping the thrown error to a message via
     `toastError(error, "<fallback>")`. `src/routes/auth/sign-in/+page.svelte`
-    and `$lib/components/profile-menu.svelte` are the reference implementations.
-    Validate inside the callback and `throw` there too, rather than toasting
-    early and returning, so there's one path in and one path out.
-  - **A `use:enhance` form** uses `enhanceToast({...})` from `$lib/toast.ts`,
+    and `src/lib/components/profile-menu.svelte` are the reference
+    implementations. Validate inside the callback and `throw` there too, rather
+    than toasting early and returning, so there's one path in and one path out.
+  - **A `use:enhance` form** uses `enhanceToast({...})` from `src/lib/toast.ts`,
     which bridges enhance's callback shape onto a real promise. It takes
     `loading`/`success`/`error` (where `success` may be a `(data) => string`
     reading the action's returned data), optional sonner `action`/`description`,
-    `reset` (forwarded to `update()`), and the lifecycle hooks
-    `onStart`/`onSubmit` (pre-submit, receives the `FormData`, for things like
-    stamping a client-generated deployment id)
-    /`onSettled`/`onSuccess`/`onFailure` (both receive the action's data)
-    /`onComplete` (runs _after_ `update()`, for a trailing `refreshAll()`).
-    `saveToast("<Section> settings")` is the shorthand for the settings-style
-    "save this section" form. Put pending-state resets in `onSettled`, not in a
-    hand-written callback. `enhanceToast` already extracts a failure's message
-    from either `data.error` or the first entry of this repo's zod-shaped
-    `data.errors` field map, so a route never needs to dig that out itself.
-    `tests/unit/app/toast.test.ts` covers that extraction and the hook order.
+    `reset` (forwarded to `update()`, which is always called with
+    `navigate: false`: kit 3's `enhance` otherwise navigates to another route's
+    page when a form posts to that route's action, and every form here stays on
+    its page), and the lifecycle hooks `onStart`/`onSubmit` (pre-submit,
+    receives the `FormData`, for things like stamping a client-generated
+    deployment id) /`onSettled`/`onSuccess`/`onFailure` (both receive the
+    action's data) /`onComplete` (runs _after_ `update()`, for a trailing
+    `refreshAll()`). `saveToast("<Section> settings")` is the shorthand for the
+    settings-style "save this section" form. Put pending-state resets in
+    `onSettled`, not in a hand-written callback. `enhanceToast` already extracts
+    a failure's message from either `data.error` or the first entry of this
+    repo's zod-shaped `data.errors` field map, so a route never needs to dig
+    that out itself. `tests/unit/app/toast.test.ts` covers that extraction and
+    the hook order.
 
     **`reset` defaults to `false`, deliberately inverting SvelteKit's own
     default, and it must stay that way.** Real bug, two visible symptoms from
@@ -345,10 +365,11 @@ that pattern for any new skill.
   accident rather than a decision. The only other exception is a **centred
   single-purpose card** on an otherwise-empty page: every signed-out page
   (`auth/sign-in`, `auth/sign-up`, `auth/sign-up/confirm`, `auth/accept-invite`,
-  `auth/error`) goes through `AuthShell` (`$lib/components/auth-shell.svelte`),
-  whose form column is `max-w-md`; `app-auth` and `cli-auth` are their own
-  `max-w-md` cards, and `/onboarding` is a `max-w-3xl` wizard column. Neither
-  exception is a licence to wrap a real page in a column.
+  `auth/error`) goes through `AuthShell`
+  (`src/lib/components/auth-shell.svelte`), whose form column is `max-w-md`;
+  `app-auth` and `cli-auth` are their own `max-w-md` cards, and `/onboarding` is
+  a `max-w-3xl` wizard column. Neither exception is a licence to wrap a real
+  page in a column.
 - **No comments. Anywhere. In any code file.** No explanatory line comments, no
   header banners, no prose in YAML/compose/shell files either. A change's
   rationale belongs in the git commit message, a feature's explanation belongs
@@ -371,7 +392,7 @@ that pattern for any new skill.
   - **Plain instance singleton**, the default, and the most common case: a class
     was `static`-only for no real reason (`AdminService`, `ApiService`,
     `DeploymentService`, `GitProviderService`, `SystemStatsService`,
-    `UserService`, `S3BackupService`, all under `$lib/services/`). Drop every
+    `UserService`, `S3BackupService`, all under `src/lib/services/`). Drop every
     `static`, instantiate once, export the instance under the _same_ name the
     class used to export
     (`class AdminServiceClass {...}; export const AdminService = new AdminServiceClass();`).
@@ -383,7 +404,7 @@ that pattern for any new skill.
     `DueScheduler`, not instantiated directly).
   - **Mixin-merge**, when several concerns need to call into each other and
     external code should keep addressing one flat symbol,
-    `$lib/services/docker.service.ts`: each concern (containers, networks,
+    `src/lib/services/docker.service.ts`: each concern (containers, networks,
     terminal, reconcile, custom-ssl, core-services,
     `src/lib/services/docker/*.ts`) is a real class extending
     `BaseDockerService` (`docker/base.ts`), merged into one `DockerService` via
@@ -393,8 +414,8 @@ that pattern for any new skill.
     calling another's method uses real inheritance (`this.inspectStatus(...)`),
     not a cross-module import.
   - **Composition**, when the pieces are independent and don't call each other,
-    `$lib/services/cron.service.ts`: `CronService` composes three instances of
-    one generic `DueScheduler<T>` (`src/lib/services/cron/due-scheduler.ts`),
+    `src/lib/services/cron.service.ts`: `CronService` composes three instances
+    of one generic `DueScheduler<T>` (`src/lib/services/cron/due-scheduler.ts`),
     extending `BaseScheduler` for its shared tick/HMR-guard boilerplate, and a
     `CronService` method just calls `.start()` on the instance it owns rather
     than being `static start = importedStart`.
@@ -412,7 +433,7 @@ that pattern for any new skill.
     have to ripple into routes/DTOs that already call through it. Apply this
     opportunistically when you're already touching a static-barrel module, not
     as a blanket rewrite mandate, same posture as the shared-UI-components note
-    above. DTOs (`$lib/dto/*`) are a deliberate exception, not an oversight:
+    above. DTOs (`src/lib/dto/*`) are a deliberate exception, not an oversight:
     their `static get()`/`.list()`/`.create()` finders returning per-row
     instances with instance methods (`svc.update()`) is already a correct,
     intentional Repository/Active-Record split, see
@@ -429,9 +450,9 @@ to reintroduce a fixed bug.
 
 | Note                        | Read it when you're touching                                                                                                                                          |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-and-config.md`        | `schema.ts`, a table/column, a DTO under `$lib/dto/`, list pagination, `config.ts`, instance settings, `/settings`                                                    |
+| `data-and-config.md`        | `schema.ts`, a table/column, a DTO under `src/lib/dto/`, list pagination, `config.ts`, instance settings, `/settings`                                                 |
 | `routing.md`                | Any route under `src/routes/`, the sidebar nav, the services/stacks/templates pages, tab layouts                                                                      |
-| `ui.md`                     | `layout.css`, theming/tokens, `$lib/components/`, list-page toolkit, page width, the `$derived` push/splice bug, appearance prefs                                     |
+| `ui.md`                     | `layout.css`, theming/tokens, `src/lib/components/`, list-page toolkit, page width, the `$derived` push/splice bug, appearance prefs                                  |
 | `docker.md`                 | `DockerService` and its mixins, containers/networks/volumes, swarm mode, network mode, web terminal, build servers, custom SSL, Docker Cleanup, the built-in registry |
 | `auth.md`                   | better-auth, sign-in/sign-up, OAuth providers, Homerun as an OIDC provider, `/authentication`, the per-app login wall, user roles/invites, onboarding                 |
 | `api-and-cli.md`            | `src/routes/api/v1/`, the OpenAPI document, `cmd/cli/`, long-running requests and Bun's idle timeout                                                                  |

@@ -1,25 +1,25 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
 import {
 	config,
 	envDefaultsForDisplay,
 	isPlaceholderAuthSecret,
-} from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { Logger } from "$lib/logger";
-import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
+} from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { Logger } from "#lib/logger.js";
+import { normalizeBaseDomain } from "#lib/server/validation/base-domain.js";
 import {
 	newtFieldsError,
 	pangolinInputFromForm,
 	saveCloudflareFromForm,
 	testCloudflareFromForm,
 	testPangolinFromForm,
-} from "$lib/server/validation/dns-settings-form";
-import { applyAndRebuild } from "$lib/server/validation/instance-settings-form";
+} from "#lib/server/validation/dns-settings-form.js";
+import { applyAndRebuild } from "#lib/server/validation/instance-settings-form.js";
 import {
 	type OnboardingInput,
 	onboardingSchema,
-} from "$lib/server/validation/onboarding";
+} from "#lib/server/validation/onboarding.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Onboarding");
 
@@ -125,10 +125,10 @@ async function saveDnsSettings(
 export const actions = {
 	testCloudflare: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const outcome = await testCloudflareFromForm(
@@ -145,10 +145,10 @@ export const actions = {
 
 	testPangolin: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const outcome = await testPangolinFromForm(
@@ -166,10 +166,10 @@ export const actions = {
 
 	finish: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -246,6 +246,6 @@ export const actions = {
 		applyAndRebuild(settings);
 
 		logger.info(`Onboarding completed: user=${locals.user.id}`);
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	},
 };

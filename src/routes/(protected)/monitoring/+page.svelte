@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import MonitoringView from "$lib/components/monitoring/monitoring-view.svelte";
-	import ServiceBreakdownTable from "$lib/components/monitoring/service-breakdown.svelte";
-	import { title } from "$lib/store/title";
+	import MonitoringView from "#lib/components/monitoring/monitoring-view.svelte";
+	import ServiceBreakdownTable from "#lib/components/monitoring/service-breakdown.svelte";
+	import { title } from "#lib/store/title.js";
 
 	const { data } = $props();
 

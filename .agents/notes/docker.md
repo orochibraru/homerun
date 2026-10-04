@@ -24,7 +24,7 @@ identical, only what runs underneath a method changed, from a dockerode call to
 `this.worker.get/post/delete/stream(...)`. Each concern file under
 `services/docker/` exports a `SomethingMixin(Base)` function returning a class
 that extends `Base` (ultimately `BaseDockerService`, `docker/base.ts`, holds the
-shared `worker` getter onto `WorkerClient`, `$lib/server/worker-client.ts`);
+shared `worker` getter onto `WorkerClient`, `src/lib/server/worker-client.ts`);
 `docker.service.ts` chains all of them and instantiates once. A concern that
 calls another's method does it via real inheritance (`this.inspectStatus(...)`),
 which is also why the chain has a load-bearing order: containers before one-off
@@ -36,7 +36,7 @@ the container/swarm-service itself for a real deploy no longer goes through this
 mixin chain at all, that now runs in the Go worker, see the `containers.ts`
 bullet below.
 
-`WorkerClient` (`$lib/server/worker-client.ts`) is the whole of that HTTP
+`WorkerClient` (`src/lib/server/worker-client.ts`) is the whole of that HTTP
 client: thin `get`/`post`/`delete`/`putRaw`/`postRaw`/`stream` methods against
 `config.worker.url` (env `WORKER_URL`, default `http://localhost:7430`),
 authenticated with a bearer token both sides read from `WORKER_TOKEN` — or, when
@@ -75,23 +75,23 @@ they now fail for different reasons with different fixes, see
   `containerId`/`swarmServiceId`, Docker Cleanup's host-wide listing is the one
   deliberate exception, see below), this app must never touch a container it
   didn't create. The public subdomain is `<slug>.<baseDomain>`
-  (`defaultHostname`, `$lib/service-domains.ts`); `slug` itself is stack-scoped
-  at creation time (`$lib/slug.ts`'s `stackScopedSlug`: prefixed with the
-  stack's own slug unless it already is one, so a stack's slug is never doubled
-  into the hostname), not re-prefixed again here — see Stack-scoped slugs in
-  `services-and-templates.md`. `serviceHostnames()` (`$lib/service-domains.ts`)
-  resolves the full hostname list — the default hostname first when
-  `defaultDomainEnabled`, then each of `domains` — and one Traefik router is
-  added per hostname (router name `<slug>` for the first, `<slug>-<n>` after
-  it), all pointing at the _same_ `traefik.http.services.<slug>` backend, one
-  loadbalancer config, N hostnames reaching it, not a duplicated service block.
-  When `authRequired` is set, a forwardAuth middleware is attached to every
-  router for the service, pointing at `authCheckUrlFor(serviceId)` —
-  `config.authCheckUrl` with a `?service=<id>` query param, so the gate
-  identifies the service from the URL rather than having to resolve
-  `X-Forwarded-Host` back to a slug or domain — plus `authResponseHeaders` for
-  `GATE_IDENTITY_HEADERS`. Because these are labels, turning the wall on or off
-  only takes effect on the next deploy.
+  (`defaultHostname`, `src/lib/service-domains.ts`); `slug` itself is
+  stack-scoped at creation time (`src/lib/slug.ts`'s `stackScopedSlug`: prefixed
+  with the stack's own slug unless it already is one, so a stack's slug is never
+  doubled into the hostname), not re-prefixed again here — see Stack-scoped
+  slugs in `services-and-templates.md`. `serviceHostnames()`
+  (`src/lib/service-domains.ts`) resolves the full hostname list — the default
+  hostname first when `defaultDomainEnabled`, then each of `domains` — and one
+  Traefik router is added per hostname (router name `<slug>` for the first,
+  `<slug>-<n>` after it), all pointing at the _same_
+  `traefik.http.services.<slug>` backend, one loadbalancer config, N hostnames
+  reaching it, not a duplicated service block. When `authRequired` is set, a
+  forwardAuth middleware is attached to every router for the service, pointing
+  at `authCheckUrlFor(serviceId)` — `config.authCheckUrl` with a `?service=<id>`
+  query param, so the gate identifies the service from the URL rather than
+  having to resolve `X-Forwarded-Host` back to a slug or domain — plus
+  `authResponseHeaders` for `GATE_IDENTITY_HEADERS`. Because these are labels,
+  turning the wall on or off only takes effect on the next deploy.
 - `networks.ts`, `DockerNetworkMixin`, per-stack Docker networks.
   `stackNetworkName(stackId)` is deterministic (`homerun-stack-<id>`, no
   separate id stored, stays a plain exported pure function).
@@ -199,7 +199,7 @@ they now fail for different reasons with different fixes, see
     common case; the uptime probe prefers it over any probe of its own, see
     `observability.md`), `streamLogs` (follow-mode web `ReadableStream`),
     `buildAuthConfig`, all exposed the same way, `DockerService.<name>`.
-    `ContainerStatus` (`$lib/types.ts`) has a `"missing"` value alongside
+    `ContainerStatus` (`src/lib/types.ts`) has a `"missing"` value alongside
     pending/pulling/starting/running/stopped/failed, for a container Docker
     can't find at all (a 404 on `inspect()`, e.g. removed manually outside the
     app, `docker rm`), distinct from `"failed"` (the container still exists but
@@ -213,7 +213,7 @@ they now fail for different reasons with different fixes, see
     agent-backed host. Docker doesn't strip a container's own ANSI color codes
     from its stdout, every raw-log-line surface (the Logs tab, deploy progress
     panel, deployment history, Errors tab) renders each line through
-    `$lib/components/ansi-line.svelte` (backed by `$lib/ansi.ts`'s
+    `src/lib/components/ansi-line.svelte` (backed by `src/lib/ansi.ts`'s
     `parseAnsiLine()`), which splits a line into styled `<span>`s rather than
     using `{@html}`, no injection surface even though the source is a live
     container's own output.
@@ -286,15 +286,15 @@ they now fail for different reasons with different fixes, see
   `aquasec/trivy` command (pinned tag) with the `homerun-trivy-cache` volume on
   `/root/.cache`, JSON output parsed by `summarizeTrivyReport`, is now
   `internal/jobs/imagescan/scan.go`'s `Scan` and `imagescan.Summarize` (the Go
-  port of `$lib/image-scan.ts`'s old `summarizeTrivyReport`, which was deleted
-  from the app). **Real, tested findings** (still true, now exercised from the
-  worker): Docker accepts a loopback registry as insecure with no daemon config
-  (verified on OrbStack); skopeo copies only the host platform's manifest, so
-  the recorded digest is the platform manifest digest, not the upstream index
-  digest; `--digestfile /dev/stdout` works and `--quiet` keeps progress off
-  stdout. **Rootless Docker**: `isRootlessDocker()` (`docker info` security
-  options, pure `isRootlessDaemon`) tells the spec to skip the loopback pull,
-  whose daemon lives in RootlessKit's network namespace and can't reach
+  port of `src/lib/image-scan.ts`'s old `summarizeTrivyReport`, which was
+  deleted from the app). **Real, tested findings** (still true, now exercised
+  from the worker): Docker accepts a loopback registry as insecure with no
+  daemon config (verified on OrbStack); skopeo copies only the host platform's
+  manifest, so the recorded digest is the platform manifest digest, not the
+  upstream index digest; `--digestfile /dev/stdout` works and `--quiet` keeps
+  progress off stdout. **Rootless Docker**: `isRootlessDocker()` (`docker info`
+  security options, pure `isRootlessDaemon`) tells the spec to skip the loopback
+  pull, whose daemon lives in RootlessKit's network namespace and can't reach
   `127.0.0.1:5055`, so the worker loads instead. `fetchFromMirror`'s order:
   loopback pull (rootful only) → mirror load → upstream pull. A loaded image has
   no `RepoDigests`, so the recorded digest is the mirror copy's. Not verified
@@ -309,25 +309,26 @@ they now fail for different reasons with different fixes, see
   `planMirrorGc`); the Registry page's "Collect garbage" goes through the same
   queued `pruneMirror` job. The TS descriptions below are the reference
   behaviour the Go code mirrors.
-- Mirror GC: `ImageMirrorGcService` (`$lib/services/image-mirror-gc.service.ts`)
-  runs as the `pruneMirror` Docker Cleanup action (exclusive `docker_cleanup`
-  job, button + size panel on `/docker-cleanup` via `getMirrorUsage`), queued
-  daily at 04:00 by `cron/mirror-gc-scheduler.ts` under the first admin's id
-  (postponed while deploy/image_scan jobs are queued or running). Keep set is
-  pure in `docker/mirror-registry.ts` (`mirrorKeepSet`, from
-  `listMirrorReferences` in `$lib/dto/mirror-reference-dto.ts`): per service the
-  current `image:tag`, the digest of every **retained revision**
+- Mirror GC: `ImageMirrorGcService`
+  (`src/lib/services/image-mirror-gc.service.ts`) runs as the `pruneMirror`
+  Docker Cleanup action (exclusive `docker_cleanup` job, button + size panel on
+  `/docker-cleanup` via `getMirrorUsage`), queued daily at 04:00 by
+  `cron/mirror-gc-scheduler.ts` under the first admin's id (postponed while
+  deploy/image_scan jobs are queued or running). Keep set is pure in
+  `docker/mirror-registry.ts` (`mirrorKeepSet`, from `listMirrorReferences` in
+  `src/lib/dto/mirror-reference-dto.ts`): per service the current `image:tag`,
+  the digest of every **retained revision**
   (`DeploymentDTO.listRetainedRevisions`, the newest
   `instance_settings.retainedImagesPerService` (null = `RETAINED_REVISIONS`, 5;
   1 to 50 on Settings → Docker) distinct images per service,
-  `$lib/revisions.ts`), and the last `MIRROR_GC_SCANS_PER_SERVICE` (2) distinct
-  mirror-scan digests (`planMirrorGc`, which diffs this keep set against the
-  registry's actual inventory, is now `internal/registryapi.PlanGC` in Go, see
-  above; `MirrorRegistryClient` there does catalog (Link paging) → tags → HEAD
-  with an index/list-aware Accept → DELETE by digest, fetch injected so
-  `tests/unit/app/image-mirror-gc.test.ts` mocks the TS `mirrorKeepSet` half).
-  Reaching the API at `127.0.0.1:5055` or `homerun-mirror:5000` (first that
-  answers `/v2/`, container name first when this app runs in one) and
+  `src/lib/revisions.ts`), and the last `MIRROR_GC_SCANS_PER_SERVICE` (2)
+  distinct mirror-scan digests (`planMirrorGc`, which diffs this keep set
+  against the registry's actual inventory, is now `internal/registryapi.PlanGC`
+  in Go, see above; `MirrorRegistryClient` there does catalog (Link paging) →
+  tags → HEAD with an index/list-aware Accept → DELETE by digest, fetch injected
+  so `tests/unit/app/image-mirror-gc.test.ts` mocks the TS `mirrorKeepSet`
+  half). Reaching the API at `127.0.0.1:5055` or `homerun-mirror:5000` (first
+  that answers `/v2/`, container name first when this app runs in one) and
   `docker exec`ing `du`, `registry garbage-collect --delete-untagged`, `rm -rf`
   of emptied repo dirs is Go's job too now (`internal/jobs/cleanup/mirror.go`).
   **Real, tested findings**: `--delete-untagged` sweeps every manifest with no
@@ -345,11 +346,11 @@ they now fail for different reasons with different fixes, see
   deploy/image_scan job is running.
 - Registry (`/registry`, admin-only, sidebar under Administration): turns
   `homerun-mirror` into a real push/pull registry rather than just a scan cache.
-  `RegistryService` (`$lib/services/registry.service.ts`) owns
+  `RegistryService` (`src/lib/services/registry.service.ts`) owns
   `status()`/`authEnabled()`/`internalCredentials()`/`createToken()`/
   `revokeToken()`/`setAuthEnabled()`/`setPublicHost()`/`syncAuth()`/`catalog()`/
   `deleteTag()`/`deleteRepository()`. Tokens are `registry_token` rows
-  (`RegistryTokenDTO`, `$lib/dto/registry-token-dto.ts`): `username` plus a
+  (`RegistryTokenDTO`, `src/lib/dto/registry-token-dto.ts`): `username` plus a
   bcrypt `secretHash` (`Bun.password.hash`, cost 10), the plaintext returned
   only once from `createToken`. `syncAuth()` rewrites the htpasswd file
   (`writeRegistryHtpasswd`, a one-off `alpine` container writing into the
@@ -516,7 +517,7 @@ key order, because `applyTraefikFlags` compares the whole argv and would
 otherwise recreate Traefik on every boot. Nothing is seeded into the database:
 `InstanceSettingsDTO.getOrCreate()` reports whether this boot created the
 singleton row, and `OrchestrationService.applyOnBoot`
-(`$lib/services/orchestration.service.ts`, called from `hooks.server.ts`'s
+(`src/lib/services/orchestration.service.ts`, called from `hooks.server.ts`'s
 `init()`) stores `detectInitialOrchestrationMode()` on a fresh row only (pure
 `initialOrchestrationMode`: swarm on an active manager with control available
 that isn't rootless, standalone otherwise). An existing row is never flipped.
@@ -580,7 +581,7 @@ lists the service's tasks (slot, node hostname, state, container id) and samples
 each local task container with `sampleContainerStats`; a task on another node
 comes back with `local: false` and no sample, since the app only reaches this
 daemon. The service Overview renders it through `getReplicaStats`
-(`stats.remote.ts`, polled) in `$lib/components/replica-stats.svelte`, and
+(`stats.remote.ts`, polled) in `src/lib/components/replica-stats.svelte`, and
 `StatsSampler` records the sum over local replicas (`sumReplicaSamples`,
 unit-tested in `tests/unit/app/swarm-replicas.test.ts`) as the service's
 `stat_sample` (`ServiceDTO.listRunningWithContainers()` now also returns running
@@ -747,7 +748,7 @@ configured; swarm tasks aren't inspected.
 ## Runtime options (`service.command`/`entrypoint`/`envFiles`/`labels`/`capAdd`/`devices`/`privileged`/`runAsUser`, Runtime tab)
 
 Stored as jsonb argv lists / string lists / a label map plus a boolean and a
-nullable text `run_as_user`; `$lib/service-runtime.ts`'s `runtimeOptionsFrom`
+nullable text `run_as_user`; `src/lib/service-runtime.ts`'s `runtimeOptionsFrom`
 reads them off a row with defaults, and `deploy.service.ts`'s `#startWorkload`
 passes them as `runtime` to both workload paths. The pure mapping is
 `docker/runtime-options.ts` (`runtimeArgv` → `Cmd`/`Entrypoint`/`User`,
@@ -1083,16 +1084,17 @@ next save.
 
 **The instance certificate** (Settings → TLS, `instance_settings.tlsCertEnc`/
 `tlsKeyEnc` plus `tlsCertNames`/`tlsCertExpiresAt`/`tlsCertIssuer` read off it
-by `$lib/tls-certificate.ts`'s `inspectCertificate`, which also checks the key
-matches) is written by `syncInstanceCertificate` as `homerun-instance-tls.yml`,
-the store's `defaultCertificate`. Traefik prefers a router's resolver
-certificate over the default, so `certResolverFor` returns null for any host
-`certificateCovers` (`config.traefik.instanceCertNames`, applied from the
-settings row), which every label builder passes; routes change on redeploy, and
-the tab offers `redeployCovered`. Verified against a real `traefik:v3`: the
-inline default certificate is what `openssl s_client` gets for a covered host.
+by `src/lib/tls-certificate.ts`'s `inspectCertificate`, which also checks the
+key matches) is written by `syncInstanceCertificate` as
+`homerun-instance-tls.yml`, the store's `defaultCertificate`. Traefik prefers a
+router's resolver certificate over the default, so `certResolverFor` returns
+null for any host `certificateCovers` (`config.traefik.instanceCertNames`,
+applied from the settings row), which every label builder passes; routes change
+on redeploy, and the tab offers `redeployCovered`. Verified against a real
+`traefik:v3`: the inline default certificate is what `openssl s_client` gets for
+a covered host.
 
-## Redirects (`$lib/redirects.ts`, `services/redirect.service.ts`)
+## Redirects (`src/lib/redirects.ts`, `services/redirect.service.ts`)
 
 The `redirect` table (source host plus optional path prefix, destination,
 keepPath, permanent, enabled) is published as one file-provider file,
@@ -1218,9 +1220,9 @@ server.
 the roles (`buildServer`, `swarmNode`), an optional name and the SHA-256 of a
 one-time `hrn_` token, valid for an hour. The page shows
 `enrollCommand(origin, token)`, which pipes `GET /api/v1/nodes/install.sh`
-(`$lib/server/node-install-script.ts`, generated with this instance's origin and
-its own release tag so the agent matches the app) into bash. The script is plain
-bash on purpose, a barebones server has no `jq`: it asks
+(`src/lib/server/node-install-script.ts`, generated with this instance's origin
+and its own release tag so the agent matches the app) into bash. The script is
+plain bash on purpose, a barebones server has no `jq`: it asks
 `POST /api/v1/nodes/enroll` with `plan: true` what to install (the token decides
 the roles, not script flags), installs Docker, runs the release installer in
 `--mode=agent` for a build server and reads the worker's token file, then posts

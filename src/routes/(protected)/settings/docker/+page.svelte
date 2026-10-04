@@ -1,27 +1,27 @@
 <script lang="ts">
 	import { onMount, untrack } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
-	import Alert from "$lib/components/alert.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import Alert from "#lib/components/alert.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { BLOCK_SEVERITY_OPTIONS } from "$lib/image-scan";
-	import { getSetupStatus } from "$lib/remote/setup.remote";
+	} from "#lib/components/ui/select/index.js";
+	import { BLOCK_SEVERITY_OPTIONS } from "#lib/image-scan.js";
+	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import {
 		MAX_RETAINED_IMAGES,
 		MIN_RETAINED_IMAGES,
 		RETAINED_REVISIONS,
-	} from "$lib/revisions";
-	import { enhanceToast, saveToast } from "$lib/toast";
+	} from "#lib/revisions.js";
+	import { enhanceToast, saveToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 
 	const { data } = $props();
 
@@ -115,15 +115,13 @@
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Image scanning</h2>
       <p class="text-text-muted text-xs">
-        Every deploy copies the image into a Homerun-managed registry mirror
-        (<code>homerun-mirror</code>, published on
-        <code>127.0.0.1:5055</code> only), scans it there with Trivy, and only
-        then pulls it onto this host. If the mirror can't be used the deploy
-        pulls directly and scans the local image instead. Git builds are
-        scanned once built. Each service can opt out on its own Settings tab.
-        The mirror is garbage-collected daily; its size and a manual cleanup
-        are on <a class="underline" href={resolve("/docker-cleanup")}
-        >Docker Cleanup</a>.
+        Every deploy copies the image into a Homerun-managed registry mirror (
+        <code>homerun-mirror</code>
+        , published on
+        <code>127.0.0.1:5055</code>
+        only), scans it there with Trivy, and only then pulls it onto this host. If the mirror can't be used the deploy pulls directly and scans the local image instead. Git builds are scanned once built. Each service can opt out on its own Settings tab. The mirror is garbage-collected daily; its size and a manual cleanup are on
+        <a class="underline" href={resolve('docker-cleanup')}>Docker Cleanup</a>
+        .
       </p>
     </div>
     <form
@@ -288,22 +286,18 @@
       <div class="text-text-subtle space-y-1 text-xs">
         <p class="text-text-muted font-medium">What swarm mode doesn't do</p>
         <ul class="list-disc space-y-1 pl-4">
+          <li>Privileged mode and device mappings (Runtime tab) are ignored : the swarm API has neither.</li>
+
           <li>
-            Privileged mode and device mappings (Runtime tab) are ignored :
-            the swarm API has neither.
+            Services don't join their stack's own network : every swarm service shares the
+            <code>-swarm</code>
+            overlay and is reached at its slug.
           </li>
           <li>
-            Services don't join their stack's own network : every swarm service
-            shares the <code>-swarm</code> overlay and is reached at its slug.
+            The Terminal tab, pre-backup commands and per-replica stats only reach replicas on this host, and the "from the network" uptime probe doesn't run (the hostname probe does).
           </li>
           <li>
-            The Terminal tab, pre-backup commands and per-replica stats only
-            reach replicas on this host, and the "from the network" uptime probe
-            doesn't run (the hostname probe does).
-          </li>
-          <li>
-            With more than one node, volumes are per node and an image built on
-            this host needs a build cache registry for other nodes to pull it.
+            With more than one node, volumes are per node and an image built on this host needs a build cache registry for other nodes to pull it.
           </li>
         </ul>
       </div>

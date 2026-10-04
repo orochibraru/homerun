@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { Check, Network } from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import CopyButton from "$lib/components/copy-button.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import CopyButton from "#lib/components/copy-button.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { internalUrl, maskUrlPassword } from "$lib/service-link";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { internalUrl, maskUrlPassword } from "#lib/service-link.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	interface Props {
 		baseDomain: string;

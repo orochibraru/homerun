@@ -1,4 +1,4 @@
-import type { ParsedEnvVar } from "$lib/env-parse";
+import type { ParsedEnvVar } from "#lib/env-parse.js";
 
 export type LinkFormat = "url" | "postgresql" | "jdbc" | "vars";
 

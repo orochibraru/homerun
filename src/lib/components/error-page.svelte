@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { dev } from "$app/environment";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { cn } from "#lib/utils.js";
+	import { dev } from "$app/env";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import { Button } from "$lib/components/ui/button";
-	import { title } from "$lib/store/title";
-	import { cn } from "$lib/utils";
 
 	interface Props {
 		normalHeight: boolean;
@@ -61,5 +61,5 @@
     {/if}
   </div>
 
-  <Button href={resolve("/")}>Go home</Button>
+  <Button href={resolve("")}>Go home</Button>
 </div>

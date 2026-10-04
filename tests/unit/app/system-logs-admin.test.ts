@@ -9,14 +9,14 @@ import {
 } from "bun:test";
 import { restoreStubs, stub } from "../support/stub";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,
 }));
 
 mock.module("$app/paths", () => ({
-	resolve: (path: string) => path,
+	resolve: (path: string) => (path.startsWith("/") ? path : `/${path}`),
 }));
 
 let streamed = false;
@@ -68,6 +68,13 @@ function locals(isAdmin: boolean) {
 	return { isAdmin, user: { id: "u1" } };
 }
 
+const signedOut = { isAdmin: false, user: null };
+
+/** A route event carrying only `locals`, the one field these routes read. */
+function event(eventLocals: object): never {
+	return { locals: eventLocals } as never;
+}
+
 describe("system logs access", () => {
 	test("a developer can't stream a stack container's logs", async () => {
 		streamed = false;
@@ -107,9 +114,10 @@ describe("system logs access", () => {
 	});
 
 	test("the page load sends a developer home", async () => {
-		await expect(
-			pageRoute.load({ locals: locals(false) }),
-		).rejects.toMatchObject({ location: "/", status: 302 });
+		await expect(pageRoute.load(event(locals(false)))).rejects.toMatchObject({
+			location: "/",
+			status: 302,
+		});
 	});
 
 	test("the page load lists app errors with their service name for an admin", async () => {
@@ -127,7 +135,7 @@ describe("system logs access", () => {
 			},
 		]);
 		stub(ServiceDTO, "list", async () => [{ id: "svc-1", name: "Dashy" }]);
-		const result = await pageRoute.load({ locals: locals(true) });
+		const result = await pageRoute.load(event(locals(true)));
 		expect(result.appLogs).toMatchObject([
 			{ id: "log-1", message: "boom", serviceName: "Dashy" },
 		]);
@@ -140,12 +148,13 @@ describe("system logs access", () => {
 		});
 		const spy = spyOn(console, "log").mockImplementation(() => undefined);
 		await expect(
-			pageRoute.actions.clearAppLogs({ locals: locals(false) }),
+			pageRoute.actions.clearAppLogs(event(locals(false))),
 		).rejects.toMatchObject({ location: "/", status: 302 });
 		expect(cleared).toEqual([]);
-		expect(
-			await pageRoute.actions.clearAppLogs({ locals: locals(true) }),
-		).toEqual({ action: "clearAppLogs", success: true });
+		expect(await pageRoute.actions.clearAppLogs(event(locals(true)))).toEqual({
+			action: "clearAppLogs",
+			success: true,
+		});
 		expect(cleared).toEqual([undefined]);
 		spy.mockRestore();
 	});
@@ -172,17 +181,15 @@ describe("Traefik actions", () => {
 
 	const run = (
 		name: keyof typeof pageRoute.actions,
-		eventLocals: ReturnType<typeof locals> | { isAdmin: boolean; user: null },
-	): Promise<unknown> =>
-		pageRoute.actions[name]({
-			locals: eventLocals,
-		});
+		eventLocals: object,
+	): Promise<unknown> => pageRoute.actions[name](event(eventLocals));
 
 	test("signed out is sent to sign in, a developer home, and nothing runs", async () => {
 		for (const name of ["restartTraefik", "updateTraefik"] as const) {
-			await expect(
-				run(name, { isAdmin: false, user: null }),
-			).rejects.toMatchObject({ location: "/auth/sign-in", status: 302 });
+			await expect(run(name, signedOut)).rejects.toMatchObject({
+				location: "/auth/sign-in",
+				status: 302,
+			});
 			await expect(run(name, locals(false))).rejects.toMatchObject({
 				location: "/",
 				status: 302,

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 /**
  * The one genuinely client-side-interactive flow every other suite in this

@@ -1,11 +1,10 @@
-import { json } from "@sveltejs/kit";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
-import { nextCronRun } from "$lib/services/cron/cron-expression";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
+import { nextCronRun } from "#lib/services/cron/cron-expression.js";
 
 export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const paged = await StorageVolumeDTO.listPaged(
 		parseApiListQuery(url, ["kind", "backup"]),

@@ -8,11 +8,11 @@
 		Network,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
+	import { getSetupStatus } from "#lib/remote/setup.remote.js";
+	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
-	import { getSetupStatus } from "$lib/remote/setup.remote";
-	import { title } from "$lib/store/title";
 
 	const { data, children } = $props();
 
@@ -58,42 +58,42 @@
 		[
 			{
 				exact: true,
-				href: resolve("/settings"),
+				href: resolve("settings"),
 				icon: Globe,
 				id: "general",
 				label: "General",
 			},
 			{
 				exact: false,
-				href: resolve("/settings/docker"),
+				href: resolve("settings/docker"),
 				icon: Container,
 				id: "docker",
 				label: "Docker",
 			},
 			{
 				exact: false,
-				href: resolve("/settings/networking"),
+				href: resolve("settings/networking"),
 				icon: Network,
 				id: "networking",
 				label: "Networking",
 			},
 			{
 				exact: false,
-				href: resolve("/settings/tls"),
+				href: resolve("settings/tls"),
 				icon: Lock,
 				id: "tls",
 				label: "TLS",
 			},
 			{
 				exact: false,
-				href: resolve("/settings/email"),
+				href: resolve("settings/email"),
 				icon: Mail,
 				id: "email",
 				label: "Email",
 			},
 			{
 				exact: false,
-				href: resolve("/settings/migrate"),
+				href: resolve("settings/migrate"),
 				icon: MoveRight,
 				id: "migrate",
 				label: "Migrate",
@@ -119,17 +119,17 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <div class="mb-8">
+	<div class="mb-8">
     <h1 class="text-text text-lg font-semibold tracking-tight">Settings</h1>
-    <p class="text-text-muted mt-1 text-sm">
+		<p class="text-text-muted mt-1 text-sm">
       Instance-wide configuration : stored in the database and applied live, no
       restart needed. Leave a field blank to fall back to its env-var default
       (shown as the placeholder); env vars still work for anyone bootstrapping
       via docker-compose before ever visiting this page.
-    </p>
-  </div>
+		</p>
+	</div>
 
-  <TabNav active={activeTabId} {tabs} />
+	<TabNav active={activeTabId} tabs={tabs} />
 
-  {@render children()}
+	{@render children()}
 </div>

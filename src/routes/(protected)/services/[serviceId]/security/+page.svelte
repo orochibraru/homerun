@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { invalidateAll } from "$app/navigation";
+	import Alert from "#lib/components/alert.svelte";
+	import LoginWallSection from "#lib/components/login-wall-section.svelte";
+	import { title } from "#lib/store/title.js";
+	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import LoginWallSection from "$lib/components/login-wall-section.svelte";
-	import { title } from "$lib/store/title";
 	import FindingsTable from "./findings-table.svelte";
 	import ScanHistoryTable from "./scan-history-table.svelte";
 	import ScanPanel from "./scan-panel.svelte";
@@ -20,7 +20,7 @@
 		if (!data.scanning) {
 			return;
 		}
-		const timer = setInterval(() => invalidateAll(), POLL_MS);
+		const timer = setInterval(() => refreshAll(), POLL_MS);
 		return () => clearInterval(timer);
 	});
 
@@ -35,16 +35,20 @@
     dashboardOrigin={data.dashboardOrigin}
     emailSignIn={data.emailSignIn}
     oauthProviders={data.oauthProviders}
-    {svc}
+    svc={svc}
     users={data.users}
   />
 
   {#if !data.instanceScanEnabled}
     <Alert title="Image scanning is turned off for this instance." variant="info">
       An admin can turn it back on under
-      <a class="text-accent underline" href={resolve("/settings/docker")}>
-        Settings → Docker
-      </a>.
+
+      <a
+        class="text-accent underline"
+        href={resolve('settings/docker')}
+      >Settings → Docker</a>
+
+      .
     </Alert>
   {:else if !svc.imageScanEnabled}
     <Alert title="Image scanning is turned off for this service." variant="info">
@@ -61,10 +65,10 @@
 
   <ScanPanel
     blockPolicy={data.blockPolicy}
-    {deployed}
+    deployed={deployed}
     isAdmin={data.isAdmin}
-    {latest}
-    {latestOk}
+    latest={latest}
+    latestOk={latestOk}
     scanning={data.scanning}
   />
 

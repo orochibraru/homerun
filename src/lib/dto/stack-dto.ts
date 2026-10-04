@@ -9,21 +9,26 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import { deployment, type Stack, service, stack } from "$lib/server/db/schema";
+import { Logger } from "#lib/logger.js";
+import { db } from "#lib/server/db/lib.js";
+import {
+	deployment,
+	type Stack,
+	service,
+	stack,
+} from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
+} from "#lib/server/list-query.js";
 import {
 	tryRemoveWorkload,
 	WorkloadDetachError,
-} from "$lib/services/docker/workload-removal";
-import { DockerService } from "$lib/services/docker.service";
-import { wouldCycle } from "$lib/stack-tree";
+} from "#lib/services/docker/workload-removal.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { wouldCycle } from "#lib/stack-tree.js";
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
 

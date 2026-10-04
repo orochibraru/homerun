@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { AlertTriangle, Terminal as TerminalIcon } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import WebTerminal from "#lib/components/web-terminal.svelte";
+	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
-	import WebTerminal from "$lib/components/web-terminal.svelte";
-	import { title } from "$lib/store/title";
 
 	const { data } = $props();
 	const svc = $derived(data.service);

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Check, Zap } from "@lucide/svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		available: boolean;

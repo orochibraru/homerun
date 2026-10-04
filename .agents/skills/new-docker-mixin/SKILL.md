@@ -63,10 +63,11 @@ Route handlers, the deploy action, the REST API, the cron scheduler, don't build
 a container/swarm-service create body directly for a full deploy — the
 create-and-roll-out step itself now runs in the Go worker
 (`internal/jobs/deploy/container.go`/`swarm.go`, see `worker.md`), reached only
-through `$lib/services/deploy.service.ts`'s `DeploymentService.deployService()`
-/ `enqueueDeploy()`, which build the worker spec and add deployment-row
-bookkeeping. Only reach for a raw `DockerService` method directly for a
-genuinely standalone operation (start/stop/restart/logs), not a full deploy.
+through `src/lib/services/deploy.service.ts`'s
+`DeploymentService.deployService()` / `enqueueDeploy()`, which build the worker
+spec and add deployment-row bookkeeping. Only reach for a raw `DockerService`
+method directly for a genuinely standalone operation (start/stop/restart/logs),
+not a full deploy.
 
 ## If this needs to work against a Remote Host
 

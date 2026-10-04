@@ -1,8 +1,8 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { config } from "$lib/config";
-import { Logger } from "$lib/logger";
-import { DASHBOARD_ICON_NAME, type IconTheme } from "$lib/service-icon";
+import { config } from "#lib/config.js";
+import { Logger } from "#lib/logger.js";
+import { DASHBOARD_ICON_NAME, type IconTheme } from "#lib/service-icon.js";
 
 export const DASHBOARD_ICONS_CDN =
 	"https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons";

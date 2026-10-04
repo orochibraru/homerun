@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { ListChecks } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { JOB_STATUS_CONFIG, JOB_TYPE_LABELS } from "$lib/constants";
-	import { getJobQueue, type QueuedJob } from "$lib/remote/jobs.remote";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { JOB_STATUS_CONFIG, JOB_TYPE_LABELS } from "#lib/constants.js";
+	import { getJobQueue, type QueuedJob } from "#lib/remote/jobs.remote.js";
 
 	const POLL_MS = 3000;
 

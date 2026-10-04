@@ -1,27 +1,27 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
-import { Logger } from "$lib/logger";
-import { adminApp } from "$lib/server/oauth-app-admin";
+import { config } from "#lib/config.js";
+import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
+import { Logger } from "#lib/logger.js";
+import { adminApp } from "#lib/server/oauth-app-admin.js";
 import {
 	authErrorMessage,
 	OauthAppService,
-} from "$lib/services/oauth-app.service";
+} from "#lib/services/oauth-app.service.js";
 import {
 	OAUTH_TEST_COOKIE,
 	OauthTestService,
-} from "$lib/services/oauth-test.service";
+} from "#lib/services/oauth-test.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("OidcProvider");
 
 export const actions = {
 	toggle: async ({ locals, params }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const app = await OauthClientDTO.get(params.appId);
 		if (!app) {
@@ -61,6 +61,6 @@ export const actions = {
 		logger.info(
 			`OAuth app test sign-in started: client=${app.clientId} user=${locals.user?.id}`,
 		);
-		throw redirect(303, authorizeUrl);
+		throw redirect(303, authorizeUrl, { external: true });
 	},
 };

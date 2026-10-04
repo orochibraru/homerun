@@ -7,28 +7,27 @@
 		Plus,
 		Trash2,
 	} from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import BulkActionBar from "$lib/components/bulk-action-bar.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList from "$lib/components/entity-list.svelte";
+	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
-	} from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import SelectAllRow from "$lib/components/select-all-row.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import VolumeSizeLabel from "$lib/components/volume-size-label.svelte";
-	import { ListSelection } from "$lib/list-selection.svelte";
-	import { BASE_SORTS } from "$lib/list-sorts";
-	import { getVolumeSizes } from "$lib/remote/volume-sizes.remote";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import SelectAllRow from "#lib/components/select-all-row.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import VolumeSizeLabel from "#lib/components/volume-size-label.svelte";
+	import { ListSelection } from "#lib/list-selection.svelte.js";
+	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { getVolumeSizes } from "#lib/remote/volume-sizes.remote.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { enhance, type SubmitFunction } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -144,10 +143,8 @@
         Local volume sources services can mount for persistent or shared data.
       </p>
     </div>
-    <Button href={resolve("/storage/new")}>
-      <Plus class="size-4" />
-      New Volume
-    </Button>
+
+    <Button href={resolve('storage/new')}><Plus class="size-4" />New Volume</Button>
   </div>
 
   {#if data.total === 0 && !data.filtered}
@@ -157,10 +154,7 @@
       title="No storage volumes yet"
     >
       {#snippet children()}
-        <Button href={resolve("/storage/new")}>
-          <Plus class="size-4" />
-          New Volume
-        </Button>
+        <Button href={resolve('storage/new')}><Plus class="size-4" />New Volume</Button>
       {/snippet}
     </EmptyState>
   {:else}
@@ -233,9 +227,12 @@
     {/snippet}
 
     <EntityToolbar
-    sorts={BASE_SORTS} {filters} placeholder="Search volumes by name or source…">
+      sorts={BASE_SORTS}
+      filters={filters}
+      placeholder="Search volumes by name or source…"
+    >
       {#snippet trailing()}
-        <ViewModeToggle {view} />
+        <ViewModeToggle view={view} />
       {/snippet}
     </EntityToolbar>
 
@@ -246,23 +243,23 @@
     {:else}
       <SelectAllRow
         noun="volumes"
-        {selection}
+        selection={selection}
         visibleCount={data.volumes.length}
       />
 
       <EntityList
-        {actions}
+        actions={actions}
         items={data.volumes.map((vol) => ({
           description: vol.description,
           id: vol.id,
           subtitle: `${vol.kind === "bind" ? "bind" : "volume"} · ${vol.source}`,
           title: vol.name,
         }))}
-        {media}
-        {meta}
+        media={media}
+        meta={meta}
         onToggleSelect={(id) => selection.toggle(id)}
         selectedIds={selection.ids}
-        {view}
+        view={view}
       />
 
       <Pagination
@@ -280,7 +277,7 @@
   idField="volumeId"
   label={plural(selection.count)}
   pending={bulkPending}
-  {selection}
+  selection={selection}
   submit={bulkSubmit}
   bind:form={bulkForm}
 >

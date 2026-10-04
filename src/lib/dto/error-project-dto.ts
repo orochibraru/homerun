@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type ErrorProject, errorProject } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/lib.js";
+import { type ErrorProject, errorProject } from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 export type ErrorProjectSettings = Partial<

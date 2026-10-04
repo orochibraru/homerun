@@ -1,26 +1,26 @@
 <script lang="ts">
 	import { GitBranch, Link2, Plus, Trash2, Unlink } from "@lucide/svelte";
 	import { onMount, tick } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList from "$lib/components/entity-list.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
 	import {
 		inputClass as input,
 		labelClass as label,
-	} from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
+	} from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/components/ui/select/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 

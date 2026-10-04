@@ -1,7 +1,7 @@
-import type { BuildMethod } from "$lib/build-methods";
-import type { RemoteExecutionTarget } from "$lib/dto/remote-host-dto";
-import type { Service } from "$lib/server/db/schema";
-import type { PullPolicy } from "$lib/types";
+import type { BuildMethod } from "#lib/build-methods.js";
+import type { RemoteExecutionTarget } from "#lib/dto/remote-host-dto.js";
+import type { Service } from "#lib/server/db/schema.js";
+import type { PullPolicy } from "#lib/types.js";
 
 export interface CacheRegistryCredentials {
 	password: string;

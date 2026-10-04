@@ -1,11 +1,11 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { Logger } from "#lib/logger.js";
+import { APP_VERSION } from "#lib/server/app-version.js";
+import { agentSetupCommands } from "#lib/server/node-install-script.js";
+import { AgentClientService } from "#lib/services/agent-client.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
 import { resolve } from "$app/paths";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { Logger } from "$lib/logger";
-import { APP_VERSION } from "$lib/server/app-version";
-import { agentSetupCommands } from "$lib/server/node-install-script";
-import { AgentClientService } from "$lib/services/agent-client.service";
-import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("RemoteHosts");
 
@@ -96,7 +96,7 @@ export const load = () => ({
 export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const formData = await request.formData();

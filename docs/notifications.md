@@ -59,6 +59,12 @@ unsubscribed from that event, and a successful one clears the error. The test
 button isn't retried. Email channels need SMTP configured first, see
 [Configuration](configuration.md).
 
+The pencil button on a channel edits its name and destination, and turns it off
+or back on: a disabled channel keeps its settings but gets nothing until it's
+enabled again. Saving clears the channel's last delivery error. Its kind can't
+change; remove it and add a new one instead. A Telegram channel's bot token
+field starts blank: leave it blank to keep the stored token.
+
 - **Slack**: create an
   [incoming webhook](https://api.slack.com/messaging/webhooks) for the channel
   and paste its `https://hooks.slack.com/services/…` URL.

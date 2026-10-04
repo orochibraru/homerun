@@ -1,14 +1,14 @@
 import { and, count, desc, eq, type SQL } from "drizzle-orm";
-import type { DestinationType } from "$lib/backup-destinations";
-import { db } from "$lib/server/db/lib";
-import { type S3Destination, s3Destination } from "$lib/server/db/schema";
+import type { DestinationType } from "#lib/backup-destinations.js";
+import { db } from "#lib/server/db/lib.js";
+import { type S3Destination, s3Destination } from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
-import { decryptSecret, encryptSecret } from "$lib/services/secrets";
+} from "#lib/server/list-query.js";
+import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewS3DestinationInput {

@@ -10,7 +10,7 @@ than in this one.
 
 Lives outside `(protected)/`, that group's guard is a page-`load` redirect,
 wrong for a JSON API that should 401 instead. Every handler starts with its own
-`if (!locals.user) return json({error:"Unauthorized"}, {status:401})`;
+`if (!locals.user) return Response.json({error:"Unauthorized"}, {status:401})`;
 `locals.user` is populated for both cookie sessions and `x-api-key`/`Bearer`
 requests by `hooks.server.ts` (see Auth below), so the same handlers serve the
 dashboard's own `fetch` calls and external API-key clients alike.
@@ -18,11 +18,11 @@ dashboard's own `fetch` calls and external API-key clients alike.
 Handlers don't check write permission themselves: `hooks.server.ts` refuses any
 non-GET request from a read-only caller (the `viewer` role or a read-scoped API
 key) with a JSON `403` before the route runs, see `auth.md`'s Read-only role
-section. `$lib/openapi/build.ts` adds that `403` to every non-GET operation
+section. `src/lib/openapi/build.ts` adds that `403` to every non-GET operation
 automatically, so a new write route documents it without a registry entry.
 
 - `services/`, `GET` list, `POST` create (zod-validated body, not the
-  FormData-shaped schema `$lib/server/validation/service.ts`, that one's
+  FormData-shaped schema `src/lib/server/validation/service.ts`, that one's
   checkbox/`envKey[]`/`envValue[]` preprocessing is form-specific).
 - `services/[serviceId]/`, `GET`, `PATCH` (partial update; `registryPassword` in
   the body re-encrypts, omitted means unchanged; changing the git source fields
@@ -53,19 +53,19 @@ automatically, so a new write route documents it without a registry entry.
 - `services/[serviceId]/previews/` (`GET`), `previews/[prNumber]/` (`GET`,
   `DELETE`) and `previews/[prNumber]/promote/` (`POST`, 202
   `{deploymentId, jobId, ...}`), backed by `PreviewApiService`
-  (`$lib/services/preview-api.service.ts`, kept out of `preview.service.ts`),
-  their OpenAPI entries and response schemas in `$lib/openapi/previews.ts`
+  (`src/lib/services/preview-api.service.ts`, kept out of `preview.service.ts`),
+  their OpenAPI entries and response schemas in `src/lib/openapi/previews.ts`
   (spread into `registry.ts`'s `routes`, which is near the `max-lines` limit).
   Promote is `enqueueDeploy({trigger: "promote", rollbackOfDeploymentId})` with
   the _preview's_ current revision as the pointer: `revisionSourceFor` loads it
   unscoped, so the parent reuses the preview's exact image, and
   `enqueueDeploy`'s `note` opens the deployment log with the provenance (no
   schema column). The `promote` trigger is what keeps it from being a rollback:
-  `isRollback` in `$lib/deploy-trigger.ts` (history label and filter, the REST
-  `trigger` field, `#rollbackTarget`'s "itself a rollback" skip) excludes it, so
-  auto-rollback watches it, it dedupes on `promote:<id>`, and its notification
-  is `deploy.*`, not `build.*`. It has to happen before the merge, since the
-  close webhook deletes the preview and cascades its deployment rows;
+  `isRollback` in `src/lib/deploy-trigger.ts` (history label and filter, the
+  REST `trigger` field, `#rollbackTarget`'s "itself a rollback" skip) excludes
+  it, so auto-rollback watches it, it dedupes on `promote:<id>`, and its
+  notification is `deploy.*`, not `build.*`. It has to happen before the merge,
+  since the close webhook deletes the preview and cascades its deployment rows;
   `docs/github-actions-preview-testing.md` promotes then merges for that reason.
   `homerun previews wait` is the CI gate (`PreviewVerdict` in
   `internal/cli/previews.go`).
@@ -87,7 +87,8 @@ automatically, so a new write route documents it without a registry entry.
   (`(protected)/+page.svelte`) now fetches `/api/v1/system-stats` instead.
 - `openapi.json/`, `GET`, public/unauthenticated (the spec describes shapes, not
   data; every documented route still enforces its own auth independently).
-  Serves the OpenAPI 3.1 document built by `$lib/openapi/build.ts`, see below.
+  Serves the OpenAPI 3.1 document built by `src/lib/openapi/build.ts`, see
+  below.
 - `auth-token/`, `DELETE`, revokes the API key that authenticated the request
   itself (`CliAuthService.revokeApiKey`, deletes the `apikey` row directly since
   better-auth's own `POST /api-key/delete` needs a session an API-key-only
@@ -118,58 +119,39 @@ meant as a CI gate. A 409 is followed (its `jobId`) when waiting, fatal
 otherwise. `latest` after the job can in principle be a concurrent deploy's scan
 rather than the queued one, accepted, the job result doesn't carry a scan id.
 
-## Long-running requests and Bun's idle timeout (`$lib/server/long-request.ts`)
+## Long-running requests and Bun's idle timeout (`vite.config.ts`)
 
-**Real, reproduced finding, not a precaution.** `@orochibraru/svelte-smol`'s
-server passes `idleTimeout` to `Bun.serve()`, defaulting to 10s (env
-`IDLE_TIMEOUT`), and Bun applies that to a request that's still being _handled_,
-not just to a genuinely idle socket: a handler that produces no bytes for longer
-than the window has its connection severed mid-flight, and the caller sees a
-bare `ECONNRESET` instead of a response. A GET is transparently retried by most
-clients so it only ever looks slow; a POST is not, so it just fails.
+`@sveltejs/adapter-bun` is configured with `serverOptions: { idleTimeout: 0 }`,
+which turns Bun's per-request idle timeout off server-wide, so no handler needs
+to opt out of it and there is no per-request helper (`allowLongRequest()` and
+`src/lib/server/long-request.ts` are gone, along with every call site).
+`App.Platform` comes from adapter-bun's ambient types (`platform.server` only).
+adapter-bun also clears the timeout for `text/event-stream` responses on its
+own, and `@orochibraru/svelte-smol`'s `IDLE_TIMEOUT` env var no longer exists.
 
-This bit `POST /api/v1/services/<id>/stop`, which awaits `docker stop`, whose
-own SIGKILL grace period is _also_ 10s, so any container that doesn't exit on
-its stop signal promptly lands the request exactly on the boundary. It surfaced
-as an integration test failing in CI on three of four consecutive runs, always
-that same request, always `ECONNRESET`, and never locally: **macOS doesn't
-enforce this the same way** (verified, a 12s handler returns 200 there), which
-is what made it look like test flakiness. Reproduced deliberately in
-`oven/bun:1.4.0` on Linux: with `idleTimeout: 10`, a 15s POST handler fails with
-`ECONNRESET` at ~12s plus Bun's own
-`warn: Bun.serve() timed out a request after 10 seconds`; at 11s it failed
-sometimes and passed others, which is the flakiness itself.
+**Why it's `0`, a real reproduced finding.** Bun's default (10s) applies to a
+request that's still being _handled_, not just to an idle socket: a handler that
+produces no bytes for longer than the window gets its connection severed and the
+caller sees a bare `ECONNRESET`. It bit `POST /api/v1/services/<id>/stop`
+(`docker stop`'s own grace period is also 10s) in CI only, since macOS doesn't
+enforce it the same way.
 
-`allowLongRequest(platform)` (`$lib/server/long-request.ts`) clears the timeout
-for one request via `platform.server.timeout(platform.request, 0)`
-(`App.Platform` was already typed for exactly this in `app.d.ts`). It's a no-op
-under `vite dev`, where `platform` is undefined and the timeout doesn't apply
-anyway. Call it as the _first_ statement of any handler that can legitimately
-outlast the window; it's already wired into the API's
-`deploy`/`stop`/`restart`/`DELETE` handlers, the dashboard actions doing those
-same operations (services list, service Overview, the Settings danger-zone
-delete), and the two long-lived streams that have the same exposure, the Logs
-and Terminal routes — svelte-smol auto-exempts only `text/event-stream`, and
-neither of those is SSE, so a quiet container would otherwise have its stream
-cut at 10s too. `start` is deliberately not wired, it can't reach 10s.
-`tests/unit/app/long-request.test.ts` guards the `0`.
-
-## OpenAPI (`$lib/openapi/`, `$lib/server/validation/api.ts`)
+## OpenAPI (`src/lib/openapi/`, `src/lib/server/validation/api.ts`)
 
 `GET /api/v1/openapi.json` serves a real OpenAPI 3.1 document, generated (not
-hand-written) from `$lib/openapi/build.ts` + `registry.ts`. Request bodies are
-the _actual_ zod schemas that validate each request at runtime
-(`$lib/server/validation/api.ts`,
+hand-written) from `src/lib/openapi/build.ts` + `registry.ts`. Request bodies
+are the _actual_ zod schemas that validate each request at runtime
+(`src/lib/server/validation/api.ts`,
 `createServiceApiBody`/`updateServiceApiBody`/`createStackApiBody`, imported by
 both the route files and `registry.ts`), converted to JSON Schema via zod v4's
 native `z.toJSONSchema()`, one schema instance drives both validation and docs,
 so they can't silently drift apart the way a hand-maintained spec would.
-`$lib/server/validation/api.ts` is deliberately separate from
-`$lib/server/validation/service.ts`, that one's checkbox/`envKey[]`/`envValue[]`
-preprocessing is FormData-specific, these are the JSON-body shapes the REST API
-actually receives.
+`src/lib/server/validation/api.ts` is deliberately separate from
+`src/lib/server/validation/service.ts`, that one's
+checkbox/`envKey[]`/`envValue[]` preprocessing is FormData-specific, these are
+the JSON-body shapes the REST API actually receives.
 
-Response schemas (`$lib/openapi/schemas.ts`) are _hand-mirrored_ from
+Response schemas (`src/lib/openapi/schemas.ts`) are _hand-mirrored_ from
 `src/lib/server/db/schema.ts`'s columns, not generated, every route's response
 is a DTO's `.toJSON()` (the raw DB row), not something validated by a zod schema
 at runtime, so there's no single source of truth to generate from the way there

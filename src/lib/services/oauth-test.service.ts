@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
-import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
-import { OauthClientSecretDTO } from "$lib/dto/oauth-client-secret-dto";
-import { oidcEndpointBase, oidcTestCallback } from "$lib/oidc-provider";
+import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
+import { OauthClientSecretDTO } from "#lib/dto/oauth-client-secret-dto.js";
+import { oidcEndpointBase, oidcTestCallback } from "#lib/oidc-provider.js";
 import { auth } from "./auth.ts";
 
 export const OAUTH_TEST_COOKIE = "homerun-oidc-test";

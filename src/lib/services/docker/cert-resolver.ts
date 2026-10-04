@@ -1,4 +1,4 @@
-import { certificateCovers } from "$lib/tls-certificate";
+import { certificateCovers } from "#lib/tls-certificate.js";
 
 const IPV4_HOST_RE = /(^|\.)\d{1,3}(\.\d{1,3}){3}$/;
 const LOCAL_HOST_RE = /(^|\.)localhost$/;

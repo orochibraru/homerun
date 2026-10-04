@@ -1,9 +1,9 @@
-import { Logger } from "$lib/logger";
+import { Logger } from "#lib/logger.js";
 import {
 	parseImageRef,
 	parseWwwAuthenticate,
 	type WwwAuthenticate,
-} from "$lib/registry-ref";
+} from "#lib/registry-ref.js";
 import type { RegistryAuth } from "./docker/containers.ts";
 
 const logger = new Logger("Docker");

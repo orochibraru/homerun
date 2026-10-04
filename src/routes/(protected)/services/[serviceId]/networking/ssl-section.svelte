@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Check, ShieldCheck } from "@lucide/svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { isUnderDomain } from "#lib/service-domains.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
-	import { isUnderDomain } from "$lib/service-domains";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		baseDomain: string;

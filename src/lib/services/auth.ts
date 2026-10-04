@@ -21,12 +21,10 @@ import {
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { inArray } from "drizzle-orm";
 import { createLocalJWKSet, type JWK, jwtVerify } from "jose";
-import { building, dev } from "$app/environment";
-import { getRequestEvent } from "$app/server";
-import { resolveAdvertisedTokenAuth } from "$lib/auth-providers";
-import { config, isSmtpEnabled } from "$lib/config";
-import { OauthClientSecretDTO } from "$lib/dto/oauth-client-secret-dto";
-import { Logger } from "$lib/logger";
+import { resolveAdvertisedTokenAuth } from "#lib/auth-providers.js";
+import { config, isSmtpEnabled } from "#lib/config.js";
+import { OauthClientSecretDTO } from "#lib/dto/oauth-client-secret-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	mcpAllowed,
 	mcpResource,
@@ -35,14 +33,16 @@ import {
 	type OidcUser,
 	oidcClaimsFor,
 	oidcIssuer,
-} from "$lib/oidc-provider";
-import { passkeyRpId } from "$lib/security-policy";
-import { withDashboardOrigin } from "$lib/server/canonical-origin";
-import { hashClientSecret } from "$lib/server/client-secret";
-import { db } from "$lib/server/db/lib";
-import * as schema from "$lib/server/db/schema";
-import { brandedEmail } from "$lib/server/email-layout";
-import { forgetGateAccess } from "$lib/server/gate-access-cache";
+} from "#lib/oidc-provider.js";
+import { passkeyRpId } from "#lib/security-policy.js";
+import { withDashboardOrigin } from "#lib/server/canonical-origin.js";
+import { hashClientSecret } from "#lib/server/client-secret.js";
+import { db } from "#lib/server/db/lib.js";
+import * as schema from "#lib/server/db/schema.js";
+import { brandedEmail } from "#lib/server/email-layout.js";
+import { forgetGateAccess } from "#lib/server/gate-access-cache.js";
+import { building, dev } from "$app/env";
+import { getRequestEvent } from "$app/server";
 import { AdminService } from "./admin.service.ts";
 import {
 	type DirectAccessScheme,

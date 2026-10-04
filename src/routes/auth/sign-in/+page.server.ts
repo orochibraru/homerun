@@ -1,23 +1,23 @@
 import { redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { PASSWORD_METHOD } from "$lib/auth-providers";
-import { config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
-import { REDIRECT_TO_PARAM, safeRedirectTarget } from "$lib/redirect-target";
-import { passkeyUsableOn } from "$lib/security-policy";
-import { gatedAppFor } from "$lib/server/app-gate-return";
+import { PASSWORD_METHOD } from "#lib/auth-providers.js";
+import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
+import { REDIRECT_TO_PARAM, safeRedirectTarget } from "#lib/redirect-target.js";
+import { passkeyUsableOn } from "#lib/security-policy.js";
+import { gatedAppFor } from "#lib/server/app-gate-return.js";
 import {
 	browserOrigin,
 	offCanonicalOrigin,
-} from "$lib/server/canonical-origin";
-import { AdminService } from "$lib/services/admin.service";
-import { PASSKEY_SIGN_IN } from "$lib/sign-in-methods";
+} from "#lib/server/canonical-origin.js";
+import { AdminService } from "#lib/services/admin.service.js";
+import { PASSKEY_SIGN_IN } from "#lib/sign-in-methods.js";
+import { resolve } from "$app/paths";
 
 export const load = async ({ request, url, locals }) => {
 	const hasUsers = await AdminService.hasAnyUser();
 	if (!hasUsers) {
-		throw redirect(302, resolve("/auth/sign-up"));
+		throw redirect(302, resolve("auth/sign-up"));
 	}
 	const redirectTo = safeRedirectTarget(
 		url.searchParams.get(REDIRECT_TO_PARAM),
@@ -26,7 +26,7 @@ export const load = async ({ request, url, locals }) => {
 		? url.searchParams.get("client_id")
 		: null;
 	if (locals.user && !oauthClientId) {
-		throw redirect(302, redirectTo ?? resolve("/"));
+		throw redirect(302, redirectTo ?? resolve(""));
 	}
 	const canonicalOrigin = offCanonicalOrigin(request, url);
 	const gatedApp = oauthClientId ? null : await gatedAppFor(redirectTo);

@@ -7,8 +7,8 @@
 </script>
 
 <script lang="ts">
-	import { timeAgo } from "$lib/formatting";
-	import { cn } from "$lib/utils";
+	import { timeAgo } from "#lib/formatting.js";
+	import { cn } from "#lib/utils.js";
 
 	const {
 		beats,

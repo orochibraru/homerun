@@ -1,4 +1,4 @@
-import { stackScopedSlug } from "$lib/slug";
+import { stackScopedSlug } from "#lib/slug.js";
 export const DOMAIN_RE =
 	/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 

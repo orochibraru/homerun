@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 const PAGE_NAME = "E2E Status";
 const PAGE_SLUG = "e2e-status";

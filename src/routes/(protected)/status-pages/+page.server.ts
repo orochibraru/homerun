@@ -1,6 +1,6 @@
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StatusPageDTO } from "$lib/dto/status-page-dto";
-import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
+import { UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 
 export const load = async ({ parent }) => {
 	await parent();

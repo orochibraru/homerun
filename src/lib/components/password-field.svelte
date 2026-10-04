@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Eye, EyeOff } from "@lucide/svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 
 	interface Props {
 		autocomplete?: "current-password" | "new-password";

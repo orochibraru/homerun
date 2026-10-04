@@ -1,13 +1,13 @@
 import { error } from "@sveltejs/kit";
+import { config } from "#lib/config.js";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { serviceHostname } from "#lib/services/dns.service.js";
+import { certResolverFor } from "#lib/services/docker/cert-resolver.js";
+import { ancestorIds } from "#lib/stack-tree.js";
 import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { ErrorIssueDTO } from "$lib/dto/error-issue-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { serviceHostname } from "$lib/services/dns.service";
-import { certResolverFor } from "$lib/services/docker/cert-resolver";
-import { ancestorIds } from "$lib/stack-tree";
 
 /**
  * The crumbs standing in for `/services`: the stack trail for a service in a
@@ -19,7 +19,7 @@ function crumbRoot(
 	previewParent: ServiceDTO | null,
 ) {
 	const base = trail.length
-		? [{ href: resolve("/stacks"), label: "Stacks" }, ...trail]
+		? [{ href: resolve("stacks"), label: "Stacks" }, ...trail]
 		: [];
 	if (!previewParent) {
 		return base.length ? base : null;
@@ -27,7 +27,7 @@ function crumbRoot(
 	return [
 		...(base.length
 			? base
-			: [{ href: resolve("/services"), label: "Services" }]),
+			: [{ href: resolve("services"), label: "Services" }]),
 		{
 			href: resolve("/(protected)/services/[serviceId]", {
 				serviceId: previewParent.id,

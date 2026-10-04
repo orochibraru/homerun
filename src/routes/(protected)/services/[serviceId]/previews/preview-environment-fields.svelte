@@ -1,6 +1,6 @@
 <script lang="ts">
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
 
 	interface Props {
 		copyVolumes: boolean;

@@ -1,8 +1,8 @@
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { Logger } from "$lib/logger";
-import { generateSshKeyPair } from "$lib/server/ssh-keys";
-import { WorkerClient, WorkerRequestError } from "$lib/server/worker-client";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { Logger } from "#lib/logger.js";
+import { generateSshKeyPair } from "#lib/server/ssh-keys.js";
+import { WorkerClient, WorkerRequestError } from "#lib/server/worker-client.js";
 import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("MachineTerminal");

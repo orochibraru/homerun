@@ -1,5 +1,5 @@
 import { error } from "@sveltejs/kit";
-import { MachineTerminalService } from "$lib/services/machine-terminal.service";
+import { MachineTerminalService } from "#lib/services/machine-terminal.service.js";
 
 export const load = async ({ params }) => {
 	const machine = await MachineTerminalService.machine(params.machineId);

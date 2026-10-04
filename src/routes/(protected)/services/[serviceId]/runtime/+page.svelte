@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Check, TerminalSquare } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import RuntimeFields from "#lib/components/runtime-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { joinShellWords } from "#lib/shell-words.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import Alert from "$lib/components/alert.svelte";
-	import RuntimeFields from "$lib/components/runtime-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { joinShellWords } from "$lib/shell-words";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);

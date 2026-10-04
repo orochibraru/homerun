@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type CronJobRun, cronJob, cronJobRun } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/lib.js";
+import { type CronJobRun, cronJob, cronJobRun } from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 const MAX_OUTPUT_CHARS = 64_000;

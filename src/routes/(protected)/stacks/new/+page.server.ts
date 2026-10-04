@@ -1,8 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { Logger } from "#lib/logger.js";
+import { stackPath } from "#lib/stack-tree.js";
 import { resolve } from "$app/paths";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { Logger } from "$lib/logger";
-import { stackPath } from "$lib/stack-tree";
 
 const logger = new Logger("Stacks");
 const SLUG_RE = /^[a-z0-9-]{1,63}$/;
@@ -28,7 +28,7 @@ export const load = async ({ parent, url }) => {
 export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const formData = await request.formData();
@@ -69,7 +69,7 @@ export const actions = {
 			303,
 			parentStack
 				? resolve("/(protected)/stacks/[stackId]", { stackId: parentStack.id })
-				: resolve("/stacks"),
+				: resolve("stacks"),
 		);
 	},
 };

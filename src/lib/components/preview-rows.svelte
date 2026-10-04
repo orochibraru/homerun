@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Bird, GitPullRequest } from "@lucide/svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
+	import type { PreviewRow } from "#lib/service-graph.js";
+	import type { ContainerStatus } from "#lib/types.js";
 	import { resolve } from "$app/paths";
-	import StatusBadge from "$lib/components/status-badge.svelte";
-	import type { PreviewRow } from "$lib/service-graph";
-	import type { ContainerStatus } from "$lib/types";
 
 	interface Props {
 		class?: string;

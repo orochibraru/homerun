@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { Pencil, Trash2 } from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
 	import { tick } from "svelte";
-	import { enhance } from "$app/forms";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import { timeAgo } from "$lib/formatting";
-	import { ROLE_OPTIONS, roleLabel } from "$lib/permissions";
-	import { enhanceToast } from "$lib/toast";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { ROLE_OPTIONS, roleLabel } from "#lib/permissions.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance, type SubmitFunction } from "$app/forms";
 
 	interface Props {
 		isSelf: boolean;

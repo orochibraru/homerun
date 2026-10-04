@@ -1,13 +1,13 @@
-import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { hostOf, providerForGitUrl } from "$lib/git-clone-url";
+import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { hostOf, providerForGitUrl } from "#lib/git-clone-url.js";
 import {
 	type CheckTarget,
 	inferProviderKind,
 	providerApiBase,
 	repoPathFromGitUrl,
 	StatusCheckClient,
-} from "$lib/status-checks";
+} from "#lib/status-checks.js";
 import { GitProviderService } from "./git-provider.service.ts";
 
 function embeddedToken(gitUrl: string): string | null {

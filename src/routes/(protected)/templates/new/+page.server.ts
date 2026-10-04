@@ -1,20 +1,20 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { TemplateDTO } from "$lib/dto/template-dto";
-import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
-import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
-import { Logger } from "$lib/logger";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
+import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
+import { Logger } from "#lib/logger.js";
 import {
 	parseEnvVars,
 	parsePublishedPortsField,
 	updateEnvFilesSchema,
 	updateRuntimeSchema,
-} from "$lib/server/validation/service";
+} from "#lib/server/validation/service.js";
 import {
 	createTemplateSchema,
 	parseTags,
-} from "$lib/server/validation/template";
-import { slugify } from "$lib/slug";
+} from "#lib/server/validation/template.js";
+import { slugify } from "#lib/slug.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Templates");
 
@@ -91,7 +91,7 @@ function parseTemplateForm(fields: Record<string, FormDataEntryValue>) {
 export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const formData = await request.formData();
@@ -145,6 +145,6 @@ export const actions = {
 		);
 
 		logger.info(`Template created: name=${input.name} user=${locals.user.id}`);
-		redirect(303, resolve("/templates"));
+		redirect(303, resolve("templates"));
 	},
 };

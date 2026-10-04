@@ -26,7 +26,7 @@ Never render items directly inside the content container.
 
 ```svelte
 <script lang="ts">
-import * as Select from "$lib/components/ui/select";
+import * as Select from "#lib/components/ui/select/index.js";
 </script>
 
 <Select.Content>
@@ -39,7 +39,7 @@ import * as Select from "$lib/components/ui/select";
 
 ```svelte
 <script lang="ts">
-import * as Select from "$lib/components/ui/select";
+import * as Select from "#lib/components/ui/select/index.js";
 </script>
 
 <Select.Content>
@@ -66,7 +66,7 @@ This applies to all group-based components:
 
 ```svelte
 <script lang="ts">
-import * as Alert from "$lib/components/ui/alert";
+import * as Alert from "#lib/components/ui/alert/index.js";
 </script>
 
 <Alert.Root>
@@ -81,8 +81,8 @@ import * as Alert from "$lib/components/ui/alert";
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
-import * as Empty from "$lib/components/ui/empty";
+import { Button } from "#lib/components/ui/button/index.js";
+import * as Empty from "#lib/components/ui/empty/index.js";
 import FolderIcon from "@lucide/svelte/icons/folder";
 </script>
 
@@ -142,7 +142,7 @@ Use `class="sr-only"` if visually hidden.
 
 ```svelte
 <script lang="ts">
-import * as Dialog from "$lib/components/ui/dialog";
+import * as Dialog from "#lib/components/ui/dialog/index.js";
 </script>
 
 <Dialog.Content>
@@ -162,8 +162,8 @@ Use full composition, don't dump everything into `Card.Content`:
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
-import * as Card from "$lib/components/ui/card";
+import { Button } from "#lib/components/ui/button/index.js";
+import * as Card from "#lib/components/ui/card/index.js";
 </script>
 
 <Card.Root>
@@ -186,8 +186,8 @@ Compose with `Spinner` inside `Button` + `disabled`:
 
 ```svelte
 <script lang="ts">
-import { Button } from "$lib/components/ui/button";
-import { Spinner } from "$lib/components/ui/spinner";
+import { Button } from "#lib/components/ui/button/index.js";
+import { Spinner } from "#lib/components/ui/spinner/index.js";
 </script>
 
 <Button disabled>
@@ -205,7 +205,7 @@ Never render `Tabs.Trigger` directly inside `Tabs.Root`, always wrap in
 
 ```svelte
 <script lang="ts">
-import * as Tabs from "$lib/components/ui/tabs";
+import * as Tabs from "#lib/components/ui/tabs/index.js";
 let tab = $state("account");
 </script>
 
@@ -226,7 +226,7 @@ Always include `Avatar.Fallback` for when the image fails to load:
 
 ```svelte
 <script lang="ts">
-import * as Avatar from "$lib/components/ui/avatar";
+import * as Avatar from "#lib/components/ui/avatar/index.js";
 </script>
 
 <Avatar.Root>
@@ -239,8 +239,8 @@ import * as Avatar from "$lib/components/ui/avatar";
 
 ## Use existing components instead of custom markup
 
-| Instead of                                     | Use                                                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `<hr>` or `<div class="border-t">`             | `<Separator />` (`import { Separator } from "$lib/components/ui/separator"`)                |
-| `<div class="animate-pulse">` with styled divs | `<Skeleton class="h-4 w-3/4" />` (`import { Skeleton } from "$lib/components/ui/skeleton"`) |
-| `<span class="rounded-full bg-green-100 ...">` | `<Badge variant="secondary">` (`import { Badge } from "$lib/components/ui/badge"`)          |
+| Instead of                                     | Use                                                                                                  |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `<hr>` or `<div class="border-t">`             | `<Separator />` (`import { Separator } from "#lib/components/ui/separator/index.js"`)                |
+| `<div class="animate-pulse">` with styled divs | `<Skeleton class="h-4 w-3/4" />` (`import { Skeleton } from "#lib/components/ui/skeleton/index.js"`) |
+| `<span class="rounded-full bg-green-100 ...">` | `<Badge variant="secondary">` (`import { Badge } from "#lib/components/ui/badge/index.js"`)          |

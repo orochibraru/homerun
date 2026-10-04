@@ -3,7 +3,7 @@ import {
 	type HighlightLanguage,
 	languageFor,
 	loadHighlighter,
-} from "$lib/highlight";
+} from "#lib/highlight.js";
 
 describe("languageFor", () => {
 	test("maps extensions, Dockerfiles and dotfiles", () => {

@@ -7,16 +7,16 @@
 		DESTINATION_TYPES,
 		type DestinationSummary,
 		type DestinationType,
-	} from "$lib/backup-destinations";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Input } from "$lib/components/ui/input/index.js";
+	} from "#lib/backup-destinations.js";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	} from "#lib/components/ui/select/index.js";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
 
 	const CUSTOM = "custom";
 

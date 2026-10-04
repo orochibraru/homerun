@@ -1,14 +1,14 @@
-import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
+import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
 import {
 	dependencyMap,
 	linkKeys,
 	mergeDependencies,
 	toGraphService,
 	toPreviewRow,
-} from "$lib/service-graph";
-import { descendantIds } from "$lib/stack-tree";
+} from "#lib/service-graph.js";
+import { descendantIds } from "#lib/stack-tree.js";
 
 export const load = async ({ params, parent }) => {
 	await parent();

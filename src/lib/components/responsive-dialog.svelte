@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import type { HTMLFormAttributes } from "svelte/elements";
-	import type { ButtonVariant } from "$lib/components/ui/button";
+	import type { ButtonVariant } from "#lib/components/ui/button/index.js";
 
 	export type DialogSize = "sm" | "md" | "lg" | "fullscreen";
 
@@ -41,10 +41,10 @@
 
 <script lang="ts">
 import { enhance } from "$app/forms";
-import { Button, buttonVariants } from "$lib/components/ui/button";
-import * as Dialog from "$lib/components/ui/dialog/index.js";
-import * as Drawer from "$lib/components/ui/drawer/index";
-import { cn } from "$lib/utils";
+import { Button, buttonVariants } from "#lib/components/ui/button/index.js";
+import * as Dialog from "#lib/components/ui/dialog/index.js";
+import * as Drawer from "#lib/components/ui/drawer/index.js";
+import { cn } from "#lib/utils.js";
 import type { Snippet } from "svelte";
 import { MediaQuery } from "svelte/reactivity";
 

@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
-import { branchPatternProblem } from "$lib/preview-branches";
-import { environmentNameField } from "$lib/server/validation/environment-name";
-import { DOMAIN_RE } from "$lib/service-domains";
-import { isRunAsUser } from "$lib/service-runtime";
-import { UPDATE_CHANNELS } from "$lib/update-channel";
+import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "#lib/build-methods.js";
+import { branchPatternProblem } from "#lib/preview-branches.js";
+import { environmentNameField } from "#lib/server/validation/environment-name.js";
+import { DOMAIN_RE } from "#lib/service-domains.js";
+import { isRunAsUser } from "#lib/service-runtime.js";
+import { UPDATE_CHANNELS } from "#lib/update-channel.js";
 
 const branchPatterns = z
 	.array(z.string().trim().min(1))
@@ -21,7 +21,7 @@ const branchPatterns = z
  * separate from `validation/service.ts`'s FormData-shaped schemas (checkbox/
  * `envKey[]`/`envValue[]` preprocessing that only makes sense for an HTML
  * form submission). These are also the single source of truth the OpenAPI
- * spec (`$lib/openapi/`) is generated from via `z.toJSONSchema()` : the same
+ * spec (`#lib/openapi/`) is generated from via `z.toJSONSchema()` : the same
  * schema instance validates a request *and* documents it, so the two can't
  * drift the way a hand-maintained spec would.
  */

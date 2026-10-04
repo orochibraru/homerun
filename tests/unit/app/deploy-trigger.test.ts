@@ -4,7 +4,7 @@ import {
 	historyTrigger,
 	historyTriggerLabel,
 	isRollback,
-} from "$lib/deploy-trigger";
+} from "#lib/deploy-trigger.js";
 
 describe("historyTrigger", () => {
 	test("a rollback target wins over the job's trigger", () => {

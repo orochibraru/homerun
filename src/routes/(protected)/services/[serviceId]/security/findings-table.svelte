@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ImageScanFinding } from "$lib/image-scan";
+	import type { ImageScanFinding } from "#lib/image-scan.js";
 	import { SEVERITY_CLASS } from "./severity-class";
 
 	interface Props {

@@ -1,7 +1,7 @@
-import { StackDTO } from "$lib/dto/stack-dto";
-import { STACK_SORTS, sortKeysOf } from "$lib/list-sorts";
-import { parseListQuery } from "$lib/server/list-query";
-import { descendantIds, stackPath } from "$lib/stack-tree";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { STACK_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { parseListQuery } from "#lib/server/list-query.js";
+import { descendantIds, stackPath } from "#lib/stack-tree.js";
 
 export const load = async ({ parent, url }) => {
 	const { preferences } = await parent();

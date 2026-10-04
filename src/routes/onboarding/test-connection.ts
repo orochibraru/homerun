@@ -1,6 +1,6 @@
-import type { SubmitFunction } from "@sveltejs/kit";
 import { toast } from "svelte-sonner";
-import { toastError } from "$lib/toast";
+import { toastError } from "#lib/toast.js";
+import type { SubmitFunction } from "$app/forms";
 
 /** Runs a DNS "Test connection" submission through its own promise toast, without `update()`, so nothing typed into the wizard is reset. */
 export const testConnection: SubmitFunction = () => {

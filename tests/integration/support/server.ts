@@ -3,7 +3,7 @@ import { join } from "node:path";
 import process from "node:process";
 import { ciTimeout } from "./ci";
 
-/** The built app's entry point : `@orochibraru/svelte-smol` compiles a single `build/server` binary, the same one `bun run start` runs. */
+/** The built app's entry point : `@sveltejs/adapter-bun` compiles a single `build/server` binary, the same one `bun run start` runs. */
 export const APP_ENTRY = "./build/server";
 
 /**
@@ -49,6 +49,7 @@ export async function spawnApp(options: SpawnAppOptions): Promise<SpawnedApp> {
 			HOMERUN_DISABLE_AUTH_RATE_LIMIT: "1",
 			ORIGIN: options.origin,
 			PORT: String(options.port),
+			SHUTDOWN_TIMEOUT: "2",
 			WORKER_URL: options.workerUrl,
 		},
 		stderr: "pipe",
@@ -108,9 +109,19 @@ export async function spawnApp(options: SpawnAppOptions): Promise<SpawnedApp> {
 		);
 	}
 
+	let stopping = false;
+	void proc.exited.then((code) => {
+		if (!stopping) {
+			console.error(
+				`[integration] App process exited mid-run (code ${code}):\n${logLines.join("").slice(-20_000)}`,
+			);
+		}
+	});
+
 	return {
 		proc,
 		stop: async () => {
+			stopping = true;
 			proc.kill("SIGTERM");
 			await proc.exited;
 		},

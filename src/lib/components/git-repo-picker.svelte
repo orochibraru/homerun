@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown, GitBranch } from "@lucide/svelte";
 	import { untrack } from "svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Command from "$lib/components/ui/command/index.js";
-	import * as Popover from "$lib/components/ui/popover/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { GIT_PROVIDER_KIND_LABELS } from "$lib/git-provider-kinds";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Command from "#lib/components/ui/command/index.js";
+	import * as Popover from "#lib/components/ui/popover/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { GIT_PROVIDER_KIND_LABELS } from "#lib/git-provider-kinds.js";
 	import {
 		hasDockerfile,
 		listProviderRepos,
-	} from "$lib/remote/git-repos.remote";
-	import type { GitProviderKind } from "$lib/server/db/schema";
-	import type { GitRepo } from "$lib/services/git-provider.service";
+	} from "#lib/remote/git-repos.remote.js";
+	import type { GitProviderKind } from "#lib/server/db/schema.js";
+	import type { GitRepo } from "#lib/services/git-provider.service.js";
 
 	interface ConnectedProvider {
 		id: string;

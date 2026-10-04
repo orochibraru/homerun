@@ -7,7 +7,7 @@ import {
 	setSystemTime,
 	test,
 } from "bun:test";
-import type { CancelledJob } from "$lib/dto/job-dto";
+import type { CancelledJob } from "#lib/dto/job-dto.js";
 import { restoreStubs, stub } from "../support/stub";
 
 interface FakeJob {
@@ -41,7 +41,7 @@ function fakeJob(overrides: Partial<FakeJob> = {}): FakeJob {
 	};
 }
 
-mock.module("$app/environment", () => ({ building: false, dev: false }));
+mock.module("$app/env", () => ({ building: false, dev: false }));
 
 const cancelDependents = mock(
 	async (_id: string, _reason: string) => [] as CancelledJob[],

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { timeAgo } from "$lib/formatting";
-	import type { ImageScanStatus, SeverityCounts } from "$lib/image-scan";
+	import { timeAgo } from "#lib/formatting.js";
+	import type { ImageScanStatus, SeverityCounts } from "#lib/image-scan.js";
 
 	interface Props {
 		scans: {

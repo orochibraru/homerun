@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Cpu, HardDrive, MemoryStick } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { getSystemStats } from "$lib/remote/system-stats.remote";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { getSystemStats } from "#lib/remote/system-stats.remote.js";
 
 	const POLL_MS = 5000;
 

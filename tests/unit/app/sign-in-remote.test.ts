@@ -9,7 +9,7 @@ import {
 } from "bun:test";
 import type { z } from "zod";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,
@@ -28,7 +28,7 @@ mock.module("$app/server", () => ({
 	query: remote,
 }));
 
-mock.module("$lib/services/auth", () => ({
+mock.module("#lib/services/auth.js", () => ({
 	auth: {},
 	rebuildAuth: () => undefined,
 }));

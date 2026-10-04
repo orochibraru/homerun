@@ -1,10 +1,9 @@
-import { json } from "@sveltejs/kit";
-import { TemplateDTO } from "$lib/dto/template-dto";
-import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
 
 export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const query = parseApiListQuery(url);
 	const [builtins, custom] = await Promise.all([

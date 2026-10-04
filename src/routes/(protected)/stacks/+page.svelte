@@ -10,25 +10,25 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { onMount, type Snippet, tick } from "svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList, {
+		type EntityRow,
+	} from "#lib/components/entity-list.svelte";
+	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import StackMoveDialog from "#lib/components/stack-move-dialog.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { STACK_SORTS } from "#lib/list-sorts.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList, {
-		type EntityRow,
-	} from "$lib/components/entity-list.svelte";
-	import EntityToolbar from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import StackMoveDialog from "$lib/components/stack-move-dialog.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button";
-	import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { STACK_SORTS } from "$lib/list-sorts";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
 
 	const { data } = $props();
 
@@ -79,10 +79,8 @@
         Group related services together.
       </p>
     </div>
-    <Button href={resolve("/stacks/new")} size="sm">
-      <Plus class="size-4" />
-      New Stack
-    </Button>
+
+    <Button href={resolve('stacks/new')} size="sm"><Plus class="size-4" />New Stack</Button>
   </div>
 
   {#if data.total === 0 && !data.filtered}
@@ -90,17 +88,12 @@
       icon={FolderKanban}
       subtitle="Create one to group related services together."
       title="No stacks yet"
-    >
-      <Button href={resolve("/stacks/new")}>
-        <Plus class="size-4" />
-        New Stack
-      </Button>
-    </EmptyState>
+    ><Button href={resolve('stacks/new')}><Plus class="size-4" />New Stack</Button></EmptyState>
   {:else}
     <EntityToolbar
     sorts={STACK_SORTS} placeholder="Search stacks by name…">
       {#snippet trailing()}
-        <ViewModeToggle {view} />
+        <ViewModeToggle view={view} />
       {/snippet}
     </EntityToolbar>
 
@@ -178,10 +171,10 @@
           id: stack.id,
           title: stack.path,
         }))}
-        {media}
-        {meta}
-        {view}
-        {wrapper}
+        media={media}
+        meta={meta}
+        view={view}
+        wrapper={wrapper}
       />
 
       <Pagination

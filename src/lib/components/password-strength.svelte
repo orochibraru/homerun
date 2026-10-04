@@ -2,7 +2,7 @@
 	import {
 		getPasswordStrength,
 		getPasswordStrengthMeta,
-	} from "$lib/formatting";
+	} from "#lib/formatting.js";
 
 	interface Props {
 		password: string;

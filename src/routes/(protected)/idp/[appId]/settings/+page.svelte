@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { AlertTriangle, SlidersHorizontal, Trash2 } from "@lucide/svelte";
 	import { untrack } from "svelte";
-	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import OauthAppFields, {
 		type OauthAppFieldValues,
-	} from "$lib/components/oauth-app-fields.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/oauth-app-fields.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	const { data, form } = $props();
 

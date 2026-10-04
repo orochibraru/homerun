@@ -1,4 +1,4 @@
-import type { CleanupItem } from "$lib/services/docker.service";
+import type { CleanupItem } from "#lib/services/docker.service.js";
 
 export type CleanupAction =
 	| "pruneBuildCache"

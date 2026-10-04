@@ -1,6 +1,6 @@
-import type { JobDTO } from "$lib/dto/job-dto";
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
+import type { JobDTO } from "#lib/dto/job-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
 import { STACK_NETWORK_PREFIX } from "../../docker/networks.ts";
 import { ImageMirrorGcService } from "../../image-mirror-gc.service.ts";
 import { RevisionService } from "../../revision.service.ts";

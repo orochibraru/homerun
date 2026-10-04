@@ -8,7 +8,7 @@ import {
 	test,
 } from "bun:test";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,
@@ -18,7 +18,7 @@ const refreshToken = mock(
 	async (_input: { body: { accountId: string; userId: string } }) => ({}),
 );
 
-mock.module("$lib/services/auth", () => ({
+mock.module("#lib/services/auth.js", () => ({
 	auth: { api: { refreshToken } },
 	rebuildAuth: () => undefined,
 }));

@@ -1,11 +1,11 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { config } from "#lib/config.js";
+import { DnsConnectionDTO } from "#lib/dto/dns-connection-dto.js";
+import { DnsManagedRecordDTO } from "#lib/dto/dns-managed-record-dto.js";
+import { DomainDTO } from "#lib/dto/domain-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseDomainForm } from "#lib/server/validation/dns-forms.js";
 import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { DnsConnectionDTO } from "$lib/dto/dns-connection-dto";
-import { DnsManagedRecordDTO } from "$lib/dto/dns-managed-record-dto";
-import { DomainDTO } from "$lib/dto/domain-dto";
-import { Logger } from "$lib/logger";
-import { parseDomainForm } from "$lib/server/validation/dns-forms";
 
 const logger = new Logger("DNS");
 
@@ -36,10 +36,10 @@ export const load = async () => {
 export const actions = {
 	addDomain: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const parsed = parseDomainForm(await request.formData(), true);
 		if (parsed.error !== null) {
@@ -67,10 +67,10 @@ export const actions = {
 
 	deleteDomain: async ({ locals, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const domain = await DomainDTO.get(
 			String((await request.formData()).get("domainId") ?? ""),

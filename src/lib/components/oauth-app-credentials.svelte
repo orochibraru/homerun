@@ -1,6 +1,6 @@
 <script lang="ts">
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import { labelClass } from "$lib/components/form-styles";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import { labelClass } from "#lib/components/form-styles.js";
 
 	const {
 		clientId,

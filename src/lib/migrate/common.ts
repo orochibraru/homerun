@@ -6,9 +6,9 @@ import {
 	type ComposeVolumeDraft,
 	parseComposeFile,
 	slugifyComposeKey,
-} from "$lib/compose-import";
-import { parseDotEnv } from "$lib/env-parse";
-import { splitImageRef } from "$lib/image-ref";
+} from "#lib/compose-import.js";
+import { parseDotEnv } from "#lib/env-parse.js";
+import { splitImageRef } from "#lib/image-ref.js";
 
 export type MigrationEntryKind = "application" | "compose" | "database";
 

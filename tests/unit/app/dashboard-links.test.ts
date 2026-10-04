@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,

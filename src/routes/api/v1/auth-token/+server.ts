@@ -1,5 +1,4 @@
-import { json } from "@sveltejs/kit";
-import { CliAuthService } from "$lib/services/cli-auth.service";
+import { CliAuthService } from "#lib/services/cli-auth.service.js";
 
 /**
  * Revokes the API key that authenticated this very request, `homerun
@@ -11,7 +10,7 @@ import { CliAuthService } from "$lib/services/cli-auth.service";
  */
 export const DELETE = async ({ request, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	const authHeader = request.headers.get("authorization");
@@ -19,7 +18,7 @@ export const DELETE = async ({ request, locals }) => {
 		request.headers.get("x-api-key") ??
 		(authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
 	if (!rawKey) {
-		return json(
+		return Response.json(
 			{
 				error:
 					"Nothing to revoke: this request wasn't authenticated with an API key (x-api-key or Authorization: Bearer).",
@@ -29,5 +28,5 @@ export const DELETE = async ({ request, locals }) => {
 	}
 
 	const revoked = await CliAuthService.revokeApiKey(rawKey, locals.user.id);
-	return json({ success: revoked });
+	return Response.json({ success: revoked });
 };

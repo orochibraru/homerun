@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Plus } from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import OauthEnvironmentCard from "$lib/components/oauth-environment-card.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import OauthEnvironmentCard from "#lib/components/oauth-environment-card.svelte";
 	import OauthEnvironmentFields, {
 		type OauthEnvironmentFieldValues,
-	} from "$lib/components/oauth-environment-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/oauth-environment-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	const { data, form } = $props();
 

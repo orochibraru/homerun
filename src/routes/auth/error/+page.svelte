@@ -2,17 +2,17 @@
 	import { KeyRound } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { goto, invalidateAll } from "$app/navigation";
+	import { authClient, signIn, signOut } from "#lib/auth-client.js";
+	import AuthShell from "#lib/components/auth-shell.svelte";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { clearOauthAttempt, lastOauthAttempt } from "#lib/oauth-attempt.js";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
+	import { goto, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import { authClient, signIn, signOut } from "$lib/auth-client";
-	import AuthShell from "$lib/components/auth-shell.svelte";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { clearOauthAttempt, lastOauthAttempt } from "$lib/oauth-attempt";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -81,7 +81,7 @@
 
 	async function startLink(providerId: string) {
 		const { error } = await authClient.linkSocial({
-			callbackURL: resolve("/profile/security"),
+			callbackURL: resolve("profile/security"),
 			provider: providerId as never,
 		});
 		if (error) {
@@ -141,8 +141,8 @@
 		try {
 			await signOut();
 			clearOauthAttempt();
-			await invalidateAll();
-			await goto(resolve("/auth/sign-in"));
+			await refreshAll();
+			await goto(resolve("auth/sign-in"));
 		} finally {
 			busy = false;
 		}
@@ -162,88 +162,88 @@
   heading={detail.heading}
   subheading={detail.body}
 >
-  {#if code === "account_not_linked"}
-    {#if data.signedInAs}
+	{#if code === "account_not_linked"}
+		{#if data.signedInAs}
       <p class="text-text-subtle mb-4 text-xs">
         Signed in as {data.signedInAs}
       </p>
-      <div class="flex flex-wrap gap-2">
-        {#if linkable}
-          <Button
-            disabled={busy}
-            onclick={() => handleLink(linkable.name, linkable.label)}
-          >
-            <KeyRound class="size-4" />
-            Link {linkable.label} to this account
-          </Button>
-        {:else}
-          {#each data.providers as provider (provider.name)}
-            <Button
-              disabled={busy}
-              onclick={() => handleLink(provider.name, provider.label)}
+			<div class="flex flex-wrap gap-2">
+				{#if linkable}
+					<Button
+						disabled={busy}
+						onclick={() => handleLink(linkable.name, linkable.label)}
+					>
+						<KeyRound class="size-4" />
+						Link {linkable.label} to this account
+					</Button>
+				{:else}
+					{#each data.providers as provider (provider.name)}
+						<Button
+							disabled={busy}
+							onclick={() => handleLink(provider.name, provider.label)}
             >
               <KeyRound class="size-4" />
               Link {provider.label}
             </Button>
-          {/each}
-        {/if}
+					{/each}
+				{/if}
         <Button disabled={busy} onclick={handleSignOut} variant="outline">
           Sign out
         </Button>
-      </div>
-    {:else if linkable}
-      <form
-        class="space-y-4"
+			</div>
+		{:else if linkable}
+			<form
+				class="space-y-4"
         onsubmit={(event) =>
         handleSignInAndLink(event, linkable.name, linkable.label)}
-      >
-        <p class="text-text-subtle text-xs">
+			>
+				<p class="text-text-subtle text-xs">
           Sign in with your existing password and {linkable.label} will be
           connected to that account straight away.
-        </p>
-        <div>
+				</p>
+				<div>
           <label class="text-text mb-1.5 block text-sm font-medium" for="email">
             Email
           </label>
-          <Input
-            autocomplete="email"
-            class="h-10"
-            id="email"
-            required
-            type="email"
-            bind:value={email}
-          />
-        </div>
+					<Input
+						autocomplete="email"
+						class="h-10"
+						id="email"
+						required
+						type="email"
+						bind:value={email}
+					/>
+				</div>
         <PasswordField id="password" label="Password" bind:value={password} />
-        <Button class="h-10 w-full" disabled={busy} type="submit">
-          <KeyRound class="size-4" />
-          Sign in and connect {linkable.label}
-        </Button>
-      </form>
-    {:else}
+				<Button class="h-10 w-full" disabled={busy} type="submit">
+					<KeyRound class="size-4" />
+					Sign in and connect {linkable.label}
+				</Button>
+			</form>
+		{:else}
       <p class="text-text-subtle mb-4 text-xs">
         Sign in with your email and password first, then connect the provider
         from your profile.
       </p>
-      <div class="flex flex-wrap gap-2">
-        <Button href={resolve("/auth/sign-in")}>Sign in</Button>
-        <Button href={resolve("/")} variant="ghost">Go to the dashboard</Button>
-      </div>
-    {/if}
-  {:else}
-    <div class="flex flex-wrap gap-2">
-      <Button href={resolve("/auth/sign-in")}>Back to sign in</Button>
-      {#if data.signedInAs}
+			<div class="flex flex-wrap gap-2">
+				<Button href={resolve('auth/sign-in')}>Sign in</Button>
+				<Button href={resolve("")} variant="ghost">Go to the dashboard</Button>
+			</div>
+		{/if}
+	{:else}
+		<div class="flex flex-wrap gap-2">
+			<Button href={resolve('auth/sign-in')}>Back to sign in</Button>
+			{#if data.signedInAs}
         <Button disabled={busy} onclick={handleSignOut} variant="outline">
           Sign out
         </Button>
-      {:else}
-        <Button href={resolve("/")} variant="ghost">Go to the dashboard</Button>
-      {/if}
-    </div>
-  {/if}
+			{:else}
+				<Button href={resolve("")} variant="ghost">Go to the dashboard</Button>
+			{/if}
+		</div>
+	{/if}
 
-  {#snippet footer()}
-    <span class="text-text-subtle text-xs">code: {code}</span>
-  {/snippet}
+	{#snippet footer()}
+		<span class="text-text-subtle text-xs">code: {code}</span>
+	{/snippet}
 </AuthShell>

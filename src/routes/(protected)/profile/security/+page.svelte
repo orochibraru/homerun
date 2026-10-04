@@ -9,20 +9,20 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { authClient } from "$lib/auth-client";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import PasskeyPanel from "$lib/components/passkey-panel.svelte";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import SetPasswordPanel from "$lib/components/set-password-panel.svelte";
-	import TwoFactorPanel from "$lib/components/two-factor-panel.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { authClient } from "#lib/auth-client.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import PasskeyPanel from "#lib/components/passkey-panel.svelte";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import SetPasswordPanel from "#lib/components/set-password-panel.svelte";
+	import TwoFactorPanel from "#lib/components/two-factor-panel.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		getPasswordStrength,
 		getPasswordStrengthMeta,
-	} from "$lib/formatting";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
+	} from "#lib/formatting.js";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
 	import ConnectedAccountsSection from "./connected-accounts-section.svelte";
 	import DeleteAccountDialog from "./delete-account-dialog.svelte";
 

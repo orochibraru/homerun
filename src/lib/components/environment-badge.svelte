@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { environmentLabel } from "$lib/release-channels";
+	import { environmentLabel } from "#lib/release-channels.js";
 
 	const { environment }: { environment: string } = $props();
 

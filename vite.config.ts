@@ -1,5 +1,5 @@
 import process from "node:process";
-import adapter from "@orochibraru/svelte-smol";
+import adapter from "@sveltejs/adapter-bun";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
@@ -63,16 +63,12 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes("node_modules") ? undefined : true,
 			},
-			adapter: adapter(),
+			adapter: adapter({
+				buildOptions: { compile: true, sourcemap: "none" },
+				serverOptions: { idleTimeout: 0 },
+			}),
 			csrf: { trustedOrigins: ["*"] },
 			experimental: {
-				// Enables src/instrumentation.server.ts, which the svelte-smol
-				// adapter loads before the rest of the compiled server bundle.
-				// Used here purely to force reflect-metadata to initialise first,
-				// see that file.
-				instrumentation: {
-					server: true,
-				},
 				remoteFunctions: true,
 			},
 		}),
@@ -91,15 +87,21 @@ export default defineConfig({
 		target: "es2022",
 		cssMinify: true,
 		reportCompressedSize: false,
-		rollupOptions: {
-			output: {
-				manualChunks(id) {
-					if (id.includes("node_modules/svelte")) {
-						return "svelte";
-					}
-					if (id.includes("node_modules")) {
-						return "vendor";
-					}
+	},
+	environments: {
+		client: {
+			build: {
+				rollupOptions: {
+					output: {
+						manualChunks(id) {
+							if (id.includes("node_modules/svelte")) {
+								return "svelte";
+							}
+							if (id.includes("node_modules")) {
+								return "vendor";
+							}
+						},
+					},
 				},
 			},
 		},

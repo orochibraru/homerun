@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Globe, Pencil, Plus, Server, Trash2 } from "@lucide/svelte";
 	import { untrack } from "svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { enhanceToast } from "$lib/toast";
 	import DomainLinkFields from "../../domain-link-fields.svelte";
 	import RecordForm from "./record-form.svelte";
 

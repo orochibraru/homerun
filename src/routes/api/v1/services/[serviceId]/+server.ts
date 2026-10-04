@@ -1,29 +1,27 @@
-import { json } from "@sveltejs/kit";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "$lib/host-access";
-import { Logger } from "$lib/logger";
-import { normalizeEnvironmentName } from "$lib/release-channels";
-import { invalidateGatedService } from "$lib/server/gated-service-cache";
-import { allowLongRequest } from "$lib/server/long-request";
-import { updateServiceApiBody } from "$lib/server/validation/api";
-import { normalizeDomains } from "$lib/service-domains";
-import { DeploymentService } from "$lib/services/deploy.service";
-import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
-import { DockerService } from "$lib/services/docker.service";
-import { GitWebhookService } from "$lib/services/git-webhook.service";
-import { PreviewService } from "$lib/services/preview.service";
-import { encryptSecret } from "$lib/services/secrets";
-import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "#lib/host-access.js";
+import { Logger } from "#lib/logger.js";
+import { normalizeEnvironmentName } from "#lib/release-channels.js";
+import { invalidateGatedService } from "#lib/server/gated-service-cache.js";
+import { updateServiceApiBody } from "#lib/server/validation/api.js";
+import { normalizeDomains } from "#lib/service-domains.js";
+import { DeploymentService } from "#lib/services/deploy.service.js";
+import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { GitWebhookService } from "#lib/services/git-webhook.service.js";
+import { PreviewService } from "#lib/services/preview.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
+import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
 
 const logger = new Logger("API");
 
 export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	// Real, tested-in-review finding, from this app's own integration test
 	// suite (tests/integration/) : unlike the dashboard's own
@@ -38,24 +36,24 @@ export const GET = async ({ params, locals }) => {
 	if (svc.containerId || svc.swarmServiceId) {
 		await DockerService.syncServiceStatus(svc.id);
 		const fresh = await ServiceDTO.get(params.serviceId);
-		return json((fresh ?? svc).toJSON());
+		return Response.json((fresh ?? svc).toJSON());
 	}
-	return json(svc.toJSON());
+	return Response.json(svc.toJSON());
 };
 
 export const PATCH = async ({ params, request, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 
 	const body = await request.json().catch(() => null);
 	const result = updateServiceApiBody.safeParse(body);
 	if (!result.success) {
-		return json(
+		return Response.json(
 			{ error: "Invalid request body", issues: result.error.flatten() },
 			{ status: 400 },
 		);
@@ -68,14 +66,14 @@ export const PATCH = async ({ params, request, locals }) => {
 		rest.domains = normalizeDomains(rest.domains);
 		const taken = await ServiceDTO.domainTaken(rest.domains, svc.id);
 		if (taken) {
-			return json(
+			return Response.json(
 				{ error: `${taken} is already routed to another service.` },
 				{ status: 409 },
 			);
 		}
 	}
 	if (!locals.isAdmin && hostAccessChanged(svc.toJSON(), rest)) {
-		return json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
+		return Response.json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
 	}
 
 	const previousWebhook = {
@@ -107,17 +105,16 @@ export const PATCH = async ({ params, request, locals }) => {
 	logger.info(
 		`Service updated via API: service=${svc.id} user=${locals.user.id}`,
 	);
-	return json(svc.toJSON());
+	return Response.json(svc.toJSON());
 };
 
-export const DELETE = async ({ params, locals, platform, url }) => {
-	allowLongRequest(platform);
+export const DELETE = async ({ params, locals, url }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
-		return json({ error: "Not found" }, { status: 404 });
+		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 
 	const force = url.searchParams.get("force") === "true";
@@ -126,7 +123,7 @@ export const DELETE = async ({ params, locals, platform, url }) => {
 		await ServiceLifecycleService.deleteService(svc, { deleteVolumes, force });
 	} catch (error) {
 		if (error instanceof WorkloadDetachError) {
-			return json({ error: error.message }, { status: 409 });
+			return Response.json({ error: error.message }, { status: 409 });
 		}
 		throw error;
 	}

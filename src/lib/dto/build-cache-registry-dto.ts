@@ -1,16 +1,16 @@
 import { and, count, desc, eq, type SQL } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type BuildCacheRegistry,
 	buildCacheRegistry,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
-import { decryptSecret, encryptSecret } from "$lib/services/secrets";
+} from "#lib/server/list-query.js";
+import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewBuildCacheRegistryInput {

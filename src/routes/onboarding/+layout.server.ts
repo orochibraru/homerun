@@ -1,7 +1,7 @@
 import { redirect } from "@sveltejs/kit";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { AdminService } from "#lib/services/admin.service.js";
 import { resolve } from "$app/paths";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { AdminService } from "$lib/services/admin.service";
 
 export const load = async ({ locals }) => {
 	if (!locals.user) {
@@ -17,7 +17,7 @@ export const load = async ({ locals }) => {
 	const onboardingDone = settings.onboardingComplete;
 
 	if (onboardingDone) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 
 	return {

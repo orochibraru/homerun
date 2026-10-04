@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { appearanceCss, PALETTES } from "$lib/palettes";
+import { appearanceCss, PALETTES } from "#lib/palettes.js";
 
 describe("appearanceCss", () => {
 	test("is empty for the built-in default", () => {

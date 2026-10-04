@@ -1,4 +1,4 @@
-import { BackupRunDTO } from "$lib/dto/backup-run-dto";
+import { BackupRunDTO } from "#lib/dto/backup-run-dto.js";
 import { S3BackupService } from "../../s3-backup.service.ts";
 import { backupRestoreJobPayload } from "../payloads.ts";
 import { finishRun, jobVolume, withRun } from "./backup.ts";

@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { ArrowLeft, Container, Database, Layers } from "@lucide/svelte";
 	import type { Component } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import type {
 		MigrationEntryKind,
 		MigrationFormState,
-	} from "$lib/migrate/common";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/migrate/common.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const {
 		form,
@@ -74,11 +74,8 @@
 
 <a
   class="text-text-muted hover:text-text mb-4 inline-flex items-center gap-1.5 text-sm"
-  href={resolve("/settings/migrate")}
->
-  <ArrowLeft class="size-3.5" />
-  All sources
-</a>
+  href={resolve('settings/migrate')}
+><ArrowLeft class="size-3.5" />All sources</a>
 
 {#if form?.result}
   <Alert
@@ -97,9 +94,11 @@
       </ul>
     {/if}
     {#snippet actions()}
-      <Button href={resolve("/services")} size="sm" variant="outline">
-        Go to services
-      </Button>
+      <Button
+        href={resolve('services')}
+        size="sm"
+        variant="outline"
+      >Go to services</Button>
     {/snippet}
   </Alert>
 {/if}
@@ -186,7 +185,7 @@
 
   {#if preview}
     {#each selectedIds as id (id)}
-      <input name="ids" type="hidden" value={id}>
+      <input name="ids" type="hidden" value={id} />
     {/each}
     <section class="panel rounded-md">
       <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">

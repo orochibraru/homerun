@@ -1,6 +1,6 @@
-import { oauthMethod } from "$lib/auth-providers";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
+import { oauthMethod } from "#lib/auth-providers.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 
 export const load = async ({ parent }) => {
 	await parent();

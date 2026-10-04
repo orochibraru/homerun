@@ -1,6 +1,6 @@
 import { asc, desc, ilike, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from "$lib/list-sorts";
+import { DEFAULT_PER_PAGE, PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
 
 export { DEFAULT_PER_PAGE };
 

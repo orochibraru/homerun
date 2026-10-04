@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { redirectApiBody } from "$lib/server/validation/api";
+import { redirectApiBody } from "#lib/server/validation/api.js";
 import type { ParamDef, RouteDef } from "./registry";
 import { errorResponse, successResponse } from "./schemas";
 

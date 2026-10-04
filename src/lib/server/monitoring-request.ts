@@ -3,7 +3,7 @@ import {
 	isMonitoringRange,
 	isTimeZone,
 	type MonitoringRange,
-} from "$lib/monitoring-ranges";
+} from "#lib/monitoring-ranges.js";
 
 /** The range an monitoring page asks for (`?range=`, a week by default) and the viewer's time zone from the `tz` cookie (UTC until the page has set it). */
 export function monitoringRequest(

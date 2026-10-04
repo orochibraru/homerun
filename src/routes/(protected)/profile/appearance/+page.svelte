@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { setMode } from "mode-watcher";
 	import { onMount, untrack } from "svelte";
-	import { enhance } from "$app/forms";
-	import SurfacePreview from "$lib/components/surface-preview.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import SurfacePreview from "#lib/components/surface-preview.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { PER_PAGE_OPTIONS } from "$lib/list-sorts";
-	import { PALETTES } from "$lib/palettes";
-	import { title } from "$lib/store/title.js";
-	import { DEFAULT_SURFACE, PRESETS, SURFACE_STYLES } from "$lib/surfaces";
-	import { saveToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
+	import { PALETTES } from "#lib/palettes.js";
+	import { title } from "#lib/store/title.js";
+	import { DEFAULT_SURFACE, PRESETS, SURFACE_STYLES } from "#lib/surfaces.js";
+	import { saveToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	const { data } = $props();
 

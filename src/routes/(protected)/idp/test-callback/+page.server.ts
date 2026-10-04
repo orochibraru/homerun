@@ -1,8 +1,8 @@
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 import {
 	OAUTH_TEST_COOKIE,
 	OauthTestService,
-} from "$lib/services/oauth-test.service";
+} from "#lib/services/oauth-test.service.js";
 
 export const load = async ({ cookies, parent, url }) => {
 	await parent();

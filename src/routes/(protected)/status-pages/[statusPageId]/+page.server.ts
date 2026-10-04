@@ -1,11 +1,11 @@
 import { error, fail, redirect } from "@sveltejs/kit";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
+import { BEAT_WINDOW, UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
+import { dashboardOrigin } from "#lib/server/canonical-origin.js";
+import { statusPageSchema } from "#lib/server/validation/status-page.js";
 import { resolve } from "$app/paths";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { StatusPageDTO } from "$lib/dto/status-page-dto";
-import { BEAT_WINDOW, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
-import { dashboardOrigin } from "$lib/server/canonical-origin";
-import { statusPageSchema } from "$lib/server/validation/status-page";
 
 export const load = async ({ params, parent, request, url }) => {
 	await parent();
@@ -53,7 +53,7 @@ export const load = async ({ params, parent, request, url }) => {
 export const actions = {
 	update: async ({ locals, params, request }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const page = await StatusPageDTO.get(params.statusPageId);
 		if (!page) {
@@ -94,13 +94,13 @@ export const actions = {
 
 	delete: async ({ locals, params }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const page = await StatusPageDTO.get(params.statusPageId);
 		if (!page) {
 			return fail(404, { error: "Status page not found." });
 		}
 		await page.delete();
-		throw redirect(303, resolve("/status-pages"));
+		throw redirect(303, resolve("status-pages"));
 	},
 };

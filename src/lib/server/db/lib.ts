@@ -1,6 +1,6 @@
 import { SQL } from "bun";
 import { type BunSQLDatabase, drizzle } from "drizzle-orm/bun-sql";
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 
 /**
  * Database singleton that survives Vite HMR.

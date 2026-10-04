@@ -1,25 +1,25 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config, isSmtpEnabled } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { Logger } from "$lib/logger";
-import { brandedEmail } from "$lib/server/email-layout";
+import { config, isSmtpEnabled } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { Logger } from "#lib/logger.js";
+import { brandedEmail } from "#lib/server/email-layout.js";
 import {
 	applyAndRebuild,
 	checkbox,
 	nullableText,
-} from "$lib/server/validation/instance-settings-form";
-import { EmailService } from "$lib/services/email.service";
+} from "#lib/server/validation/instance-settings-form.js";
+import { EmailService } from "#lib/services/email.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("InstanceSettings");
 
 export const actions = {
 	sendTest: async ({ locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		if (!isSmtpEnabled()) {
 			return fail(400, {
@@ -54,10 +54,10 @@ export const actions = {
 
 	updateSmtp: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const portRaw = (formData.get("smtpPort") as string | null)?.trim();

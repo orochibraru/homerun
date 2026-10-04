@@ -1,11 +1,11 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { CronJobRunDTO } from "#lib/dto/cron-job-run-dto.js";
+import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { Logger } from "#lib/logger.js";
+import { parseListQuery } from "#lib/server/list-query.js";
+import { enqueueCronJobRun } from "#lib/services/cron-job-queue.js";
 import { resolve } from "$app/paths";
-import { CronJobDTO } from "$lib/dto/cron-job-dto";
-import { CronJobRunDTO } from "$lib/dto/cron-job-run-dto";
-import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
-import { Logger } from "$lib/logger";
-import { parseListQuery } from "$lib/server/list-query";
-import { enqueueCronJobRun } from "$lib/services/cron-job-queue";
 
 const logger = new Logger("CronJob");
 
@@ -36,7 +36,7 @@ export const load = async ({ parent, url }) => {
 export const actions = {
 	delete: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const jobId = formData.get("jobId") as string | null;
@@ -57,7 +57,7 @@ export const actions = {
 
 	runNow: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const jobId = formData.get("jobId") as string | null;

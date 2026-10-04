@@ -1,12 +1,12 @@
-import { config } from "$lib/config";
-import type { DeploymentDTO } from "$lib/dto/deployment-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
-import type { StackDTO } from "$lib/dto/stack-dto";
-import { RELEASE_ENV } from "$lib/error-tracking/dsn";
-import { cloneFailureHint } from "$lib/git-clone-url";
-import { splitImageRef } from "$lib/image-ref";
-import { runtimeOptionsFrom } from "$lib/service-runtime";
-import { stackScopedSlug } from "$lib/slug";
+import { config } from "#lib/config.js";
+import type { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
+import type { StackDTO } from "#lib/dto/stack-dto.js";
+import { RELEASE_ENV } from "#lib/error-tracking/dsn.js";
+import { cloneFailureHint } from "#lib/git-clone-url.js";
+import { splitImageRef } from "#lib/image-ref.js";
+import { runtimeOptionsFrom } from "#lib/service-runtime.js";
+import { stackScopedSlug } from "#lib/slug.js";
 import {
 	VOLUME_HELPER_IMAGE,
 	VOLUME_HELPER_TAG,

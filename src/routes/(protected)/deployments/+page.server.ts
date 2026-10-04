@@ -1,8 +1,8 @@
-import { historyTrigger } from "$lib/deploy-trigger";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { deploymentEnvironments } from "$lib/release-channels";
-import { parseListQuery } from "$lib/server/list-query";
-import { formatDuration } from "$lib/services/notification-messages";
+import { historyTrigger } from "#lib/deploy-trigger.js";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { deploymentEnvironments } from "#lib/release-channels.js";
+import { parseListQuery } from "#lib/server/list-query.js";
+import { formatDuration } from "#lib/services/notification-messages.js";
 
 export const load = async ({ parent, url }) => {
 	const { preferences } = await parent();

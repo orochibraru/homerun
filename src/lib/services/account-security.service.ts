@@ -4,9 +4,9 @@ import {
 	type SecurityRequirement,
 	type UserSecurityState,
 	unmetSecurityRequirements,
-} from "$lib/security-policy";
-import { db } from "$lib/server/db/lib";
-import { account, passkey, user } from "$lib/server/db/schema";
+} from "#lib/security-policy.js";
+import { db } from "#lib/server/db/lib.js";
+import { account, passkey, user } from "#lib/server/db/schema.js";
 
 export interface PasskeySummary {
 	backedUp: boolean;

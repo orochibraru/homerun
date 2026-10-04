@@ -1,6 +1,5 @@
-import { json } from "@sveltejs/kit";
-import { buildOpenApiDocument } from "$lib/openapi/build";
-import { browserOrigin } from "$lib/server/canonical-origin";
+import { buildOpenApiDocument } from "#lib/openapi/build.js";
+import { browserOrigin } from "#lib/server/canonical-origin.js";
 
 /**
  * Public on purpose (no auth check) : the spec itself doesn't expose any
@@ -8,4 +7,4 @@ import { browserOrigin } from "$lib/server/canonical-origin";
  * Every documented route still enforces its own auth independently.
  */
 export const GET = ({ request, url }) =>
-	json(buildOpenApiDocument(browserOrigin(request, url)));
+	Response.json(buildOpenApiDocument(browserOrigin(request, url)));

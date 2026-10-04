@@ -8,31 +8,31 @@
 		Power,
 		RotateCcw,
 	} from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
+
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import BulkActionBar from "$lib/components/bulk-action-bar.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import CopyButton from "$lib/components/copy-button.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList from "$lib/components/entity-list.svelte";
+	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import CopyButton from "#lib/components/copy-button.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
-	} from "$lib/components/entity-toolbar.svelte";
-	import ErrorLevelBadge from "$lib/components/error-level-badge.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import SelectAllRow from "$lib/components/select-all-row.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { sdkSnippets } from "$lib/error-tracking/snippets";
-	import { timeAgo } from "$lib/formatting";
-	import { ListSelection } from "$lib/list-selection.svelte";
-	import { title } from "$lib/store/title";
-	import { enhanceToast, saveToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
+	} from "#lib/components/entity-toolbar.svelte";
+	import ErrorLevelBadge from "#lib/components/error-level-badge.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SelectAllRow from "#lib/components/select-all-row.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { sdkSnippets } from "#lib/error-tracking/snippets.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { ListSelection } from "#lib/list-selection.svelte.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast, saveToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
+	import { enhance, type SubmitFunction } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import SourceMapsPanel from "./source-maps-panel.svelte";
 
 	const { data } = $props();
@@ -71,6 +71,7 @@
 					"")
 			: "",
 	);
+
 	const snippets = $derived(
 		sdkSnippets(data.dsns?.public ?? "", serverDsn, !!data.project?.injectEnv),
 	);
@@ -78,7 +79,6 @@
 	const snippet = $derived(
 		snippets.find((candidate) => candidate.id === snippetId) ?? snippets[0],
 	);
-
 	let toggling = $state(false);
 	let rotateOpen = $state(false);
 	let rotateForm = $state<HTMLFormElement | null>(null);
@@ -230,10 +230,13 @@
           />
           <div class="flex flex-wrap items-center gap-2 md:col-span-2">
             <Button size="sm" type="submit">Save</Button>
-            <Button onclick={() => (rotateOpen = true)} size="sm" type="button" variant="ghost">
-              <KeyRound class="size-3.5" />
-              Rotate key
-            </Button>
+
+            <Button
+              onclick={() => rotateOpen = true}
+              size="sm"
+              type="button"
+              variant="ghost"
+            ><KeyRound class="size-3.5" />Rotate key</Button>
           </div>
         </form>
         <form
@@ -254,7 +257,7 @@
             <div class="flex flex-wrap gap-1.5">
               {#each snippets as candidate (candidate.id)}
                 <Button
-                  onclick={() => (snippetId = candidate.id)}
+                  onclick={() => snippetId = candidate.id}
                   size="sm"
                   type="button"
                   variant={candidate.id === snippet.id ? "default" : "outline"}
@@ -281,7 +284,11 @@
     <SourceMapsPanel releases={data.sourceMaps ?? []} serviceId={data.service.id} />
 
     <section class="space-y-3">
-      <EntityToolbar {filters} placeholder="Search issues by title or culprit…" {sorts} />
+      <EntityToolbar
+        filters={filters}
+        placeholder="Search issues by title or culprit…"
+        sorts={sorts}
+      />
 
       {#if data.issues && data.issues.total === 0 && !data.filtered}
         <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
@@ -318,20 +325,24 @@
           {/if}
         {/snippet}
 
-        <SelectAllRow noun="issues" {selection} visibleCount={issues.length} />
+        <SelectAllRow
+          noun="issues"
+          selection={selection}
+          visibleCount={issues.length}
+        />
 
         <EntityList
-          {badge}
+          badge={badge}
           items={issues.map((issue) => ({
             href: issueHref(issue.id),
             id: issue.id,
             subtitle: issue.culprit,
             title: issue.title,
           }))}
-          {meta}
+          meta={meta}
           onToggleSelect={(id) => selection.toggle(id)}
           selectedIds={selection.ids}
-          {view}
+          view={view}
         />
 
         {#if data.issues}
@@ -352,13 +363,13 @@
   idField="issueId"
   label={plural(selection.count)}
   pending={bulkPending}
-  {selection}
+  selection={selection}
   submit={bulkSubmit}
 >
   <Button
     disabled={bulkPending}
     name="status"
-    onclick={() => (bulkStatus = "resolved")}
+    onclick={() => bulkStatus = "resolved"}
     size="sm"
     type="submit"
     value="resolved"
@@ -370,7 +381,7 @@
   <Button
     disabled={bulkPending}
     name="status"
-    onclick={() => (bulkStatus = "ignored")}
+    onclick={() => bulkStatus = "ignored"}
     size="sm"
     type="submit"
     value="ignored"
@@ -382,7 +393,7 @@
   <Button
     disabled={bulkPending}
     name="status"
-    onclick={() => (bulkStatus = "unresolved")}
+    onclick={() => bulkStatus = "unresolved"}
     size="sm"
     type="submit"
     value="unresolved"

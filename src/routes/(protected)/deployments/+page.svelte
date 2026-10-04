@@ -1,21 +1,24 @@
 <script lang="ts">
 	import { ChevronRight, History } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { invalidateAll } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
+	import DeployLogPanel from "#lib/components/deploy-log-panel.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
-	} from "$lib/components/entity-toolbar.svelte";
-	import EnvironmentBadge from "$lib/components/environment-badge.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import StatusBadge from "$lib/components/status-badge.svelte";
-	import { SERVICE_STATUS_CONFIG } from "$lib/constants";
-	import { HISTORY_TRIGGERS, historyTriggerLabel } from "$lib/deploy-trigger";
-	import { timeAgo } from "$lib/formatting";
-	import { environmentLabel } from "$lib/release-channels";
-	import { title } from "$lib/store/title";
+	} from "#lib/components/entity-toolbar.svelte";
+	import EnvironmentBadge from "#lib/components/environment-badge.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
+	import { SERVICE_STATUS_CONFIG } from "#lib/constants.js";
+	import {
+		HISTORY_TRIGGERS,
+		historyTriggerLabel,
+	} from "#lib/deploy-trigger.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { environmentLabel } from "#lib/release-channels.js";
+	import { title } from "#lib/store/title.js";
+	import { refreshAll } from "$app/navigation";
+	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -35,7 +38,7 @@
 		) {
 			return;
 		}
-		const timer = setInterval(() => invalidateAll(), 3000);
+		const timer = setInterval(() => refreshAll(), 3000);
 		return () => clearInterval(timer);
 	});
 
@@ -90,7 +93,7 @@
     />
   {:else}
     <EntityToolbar
-      {filters}
+      filters={filters}
       placeholder="Search by service, image, git ref, commit or error…"
     />
 
@@ -139,7 +142,7 @@
                     <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
                       <a
                         class="text-text hover:text-accent font-medium"
-                        href="{resolve('/services')}/{dep.serviceId}/revisions?deployment={dep.id}"
+                        href="{resolve('services')}/{dep.serviceId}/revisions?deployment={dep.id}"
                         onclick={(event) => event.stopPropagation()}
                       >
                         {dep.serviceName}
@@ -167,7 +170,11 @@
                     {dep.imageRef ?? "—"}
                   {/if}
                 </td>
-                <td class="text-text-muted hidden px-4 py-3 md:table-cell">{dep.userName ?? "—"}</td>
+
+                <td
+                  class="text-text-muted hidden px-4 py-3 md:table-cell"
+                >{dep.userName ?? "—"}</td>
+
                 <td
                   class="text-text-muted hidden px-4 py-3 whitespace-nowrap md:table-cell"
                   title={new Date(dep.startedAt).toLocaleString()}

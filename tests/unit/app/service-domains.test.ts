@@ -9,7 +9,7 @@ import {
 	renderPreviewDomain,
 	rewriteHostnames,
 	serviceHostnames,
-} from "$lib/service-domains";
+} from "#lib/service-domains.js";
 
 const base = "example.com";
 const svc = {

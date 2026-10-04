@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Clock } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import MonitoringView from "#lib/components/monitoring/monitoring-view.svelte";
+	import ServiceBreakdownTable from "#lib/components/monitoring/service-breakdown.svelte";
+	import ServiceUsageTable from "#lib/components/service-usage-table.svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
-	import MonitoringView from "$lib/components/monitoring/monitoring-view.svelte";
-	import ServiceBreakdownTable from "$lib/components/monitoring/service-breakdown.svelte";
-	import ServiceUsageTable from "$lib/components/service-usage-table.svelte";
-	import StatusBadge from "$lib/components/status-badge.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { title } from "$lib/store/title";
 
 	const { data } = $props();
 
@@ -49,7 +49,7 @@
     </div>
   </div>
 
-  <ServiceUsageTable {serviceIds} title="Resource usage" />
+  <ServiceUsageTable serviceIds={serviceIds} title="Resource usage" />
 </div>
 
 <div class="panel rounded-xl">
@@ -68,7 +68,7 @@
       {#each data.recentDeployments as dep (dep.id)}
         <a
           class="hover:bg-surface-2 flex items-center gap-3 px-4 py-2.5 transition-colors"
-          href="{resolve('/services')}/{dep.serviceId}"
+          href="{resolve('services')}/{dep.serviceId}"
         >
           <StatusBadge status={dep.status} />
           <span class="text-text min-w-0 flex-1 truncate text-sm">

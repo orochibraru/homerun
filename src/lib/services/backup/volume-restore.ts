@@ -1,8 +1,8 @@
-import type { ServiceDTO } from "$lib/dto/service-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { Logger } from "$lib/logger";
-import type { RestoreMode } from "$lib/restore-modes";
-import { slugify } from "$lib/slug";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { Logger } from "#lib/logger.js";
+import type { RestoreMode } from "#lib/restore-modes.js";
+import { slugify } from "#lib/slug.js";
 import { enqueueVolumeBackup, enqueueVolumeRestore } from "../backup-queue.ts";
 import { DeploymentService } from "../deploy.service.ts";
 import type { RestoreOptions } from "../s3-backup.service.ts";

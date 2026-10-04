@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { promotePreviewApiBody } from "$lib/server/validation/api";
+import { promotePreviewApiBody } from "#lib/server/validation/api.js";
 import type { RouteDef } from "./registry";
 import { errorResponse, successResponse } from "./schemas";
 

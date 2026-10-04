@@ -1,24 +1,26 @@
 <script lang="ts">
 	import { TriangleAlert } from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
-	import { enhance } from "$app/forms";
-	import { page } from "$app/state";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { getReleaseStatus } from "$lib/remote/self-update.remote";
-	import { getSetupStatus } from "$lib/remote/setup.remote";
-	import { RESOURCE_KINDS, RESOURCE_LABELS } from "$lib/resource-thresholds";
-	import { nextPasskeyRpId, strandedPasskeyCount } from "$lib/security-policy";
-	import { enhanceToast, saveToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import { getReleaseStatus } from "#lib/remote/self-update.remote.js";
+	import { getSetupStatus } from "#lib/remote/setup.remote.js";
+	import { RESOURCE_KINDS, RESOURCE_LABELS } from "#lib/resource-thresholds.js";
+	import {
+		nextPasskeyRpId,
+		strandedPasskeyCount,
+	} from "#lib/security-policy.js";
+	import { enhanceToast, saveToast } from "#lib/toast.js";
+	import { enhance, type SubmitFunction } from "$app/forms";
+	import { page } from "$app/state";
 	import ResourceIncidents from "./resource-incidents.svelte";
 
 	const { data } = $props();
@@ -35,18 +37,16 @@
 
 	const derivedOrigin = $derived(
 		data.settings.baseDomain
-			? `${
-					data.settings.authOrigin?.startsWith("http://") ? "http" : "https"
-				}://${data.settings.baseDomain}`
+			? `${data.settings.authOrigin?.startsWith("http://") ? "http" : "https"}://${data.settings.baseDomain}`
 			: null,
 	);
+
 	const originIsDerived = $derived(
 		!data.settings.authOrigin ||
 			(!!data.settings.baseDomain &&
 				(data.settings.authOrigin === `https://${data.settings.baseDomain}` ||
 					data.settings.authOrigin === `http://${data.settings.baseDomain}`)),
 	);
-
 	let baseDomainInput = $derived(data.settings.baseDomain ?? "");
 	let dashboardUrlInput = $derived(
 		originIsDerived ? "" : (data.settings.authOrigin ?? ""),
@@ -114,13 +114,13 @@
           value={data.settings.baseDomain ?? ""}
         />
         <p class="text-text-subtle mt-1.5 text-xs">
-          A bare hostname, e.g. <code class="">example.com</code>
-          or <code class="">app.example.local</code>. Deployed
-          services are routed by Traefik under
-          <code class="">&lt;slug&gt;.{data.settings.baseDomain ??
-          data.envDefaults.baseDomain}</code>, so a port here is never part of
-          that : add one only if this dashboard is reached on a port, and it
-          moves to the Dashboard URL below instead of the routing name.
+          A bare hostname, e.g.
+          <code class="">example.com</code>
+          or
+          <code class="">app.example.local</code>
+          . Deployed services are routed by Traefik under
+          <code class="">&lt;slug&gt;.{data.settings.baseDomain ?? data.envDefaults.baseDomain}</code>
+          , so a port here is never part of that : add one only if this dashboard is reached on a port, and it moves to the Dashboard URL below instead of the routing name.
         </p>
         {#if issueFor("baseDomain")}
           <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -130,14 +130,13 @@
       </div>
       <CheckBox
         checked={data.settings.authOrigin
-        ? data.settings.authOrigin.startsWith("https://")
-        : true}
+          ? data.settings.authOrigin.startsWith("https://")
+          : true}
         helperText={`Origin: ${
           data.settings.authOrigin ??
           (data.settings.baseDomain
-            ? `https://${data.settings.baseDomain}`
-            : (data.envDefaults.authOrigin ?? "derived per-request until a base domain is set"))
-        }`}
+          ? `https://${data.settings.baseDomain}`
+          : data.envDefaults.authOrigin ?? "derived per-request until a base domain is set")}`}
         id="useHttps"
         label="Use HTTPS"
         name="useHttps"
@@ -155,7 +154,7 @@
             dashboardUrlInput = event.currentTarget.value;
           }}
           type="text"
-          value={originIsDerived ? "" : (data.settings.authOrigin ?? "")}
+          value={originIsDerived ? "" : data.settings.authOrigin ?? ""}
         />
         <p class="text-text-subtle mt-1.5 text-xs">
           Where <em>this dashboard</em> is reached, scheme and port included.

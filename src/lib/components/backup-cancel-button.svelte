@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { CircleStop } from "@lucide/svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		kind: string;

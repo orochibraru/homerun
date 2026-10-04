@@ -27,7 +27,7 @@ homerun worker's own in-process struct for the other two build kinds) carries an
 optional `Credential` (`{username, token}`) that `deploy/helpers.ts`'s
 `resolveGitCredential` fills, since the agent has no access to the git-provider
 tables. `authenticatedCloneURL` and `redactCloneURL` (`internal/agent/git.go`)
-are the only implementation left of what `$lib/git-clone-url.ts` used to also
+are the only implementation left of what `src/lib/git-clone-url.ts` used to also
 carry (`authenticatedCloneUrl`/`redactCloneUrl`, deleted from the app once
 nothing there called them anymore), and every log line and error message goes
 through the redaction so a token can't reach the deployment log.
@@ -358,7 +358,7 @@ new one prints `1000`). See each folder's own README for the full detail; this
 section is the pointer.
 
 Agent mode is a selectable build-server connection kind
-(`remote_host.kind: "agent"`, `$lib/services/agent-client.service.ts`'s
+(`remote_host.kind: "agent"`, `src/lib/services/agent-client.service.ts`'s
 `AgentClientService`, see Build servers above for the wiring) — the field still
 says `"agent"`, since that names the _role_ a registered host plays, not which
 binary serves it. The installer stays standalone tooling (it's not imported by
@@ -392,7 +392,7 @@ own runtime).
   `assetSuffix()` both just call through to it now, rather than each keeping its
   own hand-written copy. **Wired into the main app**: `remote_host.kind`
   (`"docker"` | `"agent"`) + `agentUrl`/`agentTokenEnc` (schema.ts),
-  `AgentClientService` (`$lib/services/agent-client.service.ts`, a thin HTTP
+  `AgentClientService` (`src/lib/services/agent-client.service.ts`, a thin HTTP
   client over `build`/`stats`/`health`), and the Remote Hosts "new host" form's
   connection-type toggle; `deploy/worker-spec.ts`'s `buildServerSpec` embeds the
   resolved target's kind in the deploy spec, and `internal/jobs/deploy/build.go`
@@ -410,15 +410,15 @@ own runtime).
   build-tool script and checksums the homerun worker runs in either mode; golden
   files under `tests/unit/go/internal/agent/testdata/*.json` plus
   `tests/unit/app/agent-builder-parity.test.ts` (on the app side, now only
-  checking `$lib/build-methods` against `builder-tools.json`'s method list and
-  bake defaults, the form options the app still owns) keep the two from drifting
-  on what the UI offers versus what the builder accepts. Env var renames from
-  the standalone-agent era, no compat shim: `AGENT_TOKEN` → `WORKER_TOKEN`,
-  `AGENT_TOKEN_FILE` → `WORKER_TOKEN_FILE`, `PORT` → `WORKER_PORT`,
-  `AGENT_SHUTDOWN_TIMEOUT` gone (agent mode's shutdown grace is now the fixed
-  `agentShutdownGrace`, 120s). Any existing remote host running the old
-  standalone agent needs reinstalling and re-registering, there's no migration
-  path for its token.
+  checking `src/lib/build-methods` against `builder-tools.json`'s method list
+  and bake defaults, the form options the app still owns) keep the two from
+  drifting on what the UI offers versus what the builder accepts. Env var
+  renames from the standalone-agent era, no compat shim: `AGENT_TOKEN` →
+  `WORKER_TOKEN`, `AGENT_TOKEN_FILE` → `WORKER_TOKEN_FILE`, `PORT` →
+  `WORKER_PORT`, `AGENT_SHUTDOWN_TIMEOUT` gone (agent mode's shutdown grace is
+  now the fixed `agentShutdownGrace`, 120s). Any existing remote host running
+  the old standalone agent needs reinstalling and re-registering, there's no
+  migration path for its token.
 - **`cmd/installer/`**, a single-binary installer
   (`internal/installer/installer.go`) meant to be the target of a `curl | bash`
   one-liner (`cmd/installer/bootstrap.sh`) on a fresh Linux server.
@@ -468,10 +468,10 @@ own runtime).
   `homerun.yaml` no longer carries its own `auth.origin` so those two can't
   disagree. **Real, reported bug this fixes**: the old `http://localhost:3000`
   default didn't just produce wrong absolute URLs, it made a fresh instance
-  impossible to sign up to. With `ORIGIN` set, SvelteKit normalizes `event.url`
-  to it, so better-auth derives its `baseURL`, and therefore its trusted
-  origins, from `localhost` while the browser's `Origin` header is the real
-  address, and `POST /api/v1/auth/sign-up/email` 403s with `Invalid origin`.
+  impossible to sign up to. With `ORIGIN` set, the adapter pins `event.url` to
+  it, so better-auth derives its `baseURL`, and therefore its trusted origins,
+  from `localhost` while the browser's `Origin` header is the real address, and
+  `POST /api/v1/auth/sign-up/email` 403s with `Invalid origin`.
   `compose.prod.yaml` (the manual Option B path, where nothing can detect an
   address) makes `ORIGIN` required with `${ORIGIN:?...}` instead, the same
   fail-closed shape `AUTH_SECRET` already used.
@@ -592,7 +592,41 @@ Three audiences, three places, keep them apart:
   are all gone. Don't reintroduce a docs site under `cmd/` or elsewhere in this
   repo.
 
-## Self-update from the sidebar (`$lib/services/self-update.service.ts`, `$lib/remote/self-update.remote.ts`, `app-version.svelte`)
+## The app's build and server (`vite.config.ts`, `@sveltejs/adapter-bun`)
+
+- **No `svelte.config.js`.** SvelteKit's config lives in `vite.config.ts`'s
+  `sveltekit({...})`. `tsconfig.json` extends `$app/tsconfig` with
+  `"include": ["src", "tests", "*"]`, so tests and root config files are
+  type-checked by `bun run check`. There is no `experimental.instrumentation`
+  option any more: kit 3 loads `src/instrumentation.server.ts` on its own.
+- **Adapter.** `@sveltejs/adapter-bun` with
+  `buildOptions: { compile: true, sourcemap: "none" }` still compiles one
+  standalone `build/server` (`bun run start` runs it).
+  `serverOptions: { idleTimeout: 0 }` is covered in `api-and-cli.md`.
+  `App.Platform` comes from the adapter's ambient types.
+- **Patched adapter.** adapter-bun has no runtime `ORIGIN` (kit 3 made it
+  build-time `paths.origin`), so `patches/@sveltejs%2Fadapter-bun@1.0.0.patch`
+  (bun `patchedDependencies`) makes it read `ORIGIN` at runtime and keep a
+  remote-function call's own origin when its `Origin` header names the request's
+  host, see "Remote functions" in `services-and-templates.md`.
+- **Chunks.** The `manualChunks` vendor split lives under
+  `environments.client.build` in `vite.config.ts`, client-only: an SSR-wide
+  split broke adapter-bun's chunk layout.
+- **Shutdown.** adapter-bun doesn't exit the process after its SIGTERM drain, so
+  `init` in `hooks.server.ts` does
+  `process.once("sveltekit:shutdown", () => process.exit(0))`. The drain itself
+  is `SHUTDOWN_TIMEOUT` (30s default); the integration suite sets it to 2.
+- **Image healthcheck.** adapter-bun ships no healthcheck binary and no
+  `/_health` endpoint. `/app/build/healthcheck` in the image is
+  `tools/docker/healthcheck.sh` (busybox `wget`, honours `HOST`, `PORT` and
+  `HEALTHCHECK_PATH`, default `/api/health`), kept at that path because
+  self-update's updater `docker exec`s it with `HEALTHCHECK_PATH=/api/v1/ready`
+  (see below).
+- **Migration gotcha.** `sv migrate sveltekit-3` has a parser bug: a `</script>`
+  inside a TS string literal in a file it rewrites fails with "Unterminated
+  string constant".
+
+## Self-update from the sidebar (`src/lib/services/self-update.service.ts`, `src/lib/remote/self-update.remote.ts`, `app-version.svelte`)
 
 The sidebar prints the running version for everyone; admins also get a "vX is
 available" notice that opens the update dialog. All of it loads through remote
@@ -600,7 +634,7 @@ queries (`getAppVersion`, `getReleaseStatus`, `getUpdatePreflight`) and one
 `startSelfUpdate` command, so the layout never waits on GitHub or Docker.
 
 **The version is `HOMERUN_APP_VERSION`, falling back to `package.json`**
-(`$lib/server/app-version.ts`). Reading `package.json` alone is always one
+(`src/lib/server/app-version.ts`). Reading `package.json` alone is always one
 release behind in a published image: `orochibraru/releaser` bumps it in the
 `release` job, after the image was built, and the promote path retags a PR image
 that was built before the merge. So `docker.yaml` takes an `app_version` input
@@ -676,40 +710,43 @@ canaries.
 Then `docker compose -p <project> "$@" pull`, and the safety net, before
 `up -d --no-deps` for the app and its worker companions only. Real finding that
 motivated it: a canary whose auth layer threw on every request still passed the
-image's `/_health` (the adapter answers that before any hook runs), got swapped
-in, and took the instance and every gated site down. The updater backs up every
-file it may rewrite (`<file>.homerun-rollback`) before touching them, then
-starts the new image as `homerun-update-candidate` through
-`docker compose run -d --no-deps` (so it gets the service's own env, volumes and
-networks, but no published port) with `HOMERUN_CANDIDATE=1` and
-`traefik.enable=false`, on the app's own port so the login wall's `homerun-auth`
-alias can move to it: once it's ready the updater reconnects it to the Homerun
-network with that alias, keeps it through `up -d`, and removes it only after the
-new app answers (see the self-update 500s in `auth.md`). `HOMERUN_CANDIDATE`
-makes `init()` stop right after auth is built: no job worker, schedulers,
-orchestration apply or core-services watch, which would recreate Traefik next to
-the live app. `wait_ready` polls `/api/v1/ready` (settings row +
-`auth.api.getSession`, the path the bug broke) through the image's own
-`/app/build/healthcheck` binary with `HEALTHCHECK_PATH`, via `docker exec`,
-since the updater isn't on the app's network. A failed candidate restores the
-files and exits 1 without recreating anything. After `up -d`, the same check
-runs against the new app container, and a failure there restores the files and
-runs `up -d` again on the old tag, which is still pulled locally. The candidate
-does run the new migrations on the live database; they're additive, and the old
-version keeps working on them. On the app side, `start()` then follows the
-updater (`#watchUpdater`): if it exits and this process is still alive, the
-update didn't take, so the job hold is lifted and an `update_failed`
-notification names the last `==>` line; after 30 minutes it lifts the hold
-regardless. **Never Traefik, Postgres or anything outside the project**: Traefik
-carries flags the app applies at runtime (swarm provider, ACME email, custom
-SSL) that a compose recreate would drop, and the Newt tunnel is a bare container
-or swarm service with no compose labels, which `--no-deps` without
-`--remove-orphans` can't touch. The script is exercised under a real `sh`
-against a fake `docker` in `tests/unit/app/self-update.test.ts` (the
-hand-written case skips on macOS, whose BSD `sed -i` differs from the updater's
-busybox one), and `docker:cli` does ship the compose plugin. **Not verified**: a
-real end-to-end update on an installed instance, and the CI changes above
-(nothing here can run GitHub Actions).
+image's old `/_health` (the previous adapter answered it before any hook ran;
+adapter-bun has no such endpoint), got swapped in, and took the instance and
+every gated site down. The updater backs up every file it may rewrite
+(`<file>.homerun-rollback`) before touching them, then starts the new image as
+`homerun-update-candidate` through `docker compose run -d --no-deps` (so it gets
+the service's own env, volumes and networks, but no published port) with
+`HOMERUN_CANDIDATE=1` and `traefik.enable=false`, on the app's own port so the
+login wall's `homerun-auth` alias can move to it: once it's ready the updater
+reconnects it to the Homerun network with that alias, keeps it through `up -d`,
+and removes it only after the new app answers (see the self-update 500s in
+`auth.md`). `HOMERUN_CANDIDATE` makes `init()` stop right after auth is built:
+no job worker, schedulers, orchestration apply or core-services watch, which
+would recreate Traefik next to the live app. `wait_ready` polls `/api/v1/ready`
+(settings row + `auth.api.getSession`, the path the bug broke) through the
+image's own `/app/build/healthcheck` (`tools/docker/healthcheck.sh`, a busybox
+`wget` script honouring `HOST`, `PORT` and `HEALTHCHECK_PATH`, default
+`/api/health`, kept at that path for exactly this) with
+`HEALTHCHECK_PATH=/api/v1/ready`, via `docker exec`, since the updater isn't on
+the app's network. A failed candidate restores the files and exits 1 without
+recreating anything. After `up -d`, the same check runs against the new app
+container, and a failure there restores the files and runs `up -d` again on the
+old tag, which is still pulled locally. The candidate does run the new
+migrations on the live database; they're additive, and the old version keeps
+working on them. On the app side, `start()` then follows the updater
+(`#watchUpdater`): if it exits and this process is still alive, the update
+didn't take, so the job hold is lifted and an `update_failed` notification names
+the last `==>` line; after 30 minutes it lifts the hold regardless. **Never
+Traefik, Postgres or anything outside the project**: Traefik carries flags the
+app applies at runtime (swarm provider, ACME email, custom SSL) that a compose
+recreate would drop, and the Newt tunnel is a bare container or swarm service
+with no compose labels, which `--no-deps` without `--remove-orphans` can't
+touch. The script is exercised under a real `sh` against a fake `docker` in
+`tests/unit/app/self-update.test.ts` (the hand-written case skips on macOS,
+whose BSD `sed -i` differs from the updater's busybox one), and `docker:cli`
+does ship the compose plugin. **Not verified**: a real end-to-end update on an
+installed instance, and the CI changes above (nothing here can run GitHub
+Actions).
 
 **The hold is in memory, not a DB column**, on purpose: it lives exactly as long
 as the process that's about to be replaced, so the new container boots with the

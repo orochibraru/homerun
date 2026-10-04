@@ -1,7 +1,7 @@
 import { and, gte, inArray, lt, min, sql } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type TrafficSample, trafficSample } from "$lib/server/db/schema";
-import type { TrafficCounters } from "$lib/traffic-metrics";
+import { db } from "#lib/server/db/lib.js";
+import { type TrafficSample, trafficSample } from "#lib/server/db/schema.js";
+import type { TrafficCounters } from "#lib/traffic-metrics.js";
 import { BaseDTO } from "./base-dto";
 
 /** Traffic rows older than this are pruned: a year of history, like the resource samples. */

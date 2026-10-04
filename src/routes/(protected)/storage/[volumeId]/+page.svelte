@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { Check, CloudUpload } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ScheduleField from "$lib/components/schedule-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import ScheduleField from "#lib/components/schedule-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import RestorePanel from "./restore-panel.svelte";
 	import RunLogTable from "./run-log-table.svelte";
 
@@ -164,9 +164,12 @@
           {#if data.destinations.length === 0}
             <p class="text-xs text-text-muted">
               No destinations configured yet.
-              <a class="text-accent underline" href={resolve("/s3-destinations")}>
-                Add one
-              </a>
+
+              <a
+                class="text-accent underline"
+                href={resolve('s3-destinations')}
+              >Add one</a>
+
               first.
             </p>
           {:else}
@@ -234,7 +237,7 @@
 
   {#if vol.s3DestinationId}
     <RestorePanel
-      {destinationName}
+      destinationName={destinationName}
       volumeId={vol.id}
       volumeName={vol.name}
     />

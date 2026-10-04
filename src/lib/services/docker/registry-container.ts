@@ -1,4 +1,4 @@
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 import { certResolverFor } from "./cert-resolver.ts";
 import {
 	MIRROR_AUTH_ENV,

@@ -1,20 +1,20 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { ResourceIncidentDTO } from "$lib/dto/resource-incident-dto";
-import { Logger } from "$lib/logger";
-import { parseAlertTiming } from "$lib/resource-incidents";
-import { parseThresholds } from "$lib/resource-thresholds";
-import { passkeyRpId } from "$lib/security-policy";
-import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
+import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { ResourceIncidentDTO } from "#lib/dto/resource-incident-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseAlertTiming } from "#lib/resource-incidents.js";
+import { parseThresholds } from "#lib/resource-thresholds.js";
+import { passkeyRpId } from "#lib/security-policy.js";
+import { normalizeBaseDomain } from "#lib/server/validation/base-domain.js";
 import {
 	applyAndRebuild,
 	checkbox,
 	nullableText,
-} from "$lib/server/validation/instance-settings-form";
-import { AccountSecurityService } from "$lib/services/account-security.service";
-import { isUpdateChannel } from "$lib/update-channel";
+} from "#lib/server/validation/instance-settings-form.js";
+import { AccountSecurityService } from "#lib/services/account-security.service.js";
+import { isUpdateChannel } from "#lib/update-channel.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("InstanceSettings");
 
@@ -39,10 +39,10 @@ export const load = async ({ parent }) => {
 export const actions = {
 	updateCore: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const rawBaseDomain = nullableText(formData, "baseDomain");
@@ -96,10 +96,10 @@ export const actions = {
 
 	updateChannel: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const channel = formData.get("updateChannel");
@@ -119,10 +119,10 @@ export const actions = {
 
 	updateResources: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const parsed = parseThresholds(

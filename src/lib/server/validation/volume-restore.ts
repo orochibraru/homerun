@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RESTORE_MODES } from "$lib/restore-modes";
+import { RESTORE_MODES } from "#lib/restore-modes.js";
 
 const checkbox = z
 	.string()

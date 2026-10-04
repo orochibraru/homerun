@@ -1,4 +1,4 @@
-import { joinShellWords } from "$lib/shell-words";
+import { joinShellWords } from "#lib/shell-words.js";
 
 const RUN_AS_USER_RE = /^[A-Za-z0-9_.-]{1,64}(:[A-Za-z0-9_.-]{1,64})?$/;
 

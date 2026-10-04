@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { deployEnvironment } from "$lib/release-channels";
-import type { Service } from "$lib/server/db/schema";
+import { deployEnvironment } from "#lib/release-channels.js";
+import type { Service } from "#lib/server/db/schema.js";
 
 const argv = z.array(z.string()).nullable();
 

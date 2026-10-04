@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { ArrowLeft, ArrowRight, Plus, Rocket, X } from "@lucide/svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { resolve } from "$app/paths";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 
 	interface Props {
 		currentStep: number;
@@ -31,11 +31,12 @@
       </Button>
     {/if}
   </div>
-  <div class="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
-    <Button href={resolve("/services")} variant="outline">
-      <X class="size-4" />
-      Cancel
-    </Button>
+
+  <div
+    class="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3"
+  >
+    <Button href={resolve('services')} variant="outline"><X class="size-4" />Cancel</Button>
+
     {#if currentStep < stepCount - 1}
       <Button
         onclick={() => {

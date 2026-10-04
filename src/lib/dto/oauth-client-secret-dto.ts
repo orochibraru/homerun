@@ -1,15 +1,15 @@
 import { timingSafeEqual } from "node:crypto";
 import { and, desc, eq, gt, isNull, lt, or } from "drizzle-orm";
-import { CLIENT_SECRET_MARKER } from "$lib/oidc-provider";
+import { CLIENT_SECRET_MARKER } from "#lib/oidc-provider.js";
 import {
 	generateClientSecret,
 	hashClientSecret,
-} from "$lib/server/client-secret";
-import { db } from "$lib/server/db/lib";
+} from "#lib/server/client-secret.js";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type OauthClientSecret,
 	oauthClientSecret,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 export type OauthClientSecretSummary = Omit<OauthClientSecret, "secretHash">;

@@ -1,5 +1,5 @@
-import type { OauthProviderInput } from "$lib/dto/instance-settings-dto";
-import type { OauthTokenAuthMethod } from "$lib/server/db/schema";
+import type { OauthProviderInput } from "#lib/dto/instance-settings-dto.js";
+import type { OauthTokenAuthMethod } from "#lib/server/db/schema.js";
 
 const NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
 

@@ -3,7 +3,7 @@ services:
     restart: unless-stopped
     # Docker's own default is 10s before SIGKILL, which is shorter than the
     # adapter's own graceful-shutdown window (SHUTDOWN_TIMEOUT, 30s default,
-    # see @orochibraru/svelte-smol) : without this, `docker stop` would kill
+    # see @sveltejs/adapter-bun) : without this, `docker stop` would kill
     # the process mid-drain before it ever got the chance to finish
     # gracefully, real requests (a live log stream, an in-progress deploy
     # poll) would still get cut regardless of that adapter fix.
@@ -30,7 +30,7 @@ services:
       interval: 30s
       retries: 3
       start_period: 5s
-      # The svelte-smol adapter ships a self-contained probe binary that hits
-      # GET /_health over loopback, matching the Dockerfile's own HEALTHCHECK.
+      # tools/docker/healthcheck.sh, copied into the image, hits GET
+      # /api/health over loopback, matching the Dockerfile's own HEALTHCHECK.
       test: ["CMD", "/app/build/healthcheck"]
       timeout: 30s

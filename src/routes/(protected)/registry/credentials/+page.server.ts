@@ -1,5 +1,5 @@
-import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
+import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 
 export const load = async () => {
 	const registries = await BuildCacheRegistryDTO.list();

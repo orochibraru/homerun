@@ -1,5 +1,5 @@
-import { verifyGateToken } from "$lib/server/app-gate";
-import { gatedService } from "$lib/server/gated-service-cache";
+import { verifyGateToken } from "#lib/server/app-gate.js";
+import { gatedService } from "#lib/server/gated-service-cache.js";
 
 export const APP_AUTH_PATH = "/app-auth";
 

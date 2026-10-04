@@ -4,12 +4,12 @@
 		formatCount as count,
 		formatMs as ms,
 		formatPercent as percent,
-	} from "$lib/metrics-format";
-	import { monitoringChanges } from "$lib/monitoring-changes";
+	} from "#lib/metrics-format.js";
+	import { monitoringChanges } from "#lib/monitoring-changes.js";
 	import type {
 		MonitoringSummary,
 		ServiceBreakdown,
-	} from "$lib/services/monitoring.service";
+	} from "#lib/services/monitoring.service.js";
 	import ChangeBadge from "./change-badge.svelte";
 	import MetricChart from "./metric-chart.svelte";
 

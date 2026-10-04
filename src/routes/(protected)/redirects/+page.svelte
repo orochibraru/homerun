@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { ArrowRightLeft, Pencil, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
+	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Switch } from "#lib/components/ui/switch/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList from "$lib/components/entity-list.svelte";
-	import EntityToolbar from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Switch } from "$lib/components/ui/switch/index.js";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { BASE_SORTS } from "$lib/list-sorts";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
 
 	const { data } = $props();
 
@@ -73,10 +73,10 @@
     use:enhance={enhanceToast({
       error: "Couldn't change the redirect.",
       loading: item.enabled ? "Disabling the redirect" : "Enabling the redirect",
-      success: (data) => (data?.enabled ? "Redirect enabled." : "Redirect disabled."),
+      success: (data) => data?.enabled ? "Redirect enabled." : "Redirect disabled."
     })}
   >
-    <input name="redirectId" type="hidden" value={item.id}>
+    <input name="redirectId" type="hidden" value={item.id} />
     <Switch
       aria-label={item.enabled ? "Disable redirect" : "Enable redirect"}
       checked={item.enabled}
@@ -98,7 +98,7 @@
       success: "Redirect deleted.",
     })}
   >
-    <input name="redirectId" type="hidden" value={item.id}>
+    <input name="redirectId" type="hidden" value={item.id} />
     <Button
       class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
       onclick={(e) => requestDelete(e, item.name)}
@@ -121,10 +121,8 @@
         Traefik, no container involved.
       </p>
     </div>
-    <Button href={resolve("/redirects/new")}>
-      <Plus class="size-4" />
-      Add Redirect
-    </Button>
+
+    <Button href={resolve('redirects/new')}><Plus class="size-4" />Add Redirect</Button>
   </div>
 
   {#if data.total === 0 && !data.filtered}
@@ -132,19 +130,14 @@
       icon={ArrowRightLeft}
       subtitle="Add one to send an old domain or path to its new home."
       title="No redirects yet"
-    >
-      <Button href={resolve("/redirects/new")}>
-        <Plus class="size-4" />
-        Add your first redirect
-      </Button>
-    </EmptyState>
+    ><Button href={resolve('redirects/new')}><Plus class="size-4" />Add your first redirect</Button></EmptyState>
   {:else}
     <EntityToolbar
       placeholder="Search redirects by source or destination…"
       sorts={BASE_SORTS}
     >
       {#snippet trailing()}
-        <ViewModeToggle {view} />
+        <ViewModeToggle view={view} />
       {/snippet}
     </EntityToolbar>
 
@@ -153,7 +146,14 @@
         <p class="text-text-muted text-sm">No redirects match your search.</p>
       </div>
     {:else}
-      <EntityList {actions} {badge} items={rows} {media} {view} />
+      <EntityList
+        actions={actions}
+        badge={badge}
+        items={rows}
+        media={media}
+        view={view}
+      />
+
       <Pagination
         label="redirects"
         page={data.page}

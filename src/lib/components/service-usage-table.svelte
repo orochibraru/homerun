@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { ArrowDown, ArrowUp } from "@lucide/svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { formatBytes } from "#lib/formatting.js";
+	import { getServiceUsage } from "#lib/remote/stats.remote.js";
 	import { resolve } from "$app/paths";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { formatBytes } from "$lib/formatting";
-	import { getServiceUsage } from "$lib/remote/stats.remote";
 
 	type SortKey = "cpu" | "memory" | "traffic" | "name";
 
@@ -90,64 +90,64 @@
     </p>
   {:else}
     <div class="overflow-x-auto">
-    <table class="w-full text-left">
-      <thead>
-        <tr class="border-border border-b">
-          {#each COLUMNS as [key, text, align] (key)}
-            <th class="px-4 py-2 {align}" scope="col">
-              <button
-                class="text-text-muted hover:text-text inline-flex items-center gap-1 text-[0.6875rem] font-medium transition-colors"
-                onclick={() => toggle(key)}
-                type="button"
-              >
-                {text}
-                {#if sort === key}
-                  {#if descending}
-                    <ArrowDown class="size-3" />
-                  {:else}
-                    <ArrowUp class="size-3" />
+      <table class="w-full text-left">
+        <thead>
+          <tr class="border-border border-b">
+            {#each COLUMNS as [key, text, align] (key)}
+              <th class="px-4 py-2 {align}" scope="col">
+                <button
+                  class="text-text-muted hover:text-text inline-flex items-center gap-1 text-[0.6875rem] font-medium transition-colors"
+                  onclick={() => toggle(key)}
+                  type="button"
+                >
+                  {text}
+                  {#if sort === key}
+                    {#if descending}
+                      <ArrowDown class="size-3" />
+                    {:else}
+                      <ArrowUp class="size-3" />
+                    {/if}
                   {/if}
-                {/if}
-              </button>
-            </th>
-          {/each}
-        </tr>
-      </thead>
-      <tbody class="divide-border divide-y">
-        {#each shown as row (row.id)}
-          <tr class="hover:bg-surface-2 transition-colors">
-            <td class="px-4 py-2">
-              <a
-                class="text-text block max-w-40 truncate text-sm hover:underline sm:max-w-none"
-                href="{resolve('/services')}/{row.id}"
-              >
-                {row.name}
-              </a>
-            </td>
+                </button>
+              </th>
+            {/each}
+          </tr>
+        </thead>
+        <tbody class="divide-border divide-y">
+          {#each shown as row (row.id)}
+            <tr class="hover:bg-surface-2 transition-colors">
+              <td class="px-4 py-2">
+                <a
+                  class="text-text block max-w-40 truncate text-sm hover:underline sm:max-w-none"
+                  href="{resolve('services')}/{row.id}"
+                >{row.name}</a>
+              </td>
             <td class="tech text-text-muted px-4 py-2 text-right text-xs">
               {row.cpuPercent.toFixed(1)}%
             </td>
             <td class="tech text-text-muted px-4 py-2 text-right text-xs">
-              {row.memUsedMb < 1024
-              ? `${row.memUsedMb.toFixed(0)} MB`
-              : `${(row.memUsedMb / 1024).toFixed(1)} GB`}
-            </td>
+                {row.memUsedMb < 1024
+                  ? `${row.memUsedMb.toFixed(0)} MB`
+                  : `${(row.memUsedMb / 1024).toFixed(1)} GB`}
+              </td>
             <td class="tech text-text-muted px-4 py-2 text-right text-xs">
               {formatBytes(row.netRxBytes + row.netTxBytes)}
             </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
     </div>
     {#if shown.length < rows.length}
       <div
         class="border-border text-text-subtle flex items-center justify-between gap-3 border-t px-4 py-2 text-[0.6875rem]"
       >
         <span>Top {shown.length} of {rows.length}</span>
-        <a class="text-accent font-medium hover:underline" href={resolve("/services")}>
-          All services
-        </a>
+
+        <a
+          class="text-accent font-medium hover:underline"
+          href={resolve('services')}
+        >All services</a>
       </div>
     {/if}
   {/if}

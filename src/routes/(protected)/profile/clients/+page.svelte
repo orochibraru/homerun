@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { AppWindow, KeyRound, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		API_KEY_SCOPE_OPTIONS,
 		type ApiKeyScope,
 		READ_ONLY_ROLE,
-	} from "$lib/permissions";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/permissions.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	const { data, form } = $props();
 

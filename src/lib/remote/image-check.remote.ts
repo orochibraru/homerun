@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { requireUser } from "#lib/server/remote-auth.js";
+import { ApiService } from "#lib/services/api.service.js";
 import { query } from "$app/server";
-import { requireUser } from "$lib/server/remote-auth";
-import { ApiService } from "$lib/services/api.service";
 
 export interface ImageCheck {
 	checked: boolean;

@@ -1,19 +1,19 @@
 import { error, fail, redirect } from "@sveltejs/kit";
+import { oauthMethod } from "#lib/auth-providers.js";
+import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseOauthProviderForm } from "#lib/server/oauth-provider-form.js";
+import { applyAndRebuild } from "#lib/server/validation/instance-settings-form.js";
 import { resolve } from "$app/paths";
-import { oauthMethod } from "$lib/auth-providers";
-import { config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { parseOauthProviderForm } from "$lib/server/oauth-provider-form";
-import { applyAndRebuild } from "$lib/server/validation/instance-settings-form";
 
 const logger = new Logger("InstanceSettings");
 
 export const load = async ({ locals, params, parent }) => {
 	await parent();
 	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 
 	const settings = await InstanceSettingsDTO.get();
@@ -50,10 +50,10 @@ export const load = async ({ locals, params, parent }) => {
 export const actions = {
 	delete: async ({ locals, params }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const settings = await InstanceSettingsDTO.get();
 		await settings.deleteOauthProvider(params.providerId);
@@ -61,14 +61,15 @@ export const actions = {
 		logger.info(
 			`OAuth provider deleted: name=${params.providerId} user=${locals.user.id}`,
 		);
-		throw redirect(303, resolve("/authentication/providers"));
+
+		throw redirect(303, resolve("authentication/providers"));
 	},
 	update: async ({ request, locals, params }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();

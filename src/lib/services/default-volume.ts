@@ -1,6 +1,6 @@
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { dataPathFor } from "$lib/service-link";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { dataPathFor } from "#lib/service-link.js";
 
 /**
  * Gives a new database or cache service a named volume at its engine's data

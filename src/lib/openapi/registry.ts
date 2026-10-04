@@ -6,8 +6,8 @@ import {
 	startUpdateApiBody,
 	updateChannelApiBody,
 	updateServiceApiBody,
-} from "$lib/server/validation/api";
-import { serviceConfigSchema } from "$lib/service-config";
+} from "#lib/server/validation/api.js";
+import { serviceConfigSchema } from "#lib/service-config.js";
 import { backupRoutes } from "./backups";
 import { channelRoutes } from "./channels";
 import { dependencyRoutes } from "./dependencies";
@@ -94,7 +94,7 @@ const badRequest: ResponseDef = {
  * metadata (summary/tags/params) anywhere else, so there's no way to
  * generate this automatically without duplicating that metadata into the
  * route files themselves. Keep it in sync when a route's shape changes;
- * `$lib/openapi/build.ts` uses the *real* request-body zod schemas from
+ * `#lib/openapi/build.ts` uses the *real* request-body zod schemas from
  * `validation/api.ts`, so at least the request side can't silently drift.
  */
 export const routes: RouteDef[] = [

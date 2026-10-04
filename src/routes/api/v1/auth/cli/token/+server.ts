@@ -1,5 +1,4 @@
-import { json } from "@sveltejs/kit";
-import { CliAuthService } from "$lib/services/cli-auth.service";
+import { CliAuthService } from "#lib/services/cli-auth.service.js";
 
 /** Polled by the CLI, also unauthenticated (the device code itself is the credential being exchanged), same as device/+server.ts. */
 export const POST = async ({ request }) => {
@@ -10,13 +9,16 @@ export const POST = async ({ request }) => {
 			: null;
 
 	if (!deviceCode) {
-		return json({ error: "Missing deviceCode" }, { status: 400 });
+		return Response.json({ error: "Missing deviceCode" }, { status: 400 });
 	}
 
 	const result = CliAuthService.poll(deviceCode);
 	if (result.status === "not_found") {
-		return json({ error: "Unknown or expired device code" }, { status: 404 });
+		return Response.json(
+			{ error: "Unknown or expired device code" },
+			{ status: 404 },
+		);
 	}
 
-	return json(result);
+	return Response.json(result);
 };

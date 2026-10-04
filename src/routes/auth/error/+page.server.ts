@@ -1,4 +1,4 @@
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 
 export const load = ({ locals }) => ({
 	providers: config.auth.oauthProviders
