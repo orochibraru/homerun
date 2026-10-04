@@ -2,10 +2,10 @@ import {
 	applyInstanceSettings,
 	config,
 	setDetectedAuthCheckUrl,
-} from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { WorkerClient } from "$lib/server/worker-client";
+} from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { WorkerClient } from "#lib/server/worker-client.js";
 import { DeploymentService } from "../deploy.service.ts";
 import { syncDashboardDns } from "../dns.service.ts";
 import type { TraefikExpectation } from "../docker/core-services.ts";

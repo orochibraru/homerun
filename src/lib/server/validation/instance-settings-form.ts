@@ -1,9 +1,9 @@
-import { applyInstanceSettings } from "$lib/config";
-import type { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { rebuildAuth } from "$lib/services/auth";
-import { syncDashboardDns } from "$lib/services/dns.service";
-import { DockerService } from "$lib/services/docker.service";
-import { RedirectService } from "$lib/services/redirect.service";
+import { applyInstanceSettings } from "#lib/config.js";
+import type { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { rebuildAuth } from "#lib/services/auth.js";
+import { syncDashboardDns } from "#lib/services/dns.service.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { RedirectService } from "#lib/services/redirect.service.js";
 
 /** A trimmed text field from the form, or null when it is missing or blank. */
 export function nullableText(formData: FormData, key: string): string | null {

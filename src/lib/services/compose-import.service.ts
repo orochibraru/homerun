@@ -4,18 +4,18 @@ import {
 	type ComposeServiceDraft,
 	orderByDependencies,
 	slugifyComposeKey,
-} from "$lib/compose-import";
-import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
-import { Logger } from "$lib/logger";
-import { DOMAIN_RE, normalizeDomains } from "$lib/service-domains";
-import { uniqueSlug } from "$lib/slug";
-import { tarArchive } from "$lib/tar";
+} from "#lib/compose-import.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
+import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
+import { Logger } from "#lib/logger.js";
+import { DOMAIN_RE, normalizeDomains } from "#lib/service-domains.js";
+import { uniqueSlug } from "#lib/slug.js";
+import { tarArchive } from "#lib/tar.js";
 import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { DockerService } from "./docker.service.ts";

@@ -1,15 +1,15 @@
 import { eq } from "drizzle-orm";
-import type { PublishedPort } from "$lib/published-ports";
-import { db } from "$lib/server/db/lib";
+import type { PublishedPort } from "#lib/published-ports.js";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type TemplateLink,
 	template,
 	templateLink,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 import {
 	runtimeOptionsFrom,
 	type ServiceRuntimeOptions,
-} from "$lib/service-runtime";
+} from "#lib/service-runtime.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewTemplateLinkInput {

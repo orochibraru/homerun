@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CleanupItem } from "$lib/services/docker.service";
+	import type { CleanupItem } from "#lib/services/docker.service.js";
 	import { formatBytes } from "./cleanup";
 
 	interface Props {

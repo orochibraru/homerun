@@ -1,21 +1,21 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { ErrorIssueDTO } from "$lib/dto/error-issue-dto";
-import { ErrorProjectDTO } from "$lib/dto/error-project-dto";
-import { ErrorSourceMapDTO } from "$lib/dto/error-source-map-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { parseListQuery } from "$lib/server/list-query";
+import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
+import { ErrorProjectDTO } from "#lib/dto/error-project-dto.js";
+import { ErrorSourceMapDTO } from "#lib/dto/error-source-map-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseListQuery } from "#lib/server/list-query.js";
 import {
 	errorProjectSettingsSchema,
 	issueStatusFormSchema,
-} from "$lib/server/validation/error-tracking";
+} from "#lib/server/validation/error-tracking.js";
 import {
 	ErrorTrackingService,
 	EVENTS_KEPT_PER_ISSUE,
 	EVENTS_PER_MINUTE,
 	RETENTION_DAYS,
-} from "$lib/services/error-tracking.service";
+} from "#lib/services/error-tracking.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("ErrorTracking");
 
@@ -63,7 +63,7 @@ export const load = async ({ parent, url }) => {
 
 async function ownService(serviceId: string, locals: App.Locals) {
 	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 	return await ServiceDTO.get(serviceId);
 }

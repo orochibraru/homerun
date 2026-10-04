@@ -34,12 +34,12 @@ mock.module("svelte", async () => await import(svelteClientEntry));
 
 // `$app/paths` is generated into .svelte-kit/ by SvelteKit itself, so a
 // component that links anywhere (resolve(...)) can't even be imported under
-// `bun test` without this. The identity stand-in is enough: these tests assert
-// on rendered content, never on a resolved href.
+// `bun test` without this. Prefixing the slash a real pathname gets is enough:
+// these tests assert on rendered content and plain hrefs, never on a route id.
 mock.module("$app/paths", () => ({
-	asset: (path: string) => path,
+	asset: (path: string) => `/${path}`,
 	base: "",
-	resolve: (path: string) => path,
+	resolve: (path: string) => (path.startsWith("/") ? path : `/${path}`),
 }));
 
 beforeEach(async () => {

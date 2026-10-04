@@ -1,7 +1,7 @@
 import {
 	type DestinationType,
 	describeDestination,
-} from "$lib/backup-destinations";
+} from "#lib/backup-destinations.js";
 import type { OneOffRunResult } from "../docker/one-off.ts";
 import { DockerService } from "../docker.service.ts";
 import type { BackupObject } from "../s3-backup.service.ts";

@@ -1,12 +1,12 @@
 import { and, asc, eq } from "drizzle-orm";
-import { DEFAULT_NOTIFICATION_EVENTS } from "$lib/notification-events";
-import { db } from "$lib/server/db/lib";
+import { DEFAULT_NOTIFICATION_EVENTS } from "#lib/notification-events.js";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type NotificationChannel,
 	notificationChannel,
-} from "$lib/server/db/schema";
-import { searchCondition } from "$lib/server/list-query";
-import type { NotificationChannelKind, NotificationEvent } from "$lib/types";
+} from "#lib/server/db/schema.js";
+import { searchCondition } from "#lib/server/list-query.js";
+import type { NotificationChannelKind, NotificationEvent } from "#lib/types.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewNotificationChannelInput {

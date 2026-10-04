@@ -1,16 +1,16 @@
-import { config } from "$lib/config";
-import type { DeployTrigger } from "$lib/deploy-trigger";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceGitDTO } from "$lib/dto/service-git-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { Logger } from "$lib/logger";
-import { canarySlug, tagPatternProblem } from "$lib/release-channels";
+import { config } from "#lib/config.js";
+import type { DeployTrigger } from "#lib/deploy-trigger.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { Logger } from "#lib/logger.js";
+import { canarySlug, tagPatternProblem } from "#lib/release-channels.js";
 import {
 	DOMAIN_RE,
 	primaryHostname,
 	serviceHostnames,
-} from "$lib/service-domains";
-import type { ContainerStatus } from "$lib/types";
+} from "#lib/service-domains.js";
+import type { ContainerStatus } from "#lib/types.js";
 import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { syncServiceDomainsDns } from "./dns.service.ts";

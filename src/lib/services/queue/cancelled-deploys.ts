@@ -1,6 +1,6 @@
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import type { CancelledJob } from "$lib/dto/job-dto";
-import { Logger } from "$lib/logger";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import type { CancelledJob } from "#lib/dto/job-dto.js";
+import { Logger } from "#lib/logger.js";
 import { DockerService } from "../docker.service.ts";
 import { deployJobPayload } from "./payloads.ts";
 

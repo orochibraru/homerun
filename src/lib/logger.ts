@@ -8,8 +8,8 @@ import {
 	white,
 	yellow,
 } from "@kitql/helpers";
-import { building, dev } from "$app/environment";
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
+import { building, dev } from "$app/env";
 
 // Matches this codebase's own `service=<uuid>` convention in log messages
 // (deploy.service.ts, docker/containers.ts, etc.) so a persisted warn/error
@@ -43,7 +43,7 @@ function stringifyForPersist(value: unknown): string {
  * table, for the per-service Errors tab (and a future instance-wide log
  * view) : see schema.ts's `appLog` docstring. Dynamically imports the DTO
  * (rather than a static top-level import) since $lib/logger.ts itself
- * isn't under `$lib/server/`, so this keeps the server-only db code out of
+ * isn't under `#lib/server/`, so this keeps the server-only db code out of
  * the module graph unless a warn/error call actually fires. Never throws,
  * never awaited by the caller : a logging call must never fail the
  * operation it's logging.
@@ -62,10 +62,11 @@ function persistLog(
 		optionalParams.length > 0
 			? stringifyForPersist(optionalParams.map(stringifyForPersist))
 			: null;
+
 	const serviceId =
 		extractServiceId(message) ?? (metadata ? extractServiceId(metadata) : null);
 
-	import("$lib/dto/app-log-dto")
+	import("#lib/dto/app-log-dto.js")
 		.then(({ AppLogDTO }) =>
 			AppLogDTO.create({
 				level,
@@ -86,7 +87,7 @@ function persistLog(
 	// notification (deploy.service.ts) for the same underlying event, this
 	// would otherwise double up on every deploy failure.
 	if (level === "error" && serviceId && scope !== DEPLOY_LOG_SCOPE) {
-		import("$lib/dto/notification-dto")
+		import("#lib/dto/notification-dto.js")
 			.then(({ NotificationDTO }) =>
 				NotificationDTO.notifyServiceError(serviceId, message),
 			)

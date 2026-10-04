@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Plus, Trash2 } from "@lucide/svelte";
 	import { untrack } from "svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
-	import { inputClass, labelClass } from "$lib/components/form-styles";
-	import ScheduleField from "$lib/components/schedule-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import ScheduleField from "#lib/components/schedule-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import { mergeEnvRows, type ParsedEnvVar } from "#lib/env-parse.js";
 
 	interface CronHostOption {
 		id: string;

@@ -1,6 +1,6 @@
-import { config } from "$lib/config";
-import type { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	GATE_CALLBACK_PATH,
 	GATE_LOGOUT_PATH,
@@ -11,11 +11,11 @@ import {
 	readGateCookie,
 	signGateToken,
 	verifyGateToken,
-} from "$lib/server/app-gate";
-import { cachedGateAccess } from "$lib/server/gate-access-cache";
-import { gateChallengeKind } from "$lib/server/gate-request";
-import { gatedService } from "$lib/server/gated-service-cache";
-import { AppAccessService } from "$lib/services/app-access.service";
+} from "#lib/server/app-gate.js";
+import { cachedGateAccess } from "#lib/server/gate-access-cache.js";
+import { gateChallengeKind } from "#lib/server/gate-request.js";
+import { gatedService } from "#lib/server/gated-service-cache.js";
+import { AppAccessService } from "#lib/services/app-access.service.js";
 
 const logger = new Logger("AppGate");
 

@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { mode } from "mode-watcher";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { getDashboardIcons } from "$lib/remote/dashboard-icons.remote";
-	import { DASHBOARD_ICON_PREFIX, iconSrc } from "$lib/service-icon";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { getDashboardIcons } from "#lib/remote/dashboard-icons.remote.js";
+	import { DASHBOARD_ICON_PREFIX, iconSrc } from "#lib/service-icon.js";
 
 	interface Props {
 		onpick: (icon: string) => void;

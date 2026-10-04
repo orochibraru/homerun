@@ -1,7 +1,7 @@
 import {
 	type NewNotificationInput,
 	NotificationDTO,
-} from "$lib/dto/notification-dto";
+} from "#lib/dto/notification-dto.js";
 
 export const DIGEST_QUIET_MS = 90_000;
 export const DIGEST_MAX_HOLD_MS = 10 * 60_000;

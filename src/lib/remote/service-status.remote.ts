@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { requireUser } from "#lib/server/remote-auth.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import type { ContainerStatus } from "#lib/types.js";
 import { query } from "$app/server";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { requireUser } from "$lib/server/remote-auth";
-import { DockerService } from "$lib/services/docker.service";
-import type { ContainerStatus } from "$lib/types";
 
 export interface ServiceStatus {
 	id: string;

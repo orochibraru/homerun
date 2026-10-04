@@ -1,12 +1,12 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { githubAppRegistration } from "#lib/github-app.js";
+import { Logger } from "#lib/logger.js";
+import { browserOrigin } from "#lib/server/canonical-origin.js";
+import type { GitProviderKind } from "#lib/server/db/schema.js";
+import { GitProviderService } from "#lib/services/git-provider.service.js";
 import { resolve } from "$app/paths";
-import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { githubAppRegistration } from "$lib/github-app";
-import { Logger } from "$lib/logger";
-import { browserOrigin } from "$lib/server/canonical-origin";
-import type { GitProviderKind } from "$lib/server/db/schema";
-import { GitProviderService } from "$lib/services/git-provider.service";
 
 const logger = new Logger("GitProviders");
 
@@ -41,10 +41,10 @@ export const load = async ({ parent, locals }) => {
 export const actions = {
 	createGithubApp: async ({ request, locals, url }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -76,10 +76,10 @@ export const actions = {
 
 	addProvider: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -133,10 +133,10 @@ export const actions = {
 
 	deleteProvider: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -165,7 +165,7 @@ export const actions = {
 
 	disconnect: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const formData = await request.formData();

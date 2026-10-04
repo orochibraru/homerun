@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { BellRing, Plus } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
+	import { NOTIFICATION_EVENTS } from "#lib/notification-events.js";
+	import { title } from "#lib/store/title.js";
+	import { saveToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-	import { NOTIFICATION_EVENTS } from "$lib/notification-events";
-	import { title } from "$lib/store/title";
-	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -22,12 +22,7 @@
     icon={BellRing}
     subtitle="Add a Discord, Slack or Telegram channel, a generic webhook or an email address, then choose what it receives here."
     title="No notification channels yet"
-  >
-    <Button href={resolve("/notification-channels")}>
-      <Plus class="size-4" />
-      Add a channel
-    </Button>
-  </EmptyState>
+  ><Button href={resolve('notification-channels')}><Plus class="size-4" />Add a channel</Button></EmptyState>
 {:else}
   <form
     action="?/save"
@@ -42,9 +37,12 @@
           Tick an event under every channel that should receive it.
         </p>
       </div>
-      <Button href={resolve("/notification-channels")} size="sm" variant="outline">
-        Manage channels
-      </Button>
+
+      <Button
+        href={resolve('notification-channels')}
+        size="sm"
+        variant="outline"
+      >Manage channels</Button>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">

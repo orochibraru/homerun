@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { Bell, CheckCheck, Trash2, X } from "@lucide/svelte";
-	import { resolve } from "$app/paths";
-	import { headerControlClass } from "$lib/components/header-styles";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Popover from "$lib/components/ui/popover/index.js";
-	import { timeAgo } from "$lib/formatting";
+	import { headerControlClass } from "#lib/components/header-styles.js";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Popover from "#lib/components/ui/popover/index.js";
+	import { timeAgo } from "#lib/formatting.js";
 	import {
 		deleteAllNotifications,
 		deleteNotification,
@@ -13,7 +12,8 @@
 		markAllNotificationsRead,
 		markNotificationRead,
 		type NotificationFeedItem,
-	} from "$lib/remote/notifications.remote";
+	} from "#lib/remote/notifications.remote.js";
+	import { resolve } from "$app/paths";
 
 	const feed = getNotifications();
 
@@ -95,7 +95,7 @@
             {#if n.serviceId}
               <a
                 class="min-w-0 flex-1 px-4 py-3"
-                href="{resolve('/services')}/{n.serviceId}"
+                href="{resolve('services')}/{n.serviceId}"
                 onclick={() => onItemClick(n)}
               >
                 {#if n.stackName}

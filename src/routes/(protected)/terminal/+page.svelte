@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { KeyRound, Server, TerminalSquare } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { title } from "#lib/store/title.js";
+	import { saveToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { title } from "$lib/store/title";
-	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 

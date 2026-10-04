@@ -1,11 +1,11 @@
 import { error, fail, redirect } from "@sveltejs/kit";
+import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { CronJobRunDTO } from "#lib/dto/cron-job-run-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseCronJobForm } from "#lib/server/cron-job-form.js";
+import { enqueueCronJobRun } from "#lib/services/cron-job-queue.js";
 import { resolve } from "$app/paths";
-import { CronJobDTO } from "$lib/dto/cron-job-dto";
-import { CronJobRunDTO } from "$lib/dto/cron-job-run-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { Logger } from "$lib/logger";
-import { parseCronJobForm } from "$lib/server/cron-job-form";
-import { enqueueCronJobRun } from "$lib/services/cron-job-queue";
 
 const logger = new Logger("CronJob");
 
@@ -32,7 +32,7 @@ export const load = async ({ params, parent }) => {
 export const actions = {
 	delete: async ({ params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const job = await CronJobDTO.get(params.cronJobId);
 		if (!job) {
@@ -46,12 +46,12 @@ export const actions = {
 
 		await job.delete();
 		logger.info(`Cron job deleted: job=${job.id} user=${locals.user.id}`);
-		redirect(303, resolve("/cron-jobs"));
+		redirect(303, resolve("cron-jobs"));
 	},
 
 	runNow: async ({ params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const job = await CronJobDTO.get(params.cronJobId);
 		if (!job) {
@@ -70,7 +70,7 @@ export const actions = {
 
 	update: async ({ params, request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const job = await CronJobDTO.get(params.cronJobId);
 		if (!job) {

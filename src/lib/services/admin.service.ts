@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { config, isPlaceholderAuthSecret, isSmtpEnabled } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { db } from "#lib/server/db/lib.js";
+import { user as userTable } from "#lib/server/db/schema.js";
+import { WorkerClient } from "#lib/server/worker-client.js";
 import { dev } from "$app/env";
-import { config, isPlaceholderAuthSecret, isSmtpEnabled } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { db } from "$lib/server/db/lib";
-import { user as userTable } from "$lib/server/db/schema";
-import { WorkerClient } from "$lib/server/worker-client";
 import { traefikExpectation } from "./cron/core-services-watch.ts";
 import { DASHBOARD_ROUTER_FILE } from "./docker/dashboard.ts";
 import { hasTraefikRouterFor } from "./docker/labels.ts";

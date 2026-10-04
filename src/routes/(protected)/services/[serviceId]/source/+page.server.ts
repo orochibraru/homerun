@@ -1,18 +1,18 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
-import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
+import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
+import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	type UpdateSourceInput,
 	updateSourceSchema,
-} from "$lib/server/validation/service";
-import { GitWebhookService } from "$lib/services/git-webhook.service";
-import { PreviewService } from "$lib/services/preview.service";
-import { encryptSecret } from "$lib/services/secrets";
+} from "#lib/server/validation/service.js";
+import { GitWebhookService } from "#lib/services/git-webhook.service.js";
+import { PreviewService } from "#lib/services/preview.service.js";
+import { encryptSecret } from "#lib/services/secrets.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
 
@@ -153,7 +153,7 @@ function sourcePatch(input: UpdateSourceInput, isGitBuild: boolean) {
 export const actions = {
 	updateSource: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {

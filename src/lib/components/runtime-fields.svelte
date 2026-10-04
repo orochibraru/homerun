@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Alert from "$lib/components/alert.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import Alert from "#lib/components/alert.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
 
 	interface Props {
 		errors?: Record<string, string[]>;

@@ -1,16 +1,15 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
 import {
 	ComposeParseError,
 	type ComposeServiceDraft,
 	parseComposeFile,
-} from "$lib/compose-import";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
-import { Logger } from "$lib/logger";
-import { allowLongRequest } from "$lib/server/long-request";
-import { CapacityService } from "$lib/services/capacity.service";
-import { ComposeImportService } from "$lib/services/compose-import.service";
+} from "#lib/compose-import.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
+import { Logger } from "#lib/logger.js";
+import { CapacityService } from "#lib/services/capacity.service.js";
+import { ComposeImportService } from "#lib/services/compose-import.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("ComposeImport");
 
@@ -60,7 +59,7 @@ function pickSelected(
 export const actions = {
 	preview: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const compose = (formData.get("compose") as string | null) ?? "";
@@ -75,10 +74,9 @@ export const actions = {
 		return { compose, plan: parsed.plan };
 	},
 
-	import: async ({ request, locals, platform }) => {
-		allowLongRequest(platform);
+	import: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const compose = (formData.get("compose") as string | null) ?? "";
@@ -134,11 +132,12 @@ export const actions = {
 		logger.info(
 			`Compose import finished: services=${result.services.length} user=${locals.user.id}`,
 		);
+
 		redirect(
 			303,
 			result.stackId
-				? `${resolve("/stacks")}/${result.stackId}`
-				: resolve("/services"),
+				? `${resolve("stacks")}/${result.stackId}`
+				: resolve("services"),
 		);
 	},
 };

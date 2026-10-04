@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Trash2Icon, TriangleAlertIcon } from "@lucide/svelte";
 	import { tick } from "svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import DeleteVolumesOption from "$lib/components/delete-volumes-option.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		name: string;

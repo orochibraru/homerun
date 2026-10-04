@@ -6,7 +6,7 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
-## Domains and DNS providers (`$lib/services/dns-providers/`, `DomainDnsService`, `/dns`)
+## Domains and DNS providers (`src/lib/services/dns-providers/`, `DomainDnsService`, `/dns`)
 
 DNS is managed through **connections** (`dns_connection`: a provider id, a name,
 credentials stored per field with the secret ones `encryptSecret`ed) and
@@ -52,15 +52,15 @@ and syncs are infrequent (once per deploy), same reasoning as
 `GitProviderService`. Both fire from the same spot, `deploy.service.ts`'s
 `syncAutoDns`, right after a successful **local** deploy with `dnsResolvable`
 set, for **every** hostname the service answers on (`serviceHostnames()` in
-`$lib/service-domains.ts`: the default `<slug>.<baseDomain>` hostname while it's
-still routed, plus each of `domains`, which used not to be synced at all).
+`src/lib/service-domains.ts`: the default `<slug>.<baseDomain>` hostname while
+it's still routed, plus each of `domains`, which used not to be synced at all).
 Neither can fail the deploy.
 
 **They are no longer fire-and-forget, and that was the whole bug behind
 "Pangolin is configured and nothing gets created".** Both `syncDnsRecord`s
 caught their own failures into a `logger.warn` and returned `void`, so a
 misconfiguration was indistinguishable from a working setup. Every entry point
-now returns a `DnsSyncResult` (`$lib/services/dns-result.ts`,
+now returns a `DnsSyncResult` (`src/lib/services/dns-result.ts`,
 `{provider, ok, detail}`, `null` when that provider isn't configured);
 `dns.service.ts`'s `syncDns`/`deleteDns` take an **array** of hostnames and
 return every provider's verdict, and `syncAutoDns` awaits that and appends each
@@ -260,7 +260,7 @@ account yet, see the note at the end of this section.
 Both integrations can also be switched on from the onboarding wizard's DNS step
 (see `auth.md`'s Onboarding section). Its form parsing and Test connection
 checks are the same functions the DNS page uses,
-`$lib/server/validation/dns-settings-form.ts` (`cloudflareInputFromForm`,
+`src/lib/server/validation/dns-settings-form.ts` (`cloudflareInputFromForm`,
 `pangolinInputFromForm`, `testCloudflareFromForm`, `testPangolinFromForm`), so
 the two surfaces can't drift. The wizard tests Pangolin against the base domain
 typed in its own Core step, not the running one.

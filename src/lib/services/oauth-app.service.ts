@@ -1,16 +1,16 @@
-import { config } from "$lib/config";
-import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
+import { config } from "#lib/config.js";
+import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
 import {
 	type EnvironmentInput,
 	OauthClientEnvironmentDTO,
-} from "$lib/dto/oauth-client-environment-dto";
-import { OauthClientSecretDTO } from "$lib/dto/oauth-client-secret-dto";
+} from "#lib/dto/oauth-client-environment-dto.js";
+import { OauthClientSecretDTO } from "#lib/dto/oauth-client-secret-dto.js";
 import {
 	CLAUDE_MCP_CALLBACK,
 	OIDC_SCOPES,
 	registeredCallbacks,
-} from "$lib/oidc-provider";
-import { hashClientSecret } from "$lib/server/client-secret";
+} from "#lib/oidc-provider.js";
+import { hashClientSecret } from "#lib/server/client-secret.js";
 import { auth } from "./auth.ts";
 
 /**

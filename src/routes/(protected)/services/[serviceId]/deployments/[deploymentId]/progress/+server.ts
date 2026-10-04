@@ -1,6 +1,5 @@
-import { json } from "@sveltejs/kit";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 
 /**
  * Polled by the Overview tab while a deploy is in flight (including right
@@ -23,7 +22,7 @@ export const GET = async ({ params, locals }) => {
 		return new Response("Not found", { status: 404 });
 	}
 
-	return json(
+	return Response.json(
 		{
 			errorMessage: dep.toJSON().errorMessage,
 			log: dep.log,

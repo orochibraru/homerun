@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { FileCode, Trash2 } from "@lucide/svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import type { SourceMapRelease } from "#lib/dto/error-source-map-dto.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import CopyBox from "$lib/components/copy-box.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import type { SourceMapRelease } from "$lib/dto/error-source-map-dto";
-	import { timeAgo } from "$lib/formatting";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		releases: SourceMapRelease[];

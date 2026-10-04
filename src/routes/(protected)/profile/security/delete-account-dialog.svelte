@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Trash2 } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
+	import { authClient } from "#lib/auth-client.js";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { toastError } from "#lib/toast.js";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { authClient } from "$lib/auth-client";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Dialog from "$lib/components/ui/dialog/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { toastError } from "$lib/toast";
 
 	let open = $state(false);
 	let password = $state("");
@@ -19,7 +19,7 @@
 		loading = true;
 		try {
 			const { error } = await authClient.deleteUser({
-				callbackURL: resolve("/"),
+				callbackURL: resolve(""),
 				password,
 			});
 			if (error) {
@@ -27,7 +27,7 @@
 				throw new Error(error.message ?? "Could not delete account.");
 			}
 			open = false;
-			goto(resolve("/"));
+			goto(resolve(""));
 		} finally {
 			loading = false;
 		}

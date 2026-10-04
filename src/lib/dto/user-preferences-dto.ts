@@ -1,8 +1,15 @@
 import { eq } from "drizzle-orm";
-import { DEFAULT_PER_PAGE } from "$lib/list-sorts";
-import { db } from "$lib/server/db/lib";
-import { type UserPreferences, userPreferences } from "$lib/server/db/schema";
-import { DEFAULT_SURFACE, type Preset, type SurfaceStyle } from "$lib/surfaces";
+import { DEFAULT_PER_PAGE } from "#lib/list-sorts.js";
+import { db } from "#lib/server/db/lib.js";
+import {
+	type UserPreferences,
+	userPreferences,
+} from "#lib/server/db/schema.js";
+import {
+	DEFAULT_SURFACE,
+	type Preset,
+	type SurfaceStyle,
+} from "#lib/surfaces.js";
 import { BaseDTO } from "./base-dto";
 
 export type ThemePreference = "light" | "dark" | "system";

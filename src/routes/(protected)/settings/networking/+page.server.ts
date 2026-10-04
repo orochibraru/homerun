@@ -1,25 +1,26 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { Logger } from "$lib/logger";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	applyAndRebuild,
 	nullableText,
-} from "$lib/server/validation/instance-settings-form";
-import { DockerService } from "$lib/services/docker.service";
+} from "#lib/server/validation/instance-settings-form.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("InstanceSettings");
 
 export const actions = {
 	updateTraefik: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const traefikAcmeEmail = nullableText(formData, "traefikAcmeEmail");
+
 		if (
 			traefikAcmeEmail &&
 			!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(traefikAcmeEmail)

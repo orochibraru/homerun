@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { CloudUpload, Pencil, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { describeDestination } from "#lib/backup-destinations.js";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
+	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import { describeDestination } from "$lib/backup-destinations";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityList from "$lib/components/entity-list.svelte";
-	import EntityToolbar from "$lib/components/entity-toolbar.svelte";
-	import Pagination from "$lib/components/pagination.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
-	import { BASE_SORTS } from "$lib/list-sorts";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import { ViewMode } from "$lib/view-mode.svelte";
 
 	const { data } = $props();
 
@@ -65,7 +65,7 @@
       success: "Destination deleted.",
     })}
   >
-    <input name="destinationId" type="hidden" value={dest.id}>
+    <input name="destinationId" type="hidden" value={dest.id} />
     <Button
       class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
       onclick={(e) => requestDelete(e, dest.name)}
@@ -89,10 +89,8 @@
         retyping the same credentials everywhere.
       </p>
     </div>
-    <Button href={resolve("/s3-destinations/new")}>
-      <Plus class="size-4" />
-      Add Destination
-    </Button>
+
+    <Button href={resolve('s3-destinations/new')}><Plus class="size-4" />Add Destination</Button>
   </div>
 
   {#if data.total === 0 && !data.filtered}
@@ -101,16 +99,13 @@
       subtitle="Add one, then pick it from a volume's backup config."
       title="No backup destinations yet"
     >
-      <Button href={resolve("/s3-destinations/new")}>
-        <Plus class="size-4" />
-        Add your first destination
-      </Button>
+      <Button href={resolve('s3-destinations/new')}><Plus class="size-4" />Add your first destination</Button>
     </EmptyState>
   {:else}
     <EntityToolbar
     sorts={BASE_SORTS} placeholder="Search destinations by name, host or path…">
       {#snippet trailing()}
-        <ViewModeToggle {view} />
+        <ViewModeToggle view={view} />
       {/snippet}
     </EntityToolbar>
 
@@ -119,13 +114,19 @@
         <p class="text-text-muted text-sm">No destinations match your search.</p>
       </div>
     {:else}
-    <EntityList {actions} items={rows} {media} {view} />
-    <Pagination
-      label="destinations"
-      page={data.page}
-      perPage={data.perPage}
-      total={data.total}
-    />
+      <EntityList
+        actions={actions}
+        items={rows}
+        media={media}
+        view={view}
+      />
+
+      <Pagination
+        label="destinations"
+        page={data.page}
+        perPage={data.perPage}
+        total={data.total}
+      />
     {/if}
   {/if}
 </div>

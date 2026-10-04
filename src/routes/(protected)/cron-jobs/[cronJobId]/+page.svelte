@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { Check, ChevronDown, Play, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import AnsiLine from "#lib/components/ansi-line.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import CronJobFields from "#lib/components/cron-job-fields.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { getCronJobRuns } from "#lib/remote/cron-runs.remote.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import AnsiLine from "$lib/components/ansi-line.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import CronJobFields from "$lib/components/cron-job-fields.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { getCronJobRuns } from "$lib/remote/cron-runs.remote";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 

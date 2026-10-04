@@ -1,7 +1,7 @@
+import { JobDTO } from "#lib/dto/job-dto.js";
+import { requireUser } from "#lib/server/remote-auth.js";
+import type { JobStatus, JobType } from "#lib/types.js";
 import { query } from "$app/server";
-import { JobDTO } from "$lib/dto/job-dto";
-import { requireUser } from "$lib/server/remote-auth";
-import type { JobStatus, JobType } from "$lib/types";
 
 export interface QueuedJob {
 	attempts: number;

@@ -13,22 +13,22 @@ import {
 	type SQL,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { PASSWORD_METHOD } from "$lib/auth-providers";
-import type { BuildMethod } from "$lib/build-methods";
-import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
-import type { PublishedPort } from "$lib/published-ports";
-import { db } from "$lib/server/db/lib";
-import { type Service, service, stack } from "$lib/server/db/schema";
+import { PASSWORD_METHOD } from "#lib/auth-providers.js";
+import type { BuildMethod } from "#lib/build-methods.js";
+import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "#lib/constants.js";
+import type { PublishedPort } from "#lib/published-ports.js";
+import { db } from "#lib/server/db/lib.js";
+import { type Service, service, stack } from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	narrowFilter,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
-import { isDatabaseImage } from "$lib/service-link";
-import { runtimeOptionsFrom } from "$lib/service-runtime";
-import type { ContainerStatus, PullPolicy } from "$lib/types";
+} from "#lib/server/list-query.js";
+import { isDatabaseImage } from "#lib/service-link.js";
+import { runtimeOptionsFrom } from "#lib/service-runtime.js";
+import type { ContainerStatus, PullPolicy } from "#lib/types.js";
 import { BaseDTO } from "./base-dto";
 import type { NewServiceInput, ServiceUpdateInput } from "./service-input";
 

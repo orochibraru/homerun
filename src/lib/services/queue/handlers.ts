@@ -1,5 +1,5 @@
-import type { JobDTO } from "$lib/dto/job-dto";
-import type { JobType } from "$lib/types";
+import type { JobDTO } from "#lib/dto/job-dto.js";
+import type { JobType } from "#lib/types.js";
 import { NotificationChannelService } from "../notification-channel.service.ts";
 import { notificationDeliveryJobPayload } from "./payloads.ts";
 

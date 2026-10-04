@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { RotateCcw } from "@lucide/svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		svc: { autoRollback: boolean; id: string };

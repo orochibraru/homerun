@@ -1,11 +1,11 @@
 import { error, redirect } from "@sveltejs/kit";
+import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
+import { describeScopes } from "#lib/oidc-provider.js";
 import { resolve } from "$app/paths";
-import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
-import { describeScopes } from "$lib/oidc-provider";
 
 export const load = async ({ locals, url }) => {
 	if (!locals.user) {
-		throw redirect(302, `${resolve("/auth/sign-in")}${url.search}`);
+		throw redirect(302, `${resolve("auth/sign-in")}${url.search}`);
 	}
 	const clientId = url.searchParams.get("client_id");
 	const app = clientId ? await OauthClientDTO.getByClientId(clientId) : null;

@@ -1,4 +1,4 @@
-import { Logger } from "$lib/logger";
+import { Logger } from "#lib/logger.js";
 
 const TICK_MS = 60_000;
 

@@ -1,10 +1,10 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { Logger } from "$lib/logger";
+import { Logger } from "#lib/logger.js";
 import {
 	MachineTerminalError,
 	MachineTerminalService,
-} from "$lib/services/machine-terminal.service";
+} from "#lib/services/machine-terminal.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("MachineTerminal");
 
@@ -19,10 +19,10 @@ export const load = async () => {
 export const actions = {
 	configure: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const machineId = String(formData.get("machineId") ?? "");

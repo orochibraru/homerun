@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Check, Minus } from "@lucide/svelte";
-	import AsyncBlock from "$lib/components/async-block.svelte";
+	import AsyncBlock from "#lib/components/async-block.svelte";
 	import {
 		errorClass,
 		inputClass as input,
 		labelClass as label,
-	} from "$lib/components/form-styles";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { getSwarmReadiness } from "$lib/remote/setup.remote";
+	} from "#lib/components/form-styles.js";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { getSwarmReadiness } from "#lib/remote/setup.remote.js";
 	import StepPanel from "./step-panel.svelte";
 	import type { OnboardingWizard } from "./wizard-state.svelte";
 

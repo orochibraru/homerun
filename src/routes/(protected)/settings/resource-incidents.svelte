@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { formatDuration } from "$lib/resource-incidents";
-	import { RESOURCE_LABELS } from "$lib/resource-thresholds";
-	import type { ResourceIncident } from "$lib/server/db/schema";
+	import { formatDuration } from "#lib/resource-incidents.js";
+	import { RESOURCE_LABELS } from "#lib/resource-thresholds.js";
+	import type { ResourceIncident } from "#lib/server/db/schema.js";
 
 	interface Props {
 		incidents: ResourceIncident[];

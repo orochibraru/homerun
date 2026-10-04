@@ -1,15 +1,18 @@
-import { config, isSmtpEnabled } from "$lib/config";
-import type { DeployTrigger } from "$lib/deploy-trigger";
-import type { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { JobDTO, type NewJobInput } from "$lib/dto/job-dto";
-import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { Logger } from "$lib/logger";
-import { parseTelegramTarget } from "$lib/notification-channel-target";
-import { isFailureEvent, NOTIFICATION_EVENTS } from "$lib/notification-events";
-import { brandedEmail } from "$lib/server/email-layout";
-import { primaryHostname } from "$lib/service-domains";
+import { config, isSmtpEnabled } from "#lib/config.js";
+import type { DeployTrigger } from "#lib/deploy-trigger.js";
+import type { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { JobDTO, type NewJobInput } from "#lib/dto/job-dto.js";
+import { NotificationChannelDTO } from "#lib/dto/notification-channel-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseTelegramTarget } from "#lib/notification-channel-target.js";
+import {
+	isFailureEvent,
+	NOTIFICATION_EVENTS,
+} from "#lib/notification-events.js";
+import { brandedEmail } from "#lib/server/email-layout.js";
+import { primaryHostname } from "#lib/service-domains.js";
 import { serviceHostname } from "./dns.service";
 import { EmailService } from "./email.service";
 import {

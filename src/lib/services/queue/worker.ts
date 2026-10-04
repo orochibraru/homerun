@@ -1,4 +1,4 @@
-import { JobDTO } from "$lib/dto/job-dto";
+import { JobDTO } from "#lib/dto/job-dto.js";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { closeCancelledDeploys } from "./cancelled-deploys.ts";
 import { jobHandlers } from "./handlers.ts";

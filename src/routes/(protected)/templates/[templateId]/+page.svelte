@@ -10,16 +10,16 @@
 		Tag,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { runtimeOptionsSummary } from "#lib/service-runtime.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { runtimeOptionsSummary } from "$lib/service-runtime";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 	const tmpl = $derived(data.template);
@@ -30,9 +30,7 @@
 	onMount(() => title.set(tmpl.name));
 
 	const configureHref = $derived(
-		`${resolve("/services/new")}?templateId=${tmpl.id}${
-			data.stack ? `&stackId=${data.stack.id}` : ""
-		}`,
+		`${resolve("services/new")}?templateId=${tmpl.id}${data.stack ? `&stackId=${data.stack.id}` : ""}`,
 	);
 </script>
 

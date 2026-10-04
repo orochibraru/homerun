@@ -1,15 +1,15 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { NodeEnrollmentDTO } from "#lib/dto/node-enrollment-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { Logger } from "#lib/logger.js";
+import { parseListQuery } from "#lib/server/list-query.js";
+import { enrollCommand } from "#lib/server/node-install-script.js";
+import { AgentClientService } from "#lib/services/agent-client.service.js";
+import { DockerService } from "#lib/services/docker.service.js";
 import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { NodeEnrollmentDTO } from "$lib/dto/node-enrollment-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { BASE_SORTS, sortKeysOf } from "$lib/list-sorts";
-import { Logger } from "$lib/logger";
-import { parseListQuery } from "$lib/server/list-query";
-import { enrollCommand } from "$lib/server/node-install-script";
-import { AgentClientService } from "$lib/services/agent-client.service";
-import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("RemoteHosts");
 
@@ -93,7 +93,7 @@ export const load = async ({ locals, parent, url }) => {
 export const actions = {
 	delete: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const hostId = formData.get("hostId") as string | null;
@@ -112,7 +112,7 @@ export const actions = {
 	},
 	enroll: async ({ request, locals, url }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			return fail(403, { error: "Only an admin can add servers." });
@@ -145,7 +145,7 @@ export const actions = {
 	},
 	revokeEnrollment: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			return fail(403, { error: "Only an admin can revoke enrollments." });
@@ -160,7 +160,7 @@ export const actions = {
 	},
 	removeNode: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			return fail(403, { error: "Only an admin can remove swarm nodes." });

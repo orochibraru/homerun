@@ -1,12 +1,12 @@
-import { config } from "$lib/config";
-import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceGitDTO } from "$lib/dto/service-git-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { Logger } from "$lib/logger";
-import { serviceHostnames } from "$lib/service-domains";
-import type { ContainerStatus } from "$lib/types";
+import { config } from "#lib/config.js";
+import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { Logger } from "#lib/logger.js";
+import { serviceHostnames } from "#lib/service-domains.js";
+import type { ContainerStatus } from "#lib/types.js";
 import { deleteDns } from "./dns.service.ts";
 import {
 	tryRemoveWorkload,

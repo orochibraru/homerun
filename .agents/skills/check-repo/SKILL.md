@@ -46,7 +46,7 @@ actually reading the failing file first.
    on every edited code file and `prettier --write` on every edited markdown
    file as PostToolUse hooks, so most formatting drift is caught immediately.
 
-3. **If a REST API route under `src/routes/api/v1/`, `$lib/openapi/` or
+3. **If a REST API route under `src/routes/api/v1/`, `src/lib/openapi/` or
    `src/lib/config.ts` changed**: `bun run gen`, and keep the regenerated
    `openapi.json`, `homerun.schema.json` and
    `tests/integration/support/openapi-types.ts` in the change. CI fails when

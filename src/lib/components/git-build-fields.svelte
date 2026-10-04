@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { resolve } from "$app/paths";
 	import {
 		type BuildMethod,
 		DEFAULT_BAKE_FILE,
 		DEFAULT_BAKE_TARGET,
-	} from "$lib/build-methods";
-	import BuildMethodField from "$lib/components/build-method-field.svelte";
-	import { Input } from "$lib/components/ui/input/index.js";
+	} from "#lib/build-methods.js";
+	import BuildMethodField from "#lib/components/build-method-field.svelte";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
+	} from "#lib/components/ui/select/index.js";
+	import { resolve } from "$app/paths";
 
 	interface Props {
 		buildCacheRegistryId?: string;
@@ -47,7 +47,11 @@
 	);
 </script>
 
-<BuildMethodField {labelClass} bind:value={gitBuildMethod} />
+<BuildMethodField
+  labelClass={labelClass}
+  bind:value={gitBuildMethod}
+/>
+
 {#if gitBuildMethod === "dockerfile"}
   <div>
     <label class={labelClass} for="gitDockerfilePath">Dockerfile path</label>
@@ -69,15 +73,20 @@
       bind:value={gitBuildTarget}
     />
     <p class="text-text-muted mt-1.5 text-xs">
-      The <code>FROM … AS &lt;name&gt;</code> stage to build, for a multi-stage
-      Dockerfile. Empty builds the last one.
+      The
+      <code>FROM … AS &lt;name&gt;</code>
+      stage to build, for a multi-stage Dockerfile. Empty builds the last one.
     </p>
     {#if errors?.gitBuildTarget}
       <p class={errorClass}>{errors.gitBuildTarget[0]}</p>
     {/if}
   </div>
 {:else if keepHiddenFields}
-  <input name="gitDockerfilePath" type="hidden" value={gitDockerfilePath}>
+  <input
+    name="gitDockerfilePath"
+    type="hidden"
+    value={gitDockerfilePath}
+  />
 {/if}
 {#if gitBuildMethod === "bake"}
   <div>
@@ -107,9 +116,18 @@
     {/if}
   </div>
 {:else if keepHiddenFields}
-  <input name="gitBakeFile" type="hidden" value={gitBakeFile}>
+  <input
+    name="gitBakeFile"
+    type="hidden"
+    value={gitBakeFile}
+  />
+
   {#if gitBuildMethod !== "dockerfile"}
-    <input name="gitBuildTarget" type="hidden" value={gitBuildTarget}>
+    <input
+      name="gitBuildTarget"
+      type="hidden"
+      value={gitBuildTarget}
+    />
   {/if}
 {/if}
 <div>
@@ -131,9 +149,12 @@
   {#if registries.length === 0}
     <p class="text-xs text-text-muted">
       No registries configured.
-      <a class="text-accent underline" href={resolve("/build-cache-registries")}>
-        Add one
-      </a>
+
+      <a
+        class="text-accent underline"
+        href={resolve('build-cache-registries')}
+      >Add one</a>
+
       to speed up rebuilds by reusing unchanged layers.
     </p>
   {:else}

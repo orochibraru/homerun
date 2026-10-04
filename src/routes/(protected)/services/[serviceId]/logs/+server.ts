@@ -1,11 +1,9 @@
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { allowLongRequest } from "$lib/server/long-request";
-import { isDeployed } from "$lib/service-state";
-import { DockerService } from "$lib/services/docker.service";
-import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { isDeployed } from "#lib/service-state.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
 
-export const GET = async ({ params, locals, platform }) => {
-	allowLongRequest(platform);
+export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
 		return new Response("Unauthorized", { status: 401 });
 	}

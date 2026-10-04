@@ -1,12 +1,12 @@
 import { and, eq } from "drizzle-orm";
-import type { VolumeMountSnapshot } from "$lib/revision-config";
-import { db } from "$lib/server/db/lib";
+import type { VolumeMountSnapshot } from "#lib/revision-config.js";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type ServiceVolume,
 	service,
 	serviceVolume,
 	storageVolume,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 export interface VolumeUser {

@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { Check } from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { descendantIds, type StackNode, stackPath } from "$lib/stack-tree";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import { descendantIds, type StackNode, stackPath } from "#lib/stack-tree.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	let {
 		open = $bindable(false),

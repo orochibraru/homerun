@@ -1,48 +1,48 @@
 import { join } from "node:path";
 import process, { cwd } from "node:process";
-import type { Handle, RequestEvent } from "@sveltejs/kit";
-import { sequence } from "@sveltejs/kit/hooks";
+import type { RequestEvent } from "@sveltejs/kit";
+import { type Handle, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
-import { building } from "$app/environment";
-import { applyInstanceSettings, config } from "$lib/config";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { ServiceDependencyDTO } from "$lib/dto/service-dependency-dto";
-import { isIngestPath } from "$lib/error-tracking/envelope";
-import { GIT_WEBHOOK_PATH } from "$lib/git-webhooks";
-import { Logger } from "$lib/logger";
-import { OIDC_BASE_PATH, rebaseOnOrigin } from "$lib/oidc-provider";
+import { applyInstanceSettings, config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
+import { isIngestPath } from "#lib/error-tracking/envelope.js";
+import { GIT_WEBHOOK_PATH } from "#lib/git-webhooks.js";
+import { Logger } from "#lib/logger.js";
+import { OIDC_BASE_PATH, rebaseOnOrigin } from "#lib/oidc-provider.js";
 import {
 	APP_ONLY_MESSAGE,
 	apiKeyScopeOf,
 	isAppOnly,
 	isReadOnly,
-} from "$lib/permissions";
-import { isForbiddenCrossSiteForm } from "$lib/server/csrf";
-import { db as appDb, getDb, resetDb } from "$lib/server/db";
-import { user as userTable } from "$lib/server/db/schema";
-import { seedBuiltinTemplates } from "$lib/server/db/seed";
+} from "#lib/permissions.js";
+import { isForbiddenCrossSiteForm } from "#lib/server/csrf.js";
+import { db as appDb, getDb, resetDb } from "#lib/server/db/index.js";
+import { user as userTable } from "#lib/server/db/schema.js";
+import { seedBuiltinTemplates } from "#lib/server/db/seed.js";
 import {
 	guardTokenRequest,
 	OIDC_TOKEN_PATH,
 	withTokenCors,
-} from "$lib/server/oidc-client-guard";
-import { appOnlyRejection, readOnlyRejection } from "$lib/server/read-only";
-import { AdminService } from "$lib/services/admin.service";
+} from "#lib/server/oidc-client-guard.js";
+import { appOnlyRejection, readOnlyRejection } from "#lib/server/read-only.js";
+import { AdminService } from "#lib/services/admin.service.js";
 import {
 	auth,
 	pruneUndecryptableSigningKeys,
 	rebuildAuth,
 	verifyMcpAccessToken,
-} from "$lib/services/auth";
-import { detectAuthCheckUrl } from "$lib/services/cron/core-services-watch";
-import { CronService } from "$lib/services/cron.service";
-import { DeploymentService } from "$lib/services/deploy.service";
-import { OrchestrationService } from "$lib/services/orchestration.service";
-import { JobWorker } from "$lib/services/queue/worker";
-import { RedirectService } from "$lib/services/redirect.service";
-import { DEFAULT_SURFACE } from "$lib/surfaces";
+} from "#lib/services/auth.js";
+import { detectAuthCheckUrl } from "#lib/services/cron/core-services-watch.js";
+import { CronService } from "#lib/services/cron.service.js";
+import { DeploymentService } from "#lib/services/deploy.service.js";
+import { OrchestrationService } from "#lib/services/orchestration.service.js";
+import { JobWorker } from "#lib/services/queue/worker.js";
+import { RedirectService } from "#lib/services/redirect.service.js";
+import { DEFAULT_SURFACE } from "#lib/surfaces.js";
+import { building } from "$app/env";
 
 const logger = new Logger("Hooks");
 
@@ -64,6 +64,7 @@ function isDatabaseUnavailableError(error: unknown): boolean {
 		return false;
 	}
 	const code = (error as NodeJS.ErrnoException).code;
+
 	return (
 		code === "ECONNREFUSED" ||
 		code === "ETIMEDOUT" ||
@@ -78,12 +79,13 @@ function makeErrorId(): string {
 
 /**
  * Logs an uncaught server error under a fresh error id and turns it into the
- * plain `App.Error` object the error page renders. 404s are skipped, and an
- * unreachable database gets a `DATABASE_UNAVAILABLE` code with a
+ * plain `App.Error` object the error page renders. Errors thrown with
+ * `error()`, SvelteKit's own (404s) and validation errors keep their defaults,
+ * and an unreachable database gets a `DATABASE_UNAVAILABLE` code with a
  * reload-in-a-moment message instead of the driver's.
  */
-export function handleError({ event, error, status }) {
-	if (status === 404) {
+export function handleError({ event, error, kind }) {
+	if (kind !== "unknown") {
 		return;
 	}
 	const errorId = makeErrorId();
@@ -240,9 +242,11 @@ async function backfillDependencies(): Promise<void> {
  * `HOMERUN_CANDIDATE=1` (the self-updater's pre-switch check of a new
  * version) it stops after auth is built: the candidate only has to answer
  * `/api/v1/ready`, and must not run jobs or touch Traefik next to the live
- * app.
+ * app. Exits the process once adapter-bun has drained the server on SIGTERM,
+ * since the job worker and schedulers would otherwise keep it alive.
  */
 export const init = async () => {
+	process.once("sveltekit:shutdown", () => process.exit(0));
 	await waitForDatabase();
 	await runMigrations();
 	await seedBuiltinTemplates();
@@ -321,6 +325,7 @@ async function signUpClosedResponse(
 ): Promise<Response | null> {
 	const isSignUp =
 		event.request.method === "POST" && event.url.pathname === SIGN_UP_PATH;
+
 	if (!(isSignUp && (await AdminService.hasAnyUser()))) {
 		return null;
 	}
@@ -335,6 +340,7 @@ async function signUpClosedResponse(
 /** The raw API key from `x-api-key` or `Authorization: Bearer`, or null when neither is present. */
 function readApiKey(event: RequestEvent): string | null {
 	const authHeader = event.request.headers.get("authorization");
+
 	return (
 		event.request.headers.get("x-api-key") ??
 		(authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null)

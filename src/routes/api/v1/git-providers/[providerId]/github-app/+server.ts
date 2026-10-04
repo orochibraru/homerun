@@ -1,15 +1,15 @@
 import { redirect } from "@sveltejs/kit";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { convertGithubAppManifest } from "#lib/github-app.js";
+import { Logger } from "#lib/logger.js";
+import { GitProviderService } from "#lib/services/git-provider.service.js";
 import { resolve } from "$app/paths";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { convertGithubAppManifest } from "$lib/github-app";
-import { Logger } from "$lib/logger";
-import { GitProviderService } from "$lib/services/git-provider.service";
 
 const logger = new Logger("GitProviders");
 
 export const GET = async ({ params, locals, url }) => {
 	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 	if (!locals.isAdmin) {
 		return new Response("Forbidden", { status: 403 });
@@ -27,7 +27,7 @@ export const GET = async ({ params, locals, url }) => {
 
 	const settings = await InstanceSettingsDTO.get();
 	if (settings.gitProviders.some((p) => p.id === params.providerId)) {
-		throw redirect(303, resolve("/git-providers"));
+		throw redirect(303, resolve("git-providers"));
 	}
 
 	const app = await convertGithubAppManifest(code);
@@ -54,5 +54,7 @@ export const GET = async ({ params, locals, url }) => {
 		`GitHub App created: provider=${params.providerId} app=${app.name} by=${locals.user.id}`,
 	);
 
-	throw redirect(303, `${app.htmlUrl}/installations/new`);
+	throw redirect(303, `${app.htmlUrl}/installations/new`, {
+		external: true,
+	});
 };

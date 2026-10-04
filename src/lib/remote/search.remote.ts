@@ -1,17 +1,15 @@
 import { z } from "zod";
-import { resolve } from "$app/paths";
-import { getRequestEvent, query } from "$app/server";
-import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
-import { CronJobDTO } from "$lib/dto/cron-job-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { StatusPageDTO } from "$lib/dto/status-page-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { TemplateDTO } from "$lib/dto/template-dto";
+import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
+import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { NotificationChannelDTO } from "#lib/dto/notification-channel-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
+import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
 import {
 	groupResults,
 	matchesSearch,
@@ -20,9 +18,11 @@ import {
 	SEARCH_MIN_LENGTH,
 	type SearchGroup,
 	type SearchResult,
-} from "$lib/search";
-import { requireUser } from "$lib/server/remote-auth";
-import { UserService } from "$lib/services/user.service";
+} from "#lib/search.js";
+import { requireUser } from "#lib/server/remote-auth.js";
+import { UserService } from "#lib/services/user.service.js";
+import { resolve } from "$app/paths";
+import { getRequestEvent, query } from "$app/server";
 
 function withQuery(path: string, q: string): string {
 	return `${path}?${new URLSearchParams({ q })}`;
@@ -146,7 +146,7 @@ async function searchInfrastructure(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: `${row.bucket} · ${row.endpoint}`,
-				href: withQuery(resolve("/s3-destinations"), row.name),
+				href: withQuery(resolve("s3-destinations"), row.name),
 				id: row.id,
 				kind: "s3Destination" as const,
 				label: row.name,
@@ -166,7 +166,7 @@ async function searchInfrastructure(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: row.kind,
-				href: resolve("/notification-channels"),
+				href: resolve("notification-channels"),
 				id: row.id,
 				kind: "notificationChannel" as const,
 				label: row.name,
@@ -192,7 +192,7 @@ async function searchInstance(
 	return [
 		...users.map((row) => ({
 			detail: row.role ? `${row.email} · ${row.role}` : row.email,
-			href: withQuery(resolve("/users"), row.email),
+			href: withQuery(resolve("users"), row.email),
 			id: row.id,
 			kind: "user" as const,
 			label: row.name,
@@ -202,7 +202,7 @@ async function searchInstance(
 			.slice(0, limit)
 			.map((p) => ({
 				detail: p.baseUrl ?? p.kind,
-				href: resolve("/git-providers"),
+				href: resolve("git-providers"),
 				id: p.id,
 				kind: "gitProvider" as const,
 				label: p.name,

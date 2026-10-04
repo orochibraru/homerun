@@ -1,12 +1,12 @@
 import { redirect } from "@sveltejs/kit";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { safeNextPath } from "#lib/security-policy.js";
+import { AccountSecurityService } from "#lib/services/account-security.service.js";
 import { resolve } from "$app/paths";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { safeNextPath } from "$lib/security-policy";
-import { AccountSecurityService } from "$lib/services/account-security.service";
 
 export const load = async ({ locals, url }) => {
 	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 
 	const next = safeNextPath(url.searchParams.get("next"));

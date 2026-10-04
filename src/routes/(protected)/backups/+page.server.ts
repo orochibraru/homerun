@@ -1,19 +1,19 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { BackupRunDTO } from "$lib/dto/backup-run-dto";
-import { JobDTO } from "$lib/dto/job-dto";
-import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { Logger } from "$lib/logger";
-import { parseListQuery } from "$lib/server/list-query";
+import { BackupRunDTO } from "#lib/dto/backup-run-dto.js";
+import { JobDTO } from "#lib/dto/job-dto.js";
+import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseListQuery } from "#lib/server/list-query.js";
 import {
 	cancelBackupRun,
 	enqueueVolumeBackup,
-} from "$lib/services/backup-queue";
-import { nextCronRun } from "$lib/services/cron/cron-expression";
-import { stackPath } from "$lib/stack-tree";
+} from "#lib/services/backup-queue.js";
+import { nextCronRun } from "#lib/services/cron/cron-expression.js";
+import { stackPath } from "#lib/stack-tree.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Backups");
 
@@ -82,7 +82,7 @@ export const load = async ({ parent, url }) => {
 export const actions = {
 	cancelRun: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const run = await BackupRunDTO.get(
 			String((await request.formData()).get("runId") ?? ""),
@@ -101,7 +101,7 @@ export const actions = {
 
 	run: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const volumeId = (formData.get("volumeId") as string | null)?.trim();

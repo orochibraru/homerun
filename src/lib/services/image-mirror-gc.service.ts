@@ -1,5 +1,5 @@
-import { JobDTO } from "$lib/dto/job-dto";
-import { listMirrorReferences } from "$lib/dto/mirror-reference-dto";
+import { JobDTO } from "#lib/dto/job-dto.js";
+import { listMirrorReferences } from "#lib/dto/mirror-reference-dto.js";
 import {
 	MIRROR_CONFIG_PATH,
 	MIRROR_CONTAINER_NAME,

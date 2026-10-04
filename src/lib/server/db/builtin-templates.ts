@@ -2,13 +2,16 @@ import { z } from "zod";
 import {
 	type PublishedPort,
 	publishedPortsProblem,
-} from "$lib/published-ports";
-import { isRunAsUser, type ServiceRuntimeOptions } from "$lib/service-runtime";
+} from "#lib/published-ports.js";
+import {
+	isRunAsUser,
+	type ServiceRuntimeOptions,
+} from "#lib/service-runtime.js";
 import {
 	TEMPLATE_CATEGORIES,
 	type TemplateCategory,
-} from "$lib/template-categories";
-import { secretTokensValid } from "$lib/template-secrets";
+} from "#lib/template-categories.js";
+import { secretTokensValid } from "#lib/template-secrets.js";
 
 export interface BuiltinTemplate extends Partial<ServiceRuntimeOptions> {
 	category: string;

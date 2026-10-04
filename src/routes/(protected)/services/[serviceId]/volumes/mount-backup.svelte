@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { Settings } from "@lucide/svelte";
 	import { tick } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import ScheduleField from "$lib/components/schedule-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Dialog from "$lib/components/ui/dialog/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ScheduleField from "#lib/components/schedule-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import { Switch } from "$lib/components/ui/switch/index.js";
-	import { describeSchedule, scheduleFromCron } from "$lib/schedule";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/ui/select/index.js";
+	import { Switch } from "#lib/components/ui/switch/index.js";
+	import { describeSchedule, scheduleFromCron } from "#lib/schedule.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	interface Props {
 		destinations: { id: string; name: string }[];
@@ -72,8 +72,14 @@
           : `Backups off for ${volume.name}.`,
     })}
   >
-    <input name="volumeId" type="hidden" value={volume.id}>
-    <input name="enabled" type="hidden" value={wanted ? "on" : ""}>
+    <input name="volumeId" type="hidden" value={volume.id} />
+
+    <input
+      name="enabled"
+      type="hidden"
+      value={wanted ? "on" : ""}
+    />
+
     <Switch
       aria-label="Back up {volume.name}"
       checked={volume.backupEnabled}
@@ -108,9 +114,12 @@
     {#if destinations.length === 0}
       <p class="text-text-muted text-sm">
         There's nowhere to send backups yet :
-        <a class="text-accent underline" href={resolve("/s3-destinations/new")}>
-          add a backup destination
-        </a>
+
+        <a
+          class="text-accent underline"
+          href={resolve('s3-destinations/new')}
+        >add a backup destination</a>
+
         first.
       </p>
     {:else}
@@ -127,17 +136,21 @@
           success: `Backups on for ${volume.name}.`,
         })}
       >
-        <input name="volumeId" type="hidden" value={volume.id}>
+        <input name="volumeId" type="hidden" value={volume.id} />
         <ScheduleField
           id="backupSchedule-{volume.id}"
           name="backupSchedule"
           value={volume.backupSchedule}
         />
         <div>
-          <label class={label} for="s3DestinationId-{volume.id}">
-            Destination
-          </label>
-          <input name="s3DestinationId" type="hidden" value={destinationId}>
+          <label class={label} for="s3DestinationId-{volume.id}">Destination</label>
+
+          <input
+            name="s3DestinationId"
+            type="hidden"
+            value={destinationId}
+          />
+
           <SelectRoot type="single" bind:value={destinationId}>
             <SelectTrigger class="w-full" id="s3DestinationId-{volume.id}">
               {destinations.find((d) => d.id === destinationId)?.name

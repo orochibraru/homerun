@@ -1,8 +1,8 @@
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { rangeStart } from "#lib/monitoring-ranges.js";
+import { monitoringRequest } from "#lib/server/monitoring-request.js";
+import { MonitoringService } from "#lib/services/monitoring.service.js";
 import { resolve } from "$app/paths";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { rangeStart } from "$lib/monitoring-ranges";
-import { monitoringRequest } from "$lib/server/monitoring-request";
-import { MonitoringService } from "$lib/services/monitoring.service";
 
 export const load = async ({ cookies, url }) => {
 	const { range, zone } = monitoringRequest(url, cookies);

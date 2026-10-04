@@ -1,14 +1,14 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { isBlockSeverity } from "$lib/image-scan";
-import { Logger } from "$lib/logger";
-import { MAX_RETAINED_IMAGES, MIN_RETAINED_IMAGES } from "$lib/revisions";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { isBlockSeverity } from "#lib/image-scan.js";
+import { Logger } from "#lib/logger.js";
+import { MAX_RETAINED_IMAGES, MIN_RETAINED_IMAGES } from "#lib/revisions.js";
 import {
 	applyAndRebuild,
 	nullableText,
-} from "$lib/server/validation/instance-settings-form";
-import { DockerService } from "$lib/services/docker.service";
+} from "#lib/server/validation/instance-settings-form.js";
+import { DockerService } from "#lib/services/docker.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("InstanceSettings");
 
@@ -19,10 +19,10 @@ export const load = async () => ({
 export const actions = {
 	updateDocker: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const settings = await InstanceSettingsDTO.get();
@@ -37,10 +37,10 @@ export const actions = {
 
 	updateImageScan: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const severity = formData.get("imageScanBlockSeverity");
@@ -66,10 +66,10 @@ export const actions = {
 
 	updateRetainedImages: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const count = Number(formData.get("retainedImagesPerService"));
@@ -92,10 +92,10 @@ export const actions = {
 
 	updateOrchestration: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const mode = formData.get("orchestrationMode") as string | null;

@@ -2,13 +2,13 @@
 	import { ArrowRight, MailX } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+	import { authClient } from "#lib/auth-client.js";
+	import AuthShell from "#lib/components/auth-shell.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
 	import { resolve } from "$app/paths";
-	import { authClient } from "$lib/auth-client";
-	import AuthShell from "$lib/components/auth-shell.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
 	import TwoFactorForm from "../sign-in/two-factor-form.svelte";
 
 	const { data } = $props();
@@ -19,7 +19,7 @@
 	onMount(() => title.set("Sign In"));
 
 	function finish() {
-		window.location.assign(data.redirectTo ?? resolve("/"));
+		window.location.assign(data.redirectTo ?? resolve(""));
 		return Promise.resolve();
 	}
 
@@ -60,46 +60,43 @@
 </script>
 
 {#if !data.email}
-  <AuthShell
-    eyebrow="Sign-in link"
-    heading="This link doesn't work any more"
-    subheading="Sign-in links work once and expire after 10 minutes. Ask for a new one from the sign-in page."
-  >
+	<AuthShell
+		eyebrow="Sign-in link"
+		heading="This link doesn't work any more"
+		subheading="Sign-in links work once and expire after 10 minutes. Ask for a new one from the sign-in page."
+	>
     <div class="flex flex-col items-center gap-4 py-2 text-center">
-      <span
-        class="flex size-12 items-center justify-center rounded-md bg-amber-500/10 text-amber-500"
-      >
-        <MailX class="size-6" />
-      </span>
-      <Button href={resolve("/auth/sign-in")} variant="outline">
-        Back to sign in
-      </Button>
-    </div>
-  </AuthShell>
+			<span
+				class="flex size-12 items-center justify-center rounded-md bg-amber-500/10 text-amber-500"
+			><MailX class="size-6" /></span>
+
+			<Button href={resolve('auth/sign-in')} variant="outline">Back to sign in</Button>
+		</div>
+	</AuthShell>
 {:else}
-  <AuthShell
-    eyebrow="Sign-in link"
-    heading={data.appName ? `Sign in to ${data.appName}` : "Finish signing in"}
-    subheading="You opened a sign-in link sent to {data.email}."
-  >
-    {#if twoFactorStep}
-      <TwoFactorForm
-        onBack={() => {
-          window.location.assign(resolve("/auth/sign-in"));
-        }}
-        onVerified={finish}
-        bind:loading
-      />
-    {:else}
+	<AuthShell
+		eyebrow="Sign-in link"
+		heading={data.appName ? `Sign in to ${data.appName}` : "Finish signing in"}
+		subheading="You opened a sign-in link sent to {data.email}."
+	>
+		{#if twoFactorStep}
+			<TwoFactorForm
+				onBack={() => {
+					window.location.assign(resolve('auth/sign-in'));
+				}}
+				onVerified={finish}
+				bind:loading
+			/>
+		{:else}
       <Button class="h-10 w-full" disabled={loading} onclick={handleVerify}>
-        {#if loading}
+				{#if loading}
           <Spinner />
           Signing in…
-        {:else}
-          Sign in as {data.email}
-          <ArrowRight class="size-4 opacity-70" />
-        {/if}
-      </Button>
-    {/if}
-  </AuthShell>
+				{:else}
+					Sign in as {data.email}
+					<ArrowRight class="size-4 opacity-70" />
+				{/if}
+			</Button>
+		{/if}
+	</AuthShell>
 {/if}

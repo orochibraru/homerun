@@ -1,0 +1,57 @@
+diff --git a/src/handler.js b/src/handler.js
+index a5cce744b7873975a161beb1deb02766e5635deb..47213fdbf8b96c7e84671d492489319fe17396b0 100644
+--- a/src/handler.js
++++ b/src/handler.js
+@@ -1,5 +1,5 @@
+ /** @import { Server as BunServer } from 'bun' */
+-import { env_prefix, origin, server } from '#@sveltejs/adapter-bun';
++import { app_dir, base, env_prefix, origin, server } from '#@sveltejs/adapter-bun';
+ import { server_assets } from './routes.js';
+ import { env, number_env } from './env.js';
+
+@@ -8,6 +8,8 @@ const protocol_header = env('PROTOCOL_HEADER', '').toLowerCase();
+ const host_header = env('HOST_HEADER', '').toLowerCase();
+ const port_header = env('PORT_HEADER', '').toLowerCase();
+ const xff_depth = number_env('XFF_DEPTH', 1, { min: 1 });
++const env_origin = env('ORIGIN', '');
++const remote_prefix = `${base === '/' ? '' : base}/${app_dir}/remote/`;
+
+ await server.init({
+ 	env: Bun.env,
+@@ -46,7 +48,8 @@ function normalize_request(request) {
+ 	try {
+ 		// an empty Host header makes request.url relative, so parsing belongs in the try
+ 		const url = new URL(request.url);
+-		const request_origin = origin || get_origin(request, url);
++		const request_origin =
++			same_host_remote_origin(request, url) || origin || env_origin || get_origin(request, url);
+ 		return request_origin === url.origin
+ 			? request
+ 			: new Request(request_origin + url.pathname + url.search, request);
+@@ -58,6 +61,26 @@ function normalize_request(request) {
+ 	}
+ }
+
++/**
++ * A remote function call keeps the browser's own origin when it names the host
++ * the request was sent to, so a pinned ORIGIN doesn't fail SvelteKit's
++ * same-origin check for remote calls on another address of the same server.
++ * @param {Request} request
++ * @param {URL} url
++ * @returns {string | null}
++ */
++function same_host_remote_origin(request, url) {
++	const request_origin = request.headers.get('origin');
++	if (!request_origin || !url.pathname.startsWith(remote_prefix)) return null;
++	try {
++		const parsed = new URL(request_origin);
++		const host = (host_header && request.headers.get(host_header)) || request.headers.get('host');
++		return parsed.host === host ? parsed.origin : null;
++	} catch {
++		return null;
++	}
++}
++
+ /**
+  * @param {Request} request
+  * @param {URL} url

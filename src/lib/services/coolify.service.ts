@@ -1,4 +1,4 @@
-import { Logger } from "$lib/logger";
+import { Logger } from "#lib/logger.js";
 import {
 	listFrom,
 	type MigrationConnection,
@@ -9,7 +9,7 @@ import {
 	rows,
 	sourceSlug,
 	str,
-} from "$lib/migrate/common";
+} from "#lib/migrate/common.js";
 import {
 	coolifyApplication,
 	coolifyDatabase,
@@ -17,11 +17,11 @@ import {
 	coolifyEnvironmentProjects,
 	coolifyProjectName,
 	coolifyService,
-} from "$lib/migrate/coolify";
+} from "#lib/migrate/coolify.js";
 import {
 	type CoolifyStorage,
 	coolifyStorages,
-} from "$lib/migrate/coolify-runtime";
+} from "#lib/migrate/coolify-runtime.js";
 
 const logger = new Logger("Coolify");
 

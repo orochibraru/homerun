@@ -1,10 +1,10 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { InvitationDTO } from "#lib/dto/invitation-dto.js";
+import { Logger } from "#lib/logger.js";
+import { asAuthRole } from "#lib/permissions.js";
+import { auth } from "#lib/services/auth.js";
+import { emailSignInAvailability } from "#lib/services/email-sign-in.js";
 import { resolve } from "$app/paths";
-import { InvitationDTO } from "$lib/dto/invitation-dto";
-import { Logger } from "$lib/logger";
-import { asAuthRole } from "$lib/permissions";
-import { auth } from "$lib/services/auth";
-import { emailSignInAvailability } from "$lib/services/email-sign-in";
 
 const logger = new Logger("AcceptInvite");
 
@@ -75,7 +75,7 @@ export const actions = {
 
 		await invitation.markAccepted();
 		logger.info(`Invite accepted: user=${result.user.id} email=${email}`);
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	},
 	acceptWithCodes: async ({ request, params }) => {
 		const invitation = await InvitationDTO.getByToken(params.token);
@@ -120,9 +120,10 @@ export const actions = {
 		logger.info(
 			`Invite accepted without a password: user=${result.user.id} email=${email}`,
 		);
+
 		throw redirect(
 			302,
-			`${resolve("/auth/sign-in")}?${new URLSearchParams({ email })}`,
+			`${resolve("auth/sign-in")}?${new URLSearchParams({ email })}`,
 		);
 	},
 };

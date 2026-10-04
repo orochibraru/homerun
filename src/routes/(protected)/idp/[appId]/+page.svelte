@@ -7,13 +7,13 @@
 		PlugZap,
 		ShieldCheck,
 	} from "@lucide/svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import CopyButton from "#lib/components/copy-button.svelte";
+	import OauthAppCredentials from "#lib/components/oauth-app-credentials.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { formatDate, timeAgo } from "#lib/formatting.js";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import CopyButton from "$lib/components/copy-button.svelte";
-	import OauthAppCredentials from "$lib/components/oauth-app-credentials.svelte";
-	import PanelHeader from "$lib/components/panel-header.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { formatDate, timeAgo } from "$lib/formatting";
 
 	const { data, form } = $props();
 	const app = $derived(data.app);

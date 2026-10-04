@@ -2,24 +2,24 @@
 	import { ArrowRight, ShieldCheck } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+	import { signUp, useSession } from "#lib/auth-client.js";
+	import AuthShell from "#lib/components/auth-shell.svelte";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import PasswordStrength from "#lib/components/password-strength.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { signUp, useSession } from "$lib/auth-client";
-	import AuthShell from "$lib/components/auth-shell.svelte";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import PasswordStrength from "$lib/components/password-strength.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
 
 	const session = useSession();
 
 	// Redirect if already logged in
 	$effect(() => {
 		if (!$session.isPending && $session.data?.user) {
-			goto(resolve("/"));
+			goto(resolve(""));
 		}
 	});
 
@@ -68,7 +68,7 @@
 			// case, since SMTP is one of the things onboarding sets up) had
 			// no way to receive the very email that page waits for, and no
 			// way off it either, dev's bypass button doesn't exist in prod.
-			goto(resolve("/"));
+			goto(resolve(""));
 		} catch (error) {
 			loading = false;
 			throw error;
@@ -132,7 +132,7 @@
         required
         bind:value={password}
       />
-      <PasswordStrength {password} />
+      <PasswordStrength password={password} />
     </div>
 
     <div>
@@ -179,9 +179,7 @@
     Already have an account?
     <a
       class="text-accent font-medium hover:underline"
-      href={resolve("/auth/sign-in")}
-    >
-      Sign in
-    </a>
+      href={resolve('auth/sign-in')}
+    >Sign in</a>
   {/snippet}
 </AuthShell>

@@ -17,12 +17,12 @@ import {
 	sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { db } from "$lib/server/db/lib";
-import { type Job, job, service } from "$lib/server/db/schema";
-import type { ListQuery, PagedResult } from "$lib/server/list-query";
-import { isStaleJob } from "$lib/services/queue/stale";
-import { decryptSecret, encryptSecret } from "$lib/services/secrets";
-import type { JobStage, JobStatus, JobSummary, JobType } from "$lib/types";
+import { db } from "#lib/server/db/lib.js";
+import { type Job, job, service } from "#lib/server/db/schema.js";
+import type { ListQuery, PagedResult } from "#lib/server/list-query.js";
+import { isStaleJob } from "#lib/services/queue/stale.js";
+import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
+import type { JobStage, JobStatus, JobSummary, JobType } from "#lib/types.js";
 import { BaseDTO } from "./base-dto";
 
 const TERMINAL_STATUSES: JobStatus[] = ["succeeded", "failed", "cancelled"];

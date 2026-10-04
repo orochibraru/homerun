@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createPrivateKey, createPublicKey } from "node:crypto";
-import { generateSshKeyPair } from "$lib/server/ssh-keys";
+import { generateSshKeyPair } from "#lib/server/ssh-keys.js";
 
 describe("generateSshKeyPair", () => {
 	test("writes an authorized_keys line whose key is the private key's public half", () => {

@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { ExternalLink, Trash2 } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import OauthProviderFields, {
 		type ProviderFieldValues,
-	} from "$lib/components/oauth-provider-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/oauth-provider-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -74,7 +74,7 @@
       <OauthProviderFields
         callbackBase={data.callbackBase}
         nameLocked
-        {values}
+        values={values}
       />
 
       <div class="flex justify-end">
@@ -96,7 +96,7 @@
         {#each data.usedBy as svc (svc.id)}
           <a
             class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3"
-            href="{resolve('/services')}/{svc.id}/networking"
+            href="{resolve('services')}/{svc.id}/networking"
           >
             <span class="text-text flex-1 truncate text-sm">{svc.name}</span>
             <ExternalLink class="text-text-subtle size-3.5" />

@@ -1,21 +1,24 @@
 import { randomBytes } from "node:crypto";
-import { config } from "$lib/config";
-import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceGitDTO } from "$lib/dto/service-git-dto";
-import { isCommitSha } from "$lib/git-ref";
+import { config } from "#lib/config.js";
+import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
+import { isCommitSha } from "#lib/git-ref.js";
 import {
 	gitWebhookUrl,
 	parsePullRequestEvent,
 	parsePushEvent,
 	parseTagPushEvent,
 	verifyGitWebhook,
-} from "$lib/git-webhooks";
-import { Logger } from "$lib/logger";
-import { matchesTagPattern } from "$lib/release-channels";
-import type { GitProviderConfig, GitProviderKind } from "$lib/server/db/schema";
-import { inferProviderKind } from "$lib/status-checks";
+} from "#lib/git-webhooks.js";
+import { Logger } from "#lib/logger.js";
+import { matchesTagPattern } from "#lib/release-channels.js";
+import type {
+	GitProviderConfig,
+	GitProviderKind,
+} from "#lib/server/db/schema.js";
+import { inferProviderKind } from "#lib/status-checks.js";
 import { DeploymentService } from "./deploy.service.ts";
 import {
 	GitProviderRefusedError,

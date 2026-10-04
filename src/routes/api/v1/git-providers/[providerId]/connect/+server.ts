@@ -1,9 +1,9 @@
 import { redirect } from "@sveltejs/kit";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { GIT_CONNECT_RETURN_COOKIE } from "$lib/git-webhooks";
-import { safeRedirectTarget } from "$lib/redirect-target";
-import { browserOrigin } from "$lib/server/canonical-origin";
-import { GitProviderService } from "$lib/services/git-provider.service";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { GIT_CONNECT_RETURN_COOKIE } from "#lib/git-webhooks.js";
+import { safeRedirectTarget } from "#lib/redirect-target.js";
+import { browserOrigin } from "#lib/server/canonical-origin.js";
+import { GitProviderService } from "#lib/services/git-provider.service.js";
 
 export const GET = async ({ cookies, params, locals, request, url }) => {
 	if (!locals.user) {
@@ -36,5 +36,5 @@ export const GET = async ({ cookies, params, locals, request, url }) => {
 		redirectUri,
 	);
 
-	throw redirect(302, authorizeUrl);
+	throw redirect(302, authorizeUrl, { external: true });
 };

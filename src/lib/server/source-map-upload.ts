@@ -1,8 +1,8 @@
 import {
 	mappedFileName,
 	parseSourceMap,
-} from "$lib/error-tracking/source-maps";
-import { sourceMapReleaseParam } from "$lib/server/validation/api";
+} from "#lib/error-tracking/source-maps.js";
+import { sourceMapReleaseParam } from "#lib/server/validation/api.js";
 
 export const MAX_SOURCE_MAP_BYTES = 25 * 1024 * 1024;
 export const MAX_SOURCE_MAP_FILES = 500;

@@ -8,7 +8,7 @@
 <script lang="ts">
   import { ArrowLeft, ArrowRight, Check } from "@lucide/svelte";
   import type { Component, Snippet } from "svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
 
   interface Props {
     /** Which step is currently shown : the page toggles its own step panels with this, same pattern services/new uses today. */

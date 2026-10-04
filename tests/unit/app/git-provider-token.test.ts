@@ -6,7 +6,7 @@ import {
 	encryptSecret,
 } from "../../../src/lib/services/secrets";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,

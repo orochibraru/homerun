@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 const ACCENT = "#0b6fa4";
 const CHART_1 = "#0b8ac0";

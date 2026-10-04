@@ -1,8 +1,8 @@
 import { and, inArray, like, notInArray, sql } from "drizzle-orm";
-import { parseBuiltinTemplates } from "$lib/server/db/builtin-templates";
-import { db } from "$lib/server/db/lib";
-import { template, templateLink } from "$lib/server/db/schema";
-import { runtimeOptionsFrom } from "$lib/service-runtime";
+import { parseBuiltinTemplates } from "#lib/server/db/builtin-templates.js";
+import { db } from "#lib/server/db/lib.js";
+import { template, templateLink } from "#lib/server/db/schema.js";
+import { runtimeOptionsFrom } from "#lib/service-runtime.js";
 
 const RETIRED_BUILTIN_IDS = ["builtin-newt"];
 

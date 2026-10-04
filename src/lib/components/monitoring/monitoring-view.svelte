@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { invalidateAll } from "$app/navigation";
-	import { page } from "$app/state";
-	import { formatBytes } from "$lib/formatting";
+	import { formatBytes } from "#lib/formatting.js";
 	import {
 		formatCount as count,
 		formatMb as mb,
 		formatMs as ms,
 		formatPercent as percent,
-	} from "$lib/metrics-format";
-	import { monitoringChanges } from "$lib/monitoring-changes";
-	import { MONITORING_RANGES } from "$lib/monitoring-ranges";
-	import type { MonitoringSummary } from "$lib/services/monitoring.service";
+	} from "#lib/metrics-format.js";
+	import { monitoringChanges } from "#lib/monitoring-changes.js";
+	import { MONITORING_RANGES } from "#lib/monitoring-ranges.js";
+	import type { MonitoringSummary } from "#lib/services/monitoring.service.js";
+	import { refreshAll } from "$app/navigation";
+	import { page } from "$app/state";
 	import ChangeBadge from "./change-badge.svelte";
 	import MetricChart from "./metric-chart.svelte";
 
@@ -42,12 +42,12 @@
 		const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 		if (browserZone && browserZone !== zone) {
 			document.cookie = `tz=${encodeURIComponent(browserZone)}; path=/; max-age=31536000; samesite=lax`;
-			void invalidateAll();
+			void refreshAll();
 		}
 	});
 
 	function rangeHref(range: string): string {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		url.searchParams.set("range", range);
 		return `${url.pathname}${url.search}`;
 	}

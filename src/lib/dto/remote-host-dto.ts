@@ -1,16 +1,16 @@
 import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type RemoteHost, remoteHost } from "$lib/server/db/schema";
+import { db } from "#lib/server/db/lib.js";
+import { type RemoteHost, remoteHost } from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	narrowFilter,
 	type PagedResult,
 	searchCondition,
 	sortOrder,
-} from "$lib/server/list-query";
-import type { AgentConnection } from "$lib/services/agent-client.service";
-import type { RemoteHostConnection } from "$lib/services/docker.service";
-import { decryptSecret } from "$lib/services/secrets";
+} from "#lib/server/list-query.js";
+import type { AgentConnection } from "#lib/services/agent-client.service.js";
+import type { RemoteHostConnection } from "#lib/services/docker.service.js";
+import { decryptSecret } from "#lib/services/secrets.js";
 import { BaseDTO } from "./base-dto";
 
 export interface NewRemoteHostInput {

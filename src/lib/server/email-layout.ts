@@ -1,4 +1,4 @@
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 
 const BRAND = "#8b1e3f";
 const TEXT = "#1f1d2b";

@@ -1,5 +1,5 @@
-import { expect, test as setup } from "@playwright/test";
 import { E2E_BASE_URL } from "../support/config";
+import { expect, test as setup } from "../support/test";
 import { ADMIN, AUTH_STATE } from "./support";
 
 setup("creates the admin and finishes onboarding", async ({ page }) => {

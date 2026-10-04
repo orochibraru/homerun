@@ -1,12 +1,11 @@
-import { json } from "@sveltejs/kit";
-import { DockerService } from "$lib/services/docker.service";
+import { DockerService } from "#lib/services/docker.service.js";
 
 export const POST = ({ params, locals }) => {
 	if (!locals.user) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	if (DockerService.ownsSession(params.sessionId, locals.user.id)) {
 		DockerService.closeSession(params.sessionId);
 	}
-	return json({ success: true });
+	return Response.json({ success: true });
 };

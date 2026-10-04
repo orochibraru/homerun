@@ -3,18 +3,18 @@ import {
 	acceptsEmailSignIn,
 	accountProviderIdFor,
 	emailMatchesPattern,
-} from "$lib/auth-providers";
-import { config } from "$lib/config";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
+} from "#lib/auth-providers.js";
+import { config } from "#lib/config.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { Logger } from "#lib/logger.js";
+import { db } from "#lib/server/db/lib.js";
 import {
 	account as accountTable,
 	type Service,
 	user as userTable,
-} from "$lib/server/db/schema";
-import { primaryHostname } from "$lib/service-domains";
+} from "#lib/server/db/schema.js";
+import { primaryHostname } from "#lib/service-domains.js";
 import { emailSignInAvailability } from "./email-sign-in.ts";
 
 const GROUP_CLAIMS = ["groups", "roles", "grp"];
@@ -325,7 +325,7 @@ class AppAccessServiceClass {
 		if (accounts.length === 0) {
 			return;
 		}
-		const { auth } = await import("$lib/services/auth");
+		const { auth } = await import("#lib/services/auth.js");
 		await Promise.all(
 			accounts.map(async (entry) => {
 				try {

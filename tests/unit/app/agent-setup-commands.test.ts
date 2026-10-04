@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { agentSetupCommands } from "$lib/server/node-install-script";
+import { agentSetupCommands } from "#lib/server/node-install-script.js";
 
 describe("agentSetupCommands", () => {
 	test("a release pins the installer and the image to its release tag", () => {

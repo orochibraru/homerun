@@ -1,12 +1,12 @@
 <script lang="ts">
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import { getSetupStatus } from "#lib/remote/setup.remote.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { page } from "$app/state";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { getSetupStatus } from "$lib/remote/setup.remote";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 

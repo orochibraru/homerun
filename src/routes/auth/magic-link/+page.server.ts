@@ -1,6 +1,6 @@
-import { REDIRECT_TO_PARAM, safeRedirectTarget } from "$lib/redirect-target";
-import { gatedAppFor } from "$lib/server/app-gate-return";
-import { magicLinkEmail } from "$lib/services/email-sign-in";
+import { REDIRECT_TO_PARAM, safeRedirectTarget } from "#lib/redirect-target.js";
+import { gatedAppFor } from "#lib/server/app-gate-return.js";
+import { magicLinkEmail } from "#lib/services/email-sign-in.js";
 
 export const load = async ({ url }) => {
 	const token = url.searchParams.get("token") ?? "";

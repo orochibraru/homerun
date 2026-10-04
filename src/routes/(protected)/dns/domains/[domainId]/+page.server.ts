@@ -1,14 +1,14 @@
 import { error, fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { DnsConnectionDTO } from "$lib/dto/dns-connection-dto";
-import { DomainDTO } from "$lib/dto/domain-dto";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { DnsConnectionDTO } from "#lib/dto/dns-connection-dto.js";
+import { DomainDTO } from "#lib/dto/domain-dto.js";
+import { Logger } from "#lib/logger.js";
 import {
 	parseDomainForm,
 	parseRecordForm,
-} from "$lib/server/validation/dns-forms";
-import { DomainDnsService } from "$lib/services/domain-dns.service";
+} from "#lib/server/validation/dns-forms.js";
+import { DomainDnsService } from "#lib/services/domain-dns.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("DNS");
 
@@ -18,10 +18,10 @@ async function adminDomain(
 	domainId: string,
 ): Promise<DomainDTO | null> {
 	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
+		throw redirect(302, resolve("auth/sign-in"));
 	}
 	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 	return await DomainDTO.get(domainId);
 }
@@ -41,7 +41,7 @@ export const load = async ({ params, parent }) => {
 	return {
 		baseDomain: config.baseDomain,
 		connections: connections.map((connection) => connection.summary()),
-		crumbRoot: [{ href: resolve("/dns"), label: "DNS" }],
+		crumbRoot: [{ href: resolve("dns"), label: "DNS" }],
 		domain: domain.toJSON(),
 		records: domain.connectionId
 			? DomainDnsService.records(domain).then(

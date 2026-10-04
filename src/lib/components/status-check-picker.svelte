@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { ListChecks, Plus, RefreshCw } from "@lucide/svelte";
 	import { untrack } from "svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { listStatusCheckNames } from "$lib/remote/status-checks.remote";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { listStatusCheckNames } from "#lib/remote/status-checks.remote.js";
 
 	interface Props {
 		enabled: boolean;

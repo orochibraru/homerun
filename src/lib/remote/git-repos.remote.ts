@@ -1,14 +1,14 @@
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
-import { query } from "$app/server";
-import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { Logger } from "$lib/logger";
-import { requireUser } from "$lib/server/remote-auth";
+import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { Logger } from "#lib/logger.js";
+import { requireUser } from "#lib/server/remote-auth.js";
 import {
 	GitProviderService,
 	type GitRepo,
-} from "$lib/services/git-provider.service";
+} from "#lib/services/git-provider.service.js";
+import { query } from "$app/server";
 
 const logger = new Logger("GitProviders");
 

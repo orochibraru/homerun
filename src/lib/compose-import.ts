@@ -1,10 +1,10 @@
 import { parse as parseYaml } from "yaml";
-import type { BuildMethod } from "$lib/build-methods";
-import { parseDotEnv } from "$lib/env-parse";
-import { splitImageRef } from "$lib/image-ref";
-import type { PublishedPort } from "$lib/published-ports";
-import { isRunAsUser } from "$lib/service-runtime";
-import { argvFrom } from "$lib/shell-words";
+import type { BuildMethod } from "#lib/build-methods.js";
+import { parseDotEnv } from "#lib/env-parse.js";
+import { splitImageRef } from "#lib/image-ref.js";
+import type { PublishedPort } from "#lib/published-ports.js";
+import { isRunAsUser } from "#lib/service-runtime.js";
+import { argvFrom } from "#lib/shell-words.js";
 
 export type ComposeRestartPolicy =
 	| "no"

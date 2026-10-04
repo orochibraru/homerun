@@ -1,23 +1,23 @@
-import { config } from "$lib/config";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { ServiceGitDTO } from "$lib/dto/service-git-dto";
-import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
-import { StackDTO } from "$lib/dto/stack-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { isCommitSha } from "$lib/git-ref";
-import { type PullRequestEvent, previewSlug } from "$lib/git-webhooks";
-import { Logger } from "$lib/logger";
-import { previewBranchAllowed } from "$lib/preview-branches";
-import { invalidateGatedService } from "$lib/server/gated-service-cache";
+import { config } from "#lib/config.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
+import { StackDTO } from "#lib/dto/stack-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { isCommitSha } from "#lib/git-ref.js";
+import { type PullRequestEvent, previewSlug } from "#lib/git-webhooks.js";
+import { Logger } from "#lib/logger.js";
+import { previewBranchAllowed } from "#lib/preview-branches.js";
+import { invalidateGatedService } from "#lib/server/gated-service-cache.js";
 import {
 	defaultHostname,
 	primaryHostname,
 	renderPreviewDomain,
 	rewriteHostnames,
 	serviceHostnames,
-} from "$lib/service-domains";
-import { isDeployed } from "$lib/service-state";
-import type { ContainerStatus } from "$lib/types";
+} from "#lib/service-domains.js";
+import { isDeployed } from "#lib/service-state.js";
+import type { ContainerStatus } from "#lib/types.js";
 import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { serviceHostname, syncServiceDomainsDns } from "./dns.service.ts";

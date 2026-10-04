@@ -7,14 +7,14 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+	import { signOut } from "#lib/auth-client.js";
+	import AuthShell from "#lib/components/auth-shell.svelte";
+	import PasskeyPanel from "#lib/components/passkey-panel.svelte";
+	import TwoFactorPanel from "#lib/components/two-factor-panel.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { toastError } from "#lib/toast.js";
 	import { refreshAll } from "$app/navigation";
-	import { signOut } from "$lib/auth-client";
-	import AuthShell from "$lib/components/auth-shell.svelte";
-	import PasskeyPanel from "$lib/components/passkey-panel.svelte";
-	import TwoFactorPanel from "$lib/components/two-factor-panel.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { toastError } from "$lib/toast";
 
 	const { data } = $props();
 

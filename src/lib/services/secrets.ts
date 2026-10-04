@@ -4,7 +4,7 @@ import {
 	randomBytes,
 	scryptSync,
 } from "node:crypto";
-import { config } from "$lib/config";
+import { config } from "#lib/config.js";
 
 // Registry credentials (service.registryPasswordEnc) are encrypted at
 // rest with AES-256-GCM. The key is derived from the app's own auth

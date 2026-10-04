@@ -8,17 +8,17 @@
 		Power,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import DeployLogPanel from "#lib/components/deploy-log-panel.svelte";
+	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import UptimePanel from "#lib/components/uptime-panel.svelte";
+	import { timeAgo } from "#lib/formatting.js";
+	import { workloadId } from "#lib/service-state.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
-	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import UptimePanel from "$lib/components/uptime-panel.svelte";
-	import { timeAgo } from "$lib/formatting";
-	import { workloadId } from "$lib/service-state";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 

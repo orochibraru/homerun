@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Clock } from "@lucide/svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import ScheduleField from "#lib/components/schedule-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { timeAgo } from "#lib/formatting.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ScheduleField from "$lib/components/schedule-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { timeAgo } from "$lib/formatting";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		cronError?: string;

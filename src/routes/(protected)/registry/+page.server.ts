@@ -1,8 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { runQueuedCleanup } from "#lib/services/docker-cleanup-queue.js";
+import { ImageMirrorGcService } from "#lib/services/image-mirror-gc.service.js";
+import { RegistryService } from "#lib/services/registry.service.js";
 import { resolve } from "$app/paths";
-import { runQueuedCleanup } from "$lib/services/docker-cleanup-queue";
-import { ImageMirrorGcService } from "$lib/services/image-mirror-gc.service";
-import { RegistryService } from "$lib/services/registry.service";
 
 function reason(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
@@ -19,10 +19,10 @@ export const load = async () => {
 export const actions = {
 	collectGarbage: async ({ locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const busy = await ImageMirrorGcService.busyReason();
 		if (busy) {
@@ -33,10 +33,10 @@ export const actions = {
 
 	deleteRepository: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const repository = String(
 			(await request.formData()).get("repository") ?? "",
@@ -54,10 +54,10 @@ export const actions = {
 
 	deleteTag: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const repository = String(formData.get("repository") ?? "");

@@ -9,22 +9,22 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
+	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
+	import PublishedPortsFields from "#lib/components/published-ports-fields.svelte";
+	import RuntimeFields from "#lib/components/runtime-fields.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { mergeEnvRows, type ParsedEnvVar } from "#lib/env-parse.js";
+	import { title } from "#lib/store/title.js";
+	import { TEMPLATE_CATEGORIES } from "#lib/template-categories.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
-	import PublishedPortsFields from "$lib/components/published-ports-fields.svelte";
-	import RuntimeFields from "$lib/components/runtime-fields.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "$lib/components/ui/textarea/index.js";
-	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
-	import { title } from "$lib/store/title";
-	import { TEMPLATE_CATEGORIES } from "$lib/template-categories";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -283,7 +283,7 @@
       </div>
       <div class="space-y-5 p-5">
         <RuntimeFields
-          {errors}
+          errors={errors}
           isAdmin={data.isAdmin}
           showEnvFiles
           values={values ?? {}}
@@ -368,12 +368,18 @@
                 type="text"
                 bind:value={linkAliases[linkable.id]}
               />
-              <input name="linkTemplateId" type="hidden" value={linkable.id}>
+
+              <input
+                name="linkTemplateId"
+                type="hidden"
+                value={linkable.id}
+              />
+
               <input
                 name="linkEnabled"
                 type="hidden"
                 value={enabled ? "true" : "false"}
-              >
+              />
             </div>
           {/each}
         </div>
@@ -381,7 +387,7 @@
     {/if}
 
     <div class="flex justify-end gap-3">
-      <Button href={resolve("/templates")} variant="outline">Cancel</Button>
+      <Button href={resolve('templates')} variant="outline">Cancel</Button>
       <Button disabled={submitting} type="submit">
         {#if submitting}
           <Spinner />

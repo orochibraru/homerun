@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 /**
  * Depends on `onboarding.spec.ts` having already finished onboarding for

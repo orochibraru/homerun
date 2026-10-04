@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isDeployed, workloadId } from "$lib/service-state";
+import { isDeployed, workloadId } from "#lib/service-state.js";
 
 describe("isDeployed", () => {
 	test("a standalone service is deployed once it has a container", () => {

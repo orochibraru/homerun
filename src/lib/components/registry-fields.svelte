@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChevronDown, Lock } from "@lucide/svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
 
 	interface Props {
 		class?: string;

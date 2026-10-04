@@ -2,9 +2,9 @@ import { desc, eq } from "drizzle-orm";
 import {
 	CLIENT_SECRET_MARKER,
 	OIDC_TEST_CALLBACK_PATH,
-} from "$lib/oidc-provider";
-import { db } from "$lib/server/db/lib";
-import { type OauthClient, oauthClient } from "$lib/server/db/schema";
+} from "#lib/oidc-provider.js";
+import { db } from "#lib/server/db/lib.js";
+import { type OauthClient, oauthClient } from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 /** A string-array column the auth adapter stores as JSON text, read back as a list. */

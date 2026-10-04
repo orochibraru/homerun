@@ -17,10 +17,9 @@
 		User,
 	} from "@lucide/svelte";
 	import type { Component } from "svelte";
-	import { goto } from "$app/navigation";
-	import { headerControlClass } from "$lib/components/header-styles";
-	import * as Command from "$lib/components/ui/command/index.js";
-	import { searchContent } from "$lib/remote/search.remote";
+	import { headerControlClass } from "#lib/components/header-styles.js";
+	import * as Command from "#lib/components/ui/command/index.js";
+	import { searchContent } from "#lib/remote/search.remote.js";
 	import {
 		filterPages,
 		SEARCH_MAX_LENGTH,
@@ -28,7 +27,8 @@
 		SEARCH_PAGES,
 		type SearchGroup,
 		type SearchResultKind,
-	} from "$lib/search";
+	} from "#lib/search.js";
+	import { goto } from "$app/navigation";
 
 	const { isAdmin }: { isAdmin: boolean } = $props();
 

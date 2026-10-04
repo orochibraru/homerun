@@ -1,5 +1,5 @@
-import { TemplateDTO } from "$lib/dto/template-dto";
-import { EXTRA_ICONS, type LibraryIcon } from "$lib/icon-library";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { EXTRA_ICONS, type LibraryIcon } from "#lib/icon-library.js";
 
 /**
  * Every icon a service can pick: each built-in template's logo (under "Apps"),

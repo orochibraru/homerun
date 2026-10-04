@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import BrandMark from "$lib/components/brand-mark.svelte";
+	import BrandMark from "#lib/components/brand-mark.svelte";
 	import ErrorBoundary from "./error-boundary.svelte";
 
 	interface Props {

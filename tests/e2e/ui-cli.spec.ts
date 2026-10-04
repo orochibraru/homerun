@@ -9,8 +9,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
-import { expect, type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import { E2E_BASE_URL } from "./support/config";
+import { expect, test } from "./support/test";
 
 interface CliResult {
 	code: number | null;

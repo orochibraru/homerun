@@ -12,20 +12,20 @@
 		Webhook,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import { Switch } from "#lib/components/ui/switch/index.js";
+	import { NOTIFICATION_EVENTS } from "#lib/notification-events.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import type { NotificationChannelKind } from "#lib/types.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import { Switch } from "$lib/components/ui/switch/index.js";
-	import { NOTIFICATION_EVENTS } from "$lib/notification-events";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import type { NotificationChannelKind } from "$lib/types";
 
 	const { data, form } = $props();
 
@@ -94,7 +94,12 @@
         events each channel receives in your notification settings.
       </p>
     </div>
-    <Button href={resolve("/profile/notifications")} size="sm" variant="outline">
+
+    <Button
+      href={resolve('profile/notifications')}
+      size="sm"
+      variant="outline"
+    >
       <SlidersHorizontal class="size-4" />
       Notification settings
     </Button>
@@ -316,7 +321,7 @@
         success: "Channel saved.",
       })}
     >
-      <input name="channelId" type="hidden" value={editing.id}>
+      <input name="channelId" type="hidden" value={editing.id} />
       <div>
         <label class={label} for="editChannelName">Name</label>
         <Input id="editChannelName" name="name" value={editing.name} />

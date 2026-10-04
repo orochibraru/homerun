@@ -7,7 +7,7 @@ import {
 	toEncodedMap,
 } from "@jridgewell/gen-mapping";
 
-mock.module("$app/environment", () => ({
+mock.module("$app/env", () => ({
 	browser: false,
 	building: false,
 	dev: false,

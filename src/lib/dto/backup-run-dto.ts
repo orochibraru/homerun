@@ -8,18 +8,18 @@ import {
 	or,
 	type SQL,
 } from "drizzle-orm";
-import type { BackupRunKind } from "$lib/revision-config";
-import { db } from "$lib/server/db/lib";
+import type { BackupRunKind } from "#lib/revision-config.js";
+import { db } from "#lib/server/db/lib.js";
 import {
 	type BackupRun,
 	backupRun,
 	storageVolume,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 import {
 	type ListQuery,
 	type PagedResult,
 	searchCondition,
-} from "$lib/server/list-query";
+} from "#lib/server/list-query.js";
 import { BaseDTO } from "./base-dto";
 
 /** Wraps the `backup_run` table : see ServiceDTO for the pattern this follows. */

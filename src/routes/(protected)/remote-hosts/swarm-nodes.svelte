@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Crown, Trash2, X } from "@lucide/svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import type { NodeEnrollmentSummary } from "#lib/dto/node-enrollment-dto.js";
+	import type { SwarmNodeInfo } from "#lib/services/docker.service.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import type { NodeEnrollmentSummary } from "$lib/dto/node-enrollment-dto";
-	import type { SwarmNodeInfo } from "$lib/services/docker.service";
-	import { enhanceToast } from "$lib/toast";
 
 	const {
 		enrollments,

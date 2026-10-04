@@ -16,21 +16,21 @@
 	import type { Snippet } from "svelte";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import type { SortOption } from "$lib/list-sorts";
+	} from "#lib/components/ui/select/index.js";
+	import type { SortOption } from "#lib/list-sorts.js";
 	import {
 		Drawer,
 		DrawerContent,
 		DrawerHeader,
 		DrawerTitle,
-	} from "$lib/components/ui/drawer/index.js";
+	} from "#lib/components/ui/drawer/index.js";
 
 	interface Props {
 		filters?: FilterGroup[];
@@ -93,16 +93,15 @@
 	});
 
 	function apply(mutate: (params: URLSearchParams) => void) {
-		const params = new URLSearchParams(page.url.searchParams);
+		const params = new URLSearchParams(page.url.search);
 		mutate(params);
 		for (const pageParam of pageParams) {
 			params.delete(pageParam);
 		}
 		const query = params.toString();
 		void goto(`${page.url.pathname}${query ? `?${query}` : ""}`, {
-			keepFocus: true,
-			noScroll: true,
-			replaceState: true,
+			replace: true,
+			reset: false,
 		});
 	}
 

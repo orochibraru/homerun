@@ -1,4 +1,4 @@
-import type { JobSummary } from "$lib/types";
+import type { JobSummary } from "#lib/types.js";
 
 export interface UpdatePreflight {
 	blockers: JobSummary[];

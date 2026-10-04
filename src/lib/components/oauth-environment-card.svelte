@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { KeyRound, Laptop, Trash2 } from "@lucide/svelte";
 	import { untrack } from "svelte";
-	import { enhance } from "$app/forms";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { inputClass } from "$lib/components/form-styles";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { inputClass } from "#lib/components/form-styles.js";
 	import OauthEnvironmentFields, {
 		type OauthEnvironmentFieldValues,
-	} from "$lib/components/oauth-environment-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import type { OauthClientSecretSummary } from "$lib/dto/oauth-client-secret-dto";
-	import { formatDate, timeAgo } from "$lib/formatting";
-	import type { OauthClientEnvironment } from "$lib/server/db/schema";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/oauth-environment-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import type { OauthClientSecretSummary } from "#lib/dto/oauth-client-secret-dto.js";
+	import { formatDate, timeAgo } from "#lib/formatting.js";
+	import type { OauthClientEnvironment } from "#lib/server/db/schema.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	interface Props {
 		canDelete: boolean;

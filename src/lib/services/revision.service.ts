@@ -1,9 +1,13 @@
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
-import { isRevision, revisionEntries, revisionImageRefs } from "$lib/revisions";
-import type { Deployment, Service } from "$lib/server/db/schema";
-import type { RevisionHealth } from "$lib/types";
+import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import type { ServiceDTO } from "#lib/dto/service-dto.js";
+import {
+	isRevision,
+	revisionEntries,
+	revisionImageRefs,
+} from "#lib/revisions.js";
+import type { Deployment, Service } from "#lib/server/db/schema.js";
+import type { RevisionHealth } from "#lib/types.js";
 import { DeploymentService } from "./deploy.service.ts";
 import { DockerService } from "./docker.service.ts";
 

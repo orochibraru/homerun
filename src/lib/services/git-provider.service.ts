@@ -1,14 +1,14 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { config } from "$lib/config";
-import type { GitConnectionDTO } from "$lib/dto/git-connection-dto";
+import { config } from "#lib/config.js";
+import type { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import {
 	createWebhookRequest,
 	deleteWebhookPath,
 	webhookIdFrom,
-} from "$lib/git-webhooks";
-import { Logger } from "$lib/logger";
-import type { GitProviderConfig } from "$lib/server/db/schema";
-import { providerApiBase } from "$lib/status-checks";
+} from "#lib/git-webhooks.js";
+import { Logger } from "#lib/logger.js";
+import type { GitProviderConfig } from "#lib/server/db/schema.js";
+import { providerApiBase } from "#lib/status-checks.js";
 import { decryptSecret, encryptSecret } from "./secrets.ts";
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;

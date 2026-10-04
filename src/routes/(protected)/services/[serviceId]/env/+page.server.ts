@@ -1,12 +1,12 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "$lib/host-access";
-import { Logger } from "$lib/logger";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "#lib/host-access.js";
+import { Logger } from "#lib/logger.js";
 import {
 	parseEnvVars,
 	updateEnvFilesSchema,
-} from "$lib/server/validation/service";
+} from "#lib/server/validation/service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
 
@@ -15,7 +15,7 @@ export const load = ({ locals }) => ({ isAdmin: locals.isAdmin });
 export const actions = {
 	update: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
@@ -27,14 +27,14 @@ export const actions = {
 		const secretEnvKeys = [
 			...new Set(formData.getAll("envSecret").map(String)),
 		].filter((key) => key in envVars);
-		await svc.update({ envVars, secretEnvKeys });
 
+		await svc.update({ envVars, secretEnvKeys });
 		logger.info(`Env vars updated: service=${svc.id} user=${locals.user.id}`);
 		return { success: true };
 	},
 	updateEnvFiles: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {

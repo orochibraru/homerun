@@ -1,7 +1,7 @@
-import { config } from "$lib/config";
-import { Logger } from "$lib/logger";
-import type { PublishedPort } from "$lib/published-ports";
-import type { ContainerStatus } from "$lib/types";
+import { config } from "#lib/config.js";
+import { Logger } from "#lib/logger.js";
+import type { PublishedPort } from "#lib/published-ports.js";
+import type { ContainerStatus } from "#lib/types.js";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RegistryAuth, VolumeMountParams } from "./containers.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";

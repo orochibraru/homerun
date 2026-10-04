@@ -7,7 +7,7 @@ import {
 	normalizeVolumePath,
 	parentPath,
 	parseListing,
-} from "$lib/volume-files";
+} from "#lib/volume-files.js";
 
 describe("normalizeVolumePath", () => {
 	test("drops dots and extra slashes", () => {

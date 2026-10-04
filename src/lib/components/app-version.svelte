@@ -2,22 +2,22 @@
 	import { ArrowUpCircle, CircleCheck, RefreshCw } from "@lucide/svelte";
 	import { onDestroy } from "svelte";
 	import { toast } from "svelte-sonner";
-	import Alert from "$lib/components/alert.svelte";
-	import AsyncBlock from "$lib/components/async-block.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Dialog from "$lib/components/ui/dialog/index.js";
-	import { Spinner } from "$lib/components/ui/spinner/index.js";
-	import UpdateBlockers from "$lib/components/update-blockers.svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import AsyncBlock from "#lib/components/async-block.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import { Spinner } from "#lib/components/ui/spinner/index.js";
+	import UpdateBlockers from "#lib/components/update-blockers.svelte";
 	import {
 		checkForUpdates,
 		getAppVersion,
 		getReleaseStatus,
 		getUpdatePreflight,
 		startSelfUpdate,
-	} from "$lib/remote/self-update.remote";
-	import { toastError } from "$lib/toast";
+	} from "#lib/remote/self-update.remote.js";
+	import { toastError } from "#lib/toast.js";
 
 	const { admin }: { admin: boolean } = $props();
 

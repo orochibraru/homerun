@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Fingerprint, Plus, Trash2 } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
-	import { invalidateAll } from "$app/navigation";
-	import { authClient } from "$lib/auth-client";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { toastError } from "$lib/toast";
+	import { authClient } from "#lib/auth-client.js";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { toastError } from "#lib/toast.js";
+	import { refreshAll } from "$app/navigation";
 
 	interface PasskeyRow {
 		backedUp: boolean;
@@ -22,7 +22,7 @@
 		passkeys: PasskeyRow[];
 	}
 
-	const { passkeys, onChange = invalidateAll }: Props = $props();
+	const { passkeys, onChange = refreshAll }: Props = $props();
 
 	let name = $state("");
 	let busy = $state(false);

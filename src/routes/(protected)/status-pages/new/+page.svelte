@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Plus } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import StatusPageFields from "#lib/components/status-page-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import type { StatusPageScope } from "#lib/types.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import StatusPageFields from "$lib/components/status-page-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
-	import type { StatusPageScope } from "$lib/types";
 
 	const { data, form } = $props();
 
@@ -72,11 +72,8 @@
     />
 
     <div class="flex justify-end gap-3">
-      <Button href={resolve("/status-pages")} variant="outline">Cancel</Button>
-      <Button disabled={saving} type="submit">
-        <Plus class="size-4" />
-        Create status page
-      </Button>
+      <Button href={resolve('status-pages')} variant="outline">Cancel</Button>
+      <Button disabled={saving} type="submit"><Plus class="size-4" />Create status page</Button>
     </div>
   </form>
 </div>
@@ -85,4 +82,4 @@
   onkeydown={() => {
     slugTouched = document.activeElement?.id === "slug" || slugTouched;
   }}
-/>
+></svelte:window>

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { ChevronLeft, ChevronRight } from "@lucide/svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import { goto } from "$app/navigation";
 	import { page as appPage } from "$app/state";
-	import { Button } from "$lib/components/ui/button/index.js";
 
 	interface Props {
 		label?: string;
@@ -25,7 +25,7 @@
 	const last = $derived(Math.min(page * perPage, total));
 
 	function goToPage(next: number) {
-		const params = new URLSearchParams(appPage.url.searchParams);
+		const params = new URLSearchParams(appPage.url.search);
 		if (next <= 1) {
 			params.delete(pageParam);
 		} else {
@@ -33,8 +33,7 @@
 		}
 		const query = params.toString();
 		void goto(`${appPage.url.pathname}${query ? `?${query}` : ""}`, {
-			keepFocus: true,
-			noScroll: true,
+			reset: false,
 		});
 	}
 </script>

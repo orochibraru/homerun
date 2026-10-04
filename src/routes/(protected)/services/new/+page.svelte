@@ -8,13 +8,13 @@
 		SlidersHorizontal,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { runtimeOptionsSummary } from "#lib/service-runtime.js";
+	import { stackScopedSlug } from "#lib/slug.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import Alert from "$lib/components/alert.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { runtimeOptionsSummary } from "$lib/service-runtime";
-	import { stackScopedSlug } from "$lib/slug";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 	import BasicInfoStep, { slugify } from "./basic-info-step.svelte";
 	import ComputeStep from "./compute-step.svelte";
 	import EnvironmentStep from "./environment-step.svelte";

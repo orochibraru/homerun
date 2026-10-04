@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { ArrowRight } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import Alert from "$lib/components/alert.svelte";
-	import OauthAppCredentials from "$lib/components/oauth-app-credentials.svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import OauthAppCredentials from "#lib/components/oauth-app-credentials.svelte";
 	import OauthAppFields, {
 		type OauthAppFieldValues,
-	} from "$lib/components/oauth-app-fields.svelte";
+	} from "#lib/components/oauth-app-fields.svelte";
 	import OauthEnvironmentFields, {
 		type OauthEnvironmentFieldValues,
-	} from "$lib/components/oauth-environment-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { CLAUDE_MCP_CALLBACK } from "$lib/oidc-provider";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/components/oauth-environment-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { CLAUDE_MCP_CALLBACK } from "#lib/oidc-provider.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -87,12 +87,8 @@
         endpointBase={data.endpointBase ?? data.issuer}
         issuer={data.issuer}
       />
-      <div class="flex justify-end">
-        <Button href={resolve("/idp")}>
-          Done
-          <ArrowRight class="size-4" />
-        </Button>
-      </div>
+
+      <div class="flex justify-end"><Button href={resolve('idp')}>Done <ArrowRight class="size-4" /></Button></div>
     </section>
   {:else}
     <section class="panel rounded-md">
@@ -130,7 +126,7 @@
           </div>
         {/if}
 
-        <OauthAppFields {values} />
+        <OauthAppFields values={values} />
 
         <div class="border-border border-t pt-5">
           <h2 class="text-text text-sm font-semibold">First environment</h2>
@@ -142,9 +138,12 @@
         </div>
 
         <div class="flex justify-end gap-2">
-          <Button href={resolve("/idp")} type="button" variant="ghost">
-            Cancel
-          </Button>
+          <Button
+            href={resolve('idp')}
+            type="button"
+            variant="ghost"
+          >Cancel</Button>
+
           <Button disabled={submitting} type="submit">Register app</Button>
         </div>
       </form>

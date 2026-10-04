@@ -1,12 +1,12 @@
-import { stripAnsi } from "$lib/ansi";
-import { config } from "$lib/config";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { type ProbeResult, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
+import { stripAnsi } from "#lib/ansi.js";
+import { config } from "#lib/config.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { type ProbeResult, UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 import {
 	primaryHostname,
 	type ServiceDomainFields,
-} from "$lib/service-domains";
-import { isDatabaseImage } from "$lib/service-link";
+} from "#lib/service-domains.js";
+import { isDatabaseImage } from "#lib/service-link.js";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { DockerService } from "../docker.service.ts";
 import {

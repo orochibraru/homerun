@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
+import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "#lib/build-methods.js";
 import {
 	type PublishedPort,
 	publishedPortsProblem,
-} from "$lib/published-ports";
-import { environmentNameField } from "$lib/server/validation/environment-name";
-import { DOMAIN_RE } from "$lib/service-domains";
-import { isRunAsUser } from "$lib/service-runtime";
-import { splitShellWords } from "$lib/shell-words";
+} from "#lib/published-ports.js";
+import { environmentNameField } from "#lib/server/validation/environment-name.js";
+import { DOMAIN_RE } from "#lib/service-domains.js";
+import { isRunAsUser } from "#lib/service-runtime.js";
+import { splitShellWords } from "#lib/shell-words.js";
 
 // Optional numeric fields that come from a plain <input>: an empty field
 // still submits as "" in FormData, and z.coerce.number() turns "" into 0

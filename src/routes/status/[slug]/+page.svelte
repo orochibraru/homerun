@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { CircleCheck, CircleX, MinusCircle } from "@lucide/svelte";
-	import HeartbeatStrip from "$lib/components/heartbeat-strip.svelte";
+	import HeartbeatStrip from "#lib/components/heartbeat-strip.svelte";
 
 	const { data } = $props();
 

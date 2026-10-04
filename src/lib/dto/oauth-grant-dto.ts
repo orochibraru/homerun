@@ -1,12 +1,12 @@
 import { and, eq, gt, inArray, isNull, max, or } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
+import { db } from "#lib/server/db/lib.js";
 import {
 	oauthAccessToken,
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
 	user,
-} from "$lib/server/db/schema";
+} from "#lib/server/db/schema.js";
 
 export interface AuthorizedApp {
 	clientId: string;

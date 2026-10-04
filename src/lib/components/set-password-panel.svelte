@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Lock, Mail } from "@lucide/svelte";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { enhanceToast } from "$lib/toast";
 
 	interface Props {
 		email: string;

@@ -32,10 +32,10 @@
 		"@jridgewell/gen-mapping": "0.3.13",
 		"@kitql/helpers": "0.8.15",
 		"@lucide/svelte": "1.33.0",
-		"@orochibraru/svelte-smol": "1.6.1",
 		"@playwright/test": "1.62.1",
-		"@sveltejs/kit": "2.70.3",
-		"@sveltejs/vite-plugin-svelte": "7.3.0",
+		"@sveltejs/adapter-bun": "1.0.0",
+		"@sveltejs/kit": "3.0.0",
+		"@sveltejs/vite-plugin-svelte": "7.3.1",
 		"@tailwindcss/forms": "0.5.11",
 		"@tailwindcss/language-server": "0.16.0",
 		"@tailwindcss/typography": "0.5.20",
@@ -45,7 +45,6 @@
 		"@types/dockerode": "4.0.1",
 		"@types/node": "26.6.1",
 		"@types/sanitize-html": "2.16.1",
-		"@typescript/native": "npm:typescript@7.0.2",
 		"@xterm/addon-fit": "0.11.0",
 		"@xterm/xterm": "6.0.0",
 		"agnix": "0.54.0",
@@ -66,7 +65,7 @@
 		"oxlint-tsgolint": "7.0.2002",
 		"prettier": "3.9.6",
 		"shadcn-svelte": "1.5.0",
-		"svelte": "5.56.10",
+		"svelte": "5.57.1",
 		"svelte-check": "4.7.6",
 		"svelte-sonner": "1.2.1",
 		"tailwind-merge": "3.6.0",
@@ -95,7 +94,8 @@
 	},
 	"packageManager": "bun@1.4.2",
 	"patchedDependencies": {
-		"cpu-features@0.0.10": "patches/cpu-features@0.0.10.patch"
+		"cpu-features@0.0.10": "patches/cpu-features@0.0.10.patch",
+		"@sveltejs/adapter-bun@1.0.0": "patches/@sveltejs%2Fadapter-bun@1.0.0.patch"
 	},
 	"private": true,
 	"scripts": {
@@ -105,7 +105,7 @@
 		"build": "bun run gen && vite build",
 		"start": "./build/server",
 		"gen": "svelte-kit sync && bun run scripts/generate-openapi.ts && openapi-typescript ./openapi.json -o tests/integration/support/openapi-types.ts && bunx biome check --write tests/integration/support/openapi-types.ts && bun run scripts/generate-config-schema.ts && bun run scripts/generate-architecture.ts",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --tsgo && tsc --noEmit --project tsconfig.scripts.json && go vet ./cmd/... ./internal/... ./tests/unit/go/... && go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && tsc --noEmit --project tsconfig.scripts.json && go vet ./cmd/... ./internal/... ./tests/unit/go/... && go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...",
 		"lint": "markdownlint-cli2 \"**/*.md\" && bun scripts/lint-tailwind.ts && oxlint --type-aware --deny-warnings",
 		"lint:ai": "agnix --strict .",
 		"lint:fix": "markdownlint-cli2 --fix \"**/*.md\" && bun scripts/lint-tailwind.ts --fix && oxlint --type-aware --fix",
@@ -120,5 +120,9 @@
 	"version": "1.0.52",
 	"trustedDependencies": [
 		"agnix"
-	]
+	],
+	"imports": {
+		"#lib": "./src/lib/index.js",
+		"#lib/*": "./src/lib/*"
+	}
 }

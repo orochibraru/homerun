@@ -1,5 +1,6 @@
-import { type Browser, expect, type Page, test } from "@playwright/test";
+import { type Browser, type Page } from "@playwright/test";
 import { E2E_BASE_URL } from "./support/config";
+import { expect, test } from "./support/test";
 
 const AUTH_BASE = `${E2E_BASE_URL}/api/v1/auth`;
 const CALLBACK = "https://e2e-app.homerun.test/callback";

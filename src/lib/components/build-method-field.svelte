@@ -4,13 +4,13 @@
 		BUILD_METHOD_LABELS,
 		BUILD_METHODS,
 		type BuildMethod,
-	} from "$lib/build-methods";
+	} from "#lib/build-methods.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
+	} from "#lib/components/ui/select/index.js";
 
 	let {
 		labelClass,

@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { Check, Palette, Server } from "@lucide/svelte";
-	import { enhance } from "$app/forms";
-	import { labelClass as label } from "$lib/components/form-styles";
-	import IconPicker from "$lib/components/icon-picker.svelte";
-	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import IconPicker from "#lib/components/icon-picker.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	} from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		TEMPLATE_CATEGORIES,
 		templateCategoryLabel,
-	} from "$lib/template-categories";
-	import { enhanceToast } from "$lib/toast";
+	} from "#lib/template-categories.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
 
 	interface Props {
 		icons: { group: string; icon: string; name: string }[];

@@ -1,5 +1,5 @@
-import { RedirectDTO } from "$lib/dto/redirect-dto";
-import { redirectSchema } from "$lib/server/validation/redirect";
+import { RedirectDTO } from "#lib/dto/redirect-dto.js";
+import { redirectSchema } from "#lib/server/validation/redirect.js";
 
 /**
  * Validates a redirect (the form's entries, or an API body merged over the

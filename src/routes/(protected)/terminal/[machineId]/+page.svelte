@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { ArrowLeft, TerminalSquare } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import WebTerminal from "#lib/components/web-terminal.svelte";
+	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import WebTerminal from "$lib/components/web-terminal.svelte";
-	import { title } from "$lib/store/title";
 
 	const { data } = $props();
 	const machine = $derived(data.machine);
@@ -38,20 +38,20 @@
         </span>
       {/if}
     </div>
-    <Button href={resolve("/terminal")} size="sm" variant="outline">
-      <ArrowLeft class="size-4" />
-      Machines
-    </Button>
+
+    <Button
+      href={resolve('terminal')}
+      size="sm"
+      variant="outline"
+    ><ArrowLeft class="size-4" />Machines</Button>
   </div>
 
   {#if machine.ssh}
     <section class="panel min-h-0 flex-1 overflow-hidden rounded-md">
       <WebTerminal
         class="h-[calc(100dvh-12rem)] min-h-80"
-        onState={(state) => (connected = state.connected)}
-        openUrl={resolve("/(protected)/terminal/[machineId]/open", {
-          machineId: machine.id,
-        })}
+        onState={(state) => connected = state.connected}
+        openUrl={resolve("/(protected)/terminal/[machineId]/open", { machineId: machine.id })}
         sessionUrl={(action, sessionId) => resolve(sessionRoutes[action], { sessionId })}
       />
     </section>

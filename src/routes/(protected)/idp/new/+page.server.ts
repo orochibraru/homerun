@@ -1,24 +1,24 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { resolve } from "$app/paths";
-import { config } from "$lib/config";
-import { Logger } from "$lib/logger";
+import { config } from "#lib/config.js";
+import { Logger } from "#lib/logger.js";
 import {
 	mcpAllowed,
 	mcpResource,
 	oidcEndpointBase,
 	oidcIssuer,
-} from "$lib/oidc-provider";
-import { parseOauthAppForm } from "$lib/server/oauth-app-form";
+} from "#lib/oidc-provider.js";
+import { parseOauthAppForm } from "#lib/server/oauth-app-form.js";
 import {
 	authErrorMessage,
 	OauthAppService,
-} from "$lib/services/oauth-app.service";
+} from "#lib/services/oauth-app.service.js";
+import { resolve } from "$app/paths";
 
 const logger = new Logger("OidcProvider");
 
 export const load = ({ locals }) => {
 	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 	const origin = config.auth.origin;
 	return {
@@ -31,10 +31,10 @@ export const load = ({ locals }) => {
 export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 		if (!config.auth.origin) {
 			return fail(400, {

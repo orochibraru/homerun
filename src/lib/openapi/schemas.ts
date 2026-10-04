@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { BUILD_METHODS } from "$lib/build-methods";
-import { HISTORY_TRIGGERS } from "$lib/deploy-trigger";
-import { UPDATE_CHANNELS } from "$lib/update-channel";
+import { BUILD_METHODS } from "#lib/build-methods.js";
+import { HISTORY_TRIGGERS } from "#lib/deploy-trigger.js";
+import { UPDATE_CHANNELS } from "#lib/update-channel.js";
 
 /**
  * Response-shape schemas for the OpenAPI spec. Request bodies are generated
- * straight from `$lib/server/validation/api.ts`'s real validation schemas
+ * straight from `#lib/server/validation/api.ts`'s real validation schemas
  * (single source of truth, zero drift risk); these response schemas are
  * hand-mirrored from `src/lib/server/db/schema.ts`'s columns instead,
  * because every route's response is a DTO's `.toJSON()` : the raw DB row,

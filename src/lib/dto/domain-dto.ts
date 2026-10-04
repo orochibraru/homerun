@@ -1,8 +1,8 @@
 import { asc, eq } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { type Domain, domain } from "$lib/server/db/schema";
-import { inZone, normalizeName } from "$lib/services/dns-providers/http";
-import type { DnsZone } from "$lib/services/dns-providers/types";
+import { db } from "#lib/server/db/lib.js";
+import { type Domain, domain } from "#lib/server/db/schema.js";
+import { inZone, normalizeName } from "#lib/services/dns-providers/http.js";
+import type { DnsZone } from "#lib/services/dns-providers/types.js";
 import { BaseDTO } from "./base-dto";
 
 export type DomainInput = Pick<

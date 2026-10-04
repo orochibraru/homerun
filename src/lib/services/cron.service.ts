@@ -12,9 +12,9 @@
 // is the natural fit, a method here just delegates one call into the
 // composed instance it owns.
 
-import { CronJobDTO } from "$lib/dto/cron-job-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { enqueueVolumeBackup } from "./backup-queue.ts";
 import { CoreServicesWatch } from "./cron/core-services-watch.ts";
 import { type ParsedCron, parseCronSchedule } from "./cron/cron-expression.ts";

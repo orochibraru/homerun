@@ -1,11 +1,10 @@
 import { error, fail, redirect } from "@sveltejs/kit";
+import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
+import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+import { Logger } from "#lib/logger.js";
+import { parseDestinationForm } from "#lib/server/backup-destination-form.js";
+import { S3BackupService } from "#lib/services/s3-backup.service.js";
 import { resolve } from "$app/paths";
-import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
-import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { Logger } from "$lib/logger";
-import { parseDestinationForm } from "$lib/server/backup-destination-form";
-import { allowLongRequest } from "$lib/server/long-request";
-import { S3BackupService } from "$lib/services/s3-backup.service";
 
 const logger = new Logger("S3Destinations");
 
@@ -40,11 +39,10 @@ export const load = async ({ params, parent }) => {
 };
 
 export const actions = {
-	test: async ({ params, locals, platform }) => {
+	test: async ({ params, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
-		allowLongRequest(platform);
 
 		const destination = await S3DestinationDTO.get(params.destinationId);
 		if (!destination) {
@@ -68,7 +66,7 @@ export const actions = {
 
 	update: async ({ params, request, locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 
 		const destination = await S3DestinationDTO.get(params.destinationId);

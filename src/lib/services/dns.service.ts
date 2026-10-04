@@ -1,6 +1,6 @@
-import { config } from "$lib/config";
-import { Logger } from "$lib/logger";
-import { defaultHostname } from "$lib/service-domains";
+import { config } from "#lib/config.js";
+import { Logger } from "#lib/logger.js";
+import { defaultHostname } from "#lib/service-domains.js";
 import type { DnsSyncResult } from "./dns-result.ts";
 import { dashboardHostFrom } from "./docker/dashboard.ts";
 import { DomainDnsService } from "./domain-dns.service.ts";

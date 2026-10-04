@@ -2,16 +2,16 @@
 	import { ArrowRight } from "@lucide/svelte";
 	import type { Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { signIn } from "$lib/auth-client";
-	import PasswordField from "$lib/components/password-field.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { signIn } from "#lib/auth-client.js";
+	import PasswordField from "#lib/components/password-field.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { Input } from "#lib/components/ui/input/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		completeAccountSetup,
 		resendSetupCode,
-	} from "$lib/remote/sign-in.remote";
-	import { toastError } from "$lib/toast";
+	} from "#lib/remote/sign-in.remote.js";
+	import { toastError } from "#lib/toast.js";
 
 	interface Props {
 		email: string;

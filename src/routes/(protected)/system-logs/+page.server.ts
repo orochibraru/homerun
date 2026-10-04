@@ -1,15 +1,15 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { AppLogDTO } from "#lib/dto/app-log-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { Logger } from "#lib/logger.js";
+import { DockerService } from "#lib/services/docker.service.js";
 import { resolve } from "$app/paths";
-import { AppLogDTO } from "$lib/dto/app-log-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { Logger } from "$lib/logger";
-import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Traefik");
 
 export const load = async ({ locals }) => {
 	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
+		throw redirect(302, resolve(""));
 	}
 
 	const [logs, services] = await Promise.all([
@@ -34,10 +34,10 @@ export const load = async ({ locals }) => {
 export const actions = {
 	clearAppLogs: async ({ locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		await AppLogDTO.clear();
@@ -47,10 +47,10 @@ export const actions = {
 
 	restartTraefik: async ({ locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		try {
@@ -69,10 +69,10 @@ export const actions = {
 
 	updateTraefik: async ({ locals }) => {
 		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
+			throw redirect(302, resolve("auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
-			throw redirect(302, resolve("/"));
+			throw redirect(302, resolve(""));
 		}
 
 		try {

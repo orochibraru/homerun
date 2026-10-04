@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Boxes, Trash2 } from "@lucide/svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { formatBytes } from "#lib/formatting.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import Alert from "$lib/components/alert.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EmptyState from "$lib/components/empty-state.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { formatBytes } from "$lib/formatting";
-	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 

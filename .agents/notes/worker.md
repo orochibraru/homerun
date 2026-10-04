@@ -32,8 +32,9 @@ the right shape, not a queued row the caller would have to poll. Three things go
 through it because they literally cannot be a job: **logs** and the **web
 terminal** are open-ended streams a "job" with a start and an end can't model,
 and **host stats** are a live snapshot, not a result to store. See `docker.md`'s
-Docker integration section for the client side (`$lib/server/worker-client.ts`,
-`WorkerClient`) and Web terminal section for the terminal specifically.
+Docker integration section for the client side
+(`src/lib/server/worker-client.ts`, `WorkerClient`) and Web terminal section for
+the terminal specifically.
 
 A job's own executor (`internal/jobs/<pkg>`) still talks to the daemon directly
 through `internal/dockerapi`, same as before this split, it doesn't go back

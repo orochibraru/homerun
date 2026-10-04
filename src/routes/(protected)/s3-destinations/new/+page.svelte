@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import BackupDestinationFields from "#lib/components/backup-destination-fields.svelte";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { title } from "#lib/store/title.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import BackupDestinationFields from "$lib/components/backup-destination-fields.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
 
 	const { form } = $props();
 
@@ -43,7 +43,7 @@
               resolve("/(protected)/s3-destinations/[destinationId]", {
                 destinationId: String(data?.destinationId),
               }),
-              { invalidateAll: true },
+              { refreshAll: true },
             ),
           success: "Destination added.",
         })}

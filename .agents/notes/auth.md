@@ -20,10 +20,10 @@ better-auth's own docs advise against enabling it in production). This is what
 makes `x-api-key`/`Bearer` auth work for `src/routes/api/v1/*` (see REST API
 above).
 
-## Read-only role and scoped API keys (`$lib/permissions.ts`, `$lib/server/read-only.ts`)
+## Read-only role and scoped API keys (`src/lib/permissions.ts`, `src/lib/server/read-only.ts`)
 
 Roles are `admin`, `developer`, `viewer` (labelled "Read-only") and `app-user`
-(see App-access-only role below), all listed in `$lib/permissions.ts`
+(see App-access-only role below), all listed in `src/lib/permissions.ts`
 (`USER_ROLES`, `ROLE_OPTIONS`, `isUserRole`), which `/users` validates against.
 An API key carries a scope in better-auth's key `metadata` (`{scope: "read"}`,
 `apiKey({ enableMetadata: true })` in `auth.ts`, metadata is rejected
@@ -57,10 +57,10 @@ Hiding every other write button for viewers is not done: they see them and get
 the toast.
 
 `user.deleteUser` is enabled with a `beforeDelete` hook (thin wrapper around
-`$lib/services/user.service.ts`'s `UserService.cleanupUserResources()`, see User
-roles & invitations below), don't assume better-auth's default account-deletion
-behavior is sufficient; it isn't, by design of this app's extra tables (see Data
-model above).
+`src/lib/services/user.service.ts`'s `UserService.cleanupUserResources()`, see
+User roles & invitations below), don't assume better-auth's default
+account-deletion behavior is sufficient; it isn't, by design of this app's extra
+tables (see Data model above).
 
 `config.auth.crossSubdomainCookies` (`auth.crossSubdomainCookies` in
 `homerun.yaml`, default off, also DB-editable, see Instance settings above) sets
@@ -84,7 +84,7 @@ IP silently **discards** that cookie twice over : `Secure` requires a secure
 context (only `localhost`/`127.0.0.1` are exempt, an IP is not), and the
 `__Secure-` prefix independently requires both. So the POST succeeded, no cookie
 was ever stored, `locals.user` stayed empty on the next request, the sign-in
-page's `load` never threw its `redirect(302, resolve("/"))`, `refreshAll()` had
+page's `load` never threw its `redirect(302, resolve(""))`, `refreshAll()` had
 no redirect to act on, and `loading` is only ever reset in `catch` or
 `onNavigate` : hence a success toast over a permanently spinning button.
 **Verified by A/B against a real production build on a real LAN IP**, reading
@@ -228,8 +228,8 @@ mirrors that one), and `applyAccessPolicy` re-applies it to open previews when
 the Previews tab saves it, invalidating the gate cache and redeploying only the
 ones whose wall flipped (`redeployIfLoginWallChanged`). The form and its
 validation are shared with the Security tab:
-`$lib/components/login-wall-section.svelte` (`action`/`subject`/`title` props)
-and `$lib/server/login-wall-form.ts` (`parseLoginWallForm`,
+`src/lib/components/login-wall-section.svelte` (`action`/`subject`/`title`
+props) and `src/lib/server/login-wall-form.ts` (`parseLoginWallForm`,
 `loginWallAvailability`, `loginWallOptions`). Migration 0074 copies each
 service's own wall into its preview policy so previews that were gated through
 the old mirroring stay gated.
@@ -291,13 +291,13 @@ to 3000. `vite dev` serves on 5173 (or the next free port) and doesn't set
 `PORT`, so `vite.config.ts`'s `listeningPortPlugin` hooks the dev and preview
 servers' `listening` event and writes the bound port into `process.env.PORT`.
 That works because SvelteKit's dev middleware only loads the server modules (and
-so evaluates `$lib/config.ts`) on the first request, which is always after
+so evaluates `src/lib/config.ts`) on the first request, which is always after
 `listening`. **Don't "fix" this by deriving the port from `auth.origin`**
 instead: that is only the same port in dev. Behind a reverse proxy the origin is
 443 while the app listens on 3000, so deriving would break production to fix
 development.
 
-## Authentication pages (`/authentication`, `$lib/auth-providers.ts`)
+## Authentication pages (`/authentication`, `src/lib/auth-providers.ts`)
 
 Admin-only, its own sidebar item under Administration. It **replaced** the old
 `/settings/authentication` tab (that route is gone; `/settings` is down to four
@@ -311,7 +311,7 @@ and the whole thing lived in one whole-array `updateOauth` action whose seven
 parallel `formData.getAll()` arrays had to stay index-aligned between collapsed
 and expanded rows. The route split deleted that fragility outright : each page
 edits exactly one provider through `addOauthProvider`/`updateOauthProvider`/
-`deleteOauthProvider` on the DTO, and `$lib/server/oauth-provider-form.ts`
+`deleteOauthProvider` on the DTO, and `src/lib/server/oauth-provider-form.ts`
 parses one provider from one form. Providers still live in the
 `instance_settings.oauthProviders` jsonb array rather than their own table, so
 the route param is the provider **name**, which is why the name is immutable
@@ -333,11 +333,11 @@ their IdP's logout page without anyone having configured it. The provider config
 now always passes `disableProviderLogout: !signOutOfProvider`, so the default is
 a local sign-out and the redirect only happens when an admin ticks the box.
 
-- **Presets.**- **Presets.** `OAUTH_PRESETS` (`$lib/auth-providers.ts`, a pure
-  module, also home to the method-id encoding and the email matcher) carries a
-  discovery-URL template, default scopes and PKCE default for Pocket ID,
-  Keycloak, Authelia, Logto, Authentik, Zitadel and Kanidm. Clicking one appends
-  a prefilled provider row with `{host}`/`{realm}`/`{slug}`/`{clientId}`
+- **Presets.**- **Presets.** `OAUTH_PRESETS` (`src/lib/auth-providers.ts`, a
+  pure module, also home to the method-id encoding and the email matcher)
+  carries a discovery-URL template, default scopes and PKCE default for Pocket
+  ID, Keycloak, Authelia, Logto, Authentik, Zitadel and Kanidm. Clicking one
+  appends a prefilled provider row with `{host}`/`{realm}`/`{slug}`/`{clientId}`
   placeholders left in for the admin to replace; "Blank" is still there for
   anything else. The templates are the products' own documented discovery paths,
   which differ more than you'd guess (Logto nests under `/oidc`, Authentik under
@@ -390,7 +390,7 @@ Core defaults `token_endpoint_auth_method` to. better-auth's POST-body default
 is the outlier, and following it is what made a correctly configured Pocket ID
 client fail. Falls back to `post` when Basic isn't advertised, and to
 better-auth's own default when neither is (`resolveAdvertisedTokenAuth`, a pure
-function in `$lib/auth-providers.ts`, covered by
+function in `src/lib/auth-providers.ts`, covered by
 `tests/unit/app/token-auth.test.ts`). Because the list is captured at save time,
 a provider stored before this exists has an empty `discoveredTokenAuth` and
 behaves as before until it's saved again. `"basic"` maps to better-auth's
@@ -409,17 +409,17 @@ request settled it.
 **The flow still has to start and finish on one origin.** The PKCE code-verifier
 cookie is set on whichever origin began the exchange, so beginning on host A and
 finishing on host B fails on the verifier even when the URIs line up.
-`$lib/server/canonical-origin.ts`'s `offCanonicalOrigin()` is what closes that:
-`/app-auth` 302s to the canonical origin (lossless, its state is the signed `rd`
-param), and the dashboard sign-in page swaps its provider buttons for a link to
-the canonical sign-in URL rather than offering a button that cannot work. **The
-load-bearing detail is that it reads the `Host` (or `X-Forwarded-Host`) header,
-not `url.origin`** : with `ORIGIN` set, SvelteKit normalizes `event.url` to the
-configured origin, so a `url.origin` comparison can never detect the mismatch
-and the guard is silently dead code, which is exactly how the first attempt at
-it was written. The header is attacker-controllable, which is safe here because
-it only ever decides _whether_ to redirect; the target is always
-`config.auth.origin`, never derived from the request.
+`src/lib/server/canonical-origin.ts`'s `offCanonicalOrigin()` is what closes
+that: `/app-auth` 302s to the canonical origin (lossless, its state is the
+signed `rd` param), and the dashboard sign-in page swaps its provider buttons
+for a link to the canonical sign-in URL rather than offering a button that
+cannot work. **The load-bearing detail is that it reads the `Host` (or
+`X-Forwarded-Host`) header, not `url.origin`** : with `ORIGIN` set, the adapter
+pins `event.url` to the configured origin, so a `url.origin` comparison can
+never detect the mismatch and the guard is silently dead code, which is exactly
+how the first attempt at it was written. The header is attacker-controllable,
+which is safe here because it only ever decides _whether_ to redirect; the
+target is always `config.auth.origin`, never derived from the request.
 
 **Linking a provider to an existing account is explicit, and it has to be.**
 better-auth refuses implicit linking when the **local** user row has
@@ -458,7 +458,7 @@ now renders a real **Link \<provider\> to this account** button (calling
 sign-in prompt only when nobody is signed in, since linking requires an
 authenticated session. Which provider failed isn't in better-auth's redirect (it
 only appends `error=`), so the two places that start an OAuth flow stash the
-provider name in `sessionStorage` first (`$lib/oauth-attempt.ts`); the page
+provider name in `sessionStorage` first (`src/lib/oauth-attempt.ts`); the page
 falls back to the only enabled provider when there's exactly one, and to a
 button per provider otherwise, so it degrades instead of guessing wrong.
 
@@ -476,12 +476,12 @@ typed as a union of the built-in social providers, so a custom provider id needs
 a cast at that one call site.
 
 **OIDC provider requests are rebased onto the Dashboard URL.** The server
-adapter builds every request URL from the `ORIGIN` env var when it's set, and
-the installer sets it to the host's IP. better-auth builds the discovery
-document's `authorization_endpoint`/`token_endpoint`/... from the request URL
-while the issuer comes from `config.auth.origin`, so after onboarding set a
-domain an app signing in was sent to the IP. `authHandler` in `hooks.server.ts`
-hands OIDC provider paths to `auth.handler` with
+adapter (adapter-bun, patched) builds every request URL from the `ORIGIN` env
+var when it's set, and the installer sets it to the host's IP. better-auth
+builds the discovery document's `authorization_endpoint`/`token_endpoint`/...
+from the request URL while the issuer comes from `config.auth.origin`, so after
+onboarding set a domain an app signing in was sent to the IP. `authHandler` in
+`hooks.server.ts` hands OIDC provider paths to `auth.handler` with
 `rebaseOnOrigin(request, config.auth.origin)` instead of going through
 `svelteKitHandler`. The same pinning reaches every URL built from `url.origin`:
 better-auth's verification and change-email links go through
@@ -491,7 +491,7 @@ better-auth's verification and change-email links go through
 used, which is also what the Git Providers page shows as the callback to
 register.
 
-## Per-app login wall (`service.authRequired` + policy columns, `/api/v1/auth-check`, `/app-auth`, `$lib/server/app-gate.ts`)
+## Per-app login wall (`service.authRequired` + policy columns, `/api/v1/auth-check`, `/app-auth`, `src/lib/server/app-gate.ts`)
 
 The gap this document used to describe at length — `authRequired` blocked
 _everyone_ because there was no login page on the gated hostname and
@@ -522,13 +522,13 @@ The round trip, all of it through the one forwardAuth channel:
 2. `/app-auth` (its own top-level route, outside `(protected)/` — it has to
    render for signed-out visitors) resolves the service. A signed-out visitor is
    `302`ed to the real `/auth/sign-in?redirectTo=/app-auth?rd=…`
-   (`$lib/redirect-target.ts` keeps `redirectTo` same-origin), so passkeys, 2FA
-   and the instance's preferred and enforced sign-in methods all apply exactly
-   as for the dashboard; the sign-in page names the app
-   (`$lib/server/app-gate-return.ts`), and once signed in shows a two-second
+   (`src/lib/redirect-target.ts` keeps `redirectTo` same-origin), so passkeys,
+   2FA and the instance's preferred and enforced sign-in methods all apply
+   exactly as for the dashboard; the sign-in page names the app
+   (`src/lib/server/app-gate-return.ts`), and once signed in shows a two-second
    "taking you to X" screen and returns with `window.location.assign`. It has to
    be a full page load: `/app-auth` answers an allowed user with a `302` to the
-   app's own host, and a client-side `invalidateAll`/`goto` can't follow a
+   app's own host, and a client-side `refreshAll`/`goto` can't follow a
    cross-origin redirect, which is the real bug the old in-page form had (sign
    in, "redirecting…" toast, then nothing, fields disabled). An allowed user
    gets `302`ed to `app.example.com/__homerun_auth/callback?token=<60s grant>`;
@@ -547,9 +547,9 @@ The round trip, all of it through the one forwardAuth channel:
 `/__homerun_auth/logout` clears the cookie the same way.
 
 **The hot path is DB-free.** The cookie is a self-contained signed token
-(`$lib/server/app-gate.ts`), so a request with a valid one costs an HMAC verify
-plus a 10s-TTL in-memory lookup of the service row
-(`$lib/server/gated-service-cache.ts`, HMR-safe `globalThis` singleton, same
+(`src/lib/server/app-gate.ts`), so a request with a valid one costs an HMAC
+verify plus a 10s-TTL in-memory lookup of the service row
+(`src/lib/server/gated-service-cache.ts`, HMR-safe `globalThis` singleton, same
 pattern as the db client). Every proxied request to a gated app goes through
 this, so don't add a query to it.
 
@@ -562,8 +562,8 @@ during live testing, which is what prompted adding it.
 
 **User changes revoke too, through a cached re-check.** A cookie that passes the
 signature/host/policy checks is also run through
-`$lib/server/gate-access-cache.ts`'s `cachedGateAccess`, keyed by service, user
-and policy version, which calls `AppAccessService.recheck()` (the full
+`src/lib/server/gate-access-cache.ts`'s `cachedGateAccess`, keyed by service,
+user and policy version, which calls `AppAccessService.recheck()` (the full
 `evaluate()`, now also refusing a missing or banned user) at most once every
 five minutes and shares one in-flight promise between concurrent requests. So
 the hot path stays DB-free between re-checks. `auth.ts` registers
@@ -630,9 +630,9 @@ gap.
 **The policy columns** on `service` (all jsonb, all `[]` by default):
 `authProviders` (allowed sign-in methods, `"password"` for built-in credentials
 or `"oauth:<provider name>"`), plus `authAllowedUserIds`/`authAllowedEmails`/
-`authAllowedGroups`. `$lib/auth-providers.ts` is the pure module owning that
+`authAllowedGroups`. `src/lib/auth-providers.ts` is the pure module owning that
 encoding (and the `*@domain` email matcher, and the preset catalogue);
-`$lib/services/app-access.service.ts` evaluates a decision. **Nothing is
+`src/lib/services/app-access.service.ts` evaluates a decision. **Nothing is
 selected by default and the wall can't be turned on with an empty
 `authProviders`** — that combination would lock out everyone including the
 owner, so it's rejected at save time rather than allowed and warned about.
@@ -673,7 +673,7 @@ for non-admins).
   `hooks.server.ts`'s `authHandler` hard-blocks
   `POST /api/v1/auth/sign-up/email` (better-auth's real email/password sign-up
   endpoint) with a 403 once `AdminService.hasAnyUser()`
-  (`$lib/services/admin.service.ts`, a raw query, no DTO exists for
+  (`src/lib/services/admin.service.ts`, a raw query, no DTO exists for
   better-auth-owned tables) is true, the endpoint itself is blocked, not just
   the UI, so it can't be curled around. `/auth/sign-up` and `/auth/sign-in`'s
   own `load`s cross-redirect based on the same check (blank instance → sign-up;
@@ -706,7 +706,7 @@ for non-admins).
   naively from an admin "remove user" action would cascade-delete that user's
   rows and leak their Docker containers/networks. Fixed by extracting the
   cleanup body out of `auth.ts`'s `beforeDelete` into
-  `$lib/services/user.service.ts`'s
+  `src/lib/services/user.service.ts`'s
   `UserService.cleanupUserResources(userId, actingUserId?)`, called explicitly
   by both the self-service `beforeDelete` hook _and_ `/users`' `removeUser`
   action (passing the acting admin) before it calls `auth.api.removeUser`. It
@@ -729,7 +729,7 @@ for non-admins).
   arrives without SMTP.
 - `/users`' `removeUser`/`setRole` actions also refuse to strip the last
   remaining admin (`wouldRemoveLastAdmin()`, checked via
-  `$lib/services/user.service.ts`'s `UserService.countAdmins()`) and refuse
+  `src/lib/services/user.service.ts`'s `UserService.countAdmins()`) and refuse
   self-removal (mirroring better-auth's own guard on `admin.removeUser`, checked
   client-side too before it gets there).
 - `/auth/accept-invite/[token]/+page.server.ts`'s `accept` action calls
@@ -783,21 +783,23 @@ and Settings → Docker sets up whatever's missing when the mode is switched.
 **Doc correction**: this section previously described both directions as gated
 from a single `(protected)/+layout.server.ts` load comparing `route.id` against
 `"/(protected)/onboarding"`, following an earlier fix for a real
-`url.pathname`-vs-`resolve()` bug (`resolve("/onboarding")` returns the relative
+`url.pathname`-vs-`resolve()` bug (`resolve("/onboarding")` returned a relative
 `"./onboarding"` in this app, not an absolute path, so an `===` check against
 `url.pathname` always evaluated false and infinite-redirect-looped). That fix
 and its `route.id` mechanism are gone now that `onboarding/` moved out from
 under `(protected)/` into its own top-level route with its own reverse-direction
 `load`; there is no `route.id` comparison anywhere in this codebase today. The
-underlying gotcha (`resolve()` here returns a relative path, not useful for a
-`url.pathname` equality check) is still real and still worth knowing if a future
-gate needs one, just not implemented this way anymore.
+underlying gotcha (`resolve()` returns a relative path, not useful for a
+`url.pathname` equality check) is still worth knowing if a future gate needs
+one, just not implemented this way anymore. Kit 3 also changed `resolve()`'s
+input: pathnames take no leading slash (`resolve("onboarding")`, home is
+`resolve("")`), and only route ids start with `/`.
 
 `/onboarding/+page.svelte` is a 6-step wizard (Core / Docker / Traefik / Email /
 DNS / Review) in a centred `max-w-3xl` column, each step a `panel` card with its
 own header, closing on a Review step that lists what's about to be persisted.
-It's built on the reusable `$lib/components/stepper.svelte` (connected circular
-step markers with labels at `sm+`, a progress bar below that, `Button`
+It's built on the reusable `src/lib/components/stepper.svelte` (connected
+circular step markers with labels at `sm+`, a progress bar below that, `Button`
 primitives for Back/Next), extracted from `services/new`'s inlined
 step-indicator-bar-plus-Back/Next pattern (not retrofitted onto `services/new`
 itself, a deliberate scope cut). `Stepper` owns navigation and which step is
@@ -813,7 +815,7 @@ whichever DNS integration the DNS step switched on, then
 `markOnboardingComplete()`, then `applyAndRebuild()` (the same post-save helper
 `/settings` uses, so the dashboard DNS record is synced too). The DNS step
 shares its form parsing and "Test connection" checks with Settings → Networking
-through `$lib/server/validation/dns-settings-form.ts`; Pangolin's target
+through `src/lib/server/validation/dns-settings-form.ts`; Pangolin's target
 host/port and `pangolinOwnsAuth` aren't shown and are preserved; the Newt fields
 are shown and validated with the same `newtFieldsError`. Its Test buttons post
 `?/testCloudflare`/`?/testPangolin` from the same wizard form, and the page's
@@ -823,7 +825,7 @@ field is a writable `$derived` over `data`, so `update()` would reset everything
 typed so far. Secrets (`smtpPassword`, both API tokens) are stripped from the
 `values` echoed back on a failed finish.
 
-## Trusted origins (`$lib/services/auth-origins.ts`)
+## Trusted origins (`src/lib/services/auth-origins.ts`)
 
 better-auth's `trustedOrigins` is a function reading `config` live, built by
 `trustedOriginsFor`: the `ORIGIN` env, the Dashboard URL, and `http(s)://` of
@@ -856,7 +858,7 @@ keep a session over `http://<ip>`.
 
 `twoFactor({ allowPasswordless: true })` (TOTP + backup codes) and `passkey()`
 are wired server and client side. `passkey`'s `rpID` is the hostname of
-`config.auth.origin` (`$lib/security-policy.ts`'s `passkeyRpId`): without it
+`config.auth.origin` (`src/lib/security-policy.ts`'s `passkeyRpId`): without it
 better-auth fell back to `localhost`, since `baseURL` is deliberately never set
 (see above), so passkeys could never work on a real domain. Users manage both
 from Profile → Security (`two-factor-panel.svelte`, `passkey-panel.svelte`,
@@ -880,15 +882,16 @@ one is redirected to `/security-setup?next=…`, an `AuthShell` card outside
 and remote functions hit directly aren't gated, and better-auth only asks for
 the TOTP code on email/password sign-in, not passkey or OAuth.
 
-## Email-first sign-in and admin-created accounts (`AccountSetupService`, `$lib/remote/sign-in.remote.ts`)
+## Email-first sign-in and admin-created accounts (`AccountSetupService`, `src/lib/remote/sign-in.remote.ts`)
 
 `/auth/sign-in` (`src/routes/auth/sign-in/+page.svelte`) is email-first: step 1
 asks only for an email (the passkey button and passkey autofill/auto-prompt are
 unrestricted and still shown on this step), and "Continue" calls the
 `lookupSignIn` remote command (throttled to 20 calls/min per IP per command via
 a module-scope `Map`, `sign-in.remote.ts`'s `throttle`), backed by
-`$lib/services/account-setup.service.ts`'s `AccountSetupService.lookup(email)`.
-That decides the next step, returned as a `SignInLookup` discriminated union:
+`src/lib/services/account-setup.service.ts`'s
+`AccountSetupService.lookup(email)`. That decides the next step, returned as a
+`SignInLookup` discriminated union:
 
 - **`"password"`**: the account has a `credential` account, or the email is
   unknown — an unknown email deliberately also gets this step, so the lookup
@@ -926,7 +929,7 @@ this and unchanged, it still requires SMTP.
 
 **Preferred sign-in methods** (`instance_settings.preferred_sign_in_methods`,
 jsonb string[], null = none, edited on `/authentication`, keys `password`,
-`passkey` and `oauth:<provider name>` via `$lib/sign-in-methods.ts`'s
+`passkey` and `oauth:<provider name>` via `src/lib/sign-in-methods.ts`'s
 `oauthMethod`) no longer reshuffles a list of buttons on one page —
 `splitSignInMethods` and the old "Other sign-in methods" link are gone along
 with the single-page form. It now drives exactly two things: `lookup`'s SSO
@@ -941,7 +944,7 @@ available (a deleted provider, passkey on the wrong host) simply doesn't apply,
 `lookup` still falls back to the `"password"`/`"sso"` step it would pick anyway,
 so the page can never render with no way in.
 
-## Emailed codes and links (`$lib/services/email-sign-in.ts`, `/auth/magic-link`)
+## Emailed codes and links (`src/lib/services/email-sign-in.ts`, `/auth/magic-link`)
 
 better-auth's `emailOTP` and `magicLink` plugins, registered always (no
 `rebuildAuth()` on toggle), plus a small `homerun-email-sign-in` plugin whose
@@ -997,7 +1000,7 @@ another tab doesn't carry. Codes work there.
 **Sign-in page.** `lookup` carries `email: EmailSignIn` on every step, and has a
 new `"email-only"` step for an account with no `credential` row and no linked
 enabled provider (an invite accepted with codes). What the page does there is
-`emailOnlyStep` (`$lib/auth-providers.ts`): straight to the code form, whose
+`emailOnlyStep` (`src/lib/auth-providers.ts`): straight to the code form, whose
 mount sends the code, only when codes are the only emailed method; with links on
 it shows a `"choose"` step with both buttons and sends nothing until one is
 clicked; links never count in the "Sign in with Homerun" flow. Other steps show
@@ -1012,9 +1015,9 @@ allowlist didn't change; the page talks to `/api/v1/auth/*` directly.
 **Adding a password later.** A signed-in account with no password (codes-only
 invitee, SSO-only user) gets **Set a password** on `/profile/security` and on
 `/my-apps` (`set-password-panel.svelte`, both routes export
-`$lib/server/set-password-actions.ts`'s `setPasswordActions`: form actions, so
-neither the app-only remote allowlist nor the read-only allowlist needed a new
-entry). `AccountSetupService.sendPasswordCode` emails an account-setup-style
+`src/lib/server/set-password-actions.ts`'s `setPasswordActions`: form actions,
+so neither the app-only remote allowlist nor the read-only allowlist needed a
+new entry). `AccountSetupService.sendPasswordCode` emails an account-setup-style
 code (same `account-setup-code:<id>` row, five tries), `addPassword` checks it,
 then calls better-auth's server-only `auth.api.setPassword` with the request
 headers (it links the `credential` account, enforces `minPasswordLength` and
@@ -1033,14 +1036,14 @@ link proved the address) and redirects to `/auth/sign-in?email=…`, which
 pre-fills the email.
 
 **Login wall.** `"email-otp"` and `"magic-link"` join `"password"` and
-`"oauth:<name>"` in `$lib/auth-providers.ts`; `signInMethodAvailable` is the one
-check for the Security tab's save and `/app-auth`'s "any usable method". There's
-no identity row for an emailed method, and the session doesn't record how it was
-created, so `evaluate()` treats an allowed, currently available emailed method
-as satisfied for every account (`acceptsEmailSignIn`): it proves only the
-mailbox, and every account has one. The user/email/group lists still narrow it.
-Switching the method off or losing SMTP makes it stop counting on the next
-re-check.
+`"oauth:<name>"` in `src/lib/auth-providers.ts`; `signInMethodAvailable` is the
+one check for the Security tab's save and `/app-auth`'s "any usable method".
+There's no identity row for an emailed method, and the session doesn't record
+how it was created, so `evaluate()` treats an allowed, currently available
+emailed method as satisfied for every account (`acceptsEmailSignIn`): it proves
+only the mailbox, and every account has one. The user/email/group lists still
+narrow it. Switching the method off or losing SMTP makes it stop counting on the
+next re-check.
 
 `tests/integration/support/mail-sink.ts` is a tiny in-process SMTP server
 (accepts any AUTH, keeps messages); `tests/integration/auth.test.ts` points SMTP
@@ -1048,7 +1051,7 @@ at it through the real `/settings/email` action, signs a password-less app-only
 account in with the mailed code, checks strangers get no mail, and turns SMTP
 back off.
 
-## MCP server (`$lib/server/mcp-server.ts`, `/api/v1/mcp`, `/.well-known/*`)
+## MCP server (`src/lib/server/mcp-server.ts`, `/api/v1/mcp`, `/.well-known/*`)
 
 AI agents manage Homerun through a streamable-HTTP MCP endpoint at
 `/api/v1/mcp`. Its tools don't touch DTOs: each one calls the REST API through
@@ -1092,7 +1095,7 @@ claude.ai flow: an admin creates the client through the Apps form, then sign in,
 authorize, consent, token (client secret over Basic auth), tool call; and open
 registration is refused.
 
-## Homerun as an OIDC provider (`@better-auth/oauth-provider`, `$lib/oidc-provider.ts`, `/idp`, `/auth/consent`)
+## Homerun as an OIDC provider (`@better-auth/oauth-provider`, `src/lib/oidc-provider.ts`, `/idp`, `/auth/consent`)
 
 `oidcProviderPlugins()` in `auth.ts` adds better-auth's `jwt` plugin (RS256 key
 pairs in the `jwks` table, since plenty of apps' OIDC libraries reject the EdDSA
@@ -1170,7 +1173,7 @@ code, token exchange, id_token claims, userinfo, consent):
    which is exactly what an app's server sends to `/oauth2/token`. It's turned
    off (`csrf: { trustedOrigins: ["*"] }` in `vite.config.ts`) and reimplemented
    as `csrfHandler`, first in `hooks.server.ts`'s sequence
-   (`$lib/server/csrf.ts`), exempting only the token, introspect, revoke and
+   (`src/lib/server/csrf.ts`), exempting only the token, introspect, revoke and
    end-session paths. Remote-function origin checks are separate in SvelteKit
    and unaffected.
 2. **API keys.** `applyApiKeyAuth` treats any `Authorization: Bearer` without a

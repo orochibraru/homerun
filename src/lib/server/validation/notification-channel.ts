@@ -2,8 +2,8 @@ import { z } from "zod";
 import {
 	formatTelegramTarget,
 	parseTelegramTarget,
-} from "$lib/notification-channel-target";
-import type { NotificationChannelKind } from "$lib/types";
+} from "#lib/notification-channel-target.js";
+import type { NotificationChannelKind } from "#lib/types.js";
 
 const DISCORD_HOSTS = new Set([
 	"discord.com",

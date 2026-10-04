@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Globe } from "@lucide/svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
+	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
-	import { enhanceToast } from "$lib/toast";
 	import PangolinSection from "./pangolin-section.svelte";
 
 	const { data } = $props();

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ArrowDownRight, ArrowUpRight, Minus } from "@lucide/svelte";
-	import type { Change } from "$lib/metrics-format";
+	import type { Change } from "#lib/metrics-format.js";
 
 	const {
 		change,
