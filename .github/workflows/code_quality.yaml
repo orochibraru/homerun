@@ -10,6 +10,11 @@ on:
         description:
           "Run the unit + integration suite. False for docs-only changes."
         type: boolean
+      ref:
+        required: false
+        default: ""
+        description: "Commit to test. Empty tests the event's own commit"
+        type: string
     secrets:
       HOMERUN_TEST_S3_ACCESS_KEY_ID:
         required: false
@@ -42,6 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - name: Setup bun
@@ -138,6 +144,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - name: Setup bun
