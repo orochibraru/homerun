@@ -2,6 +2,8 @@
 	import AsyncBlock from "#lib/components/async-block.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
@@ -29,9 +31,8 @@
 </script>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Pangolin</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Pangolin">
+      {#snippet description()}
         For instances fronted by a
         self-hosted <a
           class="text-primary underline"
@@ -44,9 +45,13 @@
         them blank the integration stays off. "Test connection" checks the
         whole set, not just the token, and each deploy writes what Pangolin
         did into its own deployment log.
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="pangolin-settings" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="pangolin-settings"
       action="?/updatePangolin"
       class="space-y-4 p-5"
       method="POST"
@@ -227,11 +232,10 @@
         name="pangolinOwnsAuth"
       />
 
-      <div class="flex justify-end gap-2">
+      <div class="flex justify-end">
         <Button formaction="?/testPangolin" type="submit" variant="outline">
           Test connection
         </Button>
-        <Button type="submit">Save</Button>
       </div>
     </form>
   </section>

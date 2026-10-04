@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { Bird, Check, GitBranch, Rocket, Tag } from "@lucide/svelte";
+	import { Bird, GitBranch, Rocket, Tag } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import Alert from "#lib/components/alert.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
@@ -67,8 +68,13 @@
         description="Turn this service into the stable environment of a canary / stable pair: every push to the canary branch deploys a companion canary service, and every pushed tag matching the pattern deploys this service at that tag. Off by default; turning it off deletes the canary."
         icon={Bird}
         title="Release channels"
-      />
+      >
+        {#snippet trailing()}
+          <SaveButton form="release-channels" pending={submitting} />
+        {/snippet}
+      </PanelHeader>
       <form
+        id="release-channels"
         action="?/updateChannels"
         class="space-y-5 p-5"
         method="POST"
@@ -147,18 +153,6 @@
             {/if}
           </p>
         {/if}
-
-        <div class="flex justify-end">
-          <Button disabled={submitting} type="submit">
-            {#if submitting}
-              <Spinner />
-              Saving…
-            {:else}
-              <Check class="size-4" />
-              Save
-            {/if}
-          </Button>
-        </div>
       </form>
     </section>
 

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
@@ -27,18 +29,16 @@
 </script>
 
 <section class="panel rounded-md">
-  <div class="border-border border-b px-5 py-4">
-    <h2 class="eyebrow">Email (SMTP)</h2>
-    <p class="text-text-muted text-xs">
-      Used for email verification on sign-up.
-    </p>
-    {#if issueFor("smtpHost")}
-      <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-        ⚠ {issueFor("smtpHost")}
-      </p>
-    {/if}
-  </div>
+  <PanelHeader
+    description="Used for email verification on sign-up."
+    title="Email (SMTP)"
+  >
+    {#snippet trailing()}
+      <SaveButton form="smtp-settings" />
+    {/snippet}
+  </PanelHeader>
   <form
+    id="smtp-settings"
     action="?/updateSmtp"
     class="space-y-4 p-5"
     method="POST"
@@ -57,6 +57,11 @@
       })(input);
     }}
   >
+    {#if issueFor("smtpHost")}
+      <p class="text-xs text-amber-600 dark:text-amber-400">
+        ⚠ {issueFor("smtpHost")}
+      </p>
+    {/if}
     <CheckBox
       checked={data.settings.smtpEnabled ?? false}
       helperText="Send email through this SMTP server"
@@ -139,7 +144,6 @@
       <Button formaction="?/sendTest" type="submit" variant="outline">
         Send test email
       </Button>
-      <Button type="submit">Save</Button>
     </div>
   </form>
 </section>

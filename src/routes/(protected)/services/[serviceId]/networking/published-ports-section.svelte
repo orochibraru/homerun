@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Check, Plug } from "@lucide/svelte";
+	import { Plug } from "@lucide/svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
 	import PublishedPortsFields from "#lib/components/published-ports-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import type { PublishedPort } from "#lib/published-ports.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -20,31 +20,29 @@
 	let submitting = $state(false);
 </script>
 
-<section class="panel rounded-md p-5">
-  <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <Plug class="size-4" />
-    </div>
-    <div>
-      <p class="text-text text-sm font-medium">Published ports</p>
-      <p class="text-text-muted text-xs">
-        Bind a port on this machine straight to the container, for what
-        Traefik can't route by domain : UDP (VPN, game servers, DNS) or raw TCP
-        (SSH, databases). Clients reach it at any hostname pointing at this
-        machine, on the host port.
-      </p>
-    </div>
-  </div>
+<section class="panel rounded-md">
+  <PanelHeader
+    description="Bind a port on this machine straight to the container, for what Traefik can't route by domain : UDP (VPN, game servers, DNS) or raw TCP (SSH, databases). Clients reach it at any hostname pointing at this machine, on the host port."
+    icon={Plug}
+    title="Published ports"
+  >
+    {#snippet trailing()}
+      {#if svc.networkMode !== "host"}
+        <SaveButton form="service-published-ports" pending={submitting} />
+      {/if}
+    {/snippet}
+  </PanelHeader>
 
   {#if svc.networkMode === "host"}
-    <p class="text-text-muted text-sm">
+    <p class="text-text-muted p-5 text-sm">
       Host networking already exposes every port the container listens on :
       there's nothing to publish.
     </p>
   {:else}
     <form
+      id="service-published-ports"
       action="?/updatePublishedPorts"
-      class="space-y-3"
+      class="space-y-3 p-5"
       method="POST"
       use:enhance={enhanceToast({
         error: "Couldn't save the published ports.",
@@ -63,20 +61,10 @@
         ports={svc.publishedPorts}
       />
 
-      <div class="flex flex-wrap items-center gap-3">
-        <Button disabled={submitting} type="submit" variant="outline">
-          {#if submitting}
-            <Spinner />
-          {:else}
-            <Check class="size-4" />
-          {/if}
-          Save
-        </Button>
-        <p class="text-text-subtle text-xs">
-          Redeploy for changes to take effect. A service with published ports
-          stops its old container before starting the new one.
-        </p>
-      </div>
+      <p class="text-text-subtle text-xs">
+        Redeploy for changes to take effect. A service with published ports
+        stops its old container before starting the new one.
+      </p>
     </form>
   {/if}
 </section>

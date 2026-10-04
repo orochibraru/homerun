@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check, Container, GitBranch } from "@lucide/svelte";
+	import { Container, GitBranch } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { isBuildMethod } from "#lib/build-methods.js";
 	import GitBuildFields from "#lib/components/git-build-fields.svelte";
@@ -7,8 +7,8 @@
 	import ImageCheckWarning from "#lib/components/image-check-warning.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RegistryFields from "#lib/components/registry-fields.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import StatusCheckPicker from "#lib/components/status-check-picker.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
@@ -16,7 +16,6 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { isDeployed } from "#lib/service-state.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -93,9 +92,14 @@
     description="What gets deployed. Changes take effect on the next deploy."
     icon={Container}
     title="Source"
-  />
+  >
+    {#snippet trailing()}
+      <SaveButton form="source-settings" pending={submitting} />
+    {/snippet}
+  </PanelHeader>
 
   <form
+    id="source-settings"
     action="?/updateSource"
     class="space-y-5 p-5"
     method="POST"
@@ -291,17 +295,5 @@
       bind:registryUrl
       bind:registryUsername
     />
-
-    <div class="flex justify-end">
-      <Button disabled={submitting} type="submit">
-        {#if submitting}
-          <Spinner />
-          Saving…
-        {:else}
-          <Check class="size-4" />
-          Save
-        {/if}
-      </Button>
-    </div>
   </form>
 </section>

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Clock } from "@lucide/svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import ScheduleField from "#lib/components/schedule-field.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -17,30 +18,36 @@
 	}
 
 	const { cronError, svc }: Props = $props();
+
+	let submitting = $state(false);
 </script>
 
-<section class="panel rounded-md p-5">
-  <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <Clock class="size-4" />
-    </div>
-    <div>
-      <p class="text-text text-sm font-medium">Auto-redeploy schedule</p>
-      <p class="text-text-muted text-xs">
-        Periodically repull the image and redeploy : useful for tracking a
-        <code>:latest</code>
-        tag. Disabled by default.
-      </p>
-    </div>
-  </div>
+<section class="panel rounded-md">
+  <PanelHeader icon={Clock} title="Auto-redeploy schedule">
+    {#snippet description()}
+      Periodically repull the image and redeploy : useful for tracking a
+      <code>:latest</code>
+      tag. Disabled by default.
+    {/snippet}
+    {#snippet trailing()}
+      <SaveButton form="auto-redeploy" pending={submitting} />
+    {/snippet}
+  </PanelHeader>
 
   <form
+    id="auto-redeploy"
     action="?/updateCron"
-    class="space-y-3"
+    class="space-y-3 p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Check the schedule for errors.",
       loading: "Saving the schedule",
+      onSettled: () => {
+        submitting = false;
+      },
+      onStart: () => {
+        submitting = true;
+      },
       success: "Saved.",
     })}
   >
@@ -65,6 +72,5 @@
         Last run {timeAgo(svc.cronLastRunAt)}.
       </p>
     {/if}
-    <Button type="submit" variant="outline">Save schedule</Button>
   </form>
 </section>

@@ -82,7 +82,7 @@
         {/if}
         <div class="flex min-w-0 flex-1 flex-col gap-2">
           {#if item.href}
-            <a class="flex min-w-0 items-center gap-3" href={item.href}>
+            <a class="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href={item.href}>
               {@render media?.(item)}
               <span class="min-w-0 flex-1">
                 {@render text(item, false)}
@@ -125,7 +125,7 @@
           {@render media?.(item)}
           <div class="min-w-0 flex-1">
             {#if item.href}
-              <a class="block min-w-0" href={item.href}>
+              <a class="block min-w-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href={item.href}>
                 {@render text(item, true)}
               </a>
             {:else}

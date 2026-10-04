@@ -16,10 +16,7 @@ async function signIn(page: Page) {
 async function saveColors(page: Page, palette: string): Promise<void> {
 	await page.goto("/profile/appearance");
 	await page.getByRole("button", { name: palette }).click();
-	await page
-		.locator("form[action='?/updateColors']")
-		.getByRole("button", { name: "Save" })
-		.click();
+	await page.locator("button[form='appearance-colors']").click();
 	await expect(page.getByText("Colors saved.")).toBeVisible();
 }
 
@@ -77,7 +74,7 @@ async function savePreset(page: Page, name: string): Promise<void> {
 	await page.goto("/profile/appearance");
 	const form = page.locator("form[action='?/updatePreset']");
 	await form.getByRole("button", { name }).click();
-	await form.getByRole("button", { name: "Save" }).click();
+	await page.locator("button[form='appearance-preset']").click();
 	await expect(page.getByText("Preset saved.")).toBeVisible();
 }
 
@@ -129,7 +126,7 @@ async function saveStyle(page: Page, name: string): Promise<void> {
 	await page.goto("/profile/appearance");
 	const form = page.locator("form[action='?/updateSurface']");
 	await form.getByRole("button", { name }).click();
-	await form.getByRole("button", { name: "Save" }).click();
+	await page.locator("button[form='appearance-style']").click();
 	await expect(page.getByText("Style saved.")).toBeVisible();
 }
 

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Check, Settings } from "@lucide/svelte";
+	import { Settings } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
@@ -10,7 +10,6 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { PULL_POLICIES } from "#lib/pull-policy.js";
 	import { defaultHostname } from "#lib/service-domains.js";
 	import { isDeployed } from "#lib/service-state.js";
@@ -72,9 +71,14 @@
       description="Changes take effect on the next deploy."
       icon={Settings}
       title="Service settings"
-    />
+    >
+      {#snippet trailing()}
+        <SaveButton form="service-settings" pending={submitting} />
+      {/snippet}
+    </PanelHeader>
 
     <form
+      id="service-settings"
       action="?/update"
       class="space-y-5 p-5"
       method="POST"
@@ -224,18 +228,6 @@
         >Compute</a>
         tab.
       </p>
-
-      <div class="flex justify-end">
-        <Button disabled={submitting} type="submit">
-          {#if submitting}
-            <Spinner />
-            Saving…
-          {:else}
-            <Check class="size-4" />
-            Save
-          {/if}
-        </Button>
-      </div>
     </form>
   </section>
 

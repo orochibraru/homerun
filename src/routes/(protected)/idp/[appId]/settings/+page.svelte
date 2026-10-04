@@ -6,8 +6,8 @@
 		type OauthAppFieldValues,
 	} from "#lib/components/oauth-app-fields.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 
@@ -35,8 +35,13 @@
       description="The name on the consent screen, where people are sent back to, and how sign-in behaves."
       icon={SlidersHorizontal}
       title="App settings"
-    />
+    >
+      {#snippet trailing()}
+        <SaveButton form="idp-app-settings" pending={submitting} />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="idp-app-settings"
       action="?/update"
       class="space-y-5 p-5"
       method="POST"
@@ -64,15 +69,6 @@
         value={data.app.confidential ? "confidential" : "public"}
       >
       <OauthAppFields typeLocked {values} />
-
-      <div class="flex justify-end">
-        <Button disabled={submitting} type="submit">
-          {#if submitting}
-            <Spinner />
-          {/if}
-          Save
-        </Button>
-      </div>
     </form>
   </section>
 

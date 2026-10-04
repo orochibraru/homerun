@@ -1464,7 +1464,13 @@ and equal (GitHub/Gitea `head.repo.full_name` vs `base.repo.full_name`, not
 GitLab `source_project_id` vs `target_project_id`; Bitbucket `source.repository`
 vs `destination.repository`), and `handle` ignores fork events before anything
 else, close included: a fork PR's code would run with the parent's env vars. An
-`update` whose ref didn't change is ignored. `close` deletes it through
+`update` whose ref didn't change is ignored.
+`GitWebhookService.deployOpenPullRequests` (the Previews tab's **Deploy open
+pull requests**, `?/deployOpen`) lists the repo's open pull requests through
+`GitProviderService.listOpenPullRequests` (`openPullRequestsPath` and
+`parseOpenPullRequests` in `git-webhooks.ts`, same fork rule) and replays each
+through `handle` as an `update`, so it's idempotent: an existing preview on the
+same head is skipped. `close` deletes it through
 `ServiceLifecycleService.deleteService`, which also deletes every preview first
 when the parent is deleted; turning previews off calls `removeAll`. Volumes,
 domains, cron, status checks and host networking are deliberately not copied.

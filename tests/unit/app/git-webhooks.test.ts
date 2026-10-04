@@ -4,6 +4,8 @@ import {
 	createWebhookRequest,
 	deleteWebhookPath,
 	gitWebhookUrl,
+	openPullRequestsPath,
+	parseOpenPullRequests,
 	parsePullRequestEvent,
 	parsePushEvent,
 	parseTagPushEvent,
@@ -448,6 +450,123 @@ describe("parsePullRequestEvent", () => {
 		expect(
 			parsePullRequestEvent(new Headers({ "x-github-event": "push" }), {}),
 		).toBeNull();
+	});
+});
+
+describe("parseOpenPullRequests", () => {
+	test("GitHub and Gitea list pulls as an array, a fork counts as one", () => {
+		const pulls = [
+			{
+				base: { repo: { full_name: "acme/app" } },
+				head: {
+					ref: "feat/a",
+					repo: { full_name: "acme/app" },
+					sha: "a".repeat(40),
+				},
+				number: 7,
+				title: "Add A",
+			},
+			{
+				base: { repo: { full_name: "acme/app" } },
+				head: {
+					ref: "main",
+					repo: { full_name: "someone/app" },
+					sha: "b".repeat(40),
+				},
+				number: 8,
+				title: "From a fork",
+			},
+		];
+		expect(parseOpenPullRequests("github", pulls)).toEqual([
+			{
+				action: "update",
+				branch: "feat/a",
+				commit: "a".repeat(40),
+				fromFork: false,
+				number: 7,
+				title: "Add A",
+			},
+			{
+				action: "update",
+				branch: "main",
+				commit: "b".repeat(40),
+				fromFork: true,
+				number: 8,
+				title: "From a fork",
+			},
+		]);
+		expect(parseOpenPullRequests("gitea", pulls)).toHaveLength(2);
+	});
+
+	test("GitLab merge requests use iid and project ids", () => {
+		expect(
+			parseOpenPullRequests("gitlab", [
+				{
+					iid: 3,
+					sha: "c".repeat(40),
+					source_branch: "fix/b",
+					source_project_id: 12,
+					target_project_id: 12,
+					title: "Fix B",
+				},
+			]),
+		).toEqual([
+			{
+				action: "update",
+				branch: "fix/b",
+				commit: "c".repeat(40),
+				fromFork: false,
+				number: 3,
+				title: "Fix B",
+			},
+		]);
+	});
+
+	test("Bitbucket wraps them in values and has no full commit", () => {
+		expect(
+			parseOpenPullRequests("bitbucket", {
+				values: [
+					{
+						destination: { repository: { full_name: "acme/app" } },
+						id: 5,
+						source: {
+							branch: { name: "feat/c" },
+							repository: { full_name: "acme/app" },
+						},
+						title: "C",
+					},
+				],
+			}),
+		).toEqual([
+			{
+				action: "update",
+				branch: "feat/c",
+				commit: null,
+				fromFork: false,
+				number: 5,
+				title: "C",
+			},
+		]);
+	});
+
+	test("an unexpected payload yields nothing", () => {
+		expect(parseOpenPullRequests("github", { message: "Not Found" })).toEqual(
+			[],
+		);
+		expect(parseOpenPullRequests("bitbucket", [])).toEqual([]);
+		expect(parseOpenPullRequests("gitlab", [{ title: "no iid" }])).toEqual([]);
+	});
+
+	test("openPullRequestsPath asks each provider for open ones only", () => {
+		expect(openPullRequestsPath("github", "acme/app")).toBe(
+			"/repos/acme/app/pulls?state=open&per_page=100",
+		);
+		expect(openPullRequestsPath("gitlab", "acme/app")).toBe(
+			"/projects/acme%2Fapp/merge_requests?state=opened&per_page=100",
+		);
+		expect(openPullRequestsPath("bitbucket", "acme/app")).toBe(
+			"/repositories/acme/app/pullrequests?state=OPEN&pagelen=50",
+		);
 	});
 });
 

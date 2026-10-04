@@ -186,6 +186,26 @@ export const actions = {
 		return { filteredOut, success: true };
 	},
 
+	deployOpen: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const svc = await previewParent(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		if (!svc.toJSON().previewsEnabled) {
+			return fail(400, { error: "Turn pull request previews on first." });
+		}
+		try {
+			return await GitWebhookService.deployOpenPullRequests(svc);
+		} catch (err) {
+			return fail(400, {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+	},
+
 	redeploy: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));

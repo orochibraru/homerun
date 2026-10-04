@@ -94,7 +94,7 @@
           >
             {#if n.serviceId}
               <a
-                class="min-w-0 flex-1 px-4 py-3"
+                class="min-w-0 flex-1 px-4 py-3 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
                 href="{resolve('services')}/{n.serviceId}"
                 onclick={() => onItemClick(n)}
               >
@@ -110,7 +110,7 @@
               </a>
             {:else}
               <button
-                class="min-w-0 flex-1 px-4 py-3 text-left"
+                class="min-w-0 flex-1 px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
                 onclick={() => onItemClick(n)}
                 type="button"
               >
@@ -122,7 +122,7 @@
             {/if}
             <button
               aria-label="Delete notification"
-              class="text-text-subtle hover:bg-surface-3 hover:text-text mt-2 mr-2 rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100"
+              class="text-text-subtle hover:bg-surface-3 hover:text-text mt-2 mr-2 rounded-md p-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
               onclick={() => deleteNotification(n.id)}
               type="button"
             >

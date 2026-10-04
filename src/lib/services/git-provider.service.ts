@@ -4,6 +4,9 @@ import type { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import {
 	createWebhookRequest,
 	deleteWebhookPath,
+	openPullRequestsPath,
+	type PullRequestEvent,
+	parseOpenPullRequests,
 	webhookIdFrom,
 } from "#lib/git-webhooks.js";
 import { Logger } from "#lib/logger.js";
@@ -615,6 +618,20 @@ class GitProviderServiceClass {
 			| { values: Array<{ name: string }> };
 		const rows = Array.isArray(body) ? body : body.values;
 		return rows.map((row) => row.name);
+	}
+
+	/** The open pull requests of `repo` as `update` events, as the connection's account sees them (first page). */
+	async listOpenPullRequests(
+		provider: GitProviderConfig,
+		connection: GitConnectionDTO,
+		repo: string,
+	): Promise<PullRequestEvent[]> {
+		const res = await this.#api(
+			provider,
+			connection,
+			openPullRequestsPath(provider.kind, repo),
+		);
+		return parseOpenPullRequests(provider.kind, await res.json());
 	}
 
 	/**

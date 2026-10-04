@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { Check, TerminalSquare } from "@lucide/svelte";
+	import { TerminalSquare } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import Alert from "#lib/components/alert.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RuntimeFields from "#lib/components/runtime-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { joinShellWords } from "#lib/shell-words.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -34,20 +34,18 @@
 </script>
 
 <section class="panel rounded-md">
-  <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <TerminalSquare class="size-4" />
-    </div>
-    <div>
-      <h2 class="eyebrow">Runtime</h2>
-      <p class="text-text-muted text-xs">
-        How the container starts and what it can reach on the host. Changes
-        take effect on the next deploy.
-      </p>
-    </div>
-  </div>
+  <PanelHeader
+    description="How the container starts and what it can reach on the host. Changes take effect on the next deploy."
+    icon={TerminalSquare}
+    title="Runtime"
+  >
+    {#snippet trailing()}
+      <SaveButton form="runtime-settings" pending={submitting} />
+    {/snippet}
+  </PanelHeader>
 
   <form
+    id="runtime-settings"
     action="?/updateRuntime"
     class="space-y-5 p-5"
     method="POST"
@@ -73,17 +71,5 @@
       swarm={data.orchestrationMode === "swarm"}
       {values}
     />
-
-    <div class="flex justify-end">
-      <Button disabled={submitting} type="submit">
-        {#if submitting}
-          <Spinner />
-          Saving…
-        {:else}
-          <Check class="size-4" />
-          Save
-        {/if}
-      </Button>
-    </div>
   </form>
 </section>

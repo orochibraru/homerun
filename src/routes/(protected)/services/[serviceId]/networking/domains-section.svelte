@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { Check, Globe, Plus, Trash2 } from "@lucide/svelte";
+	import { Globe, Plus, Trash2 } from "@lucide/svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		defaultHostname,
 		primaryHostname,
@@ -84,35 +85,35 @@
   </div>
 {/snippet}
 
-<section class="panel rounded-md p-5">
-  <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <Globe class="size-4" />
-    </div>
-    <div>
-      <p class="text-text text-sm font-medium">Domains</p>
-      <p class="text-text-muted text-xs">
-        {#if svc.dnsResolvable && mainHost}
-          Publicly routed at
-          <span class="text-accent">{mainHost}</span>
-          {#if routedCount > 1}
-            and {routedCount - 1} more
-          {/if}.
-        {:else if svc.networkMode === "host"}
-          Not publicly routed : this service is on the host network (see
-          Network below), which Traefik can't route to.
-        {:else}
-          Not publicly routed : subnet-only. Change this in the Network
-          section below.
-        {/if}
-      </p>
-    </div>
-  </div>
+<section class="panel rounded-md">
+  <PanelHeader icon={Globe} title="Domains">
+    {#snippet description()}
+      {#if svc.dnsResolvable && mainHost}
+        Publicly routed at
+        <span class="text-accent">{mainHost}</span>
+        {#if routedCount > 1}
+          and {routedCount - 1} more
+        {/if}.
+      {:else if svc.networkMode === "host"}
+        Not publicly routed : this service is on the host network (see
+        Network below), which Traefik can't route to.
+      {:else}
+        Not publicly routed : subnet-only. Change this in the Network
+        section below.
+      {/if}
+    {/snippet}
+    {#snippet trailing()}
+      {#if svc.dnsResolvable}
+        <SaveButton form="service-domains" pending={submitting} />
+      {/if}
+    {/snippet}
+  </PanelHeader>
 
   {#if svc.dnsResolvable}
     <form
+      id="service-domains"
       action="?/updateDomains"
-      class="space-y-3"
+      class="space-y-3 p-5"
       method="POST"
       use:enhance={enhanceToast({
         error: "Check the domains and try again.",
@@ -212,18 +213,7 @@
         Traefik to route it, it doesn't manage DNS for domains outside
         {baseDomain}.
       </p>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <Button disabled={submitting} type="submit" variant="outline">
-          {#if submitting}
-            <Spinner />
-          {:else}
-            <Check class="size-4" />
-          {/if}
-          Save
-        </Button>
-        <p class="text-text-subtle text-xs">Redeploy for changes to take effect.</p>
-      </div>
+      <p class="text-text-subtle text-xs">Redeploy for changes to take effect.</p>
     </form>
   {/if}
 </section>

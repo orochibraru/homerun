@@ -106,12 +106,13 @@
           {#each entries as entry (entry.icon)}
             <button
               class="
-                flex aspect-square items-center justify-center rounded-md border p-2 transition-colors {icon ===
+                flex aspect-square items-center justify-center rounded-md border p-2 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset {icon ===
                 entry.icon
                 ? 'border-accent bg-accent-light'
                 : 'border-border hover:bg-surface-2'}
               "
               aria-label={entry.name}
+              aria-pressed={icon === entry.icon}
               onclick={() => {
                 icon = entry.icon;
               }}

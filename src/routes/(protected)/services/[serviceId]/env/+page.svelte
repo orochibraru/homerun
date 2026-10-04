@@ -1,6 +1,5 @@
 <script lang="ts">
 	import {
-		Check,
 		FileText,
 		Lock,
 		LockOpen,
@@ -10,9 +9,10 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { mergeEnvRows, type ParsedEnvVar } from "#lib/env-parse.js";
 	import { title } from "#lib/store/title.js";
@@ -52,6 +52,7 @@
 		envRows = envRowsFromService();
 	});
 	let submitting = $state(false);
+	let savingEnvFiles = $state(false);
 
 	function addRow() {
 		envRows.push({ key: "", secret: false, value: "" });
@@ -74,21 +75,18 @@
 
 <div class="space-y-6">
 <section class="rounded-md panel">
-  <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <SlidersHorizontal class="size-4" />
-    </div>
-    <div>
-      <h2 class="eyebrow">Environment variables</h2>
-      <p class="text-xs text-text-muted">
-        Changes take effect on the next deploy : hit Redeploy on Overview after
-        saving. The lock marks a value secret: it's hidden here and always
-        redacted for AI agents, whatever its name.
-      </p>
-    </div>
-  </div>
+  <PanelHeader
+    description="Changes take effect on the next deploy : hit Redeploy on Overview after saving. The lock marks a value secret: it's hidden here and always redacted for AI agents, whatever its name."
+    icon={SlidersHorizontal}
+    title="Environment variables"
+  >
+    {#snippet trailing()}
+      <SaveButton form="env-vars" pending={submitting} />
+    {/snippet}
+  </PanelHeader>
 
   <form
+    id="env-vars"
     action="?/update"
     class="space-y-2.5 p-5"
     method="POST"
@@ -162,35 +160,22 @@
       </Button>
       <EnvPasteButton onImport={importRows} />
     </div>
-
-    <div class="flex justify-end pt-2">
-      <Button disabled={submitting} type="submit">
-        {#if submitting}
-          <Spinner />
-          Saving…
-        {:else}
-          <Check class="size-4" />
-          Save
-        {/if}
-      </Button>
-    </div>
   </form>
 </section>
 
 <section class="panel rounded-md">
-  <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <FileText class="size-4" />
-    </div>
-    <div>
-      <h2 class="eyebrow">Env files</h2>
-      <p class="text-text-muted text-xs">
-        <code>.env</code> files on this host, read at every deploy. Variables
-        above win over a file's, and a later file wins over an earlier one. A
-        file that can't be read fails the deploy.
-      </p>
-    </div>
-  </div>
+  <PanelHeader icon={FileText} title="Env files">
+    {#snippet description()}
+      <code>.env</code> files on this host, read at every deploy. Variables
+      above win over a file's, and a later file wins over an earlier one. A
+      file that can't be read fails the deploy.
+    {/snippet}
+    {#snippet trailing()}
+      {#if data.isAdmin}
+        <SaveButton form="env-files" pending={savingEnvFiles} />
+      {/if}
+    {/snippet}
+  </PanelHeader>
 
   {#if !data.isAdmin}
     <div class="space-y-2 p-5 text-xs">
@@ -209,12 +194,19 @@
     </div>
   {:else}
   <form
+    id="env-files"
     action="?/updateEnvFiles"
     class="space-y-3 p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Couldn't save the env files.",
       loading: "Saving env files",
+      onSettled: () => {
+        savingEnvFiles = false;
+      },
+      onStart: () => {
+        savingEnvFiles = true;
+      },
       success: "Saved.",
     })}
   >
@@ -229,9 +221,6 @@
     {#if form?.envFilesError}
       <p class="text-xs text-red-500">{form.envFilesError}</p>
     {/if}
-    <div class="flex justify-end">
-      <Button type="submit" variant="outline">Save env files</Button>
-    </div>
   </form>
   {/if}
 </section>

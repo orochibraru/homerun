@@ -135,7 +135,13 @@ const isDesktop = new MediaQuery("(min-width: 768px)");
       class="flex min-w-0 flex-col gap-4"
       disabled={loading}
       onkeydown={(e) => {
-        if (e.key === "Enter" && onsubmit && !submitDisabled && !loading) {
+        if (
+          e.key === "Enter" &&
+          e.target instanceof HTMLInputElement &&
+          onsubmit &&
+          !submitDisabled &&
+          !loading
+        ) {
           e.preventDefault();
           onsubmit();
         }

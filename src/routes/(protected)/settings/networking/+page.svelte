@@ -1,7 +1,8 @@
 <script lang="ts">
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -22,14 +23,16 @@
 
 <div class="space-y-6">
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Traefik</h2>
-      <p class="text-text-muted text-xs">
-        Entrypoint, cert resolver, ACME account email, and the custom-SSL
-        dynamic-config directory.
-      </p>
-    </div>
+    <PanelHeader
+      description="Entrypoint, cert resolver, ACME account email, and the custom-SSL dynamic-config directory."
+      title="Traefik"
+    >
+      {#snippet trailing()}
+        <SaveButton form="traefik-settings" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="traefik-settings"
       action="?/updateTraefik"
       class="space-y-4 p-5"
       method="POST"
@@ -109,9 +112,6 @@
         label="HTTP cache"
         name="traefikHttpCache"
       />
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
   </section>
 

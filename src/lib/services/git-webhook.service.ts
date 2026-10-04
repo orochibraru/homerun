@@ -195,6 +195,55 @@ class GitWebhookServiceClass {
 		};
 	}
 
+	/**
+	 * Asks the provider for the repo's open pull requests and replays each
+	 * through `PreviewService.handle`, so pull requests opened before previews
+	 * were turned on (or whose webhook delivery was lost) get their preview
+	 * without being closed and reopened. Forks and branches the filter leaves
+	 * out are skipped the same way a webhook delivery would be, and a preview
+	 * already building its pull request's head isn't redeployed.
+	 *
+	 * @returns How many previews were deployed and how many pull requests were skipped.
+	 * @throws When the repo wasn't picked from a connected provider, the owner
+	 * isn't connected to it any more, or the provider refuses the call.
+	 */
+	async deployOpenPullRequests(
+		svc: ServiceDTO,
+	): Promise<{ deployed: number; skipped: number }> {
+		const provider = await enabledProvider(svc.gitProviderId);
+		if (!(provider && svc.gitRepo)) {
+			throw new Error(
+				"This repo wasn't picked from a connected git provider, so Homerun can't list its pull requests.",
+			);
+		}
+		const connection = await GitConnectionDTO.getForUserAndProvider(
+			svc.userId,
+			provider.id,
+		);
+		if (!connection) {
+			throw new Error(
+				`The service's owner isn't connected to ${provider.name} any more.`,
+			);
+		}
+		const pullRequests = await GitProviderService.listOpenPullRequests(
+			provider,
+			connection,
+			svc.gitRepo,
+		);
+		const results = await Promise.all(
+			pullRequests.map((pullRequest) =>
+				PreviewService.handle(svc, pullRequest),
+			),
+		);
+		const deployed = results.filter(
+			(result) => result.status === "deployed",
+		).length;
+		logger.info(
+			`Deployed open pull requests: service=${svc.id} open=${pullRequests.length} deployed=${deployed}`,
+		);
+		return { deployed, skipped: pullRequests.length - deployed };
+	}
+
 	/** Removes the service's webhook from its provider, for a service being deleted. Never throws. */
 	async remove(svc: ServiceDTO): Promise<void> {
 		if (svc.gitWebhookId) {

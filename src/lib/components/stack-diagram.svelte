@@ -214,6 +214,33 @@
 		};
 	}
 
+	/** Pans the canvas so an element that just took keyboard focus sits inside the visible area, undoing the browser's own scroll of the clipped viewport. */
+	function reveal(target: EventTarget | null) {
+		if (
+			!(
+				viewport &&
+				target instanceof HTMLElement &&
+				target.matches(":focus-visible")
+			)
+		) {
+			return;
+		}
+		viewport.scrollLeft = 0;
+		viewport.scrollTop = 0;
+		const box = viewport.getBoundingClientRect();
+		const rect = target.getBoundingClientRect();
+		if (rect.left < box.left) {
+			view.x += box.left - rect.left + FIT_PADDING;
+		} else if (rect.right > box.right) {
+			view.x -= rect.right - box.right + FIT_PADDING;
+		}
+		if (rect.top < box.top) {
+			view.y += box.top - rect.top + FIT_PADDING;
+		} else if (rect.bottom > box.bottom) {
+			view.y -= rect.bottom - box.bottom + FIT_PADDING;
+		}
+	}
+
 	$effect(() => {
 		if (!viewport) {
 			return;
@@ -288,7 +315,7 @@
 {#snippet card(svc: GraphServiceInfo)}
 	{#snippet body()}
 		<a
-			class="border-border bg-bg hover:border-border-light relative flex w-72 cursor-grab items-center gap-2.5 rounded-lg border px-3 py-2 shadow-sm transition-colors"
+			class="border-border bg-bg hover:border-border-light relative flex w-72 cursor-grab items-center gap-2.5 rounded-lg border px-3 py-2 shadow-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 			data-node={svc.id}
 			draggable="false"
 			href={`${resolve('services')}/${svc.id}`}
@@ -430,6 +457,10 @@
       event.stopPropagation();
       suppressClick = false;
     }
+  }}
+  onfocusin={(event) => {
+    const target = event.target;
+    requestAnimationFrame(() => reveal(target));
   }}
   onpointerdown={(event) => beginDrag(event, null)}
   role="presentation"

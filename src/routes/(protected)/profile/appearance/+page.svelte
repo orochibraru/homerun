@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { setMode } from "mode-watcher";
 	import { onMount, untrack } from "svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import SurfacePreview from "#lib/components/surface-preview.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
@@ -72,24 +73,27 @@
 
 {#snippet overridden()}
     {#if presetName}
-        <p class="text-accent mt-1 text-xs font-medium">
+        <span class="text-accent mt-1 block text-xs font-medium">
             The {presetName} preset overrides this while it's on. It's kept
             for when you pick None.
-        </p>
+        </span>
     {/if}
 {/snippet}
 
 <div class="space-y-6">
     <section class="panel rounded-md">
-        <div class="border-border border-b px-5 py-4">
-            <h2 class="eyebrow">Presets</h2>
-            <p class="text-text-muted text-xs">
+        <PanelHeader title="Presets">
+            {#snippet description()}
                 A complete look from another era: its own theme, style and
                 colors, overriding the ones below while it's on. Picking one
                 previews it on this page; save to keep it.
-            </p>
-        </div>
+            {/snippet}
+            {#snippet trailing()}
+                <SaveButton form="appearance-preset" />
+            {/snippet}
+        </PanelHeader>
         <form
+            id="appearance-preset"
             action="?/updatePreset"
             class="space-y-4 p-5"
             method="POST"
@@ -122,23 +126,23 @@
                     </button>
                 {/each}
             </div>
-            <div class="flex justify-end">
-                <Button type="submit">Save</Button>
-            </div>
         </form>
     </section>
 
     <!-- ═══ Theme ═══ -->
     <section class="panel rounded-md">
-        <div class="border-border border-b px-5 py-4">
-            <h2 class="eyebrow">Theme</h2>
-            <p class="text-text-muted text-xs">
+        <PanelHeader title="Theme">
+            {#snippet description()}
                 "Match system" follows your OS's own light/dark setting and
                 updates live if it changes.
-            </p>
-            {@render overridden()}
-        </div>
+                {@render overridden()}
+            {/snippet}
+            {#snippet trailing()}
+                <SaveButton form="appearance-theme" />
+            {/snippet}
+        </PanelHeader>
         <form
+            id="appearance-theme"
             action="?/updateTheme"
             class="space-y-4 p-5"
             method="POST"
@@ -159,22 +163,22 @@
                     <SelectItem label="Dark" value="dark" />
                 </SelectContent>
             </SelectRoot>
-            <div class="flex justify-end">
-                <Button type="submit">Save</Button>
-            </div>
         </form>
     </section>
 
     <section class="panel rounded-md">
-        <div class="border-border border-b px-5 py-4">
-            <h2 class="eyebrow">Style</h2>
-            <p class="text-text-muted text-xs">
+        <PanelHeader title="Style">
+            {#snippet description()}
                 How panels, cards and buttons are drawn. Picking one previews
                 it on this page; save to keep it.
-            </p>
-            {@render overridden()}
-        </div>
+                {@render overridden()}
+            {/snippet}
+            {#snippet trailing()}
+                <SaveButton form="appearance-style" />
+            {/snippet}
+        </PanelHeader>
         <form
+            id="appearance-style"
             action="?/updateSurface"
             class="space-y-4 p-5"
             method="POST"
@@ -207,24 +211,24 @@
                     </button>
                 {/each}
             </div>
-            <div class="flex justify-end">
-                <Button type="submit">Save</Button>
-            </div>
         </form>
     </section>
 
     <!-- ═══ Colors ═══ -->
     <section class="panel rounded-md">
-        <div class="border-border border-b px-5 py-4">
-            <h2 class="eyebrow">Colors</h2>
-            <p class="text-text-muted text-xs">
+        <PanelHeader title="Colors">
+            {#snippet description()}
                 A palette sets the accent (buttons, links, tab icons) and the
                 hues charts, category tiles and the background use, all
                 picked to go together. Custom sets the accent alone.
-            </p>
-            {@render overridden()}
-        </div>
+                {@render overridden()}
+            {/snippet}
+            {#snippet trailing()}
+                <SaveButton form="appearance-colors" />
+            {/snippet}
+        </PanelHeader>
         <form
+            id="appearance-colors"
             action="?/updateColors"
             class="space-y-4 p-5"
             method="POST"
@@ -279,20 +283,20 @@
                     />
                 </label>
             </div>
-            <div class="flex justify-end">
-                <Button type="submit">Save</Button>
-            </div>
         </form>
     </section>
 
     <section class="panel rounded-md">
-        <div class="border-border border-b px-5 py-4">
-            <h2 class="eyebrow">Lists</h2>
-            <p class="text-text-muted text-xs">
+        <PanelHeader title="Lists">
+            {#snippet description()}
                 How many rows every paginated list shows per page by default.
-            </p>
-        </div>
+            {/snippet}
+            {#snippet trailing()}
+                <SaveButton form="appearance-lists" />
+            {/snippet}
+        </PanelHeader>
         <form
+            id="appearance-lists"
             action="?/updatePerPage"
             class="space-y-4 p-5"
             method="POST"
@@ -309,9 +313,6 @@
                     {/each}
                 </SelectContent>
             </SelectRoot>
-            <div class="flex justify-end">
-                <Button type="submit">Save</Button>
-            </div>
         </form>
     </section>
 </div>

@@ -69,8 +69,19 @@
 		return () => clearTimeout(timer);
 	});
 
+	function isTyping(target: EventTarget | null): boolean {
+		return (
+			target instanceof HTMLElement &&
+			(target.isContentEditable || target.matches("input, textarea, select"))
+		);
+	}
+
 	function onWindowKeydown(event: KeyboardEvent) {
-		if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
+		if (
+			event.key.toLowerCase() === "k" &&
+			(event.metaKey || event.ctrlKey) &&
+			(open || !isTyping(event.target))
+		) {
 			event.preventDefault();
 			open = !open;
 		}

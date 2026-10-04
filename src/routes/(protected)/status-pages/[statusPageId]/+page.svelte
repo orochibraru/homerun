@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { Activity, ExternalLink, Save, Trash2 } from "@lucide/svelte";
+	import { Activity, ExternalLink, Trash2 } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import Alert from "#lib/components/alert.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import HeartbeatStrip from "#lib/components/heartbeat-strip.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import StatusPageFields from "#lib/components/status-page-fields.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
@@ -113,42 +115,43 @@
     {/if}
   </section>
 
-  <form
-    action="?/update"
-    class="panel space-y-6 rounded-md p-5"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Couldn't save the status page.",
-      loading: "Saving the status page",
-      onSettled: () => {
-        saving = false;
-      },
-      onStart: () => {
-        saving = true;
-      },
-      success: "Status page saved.",
-    })}
-  >
-    <StatusPageFields
-      bind:name
-      bind:slug
-      bind:description
-      bind:scope
-      bind:stackId
-      bind:isPublic
-      bind:selectedServiceIds
-      errors={form?.errors}
-      stacks={data.stacks}
-      services={data.services}
-    />
-
-    <div class="flex justify-end">
-      <Button disabled={saving} type="submit">
-        <Save class="size-4" />
-        Save changes
-      </Button>
-    </div>
-  </form>
+  <section class="panel rounded-md">
+    <PanelHeader title="Settings">
+      {#snippet trailing()}
+        <SaveButton form="status-page-settings" pending={saving} />
+      {/snippet}
+    </PanelHeader>
+    <form
+      id="status-page-settings"
+      action="?/update"
+      class="space-y-6 p-5"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't save the status page.",
+        loading: "Saving the status page",
+        onSettled: () => {
+          saving = false;
+        },
+        onStart: () => {
+          saving = true;
+        },
+        success: "Status page saved.",
+      })}
+    >
+      <StatusPageFields
+        bind:name
+        bind:slug
+        bind:description
+        bind:scope
+        bind:stackId
+        bind:isPublic
+        bind:selectedServiceIds
+        errors={form?.errors}
+        stacks={data.stacks}
+        services={data.services}
+      />
+    </form>
+  </section>
 
   <section class="bg-surface mt-6 rounded-md border border-red-200 dark:border-red-900/40">
     <div class="flex flex-wrap items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">

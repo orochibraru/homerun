@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Check, ShieldCheck } from "@lucide/svelte";
+	import { ShieldCheck } from "@lucide/svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { isUnderDomain } from "#lib/service-domains.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -33,39 +33,42 @@
 	const outsideDomains = $derived(
 		svc.domains.filter((domain) => !isUnderDomain(domain, baseDomain)),
 	);
+	const certEditable = $derived(
+		svc.dnsResolvable && !behindPangolin && outsideDomains.length > 0,
+	);
 </script>
 
-<section class="panel rounded-md p-5">
-  <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <ShieldCheck class="size-4" />
-    </div>
-    <div>
-      <p class="text-text text-sm font-medium">SSL</p>
-      <p class="text-text-muted text-xs">
-        {#if svc.dnsResolvable && behindPangolin}
-          Pangolin serves the public certificates for this service's domains
-          : Traefik only encrypts the hop from the tunnel with its default certificate.
-        {:else if svc.dnsResolvable && !certResolver}
-          Domains under {baseDomain} can't get a public certificate, since
-          ACME only issues for real domain names : Traefik serves its self-signed
-          default instead.
-        {:else if svc.dnsResolvable}
-          TLS is automatic via Traefik's
-          <code>{certResolver}</code>
-          resolver for every domain of this service : no certificate handling
-          needed.
-        {:else}
-          Not applicable : this service isn't publicly routed.
-        {/if}
-      </p>
-    </div>
-  </div>
+<section class="panel rounded-md">
+  <PanelHeader icon={ShieldCheck} title="SSL">
+    {#snippet description()}
+      {#if svc.dnsResolvable && behindPangolin}
+        Pangolin serves the public certificates for this service's domains
+        : Traefik only encrypts the hop from the tunnel with its default certificate.
+      {:else if svc.dnsResolvable && !certResolver}
+        Domains under {baseDomain} can't get a public certificate, since
+        ACME only issues for real domain names : Traefik serves its self-signed
+        default instead.
+      {:else if svc.dnsResolvable}
+        TLS is automatic via Traefik's
+        <code>{certResolver}</code>
+        resolver for every domain of this service : no certificate handling
+        needed.
+      {:else}
+        Not applicable : this service isn't publicly routed.
+      {/if}
+    {/snippet}
+    {#snippet trailing()}
+      {#if certEditable}
+        <SaveButton form="service-ssl" label="Save certificate" pending={submitting} />
+      {/if}
+    {/snippet}
+  </PanelHeader>
 
-  {#if svc.dnsResolvable && !behindPangolin && outsideDomains.length > 0}
+  {#if certEditable}
     <form
+      id="service-ssl"
       action="?/updateSsl"
-      class="border-border space-y-3 border-t pt-4"
+      class="space-y-3 p-5"
       method="POST"
       use:enhance={enhanceToast({
         error: "Check the certificate and try again.",
@@ -121,17 +124,7 @@
           name="clearSsl"
         />
       {/if}
-      <div class="flex flex-wrap items-center gap-3">
-        <Button disabled={submitting} type="submit" variant="outline">
-          {#if submitting}
-            <Spinner />
-          {:else}
-            <Check class="size-4" />
-          {/if}
-          Save certificate
-        </Button>
-        <p class="text-text-subtle text-xs">Redeploy for changes to take effect.</p>
-      </div>
+      <p class="text-text-subtle text-xs">Redeploy for changes to take effect.</p>
     </form>
   {/if}
 </section>

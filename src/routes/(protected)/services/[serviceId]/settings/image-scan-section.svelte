@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { ShieldCheck } from "@lucide/svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -11,35 +12,42 @@
 	}
 
 	const { svc }: Props = $props();
+
+	let submitting = $state(false);
 </script>
 
-<section class="panel rounded-md p-5">
-  <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <ShieldCheck class="size-4" />
-    </div>
-    <div>
-      <p class="text-text text-sm font-medium">Image scanning</p>
-      <p class="text-text-muted text-xs">
-        Scans the image for known vulnerabilities on every deploy, through
-        Homerun's pull mirror. Results are on the
-        <a
-          class="text-accent underline"
-          href={resolve("/(protected)/services/[serviceId]/security", {
-            serviceId: svc.id,
-          })}
-        >Security</a>
-        tab.
-      </p>
-    </div>
-  </div>
+<section class="panel rounded-md">
+  <PanelHeader icon={ShieldCheck} title="Image scanning">
+    {#snippet description()}
+      Scans the image for known vulnerabilities on every deploy, through
+      Homerun's pull mirror. Results are on the
+      <a
+        class="text-accent underline"
+        href={resolve("/(protected)/services/[serviceId]/security", {
+          serviceId: svc.id,
+        })}
+      >Security</a>
+      tab.
+    {/snippet}
+    {#snippet trailing()}
+      <SaveButton form="image-scan" pending={submitting} />
+    {/snippet}
+  </PanelHeader>
+
   <form
+    id="image-scan"
     action="?/updateImageScan"
-    class="space-y-3"
+    class="space-y-3 p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Couldn't save image scanning.",
       loading: "Saving image scanning",
+      onSettled: () => {
+        submitting = false;
+      },
+      onStart: () => {
+        submitting = true;
+      },
       success: "Saved.",
     })}
   >
@@ -50,6 +58,5 @@
       label="Scan this service's image"
       name="imageScanEnabled"
     />
-    <Button type="submit" variant="outline">Save</Button>
   </form>
 </section>

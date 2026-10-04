@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check, ChevronDown, Play, Trash2 } from "@lucide/svelte";
+	import { ChevronDown, Play, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import Alert from "#lib/components/alert.svelte";
 	import AnsiLine from "#lib/components/ansi-line.svelte";
@@ -7,6 +7,7 @@
 	import CronJobFields from "#lib/components/cron-job-fields.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "#lib/formatting.js";
@@ -54,20 +55,23 @@
         {/if}
       </p>
     </div>
-    <form
-      action="?/runNow"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't queue that run.",
-        loading: "Queueing the run",
-        success: "Run queued : it shows up below once it finishes.",
-      })}
-    >
-      <Button type="submit" variant="outline">
-        <Play class="size-4" />
-        Run now
-      </Button>
-    </form>
+    <div class="flex items-center gap-2">
+      <form
+        action="?/runNow"
+        method="POST"
+        use:enhance={enhanceToast({
+          error: "Couldn't queue that run.",
+          loading: "Queueing the run",
+          success: "Run queued : it shows up below once it finishes.",
+        })}
+      >
+        <Button size="sm" type="submit" variant="outline">
+          <Play class="size-4" />
+          Run now
+        </Button>
+      </form>
+      <SaveButton form="cron-job-settings" pending={submitting} />
+    </div>
   </div>
 
   {#if form?.error}
@@ -77,6 +81,7 @@
   {/if}
 
   <form
+    id="cron-job-settings"
     action="?/update"
     class="space-y-4"
     method="POST"
@@ -111,15 +116,6 @@
         timeoutSeconds: job.timeoutSeconds,
       }}
     />
-
-    <Button disabled={submitting} type="submit">
-      {#if submitting}
-        <Spinner />
-      {:else}
-        <Check class="size-4" />
-      {/if}
-      Save
-    </Button>
   </form>
 
   {#if runs.length > 0}

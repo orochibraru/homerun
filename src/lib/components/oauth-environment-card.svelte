@@ -6,8 +6,8 @@
 	import OauthEnvironmentFields, {
 		type OauthEnvironmentFieldValues,
 	} from "#lib/components/oauth-environment-fields.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import type { OauthClientSecretSummary } from "#lib/dto/oauth-client-secret-dto.js";
 	import { formatDate, timeAgo } from "#lib/formatting.js";
 	import type { OauthClientEnvironment } from "#lib/server/db/schema.js";
@@ -55,21 +55,25 @@
         </span>
       {/if}
     </div>
-    {#if canDelete}
-      <Button
-        aria-label="Delete the {environment.name} environment"
-        onclick={() => {
-          confirmingDelete = true;
-        }}
-        size="icon-sm"
-        variant="ghost"
-      >
-        <Trash2 class="size-4" />
-      </Button>
-    {/if}
+    <div class="flex shrink-0 items-center gap-2">
+      {#if canDelete}
+        <Button
+          aria-label="Delete the {environment.name} environment"
+          onclick={() => {
+            confirmingDelete = true;
+          }}
+          size="icon-sm"
+          variant="ghost"
+        >
+          <Trash2 class="size-4" />
+        </Button>
+      {/if}
+      <SaveButton form="oauth-environment-{environment.id}" pending={saving} />
+    </div>
   </div>
 
   <form
+    id="oauth-environment-{environment.id}"
     action="?/updateEnvironment"
     class="space-y-5 p-5"
     method="POST"
@@ -87,14 +91,6 @@
   >
     <input name="environmentId" type="hidden" value={environment.id}>
     <OauthEnvironmentFields idPrefix={environment.id} {values} />
-    <div class="flex justify-end">
-      <Button disabled={saving} type="submit">
-        {#if saving}
-          <Spinner />
-        {/if}
-        Save
-      </Button>
-    </div>
   </form>
 
   {#if confidential}

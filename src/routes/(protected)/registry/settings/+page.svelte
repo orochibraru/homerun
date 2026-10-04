@@ -4,6 +4,7 @@
 	import Alert from "#lib/components/alert.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { formatBytes } from "#lib/formatting.js";
@@ -22,6 +23,7 @@
 
 	let checks = $state<RegistryCheck[] | null>(null);
 	let testing = $state(false);
+	let publishing = $state(false);
 
 	async function selfTestCallback() {
 		testing = true;
@@ -142,7 +144,14 @@
 </section>
 
 <section class="border-border bg-surface-1 rounded-lg border p-4">
-  <h2 class="text-text text-sm font-medium">Publish it</h2>
+  <div class="flex items-center justify-between gap-4">
+    <h2 class="text-text text-sm font-medium">Publish it</h2>
+    <SaveButton
+      disabled={!data.status.authEnabled}
+      form="registry-public-host"
+      pending={publishing}
+    />
+  </div>
   <p class="text-text-muted mt-1 mb-3 text-sm">
     Routes the registry through Traefik at a hostname of your own, so other
     machines can push to it. Point that hostname's DNS at this host first. Auth
@@ -156,12 +165,18 @@
   {/if}
 
   <form
+    id="registry-public-host"
     action="?/setPublicHost"
-    class="flex flex-wrap items-center gap-2"
     method="POST"
     use:enhance={enhanceToast({
       error: "Couldn't publish the registry.",
       loading: "Reconfiguring the registry",
+      onSettled: () => {
+        publishing = false;
+      },
+      onStart: () => {
+        publishing = true;
+      },
       success: "Registry updated.",
     })}
   >
@@ -172,7 +187,6 @@
       name="publicHost"
       placeholder={data.suggestedHost || "registry.example.com"}
     />
-    <Button disabled={!data.status.authEnabled} type="submit">Save</Button>
   </form>
 
   {#if data.status.publicHost}

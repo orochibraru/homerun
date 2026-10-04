@@ -25,9 +25,14 @@ When done delete the entry, no bloat.
       `subproject-sync.md` still say `$lib` and "SvelteKit 2"; update them to
       `#lib/...js` imports and SvelteKit 3.
 
+- [ ] `src/app.html` declares `lang="fr"` while the whole UI is English, so
+      screen readers read every page with French pronunciation. Set it to `en`.
+
 ## Medium
 
-<!--  -->
+- [ ] The stack diagram's cards and substacks can only be rearranged by dragging
+      with a pointer. Add a keyboard way to move the focused card (arrow keys
+      while a "move" mode is on), saved like the dragged offsets.
 
 ## Large
 

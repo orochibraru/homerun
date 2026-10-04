@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { Check, CloudUpload } from "@lucide/svelte";
+	import { CloudUpload } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import ScheduleField from "#lib/components/schedule-field.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
@@ -50,28 +52,26 @@
 
 <div class="space-y-6">
 
-  <section class="rounded-md panel p-5">
-    <div class="mb-4 flex items-center gap-3">
-      <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-        <CloudUpload class="size-4" />
-      </div>
-      <div>
-        <p class="text-sm font-medium text-text">S3 backup</p>
-        <p class="text-xs text-text-muted">
-          {vol.kind === "bind"
-            ? "Tars this directory"
-            : "Tars this named volume, read through a short-lived helper container,"}
-          and uploads it to an S3-compatible bucket. Disabled by default.
-          {#if vol.backupLastRunAt}
-            · last run {timeAgo(vol.backupLastRunAt)}
-          {/if}
-        </p>
-      </div>
-    </div>
+  <section class="panel rounded-md">
+    <PanelHeader icon={CloudUpload} title="S3 backup">
+      {#snippet description()}
+        {vol.kind === "bind"
+          ? "Tars this directory"
+          : "Tars this named volume, read through a short-lived helper container,"}
+        and uploads it to an S3-compatible bucket. Disabled by default.
+        {#if vol.backupLastRunAt}
+          · last run {timeAgo(vol.backupLastRunAt)}
+        {/if}
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="volume-backup" pending={submitting} />
+      {/snippet}
+    </PanelHeader>
 
     <form
+      id="volume-backup"
       action="?/updateBackup"
-      class="space-y-3"
+      class="space-y-3 p-5"
       method="POST"
       use:enhance={enhanceToast({
         error: "Check the form for errors.",
@@ -199,15 +199,6 @@
           />
         </div>
       </div>
-
-      <Button disabled={submitting} type="submit">
-        {#if submitting}
-          <Spinner />
-        {:else}
-          <Check class="size-4" />
-        {/if}
-        Save
-      </Button>
     </form>
   </section>
 

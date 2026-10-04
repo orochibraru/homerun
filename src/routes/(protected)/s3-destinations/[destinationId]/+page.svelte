@@ -6,6 +6,8 @@
 		describeDestination,
 	} from "#lib/backup-destinations.js";
 	import BackupDestinationFields from "#lib/components/backup-destination-fields.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
@@ -125,35 +127,36 @@
     </div>
   </div>
 
-  <form
-    action="?/update"
-    class="mb-6 space-y-4 rounded-md panel p-5"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Check the form for errors.",
-      loading: "Saving the destination",
-      onSettled: () => {
-        submitting = false;
-      },
-      onStart: () => {
-        submitting = true;
-      },
-      success: "Destination saved.",
-    })}
-  >
-    <h2 class="text-text text-sm font-semibold">Settings</h2>
-    {#if form?.error && !form.tested}
-      <p class="text-sm text-red-500">{form.error}</p>
-    {/if}
-    <BackupDestinationFields {destination} />
-    <p class="text-text-subtle text-xs">
-      The test uses the saved settings: save a change before testing it.
-    </p>
-
-    <div class="flex justify-end gap-3">
-      <Button disabled={submitting} type="submit" variant="outline">
-        Save changes
-      </Button>
-    </div>
-  </form>
+  <section class="panel mb-6 rounded-md">
+    <PanelHeader title="Settings">
+      {#snippet trailing()}
+        <SaveButton form="destination-settings" pending={submitting} />
+      {/snippet}
+    </PanelHeader>
+    <form
+      id="destination-settings"
+      action="?/update"
+      class="space-y-4 p-5"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving the destination",
+        onSettled: () => {
+          submitting = false;
+        },
+        onStart: () => {
+          submitting = true;
+        },
+        success: "Destination saved.",
+      })}
+    >
+      {#if form?.error && !form.tested}
+        <p class="text-sm text-red-500">{form.error}</p>
+      {/if}
+      <BackupDestinationFields {destination} />
+      <p class="text-text-subtle text-xs">
+        The test uses the saved settings: save a change before testing it.
+      </p>
+    </form>
+  </section>
 </div>

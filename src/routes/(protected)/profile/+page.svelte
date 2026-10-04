@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { Check, ShieldCheck, UserCircle } from "@lucide/svelte";
+	import { ShieldCheck, UserCircle } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { authClient } from "#lib/auth-client.js";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
 
@@ -98,20 +98,17 @@
 </script>
 
 <section class="rounded-md panel">
-  <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-    <div class="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
-      <UserCircle class="size-4" />
-    </div>
-    <div>
-      <h2 class="eyebrow">Account</h2>
-      <p class="text-xs text-text-muted">
-        Your display name and avatar shown across the platform, and the
-        email you sign in with.
-      </p>
-    </div>
-  </div>
+  <PanelHeader
+    description="Your display name and avatar shown across the platform, and the email you sign in with."
+    icon={UserCircle}
+    title="Account"
+  >
+    {#snippet trailing()}
+      <SaveButton form="account" pending={accountLoading} />
+    {/snippet}
+  </PanelHeader>
 
-  <form class="space-y-5 p-5" onsubmit={saveAccount}>
+  <form id="account" class="space-y-5 p-5" onsubmit={saveAccount}>
     <!-- Avatar preview + URL input -->
     <div class="flex items-center gap-4">
       <div class="shrink-0">
@@ -198,18 +195,6 @@
           save.
         {/if}
       </p>
-    </div>
-
-    <div class="flex justify-end">
-      <Button disabled={accountLoading} type="submit">
-        {#if accountLoading}
-          <Spinner />
-          Saving…
-        {:else}
-          <Check class="size-4" />
-          Save account
-        {/if}
-      </Button>
     </div>
   </form>
 </section>

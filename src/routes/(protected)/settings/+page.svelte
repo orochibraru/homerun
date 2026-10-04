@@ -3,7 +3,8 @@
 	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
@@ -87,13 +88,16 @@
 
 <div class="space-y-6">
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Core</h2>
-      <p class="text-text-muted text-xs">
-        Base domain and the auth-gate check URL.
-      </p>
-    </div>
+    <PanelHeader
+      description="Base domain and the auth-gate check URL."
+      title="Core"
+    >
+      {#snippet trailing()}
+        <SaveButton form="core-settings" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="core-settings"
       bind:this={coreForm}
       action="?/updateCore"
       class="space-y-4 p-5"
@@ -202,16 +206,12 @@
         label="Cross-subdomain cookies"
         name="authCrossSubdomainCookies"
       />
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
   </section>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Resource limits</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Resource limits">
+      {#snippet description()}
         How full the server gets before Homerun says so, checked once a minute.
         A resource that stays past its soft limit for the time below sends a
         <strong>Resource warning</strong>, past its hard one a
@@ -219,9 +219,13 @@
         it drops back); the disk alerts at once. While it lasts it reminds you,
         and it tells you when it's back to normal. The GPU counts only on a host
         that has one.
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="resource-limits" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="resource-limits"
       action="?/updateResources"
       class="space-y-4 p-5"
       method="POST"
@@ -273,19 +277,21 @@
           />
         </label>
       </div>
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
     <ResourceIncidents incidents={data.resourceIncidents} />
   </section>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Release channel</h2>
-      <p class="text-text-muted text-xs">Which releases the update notice offers.</p>
-    </div>
+    <PanelHeader
+      description="Which releases the update notice offers."
+      title="Release channel"
+    >
+      {#snippet trailing()}
+        <SaveButton form="release-channel" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="release-channel"
       action="?/updateChannel"
       class="space-y-4 p-5"
       method="POST"
@@ -316,9 +322,6 @@
           can ship a broken one. Switching to a more stable channel doesn't downgrade:
           updates just stop until that channel has a release newer than the one you run.
         </p>
-      </div>
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
       </div>
     </form>
   </section>

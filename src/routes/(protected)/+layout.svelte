@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Menu, Plus, X } from "@lucide/svelte";
 	import { modeStorageKey, setMode } from "mode-watcher";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
+	import { MediaQuery } from "svelte/reactivity";
 	import { fly } from "svelte/transition";
 	import AppVersion from "#lib/components/app-version.svelte";
 	import BrandMark from "#lib/components/brand-mark.svelte";
@@ -20,6 +21,14 @@
 	const { data, children } = $props();
 
 	let sidebarOpen = $state(false);
+	let sidebarToggle = $state<HTMLElement | null>(null);
+	let sidebarClose = $state<HTMLElement | null>(null);
+	const desktop = new MediaQuery("(min-width: 768px)");
+
+	function closeSidebar() {
+		sidebarOpen = false;
+		void tick().then(() => sidebarToggle?.focus());
+	}
 
 	// Seeds a browser that's never set a device-local theme override (no
 	// mode-watcher localStorage entry yet, e.g. a first visit on a new
@@ -96,11 +105,12 @@
       {@const NavIcon = item.icon}
       <a
         class="
-          group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150
+          group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
           {active
           ? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold'
           : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium'}
        "
+        aria-current={active ? "page" : undefined}
         href={item.href}
         onclick={onNavigate}
       >
@@ -111,6 +121,14 @@
   {/each}
 {/snippet}
 
+<svelte:window
+  onkeydown={(event) => {
+    if (sidebarOpen && event.key === "Escape") {
+      closeSidebar();
+    }
+  }}
+/>
+
 <svelte:head>
   {#if accentCss}
     {@html `<style>${accentCss}</style>`}
@@ -119,6 +137,16 @@
 
 <!-- Fills the full viewport : there's no global navbar above this. -->
 <div class="flex h-dvh overflow-hidden p-2 md:gap-2">
+  <a
+    class="bg-ink text-ink-foreground fixed top-4 left-4 z-60 rounded-md px-3 py-2 text-sm font-medium not-focus:sr-only"
+    href="#main-content"
+    onclick={(event) => {
+      event.preventDefault();
+      document.getElementById("main-content")?.focus();
+    }}
+  >
+    Skip to content
+  </a>
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
   <aside class="hidden w-64 shrink-0 flex-col md:flex" data-slot="app-sidebar">
     <BrandMark class="px-3 py-2.5" />
@@ -141,26 +169,27 @@
     <button
       aria-label="Close sidebar"
       class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
-      onclick={() => {
-        sidebarOpen = false;
-      }}
+      onclick={closeSidebar}
+      tabindex="-1"
       type="button"
     >
     </button>
 
     <div
       class="panel-strong fixed top-0 left-0 z-50 flex h-dvh w-72 flex-col border-r border-border md:hidden"
+      aria-label="Navigation"
+      aria-modal="true"
+      role="dialog"
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
       <div class="border-border flex items-center justify-between border-b py-1 pr-2">
         <BrandMark class="px-3 py-2.5" />
         <Button
           aria-label="Close sidebar"
-          onclick={() => {
-            sidebarOpen = false;
-          }}
+          onclick={closeSidebar}
           size="icon-sm"
           variant="ghost"
+          bind:ref={sidebarClose}
         >
           <X class="size-5" />
         </Button>
@@ -175,7 +204,7 @@
   {/if}
 
   <!-- ── Main content ───────────────────────────────────────────── -->
-  <div class="panel flex flex-1 flex-col overflow-hidden rounded-xl">
+  <div class="panel flex flex-1 flex-col overflow-hidden rounded-xl" inert={sidebarOpen && !desktop.current}>
     <!-- Sticky header, every page, both breakpoints : hamburger (mobile
          only) + page title on the left, notifications + account menu on
          the right. -->
@@ -184,11 +213,14 @@
       data-slot="app-header"
     >
       <Button
+        aria-expanded={sidebarOpen}
         aria-label="Toggle sidebar"
         class="md:hidden"
         onclick={() => {
           sidebarOpen = !sidebarOpen;
+          void tick().then(() => sidebarClose?.focus());
         }}
+        bind:ref={sidebarToggle}
         size="icon-sm"
         variant="ghost"
       >
@@ -213,7 +245,7 @@
     </header>
 
     <!-- Page content -->
-    <main class="relative flex-1 overflow-y-auto">
+    <main class="relative flex-1 overflow-y-auto outline-none" id="main-content" tabindex="-1">
       <ErrorBoundary class="p-5 md:p-6">
         {@render children()}
       </ErrorBoundary>

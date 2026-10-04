@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { Check, Network } from "@lucide/svelte";
+	import { Network } from "@lucide/svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import CopyButton from "#lib/components/copy-button.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
@@ -11,7 +12,6 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { internalUrl, maskUrlPassword } from "#lib/service-link.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -73,33 +73,31 @@
 	);
 </script>
 
-<section class="panel rounded-md p-5">
-  <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <Network class="size-4" />
-    </div>
-    <div>
-      <p class="text-text text-sm font-medium">Network</p>
-      <p class="text-text-muted text-xs">
-        {#if networkMode === "host"}
-          Runs on the host's own network : reachable directly on this machine
-          at its own port, not through Traefik or the shared network.
-        {:else if svc.containerId || svc.swarmServiceId}
-          Reachable from other services at
-          <span class="text-text-subtle">{maskUrlPassword(internal)}</span>
-          <CopyButton class="p-0.5 align-middle" label="internal URL" value={internal} />
-        {:else}
-          Container port
-          <span class="text-text-subtle">{svc.containerPort}</span>
-          (deploy to make it reachable).
-        {/if}
-      </p>
-    </div>
-  </div>
+<section class="panel rounded-md">
+  <PanelHeader icon={Network} title="Network">
+    {#snippet description()}
+      {#if networkMode === "host"}
+        Runs on the host's own network : reachable directly on this machine
+        at its own port, not through Traefik or the shared network.
+      {:else if svc.containerId || svc.swarmServiceId}
+        Reachable from other services at
+        <span class="text-text-subtle">{maskUrlPassword(internal)}</span>
+        <CopyButton class="p-0.5 align-middle" label="internal URL" value={internal} />
+      {:else}
+        Container port
+        <span class="text-text-subtle">{svc.containerPort}</span>
+        (deploy to make it reachable).
+      {/if}
+    {/snippet}
+    {#snippet trailing()}
+      <SaveButton form="service-network" pending={submittingPorts} />
+    {/snippet}
+  </PanelHeader>
 
   <form
+    id="service-network"
     action="?/updatePorts"
-    class="space-y-4"
+    class="space-y-4 p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Check the form for errors.",
@@ -209,16 +207,6 @@
       />
     {/if}
 
-    <div class="flex flex-wrap items-center gap-3">
-      <Button disabled={submittingPorts} type="submit" variant="outline">
-        {#if submittingPorts}
-          <Spinner />
-        {:else}
-          <Check class="size-4" />
-        {/if}
-        Save
-      </Button>
-      <p class="text-text-subtle text-xs">Redeploy for changes to take effect.</p>
-    </div>
+    <p class="text-text-subtle text-xs">Redeploy for changes to take effect.</p>
   </form>
 </section>

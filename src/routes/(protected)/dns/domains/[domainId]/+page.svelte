@@ -3,6 +3,7 @@
 	import { untrack } from "svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -32,6 +33,7 @@
 		type: string;
 	}
 
+	let savingDomain = $state(false);
 	let editing = $state<EditedRecord | "new" | null>(null);
 	let removing = $state<EditedRecord | null>(null);
 	let confirmingRemove = $state(false);
@@ -60,17 +62,29 @@
   </div>
 
   <section class="panel rounded-md">
-    <PanelHeader description="Where the domain's records live, and what services' records point at." title="Domain" />
+    <PanelHeader description="Where the domain's records live, and what services' records point at." title="Domain">
+      {#snippet trailing()}
+        <SaveButton form="domain-settings" pending={savingDomain} />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="domain-settings"
       action="?/updateDomain"
       class="space-y-4 p-5"
       method="POST"
-      use:enhance={enhanceToast({ error: "Couldn't save the domain.", loading: "Saving the domain", success: "Domain saved." })}
+      use:enhance={enhanceToast({
+        error: "Couldn't save the domain.",
+        loading: "Saving the domain",
+        onSettled: () => {
+          savingDomain = false;
+        },
+        onStart: () => {
+          savingDomain = true;
+        },
+        success: "Domain saved.",
+      })}
     >
       <DomainLinkFields baseDomain={data.baseDomain} connections={data.connections} values={link} />
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
   </section>
 

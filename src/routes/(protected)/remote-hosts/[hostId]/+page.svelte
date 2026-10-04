@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { ChevronDown, ChevronLeft, Server, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
@@ -56,134 +56,136 @@
     </div>
   {/if}
 
-  <form
-    class="mb-6 space-y-4 rounded-md panel p-5"
-    action="?/update"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Check the form for errors.",
-      loading: "Saving the host",
-      onSettled: () => {
-        submitting = false;
-      },
-      onStart: () => {
-        submitting = true;
-      },
-      success: "Remote host updated.",
-    })}
-  >
-    {#if form?.error}
-      <p class="text-sm text-red-500">{form.error}</p>
-    {/if}
-    <div>
-      <label class={label} for="name">Name</label>
-      <Input id="name" name="name" required type="text" value={data.host.name} />
-    </div>
-
-    {#if data.host.kind === "agent"}
-      <div>
-        <label class={label} for="agentUrl">Agent URL</label>
-        <Input
-          class=""
-          id="agentUrl"
-          name="agentUrl"
-          placeholder="http://192.168.1.50:7420"
-          required
-          type="text"
-          value={data.host.agentUrl}
-        />
-        <p class="mt-1.5 text-xs text-text-subtle">
-          The worker's reachable base URL, port 7420 unless WORKER_PORT says otherwise.
-        </p>
-      </div>
-      <div>
-        <label class={label} for="agentToken">Agent token</label>
-        <Input
-          class=""
-          id="agentToken"
-          name="agentToken"
-          placeholder="Leave blank to keep current"
-          type="password"
-        />
-        <p class="mt-1.5 text-xs text-text-subtle">
-          Only needed if the agent's token changed, or the URL above did :
-          both get re-verified whenever either one moves.
-        </p>
-      </div>
-    {:else}
-      <div>
-        <label class={label} for="dockerHost">Docker host</label>
-        <Input
-          class=""
-          id="dockerHost"
-          name="dockerHost"
-          placeholder="tcp://192.168.1.50:2376"
-          required
-          type="text"
-          value={data.host.dockerHost}
-        />
-        <p class="mt-1.5 text-xs text-text-subtle">
-          <code>tcp://host:port</code>
-          (add TLS certs below for a TLS-secured daemon) or
-          <code>ssh://user@host</code>
-          (uses the system's own SSH agent : no key field here).
-        </p>
-      </div>
-
-      <Button
-        class="h-auto p-0"
-        onclick={() => {
-          showTls = !showTls;
-        }}
-        variant="link"
-      >
-        <ChevronDown
-          class="size-3.5 transition-transform {showTls ? 'rotate-180' : ''}"
-        />
-        TLS client certificate (optional, tcp:// only)
-      </Button>
-      {#if showTls}
-        <div class="space-y-3">
-          <div>
-            <label class={label} for="tlsCa">CA certificate</label>
-            <Textarea
-              class="resize-none"
-              id="tlsCa"
-              name="tlsCa"
-              placeholder="Leave blank to keep current"
-              rows={3}
-            />
-          </div>
-          <div>
-            <label class={label} for="tlsCert">Client certificate</label>
-            <Textarea
-              class="resize-none"
-              id="tlsCert"
-              name="tlsCert"
-              placeholder="Leave blank to keep current"
-              rows={3}
-            />
-          </div>
-          <div>
-            <label class={label} for="tlsKey">Client key</label>
-            <Textarea
-              class="resize-none"
-              id="tlsKey"
-              name="tlsKey"
-              placeholder="Leave blank to keep current"
-              rows={3}
-            />
-          </div>
-        </div>
+  <section class="panel mb-6 rounded-md">
+    <PanelHeader title="Connection">
+      {#snippet trailing()}
+        <SaveButton form="remote-host-settings" pending={submitting} />
+      {/snippet}
+    </PanelHeader>
+    <form
+      id="remote-host-settings"
+      class="space-y-4 p-5"
+      action="?/update"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving the host",
+        onSettled: () => {
+          submitting = false;
+        },
+        onStart: () => {
+          submitting = true;
+        },
+        success: "Remote host updated.",
+      })}
+    >
+      {#if form?.error}
+        <p class="text-sm text-red-500">{form.error}</p>
       {/if}
-    {/if}
+      <div>
+        <label class={label} for="name">Name</label>
+        <Input id="name" name="name" required type="text" value={data.host.name} />
+      </div>
 
-    <div class="flex justify-end gap-3">
-      <Button disabled={submitting} type="submit" variant="outline">
-        Save changes
-      </Button>
-    </div>
-  </form>
+      {#if data.host.kind === "agent"}
+        <div>
+          <label class={label} for="agentUrl">Agent URL</label>
+          <Input
+            class=""
+            id="agentUrl"
+            name="agentUrl"
+            placeholder="http://192.168.1.50:7420"
+            required
+            type="text"
+            value={data.host.agentUrl}
+          />
+          <p class="mt-1.5 text-xs text-text-subtle">
+            The worker's reachable base URL, port 7420 unless WORKER_PORT says otherwise.
+          </p>
+        </div>
+        <div>
+          <label class={label} for="agentToken">Agent token</label>
+          <Input
+            class=""
+            id="agentToken"
+            name="agentToken"
+            placeholder="Leave blank to keep current"
+            type="password"
+          />
+          <p class="mt-1.5 text-xs text-text-subtle">
+            Only needed if the agent's token changed, or the URL above did :
+            both get re-verified whenever either one moves.
+          </p>
+        </div>
+      {:else}
+        <div>
+          <label class={label} for="dockerHost">Docker host</label>
+          <Input
+            class=""
+            id="dockerHost"
+            name="dockerHost"
+            placeholder="tcp://192.168.1.50:2376"
+            required
+            type="text"
+            value={data.host.dockerHost}
+          />
+          <p class="mt-1.5 text-xs text-text-subtle">
+            <code>tcp://host:port</code>
+            (add TLS certs below for a TLS-secured daemon) or
+            <code>ssh://user@host</code>
+            (uses the system's own SSH agent : no key field here).
+          </p>
+        </div>
+
+        <Button
+          class="h-auto p-0"
+          onclick={() => {
+            showTls = !showTls;
+          }}
+          variant="link"
+        >
+          <ChevronDown
+            class="size-3.5 transition-transform {showTls ? 'rotate-180' : ''}"
+          />
+          TLS client certificate (optional, tcp:// only)
+        </Button>
+        {#if showTls}
+          <div class="space-y-3">
+            <div>
+              <label class={label} for="tlsCa">CA certificate</label>
+              <Textarea
+                class="resize-none"
+                id="tlsCa"
+                name="tlsCa"
+                placeholder="Leave blank to keep current"
+                rows={3}
+              />
+            </div>
+            <div>
+              <label class={label} for="tlsCert">Client certificate</label>
+              <Textarea
+                class="resize-none"
+                id="tlsCert"
+                name="tlsCert"
+                placeholder="Leave blank to keep current"
+                rows={3}
+              />
+            </div>
+            <div>
+              <label class={label} for="tlsKey">Client key</label>
+              <Textarea
+                class="resize-none"
+                id="tlsKey"
+                name="tlsKey"
+                placeholder="Leave blank to keep current"
+                rows={3}
+              />
+            </div>
+          </div>
+        {/if}
+      {/if}
+    </form>
+  </section>
 
   <div class="rounded-md border border-red-500/30 bg-red-500/5 p-5">
     <h2 class="eyebrow">Danger zone</h2>

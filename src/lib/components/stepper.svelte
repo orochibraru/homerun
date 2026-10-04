@@ -83,6 +83,7 @@
       {@const StepIcon = step.icon}
       <button
         class="group flex shrink-0 flex-col items-center gap-2 disabled:cursor-not-allowed"
+        aria-current={i === activeStep ? "step" : undefined}
         disabled={i > reachableStep}
         onclick={() => goToStep(i)}
         type="button"

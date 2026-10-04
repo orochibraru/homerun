@@ -23,13 +23,14 @@
 	import ErrorLevelBadge from "#lib/components/error-level-badge.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import SelectAllRow from "#lib/components/select-all-row.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { sdkSnippets } from "#lib/error-tracking/snippets.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { ListSelection } from "#lib/list-selection.svelte.js";
 	import { title } from "#lib/store/title.js";
-	import { enhanceToast, saveToast } from "#lib/toast.js";
+	import { enhanceToast } from "#lib/toast.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -80,6 +81,7 @@
 		snippets.find((candidate) => candidate.id === snippetId) ?? snippets[0],
 	);
 	let toggling = $state(false);
+	let savingSettings = $state(false);
 	let rotateOpen = $state(false);
 	let rotateForm = $state<HTMLFormElement | null>(null);
 	let bulkPending = $state(false);
@@ -188,6 +190,7 @@
       >
         {#snippet trailing()}
           {@render toggleForm(data.project?.enabled ?? false)}
+          <SaveButton form="error-tracking-settings" pending={savingSettings} />
         {/snippet}
       </PanelHeader>
       <div class="space-y-5 p-5">
@@ -207,10 +210,21 @@
         </div>
 
         <form
+          id="error-tracking-settings"
           action="?/settings"
           class="grid gap-3 md:grid-cols-2"
           method="POST"
-          use:enhance={saveToast("Error tracking settings")}
+          use:enhance={enhanceToast({
+            error: "Check the form for errors.",
+            loading: "Saving error tracking settings",
+            onSettled: () => {
+              savingSettings = false;
+            },
+            onStart: () => {
+              savingSettings = true;
+            },
+            success: "Error tracking settings saved.",
+          })}
         >
           <CheckBox
             checked={data.project.injectEnv}
@@ -229,8 +243,6 @@
             name="internalDsn"
           />
           <div class="flex flex-wrap items-center gap-2 md:col-span-2">
-            <Button size="sm" type="submit">Save</Button>
-
             <Button
               onclick={() => rotateOpen = true}
               size="sm"

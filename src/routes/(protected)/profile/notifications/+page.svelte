@@ -2,6 +2,8 @@
 	import { BellRing, Plus } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
 	import { NOTIFICATION_EVENTS } from "#lib/notification-events.js";
@@ -24,27 +26,27 @@
     title="No notification channels yet"
   ><Button href={resolve('notification-channels')}><Plus class="size-4" />Add a channel</Button></EmptyState>
 {:else}
-  <form
-    action="?/save"
-    class="panel rounded-md"
-    method="POST"
-    use:enhance={saveToast("Notification settings")}
-  >
-    <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
-      <div>
-        <h2 class="eyebrow">What to send, and where</h2>
-        <p class="text-text-muted text-xs">
-          Tick an event under every channel that should receive it.
-        </p>
-      </div>
-
-      <Button
-        href={resolve('notification-channels')}
-        size="sm"
-        variant="outline"
-      >Manage channels</Button>
-    </div>
-    <div class="overflow-x-auto">
+  <section class="panel rounded-md">
+    <PanelHeader
+      description="Tick an event under every channel that should receive it."
+      title="What to send, and where"
+    >
+      {#snippet trailing()}
+        <Button
+          href={resolve('notification-channels')}
+          size="sm"
+          variant="outline"
+        >Manage channels</Button>
+        <SaveButton form="notification-routing" />
+      {/snippet}
+    </PanelHeader>
+    <form
+      id="notification-routing"
+      action="?/save"
+      class="overflow-x-auto"
+      method="POST"
+      use:enhance={saveToast("Notification settings")}
+    >
       <table class="w-full text-sm">
         <thead>
           <tr class="border-border border-b">
@@ -86,9 +88,6 @@
           {/each}
         </tbody>
       </table>
-    </div>
-    <div class="border-border flex justify-end border-t px-5 py-4">
-      <Button type="submit">Save</Button>
-    </div>
-  </form>
+    </form>
+  </section>
 {/if}

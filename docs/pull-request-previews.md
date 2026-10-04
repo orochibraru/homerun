@@ -17,6 +17,14 @@ repository as its base (GitHub and Gitea compare the head and base repository,
 GitLab the source and target project, Bitbucket the source and destination
 repository); a fork, or a payload that doesn't say, is acknowledged and ignored.
 
+Pull requests that were already open when previews were turned on never sent an
+event, so they get no preview on their own. **Deploy open pull requests**, in
+the header of the tab's **Open previews** section, asks the provider for the
+repo's open pull requests and deploys a preview for each one, with the same fork
+and branch-filter rules; a preview already building its pull request's head is
+left alone. It needs the repo picked from a connected git provider, and reads
+the first page only (100 pull requests, 50 on Gitea and Bitbucket).
+
 A preview copies the service's build settings, env vars, resources, healthcheck
 and stack when it's created and again on every update, but not its volumes,
 domains, cron schedule, status checks or login wall: previews have their own

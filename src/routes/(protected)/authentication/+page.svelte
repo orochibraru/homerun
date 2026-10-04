@@ -1,5 +1,7 @@
 <script lang="ts">
 	import CheckBox from "#lib/components/check-box.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { saveToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -38,18 +40,23 @@
   </section>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Emailed sign-in</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Emailed sign-in">
+      {#snippet description()}
         Sign in without a password: after entering their email, people can ask
         for a 6-digit code or a one-time link. Handy for clients with app
         access only, who can then accept an invite without choosing a password.
         Neither creates accounts, and each also becomes a method protected apps
         can accept.
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        {#if data.smtpEnabled}
+          <SaveButton form="emailed-sign-in" />
+        {/if}
+      {/snippet}
+    </PanelHeader>
     {#if data.smtpEnabled}
       <form
+        id="emailed-sign-in"
         class="space-y-3 p-5"
         action="?/emailSignIn"
         method="POST"
@@ -69,9 +76,6 @@
           label="Email me a sign-in link"
           name="magicLink"
         />
-        <div class="flex justify-end">
-          <Button type="submit">Save</Button>
-        </div>
       </form>
     {:else}
       <div class="space-y-2 p-5 text-sm">
@@ -87,15 +91,18 @@
   </section>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Preferred sign-in methods</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Preferred sign-in methods">
+      {#snippet description()}
         Picking passkey prompts for one as soon as the sign-in page opens.
         Picking a single sign-on provider sends accounts linked to it straight
         there once they enter their email.
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="preferred-sign-in" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="preferred-sign-in"
       class="space-y-3 p-5"
       action="?/preferredSignIn"
       method="POST"
@@ -110,23 +117,23 @@
           name="preferred:{option.method}"
         />
       {/each}
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
   </section>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Sign-in requirements</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Sign-in requirements">
+      {#snippet description()}
         Applies to every account, admins included. Anyone who doesn't meet a
         requirement is sent to a setup page on their next visit and can't use
         the dashboard until they've enrolled. API keys and CLI tokens aren't
         affected.
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="sign-in-requirements" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="sign-in-requirements"
       class="space-y-3 p-5"
       action="?/securityPolicy"
       method="POST"
@@ -146,9 +153,6 @@
         label="Require a passkey"
         name="requirePasskey"
       />
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
   </section>
 </div>

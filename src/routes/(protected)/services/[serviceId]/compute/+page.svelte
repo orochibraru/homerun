@@ -1,14 +1,12 @@
 <script lang="ts">
-	import { Check, Cpu } from "@lucide/svelte";
+	import { Cpu } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import CheckBox from "#lib/components/check-box.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);
@@ -31,19 +29,18 @@
 </script>
 
 <section class="panel rounded-md">
-  <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <Cpu class="size-4" />
-    </div>
-    <div>
-      <h2 class="eyebrow">Compute</h2>
-      <p class="text-text-muted text-xs">
-        Resource limits and autoscaling. Changes take effect on the next deploy.
-      </p>
-    </div>
-  </div>
+  <PanelHeader
+    description="Resource limits and autoscaling. Changes take effect on the next deploy."
+    icon={Cpu}
+    title="Compute"
+  >
+    {#snippet trailing()}
+      <SaveButton form="compute-settings" pending={submitting} />
+    {/snippet}
+  </PanelHeader>
 
   <form
+    id="compute-settings"
     action="?/updateCompute"
     class="space-y-5 p-5"
     method="POST"
@@ -107,17 +104,5 @@
         {/if}
       </div>
     {/if}
-
-    <div class="flex justify-end">
-      <Button disabled={submitting} type="submit">
-        {#if submitting}
-          <Spinner />
-          Saving…
-        {:else}
-          <Check class="size-4" />
-          Save
-        {/if}
-      </Button>
-    </div>
   </form>
 </section>

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import {
-		Check,
 		ExternalLink,
 		GitPullRequest,
 		Globe,
@@ -14,10 +13,10 @@
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import LoginWallSection from "#lib/components/login-wall-section.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -58,6 +57,7 @@
 	let previewsEnabled = $derived(values.previewsEnabled === "on");
 	let previewDefaultDomain = $derived(values.previewDefaultDomain === "on");
 	let submitting = $state(false);
+	let deployingOpen = $state(false);
 	let pendingId = $state<string | null>(null);
 	let deleteTarget = $state<{ id: string; label: string } | null>(null);
 	let deleteOpen = $state(false);
@@ -101,8 +101,13 @@
         description="Every pull request opened on the repo gets its own service, built from its head, redeployed on every push to it and removed when it's closed or merged. Pull requests from forks are never previewed."
         icon={GitPullRequest}
         title="Pull request previews"
-      />
+      >
+        {#snippet trailing()}
+          <SaveButton form="preview-settings" pending={submitting} />
+        {/snippet}
+      </PanelHeader>
       <form
+        id="preview-settings"
         action="?/updatePreviews"
         class="space-y-5 p-5"
         method="POST"
@@ -203,18 +208,6 @@
             {/if}
           </p>
         {/if}
-
-        <div class="flex justify-end">
-          <Button disabled={submitting} type="submit">
-            {#if submitting}
-              <Spinner />
-              Saving…
-            {:else}
-              <Check class="size-4" />
-              Save
-            {/if}
-          </Button>
-        </div>
       </form>
     </section>
 
@@ -239,7 +232,47 @@
         description="Open pull requests with a preview, newest first."
         icon={Globe}
         title="Open previews"
-      />
+      >
+        {#snippet trailing()}
+          {#if svc.previewsEnabled}
+            <form
+              action="?/deployOpen"
+              method="POST"
+              use:enhance={enhanceToast({
+                error: "Couldn't deploy the open pull requests.",
+                loading: "Looking for open pull requests",
+                onSettled: () => {
+                  deployingOpen = false;
+                },
+                onStart: () => {
+                  deployingOpen = true;
+                },
+                success: (result) => {
+                  const { deployed = 0, skipped = 0 } =
+                    (result as { deployed?: number; skipped?: number } | undefined) ?? {};
+                  const queued =
+                    deployed === 0
+                      ? "No new preview to deploy."
+                      : `${deployed} preview${deployed === 1 ? "" : "s"} queued.`;
+                  return skipped > 0
+                    ? `${queued} ${skipped} pull request${skipped === 1 ? "" : "s"} skipped (already up to date, from a fork, or filtered out).`
+                    : queued;
+                },
+              })}
+            >
+              <Button
+                disabled={deployingOpen}
+                size="sm"
+                type="submit"
+                variant="outline"
+              >
+                <GitPullRequest class="size-4" />
+                Deploy open pull requests
+              </Button>
+            </form>
+          {/if}
+        {/snippet}
+      </PanelHeader>
       {#if data.previews.length === 0}
         <p class="text-text-subtle p-5 text-sm">
           {svc.previewsEnabled

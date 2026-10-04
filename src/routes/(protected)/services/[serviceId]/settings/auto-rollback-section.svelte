@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { RotateCcw } from "@lucide/svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -11,36 +12,43 @@
 	}
 
 	const { svc }: Props = $props();
+
+	let submitting = $state(false);
 </script>
 
-<section class="panel rounded-md p-5">
-  <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <RotateCcw class="size-4" />
-    </div>
-    <div>
-      <p class="text-text text-sm font-medium">Auto-rollback</p>
-      <p class="text-text-muted text-xs">
-        Every deploy is watched for 90 seconds (longer while a healthcheck is
-        still starting). A revision that exits, restart-loops or fails its
-        healthcheck is reported either way. Past revisions are on the
-        <a
-          class="text-accent underline"
-          href={resolve("/(protected)/services/[serviceId]/revisions", {
-            serviceId: svc.id,
-          })}
-        >Revisions</a>
-        tab.
-      </p>
-    </div>
-  </div>
+<section class="panel rounded-md">
+  <PanelHeader icon={RotateCcw} title="Auto-rollback">
+    {#snippet description()}
+      Every deploy is watched for 90 seconds (longer while a healthcheck is
+      still starting). A revision that exits, restart-loops or fails its
+      healthcheck is reported either way. Past revisions are on the
+      <a
+        class="text-accent underline"
+        href={resolve("/(protected)/services/[serviceId]/revisions", {
+          serviceId: svc.id,
+        })}
+      >Revisions</a>
+      tab.
+    {/snippet}
+    {#snippet trailing()}
+      <SaveButton form="auto-rollback" pending={submitting} />
+    {/snippet}
+  </PanelHeader>
+
   <form
+    id="auto-rollback"
     action="?/updateAutoRollback"
-    class="space-y-3"
+    class="space-y-3 p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Couldn't save auto-rollback.",
       loading: "Saving auto-rollback",
+      onSettled: () => {
+        submitting = false;
+      },
+      onStart: () => {
+        submitting = true;
+      },
       success: "Saved.",
     })}
   >
@@ -51,6 +59,5 @@
       label="Auto-rollback when a new revision is unhealthy"
       name="autoRollback"
     />
-    <Button type="submit" variant="outline">Save</Button>
   </form>
 </section>

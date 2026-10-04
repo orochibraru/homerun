@@ -41,7 +41,7 @@
 	);
 </script>
 
-<div class="code panel focus-within:border-accent grid min-h-112 rounded-md font-mono text-[0.8125rem] leading-relaxed">
+<div class="code panel focus-within:border-accent focus-within:ring-3 focus-within:ring-ring/50 grid min-h-112 rounded-md font-mono text-[0.8125rem] leading-relaxed">
   <pre
     class="pointer-events-none m-0 p-3 wrap-anywhere whitespace-pre-wrap [grid-area:1/1]"
     aria-hidden="true"

@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { title } from "#lib/store/title.js";
@@ -56,21 +57,25 @@
               {/if}
             </div>
           </div>
-          {#if machine.ssh}
-            <Button
-              href={resolve("/(protected)/terminal/[machineId]", {
-                machineId: machine.id,
-              })}
-              size="sm"
-            >
-              <TerminalSquare class="size-4" />
-              Open terminal
-            </Button>
-          {/if}
+          <div class="flex shrink-0 items-center gap-2">
+            {#if machine.ssh}
+              <Button
+                href={resolve("/(protected)/terminal/[machineId]", {
+                  machineId: machine.id,
+                })}
+                size="sm"
+              >
+                <TerminalSquare class="size-4" />
+                Open terminal
+              </Button>
+            {/if}
+            <SaveButton form="ssh-settings-{machine.id}" />
+          </div>
         </div>
         <form
+          id="ssh-settings-{machine.id}"
           action="?/configure"
-          class="grid gap-3 p-5 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+          class="grid gap-3 p-5 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end"
           method="POST"
           use:enhance={saveToast(`${machine.name}'s SSH settings`)}
         >
@@ -103,7 +108,6 @@
               value={machine.ssh?.port === 22 ? "" : (machine.ssh?.port ?? "")}
             />
           </div>
-          <Button type="submit" variant="outline">Save</Button>
           {#if machine.ssh?.hostKey}
             <p class="text-text-subtle col-span-full truncate text-xs" title={machine.ssh.hostKey}>
               Trusts host key {machine.ssh.hostKey.slice(0, 40)}…

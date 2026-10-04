@@ -3,7 +3,8 @@
 	import Alert from "#lib/components/alert.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		SelectContent,
@@ -64,14 +65,17 @@
 
 <div class="space-y-6">
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Docker</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Docker">
+      {#snippet description()}
         The default local connection : separate from the per-service "Deploy
         target" picker on Remote Hosts.
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="docker-connection" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="docker-connection"
       action="?/updateDocker"
       class="space-y-4 p-5"
       method="POST"
@@ -105,16 +109,12 @@
           value={data.settings.dockerNetworkName ?? ""}
         />
       </div>
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
   </section>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Image scanning</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Image scanning">
+      {#snippet description()}
         Every deploy copies the image into a Homerun-managed registry mirror (
         <code>homerun-mirror</code>
         , published on
@@ -122,9 +122,13 @@
         only), scans it there with Trivy, and only then pulls it onto this host. If the mirror can't be used the deploy pulls directly and scans the local image instead. Git builds are scanned once built. Each service can opt out on its own Settings tab. The mirror is garbage-collected daily; its size and a manual cleanup are on
         <a class="underline" href={resolve('docker-cleanup')}>Docker Cleanup</a>
         .
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="image-scanning" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="image-scanning"
       action="?/updateImageScan"
       class="space-y-4 p-5"
       method="POST"
@@ -175,23 +179,23 @@
         label="Fail deploys when the image can't be scanned"
         name="imageScanRequired"
       />
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
   </section>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Retained images</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Retained images">
+      {#snippet description()}
         How many distinct images of every service stay on this host for
         rollbacks. Docker Cleanup's image prune and the image mirror cleanup
         skip them, so deploying any of those revisions never needs a rebuild or
         a pull.
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="retained-images" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="retained-images"
       action="?/updateRetainedImages"
       class="space-y-4 p-5"
       method="POST"
@@ -214,16 +218,12 @@
           lets the next cleanup remove the older images.
         </p>
       </div>
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
     </form>
   </section>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Orchestration</h2>
-      <p class="text-text-muted text-xs">
+    <PanelHeader title="Orchestration">
+      {#snippet description()}
         "Swarm" (what the installer sets up) deploys every service as a
         replicated, self-healing Docker Swarm service : scale via the Replicas
         field on a service's Compute tab, restarts are rolling updates, and
@@ -239,9 +239,13 @@
         swarm itself alone. Either way the mode only changes once the host is
         ready. Services keep running under the old mode until they're
         redeployed.
-      </p>
-    </div>
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="orchestration" />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="orchestration"
       action="?/updateOrchestration"
       class="space-y-4 p-5"
       method="POST"
@@ -300,9 +304,6 @@
             With more than one node, volumes are per node and an image built on this host needs a build cache registry for other nodes to pull it.
           </li>
         </ul>
-      </div>
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
       </div>
     </form>
   </section>

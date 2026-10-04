@@ -429,6 +429,76 @@ export function parsePullRequestEvent(
 	});
 }
 
+/** The provider API path listing `repo`'s open pull requests (merge requests on GitLab), first page only. */
+export function openPullRequestsPath(
+	kind: GitProviderKind,
+	repo: string,
+): string {
+	return {
+		bitbucket: `/repositories/${repo}/pullrequests?state=OPEN&pagelen=50`,
+		gitea: `/repos/${repo}/pulls?state=open&limit=50`,
+		github: `/repos/${repo}/pulls?state=open&per_page=100`,
+		gitlab: `/projects/${encodeURIComponent(repo)}/merge_requests?state=opened&per_page=100`,
+	}[kind];
+}
+
+/**
+ * The open pull requests in a provider's answer to `openPullRequestsPath`,
+ * as `update` events: replayed through `PreviewService.handle`, one with no
+ * preview yet gets created and one already building its head is left alone.
+ * Same fork rule and Bitbucket short-hash caveat as `parsePullRequestEvent`.
+ */
+export function parseOpenPullRequests(
+	kind: GitProviderKind,
+	payload: unknown,
+): PullRequestEvent[] {
+	const rows =
+		kind === "bitbucket"
+			? record(payload).values
+			: Array.isArray(payload)
+				? payload
+				: [];
+	if (!Array.isArray(rows)) {
+		return [];
+	}
+	return rows
+		.map((row) => {
+			const pullRequest = record(row);
+			if (kind === "bitbucket") {
+				const source = record(pullRequest.source);
+				return pullRequestEvent("update", {
+					branch: record(source.branch).name,
+					commit: null,
+					headRepo: record(source.repository).full_name,
+					baseRepo: record(record(pullRequest.destination).repository)
+						.full_name,
+					number: pullRequest.id,
+					title: pullRequest.title,
+				});
+			}
+			if (kind === "gitlab") {
+				return pullRequestEvent("update", {
+					branch: pullRequest.source_branch,
+					commit: pullRequest.sha,
+					headRepo: pullRequest.source_project_id,
+					baseRepo: pullRequest.target_project_id,
+					number: pullRequest.iid,
+					title: pullRequest.title,
+				});
+			}
+			const head = record(pullRequest.head);
+			return pullRequestEvent("update", {
+				branch: head.ref,
+				commit: head.sha,
+				headRepo: record(head.repo).full_name,
+				baseRepo: record(record(pullRequest.base).repo).full_name,
+				number: pullRequest.number,
+				title: pullRequest.title,
+			});
+		})
+		.filter((event): event is PullRequestEvent => event !== null);
+}
+
 /**
  * The slug of pull request `number`'s preview of a service: `<slug>-pr-<n>`,
  * with the parent slug cut short so the whole thing stays a valid 63

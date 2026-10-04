@@ -1,7 +1,6 @@
 <script lang="ts">
 	import {
 		ArrowLeft,
-		Check,
 		ChevronRight,
 		File,
 		FilePlus,
@@ -16,10 +15,10 @@
 	import CodeEditor from "#lib/components/code-editor.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
 	import * as Dialog from "#lib/components/ui/dialog/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { formatBytes, timeAgo } from "#lib/formatting.js";
 	import { languageFor } from "#lib/highlight.js";
 	import { title } from "#lib/store/title.js";
@@ -104,9 +103,15 @@
     </Button>
     <span class="text-text min-w-0 font-mono text-sm break-all">/{file.path}</span>
     <span class="text-text-subtle text-xs">{formatBytes(file.size)}</span>
+    {#if file.editable}
+      <div class="ml-auto">
+        <SaveButton form="volume-file" pending={saving} />
+      </div>
+    {/if}
   </div>
   {#if file.editable}
     <form
+      id="volume-file"
       action="?/save"
       class="space-y-3"
       method="POST"
@@ -129,14 +134,6 @@
         name="content"
         bind:value={content}
       />
-      <Button disabled={saving} type="submit">
-        {#if saving}
-          <Spinner />
-        {:else}
-          <Check class="size-4" />
-        {/if}
-        Save
-      </Button>
     </form>
   {:else}
     <p class="text-text-muted text-sm">

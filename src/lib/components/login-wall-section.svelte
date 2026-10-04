@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check, LockKeyhole } from "@lucide/svelte";
+	import { LockKeyhole } from "@lucide/svelte";
 	import {
 		EMAIL_OTP_METHOD,
 		type EmailSignIn,
@@ -8,8 +8,7 @@
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { roleLabel } from "#lib/permissions.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -102,6 +101,11 @@
         Open to anyone who can reach it.
       {/if}
     {/snippet}
+    {#snippet trailing()}
+      {#if svc.dnsResolvable}
+        <SaveButton form="login-wall-{subject}" pending={submittingAuth} />
+      {/if}
+    {/snippet}
   </PanelHeader>
 
   {#if !svc.dnsResolvable}
@@ -118,6 +122,7 @@
     </p>
   {:else}
     <form
+      id="login-wall-{subject}"
       action={action}
       class="space-y-4 p-5"
       method="POST"
@@ -288,17 +293,6 @@
           </div>
         </div>
       {/if}
-
-      <div class="flex flex-wrap items-center gap-3">
-        <Button disabled={submittingAuth} type="submit" variant="outline">
-          {#if submittingAuth}
-            <Spinner />
-          {:else}
-            <Check class="size-4" />
-          {/if}
-          Save
-        </Button>
-      </div>
     </form>
   {/if}
 </section>

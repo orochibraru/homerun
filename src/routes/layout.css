@@ -1675,6 +1675,11 @@ html[data-surface="retro"] {
 		@apply border-border outline-ring/50;
 	}
 
+	:focus-visible:not([tabindex="-1"]) {
+		outline: 2px solid var(--color-ring);
+		outline-offset: 2px;
+	}
+
 	::selection {
 		background-color: var(--color-accent-glow);
 	}

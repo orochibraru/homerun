@@ -30,6 +30,7 @@
 	} = $props();
 
 	let typed = $state("");
+	let phraseInput = $state<HTMLInputElement | null>(null);
 
 	$effect(() => {
 		if (open) {
@@ -60,7 +61,14 @@
   their own submission (`onConfirm` : usually `formEl.requestSubmit()`).
 -->
 <Dialog.Root bind:open>
-  <Dialog.Content>
+  <Dialog.Content
+    onOpenAutoFocus={(event) => {
+      if (confirmPhrase !== undefined) {
+        event.preventDefault();
+        requestAnimationFrame(() => phraseInput?.focus());
+      }
+    }}
+  >
     <Dialog.Header>
       <Dialog.Title>{title}</Dialog.Title>
       {#if description}
@@ -84,6 +92,7 @@
             }
           }}
           placeholder={confirmPhrase}
+          bind:ref={phraseInput}
           bind:value={typed}
         />
       </div>

@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { Check, Palette, Server } from "@lucide/svelte";
+	import { Palette, Server } from "@lucide/svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import IconPicker from "#lib/components/icon-picker.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		TEMPLATE_CATEGORIES,
 		templateCategoryLabel,
@@ -30,22 +30,21 @@
 	let saving = $state(false);
 </script>
 
-<section class="panel rounded-md p-5">
-  <div class="mb-4 flex items-center gap-3">
-    <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-      <Palette class="size-4" />
-    </div>
-    <div>
-      <p class="text-text text-sm font-medium">Type & icon</p>
-      <p class="text-text-muted text-xs">
-        What kind of app this is, and the icon it shows everywhere it's listed.
-      </p>
-    </div>
-  </div>
+<section class="panel rounded-md">
+  <PanelHeader
+    description="What kind of app this is, and the icon it shows everywhere it's listed."
+    icon={Palette}
+    title="Type & icon"
+  >
+    {#snippet trailing()}
+      <SaveButton form="service-identity" pending={saving} />
+    {/snippet}
+  </PanelHeader>
 
   <form
+    id="service-identity"
     action="?/updateIdentity"
-    class="space-y-4"
+    class="space-y-4 p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Couldn't save the type and icon.",
@@ -86,14 +85,5 @@
     </div>
 
     <IconPicker {icons} storedWith="service" bind:icon />
-
-    <Button disabled={saving} type="submit" variant="outline">
-      {#if saving}
-        <Spinner />
-      {:else}
-        <Check class="size-4" />
-      {/if}
-      Save
-    </Button>
   </form>
 </section>

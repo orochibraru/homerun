@@ -106,12 +106,13 @@
           {@const value = `${DASHBOARD_ICON_PREFIX}${entry.name}`}
           <button
             class="
-              flex aspect-square items-center justify-center rounded-md border p-2 transition-colors {selected ===
+              flex aspect-square items-center justify-center rounded-md border p-2 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset {selected ===
               value
               ? 'border-accent bg-accent-light'
               : 'border-border hover:bg-surface-2'}
             "
             aria-label={entry.name}
+            aria-pressed={selected === value}
             onclick={() => onpick(value)}
             title={entry.name}
             type="button"

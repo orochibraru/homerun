@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { Check, HeartPulse } from "@lucide/svelte";
+	import { HeartPulse } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -159,8 +158,13 @@
       description="Overrides for this service. Leave a field blank for the default. Redeploy for changes to take effect."
       icon={HeartPulse}
       title="Healthcheck settings"
-    />
+    >
+      {#snippet trailing()}
+        <SaveButton form="healthcheck-settings" pending={submitting} />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="healthcheck-settings"
       action="?/updateHealth"
       class="space-y-5 p-5"
       method="POST"
@@ -228,18 +232,6 @@
           Interval, timeout and retries also apply to Homerun's generated port
           check; its start period follows the deploy's rollout window instead.
         </p>
-      </div>
-
-      <div class="flex justify-end">
-        <Button disabled={submitting} type="submit">
-          {#if submitting}
-            <Spinner />
-            Saving…
-          {:else}
-            <Check class="size-4" />
-            Save
-          {/if}
-        </Button>
       </div>
     </form>
   </section>

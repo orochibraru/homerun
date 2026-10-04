@@ -5,6 +5,8 @@
 	import OauthProviderFields, {
 		type ProviderFieldValues,
 	} from "#lib/components/oauth-provider-fields.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -43,13 +45,16 @@
   </div>
 
   <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Provider</h2>
-      <p class="text-text-muted text-xs">
-        Saving rebuilds the auth backend live, no restart needed.
-      </p>
-    </div>
+    <PanelHeader
+      description="Saving rebuilds the auth backend live, no restart needed."
+      title="Provider"
+    >
+      {#snippet trailing()}
+        <SaveButton form="provider-settings" pending={submitting} />
+      {/snippet}
+    </PanelHeader>
     <form
+      id="provider-settings"
       action="?/update"
       class="space-y-5 p-5"
       method="POST"
@@ -76,10 +81,6 @@
         nameLocked
         values={values}
       />
-
-      <div class="flex justify-end">
-        <Button disabled={submitting} type="submit">Save</Button>
-      </div>
     </form>
   </section>
 

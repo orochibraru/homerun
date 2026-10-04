@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RedirectFields from "#lib/components/redirect-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -23,30 +24,33 @@
     </p>
   </div>
 
-  <form
-    action="?/update"
-    class="panel mb-6 space-y-4 rounded-md p-5"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Check the form for errors.",
-      loading: "Saving the redirect",
-      onSettled: () => {
-        submitting = false;
-      },
-      onStart: () => {
-        submitting = true;
-      },
-      success: "Redirect saved.",
-    })}
-  >
-    {#if form?.error}
-      <p class="text-sm text-red-500">{form.error}</p>
-    {/if}
-    <RedirectFields values={item} />
-    <div class="flex justify-end gap-3">
-      <Button disabled={submitting} type="submit" variant="outline">
-        Save changes
-      </Button>
-    </div>
-  </form>
+  <section class="panel mb-6 rounded-md">
+    <PanelHeader title="Redirect">
+      {#snippet trailing()}
+        <SaveButton form="redirect-settings" pending={submitting} />
+      {/snippet}
+    </PanelHeader>
+    <form
+      id="redirect-settings"
+      action="?/update"
+      class="space-y-4 p-5"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving the redirect",
+        onSettled: () => {
+          submitting = false;
+        },
+        onStart: () => {
+          submitting = true;
+        },
+        success: "Redirect saved.",
+      })}
+    >
+      {#if form?.error}
+        <p class="text-sm text-red-500">{form.error}</p>
+      {/if}
+      <RedirectFields values={item} />
+    </form>
+  </section>
 </div>

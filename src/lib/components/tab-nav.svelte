@@ -49,7 +49,7 @@
     {#if tab.href}
       <a
         class="
-          relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-150
+          relative flex shrink-0 items-center gap-1.5 rounded-t-md border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset
           {isActive
           ? 'border-accent text-text'
           : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
@@ -70,7 +70,7 @@
     {:else}
       <button
         class="
-          relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-150
+          relative flex shrink-0 items-center gap-1.5 rounded-t-md border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset
           {isActive
           ? 'border-accent text-text'
           : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}

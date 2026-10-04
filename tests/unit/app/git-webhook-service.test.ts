@@ -578,3 +578,59 @@ describe("GitWebhookService.handleDelivery", () => {
 		expect(result.status).toBe("deployed");
 	});
 });
+
+describe("GitWebhookService.deployOpenPullRequests", () => {
+	const open = (number: number) => ({
+		action: "update" as const,
+		branch: `feat/${number}`,
+		commit: null,
+		fromFork: false,
+		number,
+		title: `#${number}`,
+	});
+
+	test("replays every open pull request and counts the deployed ones", async () => {
+		const { svc } = fakeService({ previewsEnabled: true });
+		const listed: unknown[][] = [];
+		stub(
+			GitProviderService,
+			"listOpenPullRequests",
+			async (...args: unknown[]) => {
+				listed.push(args);
+				return [open(1), open(2), open(3)];
+			},
+		);
+		const handled: number[] = [];
+		stub(
+			PreviewService,
+			"handle",
+			async (_svc: unknown, event: { number: number }) => {
+				handled.push(event.number);
+				return event.number === 2
+					? { reason: "already up to date", status: "ignored" as const }
+					: { deploymentId: "d", jobId: "j", status: "deployed" as const };
+			},
+		);
+		expect(await GitWebhookService.deployOpenPullRequests(svc)).toEqual({
+			deployed: 2,
+			skipped: 1,
+		});
+		expect(handled).toEqual([1, 2, 3]);
+		expect(listed[0]?.[2]).toBe("me/app");
+	});
+
+	test("needs a repo picked from a connected provider", async () => {
+		const { svc } = fakeService({ gitProviderId: null });
+		await expect(GitWebhookService.deployOpenPullRequests(svc)).rejects.toThrow(
+			"connected git provider",
+		);
+	});
+
+	test("needs the owner still connected", async () => {
+		connection = null;
+		const { svc } = fakeService();
+		await expect(GitWebhookService.deployOpenPullRequests(svc)).rejects.toThrow(
+			"isn't connected to GitHub",
+		);
+	});
+});

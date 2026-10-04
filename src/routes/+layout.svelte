@@ -7,6 +7,7 @@
 	import { title } from "#lib/store/title.js";
 	import { browser } from "$app/env";
 	import { onNavigate } from "$app/navigation";
+	import { page } from "$app/state";
 
 	const { children } = $props();
 
@@ -42,7 +43,7 @@
 
 <TopLoadingBar />
 <ModeWatcher />
-<main>
+<svelte:element this={page.route.id?.startsWith("/(protected)") ? "div" : "main"}>
 	{@render children()}
-</main>
+</svelte:element>
 <Toaster closeButton position="bottom-right" richColors />
