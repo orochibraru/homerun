@@ -1,6 +1,7 @@
 <script lang="ts">
 	import "./layout.css";
 	import { ModeWatcher } from "mode-watcher";
+	import { onMount } from "svelte";
 	import TopLoadingBar from "#lib/components/top-loading-bar.svelte";
 	import { Toaster } from "#lib/components/ui/sonner/index.js";
 	import { title } from "#lib/store/title.js";
@@ -8,6 +9,10 @@
 	import { onNavigate } from "$app/navigation";
 
 	const { children } = $props();
+
+	onMount(() => {
+		document.documentElement.dataset.hydrated = "";
+	});
 
 	onNavigate((navigation) => {
 		if (navigation.shallow) {

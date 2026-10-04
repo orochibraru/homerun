@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 /**
  * Both cases here come from one real bug: `update()`'s default `reset: true`

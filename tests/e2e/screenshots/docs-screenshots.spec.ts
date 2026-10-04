@@ -2,8 +2,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import process from "node:process";
-import { expect, type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import { E2E_BASE_URL } from "../support/config";
+import { expect, test } from "../support/test";
 import { TRAEFIK_PORT } from "../templates/support";
 import { startTraefikWith } from "../templates/traefik";
 
