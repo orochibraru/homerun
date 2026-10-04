@@ -672,3 +672,31 @@ describe("authorizeUrl", () => {
 		).toThrow("Unknown git provider kind: svn");
 	});
 });
+
+describe("listOpenPullRequests", () => {
+	test("asks GitHub for open pull requests and parses them", async () => {
+		const calls = stubFetch(() =>
+			Response.json([
+				{
+					base: { repo: { full_name: "a/b" } },
+					head: {
+						ref: "feat",
+						repo: { full_name: "a/b" },
+						sha: "f".repeat(40),
+					},
+					number: 4,
+					title: "Feat",
+				},
+			]),
+		);
+		const open = await GitProviderService.listOpenPullRequests(
+			github,
+			validConnection(),
+			"a/b",
+		);
+		expect(open.map((event) => event.number)).toEqual([4]);
+		expect(calls[0].url).toBe(
+			"https://api.github.com/repos/a/b/pulls?state=open&per_page=100",
+		);
+	});
+});

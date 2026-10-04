@@ -2800,6 +2800,9 @@
 													}
 												]
 											},
+											"previewReportGithub": {
+												"type": "boolean"
+											},
 											"previewsEnabled": {
 												"type": "boolean"
 											},
@@ -2987,6 +2990,7 @@
 											"gitPollEnabled",
 											"gitLastSeenCommit",
 											"previewDefaultDomain",
+											"previewReportGithub",
 											"previewBranchExclude",
 											"previewCopyVolumes",
 											"previewEnvOverrides",
@@ -3867,6 +3871,9 @@
 												}
 											]
 										},
+										"previewReportGithub": {
+											"type": "boolean"
+										},
 										"previewsEnabled": {
 											"type": "boolean"
 										},
@@ -4049,6 +4056,7 @@
 										"gitPollEnabled",
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
+										"previewReportGithub",
 										"previewBranchExclude",
 										"previewCopyVolumes",
 										"previewEnvOverrides",
@@ -4880,6 +4888,9 @@
 												}
 											]
 										},
+										"previewReportGithub": {
+											"type": "boolean"
+										},
 										"previewsEnabled": {
 											"type": "boolean"
 										},
@@ -5062,6 +5073,7 @@
 										"gitPollEnabled",
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
+										"previewReportGithub",
 										"previewBranchExclude",
 										"previewCopyVolumes",
 										"previewEnvOverrides",
@@ -5467,6 +5479,10 @@
 									},
 									"previewInheritEnv": {
 										"description": "Whether pull request previews start from this service's environment variables.",
+										"type": "boolean"
+									},
+									"previewReportGithub": {
+										"description": "Whether a GitHub repo's pull requests get a comment with their preview's URL and a deployment in a per-preview environment.",
 										"type": "boolean"
 									},
 									"previewsEnabled": {
@@ -6120,6 +6136,9 @@
 												}
 											]
 										},
+										"previewReportGithub": {
+											"type": "boolean"
+										},
 										"previewsEnabled": {
 											"type": "boolean"
 										},
@@ -6302,6 +6321,7 @@
 										"gitPollEnabled",
 										"gitLastSeenCommit",
 										"previewDefaultDomain",
+										"previewReportGithub",
 										"previewBranchExclude",
 										"previewCopyVolumes",
 										"previewEnvOverrides",

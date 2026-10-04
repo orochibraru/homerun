@@ -1,0 +1,1 @@
+ALTER TABLE "service" ADD COLUMN "preview_report_github" boolean DEFAULT true NOT NULL;

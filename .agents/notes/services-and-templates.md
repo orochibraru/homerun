@@ -1470,7 +1470,18 @@ pull requests**, `?/deployOpen`) lists the repo's open pull requests through
 `GitProviderService.listOpenPullRequests` (`openPullRequestsPath` and
 `parseOpenPullRequests` in `git-webhooks.ts`, same fork rule) and replays each
 through `handle` as an `update`, so it's idempotent: an existing preview on the
-same head is skipped. `close` deletes it through
+same head is skipped. `PullRequestReportService`
+(`pull-request-report.service.ts`) reports previews to GitHub when the parent's
+`previewReportGithub` is on and its provider is GitHub: `DeploymentService`
+calls `deployed` from both deploy outcomes (`#notifySuccess`, `#recordFailure`),
+`PreviewService` calls `closed` from `#remove` and `removeAll`, both
+fire-and-forget, through `GitProviderService.api`. The comment is found again by
+`PREVIEW_COMMENT_MARKER` (no stored comment id); the GitHub environment is the
+preview's slug, `transient_environment` with `required_contexts: []` so pending
+checks don't refuse the deployment. `enabledGitProvider` lives in
+`git-provider.service.ts` so this service can use it without importing
+`git-webhook.service.ts`, which would cycle through `preview.service.ts` and
+`deploy.service.ts`. `close` deletes it through
 `ServiceLifecycleService.deleteService`, which also deletes every preview first
 when the parent is deleted; turning previews off calls `removeAll`. Volumes,
 domains, cron, status checks and host networking are deliberately not copied.

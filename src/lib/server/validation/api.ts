@@ -169,6 +169,12 @@ export const updateServiceApiBody = z.object({
 		.describe(
 			"Whether each new preview gets its own copy of this service's volumes.",
 		),
+	previewReportGithub: z
+		.boolean()
+		.optional()
+		.describe(
+			"Whether a GitHub repo's pull requests get a comment with their preview's URL and a deployment in a per-preview environment.",
+		),
 	previewBranchExclude: branchPatterns
 		.optional()
 		.describe(

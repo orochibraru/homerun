@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { config } from "#lib/config.js";
 import type { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import {
 	createWebhookRequest,
 	deleteWebhookPath,
@@ -19,6 +20,19 @@ const STATE_MAX_AGE_MS = 10 * 60 * 1000;
 const TOKEN_REFRESH_MARGIN_MS = 60 * 1000;
 
 const logger = new Logger("GitProvider");
+
+/** The configured, enabled git provider with this id, null otherwise. */
+export async function enabledGitProvider(
+	providerId: string | null,
+): Promise<GitProviderConfig | null> {
+	if (!providerId) {
+		return null;
+	}
+	const settings = await InstanceSettingsDTO.get();
+	return (
+		settings.gitProviders.find((p) => p.id === providerId && p.enabled) ?? null
+	);
+}
 
 export interface GitRepo {
 	cloneUrl: string;
@@ -571,7 +585,7 @@ class GitProviderServiceClass {
 	 * before Homerun asked for the scope this call needs, so the message says
 	 * to reconnect.
 	 */
-	async #api(
+	async api(
 		provider: GitProviderConfig,
 		connection: GitConnectionDTO,
 		path: string,
@@ -613,7 +627,7 @@ class GitProviderServiceClass {
 			github: `/repos/${repo}/branches?per_page=100`,
 			gitlab: `/projects/${encodeURIComponent(repo)}/repository/branches?per_page=100`,
 		}[provider.kind];
-		const body = (await (await this.#api(provider, connection, path)).json()) as
+		const body = (await (await this.api(provider, connection, path)).json()) as
 			| Array<{ name: string }>
 			| { values: Array<{ name: string }> };
 		const rows = Array.isArray(body) ? body : body.values;
@@ -626,7 +640,7 @@ class GitProviderServiceClass {
 		connection: GitConnectionDTO,
 		repo: string,
 	): Promise<PullRequestEvent[]> {
-		const res = await this.#api(
+		const res = await this.api(
 			provider,
 			connection,
 			openPullRequestsPath(provider.kind, repo),
@@ -656,7 +670,7 @@ class GitProviderServiceClass {
 		},
 	): Promise<string> {
 		const request = createWebhookRequest(provider.kind, hook.repo, hook);
-		const res = await this.#api(provider, connection, request.path, {
+		const res = await this.api(provider, connection, request.path, {
 			body: request.body,
 			method: request.method,
 		});
@@ -678,7 +692,7 @@ class GitProviderServiceClass {
 		hookId: string,
 	): Promise<void> {
 		try {
-			await this.#api(
+			await this.api(
 				provider,
 				connection,
 				deleteWebhookPath(provider.kind, repo, hookId),

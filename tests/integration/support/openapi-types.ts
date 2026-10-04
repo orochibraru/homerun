@@ -1916,6 +1916,7 @@ export interface operations {
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
+						previewReportGithub: boolean;
 						previewsEnabled: boolean;
 						primaryDomain: string | null;
 						privileged: boolean;
@@ -2173,6 +2174,7 @@ export interface operations {
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
+						previewReportGithub: boolean;
 						previewsEnabled: boolean;
 						primaryDomain: string | null;
 						privileged: boolean;
@@ -2385,6 +2387,7 @@ export interface operations {
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
+						previewReportGithub: boolean;
 						previewsEnabled: boolean;
 						primaryDomain: string | null;
 						privileged: boolean;
@@ -2594,6 +2597,8 @@ export interface operations {
 					};
 					/** @description Whether pull request previews start from this service's environment variables. */
 					previewInheritEnv?: boolean;
+					/** @description Whether a GitHub repo's pull requests get a comment with their preview's URL and a deployment in a per-preview environment. */
+					previewReportGithub?: boolean;
 					previewsEnabled?: boolean;
 					primaryDomain?: string | null;
 					privileged?: boolean;
@@ -2729,6 +2734,7 @@ export interface operations {
 						previewParentId: string | null;
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
+						previewReportGithub: boolean;
 						previewsEnabled: boolean;
 						primaryDomain: string | null;
 						privileged: boolean;

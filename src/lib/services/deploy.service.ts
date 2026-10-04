@@ -41,6 +41,7 @@ import { DockerService } from "./docker.service.ts";
 import { ImageScanBlockedError } from "./image-scan.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { imageScanMessage } from "./notification-messages.ts";
+import { PullRequestReportService } from "./pull-request-report.service.ts";
 import type { JobResult } from "./queue/handlers.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
@@ -236,6 +237,7 @@ class DeploymentServiceClass {
 			status: "failed",
 		});
 		logger.error(`Deploy failed: service=${svc.id} deployment=${dep.id}`, err);
+		PullRequestReportService.deployed(svc, dep, false);
 		if (checksFailed) {
 			await notifyStatusChecksFailed(svc, err);
 			return errorMessage;
@@ -321,6 +323,7 @@ class DeploymentServiceClass {
 			});
 		}
 		NotificationChannelService.notifyDeploy({ dep, ok: true, svc, trigger });
+		PullRequestReportService.deployed(svc, dep, true);
 	}
 
 	/**

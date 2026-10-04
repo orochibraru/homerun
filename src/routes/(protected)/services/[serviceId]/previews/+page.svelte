@@ -38,6 +38,7 @@
 			: undefined) ?? {
 			previewBranchExclude: svc.previewBranchExclude.join("\n"),
 			previewCopyVolumes: svc.previewCopyVolumes ? "on" : "",
+			previewReportGithub: svc.previewReportGithub ? "on" : "",
 			previewEnvOverrides: Object.entries(svc.previewEnvOverrides)
 				.map(([key, value]) => `${key}=${value}`)
 				.join("\n"),
@@ -56,6 +57,7 @@
 
 	let previewsEnabled = $derived(values.previewsEnabled === "on");
 	let previewDefaultDomain = $derived(values.previewDefaultDomain === "on");
+	let previewReportGithub = $derived(values.previewReportGithub === "on");
 	let submitting = $state(false);
 	let deployingOpen = $state(false);
 	let pendingId = $state<string | null>(null);
@@ -185,6 +187,14 @@
             copyVolumes={values.previewCopyVolumes === "on"}
             inheritEnv={values.previewInheritEnv === "on"}
             overrides={values.previewEnvOverrides}
+          />
+
+          <CheckBox
+            helperText={`Comments each preview's URL on its pull request, updated on every deploy, and records a deployment in a ${svc.slug}-pr-<number> environment, removed with the preview. Only for a repo picked from a connected GitHub provider.`}
+            id="previewReportGithub"
+            label="Report previews on the GitHub pull request"
+            name="previewReportGithub"
+            bind:checked={previewReportGithub}
           />
         </div>
 

@@ -154,6 +154,7 @@ export const actions = {
 		);
 		await svc.update({
 			previewCopyVolumes: formData.get("previewCopyVolumes") === "on",
+			previewReportGithub: formData.get("previewReportGithub") === "on",
 			previewEnvOverrides,
 			previewInheritEnv: formData.get("previewInheritEnv") === "on",
 			previewBranchExclude: exclude,

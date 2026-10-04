@@ -1066,6 +1066,9 @@ export const service = pgTable(
 		previewDefaultDomain: boolean("preview_default_domain")
 			.default(true)
 			.notNull(),
+		previewReportGithub: boolean("preview_report_github")
+			.default(true)
+			.notNull(),
 		previewParentId: text("preview_parent_id").references(
 			(): AnyPgColumn => service.id,
 			{ onDelete: "cascade" },

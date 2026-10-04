@@ -30,6 +30,11 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] `tests/integration/s3-backup.test.ts` failed both tests once in a full
+      `bun run test:integration` run (its `POST /api/v1/volumes/:id/backup`
+      answered 401 to its API key, three attempts) and passed when run alone.
+      Something in the full run invalidates or races that suite's API key.
+
 - [ ] The stack diagram's cards and substacks can only be rearranged by dragging
       with a pointer. Add a keyboard way to move the focused card (arrow keys
       while a "move" mode is on), saved like the dragged offsets.

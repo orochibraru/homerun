@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { config } from "#lib/config.js";
 import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
-import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
 import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
 import { isCommitSha } from "#lib/git-ref.js";
@@ -14,13 +13,11 @@ import {
 } from "#lib/git-webhooks.js";
 import { Logger } from "#lib/logger.js";
 import { matchesTagPattern } from "#lib/release-channels.js";
-import type {
-	GitProviderConfig,
-	GitProviderKind,
-} from "#lib/server/db/schema.js";
+import type { GitProviderKind } from "#lib/server/db/schema.js";
 import { inferProviderKind } from "#lib/status-checks.js";
 import { DeploymentService } from "./deploy.service.ts";
 import {
+	enabledGitProvider,
 	GitProviderRefusedError,
 	GitProviderService,
 } from "./git-provider.service.ts";
@@ -69,19 +66,6 @@ function wantsWebhook(svc: ServiceDTO): boolean {
 		svc.buildSource === "git" &&
 		!row.previewParentId &&
 		(svc.autoDeployOnPush || row.previewsEnabled || row.channelsEnabled)
-	);
-}
-
-/** The configured, enabled provider with this id, null otherwise. */
-async function enabledProvider(
-	providerId: string | null,
-): Promise<GitProviderConfig | null> {
-	if (!providerId) {
-		return null;
-	}
-	const settings = await InstanceSettingsDTO.get();
-	return (
-		settings.gitProviders.find((p) => p.id === providerId && p.enabled) ?? null
 	);
 }
 
@@ -174,7 +158,7 @@ class GitWebhookServiceClass {
 		if (!(wantsWebhook(svc) && secret)) {
 			return null;
 		}
-		const provider = await enabledProvider(svc.gitProviderId);
+		const provider = await enabledGitProvider(svc.gitProviderId);
 		const registered = !!svc.gitWebhookId;
 		return {
 			error: svc.gitWebhookError,
@@ -210,7 +194,7 @@ class GitWebhookServiceClass {
 	async deployOpenPullRequests(
 		svc: ServiceDTO,
 	): Promise<{ deployed: number; skipped: number }> {
-		const provider = await enabledProvider(svc.gitProviderId);
+		const provider = await enabledGitProvider(svc.gitProviderId);
 		if (!(provider && svc.gitRepo)) {
 			throw new Error(
 				"This repo wasn't picked from a connected git provider, so Homerun can't list its pull requests.",
@@ -381,7 +365,7 @@ class GitWebhookServiceClass {
 
 	/** The provider kind whose signature scheme a delivery uses, null when it can't be told from the service. */
 	async #kindFor(svc: ServiceDTO): Promise<GitProviderKind | null> {
-		const provider = await enabledProvider(svc.gitProviderId);
+		const provider = await enabledGitProvider(svc.gitProviderId);
 		return (
 			provider?.kind ?? (svc.gitUrl ? inferProviderKind(svc.gitUrl) : null)
 		);
@@ -405,7 +389,7 @@ class GitWebhookServiceClass {
 				reconnect: false,
 			};
 		}
-		const provider = await enabledProvider(svc.gitProviderId);
+		const provider = await enabledGitProvider(svc.gitProviderId);
 		if (!(provider && svc.gitRepo)) {
 			return {
 				error:
@@ -455,7 +439,7 @@ class GitWebhookServiceClass {
 
 	/** Deletes a previously registered hook, logging rather than throwing when the provider refuses. */
 	async #deleteHook(userId: string, hook: WebhookSnapshot): Promise<void> {
-		const provider = await enabledProvider(hook.gitProviderId);
+		const provider = await enabledGitProvider(hook.gitProviderId);
 		const connection = provider
 			? await GitConnectionDTO.getForUserAndProvider(userId, provider.id)
 			: null;

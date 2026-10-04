@@ -42,6 +42,24 @@ public URL) are replaced with the preview's main hostname, so a preview doesn't
 send its visitors, cookies or CSRF checks to the real site. Turning previews
 off, or deleting the service, deletes every preview.
 
+## Reporting back to GitHub
+
+With **Report previews on the GitHub pull request** ticked (the default), a repo
+picked from a connected GitHub provider gets two things on each pull request
+with a preview, posted as the service's owner:
+
+- a comment with the preview's URLs, the commit it was built from and a link to
+  the deployment log, edited in place on every deploy rather than posted again,
+  and rewritten to say the preview was removed when it goes;
+- a GitHub deployment to an environment named after the preview
+  (`<slug>-pr-<number>`), so the pull request shows **View deployment** and its
+  status. Removing the preview marks its deployments inactive and deletes the
+  environment, which GitHub only allows when the owner is an admin of the repo;
+  otherwise the inactive environment stays listed in the repo's settings.
+
+A report that fails (a revoked connection, a rate limit) is logged and never
+holds up the deploy. Other providers get neither.
+
 ## Environment variables and data
 
 A preview starts from the service's environment variables, with any of the

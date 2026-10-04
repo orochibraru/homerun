@@ -21,6 +21,7 @@ import type { ContainerStatus } from "#lib/types.js";
 import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { serviceHostname, syncServiceDomainsDns } from "./dns.service.ts";
+import { PullRequestReportService } from "./pull-request-report.service.ts";
 import { ServiceLifecycleService } from "./service-lifecycle.service.ts";
 
 const logger = new Logger("Previews");
@@ -239,12 +240,14 @@ class PreviewServiceClass {
 		const previews = await ServiceGitDTO.listPreviews(parent.id);
 		await Promise.all(
 			previews.map((preview) =>
-				ServiceLifecycleService.deleteService(preview).catch((err) => {
-					logger.warn(
-						`Couldn't remove preview: service=${preview.id} parent=${parent.id}`,
-						err,
-					);
-				}),
+				ServiceLifecycleService.deleteService(preview)
+					.then(() => PullRequestReportService.closed(parent, preview))
+					.catch((err) => {
+						logger.warn(
+							`Couldn't remove preview: service=${preview.id} parent=${parent.id}`,
+							err,
+						);
+					}),
 			),
 		);
 	}
@@ -566,6 +569,7 @@ class PreviewServiceClass {
 				status: "ignored",
 			};
 		}
+		PullRequestReportService.closed(parent, preview);
 		logger.info(
 			`Preview removed: parent=${parent.id} pr=${prNumber} service=${preview.id}`,
 		);

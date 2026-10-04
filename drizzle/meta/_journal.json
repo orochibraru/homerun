@@ -700,6 +700,13 @@
 			"when": 1790758964103,
 			"tag": "0099_mean_shatterstar",
 			"breakpoints": true
+		},
+		{
+			"idx": 100,
+			"version": "7",
+			"when": 1791119391354,
+			"tag": "0100_dizzy_lake",
+			"breakpoints": true
 		}
 	],
 	"version": "7"
