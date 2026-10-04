@@ -230,5 +230,5 @@ Each run writes one archive under `<prefix>/<run id>/` and leaves it there: give
 the bucket a lifecycle rule that expires that prefix. In CI the endpoint and
 bucket are repository variables and the two keys are repository secrets
 (`HOMERUN_TEST_S3_ACCESS_KEY_ID`, `HOMERUN_TEST_S3_SECRET_ACCESS_KEY`), passed
-to `code_quality.yaml` by its callers; forks get neither, so the test skips
-there.
+to `code_quality.yaml` by its callers; a fork PR gets neither, so the test skips
+there until Fork Tests reruns the suite with them, once approved.

@@ -1,0 +1,41 @@
+# pull_request_target runs this file from main with secrets, against the fork's
+# code: the fork-tests environment's required reviewer is the only thing between
+# a stranger's PR and the S3 test bucket, so read the diff before approving.
+name: Fork Tests
+
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: fork-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TZ: Europe/Paris
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CI: true
+
+permissions:
+  contents: read
+
+jobs:
+  approve:
+    name: Approve
+    if: github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    environment: fork-tests
+    steps:
+      - run: echo "Approved tests for ${{ github.event.pull_request.head.sha }}"
+
+  code_quality:
+    name: Code Quality
+    needs: [approve]
+    uses: ./.github/workflows/code_quality.yaml
+    with:
+      ref: ${{ github.event.pull_request.head.sha }}
+    secrets:
+      HOMERUN_TEST_S3_ACCESS_KEY_ID:
+        ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
+      HOMERUN_TEST_S3_SECRET_ACCESS_KEY:
+        ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
