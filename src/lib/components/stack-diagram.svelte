@@ -99,6 +99,29 @@
 		void tick().then(measure);
 	}
 
+	/**
+	 * Moves the focused card or substack `key` with Alt and an arrow key, 16px
+	 * a press (64px with Shift), saved like a drag: the keyboard's way to
+	 * rearrange the diagram.
+	 */
+	function nudge(event: KeyboardEvent, key: string) {
+		const step = event.shiftKey ? 64 : 16;
+		const delta = {
+			ArrowDown: { x: 0, y: step },
+			ArrowLeft: { x: -step, y: 0 },
+			ArrowRight: { x: step, y: 0 },
+			ArrowUp: { x: 0, y: -step },
+		}[event.key];
+		if (!(event.altKey && delta)) {
+			return;
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		const at = offsets[key] ?? { x: 0, y: 0 };
+		offsets[key] = { x: at.x + delta.x, y: at.y + delta.y };
+		saveOffsets();
+	}
+
 	/** Where `key` (a service id, `stack:<id>` or `outside`) has been dragged to, as a CSS transform. */
 	function offsetOf(key: string): string | undefined {
 		const at = offsets[key];
@@ -316,9 +339,11 @@
 	{#snippet body()}
 		<a
 			class="border-border bg-bg hover:border-border-light relative flex w-72 cursor-grab items-center gap-2.5 rounded-lg border px-3 py-2 shadow-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+			aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
 			data-node={svc.id}
 			draggable="false"
-			href={`${resolve('services')}/${svc.id}`}
+			href={resolve("/(protected)/services/[serviceId]", { serviceId: svc.id })}
+			onkeydown={(event) => nudge(event, svc.id)}
 			onpointerdown={(event) => beginDrag(event, svc.id)}
 			style:transform={offsetOf(svc.id)}
 			onblur={() => focused = null}
@@ -383,8 +408,10 @@
     {#if depth > 0}
       <a
         class="eyebrow text-text-muted hover:text-text mb-3 inline-flex items-center gap-2"
+        aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
         draggable="false"
         href={resolve("/(protected)/stacks/[stackId]", { stackId: stack.id })}
+        onkeydown={(event) => nudge(event, `stack:${stack.id}`)}
       >
         <TemplateIcon
           class="size-7 rounded-md"
@@ -414,7 +441,8 @@
 <div class="mb-2 flex flex-wrap items-center justify-end gap-2">
   <p class="text-text-subtle mr-auto hidden text-xs md:block">
     Drag the background to pan, scroll to move around, Ctrl or ⌘ and scroll to
-    zoom. Drag a card or a substack to rearrange it.
+    zoom. Drag a card or a substack to rearrange it, or focus it and press Alt
+    with the arrow keys (add Shift for bigger steps).
   </p>
   {#if Object.keys(offsets).length > 0}
     <Button onclick={resetLayout} size="sm" variant="outline">

@@ -21,10 +21,6 @@ When done delete the entry, no bloat.
       times. For patterns add presets such as Wordpress (wp- stuff) or simply a
       default list with in it sensitive files (.env, .git, .git-credentials)
 
-- [ ] The stack diagram's cards and substacks can only be rearranged by dragging
-      with a pointer. Add a keyboard way to move the focused card (arrow keys
-      while a "move" mode is on), saved like the dragged offsets.
-
 ## Large
 
 - [ ] **S3 storage service, the base for IaC state.** A dedicated S3 page where

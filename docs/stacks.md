@@ -77,9 +77,10 @@ as a dependency graph rather than a flat list, in either view:
   diagram sits on a canvas you can pan (drag the background, or scroll) and zoom
   (`Ctrl` or `⌘` and scroll, or the zoom buttons); **Fit** frames the whole
   diagram. Drag a card to untangle a crossing arrow, or drag a substack's box to
-  move it with everything inside it. The layout is remembered in your browser
-  per stack, and **Reset layout** puts every card and substack back where it
-  started.
+  move it with everything inside it. From the keyboard, focus a card or a
+  substack's name and press `Alt` with the arrow keys (`Shift` too for bigger
+  steps). The layout is remembered in your browser per stack, and **Reset
+  layout** puts every card and substack back where it started.
 
 ![List view: each service with what it connects to underneath, and the Jobs substack in its own section](images/stacks-graph-list.webp)
 
