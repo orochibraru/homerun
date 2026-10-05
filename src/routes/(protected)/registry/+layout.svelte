@@ -49,6 +49,12 @@
 	];
 
 	function isActive(href: string, exact: boolean): boolean {
+		if (href === resolve("/(protected)/registry")) {
+			return (
+				page.url.pathname === href ||
+				page.url.pathname.startsWith(`${href}/images/`)
+			);
+		}
 		if (exact) {
 			return page.url.pathname === href;
 		}

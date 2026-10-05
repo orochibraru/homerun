@@ -33,7 +33,13 @@ export interface RegistryCredentials {
 export interface RegistryRepository {
 	repository: string;
 	tags: RegistryTag[];
-	usedBy: string[];
+	usedBy: RegistryUser[];
+}
+
+/** A service whose image lives in a registry repository. */
+export interface RegistryUser {
+	id: string;
+	name: string;
 }
 
 /** One tag, with the digest it currently points at. */
@@ -363,13 +369,33 @@ class RegistryServiceClass {
 		};
 	}
 
-	/** The names of the services whose image lives in each mirror repository. */
-	async #usedBy(): Promise<Map<string, string[]>> {
-		const usedBy = new Map<string, string[]>();
-		for (const svc of await ServiceDTO.list()) {
+	/**
+	 * One repository with its tags and the services using it, or null when the
+	 * registry holds no tag for it.
+	 */
+	async repository(repository: string): Promise<RegistryRepository | null> {
+		const client = await DockerService.imageMirrorClient();
+		const tags = (await client.inventory(repository)).map((entry) => ({
+			digest: entry.digest,
+			tag: entry.tag,
+		}));
+		if (tags.length === 0) {
+			return null;
+		}
+		const usedBy = await this.#usedBy();
+		return { repository, tags, usedBy: usedBy.get(repository) ?? [] };
+	}
+
+	/** The services whose image lives in each mirror repository, by name. */
+	async #usedBy(): Promise<Map<string, RegistryUser[]>> {
+		const usedBy = new Map<string, RegistryUser[]>();
+		for (const svc of (await ServiceDTO.list()).sort((a, b) =>
+			a.name.localeCompare(b.name),
+		)) {
 			const repository = mirrorRepository(svc.image, svc.tag);
 			usedBy.set(repository, [
-				...new Set([...(usedBy.get(repository) ?? []), svc.name]),
+				...(usedBy.get(repository) ?? []),
+				{ id: svc.id, name: svc.name },
 			]);
 		}
 		return usedBy;

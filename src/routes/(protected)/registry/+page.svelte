@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { Boxes, Trash2 } from "@lucide/svelte";
+	import { Boxes, ChevronRight } from "@lucide/svelte";
 	import Alert from "#lib/components/alert.svelte";
-	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
@@ -10,43 +9,24 @@
 	import { formatBytes } from "#lib/formatting.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
-	let confirmOpen = $state(false);
-	let confirmTitle = $state("");
-	let confirmDescription = $state("");
-	let confirmForm: HTMLFormElement | null = null;
-
-	function requestConfirm(
-		event: MouseEvent,
-		title: string,
-		description: string,
-	) {
-		confirmForm = (event.currentTarget as HTMLElement).closest("form");
-		confirmTitle = title;
-		confirmDescription = description;
-		confirmOpen = true;
-	}
-
-	function confirmPending() {
-		confirmForm?.requestSubmit();
-	}
+	const TAG_PREVIEW = 4;
 </script>
 
 <div
   class="border-border bg-surface-1 mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4"
 >
-  <div class="text-sm">
-    <p class="text-text-muted">
-      {#if data.status.sizeBytes !== null}
-        {formatBytes(data.status.sizeBytes)} on disk. Deleting a tag only frees
-        its space once garbage collection runs.
-      {:else}
-        Deleting a tag only frees its space once garbage collection runs.
-      {/if}
-    </p>
-  </div>
+  <p class="text-text-muted text-sm">
+    {#if data.status.sizeBytes !== null}
+      {formatBytes(data.status.sizeBytes)} on disk. Deleting a tag only frees its
+      space once garbage collection runs.
+    {:else}
+      Deleting a tag only frees its space once garbage collection runs.
+    {/if}
+  </p>
   <form
     action="?/collectGarbage"
     method="POST"
@@ -61,134 +41,87 @@
 </div>
 
 {#await data.listing}
-  <div class="flex flex-col gap-4">
-    {#each { length: 4 }, i (i)}
-      <Skeleton class="h-28 w-full" />
+  <div class="space-y-2">
+    {#each { length: 6 }, i (i)}
+      <Skeleton class="h-12 w-full" />
     {/each}
   </div>
 {:then listing}
-{#if listing.unreachable}
-  <Alert class="mb-6" title="The registry isn't answering.">
-    {listing.unreachable}
-  </Alert>
-{/if}
-{#if listing.total === 0 && !data.searched}
-  <EmptyState
-    icon={Boxes}
-    subtitle="Homerun mirrors an image here the first time it scans one, and anything you push lands here too."
-    title="Nothing in the registry yet"
-  />
-{:else}
-  <EntityToolbar placeholder="Search repositories…" />
-  {#if listing.items.length === 0}
-    <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
-      <p class="text-text-muted text-sm">No repository matches your search.</p>
-    </div>
+  {#if listing.unreachable}
+    <Alert class="mb-6" title="The registry isn't answering.">
+      {listing.unreachable}
+    </Alert>
   {/if}
-  <div class="flex flex-col gap-4">
-    {#each listing.items as entry (entry.repository)}
-      <section class="border-border bg-surface-1 rounded-lg border">
-        <header
-          class="border-border flex items-center justify-between gap-3 border-b px-4 py-3"
-        >
-          <div class="min-w-0">
-            <h2 class="text-text font-mono text-sm font-medium break-all">
-              {entry.repository}
-            </h2>
-            <p class="text-text-muted mt-0.5 text-xs">
-              {#if entry.usedBy.length > 0}
-                Used by {entry.usedBy.join(", ")}
-              {:else}
-                Not referenced by any service
-              {/if}
-            </p>
-          </div>
-          <form
-            class="shrink-0"
-            action="?/deleteRepository"
-            method="POST"
-            use:enhance={enhanceToast({
-              error: "Couldn't delete that repository.",
-              loading: `Deleting ${entry.repository}`,
-              success: "Repository deleted.",
-            })}
-          >
-            <input name="repository" type="hidden" value={entry.repository} />
-            <Button
-              onclick={(event: MouseEvent) =>
-                requestConfirm(
-                  event,
-                  `Delete ${entry.repository}?`,
-                  "Deletes every tag in it. A service already running one of these images keeps running, but nothing can pull it again until it's mirrored or pushed back.",
-                )}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <Trash2 class="size-3.5" />
-              Delete all
-            </Button>
-          </form>
-        </header>
-        <ul class="divide-border divide-y">
-          {#each entry.tags as tag (tag.tag)}
-            <li class="flex items-center justify-between gap-3 px-4 py-2.5">
-              <div class="min-w-0">
-                <span class="text-text font-mono text-sm break-all">{tag.tag}</span>
-                {#if tag.digest}
-                  <span class="text-text-muted ml-2 font-mono text-xs">
-                    {tag.digest.slice(0, 19)}
+  {#if listing.total === 0 && !data.searched}
+    <EmptyState
+      icon={Boxes}
+      subtitle="Homerun mirrors an image here the first time it scans one, and anything you push lands here too."
+      title="Nothing in the registry yet"
+    />
+  {:else}
+    <EntityToolbar placeholder="Search repositories…" />
+    {#if listing.items.length === 0}
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
+        <p class="text-text-muted text-sm">No repository matches your search.</p>
+      </div>
+    {:else}
+      <div class="panel overflow-x-auto rounded-md">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-border text-text-muted border-b text-left text-xs uppercase">
+              <th class="px-4 py-3 font-medium">Repository</th>
+              <th class="px-4 py-3 font-medium">Tags</th>
+              <th class="hidden px-4 py-3 font-medium md:table-cell">Used by</th>
+              <th class="w-8 px-4 py-3"><span class="sr-only">Open</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each listing.items as entry (entry.repository)}
+              {@const href = resolve("/(protected)/registry/images/[...repository]", {
+                repository: entry.repository,
+              })}
+              <tr class="border-border/60 hover:bg-surface-2 group relative border-b last:border-0">
+                <td class="px-4 py-3">
+                  <a
+                    class="text-text group-hover:text-accent font-mono font-medium break-all after:absolute after:inset-0"
+                    {href}
+                  >
+                    {entry.repository}
+                  </a>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="flex flex-wrap items-center gap-1.5">
+                    {#each entry.tags.slice(0, TAG_PREVIEW) as tag (tag.tag)}
+                      <span class="bg-surface-2 text-text-muted rounded px-1.5 py-0.5 font-mono text-xs">
+                        {tag.tag}
+                      </span>
+                    {/each}
+                    {#if entry.tags.length > TAG_PREVIEW}
+                      <span class="text-text-subtle text-xs">
+                        +{entry.tags.length - TAG_PREVIEW} more
+                      </span>
+                    {/if}
                   </span>
-                {/if}
-              </div>
-              <form
-                action="?/deleteTag"
-                method="POST"
-                use:enhance={enhanceToast({
-                  error: "Couldn't delete that tag.",
-                  loading: `Deleting ${entry.repository}:${tag.tag}`,
-                  success: "Tag deleted.",
-                })}
-              >
-                <input
-                  name="repository"
-                  type="hidden"
-                  value={entry.repository}
-                />
-                <input name="tag" type="hidden" value={tag.tag} />
-                <Button
-                  onclick={(event: MouseEvent) =>
-                    requestConfirm(
-                      event,
-                      `Delete ${entry.repository}:${tag.tag}?`,
-                      "Registry deletes work on the manifest, so any other tag pointing at the same image goes with it.",
-                    )}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Trash2 class="size-3.5" />
-                </Button>
-              </form>
-            </li>
-          {/each}
-        </ul>
-      </section>
-    {/each}
-  </div>
-  <Pagination
-    label="repositories"
-    page={listing.page}
-    perPage={listing.perPage}
-    total={listing.total}
-  />
-{/if}
+                </td>
+                <td class="text-text-muted hidden px-4 py-3 md:table-cell">
+                  {entry.usedBy.length > 0
+                    ? entry.usedBy.map((svc) => svc.name).join(", ")
+                    : "—"}
+                </td>
+                <td class="text-text-subtle px-4 py-3">
+                  <ChevronRight class="size-4" />
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      <Pagination
+        label="repositories"
+        page={listing.page}
+        perPage={listing.perPage}
+        total={listing.total}
+      />
+    {/if}
+  {/if}
 {/await}
-
-<ConfirmDialog
-  bind:open={confirmOpen}
-  confirmLabel="Delete"
-  description={confirmDescription}
-  onConfirm={confirmPending}
-  title={confirmTitle}
-/>

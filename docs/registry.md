@@ -7,18 +7,19 @@ four tabs: **Images**, **Tokens**, **Credentials** and **Settings**.
 
 ## Images
 
-Every repository the registry holds, with its tags, the digest each tag
-currently points at, and which of your services reference that repository (an
-image lands here the first time [image scanning](image-scanning.md) mirrors it,
-or the moment you push to it). The list loads in the background, a page of
-repositories at a time in name order, and the search box narrows it to the
-repositories whose name contains what you type. From here you can:
+Every repository the registry holds, one row each with its first tags and the
+services whose image lives there (an image lands here the first time
+[image scanning](image-scanning.md) mirrors it, or the moment you push to it).
+The list loads in the background, a page of repositories at a time in name
+order, and the search box narrows it to the repositories whose name contains
+what you type. **Collect garbage** runs garbage collection on demand, the same
+cleanup [Docker Cleanup](docker-cleanup.md#image-mirror) runs nightly and on its
+own **Clean up mirror** button, so it doesn't fight the scheduled job.
 
-- delete a single tag, or every tag in a repository;
-- run garbage collection on demand (the **Collect garbage** button), the same
-  cleanup [Docker Cleanup](docker-cleanup.md#image-mirror) runs nightly and on
-  its own **Clean up mirror** button, so deleting here doesn't fight the
-  scheduled job.
+Click a repository for its own page: a `docker pull` command to copy, links to
+the services using it, and every tag with the digest it points at and a button
+to copy its full image reference. From there you can delete a single tag, or the
+whole repository with **Delete repository**.
 
 Deleting a tag only frees disk once garbage collection actually runs. **Registry
 deletes work on the manifest, not the tag**: if two tags point at the same
@@ -26,7 +27,7 @@ image, deleting one deletes the other too. A service that's already running a
 deleted image keeps running; it just can't be pulled again until it's
 re-mirrored or pushed back.
 
-![The Images tab, with the repository count and the Collect garbage button](images/registry-images.webp)
+![The Images tab, with the repository list and the Collect garbage button](images/registry-images.webp)
 
 ## Tokens
 

@@ -13,7 +13,6 @@ When done delete the entry, no bloat.
       it: fix that test then.
 - [ ] Since we have branding on custom traefik pages, let's also apply it to the
       custom authentication pages for a service, whitelabelling included.
-- [ ] Make UI nicer and easier to navigate on the registry page for images.
 
 ## Medium
 
