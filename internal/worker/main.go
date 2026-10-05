@@ -25,6 +25,7 @@ import (
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/logging"
 	"github.com/orochibraru/homerun/internal/secrets"
+	"github.com/orochibraru/homerun/internal/tracing"
 )
 
 const helpText = `
@@ -103,6 +104,14 @@ func run(config Config) error {
 	if err := waitForDatabase(ctx, pool); err != nil {
 		return err
 	}
+	shutdownTracing := tracing.Setup(pool)
+	defer func() {
+		flush, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTracing(flush); err != nil {
+			logging.Warnf(scope, "couldn't flush the last traces: %s", err)
+		}
+	}()
 
 	token := config.ExplicitToken
 	source := "WORKER_TOKEN"

@@ -12,6 +12,7 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
+	import UiModePicker from "#lib/components/ui-mode-picker.svelte";
 	import { getReleaseStatus } from "#lib/remote/self-update.remote.js";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import { RESOURCE_KINDS, RESOURCE_LABELS } from "#lib/resource-thresholds.js";
@@ -20,6 +21,7 @@
 		strandedPasskeyCount,
 	} from "#lib/security-policy.js";
 	import { enhanceToast, saveToast } from "#lib/toast.js";
+	import { DEFAULT_UI_MODE } from "#lib/ui-mode.js";
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { page } from "$app/state";
 	import ResourceIncidents from "./resource-incidents.svelte";
@@ -34,6 +36,9 @@
 		stable: "Stable",
 	} as const;
 	let updateChannel = $derived(data.settings.updateChannel ?? "stable");
+	let defaultUiMode = $derived<string>(
+		data.settings.defaultUiMode ?? DEFAULT_UI_MODE,
+	);
 	const issuesByField = $derived(setup.current?.issuesByField ?? {});
 
 	const derivedOrigin = $derived(
@@ -206,6 +211,28 @@
         label="Cross-subdomain cookies"
         name="authCrossSubdomainCookies"
       />
+    </form>
+  </section>
+
+  <section class="panel rounded-md">
+    <PanelHeader title="Interface mode">
+      {#snippet description()}
+        What every account sees until it picks its own mode from its profile.
+        A feature simple mode hides keeps working, and its page stays
+        reachable from a link or its address.
+      {/snippet}
+      {#snippet trailing()}
+        <SaveButton form="ui-mode" />
+      {/snippet}
+    </PanelHeader>
+    <form
+      id="ui-mode"
+      action="?/updateUiMode"
+      class="space-y-4 p-5"
+      method="POST"
+      use:enhance={saveToast("Interface mode")}
+    >
+      <UiModePicker name="defaultUiMode" bind:value={defaultUiMode} />
     </form>
   </section>
 

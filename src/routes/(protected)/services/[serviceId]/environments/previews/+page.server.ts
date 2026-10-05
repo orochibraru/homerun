@@ -19,6 +19,10 @@ import {
 } from "#lib/service-domains.js";
 import { GitWebhookService } from "#lib/services/git-webhook.service.js";
 import { PreviewService } from "#lib/services/preview.service.js";
+import {
+	ServiceSettingsError,
+	ServiceSettingsService,
+} from "#lib/services/service-settings.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("Previews");
@@ -73,14 +77,20 @@ export const actions = {
 			return fail(400, { authError: parsed.error });
 		}
 		const { policy } = parsed;
-		await svc.update({
-			previewAuthAllowedEmails: policy.authAllowedEmails,
-			previewAuthAllowedGroups: policy.authAllowedGroups,
-			previewAuthAllowedUserIds: policy.authAllowedUserIds,
-			previewAuthProviders: policy.authProviders,
-			previewAuthRequired: policy.authRequired,
-		});
-		await PreviewService.applyAccessPolicy(svc);
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{
+				previewAuthAllowedEmails: policy.authAllowedEmails,
+				previewAuthAllowedGroups: policy.authAllowedGroups,
+				previewAuthAllowedUserIds: policy.authAllowedUserIds,
+				previewAuthProviders: policy.authProviders,
+				previewAuthRequired: policy.authRequired,
+			},
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { authError: saved.message });
+		}
 		logger.info(
 			`Preview access updated: service=${svc.id} authRequired=${policy.authRequired} methods=${
 				policy.authProviders.join("|") || "none"
@@ -140,45 +150,28 @@ export const actions = {
 			});
 		}
 
-		const before = svc.toJSON();
-		const previousWebhook = {
-			gitProviderId: svc.gitProviderId,
-			gitRepo: svc.gitRepo,
-			gitWebhookId: svc.gitWebhookId,
-			previewsEnabled: before.previewsEnabled,
-		};
-		const previewEnvOverrides = Object.fromEntries(
-			parseDotEnv(String(formData.get("previewEnvOverrides") ?? "")).map(
-				(row) => [row.key, row.value],
-			),
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{
+				previewBranchExclude: exclude,
+				previewBranchInclude: include,
+				previewCopyVolumes: formData.get("previewCopyVolumes") === "on",
+				previewDefaultDomain,
+				previewDomainTemplate: template || null,
+				previewEnvOverrides: Object.fromEntries(
+					parseDotEnv(String(formData.get("previewEnvOverrides") ?? "")).map(
+						(row) => [row.key, row.value],
+					),
+				),
+				previewInheritEnv: formData.get("previewInheritEnv") === "on",
+				previewsEnabled,
+			},
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
 		);
-		await svc.update({
-			previewCopyVolumes: formData.get("previewCopyVolumes") === "on",
-			previewEnvOverrides,
-			previewInheritEnv: formData.get("previewInheritEnv") === "on",
-			previewBranchExclude: exclude,
-			previewBranchInclude: include,
-			previewDefaultDomain,
-			previewDomainTemplate: template || null,
-			previewsEnabled,
-		});
-		await GitWebhookService.sync(svc, previousWebhook);
-		if (before.previewsEnabled && !previewsEnabled) {
-			await PreviewService.removeAll(svc);
-		} else if (
-			before.previewDefaultDomain !== previewDefaultDomain ||
-			(before.previewDomainTemplate ?? "") !== template
-		) {
-			await PreviewService.applyDomains(svc);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message, values });
 		}
-
-		const filterChanged =
-			before.previewBranchInclude.join("\n") !== include.join("\n") ||
-			before.previewBranchExclude.join("\n") !== exclude.join("\n");
-		const filteredOut =
-			previewsEnabled && filterChanged
-				? await PreviewService.applyBranchFilter(svc)
-				: 0;
+		const { filteredOut } = saved;
 
 		logger.info(
 			`Preview settings updated: service=${svc.id} enabled=${previewsEnabled} template=${template || "-"} user=${locals.user.id}`,

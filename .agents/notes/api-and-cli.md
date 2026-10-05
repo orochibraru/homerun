@@ -311,3 +311,71 @@ initialization itself wasn't verified in a real browser (the Playwright suite
 that now exists, see below, doesn't cover this page), just that nothing crashes
 and the wiring (dynamic import location, CSS import, container ref) matches
 Swagger UI's own documented embed pattern.
+
+## Infrastructure as code (`src/lib/iac/`, `terraform/provider/`, `(protected)/iac/`)
+
+**One mapping, three consumers.** `src/lib/iac/resources.ts` describes every
+`homerun_*` resource and data source: its REST paths, each attribute's API field
+and Terraform name, kind, and flags (`required`, `readOnly`, `writeOnly` for
+secrets, `createOnly` for `template_id`, `forceNew`, `ref`, `default`).
+`scripts/generate-iac-spec.ts` (part of `bun run gen`, so CI's codegen check
+catches a stale copy) writes it to
+`terraform/provider/internal/provider/spec.json`, which the provider embeds; the
+IaC page's generator (`generate.ts`) and drift check (`drift.ts`) import it
+directly. Add a field once there and the provider, the generated HCL and the
+drift comparison all follow. A Terraform-reserved name (`provider`) gets an
+explicit `tf` (`dns_provider`).
+
+**The provider is generic.** `terraform/provider` is its own Go module (module
+path `github.com/orochibraru/homerun/terraform/provider`), kept out of the root
+`go.mod` like `tools/go`, since terraform-plugin-framework pulls grpc and
+friends into the shipped binaries' minimum-version selection otherwise. One
+`specResource` and one `specDataSource` serve every type: schema from the spec,
+values converted between `tftypes` and JSON (`convert.go`), create sends every
+known plan value, update only the changed ones (a cleared one as `null`), state
+after apply keeps the planned value where it's known (no "inconsistent result"
+from server normalisation) and takes the API's answer for the rest, read
+refreshes everything the API returns and keeps write-only/create-only ones.
+Optional attributes are Optional+Computed with `UseStateForUnknown`, so leaving
+one out never causes a perpetual diff (and never resets it either: documented).
+`template_id` replaces the resource only when it changes from a known value, so
+adding it to an imported service doesn't destroy it. `deploy_on_change` calls
+`POST /services/{id}/deploy` (an environment's id is a service id) and a failed
+deploy is a warning, not an error, since an error on create taints the resource
+and the next apply would replace the service. Tests live under
+`terraform/provider/tests/` (external packages, the module's own tree):
+`terraform-plugin-testing`'s `resource.UnitTest` runs real `terraform`
+plan/apply/import/refresh against an in-memory fake API, skipped when
+`terraform` isn't on PATH. `bun run check`/`bun run test` and `go.yaml` run its
+vet, golangci-lint (through `go -C terraform/provider tool`, with
+`-modfile=../../tools/go/go.mod` and `--config ../../.golangci.yml`) and tests;
+`scripts/build-packages.ts` cross-compiles it as
+`dist/homerun-terraform-provider-<target>`.
+
+**The API behind it.** Every service setting goes through
+`ServiceSettingsService.apply` (`src/lib/services/service-settings.service.ts`),
+shared by `PATCH /services/:id`, `POST /services` (the fields
+`ServiceDTO.create` doesn't take, applied right after, the row deleted again on
+a refusal) and the dashboard's networking, security, previews and settings
+actions (`save()` returns the refusal instead of throwing, for a form action).
+It validates only the groups a call touches, so an old row in an odd state
+doesn't block an unrelated save. Stacks, volumes, status pages and git providers
+have the same kind of shared service (`stack-settings`, `volume-settings`,
+`status-page-settings`, `git-provider-config`). Responses never carry
+ciphertext: `src/lib/server/api-json.ts` turns rows into their API shape (`*Set`
+booleans instead), and `IacInventoryService` builds the page's inventory from
+those same functions, which is what keeps the generator and drift in the
+provider's shape. New routes use `apiCaller`/`readApiBody`/`apiError` from
+`src/lib/server/api-route.ts` and get their OpenAPI entries from `crudRoutes()`
+in `src/lib/openapi/resources.ts`.
+
+**Verified live** against a real built app, worker and Postgres: a 16-resource
+configuration applied, re-planned clean, a generated `main.tf` from the live API
+imported all 18 objects then planned "No changes", an out-of-band PATCH showed
+up in `detectDrift` on the real state and `apply` put it back, `destroy` removed
+everything, and `deploy_on_change` deployed and redeployed a real container.
+That run found four real bugs the unit tests hadn't: `routingPatch` spreading
+`slug: undefined` over the row (a 500 on every create with domains), an empty
+`svc.update({})` throwing Drizzle's "No values to set", `deploy_on_change`
+importing as null (a diff on every imported resource), and generated variables
+for a `map(string)` secret typed `string`.

@@ -20,6 +20,7 @@
 	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
 	import { primaryHostname } from "#lib/service-domains.js";
 	import { internalUrl, maskUrlPassword } from "#lib/service-link.js";
+	import { currentHref, visibleIn } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 
@@ -43,6 +44,7 @@
 	interface RouteTab extends NavTab {
 		exact: boolean;
 		href: string;
+		link?: string;
 	}
 
 	const tabs = $derived<RouteTab[]>([
@@ -61,6 +63,11 @@
 			icon: Layers,
 			id: "environments",
 			label: "Environments & Deployments",
+			link: visibleIn(data.uiMode, "service/environments/environments")
+				? undefined
+				: resolve("/(protected)/services/[serviceId]/environments/source", {
+						serviceId: svc.id,
+					}),
 		},
 		{
 			exact: false,
@@ -138,6 +145,23 @@
 	const activeTabId = $derived(
 		tabs.find((tab) => isActive(tab.href, tab.exact))?.id ?? "",
 	);
+
+	const currentTab = $derived(
+		currentHref(
+			page.url.pathname,
+			tabs.map((tab) => tab.href),
+		),
+	);
+
+	const shownTabs = $derived(
+		tabs
+			.filter(
+				(tab) =>
+					tab.href === currentTab ||
+					visibleIn(data.uiMode, `service/${tab.id}`),
+			)
+			.map((tab) => ({ ...tab, href: tab.link ?? tab.href })),
+	);
 </script>
 
 <div class="p-5 md:p-6">
@@ -213,7 +237,7 @@
   </p>
 
   <!-- ── Tabs ─────────────────────────────────────────────── -->
-  <TabNav active={activeTabId} {tabs} />
+  <TabNav active={activeTabId} tabs={shownTabs} />
 
   {@render children()}
 </div>

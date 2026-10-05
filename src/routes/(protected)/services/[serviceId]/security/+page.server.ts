@@ -6,20 +6,20 @@ import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
 	AUTH_PATHS_MODES,
-	authPathsProblem,
 	parsePathPatterns,
-	pathFiltersChanged,
 	pathPatternsProblem,
 } from "#lib/path-patterns.js";
-import { invalidateGatedService } from "#lib/server/gated-service-cache.js";
 import {
 	loginWallAvailability,
 	loginWallOptions,
 	parseLoginWallForm,
 } from "#lib/server/login-wall-form.js";
-import { DeploymentService } from "#lib/services/deploy.service.js";
 import { errorPagesPublished } from "#lib/services/docker/error-pages.js";
 import { ImageScanService } from "#lib/services/image-scan.service.js";
+import {
+	ServiceSettingsError,
+	ServiceSettingsService,
+} from "#lib/services/service-settings.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("ImageScan");
@@ -82,16 +82,14 @@ export const actions = {
 			return fail(400, { authError: parsed.error });
 		}
 		const { policy } = parsed;
-
-		const wasRequired = svc.authRequired;
-		await svc.update(policy);
-		invalidateGatedService(svc.id);
-
-		const redeploying = await DeploymentService.redeployIfLoginWallChanged(
-			svc,
-			wasRequired,
-			locals.user.id,
-		);
+		const saved = await ServiceSettingsService.save(svc, policy, {
+			isAdmin: Boolean(locals.isAdmin),
+			userId: locals.user.id,
+		});
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { authError: saved.message });
+		}
+		const { redeploying } = saved;
 
 		accessLogger.info(
 			`App access updated: service=${svc.id} authRequired=${policy.authRequired} methods=${policy.authProviders.join("|") || "none"} user=${locals.user.id}`,
@@ -114,11 +112,15 @@ export const actions = {
 		if (problem) {
 			return fail(400, { error: problem });
 		}
-		const before = { ...svc.toJSON() };
-		await svc.update({ blockedPaths });
-		const redeploying =
-			pathFiltersChanged(before, svc.toJSON()) &&
-			(await DeploymentService.redeployForRouting(svc, locals.user.id));
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{ blockedPaths },
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
+		}
+		const { redeploying } = saved;
 		accessLogger.info(
 			`Blocked paths updated: service=${svc.id} count=${blockedPaths.length} user=${locals.user.id}`,
 		);
@@ -146,15 +148,15 @@ export const actions = {
 		if (problem) {
 			return fail(400, { error: problem });
 		}
-		const emptyPaths = authPathsProblem(authPathsMode, authPaths);
-		if (emptyPaths) {
-			return fail(400, { error: emptyPaths });
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{ authPaths, authPathsMode },
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
 		}
-		const before = { ...svc.toJSON() };
-		await svc.update({ authPaths, authPathsMode });
-		const redeploying =
-			pathFiltersChanged(before, svc.toJSON()) &&
-			(await DeploymentService.redeployForRouting(svc, locals.user.id));
+		const { redeploying } = saved;
 		accessLogger.info(
 			`Login wall paths updated: service=${svc.id} mode=${authPathsMode} count=${authPaths.length} user=${locals.user.id}`,
 		);

@@ -42,6 +42,8 @@ export type StorageVolumeUpdateInput = Partial<
 		| "backupPreCommandServiceId"
 		| "backupSchedule"
 		| "backupStopServices"
+		| "description"
+		| "name"
 		| "s3DestinationId"
 	>
 >;
@@ -219,8 +221,8 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 	}
 
 	/**
-	 * Writes the given backup fields to the row and mirrors them onto this
-	 * instance.
+	 * Writes the given name, description or backup fields to the row and
+	 * mirrors them onto this instance.
 	 */
 	async update(input: StorageVolumeUpdateInput): Promise<void> {
 		await db

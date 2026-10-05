@@ -58,7 +58,15 @@ export const serviceResponse = z.object({
 		description:
 			"Redeploy the previous healthy revision when a new one is unhealthy",
 	}),
+	buildCacheBuiltin: z.boolean(),
+	buildCacheRegistryId: z.string().nullable(),
+	buildServerRemoteHostId: z.string().nullable(),
 	buildSource: z.enum(["image", "git"]),
+	channelBranch: z.string().nullable(),
+	channelCanary: z.boolean(),
+	channelCanaryDomain: z.string().nullable(),
+	channelTagPattern: z.string(),
+	channelsEnabled: z.boolean(),
 	containerId: z.string().nullable(),
 	containerPort: z.number().int(),
 	cpuLimit: z.string().nullable(),
@@ -83,12 +91,9 @@ export const serviceResponse = z.object({
 	labels: z.record(z.string(), z.string()),
 	privileged: z.boolean(),
 	runAsUser: z.string().nullable(),
-	// Ciphertext (AES-256-GCM), not plaintext : present because `.toJSON()`
-	// returns the raw row as-is. Documented honestly rather than hidden, since
-	// hiding it here would make the spec describe a smaller response than the
-	// API actually returns.
-	customSslCertEnc: z.string().nullable(),
-	customSslKeyEnc: z.string().nullable(),
+	customSslSet: z
+		.boolean()
+		.meta({ description: "Whether a custom certificate and key are set." }),
 	defaultDomainEnabled: z.boolean(),
 	desiredState: z.enum(["running", "stopped"]),
 	dnsResolvable: z.boolean(),
@@ -112,10 +117,14 @@ export const serviceResponse = z.object({
 	gitUrl: z.string().nullable(),
 	gitWebhookError: z.string().nullable(),
 	gitWebhookId: z.string().nullable(),
-	gitWebhookSecretEnc: z.string().nullable(),
 	gitWebhookReconnect: z.boolean(),
 	gitPollEnabled: z.boolean(),
 	gitLastSeenCommit: z.string().nullable(),
+	previewAuthAllowedEmails: z.array(z.string()),
+	previewAuthAllowedGroups: z.array(z.string()),
+	previewAuthAllowedUserIds: z.array(z.string()),
+	previewAuthProviders: z.array(z.string()),
+	previewAuthRequired: z.boolean(),
 	previewDefaultDomain: z.boolean(),
 	previewReportGithub: z.boolean(),
 	previewBranchExclude: z.array(z.string()),
@@ -135,6 +144,7 @@ export const serviceResponse = z.object({
 	healthcheckRetries: z.number().int().nullable(),
 	healthcheckStartPeriodSeconds: z.number().int().nullable(),
 	healthcheckTimeoutSeconds: z.number().int().nullable(),
+	httpCacheTtl: z.number().int().nullable(),
 	id: z.string(),
 	image: z.string(),
 	imageScanEnabled: z.boolean(),
@@ -155,10 +165,9 @@ export const serviceResponse = z.object({
 			"A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL",
 	}),
 	stackId: z.string().nullable(),
-	registryPasswordEnc: z
-		.string()
-		.nullable()
-		.meta({ description: "Ciphertext, not plaintext." }),
+	registryPasswordSet: z
+		.boolean()
+		.meta({ description: "Whether a registry password is set." }),
 	registryUrl: z.string().nullable(),
 	registryUsername: z.string().nullable(),
 	requireStatusChecks: z.boolean().meta({
@@ -166,9 +175,13 @@ export const serviceResponse = z.object({
 			"Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
 	}),
 	requiredStatusChecks: z.array(z.string()),
+	pullPolicy: z.enum(["always", "missing", "never"]),
+	replicas: z.number().int(),
 	restartPolicy: z.enum(["no", "always", "on-failure", "unless-stopped"]),
 	slug: z.string(),
+	swarmServiceId: z.string().nullable(),
 	tag: z.string(),
+	tracesEnabled: z.boolean(),
 	updatedAt: isoTimestamp,
 	uptimeEnabled: z.boolean().meta({
 		description:
@@ -180,6 +193,7 @@ export const serviceResponse = z.object({
 export const stackResponse = z.object({
 	createdAt: isoTimestamp,
 	description: z.string().nullable(),
+	icon: z.string().nullable(),
 	id: z.string(),
 	name: z.string(),
 	parentId: z.string().nullable().meta({

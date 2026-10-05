@@ -14,6 +14,7 @@
 	import { stackScopedSlug } from "#lib/slug.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
+	import { visibleIn } from "#lib/ui-mode.js";
 	import { enhance } from "$app/forms";
 	import BasicInfoStep, { slugify } from "./basic-info-step.svelte";
 	import ComputeStep from "./compute-step.svelte";
@@ -223,6 +224,9 @@
           volumes={data.volumes}
         />
         <ComputeStep
+          collapsible={!visibleIn(data.uiMode, "services/new#compute") &&
+          !errors?.cpuLimit &&
+          !errors?.memoryLimitMb}
           {errors}
           hidden={currentStep !== 4}
           template={data.template}

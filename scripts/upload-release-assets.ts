@@ -34,6 +34,10 @@ const ASSETS: ReleaseAsset[] = [
 		label: "homerun CLI (darwin/arm64)",
 		path: "dist/homerun-cli-darwin-arm64",
 	},
+	...["amd64", "arm64", "darwin-amd64", "darwin-arm64"].map((target) => ({
+		label: `Terraform provider (${target.includes("-") ? target.replace("-", "/") : `linux/${target}`})`,
+		path: `dist/homerun-terraform-provider-${target}`,
+	})),
 ];
 
 const MAX_ATTEMPTS = 5;

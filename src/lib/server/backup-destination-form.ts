@@ -17,7 +17,12 @@ export type DestinationFormResult =
 	| { error: string }
 	| { parsed: ParsedDestinationForm };
 
-function field(formData: FormData, name: string): string {
+/** Where the fields come from: the form's FormData, or a Map built from a JSON body. */
+export interface DestinationFields {
+	get(name: string): unknown;
+}
+
+function field(formData: DestinationFields, name: string): string {
 	const value = formData.get(name);
 	return typeof value === "string" ? value.trim() : "";
 }
@@ -82,7 +87,7 @@ function validate(
  * @returns The parsed fields, or the first validation error message.
  */
 export function parseDestinationForm(
-	formData: FormData,
+	formData: DestinationFields,
 	options: { keepSecret?: boolean } = {},
 ): DestinationFormResult {
 	const type = parseDestinationType(field(formData, "type") || "s3");

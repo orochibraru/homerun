@@ -4,15 +4,16 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { githubAppRegistration } from "#lib/github-app.js";
 import { Logger } from "#lib/logger.js";
 import { browserOrigin } from "#lib/server/canonical-origin.js";
-import type { GitProviderKind } from "#lib/server/db/schema.js";
 import { GitProviderService } from "#lib/services/git-provider.service.js";
+import {
+	GitProviderConfigError,
+	GitProviderConfigService,
+} from "#lib/services/git-provider-config.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("GitProviders");
 
 const GITHUB_ORG_PATTERN = /^[a-z\d](?:[a-z\d-]{0,38})$/i;
-
-const VALID_KINDS = new Set<string>(["gitlab", "gitea", "bitbucket"]);
 
 export const load = async ({ parent, locals }) => {
 	const { user } = await parent();
@@ -83,51 +84,23 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const kind = formData.get("kind") as string | null;
-		const name = (formData.get("name") as string | null)?.trim() ?? "";
-		const baseUrl = (formData.get("baseUrl") as string | null)?.trim() || null;
-		const clientId = (formData.get("clientId") as string | null)?.trim() ?? "";
-		const clientSecret =
-			(formData.get("clientSecret") as string | null)?.trim() ?? "";
-
-		if (!(kind && VALID_KINDS.has(kind))) {
-			return fail(400, { error: "Choose a provider." });
+		try {
+			await GitProviderConfigService.add(
+				{
+					baseUrl: formData.get("baseUrl") as string | null,
+					clientId: (formData.get("clientId") as string | null) ?? "",
+					clientSecret: (formData.get("clientSecret") as string | null) ?? "",
+					kind: formData.get("kind") as string | null,
+					name: (formData.get("name") as string | null) ?? "",
+				},
+				locals.user.id,
+			);
+		} catch (err) {
+			if (err instanceof GitProviderConfigError) {
+				return fail(400, { error: err.message });
+			}
+			throw err;
 		}
-		if (!name) {
-			return fail(400, { error: "Name is required." });
-		}
-		if (!(clientId && clientSecret)) {
-			return fail(400, { error: "Client ID and secret are required." });
-		}
-		if (kind === "gitea" && !baseUrl) {
-			return fail(400, {
-				error: "Gitea providers need a base URL (self-hosted only).",
-			});
-		}
-
-		const settings = await InstanceSettingsDTO.get();
-		await settings.updateGitProviders([
-			...settings.gitProviders.map((p) => ({
-				baseUrl: p.baseUrl,
-				clientId: p.clientId,
-				enabled: p.enabled,
-				id: p.id,
-				kind: p.kind,
-				name: p.name,
-			})),
-			{
-				baseUrl,
-				clientId,
-				clientSecret,
-				enabled: true,
-				kind: kind as GitProviderKind,
-				name,
-			},
-		]);
-
-		logger.info(
-			`Git provider added: kind=${kind} name=${name} by=${locals.user.id}`,
-		);
 		return { added: true };
 	},
 
@@ -145,21 +118,7 @@ export const actions = {
 			return fail(400, { error: "Missing provider id." });
 		}
 
-		const settings = await InstanceSettingsDTO.get();
-		await settings.updateGitProviders(
-			settings.gitProviders
-				.filter((p) => p.id !== id)
-				.map((p) => ({
-					baseUrl: p.baseUrl,
-					clientId: p.clientId,
-					enabled: p.enabled,
-					id: p.id,
-					kind: p.kind,
-					name: p.name,
-				})),
-		);
-
-		logger.info(`Git provider deleted: id=${id} by=${locals.user.id}`);
+		await GitProviderConfigService.remove(id, locals.user.id);
 		return { deleted: true };
 	},
 

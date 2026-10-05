@@ -1,5 +1,9 @@
 # Blocked paths and IP bans
 
+Advanced mode: [simple mode](ui-modes.md) hides the Blocked paths panel (unless
+the service already blocks paths) and the IP bans settings tab. Everything here
+keeps working either way, and a hidden page still opens from a link.
+
 Bots scan every public address for the same things: `.env` files, `.git`
 folders, WordPress login pages, database dumps. A service can tell Traefik to
 turn those requests away before they reach the app, and Homerun can ban an
@@ -53,13 +57,21 @@ rule, on by default:
 - **Within**: in how many minutes (10 by default, up to a day),
 - **Ban for**: how many hours the ban lasts (24 by default, 0 for good).
 
-The same page lists the banned addresses, why and until when, each with an
-**Unban** button. Expired bans are lifted within a minute. Turning bans off
-keeps blocking the paths and only stops new bans; bans already in place stay
-until they expire or you lift them.
+**Monitoring → Blocked IPs** (admins) lists the banned addresses, why and until
+when, each with an **Unban** button, and under **Being counted** every address
+that requested a blocked path within the window but isn't banned yet: how many
+requests it made against the threshold, the last host and path it asked for, and
+when. Expired bans are lifted within a minute. Turning bans off keeps blocking
+the paths and only stops new bans; bans already in place stay until they expire
+or you lift them.
 
 The dashboard's own address is never blocked by a ban, so a banned admin can
 still sign in and lift it.
+
+To hear about bans as they happen, turn on **IP banned** for a channel under
+**Profile → Notifications** (it's off by default): each new ban sends the
+address, until when, the host it was hitting and the reason, linking to Blocked
+IPs. See [Notifications](notifications.md).
 
 **Which address gets banned.** It's the address Traefik sees the connection come
 from, the only one it can match a ban against. Behind a proxy or tunnel

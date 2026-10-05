@@ -42,18 +42,20 @@ function validate(
 }
 
 /**
- * Validates a submitted cron job form and normalises it into DTO-ready fields :
+ * Validates a cron job's fields and normalises them into DTO-ready columns :
  * trims text, drops fields that don't apply to the job's kind, encrypts the
- * registry password and defaults the tag and timeout.
+ * registry password and defaults the tag and timeout. `raw` is the form's
+ * fields or a JSON body, `envVars` its variables.
  *
  * @param options.isAdmin Only admins may create host command (exec) jobs.
  * @returns The parsed fields, or the first validation error message.
  */
-export function parseCronJobForm(
-	formData: FormData,
+export function parseCronJobInput(
+	raw: Record<string, unknown>,
+	envVars: Record<string, string>,
 	options: { isAdmin: boolean },
 ): CronJobFormResult {
-	const result = cronJobSchema.safeParse(Object.fromEntries(formData));
+	const result = cronJobSchema.safeParse(raw);
 	if (!result.success) {
 		const first = result.error.issues[0];
 		return { error: first?.message ?? "Check the form for errors." };
@@ -72,7 +74,7 @@ export function parseCronJobForm(
 			command: input.command?.trim() || null,
 			description: input.description?.trim() || null,
 			enabled: input.enabled,
-			envVars: parseEnvVars(formData),
+			envVars,
 			image: input.kind === "image" ? (input.image?.trim() ?? null) : null,
 			kind: input.kind,
 			name: input.name.trim(),
@@ -88,4 +90,16 @@ export function parseCronJobForm(
 			timeoutSeconds: input.timeoutSeconds ?? DEFAULT_CRON_JOB_TIMEOUT_SECONDS,
 		},
 	};
+}
+
+/** Validates a submitted cron job form, see `parseCronJobInput`. */
+export function parseCronJobForm(
+	formData: FormData,
+	options: { isAdmin: boolean },
+): CronJobFormResult {
+	return parseCronJobInput(
+		Object.fromEntries(formData),
+		parseEnvVars(formData),
+		options,
+	);
 }

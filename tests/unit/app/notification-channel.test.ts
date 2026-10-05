@@ -25,6 +25,7 @@ const { deployEvent, deployTitle, isFailureEvent } = await import(
 const {
 	deployMessage,
 	formatDuration,
+	ipBanMessage,
 	logTail,
 	revisionHealthMessage,
 	statusChecksMessage,
@@ -483,5 +484,51 @@ describe("withStackTitle", () => {
 
 	test("leaves an ungrouped service's title alone", () => {
 		expect(withStackTitle(message, null)).toBe(message);
+	});
+});
+
+describe("ipBanMessage", () => {
+	test("names the address, how long and where, linking to the blocked list", () => {
+		const message = ipBanMessage(
+			{
+				expiresAt: new Date("2026-10-06T12:00:00Z"),
+				host: "app.example.com",
+				ip: "203.0.113.7",
+				origin: "https://homerun.example.com",
+				reason: "10 blocked requests in 10 min, last /wp-login.php",
+			},
+			"2026-10-05T12:00:00Z",
+		);
+		expect(message).toMatchObject({
+			detail: "10 blocked requests in 10 min, last /wp-login.php",
+			event: "security.ip_banned",
+			link: "https://homerun.example.com/monitoring/blocked",
+			serviceId: null,
+			title: "203.0.113.7 banned",
+		});
+		expect(message.fields).toEqual([
+			{ name: "Address", value: "203.0.113.7" },
+			{ name: "Until", value: "2026-10-06T12:00:00.000Z" },
+			{ name: "Host", value: "app.example.com" },
+		]);
+		expect(isFailureEvent("security.ip_banned")).toBe(true);
+	});
+
+	test("a ban for good has no end and no host when none is known", () => {
+		const message = ipBanMessage(
+			{
+				expiresAt: null,
+				host: null,
+				ip: "198.51.100.1",
+				origin: null,
+				reason: "r",
+			},
+			"2026-10-05T12:00:00Z",
+		);
+		expect(message.fields).toEqual([
+			{ name: "Address", value: "198.51.100.1" },
+			{ name: "Until", value: "Lifted by hand" },
+		]);
+		expect(message.link).toBeNull();
 	});
 });

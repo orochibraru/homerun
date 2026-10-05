@@ -970,6 +970,15 @@ Garage: init, apply, a contended lock reported by Terraform with the holder's
 info, force-unlock, rollback seen by the next `plan`. See the routes in
 `api-and-cli.md`.
 
+## OpenTelemetry collector (`docker/otel.ts`, `TracingService`)
+
+The third core container on the Garage pattern: `DockerOtelMixin` (merged
+outermost, it needs `runOneOff`/`pullImage`) creates `homerun-otel` on the
+shared network with no published port and no Traefik label, its config written
+into `homerun-otel-config` by a one-off `alpine`, its export address and token
+as env vars, `reconcileOtel(null)` removing it. See `observability.md`'s Tracing
+section for what it's configured with and why.
+
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 
 Per-service "Terminal" tab, a real xterm.js terminal (`@xterm/xterm` +
@@ -1290,8 +1299,11 @@ A ban is an `ip_ban` row; `IpBanService.sync()` rewrites `homerun-bans.yml`
 when nobody is banned. `IpBanScheduler` lifts expired bans and drops hits older
 than a day every minute; boot and settings saves resync. Settings live in
 `instance_settings.ip_bans` (`withIpBanDefaults`, on, 10 hits / 10 min / 24 h),
-edited with the ban list under Settings → IP bans. Not verified against a live
-Traefik.
+edited under Settings → IP bans; the bans (with Unban) and the addresses being
+counted (`BlockedHitDTO.addressesSince`, grouped per address over the window)
+are on Monitoring → Blocked IPs. A new ban dispatches the `security.ip_banned`
+channel event (`ipBanMessage`), off by default per channel. Not verified against
+a live Traefik.
 
 ## Build servers (`remote_host` table, `RemoteHostDTO`, `/remote-hosts`)
 

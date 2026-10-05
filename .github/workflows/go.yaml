@@ -37,16 +37,21 @@ jobs:
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -1
 
+      - name: Test the Terraform provider
+        run: go -C terraform/provider test -race ./...
+
       - name: Formatting
         run: |
-          unformatted="$(gofmt -l ./cmd ./internal ./tests/unit/go)"
+          unformatted="$(gofmt -l ./cmd ./internal ./tests/unit/go ./terraform/provider)"
           if [ -n "$unformatted" ]; then
             echo "::error::gofmt would rewrite: $unformatted"
             exit 1
           fi
 
       - name: Vet
-        run: go vet ./cmd/... ./internal/... ./tests/unit/go/...
+        run: |
+          go vet ./cmd/... ./internal/... ./tests/unit/go/...
+          go -C terraform/provider vet ./...
 
       - name: Record result
         id: done
@@ -70,6 +75,9 @@ jobs:
           cache-dependency-path: |
             go.sum
             tools/go/go.sum
+            terraform/provider/go.sum
 
       - name: golangci-lint
-        run: go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...
+        run: |
+          go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...
+          go -C terraform/provider tool -modfile=../../tools/go/go.mod golangci-lint run --config ../../.golangci.yml ./...

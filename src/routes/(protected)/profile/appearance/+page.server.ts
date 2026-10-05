@@ -7,12 +7,32 @@ import {
 	presetSchema,
 	surfaceSchema,
 	themeSchema,
+	uiModeSchema,
 } from "#lib/server/validation/appearance.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("Appearance");
 
 export const actions = {
+	/** Saves the account's UI mode, or clears it to follow the instance default. */
+	updateUiMode: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const parsed = uiModeSchema.safeParse(
+			Object.fromEntries(await request.formData()),
+		);
+		if (!parsed.success) {
+			return fail(400, {
+				error: "Pick simple, advanced or the instance default.",
+			});
+		}
+		const prefs = await UserPreferencesDTO.get(locals.user.id);
+		await prefs.updateUiMode(parsed.data.uiMode || null);
+		logger.info("UI mode updated", { userId: locals.user.id });
+		return { success: true };
+	},
+
 	/** Saves the site-wide light/dark/system preference. */
 	updateTheme: async ({ request, locals }) => {
 		if (!locals.user) {

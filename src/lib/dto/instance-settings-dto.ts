@@ -27,6 +27,7 @@ import {
 } from "#lib/server/db/schema.js";
 import type { NewtCredentials } from "#lib/services/docker/newt.js";
 import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
+import type { TracingColumns } from "#lib/tracing/settings.js";
 import type { UpdateChannel } from "#lib/update-channel.js";
 import { BaseDTO } from "./base-dto";
 
@@ -187,6 +188,9 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			emailOtpSignIn: null,
 			errorPages: null,
 			ipBans: null,
+			defaultUiMode: null,
+			otelCollectorEnabled: null,
+			traceRetentionDays: null,
 			garageAdminTokenEnc: null,
 			garageEnabled: null,
 			garagePublicHost: null,
@@ -276,6 +280,13 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	/** Stamps the one-time dependency backfill as done, so later boots skip it. */
 	async markDependenciesBackfilled(): Promise<void> {
 		await this.persist({ dependenciesBackfilledAt: new Date() });
+	}
+
+	/** Persists the UI mode accounts follow by default, or clears it back to advanced. */
+	async updateDefaultUiMode(
+		mode: InstanceSettings["defaultUiMode"],
+	): Promise<void> {
+		await this.persist({ defaultUiMode: mode });
 	}
 
 	/** Stamps onboarding as completed now, so the wizard stops being shown. */
@@ -384,6 +395,11 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			>
 		>,
 	): Promise<void> {
+		await this.persist(input);
+	}
+
+	/** Persists the OpenTelemetry collector toggle and the trace retention. */
+	async persistTracing(input: TracingColumns): Promise<void> {
 		await this.persist(input);
 	}
 

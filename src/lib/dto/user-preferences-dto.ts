@@ -10,6 +10,7 @@ import {
 	type Preset,
 	type SurfaceStyle,
 } from "#lib/surfaces.js";
+import type { UiMode } from "#lib/ui-mode.js";
 import { BaseDTO } from "./base-dto";
 
 export type ThemePreference = "light" | "dark" | "system";
@@ -42,6 +43,7 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 			preset: null,
 			surfaceStyle: DEFAULT_SURFACE,
 			theme: "system",
+			uiMode: null,
 			updatedAt: now,
 			userId,
 		};
@@ -62,6 +64,11 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 	/** Persists the look of panels and buttons: glass, sleek, neumorphism, boxy, clay, skeuomorphism or Material You. */
 	async updateSurfaceStyle(surfaceStyle: SurfaceStyle): Promise<void> {
 		await this.persist({ surfaceStyle });
+	}
+
+	/** Persists the account's UI mode, or null to follow the instance default. */
+	async updateUiMode(uiMode: UiMode | null): Promise<void> {
+		await this.persist({ uiMode });
 	}
 
 	/** Persists the account's default page size for every paginated list. */

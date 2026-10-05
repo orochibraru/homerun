@@ -7,6 +7,7 @@ import { cloneFailureHint } from "#lib/git-clone-url.js";
 import { splitImageRef } from "#lib/image-ref.js";
 import { runtimeOptionsFrom } from "#lib/service-runtime.js";
 import { stackScopedSlug } from "#lib/slug.js";
+import { withTracingEnv } from "#lib/tracing/env.js";
 import {
 	VOLUME_HELPER_IMAGE,
 	VOLUME_HELPER_TAG,
@@ -392,7 +393,14 @@ export async function deployWorkerSpec(
 	);
 	return {
 		deploymentId: dep.id,
-		env: [...(sentry?.env ?? []), ...Object.entries(svc.envVars ?? {})],
+		env: [
+			...(sentry?.env ?? []),
+			...Object.entries(
+				svc.toJSON().tracesEnabled
+					? withTracingEnv(svc.envVars ?? {}, { id: svc.id, slug: svc.slug })
+					: (svc.envVars ?? {}),
+			),
+		],
 		envFiles: runtime.envFiles,
 		healthchecks: {
 			listening: listeningHealthcheck(svc.containerPort, timing),

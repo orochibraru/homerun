@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "#lib/server/db/lib.js";
 import {
 	type ServiceDependency,
@@ -43,6 +43,25 @@ export class ServiceDependencyDTO extends BaseDTO<ServiceDependency> {
 			]);
 		}
 		return deps;
+	}
+
+	/** One recorded dependency by its id, null when there's none. */
+	static async get(id: string): Promise<ServiceDependencyDTO | null> {
+		const [row] = await db
+			.select()
+			.from(serviceDependency)
+			.where(eq(serviceDependency.id, id))
+			.limit(1);
+		return row ? new ServiceDependencyDTO(row) : null;
+	}
+
+	/** Every recorded dependency, oldest first. */
+	static async list(): Promise<ServiceDependencyDTO[]> {
+		const rows = await db
+			.select()
+			.from(serviceDependency)
+			.orderBy(asc(serviceDependency.createdAt));
+		return rows.map((row) => new ServiceDependencyDTO(row));
 	}
 
 	/** The ids of the services `serviceId` depends on. */
@@ -184,6 +203,13 @@ export class ServiceDependencyDTO extends BaseDTO<ServiceDependency> {
 				);
 			}
 		});
+	}
+
+	/** Deletes this dependency. */
+	async delete(): Promise<void> {
+		await db
+			.delete(serviceDependency)
+			.where(eq(serviceDependency.id, this.row.id));
 	}
 
 	/**

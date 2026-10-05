@@ -1,5 +1,6 @@
 import type { envDefaultsForDisplay } from "#lib/config.js";
 import type { InstanceSettings } from "#lib/server/db/schema.js";
+import { DEFAULT_UI_MODE } from "#lib/ui-mode.js";
 
 export type FieldErrors = Record<string, string>;
 
@@ -105,6 +106,12 @@ export class OnboardingWizard {
 	);
 	authCrossSubdomainCookies = $derived(
 		this.settings?.authCrossSubdomainCookies ?? false,
+	);
+
+	defaultUiMode = $derived<string>(
+		this.#echo("defaultUiMode") ??
+			this.settings?.defaultUiMode ??
+			DEFAULT_UI_MODE,
 	);
 
 	dockerSocketPath = $derived(

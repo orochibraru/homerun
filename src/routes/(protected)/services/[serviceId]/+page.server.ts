@@ -8,6 +8,7 @@ import { Logger } from "#lib/logger.js";
 import { linkKeys } from "#lib/service-graph.js";
 import { DeploymentService } from "#lib/services/deploy.service.js";
 import { DockerService } from "#lib/services/docker.service.js";
+import { RevisionService } from "#lib/services/revision.service.js";
 import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
 import { resolve } from "$app/paths";
 
@@ -22,11 +23,12 @@ function lifecycleFailure(verb: string, error: unknown) {
 }
 
 export const load = async ({ params, parent }) => {
-	const { service: svc } = await parent();
-	const [deployments, siblings, recorded] = await Promise.all([
+	const { service: svc, uiMode } = await parent();
+	const [deployments, siblings, recorded, revisions] = await Promise.all([
 		DeploymentDTO.listForService(params.serviceId),
 		ServiceDTO.list(),
 		ServiceDependencyDTO.map(),
+		uiMode === "simple" ? RevisionService.list(svc) : [],
 	]);
 
 	const others = siblings.filter((other) => other.id !== params.serviceId);
@@ -56,6 +58,7 @@ export const load = async ({ params, parent }) => {
 		);
 
 	return {
+		canRollBack: revisions.some((revision) => revision.previous),
 		dependsOn,
 		deployments: deployments.map((d) => d.toJSON()),
 		usedBy,
@@ -124,6 +127,29 @@ export const actions = {
 			userId: locals.user.id,
 		});
 
+		return { deploymentId, success: true };
+	},
+
+	rollback: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		const target = await RevisionService.findTarget(svc, null);
+		if (target.error !== null) {
+			return fail(target.status, { error: target.error });
+		}
+		const { deploymentId } = await RevisionService.enqueueRollback({
+			revision: target.revision,
+			svc,
+			userId: locals.user.id,
+		});
+		logger.info(
+			`Rollback queued: service=${svc.id} revision=${target.revision.id} deployment=${deploymentId} user=${locals.user.id}`,
+		);
 		return { deploymentId, success: true };
 	},
 

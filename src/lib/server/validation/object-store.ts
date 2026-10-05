@@ -14,7 +14,7 @@ export interface ObjectStoreFormValues {
  * edit can keep the stored one.
  */
 export function parseObjectStoreForm(
-	formData: FormData,
+	formData: { get(name: string): unknown },
 	requireSecret: boolean,
 ): { error: string | null; values: ObjectStoreFormValues } {
 	const field = (name: string) => String(formData.get(name) ?? "").trim();

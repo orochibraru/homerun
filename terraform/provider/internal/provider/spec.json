@@ -1,0 +1,1409 @@
+{
+	"dataSources": [
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name"
+				},
+				{
+					"kind": "string",
+					"name": "description",
+					"tf": "description"
+				},
+				{
+					"kind": "string",
+					"name": "category",
+					"tf": "category"
+				},
+				{
+					"kind": "string",
+					"name": "image",
+					"tf": "image"
+				},
+				{
+					"kind": "string",
+					"name": "tag",
+					"tf": "tag"
+				},
+				{
+					"kind": "int",
+					"name": "containerPort",
+					"tf": "container_port"
+				},
+				{
+					"kind": "stringMap",
+					"name": "envVars",
+					"tf": "env_vars"
+				},
+				{
+					"kind": "string",
+					"name": "cpuLimit",
+					"tf": "cpu_limit"
+				},
+				{
+					"kind": "int",
+					"name": "memoryLimitMb",
+					"tf": "memory_limit_mb"
+				},
+				{
+					"kind": "strings",
+					"name": "volumes",
+					"tf": "volumes"
+				}
+			],
+			"collectionPath": "/templates",
+			"description": "A built-in or custom template, by id or name.",
+			"itemPath": "/templates/{id}",
+			"lookup": ["name"],
+			"type": "homerun_template"
+		},
+		{
+			"collectionPath": "/services",
+			"description": "A service, by id or slug.",
+			"itemPath": "/services/{id}",
+			"lookup": ["slug"],
+			"resource": "homerun_service",
+			"type": "homerun_service"
+		},
+		{
+			"collectionPath": "/stacks",
+			"description": "A stack, by id or slug.",
+			"itemPath": "/stacks/{id}",
+			"lookup": ["slug"],
+			"resource": "homerun_stack",
+			"type": "homerun_stack"
+		}
+	],
+	"resources": [
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "slug",
+					"tf": "slug",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "description",
+					"tf": "description"
+				},
+				{
+					"kind": "string",
+					"name": "parentId",
+					"tf": "parent_id",
+					"description": "The stack this one is nested in.",
+					"ref": "homerun_stack"
+				},
+				{
+					"kind": "string",
+					"name": "icon",
+					"tf": "icon"
+				}
+			],
+			"collectionPath": "/stacks",
+			"description": "A stack: a group of services sharing a network.",
+			"importId": ["id"],
+			"itemPath": "/stacks/{id}",
+			"label": "slug",
+			"type": "homerun_stack"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"description": "Required unless template_id is set."
+				},
+				{
+					"kind": "string",
+					"name": "slug",
+					"tf": "slug",
+					"description": "Subdomain and container name, unique. Required unless template_id is set."
+				},
+				{
+					"kind": "string",
+					"name": "stackId",
+					"tf": "stack_id",
+					"ref": "homerun_stack"
+				},
+				{
+					"kind": "string",
+					"name": "templateId",
+					"tf": "template_id",
+					"createOnly": true,
+					"description": "Create the service from this template (its image, variables, volumes and linked services), then apply the other attributes. Changing it replaces the service, unless it was imported without one."
+				},
+				{
+					"kind": "string",
+					"name": "buildSource",
+					"tf": "build_source",
+					"default": "image",
+					"description": "image or git."
+				},
+				{
+					"kind": "string",
+					"name": "image",
+					"tf": "image"
+				},
+				{
+					"kind": "string",
+					"name": "tag",
+					"tf": "tag",
+					"default": "latest"
+				},
+				{
+					"kind": "string",
+					"name": "pullPolicy",
+					"tf": "pull_policy",
+					"default": "always"
+				},
+				{
+					"kind": "string",
+					"name": "registryUrl",
+					"tf": "registry_url"
+				},
+				{
+					"kind": "string",
+					"name": "registryUsername",
+					"tf": "registry_username"
+				},
+				{
+					"kind": "string",
+					"name": "registryPassword",
+					"tf": "registry_password",
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "bool",
+					"name": "registryPasswordSet",
+					"tf": "registry_password_set",
+					"readOnly": true
+				},
+				{
+					"kind": "string",
+					"name": "gitUrl",
+					"tf": "git_url"
+				},
+				{
+					"kind": "string",
+					"name": "gitRef",
+					"tf": "git_ref"
+				},
+				{
+					"kind": "string",
+					"name": "gitProviderId",
+					"tf": "git_provider_id",
+					"ref": "homerun_git_provider"
+				},
+				{
+					"kind": "string",
+					"name": "gitRepo",
+					"tf": "git_repo"
+				},
+				{
+					"kind": "string",
+					"name": "gitBuildMethod",
+					"tf": "git_build_method",
+					"default": "dockerfile"
+				},
+				{
+					"kind": "string",
+					"name": "gitBuildContext",
+					"tf": "git_build_context"
+				},
+				{
+					"kind": "string",
+					"name": "gitDockerfilePath",
+					"tf": "git_dockerfile_path"
+				},
+				{
+					"kind": "string",
+					"name": "gitBakeFile",
+					"tf": "git_bake_file"
+				},
+				{
+					"kind": "string",
+					"name": "gitBuildTarget",
+					"tf": "git_build_target"
+				},
+				{
+					"kind": "bool",
+					"name": "autoDeployOnPush",
+					"tf": "auto_deploy_on_push",
+					"default": false
+				},
+				{
+					"kind": "bool",
+					"name": "gitPollEnabled",
+					"tf": "git_poll_enabled",
+					"default": false
+				},
+				{
+					"kind": "bool",
+					"name": "requireStatusChecks",
+					"tf": "require_status_checks",
+					"default": false
+				},
+				{
+					"kind": "strings",
+					"name": "requiredStatusChecks",
+					"tf": "required_status_checks"
+				},
+				{
+					"kind": "bool",
+					"name": "buildCacheBuiltin",
+					"tf": "build_cache_builtin",
+					"default": false,
+					"description": "Use the built-in registry as the build cache."
+				},
+				{
+					"kind": "string",
+					"name": "buildCacheRegistryId",
+					"tf": "build_cache_registry_id",
+					"ref": "homerun_build_cache_registry"
+				},
+				{
+					"kind": "string",
+					"name": "buildServerRemoteHostId",
+					"tf": "build_server_remote_host_id"
+				},
+				{
+					"kind": "stringMap",
+					"name": "envVars",
+					"tf": "env_vars",
+					"sensitive": true
+				},
+				{
+					"kind": "strings",
+					"name": "secretEnvKeys",
+					"tf": "secret_env_keys"
+				},
+				{
+					"kind": "strings",
+					"name": "envFiles",
+					"tf": "env_files"
+				},
+				{
+					"kind": "string",
+					"name": "cpuLimit",
+					"tf": "cpu_limit"
+				},
+				{
+					"kind": "int",
+					"name": "memoryLimitMb",
+					"tf": "memory_limit_mb"
+				},
+				{
+					"kind": "int",
+					"name": "replicas",
+					"tf": "replicas",
+					"default": 1
+				},
+				{
+					"kind": "string",
+					"name": "restartPolicy",
+					"tf": "restart_policy",
+					"default": "unless-stopped"
+				},
+				{
+					"kind": "int",
+					"name": "containerPort",
+					"tf": "container_port",
+					"description": "Required unless template_id is set."
+				},
+				{
+					"kind": "string",
+					"name": "portProtocol",
+					"tf": "port_protocol",
+					"default": "tcp"
+				},
+				{
+					"kind": "string",
+					"name": "networkMode",
+					"tf": "network_mode",
+					"default": "bridge"
+				},
+				{
+					"kind": "bool",
+					"name": "dnsResolvable",
+					"tf": "dns_resolvable",
+					"default": true,
+					"description": "Public routing through Traefik."
+				},
+				{
+					"kind": "bool",
+					"name": "defaultDomainEnabled",
+					"tf": "default_domain_enabled",
+					"default": true
+				},
+				{
+					"kind": "strings",
+					"name": "domains",
+					"tf": "domains"
+				},
+				{
+					"kind": "string",
+					"name": "primaryDomain",
+					"tf": "primary_domain"
+				},
+				{
+					"kind": "intMap",
+					"name": "domainPorts",
+					"tf": "domain_ports"
+				},
+				{
+					"kind": "int",
+					"name": "httpCacheTtl",
+					"tf": "http_cache_ttl"
+				},
+				{
+					"kind": "objects",
+					"name": "publishedPorts",
+					"tf": "published_ports",
+					"fields": [
+						{
+							"kind": "int",
+							"name": "containerPort",
+							"tf": "container_port",
+							"required": true
+						},
+						{
+							"kind": "int",
+							"name": "hostPort",
+							"tf": "host_port",
+							"required": true
+						},
+						{
+							"kind": "string",
+							"name": "protocol",
+							"tf": "protocol",
+							"default": "tcp"
+						}
+					]
+				},
+				{
+					"kind": "string",
+					"name": "customSslCert",
+					"tf": "custom_ssl_cert",
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "string",
+					"name": "customSslKey",
+					"tf": "custom_ssl_key",
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "bool",
+					"name": "customSslSet",
+					"tf": "custom_ssl_set",
+					"readOnly": true
+				},
+				{
+					"kind": "strings",
+					"name": "command",
+					"tf": "command"
+				},
+				{
+					"kind": "strings",
+					"name": "entrypoint",
+					"tf": "entrypoint"
+				},
+				{
+					"kind": "strings",
+					"name": "capAdd",
+					"tf": "cap_add"
+				},
+				{
+					"kind": "strings",
+					"name": "devices",
+					"tf": "devices"
+				},
+				{
+					"kind": "stringMap",
+					"name": "labels",
+					"tf": "labels"
+				},
+				{
+					"kind": "bool",
+					"name": "privileged",
+					"tf": "privileged",
+					"default": false
+				},
+				{
+					"kind": "string",
+					"name": "runAsUser",
+					"tf": "run_as_user"
+				},
+				{
+					"kind": "string",
+					"name": "healthcheckCommand",
+					"tf": "healthcheck_command"
+				},
+				{
+					"kind": "bool",
+					"name": "healthcheckDisabled",
+					"tf": "healthcheck_disabled",
+					"default": false
+				},
+				{
+					"kind": "int",
+					"name": "healthcheckIntervalSeconds",
+					"tf": "healthcheck_interval_seconds"
+				},
+				{
+					"kind": "int",
+					"name": "healthcheckRetries",
+					"tf": "healthcheck_retries"
+				},
+				{
+					"kind": "int",
+					"name": "healthcheckStartPeriodSeconds",
+					"tf": "healthcheck_start_period_seconds"
+				},
+				{
+					"kind": "int",
+					"name": "healthcheckTimeoutSeconds",
+					"tf": "healthcheck_timeout_seconds"
+				},
+				{
+					"kind": "bool",
+					"name": "authRequired",
+					"tf": "auth_required",
+					"default": false,
+					"description": "Put the login wall in front of the app."
+				},
+				{
+					"kind": "strings",
+					"name": "authProviders",
+					"tf": "auth_providers"
+				},
+				{
+					"kind": "strings",
+					"name": "authAllowedEmails",
+					"tf": "auth_allowed_emails"
+				},
+				{
+					"kind": "strings",
+					"name": "authAllowedGroups",
+					"tf": "auth_allowed_groups"
+				},
+				{
+					"kind": "strings",
+					"name": "authAllowedUserIds",
+					"tf": "auth_allowed_user_ids"
+				},
+				{
+					"kind": "string",
+					"name": "authPathsMode",
+					"tf": "auth_paths_mode",
+					"default": "all"
+				},
+				{
+					"kind": "strings",
+					"name": "authPaths",
+					"tf": "auth_paths"
+				},
+				{
+					"kind": "strings",
+					"name": "blockedPaths",
+					"tf": "blocked_paths"
+				},
+				{
+					"kind": "bool",
+					"name": "imageScanEnabled",
+					"tf": "image_scan_enabled",
+					"default": true
+				},
+				{
+					"kind": "bool",
+					"name": "previewsEnabled",
+					"tf": "previews_enabled",
+					"default": false
+				},
+				{
+					"kind": "strings",
+					"name": "previewBranchInclude",
+					"tf": "preview_branch_include"
+				},
+				{
+					"kind": "strings",
+					"name": "previewBranchExclude",
+					"tf": "preview_branch_exclude"
+				},
+				{
+					"kind": "bool",
+					"name": "previewInheritEnv",
+					"tf": "preview_inherit_env",
+					"default": true
+				},
+				{
+					"kind": "stringMap",
+					"name": "previewEnvOverrides",
+					"tf": "preview_env_overrides"
+				},
+				{
+					"kind": "bool",
+					"name": "previewCopyVolumes",
+					"tf": "preview_copy_volumes",
+					"default": false
+				},
+				{
+					"kind": "bool",
+					"name": "previewReportGithub",
+					"tf": "preview_report_github",
+					"default": true
+				},
+				{
+					"kind": "bool",
+					"name": "previewDefaultDomain",
+					"tf": "preview_default_domain",
+					"default": true
+				},
+				{
+					"kind": "string",
+					"name": "previewDomainTemplate",
+					"tf": "preview_domain_template"
+				},
+				{
+					"kind": "bool",
+					"name": "previewAuthRequired",
+					"tf": "preview_auth_required",
+					"default": false
+				},
+				{
+					"kind": "strings",
+					"name": "previewAuthProviders",
+					"tf": "preview_auth_providers"
+				},
+				{
+					"kind": "strings",
+					"name": "previewAuthAllowedEmails",
+					"tf": "preview_auth_allowed_emails"
+				},
+				{
+					"kind": "strings",
+					"name": "previewAuthAllowedGroups",
+					"tf": "preview_auth_allowed_groups"
+				},
+				{
+					"kind": "strings",
+					"name": "previewAuthAllowedUserIds",
+					"tf": "preview_auth_allowed_user_ids"
+				},
+				{
+					"kind": "bool",
+					"name": "channelsEnabled",
+					"tf": "channels_enabled",
+					"default": false,
+					"description": "Release channels: a canary built from channel_branch."
+				},
+				{
+					"kind": "string",
+					"name": "channelBranch",
+					"tf": "channel_branch"
+				},
+				{
+					"kind": "string",
+					"name": "channelTagPattern",
+					"tf": "channel_tag_pattern",
+					"default": "v*"
+				},
+				{
+					"kind": "string",
+					"name": "channelCanaryDomain",
+					"tf": "channel_canary_domain"
+				},
+				{
+					"kind": "string",
+					"name": "environmentName",
+					"tf": "environment_name"
+				},
+				{
+					"kind": "bool",
+					"name": "autoRollback",
+					"tf": "auto_rollback",
+					"default": false
+				},
+				{
+					"kind": "bool",
+					"name": "uptimeEnabled",
+					"tf": "uptime_enabled"
+				},
+				{
+					"kind": "bool",
+					"name": "tracesEnabled",
+					"tf": "traces_enabled",
+					"default": false
+				},
+				{
+					"kind": "bool",
+					"name": "cronEnabled",
+					"tf": "cron_enabled",
+					"default": false,
+					"description": "Redeploy on cron_schedule."
+				},
+				{
+					"kind": "string",
+					"name": "cronSchedule",
+					"tf": "cron_schedule"
+				},
+				{
+					"kind": "string",
+					"name": "category",
+					"tf": "category"
+				},
+				{
+					"kind": "string",
+					"name": "icon",
+					"tf": "icon"
+				}
+			],
+			"collectionPath": "/services",
+			"deployable": true,
+			"description": "A service: one container (or swarm service) and every setting the dashboard shows for it.",
+			"importId": ["id"],
+			"itemPath": "/services/{id}",
+			"label": "slug",
+			"type": "homerun_service"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "serviceId",
+					"tf": "service_id",
+					"forceNew": true,
+					"required": true,
+					"ref": "homerun_service"
+				},
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"forceNew": true,
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "ref",
+					"tf": "ref",
+					"required": true,
+					"description": "Branch or tag (git) or image tag the environment runs."
+				},
+				{
+					"kind": "string",
+					"name": "domain",
+					"tf": "domain"
+				},
+				{
+					"kind": "stringMap",
+					"name": "envOverrides",
+					"tf": "env_overrides",
+					"description": "Variables set on top of the copied ones.",
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "string",
+					"name": "slug",
+					"tf": "slug",
+					"readOnly": true
+				}
+			],
+			"collectionPath": "/service-environments",
+			"deployable": true,
+			"description": "An environment of a service (staging, demo...): a copy of it running another branch or tag.",
+			"importId": ["id"],
+			"itemPath": "/service-environments/{id}",
+			"label": "slug",
+			"type": "homerun_service_environment"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "serviceId",
+					"tf": "service_id",
+					"forceNew": true,
+					"required": true,
+					"ref": "homerun_service"
+				},
+				{
+					"kind": "string",
+					"name": "dependsOnId",
+					"tf": "depends_on_id",
+					"forceNew": true,
+					"required": true,
+					"ref": "homerun_service"
+				}
+			],
+			"collectionPath": "/service-dependencies",
+			"description": "One service depending on another, started before it.",
+			"importId": ["id"],
+			"itemPath": "/service-dependencies/{id}",
+			"label": "id",
+			"type": "homerun_service_dependency"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "kind",
+					"tf": "kind",
+					"forceNew": true,
+					"required": true,
+					"description": "bind (a host path) or volume (a Docker volume)."
+				},
+				{
+					"kind": "string",
+					"name": "source",
+					"tf": "source",
+					"forceNew": true,
+					"required": true,
+					"description": "The host path, or the Docker volume's name."
+				},
+				{
+					"kind": "string",
+					"name": "description",
+					"tf": "description"
+				},
+				{
+					"kind": "bool",
+					"name": "backupEnabled",
+					"tf": "backup_enabled",
+					"default": false
+				},
+				{
+					"kind": "string",
+					"name": "backupSchedule",
+					"tf": "backup_schedule"
+				},
+				{
+					"kind": "string",
+					"name": "backupPrefix",
+					"tf": "backup_prefix"
+				},
+				{
+					"kind": "string",
+					"name": "s3DestinationId",
+					"tf": "s3_destination_id",
+					"ref": "homerun_backup_destination"
+				},
+				{
+					"kind": "bool",
+					"name": "backupStopServices",
+					"tf": "backup_stop_services",
+					"default": false
+				},
+				{
+					"kind": "string",
+					"name": "backupPreCommand",
+					"tf": "backup_pre_command"
+				},
+				{
+					"kind": "string",
+					"name": "backupPreCommandServiceId",
+					"tf": "backup_pre_command_service_id",
+					"ref": "homerun_service"
+				}
+			],
+			"collectionPath": "/volumes",
+			"description": "A storage volume and its backup settings.",
+			"importId": ["id"],
+			"itemPath": "/volumes/{id}",
+			"label": "name",
+			"type": "homerun_volume"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "serviceId",
+					"tf": "service_id",
+					"forceNew": true,
+					"required": true,
+					"ref": "homerun_service"
+				},
+				{
+					"kind": "string",
+					"name": "volumeId",
+					"tf": "volume_id",
+					"forceNew": true,
+					"required": true,
+					"ref": "homerun_volume"
+				},
+				{
+					"kind": "string",
+					"name": "containerPath",
+					"tf": "container_path",
+					"required": true
+				},
+				{
+					"kind": "bool",
+					"name": "readOnly",
+					"tf": "read_only",
+					"default": false
+				}
+			],
+			"collectionPath": "/volume-mounts",
+			"description": "A volume mounted into a service, applied on its next deploy.",
+			"importId": ["id"],
+			"itemPath": "/volume-mounts/{id}",
+			"label": "containerPath",
+			"type": "homerun_volume_mount"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "kind",
+					"tf": "kind",
+					"forceNew": true,
+					"required": true,
+					"description": "image (a container) or exec (a host command, admin only)."
+				},
+				{
+					"kind": "string",
+					"name": "schedule",
+					"tf": "schedule",
+					"required": true
+				},
+				{
+					"kind": "bool",
+					"name": "enabled",
+					"tf": "enabled",
+					"default": false
+				},
+				{
+					"kind": "string",
+					"name": "description",
+					"tf": "description"
+				},
+				{
+					"kind": "string",
+					"name": "command",
+					"tf": "command"
+				},
+				{
+					"kind": "string",
+					"name": "image",
+					"tf": "image"
+				},
+				{
+					"kind": "string",
+					"name": "tag",
+					"tf": "tag",
+					"default": "latest"
+				},
+				{
+					"kind": "stringMap",
+					"name": "envVars",
+					"tf": "env_vars",
+					"sensitive": true
+				},
+				{
+					"kind": "string",
+					"name": "registryUrl",
+					"tf": "registry_url"
+				},
+				{
+					"kind": "string",
+					"name": "registryUsername",
+					"tf": "registry_username"
+				},
+				{
+					"kind": "string",
+					"name": "registryPassword",
+					"tf": "registry_password",
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "bool",
+					"name": "registryPasswordSet",
+					"tf": "registry_password_set",
+					"readOnly": true
+				},
+				{
+					"kind": "string",
+					"name": "remoteHostId",
+					"tf": "remote_host_id"
+				},
+				{
+					"kind": "int",
+					"name": "timeoutSeconds",
+					"tf": "timeout_seconds",
+					"default": 900
+				}
+			],
+			"collectionPath": "/cron-jobs",
+			"description": "A scheduled job: a container or a host command.",
+			"importId": ["id"],
+			"itemPath": "/cron-jobs/{id}",
+			"label": "name",
+			"type": "homerun_cron_job"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "source",
+					"tf": "source",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "destination",
+					"tf": "destination",
+					"required": true
+				},
+				{
+					"kind": "bool",
+					"name": "enabled",
+					"tf": "enabled",
+					"default": true
+				},
+				{
+					"kind": "bool",
+					"name": "keepPath",
+					"tf": "keep_path",
+					"default": true
+				},
+				{
+					"kind": "bool",
+					"name": "permanent",
+					"tf": "permanent",
+					"default": true
+				}
+			],
+			"collectionPath": "/redirects",
+			"description": "A hostname, or a path under it, redirected to another URL.",
+			"importId": ["id"],
+			"itemPath": "/redirects/{id}",
+			"label": "source",
+			"type": "homerun_redirect"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "kind",
+					"tf": "kind",
+					"forceNew": true,
+					"required": true,
+					"description": "webhook, discord, slack, telegram or email."
+				},
+				{
+					"kind": "string",
+					"name": "target",
+					"tf": "target",
+					"required": true,
+					"sensitive": true,
+					"writeOnly": true,
+					"description": "The webhook URL, email address, or Telegram bot_token:chat_id."
+				},
+				{
+					"kind": "string",
+					"name": "targetLabel",
+					"tf": "target_label",
+					"readOnly": true
+				},
+				{
+					"kind": "bool",
+					"name": "enabled",
+					"tf": "enabled",
+					"default": true
+				},
+				{
+					"kind": "strings",
+					"name": "events",
+					"tf": "events"
+				}
+			],
+			"collectionPath": "/notification-channels",
+			"description": "Where notifications are sent.",
+			"importId": ["id"],
+			"itemPath": "/notification-channels/{id}",
+			"label": "name",
+			"type": "homerun_notification_channel"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "type",
+					"tf": "type",
+					"default": "s3",
+					"description": "s3, sftp, smb or webdav.",
+					"forceNew": true
+				},
+				{
+					"kind": "string",
+					"name": "endpoint",
+					"tf": "endpoint",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "bucket",
+					"tf": "bucket"
+				},
+				{
+					"kind": "string",
+					"name": "region",
+					"tf": "region"
+				},
+				{
+					"kind": "string",
+					"name": "accessKeyId",
+					"tf": "access_key_id",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "secretAccessKey",
+					"tf": "secret_access_key",
+					"required": true,
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "bool",
+					"name": "secretAccessKeySet",
+					"tf": "secret_access_key_set",
+					"readOnly": true
+				}
+			],
+			"collectionPath": "/backup-destinations",
+			"description": "Where volume backups are written.",
+			"importId": ["id"],
+			"itemPath": "/backup-destinations/{id}",
+			"label": "name",
+			"type": "homerun_backup_destination"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "slug",
+					"tf": "slug",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "scope",
+					"tf": "scope",
+					"required": true,
+					"description": "global, stack or custom."
+				},
+				{
+					"kind": "string",
+					"name": "description",
+					"tf": "description"
+				},
+				{
+					"kind": "bool",
+					"name": "isPublic",
+					"tf": "is_public",
+					"default": false
+				},
+				{
+					"kind": "string",
+					"name": "stackId",
+					"tf": "stack_id",
+					"ref": "homerun_stack"
+				},
+				{
+					"kind": "objects",
+					"name": "services",
+					"tf": "services",
+					"description": "The services a custom page shows.",
+					"fields": [
+						{
+							"kind": "string",
+							"name": "serviceId",
+							"tf": "service_id",
+							"required": true,
+							"ref": "homerun_service"
+						},
+						{
+							"kind": "bool",
+							"name": "includeChildren",
+							"tf": "include_children",
+							"default": false
+						}
+					]
+				}
+			],
+			"collectionPath": "/status-pages",
+			"description": "A status page.",
+			"importId": ["id"],
+			"itemPath": "/status-pages/{id}",
+			"label": "slug",
+			"type": "homerun_status_page"
+		},
+		{
+			"adminOnly": true,
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "provider",
+					"tf": "dns_provider",
+					"forceNew": true,
+					"required": true,
+					"description": "The DNS provider's id, e.g. cloudflare."
+				},
+				{
+					"kind": "stringMap",
+					"name": "credentials",
+					"tf": "credentials",
+					"required": true,
+					"sensitive": true,
+					"writeOnly": true,
+					"description": "The provider's credential fields, by key."
+				},
+				{
+					"kind": "strings",
+					"name": "setFields",
+					"tf": "set_fields",
+					"readOnly": true
+				}
+			],
+			"collectionPath": "/dns-connections",
+			"description": "An account at a DNS provider Homerun manages records through.",
+			"importId": ["id"],
+			"itemPath": "/dns-connections/{id}",
+			"label": "name",
+			"type": "homerun_dns_connection"
+		},
+		{
+			"adminOnly": true,
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "kind",
+					"tf": "kind",
+					"forceNew": true,
+					"required": true,
+					"description": "gitlab, gitea or bitbucket. GitHub Apps are registered from the dashboard, then imported."
+				},
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "baseUrl",
+					"tf": "base_url"
+				},
+				{
+					"kind": "string",
+					"name": "clientId",
+					"tf": "client_id",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "clientSecret",
+					"tf": "client_secret",
+					"required": true,
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "bool",
+					"name": "clientSecretSet",
+					"tf": "client_secret_set",
+					"readOnly": true
+				},
+				{
+					"kind": "bool",
+					"name": "enabled",
+					"tf": "enabled",
+					"default": true
+				}
+			],
+			"collectionPath": "/git-providers",
+			"description": "A git provider users connect their account to.",
+			"importId": ["id"],
+			"itemPath": "/git-providers/{id}",
+			"label": "name",
+			"type": "homerun_git_provider"
+		},
+		{
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "registryUrl",
+					"tf": "registry_url",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "username",
+					"tf": "username",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "password",
+					"tf": "password",
+					"required": true,
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "bool",
+					"name": "passwordSet",
+					"tf": "password_set",
+					"readOnly": true
+				}
+			],
+			"collectionPath": "/build-cache-registries",
+			"description": "A registry git builds use as their layer cache.",
+			"importId": ["id"],
+			"itemPath": "/build-cache-registries/{id}",
+			"label": "name",
+			"type": "homerun_build_cache_registry"
+		},
+		{
+			"adminOnly": true,
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "endpoint",
+					"tf": "endpoint",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "region",
+					"tf": "region",
+					"default": "us-east-1"
+				},
+				{
+					"kind": "string",
+					"name": "accessKeyId",
+					"tf": "access_key_id",
+					"required": true
+				},
+				{
+					"kind": "string",
+					"name": "secretAccessKey",
+					"tf": "secret_access_key",
+					"required": true,
+					"sensitive": true,
+					"writeOnly": true
+				},
+				{
+					"kind": "string",
+					"name": "kind",
+					"tf": "kind",
+					"readOnly": true
+				}
+			],
+			"collectionPath": "/object-stores",
+			"description": "An S3-compatible object store.",
+			"importId": ["id"],
+			"itemPath": "/object-stores/{id}",
+			"label": "name",
+			"type": "homerun_object_store"
+		},
+		{
+			"adminOnly": true,
+			"attributes": [
+				{
+					"kind": "string",
+					"name": "storeId",
+					"tf": "store_id",
+					"forceNew": true,
+					"required": true,
+					"ref": "homerun_object_store"
+				},
+				{
+					"kind": "string",
+					"name": "name",
+					"tf": "name",
+					"forceNew": true,
+					"required": true
+				},
+				{
+					"kind": "int",
+					"name": "expirationDays",
+					"tf": "expiration_days",
+					"description": "Delete objects this many days after they're written."
+				}
+			],
+			"collectionPath": "/object-stores/{storeId}/buckets",
+			"description": "A bucket on an object store.",
+			"importId": ["storeId", "name"],
+			"itemPath": "/object-stores/{storeId}/buckets/{name}",
+			"label": "name",
+			"type": "homerun_bucket"
+		}
+	]
+}

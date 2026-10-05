@@ -4,6 +4,7 @@ import { UserPreferencesDTO } from "#lib/dto/user-preferences-dto.js";
 import { AccountSecurityService } from "#lib/services/account-security.service.js";
 import { AdminService } from "#lib/services/admin.service.js";
 import { effectiveSurface } from "#lib/surfaces.js";
+import { DEFAULT_UI_MODE, effectiveUiMode } from "#lib/ui-mode.js";
 import { resolve } from "$app/paths";
 
 export const load = async ({ locals, url }) => {
@@ -52,7 +53,12 @@ export const load = async ({ locals, url }) => {
 	return {
 		onboardingDone,
 		preferences: preferences.toJSON(),
+		instanceUiMode: settings.toJSON().defaultUiMode ?? DEFAULT_UI_MODE,
 		readOnly: locals.readOnly,
+		uiMode: effectiveUiMode(
+			preferences.toJSON().uiMode,
+			settings.toJSON().defaultUiMode,
+		),
 		user: locals.user,
 	};
 };

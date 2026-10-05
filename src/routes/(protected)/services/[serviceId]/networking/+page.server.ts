@@ -1,42 +1,18 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { config } from "#lib/config.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
-import { StackDTO } from "#lib/dto/stack-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
 	parsePublishedPortsField,
 	updatePortsSchema,
 } from "#lib/server/validation/service.js";
 import {
-	DOMAIN_RE,
-	defaultHostname,
-	normalizeDomains,
-	serviceHostnames,
-} from "#lib/service-domains.js";
-import { syncServiceDomainsDns } from "#lib/services/dns.service.js";
-import { DockerService } from "#lib/services/docker.service.js";
-import { encryptSecret } from "#lib/services/secrets.js";
+	ServiceSettingsError,
+	ServiceSettingsService,
+} from "#lib/services/service-settings.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
-
-/** Blank fields mean "leave unchanged" (same convention as registryPassword elsewhere); the explicit clearSsl checkbox is the only way to actually remove a stored cert/key. */
-function sslUpdateFields(
-	clearSsl: boolean,
-	cert: string | undefined,
-	key: string | undefined,
-): { customSslCertEnc?: string | null; customSslKeyEnc?: string | null } {
-	if (clearSsl) {
-		return { customSslCertEnc: null, customSslKeyEnc: null };
-	}
-	if (cert && key) {
-		return {
-			customSslCertEnc: encryptSecret(cert),
-			customSslKeyEnc: encryptSecret(key),
-		};
-	}
-	return {};
-}
 
 export const load = async ({ parent }) => {
 	await parent();
@@ -76,21 +52,14 @@ export const actions = {
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
-		const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
-
 		const formData = await request.formData();
-		const defaultDomainEnabled = formData.get("defaultDomainEnabled") === "on";
-		const fallback = defaultHostname(svc.slug, stack?.slug, config.baseDomain);
 		const rawDomains = formData.getAll("domains").map(String);
-		const domains = normalizeDomains(rawDomains).filter(
-			(domain) => domain !== fallback,
-		);
 		const rawPorts = formData.getAll("domainPorts").map(String);
 		const domainPorts: Record<string, number> = {};
 		for (const [index, raw] of rawDomains.entries()) {
 			const domain = raw.trim().toLowerCase();
 			const port = (rawPorts[index] ?? "").trim();
-			if (!(port && domains.includes(domain))) {
+			if (!(port && domain)) {
 				continue;
 			}
 			const value = Number(port);
@@ -99,53 +68,23 @@ export const actions = {
 					error: `The port for ${domain} must be a number between 1 and 65535.`,
 				});
 			}
-			if (value !== svc.containerPort) {
-				domainPorts[domain] = value;
-			}
+			domainPorts[domain] = value;
 		}
-
-		const invalid = domains.find((domain) => !DOMAIN_RE.test(domain));
-		if (invalid) {
-			return fail(400, { error: `"${invalid}" isn't a valid domain.` });
-		}
-		const taken = await ServiceDTO.domainTaken(domains, svc.id);
-		if (taken) {
-			return fail(400, {
-				error: `${taken} is already routed to another service.`,
-			});
-		}
-		const hostnames = serviceHostnames(
-			{ defaultDomainEnabled, domains, primaryDomain: null, slug: svc.slug },
-			stack?.slug,
-			config.baseDomain,
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{
+				defaultDomainEnabled: formData.get("defaultDomainEnabled") === "on",
+				domainPorts,
+				domains: rawDomains,
+				primaryDomain: String(formData.get("primaryDomain") ?? ""),
+			},
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
 		);
-		if (hostnames.length === 0) {
-			return fail(400, {
-				error:
-					"Keep at least one domain, or turn public routing off in the Network section.",
-			});
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
 		}
-		const previous = serviceHostnames(
-			svc.toJSON(),
-			stack?.slug,
-			config.baseDomain,
-		);
-		const chosen = String(formData.get("primaryDomain") ?? "")
-			.trim()
-			.toLowerCase();
-
-		await svc.update({
-			defaultDomainEnabled,
-			domainPorts,
-			domains,
-			primaryDomain: hostnames.includes(chosen) ? chosen : hostnames[0],
-		});
-		if (svc.dnsResolvable) {
-			void syncServiceDomainsDns(previous, hostnames);
-		}
-
 		logger.info(
-			`Domains updated: service=${svc.id} domains=${hostnames.join(",")} user=${locals.user.id}`,
+			`Domains updated: service=${svc.id} domains=${svc.toJSON().domains.join(",")} defaultDomain=${svc.toJSON().defaultDomainEnabled} user=${locals.user.id}`,
 		);
 		return { success: true };
 	},
@@ -163,14 +102,16 @@ export const actions = {
 		const cert = (formData.get("customSslCert") as string | null)?.trim();
 		const key = (formData.get("customSslKey") as string | null)?.trim();
 		const clearSsl = formData.get("clearSsl") === "on";
-		if (!clearSsl && Boolean(cert) !== Boolean(key)) {
-			return fail(400, {
-				error: "Paste both the certificate and its private key.",
-			});
+		const saved = await ServiceSettingsService.save(
+			svc,
+			clearSsl
+				? { customSslCert: null, customSslKey: null }
+				: { customSslCert: cert || undefined, customSslKey: key || undefined },
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
 		}
-
-		await svc.update(sslUpdateFields(clearSsl, cert, key));
-		await DockerService.syncCustomSslConfig(svc);
 
 		logger.info(
 			`Custom certificate ${clearSsl ? "removed" : "updated"}: service=${svc.id} user=${locals.user.id}`,
@@ -199,18 +140,13 @@ export const actions = {
 			});
 		}
 		const input = result.data;
-		const isHostNetwork = input.networkMode === "host";
-
-		await svc.update({
-			containerPort: input.containerPort,
-			// Host mode has no container-specific network for Traefik to
-			// route to : force this off regardless of what was submitted,
-			// same enforcement docker/containers.ts does at deploy time (this
-			// just keeps the stored value honest ahead of the next deploy).
-			dnsResolvable: isHostNetwork ? false : input.dnsResolvable,
-			networkMode: input.networkMode,
-			portProtocol: input.portProtocol,
+		const saved = await ServiceSettingsService.save(svc, input, {
+			isAdmin: Boolean(locals.isAdmin),
+			userId: locals.user.id,
 		});
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
+		}
 
 		logger.info(
 			`Ports updated: service=${svc.id} port=${input.containerPort}/${input.portProtocol} networkMode=${input.networkMode} user=${locals.user.id}`,
@@ -234,14 +170,14 @@ export const actions = {
 			return fail(400, { error: parsed.error });
 		}
 		const { ports } = parsed;
-		const taken = await ServiceDTO.publishedPortTaken(ports, svc.id);
-		if (taken) {
-			return fail(400, {
-				error: `Host port ${taken.port.hostPort}/${taken.port.protocol} is already published by ${taken.serviceName}.`,
-			});
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{ publishedPorts: ports },
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
 		}
-
-		await svc.update({ publishedPorts: ports });
 		logger.info(
 			`Published ports updated: service=${svc.id} ports=${ports.map((p) => `${p.hostPort}:${p.containerPort}/${p.protocol}`).join(",") || "none"} user=${locals.user.id}`,
 		);

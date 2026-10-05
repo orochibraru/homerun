@@ -8,6 +8,7 @@ import {
 	bucketNameProblem,
 	GARAGE_REGION,
 } from "#lib/object-storage.js";
+import type { ObjectStoreFormValues } from "#lib/server/validation/object-store.js";
 import { DOMAIN_RE } from "#lib/service-domains.js";
 import { syncCoreHostDns } from "./dns.service.ts";
 import {
@@ -279,6 +280,62 @@ class ObjectStorageServiceClass {
 	}
 
 	/**
+	 * Saves a new external store once its credentials list buckets.
+	 *
+	 * @throws When the store refuses the credentials.
+	 */
+	async createStore(
+		values: ObjectStoreFormValues,
+		userId: string,
+	): Promise<ObjectStoreDTO> {
+		try {
+			await this.testCredentials(values);
+		} catch (cause) {
+			throw new Error(
+				`Couldn't list buckets with these settings: ${message(cause)}`,
+			);
+		}
+		return await ObjectStoreDTO.create({ ...values, kind: "s3", userId });
+	}
+
+	/**
+	 * Saves an external store's edited connection once it lists buckets; a
+	 * blank secret keeps the stored one.
+	 *
+	 * @throws When the store refuses the credentials.
+	 */
+	async updateStore(
+		store: ObjectStoreDTO,
+		values: ObjectStoreFormValues,
+	): Promise<void> {
+		try {
+			await this.testCredentials({
+				...values,
+				secretAccessKey:
+					values.secretAccessKey || store.decryptSecretAccessKey(),
+			});
+		} catch (cause) {
+			throw new Error(
+				`Couldn't list buckets with these settings: ${message(cause)}`,
+			);
+		}
+		await store.update(values);
+	}
+
+	/**
+	 * The names of a store's buckets.
+	 *
+	 * @throws When the store can't be listed.
+	 */
+	async bucketNames(store: ObjectStoreDTO): Promise<string[]> {
+		return store.kind === "garage"
+			? await (await this.#admin()).bucketNames()
+			: (await (await this.client(store)).listBuckets()).map(
+					(bucket) => bucket.name,
+				);
+	}
+
+	/**
 	 * Every bucket on every store, by store then name. A store that can't be
 	 * listed (unreachable, wrong credentials, the built-in one switched off)
 	 * is reported in `failures` instead of failing the whole list.
@@ -294,12 +351,7 @@ class ObjectStorageServiceClass {
 		await Promise.all(
 			stores.map(async (store) => {
 				try {
-					const names =
-						store.kind === "garage"
-							? await (await this.#admin()).bucketNames()
-							: (await (await this.client(store)).listBuckets()).map(
-									(bucket) => bucket.name,
-								);
+					const names = await this.bucketNames(store);
 					for (const name of names) {
 						rows.push({
 							name,

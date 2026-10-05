@@ -7,6 +7,7 @@
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
+	import { visibleIn } from "#lib/ui-mode.js";
 	import { enhance } from "$app/forms";
 
 	const { data, form } = $props();
@@ -34,6 +35,10 @@
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
 	let disabled = $derived(values.healthcheckDisabled === "on");
+	const showSettings = $derived(
+		visibleIn(data.uiMode, "service/observability/health#settings") ||
+			Object.values(values).some(Boolean),
+	);
 	let submitting = $state(false);
 
 	const source = $derived.by(() => {
@@ -153,86 +158,88 @@
     </div>
   </section>
 
-  <section class="panel rounded-md">
-    <PanelHeader
-      description="Overrides for this service. Leave a field blank for the default. Redeploy for changes to take effect."
-      icon={HeartPulse}
-      title="Healthcheck settings"
-    >
-      {#snippet trailing()}
-        <SaveButton form="healthcheck-settings" pending={submitting} />
-      {/snippet}
-    </PanelHeader>
-    <form
-      id="healthcheck-settings"
-      action="?/updateHealth"
-      class="space-y-5 p-5"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Check the form for errors.",
-        loading: "Saving healthcheck settings",
-        onSettled: () => {
-          submitting = false;
-        },
-        onStart: () => {
-          submitting = true;
-        },
-        success: "Saved. Redeploy to apply.",
-      })}
-    >
-      <CheckBox
-        helperText="No healthcheck at all: the image's own is overridden, Homerun adds no port check, and a deploy doesn't wait on the service's HTTP answer. Use it for workers that don't listen on anything."
-        id="healthcheckDisabled"
-        label="Turn off healthchecks"
-        name="healthcheckDisabled"
-        bind:checked={disabled}
-      />
+  {#if showSettings}
+    <section class="panel rounded-md">
+      <PanelHeader
+        description="Overrides for this service. Leave a field blank for the default. Redeploy for changes to take effect."
+        icon={HeartPulse}
+        title="Healthcheck settings"
+      >
+        {#snippet trailing()}
+          <SaveButton form="healthcheck-settings" pending={submitting} />
+        {/snippet}
+      </PanelHeader>
+      <form
+        id="healthcheck-settings"
+        action="?/updateHealth"
+        class="space-y-5 p-5"
+        method="POST"
+        use:enhance={enhanceToast({
+          error: "Check the form for errors.",
+          loading: "Saving healthcheck settings",
+          onSettled: () => {
+            submitting = false;
+          },
+          onStart: () => {
+            submitting = true;
+          },
+          success: "Saved. Redeploy to apply.",
+        })}
+      >
+        <CheckBox
+          helperText="No healthcheck at all: the image's own is overridden, Homerun adds no port check, and a deploy doesn't wait on the service's HTTP answer. Use it for workers that don't listen on anything."
+          id="healthcheckDisabled"
+          label="Turn off healthchecks"
+          name="healthcheckDisabled"
+          bind:checked={disabled}
+        />
 
-      <div class="space-y-5 transition-opacity {disabled ? 'opacity-50' : ''}">
-        <div>
-          <label class={label} for="healthcheckCommand">Command</label>
-          <Input
-            id="healthcheckCommand"
-            name="healthcheckCommand"
-            placeholder="curl -fsS http://127.0.0.1:8080/health"
-            type="text"
-            value={values.healthcheckCommand}
-          />
-          <p class="text-text-subtle mt-1.5 text-xs">
-            Runs inside the container through the shell, exit 0 means healthy.
-            Overrides the image's own healthcheck, drives this service's uptime
-            probe and gates traffic: a new container or swarm task only gets
-            traffic once it passes. Leave blank to keep the image's; with
-            neither, Homerun waits for the port to be listening instead.
+        <div class="space-y-5 transition-opacity {disabled ? 'opacity-50' : ''}">
+          <div>
+            <label class={label} for="healthcheckCommand">Command</label>
+            <Input
+              id="healthcheckCommand"
+              name="healthcheckCommand"
+              placeholder="curl -fsS http://127.0.0.1:8080/health"
+              type="text"
+              value={values.healthcheckCommand}
+            />
+            <p class="text-text-subtle mt-1.5 text-xs">
+              Runs inside the container through the shell, exit 0 means healthy.
+              Overrides the image's own healthcheck, drives this service's uptime
+              probe and gates traffic: a new container or swarm task only gets
+              traffic once it passes. Leave blank to keep the image's; with
+              neither, Homerun waits for the port to be listening instead.
+            </p>
+            {#if errors?.healthcheckCommand}
+              <p class={errorClass}>{errors.healthcheckCommand[0]}</p>
+            {/if}
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {#each fields as field (field.id)}
+              <div>
+                <label class={label} for={field.id}>{field.label}</label>
+                <Input
+                  id={field.id}
+                  min={field.min}
+                  name={field.id}
+                  placeholder={String(field.placeholder)}
+                  type="number"
+                  value={values[field.id]}
+                />
+                {#if errors?.[field.id]}
+                  <p class={errorClass}>{errors[field.id][0]}</p>
+                {/if}
+              </div>
+            {/each}
+          </div>
+          <p class="text-text-subtle text-xs">
+            Interval, timeout and retries also apply to Homerun's generated port
+            check; its start period follows the deploy's rollout window instead.
           </p>
-          {#if errors?.healthcheckCommand}
-            <p class={errorClass}>{errors.healthcheckCommand[0]}</p>
-          {/if}
         </div>
-
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {#each fields as field (field.id)}
-            <div>
-              <label class={label} for={field.id}>{field.label}</label>
-              <Input
-                id={field.id}
-                min={field.min}
-                name={field.id}
-                placeholder={String(field.placeholder)}
-                type="number"
-                value={values[field.id]}
-              />
-              {#if errors?.[field.id]}
-                <p class={errorClass}>{errors[field.id][0]}</p>
-              {/if}
-            </div>
-          {/each}
-        </div>
-        <p class="text-text-subtle text-xs">
-          Interval, timeout and retries also apply to Homerun's generated port
-          check; its start period follows the deploy's rollout window instead.
-        </p>
-      </div>
-    </form>
-  </section>
+      </form>
+    </section>
+  {/if}
 </div>

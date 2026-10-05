@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Network } from "@lucide/svelte";
+	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
@@ -10,6 +11,7 @@
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
 	import { isDatabaseImage } from "#lib/service-link.js";
+	import { visibleIn } from "#lib/ui-mode.js";
 	import { errorClass, label } from "./field-classes";
 	import type { WizardData } from "./wizard-types";
 
@@ -118,40 +120,45 @@
       {/if}
     {/if}
 
-    <div class="grid gap-4 sm:grid-cols-2">
-      <div>
-        <label class={label} for="networkMode">Network mode</label>
-        <SelectRoot name="networkMode" type="single" bind:value={networkMode}>
-          <SelectTrigger class="w-full" id="networkMode">
-            {networkMode === "host" ? "Host" : "Bridge"}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem label="Bridge" value="bridge" />
-            <SelectItem label="Host" value="host" />
-          </SelectContent>
-        </SelectRoot>
-        <p class="mt-1 text-xs text-text-subtle">
-          Host shares the machine's network namespace : needed for
-          mDNS/SSDP apps, and not routable by Traefik.
-        </p>
+    <AdvancedDisclosure
+      collapsible={!visibleIn(data.uiMode, "services/new#network")}
+      description="Network mode and protocol"
+    >
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class={label} for="networkMode">Network mode</label>
+          <SelectRoot name="networkMode" type="single" bind:value={networkMode}>
+            <SelectTrigger class="w-full" id="networkMode">
+              {networkMode === "host" ? "Host" : "Bridge"}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem label="Bridge" value="bridge" />
+              <SelectItem label="Host" value="host" />
+            </SelectContent>
+          </SelectRoot>
+          <p class="mt-1 text-xs text-text-subtle">
+            Host shares the machine's network namespace : needed for
+            mDNS/SSDP apps, and not routable by Traefik.
+          </p>
+        </div>
+        <div>
+          <label class={label} for="portProtocol">Protocol</label>
+          <SelectRoot name="portProtocol" type="single" bind:value={portProtocol}>
+            <SelectTrigger class="w-full" id="portProtocol">
+              {portProtocol === "udp"
+              ? "UDP"
+              : portProtocol === "both"
+                ? "Both"
+                : "TCP"}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem label="TCP" value="tcp" />
+              <SelectItem label="UDP" value="udp" />
+              <SelectItem label="Both" value="both" />
+            </SelectContent>
+          </SelectRoot>
+        </div>
       </div>
-      <div>
-        <label class={label} for="portProtocol">Protocol</label>
-        <SelectRoot name="portProtocol" type="single" bind:value={portProtocol}>
-          <SelectTrigger class="w-full" id="portProtocol">
-            {portProtocol === "udp"
-            ? "UDP"
-            : portProtocol === "both"
-              ? "Both"
-              : "TCP"}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem label="TCP" value="tcp" />
-            <SelectItem label="UDP" value="udp" />
-            <SelectItem label="Both" value="both" />
-          </SelectContent>
-        </SelectRoot>
-      </div>
-    </div>
+    </AdvancedDisclosure>
   </div>
 </section>

@@ -1,8 +1,11 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
-import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { statusPageSchema } from "#lib/server/validation/status-page.js";
+import {
+	StatusPageSettingsError,
+	StatusPageSettingsService,
+} from "#lib/services/status-page-settings.service.js";
 import {
 	picksFromForm,
 	statusPageServiceOptions,
@@ -33,31 +36,21 @@ export const actions = {
 				errors: parsed.error.flatten().fieldErrors,
 			});
 		}
-		const fieldErrors: Record<string, string[]> = {};
-		if (await StatusPageDTO.slugTaken(parsed.data.slug)) {
-			fieldErrors.slug = ["That slug is already taken."];
+		try {
+			const page = await StatusPageSettingsService.create(
+				{
+					...parsed.data,
+					picks: picksFromForm(form),
+					stackId: parsed.data.stackId || null,
+				},
+				locals.user.id,
+			);
+			throw redirect(303, `${resolve("status-pages")}/${page.id}`);
+		} catch (err) {
+			if (err instanceof StatusPageSettingsError) {
+				return fail(400, { errors: { [err.field]: [err.message] } });
+			}
+			throw err;
 		}
-		if (parsed.data.scope === "stack" && !parsed.data.stackId) {
-			fieldErrors.stackId = ["Pick the stack this page covers."];
-		}
-		if (Object.keys(fieldErrors).length > 0) {
-			return fail(400, { errors: fieldErrors });
-		}
-
-		const page = await StatusPageDTO.create({
-			description: parsed.data.description || null,
-			isPublic: parsed.data.isPublic,
-			name: parsed.data.name,
-			stackId: parsed.data.scope === "stack" ? parsed.data.stackId : null,
-			scope: parsed.data.scope,
-			slug: parsed.data.slug,
-			userId: locals.user.id,
-		});
-
-		if (parsed.data.scope === "custom") {
-			await page.setPicks(picksFromForm(form));
-		}
-
-		throw redirect(303, `${resolve("status-pages")}/${page.id}`);
 	},
 };

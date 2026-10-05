@@ -4,6 +4,9 @@
 
 `/` (Overview) is the landing page after sign-in:
 
+- **Deploy an app**, in [simple mode](ui-modes.md) only: popular templates with
+  a **Quick Deploy** button each, above everything else.
+
 - **Service counts**, how many services the instance has and how many are
   running.
 - **Host resources**, live CPU, memory, disk and (if an NVIDIA card with

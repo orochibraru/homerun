@@ -1,11 +1,11 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { StackDTO } from "#lib/dto/stack-dto.js";
-import { Logger } from "#lib/logger.js";
+import {
+	StackSettingsError,
+	StackSettingsService,
+} from "#lib/services/stack-settings.service.js";
 import { stackPath } from "#lib/stack-tree.js";
 import { resolve } from "$app/paths";
-
-const logger = new Logger("Stacks");
-const SLUG_RE = /^[a-z0-9-]{1,63}$/;
 
 export const load = async ({ parent, url }) => {
 	await parent();
@@ -32,43 +32,27 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const name = (formData.get("name") as string | null)?.trim() ?? "";
-		const slug = (formData.get("slug") as string | null)?.trim() ?? "";
-		const description =
-			(formData.get("description") as string | null)?.trim() || null;
 		const parentId = (formData.get("parentId") as string | null) || null;
-		const parentStack = parentId ? await StackDTO.get(parentId) : null;
-		if (parentId && !parentStack) {
-			return fail(400, { error: "That parent stack no longer exists." });
+		try {
+			await StackSettingsService.create(
+				{
+					description: formData.get("description") as string | null,
+					name: (formData.get("name") as string | null) ?? "",
+					parentId,
+					slug: (formData.get("slug") as string | null)?.trim() ?? "",
+				},
+				locals.user.id,
+			);
+		} catch (err) {
+			if (err instanceof StackSettingsError) {
+				return fail(400, { error: err.message });
+			}
+			throw err;
 		}
-
-		if (!name) {
-			return fail(400, { error: "Name is required." });
-		}
-		if (!SLUG_RE.test(slug)) {
-			return fail(400, {
-				error: "Slug must be lowercase letters, numbers, and hyphens only.",
-			});
-		}
-		if (await StackDTO.slugTaken(slug)) {
-			return fail(400, { error: "That slug is already in use." });
-		}
-
-		const stack = await StackDTO.create({
-			description,
-			name,
-			parentId: parentStack?.id ?? null,
-			slug,
-			userId: locals.user.id,
-		});
-
-		logger.info(
-			`Stack created: stack=${stack.id} parent=${parentStack?.id ?? "none"} user=${locals.user.id}`,
-		);
 		redirect(
 			303,
-			parentStack
-				? resolve("/(protected)/stacks/[stackId]", { stackId: parentStack.id })
+			parentId
+				? resolve("/(protected)/stacks/[stackId]", { stackId: parentId })
 				: resolve("stacks"),
 		);
 	},

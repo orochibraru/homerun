@@ -31,18 +31,45 @@ export function splitList(raw: string | null): string[] {
 }
 
 /**
+ * Why a login-wall policy can't be saved, or null: a method that isn't
+ * enabled on this instance, a wall with no method, a wall without a
+ * dashboard URL to redirect to, or a malformed email pattern.
+ */
+export function loginWallPolicyProblem(
+	policy: LoginWallPolicy,
+	available: LoginWallAvailability,
+	dashboardOrigin: string | null | undefined,
+): string | null {
+	const unavailable = policy.authProviders.find(
+		(method) => !signInMethodAvailable(method, available),
+	);
+	if (unavailable) {
+		return `"${unavailable}" isn't an enabled sign-in method on this instance.`;
+	}
+	if (policy.authRequired && policy.authProviders.length === 0) {
+		return "Pick at least one sign-in method, otherwise nobody (including you) can get in.";
+	}
+	if (policy.authRequired && !dashboardOrigin) {
+		return "Set the Dashboard URL under Settings → General first : the login wall redirects visitors to this instance's own sign-in page, so Homerun has to know its own public URL.";
+	}
+	const badEmail = policy.authAllowedEmails.find(
+		(entry) => !EMAIL_PATTERN_RE.test(entry),
+	);
+	return badEmail
+		? `"${badEmail}" isn't an email address or a *@domain pattern.`
+		: null;
+}
+
+/**
  * Reads a login-wall form (the checkbox, sign-in methods, allowed users,
- * emails and groups) into a policy, or the reason it can't be saved: a
- * method that isn't enabled on this instance, a wall with no method, a wall
- * without a dashboard URL to redirect to, or a malformed email pattern.
+ * emails and groups) into a policy, or the reason it can't be saved (see
+ * `loginWallPolicyProblem`).
  */
 export function parseLoginWallForm(
 	formData: FormData,
 	available: LoginWallAvailability,
 	dashboardOrigin: string | null | undefined,
 ): { error: string } | { policy: LoginWallPolicy } {
-	const authRequired = formData.get("authRequired") === "on";
-	const methods = [...new Set(formData.getAll("authProvider").map(String))];
 	const policy: LoginWallPolicy = {
 		authAllowedEmails: splitList(
 			formData.get("authAllowedEmails") as string | null,
@@ -53,38 +80,11 @@ export function parseLoginWallForm(
 		authAllowedUserIds: [
 			...new Set(formData.getAll("authAllowedUserId").map(String)),
 		],
-		authProviders: methods,
-		authRequired,
+		authProviders: [...new Set(formData.getAll("authProvider").map(String))],
+		authRequired: formData.get("authRequired") === "on",
 	};
-	const unavailable = methods.find(
-		(method) => !signInMethodAvailable(method, available),
-	);
-	if (unavailable) {
-		return {
-			error: `"${unavailable}" isn't an enabled sign-in method on this instance.`,
-		};
-	}
-	if (authRequired && methods.length === 0) {
-		return {
-			error:
-				"Pick at least one sign-in method, otherwise nobody (including you) can get in.",
-		};
-	}
-	if (authRequired && !dashboardOrigin) {
-		return {
-			error:
-				"Set the Dashboard URL under Settings → General first : the login wall redirects visitors to this instance's own sign-in page, so Homerun has to know its own public URL.",
-		};
-	}
-	const badEmail = policy.authAllowedEmails.find(
-		(entry) => !EMAIL_PATTERN_RE.test(entry),
-	);
-	if (badEmail) {
-		return {
-			error: `"${badEmail}" isn't an email address or a *@domain pattern.`,
-		};
-	}
-	return { policy };
+	const error = loginWallPolicyProblem(policy, available, dashboardOrigin);
+	return error ? { error } : { policy };
 }
 
 /** Which sign-in methods a login wall may use on this instance right now. */

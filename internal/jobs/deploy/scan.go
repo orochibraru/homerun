@@ -12,6 +12,7 @@ import (
 
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/jobs/imagescan"
+	"github.com/orochibraru/homerun/internal/tracing"
 )
 
 const (
@@ -156,6 +157,13 @@ func (r *run) scanTargets(ctx context.Context, ref, digest string) error {
 // deploy goes ahead unless a successful scan is required. Mirrors
 // ImageScanService.scan.
 func (r *run) scan(ctx context.Context, targets []ScanTarget, digest string) error {
+	return tracing.Stage(ctx, "scan", func(ctx context.Context) error {
+		return r.scanGate(ctx, targets, digest)
+	})
+}
+
+// scanGate is scan's body, run inside its trace stage.
+func (r *run) scanGate(ctx context.Context, targets []ScanTarget, digest string) error {
 	spec := r.spec.Image.Scan
 	var failures []string
 	for _, target := range targets {

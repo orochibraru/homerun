@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UI_MODES } from "#lib/ui-mode.js";
 
 // Same "" → undefined preprocessing precedent as validation/service.ts's
 // optionalNumber : an empty <input type="number"> still submits "" in
@@ -28,6 +29,7 @@ export const onboardingSchema = z
 		cloudflareApiToken: z.string().optional(),
 		cloudflareEnabled: checkbox,
 		cloudflareZoneId: z.string().optional(),
+		defaultUiMode: z.enum(UI_MODES),
 		// Optional, not required : real, tested-in-review bug this replaced.
 		// Both fields were `requiredText`, pre-filled from the *current*
 		// effective default (envDefaults, see +page.svelte), so finishing

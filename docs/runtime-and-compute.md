@@ -1,5 +1,9 @@
 # Runtime and compute
 
+Advanced mode: [simple mode](ui-modes.md) hides the Runtime section of a
+service's Container tab. Everything here keeps working either way, and a hidden
+page still opens from a link.
+
 How a service's container starts, what it can reach on the host, and how much
 CPU and memory it gets.
 

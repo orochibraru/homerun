@@ -1,7 +1,15 @@
 <script lang="ts">
-	import { BarChart3, Bug, HeartPulse, ListChecks } from "@lucide/svelte";
+	import {
+		Activity,
+		BarChart3,
+		Bug,
+		HeartPulse,
+		ListChecks,
+	} from "@lucide/svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
+	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 
 	const { children, data } = $props();
 
@@ -11,6 +19,7 @@
 				serviceId: data.service.id,
 			}),
 			icon: BarChart3,
+			id: "service/observability/monitoring",
 			label: "Monitoring",
 		},
 		{
@@ -18,6 +27,7 @@
 				serviceId: data.service.id,
 			}),
 			icon: ListChecks,
+			id: "service/observability/events",
 			label: "Events",
 		},
 		{
@@ -25,18 +35,31 @@
 				serviceId: data.service.id,
 			}),
 			icon: Bug,
+			id: "service/observability/errors",
 			label: "Errors",
+		},
+		{
+			href: resolve("/(protected)/services/[serviceId]/observability/traces", {
+				serviceId: data.service.id,
+			}),
+			icon: Activity,
+			id: "service/observability/traces",
+			label: "Traces",
 		},
 		{
 			href: resolve("/(protected)/services/[serviceId]/observability/health", {
 				serviceId: data.service.id,
 			}),
 			icon: HeartPulse,
+			id: "service/observability/health",
 			label: "Health",
 		},
 	]);
 </script>
 
-<SectionNav label="Observability sections" {sections} />
+<SectionNav
+  label="Observability sections"
+  sections={visibleItems(data.uiMode, sections, page.url.pathname)}
+/>
 
 {@render children()}

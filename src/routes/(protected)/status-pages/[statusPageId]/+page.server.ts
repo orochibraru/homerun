@@ -6,6 +6,10 @@ import { BEAT_WINDOW, UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 import { dashboardOrigin } from "#lib/server/canonical-origin.js";
 import { statusPageSchema } from "#lib/server/validation/status-page.js";
 import {
+	StatusPageSettingsError,
+	StatusPageSettingsService,
+} from "#lib/services/status-page-settings.service.js";
+import {
 	picksFromForm,
 	statusPageServiceOptions,
 } from "#lib/status-page-members.js";
@@ -68,27 +72,17 @@ export const actions = {
 				errors: parsed.error.flatten().fieldErrors,
 			});
 		}
-		const fieldErrors: Record<string, string[]> = {};
-		if (await StatusPageDTO.slugTaken(parsed.data.slug, page.id)) {
-			fieldErrors.slug = ["That slug is already taken."];
-		}
-		if (parsed.data.scope === "stack" && !parsed.data.stackId) {
-			fieldErrors.stackId = ["Pick the stack this page covers."];
-		}
-		if (Object.keys(fieldErrors).length > 0) {
-			return fail(400, { errors: fieldErrors });
-		}
-
-		await page.update({
-			description: parsed.data.description || null,
-			isPublic: parsed.data.isPublic,
-			name: parsed.data.name,
-			stackId: parsed.data.scope === "stack" ? parsed.data.stackId : null,
-			scope: parsed.data.scope,
-			slug: parsed.data.slug,
-		});
-		if (parsed.data.scope === "custom") {
-			await page.setPicks(picksFromForm(form));
+		try {
+			await StatusPageSettingsService.update(page, {
+				...parsed.data,
+				picks: picksFromForm(form),
+				stackId: parsed.data.stackId || null,
+			});
+		} catch (err) {
+			if (err instanceof StatusPageSettingsError) {
+				return fail(400, { errors: { [err.field]: [err.message] } });
+			}
+			throw err;
 		}
 		return { success: true };
 	},

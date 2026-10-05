@@ -14,6 +14,7 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { appearanceCss } from "#lib/palettes.js";
 	import { DEFAULT_SURFACE, effectiveSurface } from "#lib/surfaces.js";
+	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { allNavItems } from "./nav-items";
@@ -81,8 +82,12 @@
 
 	const navItemGroups = $derived(
 		groupByCategory(
-			allNavItems.filter(
-				(item) => !item.adminOnly || data.user?.role === "admin",
+			visibleItems(
+				data.uiMode,
+				allNavItems
+					.filter((item) => !item.adminOnly || data.user?.role === "admin")
+					.map((item) => ({ ...item, id: item.href })),
+				page.url.pathname,
 			),
 		),
 	);
@@ -245,7 +250,7 @@
       {/if}
       <GlobalSearch isAdmin={data.user?.role === "admin"} />
       <NotificationBell />
-      <ProfileMenu user={data.user} />
+      <ProfileMenu uiMode={data.uiMode} user={data.user} />
     </header>
 
     <!-- Page content -->

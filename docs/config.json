@@ -10,6 +10,11 @@
 				{ "slug": "showcase", "icon": "images" },
 				{ "slug": "configuration", "icon": "settings-2" },
 				{
+					"slug": "ui-modes",
+					"title": "Simple and advanced modes",
+					"icon": "toggle-left"
+				},
+				{
 					"slug": "faq-and-limitations",
 					"title": "FAQ",
 					"icon": "circle-question-mark"
@@ -75,6 +80,7 @@
 				{ "slug": "swarm-mode", "icon": "layers" },
 				{ "slug": "observability", "icon": "activity" },
 				{ "slug": "error-tracking", "icon": "bug" },
+				{ "slug": "tracing", "icon": "waypoints" },
 				{ "slug": "scheduling", "icon": "calendar-clock" }
 			]
 		},
@@ -130,7 +136,12 @@
 				{ "slug": "notifications", "icon": "bell" },
 				{ "slug": "status-pages", "icon": "heart-pulse" },
 				{ "slug": "upgrading", "icon": "circle-arrow-up" },
-				{ "slug": "api-and-cli", "icon": "terminal" }
+				{ "slug": "api-and-cli", "icon": "terminal" },
+				{
+					"slug": "infrastructure-as-code",
+					"title": "Infrastructure as code",
+					"icon": "file-code-2"
+				}
 			]
 		}
 	]

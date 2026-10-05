@@ -6,12 +6,13 @@ import { Logger } from "#lib/logger.js";
 import { normalizeEnvironmentName } from "#lib/release-channels.js";
 import { listIconLibrary } from "#lib/server/icon-library.js";
 import { updateGeneralSchema } from "#lib/server/validation/service.js";
-import { iconProblem } from "#lib/service-icon.js";
 import { runtimeOptionsFrom } from "#lib/service-runtime.js";
-import { CronService } from "#lib/services/cron.service.js";
 import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
 import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
-import { TEMPLATE_CATEGORIES } from "#lib/template-categories.js";
+import {
+	ServiceSettingsError,
+	ServiceSettingsService,
+} from "#lib/services/service-settings.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
@@ -69,16 +70,14 @@ export const actions = {
 		const formData = await request.formData();
 		const category = String(formData.get("category") ?? "");
 		const icon = String(formData.get("icon") ?? "");
-		if (category && !TEMPLATE_CATEGORIES.some((c) => c.value === category)) {
-			return fail(400, { error: "Pick a type from the list." });
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{ category: category || null, icon: icon || null },
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
 		}
-		const bundled = (await listIconLibrary()).map((i) => i.icon);
-		const problem = icon === svc.icon ? null : iconProblem(icon, bundled);
-		if (problem) {
-			return fail(400, { error: problem });
-		}
-
-		await svc.update({ category: category || null, icon: icon || null });
 		logger.info(
 			`Service identity updated: service=${svc.id} category=${category || "none"} icon=${icon.startsWith("data:") ? "upload" : icon || "none"} user=${locals.user.id}`,
 		);
@@ -93,21 +92,16 @@ export const actions = {
 			return fail(404, { error: "Service not found." });
 		}
 
-		const formData = await request.formData();
-		const rawStackId = formData.get("stackId") as string | null;
-
-		// Empty selection means "ungrouped" : otherwise confirm the target
-		// stack is actually the user's own, never trust the form value alone.
-		let stackId: string | null = null;
-		if (rawStackId) {
-			const stack = await StackDTO.get(rawStackId);
-			if (!stack) {
-				return fail(400, { error: "That stack wasn't found." });
-			}
-			stackId = stack.id;
+		const stackId =
+			((await request.formData()).get("stackId") as string | null) || null;
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{ stackId },
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
 		}
-
-		await svc.update({ stackId });
 		logger.info(
 			`Service moved: service=${svc.id} stack=${stackId ?? "none"} user=${locals.user.id}`,
 		);
@@ -231,14 +225,14 @@ export const actions = {
 		const cronSchedule =
 			(formData.get("cronSchedule") as string | null)?.trim() ?? "";
 
-		if (cronEnabled && !CronService.parseCronSchedule(cronSchedule)) {
-			return fail(400, {
-				cronError:
-					'Invalid schedule : use standard 5-field cron syntax (e.g. "0 3 * * *").',
-			});
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{ cronEnabled, cronSchedule: cronSchedule || null },
+			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { cronError: saved.message });
 		}
-
-		await svc.update({ cronEnabled, cronSchedule: cronSchedule || null });
 		logger.info(
 			`Cron schedule updated: service=${svc.id} enabled=${cronEnabled} schedule="${cronSchedule}" user=${locals.user.id}`,
 		);

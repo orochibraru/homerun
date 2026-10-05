@@ -86,8 +86,8 @@ bump it with
 bun run dev              # scripts/dev.ts: vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change; `--only=app`/`--only=worker` runs one half alone
 bun run build            # bun run gen && vite build
 bun run start            # ./build/server (the standalone binary adapter-bun compiles, serve the built app)
-bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts and homerun.schema.json from source, CI fails if the result isn't committed
-bun run check            # svelte-check --fail-on-warnings (no `--tsgo`: tsgo can't resolve `.svelte` files through `#lib` subpath imports), tsc over scripts/, go vet, and golangci-lint (`go tool -modfile=tools/go/go.mod`), the whole gate in one command, see `.agents/notes/testing.md`
+bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts, homerun.schema.json and the Terraform provider's spec.json from source, CI fails if the result isn't committed
+bun run check            # svelte-check --fail-on-warnings (no `--tsgo`: tsgo can't resolve `.svelte` files through `#lib` subpath imports), tsc over scripts/, go vet, and golangci-lint (`go tool -modfile=tools/go/go.mod`), the same two over the Terraform provider's own module (`go -C terraform/provider`), the whole gate in one command, see `.agents/notes/testing.md`
 bun run lint             # markdownlint-cli2, scripts/lint-tailwind.ts (Tailwind class sorting) and oxlint --type-aware --deny-warnings (`.oxlintrc.json`; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
 bun run lint:fix         # the --fix half of all three
 bun run lint:ai          # agnix --strict over CLAUDE.md, AGENTS.md, .agents/ and .claude/ (`.agnix.toml` disables its prose heuristics), also a prek hook; agnix is a trusted dependency because its postinstall downloads the binary
@@ -100,7 +100,7 @@ docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.
 hooks from `.pre-commit-config.yaml`) run on `bun install`.
 
 ```bash
-bun run test              # svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/... then bun --config=bunfig.unit.toml test tests/unit; unit only, no Postgres/Docker needed
+bun run test              # svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/..., go -C terraform/provider test ./..., then bun --config=bunfig.unit.toml test tests/unit; unit only, no Postgres/Docker needed
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/worker, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build first, see .agents/notes/testing.md
 bun run screenshots       # regenerate docs/images/ through playwright.screenshots.config.ts, same prerequisites as test:e2e plus a Docker daemon (it really deploys); CI reruns it and commits the result after every stable release
@@ -455,7 +455,7 @@ to reintroduce a fixed bug.
 | `ui.md`                     | `layout.css`, theming/tokens, `src/lib/components/`, list-page toolkit, page width, the `$derived` push/splice bug, appearance prefs                                  |
 | `docker.md`                 | `DockerService` and its mixins, containers/networks/volumes, swarm mode, network mode, web terminal, build servers, custom SSL, Docker Cleanup, the built-in registry |
 | `auth.md`                   | better-auth, sign-in/sign-up, OAuth providers, Homerun as an OIDC provider, `/authentication`, the per-app login wall, user roles/invites, onboarding                 |
-| `api-and-cli.md`            | `src/routes/api/v1/`, the OpenAPI document, `cmd/cli/`, long-running requests and Bun's idle timeout                                                                  |
+| `api-and-cli.md`            | `src/routes/api/v1/`, the OpenAPI document, `cmd/cli/`, long-running requests and Bun's idle timeout, the Terraform provider and `/iac`                               |
 | `services-and-templates.md` | The deploy pipeline, compose import, service links, templates and template links, git-based builds, git providers, SSE deploy progress, remote functions              |
 | `jobs-and-queue.md`         | The `job` table and worker, cron schedulers, user cron jobs, S3 backups                                                                                               |
 | `worker.md`                 | The Go worker (`cmd/worker`, `internal/worker`, `internal/jobs`), the job stage protocol, porting a job type to Go, the Docker control API (`internal/workerapi`)     |

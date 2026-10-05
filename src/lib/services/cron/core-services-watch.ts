@@ -14,6 +14,7 @@ import { type WedgedContainer, WedgedReporter } from "../docker/wedged.ts";
 import { DockerService } from "../docker.service.ts";
 import { ObjectStorageService } from "../object-storage.service.ts";
 import { AUTH_CHECK_ALIAS } from "../self-update/compose-target.ts";
+import { TracingService } from "../tracing.service.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
 
 const TICK_MS = 15_000;
@@ -125,6 +126,9 @@ export class CoreServicesWatch extends BaseScheduler {
 		}
 		await ObjectStorageService.reassertBuiltin().catch((err) => {
 			this.logger.warn("Couldn't re-assert the built-in object store", err);
+		});
+		await TracingService.reassertCollector().catch((err) => {
+			this.logger.warn("Couldn't re-assert the OpenTelemetry collector", err);
 		});
 		const failures = await DockerService.reassertTraefikConfig(
 			traefikExpectation(settings.orchestrationMode === "swarm"),

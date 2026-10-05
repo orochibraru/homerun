@@ -2,10 +2,12 @@ import { error, fail, redirect } from "@sveltejs/kit";
 import { ErrorEventDTO } from "#lib/dto/error-event-dto.js";
 import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { TraceSpanDTO } from "#lib/dto/trace-span-dto.js";
 import { frameLinks } from "#lib/error-tracking/frame-links.js";
 import { Logger } from "#lib/logger.js";
 import { issueStatusFormSchema } from "#lib/server/validation/error-tracking.js";
 import { ErrorTrackingService } from "#lib/services/error-tracking.service.js";
+import { normalizeTraceId } from "#lib/tracing/list.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("ErrorTracking");
@@ -24,10 +26,12 @@ export const load = async ({ params, parent }) => {
 		error(404, "Event not found");
 	}
 	const payload = event?.toJSON().payload ?? null;
-	const [neighbours, usersAffected, source] = await Promise.all([
+	const traceId = normalizeTraceId(payload?.contexts.trace?.trace_id);
+	const [neighbours, usersAffected, source, traced] = await Promise.all([
 		event?.neighbours() ?? null,
 		issue.usersAffected(),
 		payload ? ErrorTrackingService.sourceRepo(service, payload) : null,
+		traceId ? TraceSpanDTO.inScope({ serviceId: service.id }, traceId) : false,
 	]);
 	return {
 		event: event ? { ...event.toJSON(), payload: undefined } : null,
@@ -36,6 +40,13 @@ export const load = async ({ params, parent }) => {
 		neighbours,
 		payload,
 		source,
+		traceHref:
+			traced && traceId
+				? resolve(
+						"/(protected)/services/[serviceId]/observability/traces/[traceId]",
+						{ serviceId: service.id, traceId },
+					)
+				: null,
 		usersAffected,
 	};
 };

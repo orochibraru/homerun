@@ -82,6 +82,7 @@ export type NotificationEvent =
 	| "backup.failed"
 	| "backup.succeeded"
 	| "cron_job.failed"
-	| "cron_job.succeeded";
+	| "cron_job.succeeded"
+	| "security.ip_banned";
 
 export type PullPolicy = "always" | "missing" | "never";

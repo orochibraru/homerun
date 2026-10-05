@@ -13,6 +13,7 @@ import {
 	nullableText,
 } from "#lib/server/validation/instance-settings-form.js";
 import { AccountSecurityService } from "#lib/services/account-security.service.js";
+import { isUiMode } from "#lib/ui-mode.js";
 import { isUpdateChannel } from "#lib/update-channel.js";
 import { resolve } from "$app/paths";
 
@@ -115,6 +116,26 @@ export const actions = {
 			`Update channel set: channel=${channel} user=${locals.user.id}`,
 		);
 		return { savedSection: "channel", success: true };
+	},
+
+	updateUiMode: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve(""));
+		}
+		const mode = (await request.formData()).get("defaultUiMode");
+		if (!isUiMode(mode)) {
+			return fail(400, {
+				error: "Pick simple or advanced.",
+				savedSection: "uiMode",
+			});
+		}
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateDefaultUiMode(mode);
+		logger.info(`Default UI mode set: mode=${mode} user=${locals.user.id}`);
+		return { savedSection: "uiMode", success: true };
 	},
 
 	updateResources: async ({ request, locals }) => {

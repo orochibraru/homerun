@@ -1,10 +1,11 @@
 # Observability
 
 The **Observability** tab is where a service tells you how it's doing. It has
-four sections: **Monitoring**, its traffic, response time, error rate, uptime
+five sections: **Monitoring**, its traffic, response time, error rate, uptime
 and resource use over a range; **Events**, its uptime probes, live logs, failed
 deploys and the errors Homerun logged about it; **Errors**, the exceptions your
-app reports (see [Error tracking](error-tracking.md)); and **Health**, the
+app reports (see [Error tracking](error-tracking.md)); **Traces**, its
+OpenTelemetry traces (see [Tracing](tracing.md)); and **Health**, the
 healthcheck the running container was created with (see
 [Services](services.md#health)).
 
@@ -49,7 +50,10 @@ and uptime summed over all of them, and CPU and memory summed minute by minute,
 so the peak is the stack's real peak rather than the sum of each service's.
 **Monitoring** in the sidebar covers every service on the instance, with this
 host's own CPU and memory instead of the sum of the services'. Both add a **By
-service** table, busiest first, that links to each service's own monitoring.
+service** table, busiest first, that links to each service's own monitoring. The
+sidebar's Monitoring page also has a **Traces** tab, the traces of Homerun's own
+background jobs, and for admins a **Settings** tab for the OpenTelemetry
+collector (see [Tracing](tracing.md)).
 
 ![A stack's Monitoring tab, with its By service table](images/stack-monitoring.webp)
 

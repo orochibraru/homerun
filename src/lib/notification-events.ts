@@ -148,6 +148,13 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 		group: "Scheduled tasks",
 		label: "Cron job succeeded",
 	},
+	{
+		description:
+			"An address was banned for requesting services' blocked paths too often.",
+		event: "security.ip_banned",
+		group: "Security",
+		label: "IP banned",
+	},
 ];
 
 export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
@@ -187,6 +194,7 @@ export function isFailureEvent(event: NotificationEvent): boolean {
 		event === "image.vulnerable" ||
 		event === "resource.warning" ||
 		event === "resource.critical" ||
+		event === "security.ip_banned" ||
 		event.startsWith("error.issue.")
 	);
 }

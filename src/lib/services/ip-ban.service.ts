@@ -19,6 +19,8 @@ import {
 	BLOCKED_PROOF_HEADER,
 	validBlockedProof,
 } from "./docker/error-pages.ts";
+import { NotificationChannelService } from "./notification-channel.service.ts";
+import { ipBanMessage } from "./notification-messages.ts";
 
 /** Counts requests to services' blocked paths per client address and bans the ones that keep trying, through a Traefik file-provider router. */
 class IpBanServiceClass {
@@ -57,17 +59,26 @@ class IpBanServiceClass {
 		if (!shouldBan({ hits, ip, settings })) {
 			return;
 		}
-		const banned = await IpBanDTO.ban({
-			expiresAt: banExpiry(settings, now),
-			host,
-			ip,
-			reason: `${hits} blocked requests in ${settings.windowMinutes} min${path ? `, last ${path}` : ""}`,
-		});
+		const expiresAt = banExpiry(settings, now);
+		const reason = `${hits} blocked requests in ${settings.windowMinutes} min${path ? `, last ${path}` : ""}`;
+		const banned = await IpBanDTO.ban({ expiresAt, host, ip, reason });
 		if (banned) {
 			this.logger.warn(
 				`Banned ${ip} after ${hits} blocked requests${host ? ` on ${host}` : ""}`,
 			);
 			await this.sync();
+			NotificationChannelService.notify(
+				ipBanMessage(
+					{
+						expiresAt,
+						host,
+						ip,
+						origin: config.auth.origin ?? null,
+						reason,
+					},
+					now.toISOString(),
+				),
+			);
 		}
 	}
 

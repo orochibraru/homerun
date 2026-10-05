@@ -11,6 +11,10 @@ import {
 	DEFAULT_BACKUP_SCHEDULE,
 } from "#lib/server/volume-backup-form.js";
 import { restoreVolumeBackup } from "#lib/services/backup/volume-restore.js";
+import {
+	VolumeSettingsError,
+	VolumeSettingsService,
+} from "#lib/services/volume-settings.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
@@ -233,31 +237,8 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const name = (formData.get("name") as string | null)?.trim() ?? "";
-		const kind = formData.get("kind") as string | null;
-		const source = (formData.get("source") as string | null)?.trim() ?? "";
-		const description =
-			(formData.get("description") as string | null)?.trim() || null;
 		const containerPath =
 			(formData.get("containerPath") as string | null)?.trim() ?? "";
-
-		if (!name) {
-			return fail(400, { error: "Name is required." });
-		}
-		if (kind !== "bind" && kind !== "volume") {
-			return fail(400, { error: "Choose a volume type." });
-		}
-		if (!source) {
-			return fail(400, {
-				error:
-					kind === "bind"
-						? "Host path is required."
-						: "Volume name is required.",
-			});
-		}
-		if (kind === "bind" && !source.startsWith("/")) {
-			return fail(400, { error: "Host path must be absolute (start with /)." });
-		}
 		if (containerPath && !containerPath.startsWith("/")) {
 			return fail(400, {
 				error: "Mount path must be absolute (start with /).",
@@ -268,33 +249,38 @@ export const actions = {
 			return fail(404, { error: "Service not found." });
 		}
 
-		const vol = await StorageVolumeDTO.create({
-			description,
-			kind,
-			name,
-			source,
-			userId: locals.user.id,
-		});
-
-		logger.info(
-			`Storage volume created: volume=${vol.id} kind=${kind} user=${locals.user.id}`,
-		);
-		if (containerPath) {
-			await ServiceVolumeDTO.attach({
-				containerPath,
-				readOnly: formData.get("readOnly") === "on",
-				serviceId: svc.id,
-				volumeId: vol.id,
-			});
-			logger.info(
-				`Volume mounted: service=${svc.id} volume=${vol.id} path=${containerPath} user=${locals.user.id}`,
+		try {
+			const vol = await VolumeSettingsService.create(
+				{
+					description: formData.get("description") as string | null,
+					kind: formData.get("kind") as string | null,
+					name: (formData.get("name") as string | null) ?? "",
+					source: (formData.get("source") as string | null) ?? "",
+				},
+				locals.user.id,
 			);
+			if (containerPath) {
+				await ServiceVolumeDTO.attach({
+					containerPath,
+					readOnly: formData.get("readOnly") === "on",
+					serviceId: svc.id,
+					volumeId: vol.id,
+				});
+				logger.info(
+					`Volume mounted: service=${svc.id} volume=${vol.id} path=${containerPath} user=${locals.user.id}`,
+				);
+			}
+			return {
+				volumeAttached: Boolean(containerPath),
+				volumeCreated: true,
+				volumeId: vol.id,
+			};
+		} catch (err) {
+			if (err instanceof VolumeSettingsError) {
+				return fail(400, { error: err.message });
+			}
+			throw err;
 		}
-		return {
-			volumeAttached: Boolean(containerPath),
-			volumeCreated: true,
-			volumeId: vol.id,
-		};
 	},
 	detachVolume: async ({ request, params, locals }) => {
 		if (!locals.user) {

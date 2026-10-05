@@ -8,7 +8,9 @@
 		SlidersHorizontal,
 	} from "@lucide/svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
+	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 
 	const { children, data } = $props();
 
@@ -20,6 +22,7 @@
 				serviceId: svc.id,
 			}),
 			icon: Layers,
+			id: "service/environments/environments",
 			label: "Environments",
 		},
 		{
@@ -27,6 +30,7 @@
 				serviceId: svc.id,
 			}),
 			icon: Container,
+			id: "service/environments/source",
 			label: "Source",
 		},
 		{
@@ -35,6 +39,7 @@
 				{ serviceId: svc.id },
 			),
 			icon: SlidersHorizontal,
+			id: "service/environments/variables",
 			label: "Environment Variables",
 		},
 		{
@@ -43,6 +48,7 @@
 				{ serviceId: svc.id },
 			),
 			icon: Clock,
+			id: "service/environments/revisions",
 			label: "Revisions",
 		},
 		...(svc.buildSource === "git" && !svc.previewParentId
@@ -53,6 +59,7 @@
 							{ serviceId: svc.id },
 						),
 						icon: GitPullRequest,
+						id: "service/environments/previews",
 						label: "Previews",
 					},
 					{
@@ -61,6 +68,7 @@
 							{ serviceId: svc.id },
 						),
 						icon: Bird,
+						id: "service/environments/channels",
 						label: "Channels",
 					},
 				]
@@ -68,6 +76,9 @@
 	]);
 </script>
 
-<SectionNav label="Environments & Deployments sections" {sections} />
+<SectionNav
+  label="Environments & Deployments sections"
+  sections={visibleItems(data.uiMode, sections, page.url.pathname)}
+/>
 
 {@render children()}

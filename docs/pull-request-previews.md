@@ -1,5 +1,9 @@
 # Pull request previews
 
+Advanced mode: [simple mode](ui-modes.md) hides the Previews section of a
+service's Environments & Deployments tab. Everything here keeps working either
+way, and a hidden page still opens from a link.
+
 Tick **Enable pull request previews** in a git service's **Environments &
 Deployments → Previews** section and every pull request opened on its repo gets
 a service of its own, `<slug>-pr-<number>` (so

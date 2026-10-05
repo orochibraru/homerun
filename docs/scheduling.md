@@ -1,5 +1,9 @@
 # Scheduling and the job queue
 
+Advanced mode: [simple mode](ui-modes.md) hides the Scheduling sidebar entry.
+Everything here keeps working either way, and a hidden page still opens from a
+link.
+
 Everything that runs on a timer or in the background: scheduled redeploys, cron
 jobs, the Scheduling page that lists them, and the job queue behind all of it.
 

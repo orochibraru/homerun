@@ -1,5 +1,9 @@
 # Error tracking
 
+Advanced mode: [simple mode](ui-modes.md) hides the Errors section of a
+service's Observability tab. Everything here keeps working either way, and a
+hidden page still opens from a link.
+
 Homerun can collect the errors your apps throw, group them into issues, show
 each one's stack trace next to the source code that raised it, and tell you
 through your notification channels when a new issue appears or a resolved one

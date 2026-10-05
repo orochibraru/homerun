@@ -10,11 +10,13 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
+	import UiModePicker from "#lib/components/ui-mode-picker.svelte";
 	import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
 	import { PALETTES } from "#lib/palettes.js";
 	import { title } from "#lib/store/title.js";
 	import { DEFAULT_SURFACE, PRESETS, SURFACE_STYLES } from "#lib/surfaces.js";
 	import { saveToast } from "#lib/toast.js";
+	import { UI_MODE_LABELS } from "#lib/ui-mode.js";
 	import { enhance } from "$app/forms";
 
 	const { data } = $props();
@@ -39,6 +41,7 @@
 		),
 	);
 	let perPage = $state(untrack(() => String(data.preferences.perPage)));
+	let uiMode = $derived<string>(data.preferences.uiMode ?? "");
 	let surfaceStyle = $state(untrack(() => data.preferences.surfaceStyle));
 	let preset = $state<string>(untrack(() => data.preferences.preset ?? ""));
 
@@ -81,6 +84,36 @@
 {/snippet}
 
 <div class="space-y-6">
+    <section class="panel rounded-md">
+        <PanelHeader title="Interface">
+            {#snippet description()}
+                How much of Homerun the dashboard shows you. Simple mode hides
+                the engineering features from the sidebar and the tabs; they
+                keep working and their pages stay reachable. The profile menu
+                switches it too.
+            {/snippet}
+            {#snippet trailing()}
+                <SaveButton form="appearance-ui-mode" />
+            {/snippet}
+        </PanelHeader>
+        <form
+            id="appearance-ui-mode"
+            action="?/updateUiMode"
+            class="space-y-4 p-5"
+            method="POST"
+            use:enhance={saveToast("Interface mode")}
+        >
+            <UiModePicker
+                follow={{
+                    description: `Whatever an admin set for this instance, ${UI_MODE_LABELS[data.instanceUiMode].toLowerCase()} today.`,
+                    label: "Follow the instance default",
+                }}
+                name="uiMode"
+                bind:value={uiMode}
+            />
+        </form>
+    </section>
+
     <section class="panel rounded-md">
         <PanelHeader title="Presets">
             {#snippet description()}

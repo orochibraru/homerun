@@ -80,6 +80,12 @@ describe("readOnlyMayRequest", () => {
 		expect(readOnlyMayRequest("POST", "/cli-auth")).toBe(true);
 	});
 
+	test("allows switching one's own UI mode", () => {
+		expect(readOnlyMayRequest("POST", "/_app/remote/abc123/setUiMode")).toBe(
+			true,
+		);
+	});
+
 	test("allows only the notification bell's remote commands", () => {
 		expect(
 			readOnlyMayRequest("POST", "/_app/remote/abc123/markNotificationRead"),

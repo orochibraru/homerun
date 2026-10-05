@@ -17,6 +17,7 @@ import (
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/jobs/imagescan"
+	"github.com/orochibraru/homerun/internal/tracing"
 )
 
 // Spec is what the app's prepare step resolves for one deploy.
@@ -232,29 +233,25 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 // deploy runs the deploy pipeline: build or resolve the image, scan it, start
 // the container or swarm service, and wait for it to become ready.
 func (r *run) deploy(ctx context.Context) error {
-	resolved, err := r.resolveImage(ctx)
-	if err != nil {
+	var resolved resolvedImage
+	if err := tracing.Stage(ctx, ImageStage(r.spec.Image.Kind), func(ctx context.Context) error {
+		var err error
+		resolved, err = r.resolveImage(ctx)
+		return err
+	}); err != nil {
 		return err
 	}
 	r.result.Image, r.result.Tag, r.result.Digest = resolved.image, resolved.tag, resolved.digest
-	if err := r.seedVolumes(ctx); err != nil {
-		return err
+	if len(r.spec.Seeds) > 0 {
+		if err := tracing.Stage(ctx, "seed volumes", r.seedVolumes); err != nil {
+			return err
+		}
 	}
 	r.progress.serviceStatus(ctx, "starting")
 
 	r.progress.line(PhaseContainer)
-	if r.spec.Workload.Kind == "swarm" {
-		id, err := r.startSwarm(ctx, resolved)
-		if err != nil {
-			return err
-		}
-		r.result.SwarmServiceID = id
-	} else {
-		id, err := r.startContainer(ctx, resolved, false)
-		if err != nil {
-			return err
-		}
-		r.result.ContainerID = id
+	if err := tracing.Stage(ctx, "deploy", r.startWorkload(resolved)); err != nil {
+		return err
 	}
 
 	r.progress.line(PhaseNetwork)
@@ -262,6 +259,40 @@ func (r *run) deploy(ctx context.Context) error {
 		r.result.ImageID = inspected.ID
 	}
 	return nil
+}
+
+// ImageStage names the trace stage that resolves a deploy's image of kind:
+// a pull, a rollback's revision, or a build.
+func ImageStage(kind string) string {
+	switch kind {
+	case "pull":
+		return "pull"
+	case "revision":
+		return "revision"
+	default:
+		return "build"
+	}
+}
+
+// startWorkload starts resolved as the spec's swarm service or container,
+// recording its id in the result.
+func (r *run) startWorkload(resolved resolvedImage) func(context.Context) error {
+	return func(ctx context.Context) error {
+		if r.spec.Workload.Kind == "swarm" {
+			id, err := r.startSwarm(ctx, resolved)
+			if err != nil {
+				return err
+			}
+			r.result.SwarmServiceID = id
+			return nil
+		}
+		id, err := r.startContainer(ctx, resolved, false)
+		if err != nil {
+			return err
+		}
+		r.result.ContainerID = id
+		return nil
+	}
 }
 
 // seedVolumes fills each seeded volume that doesn't exist yet with a copy of

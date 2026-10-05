@@ -10,7 +10,9 @@ whether `DATABASE_URL` is set:
   host stats, prunes, swarm). Port `7430`, bearer token derived from
   `AUTH_SECRET` on both sides. The app image ships it at
   `/usr/local/bin/homerun-worker` and the compose files run it as the `worker`
-  service.
+  service. Every job it runs is recorded as an OpenTelemetry trace, a span per
+  job and per stage, written straight to the app's database (see
+  [`docs/tracing.md`](../../docs/tracing.md)).
 - **Agent mode** (no `DATABASE_URL`): runs on a _remote_ build host's own Docker
   daemon and serves only a small, token-authenticated HTTP surface (git builds,
   image export, host stats) for the main instance to drive. Port `7420`. It's

@@ -42,6 +42,7 @@ import type {
 	RevisionHealth,
 	StatusPageScope,
 } from "#lib/types.js";
+import type { UiMode } from "#lib/ui-mode.js";
 
 export const user = pgTable("user", {
 	banExpires: timestamp("ban_expires", { mode: "date" }),
@@ -759,6 +760,9 @@ export const instanceSettings = pgTable("instance_settings", {
 	preferredSignInMethods: jsonb("preferred_sign_in_methods").$type<string[]>(),
 	errorPages: jsonb("error_pages").$type<Partial<ErrorPagesSettings>>(),
 	ipBans: jsonb("ip_bans").$type<Partial<IpBanSettings>>(),
+	defaultUiMode: text("default_ui_mode").$type<UiMode>(),
+	otelCollectorEnabled: boolean("otel_collector_enabled"),
+	traceRetentionDays: integer("trace_retention_days"),
 	requirePasskey: boolean("require_passkey"),
 	requireTwoFactor: boolean("require_two_factor"),
 	resourceAlertReminderMinutes: integer("resource_alert_reminder_minutes"),
@@ -1194,6 +1198,7 @@ export const service = pgTable(
 		// tab : see docker/swarm.ts).
 		swarmServiceId: text("swarm_service_id"),
 		uptimeEnabled: boolean("uptime_enabled").default(true).notNull(),
+		tracesEnabled: boolean("traces_enabled").default(false).notNull(),
 		tag: text("tag").default("latest").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
@@ -1864,6 +1869,7 @@ export const userPreferences = pgTable("user_preferences", {
 		.$type<"light" | "dark" | "system">()
 		.default("system")
 		.notNull(),
+	uiMode: text("ui_mode").$type<UiMode>(),
 	updatedAt: timestamp("updated_at", { mode: "date" })
 		.$onUpdate(() => new Date())
 		.notNull(),
@@ -2203,6 +2209,52 @@ export const errorIssue = pgTable(
 	],
 );
 
+export const traceSpan = pgTable(
+	"trace_span",
+	{
+		attributes: jsonb("attributes")
+			.$type<Record<string, unknown>>()
+			.default({})
+			.notNull(),
+		durationMs: doublePrecision("duration_ms").notNull(),
+		endTime: timestamp("end_time", { mode: "date", precision: 3 }).notNull(),
+		events: jsonb("events")
+			.$type<
+				{ attributes: Record<string, unknown>; name: string; time: string }[]
+			>()
+			.default([])
+			.notNull(),
+		id: serial("id").primaryKey(),
+		kind: integer("kind").default(0).notNull(),
+		name: text("name").notNull(),
+		parentSpanId: text("parent_span_id"),
+		resourceAttributes: jsonb("resource_attributes")
+			.$type<Record<string, unknown>>()
+			.default({})
+			.notNull(),
+		serviceId: text("service_id").references(() => service.id, {
+			onDelete: "cascade",
+		}),
+		serviceName: text("service_name").notNull(),
+		spanId: text("span_id").notNull(),
+		startTime: timestamp("start_time", {
+			mode: "date",
+			precision: 3,
+		}).notNull(),
+		statusCode: integer("status_code").default(0).notNull(),
+		statusMessage: text("status_message"),
+		traceId: text("trace_id").notNull(),
+	},
+	(table) => [
+		uniqueIndex("traceSpan_traceId_spanId_idx").on(table.traceId, table.spanId),
+		index("traceSpan_serviceId_startTime_idx").on(
+			table.serviceId,
+			table.startTime,
+		),
+		index("traceSpan_startTime_idx").on(table.startTime),
+	],
+);
+
 export const errorEvent = pgTable(
 	"error_event",
 	{
@@ -2264,6 +2316,7 @@ export type BlockedHit = typeof blockedHit.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type RegistryToken = typeof registryToken.$inferSelect;
 export type ObjectStore = typeof objectStore.$inferSelect;
+export type TraceSpan = typeof traceSpan.$inferSelect;
 export type IacProject = typeof iacProject.$inferSelect;
 export type IacStateVersion = typeof iacStateVersion.$inferSelect;
 export type IacStateLock = typeof iacStateLock.$inferSelect;

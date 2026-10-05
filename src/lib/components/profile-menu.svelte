@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { LogOut, UserCircle } from "@lucide/svelte";
+	import {
+		LogOut,
+		SlidersHorizontal,
+		Sparkles,
+		UserCircle,
+	} from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
 	import { signOut } from "#lib/auth-client.js";
 	import { headerControlClass } from "#lib/components/header-styles.js";
 	import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
+	import { setUiMode } from "#lib/remote/ui-mode.remote.js";
+	import { toastError } from "#lib/toast.js";
+	import { UI_MODE_LABELS, type UiMode } from "#lib/ui-mode.js";
 	import { goto, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 
@@ -13,13 +21,33 @@
 		name?: string | null;
 	}
 
-	const { user }: { user: ProfileUser | undefined } = $props();
+	const { uiMode, user }: { uiMode: UiMode; user: ProfileUser | undefined } =
+		$props();
+
+	const otherMode = $derived<UiMode>(
+		uiMode === "simple" ? "advanced" : "simple",
+	);
 
 	const userInitial = $derived(user?.name?.[0]?.toUpperCase() ?? "?");
 
 	async function signOutCallback() {
 		await signOut();
 		await refreshAll();
+	}
+
+	async function switchModeCallback(mode: UiMode) {
+		await setUiMode(mode);
+		await refreshAll();
+	}
+
+	function handleSwitchMode() {
+		const mode = otherMode;
+		return toast.promise(switchModeCallback(mode), {
+			error: (error) =>
+				toastError(error, "Couldn't switch the interface mode."),
+			loading: `Switching to ${UI_MODE_LABELS[mode].toLowerCase()} mode`,
+			success: `${UI_MODE_LABELS[mode]} mode on.`,
+		});
 	}
 
 	function handleSignOut() {
@@ -61,6 +89,14 @@
     </DropdownMenu.Label>
     <DropdownMenu.Separator />
     <DropdownMenu.Item onSelect={() => goto(resolve('profile'))}><UserCircle class="size-4" />Account settings</DropdownMenu.Item>
+    <DropdownMenu.Item onSelect={handleSwitchMode}>
+      {#if otherMode === "simple"}
+        <Sparkles class="size-4" />
+      {:else}
+        <SlidersHorizontal class="size-4" />
+      {/if}
+      Switch to {UI_MODE_LABELS[otherMode].toLowerCase()} mode
+    </DropdownMenu.Item>
     <DropdownMenu.Separator />
     <DropdownMenu.Item onSelect={handleSignOut} variant="destructive">
       <LogOut class="size-4" />

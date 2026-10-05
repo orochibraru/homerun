@@ -65,6 +65,9 @@ A per-account "Appearance" tab on your profile page controls:
 
 ![The Appearance tab on your profile](images/appearance.webp)
 
+- **Interface**: **Simple**, **Advanced** or **Follow the instance default**
+  (the default), see [Simple and advanced modes](ui-modes.md). The profile menu
+  switches between simple and advanced in one click too.
 - **Presets**: a complete look from another era, with its own theme, style and
   colors: **Windows 95**, **Windows 98**, **Windows XP**, **Windows 7**, **MSN**
   or **Retro** (a green phosphor terminal), each with its own fonts: a pixel

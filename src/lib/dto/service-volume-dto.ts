@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { VolumeMountSnapshot } from "#lib/revision-config.js";
 import { db } from "#lib/server/db/lib.js";
 import {
@@ -52,6 +52,25 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 			volumeSeedFrom: r.volumeSeedFrom,
 			volumeSource: r.volumeSource,
 		}));
+	}
+
+	/** One mount by its id, null when there's none. */
+	static async get(id: string): Promise<ServiceVolumeDTO | null> {
+		const [row] = await db
+			.select()
+			.from(serviceVolume)
+			.where(eq(serviceVolume.id, id))
+			.limit(1);
+		return row ? new ServiceVolumeDTO(row) : null;
+	}
+
+	/** Every mount of every service, oldest first. */
+	static async list(): Promise<ServiceVolumeDTO[]> {
+		const rows = await db
+			.select()
+			.from(serviceVolume)
+			.orderBy(asc(serviceVolume.createdAt));
+		return rows.map((row) => new ServiceVolumeDTO(row));
 	}
 
 	/** The distinct ids of every service a storage volume is mounted into, for stopping them around a backup or restore of it. */
@@ -174,6 +193,17 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 			readOnly: this.row.readOnly,
 			volumeId: this.row.volumeId,
 		};
+	}
+
+	/** Moves the mount or switches it read-only; applied on the next deploy. */
+	async update(
+		input: Partial<Pick<ServiceVolume, "containerPath" | "readOnly">>,
+	): Promise<void> {
+		await db
+			.update(serviceVolume)
+			.set(input)
+			.where(eq(serviceVolume.id, this.row.id));
+		Object.assign(this.row, input);
 	}
 
 	/**

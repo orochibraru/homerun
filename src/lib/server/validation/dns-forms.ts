@@ -17,8 +17,13 @@ const HOSTNAME =
 	/^(?=.{1,253}$)(\*\.)?([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
 
+/** Where a form's fields come from: its FormData, or a Map built from a JSON body. */
+export interface FormFields {
+	get(name: string): unknown;
+}
+
 /** A form field's trimmed value, empty when missing. */
-function text(formData: FormData, key: string): string {
+function text(formData: FormFields, key: string): string {
 	return String(formData.get(key) ?? "").trim();
 }
 
@@ -37,7 +42,7 @@ export function isTarget(value: string): boolean {
  * which keeps the stored value.
  */
 export function parseConnectionForm(
-	formData: FormData,
+	formData: FormFields,
 	provider: DnsProviderDefinition,
 	editing = false,
 ): Parsed<{ credentials: DnsCredentials; name: string }> {
@@ -53,6 +58,19 @@ export function parseConnectionForm(
 		}
 	}
 	return { error: null, value: { credentials, name } };
+}
+
+/** A DNS connection form's fields from a JSON body: its name, and each credential as `field_<key>`. */
+export function connectionFields(body: {
+	credentials?: Record<string, string>;
+	name?: string;
+}): Map<string, string> {
+	return new Map([
+		["name", body.name ?? ""],
+		...Object.entries(body.credentials ?? {}).map(
+			([key, value]): [string, string] => [`field_${key}`, value],
+		),
+	]);
 }
 
 /**

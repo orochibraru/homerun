@@ -482,6 +482,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			slug: input.slug,
 			swarmServiceId: null,
 			tag: input.tag,
+			tracesEnabled: false,
 			uptimeEnabled: input.uptimeEnabled ?? !isDatabaseImage(input.image),
 			updatedAt: now,
 			userId: input.userId,

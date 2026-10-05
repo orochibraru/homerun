@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Activity,
 		ArrowLeft,
 		ChevronLeft,
 		ChevronRight,
@@ -132,6 +133,12 @@
         {/if}
       </div>
       <div class="flex flex-wrap gap-2">
+        {#if data.traceHref}
+          <Button href={data.traceHref} size="sm" variant="outline">
+            <Activity class="size-3.5" />
+            View trace
+          </Button>
+        {/if}
         {#each STATUS_ACTIONS.filter((action) => action.status !== issue.status) as action (action.status)}
           <form
             action="?/status"

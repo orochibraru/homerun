@@ -442,3 +442,55 @@ per-user instead of a singleton row.
   notifications, see above) now also fetches `UserPreferencesDTO.get(...)` and
   returns `preferences: preferences.toJSON()`, since the sidebar itself, not
   just the Appearance page, needs it on every protected render.
+
+## Simple and advanced UI modes (`src/lib/ui-mode.ts`, `user_preferences.uiMode`, `instance_settings.defaultUiMode`)
+
+Two ways to render the same dashboard: **simple** (homelab click-ops: short
+sidebar, templates up front, engineering settings out of sight) and **advanced**
+(everything). The mode only changes what's in view: it never forks a page, never
+blocks a route, never changes what a service does. Operator-facing list of what
+each mode shows: `docs/ui-modes.md`, keep the two in sync.
+
+- **One definition**: `ADVANCED_ONLY` in `src/lib/ui-mode.ts`, a set of stable
+  ids. Sidebar entries are keyed by their path (`/registry`), tabs and sections
+  by their route under the page (`service/environments/revisions`,
+  `settings/ip-bans`), blocks inside a page by `<page>#<block>`
+  (`service/networking#published-ports`, `services/new#compute`). Hiding
+  something new is one id there plus the `visibleIn` call where it renders;
+  `tests/unit/app/ui-mode.test.ts` pins the split.
+- **Resolution**: `effectiveUiMode(user, instance)`, the account's choice, else
+  the instance default, else `DEFAULT_UI_MODE` (advanced, so an instance that
+  never picked keeps everything visible). The `(protected)` root layout load
+  returns `uiMode` (effective) and `instanceUiMode`, so every page and layout
+  under it reads `data.uiMode`, no extra fetch.
+- **Nav, tabs, sections**: `visibleItems(mode, items, pathname)` filters any
+  `{ href, id }[]` and always keeps the item the current page sits under
+  (`currentHref`, longest matching href, same rule as `section-nav.svelte`), so
+  landing on a hidden page directly still highlights where you are. The sidebar
+  maps each nav item to `id: item.href`; the section layouts (`environments/`,
+  `observability/`, `container/`) give each section an `id`; the service and
+  settings tab bars call `visibleIn` per tab (settings also keeps a tab with a
+  setup warning). A new section in one of those layouts needs an `id` or
+  `visibleItems` won't typecheck. In simple mode the service's Environments &
+  Deployments tab links to Source, since its bare Environments section is
+  hidden.
+- **Page blocks**: a hidden panel that's its own form is `{#if}`'d out, but
+  stays when the service already uses it (blocked paths set, published ports, a
+  response cache, healthcheck overrides): hiding a setting that's in effect
+  would hide why the service behaves the way it does. A field inside a shared
+  form goes in `advanced-disclosure.svelte` instead (collapsed in simple mode,
+  rendered inline otherwise), never `{#if}`: the form still has to submit it, or
+  saving the visible fields would reset the hidden one.
+- **Switching**: Profile → Appearance → Interface (`updateUiMode`, "" clears to
+  follow the instance), the profile menu's one-click toggle (`setUiMode` remote
+  command, allowlisted for read-only accounts in `permissions.ts` since it's a
+  personal preference, followed by `refreshAll()`), Settings → General →
+  Interface mode (`updateUiMode`, admin) and onboarding's Core step, which sets
+  the instance default. `ui-mode-picker.svelte` is the shared radio-card picker
+  for all three forms.
+- **Simple-only additions**: the Overview's "Deploy an app" strip
+  (`SIMPLE_FRONT_PAGE_TEMPLATES`, built-in template ids, posting to the
+  templates page's `?/quickDeploy`), and the service Overview's "Roll back to
+  the previous version" button (`?/rollback`,
+  `RevisionService.findTarget(svc, null)`), shown only when there's a previous
+  revision, since Revisions is hidden there.

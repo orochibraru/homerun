@@ -1,5 +1,10 @@
 # Revisions and rollback
 
+Advanced mode: [simple mode](ui-modes.md) hides the Revisions section and the
+Deployments sidebar entry, and puts a **Roll back to the previous version**
+button on the service's Overview instead. Everything here keeps working either
+way, and a hidden page still opens from a link.
+
 ![A service's Environments & Deployments → Revisions, with the current revision marked](images/revisions.webp)
 
 Every deploy that reaches running is a **revision**: the exact image it ran

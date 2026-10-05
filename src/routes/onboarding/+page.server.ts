@@ -240,6 +240,7 @@ export const actions = {
 			smtpSecure: input.smtpSecure,
 			smtpUser: blankToNull(input.smtpUser),
 		});
+		await settings.updateDefaultUiMode(input.defaultUiMode);
 		await saveDnsSettings(input, formData, settings, locals.user.id);
 		await settings.markOnboardingComplete();
 

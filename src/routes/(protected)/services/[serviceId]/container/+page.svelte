@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { Cpu } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
+	import { visibleIn } from "#lib/ui-mode.js";
 	import { enhance } from "$app/forms";
 
 	const { data, form } = $props();
@@ -87,22 +89,28 @@
     </div>
 
     {#if data.orchestrationMode === "swarm"}
-      <div>
-        <label class={label} for="replicas">Replicas</label>
-        <Input
-          id="replicas"
-          min="0"
-          name="replicas"
-          type="number"
-          value={values.replicas}
-        />
-        <p class="mt-1.5 text-xs text-text-subtle">
-          Swarm mode only. 0 : same as stopping the service.
-        </p>
-        {#if errors?.replicas}
-          <p class={errorClass}>{errors.replicas[0]}</p>
-        {/if}
-      </div>
+      <AdvancedDisclosure
+        collapsible={!visibleIn(data.uiMode, "service/container#replicas") &&
+        (svc.replicas ?? 1) === 1}
+        description="Replicas"
+      >
+        <div>
+          <label class={label} for="replicas">Replicas</label>
+          <Input
+            id="replicas"
+            min="0"
+            name="replicas"
+            type="number"
+            value={values.replicas}
+          />
+          <p class="mt-1.5 text-xs text-text-subtle">
+            Swarm mode only. 0 : same as stopping the service.
+          </p>
+          {#if errors?.replicas}
+            <p class={errorClass}>{errors.replicas[0]}</p>
+          {/if}
+        </div>
+      </AdvancedDisclosure>
     {/if}
   </form>
 </section>

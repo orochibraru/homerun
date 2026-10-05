@@ -16,6 +16,7 @@ export const ONBOARDING_FIELD_STEP: Record<string, number> = {
 	cloudflareApiToken: 4,
 	cloudflareEnabled: 4,
 	cloudflareZoneId: 4,
+	defaultUiMode: 0,
 	dockerNetworkName: 1,
 	dockerSocketPath: 1,
 	pangolinApiBaseUrl: 4,

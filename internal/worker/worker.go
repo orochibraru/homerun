@@ -12,6 +12,9 @@ import (
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/logging"
 	"github.com/orochibraru/homerun/internal/secrets"
+	"github.com/orochibraru/homerun/internal/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // scope labels every line this file logs.
@@ -118,8 +121,19 @@ func (w *Worker) reportClaimError(err error) {
 func (w *Worker) execute(ctx, execCtx context.Context, job *ClaimedJob) {
 	started := time.Now()
 	logging.Infof(scope, "job started: type=%s job=%s attempt=%d", job.JobType, job.ID, job.Attempts)
+	spanCtx, span := tracing.Tracer().Start(execCtx, "job "+job.JobType, trace.WithAttributes(
+		attribute.String("homerun.job.id", job.ID),
+		attribute.String("homerun.job.type", job.JobType),
+		attribute.Int("homerun.job.attempt", job.Attempts),
+	))
+	outcome, outcomeErr := "succeeded", error(nil)
+	defer func() {
+		span.SetAttributes(attribute.String("homerun.job.outcome", outcome))
+		tracing.Record(span, outcomeErr)
+		span.End()
+	}()
 	tracker := activity.NewTracker()
-	runCtx, cancel := context.WithCancel(activity.With(execCtx, tracker))
+	runCtx, cancel := context.WithCancel(activity.With(spanCtx, tracker))
 	defer cancel()
 
 	beat := heartbeat{
@@ -132,39 +146,54 @@ func (w *Worker) execute(ctx, execCtx context.Context, job *ClaimedJob) {
 		w.heartbeat(runCtx, beat)
 	}()
 
-	result, execErr := w.dispatch(runCtx, job)
+	var result map[string]any
+	var execErr error
+	_ = tracing.Stage(runCtx, "execute", func(ctx context.Context) error {
+		result, execErr = w.dispatch(ctx, job)
+		return execErr
+	})
 	close(beat.stop)
 	<-heartbeatDone
 	lost := beat.lost
 	select {
 	case quiet := <-beat.stalled:
 		result, execErr = nil, StalledError(quiet, execErr)
+		outcome = "stalled"
 		logging.Errorf(scope, "job %s made no progress for %s, stopped it", job.ID, quiet.Round(time.Second))
 	default:
 	}
 
-	bookkeeping, done := context.WithTimeout(context.Background(), 10*time.Second)
+	bookkeeping, done := context.WithTimeout(trace.ContextWithSpan(context.Background(), span), 10*time.Second)
 	defer done()
 	select {
 	case <-lost:
 		logging.Warnf(scope, "job %s is no longer leased to this worker after %s, dropping its result",
 			job.ID, took(started))
+		outcome, outcomeErr = "lost", errors.New("the worker lost the job's lease")
 		return
 	default:
 	}
 	if execErr != nil && execCtx.Err() != nil && ctx.Err() != nil {
 		logging.Infof(scope, "job %s interrupted by shutdown after %s, releasing it for re-execution",
 			job.ID, took(started))
+		outcome, outcomeErr = "released", execErr
 		if err := w.Store.Release(bookkeeping, job.ID, w.ID); err != nil {
 			logging.Errorf(scope, "couldn't release job %s: %s", job.ID, err)
 		}
 		return
 	}
-	if err := w.Store.Finish(bookkeeping, job.ID, w.ID, result, execErr); err != nil {
+	if err := tracing.Stage(bookkeeping, "finish", func(ctx context.Context) error {
+		return w.Store.Finish(ctx, job.ID, w.ID, result, execErr)
+	}); err != nil {
 		logging.Errorf(scope, "couldn't record job %s's outcome: %s", job.ID, err)
+		outcome, outcomeErr = "unrecorded", err
 		return
 	}
 	if execErr != nil {
+		outcomeErr = execErr
+		if outcome == "succeeded" {
+			outcome = "failed"
+		}
 		logging.Errorf(scope, "job failed: type=%s job=%s after=%s : %s",
 			job.JobType, job.ID, took(started), execErr)
 		return

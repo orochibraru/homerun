@@ -21,6 +21,7 @@ import (
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/rclone"
 	"github.com/orochibraru/homerun/internal/s3"
+	"github.com/orochibraru/homerun/internal/tracing"
 )
 
 const (
@@ -86,12 +87,15 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 		spec.Remote.Log = job.AppendLog
 	}
 	var size int64
-	var err error
+	stage, run := "backup", backup
 	if job.Type == "backup_restore" {
-		size, err = restore(ctx, job, docker, spec)
-	} else {
-		size, err = backup(ctx, job, docker, spec)
+		stage, run = "restore", restore
 	}
+	err := tracing.Stage(ctx, stage, func(ctx context.Context) error {
+		var err error
+		size, err = run(ctx, job, docker, spec)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

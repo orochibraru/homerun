@@ -76,6 +76,7 @@ const SELF_SERVICE_REMOTE_COMMANDS = new Set([
 	"deleteNotification",
 	"markAllNotificationsRead",
 	"markNotificationRead",
+	"setUiMode",
 ]);
 
 const REMOTE_PREFIX = "/_app/remote/";

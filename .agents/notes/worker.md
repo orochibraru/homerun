@@ -213,3 +213,20 @@ to this one over `WORKER_URL` (`http://worker:7430` between containers, see
 alongside `bun run dev`/`bun run dev --only=app` (`bun run dev` starts both, see
 Commands in `CLAUDE.md`). `tests/integration` and the e2e bootstrap spawn it too
 (`spawnWorker`, `startWorkerContainer` when e2e runs against an image).
+
+## Tracing (`internal/tracing`)
+
+Next to the app, the worker installs an OpenTelemetry tracer provider whose
+exporter (`PGExporter`) writes finished spans straight into `trace_span` through
+its own pool, batched, with `service_name = homerun-worker` and no service id,
+so its traces need no collector. Agent mode never calls `Setup`, so every span
+there is the SDK's no-op. `execute` opens `job <type>` (attributes
+`homerun.job.id`/`type`/`attempt`/`outcome`: succeeded, failed, stalled, lost,
+released, unrecorded), with an `execute` child around the executor and a
+`finish` child around recording the outcome; executors add stage spans with
+`tracing.Stage(ctx, name, fn)` (deploy: `pull`/`revision`/`build`, `scan`,
+`seed volumes`, `deploy`; backup: `backup`/`restore`). Go's status codes differ
+from OTLP's (`codes.Error` is 1, OTLP's error is 2): `RowFromSpan` maps them,
+and timestamps go in as UTC (`pgx` keeps a non-UTC time's wall clock). Shutdown
+flushes the batch before the pool closes. Tests use `sdktrace/tracetest`'s
+in-memory exporter through the global provider.

@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
 	import { isBuildMethod } from "#lib/build-methods.js";
+	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import GitBuildFields from "#lib/components/git-build-fields.svelte";
 	import GitSourceFields from "#lib/components/git-source-fields.svelte";
@@ -21,6 +22,7 @@
 	import { isDeployed } from "#lib/service-state.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
+	import { visibleIn } from "#lib/ui-mode.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -243,57 +245,62 @@
           bind:checked={reportGithub}
         />
       {/if}
-      <GitBuildFields
-        errorClass={errorClass}
-        errors={errors}
-        keepHiddenFields
-        labelClass={label}
-        registries={data.buildCacheRegistries}
-        bind:gitBuildMethod
-        bind:gitDockerfilePath
-        bind:gitBakeFile
-        bind:gitBuildTarget
-        bind:gitBuildContext
-        bind:buildCacheRegistryId
-      />
-      <div>
-        <label class={label} for="buildServerRemoteHostId">
-          Build server
-        </label>
-        {#if data.buildServers.length === 0}
-          <p class="text-xs text-text-muted">
-            No build servers configured.
+      <AdvancedDisclosure
+        collapsible={!visibleIn(data.uiMode, "service/environments/source#build")}
+        description="Build method, cache and build server"
+      >
+        <GitBuildFields
+          errorClass={errorClass}
+          errors={errors}
+          keepHiddenFields
+          labelClass={label}
+          registries={data.buildCacheRegistries}
+          bind:gitBuildMethod
+          bind:gitDockerfilePath
+          bind:gitBakeFile
+          bind:gitBuildTarget
+          bind:gitBuildContext
+          bind:buildCacheRegistryId
+        />
+        <div>
+          <label class={label} for="buildServerRemoteHostId">
+            Build server
+          </label>
+          {#if data.buildServers.length === 0}
+            <p class="text-xs text-text-muted">
+              No build servers configured.
 
-            <a
-              class="text-accent underline"
-              href={resolve('remote-hosts')}
-            >Mark a remote host</a>
+              <a
+                class="text-accent underline"
+                href={resolve('remote-hosts')}
+              >Mark a remote host</a>
 
-            as one to build there instead of the deploy target.
-          </p>
-        {:else}
-          <SelectRoot
-            name="buildServerRemoteHostId"
-            type="single"
-            bind:value={buildServerRemoteHostId}
-          >
-            <SelectTrigger id="buildServerRemoteHostId">
-              {buildServerLabel}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem label="Build on deploy target" value="" />
-              {#each data.buildServers as host (host.id)}
-                <SelectItem label={host.name} value={host.id} />
-              {/each}
-            </SelectContent>
-          </SelectRoot>
-          <p class="text-text-subtle mt-1.5 text-xs">
-            With a build cache registry above, the built image is published
-            there and pulled back onto this host. Without one it's streamed
-            straight back from the build server instead.
-          </p>
-        {/if}
-      </div>
+              as one to build there instead of the deploy target.
+            </p>
+          {:else}
+            <SelectRoot
+              name="buildServerRemoteHostId"
+              type="single"
+              bind:value={buildServerRemoteHostId}
+            >
+              <SelectTrigger id="buildServerRemoteHostId">
+                {buildServerLabel}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem label="Build on deploy target" value="" />
+                {#each data.buildServers as host (host.id)}
+                  <SelectItem label={host.name} value={host.id} />
+                {/each}
+              </SelectContent>
+            </SelectRoot>
+            <p class="text-text-subtle mt-1.5 text-xs">
+              With a build cache registry above, the built image is published
+              there and pulled back onto this host. Without one it's streamed
+              straight back from the build server instead.
+            </p>
+          {/if}
+        </div>
+      </AdvancedDisclosure>
       <StatusCheckPicker
         enabled={svc.requireStatusChecks}
         error={errors?.requiredStatusChecks?.[0]}

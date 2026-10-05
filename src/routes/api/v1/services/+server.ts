@@ -1,16 +1,26 @@
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
+import { serviceApiJson } from "#lib/server/api-json.js";
 import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
 import {
 	type CreateServiceApiInput,
 	createServiceApiBody,
+	createServiceFromTemplateApiBody,
+	type ServiceSettingsInput,
 } from "#lib/server/validation/api.js";
 import { CapacityService } from "#lib/services/capacity.service.js";
 import { attachDefaultDataVolume } from "#lib/services/default-volume.js";
 import { GitWebhookService } from "#lib/services/git-webhook.service.js";
 import { encryptSecret } from "#lib/services/secrets.js";
+import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
+import {
+	ServiceSettingsError,
+	ServiceSettingsService,
+} from "#lib/services/service-settings.service.js";
+import { createServiceFromTemplate } from "#lib/services/template-links.js";
 
 const logger = new Logger("API");
 
@@ -24,7 +34,7 @@ export const GET = async ({ locals, url }) => {
 		{ includePreviews: true },
 	);
 	return jsonPage(
-		paged.items.map((r) => r.service.toJSON()),
+		paged.items.map((r) => serviceApiJson(r.service.toJSON())),
 		paged,
 	);
 };
@@ -101,12 +111,80 @@ function toSourceInput(input: CreateServiceApiInput) {
 	};
 }
 
+/** The fields of a create body `ServiceDTO.create` doesn't take, applied as settings once the row exists. */
+function extraSettings(input: CreateServiceApiInput): ServiceSettingsInput {
+	const created = new Set<string>([
+		...Object.keys(toCreateInput(input, null, "")),
+		...Object.keys(toCreateInput(input, null, "").runtime),
+		"registryPassword",
+		"stackId",
+	]);
+	return Object.fromEntries(
+		Object.entries(input).filter(
+			([key, value]) => value !== undefined && !created.has(key),
+		),
+	) as ServiceSettingsInput;
+}
+
+/**
+ * Creates the service a template describes (and its linked services) in
+ * `stackId`, then applies the rest of the body as settings. A refused
+ * setting deletes what was created.
+ */
+async function createFromTemplate(
+	input: ServiceSettingsInput & { stackId?: string | null; templateId: string },
+	actor: { isAdmin: boolean; userId: string },
+): Promise<Response> {
+	const template = await TemplateDTO.get(input.templateId);
+	if (!template) {
+		return Response.json({ error: "Template not found." }, { status: 404 });
+	}
+	const full = await CapacityService.refusal();
+	if (full) {
+		return Response.json({ error: full }, { status: 409 });
+	}
+	const stackId =
+		input.stackId && (await StackDTO.get(input.stackId)) ? input.stackId : null;
+	const created = await createServiceFromTemplate(template, {
+		...actor,
+		stackId,
+	});
+	if ("refusal" in created) {
+		return Response.json({ error: created.refusal }, { status: 403 });
+	}
+	const { stackId: _stack, templateId: _template, ...settings } = input;
+	try {
+		await ServiceSettingsService.apply(created.svc, settings, actor);
+	} catch (err) {
+		await ServiceLifecycleService.deleteService(created.svc, { force: true });
+		if (err instanceof ServiceSettingsError) {
+			return Response.json({ error: err.message }, { status: err.status });
+		}
+		throw err;
+	}
+	logger.info(
+		`Service created from a template via API: service=${created.svc.id} template=${template.id} user=${actor.userId}`,
+	);
+	return Response.json(serviceApiJson(created.svc.toJSON()), { status: 201 });
+}
+
 export const POST = async ({ request, locals }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
+	const actor = { isAdmin: Boolean(locals.isAdmin), userId: locals.user.id };
 
 	const body = await request.json().catch(() => null);
+	if (body && typeof body === "object" && "templateId" in body) {
+		const fromTemplate = createServiceFromTemplateApiBody.safeParse(body);
+		if (!fromTemplate.success) {
+			return Response.json(
+				{ error: "Invalid request body", issues: fromTemplate.error.flatten() },
+				{ status: 400 },
+			);
+		}
+		return await createFromTemplate(fromTemplate.data, actor);
+	}
 	const result = createServiceApiBody.safeParse(body);
 	if (!result.success) {
 		return Response.json(
@@ -138,6 +216,15 @@ export const POST = async ({ request, locals }) => {
 	const svc = await ServiceDTO.create(
 		toCreateInput(input, stackId, locals.user.id),
 	);
+	try {
+		await ServiceSettingsService.apply(svc, extraSettings(input), actor);
+	} catch (err) {
+		await ServiceLifecycleService.deleteService(svc, { force: true });
+		if (err instanceof ServiceSettingsError) {
+			return Response.json({ error: err.message }, { status: err.status });
+		}
+		throw err;
+	}
 
 	await attachDefaultDataVolume(svc, locals.user.id);
 
@@ -151,5 +238,5 @@ export const POST = async ({ request, locals }) => {
 		`Service created via API: service=${svc.id} slug=${svc.slug} user=${locals.user.id}`,
 	);
 
-	return Response.json(svc.toJSON(), { status: 201 });
+	return Response.json(serviceApiJson(svc.toJSON()), { status: 201 });
 };

@@ -18,9 +18,11 @@ Environment Variables (`environments/variables`); Revisions; and, for a git
 service only, Previews and Channels), **Observability** (`observability/`:
 Monitoring, Events, Errors, Health), **Storage** (`volumes/`), **Networking**,
 **Container** (`container/`: Compute is the bare page, Runtime is
-`container/runtime`), **Security**, **Terminal**, **Settings**. Revisions is the
-deployment history that used to sit at the bottom of Overview, now with the
-`image:tag` that ran, its digest, how long it took and, for a git build, the
+`container/runtime`), **Security**, **Terminal**, **Settings**. In simple mode
+(see `ui.md`) every tab stays but several sections don't: each section layout
+filters its sections through `visibleItems` from `src/lib/ui-mode.ts`. Revisions
+is the deployment history that used to sit at the bottom of Overview, now with
+the `image:tag` that ran, its digest, how long it took and, for a git build, the
 commit linked to the provider. `logs/` still exists as a **route without a
 page**: its `+server.ts` is the SSE stream `live-log-viewer.svelte` fetches.
 
@@ -119,8 +121,9 @@ ones, deliberately top-level rather than under `(protected)/` since it has to
 render for signed-out visitors, see Per-app login wall below). The bell's own
 read/delete endpoints used to live at `/notifications/**` and are now remote
 commands instead, see Remote functions below. `(protected)/+layout.svelte`
-filters the nav array on `data.user.role === "admin"` before rendering, a
-developer sees everything else unchanged (every account shares every
+filters the nav array on `data.user.role === "admin"` and on the UI mode
+(`visibleItems`, see Simple and advanced UI modes in `ui.md`) before rendering,
+a developer sees everything else unchanged (every account shares every
 service/stack, see Shared resources in `data-and-config.md`). `/setup` was
 removed (see Setup diagnostics below) in favor of the dashboard banner
 deep-linking into `/settings`.

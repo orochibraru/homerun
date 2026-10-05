@@ -199,6 +199,20 @@ export const SEARCH_PAGES: SearchPage[] = [
 		section: "Object Storage",
 	},
 	{
+		adminOnly: true,
+		href: "/iac",
+		keywords: ["terraform", "pulumi", "iac", "hcl", "generate", "import"],
+		label: "Infrastructure as Code",
+		section: "Integrations",
+	},
+	{
+		adminOnly: true,
+		href: "/iac/drift",
+		keywords: ["terraform", "drift", "state", "compare"],
+		label: "Drift",
+		section: "Infrastructure as Code",
+	},
+	{
 		adminOnly: false,
 		href: "/s3-destinations/new",
 		keywords: ["create", "add", "bucket", "s3", "sftp", "smb", "webdav"],

@@ -24,6 +24,7 @@ import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
 import { IpBanScheduler } from "./cron/ip-ban-scheduler.ts";
 import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { SwarmDnsWatch } from "./cron/swarm-dns-watch.ts";
+import { TraceRetentionScheduler } from "./cron/trace-retention-scheduler.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { StatsSampler } from "./stats/stats-sampler.ts";
@@ -82,6 +83,8 @@ class CronServiceClass {
 
 	private readonly ipBanScheduler = new IpBanScheduler();
 
+	private readonly traceRetentionScheduler = new TraceRetentionScheduler();
+
 	private readonly coreServicesWatch = new CoreServicesWatch();
 
 	private readonly swarmDnsWatch = new SwarmDnsWatch();
@@ -130,6 +133,11 @@ class CronServiceClass {
 	/** Starts the hourly error tracking retention pass. */
 	startErrorRetention(): void {
 		this.errorRetentionScheduler.start();
+	}
+
+	/** Starts the hourly pass deleting trace spans past their retention. */
+	startTraceRetention(): void {
+		this.traceRetentionScheduler.start();
 	}
 
 	/** Starts the per-minute pass that lifts expired IP bans. */

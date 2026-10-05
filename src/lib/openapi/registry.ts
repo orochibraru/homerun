@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
 	createServiceApiBody,
+	createServiceFromTemplateApiBody,
 	createStackApiBody,
 	deployServiceApiBody,
 	startUpdateApiBody,
@@ -15,6 +16,7 @@ import { errorRoutes } from "./errors";
 import { iacRoutes } from "./iac";
 import { previewRoutes } from "./previews";
 import { redirectRoutes } from "./redirects";
+import { resourceRoutes } from "./resources";
 import {
 	deploymentResponse,
 	deployResultResponse,
@@ -118,10 +120,13 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Persists config only : does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it.",
+			"Persists config only : does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it. Any setting PATCH takes may be sent too. With templateId, the service (and the template's linked services) is created from the template first.",
 		method: "post",
 		path: "/services",
-		requestBody: createServiceApiBody,
+		requestBody: z.union([
+			createServiceApiBody,
+			createServiceFromTemplateApiBody,
+		]),
 		responses: {
 			201: { description: "Created", schema: serviceResponse },
 			400: badRequest,
@@ -671,4 +676,5 @@ export const routes: RouteDef[] = [
 	...backupRoutes,
 	...redirectRoutes,
 	...iacRoutes,
+	...resourceRoutes,
 ];

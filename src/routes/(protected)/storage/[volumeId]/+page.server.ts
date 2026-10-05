@@ -4,16 +4,16 @@ import { JobDTO } from "#lib/dto/job-dto.js";
 import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { Logger } from "#lib/logger.js";
-import {
-	backupConfigError,
-	parseVolumeBackupGuard,
-} from "#lib/server/volume-backup-form.js";
 import { VolumeServices } from "#lib/services/backup/volume-services.js";
 import {
 	cancelBackupRun,
 	enqueueVolumeBackup,
 	enqueueVolumeRestore,
 } from "#lib/services/backup-queue.js";
+import {
+	VolumeSettingsError,
+	VolumeSettingsService,
+} from "#lib/services/volume-settings.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("Storage");
@@ -114,34 +114,24 @@ export const actions = {
 
 		const formData = await request.formData();
 		const backupEnabled = formData.get("backupEnabled") === "on";
-		const backupSchedule =
-			(formData.get("backupSchedule") as string | null)?.trim() || null;
-		const s3DestinationId =
-			(formData.get("s3DestinationId") as string | null)?.trim() || null;
-		const backupPrefix =
-			(formData.get("backupPrefix") as string | null)?.trim() || null;
-
-		const configError = await backupConfigError({
-			enabled: backupEnabled,
-			s3DestinationId,
-			schedule: backupSchedule,
-		});
-		if (configError) {
-			return fail(400, { error: configError });
+		try {
+			await VolumeSettingsService.apply(volume, {
+				backupEnabled,
+				backupPreCommand: formData.get("backupPreCommand") as string | null,
+				backupPreCommandServiceId: formData.get("backupPreCommandServiceId") as
+					| string
+					| null,
+				backupPrefix: formData.get("backupPrefix") as string | null,
+				backupSchedule: formData.get("backupSchedule") as string | null,
+				backupStopServices: formData.get("backupStopServices") === "on",
+				s3DestinationId: formData.get("s3DestinationId") as string | null,
+			});
+		} catch (err) {
+			if (err instanceof VolumeSettingsError) {
+				return fail(400, { error: err.message });
+			}
+			throw err;
 		}
-
-		const guard = await parseVolumeBackupGuard(formData, volume);
-		if (guard.error !== null) {
-			return fail(400, { error: guard.error });
-		}
-
-		await volume.update({
-			backupEnabled,
-			backupPrefix,
-			backupSchedule,
-			s3DestinationId,
-			...guard.fields,
-		});
 
 		logger.info(
 			`Backup config updated: volume=${volume.id} enabled=${backupEnabled} user=${locals.user.id}`,

@@ -72,17 +72,10 @@ export const actions = {
 			return fail(400, { error: problem });
 		}
 		try {
-			await ObjectStorageService.testCredentials({
-				...values,
-				secretAccessKey:
-					values.secretAccessKey || store.decryptSecretAccessKey(),
-			});
+			await ObjectStorageService.updateStore(store, values);
 		} catch (cause) {
-			return fail(400, {
-				error: `Couldn't list buckets with these settings: ${reason(cause)}`,
-			});
+			return fail(400, { error: reason(cause) });
 		}
-		await store.update(values);
 		return { success: true };
 	},
 };

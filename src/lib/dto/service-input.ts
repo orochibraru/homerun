@@ -165,6 +165,7 @@ export type ServiceUpdateInput = Partial<
 		| "restartPolicy"
 		| "slug"
 		| "swarmServiceId"
+		| "tracesEnabled"
 		| "uptimeEnabled"
 		| "tag"
 	>

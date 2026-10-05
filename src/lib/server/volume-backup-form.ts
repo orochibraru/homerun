@@ -10,23 +10,25 @@ export interface VolumeBackupGuardFields {
 }
 
 /**
- * Reads the backup form's stop-services and pre-backup command fields. The
+ * Checks a volume's stop-services and pre-backup command settings. The
  * picked service is dropped when there's no command, and must be one the
  * volume is actually mounted into.
  */
-export async function parseVolumeBackupGuard(
-	formData: FormData,
+export async function volumeBackupGuard(
+	input: {
+		backupPreCommand: string | null;
+		backupPreCommandServiceId: string | null;
+		backupStopServices: boolean;
+	},
 	volume: StorageVolumeDTO,
 ): Promise<
 	| { error: string; fields: null }
 	| { error: null; fields: VolumeBackupGuardFields }
 > {
-	const backupPreCommand =
-		(formData.get("backupPreCommand") as string | null)?.trim() || null;
-	const pickedServiceId =
-		(formData.get("backupPreCommandServiceId") as string | null)?.trim() ||
-		null;
-	const backupPreCommandServiceId = backupPreCommand ? pickedServiceId : null;
+	const backupPreCommand = input.backupPreCommand?.trim() || null;
+	const backupPreCommandServiceId = backupPreCommand
+		? input.backupPreCommandServiceId?.trim() || null
+		: null;
 	if (backupPreCommandServiceId) {
 		const services = await VolumeServices.servicesUsing(volume);
 		if (!services.some((service) => service.id === backupPreCommandServiceId)) {
@@ -41,7 +43,7 @@ export async function parseVolumeBackupGuard(
 		fields: {
 			backupPreCommand,
 			backupPreCommandServiceId,
-			backupStopServices: formData.get("backupStopServices") === "on",
+			backupStopServices: input.backupStopServices,
 		},
 	};
 }

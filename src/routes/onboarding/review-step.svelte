@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Rocket } from "@lucide/svelte";
+	import { isUiMode, UI_MODE_LABELS } from "#lib/ui-mode.js";
 	import StepPanel from "./step-panel.svelte";
 	import type { OnboardingWizard } from "./wizard-state.svelte";
 
@@ -71,5 +72,11 @@
       wizard.smtpEnabled ? wizard.smtpHost || "—" : "Not configured",
     )}
     {@render reviewRow("DNS automation", dnsSummary)}
+    {@render reviewRow(
+      "Interface",
+      isUiMode(wizard.defaultUiMode)
+        ? `${UI_MODE_LABELS[wizard.defaultUiMode]} mode`
+        : "—",
+    )}
   </dl>
 </StepPanel>

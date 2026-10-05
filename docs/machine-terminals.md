@@ -1,5 +1,9 @@
 # Machine terminals
 
+Advanced mode: [simple mode](ui-modes.md) hides the Terminal sidebar entry.
+Everything here keeps working either way, and a hidden page still opens from a
+link.
+
 **Terminal** in the sidebar (Infrastructure, admins only) opens a shell on the
 machines themselves, in the browser: this server and every
 [remote host](remote-hosts-and-agent.md). It's SSH from Homerun's worker, so the

@@ -68,57 +68,93 @@ const runtimeFields = {
 		}),
 };
 
-export const createServiceApiBody = z
-	.object({
-		authRequired: z.boolean().default(false),
-		autoDeployOnPush: z.boolean().default(false),
-		buildSource: z.enum(["image", "git"]).default("image"),
-		containerPort: z.number().int().min(1).max(65_535),
-		capAdd: runtimeFields.capAdd.default([]),
-		command: runtimeFields.command.optional(),
-		cpuLimit: z.string().optional(),
-		devices: runtimeFields.devices.default([]),
-		dnsResolvable: z.boolean().default(true),
-		entrypoint: runtimeFields.entrypoint.optional(),
-		envFiles: runtimeFields.envFiles.default([]),
-		envVars: z.record(z.string(), z.string()).default({}),
-		gitBakeFile: z.string().optional(),
-		gitBuildTarget: z.string().regex(BAKE_TARGET_PATTERN).optional(),
-		gitBuildContext: z.string().optional(),
-		gitBuildMethod: z.enum(BUILD_METHODS).default("dockerfile"),
-		gitDockerfilePath: z.string().optional(),
-		gitProviderId: z.string().optional(),
-		gitRef: z.string().optional(),
-		gitRepo: z.string().optional(),
-		gitUrl: z.string().optional(),
-		image: z.string().optional(),
-		labels: runtimeFields.labels.default({}),
-		memoryLimitMb: z.number().int().positive().optional(),
-		name: z.string().min(1).max(100),
-		privileged: runtimeFields.privileged.default(false),
-		runAsUser: runtimeFields.runAsUser.optional(),
-		stackId: z.string().optional(),
-		pullPolicy: z.enum(["always", "missing", "never"]).default("always"),
-		registryPassword: z.string().optional(),
-		registryUrl: z.string().optional(),
-		registryUsername: z.string().optional(),
-		restartPolicy: z
-			.enum(["no", "always", "on-failure", "unless-stopped"])
-			.default("unless-stopped"),
-		slug: z.string().regex(SLUG_RE),
-		tag: z.string().min(1).optional(),
-	})
-	.refine((v) => v.buildSource !== "git" || !!v.gitUrl, {
-		error: 'gitUrl is required when buildSource is "git".',
-		path: ["gitUrl"],
-	})
-	.refine((v) => v.buildSource === "git" || !!v.image, {
-		error: 'image is required when buildSource is "image".',
-		path: ["image"],
-	});
+const healthSeconds = z.number().int().min(1).max(3600).nullable();
+const portNumber = z.number().int().min(1).max(65_535);
+const stringList = z.array(z.string().trim().min(1)).max(200);
 
-/** The validated JSON body of `POST /api/v1/services`. */
-export type CreateServiceApiInput = z.infer<typeof createServiceApiBody>;
+const serviceSettingsFields = {
+	authAllowedEmails: stringList.optional(),
+	authAllowedGroups: stringList.optional(),
+	authAllowedUserIds: stringList.optional(),
+	authProviders: stringList
+		.optional()
+		.describe("Sign-in methods the login wall offers, e.g. email, passkey."),
+	buildCacheBuiltin: z
+		.boolean()
+		.optional()
+		.describe("Use the built-in registry as a git build's layer cache."),
+	buildCacheRegistryId: z.string().nullable().optional(),
+	buildServerRemoteHostId: z.string().nullable().optional(),
+	category: z.string().nullable().optional(),
+	channelBranch: z.string().trim().nullable().optional(),
+	channelCanaryDomain: z.string().trim().toLowerCase().nullable().optional(),
+	channelTagPattern: z.string().trim().min(1).optional(),
+	channelsEnabled: z
+		.boolean()
+		.optional()
+		.describe(
+			"Release channels: a canary service deployed from channelBranch, the service itself from tags matching channelTagPattern.",
+		),
+	cronEnabled: z.boolean().optional(),
+	cronSchedule: z
+		.string()
+		.trim()
+		.nullable()
+		.optional()
+		.describe("5-field cron expression the service is redeployed on."),
+	customSslCert: z
+		.string()
+		.trim()
+		.nullable()
+		.optional()
+		.describe(
+			"PEM certificate, sent with customSslKey. null on both removes them. Never returned.",
+		),
+	customSslKey: z.string().trim().nullable().optional(),
+	domainPorts: z
+		.record(z.string().trim().toLowerCase(), portNumber)
+		.optional()
+		.describe("Container port per domain, when it isn't containerPort."),
+	healthcheckDisabled: z.boolean().optional(),
+	healthcheckIntervalSeconds: healthSeconds.optional(),
+	healthcheckRetries: z.number().int().min(1).max(100).nullable().optional(),
+	healthcheckStartPeriodSeconds: z
+		.number()
+		.int()
+		.min(0)
+		.max(3600)
+		.nullable()
+		.optional(),
+	healthcheckTimeoutSeconds: healthSeconds.optional(),
+	httpCacheTtl: z.number().int().min(1).max(86_400).nullable().optional(),
+	icon: z.string().nullable().optional(),
+	networkMode: z.enum(["bridge", "host"]).optional(),
+	portProtocol: z.enum(["tcp", "udp", "both"]).optional(),
+	previewAuthAllowedEmails: stringList.optional(),
+	previewAuthAllowedGroups: stringList.optional(),
+	previewAuthAllowedUserIds: stringList.optional(),
+	previewAuthProviders: stringList.optional(),
+	previewAuthRequired: z.boolean().optional(),
+	previewDefaultDomain: z.boolean().optional(),
+	previewDomainTemplate: z.string().trim().toLowerCase().nullable().optional(),
+	publishedPorts: z
+		.array(
+			z.object({
+				containerPort: portNumber,
+				hostPort: portNumber,
+				protocol: z.enum(["tcp", "udp"]).default("tcp"),
+			}),
+		)
+		.optional(),
+	replicas: z.number().int().min(0).max(50).optional(),
+	secretEnvKeys: z
+		.array(z.string())
+		.optional()
+		.describe("envVars keys the dashboard masks."),
+	slug: z.string().regex(SLUG_RE).optional(),
+	stackId: z.string().nullable().optional(),
+	tracesEnabled: z.boolean().optional(),
+};
 
 export const updateServiceApiBody = z.object({
 	authPaths: pathPatterns
@@ -222,6 +258,76 @@ export const updateServiceApiBody = z.object({
 		.optional(),
 	tag: z.string().min(1).optional(),
 	uptimeEnabled: z.boolean().optional(),
+	...serviceSettingsFields,
+});
+
+/** The validated JSON body of `PATCH /api/v1/services/{serviceId}`, every field optional. */
+export type ServiceSettingsInput = z.infer<typeof updateServiceApiBody>;
+
+const baseCreateServiceFields = {
+	authRequired: z.boolean().default(false),
+	autoDeployOnPush: z.boolean().default(false),
+	buildSource: z.enum(["image", "git"]).default("image"),
+	containerPort: z.number().int().min(1).max(65_535),
+	capAdd: runtimeFields.capAdd.default([]),
+	command: runtimeFields.command.optional(),
+	cpuLimit: z.string().optional(),
+	devices: runtimeFields.devices.default([]),
+	dnsResolvable: z.boolean().default(true),
+	entrypoint: runtimeFields.entrypoint.optional(),
+	envFiles: runtimeFields.envFiles.default([]),
+	envVars: z.record(z.string(), z.string()).default({}),
+	gitBakeFile: z.string().optional(),
+	gitBuildTarget: z.string().regex(BAKE_TARGET_PATTERN).optional(),
+	gitBuildContext: z.string().optional(),
+	gitBuildMethod: z.enum(BUILD_METHODS).default("dockerfile"),
+	gitDockerfilePath: z.string().optional(),
+	gitProviderId: z.string().optional(),
+	gitRef: z.string().optional(),
+	gitRepo: z.string().optional(),
+	gitUrl: z.string().optional(),
+	image: z.string().optional(),
+	labels: runtimeFields.labels.default({}),
+	memoryLimitMb: z.number().int().positive().optional(),
+	name: z.string().min(1).max(100),
+	privileged: runtimeFields.privileged.default(false),
+	runAsUser: runtimeFields.runAsUser.optional(),
+	stackId: z.string().optional(),
+	pullPolicy: z.enum(["always", "missing", "never"]).default("always"),
+	registryPassword: z.string().optional(),
+	registryUrl: z.string().optional(),
+	registryUsername: z.string().optional(),
+	restartPolicy: z
+		.enum(["no", "always", "on-failure", "unless-stopped"])
+		.default("unless-stopped"),
+	slug: z.string().regex(SLUG_RE),
+	tag: z.string().min(1).optional(),
+};
+
+/** `POST /services`: the fields a new service starts from, plus any setting `PATCH` takes, applied right after. */
+export const createServiceApiBody = z
+	.object({ ...updateServiceApiBody.shape, ...baseCreateServiceFields })
+	.refine((v) => v.buildSource !== "git" || !!v.gitUrl, {
+		error: 'gitUrl is required when buildSource is "git".',
+		path: ["gitUrl"],
+	})
+	.refine((v) => v.buildSource === "git" || !!v.image, {
+		error: 'image is required when buildSource is "image".',
+		path: ["image"],
+	});
+
+/** The validated JSON body of `POST /api/v1/services`. */
+export type CreateServiceApiInput = z.infer<typeof createServiceApiBody>;
+
+/** `POST /services` with a template: the template's service and linked services, then any setting `PATCH` takes. */
+export const createServiceFromTemplateApiBody = updateServiceApiBody.extend({
+	stackId: z.string().nullable().optional(),
+	templateId: z
+		.string()
+		.min(1)
+		.describe(
+			"Create the service from this template (image, variables, volumes and linked services), then apply the other fields sent. name and slug default to the template's.",
+		),
 });
 
 /** `POST /services/{serviceId}/deploy`'s optional body: a tag to switch the service to before deploying, for CI deploying the image it just pushed. */
@@ -278,10 +384,19 @@ export const releaseChannelsApiBody = z.object({
 });
 
 export const createStackApiBody = z.object({
-	description: z.string().optional(),
-	name: z.string().min(1).max(100),
+	description: z.string().nullable().optional(),
+	icon: z.string().nullable().optional(),
+	name: z.string().trim().min(1).max(100),
+	parentId: z
+		.string()
+		.nullable()
+		.optional()
+		.describe("The stack to nest this one in, null for a top-level stack."),
 	slug: z.string().regex(SLUG_RE),
 });
+
+/** `PATCH /stacks/{stackId}`: the fields sent change, the rest stay. */
+export const updateStackApiBody = createStackApiBody.partial();
 
 export const startUpdateApiBody = z.object({
 	force: z.boolean().optional().meta({

@@ -244,6 +244,41 @@ export function uptimeMessage(
 	};
 }
 
+export interface IpBanMessageInput {
+	expiresAt: Date | null;
+	host: string | null;
+	ip: string;
+	origin: string | null;
+	reason: string;
+}
+
+/** Builds the notification channel message for an address banned for hitting blocked paths. */
+export function ipBanMessage(
+	input: IpBanMessageInput,
+	timestamp: string,
+): ChannelMessage {
+	const fields: MessageField[] = [
+		{ name: "Address", value: input.ip },
+		{
+			name: "Until",
+			value: input.expiresAt ? input.expiresAt.toISOString() : "Lifted by hand",
+		},
+	];
+	if (input.host) {
+		fields.push({ name: "Host", value: input.host });
+	}
+	return {
+		detail: input.reason,
+		event: "security.ip_banned",
+		fields,
+		link: dashboardLink(input.origin, "/monitoring/blocked"),
+		serviceId: null,
+		serviceName: null,
+		timestamp,
+		title: `${input.ip} banned`,
+	};
+}
+
 export interface StatusChecksMessageInput {
 	commit: string | null;
 	failed: string[];

@@ -10,6 +10,7 @@ import {
 	Container,
 	Cylinder,
 	Database,
+	FileCode2,
 	Fingerprint,
 	FolderKanban,
 	GitBranch,
@@ -198,6 +199,14 @@ export const allNavItems = [
 		href: resolve("idp"),
 		icon: Fingerprint,
 		label: "IDP",
+	},
+	{
+		adminOnly: true,
+		category: "Integrations",
+		exact: false,
+		href: resolve("iac"),
+		icon: FileCode2,
+		label: "Infrastructure as Code",
 	},
 	{
 		adminOnly: false,

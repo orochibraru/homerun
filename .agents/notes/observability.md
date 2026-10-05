@@ -500,3 +500,67 @@ the fixed windows), through the DTOs' optional `until`.
 (`formatChange`: relative for counts, times and sizes, percentage points for
 error rate and uptime; `HIGHER_IS_BETTER` decides the colour, null for requests
 and bandwidth, which are neither good nor bad news).
+
+## Tracing (`trace_span`, `TraceSpanDTO`, `TracingService`, `src/lib/tracing/`, Observability → Traces, Monitoring → Traces)
+
+OpenTelemetry traces, opt-in per service (`service.tracesEnabled`). There's no
+trace table: a trace is every `trace_span` row sharing a `trace_id`, unique on
+`(trace_id, span_id)` so a retried export never duplicates. A row with no
+`service_id` is Homerun's own (the worker writes
+`service_name = homerun-worker`); `TraceScope` is `{ serviceId }` or
+`{ instance: true }`, and `listTraces` groups by trace in SQL (root name = the
+parentless span's, else the earliest; duration = last end minus first start;
+`status=error` is a HAVING on the failed-span count; search matches any span
+name or the trace id through a subquery, so a match keeps the whole trace). A
+trace page shows every span of the trace, any service, as long as one span is in
+scope.
+
+**Collector** (`DockerOtelMixin`, `docker/otel.ts` + `otel-container.ts`, run
+like Garage, see `docker.md`): `otel/opentelemetry-collector-contrib` pinned in
+`OTEL_IMAGE_TAG`. 0.162.0 was the latest release but Docker Hub never got that
+tag (only ghcr did), so it's 0.161.0; check the tag on Docker Hub before a bump.
+Receivers on 4317/4318 on the shared network only, `memory_limiter` + `batch`,
+one `otlp_http` exporter (`otlphttp` is a deprecated alias in 0.161 and logs a
+warning) with `encoding: json` to the app. The config file holds `${env:...}`
+references only: the export base URL and bearer token are env vars, plus a
+digest of the config (`HOMERUN_OTEL_CONFIG`), so `otelMatches` recreates the
+container when the image, address, token or file change. The app's address is
+`errorPagesTarget(config.authCheckUrl)`, the forwardAuth origin Traefik already
+reaches (the `homerun-auth` alias in production, `host.docker.internal:<port>`
+in dev, which is why the container gets `host-gateway` as an extra host).
+Re-asserted from `CoreServicesWatch` when the toggle is on.
+
+**Ingest** (`POST /api/v1/otlp/v1/traces`, not in the OpenAPI document): only
+the collector calls it, with `Bearer otlpIngestToken(AUTH_SECRET)` (an HMAC with
+its own label, compared in constant time). `hooks.server.ts` exempts the path
+from the session/API-key layer (a bearer there isn't an API key) and the CSRF
+check. JSON only (415 otherwise), 10 MB cap before and after gzip/deflate
+(`decodeBody` from error tracking), parsed by the pure `parseOtlpTraces` (hex
+ids validated, nanosecond strings through BigInt, `AnyValue` flattened, enum
+names accepted). `spanOwner` maps a resource to a service by
+`homerun.service.id`, then `service.name` = slug, only when that service has
+traces on; `homerun`/`homerun-worker` are kept with no service; the rest is
+dropped and still acknowledged (200 `{}`) so the collector doesn't retry it. The
+service list is cached 30s and dropped when a service's toggle changes.
+
+**Deploy env**: `withTracingEnv` (in `deployWorkerSpec`) adds the five `OTEL_*`
+variables, never over a user-set one, and prepends `homerun.service.id=<id>` to
+the user's own `OTEL_RESOURCE_ATTRIBUTES`. Previews start with traces off (a new
+service row).
+
+**Retention**: `TraceRetentionScheduler`, hourly, deletes spans that started
+before `traceRetentionDays` (7 by default, 1 to 90, Monitoring → Settings, which
+is admin-only) in batches of 5000.
+
+**Verified live** against a throwaway Postgres, the real worker and the real
+collector container created through `reconcileOtel`: OTLP/JSON posted to
+`homerun-otel:4318` from another container on the shared network landed in
+`trace_span` through the gzip export (mapping by slug and by
+`homerun.service.id`; a traces-off service and an unknown one dropped); a second
+reconcile was a no-op and a config change recreated the container; a job leased
+by the worker produced its job/execute/finish spans with the error recorded; the
+list, search, error filter, sorts and pruning queries returned what they should.
+Gotcha found there: Drizzle over bun-sql writes `jsonb` values as JSON strings
+(every table here does), while the Go exporter's `::jsonb` casts store objects;
+Drizzle reads both back as objects, so don't query span attributes with jsonb
+operators without accounting for that.

@@ -3,6 +3,7 @@
 	import Alert from "#lib/components/alert.svelte";
 	import LoginWallSection from "#lib/components/login-wall-section.svelte";
 	import { title } from "#lib/store/title.js";
+	import { visibleIn } from "#lib/ui-mode.js";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import BlockedPathsPanel from "./blocked-paths-panel.svelte";
@@ -41,7 +42,7 @@
     users={data.users}
   />
 
-  {#if svc.dnsResolvable}
+  {#if svc.dnsResolvable && (visibleIn(data.uiMode, "service/security#login-wall-paths") || svc.authPaths.length > 0)}
     <LoginWallPathsPanel
       authPaths={svc.authPaths}
       authPathsMode={svc.authPathsMode}
@@ -49,11 +50,13 @@
     />
   {/if}
 
-  <BlockedPathsPanel
-    blockedPageAvailable={data.blockedPageAvailable}
-    blockedPaths={svc.blockedPaths}
-    dnsResolvable={svc.dnsResolvable}
-  />
+  {#if visibleIn(data.uiMode, "service/security#blocked-paths") || svc.blockedPaths.length > 0}
+    <BlockedPathsPanel
+      blockedPageAvailable={data.blockedPageAvailable}
+      blockedPaths={svc.blockedPaths}
+      dnsResolvable={svc.dnsResolvable}
+    />
+  {/if}
 
   {#if !data.instanceScanEnabled}
     <Alert title="Image scanning is turned off for this instance." variant="info">

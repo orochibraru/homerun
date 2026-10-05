@@ -5,6 +5,7 @@
 		inputClass as input,
 		labelClass as label,
 	} from "#lib/components/form-styles.js";
+	import UiModePicker from "#lib/components/ui-mode-picker.svelte";
 	import StepPanel from "./step-panel.svelte";
 	import type { OnboardingWizard } from "./wizard-state.svelte";
 
@@ -18,7 +19,7 @@
 </script>
 
 <StepPanel
-  description="The domain this instance and everything it deploys lives under."
+  description="The domain this instance and everything it deploys lives under, and how you will use it."
   {hidden}
   title="Core"
 >
@@ -53,4 +54,18 @@
     name="authCrossSubdomainCookies"
     bind:checked={wizard.authCrossSubdomainCookies}
   />
+  <div>
+    <p class={label}>How will you use Homerun?</p>
+    <UiModePicker
+      advancedLabel="Engineering work"
+      name="defaultUiMode"
+      simpleLabel="Homelab, click-ops"
+      bind:value={wizard.defaultUiMode}
+    />
+    <p class="mt-1.5 text-xs text-text-subtle">
+      Sets what every account sees by default: simple or advanced mode. Each
+      account can switch from its profile menu, and Settings changes the
+      default.
+    </p>
+  </div>
 </StepPanel>

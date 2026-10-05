@@ -10,6 +10,7 @@
 		RotateCw,
 		Sparkles,
 		Square,
+		Undo2,
 		XCircle,
 		Zap,
 	} from "@lucide/svelte";
@@ -250,6 +251,44 @@
                 Restart
             </Button>
         </form>
+
+        {#if data.canRollBack}
+            <form
+                action="?/rollback"
+                method="POST"
+                use:enhance={enhanceToast({
+                    error: "Couldn't roll back.",
+                    loading: `Rolling ${svc.name} back to the previous version`,
+                    onFailure: () => {
+                        progress.pendingAction = null;
+                    },
+                    onStart: () => {
+                        progress.pendingAction = "rollback";
+                    },
+                    onSuccess: (result) => {
+                        progress.pendingAction = "deploy";
+                        if (typeof result?.deploymentId === "string") {
+                            progress.watchProgress(result.deploymentId);
+                        }
+                    },
+                    success: "Rollback queued.",
+                })}
+            >
+                <Button
+                    disabled={progress.pendingAction !== null}
+                    title="Redeploy the version that ran before this one"
+                    type="submit"
+                    variant="outline"
+                >
+                    {#if progress.pendingAction === "rollback"}
+                        <Spinner />
+                    {:else}
+                        <Undo2 class="size-4" />
+                    {/if}
+                    Roll back to the previous version
+                </Button>
+            </form>
+        {/if}
 
         {#if svc.containerId}
             <form

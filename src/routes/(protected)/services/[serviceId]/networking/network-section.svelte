@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Network } from "@lucide/svelte";
+	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import CopyButton from "#lib/components/copy-button.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
@@ -18,6 +19,7 @@
 
 	interface Props {
 		baseDomain: string;
+		collapseNetworkMode: boolean;
 		errors?: Record<string, string[]>;
 		submittedValues?: Record<string, string>;
 		svc: {
@@ -37,6 +39,7 @@
 
 	const {
 		baseDomain,
+		collapseNetworkMode,
 		errors: portsErrors,
 		submittedValues,
 		svc,
@@ -111,52 +114,58 @@
       success: "Saved. Redeploy for it to take effect.",
     })}
   >
-    <div>
-      <div class={label}>Network mode</div>
-      <div class="grid grid-cols-2 gap-3">
-        <button
-          class="
-            flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
-            'bridge'
-            ? 'border-accent bg-accent-light text-accent'
-            : 'border-border text-text-muted hover:bg-surface-2'}
-         "
-          onclick={() => {
-            networkMode = "bridge";
-          }}
-          type="button"
-        >
-          Bridge (default)
-        </button>
-        <button
-          class="
-            flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
-            'host'
-            ? 'border-accent bg-accent-light text-accent'
-            : 'border-border text-text-muted hover:bg-surface-2'}
-         "
-          onclick={() => {
-            networkMode = "host";
-          }}
-          type="button"
-        >
-          Host
-        </button>
+    <AdvancedDisclosure
+      collapsible={collapseNetworkMode}
+      description="Network mode"
+    >
+      <div>
+        <div class={label}>Network mode</div>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            class="
+              flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
+              'bridge'
+              ? 'border-accent bg-accent-light text-accent'
+              : 'border-border text-text-muted hover:bg-surface-2'}
+           "
+            onclick={() => {
+              networkMode = "bridge";
+            }}
+            type="button"
+          >
+            Bridge (default)
+          </button>
+          <button
+            class="
+              flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
+              'host'
+              ? 'border-accent bg-accent-light text-accent'
+              : 'border-border text-text-muted hover:bg-surface-2'}
+           "
+            onclick={() => {
+              networkMode = "host";
+            }}
+            type="button"
+          >
+            Host
+          </button>
+        </div>
+        <input name="networkMode" type="hidden" value={networkMode}>
+        <p class="text-text-subtle mt-1.5 text-xs">
+          {#if networkMode === "host"}
+            Shares this machine's network namespace directly : for apps that
+            need real host-network access (mDNS/SSDP discovery, e.g. Home
+            Assistant). No shared/stack network, no Traefik routing, no public
+            DNS route regardless of the setting below.
+          {:else}
+            Joins the shared Traefik network (plus its stack's network, if
+            any) : the normal mode for anything that doesn't specifically need
+            host networking.
+          {/if}
+        </p>
       </div>
-      <input name="networkMode" type="hidden" value={networkMode}>
-      <p class="text-text-subtle mt-1.5 text-xs">
-        {#if networkMode === "host"}
-          Shares this machine's network namespace directly : for apps that
-          need real host-network access (mDNS/SSDP discovery, e.g. Home
-          Assistant). No shared/stack network, no Traefik routing, no public
-          DNS route regardless of the setting below.
-        {:else}
-          Joins the shared Traefik network (plus its stack's network, if
-          any) : the normal mode for anything that doesn't specifically need
-          host networking.
-        {/if}
-      </p>
-    </div>
+
+    </AdvancedDisclosure>
 
     <div class="grid grid-cols-2 gap-3">
       <div>

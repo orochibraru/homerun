@@ -801,11 +801,13 @@ input: pathnames take no leading slash (`resolve("onboarding")`, home is
 `resolve("")`), and only route ids start with `/`.
 
 `/onboarding/+page.svelte` is a 6-step wizard (Core / Docker / Traefik / Email /
-DNS / Review) in a centred `max-w-3xl` column, each step a `panel` card with its
-own header, closing on a Review step that lists what's about to be persisted.
-It's built on the reusable `src/lib/components/stepper.svelte` (connected
-circular step markers with labels at `sm+`, a progress bar below that, `Button`
-primitives for Back/Next), extracted from `services/new`'s inlined
+DNS / Review; Core also asks "How will you use Homerun?", saved as
+`instance_settings.defaultUiMode`, see Simple and advanced UI modes in `ui.md`)
+in a centred `max-w-3xl` column, each step a `panel` card with its own header,
+closing on a Review step that lists what's about to be persisted. It's built on
+the reusable `src/lib/components/stepper.svelte` (connected circular step
+markers with labels at `sm+`, a progress bar below that, `Button` primitives for
+Back/Next), extracted from `services/new`'s inlined
 step-indicator-bar-plus-Back/Next pattern (not retrofitted onto `services/new`
 itself, a deliberate scope cut). `Stepper` owns navigation and which step is
 unlocked (`reachableStep`, grows only after a passed `onNext`); the consuming

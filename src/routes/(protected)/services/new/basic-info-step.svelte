@@ -18,6 +18,7 @@
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
 	import { GitBranch, Server } from "@lucide/svelte";
 	import { isBuildMethod } from "#lib/build-methods.js";
+	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
 	import GitBuildFields from "#lib/components/git-build-fields.svelte";
 	import GitSourceFields from "#lib/components/git-source-fields.svelte";
 	import ImageCheckWarning from "#lib/components/image-check-warning.svelte";
@@ -26,6 +27,7 @@
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { defaultHostname } from "#lib/service-domains.js";
 	import { stackScopedSlug } from "#lib/slug.js";
+	import { visibleIn } from "#lib/ui-mode.js";
 	import type { WizardData } from "./wizard-types";
 	import { errorClass, label } from "./field-classes";
 
@@ -220,18 +222,23 @@
         bind:gitRepo
         bind:gitUrl
       />
-      <GitBuildFields
-        {errorClass}
-        {errors}
-        labelClass={label}
-        registries={data.buildCacheRegistries}
-        bind:gitBuildMethod
-        bind:gitDockerfilePath
-        bind:gitBakeFile
-        bind:gitBuildTarget
-        bind:gitBuildContext
-        bind:buildCacheRegistryId
-      />
+      <AdvancedDisclosure
+        collapsible={!visibleIn(data.uiMode, "services/new#build")}
+        description="Build method and cache"
+      >
+        <GitBuildFields
+          {errorClass}
+          {errors}
+          labelClass={label}
+          registries={data.buildCacheRegistries}
+          bind:gitBuildMethod
+          bind:gitDockerfilePath
+          bind:gitBakeFile
+          bind:gitBuildTarget
+          bind:gitBuildContext
+          bind:buildCacheRegistryId
+        />
+      </AdvancedDisclosure>
     {/if}
   </div>
 </section>

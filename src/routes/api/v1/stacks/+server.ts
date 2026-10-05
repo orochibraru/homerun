@@ -1,9 +1,11 @@
 import { StackDTO } from "#lib/dto/stack-dto.js";
-import { Logger } from "#lib/logger.js";
 import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
+import { apiCaller, apiError, readApiBody } from "#lib/server/api-route.js";
 import { createStackApiBody } from "#lib/server/validation/api.js";
-
-const logger = new Logger("API");
+import {
+	StackSettingsError,
+	StackSettingsService,
+} from "#lib/services/stack-settings.service.js";
 
 export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -19,36 +21,21 @@ export const GET = async ({ locals, url }) => {
 };
 
 export const POST = async ({ request, locals }) => {
-	if (!locals.user) {
-		return Response.json({ error: "Unauthorized" }, { status: 401 });
+	const caller = apiCaller(locals);
+	if ("refused" in caller) {
+		return caller.refused;
 	}
-
-	const body = await request.json().catch(() => null);
-	const result = createStackApiBody.safeParse(body);
-	if (!result.success) {
-		return Response.json(
-			{ error: "Invalid request body", issues: result.error.flatten() },
-			{ status: 400 },
-		);
+	const body = await readApiBody(request, createStackApiBody);
+	if ("response" in body) {
+		return body.response;
 	}
-	const input = result.data;
-
-	if (await StackDTO.slugTaken(input.slug)) {
-		return Response.json(
-			{ error: "That slug is already in use." },
-			{ status: 409 },
-		);
+	try {
+		const stack = await StackSettingsService.create(body.data, caller.userId);
+		return Response.json(stack.toJSON(), { status: 201 });
+	} catch (err) {
+		if (err instanceof StackSettingsError) {
+			return apiError(err.message, 409);
+		}
+		throw err;
 	}
-
-	const stack = await StackDTO.create({
-		description: input.description ?? null,
-		name: input.name,
-		slug: input.slug,
-		userId: locals.user.id,
-	});
-
-	logger.info(
-		`Stack created via API: stack=${stack.id} user=${locals.user.id}`,
-	);
-	return Response.json(stack.toJSON(), { status: 201 });
 };

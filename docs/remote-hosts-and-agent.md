@@ -1,5 +1,9 @@
 # Build servers & the Homerun Agent
 
+Advanced mode: [simple mode](ui-modes.md) hides the Remote Hosts and Build Cache
+sidebar entries. Everything here keeps working either way, and a hidden page
+still opens from a link.
+
 Services always deploy to this host's own Docker daemon. Placement across
 machines is [swarm mode](swarm-mode.md)'s job: a second machine joins the swarm
 as a worker rather than being registered separately, see

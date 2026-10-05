@@ -2,6 +2,7 @@ import { redirect } from "@sveltejs/kit";
 import { AppLogDTO } from "#lib/dto/app-log-dto.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 import { Logger } from "#lib/logger.js";
 import { rangeStart } from "#lib/monitoring-ranges.js";
@@ -10,9 +11,31 @@ import { monitoringRequest } from "#lib/server/monitoring-request.js";
 import { CapacityService } from "#lib/services/capacity.service.js";
 import { MonitoringService } from "#lib/services/monitoring.service.js";
 import { isProbed } from "#lib/services/uptime/uptime-probe.js";
+import { SIMPLE_FRONT_PAGE_TEMPLATES } from "#lib/ui-mode.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("Dashboard");
+
+/** The front page's one-click templates, in `SIMPLE_FRONT_PAGE_TEMPLATES` order, skipping any this instance doesn't have. */
+async function frontPageTemplates() {
+	const templates = new Map(
+		(await TemplateDTO.list()).map((tmpl) => [tmpl.id, tmpl.toJSON()]),
+	);
+	return SIMPLE_FRONT_PAGE_TEMPLATES.flatMap((id) => {
+		const tmpl = templates.get(id);
+		return tmpl
+			? [
+					{
+						category: tmpl.category,
+						description: tmpl.description,
+						icon: tmpl.icon,
+						id: tmpl.id,
+						name: tmpl.name,
+					},
+				]
+			: [];
+	});
+}
 
 /** Today's traffic, uptime and host use, and the five busiest services, for the dashboard's summary. */
 async function todaysMonitoring(services: ServiceDTO[], zone: string) {
@@ -47,16 +70,16 @@ async function todaysMonitoring(services: ServiceDTO[], zone: string) {
 export const load = async ({ cookies, locals, parent, url }) => {
 	// (protected)/+layout.server.ts already redirects unauthenticated users
 	// before this load runs : parent() gives the already-guaranteed user.
-	await parent();
+	const { uiMode } = await parent();
 
-	const [services, recentDeployments, uptime, hardBreaches] = await Promise.all(
-		[
+	const [services, recentDeployments, uptime, hardBreaches, templates] =
+		await Promise.all([
 			ServiceDTO.list(),
 			DeploymentDTO.listRecent(),
 			UptimeCheckDTO.latest(),
 			CapacityService.hardBreaches(),
-		],
-	);
+			uiMode === "simple" && !locals.readOnly ? frontPageTemplates() : [],
+		]);
 	const recentErrors = locals.isAdmin
 		? await AppLogDTO.listRecent(5)
 		: await AppLogDTO.listRecentForServices(
@@ -70,6 +93,7 @@ export const load = async ({ cookies, locals, parent, url }) => {
 	const live = uptime.filter((check) => probed.has(check.serviceId));
 
 	return {
+		frontPageTemplates: templates,
 		isAdmin: locals.isAdmin,
 		monitoring: todaysMonitoring(
 			services,

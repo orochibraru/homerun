@@ -45,6 +45,7 @@ import { OrchestrationService } from "#lib/services/orchestration.service.js";
 import { JobWorker } from "#lib/services/queue/worker.js";
 import { RedirectService } from "#lib/services/redirect.service.js";
 import { DEFAULT_SURFACE } from "#lib/surfaces.js";
+import { isOtlpPath } from "#lib/tracing/otlp.js";
 import { building } from "$app/env";
 
 const logger = new Logger("Hooks");
@@ -288,6 +289,7 @@ export const init = async () => {
 	CronService.startMirrorGcScheduler();
 	CronService.startGitPollScheduler();
 	CronService.startErrorRetention();
+	CronService.startTraceRetention();
 	CronService.startIpBanScheduler();
 	CronService.startCoreServicesWatch();
 	CronService.startSwarmDnsWatch();
@@ -515,7 +517,11 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
  * SvelteKit routes that live under its base path.
  */
 const authHandler: Handle = async ({ event, resolve }) => {
-	if (isAuthCheckPath(event.url) || isIngestPath(event.url.pathname)) {
+	if (
+		isAuthCheckPath(event.url) ||
+		isIngestPath(event.url.pathname) ||
+		isOtlpPath(event.url.pathname)
+	) {
 		event.locals.isAdmin = false;
 		event.locals.apiKeyScope = null;
 		event.locals.readOnly = false;
@@ -683,7 +689,8 @@ const csrfHandler: Handle = async ({ event, resolve }) => {
 				OIDC_SERVER_TO_SERVER_PATHS.has(pathname) ||
 				pathname.startsWith(`${GIT_WEBHOOK_PATH}/`) ||
 				pathname.startsWith(`${ERROR_PAGE_PATH}/`) ||
-				isIngestPath(pathname),
+				isIngestPath(pathname) ||
+				isOtlpPath(pathname),
 		)
 	) {
 		return new Response(

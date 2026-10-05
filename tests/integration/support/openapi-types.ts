@@ -24,6 +24,49 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/backup-destinations": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List backup destinations
+		 * @description Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest.
+		 */
+		get: operations["get_backup_destinations"];
+		put?: never;
+		/** Create a backup destination */
+		post: operations["post_backup_destinations"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/backup-destinations/{destinationId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a backup destination */
+		get: operations["get_backup_destinations__destinationId_"];
+		put?: never;
+		post?: never;
+		/** Delete a backup destination */
+		delete: operations["delete_backup_destinations__destinationId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a backup destination
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_backup_destinations__destinationId_"];
+		trace?: never;
+	};
 	"/backups": {
 		parameters: {
 			query?: never;
@@ -42,6 +85,184 @@ export interface paths {
 		options?: never;
 		head?: never;
 		patch?: never;
+		trace?: never;
+	};
+	"/build-cache-registries": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List build cache registries
+		 * @description Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest.
+		 */
+		get: operations["get_build_cache_registries"];
+		put?: never;
+		/** Create a build cache registry */
+		post: operations["post_build_cache_registries"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/build-cache-registries/{registryId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a build cache registry */
+		get: operations["get_build_cache_registries__registryId_"];
+		put?: never;
+		post?: never;
+		/** Delete a build cache registry */
+		delete: operations["delete_build_cache_registries__registryId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a build cache registry
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_build_cache_registries__registryId_"];
+		trace?: never;
+	};
+	"/cron-jobs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List cron jobs
+		 * @description Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest.
+		 */
+		get: operations["get_cron_jobs"];
+		put?: never;
+		/**
+		 * Create a cron job
+		 * @description A kind exec job (a host command) needs an admin.
+		 */
+		post: operations["post_cron_jobs"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/cron-jobs/{cronJobId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a cron job */
+		get: operations["get_cron_jobs__cronJobId_"];
+		put?: never;
+		post?: never;
+		/** Delete a cron job */
+		delete: operations["delete_cron_jobs__cronJobId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a cron job
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_cron_jobs__cronJobId_"];
+		trace?: never;
+	};
+	"/dns-connections": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List DNS connections
+		 * @description Every DNS connection, in one response.
+		 */
+		get: operations["get_dns_connections"];
+		put?: never;
+		/** Create a DNS connection */
+		post: operations["post_dns_connections"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/dns-connections/{connectionId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a DNS connection */
+		get: operations["get_dns_connections__connectionId_"];
+		put?: never;
+		post?: never;
+		/** Delete a DNS connection */
+		delete: operations["delete_dns_connections__connectionId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a DNS connection
+		 * @description Renames the connection and replaces the credential fields sent; the others keep their stored value.
+		 */
+		patch: operations["patch_dns_connections__connectionId_"];
+		trace?: never;
+	};
+	"/git-providers": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List git providers
+		 * @description Every git provider, in one response.
+		 */
+		get: operations["get_git_providers"];
+		put?: never;
+		/**
+		 * Create a git provider
+		 * @description GitLab, Gitea or Bitbucket OAuth apps. GitHub Apps are registered from the dashboard's Git Providers page.
+		 */
+		post: operations["post_git_providers"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/git-providers/{providerId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a git provider */
+		get: operations["get_git_providers__providerId_"];
+		put?: never;
+		post?: never;
+		/** Delete a git provider */
+		delete: operations["delete_git_providers__providerId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a git provider
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_git_providers__providerId_"];
 		trace?: never;
 	};
 	"/iac/projects/{projectId}/lock": {
@@ -193,6 +414,144 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/notification-channels": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List notification channels of the caller
+		 * @description Every notification channel, in one response.
+		 */
+		get: operations["get_notification_channels"];
+		put?: never;
+		/** Create a notification channel */
+		post: operations["post_notification_channels"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/notification-channels/{channelId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a notification channel */
+		get: operations["get_notification_channels__channelId_"];
+		put?: never;
+		post?: never;
+		/** Delete a notification channel */
+		delete: operations["delete_notification_channels__channelId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a notification channel
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_notification_channels__channelId_"];
+		trace?: never;
+	};
+	"/object-stores": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List object stores
+		 * @description Every object store, in one response.
+		 */
+		get: operations["get_object_stores"];
+		put?: never;
+		/**
+		 * Create a object store
+		 * @description Saved once listing buckets with the credentials works.
+		 */
+		post: operations["post_object_stores"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/object-stores/{storeId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a object store */
+		get: operations["get_object_stores__storeId_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a object store
+		 * @description Deletes the store's record and its Terraform state projects, not its buckets. The built-in store answers 409.
+		 */
+		delete: operations["delete_object_stores__storeId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a object store
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_object_stores__storeId_"];
+		trace?: never;
+	};
+	"/object-stores/{storeId}/buckets": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List buckets of a store
+		 * @description Every bucket, in one response.
+		 */
+		get: operations["get_object_stores__storeId__buckets"];
+		put?: never;
+		/** Create a bucket */
+		post: operations["post_object_stores__storeId__buckets"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/object-stores/{storeId}/buckets/{bucket}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a bucket */
+		get: operations["get_object_stores__storeId__buckets__bucket_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a bucket
+		 * @description Only an empty bucket can be deleted.
+		 */
+		delete: operations["delete_object_stores__storeId__buckets__bucket_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a bucket
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_object_stores__storeId__buckets__bucket_"];
+		trace?: never;
+	};
 	"/ready": {
 		parameters: {
 			query?: never;
@@ -259,6 +618,94 @@ export interface paths {
 		patch: operations["patch_redirects__redirectId_"];
 		trace?: never;
 	};
+	"/service-dependencies": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List service dependencies
+		 * @description Every service dependency, in one response.
+		 */
+		get: operations["get_service_dependencies"];
+		put?: never;
+		/**
+		 * Create a service dependency
+		 * @description Refused when it would make a loop.
+		 */
+		post: operations["post_service_dependencies"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/service-dependencies/{dependencyId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a service dependency */
+		get: operations["get_service_dependencies__dependencyId_"];
+		put?: never;
+		post?: never;
+		/** Delete a service dependency */
+		delete: operations["delete_service_dependencies__dependencyId_"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/service-environments": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List service environments
+		 * @description Every service environment, in one response.
+		 */
+		get: operations["get_service_environments"];
+		put?: never;
+		/**
+		 * Create a service environment
+		 * @description Copies the service (settings, variables, volumes) into one running ref, under its own slug.
+		 */
+		post: operations["post_service_environments"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/service-environments/{environmentId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a service environment */
+		get: operations["get_service_environments__environmentId_"];
+		put?: never;
+		post?: never;
+		/** Delete a service environment */
+		delete: operations["delete_service_environments__environmentId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a service environment
+		 * @description Points the environment at another ref or main domain, and sets envOverrides over its variables. Doesn't deploy.
+		 */
+		patch: operations["patch_service_environments__environmentId_"];
+		trace?: never;
+	};
 	"/services": {
 		parameters: {
 			query?: never;
@@ -274,7 +721,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Create a service
-		 * @description Persists config only : does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it.
+		 * @description Persists config only : does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it. Any setting PATCH takes may be sent too. With templateId, the service (and the template's linked services) is created from the template first.
 		 */
 		post: operations["post_services"];
 		delete?: never;
@@ -759,6 +1206,74 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/stacks/{stackId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a stack */
+		get: operations["get_stacks__stackId_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a stack
+		 * @description Removes every service in it and the stack itself. A workload that can't be removed answers 409 unless ?force=true.
+		 */
+		delete: operations["delete_stacks__stackId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a stack
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_stacks__stackId_"];
+		trace?: never;
+	};
+	"/status-pages": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List status pages
+		 * @description Every status page, in one response.
+		 */
+		get: operations["get_status_pages"];
+		put?: never;
+		/** Create a status page */
+		post: operations["post_status_pages"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/status-pages/{statusPageId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a status page */
+		get: operations["get_status_pages__statusPageId_"];
+		put?: never;
+		post?: never;
+		/** Delete a status page */
+		delete: operations["delete_status_pages__statusPageId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a status page
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_status_pages__statusPageId_"];
+		trace?: never;
+	};
 	"/system-stats": {
 		parameters: {
 			query?: never;
@@ -796,6 +1311,69 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/templates/{templateId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a template */
+		get: operations["get_templates__templateId_"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/volume-mounts": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List volume mounts
+		 * @description Every volume mount, in one response.
+		 */
+		get: operations["get_volume_mounts"];
+		put?: never;
+		/**
+		 * Create a volume mount
+		 * @description Applied on the service's next deploy.
+		 */
+		post: operations["post_volume_mounts"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/volume-mounts/{mountId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a volume mount */
+		get: operations["get_volume_mounts__mountId_"];
+		put?: never;
+		post?: never;
+		/** Delete a volume mount */
+		delete: operations["delete_volume_mounts__mountId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a volume mount
+		 * @description Changes the fields sent and keeps the rest.
+		 */
+		patch: operations["patch_volume_mounts__mountId_"];
+		trace?: never;
+	};
 	"/volumes": {
 		parameters: {
 			query?: never;
@@ -809,11 +1387,37 @@ export interface paths {
 		 */
 		get: operations["get_volumes"];
 		put?: never;
-		post?: never;
+		/** Create a volume */
+		post: operations["post_volumes"];
 		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
+		trace?: never;
+	};
+	"/volumes/{volumeId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a volume */
+		get: operations["get_volumes__volumeId_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a volume
+		 * @description Deletes the volume's record and its mounts, not the data.
+		 */
+		delete: operations["delete_volumes__volumeId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a volume
+		 * @description Changes the fields sent and keeps the rest. Turning backups on without a schedule picks 0 3 * * *.
+		 */
+		patch: operations["patch_volumes__volumeId_"];
 		trace?: never;
 	};
 	"/volumes/{volumeId}/backup": {
@@ -906,6 +1510,372 @@ export interface operations {
 			};
 		};
 	};
+	get_backup_destinations: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The backup destinations */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						accessKeyId: string;
+						bucket: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						endpoint: string;
+						id: string;
+						name: string;
+						region: string;
+						secretAccessKeySet: boolean;
+						/** @enum {string} */
+						type: "s3" | "sftp" | "smb" | "webdav";
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_backup_destinations: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description Access key id, or username. */
+					accessKeyId: string;
+					/**
+					 * @description Bucket, or path (share for smb).
+					 * @default
+					 */
+					bucket: string;
+					/** @description S3 endpoint URL, or host / WebDAV URL. */
+					endpoint: string;
+					name: string;
+					/** @default  */
+					region: string;
+					/** @description Secret access key, password, or SFTP private key. Write-only. */
+					secretAccessKey: string;
+					/**
+					 * @default s3
+					 * @enum {string}
+					 */
+					type: "s3" | "sftp" | "smb" | "webdav";
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						accessKeyId: string;
+						bucket: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						endpoint: string;
+						id: string;
+						name: string;
+						region: string;
+						secretAccessKeySet: boolean;
+						/** @enum {string} */
+						type: "s3" | "sftp" | "smb" | "webdav";
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_backup_destinations__destinationId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Destination id */
+				destinationId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The backup destination */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						accessKeyId: string;
+						bucket: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						endpoint: string;
+						id: string;
+						name: string;
+						region: string;
+						secretAccessKeySet: boolean;
+						/** @enum {string} */
+						type: "s3" | "sftp" | "smb" | "webdav";
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_backup_destinations__destinationId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Destination id */
+				destinationId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_backup_destinations__destinationId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Destination id */
+				destinationId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					accessKeyId?: string;
+					bucket?: string;
+					endpoint?: string;
+					name?: string;
+					region?: string;
+					/** @description Secret access key, password or private key. Write-only. */
+					secretAccessKey?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						accessKeyId: string;
+						bucket: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						endpoint: string;
+						id: string;
+						name: string;
+						region: string;
+						secretAccessKeySet: boolean;
+						/** @enum {string} */
+						type: "s3" | "sftp" | "smb" | "webdav";
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	get_backups: {
 		parameters: {
 			query?: {
@@ -963,6 +1933,1455 @@ export interface operations {
 			};
 			/** @description Unauthorized */
 			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_build_cache_registries: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The build cache registries */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						name: string;
+						passwordSet: boolean;
+						registryUrl: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+						username: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_build_cache_registries: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					name: string;
+					/** @description Registry password. Write-only. */
+					password: string;
+					/** @description e.g. ghcr.io, without a scheme. */
+					registryUrl: string;
+					username: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						name: string;
+						passwordSet: boolean;
+						registryUrl: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+						username: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_build_cache_registries__registryId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Registry id */
+				registryId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The build cache registry */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						name: string;
+						passwordSet: boolean;
+						registryUrl: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+						username: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_build_cache_registries__registryId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Registry id */
+				registryId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_build_cache_registries__registryId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Registry id */
+				registryId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					name?: string;
+					/** @description Registry password. Write-only. */
+					password?: string;
+					/** @description e.g. ghcr.io, without a scheme. */
+					registryUrl?: string;
+					username?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						name: string;
+						passwordSet: boolean;
+						registryUrl: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+						username: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_cron_jobs: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The cron jobs */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						command: string | null;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						enabled: boolean;
+						envVars: {
+							[key: string]: string;
+						} | null;
+						id: string;
+						image: string | null;
+						/** @enum {string} */
+						kind: "image" | "exec";
+						lastRunAt: string | null;
+						name: string;
+						registryPasswordSet: boolean;
+						registryUrl: string | null;
+						registryUsername: string | null;
+						remoteHostId: string | null;
+						schedule: string;
+						tag: string | null;
+						timeoutSeconds: number;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_cron_jobs: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					command?: string | null;
+					description?: string | null;
+					/** @default false */
+					enabled: boolean;
+					/** @default {} */
+					envVars: {
+						[key: string]: string;
+					};
+					image?: string | null;
+					/** @enum {string} */
+					kind: "image" | "exec";
+					name: string;
+					/** @description Registry password. Write-only. */
+					registryPassword?: string;
+					registryUrl?: string | null;
+					registryUsername?: string | null;
+					remoteHostId?: string | null;
+					/** @description 5-field cron expression. */
+					schedule: string;
+					tag?: string | null;
+					timeoutSeconds?: number;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						command: string | null;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						enabled: boolean;
+						envVars: {
+							[key: string]: string;
+						} | null;
+						id: string;
+						image: string | null;
+						/** @enum {string} */
+						kind: "image" | "exec";
+						lastRunAt: string | null;
+						name: string;
+						registryPasswordSet: boolean;
+						registryUrl: string | null;
+						registryUsername: string | null;
+						remoteHostId: string | null;
+						schedule: string;
+						tag: string | null;
+						timeoutSeconds: number;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_cron_jobs__cronJobId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Cron job id */
+				cronJobId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The cron job */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						command: string | null;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						enabled: boolean;
+						envVars: {
+							[key: string]: string;
+						} | null;
+						id: string;
+						image: string | null;
+						/** @enum {string} */
+						kind: "image" | "exec";
+						lastRunAt: string | null;
+						name: string;
+						registryPasswordSet: boolean;
+						registryUrl: string | null;
+						registryUsername: string | null;
+						remoteHostId: string | null;
+						schedule: string;
+						tag: string | null;
+						timeoutSeconds: number;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_cron_jobs__cronJobId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Cron job id */
+				cronJobId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_cron_jobs__cronJobId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Cron job id */
+				cronJobId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					command?: string | null;
+					description?: string | null;
+					enabled?: boolean;
+					envVars?: {
+						[key: string]: string;
+					};
+					image?: string | null;
+					name?: string;
+					/** @description Registry password. Write-only. */
+					registryPassword?: string;
+					registryUrl?: string | null;
+					registryUsername?: string | null;
+					remoteHostId?: string | null;
+					/** @description 5-field cron expression. */
+					schedule?: string;
+					tag?: string | null;
+					timeoutSeconds?: number;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						command: string | null;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						enabled: boolean;
+						envVars: {
+							[key: string]: string;
+						} | null;
+						id: string;
+						image: string | null;
+						/** @enum {string} */
+						kind: "image" | "exec";
+						lastRunAt: string | null;
+						name: string;
+						registryPasswordSet: boolean;
+						registryUrl: string | null;
+						registryUsername: string | null;
+						remoteHostId: string | null;
+						schedule: string;
+						tag: string | null;
+						timeoutSeconds: number;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_dns_connections: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The DNS connections */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						name: string;
+						provider: string;
+						providerName: string;
+						/** @description The credential fields that hold a value */
+						setFields: string[];
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_dns_connections: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The provider's credential fields by key. Write-only. */
+					credentials: {
+						[key: string]: string;
+					};
+					name?: string;
+					/** @description The DNS provider's id. */
+					provider: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						name: string;
+						provider: string;
+						providerName: string;
+						/** @description The credential fields that hold a value */
+						setFields: string[];
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_dns_connections__connectionId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Connection id */
+				connectionId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The DNS connection */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						name: string;
+						provider: string;
+						providerName: string;
+						/** @description The credential fields that hold a value */
+						setFields: string[];
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_dns_connections__connectionId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Connection id */
+				connectionId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_dns_connections__connectionId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Connection id */
+				connectionId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The provider's credential fields by key. Write-only. */
+					credentials?: {
+						[key: string]: string;
+					};
+					name?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						name: string;
+						provider: string;
+						providerName: string;
+						/** @description The credential fields that hold a value */
+						setFields: string[];
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_git_providers: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The git providers */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						baseUrl: string | null;
+						clientId: string;
+						clientSecretSet: boolean;
+						enabled: boolean;
+						id: string;
+						/** @enum {string} */
+						kind: "github" | "gitlab" | "gitea" | "bitbucket";
+						name: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_git_providers: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description Required for Gitea (self-hosted only). */
+					baseUrl?: string | null;
+					clientId: string;
+					/** @description OAuth client secret. Write-only. */
+					clientSecret: string;
+					/** @default true */
+					enabled: boolean;
+					/** @enum {string} */
+					kind: "gitlab" | "gitea" | "bitbucket";
+					name: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						baseUrl: string | null;
+						clientId: string;
+						clientSecretSet: boolean;
+						enabled: boolean;
+						id: string;
+						/** @enum {string} */
+						kind: "github" | "gitlab" | "gitea" | "bitbucket";
+						name: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_git_providers__providerId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Provider id */
+				providerId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The git provider */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						baseUrl: string | null;
+						clientId: string;
+						clientSecretSet: boolean;
+						enabled: boolean;
+						id: string;
+						/** @enum {string} */
+						kind: "github" | "gitlab" | "gitea" | "bitbucket";
+						name: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_git_providers__providerId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Provider id */
+				providerId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_git_providers__providerId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Provider id */
+				providerId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description Required for Gitea (self-hosted only). */
+					baseUrl?: string | null;
+					clientId?: string;
+					/** @description OAuth client secret. Write-only. */
+					clientSecret?: string;
+					enabled?: boolean;
+					name?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						baseUrl: string | null;
+						clientId: string;
+						clientSecretSet: boolean;
+						enabled: boolean;
+						id: string;
+						/** @enum {string} */
+						kind: "github" | "gitlab" | "gitea" | "bitbucket";
+						name: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -1809,6 +4228,1043 @@ export interface operations {
 			};
 		};
 	};
+	get_notification_channels: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The notification channels of the caller */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						enabled: boolean;
+						events: string[];
+						id: string;
+						/** @enum {string} */
+						kind: "webhook" | "discord" | "slack" | "telegram" | "email";
+						lastError: string | null;
+						name: string;
+						/** @description Where it delivers without the secret part: a webhook's origin, a Telegram chat id, an email address */
+						targetLabel: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_notification_channels: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					enabled?: boolean;
+					/** @description The events sent to the channel. */
+					events?: string[];
+					/** @enum {string} */
+					kind: "webhook" | "discord" | "slack" | "telegram" | "email";
+					name: string;
+					/** @description The webhook URL, the email address, or bot_token:chat_id for Telegram. Write-only. */
+					target: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						enabled: boolean;
+						events: string[];
+						id: string;
+						/** @enum {string} */
+						kind: "webhook" | "discord" | "slack" | "telegram" | "email";
+						lastError: string | null;
+						name: string;
+						/** @description Where it delivers without the secret part: a webhook's origin, a Telegram chat id, an email address */
+						targetLabel: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_notification_channels__channelId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channelId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The notification channel */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						enabled: boolean;
+						events: string[];
+						id: string;
+						/** @enum {string} */
+						kind: "webhook" | "discord" | "slack" | "telegram" | "email";
+						lastError: string | null;
+						name: string;
+						/** @description Where it delivers without the secret part: a webhook's origin, a Telegram chat id, an email address */
+						targetLabel: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_notification_channels__channelId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channelId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_notification_channels__channelId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channelId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					enabled?: boolean;
+					/** @description The events sent to the channel. */
+					events?: string[];
+					name?: string;
+					/** @description The webhook URL, the email address, or bot_token:chat_id for Telegram. Write-only. */
+					target?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						enabled: boolean;
+						events: string[];
+						id: string;
+						/** @enum {string} */
+						kind: "webhook" | "discord" | "slack" | "telegram" | "email";
+						lastError: string | null;
+						name: string;
+						/** @description Where it delivers without the secret part: a webhook's origin, a Telegram chat id, an email address */
+						targetLabel: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_object_stores: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The object stores */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						accessKeyId: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						endpoint: string;
+						id: string;
+						/** @enum {string} */
+						kind: "s3" | "garage";
+						name: string;
+						region: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_object_stores: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					accessKeyId: string;
+					/** @description The S3 endpoint URL. */
+					endpoint: string;
+					name: string;
+					/** @default us-east-1 */
+					region: string;
+					/** @description Secret access key. Write-only. */
+					secretAccessKey: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						accessKeyId: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						endpoint: string;
+						id: string;
+						/** @enum {string} */
+						kind: "s3" | "garage";
+						name: string;
+						region: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_object_stores__storeId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Store id */
+				storeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The object store */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						accessKeyId: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						endpoint: string;
+						id: string;
+						/** @enum {string} */
+						kind: "s3" | "garage";
+						name: string;
+						region: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_object_stores__storeId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Store id */
+				storeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_object_stores__storeId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Store id */
+				storeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					accessKeyId?: string;
+					/** @description The S3 endpoint URL. */
+					endpoint?: string;
+					name?: string;
+					region?: string;
+					/** @description Secret access key. Write-only. */
+					secretAccessKey?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						accessKeyId: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						endpoint: string;
+						id: string;
+						/** @enum {string} */
+						kind: "s3" | "garage";
+						name: string;
+						region: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_object_stores__storeId__buckets: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Store id */
+				storeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The buckets of a store */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						expirationDays: number | null;
+						/** @description <storeId>/<name> */
+						id: string;
+						name: string;
+						storeId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_object_stores__storeId__buckets: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Store id */
+				storeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description Delete objects this many days after they're written, null never. */
+					expirationDays?: number | null;
+					name: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						expirationDays: number | null;
+						/** @description <storeId>/<name> */
+						id: string;
+						name: string;
+						storeId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_object_stores__storeId__buckets__bucket_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Store id */
+				storeId: string;
+				/** @description Bucket name */
+				bucket: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The bucket */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						expirationDays: number | null;
+						/** @description <storeId>/<name> */
+						id: string;
+						name: string;
+						storeId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_object_stores__storeId__buckets__bucket_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Store id */
+				storeId: string;
+				/** @description Bucket name */
+				bucket: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_object_stores__storeId__buckets__bucket_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Store id */
+				storeId: string;
+				/** @description Bucket name */
+				bucket: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description Delete objects this many days after they're written, null never. */
+					expirationDays: number | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						expirationDays: number | null;
+						/** @description <storeId>/<name> */
+						id: string;
+						name: string;
+						storeId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	get_ready: {
 		parameters: {
 			query?: never;
@@ -2199,6 +5655,570 @@ export interface operations {
 			};
 		};
 	};
+	get_service_dependencies: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service dependencies */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						dependsOnId: string;
+						id: string;
+						serviceId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_service_dependencies: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The service it depends on. */
+					dependsOnId: string;
+					/** @description The service that depends on it. */
+					serviceId: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						dependsOnId: string;
+						id: string;
+						serviceId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_service_dependencies__dependencyId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Dependency id */
+				dependencyId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service dependency */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						dependsOnId: string;
+						id: string;
+						serviceId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_service_dependencies__dependencyId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Dependency id */
+				dependencyId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_service_environments: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service environments */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						domain: string | null;
+						/** @description The environment's own service id */
+						id: string;
+						name: string;
+						ref: string;
+						/** @description The service it's a copy of */
+						serviceId: string;
+						slug: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_service_environments: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * @description Queue the environment's first deploy right away.
+					 * @default false
+					 */
+					deploy: boolean;
+					domain?: string | null;
+					/**
+					 * @description Variables set on top of the ones copied from the service. Write-only.
+					 * @default {}
+					 */
+					envOverrides: {
+						[key: string]: string;
+					};
+					/** @description e.g. staging */
+					name: string;
+					/** @description The branch or tag (git service) or image tag it runs. */
+					ref: string;
+					serviceId: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						domain: string | null;
+						/** @description The environment's own service id */
+						id: string;
+						name: string;
+						ref: string;
+						/** @description The service it's a copy of */
+						serviceId: string;
+						slug: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_service_environments__environmentId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Environment id */
+				environmentId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service environment */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						domain: string | null;
+						/** @description The environment's own service id */
+						id: string;
+						name: string;
+						ref: string;
+						/** @description The service it's a copy of */
+						serviceId: string;
+						slug: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_service_environments__environmentId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Environment id */
+				environmentId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_service_environments__environmentId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Environment id */
+				environmentId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					domain?: string | null;
+					/**
+					 * @description Variables set on top of the ones copied from the service. Write-only.
+					 * @default {}
+					 */
+					envOverrides?: {
+						[key: string]: string;
+					};
+					/** @description The branch or tag (git service) or image tag it runs. */
+					ref?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						domain: string | null;
+						/** @description The environment's own service id */
+						id: string;
+						name: string;
+						ref: string;
+						/** @description The service it's a copy of */
+						serviceId: string;
+						slug: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	get_services: {
 		parameters: {
 			query?: {
@@ -2239,11 +6259,19 @@ export interface operations {
 						autoRollback: boolean;
 						/** @description Path patterns Traefik answers with a 403 */
 						blockedPaths: string[];
+						buildCacheBuiltin: boolean;
+						buildCacheRegistryId: string | null;
+						buildServerRemoteHostId: string | null;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
 						/** @description The app's type, a template category like database */
 						category: string | null;
+						channelBranch: string | null;
+						channelCanary: boolean;
+						channelCanaryDomain: string | null;
+						channelTagPattern: string;
+						channelsEnabled: boolean;
 						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
@@ -2265,8 +6293,8 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
-						customSslCertEnc: string | null;
-						customSslKeyEnc: string | null;
+						/** @description Whether a custom certificate and key are set. */
+						customSslSet: boolean;
 						defaultDomainEnabled: boolean;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
@@ -2305,13 +6333,13 @@ export interface operations {
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
 						gitWebhookReconnect: boolean;
-						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						healthcheckDisabled: boolean;
 						healthcheckIntervalSeconds: number | null;
 						healthcheckRetries: number | null;
 						healthcheckStartPeriodSeconds: number | null;
 						healthcheckTimeoutSeconds: number | null;
+						httpCacheTtl: number | null;
 						/** @description A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
@@ -2326,6 +6354,11 @@ export interface operations {
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
+						previewAuthAllowedEmails: string[];
+						previewAuthAllowedGroups: string[];
+						previewAuthAllowedUserIds: string[];
+						previewAuthProviders: string[];
+						previewAuthRequired: boolean;
 						previewBranch: string | null;
 						previewBranchExclude: string[];
 						previewBranchInclude: string[];
@@ -2350,10 +6383,13 @@ export interface operations {
 							/** @enum {string} */
 							protocol: "tcp" | "udp";
 						}[];
-						/** @description Ciphertext, not plaintext. */
-						registryPasswordEnc: string | null;
+						/** @enum {string} */
+						pullPolicy: "always" | "missing" | "never";
+						/** @description Whether a registry password is set. */
+						registryPasswordSet: boolean;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						replicas: number;
 						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
 						requireStatusChecks: boolean;
 						requiredStatusChecks: string[];
@@ -2363,7 +6399,9 @@ export interface operations {
 						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
+						swarmServiceId: string | null;
 						tag: string;
+						tracesEnabled: boolean;
 						/**
 						 * @description ISO 8601 timestamp
 						 * @example 2026-08-20T12:00:00.000Z
@@ -2398,87 +6436,330 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": {
-					/** @default false */
-					authRequired: boolean;
-					/** @default false */
-					autoDeployOnPush: boolean;
-					/**
-					 * @default image
-					 * @enum {string}
-					 */
-					buildSource: "image" | "git";
-					/** @default [] */
-					capAdd: string[];
-					/** @description Argv list, null keeps the image's own */
-					command?: string[] | null;
-					containerPort: number;
-					cpuLimit?: string;
-					/**
-					 * @description host[:container[:rwm]] device mappings
-					 * @default []
-					 */
-					devices: string[];
-					/** @default true */
-					dnsResolvable: boolean;
-					/** @description Argv list, null keeps the image's own */
-					entrypoint?: string[] | null;
-					/**
-					 * @description Absolute host paths of .env files read at deploy
-					 * @default []
-					 */
-					envFiles: string[];
-					/** @default {} */
-					envVars: {
-						[key: string]: string;
-					};
-					gitBakeFile?: string;
-					gitBuildContext?: string;
-					/**
-					 * @default dockerfile
-					 * @enum {string}
-					 */
-					gitBuildMethod:
-						| "dockerfile"
-						| "bake"
-						| "nixpacks"
-						| "railpack"
-						| "heroku"
-						| "paketo";
-					gitBuildTarget?: string;
-					gitDockerfilePath?: string;
-					gitProviderId?: string;
-					gitRef?: string;
-					gitRepo?: string;
-					gitUrl?: string;
-					image?: string;
-					/** @default {} */
-					labels: {
-						[key: string]: string;
-					};
-					memoryLimitMb?: number;
-					name: string;
-					/** @default false */
-					privileged: boolean;
-					/**
-					 * @default always
-					 * @enum {string}
-					 */
-					pullPolicy: "always" | "missing" | "never";
-					registryPassword?: string;
-					registryUrl?: string;
-					registryUsername?: string;
-					/**
-					 * @default unless-stopped
-					 * @enum {string}
-					 */
-					restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
-					/** @description Docker User (uid, uid:gid, name or name:group), null keeps the image's */
-					runAsUser?: string | null;
-					slug: string;
-					stackId?: string;
-					tag?: string;
-				};
+				"application/json":
+					| {
+							authAllowedEmails?: string[];
+							authAllowedGroups?: string[];
+							authAllowedUserIds?: string[];
+							/** @description Path patterns authPathsMode applies to. A pattern matches whole path segments anywhere in the path, a leading / anchors it at the root, * matches anything and ? one character, case-insensitively. */
+							authPaths?: string[];
+							/**
+							 * @description Which paths the login wall covers: all, only the authPaths, or all except them. Applied on the next deploy, which saving queues for a running service.
+							 * @enum {string}
+							 */
+							authPathsMode?: "all" | "only" | "except";
+							/** @description Sign-in methods the login wall offers, e.g. email, passkey. */
+							authProviders?: string[];
+							/** @default false */
+							authRequired: boolean;
+							/** @default false */
+							autoDeployOnPush: boolean;
+							autoRollback?: boolean;
+							/** @description Path patterns Traefik answers with a 403 instead of passing to the app, same syntax as authPaths. Applied on the next deploy, which saving queues for a running service. */
+							blockedPaths?: string[];
+							/** @description Use the built-in registry as a git build's layer cache. */
+							buildCacheBuiltin?: boolean;
+							buildCacheRegistryId?: string | null;
+							buildServerRemoteHostId?: string | null;
+							/**
+							 * @default image
+							 * @enum {string}
+							 */
+							buildSource: "image" | "git";
+							/** @default [] */
+							capAdd: string[];
+							category?: string | null;
+							channelBranch?: string | null;
+							channelCanaryDomain?: string | null;
+							channelTagPattern?: string;
+							/** @description Release channels: a canary service deployed from channelBranch, the service itself from tags matching channelTagPattern. */
+							channelsEnabled?: boolean;
+							/** @description Argv list, null keeps the image's own */
+							command?: string[] | null;
+							containerPort: number;
+							cpuLimit?: string;
+							cronEnabled?: boolean;
+							/** @description 5-field cron expression the service is redeployed on. */
+							cronSchedule?: string | null;
+							/** @description PEM certificate, sent with customSslKey. null on both removes them. Never returned. */
+							customSslCert?: string | null;
+							customSslKey?: string | null;
+							defaultDomainEnabled?: boolean;
+							/**
+							 * @description host[:container[:rwm]] device mappings
+							 * @default []
+							 */
+							devices: string[];
+							/** @default true */
+							dnsResolvable: boolean;
+							/** @description Container port per domain, when it isn't containerPort. */
+							domainPorts?: {
+								[key: string]: number;
+							};
+							domains?: string[];
+							/** @description Argv list, null keeps the image's own */
+							entrypoint?: string[] | null;
+							/**
+							 * @description Absolute host paths of .env files read at deploy
+							 * @default []
+							 */
+							envFiles: string[];
+							/** @default {} */
+							envVars: {
+								[key: string]: string;
+							};
+							/** @description The environment this service's deployments are recorded under, e.g. staging. null or production resets it to production. Canaries and previews keep canary and preview. */
+							environmentName?: string | null;
+							gitBakeFile?: string;
+							gitBuildContext?: string;
+							/**
+							 * @default dockerfile
+							 * @enum {string}
+							 */
+							gitBuildMethod:
+								| "dockerfile"
+								| "bake"
+								| "nixpacks"
+								| "railpack"
+								| "heroku"
+								| "paketo";
+							gitBuildTarget?: string;
+							gitDockerfilePath?: string;
+							gitPollEnabled?: boolean;
+							gitProviderId?: string;
+							gitRef?: string;
+							gitRepo?: string;
+							gitUrl?: string;
+							healthcheckCommand?: string | null;
+							healthcheckDisabled?: boolean;
+							healthcheckIntervalSeconds?: number | null;
+							healthcheckRetries?: number | null;
+							healthcheckStartPeriodSeconds?: number | null;
+							healthcheckTimeoutSeconds?: number | null;
+							httpCacheTtl?: number | null;
+							icon?: string | null;
+							image?: string;
+							imageScanEnabled?: boolean;
+							/** @default {} */
+							labels: {
+								[key: string]: string;
+							};
+							memoryLimitMb?: number;
+							name: string;
+							/** @enum {string} */
+							networkMode?: "bridge" | "host";
+							/** @enum {string} */
+							portProtocol?: "tcp" | "udp" | "both";
+							previewAuthAllowedEmails?: string[];
+							previewAuthAllowedGroups?: string[];
+							previewAuthAllowedUserIds?: string[];
+							previewAuthProviders?: string[];
+							previewAuthRequired?: boolean;
+							/** @description Glob patterns whose matching branches never get a preview, even when included. */
+							previewBranchExclude?: string[];
+							/** @description Glob patterns (* any run, ? one character) a pull request's head branch must match one of to get a preview. Empty lets every branch through. */
+							previewBranchInclude?: string[];
+							/** @description Whether each new preview gets its own copy of this service's volumes. */
+							previewCopyVolumes?: boolean;
+							previewDefaultDomain?: boolean;
+							previewDomainTemplate?: string | null;
+							/** @description Environment variables set on every preview over what it inherited; {pr}, {branch} and {slug} are filled in. */
+							previewEnvOverrides?: {
+								[key: string]: string;
+							};
+							/** @description Whether pull request previews start from this service's environment variables. */
+							previewInheritEnv?: boolean;
+							/** @description Whether a GitHub repo's pull requests get a comment with their preview's URL and a deployment in a per-preview environment. */
+							previewReportGithub?: boolean;
+							previewsEnabled?: boolean;
+							primaryDomain?: string | null;
+							/** @default false */
+							privileged: boolean;
+							publishedPorts?: {
+								containerPort: number;
+								hostPort: number;
+								/**
+								 * @default tcp
+								 * @enum {string}
+								 */
+								protocol: "tcp" | "udp";
+							}[];
+							/**
+							 * @default always
+							 * @enum {string}
+							 */
+							pullPolicy: "always" | "missing" | "never";
+							registryPassword?: string;
+							registryUrl?: string;
+							registryUsername?: string;
+							replicas?: number;
+							requireStatusChecks?: boolean;
+							requiredStatusChecks?: string[];
+							/**
+							 * @default unless-stopped
+							 * @enum {string}
+							 */
+							restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
+							/** @description Docker User (uid, uid:gid, name or name:group), null keeps the image's */
+							runAsUser?: string | null;
+							/** @description envVars keys the dashboard masks. */
+							secretEnvKeys?: string[];
+							slug: string;
+							stackId?: string;
+							tag?: string;
+							tracesEnabled?: boolean;
+							uptimeEnabled?: boolean;
+					  }
+					| {
+							authAllowedEmails?: string[];
+							authAllowedGroups?: string[];
+							authAllowedUserIds?: string[];
+							/** @description Path patterns authPathsMode applies to. A pattern matches whole path segments anywhere in the path, a leading / anchors it at the root, * matches anything and ? one character, case-insensitively. */
+							authPaths?: string[];
+							/**
+							 * @description Which paths the login wall covers: all, only the authPaths, or all except them. Applied on the next deploy, which saving queues for a running service.
+							 * @enum {string}
+							 */
+							authPathsMode?: "all" | "only" | "except";
+							/** @description Sign-in methods the login wall offers, e.g. email, passkey. */
+							authProviders?: string[];
+							authRequired?: boolean;
+							autoDeployOnPush?: boolean;
+							autoRollback?: boolean;
+							/** @description Path patterns Traefik answers with a 403 instead of passing to the app, same syntax as authPaths. Applied on the next deploy, which saving queues for a running service. */
+							blockedPaths?: string[];
+							/** @description Use the built-in registry as a git build's layer cache. */
+							buildCacheBuiltin?: boolean;
+							buildCacheRegistryId?: string | null;
+							buildServerRemoteHostId?: string | null;
+							/** @enum {string} */
+							buildSource?: "image" | "git";
+							capAdd?: string[];
+							category?: string | null;
+							channelBranch?: string | null;
+							channelCanaryDomain?: string | null;
+							channelTagPattern?: string;
+							/** @description Release channels: a canary service deployed from channelBranch, the service itself from tags matching channelTagPattern. */
+							channelsEnabled?: boolean;
+							/** @description Argv list, null keeps the image's own */
+							command?: string[] | null;
+							containerPort?: number;
+							cpuLimit?: string | null;
+							cronEnabled?: boolean;
+							/** @description 5-field cron expression the service is redeployed on. */
+							cronSchedule?: string | null;
+							/** @description PEM certificate, sent with customSslKey. null on both removes them. Never returned. */
+							customSslCert?: string | null;
+							customSslKey?: string | null;
+							defaultDomainEnabled?: boolean;
+							/** @description host[:container[:rwm]] device mappings */
+							devices?: string[];
+							dnsResolvable?: boolean;
+							/** @description Container port per domain, when it isn't containerPort. */
+							domainPorts?: {
+								[key: string]: number;
+							};
+							domains?: string[];
+							/** @description Argv list, null keeps the image's own */
+							entrypoint?: string[] | null;
+							/** @description Absolute host paths of .env files read at deploy */
+							envFiles?: string[];
+							envVars?: {
+								[key: string]: string;
+							};
+							/** @description The environment this service's deployments are recorded under, e.g. staging. null or production resets it to production. Canaries and previews keep canary and preview. */
+							environmentName?: string | null;
+							gitBakeFile?: string | null;
+							gitBuildContext?: string | null;
+							/** @enum {string} */
+							gitBuildMethod?:
+								| "dockerfile"
+								| "bake"
+								| "nixpacks"
+								| "railpack"
+								| "heroku"
+								| "paketo";
+							gitBuildTarget?: string | null;
+							gitDockerfilePath?: string | null;
+							gitPollEnabled?: boolean;
+							gitProviderId?: string | null;
+							gitRef?: string | null;
+							gitRepo?: string | null;
+							gitUrl?: string | null;
+							healthcheckCommand?: string | null;
+							healthcheckDisabled?: boolean;
+							healthcheckIntervalSeconds?: number | null;
+							healthcheckRetries?: number | null;
+							healthcheckStartPeriodSeconds?: number | null;
+							healthcheckTimeoutSeconds?: number | null;
+							httpCacheTtl?: number | null;
+							icon?: string | null;
+							image?: string;
+							imageScanEnabled?: boolean;
+							labels?: {
+								[key: string]: string;
+							};
+							memoryLimitMb?: number | null;
+							name?: string;
+							/** @enum {string} */
+							networkMode?: "bridge" | "host";
+							/** @enum {string} */
+							portProtocol?: "tcp" | "udp" | "both";
+							previewAuthAllowedEmails?: string[];
+							previewAuthAllowedGroups?: string[];
+							previewAuthAllowedUserIds?: string[];
+							previewAuthProviders?: string[];
+							previewAuthRequired?: boolean;
+							/** @description Glob patterns whose matching branches never get a preview, even when included. */
+							previewBranchExclude?: string[];
+							/** @description Glob patterns (* any run, ? one character) a pull request's head branch must match one of to get a preview. Empty lets every branch through. */
+							previewBranchInclude?: string[];
+							/** @description Whether each new preview gets its own copy of this service's volumes. */
+							previewCopyVolumes?: boolean;
+							previewDefaultDomain?: boolean;
+							previewDomainTemplate?: string | null;
+							/** @description Environment variables set on every preview over what it inherited; {pr}, {branch} and {slug} are filled in. */
+							previewEnvOverrides?: {
+								[key: string]: string;
+							};
+							/** @description Whether pull request previews start from this service's environment variables. */
+							previewInheritEnv?: boolean;
+							/** @description Whether a GitHub repo's pull requests get a comment with their preview's URL and a deployment in a per-preview environment. */
+							previewReportGithub?: boolean;
+							previewsEnabled?: boolean;
+							primaryDomain?: string | null;
+							privileged?: boolean;
+							publishedPorts?: {
+								containerPort: number;
+								hostPort: number;
+								/**
+								 * @default tcp
+								 * @enum {string}
+								 */
+								protocol: "tcp" | "udp";
+							}[];
+							/** @enum {string} */
+							pullPolicy?: "always" | "missing" | "never";
+							registryPassword?: string;
+							registryUrl?: string | null;
+							registryUsername?: string | null;
+							replicas?: number;
+							requireStatusChecks?: boolean;
+							requiredStatusChecks?: string[];
+							/** @enum {string} */
+							restartPolicy?: "no" | "always" | "on-failure" | "unless-stopped";
+							/** @description Docker User (uid, uid:gid, name or name:group), null keeps the image's */
+							runAsUser?: string | null;
+							/** @description envVars keys the dashboard masks. */
+							secretEnvKeys?: string[];
+							slug?: string;
+							stackId?: string | null;
+							tag?: string;
+							/** @description Create the service from this template (image, variables, volumes and linked services), then apply the other fields sent. name and slug default to the template's. */
+							templateId: string;
+							tracesEnabled?: boolean;
+							uptimeEnabled?: boolean;
+					  };
 			};
 		};
 		responses: {
@@ -2506,11 +6787,19 @@ export interface operations {
 						autoRollback: boolean;
 						/** @description Path patterns Traefik answers with a 403 */
 						blockedPaths: string[];
+						buildCacheBuiltin: boolean;
+						buildCacheRegistryId: string | null;
+						buildServerRemoteHostId: string | null;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
 						/** @description The app's type, a template category like database */
 						category: string | null;
+						channelBranch: string | null;
+						channelCanary: boolean;
+						channelCanaryDomain: string | null;
+						channelTagPattern: string;
+						channelsEnabled: boolean;
 						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
@@ -2532,8 +6821,8 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
-						customSslCertEnc: string | null;
-						customSslKeyEnc: string | null;
+						/** @description Whether a custom certificate and key are set. */
+						customSslSet: boolean;
 						defaultDomainEnabled: boolean;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
@@ -2572,13 +6861,13 @@ export interface operations {
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
 						gitWebhookReconnect: boolean;
-						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						healthcheckDisabled: boolean;
 						healthcheckIntervalSeconds: number | null;
 						healthcheckRetries: number | null;
 						healthcheckStartPeriodSeconds: number | null;
 						healthcheckTimeoutSeconds: number | null;
+						httpCacheTtl: number | null;
 						/** @description A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
@@ -2593,6 +6882,11 @@ export interface operations {
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
+						previewAuthAllowedEmails: string[];
+						previewAuthAllowedGroups: string[];
+						previewAuthAllowedUserIds: string[];
+						previewAuthProviders: string[];
+						previewAuthRequired: boolean;
 						previewBranch: string | null;
 						previewBranchExclude: string[];
 						previewBranchInclude: string[];
@@ -2617,10 +6911,13 @@ export interface operations {
 							/** @enum {string} */
 							protocol: "tcp" | "udp";
 						}[];
-						/** @description Ciphertext, not plaintext. */
-						registryPasswordEnc: string | null;
+						/** @enum {string} */
+						pullPolicy: "always" | "missing" | "never";
+						/** @description Whether a registry password is set. */
+						registryPasswordSet: boolean;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						replicas: number;
 						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
 						requireStatusChecks: boolean;
 						requiredStatusChecks: string[];
@@ -2630,7 +6927,9 @@ export interface operations {
 						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
+						swarmServiceId: string | null;
 						tag: string;
+						tracesEnabled: boolean;
 						/**
 						 * @description ISO 8601 timestamp
 						 * @example 2026-08-20T12:00:00.000Z
@@ -2728,11 +7027,19 @@ export interface operations {
 						autoRollback: boolean;
 						/** @description Path patterns Traefik answers with a 403 */
 						blockedPaths: string[];
+						buildCacheBuiltin: boolean;
+						buildCacheRegistryId: string | null;
+						buildServerRemoteHostId: string | null;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
 						/** @description The app's type, a template category like database */
 						category: string | null;
+						channelBranch: string | null;
+						channelCanary: boolean;
+						channelCanaryDomain: string | null;
+						channelTagPattern: string;
+						channelsEnabled: boolean;
 						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
@@ -2754,8 +7061,8 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
-						customSslCertEnc: string | null;
-						customSslKeyEnc: string | null;
+						/** @description Whether a custom certificate and key are set. */
+						customSslSet: boolean;
 						defaultDomainEnabled: boolean;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
@@ -2794,13 +7101,13 @@ export interface operations {
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
 						gitWebhookReconnect: boolean;
-						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						healthcheckDisabled: boolean;
 						healthcheckIntervalSeconds: number | null;
 						healthcheckRetries: number | null;
 						healthcheckStartPeriodSeconds: number | null;
 						healthcheckTimeoutSeconds: number | null;
+						httpCacheTtl: number | null;
 						/** @description A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
@@ -2815,6 +7122,11 @@ export interface operations {
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
+						previewAuthAllowedEmails: string[];
+						previewAuthAllowedGroups: string[];
+						previewAuthAllowedUserIds: string[];
+						previewAuthProviders: string[];
+						previewAuthRequired: boolean;
 						previewBranch: string | null;
 						previewBranchExclude: string[];
 						previewBranchInclude: string[];
@@ -2839,10 +7151,13 @@ export interface operations {
 							/** @enum {string} */
 							protocol: "tcp" | "udp";
 						}[];
-						/** @description Ciphertext, not plaintext. */
-						registryPasswordEnc: string | null;
+						/** @enum {string} */
+						pullPolicy: "always" | "missing" | "never";
+						/** @description Whether a registry password is set. */
+						registryPasswordSet: boolean;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						replicas: number;
 						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
 						requireStatusChecks: boolean;
 						requiredStatusChecks: string[];
@@ -2852,7 +7167,9 @@ export interface operations {
 						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
+						swarmServiceId: string | null;
 						tag: string;
+						tracesEnabled: boolean;
 						/**
 						 * @description ISO 8601 timestamp
 						 * @example 2026-08-20T12:00:00.000Z
@@ -2977,6 +7294,9 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
+					authAllowedEmails?: string[];
+					authAllowedGroups?: string[];
+					authAllowedUserIds?: string[];
 					/** @description Path patterns authPathsMode applies to. A pattern matches whole path segments anywhere in the path, a leading / anchors it at the root, * matches anything and ? one character, case-insensitively. */
 					authPaths?: string[];
 					/**
@@ -2984,22 +7304,44 @@ export interface operations {
 					 * @enum {string}
 					 */
 					authPathsMode?: "all" | "only" | "except";
+					/** @description Sign-in methods the login wall offers, e.g. email, passkey. */
+					authProviders?: string[];
 					authRequired?: boolean;
 					autoDeployOnPush?: boolean;
 					autoRollback?: boolean;
 					/** @description Path patterns Traefik answers with a 403 instead of passing to the app, same syntax as authPaths. Applied on the next deploy, which saving queues for a running service. */
 					blockedPaths?: string[];
+					/** @description Use the built-in registry as a git build's layer cache. */
+					buildCacheBuiltin?: boolean;
+					buildCacheRegistryId?: string | null;
+					buildServerRemoteHostId?: string | null;
 					/** @enum {string} */
 					buildSource?: "image" | "git";
 					capAdd?: string[];
+					category?: string | null;
+					channelBranch?: string | null;
+					channelCanaryDomain?: string | null;
+					channelTagPattern?: string;
+					/** @description Release channels: a canary service deployed from channelBranch, the service itself from tags matching channelTagPattern. */
+					channelsEnabled?: boolean;
 					/** @description Argv list, null keeps the image's own */
 					command?: string[] | null;
 					containerPort?: number;
 					cpuLimit?: string | null;
+					cronEnabled?: boolean;
+					/** @description 5-field cron expression the service is redeployed on. */
+					cronSchedule?: string | null;
+					/** @description PEM certificate, sent with customSslKey. null on both removes them. Never returned. */
+					customSslCert?: string | null;
+					customSslKey?: string | null;
 					defaultDomainEnabled?: boolean;
 					/** @description host[:container[:rwm]] device mappings */
 					devices?: string[];
 					dnsResolvable?: boolean;
+					/** @description Container port per domain, when it isn't containerPort. */
+					domainPorts?: {
+						[key: string]: number;
+					};
 					domains?: string[];
 					/** @description Argv list, null keeps the image's own */
 					entrypoint?: string[] | null;
@@ -3028,6 +7370,13 @@ export interface operations {
 					gitRepo?: string | null;
 					gitUrl?: string | null;
 					healthcheckCommand?: string | null;
+					healthcheckDisabled?: boolean;
+					healthcheckIntervalSeconds?: number | null;
+					healthcheckRetries?: number | null;
+					healthcheckStartPeriodSeconds?: number | null;
+					healthcheckTimeoutSeconds?: number | null;
+					httpCacheTtl?: number | null;
+					icon?: string | null;
 					image?: string;
 					imageScanEnabled?: boolean;
 					labels?: {
@@ -3035,12 +7384,23 @@ export interface operations {
 					};
 					memoryLimitMb?: number | null;
 					name?: string;
+					/** @enum {string} */
+					networkMode?: "bridge" | "host";
+					/** @enum {string} */
+					portProtocol?: "tcp" | "udp" | "both";
+					previewAuthAllowedEmails?: string[];
+					previewAuthAllowedGroups?: string[];
+					previewAuthAllowedUserIds?: string[];
+					previewAuthProviders?: string[];
+					previewAuthRequired?: boolean;
 					/** @description Glob patterns whose matching branches never get a preview, even when included. */
 					previewBranchExclude?: string[];
 					/** @description Glob patterns (* any run, ? one character) a pull request's head branch must match one of to get a preview. Empty lets every branch through. */
 					previewBranchInclude?: string[];
 					/** @description Whether each new preview gets its own copy of this service's volumes. */
 					previewCopyVolumes?: boolean;
+					previewDefaultDomain?: boolean;
+					previewDomainTemplate?: string | null;
 					/** @description Environment variables set on every preview over what it inherited; {pr}, {branch} and {slug} are filled in. */
 					previewEnvOverrides?: {
 						[key: string]: string;
@@ -3052,18 +7412,33 @@ export interface operations {
 					previewsEnabled?: boolean;
 					primaryDomain?: string | null;
 					privileged?: boolean;
+					publishedPorts?: {
+						containerPort: number;
+						hostPort: number;
+						/**
+						 * @default tcp
+						 * @enum {string}
+						 */
+						protocol: "tcp" | "udp";
+					}[];
 					/** @enum {string} */
 					pullPolicy?: "always" | "missing" | "never";
 					registryPassword?: string;
 					registryUrl?: string | null;
 					registryUsername?: string | null;
+					replicas?: number;
 					requireStatusChecks?: boolean;
 					requiredStatusChecks?: string[];
 					/** @enum {string} */
 					restartPolicy?: "no" | "always" | "on-failure" | "unless-stopped";
 					/** @description Docker User (uid, uid:gid, name or name:group), null keeps the image's */
 					runAsUser?: string | null;
+					/** @description envVars keys the dashboard masks. */
+					secretEnvKeys?: string[];
+					slug?: string;
+					stackId?: string | null;
 					tag?: string;
+					tracesEnabled?: boolean;
 					uptimeEnabled?: boolean;
 				};
 			};
@@ -3093,11 +7468,19 @@ export interface operations {
 						autoRollback: boolean;
 						/** @description Path patterns Traefik answers with a 403 */
 						blockedPaths: string[];
+						buildCacheBuiltin: boolean;
+						buildCacheRegistryId: string | null;
+						buildServerRemoteHostId: string | null;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
 						/** @description The app's type, a template category like database */
 						category: string | null;
+						channelBranch: string | null;
+						channelCanary: boolean;
+						channelCanaryDomain: string | null;
+						channelTagPattern: string;
+						channelsEnabled: boolean;
 						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
@@ -3119,8 +7502,8 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
-						customSslCertEnc: string | null;
-						customSslKeyEnc: string | null;
+						/** @description Whether a custom certificate and key are set. */
+						customSslSet: boolean;
 						defaultDomainEnabled: boolean;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
@@ -3159,13 +7542,13 @@ export interface operations {
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
 						gitWebhookReconnect: boolean;
-						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						healthcheckDisabled: boolean;
 						healthcheckIntervalSeconds: number | null;
 						healthcheckRetries: number | null;
 						healthcheckStartPeriodSeconds: number | null;
 						healthcheckTimeoutSeconds: number | null;
+						httpCacheTtl: number | null;
 						/** @description A bundled template icon file name, a Dashboard Icons name as di:<name>, or an uploaded data:image URL */
 						icon: string | null;
 						id: string;
@@ -3180,6 +7563,11 @@ export interface operations {
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
+						previewAuthAllowedEmails: string[];
+						previewAuthAllowedGroups: string[];
+						previewAuthAllowedUserIds: string[];
+						previewAuthProviders: string[];
+						previewAuthRequired: boolean;
 						previewBranch: string | null;
 						previewBranchExclude: string[];
 						previewBranchInclude: string[];
@@ -3204,10 +7592,13 @@ export interface operations {
 							/** @enum {string} */
 							protocol: "tcp" | "udp";
 						}[];
-						/** @description Ciphertext, not plaintext. */
-						registryPasswordEnc: string | null;
+						/** @enum {string} */
+						pullPolicy: "always" | "missing" | "never";
+						/** @description Whether a registry password is set. */
+						registryPasswordSet: boolean;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						replicas: number;
 						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
 						requireStatusChecks: boolean;
 						requiredStatusChecks: string[];
@@ -3217,7 +7608,9 @@ export interface operations {
 						secretEnvKeys: string[];
 						slug: string;
 						stackId: string | null;
+						swarmServiceId: string | null;
 						tag: string;
+						tracesEnabled: boolean;
 						/**
 						 * @description ISO 8601 timestamp
 						 * @example 2026-08-20T12:00:00.000Z
@@ -5911,6 +10304,7 @@ export interface operations {
 						 */
 						createdAt: string;
 						description: string | null;
+						icon: string | null;
 						id: string;
 						name: string;
 						/** @description The stack this one is nested in, null at the top level. */
@@ -5949,8 +10343,11 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					description?: string;
+					description?: string | null;
+					icon?: string | null;
 					name: string;
+					/** @description The stack to nest this one in, null for a top-level stack. */
+					parentId?: string | null;
 					slug: string;
 				};
 			};
@@ -5969,6 +10366,7 @@ export interface operations {
 						 */
 						createdAt: string;
 						description: string | null;
+						icon: string | null;
 						id: string;
 						name: string;
 						/** @description The stack this one is nested in, null at the top level. */
@@ -6021,6 +10419,605 @@ export interface operations {
 			};
 			/** @description Slug already in use */
 			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_stacks__stackId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Stack id */
+				stackId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The stack */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						description: string | null;
+						icon: string | null;
+						id: string;
+						name: string;
+						/** @description The stack this one is nested in, null at the top level. */
+						parentId: string | null;
+						slug: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_stacks__stackId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Stack id */
+				stackId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_stacks__stackId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Stack id */
+				stackId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					description?: string | null;
+					icon?: string | null;
+					name?: string;
+					/** @description The stack to nest this one in, null for a top-level stack. */
+					parentId?: string | null;
+					slug?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						description: string | null;
+						icon: string | null;
+						id: string;
+						name: string;
+						/** @description The stack this one is nested in, null at the top level. */
+						parentId: string | null;
+						slug: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_status_pages: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The status pages */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						isPublic: boolean;
+						name: string;
+						/** @enum {string} */
+						scope: "global" | "stack" | "custom";
+						services: {
+							includeChildren: boolean;
+							serviceId: string;
+						}[];
+						slug: string;
+						stackId: string | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_status_pages: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					description?: string | null;
+					/** @default false */
+					isPublic: boolean;
+					name: string;
+					/** @enum {string} */
+					scope: "global" | "stack" | "custom";
+					/**
+					 * @description The services a custom-scope page shows.
+					 * @default []
+					 */
+					services: {
+						/** @default false */
+						includeChildren: boolean;
+						serviceId: string;
+					}[];
+					slug: string;
+					stackId?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						isPublic: boolean;
+						name: string;
+						/** @enum {string} */
+						scope: "global" | "stack" | "custom";
+						services: {
+							includeChildren: boolean;
+							serviceId: string;
+						}[];
+						slug: string;
+						stackId: string | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_status_pages__statusPageId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Status page id */
+				statusPageId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The status page */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						isPublic: boolean;
+						name: string;
+						/** @enum {string} */
+						scope: "global" | "stack" | "custom";
+						services: {
+							includeChildren: boolean;
+							serviceId: string;
+						}[];
+						slug: string;
+						stackId: string | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_status_pages__statusPageId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Status page id */
+				statusPageId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_status_pages__statusPageId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Status page id */
+				statusPageId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					description?: string | null;
+					isPublic?: boolean;
+					name?: string;
+					/** @enum {string} */
+					scope?: "global" | "stack" | "custom";
+					/** @description The services a custom-scope page shows. */
+					services?: {
+						/** @default false */
+						includeChildren: boolean;
+						serviceId: string;
+					}[];
+					slug?: string;
+					stackId?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						isPublic: boolean;
+						name: string;
+						/** @enum {string} */
+						scope: "global" | "stack" | "custom";
+						services: {
+							includeChildren: boolean;
+							serviceId: string;
+						}[];
+						slug: string;
+						stackId: string | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -6163,6 +11160,410 @@ export interface operations {
 			};
 		};
 	};
+	get_templates__templateId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Template id */
+				templateId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The template */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						capAdd: string[];
+						category: string | null;
+						command: string[] | null;
+						containerPort: number;
+						cpuLimit: string | null;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						description: string | null;
+						devices: string[];
+						entrypoint: string[] | null;
+						envFiles: string[];
+						envVars: {
+							[key: string]: string;
+						} | null;
+						icon: string | null;
+						id: string;
+						image: string;
+						labels: {
+							[key: string]: string;
+						};
+						memoryLimitMb: number | null;
+						name: string;
+						/** @description null = built-in template */
+						ownerId: string | null;
+						/** @description privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them */
+						privileged: boolean;
+						/** @description Host ports bound straight to the container, for UDP and non-HTTP TCP */
+						publishedPorts: {
+							containerPort: number;
+							hostPort: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
+						restartPolicy: string;
+						runAsUser: string | null;
+						tag: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						updatedAt: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_volume_mounts: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The volume mounts */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						containerPath: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						readOnly: boolean;
+						serviceId: string;
+						volumeId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_volume_mounts: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					containerPath: string;
+					/** @default false */
+					readOnly: boolean;
+					serviceId: string;
+					volumeId: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						containerPath: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						readOnly: boolean;
+						serviceId: string;
+						volumeId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_volume_mounts__mountId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Mount id */
+				mountId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The volume mount */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						containerPath: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						readOnly: boolean;
+						serviceId: string;
+						volumeId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_volume_mounts__mountId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Mount id */
+				mountId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_volume_mounts__mountId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Mount id */
+				mountId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					containerPath?: string;
+					readOnly?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						containerPath: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						readOnly: boolean;
+						serviceId: string;
+						volumeId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	get_volumes: {
 		parameters: {
 			query?: {
@@ -6218,6 +11619,347 @@ export interface operations {
 			};
 			/** @description Unauthorized */
 			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_volumes: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					backupEnabled?: boolean;
+					/** @description A command run in backupPreCommandServiceId before each backup. */
+					backupPreCommand?: string | null;
+					backupPreCommandServiceId?: string | null;
+					backupPrefix?: string | null;
+					/** @description 5-field cron expression. */
+					backupSchedule?: string | null;
+					/** @description Stop the services using the volume during a backup. */
+					backupStopServices?: boolean;
+					description?: string | null;
+					/** @enum {string} */
+					kind: "bind" | "volume";
+					name: string;
+					s3DestinationId?: string | null;
+					/** @description An absolute host path (bind) or a Docker volume name. */
+					source: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						backupEnabled: boolean;
+						backupLastRunAt: string | null;
+						/** @description When the schedule fires next, null when backups are off */
+						backupNextRunAt: string | null;
+						backupPreCommand: string | null;
+						backupPreCommandServiceId: string | null;
+						backupPrefix: string | null;
+						/** @description Cron expression */
+						backupSchedule: string | null;
+						backupStopServices: boolean;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						/** @enum {string} */
+						kind: "bind" | "volume";
+						name: string;
+						s3DestinationId: string | null;
+						/** @description A host path for a bind, the Docker volume name otherwise */
+						source: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_volumes__volumeId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Volume id */
+				volumeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The volume */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						backupEnabled: boolean;
+						backupLastRunAt: string | null;
+						/** @description When the schedule fires next, null when backups are off */
+						backupNextRunAt: string | null;
+						backupPreCommand: string | null;
+						backupPreCommandServiceId: string | null;
+						backupPrefix: string | null;
+						/** @description Cron expression */
+						backupSchedule: string | null;
+						backupStopServices: boolean;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						/** @enum {string} */
+						kind: "bind" | "volume";
+						name: string;
+						s3DestinationId: string | null;
+						/** @description A host path for a bind, the Docker volume name otherwise */
+						source: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_volumes__volumeId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Volume id */
+				volumeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_volumes__volumeId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Volume id */
+				volumeId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					backupEnabled?: boolean;
+					/** @description A command run in backupPreCommandServiceId before each backup. */
+					backupPreCommand?: string | null;
+					backupPreCommandServiceId?: string | null;
+					backupPrefix?: string | null;
+					/** @description 5-field cron expression. */
+					backupSchedule?: string | null;
+					/** @description Stop the services using the volume during a backup. */
+					backupStopServices?: boolean;
+					description?: string | null;
+					name?: string;
+					s3DestinationId?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						backupEnabled: boolean;
+						backupLastRunAt: string | null;
+						/** @description When the schedule fires next, null when backups are off */
+						backupNextRunAt: string | null;
+						backupPreCommand: string | null;
+						backupPreCommandServiceId: string | null;
+						backupPrefix: string | null;
+						/** @description Cron expression */
+						backupSchedule: string | null;
+						backupStopServices: boolean;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						/** @enum {string} */
+						kind: "bind" | "volume";
+						name: string;
+						s3DestinationId: string | null;
+						/** @description A host path for a bind, the Docker volume name otherwise */
+						source: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid body, or a value the instance refuses */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};

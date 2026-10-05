@@ -1,5 +1,9 @@
 # Environments
 
+Advanced mode: [simple mode](ui-modes.md) hides the Environments list on a
+service's Environments & Deployments tab. Everything here keeps working either
+way, and a hidden page still opens from a link.
+
 A service's **Environments & Deployments** tab opens on its **Environments**:
 every place the service runs. That's the service itself (`production`, unless
 its Settings give it another environment name), the environments created from

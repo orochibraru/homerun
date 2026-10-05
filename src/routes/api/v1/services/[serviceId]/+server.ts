@@ -1,18 +1,14 @@
 import { ServiceDTO } from "#lib/dto/service-dto.js";
-import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
-import { authPathsProblem, pathFiltersChanged } from "#lib/path-patterns.js";
-import { normalizeEnvironmentName } from "#lib/release-channels.js";
-import { invalidateGatedService } from "#lib/server/gated-service-cache.js";
+import { serviceApiJson } from "#lib/server/api-json.js";
 import { updateServiceApiBody } from "#lib/server/validation/api.js";
-import { normalizeDomains } from "#lib/service-domains.js";
-import { DeploymentService } from "#lib/services/deploy.service.js";
 import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
 import { DockerService } from "#lib/services/docker.service.js";
-import { GitWebhookService } from "#lib/services/git-webhook.service.js";
-import { PreviewService } from "#lib/services/preview.service.js";
-import { encryptSecret } from "#lib/services/secrets.js";
 import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
+import {
+	ServiceSettingsError,
+	ServiceSettingsService,
+} from "#lib/services/service-settings.service.js";
 
 const logger = new Logger("API");
 
@@ -37,9 +33,9 @@ export const GET = async ({ params, locals }) => {
 	if (svc.containerId || svc.swarmServiceId) {
 		await DockerService.syncServiceStatus(svc.id);
 		const fresh = await ServiceDTO.get(params.serviceId);
-		return Response.json((fresh ?? svc).toJSON());
+		return Response.json(serviceApiJson((fresh ?? svc).toJSON()));
 	}
-	return Response.json(svc.toJSON());
+	return Response.json(serviceApiJson(svc.toJSON()));
 };
 
 export const PATCH = async ({ params, request, locals }) => {
@@ -59,66 +55,21 @@ export const PATCH = async ({ params, request, locals }) => {
 			{ status: 400 },
 		);
 	}
-	const { registryPassword, ...rest } = result.data;
-	if (rest.environmentName !== undefined) {
-		rest.environmentName = normalizeEnvironmentName(rest.environmentName);
-	}
-	if (rest.domains) {
-		rest.domains = normalizeDomains(rest.domains);
-		const taken = await ServiceDTO.domainTaken(rest.domains, svc.id);
-		if (taken) {
-			return Response.json(
-				{ error: `${taken} is already routed to another service.` },
-				{ status: 409 },
-			);
+	try {
+		await ServiceSettingsService.apply(svc, result.data, {
+			isAdmin: Boolean(locals.isAdmin),
+			userId: locals.user.id,
+		});
+	} catch (err) {
+		if (err instanceof ServiceSettingsError) {
+			return Response.json({ error: err.message }, { status: err.status });
 		}
+		throw err;
 	}
-	const emptyPaths = authPathsProblem(
-		rest.authPathsMode ?? svc.authPathsMode,
-		rest.authPaths ?? svc.authPaths,
-	);
-	if (emptyPaths) {
-		return Response.json({ error: emptyPaths }, { status: 400 });
-	}
-	if (!locals.isAdmin && hostAccessChanged(svc.toJSON(), rest)) {
-		return Response.json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
-	}
-
-	const previousWebhook = {
-		gitProviderId: svc.gitProviderId,
-		gitRepo: svc.gitRepo,
-		gitWebhookId: svc.gitWebhookId,
-		previewsEnabled: svc.toJSON().previewsEnabled,
-	};
-	const wasRequired = svc.authRequired;
-	const before = { ...svc.toJSON() };
-	await svc.update({
-		...rest,
-		...(registryPassword
-			? { registryPasswordEnc: encryptSecret(registryPassword) }
-			: {}),
-	});
-	await GitWebhookService.sync(svc, previousWebhook);
-	if (previousWebhook.previewsEnabled && !svc.toJSON().previewsEnabled) {
-		await PreviewService.removeAll(svc);
-	} else if (rest.previewBranchInclude || rest.previewBranchExclude) {
-		await PreviewService.applyBranchFilter(svc);
-	}
-	invalidateGatedService(svc.id);
-	if (pathFiltersChanged(before, svc.toJSON())) {
-		await DeploymentService.redeployForRouting(svc, locals.user.id);
-	} else {
-		await DeploymentService.redeployIfLoginWallChanged(
-			svc,
-			wasRequired,
-			locals.user.id,
-		);
-	}
-
 	logger.info(
 		`Service updated via API: service=${svc.id} user=${locals.user.id}`,
 	);
-	return Response.json(svc.toJSON());
+	return Response.json(serviceApiJson(svc.toJSON()));
 };
 
 export const DELETE = async ({ params, locals, url }) => {

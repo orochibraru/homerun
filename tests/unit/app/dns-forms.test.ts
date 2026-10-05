@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	connectionFields,
 	isTarget,
 	parseConnectionForm,
 	parseDomainForm,
@@ -134,5 +135,23 @@ describe("DNS_PROVIDERS", () => {
 			expect(dnsProviderById(provider.id)).toBe(provider);
 		}
 		expect(dnsProviderById("nope")).toBeNull();
+	});
+});
+
+describe("connectionFields", () => {
+	test("maps a JSON body onto the connection form's fields", () => {
+		const fields = connectionFields({
+			credentials: { apiToken: "abc" },
+			name: "Main",
+		});
+		expect(fields.get("name")).toBe("Main");
+		expect(fields.get("field_apiToken")).toBe("abc");
+		const parsed = parseConnectionForm(
+			connectionFields({ credentials: {} }),
+			cloudflare,
+			true,
+		);
+		expect(parsed.error).toBeNull();
+		expect(parsed.value?.name).toBe(cloudflare.name);
 	});
 });

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
 import { PALETTES } from "#lib/palettes.js";
 import { PRESETS, SURFACE_STYLES } from "#lib/surfaces.js";
+import { UI_MODES } from "#lib/ui-mode.js";
 
 /** A bare "#rrggbb" hex color, the shape a native `<input type="color">` always submits. */
 const hexColorSchema = z
@@ -38,4 +39,9 @@ export const perPageSchema = z.object({
 			(value) => (PER_PAGE_OPTIONS as readonly number[]).includes(value),
 			"Pick one of the listed page sizes.",
 		),
+});
+
+/** The account's UI mode: simple, advanced, or "" to follow the instance default. */
+export const uiModeSchema = z.object({
+	uiMode: z.enum(["", ...UI_MODES]),
 });

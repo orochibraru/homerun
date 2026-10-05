@@ -1,5 +1,9 @@
 # Release channels
 
+Advanced mode: [simple mode](ui-modes.md) hides the Channels section of a
+service's Environments & Deployments tab. Everything here keeps working either
+way, and a hidden page still opens from a link.
+
 Release channels split one git service into two environments, for the common "a
 branch is canary, a tag is stable" release model:
 

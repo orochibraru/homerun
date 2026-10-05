@@ -19,25 +19,38 @@ interface Target {
 
 const VERSION_FLAG = `-X github.com/orochibraru/homerun/internal/buildinfo.Version=${pkg.version}`;
 
-// Every shipped binary is Go (cmd/cli, cmd/installer, cmd/worker), and Go's
+const PROVIDER = "terraform-provider";
+
+// Every shipped binary is Go (cmd/cli, cmd/installer, cmd/worker, and the
+// Terraform provider in its own module under terraform/provider), and Go's
 // GOOS/GOARCH cross-compilation is exact, so all of them build from any one
-// machine. Only the CLI gets macOS builds: the installer and the worker only
-// ever run on the Linux host they manage.
+// machine. Only the CLI and the provider get macOS builds: the installer and
+// the worker only ever run on the Linux host they manage.
 const targets: Target[] = [
 	{
-		commands: ["cli", "installer", "worker"],
+		commands: ["cli", "installer", "worker", PROVIDER],
 		goarch: "amd64",
 		goos: "linux",
 		name: "amd64",
 	},
 	{
-		commands: ["cli", "installer", "worker"],
+		commands: ["cli", "installer", "worker", PROVIDER],
 		goarch: "arm64",
 		goos: "linux",
 		name: "arm64",
 	},
-	{ commands: ["cli"], goarch: "amd64", goos: "darwin", name: "darwin-amd64" },
-	{ commands: ["cli"], goarch: "arm64", goos: "darwin", name: "darwin-arm64" },
+	{
+		commands: ["cli", PROVIDER],
+		goarch: "amd64",
+		goos: "darwin",
+		name: "darwin-amd64",
+	},
+	{
+		commands: ["cli", PROVIDER],
+		goarch: "arm64",
+		goos: "darwin",
+		name: "darwin-arm64",
+	},
 ];
 
 const requested = process.argv.slice(2).flatMap((arg) => arg.split(/[\s,]+/));
@@ -58,6 +71,8 @@ const selected = targets.filter(
  * debug info, `-trimpath` keeps build paths out of the binary, CGO is off so the
  * binary is static and runs on a musl host like Alpine too, and the release
  * version is stamped into internal/buildinfo so every binary reports the same one.
+ * The Terraform provider is its own Go module, built from its directory with
+ * the version stamped into its main package.
  *
  * @returns The output path, or the compiler's error output on failure.
  */
@@ -66,16 +81,20 @@ async function build(
 	command: string,
 ): Promise<{ error?: string; outfile: string }> {
 	const outfile = `dist/homerun-${command}-${target.name}`;
+	const provider = command === PROVIDER;
 	const proc = Bun.spawn(
 		[
 			"go",
+			...(provider ? ["-C", "terraform/provider"] : []),
 			"build",
 			"-trimpath",
 			"-ldflags",
-			`-s -w ${VERSION_FLAG}`,
+			provider
+				? `-s -w -X main.version=${pkg.version}`
+				: `-s -w ${VERSION_FLAG}`,
 			"-o",
-			outfile,
-			`./cmd/${command}`,
+			provider ? `../../${outfile}` : outfile,
+			provider ? "." : `./cmd/${command}`,
 		],
 		{
 			env: {

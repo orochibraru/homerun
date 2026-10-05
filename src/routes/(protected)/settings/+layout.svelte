@@ -13,6 +13,7 @@
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import { title } from "#lib/store/title.js";
+	import { currentHref, visibleIn } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 
@@ -132,6 +133,22 @@
 	const activeTabId = $derived(
 		tabs.find((tab) => isActive(tab.href, tab.exact))?.id ?? "",
 	);
+
+	const currentTab = $derived(
+		currentHref(
+			page.url.pathname,
+			tabs.map((tab) => tab.href),
+		),
+	);
+
+	const shownTabs = $derived(
+		tabs.filter(
+			(tab) =>
+				tab.hasWarning ||
+				tab.href === currentTab ||
+				visibleIn(data.uiMode, `settings/${tab.id}`),
+		),
+	);
 </script>
 
 <div class="p-5 md:p-6">
@@ -145,7 +162,7 @@
 		</p>
 	</div>
 
-	<TabNav active={activeTabId} tabs={tabs} />
+	<TabNav active={activeTabId} tabs={shownTabs} />
 
 	{@render children()}
 </div>

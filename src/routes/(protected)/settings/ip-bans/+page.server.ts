@@ -1,25 +1,18 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
-import { IpBanDTO } from "#lib/dto/ip-ban-dto.js";
 import {
 	DEFAULT_IP_BAN_SETTINGS,
 	MAX_BAN_WINDOW_MINUTES,
-	normalizeIp,
 } from "#lib/ip-bans.js";
 import { Logger } from "#lib/logger.js";
-import { IpBanService } from "#lib/services/ip-ban.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("IpBans");
 
 export const load = async () => {
-	const [settings, bans] = await Promise.all([
-		InstanceSettingsDTO.get(),
-		IpBanDTO.listActive(),
-	]);
+	const settings = await InstanceSettingsDTO.get();
 	return {
-		bans: bans.map((ban) => ban.toJSON()),
 		defaults: DEFAULT_IP_BAN_SETTINGS,
 		ipBans: settings.ipBans,
 		maxWindowMinutes: MAX_BAN_WINDOW_MINUTES,
@@ -75,21 +68,6 @@ export const actions = {
 			windowMinutes,
 		});
 		logger.info(`IP ban settings updated: user=${locals.user.id}`);
-		return { success: true };
-	},
-
-	unban: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
-		const ip = normalizeIp(String((await request.formData()).get("ip")));
-		if (!(ip && (await IpBanService.unban(ip)))) {
-			return fail(404, { error: "That address isn't banned." });
-		}
-		logger.info(`IP unbanned: ip=${ip} user=${locals.user.id}`);
 		return { success: true };
 	},
 };

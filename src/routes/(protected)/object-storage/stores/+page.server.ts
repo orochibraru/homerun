@@ -1,5 +1,4 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
 import { parseObjectStoreForm } from "#lib/server/validation/object-store.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
 import { resolve } from "$app/paths";
@@ -20,17 +19,15 @@ export const actions = {
 			return fail(400, { error });
 		}
 		try {
-			await ObjectStorageService.testCredentials(values);
+			const store = await ObjectStorageService.createStore(
+				values,
+				locals.user.id,
+			);
+			return { storeId: store.id, success: true };
 		} catch (cause) {
 			return fail(400, {
-				error: `Couldn't list buckets with these settings: ${cause instanceof Error ? cause.message : String(cause)}`,
+				error: cause instanceof Error ? cause.message : String(cause),
 			});
 		}
-		const store = await ObjectStoreDTO.create({
-			...values,
-			kind: "s3",
-			userId: locals.user.id,
-		});
-		return { storeId: store.id, success: true };
 	},
 };

@@ -19,6 +19,9 @@ sync by hand.
 - **[Configuration](configuration.md)**: what you set in the dashboard (almost
   everything), the three values the container needs before it can start, and the
   optional YAML file for config-as-code setups.
+- **[Simple and advanced modes](ui-modes.md)**: a short, click-ops dashboard for
+  a homelab or the full feature set for engineering work, per instance or per
+  account, and exactly what simple mode hides.
 - **[FAQ & limitations](faq-and-limitations.md)**: what's genuinely finished,
   what's a known gap, and what's on the roadmap.
 - **[Architecture](architecture.md)**: every component (app, worker, Traefik,
@@ -86,6 +89,8 @@ sync by hand.
   probes, live logs, failed deploys and errors, and the web terminal.
 - **[Error tracking](error-tracking.md)**: Sentry-compatible error collection
   per service, issues, stack traces linked to the source, and alerts.
+- **[Tracing](tracing.md)**: OpenTelemetry traces from your services through
+  Homerun's own collector, trace waterfalls, and traces of Homerun's own jobs.
 - **[Scheduling and the job queue](scheduling.md)**: scheduled redeploys, cron
   jobs, the Scheduling page, and the background job queue.
 
@@ -146,6 +151,9 @@ sync by hand.
 - **[API & CLI](api-and-cli.md)**: the REST API, the live Swagger UI, the
   `homerun` CLI, and the MCP server for AI agents (Claude needs an OAuth client
   registered first).
+- **[Infrastructure as code](infrastructure-as-code.md)**: the Terraform
+  provider, Pulumi, generating a configuration from what's running, and drift
+  between a state and the instance.
 
 ## Something's out of date
 

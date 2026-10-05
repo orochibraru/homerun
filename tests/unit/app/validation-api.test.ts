@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
 	createServiceApiBody,
+	createServiceFromTemplateApiBody,
 	createStackApiBody,
 	updateServiceApiBody,
+	updateStackApiBody,
 } from "../../../src/lib/server/validation/api";
 
 const imageBody = {
@@ -199,5 +201,59 @@ describe("updateServiceApiBody path filters", () => {
 		expect(
 			updateServiceApiBody.safeParse({ authPathsMode: "some" }).success,
 		).toBe(false);
+	});
+});
+
+describe("service settings fields", () => {
+	test("PATCH takes every dashboard setting", () => {
+		const parsed = updateServiceApiBody.parse({
+			buildCacheBuiltin: true,
+			channelsEnabled: true,
+			cronEnabled: true,
+			cronSchedule: "0 3 * * *",
+			customSslCert: null,
+			customSslKey: null,
+			domainPorts: { "A.example.com": 8080 },
+			healthcheckIntervalSeconds: 30,
+			networkMode: "host",
+			publishedPorts: [{ containerPort: 53, hostPort: 5353 }],
+			replicas: 3,
+			stackId: null,
+			tracesEnabled: true,
+		});
+		expect(parsed.domainPorts).toEqual({ "a.example.com": 8080 });
+		expect(parsed.publishedPorts).toEqual([
+			{ containerPort: 53, hostPort: 5353, protocol: "tcp" },
+		]);
+		expect(updateServiceApiBody.safeParse({ replicas: 99 }).success).toBe(
+			false,
+		);
+		expect(
+			updateServiceApiBody.safeParse({ healthcheckRetries: 0 }).success,
+		).toBe(false);
+	});
+
+	test("a create body may carry settings, and a template create needs only the template", () => {
+		const parsed = createServiceApiBody.parse({ ...imageBody, replicas: 2 });
+		expect(parsed.replicas).toBe(2);
+		const fromTemplate = createServiceFromTemplateApiBody.parse({
+			templateId: "postgres",
+		});
+		expect(fromTemplate.templateId).toBe("postgres");
+		expect(fromTemplate.name).toBeUndefined();
+		expect(
+			createServiceFromTemplateApiBody.safeParse({ templateId: "" }).success,
+		).toBe(false);
+	});
+
+	test("a stack may be nested and patched partially", () => {
+		expect(
+			createStackApiBody.parse({ name: "Web", parentId: "p", slug: "web" })
+				.parentId,
+		).toBe("p");
+		expect(updateStackApiBody.parse({ icon: null })).toEqual({ icon: null });
+		expect(updateStackApiBody.safeParse({ slug: "Not a slug" }).success).toBe(
+			false,
+		);
 	});
 });

@@ -1,5 +1,9 @@
 # Registry
 
+Advanced mode: [simple mode](ui-modes.md) hides the Registry sidebar entry.
+Everything here keeps working either way, and a hidden page still opens from a
+link.
+
 `/registry` (admin-only, under **Administration** in the sidebar) turns
 Homerun's internal image mirror into a real private Docker registry: a place you
 can `docker push` to, not just something Homerun mirrors scans through. It's

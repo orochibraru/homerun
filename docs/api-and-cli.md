@@ -53,7 +53,9 @@ credential Terraform's `http` backend sends. They're admin-only.
   of Deploy on push, pull request previews or release channels are on
 - `DELETE /api/v1/auth-token`: revokes the API key that authenticated the
   request, what `homerun logout` calls (see [Logging in](#logging-in) below)
-- `GET/POST /api/v1/stacks`, `GET /api/v1/templates`
+- `GET/POST /api/v1/stacks`, `GET/PATCH/DELETE /api/v1/stacks/:id` (delete
+  removes the stack's services too, `?force=true` like a service's),
+  `GET /api/v1/templates`, `GET /api/v1/templates/:id`
 - `GET/POST /api/v1/services/:id/scans`,
   `GET /api/v1/services/:id/scans/latest`,
   `GET /api/v1/services/:id/scans/:scanId`: image scan results, see
@@ -88,6 +90,45 @@ so an existing integration keeps working unchanged; the total row count and the
 page/size you got back come in the `x-total-count`/`x-page`/`x-per-page`
 response headers instead. Both the OpenAPI spec and the CLI (below) document
 these the same way.
+
+### Everything the dashboard manages
+
+`PATCH /api/v1/services/:id` takes every setting a service's tabs have, each
+field optional (the rest stay as they are), and checks and applies them the way
+the dashboard does: domains and their DNS records, a custom certificate
+(`customSslCert` and `customSslKey`, null on both removes it), published ports,
+the login wall and its paths, previews, release channels (`channelsEnabled`,
+`channelBranch`, `channelTagPattern`, `channelCanaryDomain`), the redeploy
+schedule, compute, healthcheck, runtime and the rest. `POST /api/v1/services`
+takes the same fields on top of the ones a new service needs, and with
+`templateId` creates the service (and the template's linked services) from a
+template first. Every other object has its own routes, each with create, read by
+id, update and delete, each with a UUID as its id (a bucket's is
+`<storeId>/<name>`). Secrets are accepted and never returned: a response says
+whether one is set instead (`registryPasswordSet`, `customSslSet`, `passwordSet`
+and so on).
+
+| Object               | Routes                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------- |
+| Stack                | `/stacks`, `/stacks/:id`                                                                 |
+| Service              | `/services`, `/services/:id`                                                             |
+| Service environment  | `/service-environments`, `/service-environments/:id`                                     |
+| Service dependency   | `/service-dependencies`, `/service-dependencies/:id` (no update)                         |
+| Volume               | `/volumes`, `/volumes/:id`                                                               |
+| Volume mount         | `/volume-mounts`, `/volume-mounts/:id`                                                   |
+| Cron job             | `/cron-jobs`, `/cron-jobs/:id`                                                           |
+| Redirect             | `/redirects`, `/redirects/:id`                                                           |
+| Notification channel | `/notification-channels`, `/notification-channels/:id` (the caller's own)                |
+| Backup destination   | `/backup-destinations`, `/backup-destinations/:id`                                       |
+| Status page          | `/status-pages`, `/status-pages/:id`                                                     |
+| DNS connection       | `/dns-connections`, `/dns-connections/:id` (admins only)                                 |
+| Git provider         | `/git-providers`, `/git-providers/:id` (admins only)                                     |
+| Build cache registry | `/build-cache-registries`, `/build-cache-registries/:id`                                 |
+| Object store         | `/object-stores`, `/object-stores/:id` (admins only)                                     |
+| Bucket               | `/object-stores/:storeId/buckets`, `/object-stores/:storeId/buckets/:name` (admins only) |
+| Template             | `/templates`, `/templates/:id` (read only)                                               |
+
+This is what the [Terraform provider](infrastructure-as-code.md) is built on.
 
 ### Image scans
 
