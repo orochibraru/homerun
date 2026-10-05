@@ -16,6 +16,7 @@ export interface WizardTemplate {
 export interface WizardData {
 	baseDomain: string;
 	buildCacheRegistries: ComponentProps<typeof GitBuildFields>["registries"];
+	builtinCacheRunning: boolean;
 	connectedGitProviders: ComponentProps<typeof GitSourceFields>["providers"];
 	linkableServices: ComponentProps<typeof ServiceLinkPicker>["services"];
 	stackId: string | null;

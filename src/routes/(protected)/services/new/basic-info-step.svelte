@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
 	import { GitBranch, Server } from "@lucide/svelte";
 	import { isBuildMethod } from "#lib/build-methods.js";
 	import GitBuildFields from "#lib/components/git-build-fields.svelte";
@@ -71,7 +72,10 @@
 	let gitBakeFile = $derived(values?.gitBakeFile ?? "");
 	let gitBuildTarget = $derived(values?.gitBuildTarget ?? "");
 	let gitBuildContext = $derived(values?.gitBuildContext ?? "");
-	let buildCacheRegistryId = $derived(values?.buildCacheRegistryId ?? "");
+	let buildCacheRegistryId = $derived(
+		values?.buildCacheRegistryId ??
+			(data.builtinCacheRunning ? BUILTIN_BUILD_CACHE : ""),
+	);
 
 	function onNameInput() {
 		if (!slugTouched) {

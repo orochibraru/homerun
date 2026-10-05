@@ -21,6 +21,7 @@ import {
 import { defaultHostname } from "#lib/service-domains.js";
 import { CapacityService } from "#lib/services/capacity.service.js";
 import { DeploymentService } from "#lib/services/deploy.service.js";
+import { DockerService } from "#lib/services/docker.service.js";
 import { GitWebhookService } from "#lib/services/git-webhook.service.js";
 import { encryptSecret } from "#lib/services/secrets.js";
 import {
@@ -153,6 +154,9 @@ export const load = async ({ url, parent, locals }) => {
 	return {
 		baseDomain: config.baseDomain,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
+		builtinCacheRunning: await DockerService.imageMirrorRunning().catch(
+			() => false,
+		),
 		linkableServices: existing.map((svc) => ({
 			command: svc.command,
 			containerPort: svc.containerPort,
