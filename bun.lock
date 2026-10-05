@@ -31,7 +31,7 @@
         "@fontsource/dejavu-sans": "5.3.0",
         "@fontsource/vt323": "5.3.0",
         "@happy-dom/global-registrator": "20.11.6",
-        "@internationalized/date": "3.12.0",
+        "@internationalized/date": "3.12.4",
         "@j178/prek": "0.5.3",
         "@jridgewell/gen-mapping": "0.3.13",
         "@kitql/helpers": "0.8.15",
@@ -319,7 +319,7 @@
 
     "@hexagon/base64": ["@hexagon/base64@1.1.28", "", {}, "sha512-lhqDEAvWixy3bZ+UOYbPwUbBkwBq5C1LAJ/xPC8Oi+lL54oyakv/npbA0aU2hgCsx/1NUd4IBvV03+aUBWxerw=="],
 
-    "@internationalized/date": ["@internationalized/date@3.12.0", "", { "dependencies": { "@swc/helpers": "^0.5.0" } }, "sha512-/PyIMzK29jtXaGU23qTvNZxvBXRtKbNnGDFD+PY6CZw/Y8Ex8pFUzkuCJCG9aOqmShjqhS9mPqP6Dk5onQY8rQ=="],
+    "@internationalized/date": ["@internationalized/date@3.12.4", "", { "dependencies": { "@swc/helpers": "^0.5.0" } }, "sha512-M1dEn4c1U1HsSlaVR8upZtSqvXrTkHDfv18H01uCSJyjVLDxnBR38v/fMxecmlwXKR4i9HeZcmgQAPE6A+aGJQ=="],
 
     "@j178/prek": ["@j178/prek@0.5.3", "", { "optionalDependencies": { "@j178/prek-android-arm64": "0.5.3", "@j178/prek-darwin-arm64": "0.5.3", "@j178/prek-darwin-x64": "0.5.3", "@j178/prek-linux-arm64-gnu": "0.5.3", "@j178/prek-linux-arm64-musl": "0.5.3", "@j178/prek-linux-x64-gnu": "0.5.3", "@j178/prek-linux-x64-musl": "0.5.3", "@j178/prek-win32-arm64-msvc": "0.5.3", "@j178/prek-win32-x64-msvc": "0.5.3" }, "bin": { "prek": "bin/prek.js" } }, "sha512-RCNdZR7xGi9yKvhZ2sjCIlOOlwnoJ+r4NJEd09uf708pi968+88mYquSvoAuzOaLKJ0iMUZXXcHwzwuykOw3Jw=="],
 
