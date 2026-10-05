@@ -175,8 +175,7 @@ describe("GitHubReportService.deployed", () => {
 		});
 		expect(calls[3]?.body).toMatchObject({
 			environment_url: expect.stringContaining("https://app-pr-12."),
-			log_url:
-				"https://homerun.example.com/services/prev/environments/revisions/dep1",
+			log_url: "https://homerun.example.com/services/prev/deployments/dep1",
 			state: "success",
 		});
 	});

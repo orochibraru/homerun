@@ -23,12 +23,13 @@ per deploy or rollback attempt, newest first, with its status, what triggered it
 (Manual, Git push, Scheduled, Promote or Rollback, Promote being a
 [pull request preview promoted](pull-request-previews.md) to the service), the
 git branch and commit or the image it ran, who started it, when and how long it
-took, and the error for a failed one. Click a row for its deploy log; the
-service name opens the revision that deployment belongs to. Search matches the
-service, image, git ref, commit or error, and the Status, Trigger and
-Environment filters narrow it down. Each row, and each revision in the Revisions
-section, carries its environment as a badge: **Production**, **Canary**,
-**Preview**, or a name you gave the service (see
+took, and the error for a failed one. The service name opens that deployment's
+own page, with its deploy log (live while it runs) and, once it's running, a
+link to its revision. The list loads in the background, so the page opens at
+once. Search matches the service, image, git ref, commit or error, and the
+Status, Trigger and Environment filters narrow it down. Each row, and each
+revision in the Revisions section, carries its environment as a badge:
+**Production**, **Canary**, **Preview**, or a name you gave the service (see
 [Release channels](release-channels.md#environments-in-the-history)). A deploy
 from before triggers were recorded, whose queue job was already pruned by then,
 shows as plain **Deploy** and only matches the Rollback filter.

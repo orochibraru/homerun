@@ -11,11 +11,7 @@ export const load = async ({ parent, url }) => {
 		{ filterKeys: ["status", "trigger", "environment"] },
 		preferences.perPage,
 	);
-	const [result, environments] = await Promise.all([
-		DeploymentDTO.listPaged(query),
-		DeploymentDTO.listEnvironments(),
-	]);
-	return {
+	const listing = DeploymentDTO.listPaged(query).then((result) => ({
 		deployments: result.items.map((item) => {
 			const row = item.deployment.toJSON();
 			return {
@@ -26,7 +22,6 @@ export const load = async ({ parent, url }) => {
 				gitRef: row.gitRef,
 				id: row.id,
 				imageRef: row.imageRef,
-				log: row.log ?? "",
 				serviceId: row.serviceId,
 				serviceName: item.serviceName,
 				serviceSlug: item.serviceSlug,
@@ -36,10 +31,15 @@ export const load = async ({ parent, url }) => {
 				userName: item.userName,
 			};
 		}),
-		environments: deploymentEnvironments(environments),
-		filtered: query.active,
 		page: result.page,
 		perPage: result.perPage,
 		total: result.total,
+	}));
+	return {
+		environments: deploymentEnvironments(
+			await DeploymentDTO.listEnvironments(),
+		),
+		filtered: query.active,
+		listing,
 	};
 };

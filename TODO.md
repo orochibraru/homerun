@@ -16,8 +16,6 @@ When done delete the entry, no bloat.
 - [ ] Make UI nicer and easier to navigate on the registry page for images.
 - [ ] Registry page: stream + paginate images when loading the page, page load
       takes too long.
-- [ ] Use data streaming on the deployments page to make sure the page load is
-      instant.
 
 ## Medium
 

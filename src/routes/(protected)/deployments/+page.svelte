@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { ChevronRight, History } from "@lucide/svelte";
+	import { History } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import DeployLogPanel from "#lib/components/deploy-log-panel.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "#lib/components/entity-toolbar.svelte";
 	import EnvironmentBadge from "#lib/components/environment-badge.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import { SERVICE_STATUS_CONFIG } from "#lib/constants.js";
 	import {
@@ -24,22 +24,23 @@
 
 	onMount(() => title.set("Deployments"));
 
-	let expandedId = $state<string | null>(null);
-
-	function toggle(id: string) {
-		expandedId = expandedId === id ? null : id;
-	}
-
 	$effect(() => {
-		if (
-			!data.deployments.some((dep) =>
-				["pending", "pulling", "starting"].includes(dep.status),
-			)
-		) {
-			return;
-		}
-		const timer = setInterval(() => refreshAll(), 3000);
-		return () => clearInterval(timer);
+		let timer: ReturnType<typeof setInterval> | undefined;
+		let cancelled = false;
+		void data.listing.then((listing) => {
+			if (
+				!cancelled &&
+				listing.deployments.some((dep) =>
+					["pending", "pulling", "starting"].includes(dep.status),
+				)
+			) {
+				timer = setInterval(() => refreshAll(), 3000);
+			}
+		});
+		return () => {
+			cancelled = true;
+			clearInterval(timer);
+		};
 	});
 
 	const filters: FilterGroup[] = $derived([
@@ -80,12 +81,19 @@
   <div class="mb-8">
     <h1 class="text-text text-lg font-semibold tracking-tight">Deployments</h1>
     <p class="text-text-muted mt-1 text-sm">
-      Every deploy and rollback across all services, newest first. Click a row for
+      Every deploy and rollback across all services, newest first. Open one for
       its log.
     </p>
   </div>
 
-  {#if data.total === 0 && !data.filtered}
+  {#await data.listing}
+    <div class="space-y-2">
+      {#each { length: 8 }, i (i)}
+        <Skeleton class="h-12 w-full" />
+      {/each}
+    </div>
+  {:then listing}
+  {#if listing.total === 0 && !data.filtered}
     <EmptyState
       icon={History}
       subtitle="Deploys and rollbacks of every service show up here."
@@ -97,7 +105,7 @@
       placeholder="Search by service, image, git ref, commit or error…"
     />
 
-    {#if data.deployments.length === 0}
+    {#if listing.deployments.length === 0}
       <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No deployments match your filters.</p>
       </div>
@@ -116,44 +124,22 @@
             </tr>
           </thead>
           <tbody>
-            {#each data.deployments as dep (dep.id)}
-              <tr
-                class="border-border/60 hover:bg-surface-2 cursor-pointer border-b last:border-0"
-                onclick={() => toggle(dep.id)}
-              >
+            {#each listing.deployments as dep (dep.id)}
+              <tr class="border-border/60 hover:bg-surface-2 border-b last:border-0">
                 <td class="px-4 py-3">
-                  <div class="flex items-center gap-1.5">
-                    <button
-                      class="text-text-subtle"
-                      aria-expanded={expandedId === dep.id}
-                      aria-label="Toggle the log of this deployment"
-                      onclick={(event) => {
-                        event.stopPropagation();
-                        toggle(dep.id);
-                      }}
-                      type="button"
+                  <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                    <a
+                      class="text-text hover:text-accent font-medium"
+                      href={resolve(
+                        "/(protected)/services/[serviceId]/deployments/[deploymentId]",
+                        { deploymentId: dep.id, serviceId: dep.serviceId },
+                      )}
                     >
-                      <ChevronRight
-                        class="size-3.5 shrink-0 transition-transform {expandedId === dep.id
-                          ? 'rotate-90'
-                          : ''}"
-                      />
-                    </button>
-                    <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-                      <a
-                        class="text-text hover:text-accent font-medium"
-                        href={resolve(
-                          "/(protected)/services/[serviceId]/environments/revisions/[revisionId]",
-                          { revisionId: dep.id, serviceId: dep.serviceId },
-                        )}
-                        onclick={(event) => event.stopPropagation()}
-                      >
-                        {dep.serviceName}
-                      </a>
-                      <EnvironmentBadge environment={dep.environment} />
-                    </span>
-                  </div>
-                  <p class="text-text-muted mt-0.5 pl-5 text-xs md:hidden">
+                      {dep.serviceName}
+                    </a>
+                    <EnvironmentBadge environment={dep.environment} />
+                  </span>
+                  <p class="text-text-muted mt-0.5 text-xs md:hidden">
                     {timeAgo(dep.startedAt)} · {historyTriggerLabel(dep.trigger)}{dep.userName ? ` · ${dep.userName}` : ""}{dep.duration ? ` · ${dep.duration}` : ""}
                   </p>
                   {#if dep.status === "failed" && dep.errorMessage}
@@ -186,27 +172,17 @@
                 </td>
                 <td class="text-text-muted hidden px-4 py-3 tabular-nums md:table-cell">{dep.duration ?? "—"}</td>
               </tr>
-              {#if expandedId === dep.id}
-                <tr class="border-border/60 border-b last:border-0">
-                  <td class="pt-3" colspan="7">
-                    {#if dep.log || dep.errorMessage}
-                      <DeployLogPanel errorMessage={dep.errorMessage} log={dep.log} logName="deploy log" />
-                    {:else}
-                      <p class="text-text-muted px-5 pb-3 text-xs">Waiting for the first line…</p>
-                    {/if}
-                  </td>
-                </tr>
-              {/if}
             {/each}
           </tbody>
         </table>
       </div>
       <Pagination
         label="deployments"
-        page={data.page}
-        perPage={data.perPage}
-        total={data.total}
+        page={listing.page}
+        perPage={listing.perPage}
+        total={listing.total}
       />
     {/if}
   {/if}
+  {/await}
 </div>
