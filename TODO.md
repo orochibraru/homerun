@@ -11,8 +11,6 @@ When done delete the entry, no bloat.
       pass, 1 fail) and not in 22 reruns since. The gate now prints `(fail)`
       lines and below-threshold coverage rows first, so the next failure names
       it: fix that test then.
-- [ ] On the custom traefik pages with the "Powered by Homerun" flag, let's add
-      a link to <https://orochibraru.com/homerun> on the "Homerun" part
 
 ## Medium
 

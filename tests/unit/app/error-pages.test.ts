@@ -110,21 +110,21 @@ describe("renderErrorPage", () => {
 	test("Powered by Homerun only shows under another brand", () => {
 		expect(
 			renderErrorPage(withErrorPageDefaults(null), "notFound", 404),
-		).not.toContain("Powered by Homerun");
+		).not.toContain("Powered by");
 		expect(
 			renderErrorPage(
 				withErrorPageDefaults({ brandName: "Acme" }),
 				"notFound",
 				404,
 			),
-		).toContain("Powered by Homerun");
+		).toContain('Powered by <a href="https://orochibraru.com/homerun"');
 		expect(
 			renderErrorPage(
 				withErrorPageDefaults({ brandName: "Acme", showPoweredBy: false }),
 				"notFound",
 				404,
 			),
-		).not.toContain("Powered by Homerun");
+		).not.toContain("Powered by");
 	});
 
 	test("a logo replaces the built-in mark and the custom accent is used", () => {

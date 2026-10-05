@@ -1,5 +1,7 @@
 export const ERROR_PAGE_PATH = "/homerun-error";
 
+const HOMERUN_URL = "https://orochibraru.com/homerun";
+
 export type ErrorPageKind = "notFound" | "notReady" | "unavailable";
 
 export interface ErrorPageText {
@@ -131,7 +133,7 @@ export function renderErrorPage(
 	const poweredBy =
 		settings.showPoweredBy &&
 		settings.brandName !== DEFAULT_ERROR_PAGES.brandName
-			? `<p class="powered">Powered by Homerun</p>`
+			? `<p class="powered">Powered by <a href="${HOMERUN_URL}" rel="noopener" target="_blank">Homerun</a></p>`
 			: "";
 	return `<!doctype html>
 <html lang="en">
@@ -154,6 +156,8 @@ main{width:100%;max-width:440px;background:var(--card);border:1px solid var(--bo
 h1{margin:0 0 8px;font-size:22px;letter-spacing:-.02em}
 p{margin:0;color:var(--muted)}
 .powered{margin-top:28px;font-size:12px}
+.powered a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.powered a:hover{color:var(--accent)}
 </style>
 </head>
 <body>
