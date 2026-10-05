@@ -14,8 +14,6 @@ When done delete the entry, no bloat.
 - [ ] Since we have branding on custom traefik pages, let's also apply it to the
       custom authentication pages for a service, whitelabelling included.
 - [ ] Make UI nicer and easier to navigate on the registry page for images.
-- [ ] Registry page: stream + paginate images when loading the page, page load
-      takes too long.
 
 ## Medium
 

@@ -3,16 +3,15 @@
 	import Alert from "#lib/components/alert.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
+	import Skeleton from "#lib/components/skeleton.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatBytes } from "#lib/formatting.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 
 	const { data } = $props();
-
-	const totalTags = $derived(
-		data.catalog.reduce((sum, entry) => sum + entry.tags.length, 0),
-	);
 
 	let confirmOpen = $state(false);
 	let confirmTitle = $state("");
@@ -35,22 +34,11 @@
 	}
 </script>
 
-{#if data.unreachable}
-  <Alert class="mb-6" title="The registry isn't answering.">
-    {data.unreachable}
-  </Alert>
-{/if}
-
 <div
   class="border-border bg-surface-1 mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4"
 >
   <div class="text-sm">
-    <p class="text-text font-medium">
-      {data.catalog.length}
-      {data.catalog.length === 1 ? "repository" : "repositories"}, {totalTags}
-      {totalTags === 1 ? "tag" : "tags"}
-    </p>
-    <p class="text-text-muted mt-0.5">
+    <p class="text-text-muted">
       {#if data.status.sizeBytes !== null}
         {formatBytes(data.status.sizeBytes)} on disk. Deleting a tag only frees
         its space once garbage collection runs.
@@ -72,15 +60,33 @@
   </form>
 </div>
 
-{#if data.catalog.length === 0}
+{#await data.listing}
+  <div class="flex flex-col gap-4">
+    {#each { length: 4 }, i (i)}
+      <Skeleton class="h-28 w-full" />
+    {/each}
+  </div>
+{:then listing}
+{#if listing.unreachable}
+  <Alert class="mb-6" title="The registry isn't answering.">
+    {listing.unreachable}
+  </Alert>
+{/if}
+{#if listing.total === 0 && !data.searched}
   <EmptyState
     icon={Boxes}
     subtitle="Homerun mirrors an image here the first time it scans one, and anything you push lands here too."
     title="Nothing in the registry yet"
   />
 {:else}
+  <EntityToolbar placeholder="Search repositories…" />
+  {#if listing.items.length === 0}
+    <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
+      <p class="text-text-muted text-sm">No repository matches your search.</p>
+    </div>
+  {/if}
   <div class="flex flex-col gap-4">
-    {#each data.catalog as entry (entry.repository)}
+    {#each listing.items as entry (entry.repository)}
       <section class="border-border bg-surface-1 rounded-lg border">
         <header
           class="border-border flex items-center justify-between gap-3 border-b px-4 py-3"
@@ -170,7 +176,14 @@
       </section>
     {/each}
   </div>
+  <Pagination
+    label="repositories"
+    page={listing.page}
+    perPage={listing.perPage}
+    total={listing.total}
+  />
 {/if}
+{/await}
 
 <ConfirmDialog
   bind:open={confirmOpen}

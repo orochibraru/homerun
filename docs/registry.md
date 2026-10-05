@@ -10,7 +10,9 @@ four tabs: **Images**, **Tokens**, **Credentials** and **Settings**.
 Every repository the registry holds, with its tags, the digest each tag
 currently points at, and which of your services reference that repository (an
 image lands here the first time [image scanning](image-scanning.md) mirrors it,
-or the moment you push to it). From here you can:
+or the moment you push to it). The list loads in the background, a page of
+repositories at a time in name order, and the search box narrows it to the
+repositories whose name contains what you type. From here you can:
 
 - delete a single tag, or every tag in a repository;
 - run garbage collection on demand (the **Collect garbage** button), the same

@@ -8,6 +8,7 @@ import {
 	publicProbeCheck,
 	type RegistryCheck,
 } from "#lib/registry-self-test.js";
+import type { ListQuery, PagedResult } from "#lib/server/list-query.js";
 import { syncRegistryDns } from "./dns.service.ts";
 import {
 	MIRROR_HOST_PORT,
@@ -328,32 +329,50 @@ class RegistryServiceClass {
 	}
 
 	/**
-	 * Every repository in the registry with its tags, and which services still
-	 * reference each one, newest-looking first (repository name order).
+	 * One page of the registry's repositories, in name order, narrowed to the
+	 * ones whose name contains `query.q`: the catalog is one request, and only
+	 * the page's repositories have their tags read, in parallel, so a big
+	 * registry doesn't slow the page down.
 	 */
-	async catalog(): Promise<RegistryRepository[]> {
+	async catalogPage(
+		query: ListQuery,
+	): Promise<PagedResult<RegistryRepository>> {
 		const client = await DockerService.imageMirrorClient();
-		const repositories = await client.catalog();
+		const needle = query.q.trim().toLowerCase();
+		const matching = (await client.catalog())
+			.filter((repository) => repository.toLowerCase().includes(needle))
+			.sort();
+		const usedBy = await this.#usedBy();
+		const items = await Promise.all(
+			matching
+				.slice(query.offset, query.offset + query.limit)
+				.map(async (repository) => ({
+					repository,
+					tags: (await client.inventory(repository)).map((entry) => ({
+						digest: entry.digest,
+						tag: entry.tag,
+					})),
+					usedBy: usedBy.get(repository) ?? [],
+				})),
+		);
+		return {
+			items,
+			page: query.page,
+			perPage: query.perPage,
+			total: matching.length,
+		};
+	}
+
+	/** The names of the services whose image lives in each mirror repository. */
+	async #usedBy(): Promise<Map<string, string[]>> {
 		const usedBy = new Map<string, string[]>();
 		for (const svc of await ServiceDTO.list()) {
 			const repository = mirrorRepository(svc.image, svc.tag);
-			usedBy.set(repository, [...(usedBy.get(repository) ?? []), svc.name]);
+			usedBy.set(repository, [
+				...new Set([...(usedBy.get(repository) ?? []), svc.name]),
+			]);
 		}
-
-		const catalog: RegistryRepository[] = [];
-		for (const repository of repositories.sort()) {
-			// oxlint-disable-next-line no-await-in-loop -- one registry round trip per repository, and the catalog is small
-			const inventory = await client.inventory(repository);
-			catalog.push({
-				repository,
-				tags: inventory.map((entry) => ({
-					digest: entry.digest,
-					tag: entry.tag,
-				})),
-				usedBy: [...new Set(usedBy.get(repository) ?? [])],
-			});
-		}
-		return catalog;
+		return usedBy;
 	}
 
 	/**
