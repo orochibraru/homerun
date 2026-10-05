@@ -28,6 +28,25 @@ export const AGENT_TOKEN = "test-agent-token-0123456789";
  * the bare global, or it 404s/network-errors inside any `test()` body
  * (setup.ts's own calls, which all happen inside `beforeAll` — itself
  * registered before any test file's `beforeEach` fires — are unaffected
- * either way, but use this too for consistency).
+ * either way, but use this too for consistency). It also waits out a 429 and
+ * retries (up to five times, honouring `Retry-After`): every suite shares the
+ * bootstrap admin's one API key, and a full run can spend that key's
+ * per-minute budget before a later suite's first request.
  */
-export const nativeFetch = fetch;
+const capturedFetch = fetch;
+export const nativeFetch = (async (
+	input: RequestInfo | URL,
+	init?: RequestInit,
+) => {
+	for (let attempt = 1; ; attempt++) {
+		const res = await capturedFetch(
+			input instanceof Request ? input.clone() : input,
+			init,
+		);
+		if (res.status !== 429 || attempt >= 5) {
+			return res;
+		}
+		const seconds = Number(res.headers.get("retry-after")) || 5;
+		await Bun.sleep(Math.min(seconds, 60) * 1000);
+	}
+}) as typeof fetch;

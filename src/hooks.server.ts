@@ -424,9 +424,23 @@ function appOnlyTokenRefusal(): Response {
 }
 
 /**
+ * How long until a rate-limited API key may be used again (in ms), when `err`
+ * is better-auth's rate-limit refusal from `verifyApiKey`, else null.
+ */
+function rateLimitedFor(err: unknown): number | null {
+	const body = (
+		err as { body?: { code?: string; details?: { tryAgainIn?: number } } }
+	)?.body;
+	return body?.code === "RATE_LIMITED"
+		? (body.details?.tryAgainIn ?? 60_000)
+		: null;
+}
+
+/**
  * API-key fallback for a request with no cookie session : populates
  * `locals.user` on success, and returns a 401 response when a key was sent
- * but doesn't verify. Returns null when there's nothing to do.
+ * but doesn't verify, or a 429 with `Retry-After` when it's rate-limited.
+ * Returns null when there's nothing to do.
  */
 async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 	const rawKey = readApiKey(event);
@@ -438,9 +452,24 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 		return await applyMcpTokenAuth(event, rawKey);
 	}
 
+	let tryAgainInMs: number | null = null;
 	const result = await auth.api
 		.verifyApiKey({ body: { key: rawKey } })
-		.catch(() => null);
+		.catch((err: unknown) => {
+			tryAgainInMs = rateLimitedFor(err);
+			return null;
+		});
+	if (tryAgainInMs !== null) {
+		return new Response(
+			JSON.stringify({ error: "Too many requests with this API key." }),
+			{
+				headers: {
+					"Retry-After": String(Math.max(1, Math.ceil(tryAgainInMs / 1000))),
+				},
+				status: 429,
+			},
+		);
+	}
 
 	if (!(result?.valid && result.key)) {
 		logger.warn("Invalid API key authentication attempt", {

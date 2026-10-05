@@ -12,7 +12,9 @@ An API key is created with **Full access** or **Read-only** access (see
 [API keys](your-profile.md#api-keys)). A read-only key, or any request from a
 [read-only account](users-and-roles.md), can call every `GET` endpoint; every
 `POST`, `PATCH` and `DELETE` answers `403` with
-`{"error": "This account or API key is read-only: ..."}`. The OpenAPI spec lists
+`{"error": "This account or API key is read-only: ..."}`. An API key makes up to
+300 requests a minute; past that it gets `429 Too Many Requests` with a
+`Retry-After` header (in seconds) until the minute is up. The OpenAPI spec lists
 that `403` on every write.
 
 - `GET/POST /api/v1/services`, `GET/PATCH/DELETE /api/v1/services/:id`: delete

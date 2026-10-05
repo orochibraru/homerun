@@ -11,17 +11,17 @@ When done delete the entry, no bloat.
       pass, 1 fail) and not in 22 reruns since. The gate now prints `(fail)`
       lines and below-threshold coverage rows first, so the next failure names
       it: fix that test then.
+- [ ] On the custom traefik pages with the "Powered by Homerun" flag, let's add
+      a link to <https://orochibraru.com/homerun> on the "Homerun" part
 
 ## Medium
 
 - [ ] Security: add a paths filter glob pattern matchers in the security tab of
       a service to block access to certain pages. In the same spirit, let's add
-      the ability to filter paths for authentication.
-
-- [ ] `tests/integration/s3-backup.test.ts` failed both tests once in a full
-      `bun run test:integration` run (its `POST /api/v1/volumes/:id/backup`
-      answered 401 to its API key, three attempts) and passed when run alone.
-      Something in the full run invalidates or races that suite's API key.
+      the ability to filter paths for authentication. Let's also add the ability
+      to completely ban IPs if trying to access a blocked pattern too many
+      times. For patterns add presets such as Wordpress (wp- stuff) or simply a
+      default list with in it sensitive files (.env, .git, .git-credentials)
 
 - [ ] The stack diagram's cards and substacks can only be rearranged by dragging
       with a pointer. Add a keyboard way to move the focused card (arrow keys
