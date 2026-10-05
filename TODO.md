@@ -12,9 +12,6 @@ When done delete the entry, no bloat.
       lines and below-threshold coverage rows first, so the next failure names
       it: fix that test then.
 
-- [ ] `src/app.html` declares `lang="fr"` while the whole UI is English, so
-      screen readers read every page with French pronunciation. Set it to `en`.
-
 - [ ] A git-built service that hasn't deployed yet shows a stray `: ·` in its
       page header before the hostname: the image and tag slot renders empty.
       Hide it (or show the repo and branch) until there's an image.
