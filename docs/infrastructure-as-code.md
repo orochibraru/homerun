@@ -100,18 +100,33 @@ your instance's URL filled in.
 
 ## Generating a configuration
 
-The **Generate** tab writes a `main.tf` for what's running: the provider block,
-one resource per object and an `import` block for each, so `terraform plan`
-adopts them instead of creating new ones. Pick **Everything**, or one stack (it
-then covers that stack, its substacks, their services with their environments,
-dependencies, mounts and volumes, and the status pages of those stacks). Pick a
-**State backend** to add an `http` backend block pointing at one of your
+The **Generate** tab writes a Terraform project for one stack or one service,
+never the whole instance at once: a project per stack or service keeps each plan
+small and each state independent. A stack covers itself, its substacks, their
+services with their environments, dependencies, mounts and volumes, and the
+status pages of those stacks. A service covers itself, its environments, the
+dependencies it declares, and its mounts with their volumes; its stack and the
+services it depends on stay outside, referenced by id. Pick a **State backend**
+to add an `http` backend block pointing at one of your
 [Terraform state projects](object-storage.md#terraform-state).
+
+The project is a folder you download as a zip, and preview file by file on the
+page, highlighted:
+
+- `versions.tf`: the provider's source, and the backend when you picked one.
+- `providers.tf`: the provider, pointed at this instance.
+- One `service_<name>.tf` per service, with its environments, dependencies and
+  volume mounts, each next to its `import` block.
+- `stacks.tf` (stacks and status pages) and `volumes.tf`.
+- `variables.tf` and `terraform.tfvars.example`, when there are secrets to fill
+  in.
+- A `README.md` with the steps below, and a `.gitignore` that keeps the state,
+  `.terraform/` and `terraform.tfvars` out of git.
 
 Values a setting leaves at its default are left out. References between objects
 become Terraform references (`homerun_stack.apps.id`). Secrets the API never
-returns, and env vars marked secret, become sensitive variables to fill in a
-`terraform.tfvars`. Copy or download the file, then:
+returns, and env vars marked secret, become sensitive variables: copy
+`terraform.tfvars.example` to `terraform.tfvars` and fill them in. Then:
 
 ```sh
 export HOMERUN_API_KEY=<an API key>

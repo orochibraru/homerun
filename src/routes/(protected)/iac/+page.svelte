@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Download, FileCode2 } from "@lucide/svelte";
-	import CodeEditor from "#lib/components/code-editor.svelte";
-	import CopyButton from "#lib/components/copy-button.svelte";
+	import { Download, FileCode2, FolderTree } from "@lucide/svelte";
+	import CodeBlock from "#lib/components/code-block.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
@@ -10,40 +10,60 @@
 
 	const { data } = $props();
 
-	let stackId = $derived(data.stackId);
+	let scope = $derived(data.scope);
 	let projectId = $derived(data.projectId);
+	let selectedPath = $state("");
 
-	const stackLabel = $derived(
-		data.stacks.find((stack) => stack.id === stackId)?.path ?? "Everything",
+	const scopeLabel = $derived(
+		data.scopes.find((option) => option.value === scope)?.label ??
+			"Pick a stack or a service",
 	);
 	const projectLabel = $derived(
 		data.projects.find((project) => project.id === projectId)?.name ??
 			"No backend",
 	);
-	const download = $derived(
-		`data:text/plain;charset=utf-8,${encodeURIComponent(data.configuration)}`,
+	const groups = $derived(
+		["Stacks", "Services"]
+			.map((group) => ({
+				group,
+				options: data.scopes.filter((option) => option.group === group),
+			}))
+			.filter((entry) => entry.options.length > 0),
 	);
-	const total = $derived(
-		data.counts.reduce((sum, entry) => sum + entry.count, 0),
+	const current = $derived(
+		data.files?.find((file) => file.path === selectedPath) ??
+			data.files?.find((file) => file.path.endsWith(".tf")) ??
+			data.files?.[0] ??
+			null,
+	);
+	const downloadHref = $derived(
+		`${resolve("/(protected)/iac/download")}?${new URLSearchParams({
+			...(projectId ? { project: projectId } : {}),
+			scope: data.scope,
+		})}`,
 	);
 </script>
 
 <div class="space-y-5">
   <section class="panel rounded-md">
     <PanelHeader
-      description="Pick what to include and where Terraform keeps its state, then generate."
+      description="A Terraform project for one stack (its substacks included) or one service, with an import block for everything in it, so terraform plan adopts what already runs."
       icon={FileCode2}
-      title="Starter configuration"
+      title="Generate a project"
     />
     <form class="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end" method="GET">
       <div>
-        <label class={labelClass} for="iac-stack">Include</label>
-        <Select.Root name="stack" type="single" bind:value={stackId}>
-          <Select.Trigger id="iac-stack" class="w-full">{stackLabel}</Select.Trigger>
+        <label class={labelClass} for="iac-scope">Stack or service</label>
+        <Select.Root name="scope" type="single" bind:value={scope}>
+          <Select.Trigger id="iac-scope" class="w-full">{scopeLabel}</Select.Trigger>
           <Select.Content>
-            <Select.Item label="Everything" value="" />
-            {#each data.stacks as stack (stack.id)}
-              <Select.Item label={stack.path} value={stack.id} />
+            {#each groups as entry (entry.group)}
+              <Select.Group>
+                <Select.Label>{entry.group}</Select.Label>
+                {#each entry.options as option (option.value)}
+                  <Select.Item label={option.label} value={option.value} />
+                {/each}
+              </Select.Group>
             {/each}
           </Select.Content>
         </Select.Root>
@@ -60,7 +80,7 @@
           </Select.Content>
         </Select.Root>
       </div>
-      <Button type="submit">Generate</Button>
+      <Button disabled={!scope} type="submit">Generate</Button>
     </form>
     {#if data.projects.length === 0}
       <p class="text-text-muted border-border border-t px-5 py-3 text-xs">
@@ -71,30 +91,45 @@
     {/if}
   </section>
 
-  <section class="panel rounded-md">
-    <PanelHeader
-      description={total === 0
-        ? "Nothing to manage yet."
-        : `${total} ${total === 1 ? "object" : "objects"}, each with an import block so terraform plan adopts it instead of creating it.`}
-      title="main.tf"
-    >
-      {#snippet trailing()}
-        <CopyButton label="main.tf" text="Copy" value={data.configuration} />
-        <Button download="main.tf" href={download} size="sm" variant="outline">
-          <Download class="size-3.5" />
-          Download
-        </Button>
-      {/snippet}
-    </PanelHeader>
-    {#if data.counts.length > 0}
-      <ul class="text-text-muted border-border flex flex-wrap gap-x-4 gap-y-1 border-b px-5 py-3 font-mono text-xs">
-        {#each data.counts as entry (entry.type)}
-          <li>{entry.type} <span class="text-text tabular-nums">{entry.count}</span></li>
-        {/each}
-      </ul>
-    {/if}
-    <div class="p-3">
-      <CodeEditor aria-label="Generated configuration" language={null} readonly value={data.configuration} />
-    </div>
-  </section>
+  {#if data.files && current}
+    <section class="panel rounded-md">
+      <PanelHeader
+        description={`${data.files.length} files for ${data.name}. Unzip, set HOMERUN_API_KEY, then terraform init and plan.`}
+        icon={FolderTree}
+        title="Project"
+      >
+        {#snippet trailing()}
+          <Button download href={downloadHref} size="sm">
+            <Download class="size-3.5" />
+            Download .zip
+          </Button>
+        {/snippet}
+      </PanelHeader>
+      <div class="grid gap-4 p-4 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+        <ul class="flex flex-row flex-wrap gap-1 md:flex-col" aria-label="Files">
+          {#each data.files as file (file.path)}
+            <li>
+              <button
+                class="hover:bg-surface-2 w-full rounded-md px-2.5 py-1.5 text-left font-mono text-xs {file.path === current.path ? 'bg-surface-2 text-text font-bold' : 'text-text-muted'}"
+                aria-current={file.path === current.path ? "true" : undefined}
+                onclick={() => {
+                  selectedPath = file.path;
+                }}
+                type="button"
+              >
+                {file.path}
+              </button>
+            </li>
+          {/each}
+        </ul>
+        <CodeBlock code={current.content} html={current.html} label={current.path} />
+      </div>
+    </section>
+  {:else if !data.scope}
+    <EmptyState
+      icon={FolderTree}
+      subtitle="Pick a stack or a service above to generate its Terraform project."
+      title="Nothing generated yet"
+    />
+  {/if}
 </div>

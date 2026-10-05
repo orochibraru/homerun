@@ -12,7 +12,15 @@ import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
-import type { Inventory, LiveObject } from "#lib/iac/generate.js";
+import {
+	type GeneratedFile,
+	type GenerateScope,
+	generateStructure,
+	type Inventory,
+	type LiveObject,
+	scopeToService,
+	scopeToStack,
+} from "#lib/iac/generate.js";
 import { Logger } from "#lib/logger.js";
 import {
 	backupDestinationApiJson,
@@ -161,6 +169,40 @@ class IacInventoryServiceClass {
 				}),
 		);
 		return listed.flat();
+	}
+
+	/**
+	 * The Terraform project for one stack (its substacks included) or one
+	 * service, as files, with the slug to name the folder and the archive
+	 * after. Null when the stack or service doesn't exist.
+	 */
+	async structure(
+		userId: string,
+		scope: GenerateScope,
+		options: { backendAddress: string | null; endpoint: string },
+	): Promise<{ files: GeneratedFile[]; name: string; slug: string } | null> {
+		const inventory = await this.inventory(userId);
+		const type = scope.kind === "stack" ? "homerun_stack" : "homerun_service";
+		const root = (inventory[type] ?? []).find(
+			(object) => object.id === scope.id,
+		);
+		if (!root) {
+			return null;
+		}
+		const name = String(root.name ?? root.slug ?? scope.id);
+		const scoped =
+			scope.kind === "stack"
+				? scopeToStack(inventory, scope.id)
+				: scopeToService(inventory, scope.id);
+		return {
+			files: generateStructure(scoped, {
+				...options,
+				generatedAt: new Date(),
+				name,
+			}),
+			name,
+			slug: String(root.slug ?? scope.id),
+		};
 	}
 }
 

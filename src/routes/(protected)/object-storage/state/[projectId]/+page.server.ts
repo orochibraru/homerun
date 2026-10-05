@@ -3,6 +3,8 @@ import { config } from "#lib/config.js";
 import { IacProjectDTO } from "#lib/dto/iac-project-dto.js";
 import { IacStateVersionDTO } from "#lib/dto/iac-state-version-dto.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { httpBackendBlock, pulumiLoginCommand } from "#lib/iac-state.js";
+import { highlightCode } from "#lib/server/shiki.js";
 import { IacStateService } from "#lib/services/iac-state.service.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
 import { resolve } from "$app/paths";
@@ -22,8 +24,28 @@ export const load = async ({ params, url }) => {
 		project.lockView(),
 		store ? ObjectStorageService.publicEndpoint(store) : Promise.resolve(""),
 	]);
+	const apiBase = `${config.auth.origin ?? url.origin}/api/v1/iac/projects/${project.id}`;
+	const terraform = httpBackendBlock(apiBase);
+	const pulumi = store
+		? pulumiLoginCommand({
+				bucket: project.bucket,
+				endpoint,
+				prefix: project.prefix,
+				region: store.region,
+				slug: project.slug,
+			})
+		: null;
 	return {
-		apiBase: `${config.auth.origin ?? url.origin}/api/v1/iac/projects/${project.id}`,
+		apiBase,
+		snippets: {
+			pulumi: pulumi
+				? { code: pulumi, html: await highlightCode(pulumi, "shellscript") }
+				: null,
+			terraform: {
+				code: terraform,
+				html: await highlightCode(terraform, "hcl"),
+			},
+		},
 		history,
 		lock,
 		project: {

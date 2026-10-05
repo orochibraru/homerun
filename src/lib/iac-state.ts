@@ -168,3 +168,33 @@ export function parseLockInfo(value: unknown): Record<string, unknown> | null {
 		? (value as Record<string, unknown>)
 		: null;
 }
+
+/** The `terraform { backend "http" }` block for a state project, from its API base. */
+export function httpBackendBlock(apiBase: string): string {
+	return [
+		"terraform {",
+		'  backend "http" {',
+		`    address        = "${apiBase}/state"`,
+		`    lock_address   = "${apiBase}/lock"`,
+		`    unlock_address = "${apiBase}/lock"`,
+		'    lock_method    = "POST"',
+		'    unlock_method  = "DELETE"',
+		'    username       = "homerun"',
+		"  }",
+		"}",
+	].join("\n");
+}
+
+/** The `pulumi login` command pointing Pulumi's own backend at a state project's folder. */
+export function pulumiLoginCommand(input: {
+	bucket: string;
+	endpoint: string;
+	prefix: string;
+	region: string;
+	slug: string;
+}): string {
+	const endpoint = new URL(input.endpoint);
+	const path = [input.prefix, input.slug].filter(Boolean).join("/");
+	const insecure = endpoint.protocol === "http:" ? "&disableSSL=true" : "";
+	return `pulumi login 's3://${input.bucket}/${path}?endpoint=${endpoint.host}&s3ForcePathStyle=true&region=${input.region}${insecure}'`;
+}

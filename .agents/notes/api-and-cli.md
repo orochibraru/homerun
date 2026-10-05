@@ -326,6 +326,20 @@ directly. Add a field once there and the provider, the generated HCL and the
 drift comparison all follow. A Terraform-reserved name (`provider`) gets an
 explicit `tf` (`dns_provider`).
 
+**Generated projects are per stack or per service, never the whole instance.**
+`generateStructure` returns files (`versions.tf`, `providers.tf`, a
+`service_<name>.tf` per service holding what hangs off it plus every `import`
+block next to its resource, `stacks.tf`, `volumes.tf`, `variables.tf` with a
+`terraform.tfvars.example`, `README.md`, `.gitignore`) for a scope parsed by
+`parseScope` (`stack:<id>` / `service:<id>`) and cut by `scopeToStack` /
+`scopeToService`; `IacInventoryService.structure` is the one entry point the
+Generate tab and `iac/download` (the zip, `src/lib/server/zip.ts`, store-only
+with its own CRC-32, checked against a real `unzip`) both call. Terraform, shell
+and TypeScript snippets render through `highlightCode`
+(`src/lib/server/shiki.ts`, server-side only so Shiki never reaches the client,
+both themes as `--shiki-light`/`--shiki-dark` variables) and `CodeBlock`, bold
+JetBrains Mono.
+
 **The provider is generic.** `terraform/provider` is its own Go module (module
 path `github.com/orochibraru/homerun/terraform/provider`), kept out of the root
 `go.mod` like `tools/go`, since terraform-plugin-framework pulls grpc and

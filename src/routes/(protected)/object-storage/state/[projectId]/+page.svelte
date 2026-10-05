@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { ArrowLeft, FileCode2, History, Lock, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import CodeBlock from "#lib/components/code-block.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
-	import CopyBox from "#lib/components/copy-box.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatBytes, timeAgo } from "#lib/formatting.js";
@@ -15,33 +15,6 @@
 	const { data } = $props();
 
 	onMount(() => title.set(`Terraform State · ${data.project.name}`));
-
-	const terraformSnippet = $derived(
-		[
-			"terraform {",
-			'  backend "http" {',
-			`    address        = "${data.apiBase}/state"`,
-			`    lock_address   = "${data.apiBase}/lock"`,
-			`    unlock_address = "${data.apiBase}/lock"`,
-			'    lock_method    = "POST"',
-			'    unlock_method  = "DELETE"',
-			'    username       = "homerun"',
-			"  }",
-			"}",
-		].join("\n"),
-	);
-
-	const pulumiSnippet = $derived.by(() => {
-		if (!data.store) {
-			return "";
-		}
-		const endpoint = new URL(data.store.endpoint);
-		const path = [data.project.prefix, data.project.slug]
-			.filter(Boolean)
-			.join("/");
-		const insecure = endpoint.protocol === "http:" ? "&disableSSL=true" : "";
-		return `pulumi login 's3://${data.project.bucket}/${path}?endpoint=${endpoint.host}&s3ForcePathStyle=true&region=${data.store.region}${insecure}'`;
-	});
 
 	const versionCount = $derived(data.history.length);
 
@@ -83,17 +56,17 @@
     <div class="space-y-4 px-5 py-4 text-sm">
       <div>
         <p class="text-text mb-1.5 font-medium">Terraform</p>
-        <CopyBox value={terraformSnippet} />
+        <CodeBlock code={data.snippets.terraform.code} html={data.snippets.terraform.html} label="backend block" />
         <p class="text-text-muted mt-1.5 text-xs">
           Then <code>export TF_HTTP_PASSWORD=&lt;a Homerun API key&gt;</code>
           (Profile → API keys) and <code>terraform init</code>. Every write is
           a version below, signed with that key's owner.
         </p>
       </div>
-      {#if pulumiSnippet}
+      {#if data.snippets.pulumi}
         <div>
           <p class="text-text mb-1.5 font-medium">Pulumi</p>
-          <CopyBox value={pulumiSnippet} />
+          <CodeBlock code={data.snippets.pulumi.code} html={data.snippets.pulumi.html} label="pulumi login" />
           <p class="text-text-muted mt-1.5 text-xs">
             With <code>AWS_ACCESS_KEY_ID</code> and
             <code>AWS_SECRET_ACCESS_KEY</code> set to a key for this bucket.

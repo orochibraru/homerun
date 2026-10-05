@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 const {
 	basicAuthPassword,
+	httpBackendBlock,
+	pulumiLoginCommand,
 	diffStates,
 	instanceAddress,
 	parseLockInfo,
@@ -154,5 +156,44 @@ describe("parseLockInfo", () => {
 		expect(parseLockInfo([1])).toBeNull();
 		expect(parseLockInfo(null)).toBeNull();
 		expect(parseLockInfo("x")).toBeNull();
+	});
+});
+
+describe("httpBackendBlock", () => {
+	test("points state, lock and unlock at the project", () => {
+		const block = httpBackendBlock(
+			"https://h.example.com/api/v1/iac/projects/p1",
+		);
+		expect(block).toContain(
+			'address        = "https://h.example.com/api/v1/iac/projects/p1/state"',
+		);
+		expect(block).toContain('unlock_method  = "DELETE"');
+	});
+});
+
+describe("pulumiLoginCommand", () => {
+	test("addresses the project folder, path-style, TLS off only for http", () => {
+		expect(
+			pulumiLoginCommand({
+				bucket: "tfstate",
+				endpoint: "https://s3.example.com",
+				prefix: "iac",
+				region: "garage",
+				slug: "lab",
+			}),
+		).toBe(
+			"pulumi login 's3://tfstate/iac/lab?endpoint=s3.example.com&s3ForcePathStyle=true&region=garage'",
+		);
+		expect(
+			pulumiLoginCommand({
+				bucket: "b",
+				endpoint: "http://homerun-garage:3900",
+				prefix: "",
+				region: "garage",
+				slug: "lab",
+			}),
+		).toContain(
+			"s3://b/lab?endpoint=homerun-garage:3900&s3ForcePathStyle=true&region=garage&disableSSL=true",
+		);
 	});
 });
