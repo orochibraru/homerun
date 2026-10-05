@@ -1,12 +1,20 @@
 export const ERROR_PAGE_PATH = "/homerun-error";
 
-const HOMERUN_URL = "https://orochibraru.com/homerun";
+export const HOMERUN_URL = "https://orochibraru.com/homerun";
 
 export type ErrorPageKind = "blocked" | "notFound" | "notReady" | "unavailable";
 
 export interface ErrorPageText {
 	message: string;
 	title: string;
+}
+
+/** The brand a gated app's sign-in pages show instead of Homerun's own. */
+export interface AuthBranding {
+	accentColor: string | null;
+	brandName: string;
+	logoUrl: string | null;
+	poweredBy: boolean;
 }
 
 export interface ErrorPagesSettings {
@@ -149,11 +157,9 @@ export function renderErrorPage(
 		kind === "notReady" || kind === "unavailable"
 			? `<meta http-equiv="refresh" content="15">`
 			: "";
-	const poweredBy =
-		settings.showPoweredBy &&
-		settings.brandName !== DEFAULT_ERROR_PAGES.brandName
-			? `<p class="powered">Powered by <a href="${HOMERUN_URL}" rel="noopener" target="_blank">Homerun</a></p>`
-			: "";
+	const poweredBy = showsPoweredBy(settings)
+		? `<p class="powered">Powered by <a href="${HOMERUN_URL}" rel="noopener" target="_blank">Homerun</a></p>`
+		: "";
 	return `<!doctype html>
 <html lang="en">
 <head>
@@ -208,4 +214,52 @@ export function errorPageTextsFromForm(
 		};
 	}
 	return pages;
+}
+
+/** Whether a page under another brand credits Homerun at its foot. */
+export function showsPoweredBy(settings: ErrorPagesSettings): boolean {
+	return (
+		settings.showPoweredBy &&
+		settings.brandName !== DEFAULT_ERROR_PAGES.brandName
+	);
+}
+
+/**
+ * The error pages' brand, for the sign-in pages of a gated app, or null when
+ * nothing has been changed from Homerun's own.
+ */
+export function authBranding(
+	settings: ErrorPagesSettings,
+): AuthBranding | null {
+	if (
+		settings.brandName === DEFAULT_ERROR_PAGES.brandName &&
+		!(settings.logoUrl || settings.accentColor)
+	) {
+		return null;
+	}
+	return {
+		accentColor: settings.accentColor,
+		brandName: settings.brandName,
+		logoUrl: settings.logoUrl,
+		poweredBy: showsPoweredBy(settings),
+	};
+}
+
+/**
+ * Inline CSS that repaints the theme's accent tokens in a brand's colour, or
+ * an empty string to keep the theme's own. The colour is a validated
+ * `#rrggbb`, so it's safe in a `style` attribute.
+ */
+export function brandAccentStyle(branding: AuthBranding | null): string {
+	const color = branding?.accentColor;
+	if (!(color && isHexColor(color))) {
+		return "";
+	}
+	return [
+		`--color-accent:${color}`,
+		`--color-ink:${color}`,
+		`--primary:${color}`,
+		`--color-accent-light:color-mix(in oklch, ${color} 12%, transparent)`,
+		`--color-accent-glow:color-mix(in oklch, ${color} 35%, transparent)`,
+	].join(";");
 }

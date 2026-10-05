@@ -7,6 +7,8 @@ mock.module("$app/env", () => ({
 }));
 
 const {
+	authBranding,
+	brandAccentStyle,
 	DEFAULT_ERROR_PAGES,
 	errorPageKind,
 	errorPageTextsFromForm,
@@ -144,6 +146,50 @@ describe("renderErrorPage", () => {
 		expect(html).not.toContain('class="mark"');
 		expect(html).toContain("--accent:#123456");
 		expect(html).toContain("502");
+	});
+});
+
+describe("authBranding", () => {
+	test("Homerun's own look brands nothing", () => {
+		expect(authBranding(withErrorPageDefaults(null))).toBeNull();
+	});
+
+	test("a logo or accent alone brands the pages, crediting nobody", () => {
+		expect(
+			authBranding(withErrorPageDefaults({ accentColor: "#123456" })),
+		).toEqual({
+			accentColor: "#123456",
+			brandName: "Homerun",
+			logoUrl: null,
+			poweredBy: false,
+		});
+	});
+
+	test("another brand credits Homerun unless turned off", () => {
+		expect(
+			authBranding(withErrorPageDefaults({ brandName: "Acme" }))?.poweredBy,
+		).toBe(true);
+		expect(
+			authBranding(
+				withErrorPageDefaults({ brandName: "Acme", showPoweredBy: false }),
+			)?.poweredBy,
+		).toBe(false);
+	});
+});
+
+describe("brandAccentStyle", () => {
+	test("repaints the accent tokens only for a valid colour", () => {
+		const branding = {
+			accentColor: "#123456",
+			brandName: "Acme",
+			logoUrl: null,
+			poweredBy: true,
+		};
+		expect(brandAccentStyle(branding)).toContain("--color-accent:#123456");
+		expect(brandAccentStyle(branding)).toContain("--primary:#123456");
+		expect(brandAccentStyle({ ...branding, accentColor: "red;x:y" })).toBe("");
+		expect(brandAccentStyle({ ...branding, accentColor: null })).toBe("");
+		expect(brandAccentStyle(null)).toBe("");
 	});
 });
 

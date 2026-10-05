@@ -37,7 +37,7 @@
 
   <section class="panel rounded-md">
     <PanelHeader
-      description="What visitors see instead of Traefik's bare errors: on an address no app answers yet (a service still deploying, a stopped one, an unknown host) and when an app can't answer (502, 503, 504). A running service picks up the 502–504 pages on its next deploy."
+      description="What visitors see instead of Traefik's bare errors: on an address no app answers yet (a service still deploying, a stopped one, an unknown host) and when an app can't answer (502, 503, 504). A running service picks up the 502–504 pages on its next deploy. The brand also dresses the sign-in pages of apps behind a login wall."
       icon={Palette}
       title="Branding"
     >

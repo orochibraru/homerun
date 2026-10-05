@@ -11,8 +11,6 @@ When done delete the entry, no bloat.
       pass, 1 fail) and not in 22 reruns since. The gate now prints `(fail)`
       lines and below-threshold coverage rows first, so the next failure names
       it: fix that test then.
-- [ ] Since we have branding on custom traefik pages, let's also apply it to the
-      custom authentication pages for a service, whitelabelling included.
 
 ## Medium
 

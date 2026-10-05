@@ -31,6 +31,11 @@ field empty to keep Homerun's own. With another brand name, a small "Powered by
 Homerun" line shows under the page unless you turn it off. Each page has a
 **Preview** link.
 
+The same brand name, logo, accent colour and "Powered by" line also dress the
+sign-in pages of an app behind the [login wall](login-wall.md), so a visitor
+never sees Homerun's name between your app and its sign-in. The dashboard's own
+sign-in stays Homerun's.
+
 ![Settings → Error pages, with the branding and each page's text](images/error-pages-settings.webp)
 
 ## How it works

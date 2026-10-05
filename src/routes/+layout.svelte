@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>Homerun - {$title ?? "Home"}</title>
+	<title>{page.data.branding?.brandName ?? "Homerun"} - {$title ?? "Home"}</title>
 </svelte:head>
 
 <TopLoadingBar />

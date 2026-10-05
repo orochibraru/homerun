@@ -407,6 +407,7 @@
 {/snippet}
 
 <AuthShell
+    branding={data.branding}
     eyebrow={data.oauthSignIn
         ? "Sign in with Homerun"
         : data.appName
@@ -416,7 +417,7 @@
     subheading={data.oauthSignIn
         ? `Use your Homerun account to sign in to ${data.appName ?? "this app"}.`
         : data.appName
-          ? `${data.appName} is behind Homerun's login. Sign in to continue.`
+          ? `${data.appName} is behind ${data.branding?.brandName ?? "Homerun"}'s login. Sign in to continue.`
           : "Sign in to manage your services."}
 >
 	{#if signInError}

@@ -12,12 +12,14 @@ providers or an allow-list on the Security tab afterwards.
 request to that hostname. A visitor without a valid session for that app is
 redirected to Homerun's own sign-in page, the same one as the dashboard's, so
 passkeys, two-factor codes and your preferred sign-in methods all work there.
-The page names the app they're signing in to, and once they're in it shows a
-short "taking you to …" screen before sending them back to the page they
-originally asked for. Homerun then sets a session cookie scoped to that app's
-own hostname, so the app stays reachable for eight hours without signing in
-again. Nothing is shared with your other apps: each one gets its own cookie, and
-a cookie issued for one hostname is rejected on any other.
+The page names the app they're signing in to and wears the brand set under
+[Settings → Error pages](error-pages.md#branding-and-text) (name, logo and
+accent colour), and once they're in it shows a short "taking you to …" screen
+before sending them back to the page they originally asked for. Homerun then
+sets a session cookie scoped to that app's own hostname, so the app stays
+reachable for eight hours without signing in again. Nothing is shared with your
+other apps: each one gets its own cookie, and a cookie issued for one hostname
+is rejected on any other.
 
 Only page loads are redirected. A request the app's own page makes in the
 background (a `fetch`, a script, an image) without a session gets a plain 401,

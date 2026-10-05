@@ -1,6 +1,8 @@
 import { error, redirect } from "@sveltejs/kit";
 import { signInMethodAvailable } from "#lib/auth-providers.js";
 import { config } from "#lib/config.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { authBranding } from "#lib/error-pages.js";
 import { signInUrlFor } from "#lib/redirect-target.js";
 import {
 	GATE_CALLBACK_PATH,
@@ -49,7 +51,11 @@ export const load = async ({ request: incoming, url, locals }) => {
 		signInMethodAvailable(method, available),
 	);
 
-	const base = { appName: svc.name, appUrl: request.target };
+	const base = {
+		appName: svc.name,
+		appUrl: request.target,
+		branding: authBranding((await InstanceSettingsDTO.get()).errorPages),
+	};
 
 	if (!hasUsableMethod) {
 		return { ...base, denial: null, noMethods: true, signedInAs: null };

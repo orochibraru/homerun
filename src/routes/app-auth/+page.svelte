@@ -3,8 +3,11 @@
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { signOut } from "#lib/auth-client.js";
+	import BrandLogo from "#lib/components/brand-logo.svelte";
 	import BrandMark from "#lib/components/brand-mark.svelte";
+	import PoweredBy from "#lib/components/powered-by.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import { brandAccentStyle } from "#lib/error-pages.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
 	import { refreshAll } from "$app/navigation";
@@ -39,8 +42,14 @@
 	}
 </script>
 
-<div class="flex min-h-screen flex-col items-center justify-center px-6 py-12">
+<div
+  class="flex min-h-screen flex-col items-center justify-center px-6 py-12"
+  style={brandAccentStyle(data.branding)}
+>
   <div class="w-full max-w-md">
+    {#if data.branding}
+      <BrandLogo class="mb-8" branding={data.branding} size="lg" />
+    {/if}
     <div class="panel overflow-hidden rounded-md">
       <div
         class="bg-surface-2 border-border flex items-center gap-3 border-b px-6 py-5"
@@ -82,15 +91,21 @@
             >
               Sign in as someone else
             </Button>
-            <Button href={resolve("")} variant="ghost">Back to Homerun</Button>
+            <Button href={resolve("")} variant="ghost">
+              Back to {data.branding?.brandName ?? "Homerun"}
+            </Button>
           </div>
         {/if}
       </div>
     </div>
 
-    <div class="mt-6 flex items-center justify-center gap-2 opacity-60">
-      <span class="text-text-subtle text-xs">gated by</span>
-      <BrandMark />
-    </div>
+    {#if !data.branding}
+      <div class="mt-6 flex items-center justify-center gap-2 opacity-60">
+        <span class="text-text-subtle text-xs">gated by</span>
+        <BrandMark />
+      </div>
+    {:else if data.branding.poweredBy}
+      <PoweredBy class="mt-6" />
+    {/if}
   </div>
 </div>

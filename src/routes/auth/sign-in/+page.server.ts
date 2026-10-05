@@ -3,6 +3,7 @@ import { PASSWORD_METHOD } from "#lib/auth-providers.js";
 import { config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
+import { authBranding } from "#lib/error-pages.js";
 import { REDIRECT_TO_PARAM, safeRedirectTarget } from "#lib/redirect-target.js";
 import { passkeyUsableOn } from "#lib/security-policy.js";
 import { gatedAppFor } from "#lib/server/app-gate-return.js";
@@ -40,6 +41,7 @@ export const load = async ({ request, url, locals }) => {
 		appName: oauthClientId
 			? ((await OauthClientDTO.getByClientId(oauthClientId))?.name ?? null)
 			: (gatedApp?.name ?? null),
+		branding: gatedApp ? authBranding(settings.errorPages) : null,
 		email: url.searchParams.get("email"),
 		canonicalSignInUrl: canonicalOrigin
 			? `${canonicalOrigin}${url.pathname}${url.search}`

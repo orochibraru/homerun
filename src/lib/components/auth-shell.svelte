@@ -1,10 +1,13 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import BrandMark from "#lib/components/brand-mark.svelte";
+	import BrandLogo from "#lib/components/brand-logo.svelte";
+	import PoweredBy from "#lib/components/powered-by.svelte";
+	import { type AuthBranding, brandAccentStyle } from "#lib/error-pages.js";
 	import ErrorBoundary from "./error-boundary.svelte";
 
 	interface Props {
 		below?: Snippet;
+		branding?: AuthBranding | null;
 		children: Snippet;
 		eyebrow?: string;
 		footer?: Snippet;
@@ -12,13 +15,23 @@
 		subheading?: string;
 	}
 
-	const { heading, subheading, eyebrow, children, below, footer }: Props =
-		$props();
+	const {
+		heading,
+		subheading,
+		eyebrow,
+		children,
+		below,
+		footer,
+		branding = null,
+	}: Props = $props();
 </script>
 
-<div class="flex min-h-screen flex-col items-center justify-center px-6 py-12">
+<div
+  class="flex min-h-screen flex-col items-center justify-center px-6 py-12"
+  style={brandAccentStyle(branding)}
+>
   <div class="w-full max-w-md">
-    <BrandMark class="mb-8" size="lg" />
+    <BrandLogo class="mb-8" {branding} size="lg" />
 
     <div class="mb-6">
       {#if eyebrow}
@@ -50,6 +63,10 @@
       <div class="text-text-muted mt-6 text-center text-sm">
         {@render footer()}
       </div>
+    {/if}
+
+    {#if branding?.poweredBy}
+      <PoweredBy class="mt-6" />
     {/if}
   </div>
 </div>
