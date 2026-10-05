@@ -1,0 +1,88 @@
+import { error, fail, redirect } from "@sveltejs/kit";
+import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { parseObjectStoreForm } from "#lib/server/validation/object-store.js";
+import { ObjectStorageService } from "#lib/services/object-storage.service.js";
+import { resolve } from "$app/paths";
+
+function reason(cause: unknown): string {
+	return cause instanceof Error ? cause.message : String(cause);
+}
+
+export const load = async ({ params }) => {
+	const store = await ObjectStoreDTO.get(params.storeId);
+	if (!store || store.kind === "garage") {
+		error(404, "That object store doesn't exist.");
+	}
+	return { store: store.summary() };
+};
+
+export const actions = {
+	delete: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve(""));
+		}
+		const store = await ObjectStoreDTO.get(params.storeId);
+		if (!store || store.kind === "garage") {
+			return fail(404, { error: "That object store doesn't exist." });
+		}
+		await store.delete();
+		return { success: true };
+	},
+
+	test: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve(""));
+		}
+		const store = await ObjectStoreDTO.get(params.storeId);
+		if (!store) {
+			return fail(404, { error: "That object store doesn't exist." });
+		}
+		try {
+			const buckets = (
+				await (await ObjectStorageService.client(store)).listBuckets()
+			).length;
+			return { buckets, success: true };
+		} catch (cause) {
+			return fail(400, { error: reason(cause) });
+		}
+	},
+
+	update: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve(""));
+		}
+		const store = await ObjectStoreDTO.get(params.storeId);
+		if (!store || store.kind === "garage") {
+			return fail(404, { error: "That object store doesn't exist." });
+		}
+		const { error: problem, values } = parseObjectStoreForm(
+			await request.formData(),
+			false,
+		);
+		if (problem) {
+			return fail(400, { error: problem });
+		}
+		try {
+			await ObjectStorageService.testCredentials({
+				...values,
+				secretAccessKey:
+					values.secretAccessKey || store.decryptSecretAccessKey(),
+			});
+		} catch (cause) {
+			return fail(400, {
+				error: `Couldn't list buckets with these settings: ${reason(cause)}`,
+			});
+		}
+		await store.update(values);
+		return { success: true };
+	},
+};

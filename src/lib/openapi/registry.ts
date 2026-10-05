@@ -12,6 +12,7 @@ import { backupRoutes } from "./backups";
 import { channelRoutes } from "./channels";
 import { dependencyRoutes } from "./dependencies";
 import { errorRoutes } from "./errors";
+import { iacRoutes } from "./iac";
 import { previewRoutes } from "./previews";
 import { redirectRoutes } from "./redirects";
 import {
@@ -669,4 +670,5 @@ export const routes: RouteDef[] = [
 	...errorRoutes,
 	...backupRoutes,
 	...redirectRoutes,
+	...iacRoutes,
 ];

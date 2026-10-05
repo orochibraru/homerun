@@ -11,6 +11,7 @@ import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
 import { ERROR_PAGE_PATH } from "#lib/error-pages.js";
 import { isIngestPath } from "#lib/error-tracking/envelope.js";
 import { GIT_WEBHOOK_PATH } from "#lib/git-webhooks.js";
+import { basicAuthPassword, IAC_API_PREFIX } from "#lib/iac-state.js";
 import { Logger } from "#lib/logger.js";
 import { OIDC_BASE_PATH, rebaseOnOrigin } from "#lib/oidc-provider.js";
 import {
@@ -341,13 +342,16 @@ async function signUpClosedResponse(
 	);
 }
 
-/** The raw API key from `x-api-key` or `Authorization: Bearer`, or null when neither is present. */
+/** The raw API key from `x-api-key`, `Authorization: Bearer`, or Basic auth's password on the Terraform state routes (the only credentials Terraform's http backend can send), or null when none is present. */
 function readApiKey(event: RequestEvent): string | null {
 	const authHeader = event.request.headers.get("authorization");
 
 	return (
 		event.request.headers.get("x-api-key") ??
-		(authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null)
+		(authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null) ??
+		(event.url.pathname.startsWith(IAC_API_PREFIX)
+			? basicAuthPassword(authHeader)
+			: null)
 	);
 }
 

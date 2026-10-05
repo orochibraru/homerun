@@ -31,7 +31,7 @@
 
 	const { data } = $props();
 
-	onMount(() => title.set("Storage"));
+	onMount(() => title.set("Volumes"));
 
 	const view = new ViewMode("storage");
 
@@ -138,7 +138,7 @@
 <div class="p-5 md:p-6 {selection.count > 0 ? 'pb-28' : ''}">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Storage</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Volumes</h1>
       <p class="text-text-muted mt-1 text-sm">
         Local volume sources services can mount for persistent or shared data.
       </p>

@@ -44,6 +44,54 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/iac/projects/{projectId}/lock": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Lock Terraform state
+		 * @description Takes the state lock. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.
+		 */
+		post: operations["post_iac_projects__projectId__lock"];
+		/**
+		 * Unlock Terraform state
+		 * @description Releases the state lock held under the body's lock id. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.
+		 */
+		delete: operations["delete_iac_projects__projectId__lock"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/iac/projects/{projectId}/state": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Read Terraform state
+		 * @description The project's latest state. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.
+		 */
+		get: operations["get_iac_projects__projectId__state"];
+		put?: never;
+		/**
+		 * Write Terraform state
+		 * @description Stores a new state version in the project's bucket. Refused while the state is locked under another lock id. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.
+		 */
+		post: operations["post_iac_projects__projectId__state"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/instance/update": {
 		parameters: {
 			query?: never;
@@ -922,6 +970,372 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_iac_projects__projectId__lock: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description State project id */
+				projectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					Created?: string;
+					ID: string;
+					Info?: string;
+					Operation?: string;
+					Path?: string;
+					Version?: string;
+					Who?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Locked */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						Created?: string;
+						ID: string;
+						Info?: string;
+						Operation?: string;
+						Path?: string;
+						Version?: string;
+						Who?: string;
+					};
+				};
+			};
+			/** @description No lock id */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description No such project */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Already locked: the holder's lock info */
+			423: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						Created?: string;
+						ID: string;
+						Info?: string;
+						Operation?: string;
+						Path?: string;
+						Version?: string;
+						Who?: string;
+					};
+				};
+			};
+		};
+	};
+	delete_iac_projects__projectId__lock: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description State project id */
+				projectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					Created?: string;
+					ID: string;
+					Info?: string;
+					Operation?: string;
+					Path?: string;
+					Version?: string;
+					Who?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Unlocked */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						success: boolean;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description No such project */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Held under another lock id */
+			423: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						Created?: string;
+						ID: string;
+						Info?: string;
+						Operation?: string;
+						Path?: string;
+						Version?: string;
+						Who?: string;
+					};
+				};
+			};
+		};
+	};
+	get_iac_projects__projectId__state: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description State project id */
+				projectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The latest state */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						[key: string]: unknown;
+					};
+				};
+			};
+			/** @description Nothing written yet */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description No such project */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_iac_projects__projectId__state: {
+		parameters: {
+			query?: {
+				/** @description The lock id this write holds, when locked */
+				ID?: string;
+			};
+			header?: never;
+			path: {
+				/** @description State project id */
+				projectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					[key: string]: unknown;
+				};
+			};
+		};
+		responses: {
+			/** @description Stored */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						serial: number;
+						success: boolean;
+					};
+				};
+			};
+			/** @description Not a Terraform state */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description No such project */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Locked by someone else */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						Created?: string;
+						ID: string;
+						Info?: string;
+						Operation?: string;
+						Path?: string;
+						Version?: string;
+						Who?: string;
 					};
 				};
 			};

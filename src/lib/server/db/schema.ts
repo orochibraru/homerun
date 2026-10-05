@@ -25,6 +25,7 @@ import type {
 	SeverityCounts,
 } from "#lib/image-scan.js";
 import type { IpBanSettings } from "#lib/ip-bans.js";
+import type { ObjectStoreKind } from "#lib/object-storage.js";
 import type { AuthPathsMode } from "#lib/path-patterns.js";
 import type { PublishedPort } from "#lib/published-ports.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
@@ -661,6 +662,10 @@ export const instanceSettings = pgTable("instance_settings", {
 	registryAuthEnabled: boolean("registry_auth_enabled"),
 	registryInternalSecretEnc: text("registry_internal_secret_enc"),
 	registryPublicHost: text("registry_public_host"),
+	garageAdminTokenEnc: text("garage_admin_token_enc"),
+	garageEnabled: boolean("garage_enabled"),
+	garagePublicHost: text("garage_public_host"),
+	garageRpcSecretEnc: text("garage_rpc_secret_enc"),
 	// {id, kind, name, baseUrl, clientId, clientSecretEnc, enabled}[] : OAuth
 	// App registrations for git-hosting providers (see the Git Providers
 	// page and $lib/services/git-provider.service.ts), separate from
@@ -1285,6 +1290,82 @@ export const s3Destination = pgTable(
 	},
 	(table) => [index("s3Destination_userId_idx").on(table.userId)],
 );
+
+export const objectStore = pgTable(
+	"object_store",
+	{
+		accessKeyId: text("access_key_id").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		endpoint: text("endpoint").notNull(),
+		id: text("id").primaryKey(),
+		kind: text("kind").$type<ObjectStoreKind>().notNull(),
+		name: text("name").notNull(),
+		region: text("region").notNull(),
+		secretAccessKeyEnc: text("secret_access_key_enc").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("objectStore_userId_idx").on(table.userId)],
+);
+
+export const iacProject = pgTable(
+	"iac_project",
+	{
+		bucket: text("bucket").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		prefix: text("prefix").default("").notNull(),
+		slug: text("slug").notNull().unique(),
+		storeId: text("store_id")
+			.notNull()
+			.references(() => objectStore.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("iacProject_storeId_idx").on(table.storeId)],
+);
+
+export const iacStateVersion = pgTable(
+	"iac_state_version",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		lineage: text("lineage"),
+		md5: text("md5").notNull(),
+		objectKey: text("object_key").notNull(),
+		projectId: text("project_id")
+			.notNull()
+			.references(() => iacProject.id, { onDelete: "cascade" }),
+		rollbackOfId: text("rollback_of_id"),
+		serial: integer("serial").notNull(),
+		sizeBytes: integer("size_bytes").notNull(),
+		userId: text("user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+	},
+	(table) => [
+		index("iacStateVersion_projectId_createdAt_idx").on(
+			table.projectId,
+			table.createdAt,
+		),
+	],
+);
+
+export const iacStateLock = pgTable("iac_state_lock", {
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	info: jsonb("info").$type<Record<string, unknown>>(),
+	lockId: text("lock_id").notNull(),
+	projectId: text("project_id")
+		.primaryKey()
+		.references(() => iacProject.id, { onDelete: "cascade" }),
+	userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+});
 
 export const storageVolume = pgTable(
 	"storage_volume",
@@ -2182,6 +2263,10 @@ export type IpBan = typeof ipBan.$inferSelect;
 export type BlockedHit = typeof blockedHit.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type RegistryToken = typeof registryToken.$inferSelect;
+export type ObjectStore = typeof objectStore.$inferSelect;
+export type IacProject = typeof iacProject.$inferSelect;
+export type IacStateVersion = typeof iacStateVersion.$inferSelect;
+export type IacStateLock = typeof iacStateLock.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
 export type Notification = typeof notification.$inferSelect;
 export type StatSample = typeof statSample.$inferSelect;

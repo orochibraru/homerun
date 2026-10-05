@@ -1,0 +1,33 @@
+import { fail, redirect } from "@sveltejs/kit";
+import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { ObjectStorageService } from "#lib/services/object-storage.service.js";
+import { resolve } from "$app/paths";
+
+export const load = () => ({ listing: ObjectStorageService.buckets() });
+
+export const actions = {
+	createBucket: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve(""));
+		}
+		const formData = await request.formData();
+		const store = await ObjectStoreDTO.get(
+			String(formData.get("storeId") ?? ""),
+		);
+		if (!store) {
+			return fail(400, { error: "Pick a store." });
+		}
+		const bucket = String(formData.get("bucket") ?? "").trim();
+		try {
+			await ObjectStorageService.createBucket(store, bucket);
+			return { bucket, success: true };
+		} catch (err) {
+			return fail(400, {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+	},
+};

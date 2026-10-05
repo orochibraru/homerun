@@ -359,6 +359,665 @@
 				"tags": ["Backups"]
 			}
 		},
+		"/iac/projects/{projectId}/lock": {
+			"delete": {
+				"description": "Releases the state lock held under the body's lock id. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.",
+				"operationId": "delete_iac_projects__projectId__lock",
+				"parameters": [
+					{
+						"description": "State project id",
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"description": "Terraform's lock info",
+								"properties": {
+									"Created": {
+										"type": "string"
+									},
+									"ID": {
+										"type": "string"
+									},
+									"Info": {
+										"type": "string"
+									},
+									"Operation": {
+										"type": "string"
+									},
+									"Path": {
+										"type": "string"
+									},
+									"Version": {
+										"type": "string"
+									},
+									"Who": {
+										"type": "string"
+									}
+								},
+								"required": ["ID"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unlocked"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No such project"
+					},
+					"423": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"description": "Terraform's lock info",
+									"properties": {
+										"Created": {
+											"type": "string"
+										},
+										"ID": {
+											"type": "string"
+										},
+										"Info": {
+											"type": "string"
+										},
+										"Operation": {
+											"type": "string"
+										},
+										"Path": {
+											"type": "string"
+										},
+										"Version": {
+											"type": "string"
+										},
+										"Who": {
+											"type": "string"
+										}
+									},
+									"required": ["ID"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Held under another lock id"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Unlock Terraform state",
+				"tags": ["Terraform state"]
+			},
+			"post": {
+				"description": "Takes the state lock. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.",
+				"operationId": "post_iac_projects__projectId__lock",
+				"parameters": [
+					{
+						"description": "State project id",
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"description": "Terraform's lock info",
+								"properties": {
+									"Created": {
+										"type": "string"
+									},
+									"ID": {
+										"type": "string"
+									},
+									"Info": {
+										"type": "string"
+									},
+									"Operation": {
+										"type": "string"
+									},
+									"Path": {
+										"type": "string"
+									},
+									"Version": {
+										"type": "string"
+									},
+									"Who": {
+										"type": "string"
+									}
+								},
+								"required": ["ID"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"description": "Terraform's lock info",
+									"properties": {
+										"Created": {
+											"type": "string"
+										},
+										"ID": {
+											"type": "string"
+										},
+										"Info": {
+											"type": "string"
+										},
+										"Operation": {
+											"type": "string"
+										},
+										"Path": {
+											"type": "string"
+										},
+										"Version": {
+											"type": "string"
+										},
+										"Who": {
+											"type": "string"
+										}
+									},
+									"required": ["ID"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Locked"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No lock id"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No such project"
+					},
+					"423": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"description": "Terraform's lock info",
+									"properties": {
+										"Created": {
+											"type": "string"
+										},
+										"ID": {
+											"type": "string"
+										},
+										"Info": {
+											"type": "string"
+										},
+										"Operation": {
+											"type": "string"
+										},
+										"Path": {
+											"type": "string"
+										},
+										"Version": {
+											"type": "string"
+										},
+										"Who": {
+											"type": "string"
+										}
+									},
+									"required": ["ID"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Already locked: the holder's lock info"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Lock Terraform state",
+				"tags": ["Terraform state"]
+			}
+		},
+		"/iac/projects/{projectId}/state": {
+			"get": {
+				"description": "The project's latest state. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.",
+				"operationId": "get_iac_projects__projectId__state",
+				"parameters": [
+					{
+						"description": "State project id",
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": {},
+									"description": "A Terraform state document, as Terraform writes it",
+									"propertyNames": {
+										"type": "string"
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "The latest state"
+					},
+					"204": {
+						"description": "Nothing written yet"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No such project"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Read Terraform state",
+				"tags": ["Terraform state"]
+			},
+			"post": {
+				"description": "Stores a new state version in the project's bucket. Refused while the state is locked under another lock id. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.",
+				"operationId": "post_iac_projects__projectId__state",
+				"parameters": [
+					{
+						"description": "State project id",
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The lock id this write holds, when locked",
+						"in": "query",
+						"name": "ID",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": {},
+								"description": "A Terraform state document, as Terraform writes it",
+								"propertyNames": {
+									"type": "string"
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"serial": {
+											"type": "number"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["serial", "success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Stored"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not a Terraform state"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No such project"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"description": "Terraform's lock info",
+									"properties": {
+										"Created": {
+											"type": "string"
+										},
+										"ID": {
+											"type": "string"
+										},
+										"Info": {
+											"type": "string"
+										},
+										"Operation": {
+											"type": "string"
+										},
+										"Path": {
+											"type": "string"
+										},
+										"Version": {
+											"type": "string"
+										},
+										"Who": {
+											"type": "string"
+										}
+									},
+									"required": ["ID"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Locked by someone else"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Write Terraform state",
+				"tags": ["Terraform state"]
+			}
+		},
 		"/instance/update": {
 			"get": {
 				"description": "The running version, the latest GitHub release, and whether a self-update could start now (the same checks as the sidebar's update dialog). Admins only.",

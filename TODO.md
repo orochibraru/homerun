@@ -11,23 +11,25 @@ When done delete the entry, no bloat.
       pass, 1 fail) and not in 22 reruns since. The gate now prints `(fail)`
       lines and below-threshold coverage rows first, so the next failure names
       it: fix that test then.
+- [ ] Send an alert to notification channels (optionally, set in the channel's
+      settings) to inform on blocked IPs
 
 ## Medium
 
 ## Large
 
-- [ ] **S3 storage service, the base for IaC state.** A dedicated S3 page where
-      users create and manage buckets, backed either by a built-in object store
-      (dxflrs/garage, run by Homerun like the built-in registry) or by a
-      connected cloud provider (AWS S3, GCP, Hetzner Object Storage, any
-      S3-compatible endpoint). Access keys per bucket, usage, lifecycle. On top
-      of it, state management so Terraform and Pulumi state never needs a paid
-      backend: a state bucket per project, locking (a DynamoDB-compatible lock
-      table or Terraform's S3 native lockfile), state versions with diff and
-      rollback, and who changed what. Possibly volume backups and volumes
-      themselves on the same store later. The sidebar gets a **Storage**
-      category grouping Volumes, Backups, Backup Destinations and the new S3
-      page.
+- [ ] **OpenTelemetry traces in a service's Observability tab.** Run an
+      OpenTelemetry collector Homerun manages (like the registry or the built-in
+      object store) that services send OTLP traces to, over gRPC and HTTP on the
+      shared network, with the endpoint injected as
+      `OTEL_EXPORTER_OTLP_ENDPOINT` when a service opts in. Store spans with a
+      retention setting, and add a Traces section under a service's
+      Observability: a searchable trace list (duration, status, root span) and a
+      waterfall view per trace, linked from error tracking events that carry a
+      trace id. Instrument Homerun's own Go worker too: a span per job and per
+      stage (pull, build, scan, deploy, backup), so a failed job's trace shows
+      where it broke and how long each stage took, viewed in the instance's own
+      observability page.
 
 - [ ] **Homerun as infrastructure as code (after the S3 service).** A Terraform
       provider and a Pulumi provider (a bridged Terraform one, or native) that

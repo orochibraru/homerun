@@ -17,6 +17,11 @@ An API key is created with **Full access** or **Read-only** access (see
 `Retry-After` header (in seconds) until the minute is up. The OpenAPI spec lists
 that `403` on every write.
 
+The Terraform state routes under `/api/v1/iac/projects/:id/` (`state` and
+`lock`, see [Object storage](object-storage.md#terraform-state)) also take the
+key as an HTTP Basic password, with any username, since that's the only
+credential Terraform's `http` backend sends. They're admin-only.
+
 - `GET/POST /api/v1/services`, `GET/PATCH/DELETE /api/v1/services/:id`: delete
   takes `?force=true` to drop Homerun's record even when the container or swarm
   service couldn't be removed, the API equivalent of the Settings tab's

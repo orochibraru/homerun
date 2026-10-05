@@ -87,6 +87,7 @@
 				{ "slug": "templates", "icon": "layout-grid" },
 				{ "slug": "storage-volumes", "icon": "hard-drive" },
 				{ "slug": "backups", "icon": "archive" },
+				{ "slug": "object-storage", "icon": "cylinder" },
 				{
 					"slug": "remote-hosts-and-agent",
 					"title": "Build servers & agent",

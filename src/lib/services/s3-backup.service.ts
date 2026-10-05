@@ -1,4 +1,3 @@
-import { createHash, createHmac } from "node:crypto";
 import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
@@ -17,6 +16,7 @@ import {
 	VolumeServices,
 } from "./backup/volume-services.ts";
 import { MANAGED_LABEL } from "./docker/labels.ts";
+import { expectS3Ok, s3Fetch } from "./s3/signer.ts";
 
 export interface RestoreOptions {
 	stopServices: boolean;
@@ -34,104 +34,7 @@ export interface S3Config {
 	secretAccessKey: string;
 }
 
-function hmac(key: Buffer | string, data: string): Buffer {
-	return createHmac("sha256", key).update(data, "utf8").digest();
-}
-
-function sha256Hex(data: Buffer | string): string {
-	return createHash("sha256").update(data).digest("hex");
-}
-
-function amzDate(date: Date): { amzDate: string; dateStamp: string } {
-	const iso = date.toISOString().replace(/[:-]|\.\d{3}/g, "");
-	return { amzDate: iso, dateStamp: iso.slice(0, 8) };
-}
-
-function signingKey(
-	secretAccessKey: string,
-	dateStamp: string,
-	region: string,
-): Buffer {
-	const kDate = hmac(`AWS4${secretAccessKey}`, dateStamp);
-	const kRegion = hmac(kDate, region);
-	const kService = hmac(kRegion, "s3");
-	return hmac(kService, "aws4_request");
-}
-
-interface SignedRequest {
-	body?: string;
-	method: "DELETE" | "GET" | "PUT";
-	path: string;
-	queryString?: string;
-}
-
-/** One signed S3 request : the same SigV4 dance `putObject` does, for the verbs restore and the destination test need. */
-async function signedRequest(
-	config: S3Config,
-	request: SignedRequest,
-): Promise<Response> {
-	const { body = "", method, path, queryString = "" } = request;
-	const url = new URL(config.endpoint);
-	url.pathname = path.replace(/\/+/g, "/");
-	url.search = queryString;
-
-	const { amzDate: amz, dateStamp } = amzDate(new Date());
-	const payloadHash = sha256Hex(body);
-
-	const headers: Record<string, string> = {
-		host: url.host,
-		"x-amz-content-sha256": payloadHash,
-		"x-amz-date": amz,
-	};
-	const signedHeaderNames = Object.keys(headers).sort();
-	const canonicalHeaders = signedHeaderNames
-		.map((h) => `${h}:${headers[h]}\n`)
-		.join("");
-	const signedHeaders = signedHeaderNames.join(";");
-
-	const canonicalRequest = [
-		method,
-		url.pathname,
-		queryString,
-		canonicalHeaders,
-		signedHeaders,
-		payloadHash,
-	].join("\n");
-
-	const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
-	const stringToSign = [
-		"AWS4-HMAC-SHA256",
-		amz,
-		credentialScope,
-		sha256Hex(canonicalRequest),
-	].join("\n");
-	const signature = hmac(
-		signingKey(config.secretAccessKey, dateStamp, config.region),
-		stringToSign,
-	).toString("hex");
-
-	return await fetch(url, {
-		headers: {
-			...headers,
-			authorization:
-				`AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, ` +
-				`SignedHeaders=${signedHeaders}, Signature=${signature}`,
-		},
-		method,
-		...(body ? { body } : {}),
-	});
-}
-
 export type BackupTarget = { destination: S3Config } | { remote: RcloneRemote };
-
-async function expectOk(res: Response, what: string): Promise<void> {
-	if (!res.ok) {
-		const text = await res.text().catch(() => "");
-		throw new Error(
-			`S3 ${what} failed: ${res.status} ${res.statusText} ${text}`.trim(),
-		);
-	}
-}
 
 export interface BackupObject {
 	key: string;
@@ -151,18 +54,12 @@ async function listObjects(
 	config: S3Config,
 	prefix: string,
 ): Promise<BackupObject[]> {
-	const query = new URLSearchParams({
-		"list-type": "2",
-		"max-keys": "200",
-		prefix,
-	});
-	query.sort();
-	const res = await signedRequest(config, {
+	const res = await s3Fetch(config, {
 		method: "GET",
 		path: `/${config.bucket}`,
-		queryString: query.toString(),
+		query: { "list-type": "2", "max-keys": "200", prefix },
 	});
-	await expectOk(res, "LIST");
+	await expectS3Ok(res, "LIST");
 	const xml = await res.text();
 	const objects: BackupObject[] = [];
 	CONTENTS_RE.lastIndex = 0;
@@ -298,16 +195,16 @@ class S3BackupServiceClass {
 			return;
 		}
 		const path = `/${target.destination.bucket}/.homerun-test-${crypto.randomUUID()}`;
-		await expectOk(
-			await signedRequest(target.destination, {
+		await expectS3Ok(
+			await s3Fetch(target.destination, {
 				body: "homerun",
 				method: "PUT",
 				path,
 			}),
 			"PUT",
 		);
-		await expectOk(
-			await signedRequest(target.destination, { method: "DELETE", path }),
+		await expectS3Ok(
+			await s3Fetch(target.destination, { method: "DELETE", path }),
 			"DELETE",
 		);
 	}

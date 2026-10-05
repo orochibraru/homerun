@@ -187,6 +187,10 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			emailOtpSignIn: null,
 			errorPages: null,
 			ipBans: null,
+			garageAdminTokenEnc: null,
+			garageEnabled: null,
+			garagePublicHost: null,
+			garageRpcSecretEnc: null,
 			gitProviders: [],
 			id: SINGLETON_ID,
 			imageScanBlockFixableOnly: null,
@@ -362,6 +366,21 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 				| "registryAuthEnabled"
 				| "registryInternalSecretEnc"
 				| "registryPublicHost"
+			>
+		>,
+	): Promise<void> {
+		await this.persist(input);
+	}
+
+	/** Persists the built-in object store's toggle, public host and secrets. */
+	async persistGarage(
+		input: Partial<
+			Pick<
+				InstanceSettings,
+				| "garageAdminTokenEnc"
+				| "garageEnabled"
+				| "garagePublicHost"
+				| "garageRpcSecretEnc"
 			>
 		>,
 	): Promise<void> {

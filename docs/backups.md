@@ -6,12 +6,12 @@ dashboard.
 
 ## Backup destinations
 
-A **backup destination** (`/s3-destinations`, **Backup Destinations** in the
-sidebar) is a named, reusable target, defined once and pointed at by as many
-volumes as you like, rather than retyping a host and credentials per volume.
-Pick its **Type** when you create it; the fields relabel to match. Secrets (the
-secret key, password or private key) are stored encrypted at rest, same scheme
-as registry passwords.
+A **backup destination** (`/s3-destinations`, **Backup Destinations** under
+**Storage** in the sidebar) is a named, reusable target, defined once and
+pointed at by as many volumes as you like, rather than retyping a host and
+credentials per volume. Pick its **Type** when you create it; the fields relabel
+to match. Secrets (the secret key, password or private key) are stored encrypted
+at rest, same scheme as registry passwords.
 
 | Type   | Host or URL                      | Path                                                  | Username      | Secret                            |
 | ------ | -------------------------------- | ----------------------------------------------------- | ------------- | --------------------------------- |

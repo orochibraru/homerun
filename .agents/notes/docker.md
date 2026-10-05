@@ -348,7 +348,7 @@ they now fail for different reasons with different fixes, see
   `homerun-mirror` into a real push/pull registry rather than just a scan cache.
   `RegistryService` (`src/lib/services/registry.service.ts`) owns
   `status()`/`authEnabled()`/`internalCredentials()`/`createToken()`/
-  `revokeToken()`/`setAuthEnabled()`/`setPublicHost()`/`syncAuth()`/`catalog()`/
+  `revokeToken()`/`setAuthEnabled()`/`setPublicHost()`/`syncAuth()`/`catalogPage()`/`repository()`/
   `deleteTag()`/`deleteRepository()`. Tokens are `registry_token` rows
   (`RegistryTokenDTO`, `src/lib/dto/registry-token-dto.ts`): `username` plus a
   bcrypt `secretHash` (`Bun.password.hash`, cost 10), the plaintext returned
@@ -894,10 +894,14 @@ Images (the default), `tokens/`, `credentials/`, `settings/`.
 `RegistryService.status()` once for every tab; `+layout.svelte` owns the
 `TabNav`.
 
-- **Images**: `catalog()` (repository/tag/digest, plus which `ServiceDTO`s
-  reference each repository, cross-referenced through
-  `mirrorRepository(image, tag)`) and its delete-tag/delete-repository/
-  garbage-collect form actions.
+- **Images**: `catalogPage(query)` (one `_catalog` call filtered by `q` and
+  paged, then the page's repositories' tags read in parallel, streamed to the
+  page) with which `ServiceDTO`s reference each repository (cross-referenced
+  through `mirrorRepository(image, tag)`), and the garbage-collect action. Each
+  repository has its own page, `images/[...repository]` (a rest param, since
+  repository names carry slashes), built on `repository(name)`, with the
+  delete-tag/delete-repository actions; it redirects to the list once the
+  repository has no tag left.
 - **Tokens**: `listTokens()`/`createToken()`/`revokeToken()`, with a one-time
   `docker login` snippet shown on creation (`form.created`, never re-derivable,
   the plaintext secret isn't stored).
@@ -910,7 +914,7 @@ Images (the default), `tokens/`, `credentials/`, `settings/`.
 See the Registry bullet under Docker integration above for `RegistryService`,
 the schema, and the container reconciliation this page drives.
 
-The registry's public host gets DNS like the dashboard's: `syncRegistryDns`
+The registry's public host gets DNS like the dashboard's: `syncCoreHostDns`
 (`dns.service.ts`, `sso: false` since `docker login` can't follow Pangolin's
 sign-in) runs from `RegistryService.setPublicHost` (deleting the previous host)
 and from the core-services watch. Before it, a Pangolin instance's edge answered
@@ -923,6 +927,48 @@ plain HTTP) with the internal credentials for a local build, and nothing for a
 build server (its cache registry doubles as the image transfer, which would
 hairpin through the public hostname). `PlanGC` (`internal/registryapi`) always
 keeps a `buildcache` tag, which no keep set lists.
+
+## Object storage (`/object-storage`, `ObjectStorageService`, `docker/garage.ts`)
+
+The built-in store is a single Garage node (`dxflrs/garage`, pinned in
+`docker/garage-container.ts`), run like the registry: `DockerGarageMixin`
+(merged outermost, it needs `runOneOff`/`pullImage`/`selfContainer`) creates
+`homerun-garage` on the shared network with `homerun-garage-meta`/`-data`/
+`-config` volumes, loopback ports 5056 (S3) and 5057 (admin), labelled
+`homerun.infra=garage`. The Garage image is `FROM scratch`, so `garage.toml` is
+written into the config volume by a one-off `alpine` container, and it carries
+no secret: `GARAGE_RPC_SECRET`/`GARAGE_ADMIN_TOKEN` go in as env vars (minted on
+first enable, stored encrypted in `instance_settings`), which is what
+`garageMatches` diffs to decide on a recreate. `reconcileGarage(null)` removes
+the container and keeps the volumes. `garageEndpoints()` picks the loopback or
+in-network address like `imageMirrorClient` does.
+
+A fresh node serves nothing until it has a layout:
+`GarageAdminClient. ensureLayout` (admin API v2,
+`src/lib/services/s3/garage-admin.ts`) assigns the node a role and applies
+`layoutVersion + 1`; `UpdateClusterLayout`'s body is `{roles: [...]}`, verified
+against a live v2.4.1 (a bare array is refused). **Verified live**: buckets
+created over S3 by a key with `createBucket` only get a _local_ alias, invisible
+to every other key, so the built-in store creates and deletes buckets through
+the admin API (`CreateBucket` with `globalAlias`, then `AllowBucketKey` for
+Homerun's own key) and does everything else over S3.
+
+Every store, built-in included, is an `object_store` row (`ObjectStoreDTO`,
+`summary()` is what pages get, never the encrypted secret); S3 calls go through
+`ObjectStoreClient` on the shared SigV4 signer (`src/lib/services/s3/signer.ts`,
+also used by backups, tested against AWS's published signature examples),
+path-style only. The core-services watch calls
+`ObjectStorageService.reassertBuiltin()` on a worker restart, and the public
+host gets DNS through `syncCoreHostDns`, like the registry's.
+
+Terraform state (`IacStateService`, `iac_project`/`iac_state_version`/
+`iac_state_lock`) is Terraform's `http` backend: every write is a new object
+(`<prefix>/<slug>/<serial>-<versionId>.tfstate`) plus a version row, the lock is
+a row taken with `INSERT ... ON CONFLICT DO NOTHING`, a rollback rewrites an old
+body with `serial = latest + 1`. **Verified live** with Terraform 1.x against
+Garage: init, apply, a contended lock reported by Terraform with the holder's
+info, force-unlock, rollback seen by the next `plan`. See the routes in
+`api-and-cli.md`.
 
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 

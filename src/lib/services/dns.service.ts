@@ -110,13 +110,15 @@ export async function syncDashboardDns(): Promise<void> {
 }
 
 /**
- * Syncs the built-in registry's public hostname to every configured provider
- * and deletes the one it replaced, without Pangolin SSO: `docker login` and
- * `docker push` can't follow a sign-in redirect. Without it, nothing routes
- * the host to this server's Traefik. Logs the outcome rather than returning
- * it, since nothing awaits this call.
+ * Syncs a core service's public hostname (the built-in registry's, the
+ * built-in object store's) to every configured provider and deletes the one
+ * it replaced, without Pangolin SSO: `docker login`, `docker push` and S3
+ * clients can't follow a sign-in redirect. Without it, nothing routes the
+ * host to this server's Traefik. Logs the outcome rather than returning it,
+ * since nothing awaits this call.
  */
-export async function syncRegistryDns(
+export async function syncCoreHostDns(
+	label: string,
 	previous: string | null,
 	next: string | null,
 ): Promise<void> {
@@ -126,10 +128,10 @@ export async function syncRegistryDns(
 	];
 	for (const result of results) {
 		if (result.ok) {
-			logger.info(`Registry (${result.provider}): ${result.detail}`);
+			logger.info(`${label} (${result.provider}): ${result.detail}`);
 		} else {
 			logger.warn(
-				`Registry sync failed (${result.provider}): ${result.detail}`,
+				`${label} sync failed (${result.provider}): ${result.detail}`,
 			);
 		}
 	}

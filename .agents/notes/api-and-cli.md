@@ -104,6 +104,15 @@ automatically, so a new write route documents it without a registry entry.
   than session/API-key gated, exempted from `csrfHandler` since some providers
   post form bodies. See Push-to-deploy in `services-and-templates.md`.
 
+- `iac/projects/[projectId]/state` (`GET`/`POST`) and `.../lock` (`POST`/
+  `DELETE`): Terraform's `http` backend over `IacStateService`, admin-only.
+  Terraform can only send HTTP Basic, so `readApiKey` in `hooks.server.ts` takes
+  the Basic password as the API key, on `IAC_API_PREFIX` only. The status codes
+  are the ones Terraform's client reads: `204` for no state yet, `423` with the
+  holder's lock info for a held lock, `409` for a write under someone else's
+  lock. The lock id is Terraform's `ID`, on the lock body and as `?ID=` on a
+  state write.
+
 `GET /api/health` sits outside `v1/` entirely, a one-line unauthenticated
 `new Response("OK")` used as a readiness probe (the compose healthcheck, and
 `tests/e2e/`'s bootstrap waiting for the spawned app), not part of the versioned

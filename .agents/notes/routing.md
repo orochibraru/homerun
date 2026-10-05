@@ -78,7 +78,7 @@ all of which describe infrastructure. `tests/e2e/ui-status-page.spec.ts` asserts
 both halves (a published page is readable signed out and leaks none of that; an
 unpublished one 404s).
 
-The sidebar nav is grouped into four labeled categories (`category` on each item
+The sidebar nav is grouped into five labeled categories (`category` on each item
 in `(protected)/nav-items.ts`, color-coded per category, see Appearance
 preferences below for the per-user "single accent color" override):
 
@@ -91,9 +91,11 @@ preferences below for the per-user "single accent color" override):
   links here), **Stacks**, **Templates**, **Cron Jobs** (user-defined scheduled
   tasks, see Cron jobs below), **Status Page** (service health and the public
   pages themselves, see Status pages in `services-and-templates.md`).
-- **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",
-  see S3 backups below), **Backup Destinations** (`/s3-destinations`, reusable
-  named targets: S3, SFTP, SMB, WebDAV), **Remote Hosts**, **Scheduling** (one
+- **Storage**: **Volumes** (`/storage`), **Backups** (backup-run history + "Run
+  now", see S3 backups below), **Backup Destinations** (`/s3-destinations`,
+  reusable named targets: S3, SFTP, SMB, WebDAV), **Object Storage**
+  (`/object-storage`, admin-only, see Object storage in `docker.md`).
+- **Infrastructure**: **Remote Hosts**, **Redirects**, **Scheduling** (one
   instance-wide view of every cron redeploy, enabled cron job and backup
   schedule, plus the job queue).
 - **Integrations**: **Git Providers**, **Build Cache** (registry credentials for

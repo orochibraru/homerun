@@ -9,7 +9,7 @@ import {
 	type RegistryCheck,
 } from "#lib/registry-self-test.js";
 import type { ListQuery, PagedResult } from "#lib/server/list-query.js";
-import { syncRegistryDns } from "./dns.service.ts";
+import { syncCoreHostDns } from "./dns.service.ts";
 import {
 	MIRROR_HOST_PORT,
 	mirrorRepository,
@@ -303,7 +303,7 @@ class RegistryServiceClass {
 		const previous = settings.toJSON().registryPublicHost ?? null;
 		await settings.persistRegistry({ registryPublicHost: trimmed || null });
 		await this.syncAuth();
-		void syncRegistryDns(previous, trimmed || null);
+		void syncCoreHostDns("Registry", previous, trimmed || null);
 	}
 
 	/**

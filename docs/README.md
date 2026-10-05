@@ -100,6 +100,9 @@ sync by hand.
 - **[Volume backups](backups.md)**: reusable backup destinations (S3, SFTP, SMB,
   WebDAV), scheduled backups of either volume kind, the backup history, and
   restoring.
+- **[Object storage](object-storage.md)**: the built-in S3 store, connecting
+  S3-compatible providers, buckets, lifecycle and access keys, and Terraform
+  state with versions, diff, rollback and locking.
 - **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
   images on a second machine, the standalone agent and installer.
 - **[Machine terminals](machine-terminals.md)**: a browser shell on this server

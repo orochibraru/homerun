@@ -1,7 +1,8 @@
 # Storage volumes
 
-A **storage volume** (`/storage`) is a named source you define once, then mount
-into one or more services from each service's Storage tab:
+A **storage volume** (`/storage`, **Volumes** under **Storage** in the sidebar)
+is a named source you define once, then mount into one or more services from
+each service's Storage tab:
 
 - **Bind mount**, an absolute path on the host filesystem.
 - **Docker-managed volume**, a named Docker volume, created/managed by Docker
@@ -23,7 +24,7 @@ and a pager once you have more than a page's worth, same toolkit as the
 [services list](services.md#the-services-list), searched/paginated server-side
 the same way.
 
-![Storage, listing each volume with its size and whether its backups are on](images/storage-volumes-list.webp)
+![Volumes, listing each volume with its size and whether its backups are on](images/storage-volumes-list.webp)
 
 Tick volumes (or the select-all box above the list, which covers the current
 page) to bring up a bottom bar with bulk **Enable backups**, **Disable backups**

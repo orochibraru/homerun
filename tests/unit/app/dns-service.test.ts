@@ -18,9 +18,9 @@ const { PangolinService } = await import(
 const {
 	deleteDns,
 	serviceHostname,
+	syncCoreHostDns,
 	syncDashboardDns,
 	syncDns,
-	syncRegistryDns,
 } = await import("../../../src/lib/services/dns.service");
 
 type Verdict =
@@ -198,9 +198,13 @@ describe("syncDashboardDns", () => {
 	});
 });
 
-describe("syncRegistryDns", () => {
+describe("syncCoreHostDns", () => {
 	test("routes the new host without SSO and removes the one it replaced", async () => {
-		await syncRegistryDns("old-registry.example.com", "registry.example.com");
+		await syncCoreHostDns(
+			"Registry",
+			"old-registry.example.com",
+			"registry.example.com",
+		);
 		expect(calls).toContainEqual([
 			"pangolin.sync",
 			"registry.example.com",
@@ -213,7 +217,7 @@ describe("syncRegistryDns", () => {
 	});
 
 	test("keeps the host it re-asserts", async () => {
-		await syncRegistryDns(null, "registry.example.com");
+		await syncCoreHostDns("Registry", null, "registry.example.com");
 		expect(calls.some((call) => String(call[0]).endsWith(".delete"))).toBe(
 			false,
 		);
