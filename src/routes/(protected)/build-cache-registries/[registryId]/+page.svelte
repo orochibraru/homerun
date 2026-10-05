@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { Layers } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
+	import StatusBadge from "#lib/components/status-badge.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -97,5 +99,42 @@
         </div>
       </div>
     </form>
+  </section>
+
+  <section class="panel rounded-md">
+    <PanelHeader
+      description="Services whose git builds cache their layers here."
+      icon={Layers}
+      title="Used by"
+    />
+    {#if data.services.length === 0}
+      <p class="text-text-subtle p-5 text-sm">
+        No service uses this registry yet. Pick it as the build cache on a
+        service's Source section.
+      </p>
+    {:else}
+      <ul class="divide-border divide-y">
+        {#each data.services as svc (svc.id)}
+          <li>
+            <a
+              class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3"
+              href={resolve("/(protected)/services/[serviceId]/environments/source", {
+                serviceId: svc.id,
+              })}
+            >
+              <span class="min-w-0 flex-1">
+                <span class="text-text block truncate text-sm font-medium">
+                  {svc.name}
+                </span>
+                <span class="text-text-subtle block truncate font-mono text-xs">
+                  {svc.slug}
+                </span>
+              </span>
+              <StatusBadge status={svc.currentStatus} />
+            </a>
+          </li>
+        {/each}
+      </ul>
+    {/if}
   </section>
 </div>

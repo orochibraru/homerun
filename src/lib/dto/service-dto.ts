@@ -1,6 +1,7 @@
 import {
 	and,
 	arrayOverlaps,
+	asc,
 	count,
 	desc,
 	eq,
@@ -16,6 +17,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { PASSWORD_METHOD } from "#lib/auth-providers.js";
 import type { BuildMethod } from "#lib/build-methods.js";
 import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "#lib/constants.js";
+import type { AuthPathsMode } from "#lib/path-patterns.js";
 import type { PublishedPort } from "#lib/published-ports.js";
 import { db } from "#lib/server/db/lib.js";
 import { type Service, service, stack } from "#lib/server/db/schema.js";
@@ -57,6 +59,18 @@ export class ServiceDTO extends BaseDTO<Service> {
 			.select()
 			.from(service)
 			.orderBy(desc(service.createdAt));
+		return rows.map((row) => new ServiceDTO(row));
+	}
+
+	/** Every service whose git builds cache their layers in build cache registry `registryId`, by name. */
+	static async listByBuildCacheRegistry(
+		registryId: string,
+	): Promise<ServiceDTO[]> {
+		const rows = await db
+			.select()
+			.from(service)
+			.where(eq(service.buildCacheRegistryId, registryId))
+			.orderBy(asc(service.name));
 		return rows.map((row) => new ServiceDTO(row));
 	}
 
@@ -380,8 +394,11 @@ export class ServiceDTO extends BaseDTO<Service> {
 			authAllowedEmails: [],
 			authAllowedGroups: [],
 			authAllowedUserIds: [],
+			authPaths: [],
+			authPathsMode: "all",
 			authProviders: input.authRequired ? [PASSWORD_METHOD] : [],
 			authRequired: input.authRequired ?? false,
+			blockedPaths: input.blockedPaths ?? [],
 			cpuLimit: input.cpuLimit ?? null,
 			dnsResolvable: input.dnsResolvable ?? true,
 			memoryLimitMb: input.memoryLimitMb ?? null,
@@ -702,6 +719,19 @@ export class ServiceDTO extends BaseDTO<Service> {
 	/** Identity provider groups allowed through the login wall. */
 	get authAllowedGroups(): string[] {
 		return this.row.authAllowedGroups;
+	}
+
+	/** Which paths the login wall covers: all of them, only those matching `authPaths`, or all but those. */
+	get authPathsMode(): AuthPathsMode {
+		return this.row.authPathsMode;
+	}
+	/** The path patterns `authPathsMode` applies to. */
+	get authPaths(): string[] {
+		return this.row.authPaths;
+	}
+	/** Path patterns Traefik answers with a 403 instead of passing them to the app. */
+	get blockedPaths(): string[] {
+		return this.row.blockedPaths;
 	}
 
 	/** The login wall every pull request preview of this service gets, independent of the service's own wall. */

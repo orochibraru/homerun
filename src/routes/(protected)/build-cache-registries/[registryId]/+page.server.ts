@@ -1,5 +1,6 @@
 import { error, fail, redirect } from "@sveltejs/kit";
 import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
 import { resolve } from "$app/paths";
 
@@ -13,6 +14,7 @@ export const load = async ({ params, parent }) => {
 		error(404, "Registry not found");
 	}
 
+	const services = await ServiceDTO.listByBuildCacheRegistry(registry.id);
 	return {
 		registry: {
 			id: registry.id,
@@ -20,6 +22,12 @@ export const load = async ({ params, parent }) => {
 			registryUrl: registry.registryUrl,
 			username: registry.username,
 		},
+		services: services.map((svc) => ({
+			currentStatus: svc.toJSON().currentStatus,
+			id: svc.id,
+			name: svc.name,
+			slug: svc.slug,
+		})),
 	};
 };
 

@@ -11,15 +11,25 @@ When done delete the entry, no bloat.
       pass, 1 fail) and not in 22 reruns since. The gate now prints `(fail)`
       lines and below-threshold coverage rows first, so the next failure names
       it: fix that test then.
+- [ ] Since we have branding on custom traefik pages, let's also apply it to the
+      custom authentication pages for a service, whitelabelling included.
+- [ ] Make UI nicer and easier to navigate on the registry page for images.
+- [ ] Registry page: stream + paginate images when loading the page, page load
+      takes too long.
+- [ ] If enabled, make the built-in build cache registry the default on a new
+      service wizard.
+- [ ] Use data streaming on the deployments page to make sure the page load is
+      instant.
 
 ## Medium
 
-- [ ] Security: add a paths filter glob pattern matchers in the security tab of
-      a service to block access to certain pages. In the same spirit, let's add
-      the ability to filter paths for authentication. Let's also add the ability
-      to completely ban IPs if trying to access a blocked pattern too many
-      times. For patterns add presets such as Wordpress (wp- stuff) or simply a
-      default list with in it sensitive files (.env, .git, .git-credentials)
+- [ ] **[WIP]** Security: add a paths filter glob pattern matchers in the
+      security tab of a service to block access to certain pages. In the same
+      spirit, let's add the ability to filter paths for authentication. Let's
+      also add the ability to completely ban IPs if trying to access a blocked
+      pattern too many times. For patterns add presets such as Wordpress (wp-
+      stuff) or simply a default list with in it sensitive files (.env, .git,
+      .git-credentials)
 
 ## Large
 
