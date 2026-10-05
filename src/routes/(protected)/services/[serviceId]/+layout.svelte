@@ -153,7 +153,11 @@
     <StatusBadge status={liveStatus} />
   </div>
   <p class="text-text-muted -mt-4 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-    <span>{svc.image}:{svc.tag}</span>
+    <span>
+      {svc.image
+        ? `${svc.image}:${svc.tag}`
+        : `${svc.gitRepo ?? (svc.gitUrl ?? "").replace(/^https?:\/\//, "").replace(/\.git$/, "")}@${svc.gitRef ?? "main"}`}
+    </span>
     {#if publicDomains.length > 0}
       {#each publicDomains as domain (domain)}
         <span aria-hidden="true">·</span>

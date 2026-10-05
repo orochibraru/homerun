@@ -12,11 +12,11 @@ When done delete the entry, no bloat.
       lines and below-threshold coverage rows first, so the next failure names
       it: fix that test then.
 
-- [ ] A git-built service that hasn't deployed yet shows a stray `: ·` in its
-      page header before the hostname: the image and tag slot renders empty.
-      Hide it (or show the repo and branch) until there's an image.
-
 ## Medium
+
+- [ ] Security: add a paths filter glob pattern matchers in the security tab of
+      a service to block access to certain pages. In the same spirit, let's add
+      the ability to filter paths for authentication.
 
 - [ ] `tests/integration/s3-backup.test.ts` failed both tests once in a full
       `bun run test:integration` run (its `POST /api/v1/volumes/:id/backup`
