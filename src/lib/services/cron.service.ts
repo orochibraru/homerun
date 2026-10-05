@@ -21,6 +21,7 @@ import { type ParsedCron, parseCronSchedule } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
 import { ErrorRetentionScheduler } from "./cron/error-retention-scheduler.ts";
 import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
+import { IpBanScheduler } from "./cron/ip-ban-scheduler.ts";
 import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { SwarmDnsWatch } from "./cron/swarm-dns-watch.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
@@ -79,6 +80,8 @@ class CronServiceClass {
 
 	private readonly errorRetentionScheduler = new ErrorRetentionScheduler();
 
+	private readonly ipBanScheduler = new IpBanScheduler();
+
 	private readonly coreServicesWatch = new CoreServicesWatch();
 
 	private readonly swarmDnsWatch = new SwarmDnsWatch();
@@ -127,6 +130,11 @@ class CronServiceClass {
 	/** Starts the hourly error tracking retention pass. */
 	startErrorRetention(): void {
 		this.errorRetentionScheduler.start();
+	}
+
+	/** Starts the per-minute pass that lifts expired IP bans. */
+	startIpBanScheduler(): void {
+		this.ipBanScheduler.start();
 	}
 
 	/** Starts the watch that re-asserts the core services every time the worker (re)starts. */

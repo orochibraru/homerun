@@ -118,6 +118,9 @@ sync by hand.
   authenticator codes, backup codes, and passkeys.
 - **[Per-app login wall](login-wall.md)**: requiring a sign-in before anyone
   reaches a service, and who's allowed through.
+- **[Blocked paths and IP bans](blocked-paths-and-ip-bans.md)**: turning away
+  requests for `.env`, `.git` and other probed paths, and banning addresses that
+  keep trying.
 - **[Sign in with Homerun](sign-in-with-homerun.md)**: Homerun as an OIDC
   provider for the apps you host, and registering the client Claude needs to use
   the MCP server.

@@ -4,6 +4,7 @@ import { rebuildAuth } from "#lib/services/auth.js";
 import { syncDashboardDns } from "#lib/services/dns.service.js";
 import { syncErrorPages } from "#lib/services/docker/error-pages.js";
 import { DockerService } from "#lib/services/docker.service.js";
+import { IpBanService } from "#lib/services/ip-ban.service.js";
 import { RedirectService } from "#lib/services/redirect.service.js";
 
 /** A trimmed text field from the form, or null when it is missing or blank. */
@@ -29,6 +30,7 @@ export function applyAndRebuild(settings: InstanceSettingsDTO) {
 	void DockerService.syncDashboardRouter();
 	void syncErrorPages();
 	void RedirectService.sync();
+	void IpBanService.sync();
 	void syncDashboardDns();
 	void DockerService.syncNewt(
 		settings.newtCredentials(),

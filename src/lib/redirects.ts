@@ -2,6 +2,8 @@ import { DOMAIN_RE } from "#lib/service-domains.js";
 
 export const REDIRECTS_FILE = "homerun-redirects.yml";
 
+export const REDIRECT_ROUTER_PRIORITY = 9500;
+
 export interface RedirectRule {
 	destination: string;
 	enabled: boolean;
@@ -92,7 +94,9 @@ export function redirectRouterRule(host: string, pathPrefix: string): string {
 /**
  * The Traefik dynamic config (JSON, which is valid YAML) with one router,
  * one `redirectRegex` middleware and the shared `noop@internal` service per
- * enabled redirect, or null when there's nothing to write.
+ * enabled redirect, or null when there's nothing to write. Each router sits
+ * above a service's own routers, blocked paths and login-wall splits
+ * included, so a redirect configured on a service's host still wins.
  */
 export function redirectsConfig(
 	rules: RedirectRule[],
@@ -117,6 +121,7 @@ export function redirectsConfig(
 		routers[name] = {
 			entryPoints: [options.entrypoint],
 			middlewares: [name],
+			priority: REDIRECT_ROUTER_PRIORITY,
 			rule: redirectRouterRule(parts.host, parts.pathPrefix),
 			service: "noop@internal",
 			tls: resolver ? { certResolver: resolver } : {},

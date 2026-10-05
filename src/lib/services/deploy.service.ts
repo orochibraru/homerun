@@ -616,9 +616,23 @@ class DeploymentServiceClass {
 		wasRequired: boolean,
 		userId: string,
 	): Promise<boolean> {
+		if (svc.authRequired === wasRequired) {
+			return false;
+		}
+		return await this.redeployForRouting(svc, userId);
+	}
+
+	/**
+	 * Queues a redeploy so a change to a service's routing labels (its
+	 * blocked paths, its login wall's paths) reaches Traefik. A service that
+	 * was never deployed, or is stopped, picks it up on its next deploy
+	 * instead, and one that isn't publicly routed has no router to change.
+	 *
+	 * @returns Whether a redeploy was queued.
+	 */
+	async redeployForRouting(svc: ServiceDTO, userId: string): Promise<boolean> {
 		if (
-			svc.authRequired === wasRequired ||
-			!isDeployed(svc) ||
+			!(isDeployed(svc) && svc.dnsResolvable) ||
 			svc.toJSON().desiredState === "stopped"
 		) {
 			return false;

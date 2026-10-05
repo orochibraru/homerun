@@ -39,6 +39,7 @@ import {
 import { detectAuthCheckUrl } from "#lib/services/cron/core-services-watch.js";
 import { CronService } from "#lib/services/cron.service.js";
 import { DeploymentService } from "#lib/services/deploy.service.js";
+import { IpBanService } from "#lib/services/ip-ban.service.js";
 import { OrchestrationService } from "#lib/services/orchestration.service.js";
 import { JobWorker } from "#lib/services/queue/worker.js";
 import { RedirectService } from "#lib/services/redirect.service.js";
@@ -286,9 +287,11 @@ export const init = async () => {
 	CronService.startMirrorGcScheduler();
 	CronService.startGitPollScheduler();
 	CronService.startErrorRetention();
+	CronService.startIpBanScheduler();
 	CronService.startCoreServicesWatch();
 	CronService.startSwarmDnsWatch();
 	void RedirectService.sync();
+	void IpBanService.sync();
 };
 
 /**
@@ -662,8 +665,9 @@ const OIDC_SERVER_TO_SERVER_PATHS = new Set(
 /**
  * Refuses cross-site form posts, in place of SvelteKit's built-in check
  * (turned off in vite.config.ts), except on the OAuth endpoints apps call
- * from their own servers and on git push webhooks, which arrive with a form
- * body (depending on the provider) and no `Origin` header.
+ * from their own servers, on git push webhooks, which arrive with a form
+ * body (depending on the provider) and no `Origin` header, and on the error
+ * pages, where Traefik sends scanners' form posts to blocked paths.
  */
 const csrfHandler: Handle = async ({ event, resolve }) => {
 	if (
@@ -674,6 +678,7 @@ const csrfHandler: Handle = async ({ event, resolve }) => {
 			(pathname) =>
 				OIDC_SERVER_TO_SERVER_PATHS.has(pathname) ||
 				pathname.startsWith(`${GIT_WEBHOOK_PATH}/`) ||
+				pathname.startsWith(`${ERROR_PAGE_PATH}/`) ||
 				isIngestPath(pathname),
 		)
 	) {

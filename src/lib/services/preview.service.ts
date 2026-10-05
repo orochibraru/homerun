@@ -111,8 +111,11 @@ export function mirroredSettings(parent: ServiceDTO) {
 		authAllowedEmails: parent.authAllowedEmails,
 		authAllowedGroups: parent.authAllowedGroups,
 		authAllowedUserIds: parent.authAllowedUserIds,
+		authPaths: parent.authPaths,
+		authPathsMode: parent.authPathsMode,
 		authProviders: parent.authProviders,
 		authRequired: parent.authRequired,
+		blockedPaths: parent.blockedPaths,
 		buildCacheRegistryId: parent.buildCacheRegistryId,
 		buildCacheBuiltin: parent.buildCacheBuiltin,
 		buildServerRemoteHostId: parent.buildServerRemoteHostId,
@@ -437,6 +440,7 @@ class PreviewServiceClass {
 		const policy = parent.previewAccessPolicy;
 		const preview = await ServiceDTO.create({
 			...settings,
+			authPathsMode: "all",
 			authRequired: policy.authRequired,
 			envVars: await previewEnv(
 				parent,
@@ -491,6 +495,7 @@ class PreviewServiceClass {
 		await preview.update({
 			...mirroredSettings(parent),
 			...parent.previewAccessPolicy,
+			authPathsMode: "all",
 			envVars: await previewEnv(
 				parent,
 				primaryHostname(preview.toJSON(), stack?.slug, config.baseDomain),

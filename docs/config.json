@@ -109,6 +109,11 @@
 					"icon": "scan-face"
 				},
 				{ "slug": "login-wall", "title": "Login wall", "icon": "lock" },
+				{
+					"slug": "blocked-paths-and-ip-bans",
+					"title": "Blocked paths and IP bans",
+					"icon": "shield-ban"
+				},
 				{ "slug": "sign-in-with-homerun", "icon": "log-in" }
 			]
 		},

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BUILD_METHODS } from "#lib/build-methods.js";
 import { HISTORY_TRIGGERS } from "#lib/deploy-trigger.js";
+import { AUTH_PATHS_MODES } from "#lib/path-patterns.js";
 import { UPDATE_CHANNELS } from "#lib/update-channel.js";
 
 /**
@@ -41,8 +42,18 @@ export const serviceResponse = z.object({
 	authAllowedEmails: z.array(z.string()),
 	authAllowedGroups: z.array(z.string()),
 	authAllowedUserIds: z.array(z.string()),
+	authPaths: z.array(z.string()).meta({
+		description: "Path patterns authPathsMode applies to",
+	}),
+	authPathsMode: z.enum(AUTH_PATHS_MODES).meta({
+		description:
+			"Which paths the login wall covers: all, only authPaths, or all except them",
+	}),
 	authProviders: z.array(z.string()),
 	authRequired: z.boolean(),
+	blockedPaths: z.array(z.string()).meta({
+		description: "Path patterns Traefik answers with a 403",
+	}),
 	autoRollback: z.boolean().meta({
 		description:
 			"Redeploy the previous healthy revision when a new one is unhealthy",

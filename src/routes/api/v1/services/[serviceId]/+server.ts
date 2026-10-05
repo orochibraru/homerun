@@ -1,6 +1,7 @@
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
+import { authPathsProblem, pathFiltersChanged } from "#lib/path-patterns.js";
 import { normalizeEnvironmentName } from "#lib/release-channels.js";
 import { invalidateGatedService } from "#lib/server/gated-service-cache.js";
 import { updateServiceApiBody } from "#lib/server/validation/api.js";
@@ -72,6 +73,13 @@ export const PATCH = async ({ params, request, locals }) => {
 			);
 		}
 	}
+	const emptyPaths = authPathsProblem(
+		rest.authPathsMode ?? svc.authPathsMode,
+		rest.authPaths ?? svc.authPaths,
+	);
+	if (emptyPaths) {
+		return Response.json({ error: emptyPaths }, { status: 400 });
+	}
 	if (!locals.isAdmin && hostAccessChanged(svc.toJSON(), rest)) {
 		return Response.json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
 	}
@@ -83,6 +91,7 @@ export const PATCH = async ({ params, request, locals }) => {
 		previewsEnabled: svc.toJSON().previewsEnabled,
 	};
 	const wasRequired = svc.authRequired;
+	const before = { ...svc.toJSON() };
 	await svc.update({
 		...rest,
 		...(registryPassword
@@ -96,11 +105,15 @@ export const PATCH = async ({ params, request, locals }) => {
 		await PreviewService.applyBranchFilter(svc);
 	}
 	invalidateGatedService(svc.id);
-	await DeploymentService.redeployIfLoginWallChanged(
-		svc,
-		wasRequired,
-		locals.user.id,
-	);
+	if (pathFiltersChanged(before, svc.toJSON())) {
+		await DeploymentService.redeployForRouting(svc, locals.user.id);
+	} else {
+		await DeploymentService.redeployIfLoginWallChanged(
+			svc,
+			wasRequired,
+			locals.user.id,
+		);
+	}
 
 	logger.info(
 		`Service updated via API: service=${svc.id} user=${locals.user.id}`,

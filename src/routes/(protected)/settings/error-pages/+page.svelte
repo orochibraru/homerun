@@ -18,7 +18,12 @@
 	let savingText = $state(false);
 	let showPoweredBy = $derived(stored.showPoweredBy ?? true);
 
-	const previewStatus = { notFound: 404, notReady: 404, unavailable: 503 };
+	const previewStatus = {
+		blocked: 403,
+		notFound: 404,
+		notReady: 404,
+		unavailable: 503,
+	};
 </script>
 
 <div class="space-y-6">

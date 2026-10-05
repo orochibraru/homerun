@@ -31,6 +31,7 @@ describe("withErrorPageDefaults", () => {
 			brandName: "  ",
 			logoUrl: "https://acme.test/logo.svg",
 			pages: {
+				blocked: { message: "", title: "" },
 				notFound: { message: "", title: "Lost?" },
 				notReady: { message: "Soon.", title: "" },
 				unavailable: { message: "", title: "" },
@@ -80,6 +81,7 @@ describe("renderErrorPage", () => {
 				brandName: '<script>alert("x")</script>',
 				logoUrl: 'https://x.test/a.png" onerror="alert(1)',
 				pages: {
+					blocked: { message: "", title: "" },
 					notFound: { message: "<b>gone</b>", title: "T" },
 					notReady: { message: "", title: "" },
 					unavailable: { message: "", title: "" },
@@ -168,6 +170,7 @@ describe("Traefik error pages config", () => {
 	test("defines a lowest-priority catch-all and the gateway errors middleware", () => {
 		const yaml = errorPagesConfig({
 			entrypoint: "websecure",
+			proof: "p",
 			target: "http://homerun-auth:3000",
 		});
 		expect(yaml).toContain("rule: PathPrefix(`/`)");

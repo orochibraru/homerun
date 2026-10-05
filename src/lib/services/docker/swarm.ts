@@ -1,5 +1,6 @@
 import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
+import type { AuthPathsMode } from "#lib/path-patterns.js";
 import type { PublishedPort } from "#lib/published-ports.js";
 import type { ContainerStatus } from "#lib/types.js";
 import type { BaseDockerService, Constructor } from "./base.ts";
@@ -133,7 +134,10 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 		Labels: mergeLabels(
 			params.runtime?.labels,
 			buildContainerLabels({
+				authPaths: params.authPaths,
+				authPathsMode: params.authPathsMode,
 				authRequired: params.authRequired,
+				blockedPaths: params.blockedPaths,
 				containerPort: params.containerPort,
 				defaultDomainEnabled: params.defaultDomainEnabled,
 				dnsResolvable:
@@ -283,7 +287,10 @@ export interface CreateSwarmServiceParams {
 	defaultDomainEnabled?: boolean;
 	dnsResolvable?: boolean;
 	domainPorts?: Record<string, number>;
+	authPaths?: string[];
+	authPathsMode?: AuthPathsMode;
 	authRequired?: boolean;
+	blockedPaths?: string[];
 	httpCacheTtl?: number | null;
 	domains?: string[];
 	envVars: Record<string, string>;

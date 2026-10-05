@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Ban,
 		Container,
 		Globe,
 		Lock,
@@ -91,6 +92,13 @@
 				icon: TriangleAlert,
 				id: "error-pages",
 				label: "Error pages",
+			},
+			{
+				exact: false,
+				href: resolve("settings/ip-bans"),
+				icon: Ban,
+				id: "ip-bans",
+				label: "IP bans",
 			},
 			{
 				exact: false,

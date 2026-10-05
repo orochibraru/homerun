@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "#lib/build-methods.js";
+import { AUTH_PATHS_MODES, pathPatternsProblem } from "#lib/path-patterns.js";
 import { branchPatternProblem } from "#lib/preview-branches.js";
 import { environmentNameField } from "#lib/server/validation/environment-name.js";
 import { DOMAIN_RE } from "#lib/service-domains.js";
@@ -11,6 +12,15 @@ const branchPatterns = z
 	.max(50)
 	.superRefine((patterns, ctx) => {
 		const problem = patterns.map(branchPatternProblem).find(Boolean);
+		if (problem) {
+			ctx.addIssue({ code: "custom", message: problem });
+		}
+	});
+
+const pathPatterns = z
+	.array(z.string().trim().min(1))
+	.superRefine((patterns, ctx) => {
+		const problem = pathPatternsProblem(patterns);
 		if (problem) {
 			ctx.addIssue({ code: "custom", message: problem });
 		}
@@ -111,7 +121,23 @@ export const createServiceApiBody = z
 export type CreateServiceApiInput = z.infer<typeof createServiceApiBody>;
 
 export const updateServiceApiBody = z.object({
+	authPaths: pathPatterns
+		.optional()
+		.describe(
+			"Path patterns authPathsMode applies to. A pattern matches whole path segments anywhere in the path, a leading / anchors it at the root, * matches anything and ? one character, case-insensitively.",
+		),
+	authPathsMode: z
+		.enum(AUTH_PATHS_MODES)
+		.optional()
+		.describe(
+			"Which paths the login wall covers: all, only the authPaths, or all except them. Applied on the next deploy, which saving queues for a running service.",
+		),
 	authRequired: z.boolean().optional(),
+	blockedPaths: pathPatterns
+		.optional()
+		.describe(
+			"Path patterns Traefik answers with a 403 instead of passing to the app, same syntax as authPaths. Applied on the next deploy, which saving queues for a running service.",
+		),
 	autoDeployOnPush: z.boolean().optional(),
 	autoRollback: z.boolean().optional(),
 	buildSource: z.enum(["image", "git"]).optional(),

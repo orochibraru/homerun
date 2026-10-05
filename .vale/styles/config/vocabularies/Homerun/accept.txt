@@ -159,3 +159,4 @@ Nextcloud
 rclone
 unencrypted
 Reachability
+[Uu]nban

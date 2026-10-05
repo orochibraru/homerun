@@ -1194,6 +1194,59 @@ it on every random host. A 404 checks whether any service routes the host
 behind Pangolin, a host without its resource never reaches this Traefik, so the
 catch-all couldn't show "not available yet" during a first deploy.
 
+## Blocked paths, login wall paths and IP bans (`src/lib/path-patterns.ts`, `src/lib/ip-bans.ts`, `IpBanService`)
+
+`service.blockedPaths`, `authPathsMode` (`all`/`only`/`except`) and `authPaths`
+are routing labels, so saving them redeploys (`pathFiltersChanged` +
+`DeploymentService.redeployForRouting`). Patterns become one Go regex per list
+(`pathPatternsRegex`: `(?i)`, `*` → `.*`, segment-anchored `(?:^|/)…(?:/|$)`, or
+`^/` with a leading slash) in a Traefik v3 `PathRegexp`; Go and JS share the
+syntax, so the unit tests match paths with a JS `RegExp` of the same source.
+`buildContainerLabels` gives each hostname's router up to three siblings with
+explicit priorities, since the default (rule length) can't order two regex
+rules: `_blocked` (9300) → `homerun-error-pages@file` through
+`homerun-blocked@file` when `errorPagesPublished()`, else the service with a
+deny-everyone `ipallowlist` (`<slug>_deny`, `127.0.0.1/32`); `_gate` (9200)
+keeps the wall's callback and logout paths behind forwardAuth; `_paths` (9100)
+carries forwardAuth (`only`) or is the ungated one (`except`). The plain router
+keeps the default priority. **The `_` separator is load-bearing**: slugs are
+`[a-z0-9-]`, so `<router>_blocked` can never equal another service's router
+(`-blocked` collided with a slug `shop-blocked`). Every forwardAuth-less router
+of a split wall carries `<slug>_strip-identity`, a `headers` middleware setting
+`X-Homerun-User`/`-Email`/`-Name` to empty (which removes them), or a visitor
+could forge the identity an app trusts. Redirect routers carry priority 9500
+(`REDIRECT_ROUTER_PRIORITY`) so a redirect on a service's host still beats all
+of these. Previews are forced to `all` (their own wall); canaries and
+environments copy the parent's paths (`mirroredSettings` into
+`ServiceDTO.create`).
+
+`/homerun-error/blocked` (a `fallback` handler, exempt from the CSRF check like
+everything under `/homerun-error/`, since scanners POST `wp-login.php` with no
+`Origin`) serves the "blocked" page to anyone but **only counts a request
+carrying Traefik's proof**: `homerun-blocked` is a chain of the `replacePath`
+and a `headers` middleware setting `X-Homerun-Blocked` to
+`blockedProofToken(auth secret)` (an HMAC of a fixed label), written into
+`homerun-error-pages.yml`, which only Traefik reads; `validBlockedProof`
+compares in constant time. Without it anyone reaching the app directly (its
+published port, the dashboard host) could forge `X-Forwarded-For` and get any
+address banned. With it, the address is the last `X-Forwarded-For` hop, not the
+first: Traefik's `ClientIP` matcher only looks at the connection's remote
+address, never XFF, and Traefik appends exactly that peer to XFF. Nothing is
+inserted for a request that can't lead to a ban (no proof, bans off, an address
+`bannableIp` refuses, one already banned), so `blocked_hit` rows per address are
+capped by the threshold. `bannableIp` refuses private, loopback, link-local,
+CGNAT, multicast and unspecified ranges (a Pangolin tunnel or Docker network)
+and Cloudflare's published edge ranges (`CLOUDFLARE_RANGES`, banning an edge
+bans everyone behind it; never trust `CF-Connecting-IP`, a client can send it).
+A ban is an `ip_ban` row; `IpBanService.sync()` rewrites `homerun-bans.yml`
+(JSON) with one router, `ClientIP(a) || …` minus the dashboard host, priority
+2e9 (under Traefik's 32-bit max), `ipAllowList` deny, `noop@internal`, removed
+when nobody is banned. `IpBanScheduler` lifts expired bans and drops hits older
+than a day every minute; boot and settings saves resync. Settings live in
+`instance_settings.ip_bans` (`withIpBanDefaults`, on, 10 hits / 10 min / 24 h),
+edited with the ban list under Settings → IP bans. Not verified against a live
+Traefik.
+
 ## Build servers (`remote_host` table, `RemoteHostDTO`, `/remote-hosts`)
 
 **A registered remote host is a build server, nothing else.** Placement is

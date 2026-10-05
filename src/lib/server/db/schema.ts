@@ -24,6 +24,8 @@ import type {
 	ImageScanStatus,
 	SeverityCounts,
 } from "#lib/image-scan.js";
+import type { IpBanSettings } from "#lib/ip-bans.js";
+import type { AuthPathsMode } from "#lib/path-patterns.js";
 import type { PublishedPort } from "#lib/published-ports.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
@@ -529,6 +531,28 @@ export const remoteHost = pgTable(
 	(table) => [index("remoteHost_userId_idx").on(table.userId)],
 );
 
+export const ipBan = pgTable("ip_ban", {
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	expiresAt: timestamp("expires_at", { mode: "date" }),
+	host: text("host"),
+	ip: text("ip").primaryKey(),
+	reason: text("reason").notNull(),
+});
+
+export const blockedHit = pgTable(
+	"blocked_hit",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		host: text("host"),
+		id: serial("id").primaryKey(),
+		ip: text("ip").notNull(),
+		path: text("path"),
+	},
+	(table) => [
+		index("blockedHit_ip_createdAt_idx").on(table.ip, table.createdAt),
+	],
+);
+
 export const redirect = pgTable(
 	"redirect",
 	{
@@ -729,6 +753,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	pangolinTargetPort: integer("pangolin_target_port"),
 	preferredSignInMethods: jsonb("preferred_sign_in_methods").$type<string[]>(),
 	errorPages: jsonb("error_pages").$type<Partial<ErrorPagesSettings>>(),
+	ipBans: jsonb("ip_bans").$type<Partial<IpBanSettings>>(),
 	requirePasskey: boolean("require_passkey"),
 	requireTwoFactor: boolean("require_two_factor"),
 	resourceAlertReminderMinutes: integer("resource_alert_reminder_minutes"),
@@ -909,6 +934,15 @@ export const service = pgTable(
 			.default([])
 			.notNull(),
 		authRequired: boolean("auth_required").default(false).notNull(),
+		authPaths: jsonb("auth_paths").$type<string[]>().default([]).notNull(),
+		authPathsMode: text("auth_paths_mode")
+			.$type<AuthPathsMode>()
+			.default("all")
+			.notNull(),
+		blockedPaths: jsonb("blocked_paths")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
 		previewAuthAllowedGroups: jsonb("preview_auth_allowed_groups")
 			.$type<string[]>()
 			.default([])
@@ -2144,6 +2178,8 @@ export type CronJob = typeof cronJob.$inferSelect;
 export type CronJobRun = typeof cronJobRun.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
 export type Redirect = typeof redirect.$inferSelect;
+export type IpBan = typeof ipBan.$inferSelect;
+export type BlockedHit = typeof blockedHit.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type RegistryToken = typeof registryToken.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;

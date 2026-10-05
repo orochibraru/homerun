@@ -14,6 +14,8 @@ app is down sees something that says what's going on.
 - **Nothing here** (404): no service uses the address at all.
 - **Temporarily unavailable** (502, 503, 504): the app's container exists but
   can't answer, because it crashed, it's restarting or it timed out.
+- **Blocked path** (403): the path matches one of the service's
+  [blocked paths](blocked-paths-and-ip-bans.md).
 
 The first and last pages reload themselves every 15 seconds, so a visitor lands
 on the app once it's up. An app's own error pages are left alone: its 404s pass
@@ -38,7 +40,9 @@ Homerun writes `homerun-error-pages.yml` into Traefik's dynamic config directory
 
 - a catch-all router at the lowest priority, so any request no other router
   claims (a host no running service routes) gets the 404 page;
-- an `errors` middleware that swaps a 502, 503 or 504 for the matching page.
+- an `errors` middleware that swaps a 502, 503 or 504 for the matching page;
+- the middleware a service's blocked paths go through to reach the Blocked path
+  page.
 
 Every service deployed since carries that middleware. A service that was already
 running picks it up on its next deploy; until then, Traefik's own gateway errors

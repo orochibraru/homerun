@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AUTH_PATHS_MODES } from "#lib/path-patterns.js";
 import { deployEnvironment } from "#lib/release-channels.js";
 import type { Service } from "#lib/server/db/schema.js";
 
@@ -58,7 +59,10 @@ export const serviceConfigSchema = z.object({
 		allowedEmails: z.array(z.string()),
 		allowedGroups: z.array(z.string()),
 		allowedUserIds: z.array(z.string()),
+		blockedPaths: z.array(z.string()),
 		imageScanEnabled: z.boolean(),
+		loginPaths: z.array(z.string()),
+		loginPathsMode: z.enum(AUTH_PATHS_MODES),
 		loginProviders: z.array(z.string()),
 		loginRequired: z.boolean(),
 	}),
@@ -134,6 +138,20 @@ export interface ServiceConfigMount {
 	source: string;
 }
 
+function securityConfig(row: Service): ServiceConfig["security"] {
+	return {
+		allowedEmails: row.authAllowedEmails,
+		allowedGroups: row.authAllowedGroups,
+		allowedUserIds: row.authAllowedUserIds,
+		blockedPaths: row.blockedPaths,
+		imageScanEnabled: row.imageScanEnabled,
+		loginPaths: row.authPaths,
+		loginPathsMode: row.authPathsMode,
+		loginProviders: row.authProviders,
+		loginRequired: row.authRequired,
+	};
+}
+
 /**
  * A service's settings grouped the way the dashboard's tabs group them, for
  * `GET /services/{id}/config` and `homerun services config`. Secrets never
@@ -191,14 +209,7 @@ export function serviceConfig(
 			privileged: row.privileged,
 			runAsUser: row.runAsUser,
 		},
-		security: {
-			allowedEmails: row.authAllowedEmails,
-			allowedGroups: row.authAllowedGroups,
-			allowedUserIds: row.authAllowedUserIds,
-			imageScanEnabled: row.imageScanEnabled,
-			loginProviders: row.authProviders,
-			loginRequired: row.authRequired,
-		},
+		security: securityConfig(row),
 		settings: {
 			autoRedeploy: { enabled: row.cronEnabled, schedule: row.cronSchedule },
 			autoRollback: row.autoRollback,

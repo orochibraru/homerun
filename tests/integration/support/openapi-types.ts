@@ -1811,11 +1811,20 @@ export interface operations {
 						authAllowedEmails: string[];
 						authAllowedGroups: string[];
 						authAllowedUserIds: string[];
+						/** @description Path patterns authPathsMode applies to */
+						authPaths: string[];
+						/**
+						 * @description Which paths the login wall covers: all, only authPaths, or all except them
+						 * @enum {string}
+						 */
+						authPathsMode: "all" | "only" | "except";
 						authProviders: string[];
 						authRequired: boolean;
 						autoDeployOnPush: boolean;
 						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
 						autoRollback: boolean;
+						/** @description Path patterns Traefik answers with a 403 */
+						blockedPaths: string[];
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
@@ -2069,11 +2078,20 @@ export interface operations {
 						authAllowedEmails: string[];
 						authAllowedGroups: string[];
 						authAllowedUserIds: string[];
+						/** @description Path patterns authPathsMode applies to */
+						authPaths: string[];
+						/**
+						 * @description Which paths the login wall covers: all, only authPaths, or all except them
+						 * @enum {string}
+						 */
+						authPathsMode: "all" | "only" | "except";
 						authProviders: string[];
 						authRequired: boolean;
 						autoDeployOnPush: boolean;
 						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
 						autoRollback: boolean;
+						/** @description Path patterns Traefik answers with a 403 */
+						blockedPaths: string[];
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
@@ -2282,11 +2300,20 @@ export interface operations {
 						authAllowedEmails: string[];
 						authAllowedGroups: string[];
 						authAllowedUserIds: string[];
+						/** @description Path patterns authPathsMode applies to */
+						authPaths: string[];
+						/**
+						 * @description Which paths the login wall covers: all, only authPaths, or all except them
+						 * @enum {string}
+						 */
+						authPathsMode: "all" | "only" | "except";
 						authProviders: string[];
 						authRequired: boolean;
 						autoDeployOnPush: boolean;
 						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
 						autoRollback: boolean;
+						/** @description Path patterns Traefik answers with a 403 */
+						blockedPaths: string[];
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
@@ -2536,9 +2563,18 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
+					/** @description Path patterns authPathsMode applies to. A pattern matches whole path segments anywhere in the path, a leading / anchors it at the root, * matches anything and ? one character, case-insensitively. */
+					authPaths?: string[];
+					/**
+					 * @description Which paths the login wall covers: all, only the authPaths, or all except them. Applied on the next deploy, which saving queues for a running service.
+					 * @enum {string}
+					 */
+					authPathsMode?: "all" | "only" | "except";
 					authRequired?: boolean;
 					autoDeployOnPush?: boolean;
 					autoRollback?: boolean;
+					/** @description Path patterns Traefik answers with a 403 instead of passing to the app, same syntax as authPaths. Applied on the next deploy, which saving queues for a running service. */
+					blockedPaths?: string[];
 					/** @enum {string} */
 					buildSource?: "image" | "git";
 					capAdd?: string[];
@@ -2629,11 +2665,20 @@ export interface operations {
 						authAllowedEmails: string[];
 						authAllowedGroups: string[];
 						authAllowedUserIds: string[];
+						/** @description Path patterns authPathsMode applies to */
+						authPaths: string[];
+						/**
+						 * @description Which paths the login wall covers: all, only authPaths, or all except them
+						 * @enum {string}
+						 */
+						authPathsMode: "all" | "only" | "except";
 						authProviders: string[];
 						authRequired: boolean;
 						autoDeployOnPush: boolean;
 						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
 						autoRollback: boolean;
+						/** @description Path patterns Traefik answers with a 403 */
+						blockedPaths: string[];
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						capAdd: string[];
@@ -3082,7 +3127,11 @@ export interface operations {
 							allowedEmails: string[];
 							allowedGroups: string[];
 							allowedUserIds: string[];
+							blockedPaths: string[];
 							imageScanEnabled: boolean;
+							loginPaths: string[];
+							/** @enum {string} */
+							loginPathsMode: "all" | "only" | "except";
 							loginProviders: string[];
 							loginRequired: boolean;
 						};

@@ -5,6 +5,7 @@ import {
 	withErrorPageDefaults,
 } from "#lib/error-pages.js";
 import type { BlockSeverity, ScanBlockPolicy } from "#lib/image-scan.js";
+import { type IpBanSettings, withIpBanDefaults } from "#lib/ip-bans.js";
 import {
 	DEFAULT_REMINDER_MINUTES,
 	DEFAULT_SUSTAIN_SECONDS,
@@ -185,6 +186,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			dockerSocketPath: null,
 			emailOtpSignIn: null,
 			errorPages: null,
+			ipBans: null,
 			gitProviders: [],
 			id: SINGLETON_ID,
 			imageScanBlockFixableOnly: null,
@@ -335,6 +337,16 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	/** Persists the error pages' branding or text, merged over what's stored. */
 	async updateErrorPages(input: Partial<ErrorPagesSettings>): Promise<void> {
 		await this.persist({ errorPages: { ...this.row.errorPages, ...input } });
+	}
+
+	/** When a client address gets banned for hitting blocked paths, every unset field at its default. */
+	get ipBans(): IpBanSettings {
+		return withIpBanDefaults(this.row.ipBans);
+	}
+
+	/** Persists the IP ban settings. */
+	async updateIpBans(input: IpBanSettings): Promise<void> {
+		await this.persist({ ipBans: input });
 	}
 
 	/** Persists the base domain and auth origin/cookie overrides. */

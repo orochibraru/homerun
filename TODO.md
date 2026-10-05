@@ -17,14 +17,6 @@ When done delete the entry, no bloat.
 
 ## Medium
 
-- [ ] **[WIP]** Security: add a paths filter glob pattern matchers in the
-      security tab of a service to block access to certain pages. In the same
-      spirit, let's add the ability to filter paths for authentication. Let's
-      also add the ability to completely ban IPs if trying to access a blocked
-      pattern too many times. For patterns add presets such as Wordpress (wp-
-      stuff) or simply a default list with in it sensitive files (.env, .git,
-      .git-credentials)
-
 ## Large
 
 - [ ] **S3 storage service, the base for IaC state.** A dedicated S3 page where

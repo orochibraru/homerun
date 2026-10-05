@@ -2,7 +2,7 @@ export const ERROR_PAGE_PATH = "/homerun-error";
 
 const HOMERUN_URL = "https://orochibraru.com/homerun";
 
-export type ErrorPageKind = "notFound" | "notReady" | "unavailable";
+export type ErrorPageKind = "blocked" | "notFound" | "notReady" | "unavailable";
 
 export interface ErrorPageText {
 	message: string;
@@ -21,6 +21,7 @@ export const ERROR_PAGE_KINDS: { kind: ErrorPageKind; label: string }[] = [
 	{ kind: "notReady", label: "Not available yet" },
 	{ kind: "unavailable", label: "Temporarily unavailable" },
 	{ kind: "notFound", label: "Nothing here" },
+	{ kind: "blocked", label: "Blocked path" },
 ];
 
 export const DEFAULT_ERROR_PAGES: ErrorPagesSettings = {
@@ -28,6 +29,11 @@ export const DEFAULT_ERROR_PAGES: ErrorPagesSettings = {
 	brandName: "Homerun",
 	logoUrl: null,
 	pages: {
+		blocked: {
+			message:
+				"This address isn't available. If you think it should be, contact the site's owner.",
+			title: "Access denied",
+		},
 		notFound: {
 			message:
 				"There's no app at this address. Check the link, or come back later.",
@@ -46,6 +52,17 @@ export const DEFAULT_ERROR_PAGES: ErrorPagesSettings = {
 	},
 	showPoweredBy: true,
 };
+
+/** The host a request proxied by Traefik was sent to, from `X-Forwarded-Host` (else `Host`), without its port. */
+export function forwardedHost(headers: Headers): string | null {
+	return (
+		(headers.get("x-forwarded-host") ?? headers.get("host"))
+			?.split(",")[0]
+			?.trim()
+			.replace(/:\d+$/, "")
+			.toLowerCase() || null
+	);
+}
 
 const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
 
@@ -129,7 +146,9 @@ export function renderErrorPage(
 		? `<img class="logo" src="${escapeHtml(settings.logoUrl)}" alt="${brand}">`
 		: HOMERUN_MARK;
 	const refresh =
-		kind === "notFound" ? "" : `<meta http-equiv="refresh" content="15">`;
+		kind === "notReady" || kind === "unavailable"
+			? `<meta http-equiv="refresh" content="15">`
+			: "";
 	const poweredBy =
 		settings.showPoweredBy &&
 		settings.brandName !== DEFAULT_ERROR_PAGES.brandName

@@ -1,4 +1,5 @@
 import type { BuildMethod } from "#lib/build-methods.js";
+import type { AuthPathsMode } from "#lib/path-patterns.js";
 import type { PublishedPort } from "#lib/published-ports.js";
 import type { Service } from "#lib/server/db/schema.js";
 import type { runtimeOptionsFrom } from "#lib/service-runtime.js";
@@ -6,7 +7,10 @@ import type { PullPolicy } from "#lib/types.js";
 
 /** Fields a caller supplies to insert a new service row. */
 export interface NewServiceInput {
+	authPaths?: string[];
+	authPathsMode?: AuthPathsMode;
 	authRequired?: boolean;
+	blockedPaths?: string[];
 	/** Off by default for a database or cache image, which has no HTTP to probe and no public route to watch. */
 	uptimeEnabled?: boolean;
 	buildCacheRegistryId?: string | null;
@@ -68,8 +72,11 @@ export type ServiceUpdateInput = Partial<
 		| "authAllowedEmails"
 		| "authAllowedGroups"
 		| "authAllowedUserIds"
+		| "authPaths"
+		| "authPathsMode"
 		| "authProviders"
 		| "authRequired"
+		| "blockedPaths"
 		| "autoRollback"
 		| "buildCacheRegistryId"
 		| "buildCacheBuiltin"

@@ -72,6 +72,17 @@ service is served by Traefik directly, costs Homerun nothing per request, and
 keeps working while Homerun itself is down. Changing who's allowed, with the
 wall already on, still applies immediately.
 
+**Covering only some paths.** Under **Login wall paths** on the Security tab,
+**Covers** picks **Every path** (the default), **Only these paths** (say
+`/admin`, leaving the rest of the site public) or **Every path except these**
+(say `/api` and `/health`, for a public API or a health check behind an
+otherwise private app). Patterns use the same syntax as
+[blocked paths](blocked-paths-and-ip-bans.md#blocked-paths): one per line,
+matching whole path segments anywhere, `/` at the start to match from the root,
+`*` for anything. The wall's own sign-in callback always stays behind it. Like
+turning the wall on, saving a change redeploys a running service. Pull request
+previews keep their own wall on every path.
+
 The app itself receives the signed-in identity as `X-Homerun-User`,
 `X-Homerun-Email` and `X-Homerun-Name` request headers, which an app that
 supports proxy-header authentication can consume directly.

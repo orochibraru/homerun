@@ -627,6 +627,11 @@ a container that's stopping or not yet listening is skipped. The first update
 onto this version still runs the old updater script, so that one still has the
 gap.
 
+**Path-scoped walls**: `authPathsMode`/`authPaths` split the gated router in
+`buildContainerLabels` rather than teaching auth-check about paths, so an
+ungated path costs nothing per request (see `docker.md`, Blocked paths, login
+wall paths and IP bans). Saving them redeploys, like toggling the wall.
+
 **The policy columns** on `service` (all jsonb, all `[]` by default):
 `authProviders` (allowed sign-in methods, `"password"` for built-in credentials
 or `"oauth:<provider name>"`), plus `authAllowedUserIds`/`authAllowedEmails`/

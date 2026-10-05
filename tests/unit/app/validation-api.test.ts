@@ -173,3 +173,31 @@ describe("updateServiceApiBody preview branch filter", () => {
 		expect(issuePaths(bad)).toEqual(["previewBranchExclude"]);
 	});
 });
+
+describe("updateServiceApiBody path filters", () => {
+	test("blocked and login wall paths are trimmed and kept", () => {
+		expect(
+			updateServiceApiBody.parse({
+				authPaths: [" /admin "],
+				authPathsMode: "only",
+				blockedPaths: [".env", "*.sql"],
+			}),
+		).toEqual({
+			authPaths: ["/admin"],
+			authPathsMode: "only",
+			blockedPaths: [".env", "*.sql"],
+		});
+	});
+
+	test("a pattern matching every path, a bad mode or whitespace is refused", () => {
+		expect(
+			updateServiceApiBody.safeParse({ blockedPaths: ["/*"] }).success,
+		).toBe(false);
+		expect(updateServiceApiBody.safeParse({ authPaths: ["a b"] }).success).toBe(
+			false,
+		);
+		expect(
+			updateServiceApiBody.safeParse({ authPathsMode: "some" }).success,
+		).toBe(false);
+	});
+});

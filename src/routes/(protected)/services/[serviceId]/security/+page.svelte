@@ -5,7 +5,9 @@
 	import { title } from "#lib/store/title.js";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import BlockedPathsPanel from "./blocked-paths-panel.svelte";
 	import FindingsTable from "./findings-table.svelte";
+	import LoginWallPathsPanel from "./login-wall-paths-panel.svelte";
 	import ScanHistoryTable from "./scan-history-table.svelte";
 	import ScanPanel from "./scan-panel.svelte";
 
@@ -37,6 +39,20 @@
     oauthProviders={data.oauthProviders}
     svc={svc}
     users={data.users}
+  />
+
+  {#if svc.dnsResolvable}
+    <LoginWallPathsPanel
+      authPaths={svc.authPaths}
+      authPathsMode={svc.authPathsMode}
+      authRequired={svc.authRequired}
+    />
+  {/if}
+
+  <BlockedPathsPanel
+    blockedPageAvailable={data.blockedPageAvailable}
+    blockedPaths={svc.blockedPaths}
+    dnsResolvable={svc.dnsResolvable}
   />
 
   {#if !data.instanceScanEnabled}

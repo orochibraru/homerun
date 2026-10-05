@@ -5,6 +5,7 @@ const {
 	normalizeDestination,
 	normalizeSource,
 	redirectRegexFor,
+	REDIRECT_ROUTER_PRIORITY,
 	redirectsConfig,
 	splitSource,
 } = await import("../../../src/lib/redirects");
@@ -121,6 +122,7 @@ describe("redirectsConfig", () => {
 		expect(router.service).toBe("noop@internal");
 		expect(router.tls).toEqual({ certResolver: "le" });
 		expect(router.entryPoints).toEqual(["websecure"]);
+		expect(router.priority).toBe(REDIRECT_ROUTER_PRIORITY);
 		expect(
 			parsed.http.middlewares["homerun-redirect-abc"].redirectRegex.permanent,
 		).toBe(false);

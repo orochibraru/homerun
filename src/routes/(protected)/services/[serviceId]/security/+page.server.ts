@@ -4,6 +4,13 @@ import { ImageScanDTO } from "#lib/dto/image-scan-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
+import {
+	AUTH_PATHS_MODES,
+	authPathsProblem,
+	parsePathPatterns,
+	pathFiltersChanged,
+	pathPatternsProblem,
+} from "#lib/path-patterns.js";
 import { invalidateGatedService } from "#lib/server/gated-service-cache.js";
 import {
 	loginWallAvailability,
@@ -11,6 +18,7 @@ import {
 	parseLoginWallForm,
 } from "#lib/server/login-wall-form.js";
 import { DeploymentService } from "#lib/services/deploy.service.js";
+import { errorPagesPublished } from "#lib/services/docker/error-pages.js";
 import { ImageScanService } from "#lib/services/image-scan.service.js";
 import { resolve } from "$app/paths";
 
@@ -28,6 +36,7 @@ export const load = async ({ locals, params, parent }) => {
 	return {
 		...wall,
 		blockPolicy: settings.imageScanBlockPolicy,
+		blockedPageAvailable: errorPagesPublished(),
 		instanceScanEnabled: settings.imageScanEnabled,
 		isAdmin: locals.isAdmin,
 		scanning,
@@ -89,5 +98,66 @@ export const actions = {
 		);
 
 		return { authSuccess: true, redeploying };
+	},
+	updateBlockedPaths: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		const blockedPaths = parsePathPatterns(
+			String((await request.formData()).get("blockedPaths") ?? ""),
+		);
+		const problem = pathPatternsProblem(blockedPaths);
+		if (problem) {
+			return fail(400, { error: problem });
+		}
+		const before = { ...svc.toJSON() };
+		await svc.update({ blockedPaths });
+		const redeploying =
+			pathFiltersChanged(before, svc.toJSON()) &&
+			(await DeploymentService.redeployForRouting(svc, locals.user.id));
+		accessLogger.info(
+			`Blocked paths updated: service=${svc.id} count=${blockedPaths.length} user=${locals.user.id}`,
+		);
+		return { redeploying };
+	},
+	updateAuthPaths: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		const formData = await request.formData();
+		const authPathsMode = AUTH_PATHS_MODES.find(
+			(mode) => mode === formData.get("authPathsMode"),
+		);
+		if (!authPathsMode) {
+			return fail(400, { error: "Pick which paths the login wall covers." });
+		}
+		const authPaths = parsePathPatterns(
+			String(formData.get("authPaths") ?? ""),
+		);
+		const problem = pathPatternsProblem(authPaths);
+		if (problem) {
+			return fail(400, { error: problem });
+		}
+		const emptyPaths = authPathsProblem(authPathsMode, authPaths);
+		if (emptyPaths) {
+			return fail(400, { error: emptyPaths });
+		}
+		const before = { ...svc.toJSON() };
+		await svc.update({ authPaths, authPathsMode });
+		const redeploying =
+			pathFiltersChanged(before, svc.toJSON()) &&
+			(await DeploymentService.redeployForRouting(svc, locals.user.id));
+		accessLogger.info(
+			`Login wall paths updated: service=${svc.id} mode=${authPathsMode} count=${authPaths.length} user=${locals.user.id}`,
+		);
+		return { redeploying };
 	},
 };

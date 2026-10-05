@@ -19,7 +19,9 @@ Each redirect has:
   redirects, so start temporary while testing.
 - **Enabled**: off keeps the redirect around without serving it.
 
-Each source can only have one redirect.
+Each source can only have one redirect. A redirect on a hostname or path a
+service also routes wins over that service, its blocked paths and login wall
+included.
 
 ![Editing a redirect: its source, destination and three switches](images/redirects-edit.webp)
 

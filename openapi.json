@@ -2258,6 +2258,18 @@
 												},
 												"type": "array"
 											},
+											"authPaths": {
+												"description": "Path patterns authPathsMode applies to",
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"authPathsMode": {
+												"description": "Which paths the login wall covers: all, only authPaths, or all except them",
+												"enum": ["all", "only", "except"],
+												"type": "string"
+											},
 											"authProviders": {
 												"items": {
 													"type": "string"
@@ -2273,6 +2285,13 @@
 											"autoRollback": {
 												"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 												"type": "boolean"
+											},
+											"blockedPaths": {
+												"description": "Path patterns Traefik answers with a 403",
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
 											},
 											"buildSource": {
 												"enum": ["image", "git"],
@@ -2943,8 +2962,11 @@
 											"authAllowedEmails",
 											"authAllowedGroups",
 											"authAllowedUserIds",
+											"authPaths",
+											"authPathsMode",
 											"authProviders",
 											"authRequired",
+											"blockedPaths",
 											"autoRollback",
 											"buildSource",
 											"containerId",
@@ -3329,6 +3351,18 @@
 											},
 											"type": "array"
 										},
+										"authPaths": {
+											"description": "Path patterns authPathsMode applies to",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authPathsMode": {
+											"description": "Which paths the login wall covers: all, only authPaths, or all except them",
+											"enum": ["all", "only", "except"],
+											"type": "string"
+										},
 										"authProviders": {
 											"items": {
 												"type": "string"
@@ -3344,6 +3378,13 @@
 										"autoRollback": {
 											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 											"type": "boolean"
+										},
+										"blockedPaths": {
+											"description": "Path patterns Traefik answers with a 403",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"buildSource": {
 											"enum": ["image", "git"],
@@ -4009,8 +4050,11 @@
 										"authAllowedEmails",
 										"authAllowedGroups",
 										"authAllowedUserIds",
+										"authPaths",
+										"authPathsMode",
 										"authProviders",
 										"authRequired",
+										"blockedPaths",
 										"autoRollback",
 										"buildSource",
 										"containerId",
@@ -4346,6 +4390,18 @@
 											},
 											"type": "array"
 										},
+										"authPaths": {
+											"description": "Path patterns authPathsMode applies to",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authPathsMode": {
+											"description": "Which paths the login wall covers: all, only authPaths, or all except them",
+											"enum": ["all", "only", "except"],
+											"type": "string"
+										},
 										"authProviders": {
 											"items": {
 												"type": "string"
@@ -4361,6 +4417,13 @@
 										"autoRollback": {
 											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 											"type": "boolean"
+										},
+										"blockedPaths": {
+											"description": "Path patterns Traefik answers with a 403",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"buildSource": {
 											"enum": ["image", "git"],
@@ -5026,8 +5089,11 @@
 										"authAllowedEmails",
 										"authAllowedGroups",
 										"authAllowedUserIds",
+										"authPaths",
+										"authPathsMode",
 										"authProviders",
 										"authRequired",
+										"blockedPaths",
 										"autoRollback",
 										"buildSource",
 										"containerId",
@@ -5188,6 +5254,19 @@
 							"schema": {
 								"additionalProperties": false,
 								"properties": {
+									"authPaths": {
+										"description": "Path patterns authPathsMode applies to. A pattern matches whole path segments anywhere in the path, a leading / anchors it at the root, * matches anything and ? one character, case-insensitively.",
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"type": "array"
+									},
+									"authPathsMode": {
+										"description": "Which paths the login wall covers: all, only the authPaths, or all except them. Applied on the next deploy, which saving queues for a running service.",
+										"enum": ["all", "only", "except"],
+										"type": "string"
+									},
 									"authRequired": {
 										"type": "boolean"
 									},
@@ -5196,6 +5275,14 @@
 									},
 									"autoRollback": {
 										"type": "boolean"
+									},
+									"blockedPaths": {
+										"description": "Path patterns Traefik answers with a 403 instead of passing to the app, same syntax as authPaths. Applied on the next deploy, which saving queues for a running service.",
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"type": "array"
 									},
 									"buildSource": {
 										"enum": ["image", "git"],
@@ -5594,6 +5681,18 @@
 											},
 											"type": "array"
 										},
+										"authPaths": {
+											"description": "Path patterns authPathsMode applies to",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authPathsMode": {
+											"description": "Which paths the login wall covers: all, only authPaths, or all except them",
+											"enum": ["all", "only", "except"],
+											"type": "string"
+										},
 										"authProviders": {
 											"items": {
 												"type": "string"
@@ -5609,6 +5708,13 @@
 										"autoRollback": {
 											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 											"type": "boolean"
+										},
+										"blockedPaths": {
+											"description": "Path patterns Traefik answers with a 403",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"buildSource": {
 											"enum": ["image", "git"],
@@ -6274,8 +6380,11 @@
 										"authAllowedEmails",
 										"authAllowedGroups",
 										"authAllowedUserIds",
+										"authPaths",
+										"authPathsMode",
 										"authProviders",
 										"authRequired",
+										"blockedPaths",
 										"autoRollback",
 										"buildSource",
 										"containerId",
@@ -7279,8 +7388,24 @@
 													},
 													"type": "array"
 												},
+												"blockedPaths": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
 												"imageScanEnabled": {
 													"type": "boolean"
+												},
+												"loginPaths": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"loginPathsMode": {
+													"enum": ["all", "only", "except"],
+													"type": "string"
 												},
 												"loginProviders": {
 													"items": {
@@ -7296,7 +7421,10 @@
 												"allowedEmails",
 												"allowedGroups",
 												"allowedUserIds",
+												"blockedPaths",
 												"imageScanEnabled",
+												"loginPaths",
+												"loginPathsMode",
 												"loginProviders",
 												"loginRequired"
 											],

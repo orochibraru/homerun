@@ -1,7 +1,13 @@
 import { config } from "#lib/config.js";
+import { type AuthPathsMode, pathPatternsRegex } from "#lib/path-patterns.js";
+import { GATE_CALLBACK_PATH, GATE_LOGOUT_PATH } from "#lib/server/app-gate.js";
 import { serviceHostnames } from "#lib/service-domains.js";
 import { certResolverFor } from "./cert-resolver.ts";
-import { ERROR_PAGES_MIDDLEWARE } from "./error-pages.ts";
+import {
+	BLOCKED_PAGE_MIDDLEWARE,
+	ERROR_PAGES_MIDDLEWARE,
+	ERROR_PAGES_SERVICE,
+} from "./error-pages.ts";
 
 export const GATE_IDENTITY_HEADERS = [
 	"X-Homerun-User",
@@ -39,6 +45,10 @@ export function hasTraefikRouterFor(
 export const RETRY_ATTEMPTS = 4;
 export const RETRY_INITIAL_INTERVAL = "100ms";
 
+export const BLOCKED_ROUTER_PRIORITY = 9300;
+export const GATE_ROUTER_PRIORITY = 9200;
+export const AUTH_PATHS_ROUTER_PRIORITY = 9100;
+
 export const MANAGED_LABEL = "homerun.managed";
 export const SERVICE_ID_LABEL = "homerun.service.id";
 
@@ -61,9 +71,24 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
  * and Authorization headers so one session's pages are never served to
  * another. With `errorPages`, the instance's error pages middleware comes
  * first, so a 502, 503 or 504 shows the branded page instead of Traefik's.
+ *
+ * Each hostname also gets a `_blocked` router for `blockedPaths`, above
+ * every other one, answering 403 through the blocked page (`errorPages`) or
+ * a deny-everyone allowlist (without it). A gated service whose
+ * `authPathsMode` isn't `all` gets its wall split: a `_paths` router for the
+ * `authPaths` that carries the forwardAuth middleware (`only`) or is the one
+ * without it (`except`), and a `_gate` router keeping the wall's callback
+ * and logout paths behind forwardAuth whatever the patterns say. Every
+ * router of such a service that skips forwardAuth blanks the identity
+ * headers, so a visitor can't hand the app a forged `X-Homerun-User`. The
+ * `_` in these names never appears in a slug, so they can't collide with
+ * another service's routers.
  */
 export function buildContainerLabels(params: {
+	authPaths?: string[];
+	authPathsMode?: AuthPathsMode;
 	authRequired?: boolean;
+	blockedPaths?: string[];
 	errorPages?: boolean;
 	containerPort: number;
 	defaultDomainEnabled?: boolean;
@@ -108,12 +133,23 @@ export function buildContainerLabels(params: {
 	const cacheMiddleware = `${slug}-cache`;
 	const cached = Boolean(params.httpCacheTtl && config.traefik.httpCache);
 	const gated = params.authRequired === true;
-	const middlewares = [
-		...(params.errorPages ? [ERROR_PAGES_MIDDLEWARE] : []),
-		...(gated ? [authMiddleware] : []),
-		retryMiddleware,
-		...(cached ? [cacheMiddleware] : []),
-	].join(",");
+	const splitMode =
+		gated && params.authPathsMode !== "all" && params.authPaths?.length
+			? params.authPathsMode
+			: null;
+	const stripMiddleware = `${slug}_strip-identity`;
+	const chain = (withAuth: boolean) =>
+		[
+			...(params.errorPages ? [ERROR_PAGES_MIDDLEWARE] : []),
+			...(withAuth ? [authMiddleware] : []),
+			...(splitMode && !withAuth ? [stripMiddleware] : []),
+			retryMiddleware,
+			...(cached ? [cacheMiddleware] : []),
+		].join(",");
+	const denyMiddleware = `${slug}_deny`;
+	const blocked = params.blockedPaths?.length
+		? pathPatternsRegex(params.blockedPaths)
+		: null;
 	const labels: Record<string, string> = {
 		...baseLabels,
 		"traefik.docker.network": networkName,
@@ -132,6 +168,18 @@ export function buildContainerLabels(params: {
 			`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`
 		] = GATE_IDENTITY_HEADERS.join(",");
 	}
+	if (splitMode) {
+		for (const header of GATE_IDENTITY_HEADERS) {
+			labels[
+				`traefik.http.middlewares.${stripMiddleware}.headers.customrequestheaders.${header}`
+			] = "";
+		}
+	}
+	if (blocked && !params.errorPages) {
+		labels[
+			`traefik.http.middlewares.${denyMiddleware}.ipallowlist.sourcerange`
+		] = "127.0.0.1/32";
+	}
 	if (cached) {
 		const souin = `traefik.http.middlewares.${cacheMiddleware}.plugin.souin`;
 		labels[`${souin}.default_cache.ttl`] = `${params.httpCacheTtl}s`;
@@ -141,24 +189,76 @@ export function buildContainerLabels(params: {
 
 	hostnames.forEach((hostname, index) => {
 		const router = index === 0 ? slug : `${slug}-${index}`;
-		labels[`traefik.http.routers.${router}.rule`] = `Host(\`${hostname}\`)`;
-		labels[`traefik.http.routers.${router}.entrypoints`] =
-			config.traefik.entrypoint;
-		labels[`traefik.http.routers.${router}.tls`] = "true";
+		const host = `Host(\`${hostname}\`)`;
 		const port = params.domainPorts?.[hostname] ?? containerPort;
 		const service = port === containerPort ? slug : `${slug}-${port}`;
 		labels[`traefik.http.services.${service}.loadbalancer.server.port`] =
 			String(port);
-		labels[`traefik.http.routers.${router}.service`] = service;
-		labels[`traefik.http.routers.${router}.middlewares`] = middlewares;
 		const resolver = certResolverFor(
 			hostname,
 			config.traefik.certResolver,
 			config.pangolinEnabled,
 			config.traefik.instanceCertNames,
 		);
-		if (resolver) {
-			labels[`traefik.http.routers.${router}.tls.certresolver`] = resolver;
+		const route = ({
+			middlewares,
+			name,
+			priority,
+			rule,
+			target,
+		}: {
+			middlewares: string;
+			name: string;
+			priority?: number;
+			rule: string;
+			target: string;
+		}) => {
+			labels[`traefik.http.routers.${name}.rule`] = rule;
+			labels[`traefik.http.routers.${name}.entrypoints`] =
+				config.traefik.entrypoint;
+			labels[`traefik.http.routers.${name}.tls`] = "true";
+			labels[`traefik.http.routers.${name}.service`] = target;
+			labels[`traefik.http.routers.${name}.middlewares`] = middlewares;
+			if (priority) {
+				labels[`traefik.http.routers.${name}.priority`] = String(priority);
+			}
+			if (resolver) {
+				labels[`traefik.http.routers.${name}.tls.certresolver`] = resolver;
+			}
+		};
+
+		route({
+			middlewares: chain(gated && splitMode !== "only"),
+			name: router,
+			rule: host,
+			target: service,
+		});
+		if (splitMode && params.authPaths) {
+			route({
+				middlewares: chain(splitMode === "only"),
+				name: `${router}_paths`,
+				priority: AUTH_PATHS_ROUTER_PRIORITY,
+				rule: `${host} && PathRegexp(\`${pathPatternsRegex(params.authPaths)}\`)`,
+				target: service,
+			});
+			route({
+				middlewares: chain(true),
+				name: `${router}_gate`,
+				priority: GATE_ROUTER_PRIORITY,
+				rule: `${host} && (Path(\`${GATE_CALLBACK_PATH}\`) || Path(\`${GATE_LOGOUT_PATH}\`))`,
+				target: service,
+			});
+		}
+		if (blocked) {
+			route({
+				middlewares: params.errorPages
+					? BLOCKED_PAGE_MIDDLEWARE
+					: denyMiddleware,
+				name: `${router}_blocked`,
+				priority: BLOCKED_ROUTER_PRIORITY,
+				rule: `${host} && PathRegexp(\`${blocked}\`)`,
+				target: params.errorPages ? ERROR_PAGES_SERVICE : service,
+			});
 		}
 	});
 

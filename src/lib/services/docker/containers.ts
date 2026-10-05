@@ -1,5 +1,6 @@
 import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
+import type { AuthPathsMode } from "#lib/path-patterns.js";
 import {
 	type PublishedPort,
 	portBindings,
@@ -144,7 +145,10 @@ export interface CreateContainerParams {
 	// <slug>.<baseDomain>, subnet-only reachability. Defaults to true.
 	dnsResolvable?: boolean;
 	domainPorts?: Record<string, number>;
+	authPaths?: string[];
+	authPathsMode?: AuthPathsMode;
 	authRequired?: boolean;
+	blockedPaths?: string[];
 	httpCacheTtl?: number | null;
 	domains?: string[];
 	envVars: Record<string, string>;
@@ -259,7 +263,10 @@ export function containerCreateTemplate(params: CreateContainerParams) {
 		Labels: mergeLabels(
 			params.runtime?.labels,
 			buildContainerLabels({
+				authPaths: params.authPaths,
+				authPathsMode: params.authPathsMode,
 				authRequired: params.authRequired,
+				blockedPaths: params.blockedPaths,
 				containerPort: params.containerPort,
 				defaultDomainEnabled: params.defaultDomainEnabled,
 				dnsResolvable: isHostNetwork ? false : params.dnsResolvable,

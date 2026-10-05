@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,6 +11,35 @@ const logger = new Logger("ErrorPages");
 export const ERROR_PAGES_FILE = "homerun-error-pages.yml";
 
 export const ERROR_PAGES_MIDDLEWARE = "homerun-errors@file";
+
+export const ERROR_PAGES_SERVICE = "homerun-error-pages@file";
+
+export const BLOCKED_PAGE_MIDDLEWARE = "homerun-blocked@file";
+
+export const BLOCKED_PROOF_HEADER = "X-Homerun-Blocked";
+
+/**
+ * The value Traefik's `homerun-blocked` middleware sets on every request it
+ * sends to the blocked page, an HMAC of a fixed label with the auth secret.
+ * Only Traefik reads the file it's written to, so a request carrying it
+ * provably came through a blocked-paths router, and its last
+ * `X-Forwarded-For` hop is Traefik's own view of the client.
+ */
+export function blockedProofToken(secret: string): string {
+	return createHmac("sha256", secret)
+		.update("homerun-blocked-proof")
+		.digest("hex");
+}
+
+/** Whether `value` is the blocked-page proof for `secret`, compared in constant time. */
+export function validBlockedProof(
+	value: string | null,
+	secret: string,
+): boolean {
+	const expected = Buffer.from(blockedProofToken(secret));
+	const actual = Buffer.from(value ?? "");
+	return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
 
 /**
  * Where Traefik reaches this app for the error pages: the origin of the login
@@ -39,11 +69,15 @@ export function errorPagesPublished(): boolean {
  * Renders the Traefik dynamic config for the error pages: a catch-all router
  * at the lowest priority that sends any request no other router claims (a
  * service still deploying, a stopped one, an unknown host) to this app's 404
- * page, and the `homerun-errors` middleware every service's router carries,
- * which swaps a 502, 503 or 504 for the matching page.
+ * page, the `homerun-errors` middleware every service's router carries,
+ * which swaps a 502, 503 or 504 for the matching page, and the
+ * `homerun-blocked` middleware a service's blocked-paths router sends its
+ * requests through to the blocked page, stamping them with `proof` (see
+ * `blockedProofToken`).
  */
 export function errorPagesConfig(params: {
 	entrypoint: string;
+	proof: string;
 	target: string;
 }): string {
 	return `# Written by Homerun for its error pages : do not edit by hand.
@@ -62,6 +96,18 @@ http:
     homerun-fallback-page:
       replacePath:
         path: ${ERROR_PAGE_PATH}/404
+    homerun-blocked:
+      chain:
+        middlewares:
+          - homerun-blocked-page
+          - homerun-blocked-proof
+    homerun-blocked-page:
+      replacePath:
+        path: ${ERROR_PAGE_PATH}/blocked
+    homerun-blocked-proof:
+      headers:
+        customRequestHeaders:
+          ${BLOCKED_PROOF_HEADER}: "${params.proof}"
     homerun-errors:
       errors:
         status:
@@ -93,7 +139,11 @@ export async function syncErrorPages(): Promise<void> {
 		await mkdir(dir, { recursive: true });
 		await writeFile(
 			join(dir, ERROR_PAGES_FILE),
-			errorPagesConfig({ entrypoint: config.traefik.entrypoint, target }),
+			errorPagesConfig({
+				entrypoint: config.traefik.entrypoint,
+				proof: blockedProofToken(config.auth.secret),
+				target,
+			}),
 		);
 	} catch (err) {
 		logger.error("Couldn't publish the error pages config", err);
