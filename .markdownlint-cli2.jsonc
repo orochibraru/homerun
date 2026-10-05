@@ -9,6 +9,6 @@
 		},
 		"MD028": false
 	},
-	"fix": true,
+	"gitignore": true,
 	"ignores": ["node_modules", "dist", "CHANGELOG.md", "test-results", ".vale"]
 }
