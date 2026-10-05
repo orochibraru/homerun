@@ -105,7 +105,7 @@
           </Button>
         {/snippet}
       </PanelHeader>
-      <div class="grid gap-4 p-4 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+      <div class="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
         <ul class="flex flex-row flex-wrap gap-1 md:flex-col" aria-label="Files">
           {#each data.files as file (file.path)}
             <li>

@@ -11,8 +11,8 @@
 	const { class: className = "", code, html, label = "code" }: Props = $props();
 </script>
 
-<div class="code-block border-border bg-surface-2 relative rounded-lg border {className}">
-  <div class="absolute top-1.5 right-1.5">
+<div class="code-block border-border bg-surface-2 relative max-w-full min-w-0 overflow-hidden rounded-lg border {className}">
+  <div class="bg-surface-2 absolute top-1.5 right-1.5 z-10 rounded-md">
     <CopyButton {label} value={code} />
   </div>
   {@html html}

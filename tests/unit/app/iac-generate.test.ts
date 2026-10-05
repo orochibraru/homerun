@@ -173,6 +173,7 @@ describe("generateStructure", () => {
 			"stacks.tf",
 			"volumes.tf",
 			"variables.tf",
+			"terraform.tfvars",
 			"terraform.tfvars.example",
 			".gitignore",
 		]);
@@ -221,6 +222,52 @@ describe("generateStructure", () => {
 		expect(all).toContain("password     = var.ghcr_password");
 		expect(file("terraform.tfvars.example")).toContain('web_api_key = ""');
 		expect(file("README.md")).toContain("terraform.tfvars.example");
+	});
+
+	test("puts secret env var values in terraform.tfvars, never in the .tf files", () => {
+		expect(file("terraform.tfvars")).toContain('web_api_key = "secret"');
+		expect(
+			files
+				.filter((entry) => entry.path.endsWith(".tf"))
+				.some((entry) => entry.content.includes('"secret"')),
+		).toBe(false);
+	});
+
+	test("comments out secrets Homerun never returns, so Terraform asks for them", () => {
+		expect(file("terraform.tfvars")).toContain(
+			'# ghcr_password = "" # Homerun never returns it: fill it in',
+		);
+	});
+
+	test("masks the values in the preview a page shows", () => {
+		const tfvars = files.find((entry) => entry.path === "terraform.tfvars");
+		expect(tfvars?.preview).toContain('web_api_key = "••••••••"');
+		expect(tfvars?.preview).not.toContain('"secret"');
+		expect(files.filter((entry) => entry.preview).length).toBe(1);
+	});
+
+	test("escapes quotes and template sequences in a secret's value", () => {
+		const escaped = generateStructure(
+			{
+				homerun_service: [
+					{
+						envVars: { TOKEN: 'a"b${c}' },
+						id: "s9",
+						image: "nginx",
+						name: "Api",
+						secretEnvKeys: ["TOKEN"],
+						slug: "api",
+					},
+				],
+			},
+			{
+				backendAddress: null,
+				endpoint: "http://x",
+				generatedAt: new Date(0),
+				name: "Api",
+			},
+		).find((entry) => entry.path === "terraform.tfvars")?.content;
+		expect(escaped).toBe('api_token = "a\\"b$${c}"\n');
 	});
 
 	test("is stable and works without a backend or secrets", () => {

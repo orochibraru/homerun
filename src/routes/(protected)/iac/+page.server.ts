@@ -34,13 +34,17 @@ export const load = async ({ parent, url }) => {
 	return {
 		files: generated
 			? await Promise.all(
-					generated.files.map(async (file) => ({
-						...file,
-						html: await highlightCode(
-							file.content,
-							/\.tf$|\.tfvars/.test(file.path) ? "hcl" : "text",
-						),
-					})),
+					generated.files.map(async (file) => {
+						const shown = file.preview ?? file.content;
+						return {
+							content: shown,
+							html: await highlightCode(
+								shown,
+								/\.tf$|\.tfvars/.test(file.path) ? "hcl" : "text",
+							),
+							path: file.path,
+						};
+					}),
 				)
 			: null,
 		name: generated?.name ?? null,

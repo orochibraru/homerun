@@ -118,15 +118,21 @@ page, highlighted:
 - One `service_<name>.tf` per service, with its environments, dependencies and
   volume mounts, each next to its `import` block.
 - `stacks.tf` (stacks and status pages) and `volumes.tf`.
-- `variables.tf` and `terraform.tfvars.example`, when there are secrets to fill
-  in.
+- `variables.tf`, `terraform.tfvars` and `terraform.tfvars.example`, when there
+  are secrets.
 - A `README.md` with the steps below, and a `.gitignore` that keeps the state,
   `.terraform/` and `terraform.tfvars` out of git.
 
 Values a setting leaves at its default are left out. References between objects
-become Terraform references (`homerun_stack.apps.id`). Secrets the API never
-returns, and env vars marked secret, become sensitive variables: copy
-`terraform.tfvars.example` to `terraform.tfvars` and fill them in. Then:
+become Terraform references (`homerun_stack.apps.id`). No secret value is ever
+written in a `.tf` file: env vars marked secret, and secrets the API never
+returns, become sensitive variables. Their values go in `terraform.tfvars`: the
+env vars come filled in with what runs today, and each secret Homerun never
+reads back (a registry password, a provider's client secret) is a commented-out
+line to fill in, so Terraform asks for it instead of applying an empty value
+over the real one. The page shows that file with the values masked; the zip has
+them, so keep it private. `terraform.tfvars.example` is the same list, empty,
+safe to commit. Then:
 
 ```sh
 export HOMERUN_API_KEY=<an API key>

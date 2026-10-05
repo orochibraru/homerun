@@ -2,6 +2,7 @@ import {
 	expression,
 	type HclBlock,
 	type HclValue,
+	quote,
 	renderHcl,
 } from "#lib/iac/hcl.js";
 import {
@@ -186,27 +187,49 @@ function isEmpty(value: unknown): boolean {
 	);
 }
 
-interface RenderContext {
-	names: Map<string, Map<string, string>>;
-	variables: HclBlock[];
+interface SecretVariable {
+	description: string;
+	name: string;
+	type: "map(string)" | "string";
+	/** What it's set to today, null for a secret Homerun never reads back. */
+	value: string | null;
 }
 
-function variable(
-	context: RenderContext,
-	name: string,
-	description: string,
-	type = "string",
-) {
-	context.variables.push({
-		attributes: [
-			["description", description],
-			["sensitive", true],
-			["type", expression(type)],
-		],
-		labels: [name],
-		type: "variable",
-	});
-	return expression(`var.${name}`);
+interface RenderContext {
+	names: Map<string, Map<string, string>>;
+	variables: SecretVariable[];
+}
+
+function variable(context: RenderContext, input: SecretVariable) {
+	context.variables.push(input);
+	return expression(`var.${input.name}`);
+}
+
+const MASK = "••••••••";
+
+/**
+ * A tfvars file: each secret's value, or for one Homerun can't read back
+ * (or `mask`ed ones, for showing on a page) a placeholder. A placeholder is
+ * commented out when the value is unknown, so Terraform asks for it rather
+ * than applying an empty secret over the real one.
+ */
+function tfvars(
+	variables: SecretVariable[],
+	mode: "example" | "masked" | "values",
+): string {
+	const empty = (variable: SecretVariable) =>
+		variable.type === "map(string)" ? "{}" : '""';
+	return `${variables
+		.map((variable) => {
+			if (mode === "example") {
+				return `${variable.name} = ${empty(variable)}`;
+			}
+			if (variable.value === null) {
+				return `# ${variable.name} = ${empty(variable)} # Homerun never returns it: fill it in`;
+			}
+			return `${variable.name} = ${quote(mode === "masked" ? MASK : variable.value)}`;
+		})
+		.join("\n")}\n`;
 }
 
 function envVarsValue(
@@ -222,11 +245,12 @@ function envVarsValue(
 		Object.entries(vars).map(([envKey, value]) => [
 			envKey,
 			secretKeys.has(envKey)
-				? variable(
-						context,
-						`${localName}_${terraformName(envKey)}`,
-						`${envKey} of ${localName}`,
-					)
+				? variable(context, {
+						description: `${envKey} of ${localName}`,
+						name: `${localName}_${terraformName(envKey)}`,
+						type: "string",
+						value,
+					})
 				: value,
 		]),
 	);
@@ -243,12 +267,12 @@ function attributeValue(
 	}
 	if (attribute.writeOnly) {
 		return attribute.required
-			? variable(
-					context,
-					`${localName}_${attribute.tf}`,
-					`${attribute.tf} of ${localName}`,
-					attribute.kind === "stringMap" ? "map(string)" : "string",
-				)
+			? variable(context, {
+					description: `${attribute.tf} of ${localName}`,
+					name: `${localName}_${attribute.tf}`,
+					type: attribute.kind === "stringMap" ? "map(string)" : "string",
+					value: null,
+				})
 			: undefined;
 	}
 	const value = object[attribute.name];
@@ -320,6 +344,8 @@ function terraformBlock(options: GenerateOptions): HclBlock {
 export interface GeneratedFile {
 	content: string;
 	path: string;
+	/** What a page may show instead of `content`, when `content` carries secrets. */
+	preview?: string;
 }
 
 const SERVICE_OWNED = new Set([
@@ -359,7 +385,7 @@ function readme(
 		`Export a Homerun API key: \`export HOMERUN_API_KEY=<key>\`${hasBackend ? " (and the same key as `TF_HTTP_PASSWORD`, for the state backend)" : ""}.`,
 		...(hasVariables
 			? [
-					"Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in the secrets Homerun never reads back.",
+					"`terraform.tfvars` holds the secrets: env vars marked secret come filled in with what runs today, and the commented-out lines are secrets Homerun never reads back, to fill in. Keep it out of git (the `.gitignore` does); `terraform.tfvars.example` is the shareable, empty copy.",
 				]
 			: []),
 		"Run `terraform init`, then `terraform plan`: the `import` blocks adopt what already runs, so the plan only imports.",
@@ -383,7 +409,9 @@ function readme(
  * block, so `terraform plan` adopts them instead of creating new ones,
  * spread over one file per service, `stacks.tf` and `volumes.tf`. Values the
  * API never returns (passwords, keys) and env vars marked secret become
- * sensitive variables, with a `terraform.tfvars.example` listing them.
+ * sensitive variables, set in `terraform.tfvars` (with the env vars' current
+ * values, and a masked `preview` for a page) and listed empty in
+ * `terraform.tfvars.example`.
  * Files and the objects in them come in a fixed order, so two runs on the
  * same instance match.
  */
@@ -444,19 +472,27 @@ export function generateStructure(
 	];
 	if (hasVariables) {
 		files.push(
-			{ content: renderHcl(context.variables), path: "variables.tf" },
 			{
-				content: `${context.variables
-					.map((block) => {
-						const type = block.attributes.find(([key]) => key === "type")?.[1];
-						const isMap =
-							typeof type === "object" &&
-							type !== null &&
-							"expression" in type &&
-							String(type.expression).startsWith("map");
-						return `${block.labels[0]} = ${isMap ? "{}" : '""'}`;
-					})
-					.join("\n")}\n`,
+				content: renderHcl(
+					context.variables.map((secret) => ({
+						attributes: [
+							["description", secret.description],
+							["sensitive", true],
+							["type", expression(secret.type)],
+						],
+						labels: [secret.name],
+						type: "variable",
+					})),
+				),
+				path: "variables.tf",
+			},
+			{
+				content: tfvars(context.variables, "values"),
+				path: "terraform.tfvars",
+				preview: tfvars(context.variables, "masked"),
+			},
+			{
+				content: tfvars(context.variables, "example"),
 				path: "terraform.tfvars.example",
 			},
 		);
