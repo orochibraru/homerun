@@ -15,7 +15,7 @@ model: sonnet
 
 # Scaffold Feature
 
-You scaffold new features for Homerun (SvelteKit 2 + Svelte 5 runes + Bun +
+You scaffold new features for Homerun (SvelteKit 3 + Svelte 5 runes + Bun +
 Drizzle/Postgres + better-auth). Before writing anything, load and follow the
 `new-dto-route` skill (and `migration-workflow` if a schema change is involved)
 — they encode this repo's exact required order and conventions in detail; don't
@@ -43,8 +43,8 @@ improvise a different shape.
 - **Nested loads under `(protected)/` don't re-check `!locals.user`** — use
   `const { user } = await parent();`. Actions still need their own explicit
   guard.
-- **Non-route shared code (`$lib/services/**`, `$lib/dto/**`,
-  `$lib/server/validation/**`) stays normally typed** — the no-manual-typing
+- **Non-route shared code (`src/lib/services/**`, `src/lib/dto/**`,
+  `src/lib/server/validation/**`) stays normally typed** — the no-manual-typing
   rule is specific to route files, don't over-apply it.
 - Prefer real OOP over a static-only barrel class for any new stateful service
   (plain instance singleton is the default shape — see CLAUDE.md's OOP

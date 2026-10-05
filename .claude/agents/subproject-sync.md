@@ -62,7 +62,7 @@ job type moved to the Go worker (see `worker.md`), and
 `agentBuild` calls over HTTP for an agent-mode-hosted one. Changing the build
 pipeline is a normal single-package Go change now, not a two-sided sync — just
 re-run `tests/unit/app/agent-builder-parity.test.ts` (checks
-`$lib/build-methods` against `builder-tools.json`, the app-side form options,
+`src/lib/build-methods` against `builder-tools.json`, the app-side form options,
 all that's left in TS) and `tests/unit/go/internal/agent/builders_test.go`/
 `tests/unit/go/internal/jobs/deploy`'s own tests.
 
@@ -94,13 +94,13 @@ else through as raw JSON.
 
 `bun run gen` still regenerates OpenAPI types from the root `openapi.json`
 (which `scripts/generate-openapi.ts` builds from source,
-`$lib/openapi/build.ts`, the same document `/api/v1/openapi.json` serves), but
-they land at `tests/integration/support/openapi-types.ts` now, feeding only
+`src/lib/openapi/build.ts`, the same document `/api/v1/openapi.json` serves),
+but they land at `tests/integration/support/openapi-types.ts` now, feeding only
 `tests/integration/support/client.ts`, not this CLI. `cmd/cli/generated/` no
 longer exists.
 
 **If you change any route under `src/routes/api/v1/`** (new endpoint, changed
-request/response shape, changed `$lib/openapi/registry.ts`/`schemas.ts`),
+request/response shape, changed `src/lib/openapi/registry.ts`/`schemas.ts`),
 regenerate with `bun run gen` from the repo root (no running instance needed)
 and keep the regenerated `openapi.json`, `homerun.schema.json` and
 `tests/integration/support/openapi-types.ts` in the change. Then check whether

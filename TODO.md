@@ -12,10 +12,6 @@ When done delete the entry, no bloat.
       lines and below-threshold coverage rows first, so the next failure names
       it: fix that test then.
 
-- [ ] `.claude/agents/repo-gate.md`, `scaffold-feature.md` and
-      `subproject-sync.md` still say `$lib` and "SvelteKit 2"; update them to
-      `#lib/...js` imports and SvelteKit 3.
-
 - [ ] `src/app.html` declares `lang="fr"` while the whole UI is English, so
       screen readers read every page with French pronunciation. Set it to `en`.
 

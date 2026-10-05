@@ -39,8 +39,8 @@ suggestion.
    `./cmd/... ./internal/... ./tests/unit/go/...` (covering `cmd/worker/`
    including its agent mode, `cmd/cli/`, `cmd/installer/` and every shared
    `internal/` library) plus `tsc` over `scripts/`; if a REST API route,
-   `$lib/openapi/` or `config.ts` changed, confirm `bun run gen` leaves no diff
-   in `openapi.json`, `homerun.schema.json` or
+   `src/lib/openapi/` or `config.ts` changed, confirm `bun run gen` leaves no
+   diff in `openapi.json`, `homerun.schema.json` or
    `tests/integration/support/openapi-types.ts`.
 4. Run the unit tests for what changed: `bun run test` (seconds, unit only), or
    scope it with
@@ -89,11 +89,11 @@ narrow, specific triggers:
   `async <name>Callback()` that throws on failure plus an outer
   `toast.promise(...)` wrapper (see `auth/sign-in/+page.svelte`); a
   `use:enhance` form uses `enhanceToast({...})` (or `saveToast(...)`) from
-  `$lib/toast.ts`, with pending-state resets in its `onSettled` hook. Only three
-  exceptions: a synchronous result with nothing to await (a clipboard copy,
-  `env-paste-button.svelte`'s parse), a background load that renders its own
-  inline spinner (`loadRepos()`), and a long-lived stream reporting through an
-  inline banner (the Terminal tab).
+  `src/lib/toast.ts`, with pending-state resets in its `onSettled` hook. Only
+  three exceptions: a synchronous result with nothing to await (a clipboard
+  copy, `env-paste-button.svelte`'s parse), a background load that renders its
+  own inline spinner (`loadRepos()`), and a long-lived stream reporting through
+  an inline banner (the Terminal tab).
 - **Any comment added by the diff, except JSDoc on functions** — no explanatory
   line comments, no header banners, no prose in YAML/compose/shell files. A
   `/** ... */` block directly above a class method or exported function is the
