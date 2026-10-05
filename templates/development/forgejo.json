@@ -3,7 +3,7 @@
 	"name": "Forgejo",
 	"description": "Community-run Gitea fork: repositories, issues, pull requests, packages and Actions. Shows a setup wizard on first visit (SQLite works out of the box). Git over SSH on host port 2223.",
 	"image": "codeberg.org/forgejo/forgejo",
-	"tag": "11",
+	"tag": "16",
 	"containerPort": 3000,
 	"icon": "di:forgejo",
 	"tags": ["git", "forge", "ci", "code"],
