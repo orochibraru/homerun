@@ -947,6 +947,7 @@ export const service = pgTable(
 			() => buildCacheRegistry.id,
 			{ onDelete: "set null" },
 		),
+		buildCacheBuiltin: boolean("build_cache_builtin").default(false).notNull(),
 		// A remote host to run the git-build step on instead of this one
 		// (null : build locally). The built image only exists on the build
 		// server's own daemon, so deployService requires buildCacheRegistryId
@@ -1874,6 +1875,7 @@ export const statusPageService = pgTable(
 	"status_page_service",
 	{
 		id: text("id").primaryKey(),
+		includeChildren: boolean("include_children").notNull().default(false),
 		serviceId: text("service_id")
 			.notNull()
 			.references(() => service.id, { onDelete: "cascade" }),

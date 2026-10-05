@@ -5,7 +5,7 @@ machine builds it.
 
 ## Deploy source: image or git repo
 
-![The Source tab of a service built from a git repository](images/source-git.webp)
+![Environments & Deployments → Source for a service built from a git repository](images/source-git.webp)
 
 Every service is either:
 
@@ -19,9 +19,10 @@ Every service is either:
 
 ## Build methods
 
-![The Source tab's build method picker, open on the six methods](images/source-build-methods.webp)
+![The Source section's build method picker, open on the six methods](images/source-build-methods.webp)
 
-A git-based service picks how it's built on the Source tab (and in the wizard):
+A git-based service picks how it's built in its **Environments & Deployments →
+Source** section (and in the wizard):
 
 - **Dockerfile** (the default): the repo's `Dockerfile`, or the path you set,
   relative to the build context, built with BuildKit
@@ -65,22 +66,25 @@ Homerun Agent, as long as a Docker connection's socket lives at
 read a build cache registry's layer cache; buildpacks keep theirs in
 `pack-cache-*` volumes on the build host.
 
-Toggle between the two on the **Source** tab (also available on the New Service
-wizard). Any git-clone-able HTTPS URL works, GitHub, GitLab, a self-hosted
-Gitea, anywhere, since cloning doesn't need a provider-specific API. If you've
-connected a git provider account (`/git-providers`, OAuth), the Source tab gets
-a repo-browsing picker instead of pasting a raw URL; a private repo can also
-fall back to a token embedded directly in the URL (`https://TOKEN@host/...`)
-without connecting a provider at all.
+Toggle between the two in the **Source** section (also available on the New
+Service wizard). Any git-clone-able HTTPS URL works, GitHub, GitLab, a
+self-hosted Gitea, anywhere, since cloning doesn't need a provider-specific API.
+If you've connected a git provider account (`/git-providers`, OAuth), the Source
+section gets a repo-browsing picker instead of pasting a raw URL; a private repo
+can also fall back to a token embedded directly in the URL
+(`https://TOKEN@host/...`) without connecting a provider at all.
 
 ## Build servers and build cache
 
-![The Source tab's build context, build cache registry and build server fields](images/source-build-servers.webp)
+![The Source section's build context, build cache registry and build server fields](images/source-build-servers.webp)
 
-By default a git build runs on this host. Two optional pickers on the Source tab
-change that:
+By default a git build runs on this host. Two optional pickers in the Source
+section change that:
 
-- **Build cache registry**, a registry credential registered under
+- **Build cache registry**: **Built-in registry** uses Homerun's own
+  [registry](registry.md), started on first use, for builds on this host (a
+  build server builds without a cache with it). Its caches survive the
+  registry's daily cleanup. Or pick a registry credential registered under
   `/build-cache-registries`. Dockerfile, Docker Bake and Railpack builds use it
   as a BuildKit registry cache: `--cache-from`/`--cache-to type=registry` at
   `<registry>/homerun-build-<slug>:buildcache`, `mode=max` so intermediate

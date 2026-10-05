@@ -1,4 +1,5 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { buildCacheChoice } from "#lib/build-cache.js";
 import { config } from "#lib/config.js";
 import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
 import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
@@ -489,8 +490,7 @@ async function createServiceFromForm(
 		domains: input.domain ? [input.domain] : [],
 		networkMode: input.networkMode,
 		portProtocol: input.portProtocol,
-		buildCacheRegistryId:
-			input.buildSource === "git" ? input.buildCacheRegistryId || null : null,
+		...buildCacheChoice(input),
 		buildSource: input.buildSource,
 		containerPort: input.containerPort,
 		cpuLimit: input.cpuLimit || null,

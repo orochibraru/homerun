@@ -68,10 +68,10 @@ bun run dev
 ```
 
 Open `http://localhost:5173`. `docker compose up -d` publishes ports 80, 443 and
-5432; Traefik also gets the request-metrics flags the Monitoring tab reads and a
-bind mount of `./traefik-dynamic` (ignored by git, where the app writes the
-instance and per-service TLS config, via `TRAEFIK_DYNAMIC_CONFIG_DIR` in
-`.env.example`). A Traefik container created before those flags existed needs
+5432; Traefik also gets the request-metrics flags Monitoring reads and a bind
+mount of `./traefik-dynamic` (ignored by git, where the app writes the instance
+and per-service TLS config, via `TRAEFIK_DYNAMIC_CONFIG_DIR` in `.env.example`).
+A Traefik container created before those flags existed needs
 `docker compose up -d --force-recreate traefik`. The app itself creates the
 image mirror (`homerun-mirror`, `127.0.0.1:5055`) on first deploy, so that port
 has to be free; compose doesn't run it. Migrations in `drizzle/` apply

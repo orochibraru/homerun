@@ -35,16 +35,18 @@ import {
 	StatusChecksFailedError,
 } from "./deploy/status-check-step.ts";
 import { deployWorkerSpec } from "./deploy/worker-spec.ts";
+import { MIRROR_HOST_PORT } from "./docker/image-scan-refs.ts";
 import { authCheckUrlFor, loginWallDrifted } from "./docker/labels.ts";
 import { RolloutFailedError } from "./docker/rollout.ts";
 import { DockerService } from "./docker.service.ts";
+import { GitHubReportService } from "./github-report.service.ts";
 import { ImageScanBlockedError } from "./image-scan.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { imageScanMessage } from "./notification-messages.ts";
-import { PullRequestReportService } from "./pull-request-report.service.ts";
 import type { JobResult } from "./queue/handlers.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
+import { RegistryService } from "./registry.service.ts";
 import { RevisionHealthService } from "./revision-health.service.ts";
 import { ScheduledBellDigest } from "./scheduled-bell-digest.ts";
 
@@ -173,6 +175,14 @@ class DeploymentServiceClass {
 		const settings = await InstanceSettingsDTO.get();
 		const isGitBuild = svc.buildSource === "git" && !revision;
 
+		let buildServer: BuildServer | null = null;
+		if (isGitBuild && svc.buildServerRemoteHostId) {
+			const target = await RemoteHostDTO.resolveBuildTarget(
+				svc.buildServerRemoteHostId,
+			);
+			buildServer = target.kind === "local" ? null : target;
+		}
+
 		const cacheRegistryRow =
 			isGitBuild && svc.buildCacheRegistryId
 				? await BuildCacheRegistryDTO.get(svc.buildCacheRegistryId)
@@ -183,15 +193,9 @@ class DeploymentServiceClass {
 					registryUrl: cacheRegistryRow.registryUrl,
 					username: cacheRegistryRow.username,
 				}
-			: null;
-
-		let buildServer: BuildServer | null = null;
-		if (isGitBuild && svc.buildServerRemoteHostId) {
-			const target = await RemoteHostDTO.resolveBuildTarget(
-				svc.buildServerRemoteHostId,
-			);
-			buildServer = target.kind === "local" ? null : target;
-		}
+			: isGitBuild && svc.buildCacheBuiltin && !buildServer
+				? await this.#builtinCacheRegistry()
+				: null;
 
 		return resolveDeployPlan({
 			buildServer,
@@ -237,7 +241,7 @@ class DeploymentServiceClass {
 			status: "failed",
 		});
 		logger.error(`Deploy failed: service=${svc.id} deployment=${dep.id}`, err);
-		PullRequestReportService.deployed(svc, dep, false);
+		GitHubReportService.deployed(svc, dep, false);
 		if (checksFailed) {
 			await notifyStatusChecksFailed(svc, err);
 			return errorMessage;
@@ -264,15 +268,15 @@ class DeploymentServiceClass {
 	 * Post-start bookkeeping once the container/swarm service is running :
 	 * marks the service and deployment rows running, clears any dismissed
 	 * error state on the service, clears the live health state of every
-	 * revision this one supersedes, appends the closing log line, and syncs
-	 * DNS for the service's hostname(s). Doesn't notify : the caller
+	 * revision this one supersedes and appends the closing log line (DNS for
+	 * the service's hostnames was synced when the deploy started, see
+	 * `prepareWorkerDeploy`). Doesn't notify : the caller
 	 * (`finalizeWorkerDeploy`) does that itself once this returns.
 	 */
 	async #recordSuccess(
 		ctx: DeployContext,
 		ids: { containerId?: string; swarmServiceId?: string },
 		resolved: ResolvedImage,
-		stack: StackDTO | null,
 	): Promise<void> {
 		const { dep, svc } = ctx;
 		const { containerId, swarmServiceId } = ids;
@@ -303,8 +307,6 @@ class DeploymentServiceClass {
 		logger.info(
 			`Deploy succeeded: service=${svc.id} container=${containerId ?? swarmServiceId} deployment=${dep.id}`,
 		);
-
-		await syncAutoDns(svc, stack, dep);
 	}
 
 	/** Sends the in-app and channel notifications for a deploy that reached "running". */
@@ -323,7 +325,33 @@ class DeploymentServiceClass {
 			});
 		}
 		NotificationChannelService.notifyDeploy({ dep, ok: true, svc, trigger });
-		PullRequestReportService.deployed(svc, dep, true);
+		GitHubReportService.deployed(svc, dep, true);
+	}
+
+	/**
+	 * The built-in registry as a local build's cache, on this host's loopback
+	 * port (BuildKit's builder is host-networked and treats a loopback
+	 * registry as plain HTTP). A build server never uses it: it would turn the
+	 * registry's public hostname into the image transfer too. Starts the
+	 * registry when it isn't running yet; when it can't, the build goes ahead
+	 * without a cache, the way a missing cache always has.
+	 */
+	async #builtinCacheRegistry(): Promise<CacheRegistryCredentials | null> {
+		try {
+			await DockerService.ensureImageMirror();
+		} catch (err) {
+			logger.warn(
+				"Couldn't start the built-in registry, building without a cache",
+				err,
+			);
+			return null;
+		}
+		const credentials = await RegistryService.internalCredentials();
+		return {
+			password: credentials?.password ?? "",
+			registryUrl: `127.0.0.1:${MIRROR_HOST_PORT}`,
+			username: credentials?.username ?? "",
+		};
 	}
 
 	/**
@@ -391,6 +419,7 @@ class DeploymentServiceClass {
 			const plan = await this.#loadDeployPlan(svc, revision);
 			await dep.appendLog(phaseLine("volumes"));
 			const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
+			await syncAutoDns(svc, stack, dep);
 			await dep.appendLog(phaseLine("image"));
 			return await deployWorkerSpec({ ...ctx, mounts, noCache, plan, stack });
 		} catch (err) {
@@ -505,18 +534,12 @@ class DeploymentServiceClass {
 			containerId: outcome.containerId || undefined,
 			swarmServiceId: outcome.swarmServiceId || undefined,
 		};
-		const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
-		await this.#recordSuccess(
-			ctx,
-			ids,
-			{
-				digest: outcome.digest || null,
-				image: outcome.image,
-				imageId: outcome.imageId || null,
-				tag: outcome.tag ?? "",
-			},
-			stack,
-		);
+		await this.#recordSuccess(ctx, ids, {
+			digest: outcome.digest || null,
+			image: outcome.image,
+			imageId: outcome.imageId || null,
+			tag: outcome.tag ?? "",
+		});
 		this.watchHealth(dep.id, svc.id, userId);
 		this.#notifySuccess(dep, svc, trigger);
 		return { containerId: ids.containerId ?? null, deploymentId: dep.id };

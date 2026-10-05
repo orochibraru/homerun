@@ -1,0 +1,1 @@
+ALTER TABLE "status_page_service" ADD COLUMN "include_children" boolean DEFAULT false NOT NULL;

@@ -115,6 +115,17 @@ class ReleaseChannelServiceClass {
 		userId: string,
 	): Promise<void> {
 		const before = { ...parent.toJSON() };
+		if (
+			settings.enabled &&
+			!before.channelsEnabled &&
+			(await ServiceGitDTO.listEnvironments(parent.id)).some(
+				(environment) => environment.toJSON().environmentName === "canary",
+			)
+		) {
+			throw new ReleaseChannelError(
+				"This service has a canary environment: delete it before turning release channels on, their canary takes its place.",
+			);
+		}
 		const existing = await ServiceGitDTO.getCanary(parent.id);
 		const { branch, canaryDomain, tagPattern } = await this.#resolveSettings(
 			parent,

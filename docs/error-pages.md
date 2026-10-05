@@ -44,6 +44,10 @@ Every service deployed since carries that middleware. A service that was already
 running picks it up on its next deploy; until then, Traefik's own gateway errors
 still show for it, while the 404 pages work for every host straight away.
 
+A service's DNS record (or Pangolin resource) is created when its deploy starts,
+not when it finishes, so the address already reaches Traefik, and the "not
+available yet" page, while the first deploy builds.
+
 Without a dynamic config directory, nothing changes and Traefik keeps its own
 pages. On a fresh hostname with no certificate yet (one issued over the HTTP
 challenge), the browser warns about the certificate before showing the page; a

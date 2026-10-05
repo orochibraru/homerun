@@ -91,11 +91,11 @@
 				svc.name,
 				svc.slug,
 				svc.image,
-				...(previews.get(svc.id) ?? []).flatMap((p) => [
-					p.name,
-					p.title ?? "",
-					p.branch ?? "",
-				]),
+				...(previews.get(svc.id) ?? []).flatMap((p) =>
+					p.kind === "preview"
+						? [p.name, p.title ?? "", p.branch ?? ""]
+						: [p.name, p.kind === "environment" ? p.environment : ""],
+				),
 			]
 				.join(" ")
 				.toLowerCase()

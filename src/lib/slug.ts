@@ -56,3 +56,13 @@ export function stackScopedSlug(
 	}
 	return `${stackSlug}-${slug}`.slice(0, MAX_SLUG_LENGTH).replace(/-+$/, "");
 }
+
+/**
+ * The slug of a service derived from `parentSlug` (a canary, a preview, an
+ * environment): `<parent>-<suffix>`, with the parent slug cut short so the
+ * whole thing stays a valid 63 character DNS label.
+ */
+export function childSlug(parentSlug: string, suffix: string): string {
+	const tail = `-${suffix}`;
+	return `${parentSlug.slice(0, 63 - tail.length).replace(/-+$/, "")}${tail}`;
+}

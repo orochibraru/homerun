@@ -1,0 +1,1 @@
+ALTER TABLE "service" ADD COLUMN "build_cache_builtin" boolean DEFAULT false NOT NULL;

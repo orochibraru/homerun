@@ -6,6 +6,11 @@ import "strings"
 // pinned under, so the registry's own untagged sweep doesn't reap it.
 const KeepTagPrefix = "homerun-keep-"
 
+// BuildCacheTag is the tag a git build's BuildKit layer cache is exported
+// under when Homerun's own registry is the build cache. It's no service's
+// image, so the keep set never lists it, and it's always kept.
+const BuildCacheTag = "buildcache"
+
 // KeepSet is what a garbage-collection pass must keep: whole tags (whatever
 // digest they point at now) and specific digests.
 type KeepSet struct {
@@ -43,7 +48,7 @@ func key(repository, value string) string {
 }
 
 // PlanGC diffs the registry's inventory against keep: every manifest not kept
-// is deleted, every kept digest with no tag in a known repository gets a pin,
+// (and not a build cache, see BuildCacheTag) is deleted, every kept digest with no tag in a known repository gets a pin,
 // and every repository with no surviving manifest is reported as emptied.
 func PlanGC(inventory []Tag, repositories []string, keep KeepSet) Plan {
 	keptTags := map[string]bool{}
@@ -57,7 +62,7 @@ func PlanGC(inventory []Tag, repositories []string, keep KeepSet) Plan {
 	tagged := map[string]bool{}
 	for _, entry := range inventory {
 		tagged[key(entry.Repository, entry.Digest)] = true
-		if keptTags[key(entry.Repository, entry.Tag)] {
+		if keptTags[key(entry.Repository, entry.Tag)] || entry.Tag == BuildCacheTag {
 			keptDigests[key(entry.Repository, entry.Digest)] = true
 		}
 	}

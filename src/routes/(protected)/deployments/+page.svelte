@@ -142,7 +142,10 @@
                     <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
                       <a
                         class="text-text hover:text-accent font-medium"
-                        href="{resolve('services')}/{dep.serviceId}/revisions?deployment={dep.id}"
+                        href={resolve(
+                          "/(protected)/services/[serviceId]/environments/revisions/[revisionId]",
+                          { revisionId: dep.id, serviceId: dep.serviceId },
+                        )}
                         onclick={(event) => event.stopPropagation()}
                       >
                         {dep.serviceName}

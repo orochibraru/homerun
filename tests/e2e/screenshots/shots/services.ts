@@ -33,7 +33,14 @@ async function patchService(
 }
 
 export const shots: ShotModule = {
-	setup: async (page) => {
+	setup: async (page, seeded) => {
+		const revisions = await page.request.get(
+			`/api/v1/services/${seeded.serviceIds.web}/revisions`,
+		);
+		expect(revisions.ok(), "listing web's revisions").toBeTruthy();
+		created.webRevision =
+			((await revisions.json()) as { id: string }[])[0]?.id ?? "";
+
 		created.storefront = await createService(page, {
 			autoDeployOnPush: true,
 			buildSource: "git",
@@ -49,7 +56,7 @@ export const shots: ShotModule = {
 		});
 		await postAction(
 			page,
-			`/services/${created.storefront}/previews?/updatePreviews`,
+			`/services/${created.storefront}/environments/previews?/updatePreviews`,
 			{
 				previewBranchExclude: "dependabot/*\nrenovate/*",
 				previewBranchInclude: "",
@@ -58,10 +65,24 @@ export const shots: ShotModule = {
 				previewDomainTemplate: "pr-{pr}.preview.example.com",
 				previewEnvOverrides: "DATABASE_URL=postgres://app@db/app_pr_{pr}",
 				previewInheritEnv: "on",
-				previewReportGithub: "on",
 				previewsEnabled: "on",
 			},
 		);
+		for (const [name, ref] of [
+			["demo", "demo"],
+			["dev", "develop"],
+		]) {
+			await postAction(
+				page,
+				`/services/${created.storefront}/environments?/createEnvironment`,
+				{
+					domain: name === "demo" ? "demo.storefront.example.com" : "",
+					envOverrides: `DATABASE_URL=postgres://app@db/app_${name}`,
+					name,
+					ref,
+				},
+			);
+		}
 
 		created.handbook = await createService(page, {
 			buildSource: "git",
@@ -88,22 +109,23 @@ export const shots: ShotModule = {
 			path: (seeded) => `/services/${seeded.serviceIds.web}/settings`,
 		},
 		{
-			doc: "/services/:id/health",
+			doc: "/services/:id/observability/health",
 			expect: /Current healthcheck/,
 			name: "services-health",
-			path: (seeded) => `/services/${seeded.serviceIds.web}/health`,
+			path: (seeded) =>
+				`/services/${seeded.serviceIds.web}/observability/health`,
 		},
 		{
-			doc: "/services/:id/source (git repository)",
+			doc: "/services/:id/environments/source (git repository)",
 			expect: /Repository URL/,
 			name: "source-git",
-			path: () => `/services/${created.storefront}/source`,
+			path: () => `/services/${created.storefront}/environments/source`,
 		},
 		{
-			doc: "/services/:id/source (build method picker open)",
+			doc: "/services/:id/environments/source (build method picker open)",
 			expect: /Repository URL/,
 			name: "source-build-methods",
-			path: () => `/services/${created.storefront}/source`,
+			path: () => `/services/${created.storefront}/environments/source`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("label[for='gitBuildMethod']"));
 				await page.locator("#gitBuildMethod").click();
@@ -113,19 +135,19 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/source (build cache and build server)",
+			doc: "/services/:id/environments/source (build cache and build server)",
 			expect: /Repository URL/,
 			name: "source-build-servers",
-			path: () => `/services/${created.storefront}/source`,
+			path: () => `/services/${created.storefront}/environments/source`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("label[for='gitBuildContext']"));
 			},
 		},
 		{
-			doc: "/services/:id/source (deploy on push)",
+			doc: "/services/:id/environments/source (deploy on push)",
 			expect: /Add a webhook in the repository's settings/,
 			name: "deploy-on-push-webhook",
-			path: () => `/services/${created.storefront}/source`,
+			path: () => `/services/${created.storefront}/environments/source`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("label:has(#autoDeployOnPush)"));
 			},
@@ -143,16 +165,16 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/previews",
+			doc: "/services/:id/environments/previews",
 			expect: /Enable pull request previews/,
 			name: "previews-tab",
-			path: () => `/services/${created.storefront}/previews`,
+			path: () => `/services/${created.storefront}/environments/previews`,
 		},
 		{
-			doc: "/services/:id/previews (Open previews)",
+			doc: "/services/:id/environments/previews (Open previews)",
 			expect: /Enable pull request previews/,
 			name: "previews-open",
-			path: () => `/services/${created.storefront}/previews`,
+			path: () => `/services/${created.storefront}/environments/previews`,
 			prepare: async (page) => {
 				await scrollToTop(
 					page.locator("section.panel").filter({
@@ -162,37 +184,54 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/previews (GitHub reporting)",
-			expect: /Enable pull request previews/,
-			name: "previews-github-report",
-			path: () => `/services/${created.storefront}/previews`,
+			doc: "/services/:id/environments/source (Report deployments to GitHub)",
+			expect: /Repository URL/,
+			name: "environments-github-report",
+			path: () => `/services/${created.storefront}/environments/source`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("label:has(#previewReportGithub)"), 360);
 			},
 		},
 		{
-			doc: "/services/:id/previews (environment and data)",
+			doc: "/services/:id/environments",
+			expect: /New environment/,
+			name: "environments-list",
+			path: () => `/services/${created.storefront}/environments`,
+		},
+		{
+			doc: "/services/:id/environments (New environment dialog)",
+			expect: /New environment/,
+			name: "environments-new",
+			path: () => `/services/${created.storefront}/environments`,
+			prepare: async (page) => {
+				await page.getByRole("button", { name: "New environment" }).click();
+				await page.getByRole("button", { exact: true, name: "test" }).click();
+				await expect(page.locator("#environmentName")).toHaveValue("test");
+			},
+		},
+		{
+			doc: "/services/:id/environments/previews (environment and data)",
 			expect: /Enable pull request previews/,
 			name: "previews-environment",
-			path: () => `/services/${created.storefront}/previews`,
+			path: () => `/services/${created.storefront}/environments/previews`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("label:has(#previewInheritEnv)"));
 			},
 		},
 		{
-			doc: "/services/:id/previews (branch filters)",
+			doc: "/services/:id/environments/previews (branch filters)",
 			expect: /Enable pull request previews/,
 			name: "previews-branches",
-			path: () => `/services/${created.storefront}/previews`,
+			path: () => `/services/${created.storefront}/environments/previews`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("label[for='previewBranchInclude']"));
 			},
 		},
 		{
-			doc: "/services/:id/previews (Who can open previews)",
+			doc: "/services/:id/environments/previews (Who can open previews)",
 			expect: /Enable pull request previews/,
 			name: "previews-access",
-			path: () => `/services/${created.storefront}/previews`,
+			path: () => `/services/${created.storefront}/environments/previews`,
 			prepare: async (page) => {
 				await page.locator("#authRequired").click();
 				await page.locator("#method-password").click();
@@ -203,19 +242,19 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/previews (domain template)",
+			doc: "/services/:id/environments/previews (domain template)",
 			expect: /Enable pull request previews/,
 			name: "previews-domains",
-			path: () => `/services/${created.storefront}/previews`,
+			path: () => `/services/${created.storefront}/environments/previews`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("label[for='previewDomainTemplate']"));
 			},
 		},
 		{
-			doc: "/services/:id/channels (Enable release channels ticked)",
+			doc: "/services/:id/environments/channels (Enable release channels ticked)",
 			expect: /Enable release channels/,
 			name: "release-channels-tab",
-			path: () => `/services/${created.storefront}/channels`,
+			path: () => `/services/${created.storefront}/environments/channels`,
 			prepare: async (page) => {
 				await page.locator("#channelsEnabled").click();
 				await page.locator("#channelCanaryDomain").fill("canary.example.com");
@@ -240,6 +279,13 @@ export const shots: ShotModule = {
 			},
 		},
 		{
+			doc: "/services/:id/environments/revisions/:revisionId",
+			expect: /All revisions/,
+			name: "revisions-detail",
+			path: (seeded) =>
+				`/services/${seeded.serviceIds.web}/environments/revisions/${created.webRevision}`,
+		},
+		{
 			doc: "/settings/docker (Retained images)",
 			expect: /Retained images/,
 			name: "revisions-retained-images",
@@ -249,10 +295,10 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/source (status checks)",
+			doc: "/services/:id/environments/source (status checks)",
 			expect: /Require status checks to pass before building/,
 			name: "status-checks-picker",
-			path: () => `/services/${created.handbook}/source`,
+			path: () => `/services/${created.handbook}/environments/source`,
 			prepare: async (page) => {
 				const checks = page.locator(
 					"label:has(span.font-mono) [data-slot='checkbox']",

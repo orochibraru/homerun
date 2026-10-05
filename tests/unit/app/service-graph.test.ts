@@ -262,6 +262,7 @@ describe("previews under their parent", () => {
 		toPreviewRow({
 			channelCanary: false,
 			currentStatus: "running",
+			environmentName: null,
 			id,
 			name: `Web PR #${pr}`,
 			previewBranch: "feat/x",
@@ -276,7 +277,9 @@ describe("previews under their parent", () => {
 			row("p9", "api", 9),
 			row("p1", "web", 1),
 		]);
-		expect(grouped.get("web")?.map((p) => p.prNumber)).toEqual([2, 1]);
+		expect(
+			grouped.get("web")?.map((p) => (p.kind === "preview" ? p.prNumber : 0)),
+		).toEqual([2, 1]);
 		expect(grouped.get("api")?.map((p) => p.id)).toEqual(["p9"]);
 		expect(grouped.get("db")).toBeUndefined();
 	});
@@ -285,6 +288,7 @@ describe("previews under their parent", () => {
 		const canary = toPreviewRow({
 			channelCanary: true,
 			currentStatus: "running",
+			environmentName: null,
 			id: "c1",
 			name: "Web (canary)",
 			previewBranch: null,
@@ -292,8 +296,26 @@ describe("previews under their parent", () => {
 			previewPrNumber: null,
 			previewPrTitle: null,
 		});
-		expect(canary).toMatchObject({ canary: true, parentId: "web" });
-		expect(row("p1", "web", 1).canary).toBe(false);
+		expect(canary).toMatchObject({ kind: "canary", parentId: "web" });
+		expect(row("p1", "web", 1).kind).toBe("preview");
+	});
+
+	test("an environment is listed by its name, never as a pull request", () => {
+		const environment = toPreviewRow({
+			channelCanary: false,
+			currentStatus: "running",
+			environmentName: "staging",
+			id: "e1",
+			name: "Web (staging)",
+			previewBranch: null,
+			previewParentId: "web",
+			previewPrNumber: null,
+			previewPrTitle: null,
+		});
+		expect(environment).toMatchObject({
+			environment: "staging",
+			kind: "environment",
+		});
 	});
 });
 

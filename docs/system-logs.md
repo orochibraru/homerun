@@ -17,7 +17,8 @@ source, the app's own output is whatever your terminal or process manager is
 already capturing.
 
 App-level warnings and errors that mention a specific service are also persisted
-and surfaced on that service's [Observability tab](observability.md#errors).
+and surfaced on that service's
+[Observability → Events](observability.md#errors).
 
 Opening Traefik also shows two buttons above its log, both behind a confirmation
 dialog:

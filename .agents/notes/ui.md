@@ -18,11 +18,11 @@ a blur/shadow stack, route it through a token here instead.
   100% (it was 110%, which rendered the whole rem-based UI too large);
   `--font-mono` is JetBrains Mono, and it is reserved for **code, logs and
   terminal output** : `live-log-viewer.svelte`, `ansi-line.svelte`, the Terminal
-  tab, System Logs, the Errors tab and the env paste box. Everything else — nav,
-  labels, status badges, metrics, image refs, hostnames — is sans. An earlier
-  pass made mono the UI's voice across the board and it read as a terminal
-  emulator rather than an app. `tech` survives as _tabular figures only_
-  (`font-variant-numeric`), so live-updating numbers still don't reflow.
+  tab, System Logs, Observability → Events and Errors and the env paste box.
+  Everything else — nav, labels, status badges, metrics, image refs, hostnames —
+  is sans. An earlier pass made mono the UI's voice across the board and it read
+  as a terminal emulator rather than an app. `tech` survives as _tabular figures
+  only_ (`font-variant-numeric`), so live-updating numbers still don't reflow.
 - **The design is ported from Penombre** (`orochibraru/penombre`'s
   `src/app.css`), deliberately, because that app's look is the target. Four
   things carry it:
@@ -174,22 +174,22 @@ steps are all clickable at any time and it has two submit buttons),
 trailing action, the header of most `panel` sections), `run-status-badge.svelte`
 (a backup/cron run's running/success/failed state),
 `git-build-fields.svelte`/`registry-fields.svelte` (shared by `services/new` and
-the service Source tab), and `skeleton.svelte` (one pulsing placeholder block,
-sized by a `class` prop, the pending branch every remote-query-backed panel
-renders, see Remote functions below), `alert.svelte` (the inline banner,
-`error`/`warning`/ `info`/`success`, optional `title` and `actions` snippet,
-`role="alert"` when it's an error — eight pages had hand-rolled the same
-`border-red-200 bg-red-50 …` div before it existed), `async-block.svelte`
-(pending/ready/failed over one remote query, with a Retry, see Remote functions
-in `services-and-templates.md`), and `error-boundary.svelte` (a
-`<svelte:boundary>` whose `failed` snippet is an `Alert` with a **Try again**
-that calls `reset` — wrapped around `{@render children()}` in
-`(protected)/+layout.svelte`, so a render error in any dashboard page is a
-banner in the content area with the sidebar and header still usable, instead of
-a blank screen). If you're touching a page with an inline empty-state or the
-same three class-string literals, prefer wiring in the shared version over
-copy-pasting again, but this is opportunistic, not a mandate to refactor
-unrelated pages.
+the service's Environments & Deployments → Source section), and
+`skeleton.svelte` (one pulsing placeholder block, sized by a `class` prop, the
+pending branch every remote-query-backed panel renders, see Remote functions
+below), `alert.svelte` (the inline banner, `error`/`warning`/ `info`/`success`,
+optional `title` and `actions` snippet, `role="alert"` when it's an error —
+eight pages had hand-rolled the same `border-red-200 bg-red-50 …` div before it
+existed), `async-block.svelte` (pending/ready/failed over one remote query, with
+a Retry, see Remote functions in `services-and-templates.md`), and
+`error-boundary.svelte` (a `<svelte:boundary>` whose `failed` snippet is an
+`Alert` with a **Try again** that calls `reset` — wrapped around
+`{@render children()}` in `(protected)/+layout.svelte`, so a render error in any
+dashboard page is a banner in the content area with the sidebar and header still
+usable, instead of a blank screen). If you're touching a page with an inline
+empty-state or the same three class-string literals, prefer wiring in the shared
+version over copy-pasting again, but this is opportunistic, not a mandate to
+refactor unrelated pages.
 
 **Self-loading components**, the ones that fetch their own data through a remote
 query rather than taking it as a prop off a route's `load` (see Remote functions
@@ -197,9 +197,9 @@ below), so a page that wants one just renders it: `host-resources.svelte` (the
 dashboard's Host Resources panel, own 5s poll), `job-queue-panel.svelte`
 (Scheduling's job queue, own 3s poll), `notification-bell.svelte` (the header's
 feed, plus its own mutations), `git-repo-picker.svelte` (the "Browse repos"
-picker, shared by `services/new` and the service Source tab, calls back with the
-picked repo), and `image-check-warning.svelte` (the debounced "this image wasn't
-found in its registry" warning, shared by the same two pages).
+picker, shared by `services/new` and the service's Source section, calls back
+with the picked repo), and `image-check-warning.svelte` (the debounced "this
+image wasn't found in its registry" warning, shared by the same two pages).
 
 **The list-page toolkit**, used by every entity list page (services, stacks,
 templates, storage, remote-hosts, s3-destinations, build-cache-registries,
@@ -313,14 +313,15 @@ first rejection's message rather than reporting success.
 ## The `$derived` + push/splice anti-pattern (real, tested bug)
 
 **Real, tested-in-review finding**: three forms, the Settings page's OAuth
-Providers list, `services/new`'s env-var rows, and the service Env Vars tab's
-own rows, declared their editable row array with `$derived(...)` and then
-mutated it directly (`rows.push(...)`/`rows.splice(...)`), which is exactly why
-"Add provider" on the Settings page did nothing observable (the bug that
-prompted this fix): a `$derived` value is computed from its dependencies, not a
-mutable store, pushing onto it doesn't reliably stick the way it would on
-`$state`. Fixed by converting all three to `let rows = $state(...)` seeded once,
-with an `$effect` re-syncing from the source data
+Providers list, `services/new`'s env-var rows, and the service's Environment
+Variables section's own rows, declared their editable row array with
+`$derived(...)` and then mutated it directly
+(`rows.push(...)`/`rows.splice(...)`), which is exactly why "Add provider" on
+the Settings page did nothing observable (the bug that prompted this fix): a
+`$derived` value is computed from its dependencies, not a mutable store, pushing
+onto it doesn't reliably stick the way it would on `$state`. Fixed by converting
+all three to `let rows = $state(...)` seeded once, with an `$effect` re-syncing
+from the source data
 (`data.settings.oauthProviders`/`data.template`/`svc.envVars`) whenever it
 actually changes, not on every keystroke, so in-progress edits aren't clobbered.
 `templates/new/+page.svelte`'s equivalent env-var rows already used `$state`

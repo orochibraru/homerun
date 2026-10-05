@@ -16,6 +16,7 @@ import { matchesTagPattern } from "#lib/release-channels.js";
 import type { GitProviderKind } from "#lib/server/db/schema.js";
 import { inferProviderKind } from "#lib/status-checks.js";
 import { DeploymentService } from "./deploy.service.ts";
+import { EnvironmentService } from "./environment.service.ts";
 import {
 	enabledGitProvider,
 	GitProviderRefusedError,
@@ -239,7 +240,8 @@ class GitWebhookServiceClass {
 	 * Handles one delivery to `/api/v1/webhooks/git/<serviceId>`: checks the
 	 * signature against the service's secret, then either hands a pull request
 	 * event to `PreviewService` when previews are on, or enqueues a deploy as
-	 * the service's owner when a push was to the branch it builds.
+	 * the service's owner when a push was to the branch it builds, and one for
+	 * each of its environments building a pushed branch.
 	 */
 	async handleDelivery(
 		svc: ServiceDTO | null,
@@ -283,16 +285,23 @@ class GitWebhookServiceClass {
 				: { reason: "Pull request previews are off.", status: "ignored" };
 		}
 
+		const pushes = parsePushEvent(headers, payload);
+		const environments = await EnvironmentService.deployPushes(svc, pushes);
+
 		if (svc.toJSON().channelsEnabled) {
 			return await this.#routeChannels(svc, headers, payload);
 		}
 
 		const branch = svc.gitRef ?? "main";
-		const push = parsePushEvent(headers, payload).find(
-			(entry) => entry.branch === branch,
-		);
+		const push = pushes.find((entry) => entry.branch === branch);
 		if (!(svc.autoDeployOnPush && push)) {
-			return { reason: `Not a push to ${branch}.`, status: "ignored" };
+			return {
+				reason:
+					environments > 0
+						? `Deployed ${environments} environment${environments === 1 ? "" : "s"}; not a push to ${branch}.`
+						: `Not a push to ${branch}.`,
+				status: "ignored",
+			};
 		}
 		if (push.commit) {
 			await svc.update({ gitLastSeenCommit: push.commit });

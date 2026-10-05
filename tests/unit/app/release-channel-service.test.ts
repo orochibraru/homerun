@@ -76,6 +76,8 @@ let domainTaken = false;
 let refusal: string | null = null;
 const originalBaseDomain = config.baseDomain;
 
+let environments: Svc[] = [];
+
 beforeEach(() => {
 	canary = null;
 	canaryUpdates = [];
@@ -88,6 +90,8 @@ beforeEach(() => {
 	config.baseDomain = "example.com";
 	stub(Logger.prototype, "info", () => undefined);
 	stub(ServiceGitDTO, "getCanary", async () => canary);
+	environments = [];
+	stub(ServiceGitDTO, "listEnvironments", async () => environments);
 	stub(ServiceDTO, "slugTaken", async () => slugTaken);
 	stub(ServiceDTO, "domainTaken", async () => (domainTaken ? "x" : null));
 	stub(CapacityService, "refusal", async () => refusal);
@@ -117,6 +121,16 @@ afterEach(() => {
 });
 
 describe("ReleaseChannelService.configure", () => {
+	test("refuses to turn on while a canary environment holds the name", async () => {
+		environments = [
+			fakeService({ environmentName: "canary", id: "env-canary" }).svc,
+		];
+		const { svc } = fakeService();
+		await expect(
+			ReleaseChannelService.configure(svc, { enabled: true }, "u1"),
+		).rejects.toThrow("canary environment");
+	});
+
 	test("refuses a service that doesn't build from git", async () => {
 		const { svc } = fakeService({ buildSource: "image" });
 		await expect(

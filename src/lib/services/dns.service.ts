@@ -110,6 +110,32 @@ export async function syncDashboardDns(): Promise<void> {
 }
 
 /**
+ * Syncs the built-in registry's public hostname to every configured provider
+ * and deletes the one it replaced, without Pangolin SSO: `docker login` and
+ * `docker push` can't follow a sign-in redirect. Without it, nothing routes
+ * the host to this server's Traefik. Logs the outcome rather than returning
+ * it, since nothing awaits this call.
+ */
+export async function syncRegistryDns(
+	previous: string | null,
+	next: string | null,
+): Promise<void> {
+	const results = [
+		...(next ? await syncDns([next], { sso: false }) : []),
+		...(previous && previous !== next ? await deleteDns([previous]) : []),
+	];
+	for (const result of results) {
+		if (result.ok) {
+			logger.info(`Registry (${result.provider}): ${result.detail}`);
+		} else {
+			logger.warn(
+				`Registry sync failed (${result.provider}): ${result.detail}`,
+			);
+		}
+	}
+}
+
+/**
  * Brings DNS in line with a service's edited domains right away, rather than
  * on its next deploy: syncs every hostname in `next` and deletes the ones
  * `previous` had that `next` dropped, across every configured provider. Logs

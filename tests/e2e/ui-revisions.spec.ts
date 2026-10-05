@@ -47,8 +47,13 @@ test.describe
 				}),
 			).toBeChecked();
 
-			await page.goto(`/services/${id}/revisions`);
+			await page.goto(`/services/${id}/environments/revisions`);
 			await expect(page.getByText("No revisions yet")).toBeVisible();
+
+			const missing = await page.goto(
+				`/services/${id}/environments/revisions/not-a-revision`,
+			);
+			expect(missing?.status()).toBe(404);
 		});
 
 		test("requiring status checks without picking one is refused", async ({
@@ -57,7 +62,7 @@ test.describe
 			await signIn(page);
 			const id = await createService(page, "rev-status-checks");
 
-			await page.goto(`/services/${id}/source`);
+			await page.goto(`/services/${id}/environments/source`);
 			await page.getByRole("button", { name: "Git repository" }).click();
 			await page.locator("#gitUrl").fill("https://git.invalid/acme/api.git");
 			await page

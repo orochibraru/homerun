@@ -1,11 +1,14 @@
+import { childSlug } from "#lib/slug.js";
+
 export const DEPLOY_ENVIRONMENTS = ["production", "canary", "preview"] as const;
 
 export const DEFAULT_TAG_PATTERN = "v*";
 
 /**
  * The environment a service's deployments belong to: its release channel
- * canary, a pull request preview, else the service's own environment name,
- * `production` when it has none.
+ * canary, a pull request preview, else the service's own environment name
+ * (an environment created on a service carries its name), `production` when
+ * it has none.
  */
 export function deployEnvironment(row: {
 	channelCanary: boolean;
@@ -15,7 +18,7 @@ export function deployEnvironment(row: {
 	if (row.channelCanary) {
 		return "canary";
 	}
-	if (row.previewParentId) {
+	if (row.previewParentId && !row.environmentName) {
 		return "preview";
 	}
 	return row.environmentName ?? "production";
@@ -91,8 +94,7 @@ export function matchesTagPattern(pattern: string, tag: string): boolean {
  * short so the whole thing stays a valid 63 character DNS label.
  */
 export function canarySlug(parentSlug: string): string {
-	const suffix = "-canary";
-	return `${parentSlug.slice(0, 63 - suffix.length).replace(/-+$/, "")}${suffix}`;
+	return childSlug(parentSlug, "canary");
 }
 
 /** Why a tag pattern can't be used, null when it's fine. */
@@ -104,4 +106,38 @@ export function tagPatternProblem(pattern: string): string | null {
 		return "A tag pattern can't contain spaces.";
 	}
 	return null;
+}
+
+export const ENVIRONMENT_PRESETS = [
+	"prod",
+	"staging",
+	"canary",
+	"test",
+	"dev",
+	"demo",
+] as const;
+
+/**
+ * Why `name` can't be a new environment of a service, null when it's fine:
+ * a valid name, not `preview` or a pull request preview's `pr-<number>`, not
+ * one the service or its other environments already use, and not `canary`
+ * while release channels own it.
+ */
+export function newEnvironmentProblem(
+	name: string,
+	service: { channelsEnabled: boolean; taken: string[] },
+): string | null {
+	if (!name) {
+		return "Give the environment a name.";
+	}
+	if (/^pr-\d+$/.test(name)) {
+		return `${name} is reserved for pull request previews.`;
+	}
+	if (name === "canary" && service.channelsEnabled) {
+		return "canary is this service's release channel canary while channels are on.";
+	}
+	if (service.taken.includes(name)) {
+		return `This service already has a ${name} environment.`;
+	}
+	return name === "canary" ? null : environmentNameProblem(name);
 }

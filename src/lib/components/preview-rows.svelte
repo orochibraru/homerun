@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Bird, GitPullRequest } from "@lucide/svelte";
+	import { Bird, GitPullRequest, Layers } from "@lucide/svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import type { PreviewRow } from "#lib/service-graph.js";
 	import type { ContainerStatus } from "#lib/types.js";
@@ -23,9 +23,13 @@
             serviceId: preview.id,
           })}
         >
-          {#if preview.canary}
+          {#if preview.kind === "canary"}
             <Bird class="text-text-subtle size-3.5 shrink-0" />
             <span class="text-text shrink-0 font-medium">Canary</span>
+            <span class="text-text-muted min-w-0 flex-1 truncate">{preview.name}</span>
+          {:else if preview.kind === "environment"}
+            <Layers class="text-text-subtle size-3.5 shrink-0" />
+            <span class="text-text shrink-0 font-medium">{preview.environment}</span>
             <span class="text-text-muted min-w-0 flex-1 truncate">{preview.name}</span>
           {:else}
             <GitPullRequest class="text-text-subtle size-3.5 shrink-0" />

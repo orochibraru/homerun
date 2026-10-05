@@ -268,16 +268,16 @@ or fails, returning the built commit for the deployment row. An agent older than
 that ignores the unrecognized field (Go's `encoding/json` default) and builds
 the branch head.
 
-The Source tab's picker (`status-check-picker.svelte`) loads names through
-`listStatusCheckNames` (`src/lib/remote/status-checks.remote.ts`, distinct names
-over the last 5 commits of the branch) as a one-shot `$state` promise and posts
-the selection as repeated `requiredStatusChecks` hidden inputs, read with
-`formData.getAll` since the route's zod parse goes through `Object.fromEntries`.
-**Verified live**, read-only: github.com/orochibraru/homerun unauthenticated
-(real check-run names, a HEAD commit with no checks yet) and a Forgejo instance
-answering 403 without a token (a permanent error). **Not verified**: GitLab and
-Bitbucket against real instances, and a full deploy blocked by a real failing
-check.
+The Environments & Deployments → Source picker (`status-check-picker.svelte`)
+loads names through `listStatusCheckNames`
+(`src/lib/remote/status-checks.remote.ts`, distinct names over the last 5
+commits of the branch) as a one-shot `$state` promise and posts the selection as
+repeated `requiredStatusChecks` hidden inputs, read with `formData.getAll` since
+the route's zod parse goes through `Object.fromEntries`. **Verified live**,
+read-only: github.com/orochibraru/homerun unauthenticated (real check-run names,
+a HEAD commit with no checks yet) and a Forgejo instance answering 403 without a
+token (a permanent error). **Not verified**: GitLab and Bitbucket against real
+instances, and a full deploy blocked by a real failing check.
 
 ## Revisions and rollback (`src/lib/revisions.ts`, `RevisionService`, `RevisionHealthService`, `deploy/revision-step.ts`)
 
@@ -371,11 +371,13 @@ latest attempt's, `lastDeployedAt` and health its latest successful run's, and
 included) and `list` (the API/CLI: the last 50 revisions) load any root that
 fell outside that window.
 
-UI: the Revisions tab (`RevisionService.annotate` builds `RevisionView`s with
-`current`/`previous`/`retained`) with a per-row **Deploy this revision**
-(`ConfirmDialog`, a hidden form, the `deployRevision` action with
-`enhanceToast`, then Overview for the progress panel), and **Auto-rollback** on
-the Settings tab. API: `GET /services/{id}/revisions` and
+UI: Environments & Deployments → Revisions (`RevisionService.annotate` builds
+`RevisionView`s with `current`/`previous`/`retained`), each row linking to the
+revision's own page (`revisions/[revisionId]`: its facts, health reason, latest
+log, the deployments folded into it, and **Deploy this revision** through
+`ConfirmDialog`, a hidden form, the `deployRevision` action with `enhanceToast`,
+then Overview for the progress panel), and **Auto-rollback** on the Settings
+tab. API: `GET /services/{id}/revisions` and
 `POST /services/{id}/revisions/{revisionId}/deploy` (`previous` accepted, waits
 like `deploy`); CLI `services revisions` and `services rollback`.
 `tests/integration/revisions.test.ts` covers two image deploys plus a rollback
@@ -517,10 +519,10 @@ produces either.
 `devices`, `capAdd` and `envFiles` are host-root-equivalent.
 `hostAccessRequested` gates a create (REST `POST /services`, compose import,
 `ComposeImportService.importPlan` via its `allowHostAccess` input, which Migrate
-passes `locals.isAdmin` to) and `hostAccessChanged` gates an update (Runtime
-tab, Env files action, REST `PATCH`): a non-admin may save a form that keeps the
-current values, which is why the Runtime tab renders them as hidden inputs for
-non-admins.
+passes `locals.isAdmin` to) and `hostAccessChanged` gates an update (Container →
+Runtime, Env files action, REST `PATCH`): a non-admin may save a form that keeps
+the current values, which is why the Runtime section renders them as hidden
+inputs for non-admins.
 
 Two mapping decisions worth not re-litigating: **`dnsResolvable` is true only
 when the compose service published a host port** (`ports:`), false when it only
@@ -655,7 +657,8 @@ health" phase**: the rollout's readiness wait happens inside the `container`
 phase and logs its own `Readiness: ...` line (see "Readiness gate" in
 `docker.md`), and a phase that passes instantly for every service without a gate
 would be a lie. Longer-term health is watched _after_ the deploy finishes (see
-Revisions and rollback above) and shows on the Revisions tab.
+Revisions and rollback above) and shows on Environments & Deployments →
+Revisions.
 
 ## Remote functions (`src/lib/remote/*.remote.ts`, `src/lib/server/remote-auth.ts`)
 
@@ -706,9 +709,9 @@ a skeleton rather than a broken page. Concretely:
 - `git-repos.remote.ts`, `listProviderRepos`/`hasDockerfile`, and
   `image-check.remote.ts`, `checkImage` : the git repo picker and the
   image-exists warning, both of which were duplicated verbatim between
-  `services/new` and the service Source tab. They're now one shared component
-  each (`git-repo-picker.svelte`, `image-check-warning.svelte`) over one shared
-  query.
+  `services/new` and the service's Source section. They're now one shared
+  component each (`git-repo-picker.svelte`, `image-check-warning.svelte`) over
+  one shared query.
 - **Every remaining Docker round-trip that used to sit in a `load`.** This was
   the single biggest source of "the app feels sluggish": a navigation couldn't
   paint until the daemon answered, and a slow or unreachable daemon stalled the
@@ -726,7 +729,7 @@ a skeleton rather than a broken page. Concretely:
     so the three settings tabs that highlight a field just read it.
   - `docker-infra.remote.ts`, `getCleanupPreview`/`getInfraStatus`/
     `getUnknownHostVolumes` : Docker Cleanup's `system df` preview, System Logs'
-    Traefik + compose-stack lookup, and the volumes tab's host-volume picker.
+    Traefik + compose-stack lookup, and the Storage tab's host-volume picker.
 
   This is the one category where a _page's own subject_ moved out of `load`, and
   it's allowed for the reason the rule exists: none of it is the page's
@@ -833,8 +836,8 @@ through `ServiceRuntimeOptions` (`src/lib/service-runtime.ts`):
 `TemplateLinkWithTemplate.linkedTemplateRuntime` are what the deploy paths read.
 Captured by `saveAsTemplate` (the service Settings tab), `templates/new` (a
 **Runtime** section rendering `src/lib/components/runtime-fields.svelte`, the
-same component the service Runtime tab uses, with `showEnvFiles`; parsed with
-`updateRuntimeSchema` + `updateEnvFilesSchema`) and returned by
+same component a service's Container → Runtime uses, with `showEnvFiles`; parsed
+with `updateRuntimeSchema` + `updateEnvFilesSchema`) and returned by
 `GET /api/v1/templates`. There is no template edit, export or import to carry
 them through.
 
@@ -1070,7 +1073,10 @@ audience that may not be signed in. Three shapes, set by `scope`:
 **`global` and `stack` resolve live** (`StatusPageDTO.serviceIds()` queries
 `service` on every read) so deploying a new service puts it on the page without
 anyone re-editing it. That's the whole reason the join table isn't used for all
-three.
+three. The same goes for a custom pick's `include_children`: its previews and
+canary (`service.previewParentId` = the pick) are looked up on every read by
+`StatusPageDTO.members()` (`resolveStatusPageMembers` does the ordering), never
+stored, since previews open and close on their own.
 
 `/status-pages` is the operator's view: health of every service and the pages
 themselves, with a link out to `/notification-channels`. `/status/<slug>` is the
@@ -1092,12 +1098,12 @@ transition logic itself.
 ## Git-based builds (`internal/agent/build.go`, `internal/agent/builders.go`, `internal/jobs/deploy/build.go`)
 
 A service's `buildSource` is `"image"` (bring-your-own, the default) or `"git"`,
-set on the new-service form or edited later on the Source tab, both share the
-same "Deploy from" toggle UI. **The whole clone-and-build pipeline now lives in
-one place, `internal/agent`** : the SvelteKit app's own copy
-(`docker/git-build.ts`, `docker/builder-run.ts`) was deleted once the `deploy`
-job type moved to the Go worker (see "Deploys run in the Go worker" above).
-`internal/jobs/deploy/build.go`'s `dockerBuild` calls
+set on the new-service form or edited later in Environments & Deployments →
+Source, both share the same "Deploy from" toggle UI. **The whole clone-and-build
+pipeline now lives in one place, `internal/agent`** : the SvelteKit app's own
+copy (`docker/git-build.ts`, `docker/builder-run.ts`) was deleted once the
+`deploy` job type moved to the Go worker (see "Deploys run in the Go worker"
+above). `internal/jobs/deploy/build.go`'s `dockerBuild` calls
 `agent.NewBuilder(docker, socket).BuildWithProgress` directly (a local build or
 a `"docker"` build server), and `agentBuild` calls the exact same code over HTTP
 on a registered Homerun Agent build server (`POST /v1/build`) — the same package
@@ -1240,8 +1246,8 @@ deleted along with the rest of `docker/git-build.ts`'s TS pipeline. What's left
 of that parity check is narrower: `tests/unit/app/agent-builder-parity.test.ts`
 now only asserts `src/lib/build-methods`'s form-facing constants
 (`BUILD_METHODS`, `BAKE_TARGET_PATTERN`, the bake defaults) equal what's checked
-into `builder-tools.json`, so the new-service form and Source tab never offer a
-method or bake default the builder itself would reject — golden-fixture
+into `builder-tools.json`, so the new-service form and the Source section never
+offer a method or bake default the builder itself would reject — golden-fixture
 `BuilderEnv`/build-failure-message parity across every recorded input is now
 `tests/unit/go/internal/agent/builders_test.go`'s job alone (`go test`, against
 the same embedded files, `tests/unit/go/internal/agent/testdata/*.json`), with
@@ -1289,8 +1295,8 @@ image reaches the deploy target.
 ## Git provider connections (`instance_settings.gitProviders`, `git_connection` table, `src/lib/services/git-provider.service.ts`, `/git-providers`)
 
 Separate from the git-clone-based builds above, this is what makes the Source
-tab's "Browse repos" picker possible instead of pasting a raw URL. Two layers,
-matching how OAuth generally works: an **OAuth App** registered once per
+section's "Browse repos" picker possible instead of pasting a raw URL. Two
+layers, matching how OAuth generally works: an **OAuth App** registered once per
 provider (GitHub/GitLab/self-hosted Gitea/Bitbucket) on that provider's own
 site, configured on the `/git-providers` page (admin-only to add/remove,
 DB-backed, `instance_settings.gitProviders` jsonb array, same "settings stored
@@ -1311,7 +1317,7 @@ than a DB-backed state table, nothing to clean up, verified purely from the
 value itself. The OAuth round-trip lives under
 `/api/v1/git-providers/[providerId]/{connect,callback}` (outside `(protected)/`
 for the same reason the REST API is, a provider's own redirect can't carry
-cookies through a page-load auth guard the same way). The Source tab's repo
+cookies through a page-load auth guard the same way). The Source section's repo
 picker (`src/lib/components/git-repo-picker.svelte`) lists the connected
 account's repos and checks for a `Dockerfile` at a given ref through
 `src/lib/remote/git-repos.remote.ts`, not a `+server.ts` route, see Remote
@@ -1365,21 +1371,22 @@ verify the first real connect by hand once an OAuth App exists.
 A git service picked from a connected account stores `gitProviderId` + `gitRepo`
 (the provider's `owner/name`, or a GitLab group path) next to `gitUrl`;
 `GitSourceFields` (`src/lib/components/git-source-fields.svelte`, used by the
-wizard and the Source tab) submits them as hidden fields, with the clone URL
+wizard and the Source section) submits them as hidden fields, with the clone URL
 only shown behind "Use a clone URL instead" and a branch `<select>` fed by
 `listRepoBranches`. Picking a repo turns `autoDeployOnPush` on.
 
 `GitWebhookService.sync(svc, previous)` runs after every save that can change
-the source (wizard create, Source tab, REST POST/PATCH), with the pre-save
+the source (wizard create, Source section, REST POST/PATCH), with the pre-save
 `{gitProviderId, gitRepo, gitWebhookId}`: a hook on a repo the service no longer
 builds from (or with deploy-on-push off) is deleted from the provider, a 48-hex
 secret is kept encrypted in `gitWebhookSecretEnc` whenever deploy-on-push is on
 (so a hook can always be added by hand), and a new hook is registered via
 `GitProviderService.createPushWebhook` as the **service owner's** connection.
 Any reason it couldn't (no Dashboard URL, a pasted URL, no connection, a
-provider refusal) lands in `gitWebhookError` and the Source tab shows the URL +
-secret instead; `sync` never throws. `ServiceLifecycleService.deleteService`
-calls `remove()` once the workload is gone.
+provider refusal) lands in `gitWebhookError` and the Source section shows the
+URL + secret instead; `sync` never throws.
+`ServiceLifecycleService.deleteService` calls `remove()` once the workload is
+gone.
 
 Deliveries hit `/api/v1/webhooks/git/<serviceId>` (public; no session, no API
 key). `handleDelivery` 404s unless the service is git + deploy-on-push with a
@@ -1429,9 +1436,9 @@ under per-token rate limits.
 `GitWebhookService.#register` returns `{error, reconnect}`: reconnect is true
 for that error and for an owner with no connection, and lands in
 `gitWebhookReconnect`. `describe()` turns it into
-`reconnect: {providerId, providerName}`, and the Source tab links to
-`/api/v1/git-providers/<id>/connect?returnTo=/services/<id>/source`. The connect
-route stores a `safeRedirectTarget` of `returnTo` in the short-lived
+`reconnect: {providerId, providerName}`, and the Source section links to
+`/api/v1/git-providers/<id>/connect?returnTo=/services/<id>/environments/source`.
+The connect route stores a `safeRedirectTarget` of `returnTo` in the short-lived
 `GIT_CONNECT_RETURN_COOKIE` (the OAuth redirect URI has to stay exact, so it
 can't carry the path), the callback redirects there and calls
 `GitWebhookService.retryAfterReconnect(userId, providerId)`, which re-syncs
@@ -1464,14 +1471,17 @@ and equal (GitHub/Gitea `head.repo.full_name` vs `base.repo.full_name`, not
 GitLab `source_project_id` vs `target_project_id`; Bitbucket `source.repository`
 vs `destination.repository`), and `handle` ignores fork events before anything
 else, close included: a fork PR's code would run with the parent's env vars. An
-`update` whose ref didn't change is ignored.
-`GitWebhookService.deployOpenPullRequests` (the Previews tab's **Deploy open
-pull requests**, `?/deployOpen`) lists the repo's open pull requests through
-`GitProviderService.listOpenPullRequests` (`openPullRequestsPath` and
-`parseOpenPullRequests` in `git-webhooks.ts`, same fork rule) and replays each
-through `handle` as an `update`, so it's idempotent: an existing preview on the
-same head is skipped. `PullRequestReportService`
-(`pull-request-report.service.ts`) reports previews to GitHub when the parent's
+`update` whose ref didn't change is ignored. `createPushWebhook` adopts a
+GitHub/Gitea hook that already delivers to the same URL when the create answers
+"already exists" (a re-linked provider, a deleted app): `#adoptWebhook` lists
+the repo's hooks, PATCHes the match's config and events and returns its id.
+`GitWebhookService.deployOpenPullRequests` (Environments & Deployments →
+Previews' **Deploy open pull requests**, `?/deployOpen`) lists the repo's open
+pull requests through `GitProviderService.listOpenPullRequests`
+(`openPullRequestsPath` and `parseOpenPullRequests` in `git-webhooks.ts`, same
+fork rule) and replays each through `handle` as an `update`, so it's idempotent:
+an existing preview on the same head is skipped. `GitHubReportService`
+(`github-report.service.ts`) reports previews to GitHub when the parent's
 `previewReportGithub` is on and its provider is GitHub: `DeploymentService`
 calls `deployed` from both deploy outcomes (`#notifySuccess`, `#recordFailure`),
 `PreviewService` calls `closed` from `#remove` and `removeAll`, both
@@ -1485,13 +1495,14 @@ checks don't refuse the deployment. `enabledGitProvider` lives in
 `ServiceLifecycleService.deleteService`, which also deletes every preview first
 when the parent is deleted; turning previews off calls `removeAll`. Volumes,
 domains, cron, status checks and host networking are deliberately not copied.
-They live on the service's own Previews tab (`services/[serviceId]/previews/`,
-shown only for a git service that isn't a preview itself), which owns the
-`previewsEnabled` toggle (and its `GitWebhookService.sync`/`removeAll`); the
-Source tab only forces it off when the service stops building from git.
-`previewDomainTemplate` (`{pr}`, `{branch}` via `branchLabel`, `{slug}`,
-rendered by `renderPreviewDomain` in `src/lib/service-domains.ts`, validated by
-`previewDomainTemplateProblem`) and `previewDefaultDomain` pick a new preview's
+They live on the service's own Previews section
+(`services/[serviceId]/environments/previews/`, shown only for a git service
+that isn't a preview itself), which owns the `previewsEnabled` toggle (and its
+`GitWebhookService.sync`/`removeAll`); the Source section only forces it off
+when the service stops building from git. `previewDomainTemplate` (`{pr}`,
+`{branch}` via `branchLabel`, `{slug}`, rendered by `renderPreviewDomain` in
+`src/lib/service-domains.ts`, validated by `previewDomainTemplateProblem`) and
+`previewDefaultDomain` pick a new preview's
 `domains`/`defaultDomainEnabled`/`primaryDomain` in `#create`; a templated
 domain another service already routes is skipped and the default hostname forced
 on. `#refresh` never touches domains; `applyDomains` re-applies them to every
@@ -1518,8 +1529,8 @@ through, and an event with no branch only passes when both lists are empty.
 `handle` checks it after the fork check and the close branch, and a filtered
 event deletes an existing preview for that pull request (`#remove`), so an
 update after the filter changed cleans up. `applyBranchFilter` does the same for
-every open preview when the Previews tab or `PATCH /api/v1/services/:id` changes
-the lists.
+every open preview when the Previews section or `PATCH /api/v1/services/:id`
+changes the lists.
 
 Env: `previewEnv` starts from the parent's env with its hostnames rewritten
 (unless `previewInheritEnv` is off, then empty) and lays `previewEnvOverrides`
@@ -1560,13 +1571,13 @@ hostnames changed.
 child, pattern, domain shape and not routed elsewhere), saves, deletes the
 canary when turned off, else deploys it when new, just enabled, or its branch or
 domain changed. It doesn't call `GitWebhookService.sync` (import cycle:
-`git-webhook.service` imports it for routing), so both callers (the Channels tab
-action and `PATCH /api/v1/services/:id/channels`) sync afterwards with
-`channelsEnabled` in the snapshot, which counts as "moved" and re-registers the
-hook; `createWebhookRequest`'s `tags` sets GitLab's `tag_push_events` (GitHub,
-Gitea and Bitbucket already deliver tags as pushes; GitHub/Gitea `create` events
-are parsed too but not subscribed, to avoid a double delivery). `wantsWebhook`
-includes `channelsEnabled`.
+`git-webhook.service` imports it for routing), so both callers (the Environments
+& Deployments → Channels action and `PATCH /api/v1/services/:id/channels`) sync
+afterwards with `channelsEnabled` in the snapshot, which counts as "moved" and
+re-registers the hook; `createWebhookRequest`'s `tags` sets GitLab's
+`tag_push_events` (GitHub, Gitea and Bitbucket already deliver tags as pushes;
+GitHub/Gitea `create` events are parsed too but not subscribed, to avoid a
+double delivery). `wantsWebhook` includes `channelsEnabled`.
 
 `handleDelivery`, after the PR branch, hands a channels service to
 `#routeChannels`: `parseTagPushEvent` (GitHub/Gitea `refs/tags/` push or
@@ -1601,12 +1612,13 @@ are reserved and `production` is stored as null (`environmentNameProblem`,
 `DeploymentDTO.listEnvironments` finds recorded (`deploymentEnvironments`);
 `get_service_config` reports the effective one as `settings.environment`. The
 migration backfills `preview` for existing preview rows. Shown by
-`environment-badge.svelte` on the Revisions tab and `/deployments` (filter key
-`environment`), exposed as `environment` on the REST deployment/revision shapes
-(so the MCP tools get it). `POST /deploy` and the MCP `deploy_service` take
-`environment: canary|stable`. CLI: `services channels enable|disable|status`,
-`services deploy --environment`, `deploy` as an alias of `services deploy`.
-**Not verified against real providers**: webhook routing is unit-tested only.
+`environment-badge.svelte` on Environments & Deployments → Revisions and
+`/deployments` (filter key `environment`), exposed as `environment` on the REST
+deployment/revision shapes (so the MCP tools get it). `POST /deploy` and the MCP
+`deploy_service` take `environment: canary|stable`. CLI:
+`services channels enable|disable|status`, `services deploy --environment`,
+`deploy` as an alias of `services deploy`. **Not verified against real
+providers**: webhook routing is unit-tested only.
 
 ## Migrating from Dokploy or Coolify (`settings/migrate/`)
 

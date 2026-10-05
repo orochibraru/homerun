@@ -5,6 +5,10 @@ import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { BEAT_WINDOW, UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 import { dashboardOrigin } from "#lib/server/canonical-origin.js";
 import { statusPageSchema } from "#lib/server/validation/status-page.js";
+import {
+	picksFromForm,
+	statusPageServiceOptions,
+} from "#lib/status-page-members.js";
 import { resolve } from "$app/paths";
 
 export const load = async ({ params, parent, request, url }) => {
@@ -15,36 +19,33 @@ export const load = async ({ params, parent, request, url }) => {
 		error(404, "Status page not found");
 	}
 
-	const [stacks, allServices, memberIds] = await Promise.all([
+	const picks = await page.picks();
+	const [stacks, allServices, shown] = await Promise.all([
 		StackDTO.list(),
 		ServiceDTO.list(),
-		page.serviceIds(),
+		page.members(picks),
 	]);
-
-	const members = allServices.filter((svc) => memberIds.includes(svc.id));
 	const beats = await Promise.all(
-		members.map(async (svc) => ({
-			beats: (await UptimeCheckDTO.beats(svc.id, "internal")).map((beat) => ({
-				checkedAt: beat.checkedAt,
-				detail: beat.detail,
-				ok: beat.ok,
-			})),
-			id: svc.id,
-			name: svc.name,
-			slug: svc.slug,
+		shown.map(async (member) => ({
+			beats: (await UptimeCheckDTO.beats(member.id, "internal")).map(
+				(beat) => ({
+					checkedAt: beat.checkedAt,
+					detail: beat.detail,
+					ok: beat.ok,
+				}),
+			),
+			childOf: member.childOf,
+			id: member.id,
+			name: member.name,
 		})),
 	);
 
 	return {
 		dashboardOrigin: dashboardOrigin(request, url),
 		beatWindow: BEAT_WINDOW,
-		memberIds,
+		picks,
 		stacks: stacks.map((p) => ({ id: p.id, name: p.name })),
-		services: allServices.map((svc) => ({
-			id: svc.id,
-			name: svc.name,
-			stackId: svc.stackId,
-		})),
+		services: statusPageServiceOptions(allServices.map((svc) => svc.toJSON())),
 		statusPage: page.toJSON(),
 		tracked: beats,
 	};
@@ -87,7 +88,7 @@ export const actions = {
 			slug: parsed.data.slug,
 		});
 		if (parsed.data.scope === "custom") {
-			await page.setServiceIds(form.getAll("serviceIds").map(String));
+			await page.setPicks(picksFromForm(form));
 		}
 		return { success: true };
 	},

@@ -23,7 +23,8 @@ What carries over:
   `start_command` becomes the container command, and the custom docker run
   options Homerun can apply (`--cap-add`, `--device`, `--privileged`, `--label`,
   `--entrypoint`, `--user`) land on the
-  [Runtime tab](runtime-and-compute.md#runtime); any other flag is a warning.
+  [Container → Runtime](runtime-and-compute.md#runtime); any other flag is a
+  warning.
 - **File mounts and storage**: a Dokploy file mount (on an app, a database, or
   bound from a compose stack's `../files/` directory) is written under
   `/var/lib/homerun/files/<slug>/` on this host and bind-mounted read-only at

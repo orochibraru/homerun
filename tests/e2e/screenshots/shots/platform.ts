@@ -168,13 +168,17 @@ async function seedJobs(page: Page, stackId: string, cacheId: string) {
 		stackId: ids.subStack,
 		tag: "2.4.1",
 	});
-	await postRows(page, `/services/${ids.worker}/env?/update`, [
-		...WORKER_ENV.flatMap(([key, value]): [string, string][] => [
-			["envKey", key],
-			["envValue", value],
-		]),
-		...WORKER_SECRETS.map((key): [string, string] => ["envSecret", key]),
-	]);
+	await postRows(
+		page,
+		`/services/${ids.worker}/environments/variables?/update`,
+		[
+			...WORKER_ENV.flatMap(([key, value]): [string, string][] => [
+				["envKey", key],
+				["envValue", value],
+			]),
+			...WORKER_SECRETS.map((key): [string, string] => ["envSecret", key]),
+		],
+	);
 	const deps = await page.request.put(
 		`/api/v1/services/${ids.worker}/dependencies`,
 		{ data: { dependsOn: [ids.db, cacheId] } },
@@ -332,16 +336,16 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/env (secret variables)",
+			doc: "/services/:id/environments/variables (secret variables)",
 			expect: /Environment variables/,
 			name: "env-vars-secret",
-			path: () => `/services/${ids.worker}/env`,
+			path: () => `/services/${ids.worker}/environments/variables`,
 		},
 		{
-			doc: "/services/:id/env (Env files)",
+			doc: "/services/:id/environments/variables (Env files)",
 			expect: /Environment variables/,
 			name: "env-vars-env-files",
-			path: () => `/services/${ids.worker}/env`,
+			path: () => `/services/${ids.worker}/environments/variables`,
 			prepare: (page) => scrollToSection(page, "Env files"),
 		},
 		{
@@ -418,10 +422,10 @@ export const shots: ShotModule = {
 			path: () => "/dns/pangolin",
 		},
 		{
-			doc: "/services/:id/runtime",
+			doc: "/services/:id/container/runtime",
 			expect: /Run as user/,
 			name: "runtime-and-compute-runtime",
-			path: () => `/services/${ids.worker}/runtime`,
+			path: () => `/services/${ids.worker}/container/runtime`,
 		},
 		{
 			doc: "/settings/docker (Orchestration)",

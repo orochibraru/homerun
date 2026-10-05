@@ -37,21 +37,27 @@ export function toGraphService(
 	};
 }
 
-export interface PreviewRow {
-	branch: string | null;
-	canary: boolean;
+export type PreviewRow = {
 	currentStatus: string;
 	id: string;
 	name: string;
 	parentId: string;
-	prNumber: number;
-	title: string | null;
-}
+} & (
+	| { kind: "canary" }
+	| { environment: string; kind: "environment" }
+	| {
+			branch: string | null;
+			kind: "preview";
+			prNumber: number;
+			title: string | null;
+	  }
+);
 
-/** A pull request preview or release channel canary as it's listed under its parent service. */
+/** A service listed under the one it came from: its release channel canary, one of its environments, or a pull request preview. */
 export function toPreviewRow(row: {
 	channelCanary: boolean;
 	currentStatus: string;
+	environmentName: string | null;
 	id: string;
 	name: string;
 	previewBranch: string | null;
@@ -59,14 +65,27 @@ export function toPreviewRow(row: {
 	previewPrNumber: number | null;
 	previewPrTitle: string | null;
 }): PreviewRow {
-	return {
-		branch: row.previewBranch,
-		canary: row.channelCanary,
+	const base = {
 		currentStatus: row.currentStatus,
 		id: row.id,
 		name: row.name,
 		parentId: row.previewParentId ?? "",
-		prNumber: row.previewPrNumber ?? 0,
+	};
+	if (row.channelCanary) {
+		return { ...base, kind: "canary" };
+	}
+	if (row.previewPrNumber === null) {
+		return {
+			...base,
+			environment: row.environmentName ?? "environment",
+			kind: "environment",
+		};
+	}
+	return {
+		...base,
+		branch: row.previewBranch,
+		kind: "preview",
+		prNumber: row.previewPrNumber,
 		title: row.previewPrTitle,
 	};
 }

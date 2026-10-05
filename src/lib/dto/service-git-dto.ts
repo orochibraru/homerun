@@ -1,4 +1,13 @@
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	inArray,
+	isNotNull,
+	isNull,
+	or,
+} from "drizzle-orm";
 import { db } from "#lib/server/db/lib.js";
 import { service } from "#lib/server/db/schema.js";
 import { ServiceDTO } from "./service-dto";
@@ -15,7 +24,9 @@ export class ServiceGitDTO extends ServiceDTO {
 	 * polling is turned on for it, or Homerun couldn't register its webhook.
 	 * Pull request previews are never polled, and neither is a service with
 	 * release channels on (branch pushes feed its canary, which is polled
-	 * instead, never having a webhook of its own).
+	 * instead, never having a webhook of its own). A service's environments
+	 * have no webhook of their own either: each is polled on its branch when
+	 * its parent's webhook isn't there to deploy it, or polling is on.
 	 */
 	static async listPushPollable(): Promise<ServiceDTO[]> {
 		const rows = await db
@@ -26,14 +37,47 @@ export class ServiceGitDTO extends ServiceDTO {
 					eq(service.buildSource, "git"),
 					eq(service.autoDeployOnPush, true),
 					eq(service.channelsEnabled, false),
-					or(isNull(service.previewParentId), eq(service.channelCanary, true)),
+					isNull(service.previewPrNumber),
 					or(eq(service.gitPollEnabled, true), isNull(service.gitWebhookId)),
 				),
 			);
-		return rows.map((row) => new ServiceGitDTO(row));
+		const environmentParents = [
+			...new Set(
+				rows.flatMap((row) =>
+					row.previewParentId && !row.channelCanary
+						? [row.previewParentId]
+						: [],
+				),
+			),
+		];
+		const pollingParents =
+			environmentParents.length === 0
+				? new Set<string>()
+				: new Set(
+						(
+							await db
+								.select({
+									gitPollEnabled: service.gitPollEnabled,
+									gitWebhookId: service.gitWebhookId,
+									id: service.id,
+								})
+								.from(service)
+								.where(inArray(service.id, environmentParents))
+						)
+							.filter((parent) => parent.gitPollEnabled || !parent.gitWebhookId)
+							.map((parent) => parent.id),
+					);
+		return rows
+			.filter(
+				(row) =>
+					!row.previewParentId ||
+					row.channelCanary ||
+					pollingParents.has(row.previewParentId),
+			)
+			.map((row) => new ServiceGitDTO(row));
 	}
 
-	/** The pull request previews and release channel canary of each of `parentIds`, the canary first then newest pull request first, keyed by parent id. */
+	/** The services listed under each of `parentIds` (its release channel canary, environments and pull request previews), the canary first then newest pull request first, keyed by parent id. */
 	static async listPreviewsOf(
 		parentIds: string[],
 	): Promise<Map<string, ServiceDTO[]>> {
@@ -64,10 +108,26 @@ export class ServiceGitDTO extends ServiceDTO {
 			.where(
 				and(
 					eq(service.previewParentId, parentId),
-					eq(service.channelCanary, false),
+					isNotNull(service.previewPrNumber),
 				),
 			)
 			.orderBy(desc(service.previewPrNumber));
+		return rows.map((row) => new ServiceGitDTO(row));
+	}
+
+	/** The environments created on a service (staging, demo...), neither its pull request previews nor its canary, by name. */
+	static async listEnvironments(parentId: string): Promise<ServiceDTO[]> {
+		const rows = await db
+			.select()
+			.from(service)
+			.where(
+				and(
+					eq(service.previewParentId, parentId),
+					isNull(service.previewPrNumber),
+					eq(service.channelCanary, false),
+				),
+			)
+			.orderBy(asc(service.environmentName));
 		return rows.map((row) => new ServiceGitDTO(row));
 	}
 

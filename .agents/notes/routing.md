@@ -9,13 +9,35 @@ than in this one.
 ## A service's tabs
 
 `services/[serviceId]/` is the reference tab layout (see Conventions in
-`CLAUDE.md`), and the set changed: **Revisions** is its own tab (the deployment
-history that used to sit at the bottom of Overview, now with the `image:tag`
-that ran, its digest, how long it took and — for a git build — the commit,
-linked to the provider), and **Observability** is Logs and Errors merged into
-one page, since flipping between "what is it printing" and "what went wrong" was
-the common path. `logs/` still exists as a **route without a page**: its
-`+server.ts` is the SSE stream `live-log-viewer.svelte` fetches.
+`CLAUDE.md`). The top-level tabs are grouped, with a pill nav
+(`section-nav.svelte`) at the top of a grouped tab picking its sub-section, each
+sub-section still its own route: **Overview**, **Environments & Deployments**
+(`environments/`: Environments, a read-only list of where the service runs
+today, itself, its release channel canary and its pull request previews; Source;
+Environment Variables (`environments/variables`); Revisions; and, for a git
+service only, Previews and Channels), **Observability** (`observability/`:
+Monitoring, Events, Errors, Health), **Storage** (`volumes/`), **Networking**,
+**Container** (`container/`: Compute is the bare page, Runtime is
+`container/runtime`), **Security**, **Terminal**, **Settings**. Revisions is the
+deployment history that used to sit at the bottom of Overview, now with the
+`image:tag` that ran, its digest, how long it took and, for a git build, the
+commit linked to the provider. `logs/` still exists as a **route without a
+page**: its `+server.ts` is the SSE stream `live-log-viewer.svelte` fetches.
+
+**The entity a page shows is a path segment, never a query parameter.** A
+revision is `environments/revisions/[revisionId]` (the list only links to it),
+an error event is `observability/errors/[issueId]/[[eventId]]` (the bare issue
+URL shows the latest event). Each detail is its own route, so its load and
+markup aren't an `{#if}` branch inside the list page, and every link goes
+through `resolve()` with the route id, which is what makes svelte-check catch a
+stale path (the `/deployments` page's string-built
+`/services/:id/revisions?deployment=` link had pointed at a route that no longer
+existed). `[revisionId]` also accepts any deployment id of the revision and
+answers it with a 307 to the revision's own URL, so a caller holding only a
+deployment id (the deploy progress toast, `/deployments`) links with that. Query
+parameters stay for list state only: sort, search, filters, the monitoring
+`range`, `view=tree`, `dismissed=1`, and the new-service `stackId`/`templateId`
+prefill.
 
 Overview now leads with the service's own resource chart and a **Connections**
 panel (what it needs, what needs it, derived from env vars naming another
@@ -142,59 +164,64 @@ deep-linking into `/settings`.
   between them); accepts `?stackId=` and/or `?templateId=` query params to
   pre-fill from a stack or template context. "Deploy from" toggles between a
   Docker image and a git repo (see Git-based builds below), same toggle repeated
-  on the service's own Source tab for editing after creation. Two submit actions
-  share one `createServiceFromForm()` helper (`new/+page.server.ts`) that
-  validates + creates the row: `create` (secondary button, "Create service",
-  persists config only, same as before) and `createAndDeploy` (primary button,
-  "Create and Deploy", calls `DeploymentService.deployService()` before
-  redirecting straight to the new service's Overview tab instead of the
-  services/stack list). A min-height wrapper around the step content keeps the
-  Next/Back button row's vertical position stable as steps of different heights
-  swap in.
+  on the service's own Environments & Deployments → Source section for editing
+  after creation. Two submit actions share one `createServiceFromForm()` helper
+  (`new/+page.server.ts`) that validates + creates the row: `create` (secondary
+  button, "Create service", persists config only, same as before) and
+  `createAndDeploy` (primary button, "Create and Deploy", calls
+  `DeploymentService.deployService()` before redirecting straight to the new
+  service's Overview tab instead of the services/stack list). A min-height
+  wrapper around the step content keeps the Next/Back button row's vertical
+  position stable as steps of different heights swap in.
 - `[serviceId]/+layout.server.ts`, existence guard (unknown id, 404) + syncs
-  live Docker status on every visit. Tabs: **Overview**
-  (deploy/start/stop/restart, live deploy progress panel, deployment history
-  with expandable per-deployment logs, plus an embedded `LiveLogViewer`, see
-  Logs below, shown once deployed so recent output is visible without switching
-  tabs), **Source** (Deploy-from image/git toggle, image+tag or git repo fields,
-  private registry, `updateSourceSchema`, its own `updateSource` action; split
-  off Settings so "what gets deployed" has its own tab), **Logs** (live-streamed
-  via a `+server.ts` GET returning a chunked `ReadableStream`, rendered through
+  live Docker status on every visit. Tabs (see A service's tabs above for the
+  grouping): **Overview** (deploy/start/stop/restart, live deploy progress
+  panel, deployment history with expandable per-deployment logs, plus an
+  embedded `LiveLogViewer`, see Logs below, shown once deployed so recent output
+  is visible without switching tabs), **Environments & Deployments** (its
+  **Source** section: Deploy-from image/git toggle, image+tag or git repo
+  fields, private registry, `updateSourceSchema`, its own `updateSource` action,
+  split off Settings so "what gets deployed" has its own place; plus the
+  Environments list, **Environment Variables**, **Revisions** and, for a git
+  service, **Previews** and **Channels**), **Observability** (Monitoring;
+  **Events**, the live logs, streamed via a `+server.ts` GET returning a chunked
+  `ReadableStream` and rendered through
   `src/lib/components/live-log-viewer.svelte`, the same component embedded in
-  Overview), **Env Vars**, **Volumes** (mount/unmount StorageVolumes, including
-  a "New volume" modal, `src/lib/components/new-volume-fields.svelte` shared
-  with `/storage/new`, so a volume can be created and mounted without leaving
-  the service), **Networking** (a **Domains** card: the default
-  `<slug>.<baseDomain>` hostname with a "Routed" toggle, a list of extra domains
-  and a radio picking the main one, `updateDomains` action, pure helpers in
-  `src/lib/service-domains.ts`; an **Access** section holds the per-app login
-  wall, its allowed sign-in methods and its user/email/group allowlists,
-  `updateAppAuth`, see Per-app login wall below; a **Network** section holds
-  container port, protocol (tcp/udp/both), network mode (bridge/host, see
-  below), and DNS-resolvability, `updatePortsSchema`, its own `updatePorts`
-  action, moved off Settings; an **SSL** section, its own `updateSsl` action,
-  shown only for domains outside the instance's base domain and never behind
-  Pangolin (which serves certificates itself), host ports are still never
-  _published_/mapped by design even though host network mode now exists, see
-  below; **every one of those settings is a Traefik label written when the
-  container is created**, so saving one changes nothing about the container
-  that's already running, which is why an already-deployed service shows an
-  amber notice and a `?/redeploy` button at the top of this tab rather than
-  leaving the user to work out why their domain 404s), **Compute** (cpu/memory
-  limits, `updateComputeSchema`, its own `updateCompute` action, moved off
-  Settings), **Terminal** (interactive shell into the live container, see
-  below), **Errors** (failed deployments + a live "container currently down"
-  banner + "Application errors", persisted app-level warn/error `Logger` output
+  Overview, then failed deployments, a live "container currently down" banner
+  and "Application errors", persisted app-level warn/error `Logger` output
   attributed to this service, see `app_log`/`AppLogDTO` in Data model below;
-  plus, when `currentStatus === "missing"`, a distinct banner with a "Resolve"
-  button, `?/resolveOrphan`, calling `ServiceDTO.resolveOrphan()` to clear the
-  stale `containerId`/`swarmServiceId` and put the row back to a clean,
-  never-deployed shape so Deploy works again, see the `"missing"`
-  `ContainerStatus` note under Docker integration below), **Settings**
-  (name/slug/restart-policy, move between stacks, save-as-template,
-  auto-redeploy cron schedule, danger-zone delete, image/git/registry,
-  port/network and cpu/memory fields all moved to their own tabs, see
-  Source/Networking/Compute above)
+  **Errors**, error tracking; **Health**), **Storage** (mount/unmount
+  StorageVolumes, including a "New volume" modal,
+  `src/lib/components/new-volume-fields.svelte` shared with `/storage/new`, so a
+  volume can be created and mounted without leaving the service), **Networking**
+  (a **Domains** card: the default `<slug>.<baseDomain>` hostname with a
+  "Routed" toggle, a list of extra domains and a radio picking the main one,
+  `updateDomains` action, pure helpers in `src/lib/service-domains.ts`; an
+  **Access** section holds the per-app login wall, its allowed sign-in methods
+  and its user/email/group allowlists, `updateAppAuth`, see Per-app login wall
+  below; a **Network** section holds container port, protocol (tcp/udp/both),
+  network mode (bridge/host, see below), and DNS-resolvability,
+  `updatePortsSchema`, its own `updatePorts` action, moved off Settings; an
+  **SSL** section, its own `updateSsl` action, shown only for domains outside
+  the instance's base domain and never behind Pangolin (which serves
+  certificates itself), host ports are still never _published_/mapped by design
+  even though host network mode now exists, see below; **every one of those
+  settings is a Traefik label written when the container is created**, so saving
+  one changes nothing about the container that's already running, which is why
+  an already-deployed service shows an amber notice and a `?/redeploy` button at
+  the top of this tab rather than leaving the user to work out why their domain
+  404s), **Container** (its **Compute** section: cpu/memory limits,
+  `updateComputeSchema`, its own `updateCompute` action, moved off Settings; its
+  **Runtime** section), **Terminal** (interactive shell into the live container,
+  see below), **Settings** (name/slug/restart-policy, move between stacks,
+  save-as-template, auto-redeploy cron schedule, danger-zone delete,
+  image/git/registry, port/network and cpu/memory fields all moved to their own
+  tabs, see Environments & Deployments/Networking/Container above). When
+  `currentStatus === "missing"`, Observability → Events shows a distinct banner
+  with a "Resolve" button, `?/resolveOrphan`, calling
+  `ServiceDTO.resolveOrphan()` to clear the stale `containerId`/`swarmServiceId`
+  and put the row back to a clean, never-deployed shape so Deploy works again,
+  see the `"missing"` `ContainerStatus` note under Docker integration below
 - `[serviceId]/deployments/[deploymentId]/events/+server.ts`, the SSE stream the
   Overview tab listens on while a deploy is in flight (see Live progress below),
   and `.../progress/+server.ts`, the older `{log, status}` JSON endpoint, now

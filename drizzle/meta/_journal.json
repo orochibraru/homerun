@@ -714,6 +714,20 @@
 			"when": 1791136518046,
 			"tag": "0101_fluffy_timeslip",
 			"breakpoints": true
+		},
+		{
+			"idx": 102,
+			"version": "7",
+			"when": 1791190453268,
+			"tag": "0102_chilly_joshua_kane",
+			"breakpoints": true
+		},
+		{
+			"idx": 103,
+			"version": "7",
+			"when": 1791190489522,
+			"tag": "0103_secret_liz_osborn",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

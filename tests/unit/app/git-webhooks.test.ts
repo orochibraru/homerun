@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import {
 	createWebhookRequest,
 	deleteWebhookPath,
+	existingWebhookId,
 	gitWebhookUrl,
 	openPullRequestsPath,
 	parseOpenPullRequests,
@@ -567,6 +568,26 @@ describe("parseOpenPullRequests", () => {
 		expect(openPullRequestsPath("bitbucket", "acme/app")).toBe(
 			"/repositories/acme/app/pullrequests?state=OPEN&pagelen=50",
 		);
+	});
+});
+
+describe("existingWebhookId", () => {
+	test("finds the hook already delivering to the URL", () => {
+		const hooks = [
+			{ config: { url: "https://other.example.com/hook" }, id: 1 },
+			{
+				config: { url: "https://homerun.example.com/api/v1/webhooks/git/svc" },
+				id: 42,
+			},
+		];
+		expect(
+			existingWebhookId(
+				hooks,
+				"https://homerun.example.com/api/v1/webhooks/git/svc",
+			),
+		).toBe("42");
+		expect(existingWebhookId(hooks, "https://nope.example.com")).toBeNull();
+		expect(existingWebhookId({ message: "Not Found" }, "x")).toBeNull();
 	});
 });
 

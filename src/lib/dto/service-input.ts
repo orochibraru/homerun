@@ -10,6 +10,7 @@ export interface NewServiceInput {
 	/** Off by default for a database or cache image, which has no HTTP to probe and no public route to watch. */
 	uptimeEnabled?: boolean;
 	buildCacheRegistryId?: string | null;
+	buildCacheBuiltin?: boolean;
 	buildServerRemoteHostId?: string | null;
 	buildSource?: "image" | "git";
 	containerPort: number;
@@ -71,6 +72,7 @@ export type ServiceUpdateInput = Partial<
 		| "authRequired"
 		| "autoRollback"
 		| "buildCacheRegistryId"
+		| "buildCacheBuiltin"
 		| "buildServerRemoteHostId"
 		| "buildSource"
 		| "containerId"

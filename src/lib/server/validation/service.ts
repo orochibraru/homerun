@@ -137,7 +137,7 @@ export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 
 // The existing-service Settings tab is split across independent forms/
 // actions/routes (Settings for the fields below, Source for build/image/git/
-// registry : see services/[serviceId]/source/, Networking's own "Network"
+// registry : see services/[serviceId]/environments/source/, Networking's own "Network"
 // section for port/protocol/network-mode/DNS : see updatePortsSchema below),
 // each validated against only its own subset of baseServiceSchema rather
 // than the full create-time shape.
@@ -306,7 +306,7 @@ export const updateRuntimeSchema = z
 	});
 export type UpdateRuntimeInput = z.infer<typeof updateRuntimeSchema>;
 
-/** Backs the Env Vars tab's env files form : absolute host paths, one per line. */
+/** Backs the Environment Variables section's env files form : absolute host paths, one per line. */
 export const updateEnvFilesSchema = z.object({
 	envFiles: z
 		.string()

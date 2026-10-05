@@ -9,15 +9,15 @@ at Homerun instead of sentry.io.
 
 ## Turning it on
 
-Open a service's **Errors** tab and turn on **Error tracking**. Homerun creates
-a project for the service and shows its DSN, with setup snippets for the common
-SDKs:
+Open a service's **Observability → Errors** section and turn on **Error
+tracking**. Homerun creates a project for the service and shows its DSN, with
+setup snippets for the common SDKs:
 
 ```text
 https://<public key>@homerun.example.com/<project id>
 ```
 
-![A service's Errors tab with error tracking on: its DSN, the env injection settings and the SDK setup snippets](images/error-tracking-setup.webp)
+![A service's Observability → Errors with error tracking on: its DSN, the env injection settings and the SDK setup snippets](images/error-tracking-setup.webp)
 
 With **Inject SENTRY_DSN, SENTRY_RELEASE and SENTRY_ENVIRONMENT** on (the
 default), the next deploy adds those three variables to the service's env, so
@@ -25,8 +25,8 @@ the app only needs to initialise the SDK with no arguments:
 
 - `SENTRY_DSN` points at the dashboard container over the Homerun network (plain
   `http://` to its network alias), so the app doesn't need to reach the
-  dashboard's public URL. The public DSN on the tab is for anything outside the
-  host, such as a browser.
+  dashboard's public URL. The public DSN in the section is for anything outside
+  the host, such as a browser.
 - `SENTRY_RELEASE` is the git commit the deploy built, or the image reference
   for an image service, so every event says exactly which code raised it.
 - `SENTRY_ENVIRONMENT` is the service's [environment](release-channels.md)
@@ -54,10 +54,10 @@ the first and last time it was seen. Events are grouped by:
 An issue is **unresolved**, **resolved** or **ignored**. Resolve one once you've
 shipped a fix; if it happens again it's **regressed**: it goes back to
 unresolved and you're notified. An ignored issue still counts its events but
-never notifies. The Errors tab lists issues with a status filter and search, and
-resolves or ignores several at once.
+never notifies. The Errors section lists issues with a status filter and search,
+and resolves or ignores several at once.
 
-![The Errors tab's issue list, each issue with its event count, users affected and when it was last seen](images/error-tracking-issues.webp)
+![The Errors section's issue list, each issue with its event count, users affected and when it was last seen](images/error-tracking-issues.webp)
 
 ## Back to the source
 
@@ -65,7 +65,8 @@ An issue's page shows the exception (and the chain of exceptions that caused
 it), its stack trace with your own frames open and library frames folded, the
 lines of code around each frame when the SDK sends them (most server-side SDKs
 do), plus the request, user, tags and breadcrumbs of the event, and the other
-events of the issue.
+events of the issue: the arrows step to the older or newer one, and each event
+has its own link to share.
 
 ![An issue's page: the exception and its stack trace, with the source around each of the app's own frames](images/error-tracking-issue.webp)
 
@@ -101,13 +102,13 @@ original file, line, function name and surrounding source as each error arrives
    `release` field and one field per map named after its path.
 
 Maps apply to errors that arrive after the upload; errors already stored keep
-their minified frames. The service's **Errors** tab lists the releases with
+their minified frames. The service's **Errors** section lists the releases with
 maps, and deletes one; `homerun services sourcemaps list <id>` and
 `homerun services sourcemaps delete <id> <release>` do the same. Only the 10
 most recent releases are kept, and a map can be at most 25 MiB. A map doesn't
 need to be served publicly, so you can keep it out of the deployed image.
 
-![The Source maps panel on the Errors tab, listing the releases with maps](images/error-tracking-source-maps.webp)
+![The Source maps panel in Observability → Errors, listing the releases with maps](images/error-tracking-source-maps.webp)
 
 ## Notifications
 

@@ -19,9 +19,10 @@ Two kinds:
   icon for its category.
 - **Custom**, save any service's current config as a template from its Settings
   tab, or build one from scratch under `Templates → New Template`, whose
-  **Runtime** section takes the same fields as a service's Runtime tab plus env
-  files. Like every other resource, a custom template is shared with every
-  account on the instance, see [Users and roles](users-and-roles.md).
+  **Runtime** section takes the same fields as a service's **Container →
+  Runtime** plus env files. Like every other resource, a custom template is
+  shared with every account on the instance, see
+  [Users and roles](users-and-roles.md).
 
 ![New Template, for building a custom template from scratch](images/templates-new.webp)
 

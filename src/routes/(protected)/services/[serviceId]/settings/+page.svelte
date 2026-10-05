@@ -222,7 +222,7 @@
         CPU/memory limits and autoscaling moved to the
         <a
           class="text-accent underline"
-          href={resolve("/(protected)/services/[serviceId]/compute", {
+          href={resolve("/(protected)/services/[serviceId]/container", {
             serviceId: svc.id,
           })}
         >Compute</a>

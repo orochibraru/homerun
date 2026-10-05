@@ -2,6 +2,7 @@ import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
 import { isCommitSha, pollOutcome } from "#lib/git-ref.js";
 import { DeploymentService } from "../deploy.service.ts";
+import { EnvironmentService } from "../environment.service.ts";
 import { ReleaseChannelService } from "../release-channel.service.ts";
 import { StatusCheckService } from "../status-check.service.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
@@ -35,13 +36,15 @@ export class GitPollScheduler extends BaseScheduler {
 		}
 	}
 
-	/** Enqueues a push deploy of a polled service; a release channel canary goes through its parent, so it picks up the parent's latest settings first. */
+	/** Enqueues a push deploy of a polled service; a release channel canary or an environment goes through its parent, so it picks up the parent's latest settings first. */
 	async #deploy(svc: ServiceDTO): Promise<{ deploymentId: string }> {
-		const parentId = svc.toJSON().previewParentId;
-		const parent =
-			svc.toJSON().channelCanary && parentId
-				? await ServiceDTO.get(parentId)
-				: null;
+		const row = svc.toJSON();
+		const parent = row.previewParentId
+			? await ServiceDTO.get(row.previewParentId)
+			: null;
+		if (parent && !row.channelCanary) {
+			return await EnvironmentService.deploy(parent, svc, "push");
+		}
 		if (parent?.toJSON().channelsEnabled) {
 			return await ReleaseChannelService.deployCanary(parent, {
 				trigger: "push",

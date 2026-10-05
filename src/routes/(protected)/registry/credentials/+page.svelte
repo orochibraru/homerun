@@ -75,7 +75,7 @@
             </p>
           </div>
           <Button
-            href={resolve("/(protected)/services/[serviceId]/source", {
+            href={resolve("/(protected)/services/[serviceId]/environments/source", {
               serviceId: svc.id,
             })}
             size="sm"

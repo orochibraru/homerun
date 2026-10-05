@@ -3,6 +3,10 @@ import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { statusPageSchema } from "#lib/server/validation/status-page.js";
+import {
+	picksFromForm,
+	statusPageServiceOptions,
+} from "#lib/status-page-members.js";
 import { resolve } from "$app/paths";
 
 export const load = async ({ parent }) => {
@@ -13,11 +17,7 @@ export const load = async ({ parent }) => {
 	]);
 	return {
 		stacks: stacks.map((p) => ({ id: p.id, name: p.name })),
-		services: services.map((svc) => ({
-			id: svc.id,
-			name: svc.name,
-			stackId: svc.stackId,
-		})),
+		services: statusPageServiceOptions(services.map((svc) => svc.toJSON())),
 	};
 };
 
@@ -55,7 +55,7 @@ export const actions = {
 		});
 
 		if (parsed.data.scope === "custom") {
-			await page.setServiceIds(form.getAll("serviceIds").map(String));
+			await page.setPicks(picksFromForm(form));
 		}
 
 		throw redirect(303, `${resolve("status-pages")}/${page.id}`);

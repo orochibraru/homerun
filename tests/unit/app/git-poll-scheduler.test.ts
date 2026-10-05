@@ -96,7 +96,7 @@ async function tick(services: ServiceRow[]) {
 }
 
 describe("GitPollScheduler with release channels", () => {
-	test("the pollable query leaves out a parent with channels on but keeps its canary", async () => {
+	test("the pollable query leaves out a parent with channels on and previews, but keeps its canary and environments", async () => {
 		let condition: SQL | undefined;
 		stub(db, "select", () => ({
 			from: () => ({
@@ -109,9 +109,7 @@ describe("GitPollScheduler with release channels", () => {
 		await ServiceGitDTO.listPushPollable();
 		const query = new PgDialect().sqlToQuery(condition as SQL);
 		expect(query.sql).toContain('"service"."channels_enabled" = $');
-		expect(query.sql).toMatch(
-			/\("service"\."preview_parent_id" is null or "service"\."channel_canary" = \$\d+\)/,
-		);
+		expect(query.sql).toMatch(/"service"\."preview_pr_number" is null/);
 		const channelsParam =
 			query.params[
 				Number(/"channels_enabled" = \$(\d+)/.exec(query.sql)?.[1]) - 1

@@ -1,5 +1,4 @@
 import { error } from "@sveltejs/kit";
-import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { BEAT_WINDOW, UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 
@@ -9,12 +8,10 @@ export const load = async ({ params }) => {
 		error(404, "No status page here");
 	}
 
-	const memberIds = await page.serviceIds();
-	const allServices = await ServiceDTO.list();
-	const members = allServices.filter((svc) => memberIds.includes(svc.id));
+	const shown = await page.members();
 
 	const services = await Promise.all(
-		members.map(async (svc) => {
+		shown.map(async (svc) => {
 			const beats = await UptimeCheckDTO.beats(svc.id, "internal");
 			const recent = beats.slice(-BEAT_WINDOW);
 			const okCount = recent.filter((beat) => beat.ok).length;
@@ -23,6 +20,7 @@ export const load = async ({ params }) => {
 					checkedAt: beat.checkedAt,
 					ok: beat.ok,
 				})),
+				childOf: svc.childOf,
 				id: svc.id,
 				name: svc.name,
 				status:

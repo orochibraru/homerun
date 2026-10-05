@@ -515,7 +515,9 @@ describe("errorIssueMessage", () => {
 		);
 		expect(message.event).toBe("error.issue.regressed");
 		expect(message.title).toBe("api: error regressed");
-		expect(message.link).toBe("https://dash.test/services/s1/errors/i1");
+		expect(message.link).toBe(
+			"https://dash.test/services/s1/observability/errors/i1",
+		);
 		expect(message.fields.map((field) => field.name)).toEqual([
 			"Level",
 			"Events",

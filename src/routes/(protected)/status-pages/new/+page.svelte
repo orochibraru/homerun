@@ -4,6 +4,7 @@
 	import Alert from "#lib/components/alert.svelte";
 	import StatusPageFields from "#lib/components/status-page-fields.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import type { StatusPagePick } from "#lib/status-page-members.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import type { StatusPageScope } from "#lib/types.js";
@@ -20,7 +21,7 @@
 	let scope = $state<StatusPageScope>("global");
 	let stackId = $state("");
 	let isPublic = $state(false);
-	let selectedServiceIds = $state<string[]>([]);
+	let picks = $state<StatusPagePick[]>([]);
 	let saving = $state(false);
 
 	let slugTouched = $state(false);
@@ -65,7 +66,7 @@
       bind:scope
       bind:stackId
       bind:isPublic
-      bind:selectedServiceIds
+      bind:picks
       errors={form?.errors}
       stacks={data.stacks}
       services={data.services}

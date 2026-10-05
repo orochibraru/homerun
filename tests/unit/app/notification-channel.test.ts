@@ -44,7 +44,7 @@ const message = {
 		{ name: "Branch", value: "main" },
 		{ name: "Repository", value: `https://example.com/${"a".repeat(60)}.git` },
 	],
-	link: "https://homerun.example.com/services/svc-1/revisions",
+	link: "https://homerun.example.com/services/svc-1/environments/revisions",
 	serviceId: "svc-1",
 	serviceName: "api",
 	timestamp: "2026-09-16T12:00:00.000Z",
@@ -83,7 +83,7 @@ describe("channel formatting", () => {
 		expect(messageBody(message)).toContain("exit code 1");
 		expect(messageBody(message)).toContain("Branch: main");
 		expect(messageBody(message)).toContain(
-			"Open: https://homerun.example.com/services/svc-1/revisions",
+			"Open: https://homerun.example.com/services/svc-1/environments/revisions",
 		);
 		expect(messageBody({ ...message, detail: null })).not.toContain(
 			"exit code 1",
@@ -329,7 +329,7 @@ describe("deploy and uptime messages", () => {
 		expect(built.title).toBe("web was updated");
 		expect(built.detail).toBeNull();
 		expect(built.link).toBe(
-			"https://homerun.example.com/services/svc-1/revisions",
+			"https://homerun.example.com/services/svc-1/environments/revisions",
 		);
 		expect(built.fields).toEqual([
 			{ name: "Stack", value: "Blog" },

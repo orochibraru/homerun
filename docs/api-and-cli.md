@@ -146,8 +146,9 @@ CI to test against (see
   `imageRef`, `imageDigest`, `health`, `healthReason`, `deployedAt`, or null)
   and `deployment` (its latest deploy attempt, failed or in flight included:
   `id`, `status`, `gitCommit`, `errorMessage`, or null).
-- `DELETE /api/v1/services/:id/previews/:prNumber` deletes it, like the Previews
-  tab's Delete button (`409` when its container couldn't be removed).
+- `DELETE /api/v1/services/:id/previews/:prNumber` deletes it, like the Delete
+  button in Environments & Deployments → Previews (`409` when its container
+  couldn't be removed).
 - `POST /api/v1/services/:id/previews/:prNumber/promote` deploys the image the
   preview runs to the service itself, the way a rollback redeploys a revision:
   no build, no pull from upstream, no scan. An optional `{"commit": "<sha>"}`
@@ -256,11 +257,12 @@ Secrets don't reach the agent, the rest stays readable:
 change, `null` deletes one. Anything sent back exactly as the agent read it,
 redaction included, keeps its stored value, and a placeholder that matches
 nothing stored is refused rather than written. A secret under a name that
-doesn't look like one (`TMDB_API`) is caught only once you mark it secret on the
-Env vars tab; an app that prints its own secrets in some other form still leaks
-them in its logs. To disconnect Claude, revoke it under Profile → Authorized
-Clients (it can't refresh its access any more, and the token it holds expires
-within the hour), or delete its app on the IDP page to cut it off for everyone.
+doesn't look like one (`TMDB_API`) is caught only once you mark it secret under
+Environments & Deployments → Environment Variables; an app that prints its own
+secrets in some other form still leaks them in its logs. To disconnect Claude,
+revoke it under Profile → Authorized Clients (it can't refresh its access any
+more, and the token it holds expires within the hour), or delete its app on the
+IDP page to cut it off for everyone.
 
 ## CLI
 
@@ -391,7 +393,7 @@ the total, a footer line tells you so
 than letting a truncated table look complete.
 
 `homerun services config <id>` (or `homerun services <id> config`) prints a
-service's settings as JSON, grouped the way the dashboard's tabs are: `source`,
+service's settings as JSON, grouped by the dashboard's sections: `source`,
 `env`, `volumes`, `networking`, `compute`, `runtime`, `security` and `settings`.
 Secrets never appear: a stored registry password or SSL key shows as
 `passwordSet`/`customSsl: true`, and an uploaded icon as `"uploaded"`. It's

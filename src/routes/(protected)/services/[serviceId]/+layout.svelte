@@ -1,23 +1,16 @@
 <script lang="ts">
 	import {
-		Bird,
-		Bug,
-		Clock,
-		Container,
 		Cpu,
 		ExternalLink,
 		FileText,
-		GitPullRequest,
 		HardDrive,
-		HeartPulse,
+		Layers,
 		LayoutGrid,
 		Network,
 		Server,
 		Settings,
 		ShieldCheck,
-		SlidersHorizontal,
 		Terminal,
-		TerminalSquare,
 	} from "@lucide/svelte";
 	import CopyButton from "#lib/components/copy-button.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
@@ -62,71 +55,22 @@
 		},
 		{
 			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/source", {
+			href: resolve("/(protected)/services/[serviceId]/environments", {
 				serviceId: svc.id,
 			}),
-			icon: Container,
-			id: "source",
-			label: "Source",
-		},
-		...(svc.buildSource === "git" && !svc.previewParentId
-			? [
-					{
-						exact: false,
-						href: resolve("/(protected)/services/[serviceId]/previews", {
-							serviceId: svc.id,
-						}),
-						icon: GitPullRequest,
-						id: "previews",
-						label: "Previews",
-					},
-					{
-						exact: false,
-						href: resolve("/(protected)/services/[serviceId]/channels", {
-							serviceId: svc.id,
-						}),
-						icon: Bird,
-						id: "channels",
-						label: "Channels",
-					},
-				]
-			: []),
-		{
-			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/revisions", {
-				serviceId: svc.id,
-			}),
-			icon: Clock,
-			id: "revisions",
-			label: "Revisions",
+			icon: Layers,
+			id: "environments",
+			label: "Environments & Deployments",
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/services/[serviceId]/observability", {
 				serviceId: svc.id,
 			}),
+			hasWarning: data.openErrors > 0,
 			icon: FileText,
 			id: "observability",
 			label: "Observability",
-		},
-		{
-			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/errors", {
-				serviceId: svc.id,
-			}),
-			hasWarning: data.openErrors > 0,
-			icon: Bug,
-			id: "errors",
-			label: "Errors",
-		},
-		{
-			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/env", {
-				serviceId: svc.id,
-			}),
-			icon: SlidersHorizontal,
-			id: "env",
-			label: "Env Vars",
 		},
 		{
 			exact: false,
@@ -148,30 +92,12 @@
 		},
 		{
 			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/compute", {
+			href: resolve("/(protected)/services/[serviceId]/container", {
 				serviceId: svc.id,
 			}),
 			icon: Cpu,
-			id: "compute",
-			label: "Compute",
-		},
-		{
-			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/runtime", {
-				serviceId: svc.id,
-			}),
-			icon: TerminalSquare,
-			id: "runtime",
-			label: "Runtime",
-		},
-		{
-			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/health", {
-				serviceId: svc.id,
-			}),
-			icon: HeartPulse,
-			id: "health",
-			label: "Health",
+			id: "container",
+			label: "Container",
 		},
 		{
 			exact: false,
@@ -264,7 +190,7 @@
       <span aria-hidden="true">·</span>
       <a
         class="text-red-600 hover:underline dark:text-red-400"
-        href={resolve("/(protected)/services/[serviceId]/errors", {
+        href={resolve("/(protected)/services/[serviceId]/observability/errors", {
           serviceId: svc.id,
         })}
       >

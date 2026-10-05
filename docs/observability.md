@@ -1,9 +1,12 @@
 # Observability
 
 The **Observability** tab is where a service tells you how it's doing. It has
-two sections: **Monitoring**, its traffic, response time, error rate, uptime and
-resource use over a range, and **Events**, its uptime probes, live logs, failed
-deploys and the errors Homerun logged about it.
+four sections: **Monitoring**, its traffic, response time, error rate, uptime
+and resource use over a range; **Events**, its uptime probes, live logs, failed
+deploys and the errors Homerun logged about it; **Errors**, the exceptions your
+app reports (see [Error tracking](error-tracking.md)); and **Health**, the
+healthcheck the running container was created with (see
+[Services](services.md#health)).
 
 ## Monitoring
 
@@ -101,15 +104,16 @@ once, so recent output is visible without switching tabs.
 
 ## Errors
 
-Below the logs, **Failed deployments** and **Application errors** (persisted
-warn/error-level app log lines that mention this service) sit alongside a
-"container currently down" banner when the container has crashed. A deploy that
-reaches running hides the errors logged before it, and **Clear errors** does the
-same by hand; a note says how many are hidden and what cleared them, with a link
-to show them again. If a service's container was removed outside Homerun (e.g. a
-manual `docker rm`), the tab shows a distinct "container is gone" banner with a
-**Resolve** button instead: click it to clear the stale reference so the service
-goes back to its normal never-deployed state and Deploy works again.
+In the **Events** section, below the logs, **Failed deployments** and
+**Application errors** (persisted warn/error-level app log lines that mention
+this service) sit alongside a "container currently down" banner when the
+container has crashed. A deploy that reaches running hides the errors logged
+before it, and **Clear errors** does the same by hand; a note says how many are
+hidden and what cleared them, with a link to show them again. If a service's
+container was removed outside Homerun (e.g. a manual `docker rm`), the section
+shows a distinct "container is gone" banner with a **Resolve** button instead:
+click it to clear the stale reference so the service goes back to its normal
+never-deployed state and Deploy works again.
 
 ![Failed deployments and Application errors, below the logs](images/observability-errors.webp)
 

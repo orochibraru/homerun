@@ -54,9 +54,10 @@ jobs:
 
 The action installs the CLI release matching its tag and runs
 `homerun services deploy`. Its `deployment-id` output is the id of the
-deployment it created, shown on the service's Revisions tab. It runs on Linux
-and macOS runners, not Windows. Pin a release tag rather than `main`, so an
-upgrade of your instance and of your pipelines happen when you choose.
+deployment it created, shown under the service's **Environments & Deployments →
+Revisions**. It runs on Linux and macOS runners, not Windows. Pin a release tag
+rather than `main`, so an upgrade of your instance and of your pipelines happen
+when you choose.
 
 ## GitLab CI and other CIs: the Docker image
 

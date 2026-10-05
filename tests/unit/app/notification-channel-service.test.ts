@@ -31,7 +31,7 @@ const message = {
 		{ name: "Branch", value: "main" },
 		{ name: "Repository", value: `https://example.com/${"a".repeat(60)}.git` },
 	],
-	link: "https://homerun.example.com/services/svc-1/revisions",
+	link: "https://homerun.example.com/services/svc-1/environments/revisions",
 	serviceId: "svc-1",
 	serviceName: "api",
 	timestamp: "2026-09-16T12:00:00.000Z",
@@ -518,7 +518,7 @@ describe("fire-and-forget notifications", () => {
 			value: "https://shop-web.example.com",
 		});
 		expect(sent.link).toBe(
-			"https://homerun.example.com/services/svc-1/revisions",
+			"https://homerun.example.com/services/svc-1/environments/revisions",
 		);
 	});
 

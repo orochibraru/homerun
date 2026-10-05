@@ -14,11 +14,11 @@ itself. Point its branch at `main` and give it its real domain
 
 ## 2. Turn release channels on
 
-![The Channels tab with release channels ticked and a canary domain filled in](images/release-channels-tab.webp)
+![Environments & Deployments → Channels with release channels ticked and a canary domain filled in](images/release-channels-tab.webp)
 
-On the service's **Channels** tab: tick **Enable release channels**, keep the
-canary branch `main` and the tag pattern `v*`, set the canary domain to
-`canary.example.com`, save. Or from a terminal:
+In the service's **Environments & Deployments → Channels** section: tick
+**Enable release channels**, keep the canary branch `main` and the tag pattern
+`v*`, set the canary domain to `canary.example.com`, save. Or from a terminal:
 
 ```bash
 homerun services channels enable app --branch main --tags 'v*' --canary-domain canary.example.com
@@ -89,16 +89,16 @@ homerun deploy app --environment stable
 ```
 
 Stable builds the ref it last deployed, so in that setup set the service's
-branch to the new tag first (Source tab, or `PATCH /api/v1/services/{id}` with
-`gitRef`).
+branch to the new tag first (Environments & Deployments → Source, or
+`PATCH /api/v1/services/{id}` with `gitRef`).
 
 ## 4. Rolling back
 
-![A service's Revisions tab](images/revisions.webp)
+![A service's Environments & Deployments → Revisions](images/revisions.webp)
 
 Stable and canary are separate services with their own revisions. To roll stable
-back, open the stable service's **Revisions** tab and **Deploy this revision**
-on the previous one, or:
+back, open the stable service's **Revisions** section and **Deploy this
+revision** on the previous one, or:
 
 ```bash
 homerun services rollback app

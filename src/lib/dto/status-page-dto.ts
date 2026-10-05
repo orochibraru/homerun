@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "#lib/server/db/lib.js";
 import {
 	type StatusPage,
@@ -7,6 +7,11 @@ import {
 	statusPageService,
 } from "#lib/server/db/schema.js";
 import { searchCondition } from "#lib/server/list-query.js";
+import {
+	resolveStatusPageMembers,
+	type StatusPageMember,
+	type StatusPagePick,
+} from "#lib/status-page-members.js";
 import type { StatusPageScope } from "#lib/types.js";
 import { BaseDTO } from "./base-dto";
 
@@ -131,47 +136,95 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 	}
 
 	/**
-	 * The ids of the services this page shows, resolved from its scope : every
-	 * service on the instance, the services in its stack (none when no stack is
-	 * set), or its hand-picked list.
+	 * The services this page shows, newest first, resolved from its scope on
+	 * every call : every service on the instance, the services in its stack
+	 * (none when no stack is set), or its hand-picked list with each pick's
+	 * previews and canary right after it when the pick includes them. Pass
+	 * the page's `picks` when they're already loaded, to skip reading them
+	 * again.
 	 */
+	async members(picks?: StatusPagePick[]): Promise<StatusPageMember[]> {
+		if (this.row.scope === "stack" && !this.row.stackId) {
+			return [];
+		}
+		const custom =
+			this.row.scope === "custom" ? (picks ?? (await this.picks())) : null;
+		if (custom?.length === 0) {
+			return [];
+		}
+		const picked = custom?.map((pick) => pick.serviceId) ?? [];
+		const withChildren =
+			custom
+				?.filter((pick) => pick.includeChildren)
+				.map((pick) => pick.serviceId) ?? [];
+		const services = await db
+			.select({
+				channelCanary: service.channelCanary,
+				id: service.id,
+				name: service.name,
+				previewParentId: service.previewParentId,
+				previewPrNumber: service.previewPrNumber,
+			})
+			.from(service)
+			.where(
+				custom
+					? withChildren.length > 0
+						? or(
+								inArray(service.id, picked),
+								inArray(service.previewParentId, withChildren),
+							)
+						: inArray(service.id, picked)
+					: this.row.scope === "stack" && this.row.stackId
+						? eq(service.stackId, this.row.stackId)
+						: undefined,
+			)
+			.orderBy(desc(service.createdAt));
+		if (!custom) {
+			return services.map((svc) => ({
+				childOf: null,
+				id: svc.id,
+				name: svc.name,
+			}));
+		}
+		return resolveStatusPageMembers(custom, services);
+	}
+
+	/** The ids of the services this page shows, see `members`. */
 	async serviceIds(): Promise<string[]> {
-		if (this.row.scope === "global") {
-			const rows = await db.select({ id: service.id }).from(service);
-			return rows.map((r) => r.id);
-		}
-		if (this.row.scope === "stack") {
-			if (!this.row.stackId) {
-				return [];
-			}
-			const rows = await db
-				.select({ id: service.id })
-				.from(service)
-				.where(eq(service.stackId, this.row.stackId));
-			return rows.map((r) => r.id);
-		}
+		return (await this.members()).map((member) => member.id);
+	}
+
+	/**
+	 * The page's hand-picked services and whether each one brings its previews
+	 * and canary along; only read for a custom-scope page.
+	 */
+	async picks(): Promise<StatusPagePick[]> {
 		const rows = await db
-			.select({ id: statusPageService.serviceId })
+			.select({
+				includeChildren: statusPageService.includeChildren,
+				serviceId: statusPageService.serviceId,
+			})
 			.from(statusPageService)
 			.where(eq(statusPageService.statusPageId, this.row.id));
-		return rows.map((r) => r.id);
+		return rows;
 	}
 
 	/**
 	 * Replaces the page's hand-picked service list; only read for a custom-scope
 	 * page.
 	 */
-	async setServiceIds(serviceIds: string[]): Promise<void> {
+	async setPicks(picks: StatusPagePick[]): Promise<void> {
 		await db
 			.delete(statusPageService)
 			.where(eq(statusPageService.statusPageId, this.row.id));
-		if (serviceIds.length === 0) {
+		if (picks.length === 0) {
 			return;
 		}
 		await db.insert(statusPageService).values(
-			serviceIds.map((serviceId) => ({
+			picks.map((pick) => ({
 				id: crypto.randomUUID(),
-				serviceId,
+				includeChildren: pick.includeChildren,
+				serviceId: pick.serviceId,
 				statusPageId: this.row.id,
 			})),
 		);

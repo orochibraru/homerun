@@ -250,8 +250,8 @@ const DATABASE_ERROR = {
 /** Turns error tracking on for the API service, reports a few errors to it through its DSN, and uploads a release's source maps. */
 async function seedErrors(page: Page, seeded: Seeded): Promise<void> {
 	const api = seeded.serviceIds.api;
-	await postAction(page, `/services/${api}/errors?/enable`, {});
-	await page.goto(`/services/${api}/errors`);
+	await postAction(page, `/services/${api}/observability/errors?/enable`, {});
+	await page.goto(`/services/${api}/observability/errors`);
 	const dsn = await page
 		.locator("code")
 		.filter({ hasText: /^https?:\/\/\w+@/ })
@@ -552,10 +552,11 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/errors (SDK setup open)",
+			doc: "/services/:id/observability/errors (SDK setup open)",
 			expect: /Public DSN/,
 			name: "error-tracking-setup",
-			path: (seeded) => `/services/${seeded.serviceIds.api}/errors`,
+			path: (seeded) =>
+				`/services/${seeded.serviceIds.api}/observability/errors`,
 			prepare: async (page) => {
 				await page.getByText("SDK setup", { exact: true }).click();
 				await expect(
@@ -564,27 +565,29 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/errors (issues)",
+			doc: "/services/:id/observability/errors (issues)",
 			expect: /Cannot read properties of undefined/,
 			name: "error-tracking-issues",
-			path: (seeded) => `/services/${seeded.serviceIds.api}/errors`,
+			path: (seeded) =>
+				`/services/${seeded.serviceIds.api}/observability/errors`,
 			prepare: (page) =>
 				scrollToTop(
 					page.getByPlaceholder("Search issues by title or culprit…"),
 				),
 		},
 		{
-			doc: "/services/:id/errors/:issueId",
+			doc: "/services/:id/observability/errors/:issueId",
 			expect: /Cannot read properties of undefined/,
 			name: "error-tracking-issue",
 			path: (seeded) =>
-				`/services/${seeded.serviceIds.api}/errors/${ids.issue}`,
+				`/services/${seeded.serviceIds.api}/observability/errors/${ids.issue}`,
 		},
 		{
-			doc: "/services/:id/errors (Source maps)",
+			doc: "/services/:id/observability/errors (Source maps)",
 			expect: /Public DSN/,
 			name: "error-tracking-source-maps",
-			path: (seeded) => `/services/${seeded.serviceIds.api}/errors`,
+			path: (seeded) =>
+				`/services/${seeded.serviceIds.api}/observability/errors`,
 			prepare: (page) => scrollToTop(heading(page, "Source maps")),
 		},
 		{

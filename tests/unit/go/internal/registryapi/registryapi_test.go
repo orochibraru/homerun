@@ -65,6 +65,14 @@ func TestPlanGCEmptyKeepDeletesEverything(t *testing.T) {
 	}
 }
 
+func TestPlanGCKeepsBuildCaches(t *testing.T) {
+	cache := "homerun-build-app"
+	plan := registryapi.PlanGC([]registryapi.Tag{{Digest: digest("1"), Repository: cache, Tag: registryapi.BuildCacheTag}}, []string{cache}, registryapi.KeepSet{})
+	if len(plan.Deletes) != 0 || len(plan.EmptiedRepositories) != 0 {
+		t.Errorf("plan = %+v", plan)
+	}
+}
+
 func TestKeepTagIsAValidTag(t *testing.T) {
 	tag := registryapi.KeepTagFor(digest("f"))
 	if !strings.HasPrefix(tag, registryapi.KeepTagPrefix) || !regexp.MustCompile(`^\w[\w.-]{0,127}$`).MatchString(tag) {

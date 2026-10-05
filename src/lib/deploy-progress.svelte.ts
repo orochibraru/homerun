@@ -65,11 +65,12 @@ export class DeployProgress {
 		this.#progressSource = null;
 	}
 
-	/** Link to the revisions tab with `deploymentId` opened. */
+	/** Link to the revision `deploymentId` belongs to (the page redirects a deployment id to its revision). */
 	revisionHref(deploymentId: string): string {
-		return `${resolve("/(protected)/services/[serviceId]/revisions", {
-			serviceId: this.#service.id(),
-		})}?deployment=${deploymentId}`;
+		return resolve(
+			"/(protected)/services/[serviceId]/environments/revisions/[revisionId]",
+			{ revisionId: deploymentId, serviceId: this.#service.id() },
+		);
 	}
 
 	/**

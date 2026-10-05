@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { BarChart3, ListChecks } from "@lucide/svelte";
+	import { BarChart3, Bug, HeartPulse, ListChecks } from "@lucide/svelte";
+	import SectionNav from "#lib/components/section-nav.svelte";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 
 	const { children, data } = $props();
 
@@ -20,27 +20,23 @@
 			icon: ListChecks,
 			label: "Events",
 		},
+		{
+			href: resolve("/(protected)/services/[serviceId]/observability/errors", {
+				serviceId: data.service.id,
+			}),
+			icon: Bug,
+			label: "Errors",
+		},
+		{
+			href: resolve("/(protected)/services/[serviceId]/observability/health", {
+				serviceId: data.service.id,
+			}),
+			icon: HeartPulse,
+			label: "Health",
+		},
 	]);
 </script>
 
-<nav
-  aria-label="Observability sections"
-  class="border-border bg-surface-2 mb-5 inline-flex rounded-lg border p-0.5"
->
-  {#each sections as section (section.href)}
-    {@const active = page.url.pathname === section.href}
-    {@const Icon = section.icon}
-    <a
-      aria-current={active ? "page" : undefined}
-      class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors {active
-        ? 'bg-surface text-text shadow-sm'
-        : 'text-text-muted hover:text-text'}"
-      href={section.href}
-    >
-      <Icon class="size-4" />
-      {section.label}
-    </a>
-  {/each}
-</nav>
+<SectionNav label="Observability sections" {sections} />
 
 {@render children()}

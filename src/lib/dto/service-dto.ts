@@ -322,6 +322,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 	static #buildColumns(input: NewServiceInput) {
 		return {
 			buildCacheRegistryId: input.buildCacheRegistryId ?? null,
+			buildCacheBuiltin: input.buildCacheBuiltin ?? false,
 			buildServerRemoteHostId: input.buildServerRemoteHostId ?? null,
 			buildSource: input.buildSource ?? "image",
 			...ServiceDTO.#buildMethodColumns(input),
@@ -778,6 +779,11 @@ export class ServiceDTO extends BaseDTO<Service> {
 	/** The registry used as a build layer cache, null for uncached builds. */
 	get buildCacheRegistryId(): string | null {
 		return this.row.buildCacheRegistryId;
+	}
+
+	/** Whether git builds cache their layers in Homerun's own registry. */
+	get buildCacheBuiltin(): boolean {
+		return this.row.buildCacheBuiltin;
 	}
 	/** The remote host builds run on, null to build locally. */
 	get buildServerRemoteHostId(): string | null {

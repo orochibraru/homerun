@@ -28,10 +28,10 @@ Deleting an account hands what it created over to another admin. See
 
 Yes. Besides a `Dockerfile` or a Docker Bake file (both built with BuildKit), a
 git-based service can be built with Nixpacks, Railpack, or Cloud Native
-Buildpacks (Heroku or Paketo builders), picked as the build method on the Source
-tab. A build clones a branch, a tag or a specific commit, and pull requests can
-get their own preview deployment. See
-[Build methods](deploy-source-and-builds.md#build-methods).
+Buildpacks (Heroku or Paketo builders), picked as the build method in a
+service's Environments & Deployments → Source section. A build clones a branch,
+a tag or a specific commit, and pull requests can get their own preview
+deployment. See [Build methods](deploy-source-and-builds.md#build-methods).
 
 ## Can it deploy to more than one server?
 

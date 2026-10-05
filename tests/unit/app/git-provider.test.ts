@@ -700,3 +700,56 @@ describe("listOpenPullRequests", () => {
 		);
 	});
 });
+
+describe("createPushWebhook adopting an existing hook", () => {
+	const hook = {
+		pullRequests: true,
+		repo: "a/b",
+		secret: "s3cret",
+		url: "https://homerun.example.com/api/v1/webhooks/git/svc",
+	};
+
+	test("takes over GitHub's existing hook for the same URL", async () => {
+		const calls = stubFetch((url, init) => {
+			if (init.method === "POST") {
+				return Response.json(
+					{
+						errors: [{ message: "Hook already exists on this repository" }],
+						message: "Validation Failed",
+					},
+					{ status: 422 },
+				);
+			}
+			if (init.method === "PATCH") {
+				return Response.json({ id: 42 });
+			}
+			return Response.json([{ config: { url: hook.url }, id: 42 }]);
+		});
+		expect(
+			await GitProviderService.createPushWebhook(
+				github,
+				validConnection(),
+				hook,
+			),
+		).toBe("42");
+		expect(calls[2]?.url).toBe("https://api.github.com/repos/a/b/hooks/42");
+		expect(calls[2]?.init.method).toBe("PATCH");
+		const body = JSON.parse(String(calls[2]?.init.body));
+		expect(body.config.secret).toBe("s3cret");
+		expect(body.events).toEqual(["push", "pull_request"]);
+	});
+
+	test("still fails when no hook has that URL", async () => {
+		stubFetch((_url, init) =>
+			init.method === "POST"
+				? Response.json(
+						{ message: "Hook already exists on this repository" },
+						{ status: 422 },
+					)
+				: Response.json([]),
+		);
+		await expect(
+			GitProviderService.createPushWebhook(github, validConnection(), hook),
+		).rejects.toThrow("already exists");
+	});
+});

@@ -14,10 +14,10 @@ on.
 
 ## Turning them on
 
-![The Channels tab with release channels ticked and a canary domain filled in](images/release-channels-tab.webp)
+![Environments & Deployments → Channels with release channels ticked and a canary domain filled in](images/release-channels-tab.webp)
 
-Open a git service's **Channels** tab, tick **Enable release channels**, and
-optionally change:
+Open a git service's **Environments & Deployments → Channels** section, tick
+**Enable release channels**, and optionally change:
 
 - **Canary branch**: the branch whose pushes deploy the canary.
 - **Stable tag pattern**: a glob. `*` matches any run of characters (slashes
@@ -44,8 +44,8 @@ The canary copies the service's build settings, env vars, resources,
 healthcheck, stack, icon and login wall, and gets them again before every canary
 deploy, so change settings on the stable service and the next canary deploy
 picks them up. It doesn't copy volumes, domains, cron schedules or status
-checks. It's a normal service you can open (its Source tab says whose canary it
-is), and it's listed under its parent in the services list, on the stack page
+checks. It's a normal service you can open (its Source section says whose canary
+it is), and it's listed under its parent in the services list, on the stack page
 and in the dependency tree, like
 [pull request previews](pull-request-previews.md).
 
@@ -75,8 +75,8 @@ stable only deploys from a webhook, or by hand.
 
 ## Deploying by hand
 
-The Channels tab has a **Deploy** button per environment. From the CLI or the
-API:
+The Channels section has a **Deploy** button per environment. From the CLI or
+the API:
 
 ```bash
 homerun deploy <service> --environment canary
@@ -89,10 +89,10 @@ too. Stable rebuilds its current ref, the last tag it deployed.
 ## Environments in the history
 
 Every deployment records the environment it deployed: `production` for a normal
-service and a stable one, `canary`, or `preview` for a pull request preview. The
-Revisions tab and the instance-wide **Deployments** page show it as a badge, and
-the Deployments page filters on it. The API's deployment and revision shapes
-carry it as `environment`.
+service and a stable one, `canary`, or `preview` for a pull request preview. A
+service's Environments & Deployments → Revisions and the instance-wide
+**Deployments** page show it as a badge, and the Deployments page filters on it.
+The API's deployment and revision shapes carry it as `environment`.
 
 ![The Deployments page, with each deployment's environment badge](images/deployments.webp)
 

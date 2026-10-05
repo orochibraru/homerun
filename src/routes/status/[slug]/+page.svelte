@@ -52,7 +52,7 @@
   {:else}
     <div class="panel divide-border divide-y rounded-md">
       {#each data.services as svc (svc.id)}
-        <div class="flex items-center gap-4 px-5 py-4">
+        <div class="flex items-center gap-4 py-4 pr-5 {svc.childOf ? 'pl-10' : 'pl-5'}">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               {#if svc.status === "up"}

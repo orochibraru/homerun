@@ -107,10 +107,10 @@ const SHOTS: Shot[] = [
 		path: () => `/services/${seeded.serviceIds.web}/observability/events`,
 	},
 	{
-		doc: "/services/:id/revisions",
+		doc: "/services/:id/environments/revisions",
 		expect: /Revisions/i,
 		name: "revisions",
-		path: () => `/services/${seeded.serviceIds.web}/revisions`,
+		path: () => `/services/${seeded.serviceIds.web}/environments/revisions`,
 	},
 	{
 		doc: "/services/:id/networking",
@@ -119,16 +119,16 @@ const SHOTS: Shot[] = [
 		path: () => `/services/${seeded.serviceIds.web}/networking`,
 	},
 	{
-		doc: "/services/:id/env",
+		doc: "/services/:id/environments/variables",
 		expect: /Environment variables/i,
 		name: "env",
-		path: () => `/services/${seeded.serviceIds.web}/env`,
+		path: () => `/services/${seeded.serviceIds.web}/environments/variables`,
 	},
 	{
-		doc: "/services/:id/compute",
+		doc: "/services/:id/container",
 		expect: /Memory limit/i,
 		name: "compute",
-		path: () => `/services/${seeded.serviceIds.web}/compute`,
+		path: () => `/services/${seeded.serviceIds.web}/container`,
 	},
 	{
 		doc: "/deployments",

@@ -26,6 +26,9 @@ const { GitProviderRefusedError, GitProviderService } = await import(
 const { PreviewService } = await import(
 	"../../../src/lib/services/preview.service"
 );
+const { EnvironmentService } = await import(
+	"../../../src/lib/services/environment.service"
+);
 const { ReleaseChannelError, ReleaseChannelService } = await import(
 	"../../../src/lib/services/release-channel.service"
 );
@@ -101,6 +104,7 @@ beforeEach(() => {
 		warnings.push(message);
 	});
 	stub(InstanceSettingsDTO, "get", async () => ({ gitProviders: providers }));
+	stub(EnvironmentService, "deployPushes", async () => 0);
 	stub(GitConnectionDTO, "getForUserAndProvider", async () => connection);
 	stub(GitProviderService, "createPushWebhook", async (...args: unknown[]) => {
 		if (createError) {

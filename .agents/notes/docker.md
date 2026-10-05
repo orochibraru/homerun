@@ -204,19 +204,19 @@ they now fail for different reasons with different fixes, see
     can't find at all (a 404 on `inspect()`, e.g. removed manually outside the
     app, `docker rm`), distinct from `"failed"` (the container still exists but
     exited non-zero); `inspectStatus` only returns `"missing"` for a real 404,
-    any other inspect error still falls back to `"failed"` as before. See the
-    Errors tab bullet above for the "Resolve" action
+    any other inspect error still falls back to `"failed"` as before. See
+    Observability → Events in `routing.md` for the "Resolve" action
     (`ServiceDTO.resolveOrphan()`) this status backs, and Remote hosts/Homerun
     Agent below, `agent-client.service.ts`'s `inspectStatus` and
     `internal/dockerapi`'s `ErrNotFound` (mapped to a real HTTP 404 by
     `internal/agent/server.go`'s `saveImage`) make the same distinction for an
     agent-backed host. Docker doesn't strip a container's own ANSI color codes
-    from its stdout, every raw-log-line surface (the Logs tab, deploy progress
-    panel, deployment history, Errors tab) renders each line through
-    `src/lib/components/ansi-line.svelte` (backed by `src/lib/ansi.ts`'s
-    `parseAnsiLine()`), which splits a line into styled `<span>`s rather than
-    using `{@html}`, no injection surface even though the source is a live
-    container's own output.
+    from its stdout, every raw-log-line surface (the live log viewer, deploy
+    progress panel, deployment history, Observability → Events) renders each
+    line through `src/lib/components/ansi-line.svelte` (backed by
+    `src/lib/ansi.ts`'s `parseAnsiLine()`), which splits a line into styled
+    `<span>`s rather than using `{@html}`, no injection surface even though the
+    source is a live container's own output.
 - `reconcile.ts`, `DockerReconcileMixin`, `syncServiceStatus`: poll-on-page-load
   status reconciliation, merged in after the container and swarm mixins so
   `this.inspectStatus`/`this.inspectSwarmServiceStatus` are available. There is
@@ -487,7 +487,7 @@ of `container.go`'s `startContainer` — `deploy.go`'s `Run` branches on
 exists; a route/DTO acting on an already-running swarm service still goes
 through `DockerSwarmMixin` below for that.
 
-- `service.replicas` (int, default 1, edited on the Compute tab, ignored in
+- `service.replicas` (int, default 1, edited on Container → Compute, ignored in
   standalone mode) is the desired replica count.
 - `service.swarmServiceId` is the swarm-mode equivalent of `containerId`;
   `containerId` stays null for a swarm-mode service, there's no single container
@@ -725,7 +725,7 @@ healthcheck command can't help either, it's `CMD-SHELL`); stopping the old
 standalone container still races Traefik's `die` handling, one request timed out
 in the live run when a SIGTERM-ignoring old container was killed.
 
-### Per-service healthcheck overrides and the Health tab
+### Per-service healthcheck overrides and Observability → Health
 
 `service.healthcheckDisabled` plus nullable
 `healthcheck{Interval,Timeout,StartPeriod}Seconds`/`healthcheckRetries` (null =
@@ -739,13 +739,13 @@ own HEALTHCHECK is off too. `RevisionHealthService.#readiness` skips the HTTP
 answer check for a disabled, non-DNS-resolvable or host-network service, the
 same set the deploy's gate treats as not routed: before that, a queue worker
 with no HTTP server (its `PORT` env notwithstanding) was flagged unhealthy on
-every deploy with "It never became ready: Unable to connect". The Health tab
-(`services/[serviceId]/health/`) reads the live container's
-`Config.Healthcheck`/`State.Health` through `DockerService.containerHealthcheck`
-(the worker's raw `/inspect`), so it shows what's applied, not what's
-configured; swarm tasks aren't inspected.
+every deploy with "It never became ready: Unable to connect". Observability's
+Health section (`services/[serviceId]/observability/health/`) reads the live
+container's `Config.Healthcheck`/`State.Health` through
+`DockerService.containerHealthcheck` (the worker's raw `/inspect`), so it shows
+what's applied, not what's configured; swarm tasks aren't inspected.
 
-## Runtime options (`service.command`/`entrypoint`/`envFiles`/`labels`/`capAdd`/`devices`/`privileged`/`runAsUser`, Runtime tab)
+## Runtime options (`service.command`/`entrypoint`/`envFiles`/`labels`/`capAdd`/`devices`/`privileged`/`runAsUser`, Container → Runtime)
 
 Stored as jsonb argv lists / string lists / a label map plus a boolean and a
 nullable text `run_as_user`; `src/lib/service-runtime.ts`'s `runtimeOptionsFrom`
@@ -760,10 +760,10 @@ run-as user to `User`, and logs that privileged/devices are ignored (the swarm
 API has neither). Custom labels go through `mergeLabels`, Homerun's own labels
 winning on a key clash, on the container and on both the swarm service and its
 task spec. `runAsUser` is validated by `isRunAsUser` (`uid`, `uid:gid`, `name`,
-`name:group`) everywhere it comes in (Runtime tab, API, template JSON, compose
-`user:`, Coolify `--user`/`-u`) and isn't host access: it's what fixes an image
-whose non-root `USER` can't write a fresh, root-owned named volume (Vikunja runs
-as `0`).
+`name:group`) everywhere it comes in (Container → Runtime, API, template JSON,
+compose `user:`, Coolify `--user`/`-u`) and isn't host access: it's what fixes
+an image whose non-root `USER` can't write a fresh, root-owned named volume
+(Vikunja runs as `0`).
 
 Env files are **host** paths, but the app runs in a container, so
 `deploy/env-file-step.ts` reads each one with an `alpine:3` `runOneOff` that
@@ -903,12 +903,26 @@ Images (the default), `tokens/`, `credentials/`, `settings/`.
   the plaintext secret isn't stored).
 - **Credentials**: read-only, `BuildCacheRegistryDTO.list()` plus every
   `ServiceDTO` with its own `registryUsername` set, each linking to where it's
-  actually edited (`/build-cache-registries` or the service's Source tab). No
-  storage of its own.
+  actually edited (`/build-cache-registries` or the service's Environments &
+  Deployments → Source section). No storage of its own.
 - **Settings**: `status()`, `setAuthEnabled()`, `setPublicHost()`.
 
 See the Registry bullet under Docker integration above for `RegistryService`,
 the schema, and the container reconciliation this page drives.
+
+The registry's public host gets DNS like the dashboard's: `syncRegistryDns`
+(`dns.service.ts`, `sso: false` since `docker login` can't follow Pangolin's
+sign-in) runs from `RegistryService.setPublicHost` (deleting the previous host)
+and from the core-services watch. Before it, a Pangolin instance's edge answered
+the host with its default certificate, which the self-test reported as "no HTTPS
+router matches". As a build cache (`service.buildCacheBuiltin`, the select's
+`builtin` value via `buildCacheChoice`), `#builtinCacheRegistry` in
+`deploy.service.ts` hands the builder `127.0.0.1:5055` (BuildKit's
+`homerun-cache` builder is host-networked and treats a loopback registry as
+plain HTTP) with the internal credentials for a local build, and nothing for a
+build server (its cache registry doubles as the image transfer, which would
+hairpin through the public hostname). `PlanGC` (`internal/registryapi`) always
+keeps a `buildcache` tag, which no keep set lists.
 
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 
@@ -1176,6 +1190,9 @@ it on every random host. A 404 checks whether any service routes the host
 (`ServiceDTO.list` + `serviceHostnames`) to pick "not available yet" over
 "nothing here". Branding lives in `instance_settings.error_pages` (jsonb,
 `withErrorPageDefaults` fills blanks), edited under Settings → Error pages.
+`syncAutoDns` runs in `prepareWorkerDeploy`, not after the deploy succeeds:
+behind Pangolin, a host without its resource never reaches this Traefik, so the
+catch-all couldn't show "not available yet" during a first deploy.
 
 ## Build servers (`remote_host` table, `RemoteHostDTO`, `/remote-hosts`)
 
@@ -1212,8 +1229,8 @@ target into the spec handed to the Go worker, and
 `internal/jobs/deploy/build.go` is what actually opens the connection and runs
 the build — for `kind: "docker"` that's `internal/dockerapi.NewRemote`
 (`tcp://`, optionally TLS), for `kind: "agent"` its own `POST /v1/build`.
-`RemoteHostDTO.listBuildServers()` is what the Source tab's build-server picker
-reads : every registered host qualifies, there's no per-host opt-in flag.
+`RemoteHostDTO.listBuildServers()` is what the Source section's build-server
+picker reads : every registered host qualifies, there's no per-host opt-in flag.
 `services/docker/client.ts` (see Docker integration above) only keeps the
 `RemoteHostConnection` shape for a `"docker"` host now, it doesn't open a client
 itself; `RemoteHostDTO.toConnection()` decrypts the stored TLS material into

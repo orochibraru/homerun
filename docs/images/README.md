@@ -18,14 +18,14 @@ feature pages under `docs/`.
 - `service-dark.webp` — `/services/:id`
 - `logs.webp` — `/services/:id/observability/events`
 - `logs-dark.webp` — `/services/:id/observability/events`
-- `revisions.webp` — `/services/:id/revisions`
-- `revisions-dark.webp` — `/services/:id/revisions`
+- `revisions.webp` — `/services/:id/environments/revisions`
+- `revisions-dark.webp` — `/services/:id/environments/revisions`
 - `networking.webp` — `/services/:id/networking`
 - `networking-dark.webp` — `/services/:id/networking`
-- `env.webp` — `/services/:id/env`
-- `env-dark.webp` — `/services/:id/env`
-- `compute.webp` — `/services/:id/compute`
-- `compute-dark.webp` — `/services/:id/compute`
+- `env.webp` — `/services/:id/environments/variables`
+- `env-dark.webp` — `/services/:id/environments/variables`
+- `compute.webp` — `/services/:id/container`
+- `compute-dark.webp` — `/services/:id/container`
 - `deployments.webp` — `/deployments`
 - `deployments-dark.webp` — `/deployments`
 - `deploy.webp` — `/services/new`
@@ -63,27 +63,37 @@ feature pages under `docs/`.
 - `instance-monitoring.webp` — `/monitoring`
 - `instance-monitoring-dark.webp` — `/monitoring`
 - `services-settings.webp` — `/services/:id/settings`
-- `services-health.webp` — `/services/:id/health`
-- `source-git.webp` — `/services/:id/source (git repository)`
+- `services-health.webp` — `/services/:id/observability/health`
+- `source-git.webp` — `/services/:id/environments/source (git repository)`
 - `source-build-methods.webp` —
-  `/services/:id/source (build method picker open)`
+  `/services/:id/environments/source (build method picker open)`
 - `source-build-servers.webp` —
-  `/services/:id/source (build cache and build server)`
-- `deploy-on-push-webhook.webp` — `/services/:id/source (deploy on push)`
+  `/services/:id/environments/source (build cache and build server)`
+- `deploy-on-push-webhook.webp` —
+  `/services/:id/environments/source (deploy on push)`
 - `git-providers.webp` — `/git-providers (Add provider)`
-- `previews-tab.webp` — `/services/:id/previews`
-- `previews-open.webp` — `/services/:id/previews (Open previews)`
-- `previews-github-report.webp` — `/services/:id/previews (GitHub reporting)`
-- `previews-environment.webp` — `/services/:id/previews (environment and data)`
-- `previews-branches.webp` — `/services/:id/previews (branch filters)`
-- `previews-access.webp` — `/services/:id/previews (Who can open previews)`
-- `previews-domains.webp` — `/services/:id/previews (domain template)`
+- `previews-tab.webp` — `/services/:id/environments/previews`
+- `previews-open.webp` — `/services/:id/environments/previews (Open previews)`
+- `environments-github-report.webp` —
+  `/services/:id/environments/source (Report deployments to GitHub)`
+- `environments-list.webp` — `/services/:id/environments`
+- `environments-new.webp` —
+  `/services/:id/environments (New environment dialog)`
+- `previews-environment.webp` —
+  `/services/:id/environments/previews (environment and data)`
+- `previews-branches.webp` —
+  `/services/:id/environments/previews (branch filters)`
+- `previews-access.webp` —
+  `/services/:id/environments/previews (Who can open previews)`
+- `previews-domains.webp` —
+  `/services/:id/environments/previews (domain template)`
 - `release-channels-tab.webp` —
-  `/services/:id/channels (Enable release channels ticked)`
+  `/services/:id/environments/channels (Enable release channels ticked)`
 - `release-channels-environment.webp` — `/services/:id/settings (Environment)`
 - `revisions-auto-rollback.webp` — `/services/:id/settings (Auto-rollback)`
 - `revisions-retained-images.webp` — `/settings/docker (Retained images)`
-- `status-checks-picker.webp` — `/services/:id/source (status checks)`
+- `status-checks-picker.webp` —
+  `/services/:id/environments/source (status checks)`
 - `image-scanning-security.webp` — `/services/:id/security (Image scan)`
 - `image-scanning-service.webp` — `/services/:id/settings (Image scanning)`
 - `image-scanning-settings.webp` —
@@ -112,10 +122,12 @@ feature pages under `docs/`.
 - `observability-errors.webp` —
   `/services/:id/observability/events (Failed deployments, Application errors)`
 - `observability-terminal.webp` — `/services/:id/terminal`
-- `error-tracking-setup.webp` — `/services/:id/errors (SDK setup open)`
-- `error-tracking-issues.webp` — `/services/:id/errors (issues)`
-- `error-tracking-issue.webp` — `/services/:id/errors/:issueId`
-- `error-tracking-source-maps.webp` — `/services/:id/errors (Source maps)`
+- `error-tracking-setup.webp` —
+  `/services/:id/observability/errors (SDK setup open)`
+- `error-tracking-issues.webp` — `/services/:id/observability/errors (issues)`
+- `error-tracking-issue.webp` — `/services/:id/observability/errors/:issueId`
+- `error-tracking-source-maps.webp` —
+  `/services/:id/observability/errors (Source maps)`
 - `notifications-bell.webp` — `/ (notifications open)`
 - `notifications-channels.webp` — `/notification-channels`
 - `notifications-subscriptions.webp` — `/profile/notifications`
@@ -149,8 +161,9 @@ feature pages under `docs/`.
 - `env-vars-link-a-service.webp` —
   `/services/new?stackId= (Environment step, Link a service)`
 - `env-vars-connections.webp` — `/services/:id (Connections)`
-- `env-vars-secret.webp` — `/services/:id/env (secret variables)`
-- `env-vars-env-files.webp` — `/services/:id/env (Env files)`
+- `env-vars-secret.webp` —
+  `/services/:id/environments/variables (secret variables)`
+- `env-vars-env-files.webp` — `/services/:id/environments/variables (Env files)`
 - `networking-http-cache.webp` — `/settings/networking (HTTP cache)`
 - `networking-published-ports.webp` —
   `/services/:id/networking (Published ports)`
@@ -162,7 +175,7 @@ feature pages under `docs/`.
   `/dns/providers (Connect a provider, Cloudflare picked)`
 - `dns-automation-domain.webp` — `/dns/domains/:id`
 - `dns-automation-pangolin.webp` — `/dns/pangolin`
-- `runtime-and-compute-runtime.webp` — `/services/:id/runtime`
+- `runtime-and-compute-runtime.webp` — `/services/:id/container/runtime`
 - `swarm-mode-orchestration.webp` — `/settings/docker (Orchestration)`
 - `compose-import-preview.webp` — `/services/import (a parsed compose file)`
 - `stacks-settings.webp` — `/stacks/:id/settings (a substack)`

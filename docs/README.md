@@ -32,7 +32,8 @@ sync by hand.
 - **[Deploy source and build methods](deploy-source-and-builds.md)**: image or
   git repo, the six build methods, build servers and the build cache registry.
 - **[Connecting a git provider](git-providers.md)**: GitHub, GitLab, Gitea or
-  Bitbucket OAuth apps, and browsing your repos from the Source tab.
+  Bitbucket OAuth apps, and browsing your repos from a service's Environments &
+  Deployments → Source section.
 - **[Deploy on push](deploy-on-push.md)**: webhooks registered for you, manual
   webhooks, and polling the branch when the provider can't reach you.
 - **[Deploying from CI](ci-cd.md)**: the GitHub Action, the CLI image for GitLab
@@ -40,6 +41,8 @@ sync by hand.
   pushed.
 - **[Pull request previews](pull-request-previews.md)**: a service per pull
   request, and why forks are never previewed.
+- **[Environments](environments.md)**: staging, demo or any other deployment of
+  a service under its own name, and reporting deploys to GitHub.
 - **[Release channels](release-channels.md)**: a managed canary service fed by a
   branch, and the service itself deployed from matching tags.
 - **[Main is canary, tags are stable](main-canary-tags-stable.md)**: a cookbook

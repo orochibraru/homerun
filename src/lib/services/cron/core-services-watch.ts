@@ -7,7 +7,7 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import { WorkerClient } from "#lib/server/worker-client.js";
 import { DeploymentService } from "../deploy.service.ts";
-import { syncDashboardDns } from "../dns.service.ts";
+import { syncDashboardDns, syncRegistryDns } from "../dns.service.ts";
 import type { TraefikExpectation } from "../docker/core-services.ts";
 import { syncErrorPages } from "../docker/error-pages.ts";
 import { type WedgedContainer, WedgedReporter } from "../docker/wedged.ts";
@@ -115,10 +115,12 @@ export class CoreServicesWatch extends BaseScheduler {
 			settings.newtCredentials(),
 			settings.orchestrationMode === "swarm",
 		);
-		if (settings.toJSON().registryPublicHost) {
+		const registryHost = settings.toJSON().registryPublicHost;
+		if (registryHost) {
 			await DockerService.ensureImageMirror().catch((err) => {
 				this.logger.warn("Couldn't re-assert the published registry", err);
 			});
+			void syncRegistryDns(null, registryHost);
 		}
 		const failures = await DockerService.reassertTraefikConfig(
 			traefikExpectation(settings.orchestrationMode === "swarm"),

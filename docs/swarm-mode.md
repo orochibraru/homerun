@@ -5,9 +5,9 @@ installer sets up: the installer makes the system Docker daemon a swarm manager,
 and a brand new instance on a rootful swarm manager starts in swarm mode (an
 existing instance keeps whatever mode it has, and a rootless or non-swarm daemon
 starts in standalone). In swarm mode every **local** deploy creates a real
-Docker Swarm Service instead of a plain container, and the Compute tab gets a
-**replicas** field (default 1) controlling how many copies Docker runs and
-load-balances across via its own routing mesh. Start/ stop map to scaling to
+Docker Swarm Service instead of a plain container, and **Container → Compute**
+gets a **replicas** field (default 1) controlling how many copies Docker runs
+and load-balances across via its own routing mesh. Start/ stop map to scaling to
 0/back up rather than a real container stop/start, and restart force-updates
 every task (recreating them) instead of restarting one container. Restart reuses
 the service's current settings: a changed environment variable needs a

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
 	import {
 		type BuildMethod,
 		DEFAULT_BAKE_FILE,
@@ -43,7 +44,10 @@
 	}: Props = $props();
 
 	const buildCacheRegistryLabel = $derived(
-		registries.find((r) => r.id === buildCacheRegistryId)?.name ?? "No cache",
+		buildCacheRegistryId === BUILTIN_BUILD_CACHE
+			? "Built-in registry"
+			: (registries.find((r) => r.id === buildCacheRegistryId)?.name ??
+					"No cache"),
 	);
 </script>
 
@@ -146,32 +150,31 @@
   <label class={labelClass} for="buildCacheRegistryId">
     Build cache registry
   </label>
-  {#if registries.length === 0}
-    <p class="text-xs text-text-muted">
-      No registries configured.
+  <SelectRoot
+    name="buildCacheRegistryId"
+    type="single"
+    bind:value={buildCacheRegistryId}
+  >
+    <SelectTrigger id="buildCacheRegistryId">
+      {buildCacheRegistryLabel}
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem label="No cache" value="" />
+      <SelectItem label="Built-in registry" value={BUILTIN_BUILD_CACHE} />
+      {#each registries as reg (reg.id)}
+        <SelectItem label={reg.name} value={reg.id} />
+      {/each}
+    </SelectContent>
+  </SelectRoot>
+  <p class="text-xs text-text-muted mt-1.5">
+    Reuses unchanged layers between builds. The built-in registry is
+    Homerun's own; a build server uses it through the registry's public
+    hostname, and builds without a cache when it has none. Other registries
+    are added under
 
-      <a
-        class="text-accent underline"
-        href={resolve('build-cache-registries')}
-      >Add one</a>
-
-      to speed up rebuilds by reusing unchanged layers.
-    </p>
-  {:else}
-    <SelectRoot
-      name="buildCacheRegistryId"
-      type="single"
-      bind:value={buildCacheRegistryId}
-    >
-      <SelectTrigger id="buildCacheRegistryId">
-        {buildCacheRegistryLabel}
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem label="No cache" value="" />
-        {#each registries as reg (reg.id)}
-          <SelectItem label={reg.name} value={reg.id} />
-        {/each}
-      </SelectContent>
-    </SelectRoot>
-  {/if}
+    <a
+      class="text-accent underline"
+      href={resolve('build-cache-registries')}
+    >Build Cache</a>.
+  </p>
 </div>

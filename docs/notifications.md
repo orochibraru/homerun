@@ -18,7 +18,7 @@ services were auto-redeployed: …" entry and one "N scheduled redeploys failed:
 
 It's deliberately a short curated list, not a log: everything Homerun logs at
 warn or error level is persisted separately and shown on the relevant service's
-[Observability tab](observability.md#errors). Old notifications are trimmed
+[Observability → Events](observability.md#errors). Old notifications are trimmed
 automatically, so the feed doesn't grow without bound.
 
 **Notification channels** send the same kind of events outside the dashboard.

@@ -55,8 +55,8 @@ so you don't have to go hunting for them —
 - the stored upstream registry credentials from
   [`/build-cache-registries`](deploy-source-and-builds.md#build-servers-and-build-cache),
   with a link to edit each one;
-- every service that carries its own pull credentials on its Source tab, with a
-  link straight to that service.
+- every service that carries its own pull credentials in its **Environments &
+  Deployments → Source** section, with a link straight to that service.
 
 ![The Credentials tab: stored registry credentials, and a service with its own](images/registry-credentials.webp)
 
@@ -74,7 +74,10 @@ so you don't have to go hunting for them —
   without you doing anything.
 - **Publish it**: routes the registry through Traefik at a hostname of your
   choosing, so another machine can `docker push`/`docker pull` against it over
-  the network instead of only from this host.
+  the network instead of only from this host. Saving the hostname also creates
+  its DNS record (or Pangolin resource, with Pangolin's sign-in off, since
+  `docker login` can't follow it) at the configured DNS provider, and removes
+  the previous hostname's.
 
 ![The registry's Settings tab: status, Require authentication and Publish it](images/registry-settings.webp)
 

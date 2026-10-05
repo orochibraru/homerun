@@ -8,6 +8,7 @@ import {
 	publicProbeCheck,
 	type RegistryCheck,
 } from "#lib/registry-self-test.js";
+import { syncRegistryDns } from "./dns.service.ts";
 import {
 	MIRROR_HOST_PORT,
 	mirrorRepository,
@@ -279,7 +280,7 @@ class RegistryServiceClass {
 
 	/**
 	 * Publishes the registry at `host` through Traefik, or unpublishes it when
-	 * `host` is empty.
+	 * `host` is empty, and moves its DNS record or Pangolin resource along.
 	 *
 	 * @throws When publishing while auth is off : an open registry anyone can
 	 *   push to is never what's wanted.
@@ -292,8 +293,10 @@ class RegistryServiceClass {
 			);
 		}
 		const settings = await InstanceSettingsDTO.get();
+		const previous = settings.toJSON().registryPublicHost ?? null;
 		await settings.persistRegistry({ registryPublicHost: trimmed || null });
 		await this.syncAuth();
+		void syncRegistryDns(previous, trimmed || null);
 	}
 
 	/**

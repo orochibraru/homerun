@@ -174,11 +174,11 @@ OIDC provider in `auth.md`) plus:
 
 - `service`, image/tag, registry creds (`registryPasswordEnc`, AES-256-GCM),
   envVars (JSON), `secretEnvKeys` (jsonb `string[]`, migration 0065, the subset
-  of `envVars`' own keys the owner marked secret on the Env vars tab; always
-  redacted for the MCP server regardless of name, see the MCP server section in
-  `auth.md`), port/restart-policy/resource limits, `desiredState` (user intent)
-  vs `currentStatus` (live reconciled Docker state), `containerId`, `stackId`
-  (nullable FK, `onDelete: "set null"`),
+  of `envVars`' own keys the owner marked secret in Environments & Deployments →
+  Environment Variables; always redacted for the MCP server regardless of name,
+  see the MCP server section in `auth.md`), port/restart-policy/resource limits,
+  `desiredState` (user intent) vs `currentStatus` (live reconciled Docker
+  state), `containerId`, `stackId` (nullable FK, `onDelete: "set null"`),
   `cronEnabled`/`cronSchedule`/`cronLastRunAt` (opt-in scheduled redeploy, see
   below), `authRequired` + `authProviders`/`authAllowedUserIds`/
   `authAllowedEmails`/`authAllowedGroups` (the per-app login wall and its access
@@ -351,22 +351,23 @@ OIDC provider in `auth.md`) plus:
   (nullable, null means still pending). See User roles & invitations below.
 - `app_log` (`AppLogDTO`), persisted warn/error-level `Logger` output: `level`,
   `scope`, `message`, `metadata` (JSON-stringified extra log args), `serviceId`
-  (nullable, heuristically populated, see below). Backs the per-service Errors
-  tab's "Application errors" section, a lightweight Sentry-adjacent view of
-  app-level failures alongside deployment failures (see
-  `services/[serviceId]/errors/` below). `Logger.warn()`/`.error()`
-  (`src/lib/logger.ts`) fire-and-forget a `AppLogDTO.create()` call on every
-  warn/error log, dynamically imported (not a top-level import) since
-  `logger.ts` isn't under `src/lib/server/`, keeping server-only db code out of
-  the module graph unless a warn/error call actually fires; never awaited, never
-  throws, so a logging call can't fail the operation it's logging. `serviceId`
-  is extracted by regex-matching this codebase's own `service=<uuid>` convention
-  already present in most Docker/deploy log messages, rather than threading an
-  explicit serviceId through every existing call site, a log with no match is
-  still visible on a future instance-wide log view, just not attributed to one
-  service's Errors tab. `AppLogDTO.create()` amortized-prunes the table back to
-  the newest 5000 rows on ~2% of writes, rather than adding a third scheduler
-  alongside `CronService`'s two.
+  (nullable, heuristically populated, see below). Backs the "Application errors"
+  section of a service's Observability → Events, a lightweight Sentry-adjacent
+  view of app-level failures alongside deployment failures (see
+  `services/[serviceId]/observability/events/` below).
+  `Logger.warn()`/`.error()` (`src/lib/logger.ts`) fire-and-forget a
+  `AppLogDTO.create()` call on every warn/error log, dynamically imported (not a
+  top-level import) since `logger.ts` isn't under `src/lib/server/`, keeping
+  server-only db code out of the module graph unless a warn/error call actually
+  fires; never awaited, never throws, so a logging call can't fail the operation
+  it's logging. `serviceId` is extracted by regex-matching this codebase's own
+  `service=<uuid>` convention already present in most Docker/deploy log
+  messages, rather than threading an explicit serviceId through every existing
+  call site, a log with no match is still visible on a future instance-wide log
+  view, just not attributed to one service's Events section.
+  `AppLogDTO.create()` amortized-prunes the table back to the newest 5000 rows
+  on ~2% of writes, rather than adding a third scheduler alongside
+  `CronService`'s two.
 - `notification` (`NotificationDTO`), a curated lifecycle event feed, one copy
   per account (deploy success/failure, service created/started/stopped,
   auto-redeploy, runtime error), deliberately separate from `app_log` above, see

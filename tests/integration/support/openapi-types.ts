@@ -3110,6 +3110,7 @@ export interface operations {
 							git: {
 								autoDeployOnPush: boolean;
 								bakeFile: string | null;
+								buildCacheBuiltin: boolean;
 								buildCacheRegistryId: string | null;
 								buildContext: string | null;
 								buildMethod: string;

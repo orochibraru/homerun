@@ -68,13 +68,13 @@ linkable as a companion to another template. See [Templates](templates.md).
 
 ## Health
 
-![The Health tab, showing the healthcheck the running container was created with](images/services-health.webp)
+![Observability → Health, showing the healthcheck the running container was created with](images/services-health.webp)
 
-The **Health** tab shows the healthcheck the running container was actually
-created with: whether it's the service's own command, the image's `HEALTHCHECK`,
-Homerun's generated port check or none, the command itself, its interval,
-timeout, retries and start period, its live status and the last few probes' exit
-codes and output. A swarm service's tasks aren't shown there.
+**Observability → Health** shows the healthcheck the running container was
+actually created with: whether it's the service's own command, the image's
+`HEALTHCHECK`, Homerun's generated port check or none, the command itself, its
+interval, timeout, retries and start period, its live status and the last few
+probes' exit codes and output. A swarm service's tasks aren't shown there.
 
 Below it, the service's own settings, each taking effect on the next deploy:
 

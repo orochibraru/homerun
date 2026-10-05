@@ -24,7 +24,7 @@
       healthcheck is reported either way. Past revisions are on the
       <a
         class="text-accent underline"
-        href={resolve("/(protected)/services/[serviceId]/revisions", {
+        href={resolve("/(protected)/services/[serviceId]/environments/revisions", {
           serviceId: svc.id,
         })}
       >Revisions</a>

@@ -1,11 +1,11 @@
-# Env vars
+# Environment variables
 
-Plain key/value rows on the Env Vars tab, stored as-is (not encrypted, don't put
-a raw plaintext secret you'd mind leaking in the DB dump into an env var if you
-can avoid it; registry passwords and similar have their own encrypted fields
-instead).
+Plain key/value rows under a service's **Environments & Deployments →
+Environment Variables**, stored as-is (not encrypted, don't put a raw plaintext
+secret you'd mind leaking in the DB dump into an env var if you can avoid it;
+registry passwords and similar have their own encrypted fields instead).
 
-![The Env Vars tab, one row per variable, each with the lock that marks it secret](images/env.webp)
+![Environments & Deployments → Environment Variables, one row per variable, each with the lock that marks it secret](images/env.webp)
 
 **Link a service** in the new-service wizard's Environment step fills those rows
 in for you from a service you already run, in any stack or none: pick it, and
@@ -72,13 +72,13 @@ a dependency-only link has no variables and is gone at once.
 
 ## Marking a variable secret
 
-The lock icon next to a row on the Env Vars tab marks that variable secret,
-independent of its name: useful for something that doesn't look secret, like
-`TMDB_API`. A secret value is a password field here, and is always redacted for
-an AI agent through the [MCP server](api-and-cli.md#mcp-server-for-ai-agents),
-whatever it's called. A variable a template fills with a generated password
-starts out marked. Only the dashboard can set or clear the mark, the REST API's
-`PATCH` ignores it if sent.
+The lock icon next to a row in the Environment Variables section marks that
+variable secret, independent of its name: useful for something that doesn't look
+secret, like `TMDB_API`. A secret value is a password field here, and is always
+redacted for an AI agent through the
+[MCP server](api-and-cli.md#mcp-server-for-ai-agents), whatever it's called. A
+variable a template fills with a generated password starts out marked. Only the
+dashboard can set or clear the mark, the REST API's `PATCH` ignores it if sent.
 
 ![Two variables marked secret: their values are password fields and their locks are closed](images/env-vars-secret.webp)
 

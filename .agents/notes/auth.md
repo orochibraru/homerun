@@ -225,9 +225,9 @@ request preview of a service gets, independent of the service's own `auth*`.
 `PreviewService#create`/`#refresh` apply it on top of `mirroredSettings` (which
 still carries the parent's own wall, deliberately: the release-channel canary
 mirrors that one), and `applyAccessPolicy` re-applies it to open previews when
-the Previews tab saves it, invalidating the gate cache and redeploying only the
-ones whose wall flipped (`redeployIfLoginWallChanged`). The form and its
-validation are shared with the Security tab:
+Environments & Deployments → Previews saves it, invalidating the gate cache and
+redeploying only the ones whose wall flipped (`redeployIfLoginWallChanged`). The
+form and its validation are shared with the Security tab:
 `src/lib/components/login-wall-section.svelte` (`action`/`subject`/`title`
 props) and `src/lib/server/login-wall-form.ts` (`parseLoginWallForm`,
 `loginWallAvailability`, `loginWallOptions`). Migration 0074 copies each
@@ -1063,13 +1063,13 @@ REST calls still refuse a read-only caller's writes.
 
 Every value an agent reads goes through `mcp-redact.ts`'s `redactSecrets` first:
 `redactEnvValue` fully masks a secret-looking name (`PASSWORD`, `TOKEN`…) and,
-now, any name in that service's own `secretEnvKeys` (the lock toggle on the Env
-vars tab, `service.secretEnvKeys`, see Data model in `data-and-config.md`) — a
-name marked secret is caught whatever it's called, e.g. `TMDB_API`.
-`update_service`'s env merge (`mergeEnvChanges` in `mcp-server.ts`'s
-`updateService`) is handed that same set, so a value it reads back unchanged
-from a marked var is still recognised as "unchanged" rather than rejected as a
-bad placeholder.
+now, any name in that service's own `secretEnvKeys` (the lock toggle in
+Environments & Deployments → Environment Variables, `service.secretEnvKeys`, see
+Data model in `data-and-config.md`) — a name marked secret is caught whatever
+it's called, e.g. `TMDB_API`. `update_service`'s env merge (`mergeEnvChanges` in
+`mcp-server.ts`'s `updateService`) is handed that same set, so a value it reads
+back unchanged from a marked var is still recognised as "unchanged" rather than
+rejected as a bad placeholder.
 
 Auth: `hooks.server.ts` treats a Bearer credential shaped like a JWT as an MCP
 access token (`verifyMcpAccessToken` in `auth.ts`: `jose` against the `jwks`

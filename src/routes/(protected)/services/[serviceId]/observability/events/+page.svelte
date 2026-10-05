@@ -163,7 +163,7 @@
         — cleared by revision
         <a
           class="text-accent underline"
-          href={resolve("/(protected)/services/[serviceId]/revisions", {
+          href={resolve("/(protected)/services/[serviceId]/environments/revisions", {
             serviceId: data.service.id,
           })}
         >{dismissedLabel}</a>

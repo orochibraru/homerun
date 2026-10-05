@@ -37,10 +37,10 @@ against this repo's own canonical primitives and shared components.
   icon tile + eyebrow title + muted description header of a `panel`),
   `run-status-badge.svelte` (running/success/failed of a backup or cron run),
   `git-build-fields.svelte` and `registry-fields.svelte` (the git build and
-  private-registry fields shared by `services/new` and the Source tab),
-  `tab-nav.svelte` (route/section tab bar, overflow-x-auto + shrink-0 per tab,
-  the actual fix for tabs not scrolling on narrow viewports — read its own
-  comment in the file before assuming any custom tab markup is equivalent).
+  private-registry fields shared by `services/new` and the service's Source
+  section), `tab-nav.svelte` (route/section tab bar, overflow-x-auto + shrink-0
+  per tab, the actual fix for tabs not scrolling on narrow viewports — read its
+  own comment in the file before assuming any custom tab markup is equivalent).
 
 Per this repo's own CLAUDE.md, adoption of these is **opportunistic, not
 mandatory**, a page that predates a shared component and hasn't been touched

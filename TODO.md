@@ -28,6 +28,10 @@ When done delete the entry, no bloat.
 - [ ] `src/app.html` declares `lang="fr"` while the whole UI is English, so
       screen readers read every page with French pronunciation. Set it to `en`.
 
+- [ ] A git-built service that hasn't deployed yet shows a stray `: ·` in its
+      page header before the hostname: the image and tag slot renders empty.
+      Hide it (or show the repo and branch) until there's an image.
+
 ## Medium
 
 - [ ] `tests/integration/s3-backup.test.ts` failed both tests once in a full
@@ -41,4 +45,40 @@ When done delete the entry, no bloat.
 
 ## Large
 
-<!--  -->
+- [ ] **S3 storage service, the base for IaC state.** A dedicated S3 page where
+      users create and manage buckets, backed either by a built-in object store
+      (dxflrs/garage, run by Homerun like the built-in registry) or by a
+      connected cloud provider (AWS S3, GCP, Hetzner Object Storage, any
+      S3-compatible endpoint). Access keys per bucket, usage, lifecycle. On top
+      of it, state management so Terraform and Pulumi state never needs a paid
+      backend: a state bucket per project, locking (a DynamoDB-compatible lock
+      table or Terraform's S3 native lockfile), state versions with diff and
+      rollback, and who changed what. Possibly volume backups and volumes
+      themselves on the same store later. The sidebar gets a **Storage**
+      category grouping Volumes, Backups, Backup Destinations and the new S3
+      page.
+
+- [ ] **Homerun as infrastructure as code (after the S3 service).** A Terraform
+      provider and a Pulumi provider (a bridged Terraform one, or native) that
+      scaffold everything the dashboard can: stacks, services and their
+      dependencies, databases from templates, and every service setting (source,
+      build, environment variables, limits, networking and domains, volumes,
+      healthcheck, runtime, revisions and rollback, previews, release channels,
+      environments, login wall, cron), plus instance-level objects (DNS
+      providers, git providers, notification channels, backup destinations,
+      redirects). Needs the REST API to cover every one of those settings first
+      (an audit of what `/api/v1` and the OpenAPI document are missing), stable
+      ids, and import of existing resources. A dedicated IaC page in the
+      dashboard: generate a starter configuration from what's running, point at
+      the state bucket, show drift between the state and the instance.
+
+- [ ] **Simple and advanced UI modes (once S3 and IaC land).** Two ways to run
+      the dashboard, switchable per instance or per account. **Simple** is for
+      homelab enthusiasts: self-hosting through click-ops, a short sidebar,
+      templates and one-click deploys up front, sensible defaults and the
+      engineering settings out of sight. **Advanced** shows the full cloud
+      feature set for engineering work: environments, release channels,
+      previews, IaC and state, S3, build servers, revisions, observability in
+      depth. Decide what each mode hides (routes, tabs, sections, settings)
+      without forking pages: a feature hidden in simple mode keeps working, it
+      just isn't in the way.

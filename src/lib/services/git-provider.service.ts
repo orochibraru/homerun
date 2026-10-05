@@ -5,9 +5,11 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import {
 	createWebhookRequest,
 	deleteWebhookPath,
+	existingWebhookId,
 	openPullRequestsPath,
 	type PullRequestEvent,
 	parseOpenPullRequests,
+	type WebhookRequest,
 	webhookIdFrom,
 } from "#lib/git-webhooks.js";
 import { Logger } from "#lib/logger.js";
@@ -654,6 +656,34 @@ class GitProviderServiceClass {
 	}
 
 	/**
+	 * Takes over the hook a GitHub or Gitea repo already has for `url` (left
+	 * by an earlier connection or a deleted app), rewriting its secret and
+	 * events to `request`'s, and answers with it. Null when there's no such
+	 * hook or the provider isn't one that refuses duplicates.
+	 */
+	async #adoptWebhook(
+		provider: GitProviderConfig,
+		connection: GitConnectionDTO,
+		request: WebhookRequest,
+		url: string,
+	): Promise<Response | null> {
+		if (!(provider.kind === "github" || provider.kind === "gitea")) {
+			return null;
+		}
+		const listing = await this.api(provider, connection, request.path);
+		const id = existingWebhookId(await listing.json(), url);
+		if (!id) {
+			return null;
+		}
+		const { active, config, events } = request.body;
+		logger.info(`Adopting the existing webhook ${id} for ${url}`);
+		return await this.api(provider, connection, `${request.path}/${id}`, {
+			body: { active, config, events },
+			method: "PATCH",
+		});
+	}
+
+	/**
 	 * Registers a webhook on `hook.repo` that delivers push events, pull
 	 * request events when `hook.pullRequests` is set and tag pushes when
 	 * `hook.tags` is set, to `hook.url`, signed with `hook.secret`.
@@ -678,6 +708,15 @@ class GitProviderServiceClass {
 		const res = await this.api(provider, connection, request.path, {
 			body: request.body,
 			method: request.method,
+		}).catch(async (err: unknown) => {
+			const adopted =
+				err instanceof Error && /already exists/i.test(err.message)
+					? await this.#adoptWebhook(provider, connection, request, hook.url)
+					: null;
+			if (!adopted) {
+				throw err;
+			}
+			return adopted;
 		});
 		const id = webhookIdFrom(
 			provider.kind,

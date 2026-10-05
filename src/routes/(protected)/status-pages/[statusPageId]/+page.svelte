@@ -9,6 +9,7 @@
 	import SaveButton from "#lib/components/save-button.svelte";
 	import StatusPageFields from "#lib/components/status-page-fields.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import type { StatusPagePick } from "#lib/status-page-members.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import type { StatusPageScope } from "#lib/types.js";
@@ -27,7 +28,9 @@
 	let scope = $state<StatusPageScope>(untrack(() => data.statusPage.scope));
 	let stackId = $state(untrack(() => data.statusPage.stackId ?? ""));
 	let isPublic = $state(untrack(() => data.statusPage.isPublic));
-	let selectedServiceIds = $state<string[]>(untrack(() => [...data.memberIds]));
+	let picks = $state<StatusPagePick[]>(
+		untrack(() => data.picks.map((pick) => ({ ...pick }))),
+	);
 	let saving = $state(false);
 
 	let deleteDialogOpen = $state(false);
@@ -97,7 +100,7 @@
     {:else}
       <div class="divide-border divide-y">
         {#each data.tracked as svc (svc.id)}
-          <div class="flex items-center gap-4 px-5 py-3">
+          <div class="flex items-center gap-4 py-3 pr-5 {svc.childOf ? 'pl-10' : 'pl-5'}">
             <div class="min-w-0 flex-1">
               <a
                 class="text-text truncate text-sm font-medium hover:underline"
@@ -145,7 +148,7 @@
         bind:scope
         bind:stackId
         bind:isPublic
-        bind:selectedServiceIds
+        bind:picks
         errors={form?.errors}
         stacks={data.stacks}
         services={data.services}

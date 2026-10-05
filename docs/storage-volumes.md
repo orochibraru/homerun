@@ -103,13 +103,13 @@ data the service runs on:
 - **Deploy as a revision** leaves the current volume alone: the backup is
   restored into a new Docker volume (`<name>-restored-<date>`, with the same
   backup destination and schedule), then the service is redeployed with it
-  mounted in the old one's place. That's a new revision on the Revisions tab,
-  and deploying the previous one with **Also restore env vars, resources,
-  networking and volumes** puts the old volume back. The old volume's scheduled
-  backups are turned off, since the new one is the live copy; delete it once you
-  don't need to go back. Only for Docker volumes, a host path can't be cloned.
-  If the restore fails, the redeploy is cancelled and the service keeps running
-  on the old volume.
+  mounted in the old one's place. That's a new revision under Environments &
+  Deployments → Revisions, and deploying the previous one with **Also restore
+  env vars, resources, networking and volumes** puts the old volume back. The
+  old volume's scheduled backups are turned off, since the new one is the live
+  copy; delete it once you don't need to go back. Only for Docker volumes, a
+  host path can't be cloned. If the restore fails, the redeploy is cancelled and
+  the service keeps running on the old volume.
 
 Every restore shows up in the run log like a backup, and can be cancelled from
 there.

@@ -1,19 +1,22 @@
 # Revisions and rollback
 
-![A service's Revisions tab, with the current revision marked](images/revisions.webp)
+![A service's Environments & Deployments → Revisions, with the current revision marked](images/revisions.webp)
 
 Every deploy that reaches running is a **revision**: the exact image it ran
 (`image:tag` plus the registry digest when there is one, or the local
 `homerun-build-<slug>:<tag>` for a git build), the commit and branch for a git
-build, and whether it stayed healthy. The **Revisions** tab lists them with the
-current one marked, next to failed attempts and their logs.
+build, and whether it stayed healthy. The service's **Environments & Deployments
+→ Revisions** section lists them with the current one marked, next to failed
+attempts and their logs.
 
 The list is in the order revisions were first deployed and deploying one never
 moves it: a rollback to an existing revision updates that revision's row in
 place, which becomes **Current** and shows when it was redeployed, and its
-expandable log, status and error are the latest attempt's (a failed rollback
-shows its error there while the revision that's still running stays Current).
-The API and CLI list revisions the same way.
+status and error are the latest attempt's (a failed rollback shows its error
+there while the revision that's still running stays Current). Click a revision
+for its own page: the image, digest and commit, its health, the latest attempt's
+deploy log and every deployment of it. The API and CLI list revisions the same
+way.
 
 **Deployments** in the sidebar is the same history across every service: one row
 per deploy or rollback attempt, newest first, with its status, what triggered it
@@ -21,11 +24,11 @@ per deploy or rollback attempt, newest first, with its status, what triggered it
 [pull request preview promoted](pull-request-previews.md) to the service), the
 git branch and commit or the image it ran, who started it, when and how long it
 took, and the error for a failed one. Click a row for its deploy log; the
-service name opens that service's Revisions tab. Search matches the service,
-image, git ref, commit or error, and the Status, Trigger and Environment filters
-narrow it down. Each row, and each revision on the Revisions tab, carries its
-environment as a badge: **Production**, **Canary**, **Preview**, or a name you
-gave the service (see
+service name opens the revision that deployment belongs to. Search matches the
+service, image, git ref, commit or error, and the Status, Trigger and
+Environment filters narrow it down. Each row, and each revision in the Revisions
+section, carries its environment as a badge: **Production**, **Canary**,
+**Preview**, or a name you gave the service (see
 [Release channels](release-channels.md#environments-in-the-history)). A deploy
 from before triggers were recorded, whose queue job was already pruned by then,
 shows as plain **Deploy** and only matches the Rollback filter.
@@ -36,7 +39,7 @@ The **Healthy** and **Checking health** badges only ever sit on the current
 revision: once another revision is deployed they're cleared from the one it
 replaced. **Unhealthy** and **Rolled back** stay on the revision as history.
 
-**Deploy this revision** (confirmed in a dialog, also
+**Deploy this revision** on a revision's page (confirmed in a dialog, also
 `POST /api/v1/services/:id/revisions/:revisionId/deploy` and
 `homerun services rollback`) queues a deploy that skips the build, the registry
 pull and the image scan, and starts that exact image: by digest for a pulled
@@ -82,7 +85,7 @@ database or cache no longer passes as healthy just because its process is up.
 Databases are exempt, they're checked by their port accepting connections, and
 so is a service that isn't DNS resolvable, uses host networking or has
 healthchecks [turned off](services.md#health). An unhealthy revision is always
-marked on the Revisions tab and reported (**Revision unhealthy**), and the
+marked in the Revisions section and reported (**Revision unhealthy**), and the
 reason is kept on the revision, so `homerun services revisions <id>` shows it
 too. With **Auto-rollback when a new revision is unhealthy** turned on in the
 service's Settings tab (off by default), Homerun instead redeploys the previous

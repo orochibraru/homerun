@@ -1,6 +1,6 @@
 /**
  * Pure parsing for pasted `.env`-file content, used by every env-var form
- * (service Env Vars tab, services/new, templates/new) to turn a pasted block
+ * (service Environment Variables section, services/new, templates/new) to turn a pasted block
  * of text into rows for the existing key/value editor. No Docker/DB
  * dependency, stays a plain exported function per the "pure transform
  * doesn't need an instance" convention.

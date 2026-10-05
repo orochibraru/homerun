@@ -18,7 +18,10 @@ takes two steps, done by different people:
    the app's settings on GitHub, under **Permissions**, give it **Read and
    write** on **Pull requests** and **Deployments**, save, then accept the new
    permissions on its installation (**Settings → Applications → Installed GitHub
-   Apps → Configure**). Reconnecting isn't needed. For GitLab, self-hosted Gitea
+   Apps → Configure**). Reconnecting isn't needed. A repo that already has
+   Homerun's webhook (from a deleted app or an earlier connection) keeps it:
+   Homerun takes it over and updates its secret and events instead of adding a
+   second one, which GitHub and Gitea refuse. For GitLab, self-hosted Gitea
    (which also wants its base URL) or Bitbucket, register an OAuth application
    on that provider's own site and paste the client id and secret in. The page
    prints the exact callback URL to register on the provider's side.
@@ -29,19 +32,19 @@ takes two steps, done by different people:
 
 ![Git Providers, with the Add provider form open above a registered provider and its Connect button](images/git-providers.webp)
 
-Once connected, a service's Source tab (and the new-service wizard) picks the
-repository and branch from that account instead of asking for a clone URL, and
-checks the repo for a `Dockerfile`. Picking one also turns on
-[Deploy on push](deploy-on-push.md), with the webhook added for you. **Use a
-clone URL instead** is still there for any other repo. Tokens are stored
-encrypted, refreshed automatically when the provider issues short-lived ones,
-and disconnecting removes them.
+Once connected, a service's **Environments & Deployments → Source** section (and
+the new-service wizard) picks the repository and branch from that account
+instead of asking for a clone URL, and checks the repo for a `Dockerfile`.
+Picking one also turns on [Deploy on push](deploy-on-push.md), with the webhook
+added for you. **Use a clone URL instead** is still there for any other repo.
+Tokens are stored encrypted, refreshed automatically when the provider issues
+short-lived ones, and disconnecting removes them.
 
 Cloning itself is provider-agnostic, so any public HTTPS git URL works with no
 provider connected at all.
 
 **Connections made before deploy-on-push existed** only allowed reading repos on
-GitLab, Gitea and Bitbucket. The Source tab offers to reconnect them once
+GitLab, Gitea and Bitbucket. The Source section offers to reconnect them once
 Homerun is refused; until then it shows the webhook to add by hand. **Gitea
 keeps the old read-only permissions across a reconnect**: it reuses the
 authorization it already has for Homerun without asking again. Revoke Homerun

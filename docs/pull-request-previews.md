@@ -1,16 +1,16 @@
 # Pull request previews
 
-Tick **Enable pull request previews** on a git service's **Previews** tab and
-every pull request opened on its repo gets a service of its own,
-`<slug>-pr-<number>` (so `<slug>-pr-<number>.<baseDomain>`), built from the pull
-request's head and deployed as the service's owner. Each push to the pull
-request redeploys the preview; closing or merging it deletes the preview,
-container, DNS records and all. GitHub, Gitea and GitLab previews build the
-exact head commit; Bitbucket only sends an abbreviated hash, so its previews
-build the head branch, which covers every pull request previews are made for
-anyway.
+Tick **Enable pull request previews** in a git service's **Environments &
+Deployments → Previews** section and every pull request opened on its repo gets
+a service of its own, `<slug>-pr-<number>` (so
+`<slug>-pr-<number>.<baseDomain>`), built from the pull request's head and
+deployed as the service's owner. Each push to the pull request redeploys the
+preview; closing or merging it deletes the preview, container, DNS records and
+all. GitHub, Gitea and GitLab previews build the exact head commit; Bitbucket
+only sends an abbreviated hash, so its previews build the head branch, which
+covers every pull request previews are made for anyway.
 
-![A git service's Previews tab with pull request previews enabled](images/previews-tab.webp)
+![A git service's Environments & Deployments → Previews with pull request previews enabled](images/previews-tab.webp)
 
 **Pull requests from forks are never previewed.** On a public repo anyone can
 open one, and a preview builds and runs its code with the service's env vars.
@@ -21,12 +21,12 @@ repository); a fork, or a payload that doesn't say, is acknowledged and ignored.
 
 Pull requests that were already open when previews were turned on never sent an
 event, so they get no preview on their own. **Deploy open pull requests**, in
-the header of the tab's **Open previews** section, asks the provider for the
-repo's open pull requests and deploys a preview for each one, with the same fork
-and branch-filter rules; a preview already building its pull request's head is
-left alone. It needs the repo picked from a connected git provider, and reads
-the first page only (100 pull requests, 50 on Gitea and Bitbucket). On GitHub,
-the app needs the **Pull requests** permission, see
+the header of the **Open previews** list, asks the provider for the repo's open
+pull requests and deploys a preview for each one, with the same fork and
+branch-filter rules; a preview already building its pull request's head is left
+alone. It needs the repo picked from a connected git provider, and reads the
+first page only (100 pull requests, 50 on Gitea and Bitbucket). On GitHub, the
+app needs the **Pull requests** permission, see
 [Connecting a git provider](git-providers.md).
 
 ![The Open previews section, with its Deploy open pull requests button](images/previews-open.webp)
@@ -36,25 +36,23 @@ and stack when it's created and again on every update, but not its volumes,
 domains, cron schedule, status checks or login wall: previews have their own
 access rules, see
 [Sharing a preview with a client](#sharing-a-preview-with-a-client). The
-Previews tab lists the open ones with their status and domains, a **Redeploy**
-and a **Delete** button (a push to its pull request brings a deleted one back),
-and a **Domains** link to the preview's own Networking tab. Each preview is a
-normal service you can open too. Previews aren't rows of their own on the
-services list or a stack's page: each one is listed under the service it
-previews, in the list and in the dependency tree, and searching for a preview's
-branch or title finds its parent. A preview takes its parent's stack, icon and
-category. Any of the service's own hostnames in its env vars (an `ORIGIN`, a
-public URL) are replaced with the preview's main hostname, so a preview doesn't
-send its visitors, cookies or CSRF checks to the real site. Turning previews
-off, or deleting the service, deletes every preview.
+Previews section lists the open ones with their status and domains, a
+**Redeploy** and a **Delete** button (a push to its pull request brings a
+deleted one back), and a **Domains** link to the preview's own Networking tab.
+Each preview is a normal service you can open too. Previews aren't rows of their
+own on the services list or a stack's page: each one is listed under the service
+it previews, in the list and in the dependency tree, and searching for a
+preview's branch or title finds its parent. A preview takes its parent's stack,
+icon and category. Any of the service's own hostnames in its env vars (an
+`ORIGIN`, a public URL) are replaced with the preview's main hostname, so a
+preview doesn't send its visitors, cookies or CSRF checks to the real site.
+Turning previews off, or deleting the service, deletes every preview.
 
 ## Reporting back to GitHub
 
-![The Report previews on the GitHub pull request option on the Previews tab](images/previews-github-report.webp)
-
-With **Report previews on the GitHub pull request** ticked (the default), a repo
-picked from a connected GitHub provider gets two things on each pull request
-with a preview, posted as the service's owner:
+With **Report deployments to GitHub** ticked (the default, under **Environments
+& Deployments → Source**), a repo picked from a connected GitHub provider gets
+two things on each pull request with a preview, posted as the service's owner:
 
 - a comment with the preview's URLs, the commit it was built from and a link to
   the deployment log, edited in place on every deploy rather than posted again,
@@ -65,16 +63,12 @@ with a preview, posted as the service's owner:
   environment, which GitHub only allows when the owner is an admin of the repo;
   otherwise the inactive environment stays listed in the repo's settings.
 
-Both need the GitHub app's **Pull requests** and **Deployments** permissions
-(Read and write); see [Connecting a git provider](git-providers.md) for adding
-them to an app created before.
-
-A report that fails (a revoked connection, a rate limit) is logged and never
-holds up the deploy. Other providers get neither.
+The same setting reports the service's other deploys too, see
+[Environments](environments.md#reporting-deployments-to-github).
 
 ## Environment variables and data
 
-![The Previews tab's environment variables, overrides and volume copy options](images/previews-environment.webp)
+![The Previews section's environment variables, overrides and volume copy options](images/previews-environment.webp)
 
 A preview starts from the service's environment variables, with any of the
 service's own hostnames in them pointed at the preview. Turn off **Start from
@@ -101,14 +95,14 @@ anything into previews that already exist.
 
 ![The Only branches matching and Never branches matching filters](images/previews-branches.webp)
 
-**Only branches matching** and **Never branches matching**, on the Previews tab,
-filter pull requests by their head branch, one glob pattern per line: `*` is any
-run of characters, slashes included, and `?` is exactly one. With nothing in the
-first list every branch qualifies; with patterns there, a branch has to match
-one. A branch matching the second list never gets a preview, even when the first
-one lets it through, so `feat/*` in the first and `*/wip` in the second previews
-`feat/login` but not `feat/wip`. A typical use is keeping bots out:
-`dependabot/*` and `renovate/*` in the second list.
+**Only branches matching** and **Never branches matching**, in the Previews
+section, filter pull requests by their head branch, one glob pattern per line:
+`*` is any run of characters, slashes included, and `?` is exactly one. With
+nothing in the first list every branch qualifies; with patterns there, a branch
+has to match one. A branch matching the second list never gets a preview, even
+when the first one lets it through, so `feat/*` in the first and `*/wip` in the
+second previews `feat/login` but not `feat/wip`. A typical use is keeping bots
+out: `dependabot/*` and `renovate/*` in the second list.
 
 The filter applies to every pull request event: an update to a pull request
 whose branch is left out deletes its preview if it had one. Saving a changed
@@ -120,7 +114,7 @@ filter deletes the open previews it now leaves out straight away. The API's
 
 ![Who can open previews, with the login wall turned on for a client's email](images/previews-access.webp)
 
-**Who can open previews**, on the Previews tab, is a login wall for every
+**Who can open previews**, in the Previews section, is a login wall for every
 preview of the service, separate from the service's own wall on its Security
 tab: production can stay public while previews are for your team and a client.
 It takes the same settings as a service's wall (the sign-in methods it accepts
@@ -134,7 +128,7 @@ To show a client a pull request before it's merged:
 1. On **Users**, invite the client with the **App access only** role. They can
    accept with a password or with emailed codes, and they never see the
    dashboard.
-2. On the service's **Previews** tab, turn on the wall under **Who can open
+2. In the service's **Previews** section, turn on the wall under **Who can open
    previews**, tick **Emailed code** (or whichever methods they use), and pick
    the client in the allowed users or add their email.
 3. Send them the preview's link. After signing in they're let through, and their
@@ -146,7 +140,7 @@ wall copied into it, so their previews stay gated as before.
 
 ## Domains
 
-![The Previews tab's domain template and Keep the default hostname option](images/previews-domains.webp)
+![The Previews section's domain template and Keep the default hostname option](images/previews-domains.webp)
 
 A preview gets `<slug>-pr-<number>.<baseDomain>` by default. A **domain
 template** gives each one its own domain instead, or as well:

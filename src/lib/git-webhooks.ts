@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { GitProviderKind } from "#lib/server/db/schema.js";
+import { childSlug } from "#lib/slug.js";
 
 export const GIT_WEBHOOK_PATH = "/api/v1/webhooks/git";
 
@@ -297,6 +298,19 @@ export function deleteWebhookPath(
 	return `/repos/${repo}/hooks/${hookId}`;
 }
 
+/**
+ * The id of the hook among `hooks` (a GitHub or Gitea hook listing) that
+ * already delivers to `url`, null when none does. GitHub refuses a second
+ * hook with the same URL, so a re-linked repo keeps the one created before.
+ */
+export function existingWebhookId(hooks: unknown, url: string): string | null {
+	if (!Array.isArray(hooks)) {
+		return null;
+	}
+	const match = hooks.find((hook) => record(record(hook).config).url === url);
+	return match ? webhookIdFrom("github", record(match)) : null;
+}
+
 /** The id a provider's create-webhook response gives the new hook. */
 export function webhookIdFrom(
 	kind: GitProviderKind,
@@ -505,6 +519,5 @@ export function parseOpenPullRequests(
  * character DNS label.
  */
 export function previewSlug(parentSlug: string, number: number): string {
-	const suffix = `-pr-${number}`;
-	return `${parentSlug.slice(0, 63 - suffix.length).replace(/-+$/, "")}${suffix}`;
+	return childSlug(parentSlug, `pr-${number}`);
 }

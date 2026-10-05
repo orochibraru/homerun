@@ -436,7 +436,7 @@ async function testSwarm(
 		slug,
 		tag: "latest",
 	})) as { id: string };
-	await client.postForm(`/services/${service.id}/compute?/updateCompute`, {
+	await client.postForm(`/services/${service.id}/container?/updateCompute`, {
 		cpuLimit: "",
 		memoryLimitMb: "",
 		replicas: String(SWARM_REPLICAS),
@@ -536,7 +536,7 @@ async function testFreshSwarm(client: AppClient, vm: Vm): Promise<void> {
 		slug,
 		tag: "latest",
 	})) as { id: string };
-	await client.postForm(`/services/${service.id}/compute?/updateCompute`, {
+	await client.postForm(`/services/${service.id}/container?/updateCompute`, {
 		cpuLimit: "",
 		memoryLimitMb: "",
 		replicas: "2",

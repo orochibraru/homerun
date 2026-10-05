@@ -22,7 +22,8 @@ services it references through env vars or depends on through a
 detection as a stack's dependency graph, see [Stacks](stacks.md)), each with an
 **Unlink** button (see [Env vars](env-vars.md#unlinking)), and a tail of its
 live logs. Deployment history, every attempt with its status, image and full
-log, is on the [Revisions](revisions-and-rollback.md) tab.
+log, is under
+[Environments & Deployments → Revisions](revisions-and-rollback.md).
 
 **Redeploys are health-gated.** When the service already has a running
 container, the new one starts next to it and the old one keeps serving until the

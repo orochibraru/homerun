@@ -7416,6 +7416,9 @@
 																		}
 																	]
 																},
+																"buildCacheBuiltin": {
+																	"type": "boolean"
+																},
 																"buildCacheRegistryId": {
 																	"anyOf": [
 																		{
@@ -7521,6 +7524,7 @@
 																"autoDeployOnPush",
 																"bakeFile",
 																"buildTarget",
+																"buildCacheBuiltin",
 																"buildCacheRegistryId",
 																"buildContext",
 																"buildMethod",
