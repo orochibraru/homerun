@@ -11,7 +11,9 @@ gate() {
   if ! "$@" >"$log" 2>&1; then
     {
       echo "$name failed, fix it before handing back: $*"
-      grep -E "error|Error|FAIL|fail|✖|below|threshold" "$log" | grep -v -E "^\s*$" | tail -40
+      grep -E "^\(fail\)|^--- FAIL|^FAIL" "$log"
+      awk -F'|' '/^ [^ ].*\|/ && $2 ~ /[0-9]/ && ($2 + 0 < 80 || $3 + 0 < 80) { print "below the 80% coverage threshold:" $0 }' "$log"
+      grep -E "error|Error|FAIL|fail|✖|below|threshold" "$log" | grep -v -E "^\s*$|^\(fail\)" | tail -40
       echo "--- last lines ---"
       tail -40 "$log"
     } >&2
