@@ -60,3 +60,23 @@ func ErrorsList(client *Client, serviceID, status string, args ListArgs) {
 	PrintTable(ErrorRows(issues), errorColumns)
 	PrintPageFooter(header, len(issues))
 }
+
+// ErrorGet prints one error issue with its latest event (or the event named by
+// eventID) as JSON.
+func ErrorGet(client *Client, serviceID, issueID, eventID string) {
+	query := url.Values{}
+	if eventID != "" {
+		query.Set("event", eventID)
+	}
+	body, _ := client.do("GET", fmt.Sprintf("/services/%s/errors/%s", url.PathEscape(serviceID), url.PathEscape(issueID)), query)
+	PrintJSON(body)
+}
+
+// ErrorSetStatus marks an error issue resolved, ignored or unresolved and
+// prints the updated issue as JSON.
+func ErrorSetStatus(client *Client, serviceID, issueID, status string) {
+	var updated json.RawMessage
+	path := fmt.Sprintf("/services/%s/errors/%s", url.PathEscape(serviceID), url.PathEscape(issueID))
+	client.decodeJSON("PATCH", path, map[string]string{"status": status}, &updated)
+	PrintJSON(updated)
+}

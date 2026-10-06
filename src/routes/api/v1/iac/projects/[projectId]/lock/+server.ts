@@ -28,7 +28,7 @@ export const POST = async ({ locals, params, request }) => {
 			});
 };
 
-export const DELETE = async ({ locals, params, request }) => {
+export const DELETE = async ({ locals, params, request, url }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
@@ -43,6 +43,7 @@ export const DELETE = async ({ locals, params, request }) => {
 	const held = await IacStateService.unlock(
 		project,
 		typeof info?.ID === "string" ? info.ID : null,
+		url.searchParams.get("force") === "true",
 	);
 	return held
 		? Response.json(held.info ?? { ID: held.lockId }, { status: 423 })

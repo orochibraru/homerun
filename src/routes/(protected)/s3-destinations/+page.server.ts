@@ -16,7 +16,10 @@ export const load = async ({ parent, url }) => {
 	);
 	const paged = await S3DestinationDTO.listPaged(query);
 	return {
-		destinations: paged.items.map((d) => d.toJSON()),
+		destinations: paged.items.map((destination) => {
+			const { secretAccessKeyEnc: _secret, ...row } = destination.toJSON();
+			return { ...row, capacity: destination.capacity };
+		}),
 		filtered: query.active,
 		page: paged.page,
 		perPage: paged.perPage,

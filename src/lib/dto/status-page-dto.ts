@@ -17,6 +17,7 @@ import { BaseDTO } from "./base-dto";
 
 export interface NewStatusPageInput {
 	description?: string | null;
+	domains?: string[];
 	isPublic?: boolean;
 	name: string;
 	stackId?: string | null;
@@ -28,7 +29,13 @@ export interface NewStatusPageInput {
 export type StatusPageUpdateInput = Partial<
 	Pick<
 		StatusPage,
-		"description" | "isPublic" | "name" | "stackId" | "scope" | "slug"
+		| "description"
+		| "domains"
+		| "isPublic"
+		| "name"
+		| "stackId"
+		| "scope"
+		| "slug"
 	>
 >;
 
@@ -73,6 +80,24 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 		return row !== undefined && row.id !== exceptId;
 	}
 
+	/** The page other than `exceptId` already answering on one of `domains`, or null. */
+	static async domainOwner(
+		domains: string[],
+		exceptId?: string,
+	): Promise<{ domain: string; name: string } | null> {
+		if (domains.length === 0) {
+			return null;
+		}
+		const wanted = new Set(domains);
+		for (const page of await StatusPageDTO.list()) {
+			const clash = page.domains.find((domain) => wanted.has(domain));
+			if (clash && page.id !== exceptId) {
+				return { domain: clash, name: page.name };
+			}
+		}
+		return null;
+	}
+
 	/** Every status page on the instance, sorted by name. */
 	static async list(): Promise<StatusPageDTO[]> {
 		const rows = await db
@@ -108,6 +133,7 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 		const row: StatusPage = {
 			createdAt: now,
 			description: input.description ?? null,
+			domains: input.domains ?? [],
 			id: crypto.randomUUID(),
 			isPublic: input.isPublic ?? false,
 			name: input.name,
@@ -128,6 +154,11 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 			.set(input)
 			.where(eq(statusPage.id, this.row.id));
 		Object.assign(this.row, input);
+	}
+
+	/** The domains this page answers on, besides its `/status/<slug>` address. */
+	get domains(): string[] {
+		return this.row.domains;
 	}
 
 	/** Deletes this status page row. */

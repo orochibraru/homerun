@@ -75,6 +75,7 @@ export const actions = {
 		try {
 			await StatusPageSettingsService.update(page, {
 				...parsed.data,
+				domains: String(form.get("domains") ?? "").split(/[\s,]+/),
 				picks: picksFromForm(form),
 				stackId: parsed.data.stackId || null,
 			});
@@ -95,7 +96,7 @@ export const actions = {
 		if (!page) {
 			return fail(404, { error: "Status page not found." });
 		}
-		await page.delete();
+		await StatusPageSettingsService.delete(page);
 		throw redirect(303, resolve("status-pages"));
 	},
 };

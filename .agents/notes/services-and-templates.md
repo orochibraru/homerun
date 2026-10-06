@@ -1078,6 +1078,22 @@ canary (`service.previewParentId` = the pick) are looked up on every read by
 `StatusPageDTO.members()` (`resolveStatusPageMembers` does the ordering), never
 stored, since previews open and close on their own.
 
+**Custom domains** (`status_page.domains`,
+`StatusPageSettingsService.syncRoutes`, `src/lib/status-page-domains.ts`) are
+served by a Traefik file-provider config, `homerun-status-pages.yml`, not by
+rewriting `/` inside the app: a rewrite would leave the browser on `/` while
+SvelteKit rendered `/status/<slug>`, and the client router's next data request
+would load the dashboard's home. So a router per domain matches only the page's
+own paths (`/`, `/status/<slug>`, `/_app/`, the favicon), `/` redirects to
+`/status/<slug>` (`redirectRegex`, query kept), and everything else on the
+domain falls through to the error pages' catch-all, which keeps the dashboard
+unreachable there. The service points at the app the way the error pages do
+(`errorPagesTarget(config.authCheckUrl)`). Every save and delete rewrites the
+file and syncs DNS with `sso: false`; the core-services watch re-asserts it.
+**Verified live** against Traefik v3.5 with a whoami backend: `/` → 302 to the
+page with the query kept, page and `_app` 200, `/services` and `/auth/sign-in`
+404 on the status domain.
+
 `/status-pages` is the operator's view: health of every service and the pages
 themselves, with a link out to `/notification-channels`. `/status/<slug>` is the
 public one, and the routing and disclosure rules for it are in `routing.md`:

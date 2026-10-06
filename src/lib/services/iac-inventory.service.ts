@@ -34,6 +34,7 @@ import {
 	serviceEnvironmentApiJson,
 	statusPageApiJson,
 } from "#lib/server/api-json.js";
+import { zipFiles } from "#lib/server/zip.js";
 import { GitProviderConfigService } from "#lib/services/git-provider-config.service.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
 
@@ -173,8 +174,9 @@ class IacInventoryServiceClass {
 
 	/**
 	 * The Terraform project for one stack (its substacks included) or one
-	 * service, as files, with the slug to name the folder and the archive
-	 * after. Null when the stack or service doesn't exist.
+	 * service, found by id or slug, as files, with the slug to name the
+	 * folder and the archive after. Null when the stack or service doesn't
+	 * exist.
 	 */
 	async structure(
 		userId: string,
@@ -184,7 +186,7 @@ class IacInventoryServiceClass {
 		const inventory = await this.inventory(userId);
 		const type = scope.kind === "stack" ? "homerun_stack" : "homerun_service";
 		const root = (inventory[type] ?? []).find(
-			(object) => object.id === scope.id,
+			(object) => object.id === scope.id || object.slug === scope.id,
 		);
 		if (!root) {
 			return null;
@@ -192,8 +194,8 @@ class IacInventoryServiceClass {
 		const name = String(root.name ?? root.slug ?? scope.id);
 		const scoped =
 			scope.kind === "stack"
-				? scopeToStack(inventory, scope.id)
-				: scopeToService(inventory, scope.id);
+				? scopeToStack(inventory, String(root.id))
+				: scopeToService(inventory, String(root.id));
 		return {
 			files: generateStructure(scoped, {
 				...options,
@@ -202,6 +204,23 @@ class IacInventoryServiceClass {
 			}),
 			name,
 			slug: String(root.slug ?? scope.id),
+		};
+	}
+
+	/** A generated project as a zip, its files in a `<slug>-terraform/` folder, with the archive's file name. */
+	archive(generated: { files: GeneratedFile[]; slug: string }): {
+		body: Uint8Array<ArrayBuffer>;
+		filename: string;
+	} {
+		const folder = `${generated.slug}-terraform`;
+		return {
+			body: zipFiles(
+				generated.files.map((file) => ({
+					content: file.content,
+					path: `${folder}/${file.path}`,
+				})),
+			),
+			filename: `${folder}.zip`,
 		};
 	}
 }

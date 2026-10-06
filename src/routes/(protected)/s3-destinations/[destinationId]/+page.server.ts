@@ -3,6 +3,7 @@ import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { Logger } from "#lib/logger.js";
 import { parseDestinationForm } from "#lib/server/backup-destination-form.js";
+import { BackupCapacityService } from "#lib/services/backup-capacity.service.js";
 import { S3BackupService } from "#lib/services/s3-backup.service.js";
 import { resolve } from "$app/paths";
 
@@ -22,6 +23,10 @@ export const load = async ({ params, parent }) => {
 		destination: {
 			accessKeyId: row.accessKeyId,
 			bucket: row.bucket,
+			capacity: destination.capacity,
+			capacityAlertPercent: row.capacityAlertPercent,
+			capacityCheckedAt: row.capacityCheckedAt,
+			capacityError: row.capacityError,
 			createdAt: row.createdAt,
 			endpoint: row.endpoint,
 			id: row.id,
@@ -39,6 +44,44 @@ export const load = async ({ params, parent }) => {
 };
 
 export const actions = {
+	checkCapacity: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const destination = await S3DestinationDTO.get(params.destinationId);
+		if (!destination) {
+			return fail(404, { error: "Destination not found." });
+		}
+		const result = await BackupCapacityService.check(destination);
+		if ("error" in result) {
+			return fail(400, { error: result.error });
+		}
+		return { success: true };
+	},
+
+	setCapacityAlert: async ({ params, request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const destination = await S3DestinationDTO.get(params.destinationId);
+		if (!destination) {
+			return fail(404, { error: "Destination not found." });
+		}
+		const percent = Number(
+			String((await request.formData()).get("capacityAlertPercent") ?? ""),
+		);
+		if (!Number.isInteger(percent) || percent < 50 || percent > 99) {
+			return fail(400, {
+				error: "The threshold is a whole number from 50 to 99.",
+			});
+		}
+		await destination.setCapacityAlertPercent(percent);
+		logger.info(
+			`Backup destination capacity threshold set: destination=${destination.id} percent=${percent} user=${locals.user.id}`,
+		);
+		return { success: true };
+	},
+
 	test: async ({ params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));

@@ -1276,6 +1276,15 @@ export const s3Destination = pgTable(
 	{
 		accessKeyId: text("access_key_id").notNull(),
 		bucket: text("bucket").notNull(),
+		capacityAlertPercent: integer("capacity_alert_percent")
+			.default(85)
+			.notNull(),
+		capacityAlertedAt: timestamp("capacity_alerted_at", { mode: "date" }),
+		capacityCheckedAt: timestamp("capacity_checked_at", { mode: "date" }),
+		capacityError: text("capacity_error"),
+		capacityFreeBytes: bigint("capacity_free_bytes", { mode: "number" }),
+		capacityTotalBytes: bigint("capacity_total_bytes", { mode: "number" }),
+		capacityUsedBytes: bigint("capacity_used_bytes", { mode: "number" }),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// S3-compatible endpoint, e.g. "https://s3.us-east-1.amazonaws.com" or
 		// a self-hosted MinIO URL.
@@ -1974,6 +1983,7 @@ export const statusPage = pgTable(
 	{
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
+		domains: jsonb("domains").$type<string[]>().default([]).notNull(),
 		id: text("id").primaryKey(),
 		isPublic: boolean("is_public").notNull().default(false),
 		name: text("name").notNull(),

@@ -420,6 +420,9 @@ export const IAC_RESOURCES: IacResource[] = [
 			}),
 			attr("description", "string"),
 			attr("isPublic", "bool", off),
+			attr("domains", "strings", {
+				description: "Domains a public page also answers on.",
+			}),
 			attr("stackId", "string", { ref: "homerun_stack" }),
 			attr("services", "objects", {
 				description: "The services a custom page shows.",

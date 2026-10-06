@@ -1,0 +1,1 @@
+ALTER TABLE "status_page" ADD COLUMN "domains" jsonb DEFAULT '[]'::jsonb NOT NULL;

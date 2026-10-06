@@ -2,6 +2,7 @@
 	import { CloudUpload, Pencil, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { describeDestination } from "#lib/backup-destinations.js";
+	import CapacityBar from "#lib/components/capacity-bar.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityList from "#lib/components/entity-list.svelte";
@@ -24,10 +25,15 @@
 
 	const rows = $derived(
 		data.destinations.map((dest) => ({
+			capacity: dest.capacity,
+			capacityAlertPercent: dest.capacityAlertPercent,
+			capacityCheckedAt: dest.capacityCheckedAt,
+			capacityError: dest.capacityError,
 			href: resolve("/(protected)/s3-destinations/[destinationId]", {
 				destinationId: dest.id,
 			}),
 			id: dest.id,
+			type: dest.type,
 			name: dest.name,
 			subtitle: describeDestination(dest),
 			title: dest.name,
@@ -45,6 +51,17 @@
 		deleteDialogOpen = true;
 	}
 </script>
+
+{#snippet details(dest: DestinationRow)}
+  {#if dest.type !== "s3"}
+    <CapacityBar
+      capacity={dest.capacity}
+      checkedAt={dest.capacityCheckedAt}
+      error={dest.capacityError}
+      thresholdPercent={dest.capacityAlertPercent}
+    />
+  {/if}
+{/snippet}
 
 {#snippet media(_dest: DestinationRow)}
   <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
@@ -116,6 +133,7 @@
     {:else}
       <EntityList
         actions={actions}
+        details={details}
         items={rows}
         media={media}
         view={view}

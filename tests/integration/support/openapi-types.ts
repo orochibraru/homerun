@@ -265,6 +265,71 @@ export interface paths {
 		patch: operations["patch_git_providers__providerId_"];
 		trace?: never;
 	};
+	"/iac/generate": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Generate a Terraform project
+		 * @description A Terraform project for one stack (its substacks included) or one service: versions.tf, providers.tf, a file per service, stacks.tf, volumes.tf, and when there are secrets variables.tf, terraform.tfvars (secret env var values filled in) and terraform.tfvars.example. As JSON by default, or a zip with ?format=zip.
+		 */
+		get: operations["get_iac_generate"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/iac/projects": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List Terraform state projects
+		 * @description Every Terraform state project, with its latest serial and whether it's locked.
+		 */
+		get: operations["get_iac_projects"];
+		put?: never;
+		/**
+		 * Create a Terraform state project
+		 * @description Creates a project keeping its state in a bucket of an object store.
+		 */
+		post: operations["post_iac_projects"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/iac/projects/{projectId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a Terraform state project */
+		get: operations["get_iac_projects__projectId_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a Terraform state project
+		 * @description Forgets the project, its versions and its lock. The state files stay in the bucket.
+		 */
+		delete: operations["delete_iac_projects__projectId_"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/iac/projects/{projectId}/lock": {
 		parameters: {
 			query?: never;
@@ -281,7 +346,7 @@ export interface paths {
 		post: operations["post_iac_projects__projectId__lock"];
 		/**
 		 * Unlock Terraform state
-		 * @description Releases the state lock held under the body's lock id. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.
+		 * @description Releases the state lock held under the body's lock id, or whatever holds it with ?force=true (only when the Terraform that took it is gone). Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.
 		 */
 		delete: operations["delete_iac_projects__projectId__lock"];
 		options?: never;
@@ -3394,6 +3459,359 @@ export interface operations {
 			};
 		};
 	};
+	get_iac_generate: {
+		parameters: {
+			query?: {
+				/** @description stack:<id or slug> or service:<id or slug> */
+				scope?: string;
+				/** @description A state project id, to add its http backend block */
+				project?: string;
+				/** @description zip for an archive instead of JSON */
+				format?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The project's files */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						files: {
+							content: string;
+							path: string;
+						}[];
+						name: string;
+						slug: string;
+					};
+				};
+			};
+			/** @description No scope */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description No such stack, service or project */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_iac_projects: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The projects */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						bucket: string;
+						createdAt: string;
+						id: string;
+						locked: boolean;
+						name: string;
+						prefix: string;
+						/** @description The latest state's serial, null before the first write */
+						serial: number | null;
+						slug: string;
+						storeId: string;
+						/** @description When the latest state was written */
+						updatedAt: string | null;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_iac_projects: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The bucket the state lives in */
+					bucket: string;
+					name: string;
+					/** @description A folder in the bucket, empty for its root */
+					prefix?: string;
+					/** @description The object store holding the bucket */
+					storeId: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						bucket: string;
+						createdAt: string;
+						id: string;
+						locked: boolean;
+						name: string;
+						prefix: string;
+						/** @description The latest state's serial, null before the first write */
+						serial: number | null;
+						slug: string;
+						storeId: string;
+						/** @description When the latest state was written */
+						updatedAt: string | null;
+					};
+				};
+			};
+			/** @description Invalid body */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_iac_projects__projectId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description State project id */
+				projectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The project */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						bucket: string;
+						createdAt: string;
+						id: string;
+						locked: boolean;
+						name: string;
+						prefix: string;
+						/** @description The latest state's serial, null before the first write */
+						serial: number | null;
+						slug: string;
+						storeId: string;
+						/** @description When the latest state was written */
+						updatedAt: string | null;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description No such project */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_iac_projects__projectId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description State project id */
+				projectId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						success: boolean;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Admins only */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description No such project */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	post_iac_projects__projectId__lock: {
 		parameters: {
 			query?: never;
@@ -3504,7 +3922,10 @@ export interface operations {
 	};
 	delete_iac_projects__projectId__lock: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** @description true releases the lock whoever holds it */
+				force?: string;
+			};
 			header?: never;
 			path: {
 				/** @description State project id */
@@ -3512,7 +3933,7 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody: {
+		requestBody?: {
 			content: {
 				"application/json": {
 					Created?: string;
@@ -10674,6 +11095,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						domains: string[];
 						id: string;
 						isPublic: boolean;
 						name: string;
@@ -10716,6 +11138,8 @@ export interface operations {
 			content: {
 				"application/json": {
 					description?: string | null;
+					/** @description Domains a public page also answers on, e.g. status.example.com: Traefik routes them to the page, with TLS and DNS like a service's. */
+					domains?: string[];
 					/** @default false */
 					isPublic: boolean;
 					name: string;
@@ -10746,6 +11170,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						domains: string[];
 						id: string;
 						isPublic: boolean;
 						name: string;
@@ -10823,6 +11248,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						domains: string[];
 						id: string;
 						isPublic: boolean;
 						name: string;
@@ -10937,6 +11363,8 @@ export interface operations {
 			content: {
 				"application/json": {
 					description?: string | null;
+					/** @description Domains a public page also answers on, e.g. status.example.com: Traefik routes them to the page, with TLS and DNS like a service's. */
+					domains?: string[];
 					isPublic?: boolean;
 					name?: string;
 					/** @enum {string} */
@@ -10963,6 +11391,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						domains: string[];
 						id: string;
 						isPublic: boolean;
 						name: string;
@@ -11047,16 +11476,14 @@ export interface operations {
 				content: {
 					"application/json": {
 						cpuPercent: number;
-						diskPercent: number | null;
-						diskTotalMb: number | null;
-						diskUsedMb: number | null;
+						diskTotalGb: number | null;
+						diskUsedGb: number | null;
 						gpu: {
 							memTotalMb: number;
 							memUsedMb: number;
 							name: string;
 							utilizationPercent: number;
 						} | null;
-						memPercent: number;
 						memTotalMb: number;
 						memUsedMb: number;
 					};

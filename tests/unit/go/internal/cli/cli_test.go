@@ -1705,11 +1705,11 @@ func TestRunScansDefaultsToList(t *testing.T) {
 		wantPath string
 		wantJSON bool
 	}{
-		{"bare id lists", []string{"svc-1"}, "/api/v1/services/svc-1/scans", false},
-		{"explicit list", []string{"list", "svc-1", "--json"}, "/api/v1/services/svc-1/scans", true},
-		{"get defaults to latest", []string{"get", "svc-1"}, "/api/v1/services/svc-1/scans/latest", false},
-		{"get by id", []string{"get", "svc-1", "scan-9"}, "/api/v1/services/svc-1/scans/scan-9", false},
-		{"get by id with a flag after it", []string{"get", "svc-1", "scan-9", "--json"}, "/api/v1/services/svc-1/scans/scan-9", true},
+		{"bare id lists", []string{"0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/scans", false},
+		{"explicit list", []string{"list", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "--json"}, "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/scans", true},
+		{"get defaults to latest", []string{"get", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/scans/latest", false},
+		{"get by id", []string{"get", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "scan-9"}, "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/scans/scan-9", false},
+		{"get by id with a flag after it", []string{"get", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "scan-9", "--json"}, "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/scans/scan-9", true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1764,7 +1764,7 @@ func TestRunServiceScanImpliesWait(t *testing.T) {
 	client, seen := scanAPI(t, "succeeded", `{"counts":{},"id":"scan-1","status":"succeeded"}`)
 
 	if _, failed := runCLI(t, func() {
-		cli.Execute(cli.Env{Client: func() *cli.Client { return client }}, []string{"services", "scan", "svc-1", "--fail-on", "critical"})
+		cli.Execute(cli.Env{Client: func() *cli.Client { return client }}, []string{"services", "scan", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "--fail-on", "critical"})
 	}); failed != "" {
 		t.Fatalf("failed with %q", failed)
 	}
@@ -1781,15 +1781,15 @@ func TestRunServicesDispatch(t *testing.T) {
 		wantPath   string
 	}{
 		{"list", []string{"list"}, "GET", "/api/v1/services"},
-		{"get", []string{"get", "svc-1"}, "GET", "/api/v1/services/svc-1"},
-		{"deploy", []string{"deploy", "svc-1"}, "POST", "/api/v1/services/svc-1/deploy"},
-		{"restart", []string{"restart", "svc-1"}, "POST", "/api/v1/services/svc-1/restart"},
-		{"delete", []string{"delete", "svc-1", "--force"}, "DELETE", "/api/v1/services/svc-1"},
-		{"webhook", []string{"webhook", "svc-1"}, "GET", "/api/v1/services/svc-1/webhook"},
-		{"revisions", []string{"revisions", "svc-1", "--json"}, "GET", "/api/v1/services/svc-1/revisions"},
-		{"logs", []string{"logs", "svc-1", "--tail", "10"}, "GET", "/api/v1/services/svc-1/logs"},
-		{"rollback", []string{"rollback", "svc-1", "rev-2"}, "POST", "/api/v1/services/svc-1/revisions/rev-2/deploy"},
-		{"scans", []string{"scans", "list", "svc-1"}, "GET", "/api/v1/services/svc-1/scans"},
+		{"get", []string{"get", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "GET", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"},
+		{"deploy", []string{"deploy", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "POST", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/deploy"},
+		{"restart", []string{"restart", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "POST", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/restart"},
+		{"delete", []string{"delete", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "--force"}, "DELETE", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"},
+		{"webhook", []string{"webhook", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "GET", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/webhook"},
+		{"revisions", []string{"revisions", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "--json"}, "GET", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/revisions"},
+		{"logs", []string{"logs", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "--tail", "10"}, "GET", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/logs"},
+		{"rollback", []string{"rollback", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "rev-2"}, "POST", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/revisions/rev-2/deploy"},
+		{"scans", []string{"scans", "list", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "GET", "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/scans"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1861,7 +1861,7 @@ func TestRunStacksAndTemplates(t *testing.T) {
 				t.Errorf("wrong path %q", seenPath)
 			}
 
-			for _, args := range [][]string{nil, {"delete"}} {
+			for _, args := range [][]string{nil, {"frobnicate"}} {
 				_, failed := runCLI(t, func() { run(cli.GlobalFlags{}, args) })
 				if !strings.Contains(failed, name+" subcommand") {
 					t.Errorf("%v: got %q", args, failed)

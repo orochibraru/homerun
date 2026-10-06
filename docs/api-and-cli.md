@@ -128,7 +128,9 @@ and so on).
 | Bucket               | `/object-stores/:storeId/buckets`, `/object-stores/:storeId/buckets/:name` (admins only) |
 | Template             | `/templates`, `/templates/:id` (read only)                                               |
 
-This is what the [Terraform provider](infrastructure-as-code.md) is built on.
+This is what the [Terraform provider](infrastructure-as-code.md) is built on,
+and the CLI has a command group for each, see
+[Everything else the API manages](#everything-else-the-api-manages).
 
 ### Image scans
 
@@ -217,9 +219,10 @@ default, `resolved`, `ignored` or `all`, `q` to search, `sort` by `lastSeen`,
 event (stack trace, source context, request, tags, breadcrumbs), and `PATCH` on
 it with `{"status": "resolved" | "ignored" | "unresolved"}` changes its status.
 The MCP server exposes the same as `list_errors` and `get_error`, and the CLI as
-`homerun services errors <id>`. `GET`, `POST` (multipart) and `DELETE ?release=`
-on `/api/v1/services/:id/sourcemaps` list, upload and delete a release's
-[source maps](error-tracking.md#source-maps).
+`homerun services errors <id>`, `homerun services errors get <id> <issueId>` and
+`homerun services errors resolve <id> <issueId>`. `GET`, `POST` (multipart) and
+`DELETE ?release=` on `/api/v1/services/:id/sourcemaps` list, upload and delete
+a release's [source maps](error-tracking.md#source-maps).
 
 ### Backups and jobs
 
@@ -385,6 +388,8 @@ The rest operate on your instance:
 ```bash
 homerun services list [--json]
 homerun services get <id>
+homerun services create --set <key=value>... [--file <body.json>]
+homerun services update <id> --set <key=value>... [--file <body.json>]
 homerun services config <id>
 homerun services deploy <id> [--tag <tag>] [--environment canary|stable]
 homerun services start <id>
@@ -398,6 +403,10 @@ homerun services channels status <id>
 homerun services environment <id> [name]
 homerun services dependencies <id> [--json]
 homerun services dependencies set <id> [<dependsOnId>...]
+homerun services errors <id> [--status unresolved|resolved|ignored|all]
+homerun services errors get <id> <issueId> [--event <eventId>]
+homerun services errors resolve <id> <issueId> [--status resolved|ignored|unresolved]
+homerun services deployments <id> [--limit <n>] [--json]
 homerun services scans <id> [--json]
 homerun services scans get <id> [scanId] [--json]
 homerun services sourcemaps upload <id> <dir> --release <release>
@@ -412,11 +421,18 @@ homerun previews get <id> <pr>
 homerun previews wait <id> <pr> [--commit <sha>] [--timeout 20m] [--json]
 homerun previews delete <id> <pr>
 homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
-homerun stacks list [--json]
-homerun templates list [--json]
+homerun stacks list|get|create|update|delete
+homerun templates list|get
 homerun backups list [--volume <id|name>] [--outcome running|success|failed] [--json]
 homerun backups volumes [--json]
 homerun backups run <id|name> [--wait] [--timeout <seconds>]
+homerun volumes backup <id|name> [--wait] [--timeout <seconds>]
+homerun <resource> list|get|create|update|delete
+homerun iac generate (--stack <id|slug> | --service <id|slug>) [--state-project <id>] [--out <dir> | --zip <file> | --stdout] [--force]
+homerun iac projects list|get|create|delete
+homerun iac state pull <project>
+homerun iac unlock <project> --force [--yes]
+homerun system stats [--json]
 homerun jobs list [--status queued,running,succeeded,failed,cancelled] [--json]
 homerun jobs get <id> [--json]
 homerun instance status [--json]
@@ -424,12 +440,14 @@ homerun instance update [--wait=false] [--timeout <seconds>] [--force]
 homerun instance channel stable|canary|nightly
 ```
 
-No `create`/`update` yet (`homerun update` above is the CLI's own self-updater,
-unrelated). `homerun services delete <id>` is the same danger-zone action as the
-Settings tab's Delete button, and `--force` deletes Homerun's record even when
-the container or swarm service couldn't be removed (the API's `?force=true`,
-without it that case is a `409` and deletes nothing). `--volumes` also deletes
-the volumes no other service mounts (the API's `?deleteVolumes=true`), like the
+`homerun update` above is the CLI's own self-updater, unrelated to
+`homerun services update`. Every `services` and `previews` command takes a
+service's slug as well as its id, and every `stacks` command a stack's slug.
+`homerun services delete <id>` is the same danger-zone action as the Settings
+tab's Delete button, and `--force` deletes Homerun's record even when the
+container or swarm service couldn't be removed (the API's `?force=true`, without
+it that case is a `409` and deletes nothing). `--volumes` also deletes the
+volumes no other service mounts (the API's `?deleteVolumes=true`), like the
 checkbox in the delete dialog. `homerun services webhook <id>` prints a
 service's push-to-deploy payload URL and secret (a `404` when none of Deploy on
 push, pull request previews or release channels are turned on).
@@ -502,6 +520,54 @@ non-zero when the deploy failed, the preview is unhealthy, previews are off, or
 deploys the preview's exact image to the service, refusing when `--commit` isn't
 what it runs; `--wait` follows the deploy and exits non-zero if it fails. See
 [Testing pull requests with GitHub Actions](github-actions-preview-testing.md).
+
+`homerun services deployments <id>` lists a service's latest deploy attempts
+with their status, trigger, image, commit and, for a failed one, the error.
+`homerun services errors get <id> <issueId>` prints an error issue with its
+latest event and stack trace, and `homerun services errors resolve` marks it
+resolved (or `--status ignored`/`unresolved`). `homerun system stats` prints the
+host's CPU, memory, disk and GPU usage.
+
+#### Everything else the API manages
+
+`<resource>` is any of `service-environments`, `service-dependencies`,
+`volumes`, `volume-mounts`, `cron-jobs`, `notification-channels`,
+`backup-destinations`, `build-cache-registries`, `dns-connections`,
+`git-providers`, `object-stores`, `buckets` and `status-pages`, the REST
+collections of the same name. `buckets` takes the object store's id first
+(`homerun buckets list <storeId>`) and a bucket's name as its id;
+`service-dependencies` has no `update`. `list` prints a table (`--json` for the
+raw list), and `get`, `create` and `update` print the item as a field/value
+table.
+
+`create` and `update` build the request body from `--set key=value`, repeatable,
+and `--file <body.json>` (`-` for stdin), with `--set` applied on top of the
+file. A value that parses as JSON is sent as JSON (`--set replicas=2`,
+`--set privileged=false`, `--set 'domains=["a.example.com"]'`), anything else as
+a string, and `'--set tag="2024"'` forces a string that looks like a number. A
+dotted key sets a nested field, and on `update` it keeps the rest of that
+object: `homerun services update web --set envVars.MODE=prod` changes one
+variable and leaves the others alone. The field names are the API's: see the
+[OpenAPI spec](#openapi-spec--swagger-ui) or `get --json`.
+
+```bash
+homerun stacks create --set name=Web --set slug=web
+homerun services create --file api.json --set stackId=<stack id>
+homerun volumes update <id> --set backupEnabled=true --set 'backupSchedule=0 3 * * *'
+homerun buckets create <storeId> --set name=logs --set expirationDays=30
+```
+
+`delete` asks for confirmation; `--yes` skips the question, for scripts.
+
+#### Infrastructure as code
+
+`homerun iac generate --stack <id|slug>` (or `--service`) writes the same
+Terraform project as the Infrastructure as Code page's Generate tab, see
+[From the CLI](infrastructure-as-code.md#from-the-cli).
+`homerun iac projects list|get|create|delete` manage the Terraform state
+projects, `homerun iac state pull <project>` prints a project's latest state,
+and `homerun iac unlock <project> --force` breaks a stuck lock. These are
+admin-only, like the page.
 
 ### Working on the CLI itself
 

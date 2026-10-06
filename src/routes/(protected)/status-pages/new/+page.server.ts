@@ -40,6 +40,7 @@ export const actions = {
 			const page = await StatusPageSettingsService.create(
 				{
 					...parsed.data,
+					domains: String(form.get("domains") ?? "").split(/[\s,]+/),
 					picks: picksFromForm(form),
 					stackId: parsed.data.stackId || null,
 				},

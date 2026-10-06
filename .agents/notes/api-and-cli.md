@@ -231,6 +231,49 @@ API call). A new command is one entry, nothing else. `services scans <id>` is
 `services scans list`'s alias. See `cmd/cli/README.md` for the full command
 reference and what's verified.
 
+Plain REST collections don't get hand-written commands: `resources.go` has a
+`Resource` table (group, API path with an optional parent `%s` like
+`/object-stores/%s/buckets`, id argument name, list columns, paginated or not,
+slugs or not, which of list/get/create/update/delete exist), and
+`ResourceCommands` turns each entry into ordinary `Commands` entries, so help,
+dispatch, arg checks and `help_test.go` cover them like everything else. A new
+collection is one table entry. `create`/`update` build the body from `--file`
+(`-` is stdin, numbers decoded with `UseNumber` so big ints survive) plus
+repeatable `--set key=value` on top (JSON when `json.Valid`, else a string;
+dotted keys nest). **Real, live-tested finding:** the API's `PATCH` replaces an
+object field whole, so the first cut of
+`services update api --set envVars.MODE=prod` silently dropped every other env
+var of the service. `update` now GETs the item first whenever a `--set` key is
+dotted and seeds that top-level object from it (unless `--file` already carries
+it), which is why a dotted update costs one extra request. `delete` confirms on
+stderr unless `--yes`. Every `services`/`previews` command and every `stacks`
+command resolve a non-UUID argument as a slug through the list's `q` search
+(exact slug match, anything else passed through so the API's own 404 still
+answers a typo), which is why the dispatch tests use UUID-shaped ids: a non-UUID
+costs a list request first.
+
+`iac generate` writes the project to `./<slug>-terraform/` (all-or-nothing: it
+refuses before writing anything if any target exists, unless `--force`),
+`terraform.tfvars` and the `--zip` file at `0600` with an explicit `chmod` so an
+overwritten file doesn't keep its old mode, and rejects a non-local path or slug
+from the server. `iac state pull` treats an empty `204` body as "no state yet"
+on stderr, stdout stays empty. `system stats` follows the route's real answer
+(`diskTotalGb`/`diskUsedGb`, no percent fields), not the OpenAPI schema, which
+describes the worker's raw host stats instead.
+
+**Verified live** (the parity session, a throwaway Postgres container and
+`bun run dev` on their own ports, a fresh account and API key):
+`stacks create/get/update/delete` by slug, `services create --file --set`,
+`services update` by slug with flat and dotted `--set` (the env var finding
+above), `volumes create/update/list/delete --yes`, `volume-mounts create/list`
+and `delete` declined then confirmed, `iac generate --service` (files at
+`0644`/`0600`, then the overwrite refusal), `--zip` and `--stdout`,
+`iac state pull` on a missing project (404), `templates get`, `system stats`,
+`services deployments`/`errors` and every new `list`. Not run live:
+`iac projects create`/`state pull` with real state and `iac unlock` (no object
+store on that instance), `services errors get/resolve` against a real issue, and
+`buckets` (unit-tested against a fake server).
+
 Every `list` command also takes `--page <n>`, `--per-page <n>` (default 100, max
 100, same clamp as the API) and `--search <term>`, threaded through as the same
 `page`/`perPage`/`q` query params the REST API's `GET` list routes accept (see

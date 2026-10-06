@@ -87,6 +87,27 @@ losing its target, so a volume whose destination is gone reports "no
 destination" and its backups fail with a config error rather than silently doing
 nothing.
 
+### Storage space
+
+An SFTP, SMB or WebDAV destination has a fixed size, so Homerun watches how full
+it is: every hour it asks the destination for its size and its free space (an S3
+bucket has no size to fill, so it isn't measured). The list shows a bar under
+each of them, and the destination's **Storage** section shows the free space,
+the size, how full it is, when it was last checked and why the last check
+failed, if it did. **Check now** measures it right away.
+
+**Alert past (% used)**, 85 by default, from 50 to 99, sets when it counts as
+low on space: the bar turns amber past it (red past 95%) and channels subscribed
+to **Backup storage low** (on by default for a new channel) get one message,
+with the space used, free and in all. The next one comes only once the
+destination went back more than 5 points under the threshold and crossed it
+again, so a destination hovering at the line doesn't alert every hour. Changing
+the threshold lets it alert again.
+
+SFTP reports its size through the server's own extension when it has one, and
+through `df` in a shell otherwise; a server with neither, or a WebDAV server
+without quota support, shows "Size unknown" with rclone's reason.
+
 ## Backups
 
 Off by default, turned on per volume. The quickest way is the **switch** next to

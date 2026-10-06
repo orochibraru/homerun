@@ -32,10 +32,10 @@ func TestRunDependenciesDispatches(t *testing.T) {
 		wantBody   string
 		wantOut    string
 	}{
-		{"list", []string{"svc-1"}, "GET", "", "depends on  Postgres"},
-		{"list as json", []string{"svc-1", "--json"}, "GET", "", `"slug": "postgres"`},
-		{"set", []string{"set", "svc-1", "db-1", "cache-1"}, "PUT", `{"dependsOn":["db-1","cache-1"]}`, "needed by"},
-		{"set nothing clears", []string{"set", "svc-1"}, "PUT", `{"dependsOn":[]}`, "Cron"},
+		{"list", []string{"0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "GET", "", "depends on  Postgres"},
+		{"list as json", []string{"0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "--json"}, "GET", "", `"slug": "postgres"`},
+		{"set", []string{"set", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "db-1", "cache-1"}, "PUT", `{"dependsOn":["db-1","cache-1"]}`, "needed by"},
+		{"set nothing clears", []string{"set", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "PUT", `{"dependsOn":[]}`, "Cron"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -47,7 +47,7 @@ func TestRunDependenciesDispatches(t *testing.T) {
 				t.Fatalf("failed with %q", failed)
 			}
 			request := (*seen)[0]
-			if request.Method != test.wantMethod || request.Path != "/api/v1/services/svc-1/dependencies" {
+			if request.Method != test.wantMethod || request.Path != "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/dependencies" {
 				t.Errorf("wrong request %s %s", request.Method, request.Path)
 			}
 			if request.Body != test.wantBody {

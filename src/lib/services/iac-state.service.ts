@@ -23,6 +23,19 @@ export type LockResult =
 	| { lock: IacStateLock; ok: true }
 	| { lock: IacStateLock; ok: false };
 
+export interface IacProjectSummary {
+	bucket: string;
+	createdAt: Date;
+	id: string;
+	locked: boolean;
+	name: string;
+	prefix: string;
+	serial: number | null;
+	slug: string;
+	storeId: string;
+	updatedAt: Date | null;
+}
+
 export interface VersionDiff {
 	diff: StateDiff;
 	previousSerial: number | null;
@@ -70,6 +83,27 @@ class IacStateServiceClass {
 			storeId: input.storeId,
 			userId: input.userId,
 		});
+	}
+
+	/** A project with its latest serial and whether it's locked, as the API and the CLI show it. */
+	async summary(project: IacProjectDTO): Promise<IacProjectSummary> {
+		const [latest, lock] = await Promise.all([
+			IacStateVersionDTO.latest(project.id),
+			project.currentLock(),
+		]);
+		const row = project.toJSON();
+		return {
+			bucket: row.bucket,
+			createdAt: row.createdAt,
+			id: row.id,
+			locked: lock !== null,
+			name: row.name,
+			prefix: row.prefix,
+			serial: latest?.serial ?? null,
+			slug: row.slug,
+			storeId: row.storeId,
+			updatedAt: latest?.toJSON().createdAt ?? null,
+		};
 	}
 
 	/**

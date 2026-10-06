@@ -4325,9 +4325,718 @@
 				"tags": ["Git providers"]
 			}
 		},
+		"/iac/generate": {
+			"get": {
+				"description": "A Terraform project for one stack (its substacks included) or one service: versions.tf, providers.tf, a file per service, stacks.tf, volumes.tf, and when there are secrets variables.tf, terraform.tfvars (secret env var values filled in) and terraform.tfvars.example. As JSON by default, or a zip with ?format=zip.",
+				"operationId": "get_iac_generate",
+				"parameters": [
+					{
+						"description": "stack:<id or slug> or service:<id or slug>",
+						"in": "query",
+						"name": "scope",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "A state project id, to add its http backend block",
+						"in": "query",
+						"name": "project",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "zip for an archive instead of JSON",
+						"in": "query",
+						"name": "format",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"files": {
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"content": {
+														"type": "string"
+													},
+													"path": {
+														"type": "string"
+													}
+												},
+												"required": ["content", "path"],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"name": {
+											"type": "string"
+										},
+										"slug": {
+											"type": "string"
+										}
+									},
+									"required": ["files", "name", "slug"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The project's files"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No scope"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No such stack, service or project"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Generate a Terraform project",
+				"tags": ["Infrastructure as code"]
+			}
+		},
+		"/iac/projects": {
+			"get": {
+				"description": "Every Terraform state project, with its latest serial and whether it's locked.",
+				"operationId": "get_iac_projects",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"bucket": {
+												"type": "string"
+											},
+											"createdAt": {
+												"type": "string"
+											},
+											"id": {
+												"type": "string"
+											},
+											"locked": {
+												"type": "boolean"
+											},
+											"name": {
+												"type": "string"
+											},
+											"prefix": {
+												"type": "string"
+											},
+											"serial": {
+												"anyOf": [
+													{
+														"type": "number"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The latest state's serial, null before the first write"
+											},
+											"slug": {
+												"type": "string"
+											},
+											"storeId": {
+												"type": "string"
+											},
+											"updatedAt": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "When the latest state was written"
+											}
+										},
+										"required": [
+											"bucket",
+											"createdAt",
+											"id",
+											"locked",
+											"name",
+											"prefix",
+											"serial",
+											"slug",
+											"storeId",
+											"updatedAt"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The projects"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List Terraform state projects",
+				"tags": ["Terraform state"]
+			},
+			"post": {
+				"description": "Creates a project keeping its state in a bucket of an object store.",
+				"operationId": "post_iac_projects",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"bucket": {
+										"description": "The bucket the state lives in",
+										"minLength": 1,
+										"type": "string"
+									},
+									"name": {
+										"minLength": 1,
+										"type": "string"
+									},
+									"prefix": {
+										"description": "A folder in the bucket, empty for its root",
+										"type": "string"
+									},
+									"storeId": {
+										"description": "The object store holding the bucket",
+										"minLength": 1,
+										"type": "string"
+									}
+								},
+								"required": ["bucket", "name", "storeId"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"bucket": {
+											"type": "string"
+										},
+										"createdAt": {
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"locked": {
+											"type": "boolean"
+										},
+										"name": {
+											"type": "string"
+										},
+										"prefix": {
+											"type": "string"
+										},
+										"serial": {
+											"anyOf": [
+												{
+													"type": "number"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The latest state's serial, null before the first write"
+										},
+										"slug": {
+											"type": "string"
+										},
+										"storeId": {
+											"type": "string"
+										},
+										"updatedAt": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "When the latest state was written"
+										}
+									},
+									"required": [
+										"bucket",
+										"createdAt",
+										"id",
+										"locked",
+										"name",
+										"prefix",
+										"serial",
+										"slug",
+										"storeId",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Created"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Create a Terraform state project",
+				"tags": ["Terraform state"]
+			}
+		},
+		"/iac/projects/{projectId}": {
+			"delete": {
+				"description": "Forgets the project, its versions and its lock. The state files stay in the bucket.",
+				"operationId": "delete_iac_projects__projectId_",
+				"parameters": [
+					{
+						"description": "State project id",
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Deleted"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No such project"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Delete a Terraform state project",
+				"tags": ["Terraform state"]
+			},
+			"get": {
+				"operationId": "get_iac_projects__projectId_",
+				"parameters": [
+					{
+						"description": "State project id",
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"bucket": {
+											"type": "string"
+										},
+										"createdAt": {
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"locked": {
+											"type": "boolean"
+										},
+										"name": {
+											"type": "string"
+										},
+										"prefix": {
+											"type": "string"
+										},
+										"serial": {
+											"anyOf": [
+												{
+													"type": "number"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The latest state's serial, null before the first write"
+										},
+										"slug": {
+											"type": "string"
+										},
+										"storeId": {
+											"type": "string"
+										},
+										"updatedAt": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "When the latest state was written"
+										}
+									},
+									"required": [
+										"bucket",
+										"createdAt",
+										"id",
+										"locked",
+										"name",
+										"prefix",
+										"serial",
+										"slug",
+										"storeId",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The project"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Admins only"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No such project"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a Terraform state project",
+				"tags": ["Terraform state"]
+			}
+		},
 		"/iac/projects/{projectId}/lock": {
 			"delete": {
-				"description": "Releases the state lock held under the body's lock id. Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.",
+				"description": "Releases the state lock held under the body's lock id, or whatever holds it with ?force=true (only when the Terraform that took it is gone). Terraform's http backend: authenticate with HTTP Basic, any username and an API key as the password.",
 				"operationId": "delete_iac_projects__projectId__lock",
 				"parameters": [
 					{
@@ -4335,6 +5044,15 @@
 						"in": "path",
 						"name": "projectId",
 						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "true releases the lock whoever holds it",
+						"in": "query",
+						"name": "force",
+						"required": false,
 						"schema": {
 							"type": "string"
 						}
@@ -4374,7 +5092,7 @@
 							}
 						}
 					},
-					"required": true
+					"required": false
 				},
 				"responses": {
 					"200": {
@@ -23872,6 +24590,12 @@
 													}
 												]
 											},
+											"domains": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"id": {
 												"type": "string"
 											},
@@ -23925,6 +24649,7 @@
 										"required": [
 											"createdAt",
 											"description",
+											"domains",
 											"id",
 											"isPublic",
 											"name",
@@ -23991,6 +24716,13 @@
 												"type": "null"
 											}
 										]
+									},
+									"domains": {
+										"description": "Domains a public page also answers on, e.g. status.example.com: Traefik routes them to the page, with TLS and DNS like a service's.",
+										"items": {
+											"type": "string"
+										},
+										"type": "array"
 									},
 									"isPublic": {
 										"default": false,
@@ -24070,6 +24802,12 @@
 												}
 											]
 										},
+										"domains": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -24123,6 +24861,7 @@
 									"required": [
 										"createdAt",
 										"description",
+										"domains",
 										"id",
 										"isPublic",
 										"name",
@@ -24322,6 +25061,12 @@
 												}
 											]
 										},
+										"domains": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -24375,6 +25120,7 @@
 									"required": [
 										"createdAt",
 										"description",
+										"domains",
 										"id",
 										"isPublic",
 										"name",
@@ -24469,6 +25215,13 @@
 											}
 										]
 									},
+									"domains": {
+										"description": "Domains a public page also answers on, e.g. status.example.com: Traefik routes them to the page, with TLS and DNS like a service's.",
+										"items": {
+											"type": "string"
+										},
+										"type": "array"
+									},
 									"isPublic": {
 										"type": "boolean"
 									},
@@ -24544,6 +25297,12 @@
 												}
 											]
 										},
+										"domains": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -24597,6 +25356,7 @@
 									"required": [
 										"createdAt",
 										"description",
+										"domains",
 										"id",
 										"isPublic",
 										"name",
@@ -24711,7 +25471,7 @@
 										"cpuPercent": {
 											"type": "number"
 										},
-										"diskPercent": {
+										"diskTotalGb": {
 											"anyOf": [
 												{
 													"type": "number"
@@ -24721,17 +25481,7 @@
 												}
 											]
 										},
-										"diskTotalMb": {
-											"anyOf": [
-												{
-													"type": "number"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
-										"diskUsedMb": {
+										"diskUsedGb": {
 											"anyOf": [
 												{
 													"type": "number"
@@ -24772,9 +25522,6 @@
 												}
 											]
 										},
-										"memPercent": {
-											"type": "number"
-										},
 										"memTotalMb": {
 											"type": "number"
 										},
@@ -24784,11 +25531,9 @@
 									},
 									"required": [
 										"cpuPercent",
-										"diskPercent",
-										"diskTotalMb",
-										"diskUsedMb",
+										"diskTotalGb",
+										"diskUsedGb",
 										"gpu",
-										"memPercent",
 										"memTotalMb",
 										"memUsedMb"
 									],

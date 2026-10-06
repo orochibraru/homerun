@@ -1152,6 +1152,12 @@
 					"default": false
 				},
 				{
+					"kind": "strings",
+					"name": "domains",
+					"tf": "domains",
+					"description": "Domains a public page also answers on."
+				},
+				{
 					"kind": "string",
 					"name": "stackId",
 					"tf": "stack_id",

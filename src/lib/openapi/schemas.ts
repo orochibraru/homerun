@@ -448,9 +448,8 @@ export const instanceUpdateProgressResponse = z.object({
 
 export const systemStatsResponse = z.object({
 	cpuPercent: z.number(),
-	diskPercent: z.number().nullable(),
-	diskTotalMb: z.number().nullable(),
-	diskUsedMb: z.number().nullable(),
+	diskTotalGb: z.number().nullable(),
+	diskUsedGb: z.number().nullable(),
 	gpu: z
 		.object({
 			memTotalMb: z.number(),
@@ -459,7 +458,6 @@ export const systemStatsResponse = z.object({
 			utilizationPercent: z.number(),
 		})
 		.nullable(),
-	memPercent: z.number(),
 	memTotalMb: z.number(),
 	memUsedMb: z.number(),
 });

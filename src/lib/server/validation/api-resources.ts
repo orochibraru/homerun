@@ -158,6 +158,12 @@ const statusPageServices = z
 
 export const statusPageApiBody = z.object({
 	description: nullableText,
+	domains: z
+		.array(z.string())
+		.optional()
+		.describe(
+			"Domains a public page also answers on, e.g. status.example.com: Traefik routes them to the page, with TLS and DNS like a service's.",
+		),
 	isPublic: z.boolean().default(false),
 	name: text.min(1).max(100),
 	scope: z.enum(["global", "stack", "custom"]),

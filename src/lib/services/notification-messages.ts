@@ -1,6 +1,8 @@
 import { stripAnsi } from "#lib/ansi.js";
+import { type Capacity, usedPercent } from "#lib/backup-capacity.js";
 import { isPhaseLine } from "#lib/deploy-phases.js";
 import { type DeployTrigger, deployTriggerLabel } from "#lib/deploy-trigger.js";
+import { formatBytes } from "#lib/formatting.js";
 import {
 	countsLine,
 	type ImageScanFinding,
@@ -241,6 +243,42 @@ export function uptimeMessage(
 		serviceName: service.name,
 		timestamp,
 		title: `${service.name} ${input.ok ? "recovered" : "is down"}`,
+	};
+}
+
+export interface BackupCapacityMessageInput {
+	capacity: Capacity;
+	destinationId: string;
+	name: string;
+	origin: string | null;
+	thresholdPercent: number;
+}
+
+/** Builds the notification channel message for a backup destination past its usage threshold. */
+export function backupCapacityMessage(
+	input: BackupCapacityMessageInput,
+	timestamp: string,
+): ChannelMessage {
+	const percent = Math.round(usedPercent(input.capacity));
+	return {
+		detail: `Backups to it may start failing once it's full. The alert threshold is ${input.thresholdPercent}%.`,
+		event: "backup.storage_low",
+		fields: [
+			{
+				name: "Used",
+				value: `${formatBytes(input.capacity.usedBytes)} (${percent}%)`,
+			},
+			{ name: "Free", value: formatBytes(input.capacity.freeBytes) },
+			{ name: "Size", value: formatBytes(input.capacity.totalBytes) },
+		],
+		link: dashboardLink(
+			input.origin,
+			`/s3-destinations/${input.destinationId}`,
+		),
+		serviceId: null,
+		serviceName: null,
+		timestamp,
+		title: `${input.name} is ${percent}% full`,
 	};
 }
 

@@ -1,4 +1,8 @@
-import { and, count, desc, eq, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, ne, type SQL } from "drizzle-orm";
+import {
+	type Capacity,
+	DEFAULT_CAPACITY_ALERT_PERCENT,
+} from "#lib/backup-capacity.js";
 import type { DestinationType } from "#lib/backup-destinations.js";
 import { db } from "#lib/server/db/lib.js";
 import { type S3Destination, s3Destination } from "#lib/server/db/schema.js";
@@ -125,6 +129,13 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 		const row: S3Destination = {
 			accessKeyId: input.accessKeyId,
 			bucket: input.bucket,
+			capacityAlertPercent: DEFAULT_CAPACITY_ALERT_PERCENT,
+			capacityAlertedAt: null,
+			capacityCheckedAt: null,
+			capacityError: null,
+			capacityFreeBytes: null,
+			capacityTotalBytes: null,
+			capacityUsedBytes: null,
 			createdAt: now,
 			endpoint: input.endpoint,
 			id: crypto.randomUUID(),
@@ -156,6 +167,71 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 			.set(patch)
 			.where(eq(s3Destination.id, this.row.id));
 		Object.assign(this.row, patch);
+	}
+
+	/** Every destination that isn't S3 (SFTP, SMB, WebDAV), whose free space Homerun watches. */
+	static async listNonS3(): Promise<S3DestinationDTO[]> {
+		const rows = await db
+			.select()
+			.from(s3Destination)
+			.where(ne(s3Destination.type, "s3"));
+		return rows.map((row) => new S3DestinationDTO(row));
+	}
+
+	/** Records a capacity check: the figures when it worked, the error otherwise, keeping the last good figures. */
+	async recordCapacity(
+		result: { capacity: Capacity } | { error: string },
+		checkedAt = new Date(),
+	): Promise<void> {
+		const patch =
+			"capacity" in result
+				? {
+						capacityCheckedAt: checkedAt,
+						capacityError: null,
+						capacityFreeBytes: result.capacity.freeBytes,
+						capacityTotalBytes: result.capacity.totalBytes,
+						capacityUsedBytes: result.capacity.usedBytes,
+					}
+				: { capacityCheckedAt: checkedAt, capacityError: result.error };
+		await db
+			.update(s3Destination)
+			.set(patch)
+			.where(eq(s3Destination.id, this.row.id));
+		Object.assign(this.row, patch);
+	}
+
+	/** Marks the low-space alert as sent (a date) or cleared (null). */
+	async setCapacityAlerted(at: Date | null): Promise<void> {
+		await db
+			.update(s3Destination)
+			.set({ capacityAlertedAt: at })
+			.where(eq(s3Destination.id, this.row.id));
+		this.row.capacityAlertedAt = at;
+	}
+
+	/** Sets the usage, in percent, past which the destination alerts, and lets it alert again. */
+	async setCapacityAlertPercent(percent: number): Promise<void> {
+		await db
+			.update(s3Destination)
+			.set({ capacityAlertedAt: null, capacityAlertPercent: percent })
+			.where(eq(s3Destination.id, this.row.id));
+		this.row.capacityAlertPercent = percent;
+		this.row.capacityAlertedAt = null;
+	}
+
+	/** The last capacity measurement, null before the first successful check. */
+	get capacity(): Capacity | null {
+		const { capacityFreeBytes, capacityTotalBytes, capacityUsedBytes } =
+			this.row;
+		return capacityFreeBytes === null ||
+			capacityTotalBytes === null ||
+			capacityUsedBytes === null
+			? null
+			: {
+					freeBytes: capacityFreeBytes,
+					totalBytes: capacityTotalBytes,
+					usedBytes: capacityUsedBytes,
+				};
 	}
 
 	/** Deletes this destination row. */

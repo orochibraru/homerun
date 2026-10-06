@@ -342,6 +342,18 @@ upload, no temp file whatever the volume's size). A non-zero exit from the
 helper fails the run with the helper's own stderr attached, and the upload is
 aborted rather than left truncated.
 
+**Destination capacity** (`BackupCapacityService`, `BackupCapacityScheduler`,
+hourly, `src/lib/backup-capacity.ts`): SFTP/SMB/WebDAV destinations are measured
+with `rclone about --json` in a one-off rclone container (`remoteAbout`). SFTP
+answers through the server's statvfs extension even with `shell_type=none`
+(**verified live** against an OpenSSH server); only when that fails is it asked
+again through `dest,shell_type=unix:` (`df` over a shell). The figures, the
+error and when it was checked live on `s3_destination.capacity_*`; a failed
+check keeps the last good figures. `capacityAlertChange` alerts once on crossing
+`capacity_alert_percent` (85 by default) through the `backup.storage_low`
+channel event and clears 5 points under it, so a destination hovering at the
+line doesn't alert hourly. S3 has no size and is never measured.
+
 **Real production incident** (2026-09-28): the S3 endpoint answered part PUTs
 with `504 Gateway Timeout`, and every failed run said only "the upload stopped
 reading the archive": `archiveAndUpload` returned the helper's broken-pipe error

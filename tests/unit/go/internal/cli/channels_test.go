@@ -72,9 +72,9 @@ func TestRunChannelsDispatches(t *testing.T) {
 		wantMethod string
 		wantBody   string
 	}{
-		{"status", []string{"status", "svc-1"}, "GET", ""},
-		{"disable", []string{"disable", "svc-1"}, "PATCH", `{"enabled":false}`},
-		{"enable clears the domain", []string{"enable", "svc-1", "--tags", "release-*", "--canary-domain", ""}, "PATCH", `{"canaryDomain":null,"enabled":true,"tagPattern":"release-*"}`},
+		{"status", []string{"status", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "GET", ""},
+		{"disable", []string{"disable", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"}, "PATCH", `{"enabled":false}`},
+		{"enable clears the domain", []string{"enable", "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90", "--tags", "release-*", "--canary-domain", ""}, "PATCH", `{"canaryDomain":null,"enabled":true,"tagPattern":"release-*"}`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -86,7 +86,7 @@ func TestRunChannelsDispatches(t *testing.T) {
 				t.Fatalf("failed with %q", failed)
 			}
 			request := (*seen)[0]
-			if request.Method != test.wantMethod || request.Path != "/api/v1/services/svc-1/channels" {
+			if request.Method != test.wantMethod || request.Path != "/api/v1/services/0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90/channels" {
 				t.Errorf("wrong request %s %s", request.Method, request.Path)
 			}
 			if request.Body != test.wantBody {

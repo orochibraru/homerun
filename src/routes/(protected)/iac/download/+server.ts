@@ -1,7 +1,6 @@
 import { config } from "#lib/config.js";
 import { IacProjectDTO } from "#lib/dto/iac-project-dto.js";
 import { parseScope } from "#lib/iac/generate.js";
-import { zipFiles } from "#lib/server/zip.js";
 import { IacInventoryService } from "#lib/services/iac-inventory.service.js";
 
 export const GET = async ({ locals, url }) => {
@@ -34,20 +33,12 @@ export const GET = async ({ locals, url }) => {
 			{ status: 404 },
 		);
 	}
-	const folder = `${generated.slug}-terraform`;
-	return new Response(
-		zipFiles(
-			generated.files.map((file) => ({
-				content: file.content,
-				path: `${folder}/${file.path}`,
-			})),
-		),
-		{
-			headers: {
-				"cache-control": "no-store",
-				"content-disposition": `attachment; filename="${folder}.zip"`,
-				"content-type": "application/zip",
-			},
+	const archive = IacInventoryService.archive(generated);
+	return new Response(archive.body, {
+		headers: {
+			"cache-control": "no-store",
+			"content-disposition": `attachment; filename="${archive.filename}"`,
+			"content-type": "application/zip",
 		},
-	);
+	});
 };

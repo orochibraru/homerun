@@ -130,6 +130,13 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 		label: "Backup failed",
 	},
 	{
+		description:
+			"An SFTP, SMB or WebDAV backup destination is fuller than its alert threshold.",
+		event: "backup.storage_low",
+		group: "Scheduled tasks",
+		label: "Backup storage low",
+	},
+	{
 		description: "A volume was backed up to its destination.",
 		event: "backup.succeeded",
 		group: "Scheduled tasks",
@@ -168,6 +175,7 @@ export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
 	"error.issue.new",
 	"error.issue.regressed",
 	"backup.failed",
+	"backup.storage_low",
 	"cron_job.failed",
 ];
 
@@ -195,6 +203,7 @@ export function isFailureEvent(event: NotificationEvent): boolean {
 		event === "resource.warning" ||
 		event === "resource.critical" ||
 		event === "security.ip_banned" ||
+		event === "backup.storage_low" ||
 		event.startsWith("error.issue.")
 	);
 }

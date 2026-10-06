@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { iacProjectApiBody } from "#lib/server/validation/iac.js";
 import type { ParamDef, RouteDef } from "./registry";
 import { errorResponse, successResponse } from "./schemas";
 
@@ -21,6 +22,30 @@ const lockInfo = z
 		Who: z.string().optional(),
 	})
 	.meta({ description: "Terraform's lock info" });
+
+const projectResponse = z.object({
+	bucket: z.string(),
+	createdAt: z.string(),
+	id: z.string(),
+	locked: z.boolean(),
+	name: z.string(),
+	prefix: z.string(),
+	serial: z.number().nullable().meta({
+		description: "The latest state's serial, null before the first write",
+	}),
+	slug: z.string(),
+	storeId: z.string(),
+	updatedAt: z
+		.string()
+		.nullable()
+		.meta({ description: "When the latest state was written" }),
+});
+
+const generatedProject = z.object({
+	files: z.array(z.object({ content: z.string(), path: z.string() })),
+	name: z.string(),
+	slug: z.string(),
+});
 
 const unauthorized = { description: "Unauthorized", schema: errorResponse };
 const forbidden = { description: "Admins only", schema: errorResponse };
@@ -89,11 +114,15 @@ export const iacRoutes: RouteDef[] = [
 		tags,
 	},
 	{
-		description: `Releases the state lock held under the body's lock id. ${basicAuth}`,
+		description: `Releases the state lock held under the body's lock id, or whatever holds it with ?force=true (only when the Terraform that took it is gone). ${basicAuth}`,
 		method: "delete",
 		path: "/iac/projects/{projectId}/lock",
 		pathParams: projectIdParam,
+		queryParams: [
+			{ description: "true releases the lock whoever holds it", name: "force" },
+		],
 		requestBody: lockInfo,
+		requestBodyOptional: true,
 		responses: {
 			200: { description: "Unlocked", schema: successResponse },
 			401: unauthorized,
@@ -103,5 +132,94 @@ export const iacRoutes: RouteDef[] = [
 		},
 		summary: "Unlock Terraform state",
 		tags,
+	},
+	{
+		description:
+			"Every Terraform state project, with its latest serial and whether it's locked.",
+		method: "get",
+		path: "/iac/projects",
+		responses: {
+			200: {
+				description: "The projects",
+				isArray: true,
+				schema: projectResponse,
+			},
+			401: unauthorized,
+			403: forbidden,
+		},
+		summary: "List Terraform state projects",
+		tags,
+	},
+	{
+		description:
+			"Creates a project keeping its state in a bucket of an object store.",
+		method: "post",
+		path: "/iac/projects",
+		requestBody: iacProjectApiBody,
+		responses: {
+			201: { description: "Created", schema: projectResponse },
+			400: { description: "Invalid body", schema: errorResponse },
+			401: unauthorized,
+			403: forbidden,
+		},
+		summary: "Create a Terraform state project",
+		tags,
+	},
+	{
+		method: "get",
+		path: "/iac/projects/{projectId}",
+		pathParams: projectIdParam,
+		responses: {
+			200: { description: "The project", schema: projectResponse },
+			401: unauthorized,
+			403: forbidden,
+			404: notFound,
+		},
+		summary: "Get a Terraform state project",
+		tags,
+	},
+	{
+		description:
+			"Forgets the project, its versions and its lock. The state files stay in the bucket.",
+		method: "delete",
+		path: "/iac/projects/{projectId}",
+		pathParams: projectIdParam,
+		responses: {
+			200: { description: "Deleted", schema: successResponse },
+			401: unauthorized,
+			403: forbidden,
+			404: notFound,
+		},
+		summary: "Delete a Terraform state project",
+		tags,
+	},
+	{
+		description:
+			"A Terraform project for one stack (its substacks included) or one service: versions.tf, providers.tf, a file per service, stacks.tf, volumes.tf, and when there are secrets variables.tf, terraform.tfvars (secret env var values filled in) and terraform.tfvars.example. As JSON by default, or a zip with ?format=zip.",
+		method: "get",
+		path: "/iac/generate",
+		queryParams: [
+			{
+				description: "stack:<id or slug> or service:<id or slug>",
+				name: "scope",
+			},
+			{
+				description: "A state project id, to add its http backend block",
+				name: "project",
+			},
+			{ description: "zip for an archive instead of JSON", name: "format" },
+		],
+		responses: {
+			200: { description: "The project's files", schema: generatedProject },
+			400: { description: "No scope", schema: errorResponse },
+			401: unauthorized,
+			403: forbidden,
+			404: {
+				description: "No such stack, service or project",
+				schema: errorResponse,
+			},
+		},
+		summary: "Generate a Terraform project",
+		tags: ["Infrastructure as code"],
 	},
 ];

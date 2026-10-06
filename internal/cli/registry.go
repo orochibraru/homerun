@@ -11,7 +11,7 @@ var instanceChannels = []string{"stable", "canary", "nightly"}
 var deployEnvironments = []string{"canary", "stable"}
 
 // Commands is every command the CLI has, in the order the top-level usage lists them.
-var Commands = slices.Concat(baseCommands, redirectCommands, adminCommands)
+var Commands = slices.Concat(baseCommands, ResourceCommands(resources), resourceExtras, redirectCommands, iacCommands, adminCommands)
 
 var baseCommands = []Command{
 	{
@@ -50,13 +50,13 @@ var baseCommands = []Command{
 		Args:    "<id>",
 		Name:    "services get",
 		Summary: "get a service by id",
-		Setup:   noFlags(func(env Env, args []string) { ServiceGet(env.Client(), args[0]) }),
+		Setup:   noFlags(func(env Env, args []string) { ServiceGet(env.Client(), serviceID(env, args[0])) }),
 	},
 	{
 		Args:    "<id>",
 		Name:    "services config",
 		Summary: "print a service's settings as JSON, grouped by dashboard tab (also: services <id> config)",
-		Setup:   noFlags(func(env Env, args []string) { ServiceConfig(env.Client(), args[0]) }),
+		Setup:   noFlags(func(env Env, args []string) { ServiceConfig(env.Client(), serviceID(env, args[0])) }),
 	},
 	{
 		Aliases: []string{"deploy"},
@@ -72,10 +72,10 @@ var baseCommands = []Command{
 					Fail("--tag and --environment can't be combined.")
 				}
 				if *environment != "" {
-					ServiceDeployEnvironment(env.Client(), args[0], *environment)
+					ServiceDeployEnvironment(env.Client(), serviceID(env, args[0]), *environment)
 					return
 				}
-				ServiceDeploy(env.Client(), args[0], *tag)
+				ServiceDeploy(env.Client(), serviceID(env, args[0]), *tag)
 			}
 		},
 	},
@@ -89,14 +89,14 @@ var baseCommands = []Command{
 		Setup: func(set *flag.FlagSet) Runner {
 			force := set.Bool("force", false, "delete Homerun's record even if the workload couldn't be removed")
 			volumes := set.Bool("volumes", false, "also delete the volumes no other service mounts")
-			return func(env Env, args []string) { ServiceDelete(env.Client(), args[0], *force, *volumes) }
+			return func(env Env, args []string) { ServiceDelete(env.Client(), serviceID(env, args[0]), *force, *volumes) }
 		},
 	},
 	{
 		Args:    "<id>",
 		Name:    "services webhook",
 		Summary: "show a service's push-to-deploy webhook URL and secret",
-		Setup:   noFlags(func(env Env, args []string) { ServiceWebhook(env.Client(), args[0]) }),
+		Setup:   noFlags(func(env Env, args []string) { ServiceWebhook(env.Client(), serviceID(env, args[0])) }),
 	},
 	{
 		Args:    "<id>",
@@ -107,7 +107,7 @@ var baseCommands = []Command{
 			tags := set.String("tags", "", "`glob` a pushed tag must match to deploy stable (default v*)")
 			canaryDomain := set.String("canary-domain", "", "a custom `domain` for the canary, empty to clear it")
 			return func(env Env, args []string) {
-				ChannelsConfigure(env.Client(), args[0], true, ChannelArgs{
+				ChannelsConfigure(env.Client(), serviceID(env, args[0]), true, ChannelArgs{
 					Branch:          *branch,
 					CanaryDomain:    *canaryDomain,
 					CanaryDomainSet: flagSet(set, "canary-domain"),
@@ -121,14 +121,14 @@ var baseCommands = []Command{
 		Name:    "services channels disable",
 		Summary: "turn release channels off and delete the canary",
 		Setup: noFlags(func(env Env, args []string) {
-			ChannelsConfigure(env.Client(), args[0], false, ChannelArgs{})
+			ChannelsConfigure(env.Client(), serviceID(env, args[0]), false, ChannelArgs{})
 		}),
 	},
 	{
 		Args:    "<id>",
 		Name:    "services channels status",
 		Summary: "show a service's release channel settings and canary",
-		Setup:   noFlags(func(env Env, args []string) { ChannelsStatus(env.Client(), args[0]) }),
+		Setup:   noFlags(func(env Env, args []string) { ChannelsStatus(env.Client(), serviceID(env, args[0])) }),
 	},
 	{
 		Args:    "<id> [name]",
@@ -139,7 +139,7 @@ var baseCommands = []Command{
 			if len(args) > 1 {
 				name = args[1]
 			}
-			ServiceSetEnvironment(env.Client(), args[0], name)
+			ServiceSetEnvironment(env.Client(), serviceID(env, args[0]), name)
 		}),
 	},
 	{
@@ -148,7 +148,7 @@ var baseCommands = []Command{
 		Summary: "list what a service depends on and what depends on it (recorded, env or both)",
 		Setup: func(set *flag.FlagSet) Runner {
 			asJSON := set.Bool("json", false, "print raw JSON instead of a table")
-			return func(env Env, args []string) { DependenciesList(env.Client(), args[0], *asJSON) }
+			return func(env Env, args []string) { DependenciesList(env.Client(), serviceID(env, args[0]), *asJSON) }
 		},
 	},
 	{
@@ -156,7 +156,7 @@ var baseCommands = []Command{
 		Name:    "services dependencies set",
 		Summary: "replace the services it depends on, started before it (none clears them)",
 		Setup: noFlags(func(env Env, args []string) {
-			DependenciesSet(env.Client(), args[0], args[1:])
+			DependenciesSet(env.Client(), serviceID(env, args[0]), args[1:])
 		}),
 	},
 	{
@@ -168,7 +168,43 @@ var baseCommands = []Command{
 			status := set.String("status", "", "`unresolved|resolved|ignored|all` (default unresolved)")
 			return func(env Env, args []string) {
 				RequireOneOf("status", *status, errorStatuses)
-				ErrorsList(env.Client(), args[0], *status, *options)
+				ErrorsList(env.Client(), serviceID(env, args[0]), *status, *options)
+			}
+		},
+	},
+	{
+		Args:    "<id> <issueId>",
+		Name:    "services errors get",
+		Summary: "show one error issue with its latest event and stack trace",
+		Setup: func(set *flag.FlagSet) Runner {
+			event := set.String("event", "", "show this retained event `id` instead of the latest")
+			return func(env Env, args []string) { ErrorGet(env.Client(), serviceID(env, args[0]), args[1], *event) }
+		},
+	},
+	{
+		Args:    "<id> <issueId>",
+		Name:    "services errors resolve",
+		Summary: "mark an error issue resolved (a new event reopens it as a regression), or ignored or unresolved with --status",
+		Setup: func(set *flag.FlagSet) Runner {
+			status := set.String("status", "resolved", "`resolved|ignored|unresolved`")
+			return func(env Env, args []string) {
+				if *status == "" {
+					Fail("--status can't be empty.")
+				}
+				RequireOneOf("status", *status, errorStatuses[:3])
+				ErrorSetStatus(env.Client(), serviceID(env, args[0]), args[1], *status)
+			}
+		},
+	},
+	{
+		Args:    "<id>",
+		Name:    "services deployments",
+		Summary: "list a service's latest deploy attempts, newest first: status, trigger, image, commit, error",
+		Setup: func(set *flag.FlagSet) Runner {
+			limit := set.Int("limit", 0, "how many `deployments`, 1 to 50 (default 10)")
+			asJSON := set.Bool("json", false, "print raw JSON instead of a table")
+			return func(env Env, args []string) {
+				DeploymentsList(env.Client(), serviceID(env, args[0]), *limit, *asJSON)
 			}
 		},
 	},
@@ -178,7 +214,7 @@ var baseCommands = []Command{
 		Summary: "list a service's revisions, newest first by first deploy",
 		Setup: func(set *flag.FlagSet) Runner {
 			asJSON := set.Bool("json", false, "print raw JSON instead of a table")
-			return func(env Env, args []string) { RevisionsList(env.Client(), args[0], *asJSON) }
+			return func(env Env, args []string) { RevisionsList(env.Client(), serviceID(env, args[0]), *asJSON) }
 		},
 	},
 	{
@@ -189,7 +225,7 @@ var baseCommands = []Command{
 			tail := set.Int("tail", 0, "how many `lines` of backlog to print, 1 to 10000 (default 200)")
 			follow := set.Bool("follow", false, "keep streaming new lines until interrupted")
 			set.BoolVar(follow, "f", false, "shorthand for --follow")
-			return func(env Env, args []string) { ServiceLogs(env.Client(), args[0], *follow, *tail) }
+			return func(env Env, args []string) { ServiceLogs(env.Client(), serviceID(env, args[0]), *follow, *tail) }
 		},
 	},
 	{
@@ -203,7 +239,7 @@ var baseCommands = []Command{
 				if len(args) > 1 {
 					revisionID = args[1]
 				}
-				ServiceRollback(env.Client(), args[0], revisionID, *restoreConfig)
+				ServiceRollback(env.Client(), serviceID(env, args[0]), revisionID, *restoreConfig)
 			}
 		},
 	},
@@ -219,7 +255,7 @@ var baseCommands = []Command{
 			return func(env Env, args []string) {
 				RequireOneOf("fail-on", *failOn, failOnLevels)
 				RequirePositiveTimeout(*timeout)
-				ServiceScan(env.Client(), args[0], ScanArgs{
+				ServiceScan(env.Client(), serviceID(env, args[0]), ScanArgs{
 					FailOn:  *failOn,
 					JSON:    *asJSON,
 					Timeout: time.Duration(*timeout) * time.Second,
@@ -235,7 +271,7 @@ var baseCommands = []Command{
 		Summary: "list a service's image scans, newest first",
 		Setup: func(set *flag.FlagSet) Runner {
 			options := ListFlags(set)
-			return func(env Env, args []string) { ScansList(env.Client(), args[0], *options) }
+			return func(env Env, args []string) { ScansList(env.Client(), serviceID(env, args[0]), *options) }
 		},
 	},
 	{
@@ -249,7 +285,7 @@ var baseCommands = []Command{
 				if len(args) > 1 {
 					scanID = args[1]
 				}
-				ScanGet(env.Client(), args[0], scanID, *asJSON)
+				ScanGet(env.Client(), serviceID(env, args[0]), scanID, *asJSON)
 			}
 		},
 	},
@@ -264,7 +300,7 @@ var baseCommands = []Command{
 				if *release == "" {
 					Fail("--release is required: the release the app reports its errors under.")
 				}
-				SourceMapsUpload(env.Client(), args[0], args[1], *release)
+				SourceMapsUpload(env.Client(), serviceID(env, args[0]), args[1], *release)
 			}
 		},
 	},
@@ -275,14 +311,14 @@ var baseCommands = []Command{
 		Summary: "list the releases a service has source maps for (the 10 most recent are kept)",
 		Setup: func(set *flag.FlagSet) Runner {
 			asJSON := set.Bool("json", false, "print raw JSON instead of a table")
-			return func(env Env, args []string) { SourceMapsList(env.Client(), args[0], *asJSON) }
+			return func(env Env, args []string) { SourceMapsList(env.Client(), serviceID(env, args[0]), *asJSON) }
 		},
 	},
 	{
 		Args:    "<id> <release>",
 		Name:    "services sourcemaps delete",
 		Summary: "delete one release's source maps",
-		Setup:   noFlags(func(env Env, args []string) { SourceMapsDelete(env.Client(), args[0], args[1]) }),
+		Setup:   noFlags(func(env Env, args []string) { SourceMapsDelete(env.Client(), serviceID(env, args[0]), args[1]) }),
 	},
 
 	{
@@ -291,7 +327,7 @@ var baseCommands = []Command{
 		Summary: "list a git service's open pull request previews",
 		Setup: func(set *flag.FlagSet) Runner {
 			asJSON := set.Bool("json", false, "print raw JSON instead of a table")
-			return func(env Env, args []string) { PreviewsList(env.Client(), args[0], *asJSON) }
+			return func(env Env, args []string) { PreviewsList(env.Client(), serviceID(env, args[0]), *asJSON) }
 		},
 	},
 	{
@@ -300,7 +336,7 @@ var baseCommands = []Command{
 		Summary: "show one preview: URL, the revision it runs, its latest deploy",
 		Setup: noFlags(func(env Env, args []string) {
 			pr := RequirePR(args[1])
-			PreviewGet(env.Client(), args[0], pr)
+			PreviewGet(env.Client(), serviceID(env, args[0]), pr)
 		}),
 	},
 	{
@@ -314,7 +350,7 @@ var baseCommands = []Command{
 			return func(env Env, args []string) {
 				pr := RequirePR(args[1])
 				requireCommit(*commit)
-				PreviewWait(env.Client(), args[0], pr, PreviewWaitArgs{Commit: *commit, JSON: *asJSON, Timeout: *timeout})
+				PreviewWait(env.Client(), serviceID(env, args[0]), pr, PreviewWaitArgs{Commit: *commit, JSON: *asJSON, Timeout: *timeout})
 			}
 		},
 	},
@@ -324,7 +360,7 @@ var baseCommands = []Command{
 		Summary: "delete a preview (the next push to the pull request recreates it)",
 		Setup: noFlags(func(env Env, args []string) {
 			pr := RequirePR(args[1])
-			PreviewDelete(env.Client(), args[0], pr)
+			PreviewDelete(env.Client(), serviceID(env, args[0]), pr)
 		}),
 	},
 	{
@@ -338,7 +374,7 @@ var baseCommands = []Command{
 			return func(env Env, args []string) {
 				pr := RequirePR(args[1])
 				requireCommit(*commit)
-				PreviewPromote(env.Client(), args[0], pr, PreviewPromoteArgs{Commit: *commit, Timeout: *timeout, Wait: *wait})
+				PreviewPromote(env.Client(), serviceID(env, args[0]), pr, PreviewPromoteArgs{Commit: *commit, Timeout: *timeout, Wait: *wait})
 			}
 		},
 	},
@@ -391,17 +427,23 @@ var baseCommands = []Command{
 		Args:    "<id|name>",
 		Name:    "backups run",
 		Summary: "back up a volume now",
+		Setup:   backupRunSetup,
+	},
+}
+
+var resourceExtras = []Command{
+	{
+		Args:    "<id|name>",
+		Name:    "volumes backup",
+		Summary: "back up a volume now (same as backups run)",
+		Setup:   backupRunSetup,
+	},
+	{
+		Name:    "system stats",
+		Summary: "show the host's CPU, memory, disk and GPU usage",
 		Setup: func(set *flag.FlagSet) Runner {
-			wait := set.Bool("wait", false, "follow the backup's log until it finishes, non-zero exit unless it succeeded")
-			timeout := set.Int("timeout", 0, "with --wait, give up after this many `seconds` (default 6h)")
-			return func(env Env, args []string) {
-				RequirePositiveTimeout(*timeout)
-				limit := defaultBackupTimeout
-				if *timeout > 0 {
-					limit = time.Duration(*timeout) * time.Second
-				}
-				BackupRunNow(env.Client(), args[0], *wait, limit)
-			}
+			asJSON := set.Bool("json", false, "print raw JSON instead of a summary")
+			return func(env Env, _ []string) { SystemStatsShow(env.Client(), *asJSON) }
 		},
 	},
 }
@@ -459,13 +501,30 @@ func noFlags(run Runner) func(*flag.FlagSet) Runner {
 	return func(*flag.FlagSet) Runner { return run }
 }
 
+func backupRunSetup(set *flag.FlagSet) Runner {
+	wait := set.Bool("wait", false, "follow the backup's log until it finishes, non-zero exit unless it succeeded")
+	timeout := set.Int("timeout", 0, "with --wait, give up after this many `seconds` (default 6h)")
+	return func(env Env, args []string) {
+		RequirePositiveTimeout(*timeout)
+		limit := defaultBackupTimeout
+		if *timeout > 0 {
+			limit = time.Duration(*timeout) * time.Second
+		}
+		BackupRunNow(env.Client(), args[0], *wait, limit)
+	}
+}
+
+func serviceID(env Env, ref string) string {
+	return ResolveSlug(env.Client(), "/services", ref)
+}
+
 func serviceAction(action string) Command {
 	return Command{
 		Args:    "<id>",
 		Name:    "services " + action,
 		Summary: action + " a service",
 		Setup: noFlags(func(env Env, args []string) {
-			ServiceAction(env.Client(), action, args[0])
+			ServiceAction(env.Client(), action, serviceID(env, args[0]))
 		}),
 	}
 }

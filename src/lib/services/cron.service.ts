@@ -16,6 +16,7 @@ import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { enqueueVolumeBackup } from "./backup-queue.ts";
+import { BackupCapacityScheduler } from "./cron/backup-capacity-scheduler.ts";
 import { CoreServicesWatch } from "./cron/core-services-watch.ts";
 import { type ParsedCron, parseCronSchedule } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
@@ -82,6 +83,7 @@ class CronServiceClass {
 	private readonly errorRetentionScheduler = new ErrorRetentionScheduler();
 
 	private readonly ipBanScheduler = new IpBanScheduler();
+	private readonly backupCapacityScheduler = new BackupCapacityScheduler();
 
 	private readonly traceRetentionScheduler = new TraceRetentionScheduler();
 
@@ -143,6 +145,11 @@ class CronServiceClass {
 	/** Starts the per-minute pass that lifts expired IP bans. */
 	startIpBanScheduler(): void {
 		this.ipBanScheduler.start();
+	}
+
+	/** Starts the hourly check of how full the SFTP, SMB and WebDAV backup destinations are. */
+	startBackupCapacityScheduler(): void {
+		this.backupCapacityScheduler.start();
 	}
 
 	/** Starts the watch that re-asserts the core services every time the worker (re)starts. */

@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { PlugZap } from "@lucide/svelte";
+	import { Gauge, PlugZap, RefreshCw } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import {
 		DESTINATION_TYPE_LABELS,
 		describeDestination,
 	} from "#lib/backup-destinations.js";
 	import BackupDestinationFields from "#lib/components/backup-destination-fields.svelte";
+	import CapacityBar from "#lib/components/capacity-bar.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
@@ -24,6 +26,8 @@
 	let submitting = $state(false);
 	let testing = $state(false);
 	let testResult = $state<{ error: string | null } | null>(null);
+	let checking = $state(false);
+	let savingThreshold = $state(false);
 </script>
 
 <div class="p-5 md:p-6">
@@ -126,6 +130,75 @@
       {/if}
     </div>
   </div>
+
+  {#if destination.type !== "s3"}
+    <section class="panel mb-6 rounded-md">
+      <PanelHeader
+        description="Checked every hour. Channels subscribed to Backup storage low hear about it once it's fuller than the threshold, and again after it went back under."
+        icon={Gauge}
+        title="Storage"
+      >
+        {#snippet trailing()}
+          <form
+            action="?/checkCapacity"
+            method="POST"
+            use:enhance={enhanceToast({
+              error: "Couldn't read the destination's size.",
+              loading: "Measuring the destination",
+              onSettled: () => {
+                checking = false;
+              },
+              onStart: () => {
+                checking = true;
+              },
+              success: "Measured.",
+            })}
+          >
+            <Button disabled={checking} size="sm" type="submit" variant="outline">
+              <RefreshCw class="size-3.5" />
+              Check now
+            </Button>
+          </form>
+          <SaveButton form="capacity-alert" pending={savingThreshold} />
+        {/snippet}
+      </PanelHeader>
+      <div class="grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_14rem] md:items-end">
+        <CapacityBar
+          capacity={destination.capacity}
+          checkedAt={destination.capacityCheckedAt}
+          error={destination.capacityError}
+          thresholdPercent={destination.capacityAlertPercent}
+        />
+        <form
+          id="capacity-alert"
+          action="?/setCapacityAlert"
+          method="POST"
+          use:enhance={enhanceToast({
+            error: "Couldn't save the threshold.",
+            loading: "Saving the threshold",
+            onSettled: () => {
+              savingThreshold = false;
+            },
+            onStart: () => {
+              savingThreshold = true;
+            },
+            success: "Threshold saved.",
+          })}
+        >
+          <label class={labelClass} for="capacityAlertPercent">Alert past (% used)</label>
+          <input
+            id="capacityAlertPercent"
+            class={inputClass}
+            max="99"
+            min="50"
+            name="capacityAlertPercent"
+            type="number"
+            value={destination.capacityAlertPercent}
+          />
+        </form>
+      </div>
+    </section>
+  {/if}
 
   <section class="panel mb-6 rounded-md">
     <PanelHeader title="Settings">

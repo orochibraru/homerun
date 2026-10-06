@@ -88,6 +88,8 @@ homerun update [--channel stable|canary|nightly]
 homerun --version
 homerun services list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services get <id>
+homerun services create [--set <key=value>]... [--file <body.json>|-] [--json]
+homerun services update <id> [--set <key=value>]... [--file <body.json>|-] [--json]
 homerun services config <id>
 homerun services deploy <id> [--tag <tag>] [--environment canary|stable]
 homerun services start <id>
@@ -101,6 +103,10 @@ homerun services channels status <id>
 homerun services environment <id> [name]
 homerun services dependencies <id> [--json]
 homerun services dependencies set <id> [<dependsOnId>...]
+homerun services errors <id> [--status unresolved|resolved|ignored|all] [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun services errors get <id> <issueId> [--event <eventId>]
+homerun services errors resolve <id> <issueId> [--status resolved|ignored|unresolved]
+homerun services deployments <id> [--limit <n>] [--json]
 homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services scans get <id> [scanId] [--json]
 homerun services sourcemaps upload <id> <dir> --release <release>
@@ -116,9 +122,23 @@ homerun previews wait <id> <pr> [--commit <sha>] [--timeout 20m] [--json]
 homerun previews delete <id> <pr>
 homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun stacks get|create|update|delete ...
+homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun templates get <id> [--json]
 homerun backups list [--volume <id|name>] [--outcome running|success|failed] [--json]
 homerun backups volumes [--json]
 homerun backups run <id|name> [--wait] [--timeout <seconds>]
+homerun volumes backup <id|name> [--wait] [--timeout <seconds>]
+homerun <resource> list [<store>] [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun <resource> get [<store>] <id> [--json]
+homerun <resource> create [<store>] [--set <key=value>]... [--file <body.json>|-] [--json]
+homerun <resource> update [<store>] <id> [--set <key=value>]... [--file <body.json>|-] [--json]
+homerun <resource> delete [<store>] <id> [--yes]
+homerun iac generate (--stack <id|slug> | --service <id|slug>) [--state-project <id>] [--out <dir> | --zip <file> | --stdout] [--force]
+homerun iac projects list|get|create|delete ...
+homerun iac state pull <project>
+homerun iac unlock <project> --force [--yes]
+homerun system stats [--json]
 homerun redirects list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun redirects get <id>
 homerun redirects create <source> <destination> [--enabled=false] [--keep-path=false] [--permanent=false]
@@ -130,7 +150,6 @@ homerun jobs get <id> [--json]
 homerun instance status [--json]
 homerun instance update [--wait=false] [--timeout <seconds>] [--force]
 homerun instance channel stable|canary|nightly
-homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
 
 `list` without `--json` prints a plain text table; every other command prints
@@ -138,10 +157,97 @@ the raw JSON response. Listings are paginated: `--per-page` defaults to 100 (its
 maximum), `--page` selects a page, and `--search <term>` filters server-side.
 When a listing is only part of the total, a trailing line says so
 (`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.`); nothing
-is printed when everything fit on one page. There's no `create`/`update` for a
-service yet (`homerun update` above is the CLI self-updater, unrelated),
-straightforward to add the same way as the existing commands in
-`internal/cli/commands.go`.
+is printed when everything fit on one page.
+
+Every `services` command, and `previews`, takes the service's slug as well as
+its id, and so does every `stacks` command: an argument that isn't a UUID is
+looked up through the list's search and replaced by the id of the item with
+exactly that slug. One that matches no slug is passed through as it is, so the
+API answers for it (a `404` for a typo).
+
+### Resource commands
+
+`<resource>` above is any of `service-environments`, `service-dependencies`,
+`volumes`, `volume-mounts`, `cron-jobs`, `notification-channels`,
+`backup-destinations`, `build-cache-registries`, `dns-connections`,
+`git-providers`, `object-stores`, `buckets` and `status-pages`. Each maps one to
+one onto the REST collection of the same name (`/api/v1/<resource>`, `buckets`
+onto `/object-stores/{storeId}/buckets`, which is why it takes the store as its
+first argument and the bucket's name as its id). `service-dependencies` has no
+`update`, since the API has none. `stacks get|create|update|delete`,
+`services create|update`, `templates get` and
+`iac projects list|get|create|delete` are the same commands over their
+collections.
+
+- `list` prints a table of the fields that identify a row, `--json` the raw
+  list. `--page`/`--per-page`/`--search` exist where the endpoint is paginated
+  (`volumes`, `cron-jobs`, `backup-destinations`, `build-cache-registries`,
+  `services`, `stacks`, `templates`); the others always return everything.
+- `get`, `create` and `update` print the item as a field/value table, sorted by
+  field, arrays and objects as compact JSON; `--json` prints the API's answer as
+  it is.
+- `create` and `update` build the JSON body from `--file <body.json>` (`-` reads
+  stdin), then every `--set key=value` on top of it, so `--set` wins over the
+  file. The value is decoded as JSON when it parses as JSON (`3`, `true`,
+  `null`, `["a","b"]`, `{"k":"v"}`, `"2024"` for a string that looks like a
+  number) and taken as a plain string otherwise. A dotted key sets a nested
+  field: `--set envVars.MODE=prod` is `{"envVars":{"MODE":"prod"}}`. The API
+  replaces an object field whole, so on `update` a dotted key into an object the
+  body doesn't already carry starts from that object's current value (one extra
+  `GET` first): `homerun services update web --set envVars.MODE=prod` adds or
+  changes one variable and keeps the others. `update` with neither `--set` nor
+  `--file` fails without calling the API. The field names are the API's, see the
+  OpenAPI document or `get --json`.
+- `delete` asks `Delete <noun> <id>? [y/N]` on stderr and deletes only on `y` or
+  `yes`; `--yes` skips the question, for scripts. No answer (stdin closed)
+  counts as no. `stacks delete --force` adds `?force=true`, like
+  `services delete --force`. It prints `{"deleted": true, "id": ...}`.
+
+```bash
+homerun stacks create --set name=Web --set slug=web
+homerun services create --file api.json --set stackId=<stack id>
+homerun services update api --set tag=1.4.1 --set replicas=2
+homerun buckets create <storeId> --set name=logs --set expirationDays=30
+homerun volumes delete <id> --yes
+```
+
+`homerun volumes backup <id|name>` is `homerun backups run` under the volumes
+group. `homerun services deployments <id>` calls
+`GET /services/{serviceId}/deployments` and prints the latest deploy attempts,
+newest first: status, trigger, environment, image, commit, start and finish
+times, and a failed one's error (`--limit`, 1 to 50, default 10).
+`homerun services errors get <id> <issueId>` prints one error issue with its
+latest event and stack trace as JSON (`--event <eventId>` for another retained
+event), and `homerun services errors resolve <id> <issueId>` marks it resolved
+(`PATCH /services/{serviceId}/errors/{issueId}`; `--status ignored` or
+`--status unresolved` instead). `homerun system stats` prints the host's CPU,
+memory, disk and GPU usage.
+
+### Infrastructure as code
+
+`homerun iac generate` calls `GET /iac/generate?scope=stack:<ref>` (or
+`service:<ref>`, an id or a slug, exactly one of `--stack`/`--service`), with
+`&project=<id>` for `--state-project`, which adds an `http` backend pointing at
+that Terraform state project. By default it writes the files into
+`./<slug>-terraform/` (`--out <dir>` picks another directory) and refuses to
+write anything when any of them already exists, unless `--force`.
+`terraform.tfvars`, which holds the secret env var values, is written with mode
+`0600`, everything else `0644`. It then lists the files and the next steps
+(`export HOMERUN_API_KEY=...`, `TF_HTTP_PASSWORD` too with a state project, then
+`cd <dir> && terraform init && terraform plan`). `--zip <file>` saves the
+dashboard's zip instead (`&format=zip`, mode `0600`, same overwrite rule), and
+`--stdout` prints every file after a `# ==> <path> <==` header. All three are
+mutually exclusive.
+
+`homerun iac projects list|get|create|delete` manage the Terraform state
+projects (`/iac/projects`;
+`create --set name=... --set storeId=... --set bucket=...`).
+`homerun iac state pull <project>` writes a project's latest state to stdout
+exactly as stored (`GET /iac/projects/{id}/state`, the API key in `x-api-key`
+like every call), and says on stderr that there's none yet when the API answers
+`204`. `homerun iac unlock <project> --force` breaks the project's lock, whoever
+holds it (`DELETE /iac/projects/{id}/lock?force=true`): `--force` is required
+and it asks first unless `--yes`. All of them are admin-only.
 
 `homerun services delete <id>` calls `DELETE /services/{serviceId}`, the same
 danger-zone action as the Settings tab's Delete button; `--force` adds
@@ -242,4 +348,6 @@ From the repo root: rebuilds `openapi.json` from source
 `tests/integration/support/openapi-types.ts` from it, no running instance
 needed. CI's "Codegen is current" step fails on a stale one. The CLI itself
 needs a change only when a command's _printed_ fields move, since everything
-else is passed through as raw JSON.
+else is passed through as raw JSON. A new REST collection gets its commands from
+one entry in the CLI's resource table (group, API path, id argument, list
+columns, verbs), not from new code.

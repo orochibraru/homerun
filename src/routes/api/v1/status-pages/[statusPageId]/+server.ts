@@ -36,6 +36,7 @@ export const PATCH = async ({ locals, params, request }) => {
 	try {
 		await StatusPageSettingsService.update(page, {
 			description: current.description,
+			domains: current.domains,
 			isPublic: current.isPublic,
 			name: current.name,
 			scope: current.scope,
@@ -62,6 +63,6 @@ export const DELETE = async ({ locals, params }) => {
 	if (!page) {
 		return apiError("Not found", 404);
 	}
-	await page.delete();
+	await StatusPageSettingsService.delete(page);
 	return new Response(null, { status: 204 });
 };

@@ -26,6 +26,7 @@
 		name = $bindable(""),
 		slug = $bindable(""),
 		description = $bindable(""),
+		domains = $bindable(""),
 		scope = $bindable("global" as StatusPageScope),
 		stackId = $bindable(""),
 		isPublic = $bindable(false),
@@ -37,6 +38,7 @@
 		name?: string;
 		slug?: string;
 		description?: string;
+		domains?: string;
 		scope?: StatusPageScope;
 		stackId?: string;
 		isPublic?: boolean;
@@ -110,6 +112,24 @@
       name="description"
       placeholder="What visitors should understand about this page."
     />
+  </div>
+
+  <div>
+    <label class={label} for="domains">Custom domains</label>
+    <Input
+      bind:value={domains}
+      id="domains"
+      name="domains"
+      placeholder="status.example.com"
+    />
+    <p class="text-text-subtle mt-1.5 text-xs">
+      Optional, separated by spaces or commas. A public page also answers on
+      each, with TLS, and DNS when automation is set up; nothing but the page is
+      reachable there.
+    </p>
+    {#if errors?.domains}
+      <p class="mt-1.5 text-xs text-red-500">{errors.domains[0]}</p>
+    {/if}
   </div>
 
   <div class="grid gap-4 md:grid-cols-2">

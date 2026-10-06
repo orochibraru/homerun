@@ -25,6 +25,7 @@
 	let name = $state(untrack(() => data.statusPage.name));
 	let slug = $state(untrack(() => data.statusPage.slug));
 	let description = $state(untrack(() => data.statusPage.description ?? ""));
+	let domains = $state(untrack(() => data.statusPage.domains.join(", ")));
 	let scope = $state<StatusPageScope>(untrack(() => data.statusPage.scope));
 	let stackId = $state(untrack(() => data.statusPage.stackId ?? ""));
 	let isPublic = $state(untrack(() => data.statusPage.isPublic));
@@ -145,6 +146,7 @@
         bind:name
         bind:slug
         bind:description
+        bind:domains
         bind:scope
         bind:stackId
         bind:isPublic

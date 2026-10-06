@@ -18,6 +18,7 @@
 	let name = $state("");
 	let slug = $state("");
 	let description = $state("");
+	let domains = $state("");
 	let scope = $state<StatusPageScope>("global");
 	let stackId = $state("");
 	let isPublic = $state(false);
@@ -63,6 +64,7 @@
       bind:name
       bind:slug
       bind:description
+      bind:domains
       bind:scope
       bind:stackId
       bind:isPublic

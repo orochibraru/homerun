@@ -14,6 +14,7 @@ import { type WedgedContainer, WedgedReporter } from "../docker/wedged.ts";
 import { DockerService } from "../docker.service.ts";
 import { ObjectStorageService } from "../object-storage.service.ts";
 import { AUTH_CHECK_ALIAS } from "../self-update/compose-target.ts";
+import { StatusPageSettingsService } from "../status-page-settings.service.ts";
 import { TracingService } from "../tracing.service.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
 
@@ -112,6 +113,7 @@ export class CoreServicesWatch extends BaseScheduler {
 		const settings = await InstanceSettingsDTO.get();
 		await DockerService.syncDashboardRouter();
 		await syncErrorPages();
+		await StatusPageSettingsService.syncRoutes();
 		void syncDashboardDns();
 		await DockerService.syncNewt(
 			settings.newtCredentials(),

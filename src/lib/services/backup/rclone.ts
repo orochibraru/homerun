@@ -1,3 +1,4 @@
+import { type Capacity, parseRcloneAbout } from "#lib/backup-capacity.js";
 import {
 	type DestinationType,
 	describeDestination,
@@ -188,4 +189,29 @@ export async function listRemoteBackups(
 			sizeBytes: entry.Size,
 		}))
 		.sort((a, b) => b.key.localeCompare(a.key));
+}
+
+/**
+ * How big `remote` is and how much of it is used, from `rclone about`. SFTP
+ * answers through the server's statvfs extension when it has one; when it
+ * doesn't, it's asked again through a unix shell, which is how rclone runs
+ * `df` there. Uploads keep running without a shell either way.
+ *
+ * @throws When rclone can't reach the destination or it can't report its size.
+ */
+export async function remoteAbout(remote: RcloneRemote): Promise<Capacity> {
+	let result = await run(remote, ["about", "--json", "dest:"]);
+	if (failed(result) && remote.env.RCLONE_CONFIG_DEST_TYPE === "sftp") {
+		result = await run(remote, ["about", "--json", "dest,shell_type=unix:"]);
+	}
+	if (failed(result)) {
+		throw new Error(
+			`Couldn't read the free space on ${remote.label}: ${detail(result)}`,
+		);
+	}
+	const capacity = parseRcloneAbout(result.stdout.toString("utf8"));
+	if (!capacity) {
+		throw new Error(`${remote.label} doesn't report its size.`);
+	}
+	return capacity;
 }

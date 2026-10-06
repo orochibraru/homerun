@@ -145,6 +145,24 @@ The first plan imports everything and updates the write-only secrets (Terraform
 can't know their current value). Previews, canaries and the built-in object
 store are Homerun's own and aren't included.
 
+### From the CLI
+
+The [CLI](api-and-cli.md#cli) writes the same project without the browser, with
+an admin API key:
+
+```sh
+homerun iac generate --service api
+homerun iac generate --stack web --state-project <project id>
+```
+
+`--stack` and `--service` take an id or a slug. The files go into
+`./<slug>-terraform/` (`--out <dir>` for another directory), and the CLI writes
+nothing when any of them already exists unless you pass `--force`.
+`terraform.tfvars` is written readable by you only, since it holds the secret
+values. The CLI then prints the files it wrote and the commands to run next.
+`--zip <file>` saves the zip instead, and `--stdout` prints every file after a
+`# ==> <path> <==` line, for a quick look or a pipe.
+
 ## Drift
 
 The **Drift** tab reads the latest version of a Terraform state project and

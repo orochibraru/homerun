@@ -37,6 +37,7 @@ export const POST = async ({ locals, request }) => {
 			{
 				...fields,
 				description: fields.description ?? null,
+				domains: fields.domains ?? [],
 				picks: services,
 				stackId: fields.stackId ?? null,
 			},

@@ -177,7 +177,7 @@ class S3BackupServiceClass {
 		if (!row) {
 			throw new Error("The picked backup destination no longer exists.");
 		}
-		return this.#targetOf(row);
+		return this.targetOf(row);
 	}
 
 	/**
@@ -189,7 +189,7 @@ class S3BackupServiceClass {
 	 *   reached, logged into or written to.
 	 */
 	async testDestination(row: S3DestinationDTO): Promise<void> {
-		const target = this.#targetOf(row);
+		const target = this.targetOf(row);
 		if ("remote" in target) {
 			await testRemote(target.remote);
 			return;
@@ -215,7 +215,7 @@ class S3BackupServiceClass {
 	 *
 	 * @throws When its secret can't be decrypted.
 	 */
-	#targetOf(row: S3DestinationDTO): BackupTarget {
+	targetOf(row: S3DestinationDTO): BackupTarget {
 		const secretAccessKey = row.decryptSecretAccessKey();
 		if (!secretAccessKey) {
 			throw new Error("Couldn't decrypt the destination's stored secret.");

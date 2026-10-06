@@ -291,6 +291,7 @@ export const init = async () => {
 	CronService.startErrorRetention();
 	CronService.startTraceRetention();
 	CronService.startIpBanScheduler();
+	CronService.startBackupCapacityScheduler();
 	CronService.startCoreServicesWatch();
 	CronService.startSwarmDnsWatch();
 	void RedirectService.sync();

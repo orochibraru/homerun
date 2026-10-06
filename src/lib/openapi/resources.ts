@@ -138,6 +138,7 @@ export const backupDestinationResponse = z.object({
 export const statusPageResponse = z.object({
 	createdAt: timestamp,
 	description: z.string().nullable(),
+	domains: z.array(z.string()),
 	id: z.string(),
 	isPublic: z.boolean(),
 	name: z.string(),

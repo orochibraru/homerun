@@ -25,4 +25,14 @@ A public page shows only service names, up/down, and uptime over the last 40
 checks from the network probe: never images, ports, hostnames or probe errors.
 An unpublished page is a 404 there.
 
+**Custom domains** puts a published page on addresses of your own, such as
+`status.example.com`, separated by spaces or commas. Opening the domain takes
+visitors to the page (`status.example.com` redirects to
+`status.example.com/status/<slug>`), with a TLS certificate like a service's,
+and the [DNS automation](dns-automation.md) points the domain at this server
+(without Pangolin's sign-in, a status page being for people who aren't signed
+in). Only the page answers there: any other path on the domain, the dashboard
+included, is Homerun's "nothing here" page. A domain can serve one page only,
+and an unpublished page's domains stop answering until it's published again.
+
 ![The public status page, readable without signing in](images/status-pages-public.webp)
