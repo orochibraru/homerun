@@ -92,7 +92,10 @@ export const shots: ShotModule = {
 			name: "Handbook",
 			slug: "handbook",
 		});
-		await patchService(page, created.handbook, { requireStatusChecks: true });
+		await patchService(page, created.handbook, {
+			requireStatusChecks: true,
+			requiredStatusChecks: ["ci/build", "ci/test"],
+		});
 
 		await postAction(page, "/git-providers?/addProvider", {
 			clientId: "homerun-acme",
