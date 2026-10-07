@@ -59,7 +59,7 @@
         <CodeBlock code={data.snippets.terraform.code} html={data.snippets.terraform.html} label="backend block" />
         <p class="text-text-muted mt-1.5 text-xs">
           Then <code>export TF_HTTP_PASSWORD=&lt;a Homerun API key&gt;</code>
-          (Profile → API keys) and <code>terraform init</code>. Every write is
+          (Profile → Authorized Clients) and <code>terraform init</code>. Every write is
           a version below, signed with that key's owner.
         </p>
       </div>

@@ -14,7 +14,7 @@ export function providerSnippets(origin: string): ProviderSnippet[] {
 		{
 			code: [
 				`export HOMERUN_ENDPOINT=${origin}`,
-				"export HOMERUN_API_KEY=<an API key from Profile → API keys>",
+				"export HOMERUN_API_KEY=<an API key from Profile → Authorized Clients>",
 				"export TF_HTTP_PASSWORD=$HOMERUN_API_KEY",
 				"terraform init",
 				"terraform plan",
