@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.55](https://github.com/orochibraru/homerun/compare/v1.0.54...v1.0.55) (2026-10-07)
+
+### Features
+
+- area-based permissions for users and scoped expiring API keys, publish the
+  Terraform provider, mirror Docker Hub pulls in CI
+  ([44874af](https://github.com/orochibraru/homerun/commit/44874afd0125860dab7820c6f4cae6d533f2b131))
+
+### Bug Fixes
+
+- **ci:** prettier-format the generated screenshot index so nightly prek passes
+  ([a76afb9](https://github.com/orochibraru/homerun/commit/a76afb90213a2dd7d809dad16a33acec1c7a8af2))
+
 ## [1.0.54](https://github.com/orochibraru/homerun/compare/v1.0.53...v1.0.54) (2026-10-07)
 
 ### Bug Fixes
