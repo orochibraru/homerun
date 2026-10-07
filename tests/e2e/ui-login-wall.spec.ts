@@ -107,7 +107,7 @@ test.describe
 			await page.getByRole("link", { name: "Security" }).click();
 
 			await expect(
-				page.getByRole("heading", { name: "Login wall" }),
+				page.getByRole("heading", { name: "Login wall", exact: true }),
 			).toBeVisible();
 			await expect(page.getByText("Sign-in methods")).toBeHidden();
 

@@ -59,7 +59,10 @@ fi
 mapfile -t stale < <(gh release list --limit 100 --json tagName,isPrerelease,createdAt \
   --jq "[.[] | select(.isPrerelease and (.tagName | contains(\"-nightly.\")))] | sort_by(.createdAt) | reverse | .[$keep:] | .[].tagName")
 for old in "${stale[@]}"; do
-  gh release delete "$old" --cleanup-tag --yes
+  gh release delete "$old" --yes
+  if gh api "repos/{owner}/{repo}/git/refs/tags/$old" >/dev/null 2>&1; then
+    gh api -X DELETE "repos/{owner}/{repo}/git/refs/tags/$old"
+  fi
 done
 
 echo "Published $tag at $SHA"

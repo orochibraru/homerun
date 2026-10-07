@@ -48,6 +48,6 @@ test.describe
 			).text();
 			expect(html).toContain("Warming up");
 			expect(html).toContain("Acme Cloud");
-			expect(html).toContain("Powered by Homerun");
+			expect(html).toMatch(/Powered by <a [^>]*>Homerun<\/a>/);
 		});
 	});
