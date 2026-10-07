@@ -1,5 +1,96 @@
 # Changelog
 
+## [1.0.53](https://github.com/orochibraru/homerun/compare/v1.0.52...v1.0.53) (2026-10-07)
+
+### ⚠ BREAKING CHANGES
+
+- sveltekit 3 (#45)
+  ([bb111f2](https://github.com/orochibraru/homerun/commit/bb111f2355190b56ee1267332ba59a1964f88262))
+
+### Features
+
+- full CLI coverage with iac generate, backup destination free-space alerts, and
+  custom domains for status pages
+  ([ca4c5fd](https://github.com/orochibraru/homerun/commit/ca4c5fd49534ce0991ee1d5ecac9b5a9b1e3e18c))
+- **iac:** generate a zipped Terraform project per stack or service,
+  Shiki-highlightedfeat(iac): generate a zipped Terraform project per stack or
+  service, Shiki-highlighted
+  ([0764bc4](https://github.com/orochibraru/homerun/commit/0764bc493f801f5d6edb3ad72f5551c5911f95ee))
+- OpenTelemetry tracing, a Terraform provider with full API coverage and an IaC
+  page, simple and advanced UI modes, and IP ban alerts
+  ([dcf3c8d](https://github.com/orochibraru/homerun/commit/dcf3c8dde16ad74224e3bf271b57a649308806fa))
+- **storage:** object storage with a built-in Garage store, S3 providers,
+  buckets and Terraform state
+  ([f226ad4](https://github.com/orochibraru/homerun/commit/f226ad4dfdab6124d7dcb4ad1fbd034127a1a4b4))
+- **login-wall:** dress a gated app's sign-in pages in the error pages' brand
+  ([36857f4](https://github.com/orochibraru/homerun/commit/36857f4e3f38e6e91d5123a1206aab48cc6e5d53))
+- **registry:** list repositories as a table and give each its own page with its
+  tags
+  ([df5fdf0](https://github.com/orochibraru/homerun/commit/df5fdf080bda77e34ab2b32a7cf8f335cf6616de))
+- **security:** block path patterns per service, scope the login wall to paths,
+  and ban IPs that keep hitting blocked paths
+  ([e99282e](https://github.com/orochibraru/homerun/commit/e99282ee958c700dd66442931c72418e6db3a814))
+- **registry:** stream the images tab and page and search its repositories
+  ([bd31b7c](https://github.com/orochibraru/homerun/commit/bd31b7ce7435edea905128095711718905a9e892))
+- **deployments:** stream the deployments list and give each deployment its own
+  page with its log
+  ([44a62d2](https://github.com/orochibraru/homerun/commit/44a62d22e2c95a1ef2d96a44f9c9cf61c6c61a8f))
+- **services:** default a new git service's build cache to the built-in registry
+  when it's running
+  ([0af787b](https://github.com/orochibraru/homerun/commit/0af787b7a4a1392408cf3d11b010bf1ab3e1d370))
+- **build-cache:** list the services using a build cache registry on its page
+  ([16cf8c1](https://github.com/orochibraru/homerun/commit/16cf8c1a977e795301e74f4669a224591f477e92))
+- **stacks:** move a focused diagram card or substack with Alt and the arrow
+  keys
+  ([39059e2](https://github.com/orochibraru/homerun/commit/39059e254f93e5f14fc35f8967d0bfecf91f797e))
+- **error-pages:** link Homerun in the Powered by line to the project page
+  ([7f19a7d](https://github.com/orochibraru/homerun/commit/7f19a7d57cee2805dc3d1eca850cb5f7f90470f5))
+- service environments with presets, regrouped service tabs with path-routed
+  sub-pages, GitHub deployments for every environment, built-in build cache, and
+  review fixes
+  ([abde2d3](https://github.com/orochibraru/homerun/commit/abde2d37c53e8cf5d5a5be96f6b023a83c1613bd))
+- branded Traefik error pages, liquid glass rework, GitHub app permissions for
+  previews, and screenshots across the docs
+  ([b1f070f](https://github.com/orochibraru/homerun/commit/b1f070ff9bd9eef3ca29b34419037a2a675d4353))
+- **previews:** comment the preview URL on GitHub pull requests and track it as
+  a deployment environment
+  ([4c5245a](https://github.com/orochibraru/homerun/commit/4c5245a05e10173f7378346c708a1e923c52ccfb))
+- deploy already-open pull requests, section-header save buttons, keyboard
+  navigation pass
+  ([d041924](https://github.com/orochibraru/homerun/commit/d041924941951712ae8988d504a400b0994d7d87))
+- fork ci suite (#46)
+  ([c0bd9a8](https://github.com/orochibraru/homerun/commit/c0bd9a82af7dca4b9f0054a0c2c19f14513748f9))
+- sveltekit 3 (#45)
+  ([bb111f2](https://github.com/orochibraru/homerun/commit/bb111f2355190b56ee1267332ba59a1964f88262))
+- **notifications:** edit, enable and disable notification channels
+  ([48e33df](https://github.com/orochibraru/homerun/commit/48e33dfd18ae3da43ca89ef6b7fe30cec6673be2))
+
+### Bug Fixes
+
+- **ci:** unbreak nightly cleanup on missing tags and two stale e2e assertions
+  ([4dcbdc5](https://github.com/orochibraru/homerun/commit/4dcbdc5d3a692f11cb481fd6549f645dbb4999e9))
+- **iac:** keep code previews from overflowing the page on mobile, and put
+  secret values in terraform.tfvars
+  ([dacbeee](https://github.com/orochibraru/homerun/commit/dacbeeee2221cccaf4ef018866d4c52b93fde680))
+- **api:** answer a rate-limited API key with 429 and Retry-After instead of
+  401, and let the integration client wait it out
+  ([f74f7ac](https://github.com/orochibraru/homerun/commit/f74f7acc7bdbc1d145d30924f9ef6eab61d45da8))
+- **services:** show a git service's repo and branch in its header until it has
+  an image
+  ([58c4ca7](https://github.com/orochibraru/homerun/commit/58c4ca73a9994b9ebee709da62d3d97ca0421ca3))
+- **a11y:** set the html lang attribute to en, missed by the previous commit
+  ([3a9b7b1](https://github.com/orochibraru/homerun/commit/3a9b7b1d3d354ea2853116347df37aacd9efd16e))
+- **a11y:** declare the dashboard's language as English
+  ([3be80c8](https://github.com/orochibraru/homerun/commit/3be80c8e3ec33ccdee15998615adff1504f93732))
+- **auth:** drop the dead sign-up link from the sign-in footer
+  ([e255598](https://github.com/orochibraru/homerun/commit/e255598a337c09b33dcbaae271e7873d7399eaae))
+
+### Documentation
+
+- **agents:** point repo-gate, scaffold-feature and subproject-sync at SvelteKit
+  3 and src/lib paths
+  ([7e849e6](https://github.com/orochibraru/homerun/commit/7e849e6d1e61dde3cf470a8237ce1d36fa434a53))
+
 ## [1.0.52](https://github.com/orochibraru/homerun/compare/v1.0.51...v1.0.52) (2026-10-01)
 
 ### Bug Fixes
