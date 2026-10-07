@@ -19,6 +19,7 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "#lib/formatting.js";
+	import { can } from "#lib/permissions.js";
 	import {
 		getSetupStatus,
 		reapplyTraefikConfig,
@@ -153,7 +154,7 @@
                   </p>
                 {/if}
               </div>
-              {#if issue.action === "reapply-traefik" && data.user?.role === "admin"}
+              {#if issue.action === "reapply-traefik" && can(data.permissions, "settings", "write")}
                 <button
                   class="eyebrow shrink-0 text-amber-700 hover:underline disabled:opacity-50 dark:text-amber-400"
                   disabled={reapplying}
@@ -184,7 +185,7 @@
         {data.overCapacity.join(", ")}. New services are refused until usage
         drops back.
       </p>
-      {#if data.isAdmin}
+      {#if data.readsSettings}
         <a
           class="eyebrow shrink-0 text-red-700 hover:underline dark:text-red-400"
           href={resolve('settings')}
@@ -422,7 +423,7 @@
               </button>
             </form>
           {/if}
-          {#if data.isAdmin}
+          {#if data.readsSystem}
             <a
               class="text-accent text-xs font-medium hover:underline"
               href={resolve('system-logs')}

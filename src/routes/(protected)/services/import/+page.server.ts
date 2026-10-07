@@ -7,6 +7,7 @@ import {
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { CapacityService } from "#lib/services/capacity.service.js";
 import { ComposeImportService } from "#lib/services/compose-import.service.js";
 import { resolve } from "$app/paths";
@@ -97,7 +98,8 @@ export const actions = {
 			});
 		}
 
-		if (!locals.isAdmin && drafts.some((draft) => hostAccessRequested(draft))) {
+		const hostAccess = can(locals.permissions, "system", "write");
+		if (!hostAccess && drafts.some((draft) => hostAccessRequested(draft))) {
 			return fail(403, {
 				compose,
 				error: HOST_ACCESS_MESSAGE,
@@ -115,7 +117,7 @@ export const actions = {
 			(formData.get("stackName") as string | null)?.trim() || null;
 
 		const result = await ComposeImportService.importPlan({
-			allowHostAccess: locals.isAdmin,
+			allowHostAccess: hostAccess,
 			drafts,
 			stackId,
 			stackName: stackId ? null : stackName,

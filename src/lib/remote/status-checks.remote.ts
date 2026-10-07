@@ -1,7 +1,7 @@
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
 import { Logger } from "#lib/logger.js";
-import { requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import { StatusCheckService } from "#lib/services/status-check.service.js";
 import { query } from "$app/server";
 
@@ -10,7 +10,7 @@ const logger = new Logger("StatusChecks");
 export const listStatusCheckNames = query(
 	z.object({ gitRef: z.string(), gitUrl: z.string().min(1) }),
 	async ({ gitRef, gitUrl }): Promise<string[]> => {
-		const user = requireUser();
+		const user = requirePermission("status-pages", "read");
 		try {
 			return await StatusCheckService.checkNames(
 				gitUrl,

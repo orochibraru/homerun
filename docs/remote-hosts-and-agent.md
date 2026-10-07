@@ -14,9 +14,9 @@ image gets built instead of on this machine, then brought back here to run.
 
 ## Adding a server with one command
 
-On `/remote-hosts`, **Add a server** (admins only) turns any fresh Linux server
-into a build server, a [swarm](swarm-mode.md) node, or both. Pick the roles and
-an optional name, and Homerun hands you a command:
+On `/remote-hosts`, **Add a server** (needs write access to Remote hosts) turns
+any fresh Linux server into a build server, a [swarm](swarm-mode.md) node, or
+both. Pick the roles and an optional name, and Homerun hands you a command:
 
 ```sh
 curl -fsSL https://<your instance>/api/v1/nodes/install.sh | sudo bash -s -- --token=hrn_...

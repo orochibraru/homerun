@@ -22,9 +22,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		try {
 			const deleted = await RegistryService.deleteRepository(params.repository);
 			return { deleted, success: true };
@@ -36,9 +33,6 @@ export const actions = {
 	deleteTag: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const tag = String((await request.formData()).get("tag") ?? "");
 		if (!tag) {

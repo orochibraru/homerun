@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
-import { requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import { DockerService } from "#lib/services/docker.service.js";
 import type { ContainerStatus } from "#lib/types.js";
 import { query } from "$app/server";
@@ -13,7 +13,7 @@ export interface ServiceStatus {
 export const syncServiceStatuses = query(
 	z.array(z.string()),
 	async (serviceIds): Promise<ServiceStatus[]> => {
-		requireUser();
+		requirePermission("services", "read");
 		if (serviceIds.length === 0) {
 			return [];
 		}

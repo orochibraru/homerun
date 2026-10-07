@@ -8,9 +8,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const { error, values } = parseObjectStoreForm(
 			await request.formData(),
 			true,

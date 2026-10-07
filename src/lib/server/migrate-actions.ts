@@ -3,6 +3,7 @@ import type {
 	MigrationConnection,
 	MigrationEntry,
 } from "#lib/migrate/common.js";
+import { can } from "#lib/permissions.js";
 import { MigrationService } from "#lib/services/migration.service.js";
 import { resolve } from "$app/paths";
 
@@ -17,9 +18,6 @@ export interface MigrationSource {
 function guard(event: RequestEvent): string {
 	if (!event.locals.user) {
 		throw redirect(302, resolve("auth/sign-in"));
-	}
-	if (!event.locals.isAdmin) {
-		throw redirect(302, resolve(""));
 	}
 	return event.locals.user.id;
 }
@@ -82,7 +80,7 @@ export function migrationActions(source: MigrationSource) {
 					entries,
 					userId,
 					source.label,
-					event.locals.isAdmin,
+					can(event.locals.permissions, "system", "write"),
 				);
 				return { result, values: { baseUrl } };
 			} catch (err) {

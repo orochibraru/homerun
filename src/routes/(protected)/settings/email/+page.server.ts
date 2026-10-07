@@ -18,9 +18,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		if (!isSmtpEnabled()) {
 			return fail(400, {
 				error:
@@ -55,9 +52,6 @@ export const actions = {
 	updateSmtp: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const portRaw = (formData.get("smtpPort") as string | null)?.trim();

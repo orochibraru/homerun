@@ -12,16 +12,13 @@ import { resolve } from "$app/paths";
 
 const logger = new Logger("DNS");
 
-/** The domain an action works on, redirecting away from a non-admin. */
-async function adminDomain(
+/** The domain an action works on, redirecting a signed-out caller to sign-in. */
+async function actionDomain(
 	locals: App.Locals,
 	domainId: string,
 ): Promise<DomainDTO | null> {
 	if (!locals.user) {
 		throw redirect(302, resolve("auth/sign-in"));
-	}
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve(""));
 	}
 	return await DomainDTO.get(domainId);
 }
@@ -55,7 +52,7 @@ export const load = async ({ params, parent }) => {
 
 export const actions = {
 	updateDomain: async ({ locals, params, request }) => {
-		const domain = await adminDomain(locals, params.domainId);
+		const domain = await actionDomain(locals, params.domainId);
 		if (!domain) {
 			return fail(404, { error: "That domain doesn't exist any more." });
 		}
@@ -70,7 +67,7 @@ export const actions = {
 	},
 
 	pointAtServer: async ({ locals, params }) => {
-		const domain = await adminDomain(locals, params.domainId);
+		const domain = await actionDomain(locals, params.domainId);
 		if (!domain) {
 			return fail(404, { error: "That domain doesn't exist any more." });
 		}
@@ -84,7 +81,7 @@ export const actions = {
 	},
 
 	saveRecord: async ({ locals, params, request }) => {
-		const domain = await adminDomain(locals, params.domainId);
+		const domain = await actionDomain(locals, params.domainId);
 		if (!domain) {
 			return fail(404, { error: "That domain doesn't exist any more." });
 		}
@@ -110,7 +107,7 @@ export const actions = {
 	},
 
 	deleteRecord: async ({ locals, params, request }) => {
-		const domain = await adminDomain(locals, params.domainId);
+		const domain = await actionDomain(locals, params.domainId);
 		if (!domain) {
 			return fail(404, { error: "That domain doesn't exist any more." });
 		}

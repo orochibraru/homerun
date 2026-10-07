@@ -1,10 +1,11 @@
+import { can } from "#lib/permissions.js";
 import { DockerService } from "#lib/services/docker.service.js";
 
 export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
 		return new Response("Unauthorized", { status: 401 });
 	}
-	if (!locals.isAdmin) {
+	if (!can(locals.permissions, "system", "read")) {
 		return new Response("Forbidden", { status: 403 });
 	}
 

@@ -2,16 +2,17 @@
 
 Homerun can be managed with Terraform (or OpenTofu) and Pulumi: stacks, services
 and every setting the dashboard has, plus the objects around them. The
-**Infrastructure as Code** page (Integrations, admins only) writes a starter
-configuration from what's already running, and compares a Terraform state with
-the instance to show what changed outside it.
+**Infrastructure as Code** page (Integrations, needs the Infrastructure as code
+permission) writes a starter configuration from what's already running, and
+compares a Terraform state with the instance to show what changed outside it.
 
 ## The Terraform provider
 
 The provider's address is `orochibraru/homerun`. It talks to the REST API, so it
-can do what an API key can (see [API & CLI](api-and-cli.md)), and it needs an
-admin key for the admin-only resources (DNS connections, git providers, object
-stores and buckets).
+can do what an API key can (see [API & CLI](api-and-cli.md)), and it needs a key
+with the matching permission for each resource it manages (write on DNS for DNS
+connections, on Git providers for git providers, on Object storage for object
+stores and buckets, and so on).
 
 ```hcl
 terraform {
@@ -77,26 +78,14 @@ How the attributes behave:
 
 ### Installing it
 
-The provider isn't on the Terraform Registry. Build it from the repository
-(`go build` in `terraform/provider`), or download the
-`homerun-terraform-provider` binary for your platform from a release and name it
-`terraform-provider-homerun`. Then point Terraform at it in `~/.terraformrc`:
-
-```hcl
-provider_installation {
-  dev_overrides {
-    "orochibraru/homerun" = "/home/you/.local/share/terraform-provider-homerun"
-  }
-  direct {}
-}
-```
-
-With `dev_overrides`, `terraform init` doesn't download the provider and `plan`
-and `apply` use the binary directly. To pin a version instead, put the binary in
-a filesystem mirror:
-`~/.terraform.d/plugins/registry.terraform.io/orochibraru/homerun/<version>/<os>_<arch>/terraform-provider-homerun_v<version>`.
-The **Provider** tab of the Infrastructure as Code page has the same steps, with
-your instance's URL filled in.
+The provider is published to the
+[Terraform Registry](https://registry.terraform.io/providers/orochibraru/homerun)
+and the
+[OpenTofu Registry](https://search.opentofu.org/provider/orochibraru/homerun),
+with a version for every Homerun release, so `terraform init` (or `tofu init`)
+downloads it like any other provider: nothing to build or install by hand. The
+**Provider** tab of the Infrastructure as Code page has the commands to run,
+with your instance's URL filled in.
 
 ## Generating a configuration
 
@@ -148,7 +137,8 @@ store are Homerun's own and aren't included.
 ### From the CLI
 
 The [CLI](api-and-cli.md#cli) writes the same project without the browser, with
-an admin API key:
+an API key that can read what you generate from (the Infrastructure as code
+permission, plus the areas of the services involved):
 
 ```sh
 homerun iac generate --service api
@@ -182,11 +172,11 @@ Write-only attributes can't be compared and are left out.
 ## Pulumi
 
 Pulumi (3.147 or later) runs any Terraform provider, so there's no separate
-Pulumi provider. Add it to a Pulumi project from the binary, which generates a
+Pulumi provider. Add it to a Pulumi project from the registry, which generates a
 typed SDK and records it under `packages` in `Pulumi.yaml`:
 
 ```sh
-pulumi package add terraform-provider /path/to/terraform-provider-homerun
+pulumi package add terraform-provider orochibraru/homerun
 pulumi config set homerun:endpoint https://homerun.example.com
 pulumi config set --secret homerun:apiKey <an API key>
 ```

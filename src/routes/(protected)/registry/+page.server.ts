@@ -29,9 +29,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const busy = await ImageMirrorGcService.busyReason();
 		if (busy) {
 			return fail(409, { error: busy });

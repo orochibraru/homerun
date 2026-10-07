@@ -17,11 +17,13 @@ migrations only run forward.
 Yes. Every account sees and manages every service, stack, volume, backup and the
 rest of the instance's resources, whoever created them. Sessions, API keys,
 preferences, git connections, the bell feed and notification channels stay
-personal. Homerun has no teams and no per-stack permissions: admin and developer
-only differ in which instance-wide pages they can open, and the third role,
-read-only, can look at everything but change nothing. An API key has the
-permissions of its account, or read-only ones if it was created that way.
-Deleting an account hands what it created over to another admin. See
+personal. Homerun has no teams and no per-stack permissions: access is per area
+of the dashboard (services, stacks, DNS, settings and so on, 18 in all), each at
+read or write, and the roles are presets of that (admin, developer, read-only,
+plus a custom role where you pick the areas per user). An API key has the
+permissions you pick for it, never more than its account holds right now, and
+expires after 90 days unless you choose otherwise. Deleting an account hands
+what it created over to another admin. See
 [Users and roles](users-and-roles.md).
 
 ## Can it build an app without a Dockerfile?

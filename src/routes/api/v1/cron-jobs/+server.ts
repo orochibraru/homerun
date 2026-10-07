@@ -1,4 +1,5 @@
 import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { can } from "#lib/permissions.js";
 import { cronJobApiJson } from "#lib/server/api-json.js";
 import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
 import { apiCaller, apiError, readApiBody } from "#lib/server/api-route.js";
@@ -32,7 +33,7 @@ export const POST = async ({ locals, request }) => {
 			Object.entries(fields).filter(([, value]) => value !== null),
 		),
 		envVars,
-		caller,
+		{ hostAccess: can(caller.permissions, "system", "write") },
 	);
 	if ("error" in result) {
 		return apiError(result.error);

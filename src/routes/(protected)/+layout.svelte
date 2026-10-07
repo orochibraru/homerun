@@ -13,6 +13,7 @@
 	import ProfileMenu from "#lib/components/profile-menu.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { appearanceCss } from "#lib/palettes.js";
+	import { can, mayVisit } from "#lib/permissions.js";
 	import { DEFAULT_SURFACE, effectiveSurface } from "#lib/surfaces.js";
 	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
@@ -85,7 +86,7 @@
 			visibleItems(
 				data.uiMode,
 				allNavItems
-					.filter((item) => !item.adminOnly || data.user?.role === "admin")
+					.filter((item) => mayVisit(data.permissions, item.href))
 					.map((item) => ({ ...item, id: item.href })),
 				page.url.pathname,
 			),
@@ -156,7 +157,7 @@
   <aside class="hidden w-64 shrink-0 flex-col md:flex" data-slot="app-sidebar">
     <BrandMark class="px-3 py-2.5" />
 
-    {#if !data.readOnly}
+    {#if can(data.permissions, "services", "write")}
       <div class="px-2 pb-2">
         <Button class="w-full" href={resolve('services/new')}><Plus class="size-4" />Deploy a service</Button>
       </div>
@@ -166,7 +167,7 @@
     <nav class="flex-1 overflow-y-auto px-2 pb-3">
       {@render navGroups(navItemGroups)}
     </nav>
-    <AppVersion admin={data.user?.role === "admin"} />
+    <AppVersion admin={can(data.permissions, "settings", "write")} />
   </aside>
 
   <!-- ── Mobile sidebar overlay ────────────────────────────────── -->
@@ -204,7 +205,7 @@
           sidebarOpen = false;
         })}
       </nav>
-      <AppVersion admin={data.user?.role === "admin"} />
+      <AppVersion admin={can(data.permissions, "settings", "write")} />
     </div>
   {/if}
 
@@ -243,12 +244,12 @@
       {#if data.readOnly}
         <span
           class="text-text-muted border-border hidden rounded-full border px-2 py-0.5 text-[0.7rem] font-medium sm:inline"
-          title="This account or API key can view everything but can't change anything."
+          title="This account or API key can view but can't change anything."
         >
           Read-only
         </span>
       {/if}
-      <GlobalSearch isAdmin={data.user?.role === "admin"} />
+      <GlobalSearch permissions={data.permissions} />
       <NotificationBell />
       <ProfileMenu uiMode={data.uiMode} user={data.user} />
     </header>

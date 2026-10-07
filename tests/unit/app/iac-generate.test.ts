@@ -178,6 +178,8 @@ describe("generateStructure", () => {
 			".gitignore",
 		]);
 		expect(file("README.md")).toStartWith("# Apps");
+		expect(file("README.md")).toContain("1. Export a Homerun API key");
+		expect(file("README.md")).not.toContain("Install the Homerun provider");
 		expect(file(".gitignore")).toContain("terraform.tfvars");
 	});
 

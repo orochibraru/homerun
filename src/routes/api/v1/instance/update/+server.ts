@@ -8,9 +8,6 @@ export const GET = async ({ locals }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
-	if (!locals.isAdmin) {
-		return Response.json({ error: "Forbidden" }, { status: 403 });
-	}
 	const [release, preflight] = await Promise.all([
 		SelfUpdateService.releaseStatus(),
 		SelfUpdateService.preflight(),
@@ -21,9 +18,6 @@ export const GET = async ({ locals }) => {
 export const POST = async ({ locals, request }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
-	}
-	if (!locals.isAdmin) {
-		return Response.json({ error: "Forbidden" }, { status: 403 });
 	}
 	const raw = await request.text();
 	let parsed: unknown = {};

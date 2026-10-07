@@ -8,7 +8,7 @@ import {
 import { dnsProviderById } from "#lib/services/dns-providers/index.js";
 
 export const GET = async ({ locals, params }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}
@@ -19,7 +19,7 @@ export const GET = async ({ locals, params }) => {
 };
 
 export const PATCH = async ({ locals, params, request }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}
@@ -49,7 +49,7 @@ export const PATCH = async ({ locals, params, request }) => {
 };
 
 export const DELETE = async ({ locals, params }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}

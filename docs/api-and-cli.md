@@ -8,19 +8,24 @@ independently (a cookie session, or `x-api-key`/`Authorization: Bearer <key>`
 from your profile page), so the same handlers serve the dashboard's own requests
 and external API-key clients alike.
 
-An API key is created with **Full access** or **Read-only** access (see
-[API keys](your-profile.md#api-keys)). A read-only key, or any request from a
-[read-only account](users-and-roles.md), can call every `GET` endpoint; every
-`POST`, `PATCH` and `DELETE` answers `403` with
-`{"error": "This account or API key is read-only: ..."}`. An API key makes up to
-300 requests a minute; past that it gets `429 Too Many Requests` with a
+Every route belongs to one [permission area](users-and-roles.md#permissions)
+(services, stacks, DNS and so on): a `GET` needs read access to it, a `POST`,
+`PATCH` or `DELETE` needs write access. A request from an account or API key
+without it answers `403` with an error naming the area, such as
+`{"error": "You don't have permission to change Services."}`. An API key is
+created with the permissions you pick, an expiry and, optionally, "all
+permissions" (see [API keys](your-profile.md#api-keys)), and is always limited
+to what its owner holds at that moment. Profile, CLI login, the API docs and the
+MCP endpoint are open to any signed-in account. An API key makes up to 300
+requests a minute; past that it gets `429 Too Many Requests` with a
 `Retry-After` header (in seconds) until the minute is up. The OpenAPI spec lists
-that `403` on every write.
+that `403` on every route.
 
 The Terraform state routes under `/api/v1/iac/projects/:id/` (`state` and
 `lock`, see [Object storage](object-storage.md#terraform-state)) also take the
 key as an HTTP Basic password, with any username, since that's the only
-credential Terraform's `http` backend sends. They're admin-only.
+credential Terraform's `http` backend sends. They need write access to
+Infrastructure as code (and read for `GET`).
 
 - `GET/POST /api/v1/services`, `GET/PATCH/DELETE /api/v1/services/:id`: delete
   takes `?force=true` to drop Homerun's record even when the container or swarm
@@ -74,14 +79,15 @@ credential Terraform's `http` backend sends. They're admin-only.
 - `GET /api/v1/jobs?status=running,queued`: jobs by status (comma-separated;
   every job without it), running first, each with its service's name, stage,
   worker lease and a `stale` flag (executing with no worker heartbeat for over
-  two minutes); admins only
+  two minutes); needs the System permission
 - `GET /api/v1/system-stats`: host CPU/RAM/disk/GPU
 - `GET/POST /api/v1/instance/update`: the running version, the latest release
   and whether an update can start (with the jobs in the way in
   `preflight.blockers`), and starting one (`{"force": true}` to update over
-  those jobs), see [Upgrading](upgrading.md#without-the-dashboard); admins only
+  those jobs), see [Upgrading](upgrading.md#without-the-dashboard); needs the
+  Settings permission
 - `GET /api/v1/instance/update/progress`: the update helper's state and output,
-  to follow a running update; admins only
+  to follow a running update; needs the Settings permission
 
 The list `GET`s (`services`, `stacks`, `templates`, `jobs`, a service's `scans`)
 are paginated: `?page=`, `?perPage=` (default 100, max 200), and `?q=` for a
@@ -108,25 +114,25 @@ id, update and delete, each with a UUID as its id (a bucket's is
 whether one is set instead (`registryPasswordSet`, `customSslSet`, `passwordSet`
 and so on).
 
-| Object               | Routes                                                                                   |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| Stack                | `/stacks`, `/stacks/:id`                                                                 |
-| Service              | `/services`, `/services/:id`                                                             |
-| Service environment  | `/service-environments`, `/service-environments/:id`                                     |
-| Service dependency   | `/service-dependencies`, `/service-dependencies/:id` (no update)                         |
-| Volume               | `/volumes`, `/volumes/:id`                                                               |
-| Volume mount         | `/volume-mounts`, `/volume-mounts/:id`                                                   |
-| Cron job             | `/cron-jobs`, `/cron-jobs/:id`                                                           |
-| Redirect             | `/redirects`, `/redirects/:id`                                                           |
-| Notification channel | `/notification-channels`, `/notification-channels/:id` (the caller's own)                |
-| Backup destination   | `/backup-destinations`, `/backup-destinations/:id`                                       |
-| Status page          | `/status-pages`, `/status-pages/:id`                                                     |
-| DNS connection       | `/dns-connections`, `/dns-connections/:id` (admins only)                                 |
-| Git provider         | `/git-providers`, `/git-providers/:id` (admins only)                                     |
-| Build cache registry | `/build-cache-registries`, `/build-cache-registries/:id`                                 |
-| Object store         | `/object-stores`, `/object-stores/:id` (admins only)                                     |
-| Bucket               | `/object-stores/:storeId/buckets`, `/object-stores/:storeId/buckets/:name` (admins only) |
-| Template             | `/templates`, `/templates/:id` (read only)                                               |
+| Object               | Routes                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| Stack                | `/stacks`, `/stacks/:id`                                                                         |
+| Service              | `/services`, `/services/:id`                                                                     |
+| Service environment  | `/service-environments`, `/service-environments/:id`                                             |
+| Service dependency   | `/service-dependencies`, `/service-dependencies/:id` (no update)                                 |
+| Volume               | `/volumes`, `/volumes/:id`                                                                       |
+| Volume mount         | `/volume-mounts`, `/volume-mounts/:id`                                                           |
+| Cron job             | `/cron-jobs`, `/cron-jobs/:id`                                                                   |
+| Redirect             | `/redirects`, `/redirects/:id`                                                                   |
+| Notification channel | `/notification-channels`, `/notification-channels/:id` (the caller's own)                        |
+| Backup destination   | `/backup-destinations`, `/backup-destinations/:id`                                               |
+| Status page          | `/status-pages`, `/status-pages/:id`                                                             |
+| DNS connection       | `/dns-connections`, `/dns-connections/:id` (DNS area)                                            |
+| Git provider         | `/git-providers`, `/git-providers/:id` (Git providers area)                                      |
+| Build cache registry | `/build-cache-registries`, `/build-cache-registries/:id`                                         |
+| Object store         | `/object-stores`, `/object-stores/:id` (Object storage area)                                     |
+| Bucket               | `/object-stores/:storeId/buckets`, `/object-stores/:storeId/buckets/:name` (Object storage area) |
+| Template             | `/templates`, `/templates/:id` (read only)                                                       |
 
 This is what the [Terraform provider](infrastructure-as-code.md) is built on,
 and the CLI has a command group for each, see
@@ -274,8 +280,8 @@ themselves, an admin creates each one.
   client ID and secret Homerun just showed you. Claude sends you to Homerun's
   sign-in page, Homerun asks you to allow it, and from then on it acts as you.
 - **Claude Code**, or anything headless: no OAuth client needed, pass an API key
-  instead, created under Profile → Authorized Clients. A read-only key gives an
-  agent that can diagnose but not change anything.
+  instead, created under Profile → Authorized Clients. A key with read
+  permissions only gives an agent that can diagnose but not change anything.
 
 ```bash
 claude mcp add --transport http homerun \
@@ -290,8 +296,8 @@ changes: `update_service`, `set_dependencies`, `deploy_service`,
 `restart_service`, `start_service`, `stop_service`, `rollback_service`,
 `run_backup`, `create_redirect`, `update_redirect` and `delete_redirect`.
 Deleting a service is deliberately not a tool. Every tool goes through the REST
-API with your own permissions, so a read-only account or API key can diagnose
-but not change anything.
+API with your own permissions, checked per call, so a read-only account or an
+API key with read permissions can diagnose but not change anything.
 
 Secrets don't reach the agent, the rest stays readable:
 
@@ -367,10 +373,10 @@ homerun services list
 ```
 
 `--base-url` and `--api-key` are global flags that override both the saved login
-and those env vars, for hopping between instances. A read-only key works the
-same way for every read command (`list`, `get`, `scans`, `revisions`, `webhook`)
-and fails with a `403` on anything that changes state; `homerun logout` still
-revokes it.
+and those env vars, for hopping between instances. A key with read permissions
+works the same way for every read command (`list`, `get`, `scans`, `revisions`,
+`webhook`) and fails with a `403` on anything that changes state;
+`homerun logout` still revokes it.
 
 ### Commands
 
@@ -566,8 +572,8 @@ Terraform project as the Infrastructure as Code page's Generate tab, see
 [From the CLI](infrastructure-as-code.md#from-the-cli).
 `homerun iac projects list|get|create|delete` manage the Terraform state
 projects, `homerun iac state pull <project>` prints a project's latest state,
-and `homerun iac unlock <project> --force` breaks a stuck lock. These are
-admin-only, like the page.
+and `homerun iac unlock <project> --force` breaks a stuck lock. These need the
+Infrastructure as code permission, like the page.
 
 ### Working on the CLI itself
 

@@ -2,6 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { config } from "#lib/config.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import {
 	parsePublishedPortsField,
 	updatePortsSchema,
@@ -78,7 +79,10 @@ export const actions = {
 				domains: rawDomains,
 				primaryDomain: String(formData.get("primaryDomain") ?? ""),
 			},
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { error: saved.message });
@@ -107,7 +111,10 @@ export const actions = {
 			clearSsl
 				? { customSslCert: null, customSslKey: null }
 				: { customSslCert: cert || undefined, customSslKey: key || undefined },
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { error: saved.message });
@@ -141,7 +148,7 @@ export const actions = {
 		}
 		const input = result.data;
 		const saved = await ServiceSettingsService.save(svc, input, {
-			isAdmin: Boolean(locals.isAdmin),
+			hostAccess: can(locals.permissions, "system", "write"),
 			userId: locals.user.id,
 		});
 		if (saved instanceof ServiceSettingsError) {
@@ -173,7 +180,10 @@ export const actions = {
 		const saved = await ServiceSettingsService.save(
 			svc,
 			{ publishedPorts: ports },
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { error: saved.message });

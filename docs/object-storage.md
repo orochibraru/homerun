@@ -1,11 +1,11 @@
 # Object storage
 
-**Object Storage** (admins only, under **Storage** in the sidebar) gives you S3
-buckets without paying for a cloud: a built-in object store Homerun runs for
-you, plus any S3-compatible provider you connect, side by side. On top of it,
-Homerun keeps Terraform state, so infrastructure code needs no paid backend
-either. The page has four tabs: **Buckets**, **Stores**, **Built-in** and
-**Terraform State**.
+**Object Storage** (needs the Object storage permission, under **Storage** in
+the sidebar) gives you S3 buckets without paying for a cloud: a built-in object
+store Homerun runs for you, plus any S3-compatible provider you connect, side by
+side. On top of it, Homerun keeps Terraform state, so infrastructure code needs
+no paid backend either. The page has four tabs: **Buckets**, **Stores**,
+**Built-in** and **Terraform State**.
 
 ## The built-in store
 
@@ -87,10 +87,10 @@ terraform {
 }
 ```
 
-Terraform authenticates with HTTP Basic: any username, and an API key of an
-admin (**Profile → API keys**) as the password, set as `TF_HTTP_PASSWORD` so it
-stays out of the file. A read-only key can read the state but not write or lock
-it.
+Terraform authenticates with HTTP Basic: any username, and an API key (**Profile
+→ API keys**) as the password, set as `TF_HTTP_PASSWORD` so it stays out of the
+file. The key needs write access to Infrastructure as code to write or lock the
+state; with read access it can only read it.
 
 - **Versions.** Every state Terraform writes is kept as its own object in the
   bucket and listed newest first, with its serial, when, who (the API key's

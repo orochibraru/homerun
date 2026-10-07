@@ -9,7 +9,7 @@ function reason(cause: unknown): string {
 }
 
 export const GET = async ({ locals, params }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}
@@ -36,7 +36,7 @@ export const GET = async ({ locals, params }) => {
 };
 
 export const POST = async ({ locals, params, request }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}

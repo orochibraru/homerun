@@ -1,5 +1,6 @@
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { serviceApiJson } from "#lib/server/api-json.js";
 import { updateServiceApiBody } from "#lib/server/validation/api.js";
 import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
@@ -57,7 +58,7 @@ export const PATCH = async ({ params, request, locals }) => {
 	}
 	try {
 		await ServiceSettingsService.apply(svc, result.data, {
-			isAdmin: Boolean(locals.isAdmin),
+			hostAccess: can(locals.permissions, "system", "write"),
 			userId: locals.user.id,
 		});
 	} catch (err) {

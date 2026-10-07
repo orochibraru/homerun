@@ -64,9 +64,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const project = await IacProjectDTO.get(params.projectId);
 		if (!project) {
 			return fail(404, { error: "That state project doesn't exist." });
@@ -79,9 +76,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const project = await IacProjectDTO.get(params.projectId);
 		if (!project) {
 			return fail(404, { error: "That state project doesn't exist." });
@@ -93,9 +87,6 @@ export const actions = {
 	rollback: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const project = await IacProjectDTO.get(params.projectId);
 		if (!project) {

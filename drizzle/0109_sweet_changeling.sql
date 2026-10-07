@@ -1,0 +1,2 @@
+ALTER TABLE "user" ADD COLUMN "permissions" jsonb;--> statement-breakpoint
+UPDATE "apikey" SET "permissions" = '{"services":["read"],"stacks":["read"],"templates":["read"],"cron-jobs":["read"],"redirects":["read"],"status-pages":["read"],"storage":["read"],"object-storage":["read"],"registry":["read"],"build-cache":["read"],"git-providers":["read"],"notifications":["read"],"dns":["read"],"remote-hosts":["read"],"system":["read"],"iac":["read"],"users":["read"],"settings":["read"]}' WHERE "metadata" ~ 'scope\\?":\\?"read';

@@ -32,8 +32,9 @@ export const getThing = query(async (): Promise<Thing> => {
 });
 ```
 
-Admin-only data needs its own `locals.isAdmin`-equivalent check on top —
-`requireUser()` alone doesn't gate that.
+Data that belongs to a permission area needs `requirePermission(area, level)`
+instead of `requireUser()`: remote function requests skip the hook's route gate,
+so `requireUser()` alone lets any signed-in user read it.
 
 ## 3. Validate arguments, don't cast
 

@@ -37,15 +37,21 @@
 
 	interface Props {
 		blockPolicy: ScanBlockPolicy;
+		canChangeScanPolicy: boolean;
 		deployed: boolean;
-		isAdmin: boolean;
 		latest: Scan | null;
 		latestOk: Scan | undefined;
 		scanning: boolean;
 	}
 
-	const { blockPolicy, deployed, isAdmin, latest, latestOk, scanning }: Props =
-		$props();
+	const {
+		blockPolicy,
+		canChangeScanPolicy,
+		deployed,
+		latest,
+		latestOk,
+		scanning,
+	}: Props = $props();
 
 	let submitting = $state(false);
 
@@ -70,7 +76,7 @@
     {#snippet description()}
       Every deploy scans the image with Trivy before the workload starts.
       Block policy: <span class="text-text font-medium">{policyLabel}</span>
-      {#if isAdmin}
+      {#if canChangeScanPolicy}
         (
 
         <a
@@ -80,7 +86,7 @@
 
         ).
       {:else}
-        (set by an admin).
+        (set in instance settings).
       {/if}
     {/snippet}
     {#snippet trailing()}

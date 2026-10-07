@@ -1,17 +1,18 @@
 import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
+import { can } from "#lib/permissions.js";
 import { cronJobApiJson } from "#lib/server/api-json.js";
 import { apiCaller, apiError, readApiBody } from "#lib/server/api-route.js";
 import { parseCronJobInput } from "#lib/server/cron-job-form.js";
 import { updateCronJobApiBody } from "#lib/server/validation/api-resources.js";
 
-/** The cron job, or the response refusing the caller: missing, or a host command job and they aren't an admin. */
-async function ownJob(id: string, isAdmin: boolean) {
+/** The cron job, or the response refusing the caller: missing, or a host command job without host access. */
+async function ownJob(id: string, hostAccess: boolean) {
 	const job = await CronJobDTO.get(id);
 	if (!job) {
 		return apiError("Not found", 404);
 	}
-	return job.kind === "exec" && !isAdmin
-		? apiError("Only an admin can manage a host command job.", 403)
+	return job.kind === "exec" && !hostAccess
+		? apiError("Managing a host command job needs write access to System.", 403)
 		: job;
 }
 
@@ -31,7 +32,8 @@ export const PATCH = async ({ locals, params, request }) => {
 	if ("refused" in caller) {
 		return caller.refused;
 	}
-	const job = await ownJob(params.cronJobId, caller.isAdmin);
+	const hostAccess = can(caller.permissions, "system", "write");
+	const job = await ownJob(params.cronJobId, hostAccess);
 	if (job instanceof Response) {
 		return job;
 	}
@@ -52,7 +54,7 @@ export const PATCH = async ({ locals, params, request }) => {
 			),
 		),
 		envVars ?? currentEnv ?? {},
-		caller,
+		{ hostAccess },
 	);
 	if ("error" in result) {
 		return apiError(result.error);
@@ -70,7 +72,10 @@ export const DELETE = async ({ locals, params }) => {
 	if ("refused" in caller) {
 		return caller.refused;
 	}
-	const job = await ownJob(params.cronJobId, caller.isAdmin);
+	const job = await ownJob(
+		params.cronJobId,
+		can(caller.permissions, "system", "write"),
+	);
 	if (job instanceof Response) {
 		return job;
 	}

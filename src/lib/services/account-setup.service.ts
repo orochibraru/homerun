@@ -80,7 +80,6 @@ class AccountSetupServiceClass {
 	 */
 	async createPendingUser(input: {
 		email: string;
-		headers: Headers;
 		name: string;
 		role: "admin" | "user";
 	}): Promise<string> {
@@ -92,7 +91,6 @@ class AccountSetupServiceClass {
 				password: randomBytes(32).toString("hex"),
 				role: input.role,
 			},
-			headers: input.headers,
 		});
 		const ctx = await auth.$context;
 		await ctx.internalAdapter.createVerificationValue({

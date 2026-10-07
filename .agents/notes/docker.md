@@ -857,9 +857,10 @@ page shows what a prune would remove before the admin commits to it. Six form
 actions, each a thin call into one `DockerCleanupMixin` method
 (`pruneContainers`/`pruneImages`/`pruneNetworks`/`pruneBuildCache`/
 `pruneVolumes`/`pruneSystem`, `pruneSystem` running the first four in sequence
-and returning one combined summary), every one independently re-checking
-`locals.isAdmin` the same as `load` does. No confirmation-dialog/dry-run step in
-the UI itself, the preview list is the only "are you sure" a prune action gets.
+and returning one combined summary), every one refused by the request hook
+without write access to System (the page itself needs read). No
+confirmation-dialog/dry-run step in the UI itself, the preview list is the only
+"are you sure" a prune action gets.
 
 **Retained revisions are never pruned.** `pruneImages(all, keepImageIds)` and
 `pruneSystem(keepImageIds)` take the image ids of every retained revision

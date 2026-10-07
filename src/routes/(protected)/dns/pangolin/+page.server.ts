@@ -49,9 +49,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const enabled = (await request.formData()).get("enabled") === "on";
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateDnsProvider(enabled ? "pangolin" : null);
@@ -63,9 +60,6 @@ export const actions = {
 	testPangolin: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const outcome = await testPangolinFromForm(
 			await request.formData(),
@@ -85,9 +79,6 @@ export const actions = {
 	updatePangolin: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const settings = await InstanceSettingsDTO.get();

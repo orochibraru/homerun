@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DnsConnectionDTO } from "#lib/dto/dns-connection-dto.js";
-import { requireAdmin } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import type { DnsZone } from "#lib/services/dns-providers/types.js";
 import { query } from "$app/server";
 
@@ -8,7 +8,7 @@ import { query } from "$app/server";
 export const getConnectionZones = query(
 	z.string(),
 	async (connectionId): Promise<{ error: string | null; zones: DnsZone[] }> => {
-		requireAdmin();
+		requirePermission("dns", "read");
 		const connection = await DnsConnectionDTO.get(connectionId);
 		if (!connection) {
 			return { error: "That connection doesn't exist any more.", zones: [] };

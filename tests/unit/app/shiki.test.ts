@@ -21,17 +21,21 @@ describe("highlightCode", () => {
 });
 
 describe("providerSnippets", () => {
-	test("fills in the instance's URL and gives each step a language", () => {
+	test("fills in the instance's URL and installs the provider from the registry", () => {
 		const snippets = providerSnippets("https://h.example.com");
 		expect(snippets.map((snippet) => snippet.language)).toEqual([
-			"shellscript",
-			"hcl",
 			"shellscript",
 			"shellscript",
 			"typescript",
 		]);
-		expect(snippets[2].code).toContain(
+		expect(snippets[0].code).toContain(
 			"HOMERUN_ENDPOINT=https://h.example.com",
+		);
+		expect(snippets[1].code).toContain(
+			"pulumi package add terraform-provider orochibraru/homerun",
+		);
+		expect(snippets.map((snippet) => snippet.code).join("\n")).not.toContain(
+			"terraformrc",
 		);
 	});
 });

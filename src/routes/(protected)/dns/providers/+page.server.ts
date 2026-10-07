@@ -28,9 +28,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const formData = await request.formData();
 		const existing = await DnsConnectionDTO.get(
 			String(formData.get("connectionId") ?? ""),
@@ -79,9 +76,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const connection = await DnsConnectionDTO.get(
 			String((await request.formData()).get("connectionId") ?? ""),
 		);
@@ -106,9 +100,6 @@ export const actions = {
 	deleteConnection: async ({ locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const connection = await DnsConnectionDTO.get(
 			String((await request.formData()).get("connectionId") ?? ""),

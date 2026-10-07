@@ -10,12 +10,8 @@ import { resolve } from "$app/paths";
 
 const logger = new Logger("InstanceSettings");
 
-export const load = async ({ locals, params, parent }) => {
+export const load = async ({ params, parent }) => {
 	await parent();
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve(""));
-	}
-
 	const settings = await InstanceSettingsDTO.get();
 	const provider = settings
 		.toJSON()
@@ -52,9 +48,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const settings = await InstanceSettingsDTO.get();
 		await settings.deleteOauthProvider(params.providerId);
 		applyAndRebuild(settings);
@@ -67,9 +60,6 @@ export const actions = {
 	update: async ({ request, locals, params }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();

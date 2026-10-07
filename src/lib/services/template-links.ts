@@ -124,9 +124,9 @@ export async function buildTemplateLinkContext(
 export function templateHostAccessRefusal(
 	template: TemplateDTO,
 	links: Pick<ResolvedTemplateLink, "runtime" | "templateName">[],
-	isAdmin: boolean,
+	hostAccess: boolean,
 ): string | null {
-	if (isAdmin) {
+	if (hostAccess) {
 		return null;
 	}
 	const names = templatesNeedingHostAccess([
@@ -232,7 +232,7 @@ export async function createLinkedServices(
  */
 export async function createServiceFromTemplate(
 	template: TemplateDTO,
-	params: { isAdmin: boolean; stackId: string | null; userId: string },
+	params: { hostAccess: boolean; stackId: string | null; userId: string },
 ): Promise<
 	| {
 			linkedServices: ServiceDTO[];
@@ -249,7 +249,7 @@ export async function createServiceFromTemplate(
 		(candidate) => ServiceDTO.slugTaken(candidate),
 	);
 	const links = await buildTemplateLinkContext(row.id, slug);
-	const refusal = templateHostAccessRefusal(template, links, params.isAdmin);
+	const refusal = templateHostAccessRefusal(template, links, params.hostAccess);
 	if (refusal) {
 		return { refusal };
 	}
@@ -325,7 +325,7 @@ export type QuickDeployResult =
  */
 export async function quickDeployFromTemplate(
 	templateId: string,
-	params: { isAdmin: boolean; stackId: string | null; userId: string },
+	params: { hostAccess: boolean; stackId: string | null; userId: string },
 ): Promise<QuickDeployResult> {
 	const { userId } = params;
 	const template = await TemplateDTO.get(templateId);

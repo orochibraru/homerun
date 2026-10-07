@@ -38,9 +38,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const parsed = parseDomainForm(await request.formData(), true);
 		if (parsed.error !== null) {
 			return fail(400, { error: parsed.error });
@@ -68,9 +65,6 @@ export const actions = {
 	deleteDomain: async ({ locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const domain = await DomainDTO.get(
 			String((await request.formData()).get("domainId") ?? ""),

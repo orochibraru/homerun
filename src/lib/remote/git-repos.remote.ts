@@ -3,12 +3,12 @@ import { z } from "zod";
 import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { Logger } from "#lib/logger.js";
-import { requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission, requireUser } from "#lib/server/remote-auth.js";
 import {
 	GitProviderService,
 	type GitRepo,
 } from "#lib/services/git-provider.service.js";
-import { query } from "$app/server";
+import { command, query } from "$app/server";
 
 const logger = new Logger("GitProviders");
 
@@ -39,7 +39,7 @@ async function resolveConnection(providerId: string, userId: string) {
 export const listProviderRepos = query(
 	z.string(),
 	async (providerId): Promise<GitRepo[]> => {
-		const user = requireUser();
+		const user = requirePermission("services", "read");
 		const { connection, provider } = await resolveConnection(
 			providerId,
 			user.id,
@@ -57,7 +57,7 @@ export const listProviderRepos = query(
 export const listRepoBranches = query(
 	z.object({ providerId: z.string(), repo: z.string() }),
 	async ({ providerId, repo }): Promise<string[]> => {
-		const user = requireUser();
+		const user = requirePermission("services", "read");
 		const { connection, provider } = await resolveConnection(
 			providerId,
 			user.id,
@@ -77,7 +77,7 @@ export const listRepoBranches = query(
 export const hasDockerfile = query(
 	z.object({ providerId: z.string(), ref: z.string(), repo: z.string() }),
 	async ({ providerId, ref, repo }): Promise<boolean> => {
-		const user = requireUser();
+		const user = requirePermission("services", "read");
 		const { connection, provider } = await resolveConnection(
 			providerId,
 			user.id,
@@ -88,5 +88,27 @@ export const hasDockerfile = query(
 			repo,
 			ref,
 		);
+	},
+);
+
+/**
+ * Drops the caller's own connection to a git provider. It's their personal
+ * link, so it needs no permission on Git providers, which only governs the
+ * instance's provider list.
+ */
+export const disconnectGitProvider = command(
+	z.string(),
+	async (providerId): Promise<void> => {
+		const user = requireUser();
+		const connection = await GitConnectionDTO.getForUserAndProvider(
+			user.id,
+			providerId,
+		);
+		if (connection) {
+			await connection.delete();
+			logger.info(
+				`Git provider disconnected: provider=${providerId} user=${user.id}`,
+			);
+		}
 	},
 );

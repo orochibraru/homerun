@@ -1,5 +1,5 @@
 export const HOST_ACCESS_MESSAGE =
-	"Only an admin can set privileged mode, devices, added capabilities or env files : each of them gives the container access to the host.";
+	"Setting privileged mode, devices, added capabilities or env files needs write access to System : each of them gives the container access to the host.";
 
 export interface HostAccessOptions {
 	capAdd?: string[];
@@ -55,5 +55,5 @@ export function templatesNeedingHostAccess(
 /** The refusal a non-admin gets for deploying templates that need host access, naming each one. */
 export function templateHostAccessMessage(names: string[]): string {
 	const quoted = names.map((name) => `"${name}"`).join(", ");
-	return `${quoted} ${names.length === 1 ? "needs" : "need"} host access (privileged mode, devices, added capabilities or env files) : only an admin can deploy ${names.length === 1 ? "it" : "them"}.`;
+	return `${quoted} ${names.length === 1 ? "needs" : "need"} host access (privileged mode, devices, added capabilities or env files) : deploying ${names.length === 1 ? "it" : "them"} needs write access to System.`;
 }

@@ -8,10 +8,7 @@ import { resolve } from "$app/paths";
 
 const logger = new Logger("InstanceSettings");
 
-export const load = ({ locals }) => {
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve(""));
-	}
+export const load = () => {
 	return { callbackBase: config.auth.origin ?? null };
 };
 
@@ -19,9 +16,6 @@ export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();

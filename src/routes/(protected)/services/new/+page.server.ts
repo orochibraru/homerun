@@ -13,6 +13,7 @@ import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import {
 	type CreateServiceInput,
 	createServiceSchema,
@@ -188,7 +189,7 @@ export const load = async ({ url, parent, locals }) => {
 				}
 			: null,
 		templateHostAccessRefusal:
-			template && !locals.isAdmin
+			template && !can(locals.permissions, "system", "write")
 				? templateHostAccessRefusal(
 						template,
 						templateLinks.map((l) => ({
@@ -214,7 +215,7 @@ export const load = async ({ url, parent, locals }) => {
 
 async function prepareLinkedStack(
 	formData: FormData,
-	user: { id: string; isAdmin: boolean },
+	user: { hostAccess: boolean; id: string },
 	primary: { name: string; stackId: string | null; slug: string },
 ) {
 	const userId = user.id;
@@ -224,7 +225,7 @@ async function prepareLinkedStack(
 		? await buildTemplateLinkContext(template.id, primary.slug)
 		: [];
 	const refusal = template
-		? templateHostAccessRefusal(template, links, user.isAdmin)
+		? templateHostAccessRefusal(template, links, user.hostAccess)
 		: null;
 	if (refusal) {
 		return {
@@ -426,7 +427,7 @@ function announceCreated(
 
 async function createServiceFromForm(
 	formData: FormData,
-	user: { id: string; isAdmin: boolean },
+	user: { hostAccess: boolean; id: string },
 ) {
 	const userId = user.id;
 	const rawStackId = formData.get("stackId") as string | null;
@@ -553,8 +554,8 @@ export const actions = {
 			return fail(409, { error: full, values: Object.fromEntries(formData) });
 		}
 		const result = await createServiceFromForm(formData, {
+			hostAccess: can(locals.permissions, "system", "write"),
 			id: locals.user.id,
-			isAdmin: locals.isAdmin,
 		});
 		if ("failure" in result) {
 			return result.failure;
@@ -575,8 +576,8 @@ export const actions = {
 
 		const formData = await request.formData();
 		const result = await createServiceFromForm(formData, {
+			hostAccess: can(locals.permissions, "system", "write"),
 			id: locals.user.id,
-			isAdmin: locals.isAdmin,
 		});
 		if ("failure" in result) {
 			return result.failure;

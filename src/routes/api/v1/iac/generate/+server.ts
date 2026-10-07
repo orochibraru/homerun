@@ -1,17 +1,22 @@
 import { config } from "#lib/config.js";
 import { IacProjectDTO } from "#lib/dto/iac-project-dto.js";
 import { parseScope } from "#lib/iac/generate.js";
+import { can, permissionDeniedMessage } from "#lib/permissions.js";
 import { apiCaller, apiError } from "#lib/server/api-route.js";
 import { IacInventoryService } from "#lib/services/iac-inventory.service.js";
 
 export const GET = async ({ locals, url }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}
 	const scope = parseScope(url.searchParams.get("scope"));
 	if (!scope) {
 		return apiError("scope is stack:<id or slug> or service:<id or slug>.");
+	}
+	const scopeArea = scope.kind === "stack" ? "stacks" : "services";
+	if (!can(caller.permissions, scopeArea)) {
+		return apiError(permissionDeniedMessage(scopeArea, "read"), 403);
 	}
 	const projectId = url.searchParams.get("project");
 	const project = projectId ? await IacProjectDTO.get(projectId) : null;

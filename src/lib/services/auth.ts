@@ -34,6 +34,7 @@ import {
 	oidcClaimsFor,
 	oidcIssuer,
 } from "#lib/oidc-provider.js";
+import { can, permissionsForRole } from "#lib/permissions.js";
 import { passkeyRpId } from "#lib/security-policy.js";
 import { withDashboardOrigin } from "#lib/server/canonical-origin.js";
 import { hashClientSecret } from "#lib/server/client-secret.js";
@@ -116,7 +117,16 @@ function oidcProviderPlugins(origin: string | undefined) {
 			claims_supported: [...OIDC_CLAIMS],
 			scopes_supported: [...OIDC_SCOPES],
 		},
-		clientPrivileges: ({ user }) => user?.role === "admin",
+		clientPrivileges: ({ user }) => {
+			const owner = user as
+				| { permissions?: unknown; role?: string | null }
+				| undefined;
+			return can(
+				permissionsForRole(owner?.role, owner?.permissions),
+				"users",
+				"write",
+			);
+		},
 		consentPage: "/auth/consent",
 		customIdTokenClaims: ({ user, scopes }) =>
 			oidcClaimsFor(user as OidcUser, scopes),
@@ -422,6 +432,9 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 		},
 		secret: config.auth.secret,
 		user: {
+			additionalFields: {
+				permissions: { input: false, required: false, type: "json" },
+			},
 			changeEmail: {
 				enabled: true,
 				sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {

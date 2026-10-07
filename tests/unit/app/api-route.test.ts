@@ -20,20 +20,13 @@ function jsonRequest(body: string): Request {
 }
 
 describe("api route helpers", () => {
-	test("refuses anonymous and non-admin callers", async () => {
+	test("refuses anonymous callers and passes the permissions through", () => {
 		const anonymous = apiCaller({});
 		expect("refused" in anonymous && anonymous.refused.status).toBe(401);
-		const developer = apiCaller(
-			{ isAdmin: false, user: { id: "u" } },
-			{ adminOnly: true },
-		);
-		expect("refused" in developer && (await developer.refused.json())).toEqual({
-			error: "Admins only.",
-		});
 		expect(
-			apiCaller({ isAdmin: true, user: { id: "u" } }, { adminOnly: true }),
+			apiCaller({ permissions: { services: "read" }, user: { id: "u" } }),
 		).toEqual({
-			isAdmin: true,
+			permissions: { services: "read" },
 			userId: "u",
 		});
 		expect(apiError("Nope").status).toBe(400);

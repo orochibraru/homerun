@@ -16,9 +16,11 @@ answers 400.
 
 ## What you need
 
-- **An API key** with **Full access**, from your profile's
-  [API keys](your-profile.md#api-keys). A read-only key can't deploy. Store it
-  as a CI secret, never in the repository.
+- **An API key** with write access to **Services**, from your profile's
+  [API keys](your-profile.md#api-keys). A key with only read access can't
+  deploy, and deploying needs the owning account to hold write on Services too.
+  Pick an expiry you can live with and rotate the secret before it. Store it as
+  a CI secret, never in the repository.
 - **The service's id**: `homerun services list`, or the last part of the
   service's URL in the dashboard (`/services/<id>`).
 - **Your instance's URL**, e.g. `https://homerun.example.com`, reachable from

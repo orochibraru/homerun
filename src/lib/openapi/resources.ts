@@ -52,10 +52,6 @@ const invalid: ResponseDef = {
 	description: "Invalid body, or a value the instance refuses",
 	schema: errorResponse,
 };
-const adminsOnly: ResponseDef = {
-	description: "Admins only",
-	schema: errorResponse,
-};
 
 export const serviceEnvironmentResponse = z.object({
 	createdAt: timestamp,
@@ -202,7 +198,6 @@ export const bucketResponse = z.object({
 });
 
 interface CrudSpec {
-	adminOnly?: boolean;
 	createBody?: z.ZodType;
 	idParam: ParamDef;
 	/** Lines added to each operation's description, by method. */
@@ -221,9 +216,7 @@ interface CrudSpec {
 function crudRoutes(spec: CrudSpec): RouteDef[] {
 	const item = `${spec.path}/{${spec.idParam.name}}`;
 	const parent = spec.parentParams ?? [];
-	const guard: Record<number, ResponseDef> = spec.adminOnly
-		? { 401: unauthorized, 403: adminsOnly }
-		: { 401: unauthorized };
+	const guard: Record<number, ResponseDef> = { 401: unauthorized };
 	const base = { tags: [spec.tag] };
 	const routes: RouteDef[] = [
 		{
@@ -430,7 +423,6 @@ export const resourceRoutes: RouteDef[] = [
 		updateBody: updateStatusPageApiBody,
 	}),
 	...crudRoutes({
-		adminOnly: true,
 		createBody: dnsConnectionApiBody,
 		idParam: { description: "Connection id", name: "connectionId" },
 		notes: {
@@ -445,7 +437,6 @@ export const resourceRoutes: RouteDef[] = [
 		updateBody: updateDnsConnectionApiBody,
 	}),
 	...crudRoutes({
-		adminOnly: true,
 		createBody: gitProviderApiBody,
 		idParam: { description: "Provider id", name: "providerId" },
 		notes: {
@@ -471,7 +462,6 @@ export const resourceRoutes: RouteDef[] = [
 		updateBody: updateBuildCacheRegistryApiBody,
 	}),
 	...crudRoutes({
-		adminOnly: true,
 		createBody: objectStoreApiBody,
 		idParam: { description: "Store id", name: "storeId" },
 		notes: {
@@ -487,7 +477,6 @@ export const resourceRoutes: RouteDef[] = [
 		updateBody: updateObjectStoreApiBody,
 	}),
 	...crudRoutes({
-		adminOnly: true,
 		createBody: bucketApiBody,
 		idParam: { description: "Bucket name", name: "bucket" },
 		notes: { delete: "Only an empty bucket can be deleted." },

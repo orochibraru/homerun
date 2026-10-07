@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import { ApiService } from "#lib/services/api.service.js";
 import { query } from "$app/server";
 
@@ -19,7 +19,7 @@ const imageCheckInput = z.object({
 export const checkImage = query(
 	imageCheckInput,
 	async (input): Promise<ImageCheck> => {
-		requireUser();
+		requirePermission("services", "read");
 
 		const image = input.image.trim();
 		if (!image) {

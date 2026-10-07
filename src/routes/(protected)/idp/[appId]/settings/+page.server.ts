@@ -15,9 +15,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const app = await OauthClientDTO.get(params.appId);
 		if (!app) {
 			return fail(404, { error: "That app isn't registered." });
@@ -46,9 +43,6 @@ export const actions = {
 	delete: async ({ locals, params }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const app = await OauthClientDTO.get(params.appId);
 		if (app) {

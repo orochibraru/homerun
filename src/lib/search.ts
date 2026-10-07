@@ -1,3 +1,5 @@
+import { mayVisit, type Permissions } from "#lib/permissions.js";
+
 export const SEARCH_MIN_LENGTH = 2;
 
 export const SEARCH_MAX_LENGTH = 100;
@@ -50,7 +52,6 @@ export const SEARCH_GROUP_HEADINGS: Record<SearchResultKind, string> = {
 };
 
 export interface SearchPage {
-	adminOnly: boolean;
 	href: string;
 	keywords: string[];
 	label: string;
@@ -59,350 +60,300 @@ export interface SearchPage {
 
 export const SEARCH_PAGES: SearchPage[] = [
 	{
-		adminOnly: false,
 		href: "/",
 		keywords: ["dashboard", "home"],
 		label: "Overview",
 		section: "Workspace",
 	},
 	{
-		adminOnly: false,
 		href: "/services",
 		keywords: ["containers", "apps"],
 		label: "Services",
 		section: "Workspace",
 	},
 	{
-		adminOnly: false,
 		href: "/services/new",
 		keywords: ["deploy", "create", "add"],
 		label: "Deploy a service",
 		section: "Services",
 	},
 	{
-		adminOnly: false,
 		href: "/services/import",
 		keywords: ["compose", "docker-compose", "yaml"],
 		label: "Import compose",
 		section: "Services",
 	},
 	{
-		adminOnly: false,
 		href: "/stacks",
 		keywords: ["groups"],
 		label: "Stacks",
 		section: "Workspace",
 	},
 	{
-		adminOnly: false,
 		href: "/stacks/new",
 		keywords: ["create", "add", "stack"],
 		label: "New stack",
 		section: "Stacks",
 	},
 	{
-		adminOnly: false,
 		href: "/templates",
 		keywords: ["gallery", "catalog"],
 		label: "Templates",
 		section: "Workspace",
 	},
 	{
-		adminOnly: false,
 		href: "/templates/new",
 		keywords: ["create", "add"],
 		label: "New template",
 		section: "Templates",
 	},
 	{
-		adminOnly: false,
 		href: "/redirects",
 		keywords: ["forward", "301", "308", "domain", "url"],
 		label: "Redirects",
 		section: "Infrastructure",
 	},
 	{
-		adminOnly: false,
 		href: "/redirects/new",
 		keywords: ["create", "add"],
 		label: "New redirect",
 		section: "Redirects",
 	},
 	{
-		adminOnly: false,
 		href: "/cron-jobs",
 		keywords: ["scheduled", "tasks"],
 		label: "Cron Jobs",
 		section: "Workspace",
 	},
 	{
-		adminOnly: false,
 		href: "/cron-jobs/new",
 		keywords: ["create", "add"],
 		label: "New cron job",
 		section: "Cron Jobs",
 	},
 	{
-		adminOnly: false,
 		href: "/status-pages",
 		keywords: ["uptime", "health"],
 		label: "Status Pages",
 		section: "Workspace",
 	},
 	{
-		adminOnly: false,
 		href: "/status-pages/new",
 		keywords: ["create", "add"],
 		label: "New status page",
 		section: "Status Pages",
 	},
 	{
-		adminOnly: false,
 		href: "/storage",
 		keywords: ["volumes", "disks", "mounts", "storage"],
 		label: "Volumes",
 		section: "Storage",
 	},
 	{
-		adminOnly: false,
 		href: "/storage/new",
 		keywords: ["create", "add", "volume"],
 		label: "New volume",
 		section: "Volumes",
 	},
 	{
-		adminOnly: false,
 		href: "/backups",
 		keywords: ["restore", "runs"],
 		label: "Backups",
 		section: "Storage",
 	},
 	{
-		adminOnly: false,
 		href: "/s3-destinations",
 		keywords: ["bucket", "minio", "s3", "sftp", "smb", "webdav", "nas"],
 		label: "Backup Destinations",
 		section: "Storage",
 	},
 	{
-		adminOnly: true,
 		href: "/object-storage",
 		keywords: ["s3", "buckets", "garage", "minio", "r2", "object"],
 		label: "Object Storage",
 		section: "Storage",
 	},
 	{
-		adminOnly: true,
 		href: "/object-storage/state",
 		keywords: ["terraform", "pulumi", "tfstate", "iac", "state", "lock"],
 		label: "Terraform State",
 		section: "Object Storage",
 	},
 	{
-		adminOnly: true,
 		href: "/iac",
 		keywords: ["terraform", "pulumi", "iac", "hcl", "generate", "import"],
 		label: "Infrastructure as Code",
 		section: "Integrations",
 	},
 	{
-		adminOnly: true,
 		href: "/iac/drift",
 		keywords: ["terraform", "drift", "state", "compare"],
 		label: "Drift",
 		section: "Infrastructure as Code",
 	},
 	{
-		adminOnly: false,
 		href: "/s3-destinations/new",
 		keywords: ["create", "add", "bucket", "s3", "sftp", "smb", "webdav"],
 		label: "New backup destination",
 		section: "Backup Destinations",
 	},
 	{
-		adminOnly: false,
 		href: "/remote-hosts",
 		keywords: ["agents", "servers", "build servers"],
 		label: "Remote Hosts",
 		section: "Infrastructure",
 	},
 	{
-		adminOnly: false,
 		href: "/remote-hosts/new",
 		keywords: ["create", "add", "agent"],
 		label: "New remote host",
 		section: "Remote Hosts",
 	},
 	{
-		adminOnly: false,
 		href: "/scheduling",
 		keywords: ["jobs", "queue", "cron"],
 		label: "Scheduling",
 		section: "Infrastructure",
 	},
 	{
-		adminOnly: false,
 		href: "/git-providers",
 		keywords: ["github", "gitlab", "gitea", "bitbucket"],
 		label: "Git Providers",
 		section: "Integrations",
 	},
 	{
-		adminOnly: false,
 		href: "/build-cache-registries",
 		keywords: ["registry", "cache"],
 		label: "Build Cache",
 		section: "Integrations",
 	},
 	{
-		adminOnly: false,
 		href: "/build-cache-registries/new",
 		keywords: ["create", "add", "registry"],
 		label: "New build cache registry",
 		section: "Build Cache",
 	},
 	{
-		adminOnly: false,
 		href: "/notification-channels",
 		keywords: ["webhook", "discord", "slack", "telegram", "email", "alerts"],
 		label: "Notification Channels",
 		section: "Integrations",
 	},
 	{
-		adminOnly: false,
 		href: "/api-docs",
 		keywords: ["openapi", "rest", "reference"],
 		label: "API Docs",
 		section: "Integrations",
 	},
 	{
-		adminOnly: false,
 		href: "/profile",
 		keywords: ["account", "name", "email"],
 		label: "Personal Information",
 		section: "Profile",
 	},
 	{
-		adminOnly: false,
 		href: "/profile/security",
 		keywords: ["password", "account"],
 		label: "Security",
 		section: "Profile",
 	},
 	{
-		adminOnly: false,
 		href: "/profile/sessions",
 		keywords: ["devices", "sign out"],
 		label: "Sessions",
 		section: "Profile",
 	},
 	{
-		adminOnly: false,
 		href: "/profile/clients",
 		keywords: ["cli", "tokens", "api keys"],
 		label: "Authorized Clients",
 		section: "Profile",
 	},
 	{
-		adminOnly: false,
 		href: "/profile/appearance",
 		keywords: ["theme", "dark mode", "accent", "colors"],
 		label: "Appearance",
 		section: "Profile",
 	},
 	{
-		adminOnly: false,
 		href: "/profile/notifications",
 		keywords: ["alerts", "events"],
 		label: "Notification Preferences",
 		section: "Profile",
 	},
 	{
-		adminOnly: true,
 		href: "/users",
 		keywords: ["members", "invites", "roles"],
 		label: "Users",
 		section: "Administration",
 	},
 	{
-		adminOnly: true,
 		href: "/authentication",
 		keywords: ["oauth", "oidc", "sso", "sign-in", "login wall"],
 		label: "Authentication",
 		section: "Administration",
 	},
 	{
-		adminOnly: true,
 		href: "/authentication/new",
 		keywords: ["oauth", "oidc", "provider", "add"],
 		label: "New auth provider",
 		section: "Authentication",
 	},
 	{
-		adminOnly: true,
 		href: "/settings",
 		keywords: ["general", "base domain", "instance"],
 		label: "Settings",
 		section: "Administration",
 	},
 	{
-		adminOnly: true,
 		href: "/settings/docker",
 		keywords: ["socket", "network", "swarm"],
 		label: "Docker Settings",
 		section: "Settings",
 	},
 	{
-		adminOnly: true,
 		href: "/settings/networking",
 		keywords: ["traefik", "tls", "acme", "cache"],
 		label: "Networking Settings",
 		section: "Settings",
 	},
 	{
-		adminOnly: true,
 		href: "/dns",
 		keywords: ["dns", "cloudflare", "pangolin", "domains", "tunnel"],
 		label: "DNS",
 		section: "Integrations",
 	},
 	{
-		adminOnly: true,
 		href: "/idp",
 		keywords: ["oidc", "openid", "sso", "sign in with homerun", "oauth apps"],
 		label: "IDP",
 		section: "Integrations",
 	},
 	{
-		adminOnly: true,
 		href: "/settings/email",
 		keywords: ["smtp", "mail"],
 		label: "Email Settings",
 		section: "Settings",
 	},
 	{
-		adminOnly: true,
 		href: "/settings/migrate",
 		keywords: ["dokploy", "coolify", "migration", "import"],
 		label: "Migrate from Dokploy or Coolify",
 		section: "Settings",
 	},
 	{
-		adminOnly: true,
 		href: "/system-logs",
 		keywords: ["logs"],
 		label: "System Logs",
 		section: "Administration",
 	},
 	{
-		adminOnly: true,
 		href: "/registry",
 		keywords: ["registry", "images", "tokens", "push", "pull", "mirror"],
 		label: "Registry",
 		section: "Administration",
 	},
 	{
-		adminOnly: true,
 		href: "/docker-cleanup",
 		keywords: ["prune", "images", "disk"],
 		label: "Docker Cleanup",
@@ -431,15 +382,15 @@ export function matchesSearch(
 }
 
 /**
- * Filters the static page list for global search, hiding admin-only pages from
- * non-admins. A blank query returns every visible page.
+ * Filters the static page list for global search, hiding pages `permissions`
+ * can't open. A blank query returns every visible page.
  */
 export function filterPages(
 	pages: SearchPage[],
 	q: string,
-	isAdmin: boolean,
+	permissions: Permissions,
 ): SearchPage[] {
-	const visible = pages.filter((p) => isAdmin || !p.adminOnly);
+	const visible = pages.filter((p) => mayVisit(permissions, p.href));
 	if (!normalizeSearch(q)) {
 		return visible;
 	}

@@ -3,6 +3,7 @@ import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import {
 	parseEnvVars,
 	parsePublishedPortsField,
@@ -29,7 +30,10 @@ export const load = async ({ parent, locals }) => {
 		.filter((_, i) => linkCounts[i] === 0)
 		.map((t) => t.toJSON());
 
-	return { isAdmin: locals.isAdmin, linkableTemplates: linkable };
+	return {
+		hostAccess: can(locals.permissions, "system", "write"),
+		linkableTemplates: linkable,
+	};
 };
 
 async function parseLinks(
@@ -102,7 +106,10 @@ export const actions = {
 		}
 
 		const { input, runtimeOptions } = parsed;
-		if (!locals.isAdmin && hostAccessRequested(runtimeOptions)) {
+		if (
+			!can(locals.permissions, "system", "write") &&
+			hostAccessRequested(runtimeOptions)
+		) {
 			return fail(403, { error: HOST_ACCESS_MESSAGE, values: fields });
 		}
 

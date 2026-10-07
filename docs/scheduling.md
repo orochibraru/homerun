@@ -30,9 +30,10 @@ schedule that isn't tied to a service. Each job runs one of two ways:
   itself, not inside Homerun's container: a throwaway privileged `alpine:3`
   helper sharing the host's PID namespace uses `nsenter` to step into the host's
   own namespaces, so the command sees the host's filesystem, network and
-  processes as root. Only the job's own env vars are set. **Admin-only**. With
-  rootless Docker "the host" is the rootless daemon's own namespace, and with
-  Docker Desktop or OrbStack it's their Linux VM, not your Mac.
+  processes as root. Only the job's own env vars are set. **Needs write access
+  to System** (admins only, unless a custom role has it). With rootless Docker
+  "the host" is the rootless daemon's own namespace, and with Docker Desktop or
+  OrbStack it's their Linux VM, not your Mac.
 
 ![A cron job's page: its schedule, image, command, timeout and Run now](images/scheduling-cron-job.webp)
 

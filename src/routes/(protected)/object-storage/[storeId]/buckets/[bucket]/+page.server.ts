@@ -30,9 +30,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const store = await ObjectStoreDTO.get(params.storeId);
 		if (!store) {
 			return fail(404, { error: "That object store doesn't exist." });
@@ -67,9 +64,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const store = await ObjectStoreDTO.get(params.storeId);
 		if (!store) {
 			return fail(404, { error: "That object store doesn't exist." });
@@ -85,9 +79,6 @@ export const actions = {
 	revokeKey: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const store = await ObjectStoreDTO.get(params.storeId);
 		if (!store) {
@@ -107,9 +98,6 @@ export const actions = {
 	setExpiration: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const store = await ObjectStoreDTO.get(params.storeId);
 		if (!store) {
@@ -136,9 +124,6 @@ export const actions = {
 	useAsBackupDestination: async ({ params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const store = await ObjectStoreDTO.get(params.storeId);
 		if (!store) {

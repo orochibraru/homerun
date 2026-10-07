@@ -10,6 +10,7 @@ import { StackDTO } from "#lib/dto/stack-dto.js";
 import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
+import { can, mayVisit } from "#lib/permissions.js";
 import {
 	groupResults,
 	matchesSearch,
@@ -175,19 +176,19 @@ async function searchInfrastructure(
 }
 
 /**
- * Global search over instance-level configuration : git providers for everyone,
- * plus users and sign-in OAuth providers for admins only.
+ * Global search over instance-level configuration : git providers, plus users
+ * and sign-in OAuth providers for callers who may read Users.
  */
 async function searchInstance(
 	q: string,
 	limit: number,
-	isAdmin: boolean,
+	canReadUsers: boolean,
 ): Promise<SearchResult[]> {
 	const [users, settings] = await Promise.all([
-		isAdmin ? UserService.searchUsers(q, limit) : Promise.resolve([]),
+		canReadUsers ? UserService.searchUsers(q, limit) : Promise.resolve([]),
 		InstanceSettingsDTO.get(),
 	]);
-	const oauthProviders = isAdmin ? settings.toJSON().oauthProviders : [];
+	const oauthProviders = canReadUsers ? settings.toJSON().oauthProviders : [];
 
 	return [
 		...users.map((row) => ({
@@ -226,12 +227,14 @@ export const searchContent = query(
 	z.string().trim().min(SEARCH_MIN_LENGTH).max(SEARCH_MAX_LENGTH),
 	async (q): Promise<SearchGroup[]> => {
 		const user = requireUser();
-		const isAdmin = Boolean(getRequestEvent().locals.isAdmin);
+		const { permissions } = getRequestEvent().locals;
 		const groups = await Promise.all([
 			searchWorkspace(q, SEARCH_GROUP_LIMIT),
 			searchInfrastructure(user.id, q, SEARCH_GROUP_LIMIT),
-			searchInstance(q, SEARCH_GROUP_LIMIT, isAdmin),
+			searchInstance(q, SEARCH_GROUP_LIMIT, can(permissions, "users")),
 		]);
-		return groupResults(groups.flat());
+		return groupResults(
+			groups.flat().filter((result) => mayVisit(permissions, result.href)),
+		);
 	},
 );

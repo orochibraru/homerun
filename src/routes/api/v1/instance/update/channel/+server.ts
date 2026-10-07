@@ -8,9 +8,6 @@ export const PATCH = async ({ locals, request }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
-	if (!locals.isAdmin) {
-		return Response.json({ error: "Forbidden" }, { status: 403 });
-	}
 	const result = updateChannelApiBody.safeParse(
 		await request.json().catch(() => null),
 	);

@@ -1,14 +1,18 @@
 import { config } from "#lib/config.js";
 import { IacProjectDTO } from "#lib/dto/iac-project-dto.js";
 import { parseScope } from "#lib/iac/generate.js";
+import { can, permissionDeniedMessage } from "#lib/permissions.js";
 import { IacInventoryService } from "#lib/services/iac-inventory.service.js";
 
 export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
-	if (!locals.isAdmin) {
-		return Response.json({ error: "Admins only." }, { status: 403 });
+	if (!can(locals.permissions, "iac", "read")) {
+		return Response.json(
+			{ error: permissionDeniedMessage("iac", "read") },
+			{ status: 403 },
+		);
 	}
 	const scope = parseScope(url.searchParams.get("scope"));
 	if (!scope) {

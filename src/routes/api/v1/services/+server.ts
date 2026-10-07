@@ -3,6 +3,7 @@ import { StackDTO } from "#lib/dto/stack-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { serviceApiJson } from "#lib/server/api-json.js";
 import { jsonPage, parseApiListQuery } from "#lib/server/api-pagination.js";
 import {
@@ -133,7 +134,7 @@ function extraSettings(input: CreateServiceApiInput): ServiceSettingsInput {
  */
 async function createFromTemplate(
 	input: ServiceSettingsInput & { stackId?: string | null; templateId: string },
-	actor: { isAdmin: boolean; userId: string },
+	actor: { hostAccess: boolean; userId: string },
 ): Promise<Response> {
 	const template = await TemplateDTO.get(input.templateId);
 	if (!template) {
@@ -172,7 +173,10 @@ export const POST = async ({ request, locals }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const actor = { isAdmin: Boolean(locals.isAdmin), userId: locals.user.id };
+	const actor = {
+		hostAccess: can(locals.permissions, "system", "write"),
+		userId: locals.user.id,
+	};
 
 	const body = await request.json().catch(() => null);
 	if (body && typeof body === "object" && "templateId" in body) {
@@ -194,7 +198,7 @@ export const POST = async ({ request, locals }) => {
 	}
 	const input = result.data;
 
-	if (!locals.isAdmin && hostAccessRequested(input)) {
+	if (!actor.hostAccess && hostAccessRequested(input)) {
 		return Response.json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
 	}
 

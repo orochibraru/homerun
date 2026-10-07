@@ -59,8 +59,8 @@ notification channel subscribed to it. The same scans are in the
 
 Scanning is controlled in two places:
 
-- **Settings → Docker → Image scanning**, admin-only: turn it off for every
-  service, and set the deploy block policy (see below).
+- **Settings → Docker → Image scanning**, needs the Settings permission: turn it
+  off for every service, and set the deploy block policy (see below).
 - **Scan this service's image** on a service's Settings tab, to opt one service
   out. An opted-out service pulls straight from its registry, and the block
   policy doesn't apply to it.

@@ -502,6 +502,77 @@ jobs:
           TAG: ${{ steps.releaser.outputs.tag }}
         run: bun scripts/upload-release-assets.ts "$TAG"
 
+  stable-terraform-provider:
+    name: Publish Terraform Provider ${{ needs.stable.outputs.tag }}
+    needs: [stable, stable-release]
+    runs-on: ubuntu-latest
+    env:
+      MIRROR: orochibraru/terraform-provider-homerun
+      VERSION: ${{ needs.stable.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download binaries
+        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        with:
+          path: dist
+          pattern: binaries-*
+          merge-multiple: true
+
+      - name: Import the signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.TERRAFORM_PROVIDER_GPG_PRIVATE_KEY }}
+        run: printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Package and sign the provider
+        env:
+          TERRAFORM_PROVIDER_GPG_PASSPHRASE:
+            ${{ secrets.TERRAFORM_PROVIDER_GPG_PASSPHRASE }}
+        run: scripts/package-terraform-provider.sh "$VERSION"
+
+      - name: Push the provider source to the mirror repo
+        env:
+          TOKEN: ${{ secrets.TERRAFORM_PROVIDER_REPO_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          remote="https://x-access-token:$TOKEN@github.com/$MIRROR.git"
+          if git ls-remote --exit-code --tags "$remote" "refs/tags/v$VERSION" >/dev/null; then
+            echo "$MIRROR already has v$VERSION."
+            exit 0
+          fi
+          git clone --quiet "$remote" mirror
+          find mirror -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R terraform/provider/. mirror/
+          cd mirror
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit --quiet -m "chore(release): $VERSION" -m "From orochibraru/homerun@$SHA."
+          fi
+          git tag "v$VERSION"
+          git push --quiet origin HEAD:refs/heads/main "refs/tags/v$VERSION"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.TERRAFORM_PROVIDER_REPO_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          if gh release view "$tag" --repo "$MIRROR" >/dev/null 2>&1; then
+            gh release upload "$tag" --repo "$MIRROR" --clobber dist/terraform-provider/*
+            gh release edit "$tag" --repo "$MIRROR" --draft=false --latest
+          else
+            gh release create "$tag" --repo "$MIRROR" --verify-tag --latest \
+              --title "$tag" \
+              --notes "Homerun Terraform provider $VERSION, built from orochibraru/homerun@$SHA. Issues and source: https://github.com/orochibraru/homerun." \
+              dist/terraform-provider/*
+          fi
+
   stable-screenshots:
     name: Refresh Screenshots
     needs: [stable-release]

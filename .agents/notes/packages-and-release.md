@@ -291,6 +291,27 @@ draft with the tag pushed and no way to resume. Since a draft isn't
 every binary is on it. A failed upload step is finished by hand: download the
 run's `binaries-*` artifacts into `dist/` and run the script with that tag.
 
+**Terraform provider registries.** Both registries only read a public GitHub
+repo named `terraform-provider-<name>`, so the monorepo can't be published
+directly: `publish.yaml`'s `stable-terraform-provider` job (stable releases
+only, after `stable-release`) copies `terraform/provider` into
+`orochibraru/terraform-provider-homerun` as one commit, tags it `vX.Y.Z`, and
+creates the release there with what `scripts/package-terraform-provider.sh`
+builds from the `stable-binaries` artifact: one
+`terraform-provider-homerun_X.Y.Z_<os>_<arch>.zip` per target (holding
+`terraform-provider-homerun_vX.Y.Z`), the `_manifest.json` (protocol 6.0), the
+`_SHA256SUMS` over both, and its binary detached `.sig`. The registries reject
+an ECC key, so the signing key is RSA. Secrets:
+`TERRAFORM_PROVIDER_GPG_PRIVATE_KEY` (ASCII-armored export),
+`TERRAFORM_PROVIDER_GPG_PASSPHRASE`, and `TERRAFORM_PROVIDER_REPO_TOKEN` (a
+fine-grained PAT with Contents: write on the mirror). The release is created
+with its assets in one `gh release create`, never published empty, since the
+registry ingests a version from the release webhook. A re-run skips the push
+when the tag exists and re-uploads with `--clobber`. The package script runs
+locally too:
+`scripts/package-terraform-provider.sh <version> [binaries dir] [output dir]`,
+signing with the default key of the current `GNUPGHOME`.
+
 **Container images go to Docker Hub, not GHCR**, deliberately:
 `docker.io/orochibraru/homerun{,-worker}`. That's the one piece of the pipeline
 that does _not_ follow the code host, so `docker.yaml`'s login takes a real

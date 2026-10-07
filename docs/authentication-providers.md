@@ -1,11 +1,11 @@
 # Authentication providers
 
-The **Authentication** page (Administration, admin-only) is where sign-in
-methods are configured for the whole instance. It has three tabs: **Sign-in**
-(built-in accounts, preferred methods and requirements), **Providers** and
-**Protected apps** (every service behind the login wall and the methods it
-accepts). Homerun as a provider for your own apps has its own **IDP** page, see
-[Sign in with Homerun](sign-in-with-homerun.md).
+The **Authentication** page (Administration, needs the Users & authentication
+permission) is where sign-in methods are configured for the whole instance. It
+has three tabs: **Sign-in** (built-in accounts, preferred methods and
+requirements), **Providers** and **Protected apps** (every service behind the
+login wall and the methods it accepts). Homerun as a provider for your own apps
+has its own **IDP** page, see [Sign in with Homerun](sign-in-with-homerun.md).
 
 - **Built-in authentication** is Homerun's own email and password accounts,
   managed on the Users page. It's always available for the dashboard.

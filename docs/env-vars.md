@@ -89,7 +89,7 @@ path per line, read at every deploy through a short-lived helper container (so
 they work even though Homerun itself runs in a container). A later file wins
 over an earlier one, and the service's own variables win over both. A file that
 can't be read fails the deploy, the same as a missing `env_file` fails
-`docker compose up`. Only an admin can change the list, since the files are read
-off the host.
+`docker compose up`. Only an account with write access to System can change the
+list, since the files are read off the host.
 
 ![The Env files panel under the variables, with one host path](images/env-vars-env-files.webp)

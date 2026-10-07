@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
-import { requireAdmin, requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import type { CleanupPreview } from "#lib/services/docker/cleanup.js";
 import type {
 	InfraContainer,
@@ -22,7 +22,7 @@ export interface InfraStatus {
 }
 
 export const getCleanupPreview = query(async (): Promise<CleanupPreview> => {
-	requireAdmin();
+	requirePermission("system", "read");
 	const [keepImageIds, keepVolumeNames] = await Promise.all([
 		RevisionService.retainedImageIds(),
 		ServiceVolumeDTO.mountedVolumeNames(),
@@ -33,18 +33,18 @@ export const getCleanupPreview = query(async (): Promise<CleanupPreview> => {
 /** Stack networks the daemon still has but no stack row does : the leak Docker's own network prune can't see while anything is attached. */
 export const getOrphanStackNetworks = query(
 	async (): Promise<OrphanNetwork[]> => {
-		requireAdmin();
+		requirePermission("system", "read");
 		return await DockerService.findOrphanStackNetworks(await StackDTO.allIds());
 	},
 );
 
 export const getMirrorUsage = query(async (): Promise<MirrorUsage> => {
-	requireAdmin();
+	requirePermission("system", "read");
 	return await ImageMirrorGcService.usage();
 });
 
 export const getInfraStatus = query(async (): Promise<InfraStatus> => {
-	requireAdmin();
+	requirePermission("system", "read");
 	const [traefik, infra] = await Promise.all([
 		DockerService.findTraefikContainer(),
 		DockerService.listInfraContainers().catch(() => []),
@@ -55,7 +55,7 @@ export const getInfraStatus = query(async (): Promise<InfraStatus> => {
 export const getUnknownHostVolumes = query(
 	z.array(z.string()),
 	async (known): Promise<string[]> => {
-		requireUser();
+		requirePermission("storage", "read");
 		const names = await DockerService.listHostVolumes().catch(
 			() => [] as string[],
 		);

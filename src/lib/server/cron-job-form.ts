@@ -30,10 +30,10 @@ export type CronJobFormResult =
 
 function validate(
 	input: CronJobInput,
-	options: { isAdmin: boolean },
+	options: { hostAccess: boolean },
 ): string | null {
-	if (input.kind === "exec" && !options.isAdmin) {
-		return "Only an admin can create a host command job.";
+	if (input.kind === "exec" && !options.hostAccess) {
+		return "A host command job needs write access to System.";
 	}
 	if (!CronService.parseCronSchedule(input.schedule)) {
 		return 'Invalid schedule : use standard 5-field cron syntax (e.g. "0 3 * * *").';
@@ -47,13 +47,13 @@ function validate(
  * registry password and defaults the tag and timeout. `raw` is the form's
  * fields or a JSON body, `envVars` its variables.
  *
- * @param options.isAdmin Only admins may create host command (exec) jobs.
+ * @param options.hostAccess Whether the caller may create host command (exec) jobs, which needs write access to System.
  * @returns The parsed fields, or the first validation error message.
  */
 export function parseCronJobInput(
 	raw: Record<string, unknown>,
 	envVars: Record<string, string>,
-	options: { isAdmin: boolean },
+	options: { hostAccess: boolean },
 ): CronJobFormResult {
 	const result = cronJobSchema.safeParse(raw);
 	if (!result.success) {
@@ -95,7 +95,7 @@ export function parseCronJobInput(
 /** Validates a submitted cron job form, see `parseCronJobInput`. */
 export function parseCronJobForm(
 	formData: FormData,
-	options: { isAdmin: boolean },
+	options: { hostAccess: boolean },
 ): CronJobFormResult {
 	return parseCronJobInput(
 		Object.fromEntries(formData),

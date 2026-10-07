@@ -1,30 +1,20 @@
 import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
-import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 
-export const load = async ({ parent, locals }) => {
+export const load = async ({ parent }) => {
 	await parent();
 
-	const [
-		servicesWithStacks,
-		volumes,
-		remoteHosts,
-		destinations,
-		_settings,
-		cronJobs,
-	] = await Promise.all([
-		ServiceDTO.listWithStackNames(),
-		StorageVolumeDTO.list(),
-		RemoteHostDTO.list(),
-		S3DestinationDTO.list(),
-		// Instance-wide, only meaningful to show to an admin (see Settings'
-		// own admin-only gate); a developer's own cron/backup rows are still
-		locals.isAdmin ? InstanceSettingsDTO.get() : null,
-		CronJobDTO.list(),
-	]);
+	const [servicesWithStacks, volumes, remoteHosts, destinations, cronJobs] =
+		await Promise.all([
+			ServiceDTO.listWithStackNames(),
+			StorageVolumeDTO.list(),
+			RemoteHostDTO.list(),
+			S3DestinationDTO.list(),
+			CronJobDTO.list(),
+		]);
 
 	const _remoteHostNames = new Map(remoteHosts.map((h) => [h.id, h.name]));
 	const destinationNames = new Map(destinations.map((d) => [d.id, d.name]));
@@ -48,6 +38,5 @@ export const load = async ({ parent, locals }) => {
 		backupVolumes,
 		cronJobs: cronJobs.filter((j) => j.enabled).map((j) => j.toJSON()),
 		cronServices,
-		isAdmin: locals.isAdmin,
 	};
 };

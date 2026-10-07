@@ -88,8 +88,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   URL, JDBC URL or one variable per value filled in for you, unlink it later
   with one click
 - **[Runtime options](docs/runtime-and-compute.md#runtime)**: entrypoint,
-  command, custom labels, and (admin-only) added capabilities, device mappings
-  and privileged mode
+  command, custom labels, and (System permission) added capabilities, device
+  mappings and privileged mode
 - **[Compute & settings](docs/services.md#settings)**: CPU/memory limits,
   replicas, restart and pull policies, a healthcheck command, and scanning and
   auto-rollback per service
@@ -175,16 +175,16 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[Scheduled redeploys](docs/scheduling.md#scheduled-redeploy)**: cron-style
   auto-redeploy per service to pick up new images
 - **[Cron jobs](docs/scheduling.md#cron-jobs)**: a throwaway container, or an
-  admin-only command on the host itself, on a schedule, with exit codes and
-  output kept per run
+  host command (needs the System permission) itself, on a schedule, with exit
+  codes and output kept per run
 - **[The Scheduling page](docs/scheduling.md#the-scheduling-page)**: every cron
   redeploy, job and backup schedule, plus the live job queue, on one page
 
 ### Users & security
 
-- **[Roles & invites](docs/users-and-roles.md)**: admin, developer and read-only
-  roles, email or direct-create invites, and a resource pool the whole team
-  shares
+- **[Roles & invites](docs/users-and-roles.md)**: admin, developer, read-only
+  and custom (pick the areas) roles, email or direct-create invites, and a
+  resource pool the whole team shares
 - **[OAuth/OIDC sign-in](docs/authentication-providers.md#oauth--oidc-login)**:
   one-click presets for Pocket ID, Keycloak, Authelia, Authentik, Logto, Zitadel
   and Kanidm
@@ -196,8 +196,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[Git provider accounts](docs/git-providers.md)**: connect GitHub, GitLab,
   self-hosted Gitea or Bitbucket and pick a repo and branch instead of pasting
   URLs
-- **[API keys](docs/your-profile.md#api-keys)**: full-access or read-only,
-  created by hand or through `homerun login`
+- **[API keys](docs/your-profile.md#api-keys)**: per-area permissions and an
+  expiry, created by hand or through `homerun login`
 - **Hands off everything else**: every container is labeled
   `homerun.managed=true`, and Homerun never touches anything it didn't create
   (Docker Cleanup being the one deliberate exception)
@@ -231,7 +231,7 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   deep-links to the exact setting that's wrong
 - **[System logs](docs/system-logs.md)**: live logs of Traefik, Postgres and
   Homerun itself, with Traefik restart and update buttons
-- **[Docker Cleanup](docs/docker-cleanup.md)**: admin-only
+- **[Docker Cleanup](docs/docker-cleanup.md)**: needs the System permission
   `docker system df`/prune from the dashboard with a preview before anything
   goes, plus automatic garbage collection of the scan mirror
 - **[Registry](docs/registry.md)**: turn the internal image mirror into a real

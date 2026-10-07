@@ -1,6 +1,6 @@
 import type { HTMLAnchorAttributes } from "svelte/elements";
 import type { Logger } from "#lib/logger.js";
-import type { ApiKeyScope } from "#lib/permissions.js";
+import type { Permissions } from "#lib/permissions.js";
 import type { AuthType } from "#lib/services/auth.js";
 import type { SurfaceId } from "#lib/surfaces.js";
 import type { Path } from "$app/types";
@@ -14,16 +14,14 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			apiKeyScope: ApiKeyScope | null;
 			appOnly: boolean;
 			authCookie: string;
 			error: string;
 			errorId: string;
 			errorStackTrace: string;
-			isAdmin: boolean;
 			logger: Logger;
 			message: unknown;
-			readOnly: boolean;
+			permissions: Permissions;
 			session: AuthType["session"];
 			surface?: SurfaceId;
 			user: AuthType["user"];

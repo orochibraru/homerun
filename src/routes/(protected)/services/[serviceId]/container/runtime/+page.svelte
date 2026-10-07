@@ -67,7 +67,7 @@
 
     <RuntimeFields
       {errors}
-      isAdmin={data.isAdmin}
+      hostAccess={data.hostAccess}
       swarm={data.orchestrationMode === "swarm"}
       {values}
     />

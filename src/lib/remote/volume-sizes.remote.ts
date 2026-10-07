@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
-import { requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import { VolumeSizeService } from "#lib/services/volume-size.service.js";
 import { query } from "$app/server";
 
@@ -13,7 +13,7 @@ export interface VolumeSizeRow {
 export const getVolumeSizes = query(
 	z.array(z.string()).max(200),
 	async (volumeIds): Promise<VolumeSizeRow[]> => {
-		requireUser();
+		requirePermission("storage", "read");
 		if (volumeIds.length === 0) {
 			return [];
 		}

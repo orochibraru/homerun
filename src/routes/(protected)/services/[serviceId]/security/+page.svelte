@@ -85,7 +85,7 @@
   <ScanPanel
     blockPolicy={data.blockPolicy}
     deployed={deployed}
-    isAdmin={data.isAdmin}
+    canChangeScanPolicy={data.canChangeScanPolicy}
     latest={latest}
     latestOk={latestOk}
     scanning={data.scanning}

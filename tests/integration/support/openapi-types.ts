@@ -1561,14 +1561,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -1624,6 +1624,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -1710,14 +1722,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -1772,6 +1784,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -1817,14 +1841,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -1915,14 +1939,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -2008,6 +2032,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 		};
 	};
 	get_build_cache_registries: {
@@ -2055,6 +2091,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -2124,14 +2172,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -2182,6 +2230,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -2227,14 +2287,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -2320,14 +2380,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -2405,6 +2465,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -2503,14 +2575,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -2575,6 +2647,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -2620,14 +2704,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -2738,14 +2822,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -2803,15 +2887,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -2880,15 +2964,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -2936,15 +3020,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -2993,15 +3077,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -3083,15 +3167,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -3148,15 +3232,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -3228,15 +3312,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -3284,15 +3368,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -3341,15 +3425,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -3433,15 +3517,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -4635,6 +4719,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -4691,6 +4787,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -4766,14 +4874,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -4828,6 +4936,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -4873,14 +4993,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -4970,14 +5090,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -5036,15 +5156,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5115,15 +5235,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5172,15 +5292,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5229,15 +5349,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5322,15 +5442,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5387,15 +5507,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5460,15 +5580,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5515,15 +5635,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5574,15 +5694,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5660,15 +5780,15 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Admins only */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						/** @example You don't have permission to change Services. */
 						error: string;
-						issues?: unknown;
 					};
 				};
 			};
@@ -5704,6 +5824,18 @@ export interface operations {
 					"application/json": {
 						/** @constant */
 						status: "ok";
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -5769,6 +5901,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -5843,14 +5987,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -5903,6 +6047,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -5952,14 +6108,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -6050,14 +6206,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -6109,6 +6265,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -6171,14 +6339,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -6221,6 +6389,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -6269,14 +6449,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -6333,6 +6513,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -6414,14 +6606,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -6472,6 +6664,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -6517,14 +6721,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -6614,14 +6818,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -6843,6 +7047,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -7386,14 +7602,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -7614,6 +7830,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -7664,14 +7892,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -8067,14 +8295,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -8149,6 +8377,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -8250,14 +8490,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -8434,6 +8674,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -8501,6 +8753,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -8593,14 +8857,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -8681,14 +8945,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -8803,6 +9067,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -8887,6 +9163,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -9042,6 +9330,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Service or issue not found */
 			404: {
 				headers: {
@@ -9140,14 +9440,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -9213,6 +9513,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -9322,6 +9634,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -9448,6 +9772,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description No such service, or no preview for that pull request */
 			404: {
 				headers: {
@@ -9511,14 +9847,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -9613,14 +9949,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -9698,14 +10034,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -9800,6 +10136,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -9869,14 +10217,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -9983,6 +10331,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -10046,14 +10406,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -10162,6 +10522,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Service not found, or never scanned */
 			404: {
 				headers: {
@@ -10255,6 +10627,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -10306,6 +10690,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -10383,14 +10779,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -10460,14 +10856,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -10533,14 +10929,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -10606,14 +11002,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -10679,6 +11075,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -10749,6 +11157,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -10826,14 +11246,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -10904,6 +11324,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -10949,14 +11381,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -11050,14 +11482,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -11122,6 +11554,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -11212,14 +11656,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -11278,6 +11722,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -11323,14 +11779,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -11433,14 +11889,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -11498,6 +11954,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -11585,6 +12053,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 		};
 	};
 	get_templates__templateId_: {
@@ -11665,6 +12145,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -11714,6 +12206,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -11779,14 +12283,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -11831,6 +12335,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -11879,14 +12395,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -11965,14 +12481,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -12053,6 +12569,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -12145,14 +12673,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -12216,6 +12744,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -12261,14 +12801,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -12373,14 +12913,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};
@@ -12446,14 +12986,14 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
-						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						/** @example You don't have permission to change Services. */
 						error: string;
 					};
 				};

@@ -3,11 +3,16 @@ import { config, isSmtpEnabled } from "#lib/config.js";
 import { InvitationDTO } from "#lib/dto/invitation-dto.js";
 import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
 import { Logger } from "#lib/logger.js";
-import { asAuthRole, isUserRole, roleLabel } from "#lib/permissions.js";
+import {
+	asAuthRole,
+	isUserRole,
+	permissionsForRole,
+	permissionsFromForm,
+	roleLabel,
+} from "#lib/permissions.js";
 import { brandedEmail } from "#lib/server/email-layout.js";
 import { parseListQuery } from "#lib/server/list-query.js";
 import { AccountSetupService } from "#lib/services/account-setup.service.js";
-import { auth } from "#lib/services/auth.js";
 import { EmailService } from "#lib/services/email.service.js";
 import { UserService } from "#lib/services/user.service.js";
 import { resolve } from "$app/paths";
@@ -16,12 +21,8 @@ const logger = new Logger("Users");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const load = async ({ locals, parent, url }) => {
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve(""));
-	}
-
-	const { preferences } = await parent();
+export const load = async ({ parent, url }) => {
+	const { preferences, user } = await parent();
 	const query = parseListQuery(
 		url,
 		{ filterKeys: ["role"], sortKeys: sortKeysOf(BASE_SORTS) },
@@ -33,7 +34,7 @@ export const load = async ({ locals, parent, url }) => {
 	]);
 
 	return {
-		currentUserId: locals.user.id,
+		currentUserId: user.id,
 		filtered: query.active,
 		invites: invites.map((i) => i.toJSON()),
 		page: users.page,
@@ -58,9 +59,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const formData = await request.formData();
 		const id = formData.get("id") as string;
 		await InvitationDTO.deleteById(id);
@@ -70,9 +68,6 @@ export const actions = {
 	createDirect: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -88,13 +83,12 @@ export const actions = {
 				error: "Name and email are required.",
 			});
 		}
-		if (!isUserRole(role)) {
+		if (!isUserRole(role) || role === "custom") {
 			return fail(400, { action: "createDirect", error: "Invalid role." });
 		}
 
 		const created = await AccountSetupService.createPendingUser({
 			email,
-			headers: request.headers,
 			name,
 			role: asAuthRole(role),
 		}).catch((error: unknown) => ({ error }));
@@ -119,9 +113,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		if (!isSmtpEnabled()) {
 			return fail(400, {
 				action: "invite",
@@ -142,7 +133,7 @@ export const actions = {
 				error: "Name and email are required.",
 			});
 		}
-		if (!isUserRole(role)) {
+		if (!isUserRole(role) || role === "custom") {
 			return fail(400, { action: "invite", error: "Invalid role." });
 		}
 
@@ -196,9 +187,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 
 		const formData = await request.formData();
 		const userId = formData.get("userId") as string;
@@ -217,7 +205,7 @@ export const actions = {
 		}
 
 		await UserService.cleanupUserResources(userId, locals.user.id);
-		await auth.api.removeUser({ body: { userId }, headers: request.headers });
+		await UserService.deleteUser(userId);
 
 		logger.info(`User removed: user=${userId} by=${locals.user.id}`);
 		return { action: "removeUser", success: true };
@@ -226,9 +214,6 @@ export const actions = {
 	setEmail: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -258,10 +243,7 @@ export const actions = {
 			});
 		}
 
-		await auth.api.adminUpdateUser({
-			body: { data: { email, emailVerified: true }, userId },
-			headers: request.headers,
-		});
+		await UserService.setEmail(userId, email);
 		logger.info(
 			`Email changed: user=${userId} from=${target.email} to=${email} by=${locals.user.id}`,
 		);
@@ -271,9 +253,6 @@ export const actions = {
 	setRole: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -291,13 +270,47 @@ export const actions = {
 			});
 		}
 
-		await auth.api.setRole({
-			body: { role: asAuthRole(role), userId },
-			headers: request.headers,
-		});
+		const target = (await UserService.listUsers()).find(
+			(candidate) => candidate.id === userId,
+		);
+		if (!target) {
+			return fail(404, { action: "setRole", error: "User not found." });
+		}
+		await UserService.setRole(
+			userId,
+			role,
+			role === "custom"
+				? permissionsForRole(target.role, target.permissions)
+				: null,
+		);
 		logger.info(
 			`Role changed: user=${userId} role=${role} by=${locals.user.id}`,
 		);
 		return { action: "setRole", success: true };
+	},
+
+	setPermissions: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+
+		const formData = await request.formData();
+		const userId = formData.get("userId") as string;
+		const target = (await UserService.listUsers()).find(
+			(candidate) => candidate.id === userId,
+		);
+		if (target?.role !== "custom") {
+			return fail(400, {
+				action: "setPermissions",
+				error: "Only a custom-role user has their own permissions.",
+			});
+		}
+
+		const permissions = permissionsFromForm(formData);
+		await UserService.setPermissions(userId, permissions);
+		logger.info(
+			`Permissions changed: user=${userId} permissions=${JSON.stringify(permissions)} by=${locals.user.id}`,
+		);
+		return { action: "setPermissions", success: true };
 	},
 };

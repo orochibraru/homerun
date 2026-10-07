@@ -126,7 +126,7 @@
       </p>
     </div>
     <div class="flex gap-2">
-      {#if data.isAdmin}
+      {#if data.canWrite}
         <Button onclick={() => enrollOpen = true}><Plus class="size-4" />Add a server</Button>
       {/if}
 

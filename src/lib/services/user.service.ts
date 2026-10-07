@@ -10,6 +10,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import { Logger } from "#lib/logger.js";
+import type { Permissions, Role } from "#lib/permissions.js";
 import { db } from "#lib/server/db/lib.js";
 import type { User } from "#lib/server/db/schema.js";
 import * as schema from "#lib/server/db/schema.js";
@@ -45,10 +46,9 @@ class UserServiceClass {
 	 * Shared by two callers that must both get this treatment:
 	 * - auth.ts's `user.deleteUser.beforeDelete` hook (self-service account
 	 *   deletion).
-	 * - The Users page's admin "remove user" action. better-auth's admin
-	 *   plugin `removeUser` endpoint calls `internalAdapter.deleteUser()`
-	 *   directly, which does **not** run the `deleteUser.beforeDelete`
-	 *   option, so that action has to call this itself first.
+	 * - The Users page's "remove user" action, which deletes the row with
+	 *   `deleteUser` and so never runs the `deleteUser.beforeDelete` option,
+	 *   so that action has to call this itself first.
 	 */
 	async cleanupUserResources(
 		userId: string,
@@ -257,6 +257,51 @@ class UserServiceClass {
 			.orderBy(asc(userTable.createdAt))
 			.limit(1);
 		return row ? row.id : null;
+	}
+
+	/**
+	 * Gives `userId` a role, and the permissions it holds when that role is
+	 * custom. Written straight to the table rather than through better-auth's
+	 * admin plugin, whose endpoints only let the `admin` role through, so a
+	 * custom-role user with write access to Users can manage accounts too.
+	 */
+	async setRole(
+		userId: string,
+		role: Role,
+		permissions: Permissions | null,
+	): Promise<void> {
+		await db
+			.update(userTable)
+			.set({ permissions, role })
+			.where(eq(userTable.id, userId));
+	}
+
+	/** Replaces a custom-role user's permissions. */
+	async setPermissions(
+		userId: string,
+		permissions: Permissions,
+	): Promise<void> {
+		await db
+			.update(userTable)
+			.set({ permissions })
+			.where(eq(userTable.id, userId));
+	}
+
+	/** Changes `userId`'s email and marks it verified, since an admin vouched for it. */
+	async setEmail(userId: string, email: string): Promise<void> {
+		await db
+			.update(userTable)
+			.set({ email, emailVerified: true })
+			.where(eq(userTable.id, userId));
+	}
+
+	/**
+	 * Deletes the user row; sessions, accounts, API keys and every other
+	 * personal row cascade with it. Call `cleanupUserResources` first to hand
+	 * shared resources over.
+	 */
+	async deleteUser(userId: string): Promise<void> {
+		await db.delete(userTable).where(eq(userTable.id, userId));
 	}
 
 	/** How many users currently hold the `admin` role. */

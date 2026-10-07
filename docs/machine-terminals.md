@@ -4,8 +4,8 @@ Advanced mode: [simple mode](ui-modes.md) hides the Terminal sidebar entry.
 Everything here keeps working either way, and a hidden page still opens from a
 link.
 
-**Terminal** in the sidebar (Infrastructure, admins only) opens a shell on the
-machines themselves, in the browser: this server and every
+**Terminal** in the sidebar (Infrastructure, needs write access to System) opens
+a shell on the machines themselves, in the browser: this server and every
 [remote host](remote-hosts-and-agent.md). It's SSH from Homerun's worker, so the
 machine only needs an SSH server and Homerun's public key. A service's own
 container has its own Terminal tab, see
@@ -47,8 +47,8 @@ recorded key, and the next connection records the new one.
   with the browser window. `sudo`, `htop`, `vim` and friends work.
 - An idle session closes after 15 minutes, like a container terminal. Closing
   the tab ends the shell.
-- Only admins see the page, and a session is only readable by the user who
-  opened it.
+- Only accounts with write access to System see the page, and a session is only
+  readable by the user who opened it.
 - "The machine refused Homerun's key" means the key isn't in that user's
   `authorized_keys` yet, or the file's permissions are too open for `sshd`.
 

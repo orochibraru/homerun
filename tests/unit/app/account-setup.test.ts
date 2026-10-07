@@ -334,10 +334,8 @@ describe("AccountSetupService.lookup narrowed to a login wall's methods", () => 
 
 describe("AccountSetupService pending accounts", () => {
 	test("createPendingUser makes an account with an unknown password, marked pending", async () => {
-		const headers = new Headers({ cookie: "x" });
 		const id = await AccountSetupService.createPendingUser({
 			email: "new@example.com",
-			headers,
 			name: "New",
 			role: "user",
 		});

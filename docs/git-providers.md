@@ -4,13 +4,13 @@
 repos", and it's how a private repo works without putting a token in the URL. It
 takes two steps, done by different people:
 
-1. **An admin registers the provider**, once. For **GitHub**, give the app a
-   name (and an organization, or leave it empty for your personal account) and
-   click **Create GitHub App**: GitHub asks you to confirm the app, then to
-   install it on the repositories Homerun should see. Nothing to copy by hand.
-   The app only asks for what Homerun uses: read access to code, commit statuses
-   and checks, and write access to repository webhooks, pull requests and
-   deployments (the last two for
+1. **Someone with write access to Git providers registers the provider**, once.
+   For **GitHub**, give the app a name (and an organization, or leave it empty
+   for your personal account) and click **Create GitHub App**: GitHub asks you
+   to confirm the app, then to install it on the repositories Homerun should
+   see. Nothing to copy by hand. The app only asks for what Homerun uses: read
+   access to code, commit statuses and checks, and write access to repository
+   webhooks, pull requests and deployments (the last two for
    [pull request previews](pull-request-previews.md)). To give it more
    repositories later, change the installation on GitHub. **An app created
    before previews reported to GitHub** lacks the pull request and deployment

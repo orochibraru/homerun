@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
-import { requireAdmin } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
 import { query } from "$app/server";
 
@@ -16,7 +16,7 @@ export interface BucketUsageRow {
 export const getBucketUsages = query(
 	z.array(z.object({ bucket: z.string(), storeId: z.string() })).max(200),
 	async (buckets): Promise<BucketUsageRow[]> => {
-		requireAdmin();
+		requirePermission("object-storage", "read");
 		const stores = new Map(
 			(await ObjectStoreDTO.list()).map((store) => [store.id, store]),
 		);

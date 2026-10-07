@@ -2,10 +2,12 @@ import { fail, redirect } from "@sveltejs/kit";
 import { OauthGrantDTO } from "#lib/dto/oauth-grant-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
-	API_KEY_SCOPES,
-	type ApiKeyScope,
-	apiKeyScopeOf,
-	READ_ONLY_ROLE,
+	API_KEY_EXPIRY_OPTIONS,
+	intersectPermissions,
+	type Permissions,
+	parsePermissions,
+	permissionsFromForm,
+	toApiKeyPermissions,
 } from "#lib/permissions.js";
 import { auth } from "#lib/services/auth.js";
 import { resolve } from "$app/paths";
@@ -18,13 +20,13 @@ interface ApiKeyRow {
 	expiresAt: Date | null;
 	id: string;
 	lastRequest: Date | null;
-	metadata: unknown;
 	name: string | null;
+	permissions: unknown;
 	prefix: string | null;
 	start: string | null;
 }
 
-export const load = async ({ parent, request }) => {
+export const load = async ({ locals, parent, request }) => {
 	const { user } = await parent();
 	const authorizedApps = await OauthGrantDTO.listForUser(user.id);
 	// listApiKeys is user-scoped via the cookie session (sessionMiddleware),
@@ -38,17 +40,18 @@ export const load = async ({ parent, request }) => {
 
 		return {
 			authorizedApps,
-			apiKeys: apiKeys.map((k) => ({
-				createdAt: k.createdAt,
-				enabled: k.enabled ?? true,
-				expiresAt: k.expiresAt,
-				id: k.id,
-				lastRequest: k.lastRequest,
-				name: k.name,
-				prefix: k.prefix,
-				scope: apiKeyScopeOf(k.metadata),
-				start: k.start,
+			apiKeys: apiKeys.map((key) => ({
+				createdAt: key.createdAt,
+				enabled: key.enabled ?? true,
+				expiresAt: key.expiresAt,
+				id: key.id,
+				lastRequest: key.lastRequest,
+				name: key.name,
+				permissions: key.permissions ? parsePermissions(key.permissions) : null,
+				prefix: key.prefix,
+				start: key.start,
 			})),
+			grantable: locals.permissions,
 		};
 	} catch (error) {
 		logger.warn("Couldn't list API keys", {
@@ -56,7 +59,10 @@ export const load = async ({ parent, request }) => {
 		});
 		return {
 			authorizedApps,
-			apiKeys: [] as (Omit<ApiKeyRow, "metadata"> & { scope: ApiKeyScope })[],
+			apiKeys: [] as (Omit<ApiKeyRow, "permissions"> & {
+				permissions: Permissions | null;
+			})[],
+			grantable: locals.permissions,
 		};
 	}
 };
@@ -68,23 +74,36 @@ export const actions = {
 		}
 		const formData = await request.formData();
 		const name = (formData.get("name") as string | null)?.trim() || "API key";
-		const requestedScope = formData.get("scope");
-		const scope: ApiKeyScope =
-			locals.user.role === READ_ONLY_ROLE
-				? "read"
-				: (API_KEY_SCOPES.find((candidate) => candidate === requestedScope) ??
-					"full");
+		const expiry = API_KEY_EXPIRY_OPTIONS.find(
+			(option) => option.value === formData.get("expiry"),
+		);
+		if (!expiry) {
+			return fail(400, { error: "Pick when the key expires." });
+		}
+		const allPermissions = formData.get("allPermissions") === "on";
+		const permissions = intersectPermissions(
+			permissionsFromForm(formData),
+			locals.permissions,
+		);
+		if (!allPermissions && Object.keys(permissions).length === 0) {
+			return fail(400, {
+				error: "Pick at least one permission, or allow all of them.",
+			});
+		}
 
 		try {
-			// Server-only userId field, same pattern cli-auth.service.ts's
-			// device-code approval already uses : bypasses the endpoint's
-			// normal session requirement since we already know who's asking
-			// (locals.user, not a client-supplied id).
 			const created = await auth.api.createApiKey({
-				body: { metadata: { scope }, name, userId: locals.user.id },
+				body: {
+					expiresIn: expiry.days ? expiry.days * 86_400 : null,
+					name,
+					permissions: allPermissions
+						? undefined
+						: toApiKeyPermissions(permissions),
+					userId: locals.user.id,
+				},
 			});
 			logger.info(
-				`API key created: name=${name} scope=${scope} user=${locals.user.id}`,
+				`API key created: name=${name} expiry=${expiry.value} permissions=${allPermissions ? "all" : JSON.stringify(permissions)} user=${locals.user.id}`,
 			);
 			return { key: created.key, success: true };
 		} catch (error) {

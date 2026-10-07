@@ -3,6 +3,7 @@ import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { normalizeEnvironmentName } from "#lib/release-channels.js";
 import { listIconLibrary } from "#lib/server/icon-library.js";
 import { updateGeneralSchema } from "#lib/server/validation/service.js";
@@ -73,7 +74,10 @@ export const actions = {
 		const saved = await ServiceSettingsService.save(
 			svc,
 			{ category: category || null, icon: icon || null },
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { error: saved.message });
@@ -97,7 +101,10 @@ export const actions = {
 		const saved = await ServiceSettingsService.save(
 			svc,
 			{ stackId },
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { error: saved.message });
@@ -228,7 +235,10 @@ export const actions = {
 		const saved = await ServiceSettingsService.save(
 			svc,
 			{ cronEnabled, cronSchedule: cronSchedule || null },
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { cronError: saved.message });

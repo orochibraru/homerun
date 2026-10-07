@@ -4,7 +4,7 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import * as Select from "#lib/components/ui/select/index.js";
-	import { ROLE_OPTIONS } from "#lib/permissions.js";
+	import { CUSTOM_ROLE, ROLE_OPTIONS } from "#lib/permissions.js";
 	import { enhance, type SubmitFunction } from "$app/forms";
 
 	interface Props {
@@ -17,10 +17,14 @@
 
 	const { error, open, smtpEnabled, submitToast, submitting }: Props = $props();
 
+	const PRESET_ROLES = ROLE_OPTIONS.filter(
+		(option) => option.value !== CUSTOM_ROLE,
+	);
+
 	let addMode = $state<"direct" | "invite">("direct");
 	let newRole = $state("developer");
 	const newRoleOption = $derived(
-		ROLE_OPTIONS.find((r) => r.value === newRole) ?? ROLE_OPTIONS[0],
+		PRESET_ROLES.find((r) => r.value === newRole) ?? PRESET_ROLES[0],
 	);
 	const newRoleLabel = $derived(newRoleOption.label);
 </script>
@@ -98,7 +102,7 @@
             <Select.Content>
               <Select.Group>
                 <Select.Label>Role</Select.Label>
-                {#each ROLE_OPTIONS as opt (opt.value)}
+                {#each PRESET_ROLES as opt (opt.value)}
                   <Select.Item label={opt.label} value={opt.value}>
                     {opt.label}
                   </Select.Item>
@@ -141,7 +145,7 @@
             <Select.Content>
               <Select.Group>
                 <Select.Label>Role</Select.Label>
-                {#each ROLE_OPTIONS as opt (opt.value)}
+                {#each PRESET_ROLES as opt (opt.value)}
                   <Select.Item label={opt.label} value={opt.value} />
                 {/each}
               </Select.Group>

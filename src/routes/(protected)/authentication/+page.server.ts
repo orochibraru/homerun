@@ -1,4 +1,4 @@
-import { fail, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { oauthMethod } from "#lib/auth-providers.js";
 import { isSmtpEnabled } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
@@ -44,11 +44,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			return fail(403, {
-				error: "Only admins can change the emailed sign-in methods.",
-			});
-		}
 		const formData = await request.formData();
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateEmailSignIn({
@@ -60,11 +55,6 @@ export const actions = {
 	preferredSignIn: async ({ locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			return fail(403, {
-				error: "Only admins can change the preferred sign-in methods.",
-			});
 		}
 		const formData = await request.formData();
 		const settings = await InstanceSettingsDTO.get();
@@ -79,11 +69,6 @@ export const actions = {
 	securityPolicy: async ({ locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			return fail(403, {
-				error: "Only admins can change sign-in requirements.",
-			});
 		}
 		const formData = await request.formData();
 		const settings = await InstanceSettingsDTO.get();

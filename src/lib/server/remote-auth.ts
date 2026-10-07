@@ -1,5 +1,11 @@
 import { error } from "@sveltejs/kit";
-import { APP_ONLY_MESSAGE, READ_ONLY_MESSAGE } from "#lib/permissions.js";
+import {
+	APP_ONLY_MESSAGE,
+	can,
+	type PermissionArea,
+	type PermissionLevel,
+	permissionDeniedMessage,
+} from "#lib/permissions.js";
 import type { AuthType } from "#lib/services/auth.js";
 import { getRequestEvent } from "$app/server";
 
@@ -21,35 +27,21 @@ export function requireUser(): AuthType["user"] {
 }
 
 /**
- * The signed-in user for the current remote function call, only if they are an
- * admin.
+ * The signed-in user for the current remote function call, only if their
+ * permissions (narrowed by the API key they used, if any) grant `level` on
+ * `area`.
  *
- * @throws A 401 error when nobody is signed in, or 403 when the user isn't an
- * admin.
+ * @throws A 401 error when nobody is signed in, or 403 when the permission
+ * is missing.
  */
-export function requireAdmin(): AuthType["user"] {
+export function requirePermission(
+	area: PermissionArea,
+	level: PermissionLevel,
+): AuthType["user"] {
 	const { locals } = getRequestEvent();
 	const user = requireUser();
-	if (!locals.isAdmin) {
-		error(403, "Forbidden");
-	}
-	return user;
-}
-
-/**
- * The signed-in user for a remote command that changes shared state, only if
- * they may write. The request hook already refuses read-only callers before a
- * command runs; this is the same check at the call site, so a command that
- * lands on the hook's self-service allowlist by name still can't write.
- *
- * @throws A 401 error when nobody is signed in, or 403 when the user holds the
- * read-only role or authenticated with a read-scoped API key.
- */
-export function requireWriter(): AuthType["user"] {
-	const { locals } = getRequestEvent();
-	const user = requireUser();
-	if (locals.readOnly) {
-		error(403, READ_ONLY_MESSAGE);
+	if (!can(locals.permissions, area, level)) {
+		error(403, permissionDeniedMessage(area, level));
 	}
 	return user;
 }

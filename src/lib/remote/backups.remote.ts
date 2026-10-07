@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
-import { requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import {
 	type BackupObject,
 	S3BackupService,
@@ -11,7 +11,7 @@ import { query } from "$app/server";
 export const getVolumeBackups = query(
 	z.string(),
 	async (volumeId): Promise<BackupObject[]> => {
-		requireUser();
+		requirePermission("storage", "read");
 		const volume = await StorageVolumeDTO.get(volumeId);
 		if (!volume?.s3DestinationId) {
 			return [];

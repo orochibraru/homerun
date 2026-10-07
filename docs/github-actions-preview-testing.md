@@ -44,9 +44,10 @@ image.
   the service: previews copy its build settings, env vars, resources,
   healthcheck and login wall. A login wall in front of the preview also stops
   your tests, so either leave it off or have the suite sign in.
-- An API key with **Full access** from your profile's
-  [API keys](your-profile.md#api-keys). Promote and delete write; a read-only
-  key gets a `403`.
+- An API key with write access to **Services** from your profile's
+  [API keys](your-profile.md#api-keys). Promote and delete write; a key that
+  only reads gets a `403`. Mind its expiry, or the workflow starts failing the
+  day it lapses.
 
 ## GitHub settings
 

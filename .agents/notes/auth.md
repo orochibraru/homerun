@@ -20,41 +20,69 @@ better-auth's own docs advise against enabling it in production). This is what
 makes `x-api-key`/`Bearer` auth work for `src/routes/api/v1/*` (see REST API
 above).
 
-## Read-only role and scoped API keys (`src/lib/permissions.ts`, `src/lib/server/read-only.ts`)
+## Permissions, roles and API keys (`src/lib/permissions.ts`, `src/lib/server/access-gate.ts`)
 
-Roles are `admin`, `developer`, `viewer` (labelled "Read-only") and `app-user`
-(see App-access-only role below), all listed in `src/lib/permissions.ts`
-(`USER_ROLES`, `ROLE_OPTIONS`, `isUserRole`), which `/users` validates against.
-An API key carries a scope in better-auth's key `metadata` (`{scope: "read"}`,
-`apiKey({ enableMetadata: true })` in `auth.ts`, metadata is rejected
-otherwise); no scope recorded means full access, so every key created before
-this is a full key. `apiKeyScopeOf` reads it, tolerating the double-stringified
-legacy shape better-auth itself migrates.
+Access is a `Permissions` map: 18 areas (`PERMISSION_AREAS`, each with its
+label, description and the dashboard/API route prefixes it owns), each `read` or
+`write` (write includes read, `can()`). Roles (`USER_ROLES`: `admin`,
+`developer`, `viewer` labelled "Read-only", `app-user`, `custom`, see
+`ROLE_OPTIONS`) are presets: `permissionsForRole(role, stored)` returns
+all-write, the developer preset (`DEVELOPER_PERMISSIONS`), the same areas at
+read, nothing, or for `custom` the user's own `user.permissions` jsonb (added in
+migration 0109, parsed through `parsePermissions`, which drops unknown areas and
+levels). `/users` validates roles against that list; invites and direct-create
+only offer the presets, the Permissions button on a custom user's row posts
+`?/setPermissions` with one `permission.<area>` field per area
+(`permissionsFromForm`, the `PermissionPicker` component), and switching to
+custom seeds from the previous role's permissions. Write on `users` can grant
+anything, itself included, which is deliberate and documented as
+admin-equivalent. `system` is the host-level area: the host terminal, system
+logs, Docker cleanup, host-command cron jobs and the
+privileged/devices/capabilities/env-file service options (and templates and
+compose imports needing them).
 
-**Enforcement is one check in `hooks.server.ts`, not one per action.**
-`authHandler` sets `locals.apiKeyScope` (API-key path only) and
-`locals.readOnly` (`isReadOnly(role, scope)`), and when read-only runs
-`readOnlyRejection` before resolving: every non-GET/HEAD/OPTIONS request is
-refused unless `readOnlyMayRequest` allowlists it. That single gate covers form
-actions, remote commands (`/_app/remote/<hash>/<exportName>` POSTs) and the REST
-API at once, so a new action or endpoint is protected without remembering to add
-a guard. The allowlist is the caller's own account only: better-auth's
-`/api/v1/auth/*` (sign-out, passkeys, 2FA, password; its admin endpoints stay
-gated by better-auth's own admin check), `/api/v1/auth-token`
-(`homerun logout`), `/profile/*`, `/cli-auth`, `/security-setup`, `/auth/*`,
-`/app-auth`, and the four notification-bell commands **by export name**, since a
-remote function's URL is `<file hash>/<export name>`. Renaming one of those
-commands silently drops it from the allowlist (it then 403s for viewers, fails
-closed). The response is shaped per caller so the UI reports it properly: a
-devalue-encoded `ActionResult` failure for a `use:enhance` post (the promise
-toast shows the message), a remote-function `{type:"error"}` body for commands,
-`{error}` JSON for `/api/`, plain text otherwise. `requireWriter()` in
-`remote-auth.ts` is the call-site belt-and-braces for commands
-(`startSelfUpdate` uses it). A read-only account's API keys are always created
-read-only (Profile → Authorized Clients forces the scope); the (protected)
-layout exposes `readOnly` for the header badge and hides "Deploy a service".
-Hiding every other write button for viewers is not done: they see them and get
-the toast.
+**Where it's enforced, outermost first.**
+
+- **`hooks.server.ts`'s `authHandler` sets `locals.permissions`** (the role's
+  permissions, or for an API key those intersected with the key's own, see
+  below) and runs `permissionRejection` (`access-gate.ts`) before resolving.
+  `requiredPermission(method, routeId)` maps SvelteKit's matched route id to an
+  area from `PERMISSION_AREAS[].routes` and a level (read for GET/HEAD/OPTIONS,
+  write otherwise); `OPEN_ROUTES` (overview, `/profile`, `/cli-auth`,
+  `/api-docs`, better-auth, `/api/v1/mcp`, webhooks, readiness and a few more)
+  need nothing, and a route no area claims comes back `"unmapped"`, which only a
+  holder of every permission gets through. **A new route under `(protected)` or
+  `/api/v1` must be added to an area's `routes` (or `OPEN_ROUTES`), or it's
+  admin-only.** That one gate covers form actions, remote commands
+  (`/_app/remote/...` POSTs) and the REST API. The response is shaped per caller
+  (`forbidden()`): a devalue `ActionResult` failure for a `use:enhance` post, a
+  remote-function error body, `{error}` JSON for `/api/`, plain text otherwise,
+  with `permissionDeniedMessage(area, level)`.
+- **Dashboard page reads are not refused by the hook**: `permissionRejection`
+  lets a plain page GET through, and the `(protected)` layout load does the
+  check for the matched route and renders the 403 as an error page. The sidebar
+  and global search filter with `mayVisit(permissions, href)`.
+- **`requirePermission(area, level)` (`remote-auth.ts`)** in remote functions
+  under `src/lib/remote/`, replacing the old `requireWriter()`: it throws a 403
+  error and returns the user, so queries and commands whose route the hook can't
+  attribute to the right area name theirs explicitly.
+- **`can(locals.permissions, area, level)`** inside a route, for a sub-concern
+  of a page that spans areas: host access (`src/lib/host-access.ts`, the
+  privileged/devices/capabilities/env-file options, needs write on `system`),
+  host-command cron jobs, and similar.
+
+**API keys** store their permissions in better-auth's `apikey.permissions`
+(`toApiKeyPermissions` shape: area to `[level]`). A key created with "Allow all
+permissions" stores none, and `applyApiKeyAuth` then gives it whatever the owner
+holds, later grants included; otherwise `intersectPermissions(owner, key)`, so a
+key never outlives a demotion. Profile → Authorized Clients (`profile/clients/`)
+refuses a key requesting more than its creator holds and takes an expiry from
+`API_KEY_EXPIRY_OPTIONS` (7, 30, 90 (default), 365 days or never, with a warning
+in the form); better-auth refuses an expired key. `homerun login` (CLI device
+flow) keys are all-permissions with no expiry. Migration 0109 turned the old
+`metadata.scope = "read"` keys into read on every area, and keys without a scope
+had no permissions stored, so they became "all permissions". The OpenAPI
+document (`src/lib/openapi/build.ts`) declares a 403 on every route.
 
 `user.deleteUser` is enabled with a `beforeDelete` hook (thin wrapper around
 `src/lib/services/user.service.ts`'s `UserService.cleanupUserResources()`, see
@@ -189,19 +217,19 @@ should only get through chosen apps' login walls, typically a client reviewing a
 pull request preview. Roles are a plain `text` column, so the value needed no
 migration; `schema.ts`'s `UserRole` type alias (used only by the invitation row)
 still lists three roles, so `InvitationDTO.create` casts. **Enforcement is one
-gate in `hooks.server.ts`, like read-only, but it covers reads too.**
-`authHandler` sets `locals.appOnly` and runs `appOnlyRejection` (`read-only.ts`)
-before resolving; `appOnlyMayRequest` (`permissions.ts`) decides from the path
-and SvelteKit's matched `event.route.id` (already set when `handle` runs): any
-route under `/(protected)` or `/onboarding` is refused, every other page
-(`/auth/*`, `/app-auth`, `/security-setup`, `/my-apps`, public status pages) is
-allowed; under `/api/` only `/api/v1/auth/*` (minus `api-key/`, `admin/` and
-`cli/`), `/api/health` and `/api/v1/ready`; remote functions only the sign-in
-page's three commands, by export name. A refused page GET is a 303 to
-`/my-apps`, and a refused `__data.json` gets SvelteKit's own
+gate in `hooks.server.ts`, like permissions, but it covers reads too.**
+`authHandler` sets `locals.appOnly` and runs `appOnlyRejection`
+(`access-gate.ts`) before resolving; `appOnlyMayRequest` (`permissions.ts`)
+decides from the path and SvelteKit's matched `event.route.id` (already set when
+`handle` runs): any route under `/(protected)` or `/onboarding` is refused,
+every other page (`/auth/*`, `/app-auth`, `/security-setup`, `/my-apps`, public
+status pages) is allowed; under `/api/` only `/api/v1/auth/*` (minus `api-key/`,
+`admin/` and `cli/`), `/api/health` and `/api/v1/ready`; remote functions only
+the sign-in page's three commands, by export name. A refused page GET is a 303
+to `/my-apps`, and a refused `__data.json` gets SvelteKit's own
 `{"type":"redirect"}` JSON so client-side navigation (sign-in's `goto("/")`)
-follows it instead of choking on a 303; everything else gets the read-only 403
-shapes with `APP_ONLY_MESSAGE`. Belt and braces: the `(protected)` layout load
+follows it instead of choking on a 303; everything else gets the same 403 shapes
+with `APP_ONLY_MESSAGE`. Belt and braces: the `(protected)` layout load
 redirects to `/my-apps`, `requireUser()` throws 403, and
 `applyApiKeyAuth`/`applyMcpTokenAuth` refuse a key or MCP token owned by an
 app-only user outright (so a key minted under an earlier role dies with the role
@@ -664,15 +692,12 @@ claim extraction.
 ## User roles & admin-managed accounts (`user.role`, `/users`, `invitation` table)
 
 This moved from "anyone can `/auth/sign-up`" to a real single-instance model.
-Roles are `"admin"`, `"developer"`, `"viewer"` and `"app-user"` (read-only and
-app-access-only, see their sections above). Between admin and developer the
-difference is a label plus route-gating only, not a permissions system: both
-roles get the full dashboard over every shared resource (no shared-resource DTO
-filters by `userId`, which only records the creator; see Shared resources in
-`data-and-config.md`), the only difference is two admin-only pages, `/users` and
-`/settings` (`locals.isAdmin`, see below, checked at the top of each `load`,
-plus the nav items are filtered out of `(protected)/+layout.svelte`'s sidebar
-for non-admins).
+Roles are `"admin"`, `"developer"`, `"viewer"`, `"app-user"` and `"custom"`,
+each a preset of per-area permissions (see Permissions above). Every role reads
+the same shared resources (no shared-resource DTO filters by `userId`, which
+only records the creator; see Shared resources in `data-and-config.md`); what
+differs is which areas' routes `locals.permissions` lets through, and the
+sidebar nav is filtered with `mayVisit`.
 
 - **The very first account becomes admin automatically**, whoever creates it.
   `hooks.server.ts`'s `authHandler` hard-blocks
@@ -746,13 +771,10 @@ for non-admins).
   `InvitationDTO.getByToken`) is the authorization, not an admin session.
   `/users`' own actions, by contrast, always pass `headers: request.headers` so
   better-auth's own permission check double-enforces admin-only on top of the
-  route's own `locals.isAdmin` guard.
-- `App.Locals.isAdmin` (declared in `app.d.ts`, was dead/aspirational like
-  `logger`, see Logging below, until this feature) is now populated in
-  `hooks.server.ts`'s `authHandler` right after `locals.user` is set
-  (`locals.user?.role === "admin"`), for both the cookie-session and API-key
-  paths. Every admin-only route checks `locals.isAdmin`, not
-  `locals.user?.role === "admin"` inline.
+  route's own permission check.
+- `App.Locals.permissions` replaced the old `locals.isAdmin`: a route that needs
+  an area checks `can(locals.permissions, area, level)`, and "admin" is just
+  `hasAllPermissions`.
 
 ## Onboarding (`instance_settings.onboardingCompletedAt`, `/onboarding`, `Stepper` component)
 
@@ -772,9 +794,9 @@ both reading the same `InstanceSettingsDTO.onboardingComplete` getter
 bootstrap admin finishes it, later developer accounts never see the wizard, that
 falls out naturally from the flag living on the instance, not the account. Edge
 case: an admin _could_ create another account before finishing onboarding
-themselves, `/onboarding/+page.server.ts`'s own `load` checks `locals.isAdmin`
-and shows a non-admin a "an admin needs to finish setting up this instance"
-holding message instead of the real wizard rather than handing them
+themselves, `/onboarding/+page.server.ts`'s own `load` checks the account's
+permissions and shows a non-admin a "an admin needs to finish setting up this
+instance" holding message instead of the real wizard rather than handing them
 instance-wide config controls.
 
 The Docker step shows a live **swarm readiness** block
@@ -1023,18 +1045,18 @@ allowlist didn't change; the page talks to `/api/v1/auth/*` directly.
 invitee, SSO-only user) gets **Set a password** on `/profile/security` and on
 `/my-apps` (`set-password-panel.svelte`, both routes export
 `src/lib/server/set-password-actions.ts`'s `setPasswordActions`: form actions,
-so neither the app-only remote allowlist nor the read-only allowlist needed a
-new entry). `AccountSetupService.sendPasswordCode` emails an account-setup-style
-code (same `account-setup-code:<id>` row, five tries), `addPassword` checks it,
-then calls better-auth's server-only `auth.api.setPassword` with the request
-headers (it links the `credential` account, enforces `minPasswordLength` and
-refuses an account that already has one) and marks the email verified, so no
-later emailed sign-in can take the account for unproven and wipe the new
-password. Needs SMTP: without it the panel says so and there's no fallback
-(session freshness was the alternative; an account with no password and no SMTP
-can't sign in by email anyway). `lookup` then returns `"password"` for that
-account, nothing else to change. `tests/integration/auth.test.ts` covers code →
-set → password sign-in.
+so the app-only remote allowlist needed no new entry and the permission gate (an
+open `/profile` route) lets them through).
+`AccountSetupService.sendPasswordCode` emails an account-setup-style code (same
+`account-setup-code:<id>` row, five tries), `addPassword` checks it, then calls
+better-auth's server-only `auth.api.setPassword` with the request headers (it
+links the `credential` account, enforces `minPasswordLength` and refuses an
+account that already has one) and marks the email verified, so no later emailed
+sign-in can take the account for unproven and wipe the new password. Needs SMTP:
+without it the panel says so and there's no fallback (session freshness was the
+alternative; an account with no password and no SMTP can't sign in by email
+anyway). `lookup` then returns `"password"` for that account, nothing else to
+change. `tests/integration/auth.test.ts` covers code → set → password sign-in.
 
 **Invites.** `/auth/accept-invite/[token]` has an **Emailed codes** option while
 either method is available: `acceptWithCodes` calls `auth.api.createUser`
@@ -1063,10 +1085,10 @@ back off.
 AI agents manage Homerun through a streamable-HTTP MCP endpoint at
 `/api/v1/mcp`. Its tools don't touch DTOs: each one calls the REST API through
 SvelteKit's `event.fetch` with the caller's own `authorization`/`cookie`/
-`x-api-key` headers, so permissions, read-only enforcement and validation are
-the REST routes' and nothing is duplicated. `/api/v1/mcp` is on the read-only
-allowlist (`permissions.ts`) because MCP sends every read as a POST; the inner
-REST calls still refuse a read-only caller's writes.
+`x-api-key` headers, so permissions, per-call permission checks and validation
+are the REST routes' and nothing is duplicated. `/api/v1/mcp` is in
+`OPEN_ROUTES` (`permissions.ts`) because MCP sends every read as a POST; the
+inner REST calls are gated by the caller's permissions.
 
 Every value an agent reads goes through `mcp-redact.ts`'s `redactSecrets` first:
 `redactEnvValue` fully masks a secret-looking name (`PASSWORD`, `TOKEN`…) and,

@@ -5,14 +5,15 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { IpBanDTO } from "#lib/dto/ip-ban-dto.js";
 import { normalizeIp } from "#lib/ip-bans.js";
 import { Logger } from "#lib/logger.js";
+import { can, permissionDeniedMessage } from "#lib/permissions.js";
 import { IpBanService } from "#lib/services/ip-ban.service.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("IpBans");
 
-export const load = async ({ parent }) => {
-	const { user } = await parent();
-	if (user.role !== "admin") {
+export const load = async ({ locals, parent }) => {
+	await parent();
+	if (!can(locals.permissions, "settings", "read")) {
 		throw redirect(302, resolve("/(protected)/monitoring"));
 	}
 	const settings = (await InstanceSettingsDTO.get()).ipBans;
@@ -35,8 +36,8 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
+		if (!can(locals.permissions, "settings", "write")) {
+			return fail(403, { error: permissionDeniedMessage("settings", "write") });
 		}
 		const ip = normalizeIp(String((await request.formData()).get("ip")));
 		if (!(ip && (await IpBanService.unban(ip)))) {

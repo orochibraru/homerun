@@ -21,9 +21,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const store = await ObjectStoreDTO.get(params.storeId);
 		if (!store || store.kind === "garage") {
 			return fail(404, { error: "That object store doesn't exist." });
@@ -35,9 +32,6 @@ export const actions = {
 	test: async ({ params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const store = await ObjectStoreDTO.get(params.storeId);
 		if (!store) {
@@ -56,9 +50,6 @@ export const actions = {
 	update: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const store = await ObjectStoreDTO.get(params.storeId);
 		if (!store || store.kind === "garage") {

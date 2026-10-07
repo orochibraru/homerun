@@ -2,7 +2,7 @@
 	"components": {
 		"securitySchemes": {
 			"apiKey": {
-				"description": "An API key from Profile → Authorized Clients (or `homerun login`). A key is created with Full access or Read-only scope: a read-only key may call every GET endpoint and gets a 403 on anything that writes.",
+				"description": "An API key from Profile → Authorized Clients (or `homerun login`). A key holds the permissions picked when it was created (read or write, per area), never more than its owner's, and may expire.",
 				"in": "header",
 				"name": "x-api-key",
 				"type": "apiKey"
@@ -86,7 +86,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -95,7 +95,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -226,6 +226,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -403,7 +420,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -412,7 +429,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -469,7 +486,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -478,7 +495,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -603,6 +620,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -790,7 +824,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -799,7 +833,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -1067,6 +1101,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -1184,6 +1235,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -1325,7 +1393,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -1334,7 +1402,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -1391,7 +1459,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -1400,7 +1468,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -1512,6 +1580,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -1681,7 +1766,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -1690,7 +1775,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -1943,6 +2028,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -2291,7 +2393,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -2300,7 +2402,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -2357,7 +2459,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -2366,7 +2468,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -2595,6 +2697,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -2964,7 +3083,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -2973,7 +3092,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -3081,19 +3200,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -3228,19 +3346,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -3295,19 +3412,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -3419,19 +3535,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -3589,19 +3704,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -3716,19 +3830,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -3891,19 +4004,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -3958,19 +4070,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -4089,19 +4200,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -4280,19 +4390,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -6777,6 +6886,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -6909,6 +7035,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -7087,7 +7230,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -7096,7 +7239,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -7153,7 +7296,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -7162,7 +7305,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -7300,6 +7443,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -7496,7 +7656,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -7505,7 +7665,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -7614,19 +7774,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -7773,19 +7932,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -7841,19 +7999,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -7966,19 +8123,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -8146,19 +8302,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -8268,19 +8423,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -8415,19 +8569,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -8492,19 +8645,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -8617,19 +8769,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -8788,19 +8939,18 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"additionalProperties": false,
 									"properties": {
 										"error": {
+											"example": "You don't have permission to change Services.",
 											"type": "string"
-										},
-										"issues": {}
+										}
 									},
 									"required": ["error"],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Admins only"
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -8856,6 +9006,23 @@
 							}
 						},
 						"description": "Ready"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"503": {
 						"content": {
@@ -8999,6 +9166,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -9145,7 +9329,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -9154,7 +9338,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -9225,7 +9409,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -9234,7 +9418,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -9351,6 +9535,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -9525,7 +9726,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -9534,7 +9735,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -9620,6 +9821,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -9731,7 +9949,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -9740,7 +9958,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -9797,7 +10015,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -9806,7 +10024,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -9896,6 +10114,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -10007,6 +10242,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -10181,7 +10433,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -10190,7 +10442,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -10247,7 +10499,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -10256,7 +10508,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -10372,6 +10624,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -10553,7 +10822,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -10562,7 +10831,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -11571,6 +11840,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -13966,7 +14252,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -13975,7 +14261,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"409": {
 						"content": {
@@ -14069,7 +14355,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -14078,7 +14364,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -15076,6 +15362,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -16813,7 +17116,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -16822,7 +17125,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -17011,6 +17314,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -17261,7 +17581,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -17270,7 +17590,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -18086,6 +18406,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -18214,6 +18551,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -18389,7 +18743,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -18398,7 +18752,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -18538,7 +18892,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -18547,7 +18901,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -18838,6 +19192,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -19119,6 +19490,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -19927,6 +20315,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -20204,7 +20609,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -20213,7 +20618,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -20325,6 +20730,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -20689,6 +21111,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -20804,7 +21243,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -20813,7 +21252,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -21218,6 +21657,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -21390,7 +21846,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -21399,7 +21855,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -21524,7 +21980,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -21533,7 +21989,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -21785,6 +22241,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -21918,7 +22391,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -21927,7 +22400,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -22220,6 +22693,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -22334,7 +22824,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -22343,7 +22833,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -22658,6 +23148,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -22959,6 +23466,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -23079,7 +23603,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -23088,7 +23612,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -23187,6 +23711,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -23322,7 +23863,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -23331,7 +23872,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -23438,7 +23979,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -23447,7 +23988,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -23554,7 +24095,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -23563,7 +24104,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -23716,6 +24257,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -23879,6 +24437,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -24069,7 +24644,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -24078,7 +24653,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"409": {
 						"content": {
@@ -24154,7 +24729,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -24163,7 +24738,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -24303,6 +24878,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -24521,7 +25113,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -24530,7 +25122,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -24685,6 +25277,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -24920,7 +25529,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -24929,7 +25538,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -24986,7 +25595,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -24995,7 +25604,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -25154,6 +25763,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -25415,7 +26041,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -25424,7 +26050,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -25560,6 +26186,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -25868,6 +26511,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -26155,6 +26815,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -26252,6 +26929,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -26387,7 +27081,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -26396,7 +27090,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -26453,7 +27147,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -26462,7 +27156,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -26565,6 +27259,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -26713,7 +27424,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -26722,7 +27433,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -26974,6 +27685,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -27277,7 +28005,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -27286,7 +28014,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					}
 				},
 				"security": [
@@ -27344,7 +28072,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -27353,7 +28081,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -27563,6 +28291,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -27885,7 +28630,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -27894,7 +28639,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {
@@ -28002,7 +28747,7 @@
 								"schema": {
 									"properties": {
 										"error": {
-											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"example": "You don't have permission to change Services.",
 											"type": "string"
 										}
 									},
@@ -28011,7 +28756,7 @@
 								}
 							}
 						},
-						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
 					},
 					"404": {
 						"content": {

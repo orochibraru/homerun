@@ -2,6 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import {
 	parseEnvVars,
 	updateEnvFilesSchema,
@@ -10,7 +11,9 @@ import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
 
-export const load = ({ locals }) => ({ isAdmin: locals.isAdmin });
+export const load = ({ locals }) => ({
+	hostAccess: can(locals.permissions, "system", "write"),
+});
 
 export const actions = {
 	update: async ({ request, params, locals }) => {
@@ -48,7 +51,10 @@ export const actions = {
 				envFilesError: result.error.issues[0]?.message ?? "Invalid path.",
 			});
 		}
-		if (!locals.isAdmin && hostAccessChanged(svc.toJSON(), result.data)) {
+		if (
+			!can(locals.permissions, "system", "write") &&
+			hostAccessChanged(svc.toJSON(), result.data)
+		) {
 			return fail(403, { envFilesError: HOST_ACCESS_MESSAGE });
 		}
 		await svc.update({ envFiles: result.data.envFiles });

@@ -16,10 +16,15 @@ import { Logger } from "#lib/logger.js";
 import { OIDC_BASE_PATH, rebaseOnOrigin } from "#lib/oidc-provider.js";
 import {
 	APP_ONLY_MESSAGE,
-	apiKeyScopeOf,
+	intersectPermissions,
 	isAppOnly,
-	isReadOnly,
+	parsePermissions,
+	permissionsForRole,
 } from "#lib/permissions.js";
+import {
+	appOnlyRejection,
+	permissionRejection,
+} from "#lib/server/access-gate.js";
 import { isForbiddenCrossSiteForm } from "#lib/server/csrf.js";
 import { db as appDb, getDb, resetDb } from "#lib/server/db/index.js";
 import { user as userTable } from "#lib/server/db/schema.js";
@@ -29,7 +34,6 @@ import {
 	OIDC_TOKEN_PATH,
 	withTokenCors,
 } from "#lib/server/oidc-client-guard.js";
-import { appOnlyRejection, readOnlyRejection } from "#lib/server/read-only.js";
 import { AdminService } from "#lib/services/admin.service.js";
 import {
 	auth,
@@ -47,6 +51,12 @@ import { RedirectService } from "#lib/services/redirect.service.js";
 import { DEFAULT_SURFACE } from "#lib/surfaces.js";
 import { isOtlpPath } from "#lib/tracing/otlp.js";
 import { building } from "$app/env";
+
+const ENDPOINT_ROUTE_IDS = new Set(
+	Object.keys(import.meta.glob("./routes/**/+server.ts")).map((path) =>
+		path.slice("./routes".length, -"/+server.ts".length),
+	),
+);
 
 const logger = new Logger("Hooks");
 
@@ -506,14 +516,23 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 	}
 	if (apiKeyUser) {
 		event.locals.user = apiKeyUser;
-		event.locals.apiKeyScope = apiKeyScopeOf(result.key.metadata);
+		const ownerPermissions = permissionsForRole(
+			apiKeyUser.role,
+			apiKeyUser.permissions,
+		);
+		event.locals.permissions = result.key.permissions
+			? intersectPermissions(
+					ownerPermissions,
+					parsePermissions(result.key.permissions),
+				)
+			: ownerPermissions;
 	}
 	return null;
 }
 
 /**
  * Resolves the request's user from the better-auth session cookie, falling back
- * to an API key, and sets `locals.isAdmin`. Rejects closed sign-up and bad API
+ * to an API key, and sets `locals.permissions`. Rejects closed sign-up and bad API
  * keys up front, and passes auth API paths to better-auth except the few
  * SvelteKit routes that live under its base path.
  */
@@ -523,9 +542,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		isIngestPath(event.url.pathname) ||
 		isOtlpPath(event.url.pathname)
 	) {
-		event.locals.isAdmin = false;
-		event.locals.apiKeyScope = null;
-		event.locals.readOnly = false;
+		event.locals.permissions = {};
 		event.locals.appOnly = false;
 		return resolve(event);
 	}
@@ -553,10 +570,9 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// Declared in app.d.ts for exactly this : populated here so every route
-	// can check `locals.isAdmin` instead of re-deriving it from `role`.
-	event.locals.isAdmin = event.locals.user?.role === "admin";
-	event.locals.apiKeyScope ??= null;
+	event.locals.permissions ??= event.locals.user
+		? permissionsForRole(event.locals.user.role, event.locals.user.permissions)
+		: {};
 	event.locals.appOnly = isAppOnly(event.locals.user?.role);
 	if (event.locals.appOnly) {
 		const refused = appOnlyRejection(
@@ -569,11 +585,16 @@ const authHandler: Handle = async ({ event, resolve }) => {
 			return refused;
 		}
 	}
-	event.locals.readOnly =
-		!!event.locals.user &&
-		isReadOnly(event.locals.user.role, event.locals.apiKeyScope);
-	if (event.locals.readOnly) {
-		const refused = readOnlyRejection(event.request, event.url.pathname);
+	if (event.locals.user) {
+		const refused = permissionRejection(
+			event.request,
+			event.url.pathname,
+			{
+				id: event.route.id,
+				isEndpoint: ENDPOINT_ROUTE_IDS.has(event.route.id ?? ""),
+			},
+			event.locals.permissions,
+		);
 		if (refused) {
 			return refused;
 		}

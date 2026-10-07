@@ -2,6 +2,7 @@ import { error, fail, redirect } from "@sveltejs/kit";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
+import { can } from "#lib/permissions.js";
 import { getGitHubRepoInfo } from "#lib/services/github-repo.service.js";
 import {
 	quickDeployFromTemplate,
@@ -32,7 +33,7 @@ export const load = async ({ params, parent, url, locals }) => {
 				runtime: l.linkedTemplateRuntime,
 				templateName: l.linkedTemplateName,
 			})),
-			locals.isAdmin,
+			can(locals.permissions, "system", "write"),
 		),
 		links: links.map((l) => ({
 			alias: l.link.alias,
@@ -57,7 +58,7 @@ export const actions = {
 		const stackId =
 			rawStackId && (await StackDTO.get(rawStackId)) ? rawStackId : null;
 		const result = await quickDeployFromTemplate(params.templateId, {
-			isAdmin: locals.isAdmin,
+			hostAccess: can(locals.permissions, "system", "write"),
 			stackId,
 			userId: locals.user.id,
 		});

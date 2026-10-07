@@ -1,9 +1,10 @@
 # Configuration
 
 **Almost everything is a setting in the dashboard.** The first-run wizard asks
-for what a first deploy needs, and `/settings` (admin-only) lets you change any
-of it later, live, with no restart and no file to edit. If you installed with
-the [one-liner](getting-started.md#option-a-the-one-liner-fresh-linux-server),
+for what a first deploy needs, and `/settings` (needs the Settings permission,
+admins have it) lets you change any of it later, live, with no restart and no
+file to edit. If you installed with the
+[one-liner](getting-started.md#option-a-the-one-liner-fresh-linux-server),
 that's the whole story: it set the handful of values the container itself needs
 before it can start, and everything after that is the UI.
 
@@ -13,7 +14,7 @@ for people who'd rather manage settings as code.
 
 ## What you set in the dashboard
 
-`/settings` is one page per tab, all admin-only:
+`/settings` is one page per tab, all behind the Settings permission:
 
 | Tab            | What's on it                                                                                                                                                                                                                          |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -31,9 +31,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const formData = await request.formData();
 		try {
 			const project = await IacStateService.createProject({

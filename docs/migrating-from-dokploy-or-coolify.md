@@ -1,11 +1,11 @@
 # Migrating from Dokploy or Coolify
 
-**Settings → Migrate** (admin-only) reads another PaaS instance and recreates
-what it finds here. Pick Dokploy or Coolify, give it the instance URL and an API
-token, and **Read instance** lists every application, compose stack and
-database, grouped by the project it lives in. It only ever makes read requests:
-nothing on the other side is stopped, changed or deleted, and the token is sent
-with each request on that page, never stored.
+**Settings → Migrate** (needs the Settings permission) reads another PaaS
+instance and recreates what it finds here. Pick Dokploy or Coolify, give it the
+instance URL and an API token, and **Read instance** lists every application,
+compose stack and database, grouped by the project it lives in. It only ever
+makes read requests: nothing on the other side is stopped, changed or deleted,
+and the token is sent with each request on that page, never stored.
 
 Tick what you want and **Import**. Each source project becomes a Homerun stack,
 and every entry goes through the same importer as

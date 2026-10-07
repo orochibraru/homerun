@@ -42,9 +42,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const formData = await request.formData();
 		const rawBaseDomain = nullableText(formData, "baseDomain");
 		const normalized = rawBaseDomain
@@ -99,9 +96,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const formData = await request.formData();
 		const channel = formData.get("updateChannel");
 		if (!isUpdateChannel(channel)) {
@@ -122,9 +116,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const mode = (await request.formData()).get("defaultUiMode");
 		if (!isUiMode(mode)) {
 			return fail(400, {
@@ -141,9 +132,6 @@ export const actions = {
 	updateResources: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const parsed = parseThresholds(

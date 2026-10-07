@@ -60,9 +60,9 @@ describe("host access gate", () => {
 		expect(templatesNeedingHostAccess([{ name: "Plain" }])).toEqual([]);
 	});
 
-	test("the template refusal names what needs an admin", () => {
+	test("the template refusal names what needs write access to System", () => {
 		expect(templateHostAccessMessage(["Vpn"])).toBe(
-			'"Vpn" needs host access (privileged mode, devices, added capabilities or env files) : only an admin can deploy it.',
+			'"Vpn" needs host access (privileged mode, devices, added capabilities or env files) : deploying it needs write access to System.',
 		);
 		expect(templateHostAccessMessage(["Vpn", "Transcoder"])).toContain(
 			'"Vpn", "Transcoder" need host access',

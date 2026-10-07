@@ -131,7 +131,7 @@
         <span class="text-text-subtle block text-xs font-normal">
           {canUseExec
             ? "A shell command on the Docker host itself"
-            : "Admins only"}
+            : "Needs write access to System"}
         </span>
       </button>
     </div>

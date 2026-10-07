@@ -21,9 +21,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const formData = await request.formData();
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateDocker({
@@ -38,9 +35,6 @@ export const actions = {
 	updateImageScan: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const severity = formData.get("imageScanBlockSeverity");
@@ -68,9 +62,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const formData = await request.formData();
 		const count = Number(formData.get("retainedImagesPerService"));
 		if (
@@ -93,9 +84,6 @@ export const actions = {
 	updateOrchestration: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
 		const mode = formData.get("orchestrationMode") as string | null;

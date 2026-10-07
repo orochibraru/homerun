@@ -3,6 +3,7 @@ import { StackDTO } from "#lib/dto/stack-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
 import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { can } from "#lib/permissions.js";
 import { parseListQuery } from "#lib/server/list-query.js";
 import { quickDeployFromTemplate } from "#lib/services/template-links.js";
 import { resolve } from "$app/paths";
@@ -83,7 +84,7 @@ export const actions = {
 		const stackId =
 			rawStackId && (await StackDTO.get(rawStackId)) ? rawStackId : null;
 		const result = await quickDeployFromTemplate(templateId, {
-			isAdmin: locals.isAdmin,
+			hostAccess: can(locals.permissions, "system", "write"),
 			stackId,
 			userId: locals.user.id,
 		});

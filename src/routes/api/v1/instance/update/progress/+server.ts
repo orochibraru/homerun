@@ -4,8 +4,5 @@ export const GET = async ({ locals }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
-	if (!locals.isAdmin) {
-		return Response.json({ error: "Forbidden" }, { status: 403 });
-	}
 	return Response.json(await SelfUpdateService.progress());
 };

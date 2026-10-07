@@ -3,6 +3,7 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { updateRuntimeSchema } from "#lib/server/validation/service.js";
 import { resolve } from "$app/paths";
 
@@ -11,7 +12,7 @@ const logger = new Logger("Services");
 export const load = async ({ locals }) => {
 	const settings = await InstanceSettingsDTO.get();
 	return {
-		isAdmin: locals.isAdmin,
+		hostAccess: can(locals.permissions, "system", "write"),
 		orchestrationMode: settings.orchestrationMode,
 	};
 };
@@ -35,7 +36,10 @@ export const actions = {
 			});
 		}
 
-		if (!locals.isAdmin && hostAccessChanged(svc.toJSON(), result.data)) {
+		if (
+			!can(locals.permissions, "system", "write") &&
+			hostAccessChanged(svc.toJSON(), result.data)
+		) {
 			return fail(403, {
 				error: HOST_ACCESS_MESSAGE,
 				values: Object.fromEntries(formData),

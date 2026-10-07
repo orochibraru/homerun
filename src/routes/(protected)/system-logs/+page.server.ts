@@ -7,11 +7,7 @@ import { resolve } from "$app/paths";
 
 const logger = new Logger("Traefik");
 
-export const load = async ({ locals }) => {
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve(""));
-	}
-
+export const load = async () => {
 	const [logs, services] = await Promise.all([
 		AppLogDTO.listRecent(200),
 		ServiceDTO.list(),
@@ -36,9 +32,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 
 		await AppLogDTO.clear();
 		logger.info(`Application log cleared by user=${locals.user.id}`);
@@ -48,9 +41,6 @@ export const actions = {
 	restartTraefik: async ({ locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 
 		try {
@@ -70,9 +60,6 @@ export const actions = {
 	updateTraefik: async ({ locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 
 		try {

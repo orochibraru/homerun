@@ -115,8 +115,8 @@ sync by hand.
 
 ## Users and access
 
-- **[Users and roles](users-and-roles.md)**: admin, developer and read-only,
-  creating and inviting accounts, and onboarding.
+- **[Users and roles](users-and-roles.md)**: admin, developer, read-only and
+  custom roles, creating and inviting accounts, and onboarding.
 - **[Authentication providers](authentication-providers.md)**: OAuth/OIDC
   sign-in, emailed codes and links, preferred methods, sign-in requirements, and
   linking a provider to an existing account.

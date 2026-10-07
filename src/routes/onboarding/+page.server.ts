@@ -6,6 +6,7 @@ import {
 } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { Logger } from "#lib/logger.js";
+import { hasAllPermissions } from "#lib/permissions.js";
 import { normalizeBaseDomain } from "#lib/server/validation/base-domain.js";
 import {
 	newtFieldsError,
@@ -35,7 +36,7 @@ export const load = async ({ locals }) => {
 	// admin before they got around to this step). They land here too (the
 	// parent layout's gate doesn't know about roles), but get a holding
 	// message instead of instance-wide config controls.
-	if (!locals.isAdmin) {
+	if (!hasAllPermissions(locals.permissions)) {
 		return { waitingForAdmin: true as const };
 	}
 
@@ -127,7 +128,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
+		if (!hasAllPermissions(locals.permissions)) {
 			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
@@ -147,7 +148,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
+		if (!hasAllPermissions(locals.permissions)) {
 			throw redirect(302, resolve(""));
 		}
 		const formData = await request.formData();
@@ -168,7 +169,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
+		if (!hasAllPermissions(locals.permissions)) {
 			throw redirect(302, resolve(""));
 		}
 

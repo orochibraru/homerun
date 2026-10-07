@@ -1,17 +1,23 @@
 <script lang="ts">
 	import { AppWindow, KeyRound, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import Alert from "#lib/components/alert.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
+	import PermissionPicker from "#lib/components/permission-picker.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import * as Select from "#lib/components/ui/select/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
-		API_KEY_SCOPE_OPTIONS,
-		type ApiKeyScope,
-		READ_ONLY_ROLE,
+		API_KEY_EXPIRY_OPTIONS,
+		type ApiKeyExpiry,
+		areaLabel,
+		DEFAULT_API_KEY_EXPIRY,
+		type PermissionArea,
+		type Permissions,
 	} from "#lib/permissions.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -22,14 +28,24 @@
 	onMount(() => title.set("Authorized Clients"));
 
 	let newKeyName = $state("");
-	const roleIsReadOnly = $derived(data.user?.role === READ_ONLY_ROLE);
-	let newKeyScope = $state<ApiKeyScope>("full");
-	const newKeyScopeOption = $derived(
-		API_KEY_SCOPE_OPTIONS.find(
-			(option) => option.value === (roleIsReadOnly ? "read" : newKeyScope),
-		) ?? API_KEY_SCOPE_OPTIONS[0],
+	let newKeyExpiry = $state<ApiKeyExpiry>(DEFAULT_API_KEY_EXPIRY);
+	const newKeyExpiryLabel = $derived(
+		API_KEY_EXPIRY_OPTIONS.find((option) => option.value === newKeyExpiry)
+			?.label ?? "",
 	);
+	let newKeyAllPermissions = $state(false);
+	let newKeyPermissions = $state<Permissions>({});
 	let creating = $state(false);
+
+	function permissionSummary(permissions: Permissions): string {
+		return Object.entries(permissions)
+			.map(([area, level]) => `${areaLabel(area as PermissionArea)}: ${level}`)
+			.join(", ");
+	}
+
+	function isExpired(expiresAt: Date | string | null): boolean {
+		return expiresAt !== null && new Date(expiresAt).getTime() < Date.now();
+	}
 	let revokeDialogOpen = $state(false);
 	let pendingRevokeName = $state("");
 	let pendingRevokeForm: HTMLFormElement | null = null;
@@ -85,9 +101,8 @@
         <p class="text-xs text-text-muted">
           API keys for the Homerun CLI or your own scripts. Same
           <code>x-api-key</code>
-          auth the REST API accepts. A read-only key can call every
-          <code>GET</code> endpoint and is refused with a 403 on anything that
-          writes.
+          auth the REST API accepts. A key can only do what you can, narrowed
+          to the permissions you pick for it.
         </p>
       </div>
     </div>
@@ -95,64 +110,85 @@
     <div class="border-b border-border p-5">
       <form
         action="?/create"
-        class="flex flex-wrap items-end gap-2"
+        class="space-y-4"
         method="POST"
         use:enhance={enhanceToast({
           error: "Couldn't create the key.",
           loading: "Creating the key",
           onSettled: () => {
             creating = false;
-            newKeyName = "";
           },
           onStart: () => {
             creating = true;
           },
+          onSuccess: () => {
+            newKeyName = "";
+            newKeyExpiry = DEFAULT_API_KEY_EXPIRY;
+            newKeyAllPermissions = false;
+            newKeyPermissions = {};
+          },
           success: "Key created.",
         })}
       >
-        <div class="min-w-48 flex-1">
-          <label class="mb-1.5 block text-sm font-medium text-text" for="name">
-            New key name
-          </label>
-          <Input
-            id="name"
-            name="name"
-            placeholder="e.g. Homerun CLI"
-            type="text"
-            bind:value={newKeyName}
-          />
+        <div class="flex flex-wrap items-end gap-2">
+          <div class="min-w-48 flex-1">
+            <label class="mb-1.5 block text-sm font-medium text-text" for="name">
+              New key name
+            </label>
+            <Input
+              id="name"
+              name="name"
+              placeholder="e.g. CI deploys"
+              type="text"
+              bind:value={newKeyName}
+            />
+          </div>
+          <div>
+            <div class="mb-1.5 block text-sm font-medium text-text">Expires</div>
+            <Select.Root name="expiry" type="single" bind:value={newKeyExpiry}>
+              <Select.Trigger aria-label="Expires" class="w-52">
+                {newKeyExpiryLabel}
+              </Select.Trigger>
+              <Select.Content>
+                {#each API_KEY_EXPIRY_OPTIONS as option (option.value)}
+                  <Select.Item label={option.label} value={option.value}>
+                    {option.label}
+                  </Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
+          </div>
         </div>
-        <div>
-          <div class="mb-1.5 block text-sm font-medium text-text">Access</div>
-          <Select.Root
-            disabled={roleIsReadOnly}
-            name="scope"
-            type="single"
-            bind:value={newKeyScope}
-          >
-            <Select.Trigger aria-label="Access" class="w-40">
-              {newKeyScopeOption.label}
-            </Select.Trigger>
-            <Select.Content>
-              {#each API_KEY_SCOPE_OPTIONS as option (option.value)}
-                <Select.Item label={option.label} value={option.value}>
-                  <div>
-                    <p>{option.label}</p>
-                    <p class="text-xs text-text-muted">{option.description}</p>
-                  </div>
-                </Select.Item>
-              {/each}
-            </Select.Content>
-          </Select.Root>
+
+        {#if newKeyExpiry === "never"}
+          <Alert variant="warning">
+            A key that never expires keeps working until you revoke it. Set an
+            expiry unless something can't rotate it.
+          </Alert>
+        {/if}
+
+        <CheckBox
+          helperText="Dangerous: the key can do everything your account can, including whatever you're granted later. Pick only what it needs unless you really mean it."
+          id="allPermissions"
+          label="Allow all permissions"
+          name="allPermissions"
+          bind:checked={newKeyAllPermissions}
+        />
+
+        {#if !newKeyAllPermissions}
+          <PermissionPicker grantable={data.grantable} bind:value={newKeyPermissions} />
+        {/if}
+
+        <div class="flex justify-end">
+          <Button disabled={creating} type="submit">
+            {#if creating}
+              <Spinner />
+            {:else}
+              <Plus class="size-4" />
+            {/if}
+            Generate
+          </Button>
         </div>
-        <Button disabled={creating} type="submit">
-          {#if creating}
-            <Spinner />
-          {:else}
-            <Plus class="size-4" />
-          {/if}
-          Generate
-        </Button>
       </form>
     </div>
 
@@ -170,9 +206,14 @@
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium text-text">
                   {key.name ?? "Unnamed key"}
-                  {#if key.scope === "read"}
-                    <span class="ml-1.5 rounded-full border border-border px-2 py-0.5 text-[0.65rem] font-semibold text-text-muted">
-                      Read-only
+                  {#if key.permissions === null}
+                    <span class="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-[0.65rem] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                      All permissions
+                    </span>
+                  {/if}
+                  {#if isExpired(key.expiresAt)}
+                    <span class="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-[0.65rem] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                      Expired
                     </span>
                   {/if}
                   {#if !key.enabled}
@@ -184,12 +225,17 @@
                 <p class="mt-0.5 truncate text-xs text-text-muted">
                   {key.prefix ?? ""}{key.start ?? "••••••••"}…
                 </p>
+                {#if key.permissions}
+                  <p class="mt-0.5 truncate text-xs text-text-muted">
+                    {permissionSummary(key.permissions) || "No permissions"}
+                  </p>
+                {/if}
                 <p class="mt-0.5 text-xs text-text-subtle">
                   created {formatDate(key.createdAt)}
                   · last used {formatDate(key.lastRequest)}
-                  {#if key.expiresAt}
-                    · expires {formatDate(key.expiresAt)}
-                  {/if}
+                  · {key.expiresAt
+                    ? `expires ${formatDate(key.expiresAt)}`
+                    : "never expires"}
                 </p>
               </div>
               <form

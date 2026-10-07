@@ -1,13 +1,20 @@
-import { redirect } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { UserPreferencesDTO } from "#lib/dto/user-preferences-dto.js";
+import {
+	can,
+	hasAllPermissions,
+	hasAnyWrite,
+	permissionDeniedMessage,
+	requiredPermission,
+} from "#lib/permissions.js";
 import { AccountSecurityService } from "#lib/services/account-security.service.js";
 import { AdminService } from "#lib/services/admin.service.js";
 import { effectiveSurface } from "#lib/surfaces.js";
 import { DEFAULT_UI_MODE, effectiveUiMode } from "#lib/ui-mode.js";
 import { resolve } from "$app/paths";
 
-export const load = async ({ locals, url }) => {
+export const load = async ({ locals, route, url }) => {
 	if (!locals.user) {
 		throw redirect(
 			302,
@@ -19,6 +26,18 @@ export const load = async ({ locals, url }) => {
 
 	if (locals.appOnly) {
 		throw redirect(302, resolve("my-apps"));
+	}
+
+	const required = requiredPermission("GET", route.id);
+	if (required === "unmapped" && !hasAllPermissions(locals.permissions)) {
+		error(403, "Admins only.");
+	}
+	if (
+		required &&
+		required !== "unmapped" &&
+		!can(locals.permissions, required.area, required.level)
+	) {
+		error(403, permissionDeniedMessage(required.area, required.level));
 	}
 
 	const settings = await InstanceSettingsDTO.get();
@@ -54,7 +73,8 @@ export const load = async ({ locals, url }) => {
 		onboardingDone,
 		preferences: preferences.toJSON(),
 		instanceUiMode: settings.toJSON().defaultUiMode ?? DEFAULT_UI_MODE,
-		readOnly: locals.readOnly,
+		permissions: locals.permissions,
+		readOnly: !hasAnyWrite(locals.permissions),
 		uiMode: effectiveUiMode(
 			preferences.toJSON().uiMode,
 			settings.toJSON().defaultUiMode,

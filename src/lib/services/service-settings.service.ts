@@ -52,7 +52,7 @@ export class ServiceSettingsError extends Error {
 }
 
 export interface SettingsActor {
-	isAdmin: boolean;
+	hostAccess: boolean;
 	userId: string;
 }
 
@@ -204,7 +204,7 @@ class ServiceSettingsServiceClass {
 			...fields
 		} = input;
 		const row = svc.toJSON();
-		if (!actor.isAdmin && hostAccessChanged(row, fields)) {
+		if (!actor.hostAccess && hostAccessChanged(row, fields)) {
 			fail(HOST_ACCESS_MESSAGE, 403);
 		}
 		await this.#checkIdentity(svc, fields);

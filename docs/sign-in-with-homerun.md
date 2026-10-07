@@ -116,9 +116,10 @@ If an app asks for individual endpoints instead, the app's page in Homerun lists
 the issuer (`<dashboard>/issuer`) and the authorization, token, userinfo and
 JWKS URLs, which live under `<dashboard>/api/v1/auth`. Request the scopes
 `openid profile email`, plus `groups` if the app maps groups to roles: the
-`groups` claim holds the user's Homerun role (`admin`, `developer`, `viewer` or
-`app-user`). An **App access only** account can sign in to these apps too, it
-just can't reach the Homerun dashboard. Tokens are signed with RS256.
+`groups` claim holds the user's Homerun role (`admin`, `developer`, `viewer`,
+`custom` or `app-user`). An **App access only** account can sign in to these
+apps too, it just can't reach the Homerun dashboard. Tokens are signed with
+RS256.
 
 **Turning an app off or deleting it.** Turning it off (the switch on the IDP
 page or at the top of the app's page) stops new sign-ins through the app.

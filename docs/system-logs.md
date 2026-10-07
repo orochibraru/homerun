@@ -4,9 +4,9 @@ Advanced mode: [simple mode](ui-modes.md) hides the System Logs sidebar entry.
 Everything here keeps working either way, and a hidden page still opens from a
 link.
 
-`/system-logs` (admin-only) live-streams the logs of the infrastructure Homerun
-depends on, with the same push-based viewer the per-service
-[logs panel](observability.md#logs) uses.
+`/system-logs` (needs the System permission) live-streams the logs of the
+infrastructure Homerun depends on, with the same push-based viewer the
+per-service [logs panel](observability.md#logs) uses.
 
 ![System Logs, with Homerun's own warnings and errors above the containers of its stack](images/system-logs.webp)
 

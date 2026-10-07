@@ -19,6 +19,7 @@
 	import type { Component } from "svelte";
 	import { headerControlClass } from "#lib/components/header-styles.js";
 	import * as Command from "#lib/components/ui/command/index.js";
+	import type { Permissions } from "#lib/permissions.js";
 	import { searchContent } from "#lib/remote/search.remote.js";
 	import {
 		filterPages,
@@ -30,7 +31,7 @@
 	} from "#lib/search.js";
 	import { goto } from "$app/navigation";
 
-	const { isAdmin }: { isAdmin: boolean } = $props();
+	const { permissions }: { permissions: Permissions } = $props();
 
 	const DEBOUNCE_MS = 250;
 
@@ -55,7 +56,7 @@
 	let contentPromise = $state<Promise<SearchGroup[]> | null>(null);
 
 	const term = $derived(search.trim());
-	const pages = $derived(filterPages(SEARCH_PAGES, term, isAdmin));
+	const pages = $derived(filterPages(SEARCH_PAGES, term, permissions));
 
 	$effect(() => {
 		const q = term;

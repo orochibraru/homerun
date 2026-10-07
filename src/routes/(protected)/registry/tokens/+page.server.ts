@@ -20,9 +20,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const username = String((await request.formData()).get("username") ?? "")
 			.trim()
 			.toLowerCase();
@@ -40,9 +37,6 @@ export const actions = {
 	revoke: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const id = String((await request.formData()).get("id") ?? "");
 		try {

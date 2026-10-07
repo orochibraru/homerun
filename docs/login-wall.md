@@ -90,9 +90,9 @@ The app itself receives the signed-in identity as `X-Homerun-User`,
 supports proxy-header authentication can consume directly.
 
 **Groups include the Homerun role.** Besides the provider's claims, a user's
-Homerun role (`admin`, `developer`, `viewer` for read-only, or `app-user` for
-app access only) counts as a group, so an app can be limited to `admin` without
-an identity provider at all.
+Homerun role (`admin`, `developer`, `viewer` for read-only, `custom`, or
+`app-user` for app access only) counts as a group, so an app can be limited to
+`admin` without an identity provider at all.
 
 **Sharing an app with someone who shouldn't see the dashboard.** Create them on
 `/users` with the **App access only** role, then pick them under **Users** on

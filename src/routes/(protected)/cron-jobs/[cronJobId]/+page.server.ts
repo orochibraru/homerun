@@ -3,14 +3,15 @@ import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
 import { CronJobRunDTO } from "#lib/dto/cron-job-run-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { parseCronJobForm } from "#lib/server/cron-job-form.js";
 import { enqueueCronJobRun } from "#lib/services/cron-job-queue.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("CronJob");
 
-export const load = async ({ params, parent }) => {
-	const { user } = await parent();
+export const load = async ({ locals, params, parent }) => {
+	await parent();
 	const job = await CronJobDTO.get(params.cronJobId);
 	if (!job) {
 		error(404, "Cron job not found");
@@ -20,7 +21,7 @@ export const load = async ({ params, parent }) => {
 		RemoteHostDTO.list(),
 	]);
 	return {
-		canUseExec: user.role === "admin",
+		canUseExec: can(locals.permissions, "system", "write"),
 		job: job.toJSON(),
 		remoteHosts: hosts
 			.filter((host) => host.kind === "docker")
@@ -38,9 +39,9 @@ export const actions = {
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
 		}
-		if (job.kind === "exec" && !locals.isAdmin) {
+		if (job.kind === "exec" && !can(locals.permissions, "system", "write")) {
 			return fail(403, {
-				error: "Only an admin can manage a host command job.",
+				error: "A host command job needs write access to System.",
 			});
 		}
 
@@ -57,9 +58,9 @@ export const actions = {
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
 		}
-		if (job.kind === "exec" && !locals.isAdmin) {
+		if (job.kind === "exec" && !can(locals.permissions, "system", "write")) {
 			return fail(403, {
-				error: "Only an admin can manage a host command job.",
+				error: "A host command job needs write access to System.",
 			});
 		}
 
@@ -76,15 +77,15 @@ export const actions = {
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
 		}
-		if (job.kind === "exec" && !locals.isAdmin) {
+		if (job.kind === "exec" && !can(locals.permissions, "system", "write")) {
 			return fail(403, {
-				error: "Only an admin can manage a host command job.",
+				error: "A host command job needs write access to System.",
 			});
 		}
 
 		const formData = await request.formData();
 		const result = parseCronJobForm(formData, {
-			isAdmin: Boolean(locals.isAdmin),
+			hostAccess: can(locals.permissions, "system", "write"),
 		});
 		if ("error" in result) {
 			return fail(400, { error: result.error });

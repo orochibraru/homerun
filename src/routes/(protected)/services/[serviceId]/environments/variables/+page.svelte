@@ -171,13 +171,13 @@
       file that can't be read fails the deploy.
     {/snippet}
     {#snippet trailing()}
-      {#if data.isAdmin}
+      {#if data.hostAccess}
         <SaveButton form="env-files" pending={savingEnvFiles} />
       {/if}
     {/snippet}
   </PanelHeader>
 
-  {#if !data.isAdmin}
+  {#if !data.hostAccess}
     <div class="space-y-2 p-5 text-xs">
       {#if (svc.envFiles ?? []).length > 0}
         <ul class="text-text font-mono">
@@ -189,7 +189,7 @@
         <p class="text-text-muted">No env files.</p>
       {/if}
       <p class="text-text-subtle">
-        Only an admin can change env files : they're read from the host.
+        Changing env files needs write access to System : they're read from the host.
       </p>
     </div>
   {:else}

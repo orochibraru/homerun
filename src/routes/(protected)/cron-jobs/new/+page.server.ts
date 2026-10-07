@@ -2,16 +2,17 @@ import { fail, redirect } from "@sveltejs/kit";
 import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { parseCronJobForm } from "#lib/server/cron-job-form.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("CronJob");
 
-export const load = async ({ parent }) => {
-	const { user } = await parent();
+export const load = async ({ locals, parent }) => {
+	await parent();
 	const hosts = await RemoteHostDTO.list();
 	return {
-		canUseExec: user.role === "admin",
+		canUseExec: can(locals.permissions, "system", "write"),
 		remoteHosts: hosts
 			.filter((host) => host.kind === "docker")
 			.map((host) => ({ id: host.id, name: host.name })),
@@ -26,7 +27,7 @@ export const actions = {
 
 		const formData = await request.formData();
 		const result = parseCronJobForm(formData, {
-			isAdmin: Boolean(locals.isAdmin),
+			hostAccess: can(locals.permissions, "system", "write"),
 		});
 		if ("error" in result) {
 			return fail(400, { error: result.error });

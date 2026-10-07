@@ -1,4 +1,4 @@
-import { redirect } from "@sveltejs/kit";
+import { fail, redirect } from "@sveltejs/kit";
 import { AppLogDTO } from "#lib/dto/app-log-dto.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
@@ -6,6 +6,7 @@ import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 import { Logger } from "#lib/logger.js";
 import { rangeStart } from "#lib/monitoring-ranges.js";
+import { can } from "#lib/permissions.js";
 import { describeReading } from "#lib/resource-thresholds.js";
 import { monitoringRequest } from "#lib/server/monitoring-request.js";
 import { CapacityService } from "#lib/services/capacity.service.js";
@@ -72,15 +73,18 @@ export const load = async ({ cookies, locals, parent, url }) => {
 	// before this load runs : parent() gives the already-guaranteed user.
 	const { uiMode } = await parent();
 
+	const readsServices = can(locals.permissions, "services");
 	const [services, recentDeployments, uptime, hardBreaches, templates] =
 		await Promise.all([
-			ServiceDTO.list(),
-			DeploymentDTO.listRecent(),
-			UptimeCheckDTO.latest(),
+			readsServices ? ServiceDTO.list() : [],
+			readsServices ? DeploymentDTO.listRecent() : [],
+			readsServices ? UptimeCheckDTO.latest() : [],
 			CapacityService.hardBreaches(),
-			uiMode === "simple" && !locals.readOnly ? frontPageTemplates() : [],
+			uiMode === "simple" && can(locals.permissions, "services", "write")
+				? frontPageTemplates()
+				: [],
 		]);
-	const recentErrors = locals.isAdmin
+	const recentErrors = can(locals.permissions, "system")
 		? await AppLogDTO.listRecent(5)
 		: await AppLogDTO.listRecentForServices(
 				services.map((svc) => svc.id),
@@ -94,7 +98,8 @@ export const load = async ({ cookies, locals, parent, url }) => {
 
 	return {
 		frontPageTemplates: templates,
-		isAdmin: locals.isAdmin,
+		readsSettings: can(locals.permissions, "settings"),
+		readsSystem: can(locals.permissions, "system"),
 		monitoring: todaysMonitoring(
 			services,
 			monitoringRequest(url, cookies).zone,
@@ -143,7 +148,10 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (locals.isAdmin) {
+		if (!can(locals.permissions, "services", "write")) {
+			return fail(403, { error: "Needs write access to Services." });
+		}
+		if (can(locals.permissions, "system", "write")) {
 			await AppLogDTO.clear();
 		} else {
 			const services = await ServiceDTO.list();

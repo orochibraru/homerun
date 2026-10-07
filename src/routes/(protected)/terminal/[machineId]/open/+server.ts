@@ -10,11 +10,8 @@ const sizeSchema = z.object({
 });
 
 export const POST = async ({ params, request, locals }) => {
-	if (!(locals.user && locals.isAdmin)) {
-		return Response.json(
-			{ error: "Only an admin can open a machine's terminal." },
-			{ status: 403 },
-		);
+	if (!locals.user) {
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const size = sizeSchema.safeParse(await request.json().catch(() => null));
 	try {

@@ -17,11 +17,7 @@ const FIELD_TAB: Record<string, string> = {
 	traefikDynamicConfigDir: "networking",
 };
 
-export const load = async ({ locals, url }) => {
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve(""));
-	}
-
+export const load = async ({ url }) => {
 	const highlightParam = url.searchParams.get("highlight") ?? "";
 	const highlightFields = highlightParam.split(",").filter(Boolean);
 	const targetTab =

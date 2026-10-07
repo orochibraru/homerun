@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { Logger } from "#lib/logger.js";
+import { can, permissionDeniedMessage } from "#lib/permissions.js";
 import { TracingService } from "#lib/services/tracing.service.js";
 import {
 	MAX_TRACE_RETENTION_DAYS,
@@ -10,9 +11,9 @@ import { resolve } from "$app/paths";
 
 const logger = new Logger("Tracing");
 
-export const load = async ({ parent }) => {
-	const { user } = await parent();
-	if (user.role !== "admin") {
+export const load = async ({ locals, parent }) => {
+	await parent();
+	if (!can(locals.permissions, "settings", "read")) {
 		throw redirect(302, resolve("monitoring"));
 	}
 	return {
@@ -26,8 +27,8 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve("monitoring"));
+		if (!can(locals.permissions, "settings", "write")) {
+			return fail(403, { error: permissionDeniedMessage("settings", "write") });
 		}
 		const formData = await request.formData();
 		const retentionDays = parseRetentionDays(formData.get("retentionDays"));

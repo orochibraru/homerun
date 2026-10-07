@@ -3,6 +3,7 @@ import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
 import { CronJobRunDTO } from "#lib/dto/cron-job-run-dto.js";
 import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { parseListQuery } from "#lib/server/list-query.js";
 import { enqueueCronJobRun } from "#lib/services/cron-job-queue.js";
 import { resolve } from "$app/paths";
@@ -44,9 +45,9 @@ export const actions = {
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
 		}
-		if (job.kind === "exec" && !locals.isAdmin) {
+		if (job.kind === "exec" && !can(locals.permissions, "system", "write")) {
 			return fail(403, {
-				error: "Only an admin can manage a host command job.",
+				error: "A host command job needs write access to System.",
 			});
 		}
 
@@ -65,9 +66,9 @@ export const actions = {
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
 		}
-		if (job.kind === "exec" && !locals.isAdmin) {
+		if (job.kind === "exec" && !can(locals.permissions, "system", "write")) {
 			return fail(403, {
-				error: "Only an admin can manage a host command job.",
+				error: "A host command job needs write access to System.",
 			});
 		}
 

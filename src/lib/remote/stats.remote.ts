@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { type StatPoint, StatSampleDTO } from "#lib/dto/stat-sample-dto.js";
-import { requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import {
 	DockerService,
 	type SwarmReplica,
@@ -36,7 +36,7 @@ export interface ServiceUsage {
 export const getStatHistory = query(
 	historyInput,
 	async ({ range, serviceId }): Promise<StatPoint[]> => {
-		requireUser();
+		requirePermission("services", "read");
 		if (serviceId) {
 			const svc = await ServiceDTO.get(serviceId);
 			if (!svc) {
@@ -49,7 +49,7 @@ export const getStatHistory = query(
 
 /** Every service the caller owns with its newest sample, for the dashboard's sortable usage table. */
 export const getServiceUsage = query(async (): Promise<ServiceUsage[]> => {
-	requireUser();
+	requirePermission("services", "read");
 	const [services, latest] = await Promise.all([
 		ServiceDTO.list(),
 		StatSampleDTO.latestPerService(),
@@ -72,7 +72,7 @@ export const getServiceUsage = query(async (): Promise<ServiceUsage[]> => {
 export const getReplicaStats = query(
 	z.string(),
 	async (serviceId): Promise<SwarmReplica[]> => {
-		requireUser();
+		requirePermission("services", "read");
 		const svc = await ServiceDTO.get(serviceId);
 		if (!svc?.swarmServiceId) {
 			return [];

@@ -519,10 +519,10 @@ produces either.
 `devices`, `capAdd` and `envFiles` are host-root-equivalent.
 `hostAccessRequested` gates a create (REST `POST /services`, compose import,
 `ComposeImportService.importPlan` via its `allowHostAccess` input, which Migrate
-passes `locals.isAdmin` to) and `hostAccessChanged` gates an update (Container →
-Runtime, Env files action, REST `PATCH`): a non-admin may save a form that keeps
-the current values, which is why the Runtime section renders them as hidden
-inputs for non-admins.
+passes `can(locals.permissions, "system", "write")` to) and `hostAccessChanged`
+gates an update (Container → Runtime, Env files action, REST `PATCH`): a caller
+without write access to System may save a form that keeps the current values,
+which is why the Runtime section renders them as hidden inputs for non-admins.
 
 Two mapping decisions worth not re-litigating: **`dnsResolvable` is true only
 when the compose service published a host port** (`ports:`), false when it only
@@ -683,7 +683,7 @@ read `ORIGIN` at runtime and to keep a remote call's own origin when its
 `src/lib/server/csrf.ts` applies to forms (svelte-smol's old exemption).
 
 **What is and isn't allowed to move here.** Anything a page's own correctness
-depends on stays in `load` : the signed-in user, their role/`isAdmin`, their
+depends on stays in `load` : the signed-in user, their role/permissions, their
 appearance preferences, instance settings, and every entity list a route
 renders. What moved is only data whose absence for a few hundred milliseconds is
 a skeleton rather than a broken page. Concretely:
@@ -741,11 +741,11 @@ a skeleton rather than a broken page. Concretely:
 `+server.ts` route. Every query/command starts with `requireUser()`
 (`src/lib/server/remote-auth.ts`), which reads `getRequestEvent().locals.user`
 and `error(401)`s otherwise. `hooks.server.ts` populates `locals` for these
-requests the same as any other, so cookie sessions and API keys both work.
-Admin-only ones use `requireAdmin()` from the same module, which is
-`requireUser()` plus a `locals.isAdmin` check and a `error(403)` —
-`getCleanupPreview` and `getInfraStatus` back admin-only pages, so the guard has
-to be on the function, not only on the route that happens to call it.
+requests the same as any other, so cookie sessions and API keys both work. Ones
+reading an area's data use `requirePermission(area, level)` from the same
+module, which is `requireUser()` plus a `can(locals.permissions, ...)` check and
+an `error(403)`. Remote function requests skip the hook's route gate, so the
+guard has to be on the function, not only on the route that happens to call it.
 
 **Arguments are validated, not cast.** A query/command taking an argument passes
 a zod schema as its first parameter (`query(z.string(), ...)`), the same "one
@@ -847,12 +847,13 @@ companion (`ResolvedTemplateLink.runtime`); the wizard (`services/new`) passes
 the template's options on create, since the wizard itself has no runtime fields
 and only shows them as a `runtimeOptionsSummary` line in its template banner.
 
-**Host access stays admin-only.** A non-admin can't set privileged, devices,
-capAdd or envFiles on `templates/new` (403, `hostAccessRequested`), and
-`templateHostAccessRefusal(template, links, isAdmin)`
+**Host access needs write access to System.** Without it a caller can't set
+privileged, devices, capAdd or envFiles on `templates/new` (403,
+`hostAccessRequested`), and
+`templateHostAccessRefusal(template, links, hostAccess)`
 (`src/lib/services/template-links.ts`, built on `templatesNeedingHostAccess` +
-`templateHostAccessMessage` in `src/lib/host-access.ts`) refuses a non-admin
-deploy when the primary **or any linked companion** needs it. It runs after
+`templateHostAccessMessage` in `src/lib/host-access.ts`) refuses such a deploy
+when the primary **or any linked companion** needs it. It runs after
 `buildTemplateLinkContext` but before a stack or any service is created, so a
 refusal leaves nothing behind: `quickDeployFromTemplate` returns a 403,
 `services/new`'s `prepareLinkedStack` returns a 403 `fail`. The details page and

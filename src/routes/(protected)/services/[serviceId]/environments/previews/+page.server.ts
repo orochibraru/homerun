@@ -4,6 +4,7 @@ import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { parseDotEnv } from "#lib/env-parse.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import {
 	branchPatternProblem,
 	parseBranchPatterns,
@@ -86,7 +87,10 @@ export const actions = {
 				previewAuthProviders: policy.authProviders,
 				previewAuthRequired: policy.authRequired,
 			},
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { authError: saved.message });
@@ -166,7 +170,10 @@ export const actions = {
 				previewInheritEnv: formData.get("previewInheritEnv") === "on",
 				previewsEnabled,
 			},
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { error: saved.message, values });

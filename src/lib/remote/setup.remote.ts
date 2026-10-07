@@ -1,5 +1,5 @@
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
-import { requireAdmin, requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission, requireUser } from "#lib/server/remote-auth.js";
 import { AdminService, type SetupCheck } from "#lib/services/admin.service.js";
 import { traefikExpectation } from "#lib/services/cron/core-services-watch.js";
 import type { InfraContainer } from "#lib/services/docker/core-services.js";
@@ -53,7 +53,7 @@ export const getSwarmReadiness = query(async (): Promise<SwarmReadiness> => {
  * @throws Error naming each step that failed.
  */
 export const reapplyTraefikConfig = command(async (): Promise<void> => {
-	requireAdmin();
+	requirePermission("settings", "write");
 	const settings = await InstanceSettingsDTO.get();
 	const failures = await DockerService.reassertTraefikConfig(
 		traefikExpectation(settings.orchestrationMode === "swarm"),

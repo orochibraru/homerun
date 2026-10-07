@@ -2,7 +2,7 @@ import { z } from "zod";
 import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
 import { CronJobRunDTO } from "#lib/dto/cron-job-run-dto.js";
 import type { CronJobRun } from "#lib/server/db/schema.js";
-import { requireUser } from "#lib/server/remote-auth.js";
+import { requirePermission } from "#lib/server/remote-auth.js";
 import { query } from "$app/server";
 
 /**
@@ -14,7 +14,7 @@ import { query } from "$app/server";
 export const getCronJobRuns = query(
 	z.string(),
 	async (cronJobId): Promise<CronJobRun[]> => {
-		requireUser();
+		requirePermission("cron-jobs", "read");
 		const job = await CronJobDTO.get(cronJobId);
 		if (!job) {
 			return [];

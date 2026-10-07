@@ -16,9 +16,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const enabled = (await request.formData()).get("enabled") === "true";
 		try {
 			await RegistryService.setAuthEnabled(enabled);
@@ -31,9 +28,6 @@ export const actions = {
 	setPublicHost: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const host = String((await request.formData()).get("publicHost") ?? "");
 		try {

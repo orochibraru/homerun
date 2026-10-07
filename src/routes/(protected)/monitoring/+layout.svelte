@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Activity, BarChart3, Settings2, ShieldBan } from "@lucide/svelte";
 	import TabNav from "#lib/components/tab-nav.svelte";
+	import { can } from "#lib/permissions.js";
 	import { currentHref, visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -20,7 +21,7 @@
 			id: "monitoring/traces",
 			label: "Traces",
 		},
-		...(data.user.role === "admin"
+		...(can(data.permissions, "settings", "read")
 			? [
 					{
 						href: resolve("/(protected)/monitoring/blocked"),

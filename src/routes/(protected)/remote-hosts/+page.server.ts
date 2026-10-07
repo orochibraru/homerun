@@ -5,6 +5,7 @@ import { NodeEnrollmentDTO } from "#lib/dto/node-enrollment-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
 import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { parseListQuery } from "#lib/server/list-query.js";
 import { enrollCommand } from "#lib/server/node-install-script.js";
 import { AgentClientService } from "#lib/services/agent-client.service.js";
@@ -71,15 +72,16 @@ export const load = async ({ locals, parent, url }) => {
 		preferences.perPage,
 	);
 	const paged = await RemoteHostDTO.listPaged(query);
+	const canWrite = can(locals.permissions, "remote-hosts", "write");
 	const [agentStatuses, nodes, enrollments] = await Promise.all([
 		checkAgentStatuses(paged.items),
-		locals.isAdmin ? swarmNodes(swarmMode) : [],
-		locals.isAdmin ? NodeEnrollmentDTO.listPending() : [],
+		canWrite ? swarmNodes(swarmMode) : [],
+		canWrite ? NodeEnrollmentDTO.listPending() : [],
 	]);
 	return {
 		agentStatuses,
+		canWrite,
 		enrollments: enrollments.map((e) => e.summary()),
-		isAdmin: locals.isAdmin,
 		swarmMode,
 		swarmNodes: nodes,
 		filtered: query.active,
@@ -114,9 +116,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			return fail(403, { error: "Only an admin can add servers." });
-		}
 		const formData = await request.formData();
 		const buildServer = formData.get("buildServer") === "on";
 		const swarmNode = formData.get("swarmNode") === "on";
@@ -147,9 +146,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			return fail(403, { error: "Only an admin can revoke enrollments." });
-		}
 		const id = (await request.formData()).get("enrollmentId") as string | null;
 		const enrollment = id ? await NodeEnrollmentDTO.get(id) : null;
 		if (!enrollment) {
@@ -161,9 +157,6 @@ export const actions = {
 	removeNode: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			return fail(403, { error: "Only an admin can remove swarm nodes." });
 		}
 		const nodeId = (await request.formData()).get("nodeId") as string | null;
 		if (!nodeId) {

@@ -381,7 +381,6 @@ function readme(
 	hasBackend: boolean,
 ): string {
 	const steps = [
-		"Install the Homerun provider: see Infrastructure as Code → Provider in the dashboard.",
 		`Export a Homerun API key: \`export HOMERUN_API_KEY=<key>\`${hasBackend ? " (and the same key as `TF_HTTP_PASSWORD`, for the state backend)" : ""}.`,
 		...(hasVariables
 			? [

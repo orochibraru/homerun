@@ -9,6 +9,7 @@ import {
 	parsePathPatterns,
 	pathPatternsProblem,
 } from "#lib/path-patterns.js";
+import { can } from "#lib/permissions.js";
 import {
 	loginWallAvailability,
 	loginWallOptions,
@@ -37,8 +38,8 @@ export const load = async ({ locals, params, parent }) => {
 		...wall,
 		blockPolicy: settings.imageScanBlockPolicy,
 		blockedPageAvailable: errorPagesPublished(),
+		canChangeScanPolicy: can(locals.permissions, "settings", "write"),
 		instanceScanEnabled: settings.imageScanEnabled,
-		isAdmin: locals.isAdmin,
 		scanning,
 		scans: scans.map((scan) => scan.toJSON()),
 	};
@@ -83,7 +84,7 @@ export const actions = {
 		}
 		const { policy } = parsed;
 		const saved = await ServiceSettingsService.save(svc, policy, {
-			isAdmin: Boolean(locals.isAdmin),
+			hostAccess: can(locals.permissions, "system", "write"),
 			userId: locals.user.id,
 		});
 		if (saved instanceof ServiceSettingsError) {
@@ -115,7 +116,10 @@ export const actions = {
 		const saved = await ServiceSettingsService.save(
 			svc,
 			{ blockedPaths },
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { error: saved.message });
@@ -151,7 +155,10 @@ export const actions = {
 		const saved = await ServiceSettingsService.save(
 			svc,
 			{ authPaths, authPathsMode },
-			{ isAdmin: Boolean(locals.isAdmin), userId: locals.user.id },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
 		);
 		if (saved instanceof ServiceSettingsError) {
 			return fail(saved.status, { error: saved.message });

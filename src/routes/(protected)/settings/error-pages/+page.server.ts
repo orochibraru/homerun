@@ -30,9 +30,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 		const formData = await request.formData();
 		const accentColor = text(formData, "accentColor", 7);
 		const logoUrl = text(formData, "logoUrl", 2000);
@@ -58,9 +55,6 @@ export const actions = {
 	updateText: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateErrorPages({

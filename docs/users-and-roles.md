@@ -1,28 +1,65 @@
 # Users and roles
 
-Homerun has four roles, **admin**, **developer**, **read-only** and **app access
-only**. Every dashboard account sees every resource on the instance, and every
-admin or developer account manages it: services, stacks, volumes, backups,
-backup destinations, build cache registries, remote hosts, cron jobs, status
-pages, custom templates and the job queue are shared, whoever created them. Each
-one still records who created it. What stays personal is your sessions, API
-keys, preferences, git provider connections, terminal sessions, bell feed and
-notification channels. Every account gets a copy of each bell notification, and
-every account's own notification channels hear about every event. Between admin
-and developer, the only difference is a few admin-only pages, **Users**,
-**Authentication**, **Settings**, **System Logs**, **Registry**, **Docker
-Cleanup** and **DNS**, plus admin-only actions elsewhere: registering a git
-provider's OAuth app and host-command cron jobs. There's no finer-grained
-permission system yet (no per-stack access control, no teams).
+Homerun has five roles, **admin**, **developer**, **read-only**, **app access
+only** and **custom**. Every dashboard account sees the same pool of resources,
+and what an account may do with it is decided by its **permissions**. Services,
+stacks, volumes, backups, backup destinations, build cache registries, remote
+hosts, cron jobs, status pages, custom templates and the job queue are shared,
+whoever created them. Each one still records who created it. What stays personal
+is your sessions, API keys, preferences, git provider connections, terminal
+sessions, bell feed and notification channels. Every account gets a copy of each
+bell notification, and every account's own notification channels hear about
+every event. Homerun has no teams and no per-stack access control: permissions
+are per area of the dashboard, not per resource.
 
-**Read-only** accounts see everything a developer sees but can't change
-anything: every form, button and API call that writes is refused with "This
-account or API key is read-only", enforced on the server for form actions,
-remote commands and the REST API alike, and the dashboard header shows a
-**Read-only** badge. What they can still do is look after their own account:
-sign out, change their password, manage passkeys and two-factor, set
-preferences, clear their notification bell, create API keys (always read-only)
-and log in the CLI. They don't see the admin-only pages.
+## Permissions
+
+Homerun has 18 permission areas: **Services**, **Stacks**, **Templates**, **Cron
+jobs**, **Redirects**, **Status pages**, **Volumes & backups**, **Object
+storage**, **Registry**, **Build cache**, **Git providers**, **Notification
+channels**, **DNS**, **Remote hosts**, **System**, **Infrastructure as code**,
+**Users & authentication** and **Settings**. An account holds each one at
+**Read** or **Write** (write includes read), or not at all.
+
+Every dashboard page and every REST API route belongs to one area. Reading it
+needs read access, changing anything needs write access, and an account without
+the permission gets a `403`: a dashboard page shows a 403 error page, the
+sidebar and global search leave out what you can't open, and the API, remote
+commands and form actions refuse the request on the server, so hiding a link is
+never the only protection. Your profile, the overview, CLI login, the API docs
+and the MCP endpoint are open to every signed-in account (MCP tools call the
+REST API, so each call is checked against the account's permissions).
+
+**System** is the host-level area: the host terminal, system logs, Docker
+cleanup, host command cron jobs and the service options that give a container
+access to the host (privileged mode, device mappings, added capabilities and env
+files), including templates and compose imports that set them. Treat it as root
+on the box. **Write access to Users & authentication** can grant any permission,
+its holder's own included, so it's an admin in all but name.
+
+The roles are presets of those permissions:
+
+| Role            | What it holds                                                                                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Admin           | Write on every area                                                                                                                                                        |
+| Developer       | Write on Services, Stacks, Templates, Cron jobs, Redirects, Status pages, Volumes & backups, Build cache and Notification channels; read on Git providers and Remote hosts |
+| Read-only       | Read on the developer's areas                                                                                                                                              |
+| App access only | Nothing: no dashboard at all, see below                                                                                                                                    |
+| Custom          | Exactly the areas you pick for that user, each at Read or Write                                                                                                            |
+
+A **read-only** account sees what a developer sees but can't change anything:
+every form, button and API call that writes is refused with a message naming the
+area ("You don't have permission to change Services."), enforced on the server
+for form actions, remote commands and the REST API alike. What they can still do
+is look after their own account: sign out, change their password, manage
+passkeys and two-factor, set preferences, clear their notification bell, create
+API keys (limited to what they can read) and log in the CLI.
+
+**Custom** is for everyone in between. On **Users**, switch the account's role
+to **Custom**, then click the **Permissions** button on its row and pick an
+access level per area. Switching to Custom starts from the permissions of the
+role the account had, so you only adjust the difference. Invites and direct
+creation only offer the preset roles; change a new account to Custom afterwards.
 
 **App access only** accounts never see the dashboard. They exist so you can let
 someone (a client, a friend, the family) through the [login wall](login-wall.md)
@@ -81,7 +118,8 @@ who's asking. Set up SMTP (see [Configuration](configuration.md)) before
 direct-creating an account if that's a real risk on your instance, or use email
 invites instead, which already require it.
 
-An admin can change a user's role or email, or remove them, from `/users`. An
+Someone with write access to Users & authentication (an admin, by default) can
+change a user's role, permissions or email, or remove them, from `/users`. An
 email changed there takes effect immediately and is marked verified, no
 confirmation link and no SMTP needed, which is the way to change a verified
 address on an instance without email set up. Two guards apply: you can't remove

@@ -5,9 +5,6 @@ export const GET = async ({ locals, params }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
-	if (!locals.isAdmin) {
-		return Response.json({ error: "Admins only." }, { status: 403 });
-	}
 	const project = await IacProjectDTO.get(params.projectId);
 	if (!project) {
 		return Response.json({ error: "Project not found." }, { status: 404 });
@@ -23,9 +20,6 @@ export const GET = async ({ locals, params }) => {
 export const POST = async ({ locals, params, request, url }) => {
 	if (!locals.user) {
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
-	}
-	if (!locals.isAdmin) {
-		return Response.json({ error: "Admins only." }, { status: 403 });
 	}
 	const project = await IacProjectDTO.get(params.projectId);
 	if (!project) {

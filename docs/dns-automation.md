@@ -1,8 +1,8 @@
 # DNS automation
 
-The **DNS** page (sidebar → Integrations, admins only) is where Homerun manages
-your domains' DNS. It has three tabs: **Domains**, **Providers** and
-**Pangolin**.
+The **DNS** page (sidebar → Integrations, needs the DNS permission) is where
+Homerun manages your domains' DNS. It has three tabs: **Domains**, **Providers**
+and **Pangolin**.
 
 ![The DNS page's Domains tab](images/dns.webp)
 

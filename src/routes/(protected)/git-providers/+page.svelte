@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { GitBranch, Link2, Plus, Trash2, Unlink } from "@lucide/svelte";
 	import { onMount, tick } from "svelte";
+	import { toast } from "svelte-sonner";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
@@ -16,10 +17,12 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
+	import { disconnectGitProvider } from "#lib/remote/git-repos.remote.js";
 	import { title } from "#lib/store/title.js";
-	import { enhanceToast } from "#lib/toast.js";
+	import { enhanceToast, toastError } from "#lib/toast.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
 	import { enhance } from "$app/forms";
+	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
@@ -28,11 +31,24 @@
 
 	const view = new ViewMode("git-providers");
 
+	async function disconnectCallback(providerId: string) {
+		await disconnectGitProvider(providerId);
+		await refreshAll();
+	}
+
+	function handleDisconnect(providerId: string) {
+		return toast.promise(disconnectCallback(providerId), {
+			error: (error) => toastError(error, "Couldn't disconnect."),
+			loading: "Disconnecting",
+			success: "Disconnected.",
+		});
+	}
+
 	const rows = $derived(
 		data.providers.map((provider) => ({
 			connected: data.connectedProviderIds.includes(provider.id),
 			callbackUrl:
-				data.isAdmin &&
+				data.canWrite &&
 				provider.kind !== "github" &&
 				!data.connectedProviderIds.includes(provider.id)
 					? callbackUrlFor(provider.id)
@@ -113,28 +129,22 @@
 
 {#snippet actions(provider: ProviderRow)}
   {#if provider.connected}
-    <form
-      action="?/disconnect"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't disconnect.",
-        loading: "Disconnecting",
-        success: "Disconnected.",
-      })}
+    <Button
+      onclick={() => handleDisconnect(provider.id)}
+      size="sm"
+      type="button"
+      variant="outline"
     >
-      <input name="providerId" type="hidden" value={provider.id}>
-      <Button size="sm" type="submit" variant="outline">
-        <Unlink class="size-4" />
-        Disconnect
-      </Button>
-    </form>
+      <Unlink class="size-4" />
+      Disconnect
+    </Button>
   {:else}
     <Button href={`/api/v1/git-providers/${provider.id}/connect`} size="sm">
       <Link2 class="size-4" />
       Connect
     </Button>
   {/if}
-  {#if data.isAdmin}
+  {#if data.canWrite}
     <form action="?/deleteProvider" method="POST">
       <input name="id" type="hidden" value={provider.id}>
       <Button
@@ -161,7 +171,7 @@
         instead of pasting a raw URL : no personal access token needed.
       </p>
     </div>
-    {#if data.isAdmin}
+    {#if data.canWrite}
       <Button
         onclick={() => {
           showAddForm = !showAddForm;
@@ -173,7 +183,7 @@
     {/if}
   </div>
 
-  {#if data.isAdmin && showAddForm}
+  {#if data.canWrite && showAddForm}
     <div class="panel mb-6 rounded-md p-5">
       <p class="text-text-subtle mb-4 text-xs">
         {#if isGithub}

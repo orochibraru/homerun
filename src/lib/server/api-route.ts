@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { Permissions } from "#lib/permissions.js";
 
 /** A JSON `{ error }` response with `status`. */
 export function apiError(message: string, status = 400): Response {
@@ -6,26 +7,23 @@ export function apiError(message: string, status = 400): Response {
 }
 
 export interface ApiCaller {
-	isAdmin: boolean;
+	permissions: Permissions;
 	userId: string;
 }
 
 /**
- * Who's calling a REST route, or the response refusing them: 401 without a
- * signed-in user or API key, 403 when the route is admin-only and the
- * caller isn't one.
+ * Who's calling a REST route, or the 401 refusing them without a signed-in
+ * user or API key. Which areas the caller may read or change is already
+ * enforced by the request hook from the route's area.
  */
-export function apiCaller(
-	locals: { isAdmin?: boolean; user?: { id: string } | null },
-	options: { adminOnly?: boolean } = {},
-): ApiCaller | { refused: Response } {
+export function apiCaller(locals: {
+	permissions?: Permissions;
+	user?: { id: string } | null;
+}): ApiCaller | { refused: Response } {
 	if (!locals.user) {
 		return { refused: apiError("Unauthorized", 401) };
 	}
-	if (options.adminOnly && !locals.isAdmin) {
-		return { refused: apiError("Admins only.", 403) };
-	}
-	return { isAdmin: Boolean(locals.isAdmin), userId: locals.user.id };
+	return { permissions: locals.permissions ?? {}, userId: locals.user.id };
 }
 
 /**

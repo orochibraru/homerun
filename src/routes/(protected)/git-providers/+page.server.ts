@@ -2,7 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { githubAppRegistration } from "#lib/github-app.js";
-import { Logger } from "#lib/logger.js";
+import { can } from "#lib/permissions.js";
 import { browserOrigin } from "#lib/server/canonical-origin.js";
 import { GitProviderService } from "#lib/services/git-provider.service.js";
 import {
@@ -10,8 +10,6 @@ import {
 	GitProviderConfigService,
 } from "#lib/services/git-provider-config.service.js";
 import { resolve } from "$app/paths";
-
-const logger = new Logger("GitProviders");
 
 const GITHUB_ORG_PATTERN = /^[a-z\d](?:[a-z\d-]{0,38})$/i;
 
@@ -22,11 +20,8 @@ export const load = async ({ parent, locals }) => {
 	const connectedProviderIds = new Set(connections.map((c) => c.providerId));
 
 	return {
+		canWrite: can(locals.permissions, "git-providers", "write"),
 		connectedProviderIds: [...connectedProviderIds],
-		// Configuring providers (add/delete) is admin-only, same as every
-		// other instance-wide config surface : connecting *to* one is not,
-		// every developer needs that for their own git-based services.
-		isAdmin: locals.isAdmin,
 		// clientSecretEnc never leaves the server : the form only ever shows
 		// "configured" vs not, same convention as registryPassword/smtpPassword.
 		providers: settings.gitProviders.map((p) => ({
@@ -43,9 +38,6 @@ export const actions = {
 	createGithubApp: async ({ request, locals, url }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 
 		const formData = await request.formData();
@@ -79,9 +71,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 
 		const formData = await request.formData();
 		try {
@@ -108,9 +97,6 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
-		}
 
 		const formData = await request.formData();
 		const id = formData.get("id") as string | null;
@@ -120,29 +106,5 @@ export const actions = {
 
 		await GitProviderConfigService.remove(id, locals.user.id);
 		return { deleted: true };
-	},
-
-	disconnect: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("auth/sign-in"));
-		}
-
-		const formData = await request.formData();
-		const providerId = formData.get("providerId") as string | null;
-		if (!providerId) {
-			return fail(400, { error: "Missing provider id." });
-		}
-
-		const connection = await GitConnectionDTO.getForUserAndProvider(
-			locals.user.id,
-			providerId,
-		);
-		if (connection) {
-			await connection.delete();
-			logger.info(
-				`Git provider disconnected: provider=${providerId} user=${locals.user.id}`,
-			);
-		}
-		return { disconnected: true };
 	},
 };

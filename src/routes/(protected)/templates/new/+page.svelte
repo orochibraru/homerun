@@ -276,15 +276,15 @@
           <h2 class="eyebrow">Runtime</h2>
           <p class="text-xs text-text-muted">
             How containers deployed from this template start and what they can
-            reach on the host. Only an admin can deploy a template that asks
-            for host access.
+            reach on the host. Deploying a template that asks for host access
+            needs write access to System.
           </p>
         </div>
       </div>
       <div class="space-y-5 p-5">
         <RuntimeFields
           errors={errors}
-          isAdmin={data.isAdmin}
+          hostAccess={data.hostAccess}
           showEnvFiles
           values={values ?? {}}
         />

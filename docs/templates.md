@@ -54,13 +54,14 @@ them.
 ## Host access
 
 Privileged mode, devices, added capabilities and env files give a container
-access to the host, so they stay admin-only on templates too. Only an admin can
-set them on `Templates → New Template`, and only an admin can deploy a template
-that carries any of them, whether through **Quick Deploy** or **Configure**.
-That includes a template whose linked companion carries them: the whole deploy
-is refused with a message naming each template that needs host access, before
-anything is created. Non-admins see the same warning on the template's details
-page and in the New Service wizard, and Quick Deploy is disabled there.
+access to the host, so they need write access to System on templates too
+(admins, or a custom role with it). Only such an account can set them on
+`Templates → New Template` or deploy a template that carries any of them,
+whether through **Quick Deploy** or **Configure**. That includes a template
+whose linked companion carries them: the whole deploy is refused with a message
+naming each template that needs host access, before anything is created.
+Non-admins see the same warning on the template's details page and in the New
+Service wizard, and Quick Deploy is disabled there.
 
 ## The gallery
 

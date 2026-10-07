@@ -33,7 +33,6 @@ import { resolve } from "$app/paths";
 
 export const allNavItems = [
 	{
-		adminOnly: false,
 		category: "Workspace",
 		exact: true,
 		href: resolve(""),
@@ -41,7 +40,6 @@ export const allNavItems = [
 		label: "Overview",
 	},
 	{
-		adminOnly: false,
 		category: "Workspace",
 		exact: false,
 		href: resolve("services"),
@@ -49,7 +47,6 @@ export const allNavItems = [
 		label: "Services",
 	},
 	{
-		adminOnly: false,
 		category: "Workspace",
 		exact: false,
 		href: resolve("deployments"),
@@ -57,7 +54,6 @@ export const allNavItems = [
 		label: "Deployments",
 	},
 	{
-		adminOnly: false,
 		category: "Workspace",
 		exact: false,
 		href: resolve("monitoring"),
@@ -65,7 +61,6 @@ export const allNavItems = [
 		label: "Monitoring",
 	},
 	{
-		adminOnly: false,
 		category: "Workspace",
 		exact: false,
 		href: resolve("stacks"),
@@ -73,7 +68,6 @@ export const allNavItems = [
 		label: "Stacks",
 	},
 	{
-		adminOnly: false,
 		category: "Workspace",
 		exact: false,
 		href: resolve("templates"),
@@ -81,7 +75,6 @@ export const allNavItems = [
 		label: "Templates",
 	},
 	{
-		adminOnly: false,
 		category: "Workspace",
 		exact: false,
 		href: resolve("cron-jobs"),
@@ -89,7 +82,6 @@ export const allNavItems = [
 		label: "Cron Jobs",
 	},
 	{
-		adminOnly: false,
 		category: "Workspace",
 		exact: false,
 		href: resolve("status-pages"),
@@ -97,7 +89,6 @@ export const allNavItems = [
 		label: "Status Page",
 	},
 	{
-		adminOnly: false,
 		category: "Storage",
 		exact: false,
 		href: resolve("storage"),
@@ -105,7 +96,6 @@ export const allNavItems = [
 		label: "Volumes",
 	},
 	{
-		adminOnly: false,
 		category: "Storage",
 		exact: false,
 		href: resolve("backups"),
@@ -113,7 +103,6 @@ export const allNavItems = [
 		label: "Backups",
 	},
 	{
-		adminOnly: false,
 		category: "Storage",
 		exact: false,
 		href: resolve("s3-destinations"),
@@ -121,7 +110,6 @@ export const allNavItems = [
 		label: "Backup Destinations",
 	},
 	{
-		adminOnly: true,
 		category: "Storage",
 		exact: false,
 		href: resolve("object-storage"),
@@ -129,7 +117,6 @@ export const allNavItems = [
 		label: "Object Storage",
 	},
 	{
-		adminOnly: false,
 		category: "Infrastructure",
 		exact: false,
 		href: resolve("remote-hosts"),
@@ -137,7 +124,6 @@ export const allNavItems = [
 		label: "Remote Hosts",
 	},
 	{
-		adminOnly: false,
 		category: "Infrastructure",
 		exact: false,
 		href: resolve("redirects"),
@@ -145,7 +131,6 @@ export const allNavItems = [
 		label: "Redirects",
 	},
 	{
-		adminOnly: false,
 		category: "Infrastructure",
 		exact: false,
 		href: resolve("scheduling"),
@@ -153,7 +138,6 @@ export const allNavItems = [
 		label: "Scheduling",
 	},
 	{
-		adminOnly: true,
 		category: "Infrastructure",
 		exact: false,
 		href: resolve("terminal"),
@@ -161,7 +145,6 @@ export const allNavItems = [
 		label: "Terminal",
 	},
 	{
-		adminOnly: false,
 		category: "Integrations",
 		exact: false,
 		href: resolve("git-providers"),
@@ -169,7 +152,6 @@ export const allNavItems = [
 		label: "Git Providers",
 	},
 	{
-		adminOnly: false,
 		category: "Integrations",
 		exact: false,
 		href: resolve("build-cache-registries"),
@@ -177,7 +159,6 @@ export const allNavItems = [
 		label: "Build Cache",
 	},
 	{
-		adminOnly: false,
 		category: "Integrations",
 		exact: false,
 		href: resolve("notification-channels"),
@@ -185,7 +166,6 @@ export const allNavItems = [
 		label: "Notification Channels",
 	},
 	{
-		adminOnly: true,
 		category: "Integrations",
 		exact: false,
 		href: resolve("dns"),
@@ -193,7 +173,6 @@ export const allNavItems = [
 		label: "DNS",
 	},
 	{
-		adminOnly: true,
 		category: "Integrations",
 		exact: false,
 		href: resolve("idp"),
@@ -201,7 +180,6 @@ export const allNavItems = [
 		label: "IDP",
 	},
 	{
-		adminOnly: true,
 		category: "Integrations",
 		exact: false,
 		href: resolve("iac"),
@@ -209,7 +187,6 @@ export const allNavItems = [
 		label: "Infrastructure as Code",
 	},
 	{
-		adminOnly: false,
 		category: "Integrations",
 		exact: false,
 		href: resolve("api-docs"),
@@ -217,7 +194,6 @@ export const allNavItems = [
 		label: "API Docs",
 	},
 	{
-		adminOnly: true,
 		category: "Administration",
 		exact: false,
 		href: resolve("users"),
@@ -225,7 +201,6 @@ export const allNavItems = [
 		label: "Users",
 	},
 	{
-		adminOnly: true,
 		category: "Administration",
 		exact: false,
 		href: resolve("authentication"),
@@ -233,7 +208,6 @@ export const allNavItems = [
 		label: "Authentication",
 	},
 	{
-		adminOnly: true,
 		category: "Administration",
 		exact: false,
 		href: resolve("settings"),
@@ -241,7 +215,6 @@ export const allNavItems = [
 		label: "Settings",
 	},
 	{
-		adminOnly: true,
 		category: "Administration",
 		exact: false,
 		href: resolve("system-logs"),
@@ -249,7 +222,6 @@ export const allNavItems = [
 		label: "System Logs",
 	},
 	{
-		adminOnly: true,
 		category: "Administration",
 		exact: false,
 		href: resolve("registry"),
@@ -257,7 +229,6 @@ export const allNavItems = [
 		label: "Registry",
 	},
 	{
-		adminOnly: true,
 		category: "Administration",
 		exact: false,
 		href: resolve("docker-cleanup"),

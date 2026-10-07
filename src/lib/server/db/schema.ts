@@ -27,6 +27,7 @@ import type {
 import type { IpBanSettings } from "#lib/ip-bans.js";
 import type { ObjectStoreKind } from "#lib/object-storage.js";
 import type { AuthPathsMode } from "#lib/path-patterns.js";
+import type { Permissions, Role } from "#lib/permissions.js";
 import type { PublishedPort } from "#lib/published-ports.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
@@ -55,6 +56,7 @@ export const user = pgTable("user", {
 	image: text("image"),
 	lastSignInAt: timestamp("last_sign_in_at", { mode: "date" }),
 	name: text("name").notNull(),
+	permissions: jsonb("permissions").$type<Permissions>(),
 	role: text("role"),
 	twoFactorEnabled: boolean("two_factor_enabled").default(false),
 	updatedAt: timestamp("updated_at", { mode: "date" })
@@ -1977,7 +1979,7 @@ export const serviceDependencyRelations = relations(
 	}),
 );
 
-export type UserRole = "admin" | "developer" | "viewer" | "app-user";
+export type UserRole = Role;
 export const statusPage = pgTable(
 	"status_page",
 	{

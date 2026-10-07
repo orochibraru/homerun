@@ -16,10 +16,7 @@ import { resolve } from "$app/paths";
 
 const logger = new Logger("OidcProvider");
 
-export const load = ({ locals }) => {
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve(""));
-	}
+export const load = () => {
 	const origin = config.auth.origin;
 	return {
 		endpointBase: origin ? oidcEndpointBase(origin) : null,
@@ -32,9 +29,6 @@ export const actions = {
 	create: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
-		}
-		if (!locals.isAdmin) {
-			throw redirect(302, resolve(""));
 		}
 		if (!config.auth.origin) {
 			return fail(400, {

@@ -4,10 +4,10 @@ Advanced mode: [simple mode](ui-modes.md) hides the Docker Cleanup sidebar
 entry. Everything here keeps working either way, and a hidden page still opens
 from a link.
 
-`/docker-cleanup` (admin-only) is `docker system df` and `docker system prune`
-from the dashboard. **Unlike everything else in Homerun it is not scoped to
-containers Homerun created**, that's the entire point of a cleanup tool: it can
-see, and remove, anything on the host's Docker daemon.
+`/docker-cleanup` (needs write access to System) is `docker system df` and
+`docker system prune` from the dashboard. **Unlike everything else in Homerun it
+is not scoped to containers Homerun created**, that's the entire point of a
+cleanup tool: it can see, and remove, anything on the host's Docker daemon.
 
 The page previews what's actually reclaimable before you commit, unused images,
 stopped containers, unreferenced volumes, unused networks (excluding Docker's

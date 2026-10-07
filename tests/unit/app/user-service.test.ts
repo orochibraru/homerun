@@ -65,7 +65,7 @@ beforeEach(() => {
 	respond = () => [];
 	docker.containers = [];
 	docker.networks = [];
-	for (const method of ["select", "update"]) {
+	for (const method of ["delete", "select", "update"]) {
 		stub(db, method, (...args: unknown[]) => chain({ args, method }));
 	}
 	stub(Logger.prototype, "info", () => undefined);
@@ -262,5 +262,40 @@ describe("UserService reads", () => {
 
 		respond = () => [];
 		expect(await UserService.countAdmins()).toBe(0);
+	});
+});
+
+describe("UserService writes", () => {
+	test("setRole stores the role and a custom role's permissions", async () => {
+		await UserService.setRole("u1", "custom", { services: "read" });
+		const [calls] = chains;
+		expect(calls?.[0]?.method).toBe("update");
+		expect(arg(calls ?? [], "set")).toEqual({
+			permissions: { services: "read" },
+			role: "custom",
+		});
+		expect(rendered(calls ?? [])?.params).toEqual(["u1"]);
+	});
+
+	test("setPermissions replaces only the permissions", async () => {
+		await UserService.setPermissions("u1", { stacks: "write" });
+		expect(arg(chains[0] ?? [], "set")).toEqual({
+			permissions: { stacks: "write" },
+		});
+	});
+
+	test("setEmail changes the email and marks it verified", async () => {
+		await UserService.setEmail("u1", "new@example.com");
+		expect(arg(chains[0] ?? [], "set")).toEqual({
+			email: "new@example.com",
+			emailVerified: true,
+		});
+	});
+
+	test("deleteUser deletes the row by id", async () => {
+		await UserService.deleteUser("u1");
+		const [calls] = chains;
+		expect(calls?.[0]?.method).toBe("delete");
+		expect(rendered(calls ?? [])?.params).toEqual(["u1"]);
 	});
 });

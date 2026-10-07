@@ -3,7 +3,7 @@ import { apiCaller, apiError } from "#lib/server/api-route.js";
 import { IacStateService } from "#lib/services/iac-state.service.js";
 
 export const GET = async ({ locals, params }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}
@@ -14,7 +14,7 @@ export const GET = async ({ locals, params }) => {
 };
 
 export const DELETE = async ({ locals, params }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}

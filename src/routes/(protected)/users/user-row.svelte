@@ -1,11 +1,17 @@
 <script lang="ts">
-	import { Pencil, Trash2 } from "@lucide/svelte";
+	import { Pencil, ShieldCheck, Trash2 } from "@lucide/svelte";
 	import { tick } from "svelte";
+	import PermissionPicker from "#lib/components/permission-picker.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import * as Select from "#lib/components/ui/select/index.js";
 	import { timeAgo } from "#lib/formatting.js";
-	import { ROLE_OPTIONS, roleLabel } from "#lib/permissions.js";
+	import {
+		type Permissions,
+		parsePermissions,
+		ROLE_OPTIONS,
+		roleLabel,
+	} from "#lib/permissions.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance, type SubmitFunction } from "$app/forms";
 
@@ -18,6 +24,7 @@
 			id: string;
 			lastSignInAt: Date | string | null;
 			name: string;
+			permissions?: unknown;
 			role?: string | null;
 		};
 	}
@@ -25,6 +32,8 @@
 	const { isSelf, onRemove, submitToast, user }: Props = $props();
 
 	let editingEmail = $state(false);
+	let editingPermissions = $state(false);
+	let permissions = $state<Permissions>({});
 	let roleForm = $state<HTMLFormElement>();
 </script>
 
@@ -125,6 +134,21 @@
           </Select.Content>
         </Select.Root>
       </form>
+      {#if user.role === "custom"}
+        <Button
+          aria-expanded={editingPermissions}
+          onclick={() => {
+            permissions = parsePermissions(user.permissions);
+            editingPermissions = !editingPermissions;
+          }}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <ShieldCheck class="size-4" />
+          Permissions
+        </Button>
+      {/if}
       <form
         action="?/removeUser"
         method="POST"
@@ -144,4 +168,34 @@
       </form>
     {/if}
   </div>
+  {#if editingPermissions && user.role === "custom" && !isSelf}
+    <form
+      action="?/setPermissions"
+      class="w-full space-y-3 border-t border-border pt-3"
+      method="POST"
+      use:enhance={enhanceToast({
+        loading: "Saving permissions",
+        onSuccess: () => {
+          editingPermissions = false;
+        },
+        success: "Permissions saved.",
+      })}
+    >
+      <input name="userId" type="hidden" value={user.id} />
+      <PermissionPicker bind:value={permissions} />
+      <div class="flex justify-end gap-2">
+        <Button
+          onclick={() => {
+            editingPermissions = false;
+          }}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
+          Cancel
+        </Button>
+        <Button size="sm" type="submit">Save permissions</Button>
+      </div>
+    </form>
+  {/if}
 </div>

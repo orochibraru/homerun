@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { permissionsForRole } from "../../../src/lib/permissions";
 import {
 	filterPages,
 	groupResults,
@@ -19,27 +20,32 @@ describe("matchesSearch", () => {
 });
 
 describe("filterPages", () => {
-	test("hides admin-only pages from a developer", () => {
-		const hrefs = filterPages(SEARCH_PAGES, "", false).map((p) => p.href);
+	const developer = permissionsForRole("developer", null);
+	const admin = permissionsForRole("admin", null);
+
+	test("hides pages a developer can't read", () => {
+		const hrefs = filterPages(SEARCH_PAGES, "", developer).map((p) => p.href);
 		expect(hrefs).toContain("/services");
 		expect(hrefs).not.toContain("/settings");
 		expect(hrefs).not.toContain("/users");
 	});
 
-	test("shows admin-only pages to an admin", () => {
-		const hrefs = filterPages(SEARCH_PAGES, "smtp", true).map((p) => p.href);
+	test("shows settings pages to an admin", () => {
+		const hrefs = filterPages(SEARCH_PAGES, "smtp", admin).map((p) => p.href);
 		expect(hrefs).toEqual(["/settings/email"]);
 	});
 
 	test("matches on keywords, not only the label", () => {
-		const hrefs = filterPages(SEARCH_PAGES, "dark mode", false).map(
+		const hrefs = filterPages(SEARCH_PAGES, "dark mode", developer).map(
 			(p) => p.href,
 		);
 		expect(hrefs).toEqual(["/profile/appearance"]);
 	});
 
 	test("finds the stacks page", () => {
-		const hrefs = filterPages(SEARCH_PAGES, "stacks", false).map((p) => p.href);
+		const hrefs = filterPages(SEARCH_PAGES, "stacks", developer).map(
+			(p) => p.href,
+		);
 		expect(hrefs).toContain("/stacks");
 	});
 

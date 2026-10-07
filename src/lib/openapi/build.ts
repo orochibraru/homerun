@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { READ_ONLY_MESSAGE } from "#lib/permissions.js";
+import { permissionDeniedMessage } from "#lib/permissions.js";
 import { routes } from "./registry";
 
 /** zod's toJSONSchema() emits a top-level `$schema` pointer meant for a standalone document : an embedded OpenAPI schema object shouldn't carry one. */
@@ -10,12 +10,15 @@ function toEmbeddedSchema(schema: z.ZodType): Record<string, unknown> {
 	return rest;
 }
 
-const readOnlyForbidden = {
+const permissionForbidden = {
 	content: {
 		"application/json": {
 			schema: {
 				properties: {
-					error: { example: READ_ONLY_MESSAGE, type: "string" },
+					error: {
+						example: permissionDeniedMessage("services", "write"),
+						type: "string",
+					},
 				},
 				required: ["error"],
 				type: "object",
@@ -23,12 +26,12 @@ const readOnlyForbidden = {
 		},
 	},
 	description:
-		"Read-only caller: the user holds the read-only role or the request used a read-only API key.",
+		"The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access.",
 };
 
-/** The responses every route of this method documents before its own: a write also answers 403 to a read-only caller. */
-function baseResponses(method: string): Record<string, unknown> {
-	return method === "get" ? {} : { 403: readOnlyForbidden };
+/** The responses every route documents before its own: a 403 when the caller lacks the permission the route's area needs. */
+function baseResponses(): Record<string, unknown> {
+	return { 403: permissionForbidden };
 }
 
 /**
@@ -43,7 +46,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 	for (const route of routes) {
 		paths[route.path] ??= {};
 
-		const responses = baseResponses(route.method);
+		const responses = baseResponses();
 		for (const [status, def] of Object.entries(route.responses)) {
 			responses[status] = {
 				content: def.schema
@@ -100,7 +103,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 			securitySchemes: {
 				apiKey: {
 					description:
-						"An API key from Profile → Authorized Clients (or `homerun login`). A key is created with Full access or Read-only scope: a read-only key may call every GET endpoint and gets a 403 on anything that writes.",
+						"An API key from Profile → Authorized Clients (or `homerun login`). A key holds the permissions picked when it was created (read or write, per area), never more than its owner's, and may expire.",
 					in: "header",
 					name: "x-api-key",
 					type: "apiKey",

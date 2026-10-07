@@ -6,7 +6,7 @@
 
 	interface Props {
 		errors?: Record<string, string[]>;
-		isAdmin: boolean;
+		hostAccess: boolean;
 		showEnvFiles?: boolean;
 		swarm?: boolean;
 		values: Record<string, string>;
@@ -14,7 +14,7 @@
 
 	const {
 		errors,
-		isAdmin,
+		hostAccess,
 		showEnvFiles = false,
 		swarm = false,
 		values,
@@ -106,7 +106,7 @@
   {/if}
 </div>
 
-{#if isAdmin}
+{#if hostAccess}
   <div class="grid gap-5 lg:grid-cols-2">
     <div>
       <label class={label} for="capAdd">Added capabilities</label>

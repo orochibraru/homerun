@@ -43,16 +43,28 @@ account:
 
 Generate an API key from **Profile → Authorized Clients** to use the
 [REST API or CLI](api-and-cli.md) without a browser session, sent as `x-api-key`
-or `Authorization: Bearer <key>` on any `/api/v1/*` request. Pick its **Access**
-when you create it:
+or `Authorization: Bearer <key>` on any `/api/v1/*` request. When you create
+one, pick:
 
-- **Full access** carries the full permissions of the account that owns it.
-- **Read-only** can call every `GET` endpoint and gets a `403` on anything that
-  writes, whatever the owning account's role. Use it for dashboards, monitoring
-  scripts and anything else that only needs to look.
+- **Permissions**, per area (see
+  [Users and roles](users-and-roles.md#permissions)): none, **Read** or
+  **Write**. The **Read everything** and **Clear** shortcuts fill or empty the
+  whole list. A key can never hold more than the account that creates it, and at
+  request time it's always limited to what its owner holds _right now_, so
+  demoting an account also demotes every key it owns. A key that needs one thing
+  (deploy one service, read the status of everything) should get only that area.
+- **Allow all permissions**, flagged dangerous: the key follows everything its
+  owner can do, including permissions granted to the owner later. Only for a key
+  you'd trust as much as your own login.
+- **Expires**: 7 days, 30 days, **90 days** (the default, recommended), 1 year
+  or **Never**, which shows a warning because a leaked key then works until you
+  revoke it. An expired key is refused and shows an **Expired** badge in the
+  list.
 
-A read-only account can only create read-only keys. The key list shows a
-**Read-only** badge on each read-only key.
+A request that needs a permission the key doesn't have gets a `403` naming the
+area. `homerun login` keys are created with all permissions and no expiry, and
+keys created before permissions existed were migrated: a read-only key became
+read on every area, a full-access key became "all permissions".
 
 ![Profile → Authorized Clients: generating a key with its access, and the key list](images/profile-api-keys.webp)
 

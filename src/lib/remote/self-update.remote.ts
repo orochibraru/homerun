@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-	requireAdmin,
-	requireUser,
-	requireWriter,
-} from "#lib/server/remote-auth.js";
+import { requirePermission, requireUser } from "#lib/server/remote-auth.js";
 import type { UpdatePreflight } from "#lib/services/self-update/preflight.js";
 import {
 	type ReleaseStatus,
@@ -17,27 +13,26 @@ export const getAppVersion = query((): string => {
 });
 
 export const getReleaseStatus = query(async (): Promise<ReleaseStatus> => {
-	requireAdmin();
+	requirePermission("settings", "read");
 	return await SelfUpdateService.releaseStatus();
 });
 
 export const checkForUpdates = command(async (): Promise<ReleaseStatus> => {
-	requireAdmin();
+	requirePermission("settings", "read");
 	const status = await SelfUpdateService.releaseStatus({ fresh: true });
 	await getReleaseStatus().refresh();
 	return status;
 });
 
 export const getUpdatePreflight = query(async (): Promise<UpdatePreflight> => {
-	requireAdmin();
+	requirePermission("settings", "read");
 	return await SelfUpdateService.preflight();
 });
 
 export const startSelfUpdate = command(
 	z.object({ force: z.boolean().default(false) }),
 	async ({ force }): Promise<{ version: string }> => {
-		requireAdmin();
-		requireWriter();
+		requirePermission("settings", "write");
 		return await SelfUpdateService.start({ force });
 	},
 );

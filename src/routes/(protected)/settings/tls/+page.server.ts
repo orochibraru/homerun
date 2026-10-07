@@ -47,20 +47,17 @@ export const load = async () => {
 	};
 };
 
-/** The admin guard every action here shares. */
-function requireAdmin(locals: App.Locals): string {
+/** The signed-in user's id, sending a signed-out caller to the sign-in page. */
+function signedInUserId(locals: App.Locals): string {
 	if (!locals.user) {
 		throw redirect(302, resolve("auth/sign-in"));
-	}
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve(""));
 	}
 	return locals.user.id;
 }
 
 export const actions = {
 	install: async ({ request, locals }) => {
-		const userId = requireAdmin(locals);
+		const userId = signedInUserId(locals);
 		const formData = await request.formData();
 		const cert = String(formData.get("cert") ?? "").trim();
 		const key = String(formData.get("key") ?? "").trim();
@@ -89,7 +86,7 @@ export const actions = {
 	},
 
 	remove: async ({ locals }) => {
-		const userId = requireAdmin(locals);
+		const userId = signedInUserId(locals);
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateInstanceCertificate(null);
 		applyAndRebuild(settings);
@@ -101,7 +98,7 @@ export const actions = {
 	},
 
 	redeployCovered: async ({ locals }) => {
-		const userId = requireAdmin(locals);
+		const userId = signedInUserId(locals);
 		const settings = await InstanceSettingsDTO.get();
 		const services = await coveredServices(
 			settings.instanceCertificate?.names ?? [],

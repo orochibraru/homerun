@@ -8,7 +8,7 @@ import {
 import { dnsProviderById } from "#lib/services/dns-providers/index.js";
 
 export const GET = async ({ locals }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}
@@ -18,7 +18,7 @@ export const GET = async ({ locals }) => {
 };
 
 export const POST = async ({ locals, request }) => {
-	const caller = apiCaller(locals, { adminOnly: true });
+	const caller = apiCaller(locals);
 	if ("refused" in caller) {
 		return caller.refused;
 	}

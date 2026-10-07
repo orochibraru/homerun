@@ -3,8 +3,11 @@ import {
 	APP_ONLY_HOME,
 	APP_ONLY_MESSAGE,
 	appOnlyMayRequest,
-	READ_ONLY_MESSAGE,
-	readOnlyMayRequest,
+	can,
+	hasAllPermissions,
+	type Permissions,
+	permissionDeniedMessage,
+	requiredPermission,
 } from "#lib/permissions.js";
 
 type RefusedRequest = Pick<Request, "headers" | "method">;
@@ -51,25 +54,47 @@ function forbidden(
 }
 
 /**
- * The 403 a read-only caller gets for a write, shaped for whoever sent it.
+ * The 403 a caller gets for a request its permissions don't cover, from the
+ * area owning the matched route (see `requiredPermission`). Page reads are
+ * left to the `(protected)` layout, which renders the refusal as an error
+ * page instead; an endpoint (`isEndpoint`, a `+server.ts` route) never runs
+ * that layout, so its reads are refused here.
  *
  * @returns Null when the request is allowed.
  */
-export function readOnlyRejection(
+export function permissionRejection(
 	request: RefusedRequest,
 	pathname: string,
+	route: { id: string | null; isEndpoint: boolean },
+	permissions: Permissions,
 ): Response | null {
-	if (readOnlyMayRequest(request.method, pathname)) {
+	const required = requiredPermission(request.method, route.id);
+	if (!required) {
 		return null;
 	}
-	return forbidden(request, pathname, READ_ONLY_MESSAGE);
+	if (required === "unmapped") {
+		return hasAllPermissions(permissions)
+			? null
+			: forbidden(request, pathname, "Admins only.");
+	}
+	if (can(permissions, required.area, required.level)) {
+		return null;
+	}
+	if (required.level === "read" && !route.isEndpoint) {
+		return null;
+	}
+	return forbidden(
+		request,
+		pathname,
+		permissionDeniedMessage(required.area, required.level),
+	);
 }
 
 /**
  * What an app-access-only user gets for anything outside `appOnlyMayRequest`:
  * a page navigation is sent to their apps page (a `__data.json` request gets
  * SvelteKit's own JSON redirect so client-side navigation follows it), and
- * every other request a 403 shaped like `readOnlyRejection`'s.
+ * every other request a 403 shaped like `permissionRejection`'s.
  *
  * @returns Null when the request is allowed.
  */

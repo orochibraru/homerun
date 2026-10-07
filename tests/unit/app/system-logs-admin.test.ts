@@ -64,11 +64,14 @@ const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 
 type LogsEvent = Parameters<typeof logsRoute.GET>[0];
 
-function locals(isAdmin: boolean) {
-	return { isAdmin, user: { id: "u1" } };
+function locals(systemAccess: boolean) {
+	return {
+		permissions: systemAccess ? { system: "write" } : {},
+		user: { id: "u1" },
+	};
 }
 
-const signedOut = { isAdmin: false, user: null };
+const signedOut = { permissions: {}, user: null };
 
 /** A route event carrying only `locals`, the one field these routes read. */
 function event(eventLocals: object): never {
@@ -76,7 +79,7 @@ function event(eventLocals: object): never {
 }
 
 describe("system logs access", () => {
-	test("a developer can't stream a stack container's logs", async () => {
+	test("a caller without System access can't stream a stack container's logs", async () => {
 		streamed = false;
 		const res = await logsRoute.GET({
 			locals: locals(false),
@@ -86,7 +89,7 @@ describe("system logs access", () => {
 		expect(streamed).toBe(false);
 	});
 
-	test("an admin can stream a stack container's logs", async () => {
+	test("a caller with System access can stream a stack container's logs", async () => {
 		const res = await logsRoute.GET({
 			locals: locals(true),
 			params: { containerId: "traefik" },
@@ -107,20 +110,13 @@ describe("system logs access", () => {
 
 	test("signed out gets a 401", async () => {
 		const res = await logsRoute.GET({
-			locals: { isAdmin: false, user: null },
+			locals: signedOut,
 			params: { containerId: "traefik" },
 		} as unknown as LogsEvent);
 		expect(res.status).toBe(401);
 	});
 
-	test("the page load sends a developer home", async () => {
-		await expect(pageRoute.load(event(locals(false)))).rejects.toMatchObject({
-			location: "/",
-			status: 302,
-		});
-	});
-
-	test("the page load lists app errors with their service name for an admin", async () => {
+	test("the page load lists app errors with their service name", async () => {
 		stub(AppLogDTO, "listRecent", async () => [
 			{
 				toJSON: () => ({
@@ -135,22 +131,18 @@ describe("system logs access", () => {
 			},
 		]);
 		stub(ServiceDTO, "list", async () => [{ id: "svc-1", name: "Dashy" }]);
-		const result = await pageRoute.load(event(locals(true)));
+		const result = await pageRoute.load();
 		expect(result.appLogs).toMatchObject([
 			{ id: "log-1", message: "boom", serviceName: "Dashy" },
 		]);
 	});
 
-	test("clearing the app log is admin only", async () => {
+	test("clearing the app log empties it", async () => {
 		const cleared: unknown[] = [];
 		stub(AppLogDTO, "clear", async (ids?: string[]) => {
 			cleared.push(ids);
 		});
 		const spy = spyOn(console, "log").mockImplementation(() => undefined);
-		await expect(
-			pageRoute.actions.clearAppLogs(event(locals(false))),
-		).rejects.toMatchObject({ location: "/", status: 302 });
-		expect(cleared).toEqual([]);
 		expect(await pageRoute.actions.clearAppLogs(event(locals(true)))).toEqual({
 			action: "clearAppLogs",
 			success: true,
@@ -184,21 +176,17 @@ describe("Traefik actions", () => {
 		eventLocals: object,
 	): Promise<unknown> => pageRoute.actions[name](event(eventLocals));
 
-	test("signed out is sent to sign in, a developer home, and nothing runs", async () => {
+	test("signed out is sent to sign in and nothing runs", async () => {
 		for (const name of ["restartTraefik", "updateTraefik"] as const) {
 			await expect(run(name, signedOut)).rejects.toMatchObject({
 				location: "/auth/sign-in",
-				status: 302,
-			});
-			await expect(run(name, locals(false))).rejects.toMatchObject({
-				location: "/",
 				status: 302,
 			});
 		}
 		expect(traefikCalls).toEqual([]);
 	});
 
-	test("an admin restarts and updates Traefik", async () => {
+	test("restarts and updates Traefik", async () => {
 		expect(await run("restartTraefik", locals(true))).toEqual({
 			action: "restartTraefik",
 			success: true,

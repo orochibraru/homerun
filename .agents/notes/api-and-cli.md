@@ -407,7 +407,11 @@ plan/apply/import/refresh against an in-memory fake API, skipped when
 vet, golangci-lint (through `go -C terraform/provider tool`, with
 `-modfile=../../tools/go/go.mod` and `--config ../../.golangci.yml`) and tests;
 `scripts/build-packages.ts` cross-compiles it as
-`dist/homerun-terraform-provider-<target>`.
+`dist/homerun-terraform-provider-<target>`, and every stable release publishes
+it to registry.terraform.io and registry.opentofu.org as `orochibraru/homerun`
+through a mirror repo (see Terraform provider registries in
+`packages-and-release.md`), so the Provider tab and a generated project's README
+only say to set the key and run `terraform init`.
 
 **The API behind it.** Every service setting goes through
 `ServiceSettingsService.apply` (`src/lib/services/service-settings.service.ts`),
