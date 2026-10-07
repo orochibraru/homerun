@@ -451,7 +451,10 @@ class ServiceSettingsServiceClass {
 			});
 		}
 		let filteredOut = 0;
-		if (before.previewsEnabled && !after.previewsEnabled) {
+		if (
+			(before.previewsEnabled && !after.previewsEnabled) ||
+			before.buildSource !== after.buildSource
+		) {
 			await PreviewService.removeAll(svc);
 		} else {
 			if (

@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { promotePreviewApiBody } from "#lib/server/validation/api.js";
+import {
+	deployPreviewApiBody,
+	promotePreviewApiBody,
+} from "#lib/server/validation/api.js";
 import type { RouteDef } from "./registry";
 import { errorResponse, successResponse } from "./schemas";
 
@@ -39,7 +42,7 @@ export const previewResponse = z.object({
 		}),
 	gitRef: z.string().nullable().meta({
 		description:
-			"What the preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA",
+			"What a git service's preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA. Null for an image-based service's preview",
 	}),
 	hostnames: z.array(z.string()),
 	id: z.string().meta({ description: "The preview's own service id" }),
@@ -72,6 +75,13 @@ export const previewResponse = z.object({
 	title: z.string().nullable(),
 	url: z.string().nullable().meta({
 		description: "The preview's main URL, null when nothing routes to it",
+	}),
+});
+
+export const deployPreviewResponse = previewResponse.extend({
+	deploymentId: z.string().meta({
+		description:
+			"The preview's queued deployment. Poll GET /services/{serviceId}/previews/{prNumber} (or run homerun previews wait) until its revision is healthy",
 	}),
 });
 
@@ -136,7 +146,31 @@ export const previewRoutes: RouteDef[] = [
 	},
 	{
 		description:
-			"Deletes the preview's workload, DNS records and row. The next push to the pull request recreates it.",
+			"Creates or updates the pull request's preview on an image-based service, from the image CI just pushed: a new preview gets the service's preview settings (env and overrides, domains, login wall, stack, volume copies when that's on) and runs the service's own image at tag, with its registry credentials; an existing one switches to tag and redeploys, without copying volumes again. commit is recorded on the preview's revision for homerun previews wait --commit. With branch, the preview branch filter applies: a filtered-out branch is refused and loses the preview it had. Returns once the deploy is queued.",
+		method: "put",
+		path: "/services/{serviceId}/previews/{prNumber}",
+		pathParams: servicePrParams,
+		requestBody: deployPreviewApiBody,
+		responses: {
+			202: {
+				description: "Deploy queued",
+				schema: deployPreviewResponse,
+			},
+			400: error(
+				"Invalid body, not a pull request number, or the service builds from git (its previews come from the webhook) or is itself a preview",
+			),
+			401: error("Unauthorized"),
+			404: error("Not found"),
+			409: error(
+				"Previews are off, the branch doesn't pass the preview branch filter, the preview's slug is taken, or the instance is out of capacity",
+			),
+		},
+		summary: "Deploy a preview from an image",
+		tags: ["Previews"],
+	},
+	{
+		description:
+			"Deletes the preview's workload, DNS records and row. A git service's next push to the pull request recreates it; an image-based service's CI calls this when the pull request closes.",
 		method: "delete",
 		path: "/services/{serviceId}/previews/{prNumber}",
 		pathParams: servicePrParams,
@@ -152,7 +186,7 @@ export const previewRoutes: RouteDef[] = [
 	},
 	{
 		description:
-			"Deploys the exact image the preview's current revision runs to the service it previews, without building, pulling or scanning, the same way a rollback redeploys a revision. The deployment points at the preview revision (rollbackOfDeploymentId) and its log opens with where the image came from. Refused while the preview has no running revision, while its health is still being watched or unhealthy, or when commit is given and isn't what it runs. Returns once queued: poll GET /jobs/{jobId}.",
+			"Deploys the exact image the preview's current revision runs to the service it previews, without building, pulling or scanning, the same way a rollback redeploys a revision. An image-based service ends up on the preview's image and tag. The deployment points at the preview revision (rollbackOfDeploymentId) and its log opens with where the image came from. Refused while the preview has no running revision, while its health is still being watched or unhealthy, or when commit is given and isn't what it runs. Returns once queued: poll GET /jobs/{jobId}.",
 		method: "post",
 		path: "/services/{serviceId}/previews/{prNumber}/promote",
 		pathParams: servicePrParams,
@@ -160,7 +194,7 @@ export const previewRoutes: RouteDef[] = [
 		requestBodyOptional: true,
 		responses: {
 			202: { description: "Deploy queued", schema: promoteResponse },
-			400: error("Invalid body, or the service doesn't build from git"),
+			400: error("Invalid body, or the service is itself a preview"),
 			401: error("Unauthorized"),
 			404: error("No such service, or no preview for that pull request"),
 			409: error(

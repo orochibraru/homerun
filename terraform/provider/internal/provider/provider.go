@@ -47,7 +47,7 @@ func (p *homerunProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"api_key": schema.StringAttribute{
-				Description: "An API key (Profile → API keys). Defaults to HOMERUN_API_KEY.",
+				Description: "An API key (Profile → Authorized Clients). Defaults to HOMERUN_API_KEY.",
 				Optional:    true,
 				Sensitive:   true,
 			},

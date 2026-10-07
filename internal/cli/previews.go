@@ -67,6 +67,15 @@ type PreviewWaitArgs struct {
 	Timeout time.Duration
 }
 
+// PreviewDeployArgs are the options of `previews deploy`.
+type PreviewDeployArgs struct {
+	Branch  string
+	Commit  string
+	Tag     string
+	Timeout time.Duration
+	Title   string
+}
+
 // PreviewPromoteArgs are the options of `previews promote`.
 type PreviewPromoteArgs struct {
 	Commit  string
@@ -210,7 +219,40 @@ func PreviewWait(client *Client, service string, pr int, args PreviewWaitArgs) {
 	client.decode("GET", "/services/"+url.PathEscape(service), nil, &parent)
 	if !parent.PreviewsEnabled {
 		Fail("Previews are off for this service: turn them on in its Previews tab.")
+		return
 	}
+	waitForPreview(client, service, pr, args)
+}
+
+// PreviewDeploy creates or updates the preview of pr on an image-based
+// service from the image CI just pushed at args.Tag, then waits for it the
+// way PreviewWait does (on args.Commit when given) and prints its URL.
+// Exits non-zero when the instance refuses it (a git service, previews off,
+// a filtered-out branch), the deploy fails, the preview is unhealthy, or the
+// timeout passes.
+func PreviewDeploy(client *Client, service string, pr int, args PreviewDeployArgs) {
+	payload := map[string]string{"tag": args.Tag}
+	if args.Branch != "" {
+		payload["branch"] = args.Branch
+	}
+	if args.Commit != "" {
+		payload["commit"] = args.Commit
+	}
+	if args.Title != "" {
+		payload["title"] = args.Title
+	}
+	var queued struct {
+		DeploymentID string `json:"deploymentId"`
+		Slug         string `json:"slug"`
+	}
+	client.decodeJSON("PUT", previewPath(service, pr), payload, &queued)
+	fmt.Fprintf(os.Stderr, "Deploying %s to %s, the preview of #%d (deployment %s)...\n", args.Tag, queued.Slug, pr, queued.DeploymentID)
+	waitForPreview(client, service, pr, PreviewWaitArgs{Commit: args.Commit, Timeout: args.Timeout})
+}
+
+// waitForPreview polls the preview of pr until PreviewVerdict calls it ready
+// or failed, or args.Timeout passes, printing each new state to stderr.
+func waitForPreview(client *Client, service string, pr int, args PreviewWaitArgs) {
 	timeout := args.Timeout
 	if timeout <= 0 {
 		timeout = defaultPreviewWait

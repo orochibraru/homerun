@@ -95,9 +95,12 @@ small and each state independent. A stack covers itself, its substacks, their
 services with their environments, dependencies, mounts and volumes, and the
 status pages of those stacks. A service covers itself, its environments, the
 dependencies it declares, and its mounts with their volumes; its stack and the
-services it depends on stay outside, referenced by id. Pick a **State backend**
-to add an `http` backend block pointing at one of your
-[Terraform state projects](object-storage.md#terraform-state).
+services it depends on stay outside, referenced by id. Search for the stack or
+service by name. The **State backend** adds an `http` backend block pointing at
+one of your [Terraform state projects](object-storage.md#terraform-state): it
+starts on the project whose name matches the stack or service, and when none
+does, on **Create a new backend**, which creates one named after it (pick the
+store and bucket) before generating. **No backend** leaves the block out.
 
 The project is a folder you download as a zip, and preview file by file on the
 page, highlighted:

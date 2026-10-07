@@ -1513,10 +1513,9 @@ checks don't refuse the deployment. `enabledGitProvider` lives in
 when the parent is deleted; turning previews off calls `removeAll`. Volumes,
 domains, cron, status checks and host networking are deliberately not copied.
 They live on the service's own Previews section
-(`services/[serviceId]/environments/previews/`, shown only for a git service
-that isn't a preview itself), which owns the `previewsEnabled` toggle (and its
-`GitWebhookService.sync`/`removeAll`); the Source section only forces it off
-when the service stops building from git. `previewDomainTemplate` (`{pr}`,
+(`services/[serviceId]/environments/previews/`, shown for any service that isn't
+a preview itself), which owns the `previewsEnabled` toggle (and its
+`GitWebhookService.sync`/`removeAll`). `previewDomainTemplate` (`{pr}`,
 `{branch}` via `branchLabel`, `{slug}`, rendered by `renderPreviewDomain` in
 `src/lib/service-domains.ts`, validated by `previewDomainTemplateProblem`) and
 `previewDefaultDomain` pick a new preview's
@@ -1564,6 +1563,27 @@ retries. Existing previews never get copies.
 `ServiceLifecycleService.deleteService` removes a preview's copied Docker
 volumes (`#removePreviewVolumes`, best effort) before the row goes.
 `tests/integration/volume-seed.test.ts` covers the seed end to end.
+
+Image-based previews: an image service has no webhook, so CI creates them
+through `PUT /api/v1/services/:id/previews/:pr` (`homerun previews deploy`),
+which lands in `PreviewService.deployImage`. It shares `#create`/`#refresh` with
+`handle` through a `PreviewRequest` whose `source` is either
+`{kind: "git", gitRef}` or `{kind: "image", tag, commit}`; `sourceColumns` sets
+`buildSource`/`gitRef` or `buildSource`/`image`/`tag`, and `#refresh`'s
+skip-if-unchanged only applies to a git `update` event (a CI call always
+redeploys). The branch filter runs only when CI sends a branch, removing an
+existing preview of a filtered branch like `handle` does; there's no fork check
+(CI's job) and no close event (CI calls `DELETE`, nothing sweeps a forgotten
+one). `wait --commit` needs a commit on an image deploy, so `enqueueDeploy`
+takes `gitCommit` (written on the deployment row up front, and moved onto the
+coalesced deployment when the job coalesces), and `#recordedCommit` carries the
+latest deployment's commit into any other deploy of an image-based preview (hand
+redeploy, domain or login wall re-apply), so its revisions keep matching. The
+Previews section and the Environments page show previews for every non-preview
+service; only **Deploy open pull requests** stays git-only. The Source tab no
+longer forces `previewsEnabled` off for an image service; instead any change of
+`buildSource` (Source tab or `ServiceSettingsService#resync`) deletes every
+existing preview, since they ran the old source.
 
 ## Release channels (`service.channels*` columns, `channelCanary`, `ReleaseChannelService`, `src/lib/release-channels.ts`)
 

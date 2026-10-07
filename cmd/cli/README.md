@@ -119,6 +119,7 @@ homerun services rollback <id> [revisionId] [--restore-config]
 homerun previews list <id> [--json]
 homerun previews get <id> <pr>
 homerun previews wait <id> <pr> [--commit <sha>] [--timeout 20m] [--json]
+homerun previews deploy <id> <pr> --tag <tag> [--commit <sha>] [--branch <b>] [--title <t>] [--timeout 20m]
 homerun previews delete <id> <pr>
 homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
@@ -300,9 +301,14 @@ not created yet, until `PreviewVerdict` says ready (the current revision is
 `--commit` and `healthy`, or has no health and the preview is running) or failed
 (the deploy of that commit failed, or its revision is
 `unhealthy`/`rolled_back`), and prints only the URL on stdout, progress on
-stderr. `homerun previews promote` posts `{commit}` to `.../promote` (a `202`
-with the deploy's `jobId`), and with `--wait` polls `GET /jobs/{jobId}` like
-`services scan --wait`.
+stderr. `homerun previews deploy` (image-based services) sends
+`PUT /services/{serviceId}/previews/{prNumber}` with
+`{tag, commit, branch, title}`, which creates or updates the preview at that
+tag, then polls exactly like `previews wait` (on `--commit` when given) and
+prints the URL; a refusal (a git service, previews off, a filtered-out branch)
+exits non-zero at once. `homerun previews promote` posts `{commit}` to
+`.../promote` (a `202` with the deploy's `jobId`), and with `--wait` polls
+`GET /jobs/{jobId}` like `services scan --wait`.
 
 `homerun instance status` calls `GET /instance/update` and prints the running
 version, the release channel, its latest release and whether an update can start

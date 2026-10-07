@@ -36,6 +36,7 @@ export interface PreviewSummary {
 	prNumber: number;
 	slug: string;
 	status: ContainerStatus;
+	tag: string | null;
 	title: string | null;
 }
 
@@ -47,6 +48,40 @@ export type PreviewResult =
 /** The ref a preview builds: the pull request's head commit when the provider sent a full SHA, else its branch. */
 function previewRef(event: PullRequestEvent): string | null {
 	return isCommitSha(event.commit) ? event.commit : event.branch;
+}
+
+/** What a preview deploys: a ref of the parent's repo to build, or a tag of the parent's image CI built from `commit`. */
+type PreviewSource =
+	| { gitRef: string; kind: "git" }
+	| { commit: string | null; kind: "image"; tag: string };
+
+/** The pull request a preview is created or refreshed for. */
+interface PreviewRequest {
+	branch: string | null;
+	number: number;
+	source: PreviewSource;
+	title: string | null;
+}
+
+/** What CI sends to create or update the preview of an image-based service's pull request. */
+export interface ImagePreviewInput {
+	branch: string | null;
+	commit: string | null;
+	prNumber: number;
+	tag: string;
+	title: string | null;
+}
+
+/** The columns a preview's source sets: the ref it builds, or the parent's image at the tag it runs. */
+function sourceColumns(parent: ServiceDTO, source: PreviewSource) {
+	return source.kind === "git"
+		? { buildSource: "git" as const, gitRef: source.gitRef }
+		: { buildSource: "image" as const, image: parent.image, tag: source.tag };
+}
+
+/** A preview's source for logs: the ref it builds or the tag it runs. */
+function sourceLabel(source: PreviewSource): string {
+	return source.kind === "git" ? `ref=${source.gitRef}` : `tag=${source.tag}`;
 }
 
 /** What a preview's env overrides can refer to: `{pr}`, `{branch}` and `{slug}`. */
@@ -179,11 +214,13 @@ async function previewDomains(
 }
 
 /**
- * Pull request preview deployments: a git service with previews on gets one
- * extra service per open pull request, `<slug>-pr-<n>`, built from the pull
- * request's head and torn down when it closes or merges. The parent's
- * branch filter (include and exclude glob patterns) decides which pull
- * requests get one.
+ * Pull request preview deployments: a service with previews on gets one
+ * extra service per open pull request, `<slug>-pr-<n>`. A git service's are
+ * built from the pull request's head and torn down when it closes or merges,
+ * driven by its webhook; an image-based service's run the image CI pushed for
+ * the pull request, created, updated and deleted by CI through the API. The
+ * parent's branch filter (include and exclude glob patterns) decides which
+ * pull requests get one.
  */
 class PreviewServiceClass {
 	/**
@@ -227,11 +264,56 @@ class PreviewServiceClass {
 				status: "ignored",
 			};
 		}
+		const request: PreviewRequest = {
+			branch: event.branch,
+			number: event.number,
+			source: { gitRef: ref, kind: "git" },
+			title: event.title,
+		};
 		const existing = await ServiceGitDTO.getPreview(parent.id, event.number);
 		if (existing) {
-			return await this.#refresh(parent, existing, event, ref);
+			return await this.#refresh(parent, existing, request, {
+				skipUnchanged: event.action === "update",
+			});
 		}
-		return await this.#create(parent, event, ref);
+		return await this.#create(parent, request);
+	}
+
+	/**
+	 * Creates or updates the preview of pull request `input.prNumber` on an
+	 * image-based service from an image CI built and pushed: a new preview is
+	 * created like a git one (settings, env, domains, login wall, volume
+	 * copies) and runs the parent's image at `input.tag`; an existing one is
+	 * switched to that tag and redeployed, its volumes left alone. The deploy
+	 * records `input.commit`. With a `branch`, the branch filter applies as
+	 * for a pull request event, a filtered-out branch losing the preview it
+	 * had. Never throws for a request it can't act on, it reports why.
+	 */
+	async deployImage(
+		parent: ServiceDTO,
+		input: ImagePreviewInput,
+	): Promise<PreviewResult> {
+		if (input.branch !== null && !this.#branchAllowed(parent, input.branch)) {
+			await this.#remove(parent, input.prNumber);
+			return {
+				reason: `${input.branch} doesn't pass this service's preview branch filter.`,
+				status: "ignored",
+			};
+		}
+		const existing = await ServiceGitDTO.getPreview(parent.id, input.prNumber);
+		const row = existing?.toJSON();
+		const request: PreviewRequest = {
+			branch: input.branch ?? row?.previewBranch ?? null,
+			number: input.prNumber,
+			source: { commit: input.commit, kind: "image", tag: input.tag },
+			title: input.title ?? row?.previewPrTitle ?? null,
+		};
+		if (existing) {
+			return await this.#refresh(parent, existing, request, {
+				skipUnchanged: false,
+			});
+		}
+		return await this.#create(parent, request);
 	}
 
 	/**
@@ -311,6 +393,7 @@ class PreviewServiceClass {
 				prNumber: preview.toJSON().previewPrNumber ?? 0,
 				slug: preview.slug,
 				status: preview.currentStatus,
+				tag: preview.buildSource === "image" ? preview.tag : null,
 				title: row.previewPrTitle,
 			};
 		});
@@ -417,10 +500,9 @@ class PreviewServiceClass {
 	/** Creates the preview service for a newly opened pull request and deploys it. */
 	async #create(
 		parent: ServiceDTO,
-		event: PullRequestEvent,
-		ref: string,
+		request: PreviewRequest,
 	): Promise<PreviewResult> {
-		const slug = previewSlug(parent.slug, event.number);
+		const slug = previewSlug(parent.slug, request.number);
 		if (await ServiceDTO.slugTaken(slug)) {
 			return {
 				reason: `The slug ${slug} is already taken by another service.`,
@@ -433,8 +515,8 @@ class PreviewServiceClass {
 		}
 		const settings = mirroredSettings(parent);
 		const domains = await previewDomains(parent, {
-			branch: event.branch,
-			pr: event.number,
+			branch: request.branch,
+			pr: request.number,
 		});
 		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
 		const policy = parent.previewAccessPolicy;
@@ -446,25 +528,24 @@ class PreviewServiceClass {
 				parent,
 				domains.primaryDomain ??
 					defaultHostname(slug, stack?.slug, config.baseDomain),
-				{ branch: event.branch, pr: event.number, slug },
+				{ branch: request.branch, pr: request.number, slug },
 			),
 			domains: domains.domains,
-			buildSource: "git",
-			gitRef: ref,
 			image: parent.image,
-			name: `${parent.name} PR #${event.number}`,
+			name: `${parent.name} PR #${request.number}`,
 			networkMode: "bridge",
 			portProtocol: parent.portProtocol,
-			previewBranch: event.branch,
+			previewBranch: request.branch,
 			previewParentId: parent.id,
-			previewPrNumber: event.number,
-			previewPrTitle: event.title,
+			previewPrNumber: request.number,
+			previewPrTitle: request.title,
 			pullPolicy: parent.pullPolicy,
 			restartPolicy: parent.restartPolicy,
 			slug,
 			stackId: parent.stackId,
 			tag: parent.tag,
 			userId: parent.userId,
+			...sourceColumns(parent, request.source),
 		});
 		await preview.update({
 			defaultDomainEnabled: domains.defaultDomainEnabled,
@@ -478,19 +559,27 @@ class PreviewServiceClass {
 			await this.#copyVolumes(parent, preview);
 		}
 		logger.info(
-			`Preview created: parent=${parent.id} pr=${event.number} service=${preview.id} ref=${ref}`,
+			`Preview created: parent=${parent.id} pr=${request.number} service=${preview.id} ${sourceLabel(request.source)}`,
 		);
-		return await this.#deploy(parent, preview);
+		return await this.#deploy(parent, preview, request.source);
 	}
 
-	/** Points an existing preview at the pull request's new head and redeploys it, unless an update left the head where it was. A reopened pull request always redeploys. */
+	/**
+	 * Points an existing preview at the pull request's new head (or CI's new
+	 * image tag) and redeploys it. With `skipUnchanged`, a git preview whose
+	 * ref didn't move is refreshed without a redeploy.
+	 */
 	async #refresh(
 		parent: ServiceDTO,
 		preview: ServiceDTO,
-		event: PullRequestEvent,
-		ref: string,
+		request: PreviewRequest,
+		options: { skipUnchanged: boolean },
 	): Promise<PreviewResult> {
-		const unchanged = preview.gitRef === ref && event.action === "update";
+		const { source } = request;
+		const unchanged =
+			options.skipUnchanged &&
+			source.kind === "git" &&
+			preview.gitRef === source.gitRef;
 		const stack = parent.stackId ? await StackDTO.get(parent.stackId) : null;
 		await preview.update({
 			...mirroredSettings(parent),
@@ -499,19 +588,19 @@ class PreviewServiceClass {
 			envVars: await previewEnv(
 				parent,
 				primaryHostname(preview.toJSON(), stack?.slug, config.baseDomain),
-				{ branch: event.branch, pr: event.number, slug: preview.slug },
+				{ branch: request.branch, pr: request.number, slug: preview.slug },
 			),
-			gitRef: ref,
-			previewBranch: event.branch,
-			previewPrTitle: event.title,
+			previewBranch: request.branch,
+			previewPrTitle: request.title,
+			...sourceColumns(parent, source),
 		});
 		if (unchanged) {
 			return {
-				reason: `Preview of #${event.number} already builds ${ref}.`,
+				reason: `Preview of #${request.number} already builds ${preview.gitRef}.`,
 				status: "ignored",
 			};
 		}
-		return await this.#deploy(parent, preview);
+		return await this.#deploy(parent, preview, source);
 	}
 
 	/**
@@ -541,12 +630,14 @@ class PreviewServiceClass {
 		}
 	}
 
-	/** Enqueues a deploy of a preview as the parent service's owner. */
+	/** Enqueues a deploy of a preview as the parent service's owner, recording the commit CI built its image from. */
 	async #deploy(
 		parent: ServiceDTO,
 		preview: ServiceDTO,
+		source?: PreviewSource,
 	): Promise<PreviewResult> {
 		const { deploymentId, jobId } = await DeploymentService.enqueueDeploy({
+			...(source?.kind === "image" ? { gitCommit: source.commit } : {}),
 			svc: preview,
 			trigger: "push",
 			userId: parent.userId,

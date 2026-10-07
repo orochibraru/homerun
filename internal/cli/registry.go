@@ -324,7 +324,7 @@ var baseCommands = []Command{
 	{
 		Args:    "<service>",
 		Name:    "previews list",
-		Summary: "list a git service's open pull request previews",
+		Summary: "list a service's open pull request previews",
 		Setup: func(set *flag.FlagSet) Runner {
 			asJSON := set.Bool("json", false, "print raw JSON instead of a table")
 			return func(env Env, args []string) { PreviewsList(env.Client(), serviceID(env, args[0]), *asJSON) }
@@ -356,8 +356,31 @@ var baseCommands = []Command{
 	},
 	{
 		Args:    "<service> <pr>",
+		Name:    "previews deploy",
+		Summary: "create or update an image-based service's preview at the tag CI pushed, wait until it's healthy, then print its URL (non-zero on failure or timeout)",
+		Setup: func(set *flag.FlagSet) Runner {
+			tag := set.String("tag", "", "the `tag` of the service's image the preview runs (required)")
+			commit := set.String("commit", "", "the commit `sha` the image was built from, recorded and waited for")
+			branch := set.String("branch", "", "the pull request's head `branch`, checked against the preview branch filter")
+			title := set.String("title", "", "the pull request's `title`")
+			timeout := set.Duration("timeout", defaultPreviewWait, "give up after this long, e.g. 20m")
+			return func(env Env, args []string) {
+				pr := RequirePR(args[1])
+				if *tag == "" {
+					Fail("--tag is required: the image tag CI pushed for the pull request.")
+					return
+				}
+				requireCommit(*commit)
+				PreviewDeploy(env.Client(), serviceID(env, args[0]), pr, PreviewDeployArgs{
+					Branch: *branch, Commit: *commit, Tag: *tag, Timeout: *timeout, Title: *title,
+				})
+			}
+		},
+	},
+	{
+		Args:    "<service> <pr>",
 		Name:    "previews delete",
-		Summary: "delete a preview (the next push to the pull request recreates it)",
+		Summary: "delete a preview (a git service's next push to the pull request recreates it)",
 		Setup: noFlags(func(env Env, args []string) {
 			pr := RequirePR(args[1])
 			PreviewDelete(env.Client(), serviceID(env, args[0]), pr)

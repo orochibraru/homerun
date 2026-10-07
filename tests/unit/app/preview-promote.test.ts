@@ -146,12 +146,12 @@ describe("PreviewApiService.promote", () => {
 				prNumber: 7,
 				userId: "u1",
 			});
-		const imageParent = {
-			buildSource: "image",
+		const previewParent = {
+			buildSource: "git",
 			id: "parent",
-			toJSON: () => ({ previewParentId: null }),
+			toJSON: () => ({ previewParentId: "grandparent" }),
 		} as unknown as Parent;
-		expect(await promote(null, imageParent)).toMatchObject({ status: 400 });
+		expect(await promote(null, previewParent)).toMatchObject({ status: 400 });
 		expect(await promote("fff")).toMatchObject({ status: 409 });
 		health = "watching";
 		expect(await promote()).toMatchObject({ status: 409 });
@@ -204,5 +204,134 @@ describe("DeploymentService.enqueueDeploy", () => {
 			dedupeKey: "rollback:parent",
 			title: "Roll back Web",
 		});
+	});
+});
+
+describe("PreviewApiService.deploy", () => {
+	const input = {
+		branch: "feature",
+		commit: "abc1234def",
+		prNumber: 7,
+		tag: "pr-7",
+		title: "Add thing",
+	};
+	const imageParent = (previewsEnabled = true) =>
+		({
+			buildSource: "image",
+			id: "parent",
+			name: "Web",
+			stackId: "stk",
+			toJSON: () => ({ previewParentId: null, previewsEnabled }),
+			update: async () => undefined,
+		}) as unknown as Parent;
+
+	test("deploys through PreviewService and answers with the preview and its deployment", async () => {
+		const calls: unknown[] = [];
+		stub(
+			PreviewService,
+			"deployImage",
+			async (_parent: unknown, sent: unknown) => {
+				calls.push(sent);
+				return { deploymentId: "d-new", jobId: "job-1", status: "deployed" };
+			},
+		);
+		const result = await PreviewApiService.deploy(imageParent(), input);
+		expect(calls).toEqual([input]);
+		expect(result).toMatchObject({
+			deploymentId: "d-new",
+			error: null,
+			preview: { prNumber: 7, slug: "web-pr-7" },
+		});
+	});
+
+	test("refuses a git service, previews off and an ignored request", async () => {
+		let deploys = 0;
+		stub(PreviewService, "deployImage", async () => {
+			deploys++;
+			return { reason: "filtered out", status: "ignored" };
+		});
+		expect(await PreviewApiService.deploy(parent, input)).toMatchObject({
+			status: 400,
+		});
+		expect(deploys).toBe(0);
+		expect(
+			await PreviewApiService.deploy(imageParent(false), input),
+		).toMatchObject({ status: 409 });
+		expect(deploys).toBe(0);
+		expect(await PreviewApiService.deploy(imageParent(), input)).toEqual({
+			error: "filtered out",
+			status: 409,
+		});
+	});
+
+	test("promotes an image-based preview's revision to its image-based parent", async () => {
+		const result = await PreviewApiService.promote({
+			commit: "abc1234",
+			parent: imageParent(),
+			prNumber: 7,
+			userId: "u1",
+		});
+		expect(result.error).toBeNull();
+		expect(created[0]).toMatchObject({
+			rollbackOfDeploymentId: "d-preview",
+			trigger: "promote",
+		});
+	});
+});
+
+describe("DeploymentService.enqueueDeploy commit", () => {
+	const imagePreview = {
+		buildSource: "image",
+		id: "preview",
+		name: "Web PR #7",
+		toJSON: () => ({ previewParentId: "parent" }),
+		update: async () => undefined,
+	} as unknown as Parent;
+
+	test("records the commit it's given", async () => {
+		await DeploymentService.enqueueDeploy({
+			gitCommit: "fff1234",
+			svc: imagePreview,
+			userId: "u1",
+		});
+		expect(created[0]).toMatchObject({ gitCommit: "fff1234" });
+	});
+
+	test("a redeploy of an image-based preview keeps its latest commit", async () => {
+		await DeploymentService.enqueueDeploy({ svc: imagePreview, userId: "u1" });
+		expect(created[0]).toMatchObject({ gitCommit: "abc1234def" });
+		await DeploymentService.enqueueDeploy({ svc: parent, userId: "u1" });
+		expect(created[1]).toMatchObject({ gitCommit: null });
+	});
+
+	test("moves a given commit onto the deploy it coalesced into", async () => {
+		const updates: unknown[] = [];
+		stub(QueueService, "enqueue", async () => ({
+			id: "job-0",
+			payload: {
+				deploymentId: "d-queued",
+				serviceId: "preview",
+				trigger: "push",
+				userId: "u1",
+			},
+		}));
+		stub(DeploymentDTO, "create", async () => ({
+			id: "d-new",
+			update: async () => undefined,
+		}));
+		stub(DeploymentDTO, "get", async (id: string) => ({
+			update: async (patch: unknown) => {
+				updates.push({ id, patch });
+			},
+		}));
+		const result = await DeploymentService.enqueueDeploy({
+			gitCommit: "fff1234",
+			svc: imagePreview,
+			userId: "u1",
+		});
+		expect(result.deploymentId).toBe("d-queued");
+		expect(updates).toEqual([
+			{ id: "d-queued", patch: { gitCommit: "fff1234" } },
+		]);
 	});
 });

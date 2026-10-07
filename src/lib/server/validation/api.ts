@@ -423,6 +423,44 @@ export const promotePreviewApiBody = z.object({
 		),
 });
 
+/** `PUT /services/{serviceId}/previews/{prNumber}`'s body: the image tag CI pushed for the pull request, and what it was built from. */
+export const deployPreviewApiBody = z.object({
+	branch: z
+		.string()
+		.trim()
+		.min(1)
+		.max(255)
+		.optional()
+		.describe(
+			"The pull request's head branch: checked against the service's preview branch filter, a filtered-out branch is refused with 409. Omitted, no filter applies and an existing preview keeps its branch.",
+		),
+	commit: z
+		.string()
+		.regex(/^[0-9a-f]{7,40}$/i, "A full or abbreviated (7+) commit SHA.")
+		.optional()
+		.describe(
+			"The commit the image was built from, recorded on the preview's revision so `homerun previews wait --commit` and promote --commit can match it.",
+		),
+	tag: z
+		.string()
+		.regex(
+			/^[\w][\w.-]{0,127}$/,
+			"A Docker tag: letters, digits, _, . and -, up to 128 characters.",
+		)
+		.describe(
+			"The tag of the service's own image the preview runs, pulled with the service's registry credentials.",
+		),
+	title: z
+		.string()
+		.trim()
+		.min(1)
+		.max(500)
+		.optional()
+		.describe(
+			"The pull request's title. Omitted, an existing preview keeps its title.",
+		),
+});
+
 /** `PUT /services/{serviceId}/dependencies`'s body: the full set of services it depends on, replacing the recorded ones. */
 export const serviceDependenciesApiBody = z.object({
 	dependsOn: z

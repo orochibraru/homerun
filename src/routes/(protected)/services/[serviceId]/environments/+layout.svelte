@@ -51,8 +51,9 @@
 			id: "service/environments/revisions",
 			label: "Revisions",
 		},
-		...(svc.buildSource === "git" && !svc.previewParentId
-			? [
+		...(svc.previewParentId
+			? []
+			: [
 					{
 						href: resolve(
 							"/(protected)/services/[serviceId]/environments/previews",
@@ -62,6 +63,9 @@
 						id: "service/environments/previews",
 						label: "Previews",
 					},
+				]),
+		...(svc.buildSource === "git" && !svc.previewParentId
+			? [
 					{
 						href: resolve(
 							"/(protected)/services/[serviceId]/environments/channels",

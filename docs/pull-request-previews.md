@@ -14,6 +14,10 @@ all. GitHub, Gitea and GitLab previews build the exact head commit; Bitbucket
 only sends an abbreviated hash, so its previews build the head branch, which
 covers every pull request previews are made for anyway.
 
+A service whose CI builds and pushes its own image gets previews too, created by
+the pipeline instead of the webhook, see
+[Previews of an image-based service](#previews-of-an-image-based-service).
+
 ![A git service's Environments & Deployments → Previews with pull request previews enabled](images/previews-tab.webp)
 
 **Pull requests from forks are never previewed.** On a public repo anyone can
@@ -50,7 +54,8 @@ preview's branch or title finds its parent. A preview takes its parent's stack,
 icon and category. Any of the service's own hostnames in its env vars (an
 `ORIGIN`, a public URL) are replaced with the preview's main hostname, so a
 preview doesn't send its visitors, cookies or CSRF checks to the real site.
-Turning previews off, or deleting the service, deletes every preview.
+Turning previews off, switching the service between a git repo and an image, or
+deleting the service, deletes every preview.
 
 ## Reporting back to GitHub
 
@@ -180,6 +185,41 @@ Previews combine with [release channels](release-channels.md) on the same
 service: pull requests get previews, the canary branch deploys the canary and
 matching tags deploy the service itself. See
 [Main is canary, tags are stable](main-canary-tags-stable.md).
+
+## Previews of an image-based service
+
+An image-based service has no repo for Homerun to watch, so its CI creates the
+previews: after pushing the pull request's image, it runs
+`homerun previews deploy <service> <pr> --tag <tag>`. With **Enable pull request
+previews** ticked in the service's **Environments & Deployments → Previews**,
+the first call for a pull request creates `<slug>-pr-<number>` the same way a
+git preview is created: the service's settings, env vars and overrides, domain
+template, login wall, stack, icon and category, plus volume copies when that
+option is on. The preview runs the service's own image at that tag, pulled with
+the service's registry credentials. Each later call switches the preview to the
+new tag and redeploys it, without copying volumes again. The command waits until
+the preview is healthy, prints its URL, and exits non-zero when the deploy fails
+or `--timeout` (default `20m`) passes.
+
+- `--commit <sha>` records the commit the image was built from on the preview's
+  revision, so the command waits for that exact deploy, and
+  `homerun previews wait --commit` and `homerun previews promote --commit` match
+  it. Redeploys of the same tag keep it.
+- `--branch <branch>` runs the branch filter, see
+  [Choosing which branches get previews](#choosing-which-branches-get-previews):
+  a branch it leaves out is refused, and loses the preview it had. Without
+  `--branch` no filter applies.
+- `--title <title>` is the pull request's title shown in the Previews section.
+
+There's no webhook to delete the preview when the pull request closes, so the
+pipeline does it with `homerun previews delete <service> <pr>`; a preview whose
+pull request closed without that stays until it's deleted by hand. Forks are up
+to the pipeline as well: Homerun can't tell where an image came from, so skip
+pull requests from forks in the workflow. A git service refuses the command (its
+previews come from the webhook), and so does a service with previews off.
+**Deploy open pull requests** and **Reporting back to GitHub** only apply to git
+services. [Deploying from CI](ci-cd.md#previews-from-ci) has a complete GitHub
+Actions workflow.
 
 ## Testing previews from CI
 

@@ -345,6 +345,7 @@ describe("PreviewService.list", () => {
 			prNumber: 7,
 			slug: "web-pr-7",
 			status: "running",
+			tag: null,
 			title: "Add thing",
 		});
 		expect(list[1]).toMatchObject({ hostname: null, prNumber: 0 });
@@ -583,5 +584,134 @@ describe("preview environment and volumes", () => {
 				slug: "s",
 			}),
 		).toBe("s:3:");
+	});
+});
+
+describe("PreviewService.deployImage", () => {
+	const input = (overrides: Record<string, unknown> = {}) => ({
+		branch: "feat/login",
+		commit: SHA,
+		prNumber: 7,
+		tag: "pr-7",
+		title: "Add login",
+		...overrides,
+	});
+
+	test("creates a preview running the parent's image at the tag, like a git one", async () => {
+		const volumes: Record<string, unknown>[] = [];
+		stub(ServiceVolumeDTO, "listForService", async () => [
+			{
+				mount: { toJSON: () => ({ containerPath: "/data", readOnly: false }) },
+				volumeName: "data",
+				volumeSource: "app-data",
+			},
+		]);
+		stub(
+			StorageVolumeDTO,
+			"create",
+			async (volume: Record<string, unknown>) => {
+				volumes.push(volume);
+				return { id: "copy-1" };
+			},
+		);
+		stub(ServiceVolumeDTO, "attach", async () => undefined);
+		const { svc } = fakeService({
+			buildSource: "image",
+			envVars: { KEEP: "1" },
+			image: "ghcr.io/me/app",
+			previewCopyVolumes: true,
+			previewDomainTemplate: "pr-{pr}.preview.io",
+			previewEnvOverrides: { DB: "app_{pr}_{branch}" },
+			registryUrl: "ghcr.io",
+		});
+		const result = await PreviewService.deployImage(svc, input());
+		expect(result).toEqual({
+			deploymentId: "d1",
+			jobId: "j1",
+			status: "deployed",
+		});
+		expect(created[0]).toMatchObject({
+			buildSource: "image",
+			domains: ["pr-7.preview.io"],
+			envVars: { DB: "app_7_feat/login", KEEP: "1" },
+			image: "ghcr.io/me/app",
+			previewBranch: "feat/login",
+			previewParentId: "parent",
+			previewPrNumber: 7,
+			previewPrTitle: "Add login",
+			registryUrl: "ghcr.io",
+			slug: "web-pr-7",
+			tag: "pr-7",
+		});
+		expect(volumes).toHaveLength(1);
+		expect(enqueued).toEqual([
+			expect.objectContaining({
+				gitCommit: SHA,
+				trigger: "push",
+				userId: "u1",
+			}),
+		]);
+	});
+
+	test("switches an existing preview to the new tag without copying volumes again", async () => {
+		let copies = 0;
+		stub(StorageVolumeDTO, "create", async () => {
+			copies++;
+			return { id: "copy" };
+		});
+		const preview = fakeService({
+			buildSource: "image",
+			id: "preview",
+			previewBranch: "feat/login",
+			previewPrTitle: "Old title",
+			tag: "pr-7-old",
+		});
+		existing = preview.svc;
+		const { svc } = fakeService({
+			buildSource: "image",
+			previewCopyVolumes: true,
+		});
+		const result = await PreviewService.deployImage(
+			svc,
+			input({ branch: null, commit: null, title: null }),
+		);
+		expect(result.status).toBe("deployed");
+		expect(created).toHaveLength(0);
+		expect(copies).toBe(0);
+		expect(preview.updates[0]).toMatchObject({
+			buildSource: "image",
+			previewBranch: "feat/login",
+			previewPrTitle: "Old title",
+			tag: "pr-7",
+		});
+		expect(enqueued).toEqual([expect.objectContaining({ gitCommit: null })]);
+	});
+
+	test("refuses a branch the filter leaves out, removing the preview it had", async () => {
+		const { svc } = fakeService({
+			buildSource: "image",
+			previewBranchInclude: ["feat/*"],
+		});
+		const refused = await PreviewService.deployImage(
+			svc,
+			input({ branch: "chore/deps" }),
+		);
+		expect(refused).toEqual({
+			reason: "chore/deps doesn't pass this service's preview branch filter.",
+			status: "ignored",
+		});
+		expect(created).toHaveLength(0);
+		expect(enqueued).toHaveLength(0);
+
+		existing = fakeService({ id: "old", previewBranch: "chore/deps" }).svc;
+		await PreviewService.deployImage(svc, input({ branch: "chore/deps" }));
+		expect(deleted).toEqual(["old"]);
+
+		existing = null;
+		const unfiltered = await PreviewService.deployImage(
+			svc,
+			input({ branch: null }),
+		);
+		expect(unfiltered.status).toBe("deployed");
 	});
 });

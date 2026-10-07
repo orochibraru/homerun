@@ -1,16 +1,24 @@
+import { fail, redirect } from "@sveltejs/kit";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { parseScope } from "#lib/iac/generate.js";
 import { highlightCode } from "#lib/server/shiki.js";
 import { IacInventoryService } from "#lib/services/iac-inventory.service.js";
+import { IacStateService } from "#lib/services/iac-state.service.js";
 import { stackPath } from "#lib/stack-tree.js";
+import { resolve } from "$app/paths";
 
 export const load = async ({ parent, url }) => {
 	const { origin, projects, user } = await parent();
-	const [stackRows, serviceRows] = await Promise.all([
+	const [stackRows, serviceRows, storeRows, settings] = await Promise.all([
 		StackDTO.list(),
 		ServiceDTO.list(),
+		ObjectStoreDTO.list(),
+		InstanceSettingsDTO.get(),
 	]);
+	const builtinEnabled = settings.toJSON().garageEnabled === true;
 	const stacks = stackRows.map((stack) => ({
 		id: stack.id,
 		name: stack.name,
@@ -55,6 +63,7 @@ export const load = async ({ parent, url }) => {
 				.map((stack) => ({
 					group: "Stacks",
 					label: stackPath(stack.id, stacks),
+					name: stack.name,
 					value: `stack:${stack.id}`,
 				}))
 				.sort((a, b) => a.label.localeCompare(b.label)),
@@ -63,9 +72,36 @@ export const load = async ({ parent, url }) => {
 				.map((svc) => ({
 					group: "Services",
 					label: svc.name,
+					name: svc.name,
 					value: `service:${svc.id}`,
 				}))
 				.sort((a, b) => a.label.localeCompare(b.label)),
 		],
+		stores: storeRows
+			.filter((store) => store.kind !== "garage" || builtinEnabled)
+			.map((store) => store.summary()),
 	};
+};
+
+export const actions = {
+	createBackend: async ({ locals, request }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const formData = await request.formData();
+		try {
+			const project = await IacStateService.createProject({
+				bucket: String(formData.get("bucket") ?? "").trim(),
+				name: String(formData.get("name") ?? ""),
+				prefix: String(formData.get("prefix") ?? ""),
+				storeId: String(formData.get("storeId") ?? ""),
+				userId: locals.user.id,
+			});
+			return { projectId: project.id };
+		} catch (cause) {
+			return fail(400, {
+				error: cause instanceof Error ? cause.message : String(cause),
+			});
+		}
+	},
 };

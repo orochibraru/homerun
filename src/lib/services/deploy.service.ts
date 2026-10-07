@@ -68,6 +68,7 @@ interface ResolvedImage {
 export interface EnqueueDeployInput {
 	clientDeploymentId?: string | null;
 	dependsOnJobId?: string | null;
+	gitCommit?: string | null;
 	mountSwap?: { from: string; to: string };
 	noCache?: boolean;
 	note?: string;
@@ -647,7 +648,9 @@ class DeploymentServiceClass {
 	 * a `deploy` job deduped per kind (deploy, rollback, promote). Concurrent enqueues for the same service coalesce onto
 	 * one queued job (`dedupeKey`/`lockKey` scoped to `service:${svc.id}`); when
 	 * that happens this deployment's own row is marked `stopped` as superseded
-	 * and the coalesced job's deployment id is returned instead.
+	 * and the coalesced job's deployment id is returned instead, a given
+	 * `gitCommit` moving onto that deployment since its job deploys what the
+	 * service row says when it runs.
 	 */
 	async enqueueDeploy(input: EnqueueDeployInput): Promise<EnqueueDeployResult> {
 		const { svc, userId } = input;
@@ -657,6 +660,7 @@ class DeploymentServiceClass {
 			trigger === "promote" ? "promote" : rollbackOf ? "rollback" : "deploy";
 		const dep = await DeploymentDTO.create({
 			environment: deployEnvironment(svc.toJSON()),
+			gitCommit: await this.#recordedCommit(input),
 			id: input.clientDeploymentId || undefined,
 			log: input.note ? `${input.note}\n` : undefined,
 			restoreConfig: kind === "rollback" && Boolean(input.restoreConfig),
@@ -696,12 +700,38 @@ class DeploymentServiceClass {
 				finishedAt: new Date(),
 				status: "stopped",
 			});
+			if (input.gitCommit !== undefined) {
+				const queued = await DeploymentDTO.get(coalesced);
+				await queued?.update({ gitCommit: input.gitCommit });
+			}
 			logger.info(
 				`Deploy coalesced into queued job: service=${svc.id} job=${entry.id}`,
 			);
 		}
 
 		return { deploymentId: coalesced, jobId: entry.id };
+	}
+
+	/**
+	 * The commit a deploy records before it runs: `input.gitCommit` when given,
+	 * else, for a redeploy of a preview running an image CI built, the commit
+	 * its latest deployment recorded, so every revision of it still says which
+	 * commit it runs. Null otherwise: a git build records what it built.
+	 */
+	async #recordedCommit(input: EnqueueDeployInput): Promise<string | null> {
+		if (input.gitCommit !== undefined) {
+			return input.gitCommit;
+		}
+		const { svc } = input;
+		if (
+			input.rollbackOfDeploymentId ||
+			svc.buildSource !== "image" ||
+			!svc.toJSON().previewParentId
+		) {
+			return null;
+		}
+		const [latest] = await DeploymentDTO.listForService(svc.id, 1);
+		return latest?.toJSON().gitCommit ?? null;
 	}
 
 	/**

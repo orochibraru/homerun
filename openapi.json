@@ -18216,21 +18216,6 @@
 																"pollEnabled": {
 																	"type": "boolean"
 																},
-																"previewBranchExclude": {
-																	"items": {
-																		"type": "string"
-																	},
-																	"type": "array"
-																},
-																"previewBranchInclude": {
-																	"items": {
-																		"type": "string"
-																	},
-																	"type": "array"
-																},
-																"previewsEnabled": {
-																	"type": "boolean"
-																},
 																"ref": {
 																	"anyOf": [
 																		{
@@ -18272,9 +18257,6 @@
 																"buildServerRemoteHostId",
 																"dockerfilePath",
 																"pollEnabled",
-																"previewBranchExclude",
-																"previewBranchInclude",
-																"previewsEnabled",
 																"ref",
 																"requireStatusChecks",
 																"requiredStatusChecks",
@@ -18289,6 +18271,21 @@
 												},
 												"image": {
 													"type": "string"
+												},
+												"previewBranchExclude": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"previewBranchInclude": {
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												"previewsEnabled": {
+													"type": "boolean"
 												},
 												"pullPolicy": {
 													"type": "string"
@@ -18331,6 +18328,9 @@
 												"buildSource",
 												"git",
 												"image",
+												"previewBranchExclude",
+												"previewBranchInclude",
+												"previewsEnabled",
 												"pullPolicy",
 												"registry",
 												"tag"
@@ -20907,7 +20907,7 @@
 														"type": "null"
 													}
 												],
-												"description": "What the preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA"
+												"description": "What a git service's preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA. Null for an image-based service's preview"
 											},
 											"hostnames": {
 												"items": {
@@ -21161,7 +21161,7 @@
 		},
 		"/services/{serviceId}/previews/{prNumber}": {
 			"delete": {
-				"description": "Deletes the preview's workload, DNS records and row. The next push to the pull request recreates it.",
+				"description": "Deletes the preview's workload, DNS records and row. A git service's next push to the pull request recreates it; an image-based service's CI calls this when the pull request closes.",
 				"operationId": "delete_services__serviceId__previews__prNumber_",
 				"parameters": [
 					{
@@ -21437,7 +21437,7 @@
 													"type": "null"
 												}
 											],
-											"description": "What the preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA"
+											"description": "What a git service's preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA. Null for an image-based service's preview"
 										},
 										"hostnames": {
 											"items": {
@@ -21703,11 +21703,472 @@
 				],
 				"summary": "Get a preview",
 				"tags": ["Previews"]
+			},
+			"put": {
+				"description": "Creates or updates the pull request's preview on an image-based service, from the image CI just pushed: a new preview gets the service's preview settings (env and overrides, domains, login wall, stack, volume copies when that's on) and runs the service's own image at tag, with its registry credentials; an existing one switches to tag and redeploys, without copying volumes again. commit is recorded on the preview's revision for homerun previews wait --commit. With branch, the preview branch filter applies: a filtered-out branch is refused and loses the preview it had. Returns once the deploy is queued.",
+				"operationId": "put_services__serviceId__previews__prNumber_",
+				"parameters": [
+					{
+						"description": "Service id (the preview's parent)",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Pull request number",
+						"in": "path",
+						"name": "prNumber",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"branch": {
+										"description": "The pull request's head branch: checked against the service's preview branch filter, a filtered-out branch is refused with 409. Omitted, no filter applies and an existing preview keeps its branch.",
+										"maxLength": 255,
+										"minLength": 1,
+										"type": "string"
+									},
+									"commit": {
+										"description": "The commit the image was built from, recorded on the preview's revision so `homerun previews wait --commit` and promote --commit can match it.",
+										"pattern": "^[0-9a-f]{7,40}$",
+										"type": "string"
+									},
+									"tag": {
+										"description": "The tag of the service's own image the preview runs, pulled with the service's registry credentials.",
+										"pattern": "^[\\w][\\w.-]{0,127}$",
+										"type": "string"
+									},
+									"title": {
+										"description": "The pull request's title. Omitted, an existing preview keeps its title.",
+										"maxLength": 500,
+										"minLength": 1,
+										"type": "string"
+									}
+								},
+								"required": ["tag"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"branch": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"deployment": {
+											"anyOf": [
+												{
+													"additionalProperties": false,
+													"properties": {
+														"createdAt": {
+															"description": "ISO 8601 timestamp",
+															"example": "2026-08-20T12:00:00.000Z",
+															"type": "string"
+														},
+														"errorMessage": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"finishedAt": {
+															"anyOf": [
+																{
+																	"description": "ISO 8601 timestamp",
+																	"example": "2026-08-20T12:00:00.000Z",
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"gitCommit": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															],
+															"description": "The commit it built, null until the build checked it out"
+														},
+														"gitRef": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"id": {
+															"type": "string"
+														},
+														"status": {
+															"enum": [
+																"pending",
+																"pulling",
+																"starting",
+																"running",
+																"stopped",
+																"failed",
+																"missing"
+															],
+															"type": "string"
+														}
+													},
+													"required": [
+														"createdAt",
+														"errorMessage",
+														"finishedAt",
+														"gitCommit",
+														"gitRef",
+														"id",
+														"status"
+													],
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The preview's latest deploy attempt, failed or in flight ones included"
+										},
+										"deploymentId": {
+											"description": "The preview's queued deployment. Poll GET /services/{serviceId}/previews/{prNumber} (or run homerun previews wait) until its revision is healthy",
+											"type": "string"
+										},
+										"gitRef": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "What a git service's preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA. Null for an image-based service's preview"
+										},
+										"hostnames": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"id": {
+											"description": "The preview's own service id",
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"prNumber": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"revision": {
+											"anyOf": [
+												{
+													"additionalProperties": false,
+													"properties": {
+														"deployedAt": {
+															"anyOf": [
+																{
+																	"description": "ISO 8601 timestamp",
+																	"example": "2026-08-20T12:00:00.000Z",
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"gitCommit": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"gitRef": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"health": {
+															"anyOf": [
+																{
+																	"enum": [
+																		"watching",
+																		"healthy",
+																		"unhealthy",
+																		"rolled_back"
+																	],
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"healthReason": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"id": {
+															"description": "The revision's deployment id on the preview",
+															"type": "string"
+														},
+														"imageDigest": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"imageRef": {
+															"anyOf": [
+																{
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														}
+													},
+													"required": [
+														"deployedAt",
+														"gitCommit",
+														"gitRef",
+														"health",
+														"healthReason",
+														"id",
+														"imageDigest",
+														"imageRef"
+													],
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The revision the preview runs now, null until a deploy of it succeeded"
+										},
+										"slug": {
+											"type": "string"
+										},
+										"status": {
+											"description": "The preview service's last known status",
+											"enum": [
+												"pending",
+												"pulling",
+												"starting",
+												"running",
+												"stopped",
+												"failed",
+												"missing"
+											],
+											"type": "string"
+										},
+										"title": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"url": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The preview's main URL, null when nothing routes to it"
+										}
+									},
+									"required": [
+										"branch",
+										"deployment",
+										"gitRef",
+										"hostnames",
+										"id",
+										"name",
+										"prNumber",
+										"revision",
+										"slug",
+										"status",
+										"title",
+										"url",
+										"deploymentId"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Deploy queued"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, not a pull request number, or the service builds from git (its previews come from the webhook) or is itself a preview"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Previews are off, the branch doesn't pass the preview branch filter, the preview's slug is taken, or the instance is out of capacity"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Deploy a preview from an image",
+				"tags": ["Previews"]
 			}
 		},
 		"/services/{serviceId}/previews/{prNumber}/promote": {
 			"post": {
-				"description": "Deploys the exact image the preview's current revision runs to the service it previews, without building, pulling or scanning, the same way a rollback redeploys a revision. The deployment points at the preview revision (rollbackOfDeploymentId) and its log opens with where the image came from. Refused while the preview has no running revision, while its health is still being watched or unhealthy, or when commit is given and isn't what it runs. Returns once queued: poll GET /jobs/{jobId}.",
+				"description": "Deploys the exact image the preview's current revision runs to the service it previews, without building, pulling or scanning, the same way a rollback redeploys a revision. An image-based service ends up on the preview's image and tag. The deployment points at the preview revision (rollbackOfDeploymentId) and its log opens with where the image came from. Refused while the preview has no running revision, while its health is still being watched or unhealthy, or when commit is given and isn't what it runs. Returns once queued: poll GET /jobs/{jobId}.",
 				"operationId": "post_services__serviceId__previews__prNumber__promote",
 				"parameters": [
 					{
@@ -21820,7 +22281,7 @@
 								}
 							}
 						},
-						"description": "Invalid body, or the service doesn't build from git"
+						"description": "Invalid body, or the service is itself a preview"
 					},
 					"401": {
 						"content": {

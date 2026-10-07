@@ -86,7 +86,7 @@ bump it with
 bun run dev              # scripts/dev.ts: vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change; `--only=app`/`--only=worker` runs one half alone
 bun run build            # bun run gen && vite build
 bun run start            # ./build/server (the standalone binary adapter-bun compiles, serve the built app)
-bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts, homerun.schema.json and the Terraform provider's spec.json from source, CI fails if the result isn't committed
+bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts, homerun.schema.json, the Terraform provider's spec.json and its registry docs from source, CI fails if the result isn't committed
 bun run check            # svelte-check --fail-on-warnings (no `--tsgo`: tsgo can't resolve `.svelte` files through `#lib` subpath imports), tsc over scripts/, go vet, and golangci-lint (`go tool -modfile=tools/go/go.mod`), the same two over the Terraform provider's own module (`go -C terraform/provider`), the whole gate in one command, see `.agents/notes/testing.md`
 bun run lint             # markdownlint-cli2, scripts/lint-tailwind.ts (Tailwind class sorting) and oxlint --type-aware --deny-warnings (`.oxlintrc.json`; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
 bun run lint:fix         # the --fix half of all three

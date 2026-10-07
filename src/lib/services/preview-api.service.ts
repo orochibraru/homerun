@@ -7,7 +7,7 @@ import { Logger } from "#lib/logger.js";
 import { primaryHostname, serviceHostnames } from "#lib/service-domains.js";
 import type { ContainerStatus, RevisionHealth } from "#lib/types.js";
 import { DeploymentService } from "./deploy.service.ts";
-import { PreviewService } from "./preview.service.ts";
+import { type ImagePreviewInput, PreviewService } from "./preview.service.ts";
 import { RevisionService, type RevisionView } from "./revision.service.ts";
 
 const logger = new Logger("Previews");
@@ -56,6 +56,10 @@ export type PromoteResult =
 			preview: PreviewView;
 			revision: PreviewRevision;
 	  }
+	| { error: string; status: number };
+
+export type DeployPreviewResult =
+	| { deploymentId: string; error: null; preview: PreviewView }
 	| { error: string; status: number };
 
 const PROMOTABLE_HEALTH = new Set<RevisionHealth | null>([null, "healthy"]);
@@ -121,13 +125,60 @@ class PreviewApiServiceClass {
 	}
 
 	/**
+	 * Creates or updates the preview of pull request `input.prNumber` on an
+	 * image-based service from the image CI just pushed at `input.tag`,
+	 * through `PreviewService.deployImage`. Refused for a git-built service
+	 * (its previews come from the pull request webhook) or a preview, when
+	 * previews are off, and when `PreviewService` ignores the request (a
+	 * filtered-out branch, a taken slug, no capacity left).
+	 */
+	async deploy(
+		parent: ServiceDTO,
+		input: ImagePreviewInput,
+	): Promise<DeployPreviewResult> {
+		if (parent.buildSource !== "image" || parent.toJSON().previewParentId) {
+			return {
+				error:
+					"Only an image-based service that isn't a preview itself takes previews from CI: a git service's previews come from its pull request webhook.",
+				status: 400,
+			};
+		}
+		if (!parent.toJSON().previewsEnabled) {
+			return {
+				error:
+					"Pull request previews are off for this service: turn them on in its Previews tab.",
+				status: 409,
+			};
+		}
+		const result = await PreviewService.deployImage(parent, input);
+		if (result.status !== "deployed") {
+			return {
+				error:
+					result.status === "ignored"
+						? result.reason
+						: `The preview of #${input.prNumber} was removed.`,
+				status: 409,
+			};
+		}
+		const preview = await this.get(parent, input.prNumber);
+		if (!preview) {
+			return {
+				error: `The preview of #${input.prNumber} disappeared while it was being deployed.`,
+				status: 409,
+			};
+		}
+		return { deploymentId: result.deploymentId, error: null, preview };
+	}
+
+	/**
 	 * Deploys the exact image the preview of pull request `prNumber` runs to
 	 * `parent` as a `promote` deploy: it points at the preview's revision
 	 * (`rollbackOfDeploymentId`) the way a rollback points at its target, so
 	 * nothing is rebuilt, pulled or scanned, yet it's recorded and health-watched
 	 * as a fresh revision (auto-rollback applies), and its log opens with where
-	 * the image came from. Refused when
-	 * the preview has no running revision, its revision isn't healthy (or
+	 * the image came from. An image-based service ends up on the preview's
+	 * image and tag, as `deploy --tag` would leave it. Refused when `parent`
+	 * is itself a preview, when the preview has no running revision, its revision isn't healthy (or
 	 * still being watched), or `commit` is given and isn't the commit it runs.
 	 */
 	async promote(input: {
@@ -137,9 +188,9 @@ class PreviewApiServiceClass {
 		userId: string;
 	}): Promise<PromoteResult> {
 		const { commit, parent, prNumber, userId } = input;
-		if (parent.buildSource !== "git" || parent.toJSON().previewParentId) {
+		if (parent.toJSON().previewParentId) {
 			return {
-				error: "Only a service built from git can be promoted to.",
+				error: "A preview can't be promoted to, only the service it previews.",
 				status: 400,
 			};
 		}

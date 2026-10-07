@@ -190,30 +190,44 @@ service's [uptime probes](observability.md#uptime) on or off).
 
 ### Previews
 
-The open [pull request previews](pull-request-previews.md) of a git service, for
-CI to test against (see
+The open [pull request previews](pull-request-previews.md) of a service, for CI
+to create (image-based services) and test against (see
 [Testing pull requests with GitHub Actions](github-actions-preview-testing.md)):
 
 - `GET /api/v1/services/:id/previews` lists them, newest pull request first, and
   `GET /api/v1/services/:id/previews/:prNumber` returns one (`404` when that
   pull request has none). Fields: `id` (the preview's own service id),
-  `prNumber`, `title`, `branch`, `gitRef` (the head SHA it builds), `status`,
-  `hostnames`, `url`, `revision` (the revision it runs now: `id`, `gitCommit`,
-  `imageRef`, `imageDigest`, `health`, `healthReason`, `deployedAt`, or null)
-  and `deployment` (its latest deploy attempt, failed or in flight included:
-  `id`, `status`, `gitCommit`, `errorMessage`, or null).
+  `prNumber`, `title`, `branch`, `gitRef` (the head SHA a git preview builds,
+  null for an image-based one), `status`, `hostnames`, `url`, `revision` (the
+  revision it runs now: `id`, `gitCommit`, `imageRef`, `imageDigest`, `health`,
+  `healthReason`, `deployedAt`, or null) and `deployment` (its latest deploy
+  attempt, failed or in flight included: `id`, `status`, `gitCommit`,
+  `errorMessage`, or null).
+- `PUT /api/v1/services/:id/previews/:prNumber` creates or updates the preview
+  of an image-based service from the image CI just pushed. The body is
+  `{"tag": "<tag>"}` plus optional `commit` (recorded on the preview's revision,
+  what `previews wait --commit` and the promote `commit` match), `branch`
+  (checked against the preview branch filter) and `title`. A new preview gets
+  the service's preview settings and runs its image at `tag`; an existing one
+  switches to `tag` and redeploys, without copying volumes again. It answers
+  `202` with the same fields as `GET` plus `deploymentId` once the deploy is
+  queued, `400` for a git service (its previews come from the webhook) or a
+  preview, and `409` when previews are off, the branch doesn't pass the filter
+  (an existing preview of it is deleted), the preview's slug is taken or the
+  instance is out of capacity.
 - `DELETE /api/v1/services/:id/previews/:prNumber` deletes it, like the Delete
   button in Environments & Deployments → Previews (`409` when its container
-  couldn't be removed).
+  couldn't be removed). An image-based service's CI calls it when the pull
+  request closes, since no webhook does.
 - `POST /api/v1/services/:id/previews/:prNumber/promote` deploys the image the
-  preview runs to the service itself, the way a rollback redeploys a revision:
-  no build, no pull from upstream, no scan. An optional `{"commit": "<sha>"}`
-  body refuses (`409`) unless the preview runs that commit; it's also a `409`
-  while the preview has no running revision or its health check is still running
-  or failed. The deploy's trigger is `promote`, not `rollback`, so auto-rollback
-  watches it like any new revision. It answers `202` with `deploymentId`,
-  `jobId` (poll `GET /api/v1/jobs/:jobId`), `revisionId`, `imageRef` and
-  `gitCommit`.
+  preview runs to the service itself (an image-based service ends up on the
+  preview's tag), the way a rollback redeploys a revision: no build, no pull
+  from upstream, no scan. An optional `{"commit": "<sha>"}` body refuses (`409`)
+  unless the preview runs that commit; it's also a `409` while the preview has
+  no running revision or its health check is still running or failed. The
+  deploy's trigger is `promote`, not `rollback`, so auto-rollback watches it
+  like any new revision. It answers `202` with `deploymentId`, `jobId` (poll
+  `GET /api/v1/jobs/:jobId`), `revisionId`, `imageRef` and `gitCommit`.
 
 ### Errors
 
@@ -425,6 +439,7 @@ homerun services rollback <id> [revisionId] [--restore-config]
 homerun previews list <id> [--json]
 homerun previews get <id> <pr>
 homerun previews wait <id> <pr> [--commit <sha>] [--timeout 20m] [--json]
+homerun previews deploy <id> <pr> --tag <tag> [--commit <sha>] [--branch <b>] [--title <t>] [--timeout 20m]
 homerun previews delete <id> <pr>
 homerun previews promote <id> <pr> [--commit <sha>] [--wait] [--timeout 30m]
 homerun stacks list|get|create|update|delete
@@ -517,14 +532,20 @@ and previous one marked and, for an unhealthy one, the reason, and
 one when no id is given) and waits for it like `deploy`; `--restore-config` also
 restores that revision's env vars, resources and networking.
 
-`homerun previews` works on a git service's pull request previews, `<id>` being
-the service they preview. `homerun previews wait <id> <pr>` waits until the
-preview exists, runs `--commit` when given, and its health check passed, then
-prints its URL alone on stdout (`--json` prints the preview instead); it exits
-non-zero when the deploy failed, the preview is unhealthy, previews are off, or
-`--timeout` (a duration, default `20m`) passes. `homerun previews promote`
-deploys the preview's exact image to the service, refusing when `--commit` isn't
-what it runs; `--wait` follows the deploy and exits non-zero if it fails. See
+`homerun previews` works on a service's pull request previews, `<id>` being the
+service they preview. `homerun previews deploy <id> <pr> --tag <tag>` creates or
+updates an image-based service's preview at that tag (the `PUT` above, with
+`--commit`, `--branch` and `--title`), then waits for it like `previews wait`
+and prints its URL; it exits non-zero when the request is refused, the deploy
+fails, the preview is unhealthy or `--timeout` passes, see
+[Previews from CI](ci-cd.md#previews-from-ci). `homerun previews wait <id> <pr>`
+waits until the preview exists, runs `--commit` when given, and its health check
+passed, then prints its URL alone on stdout (`--json` prints the preview
+instead); it exits non-zero when the deploy failed, the preview is unhealthy,
+previews are off, or `--timeout` (a duration, default `20m`) passes.
+`homerun previews promote` deploys the preview's exact image to the service,
+refusing when `--commit` isn't what it runs; `--wait` follows the deploy and
+exits non-zero if it fails. See
 [Testing pull requests with GitHub Actions](github-actions-preview-testing.md).
 
 `homerun services deployments <id>` lists a service's latest deploy attempts

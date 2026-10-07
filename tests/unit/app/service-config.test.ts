@@ -59,6 +59,8 @@ function row(overrides: Partial<Service> = {}): Service {
 		name: "DB",
 		networkMode: "bridge",
 		portProtocol: "tcp",
+		previewBranchExclude: [],
+		previewBranchInclude: [],
 		previewDefaultDomain: true,
 		previewDomainTemplate: null,
 		previewsEnabled: false,
@@ -102,6 +104,12 @@ describe("serviceConfig", () => {
 		expect(config.volumes[0]?.containerPath).toBe("/var/lib/postgresql/data");
 		expect(config.settings.stack).toEqual({ id: "stack-1", name: "App" });
 		expect(config.source.git).toBeNull();
+	});
+
+	test("shows an image-based service's preview settings", () => {
+		const config = serviceConfig(row({ previewsEnabled: true }), extras);
+		expect(config.source.git).toBeNull();
+		expect(config.source.previewsEnabled).toBe(true);
 	});
 
 	test("never leaks a secret or an uploaded image", () => {

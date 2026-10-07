@@ -58,14 +58,9 @@ export const load = async ({ parent, params }) => {
 	};
 };
 
-function gitTriggerPatch(
-	formData: FormData,
-	isGitBuild: boolean,
-	previewsEnabled: boolean,
-) {
+function gitTriggerPatch(formData: FormData, isGitBuild: boolean) {
 	return {
 		gitPollEnabled: isGitBuild && formData.get("gitPollEnabled") === "on",
-		previewsEnabled: isGitBuild && previewsEnabled,
 	};
 }
 
@@ -209,11 +204,12 @@ export const actions = {
 			gitWebhookId: svc.gitWebhookId,
 			previewsEnabled: svc.toJSON().previewsEnabled,
 		};
+		const previousBuildSource = svc.buildSource;
 		await svc.update({
 			...buildCache,
 			buildServerRemoteHostId,
 			...checks,
-			...gitTriggerPatch(formData, isGitBuild, svc.toJSON().previewsEnabled),
+			...gitTriggerPatch(formData, isGitBuild),
 			previewReportGithub:
 				isGitBuild && !svc.toJSON().previewParentId
 					? formData.get("previewReportGithub") === "on"
@@ -221,7 +217,7 @@ export const actions = {
 			...sourcePatch(input, isGitBuild),
 		});
 		await GitWebhookService.sync(svc, previousWebhook);
-		if (previousWebhook.previewsEnabled && !svc.toJSON().previewsEnabled) {
+		if (previousBuildSource !== svc.buildSource) {
 			await PreviewService.removeAll(svc);
 		}
 

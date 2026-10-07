@@ -24,7 +24,7 @@ export const load = async ({ params, parent }) => {
 	const isGit = service.buildSource === "git";
 	const [channels, previews, environments] = await Promise.all([
 		isGit ? ReleaseChannelService.status(parentService) : null,
-		isGit ? PreviewService.list(parentService) : [],
+		PreviewService.list(parentService),
 		EnvironmentService.list(parentService),
 	]);
 	return {

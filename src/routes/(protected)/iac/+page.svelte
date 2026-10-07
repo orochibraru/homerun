@@ -1,26 +1,60 @@
 <script lang="ts">
-	import { Download, FileCode2, FolderTree } from "@lucide/svelte";
+	import {
+		Check,
+		ChevronsUpDown,
+		Download,
+		FileCode2,
+		FolderTree,
+	} from "@lucide/svelte";
 	import CodeBlock from "#lib/components/code-block.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
-	import { labelClass } from "#lib/components/form-styles.js";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import ObjectStoreSelect from "#lib/components/object-store-select.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Command from "#lib/components/ui/command/index.js";
+	import * as Popover from "#lib/components/ui/popover/index.js";
 	import * as Select from "#lib/components/ui/select/index.js";
+	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { matchBackend } from "#lib/iac/backend-match.js";
+	import { enhanceToast } from "#lib/toast.js";
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+
+	const NEW_BACKEND = "new";
 
 	const { data } = $props();
 
 	let scope = $derived(data.scope);
-	let projectId = $derived(data.projectId);
+	let scopeOpen = $state(false);
 	let selectedPath = $state("");
+	let creating = $state(false);
 
-	const scopeLabel = $derived(
-		data.scopes.find((option) => option.value === scope)?.label ??
-			"Pick a stack or a service",
+	const scopeOption = $derived(
+		data.scopes.find((option) => option.value === scope),
 	);
+	const suggestedBackend = $derived(
+		scopeOption
+			? (matchBackend(scopeOption.name, data.projects) ??
+					(data.stores.length > 0 ? NEW_BACKEND : ""))
+			: "",
+	);
+	let projectId = $derived(
+		data.scope && scope === data.scope ? data.projectId : suggestedBackend,
+	);
+	let newName = $derived(scopeOption?.name ?? "");
+	let storeId = $derived(data.stores[0]?.id ?? "");
+	let bucket = $derived(
+		data.projects.find((project) => project.storeId === storeId)?.bucket ??
+			"tfstate",
+	);
+
 	const projectLabel = $derived(
-		data.projects.find((project) => project.id === projectId)?.name ??
-			"No backend",
+		projectId === NEW_BACKEND
+			? "Create a new backend"
+			: (data.projects.find((project) => project.id === projectId)?.name ??
+					"No backend"),
 	);
 	const groups = $derived(
 		["Stacks", "Services"]
@@ -38,7 +72,7 @@
 	);
 	const downloadHref = $derived(
 		`${resolve("/(protected)/iac/download")}?${new URLSearchParams({
-			...(projectId ? { project: projectId } : {}),
+			...(data.projectId ? { project: data.projectId } : {}),
 			scope: data.scope,
 		})}`,
 	);
@@ -51,28 +85,72 @@
       icon={FileCode2}
       title="Generate a project"
     />
-    <form class="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end" method="GET">
+    <form
+      id="iac-generate"
+      class="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+      method="GET"
+    >
       <div>
         <label class={labelClass} for="iac-scope">Stack or service</label>
-        <Select.Root name="scope" type="single" bind:value={scope}>
-          <Select.Trigger id="iac-scope" class="w-full">{scopeLabel}</Select.Trigger>
-          <Select.Content>
-            {#each groups as entry (entry.group)}
-              <Select.Group>
-                <Select.Label>{entry.group}</Select.Label>
-                {#each entry.options as option (option.value)}
-                  <Select.Item label={option.label} value={option.value} />
+        <input name="scope" type="hidden" value={scope}>
+        <Popover.Root bind:open={scopeOpen}>
+          <Popover.Trigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                class="w-full justify-between"
+                id="iac-scope"
+                role="combobox"
+                type="button"
+                variant="outline"
+              >
+                <span class="truncate {scopeOption ? '' : 'text-text-muted'}">
+                  {scopeOption?.label ?? "Pick a stack or a service…"}
+                </span>
+                <ChevronsUpDown class="size-4 shrink-0 opacity-50" />
+              </Button>
+            {/snippet}
+          </Popover.Trigger>
+          <Popover.Content class="w-(--bits-popover-anchor-width) p-0">
+            <Command.Root>
+              <Command.Input placeholder="Search stacks and services…" />
+              <Command.List>
+                <Command.Empty>No stack or service matches.</Command.Empty>
+                {#each groups as entry (entry.group)}
+                  <Command.Group heading={entry.group}>
+                    {#each entry.options as option (option.value)}
+                      <Command.Item
+                        onSelect={() => {
+                          scope = option.value;
+                          scopeOpen = false;
+                        }}
+                        value="{option.label} {option.value}"
+                      >
+                        <Check
+                          class="size-4 shrink-0 {scope === option.value ? '' : 'opacity-0'}"
+                        />
+                        <span class="truncate">{option.label}</span>
+                      </Command.Item>
+                    {/each}
+                  </Command.Group>
                 {/each}
-              </Select.Group>
-            {/each}
-          </Select.Content>
-        </Select.Root>
+              </Command.List>
+            </Command.Root>
+          </Popover.Content>
+        </Popover.Root>
       </div>
       <div>
         <label class={labelClass} for="iac-project">State backend</label>
-        <Select.Root name="project" type="single" bind:value={projectId}>
+        <Select.Root
+          name={projectId === NEW_BACKEND ? undefined : "project"}
+          type="single"
+          bind:value={projectId}
+        >
           <Select.Trigger id="iac-project" class="w-full">{projectLabel}</Select.Trigger>
           <Select.Content>
+            {#if data.stores.length > 0}
+              <Select.Item label="Create a new backend" value={NEW_BACKEND} />
+            {/if}
             <Select.Item label="No backend" value="" />
             {#each data.projects as project (project.id)}
               <Select.Item label={project.name} value={project.id} />
@@ -80,13 +158,83 @@
           </Select.Content>
         </Select.Root>
       </div>
-      <Button disabled={!scope} type="submit">Generate</Button>
+      <Button
+        disabled={!scope || creating}
+        form={projectId === NEW_BACKEND ? "iac-new-backend" : "iac-generate"}
+        type="submit"
+      >
+        {#if creating}
+          <Spinner />
+        {/if}
+        Generate
+      </Button>
     </form>
-    {#if data.projects.length === 0}
+    {#if projectId === NEW_BACKEND}
+      <form
+        id="iac-new-backend"
+        class="border-border grid gap-4 border-t px-5 py-4 sm:grid-cols-3"
+        action="?/createBackend"
+        method="POST"
+        use:enhance={enhanceToast({
+          error: "Couldn't create the backend.",
+          loading: "Creating the backend",
+          onSettled: () => {
+            creating = false;
+          },
+          onStart: () => {
+            creating = true;
+          },
+          onSuccess: async (result) => {
+            if (typeof result?.projectId === "string") {
+              await goto(
+                `${resolve("iac")}?${new URLSearchParams({
+                  project: result.projectId,
+                  scope,
+                })}`,
+              );
+            }
+          },
+          success: "Backend created.",
+        })}
+      >
+        <div>
+          <label class={labelClass} for="iac-backend-name">Backend name</label>
+          <input
+            id="iac-backend-name"
+            class={inputClass}
+            autocomplete="off"
+            name="name"
+            required
+            bind:value={newName}
+          >
+        </div>
+        <div>
+          <label class={labelClass} for="iac-backend-store">Store</label>
+          <ObjectStoreSelect
+            id="iac-backend-store"
+            name="storeId"
+            stores={data.stores}
+            bind:value={storeId}
+          />
+        </div>
+        <div>
+          <label class={labelClass} for="iac-backend-bucket">Bucket</label>
+          <input
+            id="iac-backend-bucket"
+            class={inputClass}
+            autocomplete="off"
+            name="bucket"
+            required
+            bind:value={bucket}
+          >
+        </div>
+      </form>
+    {/if}
+    {#if data.stores.length === 0 && data.projects.length === 0}
       <p class="text-text-muted border-border border-t px-5 py-3 text-xs">
-        No Terraform state project yet:
-        <a class="text-accent hover:underline" href={resolve("/(protected)/object-storage/state")}>create one in Object Storage</a>
-        to keep the state on this instance.
+        No object store yet:
+        <a class="text-accent hover:underline" href={resolve("/(protected)/object-storage")}>turn on the built-in one or connect one</a>
+        to keep the Terraform state on this instance.
       </p>
     {/if}
   </section>

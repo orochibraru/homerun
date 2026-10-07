@@ -74,12 +74,20 @@ export const shots: ShotModule = {
 			await postAction(page, "/users?/createDirect", { email, name, role });
 		}
 		await postAction(page, "/profile/clients?/create", {
+			allPermissions: "on",
+			expiry: "never",
 			name: "Homerun CLI",
-			scope: "full",
 		});
 		await postAction(page, "/profile/clients?/create", {
+			expiry: "90",
 			name: "Grafana dashboard",
-			scope: "read",
+			"permission.services": "read",
+			"permission.stacks": "read",
+		});
+		await postAction(page, "/profile/clients?/create", {
+			expiry: "30",
+			name: "CI deploys",
+			"permission.services": "write",
 		});
 		await addProvider(page);
 		await gateApi(page, seeded.serviceIds.api ?? "");

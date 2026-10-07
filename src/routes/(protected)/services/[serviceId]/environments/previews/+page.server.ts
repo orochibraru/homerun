@@ -47,17 +47,10 @@ export const load = async ({ params }) => {
 	};
 };
 
-/** The service behind a previews action, when it's a git-built service that isn't itself a preview. */
+/** The service behind a previews action, when it isn't itself a preview. */
 async function previewParent(serviceId: string) {
 	const svc = await ServiceDTO.get(serviceId);
-	if (
-		!svc ||
-		svc.toJSON().buildSource !== "git" ||
-		svc.toJSON().previewParentId
-	) {
-		return null;
-	}
-	return svc;
+	return svc && !svc.toJSON().previewParentId ? svc : null;
 }
 
 export const actions = {
@@ -67,7 +60,7 @@ export const actions = {
 		}
 		const svc = await previewParent(params.serviceId);
 		if (!svc) {
-			return fail(404, { error: "Previews need a service built from git." });
+			return fail(404, { error: "Service not found." });
 		}
 		const parsed = parseLoginWallForm(
 			await request.formData(),
@@ -109,7 +102,7 @@ export const actions = {
 		}
 		const svc = await previewParent(params.serviceId);
 		if (!svc) {
-			return fail(404, { error: "Previews need a service built from git." });
+			return fail(404, { error: "Service not found." });
 		}
 
 		const formData = await request.formData();
@@ -193,6 +186,11 @@ export const actions = {
 		const svc = await previewParent(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
+		}
+		if (svc.buildSource !== "git") {
+			return fail(400, {
+				error: "Only a service built from git can list its open pull requests.",
+			});
 		}
 		if (!svc.toJSON().previewsEnabled) {
 			return fail(400, { error: "Turn pull request previews on first." });

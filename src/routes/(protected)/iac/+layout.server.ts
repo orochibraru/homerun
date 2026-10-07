@@ -7,8 +7,10 @@ export const load = async ({ parent, url }) => {
 	return {
 		origin: config.auth.origin ?? url.origin,
 		projects: projects.map((project) => ({
+			bucket: project.bucket,
 			id: project.id,
 			name: project.name,
+			storeId: project.storeId,
 		})),
 	};
 };

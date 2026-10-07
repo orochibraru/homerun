@@ -886,7 +886,7 @@
 					"tf": "kind",
 					"forceNew": true,
 					"required": true,
-					"description": "image (a container) or exec (a host command, admin only)."
+					"description": "image (a container) or exec (a host command, needs write access to System)."
 				},
 				{
 					"kind": "string",

@@ -51,7 +51,7 @@ automatically, so a new write route documents it without a registry entry.
   job, any account's job (resources are shared), 404 for an unknown id. Exists
   for `homerun services scan --wait`, generic on purpose.
 - `services/[serviceId]/previews/` (`GET`), `previews/[prNumber]/` (`GET`,
-  `DELETE`) and `previews/[prNumber]/promote/` (`POST`, 202
+  `PUT`, `DELETE`) and `previews/[prNumber]/promote/` (`POST`, 202
   `{deploymentId, jobId, ...}`), backed by `PreviewApiService`
   (`src/lib/services/preview-api.service.ts`, kept out of `preview.service.ts`),
   their OpenAPI entries and response schemas in `src/lib/openapi/previews.ts`
@@ -68,7 +68,13 @@ automatically, so a new write route documents it without a registry entry.
   since the close webhook deletes the preview and cascades its deployment rows;
   `docs/github-actions-preview-testing.md` promotes then merges for that reason.
   `homerun previews wait` is the CI gate (`PreviewVerdict` in
-  `internal/cli/previews.go`).
+  `internal/cli/previews.go`). `PUT` is how an image-based service gets previews
+  (`PreviewApiService.deploy`: 400 unless image-based and not a preview, 409
+  when previews are off or `PreviewService.deployImage` ignores it), answering
+  202 with the `GET` view plus `deploymentId`; `homerun previews deploy` sends
+  it then runs the same wait loop (`waitForPreview`). Promote takes an
+  image-based parent too: the worker's `serviceImage` outcome leaves it on the
+  preview's image and tag.
 - `stacks/`, `templates/`, read/create, same pattern, thinner (no lifecycle
   actions).
 - `services/`, `stacks/`, and `templates/`'s `GET`s are paginated
@@ -367,7 +373,11 @@ catches a stale copy) writes it to
 IaC page's generator (`generate.ts`) and drift check (`drift.ts`) import it
 directly. Add a field once there and the provider, the generated HCL and the
 drift comparison all follow. A Terraform-reserved name (`provider`) gets an
-explicit `tf` (`dns_provider`).
+explicit `tf` (`dns_provider`). The same script writes the provider's Terraform
+Registry pages to `terraform/provider/docs/` from `provider-docs.ts` (one per
+resource and data source, in the registry's own layout), and the release job
+copies them to the mirror with the source; a new resource needs an entry in
+`RESOURCE_EXAMPLES`, which a unit test enforces.
 
 **Generated projects are per stack or per service, never the whole instance.**
 `generateStructure` returns files (`versions.tf`, `providers.tf`, a

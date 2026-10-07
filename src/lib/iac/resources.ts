@@ -326,7 +326,7 @@ export const IAC_RESOURCES: IacResource[] = [
 			attr("kind", "string", {
 				...replace,
 				description:
-					"image (a container) or exec (a host command, admin only).",
+					"image (a container) or exec (a host command, needs write access to System).",
 			}),
 			attr("schedule", "string", required),
 			attr("enabled", "bool", off),

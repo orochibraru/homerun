@@ -251,3 +251,92 @@ func TestPreviewPromote(t *testing.T) {
 		})
 	}
 }
+
+// previewDeployAPI is a fake instance that answers the preview PUT with put
+// (status putStatus), then the preview of #7 with each of states in turn.
+func previewDeployAPI(t *testing.T, putStatus int, put string, states ...string) (*cli.Client, *[]seenRequest) {
+	t.Helper()
+	calls := 0
+	return fakeAPI(t, func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("content-type", "application/json")
+		if request.Method == http.MethodPut {
+			writer.WriteHeader(putStatus)
+			fmt.Fprint(writer, put)
+			return
+		}
+		state := states[min(calls, len(states)-1)]
+		calls++
+		fmt.Fprint(writer, state)
+	})
+}
+
+func TestPreviewDeploySendsTheTagThenWaitsForTheCommit(t *testing.T) {
+	noSleep(t)
+	queued := `{"deploymentId":"dep-1","slug":"app-pr-7","deployment":{"status":"pending","gitCommit":"` + fullSHA + `"}}`
+	pulling := `{"url":"https://app-pr-7.example.com","deployment":{"status":"pulling","gitCommit":"` + fullSHA + `"}}`
+	ready := `{"url":"https://app-pr-7.example.com","revision":{"gitCommit":"` + fullSHA + `","health":"healthy"}}`
+	client, seen := previewDeployAPI(t, http.StatusAccepted, queued, pulling, ready)
+
+	out, failed := runCLI(t, func() {
+		cli.PreviewDeploy(client, "svc-1", 7, cli.PreviewDeployArgs{
+			Branch: "feat/login", Commit: fullSHA, Tag: "pr-7", Timeout: time.Minute, Title: "Add login",
+		})
+	})
+	if failed != "" {
+		t.Fatalf("failed with %q", failed)
+	}
+	put := (*seen)[0]
+	if put.Method != http.MethodPut || put.Path != "/api/v1/services/svc-1/previews/7" {
+		t.Errorf("got %s %s", put.Method, put.Path)
+	}
+	want := `{"branch":"feat/login","commit":"` + fullSHA + `","tag":"pr-7","title":"Add login"}`
+	if put.Body != want {
+		t.Errorf("got body %q, want %q", put.Body, want)
+	}
+	if strings.TrimSpace(out) != "https://app-pr-7.example.com" {
+		t.Errorf("stdout should be the URL alone, got %q", out)
+	}
+	if len(*seen) != 3 {
+		t.Errorf("want the PUT then 2 polls, got %d requests", len(*seen))
+	}
+}
+
+func TestPreviewDeploySendsOnlyTheTagWhenThatsAllItHas(t *testing.T) {
+	noSleep(t)
+	ready := `{"url":"https://app-pr-7.example.com","deployment":{"status":"running"},"revision":{"health":"healthy"}}`
+	client, seen := previewDeployAPI(t, http.StatusAccepted, `{"deploymentId":"dep-1"}`, ready)
+	_, failed := runCLI(t, func() {
+		cli.PreviewDeploy(client, "svc-1", 7, cli.PreviewDeployArgs{Tag: "pr-7", Timeout: time.Minute})
+	})
+	if failed != "" {
+		t.Fatalf("failed with %q", failed)
+	}
+	if (*seen)[0].Body != `{"tag":"pr-7"}` {
+		t.Errorf("got body %q", (*seen)[0].Body)
+	}
+}
+
+func TestPreviewDeployFailsOnARefusal(t *testing.T) {
+	client, seen := previewDeployAPI(t, http.StatusConflict, `{"error":"feat/x doesn't pass this service's preview branch filter."}`)
+	_, failed := runCLI(t, func() {
+		cli.PreviewDeploy(client, "svc-1", 7, cli.PreviewDeployArgs{Branch: "feat/x", Tag: "pr-7", Timeout: time.Minute})
+	})
+	if !strings.Contains(failed, "preview branch filter") {
+		t.Errorf("got %q", failed)
+	}
+	if len(*seen) != 1 {
+		t.Errorf("shouldn't poll after a refusal, got %d requests", len(*seen))
+	}
+}
+
+func TestPreviewDeployFailsWhenTheDeployFails(t *testing.T) {
+	noSleep(t)
+	failedDeploy := `{"deployment":{"status":"failed","gitCommit":"` + fullSHA + `","errorMessage":"manifest unknown"}}`
+	client, _ := previewDeployAPI(t, http.StatusAccepted, `{"deploymentId":"dep-1"}`, failedDeploy)
+	_, failed := runCLI(t, func() {
+		cli.PreviewDeploy(client, "svc-1", 7, cli.PreviewDeployArgs{Commit: fullSHA, Tag: "pr-7", Timeout: time.Minute})
+	})
+	if !strings.Contains(failed, "manifest unknown") {
+		t.Errorf("got %q", failed)
+	}
+}

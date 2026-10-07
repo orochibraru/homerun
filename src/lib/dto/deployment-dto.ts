@@ -42,6 +42,7 @@ export interface NewDeploymentInput {
 	// polling the progress endpoint before the create-deployment request
 	// even resolves) : falls back to a fresh one when omitted.
 	environment?: string;
+	gitCommit?: string | null;
 	id?: string;
 	log?: string;
 	restoreConfig?: boolean;
@@ -471,7 +472,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			environment: input.environment ?? "production",
 			errorMessage: null,
 			finishedAt: null,
-			gitCommit: null,
+			gitCommit: input.gitCommit ?? null,
 			gitRef: null,
 			health: null,
 			healthReason: null,

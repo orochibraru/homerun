@@ -54,6 +54,7 @@
 			: undefined,
 	);
 
+	const isGit = $derived(svc.buildSource === "git");
 	let previewsEnabled = $derived(values.previewsEnabled === "on");
 	let previewDefaultDomain = $derived(values.previewDefaultDomain === "on");
 	let submitting = $state(false);
@@ -79,26 +80,13 @@
       Open the parent's previews
     </Button>
   </EmptyState>
-{:else if svc.buildSource !== "git"}
-  <EmptyState
-    icon={GitPullRequest}
-    subtitle="Pull request previews build from a repository. Switch the source to a git repo first."
-    title="Previews need a service built from git"
-  >
-    <Button
-      href={resolve("/(protected)/services/[serviceId]/environments/source", {
-        serviceId: svc.id,
-      })}
-      variant="outline"
-    >
-      Open Source
-    </Button>
-  </EmptyState>
 {:else}
   <div class="space-y-6">
     <section class="panel rounded-md">
       <PanelHeader
-        description="Every pull request opened on the repo gets its own service, built from its head, redeployed on every push to it and removed when it's closed or merged. Pull requests from forks are never previewed."
+        description={isGit
+          ? "Every pull request opened on the repo gets its own service, built from its head, redeployed on every push to it and removed when it's closed or merged. Pull requests from forks are never previewed."
+          : "Your CI gets each pull request its own service: after pushing the pull request's image it runs homerun previews deploy, which creates or updates the preview at that tag, and deletes the preview when the pull request closes."}
         icon={GitPullRequest}
         title="Pull request previews"
       >
@@ -134,7 +122,7 @@
         {/if}
 
         <CheckBox
-          helperText={`Each preview is a service named ${svc.slug}-pr-<number>. Needs the repository webhook, see below.`}
+          helperText={`Each preview is a service named ${svc.slug}-pr-<number>. ${isGit ? "Needs the repository webhook, see below." : "Created and deleted by your CI with homerun previews deploy and homerun previews delete."}`}
           id="previewsEnabled"
           label="Enable pull request previews"
           name="previewsEnabled"
@@ -235,7 +223,7 @@
         title="Open previews"
       >
         {#snippet trailing()}
-          {#if svc.previewsEnabled}
+          {#if svc.previewsEnabled && isGit}
             <form
               action="?/deployOpen"
               method="POST"
@@ -294,7 +282,9 @@
                   #{preview.prNumber} {preview.title ?? preview.name}
                 </a>
                 <p class="text-text-muted truncate font-mono text-xs">
-                  {preview.branch ?? preview.gitRef}
+                  {[preview.branch ?? preview.gitRef, preview.tag]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
                 {#if preview.hostnames.length > 0}
                   <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1">
@@ -396,7 +386,7 @@
 
   <ConfirmDialog
     confirmLabel="Delete"
-    description="Removes its container, domains and DNS records. The next push to the pull request creates it again."
+    description="Removes its container, domains and DNS records. The next push to the pull request creates it again{isGit ? '' : ' when your CI deploys it'}."
     onConfirm={() => deleteForm?.requestSubmit()}
     title="Delete preview {deleteTarget?.label ?? ''}?"
     bind:open={deleteOpen}

@@ -99,9 +99,6 @@ export const serviceConfigSchema = z.object({
 				buildServerRemoteHostId: z.string().nullable(),
 				dockerfilePath: z.string().nullable(),
 				pollEnabled: z.boolean(),
-				previewBranchExclude: z.array(z.string()),
-				previewBranchInclude: z.array(z.string()),
-				previewsEnabled: z.boolean(),
 				ref: z.string().nullable(),
 				requireStatusChecks: z.boolean(),
 				requiredStatusChecks: z.array(z.string()),
@@ -109,6 +106,9 @@ export const serviceConfigSchema = z.object({
 			})
 			.nullable(),
 		image: z.string(),
+		previewBranchExclude: z.array(z.string()),
+		previewBranchInclude: z.array(z.string()),
+		previewsEnabled: z.boolean(),
 		pullPolicy: z.string(),
 		registry: z.object({
 			passwordSet: z.boolean(),
@@ -235,9 +235,6 @@ export function serviceConfig(
 							buildServerRemoteHostId: row.buildServerRemoteHostId,
 							dockerfilePath: row.gitDockerfilePath,
 							pollEnabled: row.gitPollEnabled,
-							previewBranchExclude: row.previewBranchExclude,
-							previewBranchInclude: row.previewBranchInclude,
-							previewsEnabled: row.previewsEnabled,
 							ref: row.gitRef,
 							requireStatusChecks: row.requireStatusChecks,
 							requiredStatusChecks: row.requiredStatusChecks,
@@ -245,6 +242,9 @@ export function serviceConfig(
 						}
 					: null,
 			image: row.image,
+			previewBranchExclude: row.previewBranchExclude,
+			previewBranchInclude: row.previewBranchInclude,
+			previewsEnabled: row.previewsEnabled,
 			pullPolicy: row.pullPolicy,
 			registry: {
 				passwordSet: Boolean(row.registryPasswordEnc),

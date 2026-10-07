@@ -1021,11 +1021,15 @@ export interface paths {
 		 * @description One pull request's preview. What `homerun previews wait` polls: ready once revision.gitCommit is the commit under test and revision.health is healthy.
 		 */
 		get: operations["get_services__serviceId__previews__prNumber_"];
-		put?: never;
+		/**
+		 * Deploy a preview from an image
+		 * @description Creates or updates the pull request's preview on an image-based service, from the image CI just pushed: a new preview gets the service's preview settings (env and overrides, domains, login wall, stack, volume copies when that's on) and runs the service's own image at tag, with its registry credentials; an existing one switches to tag and redeploys, without copying volumes again. commit is recorded on the preview's revision for homerun previews wait --commit. With branch, the preview branch filter applies: a filtered-out branch is refused and loses the preview it had. Returns once the deploy is queued.
+		 */
+		put: operations["put_services__serviceId__previews__prNumber_"];
 		post?: never;
 		/**
 		 * Delete a preview
-		 * @description Deletes the preview's workload, DNS records and row. The next push to the pull request recreates it.
+		 * @description Deletes the preview's workload, DNS records and row. A git service's next push to the pull request recreates it; an image-based service's CI calls this when the pull request closes.
 		 */
 		delete: operations["delete_services__serviceId__previews__prNumber_"];
 		options?: never;
@@ -1044,7 +1048,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Promote a preview
-		 * @description Deploys the exact image the preview's current revision runs to the service it previews, without building, pulling or scanning, the same way a rollback redeploys a revision. The deployment points at the preview revision (rollbackOfDeploymentId) and its log opens with where the image came from. Refused while the preview has no running revision, while its health is still being watched or unhealthy, or when commit is given and isn't what it runs. Returns once queued: poll GET /jobs/{jobId}.
+		 * @description Deploys the exact image the preview's current revision runs to the service it previews, without building, pulling or scanning, the same way a rollback redeploys a revision. An image-based service ends up on the preview's image and tag. The deployment points at the preview revision (rollbackOfDeploymentId) and its log opens with where the image came from. Refused while the preview has no running revision, while its health is still being watched or unhealthy, or when commit is given and isn't what it runs. Returns once queued: poll GET /jobs/{jobId}.
 		 */
 		post: operations["post_services__serviceId__previews__prNumber__promote"];
 		delete?: never;
@@ -8635,15 +8639,15 @@ export interface operations {
 								buildTarget: string | null;
 								dockerfilePath: string | null;
 								pollEnabled: boolean;
-								previewBranchExclude: string[];
-								previewBranchInclude: string[];
-								previewsEnabled: boolean;
 								ref: string | null;
 								requireStatusChecks: boolean;
 								requiredStatusChecks: string[];
 								url: string | null;
 							} | null;
 							image: string;
+							previewBranchExclude: string[];
+							previewBranchInclude: string[];
+							previewsEnabled: boolean;
 							pullPolicy: string;
 							registry: {
 								passwordSet: boolean;
@@ -9585,7 +9589,7 @@ export interface operations {
 								| "failed"
 								| "missing";
 						} | null;
-						/** @description What the preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA */
+						/** @description What a git service's preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA. Null for an image-based service's preview */
 						gitRef: string | null;
 						hostnames: string[];
 						/** @description The preview's own service id */
@@ -9708,7 +9712,7 @@ export interface operations {
 								| "failed"
 								| "missing";
 						} | null;
-						/** @description What the preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA */
+						/** @description What a git service's preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA. Null for an image-based service's preview */
 						gitRef: string | null;
 						hostnames: string[];
 						/** @description The preview's own service id */
@@ -9786,6 +9790,168 @@ export interface operations {
 			};
 			/** @description No such service, or no preview for that pull request */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	put_services__serviceId__previews__prNumber_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id (the preview's parent) */
+				serviceId: string;
+				/** @description Pull request number */
+				prNumber: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The pull request's head branch: checked against the service's preview branch filter, a filtered-out branch is refused with 409. Omitted, no filter applies and an existing preview keeps its branch. */
+					branch?: string;
+					/** @description The commit the image was built from, recorded on the preview's revision so `homerun previews wait --commit` and promote --commit can match it. */
+					commit?: string;
+					/** @description The tag of the service's own image the preview runs, pulled with the service's registry credentials. */
+					tag: string;
+					/** @description The pull request's title. Omitted, an existing preview keeps its title. */
+					title?: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Deploy queued */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						branch: string | null;
+						/** @description The preview's latest deploy attempt, failed or in flight ones included */
+						deployment: {
+							/**
+							 * @description ISO 8601 timestamp
+							 * @example 2026-08-20T12:00:00.000Z
+							 */
+							createdAt: string;
+							errorMessage: string | null;
+							finishedAt: string | null;
+							/** @description The commit it built, null until the build checked it out */
+							gitCommit: string | null;
+							gitRef: string | null;
+							id: string;
+							/** @enum {string} */
+							status:
+								| "pending"
+								| "pulling"
+								| "starting"
+								| "running"
+								| "stopped"
+								| "failed"
+								| "missing";
+						} | null;
+						/** @description The preview's queued deployment. Poll GET /services/{serviceId}/previews/{prNumber} (or run homerun previews wait) until its revision is healthy */
+						deploymentId: string;
+						/** @description What a git service's preview builds: the pull request's head SHA, or its branch when the provider sent no full SHA. Null for an image-based service's preview */
+						gitRef: string | null;
+						hostnames: string[];
+						/** @description The preview's own service id */
+						id: string;
+						name: string;
+						prNumber: number;
+						/** @description The revision the preview runs now, null until a deploy of it succeeded */
+						revision: {
+							deployedAt: string | null;
+							gitCommit: string | null;
+							gitRef: string | null;
+							health:
+								| ("watching" | "healthy" | "unhealthy" | "rolled_back")
+								| null;
+							healthReason: string | null;
+							/** @description The revision's deployment id on the preview */
+							id: string;
+							imageDigest: string | null;
+							imageRef: string | null;
+						} | null;
+						slug: string;
+						/**
+						 * @description The preview service's last known status
+						 * @enum {string}
+						 */
+						status:
+							| "pending"
+							| "pulling"
+							| "starting"
+							| "running"
+							| "stopped"
+							| "failed"
+							| "missing";
+						title: string | null;
+						/** @description The preview's main URL, null when nothing routes to it */
+						url: string | null;
+					};
+				};
+			};
+			/** @description Invalid body, not a pull request number, or the service builds from git (its previews come from the webhook) or is itself a preview */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Previews are off, the branch doesn't pass the preview branch filter, the preview's slug is taken, or the instance is out of capacity */
+			409: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -9925,7 +10091,7 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Invalid body, or the service doesn't build from git */
+			/** @description Invalid body, or the service is itself a preview */
 			400: {
 				headers: {
 					[name: string]: unknown;
