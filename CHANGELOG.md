@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.54](https://github.com/orochibraru/homerun/compare/v1.0.53...v1.0.54) (2026-10-07)
+
+### Bug Fixes
+
+- **e2e:** name the required status checks in the docs screenshot setup
+  ([d84140a](https://github.com/orochibraru/homerun/commit/d84140afe83c0f05b87d091fae9b3595a1f28276))
+
 ## [1.0.53](https://github.com/orochibraru/homerun/compare/v1.0.52...v1.0.53) (2026-10-07)
 
 ### ⚠ BREAKING CHANGES
