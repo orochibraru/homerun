@@ -17,6 +17,14 @@
 	onMount(() => title.set(`Terraform State · ${data.project.name}`));
 
 	const versionCount = $derived(data.history.length);
+	const bucketHref = $derived(
+		data.store
+			? resolve("/(protected)/object-storage/[storeId]/buckets/[bucket]", {
+					bucket: data.project.bucket,
+					storeId: data.store.id,
+				})
+			: null,
+	);
 
 	let confirm = $state<{
 		description: string;
@@ -52,7 +60,13 @@
       description={`Kept in ${data.project.bucket}${data.store ? ` on ${data.store.name}` : ""}.`}
       icon={FileCode2}
       title={data.project.name}
-    />
+    >
+      {#snippet trailing()}
+        {#if bucketHref}
+          <Button href={bucketHref} size="sm" variant="outline">Open bucket</Button>
+        {/if}
+      {/snippet}
+    </PanelHeader>
     <div class="space-y-4 px-5 py-4 text-sm">
       <div>
         <p class="text-text mb-1.5 font-medium">Terraform</p>
@@ -70,6 +84,12 @@
           <p class="text-text-muted mt-1.5 text-xs">
             With <code>AWS_ACCESS_KEY_ID</code> and
             <code>AWS_SECRET_ACCESS_KEY</code> set to a key for this bucket.
+            {#if data.store?.kind === "garage" && bucketHref}
+              Create one under
+              <a class="text-accent hover:underline" href={bucketHref}>{data.project.bucket} → Access keys</a>.
+            {:else}
+              Create one in {data.store?.name ?? "the store"}'s own console.
+            {/if}
             Pulumi talks to the bucket directly and keeps its own history, so
             the versions below only cover Terraform.
           </p>

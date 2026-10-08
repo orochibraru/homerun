@@ -112,5 +112,10 @@ in the bucket.
 Pulumi doesn't speak Terraform's backend protocol, so the project page also
 shows a `pulumi login` command that points Pulumi straight at the same bucket
 and folder, with an access key for the bucket in `AWS_ACCESS_KEY_ID` and
-`AWS_SECRET_ACCESS_KEY`. Pulumi then keeps its own history and locks in the
-bucket; the versions, diff and rollback above only cover Terraform.
+`AWS_SECRET_ACCESS_KEY`. On the built-in store, mint that key from the bucket's
+**Access keys** (**Open bucket** on the project page); for a provider, from its
+own console. Pulumi then keeps its own history and locks in the bucket; the
+versions, diff and rollback above only cover Terraform.
+
+Terraform itself never needs a bucket key: it only talks to Homerun, which reads
+and writes the bucket with the store's own credentials.

@@ -55,7 +55,15 @@ export const load = async ({ params, url }) => {
 			prefix: project.prefix,
 			slug: project.slug,
 		},
-		store: store ? { endpoint, name: store.name, region: store.region } : null,
+		store: store
+			? {
+					endpoint,
+					id: store.id,
+					kind: store.kind,
+					name: store.name,
+					region: store.region,
+				}
+			: null,
 	};
 };
 
