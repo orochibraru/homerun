@@ -376,13 +376,13 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 			// using a key would all get silently 401'd (hooks.server.ts
 			// treats a rate-limited verifyApiKey() result identically to an
 			// actually-invalid key) after just 10 calls, not a deliberate
-			// choice anywhere in this app's own design. 300/minute is
-			// generous for legitimate CLI/dashboard use while still keeping
-			// *some* abuse protection, rather than removing rate limiting
-			// outright.
+			// choice anywhere in this app's own design. 3000/minute leaves
+			// room for a Terraform plan over a large stack (one request per
+			// resource) while still keeping *some* abuse protection, rather
+			// than removing rate limiting outright.
 			apiKey({
 				enableMetadata: true,
-				rateLimit: { maxRequests: 300, timeWindow: 60_000 },
+				rateLimit: { maxRequests: 3000, timeWindow: 60_000 },
 			}),
 			passkey({
 				rpID: passkeyRpId(config.auth.origin),

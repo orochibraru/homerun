@@ -66,7 +66,7 @@ source, not worked around here):
 - `apiKey()`'s own default rate limit (10 requests per _24 hours_ per key,
   independent of better-auth's general `rateLimit` option) silently 401'd the
   REST API/CLI after ~10 calls on any one key — fixed in
-  `src/lib/services/auth.ts` (300/min).
+  `src/lib/services/auth.ts` (3000/min).
 - `GET /services/{id}` returned the raw, possibly-stale DB row instead of
   reconciling `currentStatus` against live Docker/agent state the way the
   dashboard's own page load already does — a stop/start via the REST API never

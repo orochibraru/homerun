@@ -16,7 +16,7 @@ without it answers `403` with an error naming the area, such as
 created with the permissions you pick, an expiry and, optionally, "all
 permissions" (see [API keys](your-profile.md#api-keys)), and is always limited
 to what its owner holds at that moment. Profile, CLI login, the API docs and the
-MCP endpoint are open to any signed-in account. An API key makes up to 300
+MCP endpoint are open to any signed-in account. An API key makes up to 3000
 requests a minute; past that it gets `429 Too Many Requests` with a
 `Retry-After` header (in seconds) until the minute is up. The OpenAPI spec lists
 that `403` on every route.

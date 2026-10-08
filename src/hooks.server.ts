@@ -444,15 +444,16 @@ function appOnlyTokenRefusal(): Response {
 }
 
 /**
- * How long until a rate-limited API key may be used again (in ms), when `err`
- * is better-auth's rate-limit refusal from `verifyApiKey`, else null.
+ * How long until a rate-limited API key may be used again (in ms), when
+ * `refusal` is better-auth's rate-limit refusal, else null. `verifyApiKey`
+ * returns it as `{ valid: false, error }` rather than throwing, but a thrown
+ * `APIError` carries the same shape in its `body`.
  */
-function rateLimitedFor(err: unknown): number | null {
-	const body = (
-		err as { body?: { code?: string; details?: { tryAgainIn?: number } } }
-	)?.body;
-	return body?.code === "RATE_LIMITED"
-		? (body.details?.tryAgainIn ?? 60_000)
+function rateLimitedFor(
+	refusal: { code?: string; details?: { tryAgainIn?: number } } | undefined,
+): number | null {
+	return refusal?.code === "RATE_LIMITED"
+		? (refusal.details?.tryAgainIn ?? 60_000)
 		: null;
 }
 
@@ -476,9 +477,14 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 	const result = await auth.api
 		.verifyApiKey({ body: { key: rawKey } })
 		.catch((err: unknown) => {
-			tryAgainInMs = rateLimitedFor(err);
+			tryAgainInMs = rateLimitedFor(
+				(err as { body?: Parameters<typeof rateLimitedFor>[0] })?.body,
+			);
 			return null;
 		});
+	tryAgainInMs ??= rateLimitedFor(
+		(result as { error?: Parameters<typeof rateLimitedFor>[0] } | null)?.error,
+	);
 	if (tryAgainInMs !== null) {
 		return new Response(
 			JSON.stringify({ error: "Too many requests with this API key." }),

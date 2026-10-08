@@ -155,8 +155,12 @@ HTTPS, never scoped to the base domain. Named hosts keep the configured
 instance, so the rule above is unchanged for them.
 
 Rate limiting is on outside `vite dev`: 100 requests per IP per 15 minutes
-overall, plus the `apiKey()` plugin's own 300/minute. **Real, tested finding**:
-better-auth also applies an undocumented-in-config "special rule" (its
+overall, plus the `apiKey()` plugin's own 3000/minute per key. A key over it
+gets a 429 with `Retry-After`: `verifyApiKey` reports the refusal as
+`{ valid: false, error: { code: "RATE_LIMITED" } }` instead of throwing, which
+`hooks.server.ts` used to turn into a 401, so a growing integration suite on one
+key failed at random with "Unauthorized". **Real, tested finding**: better-auth
+also applies an undocumented-in-config "special rule" (its
 `rate-limiter/index.mjs`'s `getDefaultSpecialRules`) capping any
 `/sign-in`/`/sign-up`-prefixed path at 3 requests per 10 seconds, well below
 that `max`/`window` and unaffected by them, which a handful of `tests/e2e/`

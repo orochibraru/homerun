@@ -61,7 +61,7 @@ export async function bootstrapAdmin(origin: string): Promise<Bootstrapped> {
 	// rate-limited verifyApiKey() the same as an actually-invalid key) —
 	// not a test-only problem, it would have silently crippled the REST
 	// API/CLI for any real session too. Fixed at the source in auth.ts's
-	// own apiKey() plugin config (300/min), not worked around here :
+	// own apiKey() plugin config (3000/min), not worked around here :
 	// `rateLimitEnabled` itself is a server-only field the real HTTP
 	// endpoint rejects outright for a non-privileged caller, confirmed
 	// against @better-auth/api-key's own route source, so this couldn't
