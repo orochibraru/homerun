@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LayoutGrid, Plus, Rocket, SettingsIcon } from "@lucide/svelte";
+	import { LayoutGrid, Plus, Rocket, SettingsIcon, Tags } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import EntityList from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
@@ -10,6 +10,7 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
+	import { templateCategoryIcon } from "#lib/constants.js";
 	import { BASE_SORTS } from "#lib/list-sorts.js";
 	import { title } from "#lib/store/title.js";
 	import { templateCategoryLabel } from "#lib/template-categories.js";
@@ -32,11 +33,14 @@
 
 	const filters = $derived<FilterGroup[]>([
 		{
+			icon: Tags,
 			key: "category",
 			label: "Category",
-			options: data.categories.map((c) => ({
-				label: templateCategoryLabel(c),
-				value: c,
+			options: data.categories.map(({ category, count }) => ({
+				count,
+				icon: templateCategoryIcon(category),
+				label: templateCategoryLabel(category),
+				value: category,
 			})),
 		},
 	]);
@@ -136,8 +140,11 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">
+      <h1 class="text-text flex items-baseline gap-2 text-lg font-semibold tracking-tight">
         Templates
+        <span class="text-text-muted text-sm font-medium tabular-nums">
+          {data.builtinsTotal + data.customTotal}
+        </span>
       </h1>
       <p class="text-text-muted mt-1 text-sm">
         One-click configs for common services.

@@ -155,15 +155,27 @@ export class TemplateDTO extends BaseDTO<Template> {
 		return icons;
 	}
 
-	/** Every category present across built-in and custom templates, for the gallery's filter pills. */
-	static async listCategories(): Promise<string[]> {
+	/**
+	 * Every category present across built-in and custom templates with how
+	 * many templates matching the search `q` it holds, by name, counted in SQL
+	 * for the gallery's filter panel.
+	 */
+	static async categoryCounts(
+		q: string,
+	): Promise<{ category: string; count: number }[]> {
+		const search = or(
+			searchCondition(q, [template.name, template.description, template.image]),
+			tagSearchCondition(q),
+		);
 		const rows = await db
-			.selectDistinct({ category: template.category })
-			.from(template);
-		return rows
-			.map((r) => r.category)
-			.filter((c): c is string => Boolean(c))
-			.sort();
+			.select({ category: template.category, count: count() })
+			.from(template)
+			.where(and(isNotNull(template.category), search))
+			.groupBy(template.category)
+			.orderBy(asc(template.category));
+		return rows.filter((row): row is { category: string; count: number } =>
+			Boolean(row.category),
+		);
 	}
 
 	/**

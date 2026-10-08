@@ -19,7 +19,11 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "#lib/server/db/lib.js";
 import { type Job, job, service } from "#lib/server/db/schema.js";
-import type { ListQuery, PagedResult } from "#lib/server/list-query.js";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "#lib/server/list-query.js";
 import { isStaleJob } from "#lib/services/queue/stale.js";
 import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
 import type { JobStage, JobStatus, JobSummary, JobType } from "#lib/types.js";
@@ -42,6 +46,24 @@ export interface NewJobInput {
 	title: string;
 	type: JobType;
 	userId: string;
+}
+
+export interface JobListFilter {
+	q?: string;
+	types?: JobType[];
+}
+
+/** The SQL conditions for a job list's search (on the title) and type filter. */
+function jobFilter(filter: JobListFilter): SQL[] {
+	const conditions: SQL[] = [];
+	const search = searchCondition(filter.q ?? "", [job.title]);
+	if (search) {
+		conditions.push(search);
+	}
+	if (filter.types && filter.types.length > 0) {
+		conditions.push(inArray(job.type, filter.types));
+	}
+	return conditions;
 }
 
 const one = { one: sql`1` };
@@ -151,6 +173,14 @@ export class JobDTO extends BaseDTO<Job> {
 	/**
 	 * Loads one job by id, unscoped : callers must check ownership themselves.
 	 */
+	/** Appends one line to a job's log, for jobs that run in-process rather than on the Go worker. */
+	static async appendLog(id: string, line: string): Promise<void> {
+		await db
+			.update(job)
+			.set({ log: sql`${job.log} || ${`${line}\n`}`, progressAt: new Date() })
+			.where(eq(job.id, id));
+	}
+
 	static async get(id: string): Promise<JobDTO | null> {
 		const [row] = await db.select().from(job).where(eq(job.id, id)).limit(1);
 		return row ? new JobDTO(row) : null;
@@ -296,6 +326,7 @@ export class JobDTO extends BaseDTO<Job> {
 			type: input.type,
 			userId: input.userId,
 			workerId: null,
+			workerVersion: null,
 		};
 
 		const [inserted] = await db
@@ -645,11 +676,13 @@ export class JobDTO extends BaseDTO<Job> {
 	 * Up to 50 running and queued jobs, running first, then by priority and
 	 * age.
 	 */
-	static async listActive(): Promise<JobDTO[]> {
+	static async listActive(filter: JobListFilter = {}): Promise<JobDTO[]> {
 		const rows = await db
 			.select()
 			.from(job)
-			.where(inArray(job.status, ["running", "queued"]))
+			.where(
+				and(inArray(job.status, ["running", "queued"]), ...jobFilter(filter)),
+			)
 			.orderBy(desc(job.status), desc(job.priority), asc(job.createdAt))
 			.limit(50);
 		return rows.map((row) => new JobDTO(row));
@@ -661,18 +694,36 @@ export class JobDTO extends BaseDTO<Job> {
 	 */
 	static async listRecent(
 		limit = 15,
+		filter: JobListFilter = {},
 	): Promise<Array<{ job: JobDTO; serviceSlug: string | null }>> {
 		const rows = await db
 			.select({ row: job, serviceSlug: service.slug })
 			.from(job)
 			.leftJoin(service, eq(job.serviceId, service.id))
-			.where(inArray(job.status, TERMINAL_STATUSES))
+			.where(and(inArray(job.status, TERMINAL_STATUSES), ...jobFilter(filter)))
 			.orderBy(desc(job.finishedAt))
 			.limit(limit);
 		return rows.map((r) => ({
 			job: new JobDTO(r.row),
 			serviceSlug: r.serviceSlug,
 		}));
+	}
+
+	/** How many kept jobs of each type match the search `q`, counted in SQL for the job queue's filter panel. */
+	static async typeCounts(
+		q: string,
+	): Promise<{ count: number; type: JobType }[]> {
+		return await db
+			.select({ count: count(), type: job.type })
+			.from(job)
+			.where(and(...jobFilter({ q })))
+			.groupBy(job.type)
+			.orderBy(asc(job.type));
+	}
+
+	/** Records which worker build ran a job: the Go worker stamps its own on claim, the app stamps its version on the jobs it runs in-process. */
+	static async stampWorkerVersion(id: string, version: string): Promise<void> {
+		await db.update(job).set({ workerVersion: version }).where(eq(job.id, id));
 	}
 
 	/** Deletes finished jobs that finished more than a week ago. */

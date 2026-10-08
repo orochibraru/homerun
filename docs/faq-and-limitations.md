@@ -177,12 +177,13 @@ check the dashboard for anything that didn't.
 - **Every registry token can both push and pull.** The built-in registry's
   htpasswd auth has no concept of scopes or read-only access without running a
   separate token server, so there's no pull-only credential to hand out. See
-  [Registry](registry.md#tokens).
+  [Docker Registry](registry.md#tokens).
 - **Publishing the registry through a real Traefik hostname hasn't been pushed
   to yet.** Only the container's own htpasswd auth was verified directly
   (anonymous/wrong-password rejected, correct token accepted, a real
   `docker push` landed in the catalogue); a push over a published hostname with
-  a real certificate is untested. See [Registry](registry.md#whats-verified).
+  a real certificate is untested. See
+  [Docker Registry](registry.md#whats-verified).
 
 The live backlog is [`TODO.md`](../TODO.md).
 

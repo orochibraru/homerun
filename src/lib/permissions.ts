@@ -70,7 +70,7 @@ export const PERMISSION_AREAS = [
 	{
 		description: "The built-in image registry, its images and tokens.",
 		key: "registry",
-		label: "Registry",
+		label: "Docker Registry",
 		routes: ["/registry"],
 	},
 	{

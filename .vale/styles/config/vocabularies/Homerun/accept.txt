@@ -23,6 +23,7 @@ Authentik
 autofill
 autofix
 Backblaze
+backend's
 backoff
 bcrypt
 buildx
@@ -95,6 +96,7 @@ storages
 subcommand
 submenus?
 substacks?
+subtabs?
 subuid
 sysctl
 systemd

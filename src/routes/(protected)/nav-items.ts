@@ -1,5 +1,6 @@
 import {
 	Activity,
+	ArchiveRestore,
 	ArrowRightLeft,
 	BarChart3,
 	BookOpen,
@@ -15,6 +16,7 @@ import {
 	FolderKanban,
 	GitBranch,
 	Globe,
+	Hammer,
 	HardDrive,
 	History,
 	KeyRound,
@@ -28,10 +30,36 @@ import {
 	TerminalSquare,
 	Trash2,
 	Users,
+	Warehouse,
+	Wrench,
 } from "@lucide/svelte";
+import type { Component } from "svelte";
 import { resolve } from "$app/paths";
 
-export const allNavItems = [
+export interface NavItem {
+	category: string;
+	exact: boolean;
+	href: string;
+	icon: Component;
+	label: string;
+	/** What the sidebar calls the item when it's nested, when `label` would repeat its parent's name. */
+	navLabel?: string;
+	/** Nests the item under a collapsible entry of that name, see `NAV_PARENT_ICONS`. */
+	parent?: string;
+}
+
+export const NAV_PARENT_ICONS: Record<string, Component> = {
+	"Backup & Restore": ArchiveRestore,
+	Builds: Hammer,
+	Developer: FileCode2,
+	Identity: Fingerprint,
+	Observability: Activity,
+	Registries: Warehouse,
+	Scheduling: CalendarClock,
+	System: Wrench,
+};
+
+export const allNavItems: NavItem[] = [
 	{
 		category: "Workspace",
 		exact: true,
@@ -45,20 +73,6 @@ export const allNavItems = [
 		href: resolve("services"),
 		icon: Server,
 		label: "Services",
-	},
-	{
-		category: "Workspace",
-		exact: false,
-		href: resolve("deployments"),
-		icon: History,
-		label: "Deployments",
-	},
-	{
-		category: "Workspace",
-		exact: false,
-		href: resolve("monitoring"),
-		icon: BarChart3,
-		label: "Monitoring",
 	},
 	{
 		category: "Workspace",
@@ -77,121 +91,148 @@ export const allNavItems = [
 	{
 		category: "Workspace",
 		exact: false,
-		href: resolve("cron-jobs"),
-		icon: Clock,
-		label: "Cron Jobs",
+		href: resolve("deployments"),
+		icon: History,
+		label: "Deployments",
 	},
 	{
-		category: "Workspace",
+		category: "Operations",
+		exact: false,
+		href: resolve("monitoring"),
+		icon: BarChart3,
+		label: "Monitoring",
+		parent: "Observability",
+	},
+	{
+		category: "Operations",
 		exact: false,
 		href: resolve("status-pages"),
 		icon: Activity,
 		label: "Status Page",
+		parent: "Observability",
 	},
 	{
-		category: "Storage",
-		exact: false,
-		href: resolve("storage"),
-		icon: HardDrive,
-		label: "Volumes",
-	},
-	{
-		category: "Storage",
-		exact: false,
-		href: resolve("backups"),
-		icon: CloudUpload,
-		label: "Backups",
-	},
-	{
-		category: "Storage",
-		exact: false,
-		href: resolve("s3-destinations"),
-		icon: Database,
-		label: "Backup Destinations",
-	},
-	{
-		category: "Storage",
-		exact: false,
-		href: resolve("object-storage"),
-		icon: Cylinder,
-		label: "Object Storage",
-	},
-	{
-		category: "Infrastructure",
-		exact: false,
-		href: resolve("remote-hosts"),
-		icon: Network,
-		label: "Remote Hosts",
-	},
-	{
-		category: "Infrastructure",
-		exact: false,
-		href: resolve("redirects"),
-		icon: ArrowRightLeft,
-		label: "Redirects",
-	},
-	{
-		category: "Infrastructure",
-		exact: false,
-		href: resolve("scheduling"),
-		icon: CalendarClock,
-		label: "Scheduling",
-	},
-	{
-		category: "Infrastructure",
-		exact: false,
-		href: resolve("terminal"),
-		icon: TerminalSquare,
-		label: "Terminal",
-	},
-	{
-		category: "Integrations",
-		exact: false,
-		href: resolve("git-providers"),
-		icon: GitBranch,
-		label: "Git Providers",
-	},
-	{
-		category: "Integrations",
-		exact: false,
-		href: resolve("build-cache-registries"),
-		icon: Container,
-		label: "Build Cache",
-	},
-	{
-		category: "Integrations",
+		category: "Operations",
 		exact: false,
 		href: resolve("notification-channels"),
 		icon: Send,
 		label: "Notification Channels",
 	},
 	{
-		category: "Integrations",
+		category: "Operations",
 		exact: false,
-		href: resolve("dns"),
-		icon: Globe,
-		label: "DNS",
+		href: resolve("scheduling"),
+		icon: CalendarClock,
+		label: "Scheduling",
+		navLabel: "Overview",
+		parent: "Scheduling",
 	},
 	{
-		category: "Integrations",
+		category: "Operations",
 		exact: false,
-		href: resolve("idp"),
-		icon: Fingerprint,
-		label: "IDP",
+		href: resolve("cron-jobs"),
+		icon: Clock,
+		label: "Cron Jobs",
+		parent: "Scheduling",
 	},
 	{
-		category: "Integrations",
+		category: "Operations",
+		exact: false,
+		href: resolve("terminal"),
+		icon: TerminalSquare,
+		label: "Terminal",
+	},
+	{
+		category: "Data",
+		exact: false,
+		href: resolve("storage"),
+		icon: HardDrive,
+		label: "Volumes",
+	},
+	{
+		category: "Data",
+		exact: false,
+		href: resolve("backups"),
+		icon: CloudUpload,
+		label: "Backups",
+		parent: "Backup & Restore",
+	},
+	{
+		category: "Data",
+		exact: false,
+		href: resolve("s3-destinations"),
+		icon: Database,
+		label: "Backup Destinations",
+		parent: "Backup & Restore",
+	},
+	{
+		category: "Data",
+		exact: false,
+		href: resolve("object-storage"),
+		icon: Cylinder,
+		label: "Object Storage",
+	},
+	{
+		category: "Delivery",
+		exact: false,
+		href: resolve("git-providers"),
+		icon: GitBranch,
+		label: "Git Providers",
+		parent: "Builds",
+	},
+	{
+		category: "Delivery",
+		exact: false,
+		href: resolve("build-cache-registries"),
+		icon: Container,
+		label: "Build Cache",
+		parent: "Builds",
+	},
+	{
+		category: "Delivery",
+		exact: false,
+		href: resolve("remote-hosts"),
+		icon: Network,
+		label: "Remote Hosts",
+		parent: "Builds",
+	},
+	{
+		category: "Delivery",
+		exact: false,
+		href: resolve("registry"),
+		icon: Boxes,
+		label: "Docker Registry",
+		parent: "Registries",
+	},
+	{
+		category: "Delivery",
 		exact: false,
 		href: resolve("iac"),
 		icon: FileCode2,
 		label: "Infrastructure as Code",
+		parent: "Developer",
 	},
 	{
-		category: "Integrations",
+		category: "Delivery",
 		exact: false,
 		href: resolve("api-docs"),
 		icon: BookOpen,
 		label: "API Docs",
+		parent: "Developer",
+	},
+	{
+		category: "Networking",
+		exact: false,
+		href: resolve("redirects"),
+		icon: ArrowRightLeft,
+		label: "Redirects",
+	},
+	{
+		category: "Networking",
+		exact: false,
+		href: resolve("dns"),
+		icon: Globe,
+		label: "DNS",
 	},
 	{
 		category: "Administration",
@@ -206,6 +247,15 @@ export const allNavItems = [
 		href: resolve("authentication"),
 		icon: KeyRound,
 		label: "Authentication",
+		parent: "Identity",
+	},
+	{
+		category: "Administration",
+		exact: false,
+		href: resolve("idp"),
+		icon: Fingerprint,
+		label: "IDP",
+		parent: "Identity",
 	},
 	{
 		category: "Administration",
@@ -220,13 +270,7 @@ export const allNavItems = [
 		href: resolve("system-logs"),
 		icon: ScrollText,
 		label: "System Logs",
-	},
-	{
-		category: "Administration",
-		exact: false,
-		href: resolve("registry"),
-		icon: Boxes,
-		label: "Registry",
+		parent: "System",
 	},
 	{
 		category: "Administration",
@@ -234,5 +278,6 @@ export const allNavItems = [
 		href: resolve("docker-cleanup"),
 		icon: Trash2,
 		label: "Docker Cleanup",
+		parent: "System",
 	},
 ];

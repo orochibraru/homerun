@@ -10,6 +10,7 @@ import {
 	type Preset,
 	type SurfaceStyle,
 } from "#lib/surfaces.js";
+import type { TabLayout } from "#lib/tab-layout.js";
 import type { UiMode } from "#lib/ui-mode.js";
 import { BaseDTO } from "./base-dto";
 
@@ -42,6 +43,7 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 			perPage: DEFAULT_PER_PAGE,
 			preset: null,
 			surfaceStyle: DEFAULT_SURFACE,
+			tabLayout: "horizontal",
 			theme: "system",
 			uiMode: null,
 			updatedAt: now,
@@ -69,6 +71,11 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 	/** Persists the account's UI mode, or null to follow the instance default. */
 	async updateUiMode(uiMode: UiMode | null): Promise<void> {
 		await this.persist({ uiMode });
+	}
+
+	/** Persists whether page tabs sit above the page or in a column beside it. */
+	async updateTabLayout(tabLayout: TabLayout): Promise<void> {
+		await this.persist({ tabLayout });
 	}
 
 	/** Persists the account's default page size for every paginated list. */

@@ -1,10 +1,15 @@
 <script lang="ts" module>
+	import type { Component } from "svelte";
+
 	export interface FilterOption {
+		count?: number;
+		icon?: Component;
 		label: string;
 		value: string;
 	}
 
 	export interface FilterGroup {
+		icon?: Component;
 		key: string;
 		label: string;
 		options: FilterOption[];
@@ -12,12 +17,11 @@
 </script>
 
 <script lang="ts">
-	import { ArrowDownUp, ListFilter, Search, X } from "@lucide/svelte";
+	import { ArrowDownUp, Check, ListFilter, Search, X } from "@lucide/svelte";
 	import type { Snippet } from "svelte";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
 	import {
 		SelectContent,
 		SelectItem,
@@ -119,26 +123,38 @@
 		}, 300);
 	}
 
-	function toggle(groupKey: string, value: string) {
-		const current = selected[groupKey] ?? [];
-		const next = current.includes(value)
-			? current.filter((v) => v !== value)
-			: [...current, value];
-		apply((params) => {
-			if (next.length > 0) {
-				params.set(groupKey, next.join(","));
-			} else {
-				params.delete(groupKey);
-			}
-		});
+	let pending = $state<Record<string, string[]>>({});
+
+	const pendingCount = $derived(
+		Object.values(pending).reduce((total, values) => total + values.length, 0),
+	);
+
+	function openFilters() {
+		pending = Object.fromEntries(
+			Object.entries(selected).map(([key, values]) => [key, [...values]]),
+		);
+		filtersOpen = true;
 	}
 
-	function clearFilters() {
+	function toggle(groupKey: string, value: string) {
+		const current = pending[groupKey] ?? [];
+		pending[groupKey] = current.includes(value)
+			? current.filter((v) => v !== value)
+			: [...current, value];
+	}
+
+	function applyFilters() {
 		apply((params) => {
 			for (const group of usableFilters) {
-				params.delete(group.key);
+				const values = pending[group.key] ?? [];
+				if (values.length > 0) {
+					params.set(group.key, values.join(","));
+				} else {
+					params.delete(group.key);
+				}
 			}
 		});
+		filtersOpen = false;
 	}
 </script>
 
@@ -167,7 +183,7 @@
     </SelectRoot>
   {/if}
   {#if usableFilters.length > 0}
-    <Button onclick={() => { filtersOpen = true; }} variant="outline">
+    <Button onclick={openFilters} variant="outline">
       <ListFilter class="size-4" />
       Filters
       {#if activeCount > 0}
@@ -184,41 +200,79 @@
 
 <Drawer bind:open={filtersOpen} direction="right">
   <DrawerContent class="flex flex-col">
-    <DrawerHeader class="flex-row items-center justify-between">
-      <DrawerTitle>Filters</DrawerTitle>
-      <Button onclick={() => { filtersOpen = false; }} size="icon-sm" variant="ghost">
+    <DrawerHeader class="border-border flex-row items-center gap-3 border-b px-5 py-4">
+      <span class="bg-accent-light text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
+        <ListFilter class="size-4" />
+      </span>
+      <div class="min-w-0 flex-1">
+        <DrawerTitle class="text-text text-base">Filters</DrawerTitle>
+        <p class="text-text-muted text-xs">
+          {pendingCount === 0
+            ? "Nothing selected."
+            : `${pendingCount} selected`}
+        </p>
+      </div>
+      <Button aria-label="Close" onclick={() => { filtersOpen = false; }} size="icon-sm" variant="ghost">
         <X class="size-4" />
       </Button>
     </DrawerHeader>
-    <div class="space-y-6 overflow-y-auto px-4 pb-6">
+    <div class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
       {#each usableFilters as group (group.key)}
-        <div>
-          <h3 class="eyebrow mb-2">{group.label}</h3>
-          <ul class="flex flex-col">
+        {@const GroupIcon = group.icon}
+        <section>
+          <h3 class="eyebrow mb-2.5 flex items-center gap-1.5">
+            {#if GroupIcon}<GroupIcon class="size-3.5" />{/if}
+            {group.label}
+          </h3>
+          <ul class="flex flex-col gap-1">
             {#each group.options as option (option.value)}
-              {@const isOn = (selected[group.key] ?? []).includes(option.value)}
+              {@const isOn = (pending[group.key] ?? []).includes(option.value)}
+              {@const OptionIcon = option.icon}
               <li>
-                <label class="hover:bg-surface-2 flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors">
-                  <Checkbox
-                    checked={isOn}
-                    onCheckedChange={() => toggle(group.key, option.value)}
-                  />
-                  <span class="capitalize {isOn ? 'text-text font-medium' : 'text-text-muted'}">
-                    {option.label}
+                <button
+                  class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm transition-colors {isOn ? 'bg-accent-light text-text ring-accent/30 font-medium ring-1' : 'text-text hover:bg-surface-2'}"
+                  aria-pressed={isOn}
+                  onclick={() => toggle(group.key, option.value)}
+                  type="button"
+                >
+                  {#if OptionIcon}
+                    <span class="flex size-7 shrink-0 items-center justify-center rounded-md {isOn ? 'bg-accent text-white' : 'bg-surface-2 text-text-muted'}">
+                      <OptionIcon class="size-3.5" />
+                    </span>
+                  {/if}
+                  <span class="min-w-0 flex-1 truncate capitalize">{option.label}</span>
+                  {#if option.count !== undefined}
+                    <span class="text-text-muted bg-surface-2 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums">
+                      {option.count}
+                    </span>
+                  {/if}
+                  <span
+                    class="flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors {isOn ? 'border-accent bg-accent text-white' : 'border-text-subtle/60'}"
+                  >
+                    {#if isOn}<Check class="size-3" />{/if}
                   </span>
-                </label>
+                </button>
               </li>
             {/each}
           </ul>
-        </div>
+        </section>
       {/each}
     </div>
-    {#if activeCount > 0}
-      <div class="border-border border-t px-4 py-3">
-        <Button onclick={clearFilters} size="sm" variant="outline">
-          Clear all
-        </Button>
-      </div>
-    {/if}
+    <div class="border-border flex items-center justify-between gap-2 border-t px-5 py-3">
+      <Button
+        disabled={pendingCount === 0}
+        onclick={() => {
+          pending = {};
+        }}
+        size="sm"
+        variant="ghost"
+      >
+        Clear all
+      </Button>
+      <Button onclick={applyFilters} size="sm">
+        <Check class="size-4" />
+        Apply
+      </Button>
+    </div>
   </DrawerContent>
 </Drawer>

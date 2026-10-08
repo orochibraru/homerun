@@ -98,7 +98,7 @@
     <OauthAppToggle {app} showLabel />
   </div>
 
-  <TabNav active={activeTabId} {tabs} />
-
-  {@render children()}
+  <TabNav active={activeTabId} {tabs}>
+    {@render children()}
+  </TabNav>
 </div>

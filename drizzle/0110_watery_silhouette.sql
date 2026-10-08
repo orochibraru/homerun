@@ -1,0 +1,1 @@
+ALTER TABLE "user_preferences" ADD COLUMN "tab_layout" text DEFAULT 'horizontal' NOT NULL;

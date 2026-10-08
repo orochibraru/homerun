@@ -1,30 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { IacProjectDTO } from "#lib/dto/iac-project-dto.js";
-import { IacStateVersionDTO } from "#lib/dto/iac-state-version-dto.js";
 import { IacStateService } from "#lib/services/iac-state.service.js";
 import { resolve } from "$app/paths";
-
-export const load = async () => {
-	const projects = await IacProjectDTO.list();
-	return {
-		projects: await Promise.all(
-			projects.map(async (project) => {
-				const [latest, lock] = await Promise.all([
-					IacStateVersionDTO.latest(project.id),
-					project.currentLock(),
-				]);
-				return {
-					bucket: project.bucket,
-					id: project.id,
-					locked: lock !== null,
-					name: project.name,
-					serial: latest?.serial ?? null,
-					updatedAt: latest?.toJSON().createdAt ?? null,
-				};
-			}),
-		),
-	};
-};
 
 export const actions = {
 	create: async ({ request, locals }) => {

@@ -18,10 +18,16 @@ test.describe
 		test("is reachable from the sidebar and renders every tab", async ({
 			page,
 		}) => {
-			await page.getByRole("link", { name: "Registry", exact: true }).click();
+			await page
+				.getByRole("button", { name: "Registries", exact: true })
+				.first()
+				.click();
+			await page
+				.getByRole("link", { name: "Docker Registry", exact: true })
+				.click();
 			await expect(page).toHaveURL(/\/registry$/);
 			await expect(
-				page.getByRole("heading", { level: 1, name: "Registry" }),
+				page.getByRole("heading", { level: 1, name: "Docker Registry" }),
 			).toBeVisible();
 
 			// The registry container isn't up in the E2E environment, so the

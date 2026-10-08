@@ -10,6 +10,7 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import HostResources from "#lib/components/host-resources.svelte";
 	import MonitoringSummary from "#lib/components/monitoring/monitoring-summary.svelte";
 	import ServiceUsageTable from "#lib/components/service-usage-table.svelte";
@@ -302,7 +303,9 @@
       {/each}
     </div>
 
-    <HostResources />
+    <ErrorBoundary title="Host resources didn't load.">
+      <HostResources />
+    </ErrorBoundary>
   </div>
 
   <div class="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -321,7 +324,9 @@
         Couldn't load today's monitoring.
       </div>
     {/await}
-    <ServiceUsageTable limit={5} />
+    <ErrorBoundary title="Resource usage didn't load.">
+      <ServiceUsageTable limit={5} />
+    </ErrorBoundary>
   </div>
 
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">

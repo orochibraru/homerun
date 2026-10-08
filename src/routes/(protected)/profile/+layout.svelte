@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		AppWindow,
 		BellRing,
 		KeyRound,
 		Lock,
@@ -42,8 +43,15 @@
 		},
 		{
 			exact: false,
-			href: resolve("profile/clients"),
+			href: resolve("profile/api-keys"),
 			icon: KeyRound,
+			id: "api-keys",
+			label: "API Keys",
+		},
+		{
+			exact: false,
+			href: resolve("profile/clients"),
+			icon: AppWindow,
 			id: "clients",
 			label: "Authorized Clients",
 		},
@@ -84,9 +92,9 @@
 	</div>
 
 	<!-- ── Tabs ─────────────────────────────────────────────── -->
-	<TabNav active={activeTabId} tabs={tabs} />
-
-	{@render children()}
+	<TabNav active={activeTabId} tabs={tabs}>
+	  {@render children()}
+	</TabNav>
 
 	<!-- Extra bottom padding so the last card isn't flush with viewport edge -->
 	<div class="h-4"></div>

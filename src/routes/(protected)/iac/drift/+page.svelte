@@ -29,7 +29,7 @@
       subtitle="Drift compares a Terraform state kept on this instance with what's running."
       title="No Terraform state project yet"
     >
-      <Button href={resolve("/(protected)/object-storage/state")} size="sm">Create one</Button>
+      <Button href={resolve("/(protected)/iac/state")} size="sm">Create one</Button>
     </EmptyState>
   {:else}
     <section class="panel rounded-md">

@@ -8,9 +8,10 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { formatBytes } from "#lib/formatting.js";
+	import { queuedJobToast } from "#lib/job-toast.js";
 	import type { RegistryCheck } from "#lib/registry-self-test.js";
 	import { testRegistry } from "#lib/remote/registry.remote.js";
-	import { enhanceToast, toastError } from "#lib/toast.js";
+	import { toastError } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 
 	const { data } = $props();
@@ -19,7 +20,11 @@
 	$effect(() => {
 		publicHost = data.status.publicHost ?? "";
 	});
-	let authForm: HTMLFormElement | undefined = $state();
+	let authEnabled = $state(false);
+	$effect(() => {
+		authEnabled = data.status.authEnabled;
+	});
+	let savingAuth = $state(false);
 
 	let checks = $state<RegistryCheck[] | null>(null);
 	let testing = $state(false);
@@ -116,31 +121,37 @@
         time, so its own scans and deploys keep working.
       </p>
     </div>
-    <form
-      action="?/setAuth"
-      bind:this={authForm}
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't change the registry's auth.",
-        loading: "Reconfiguring the registry",
-        success: "Registry auth updated.",
-      })}
-    >
-      <input
-        name="enabled"
-        type="hidden"
-        value={String(!data.status.authEnabled)}
-      />
-      <CheckBox
-        checked={data.status.authEnabled}
-        helperText="Applies straight away : the registry container is recreated with its auth file."
-        id="registryAuthEnabled"
-        label="Require a token"
-        name="authEnabled"
-        onCheckedChange={() => authForm?.requestSubmit()}
-      />
-    </form>
+    <SaveButton
+      disabled={authEnabled === data.status.authEnabled}
+      form="registry-auth"
+      pending={savingAuth}
+    />
   </div>
+  <form
+    id="registry-auth"
+    class="mt-3"
+    action="?/setAuth"
+    method="POST"
+    use:enhance={queuedJobToast({
+      error: "Couldn't change the registry's auth.",
+      loading: "Queueing the change",
+      onSettled: () => {
+        savingAuth = false;
+      },
+      onStart: () => {
+        savingAuth = true;
+      },
+      success: "The registry's auth is being changed in the background.",
+    })}
+  >
+    <CheckBox
+      helperText="Applies on save : the registry container is recreated with its auth file."
+      id="registryAuthEnabled"
+      label="Require a token"
+      name="enabled"
+      bind:checked={authEnabled}
+    />
+  </form>
 </section>
 
 <section class="border-border bg-surface-1 rounded-lg border p-4">
@@ -168,16 +179,16 @@
     id="registry-public-host"
     action="?/setPublicHost"
     method="POST"
-    use:enhance={enhanceToast({
+    use:enhance={queuedJobToast({
       error: "Couldn't publish the registry.",
-      loading: "Reconfiguring the registry",
+      loading: "Queueing the change",
       onSettled: () => {
         publishing = false;
       },
       onStart: () => {
         publishing = true;
       },
-      success: "Registry updated.",
+      success: "The registry's route is being reconfigured in the background.",
     })}
   >
     <Input

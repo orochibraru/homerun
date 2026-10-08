@@ -52,7 +52,7 @@ function withKey(key: string, path: string, body?: unknown) {
 describe("scoped API keys", () => {
 	test("a key only reaches the areas and levels it was created with", async () => {
 		const cookie = await signIn(ADMIN_EMAIL, ADMIN_PASSWORD);
-		const created = await formAction(cookie, "/profile/clients?/create", {
+		const created = await formAction(cookie, "/profile/api-keys/new?/create", {
 			expiry: "7",
 			name: "services reader",
 			"permission.services": "read",
@@ -68,17 +68,21 @@ describe("scoped API keys", () => {
 
 	test("a key needs at least one permission unless it's allowed all of them", async () => {
 		const cookie = await signIn(ADMIN_EMAIL, ADMIN_PASSWORD);
-		const refused = await formAction(cookie, "/profile/clients?/create", {
+		const refused = await formAction(cookie, "/profile/api-keys/new?/create", {
 			expiry: "never",
 			name: "nothing",
 		});
 		expect(refused.type).toBe("failure");
 
-		const everything = await formAction(cookie, "/profile/clients?/create", {
-			allPermissions: "on",
-			expiry: "never",
-			name: "everything",
-		});
+		const everything = await formAction(
+			cookie,
+			"/profile/api-keys/new?/create",
+			{
+				allPermissions: "on",
+				expiry: "never",
+				name: "everything",
+			},
+		);
 		expect(everything.type).toBe("success");
 		expect(
 			(await withKey(everything.data.key as string, "/api/v1/iac/projects"))

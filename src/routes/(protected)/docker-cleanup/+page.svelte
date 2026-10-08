@@ -16,25 +16,23 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import { queuedJobToast } from "#lib/job-toast.js";
 	import {
 		getCleanupPreview,
 		getMirrorUsage,
 		getOrphanStackNetworks,
 	} from "#lib/remote/docker-infra.remote.js";
 	import { title } from "#lib/store/title.js";
-	import { type EnhanceToastOptions, enhanceToast } from "#lib/toast.js";
+	import type { EnhanceToastOptions } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import {
 		type CleanupAction,
 		confirmCopy,
-		describeResult,
 		formatBytes,
 		sumSize,
 	} from "./cleanup";
 	import CleanupItemList from "./cleanup-item-list.svelte";
 	import CleanupPanel from "./cleanup-panel.svelte";
-
-	const { form } = $props();
 
 	const cleanup = getCleanupPreview();
 	const orphans = getOrphanStackNetworks();
@@ -66,17 +64,17 @@
 		action: CleanupAction,
 		extra: Partial<EnhanceToastOptions> = {},
 	) {
-		return enhanceToast({
-			error: "Docker cleanup action failed.",
-			loading: "Running cleanup",
+		return queuedJobToast({
+			error: "Couldn't start the cleanup.",
+			loading: "Queueing the cleanup",
 			onSettled: () => {
 				pendingAction = null;
 			},
 			onStart: () => {
 				pendingAction = action;
 			},
-			success: (data) =>
-				describeResult((data as { result?: unknown } | undefined)?.result),
+			success:
+				"The cleanup is running in the background. Its page says what it reclaimed.",
 			...extra,
 		});
 	}
@@ -189,7 +187,7 @@
                 action="?/reclaimStackNetworks"
                 method="POST"
                 use:enhance={pruneToast("reclaimStackNetworks", {
-                  loading: "Reclaiming orphaned stack networks",
+                  loading: "Queueing the network cleanup",
                   onComplete: () => orphans.refresh(),
                 })}
               >
@@ -272,8 +270,8 @@
           action="?/pruneMirror"
           method="POST"
           use:enhance={pruneToast("pruneMirror", {
-            error: "Mirror cleanup failed.",
-            loading: "Cleaning up the image mirror",
+            error: "Couldn't start the mirror cleanup.",
+            loading: "Queueing the mirror cleanup",
             onComplete: () => mirror.refresh(),
           })}
         >

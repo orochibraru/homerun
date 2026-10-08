@@ -3,9 +3,9 @@
 **Object Storage** (needs the Object storage permission, under **Storage** in
 the sidebar) gives you S3 buckets without paying for a cloud: a built-in object
 store Homerun runs for you, plus any S3-compatible provider you connect, side by
-side. On top of it, Homerun keeps Terraform state, so infrastructure code needs
-no paid backend either. The page has four tabs: **Buckets**, **Stores**,
-**Built-in** and **Terraform State**.
+side. The page has three tabs: **Buckets**, **Stores** and **Built-in**.
+Terraform state kept in these buckets is managed from
+[Infrastructure as code](infrastructure-as-code.md#terraform-state).
 
 ## The built-in store
 
@@ -22,7 +22,10 @@ routes that hostname to the store's S3 API with TLS, and the
 [DNS automation](dns-automation.md) points it at this server like the
 registry's. Only the S3 API is ever published, never Garage's admin API.
 
-The tab shows whether the container runs and how much its buckets hold.
+The tab shows whether the container runs and how much its buckets hold. Turning
+the store on or off and publishing it take effect with **Save**, and run in the
+background through the [job queue](scheduling.md#the-job-queue): the notice that
+they started has a **View task** button that opens the job and its log.
 
 ## Connecting a provider
 
@@ -33,7 +36,7 @@ MinIO and the like. Give it a name, the endpoint (scheme and host only, e.g.
 and an access key. Homerun lists the provider's buckets with the key before
 saving it, so a typo never lands. The secret is stored encrypted and never shown
 again; editing a store with the secret left empty keeps it. Removing a store
-forgets the connection and the Terraform state projects kept on it; the buckets
+forgets the connection and the Terraform state backends kept on it; the buckets
 and their objects stay at the provider.
 
 Requests use path-style addressing (the bucket in the path), which every
@@ -45,13 +48,25 @@ S3-compatible store accepts.
 and their size. The built-in store reports exact numbers instantly; for a
 provider, Homerun counts by listing at most 10,000 objects and shows `10,000+`
 beyond that. A store that can't be listed (unreachable, a revoked key) is
-reported above the list instead of hiding the rest. **New bucket** creates one
-on the store you pick; names are 3 to 63 lowercase letters, digits, dots or
-dashes.
+reported above the list instead of hiding the rest, and a public bucket carries
+a **Public** badge. **New bucket** opens a page that creates one on the store
+you pick; names are 3 to 63 lowercase letters, digits, dots or dashes, and
+**Public** makes it public from the start.
 
-Click a bucket for its page:
+Click a bucket for its page. Its **Files** tab browses it like a folder tree (S3
+has no real folders: a name with `/` in it reads as one): open a folder,
+download a file, delete one, upload files into the folder you're in, or create a
+folder. A large folder shows 200 entries at a time, with **Next page**. Uploads
+go through Homerun, so keep them to what fits in its memory; a client with an
+access key is better for big transfers. Its **Settings** tab has:
 
 - **Endpoint and region** to copy into a client.
+- **Public access**: a public bucket's objects can be downloaded by anyone at
+  `https://<homerun>/public/<store id>/<bucket>/<key>`, without signing in, on
+  the built-in store and on every provider alike: Homerun fetches the object
+  with the store's own key and streams it back, ranges included. Listing the
+  bucket and uploading still need an access key. Private is the default, and
+  turning it off takes effect at once.
 - **Lifecycle**: expire every object a number of days after it was written, or
   leave it empty to keep objects until you delete them. It replaces any
   lifecycle rule the bucket had.
@@ -66,56 +81,3 @@ Click a bucket for its page:
   otherwise.
 - **Delete bucket** deletes an empty bucket. A bucket that still holds objects
   is refused with a plain message rather than emptied for you.
-
-## Terraform state
-
-**Terraform State** keeps each Terraform configuration's state in a bucket you
-pick, through Terraform's `http` backend. **New state project** takes a name, a
-store, a bucket and an optional folder inside it; the project page then shows
-the backend block to paste:
-
-```hcl
-terraform {
-  backend "http" {
-    address        = "https://homerun.example.com/api/v1/iac/projects/<id>/state"
-    lock_address   = "https://homerun.example.com/api/v1/iac/projects/<id>/lock"
-    unlock_address = "https://homerun.example.com/api/v1/iac/projects/<id>/lock"
-    lock_method    = "POST"
-    unlock_method  = "DELETE"
-    username       = "homerun"
-  }
-}
-```
-
-Terraform authenticates with HTTP Basic: any username, and an API key (**Profile
-→ API keys**) as the password, set as `TF_HTTP_PASSWORD` so it stays out of the
-file. The key needs write access to Infrastructure as code to write or lock the
-state; with read access it can only read it.
-
-- **Versions.** Every state Terraform writes is kept as its own object in the
-  bucket and listed newest first, with its serial, when, who (the API key's
-  owner) and its size. Nothing is overwritten.
-- **Diff.** Open a version to see which resources it added, changed and removed
-  compared with the version before it.
-- **Rollback.** **Roll back** on an older version writes it back as the newest
-  state, with a serial past the latest so Terraform accepts it. The versions in
-  between stay in the history. It's refused while the state is locked.
-- **Lock.** Terraform locks the state for every plan and apply, and a second run
-  is refused with the first one's lock info until it finishes. The lock lives in
-  Homerun, not in the bucket, so it works on every store. **Force unlock**
-  releases a lock left behind by a run that died; only use it when that run is
-  really gone.
-
-Deleting a project forgets it, its versions and its lock; the state files stay
-in the bucket.
-
-Pulumi doesn't speak Terraform's backend protocol, so the project page also
-shows a `pulumi login` command that points Pulumi straight at the same bucket
-and folder, with an access key for the bucket in `AWS_ACCESS_KEY_ID` and
-`AWS_SECRET_ACCESS_KEY`. On the built-in store, mint that key from the bucket's
-**Access keys** (**Open bucket** on the project page); for a provider, from its
-own console. Pulumi then keeps its own history and locks in the bucket; the
-versions, diff and rollback above only cover Terraform.
-
-Terraform itself never needs a bucket key: it only talks to Homerun, which reads
-and writes the bucket with the store's own credentials.

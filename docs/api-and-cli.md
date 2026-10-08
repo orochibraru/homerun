@@ -22,8 +22,8 @@ requests a minute; past that it gets `429 Too Many Requests` with a
 that `403` on every route.
 
 The Terraform state routes under `/api/v1/iac/projects/:id/` (`state` and
-`lock`, see [Object storage](object-storage.md#terraform-state)) also take the
-key as an HTTP Basic password, with any username, since that's the only
+`lock`, see [Terraform state](infrastructure-as-code.md#terraform-state)) also
+take the key as an HTTP Basic password, with any username, since that's the only
 credential Terraform's `http` backend sends. They need write access to
 Infrastructure as code (and read for `GET`).
 
@@ -294,8 +294,8 @@ themselves, an admin creates each one.
   client ID and secret Homerun just showed you. Claude sends you to Homerun's
   sign-in page, Homerun asks you to allow it, and from then on it acts as you.
 - **Claude Code**, or anything headless: no OAuth client needed, pass an API key
-  instead, created under Profile → Authorized Clients. A key with read
-  permissions only gives an agent that can diagnose but not change anything.
+  instead, created under Profile → API Keys. A key with read permissions only
+  gives an agent that can diagnose but not change anything.
 
 ```bash
 claude mcp add --transport http homerun \
@@ -305,13 +305,15 @@ claude mcp add --transport http homerun \
 It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
 `list_deployments` (each deploy attempt's error and log), `list_revisions`,
 `list_dependencies`, `list_stacks`, `system_stats`, `instance_status`,
-`list_volumes`, `list_backups`, `get_job`, `list_jobs` and `list_redirects`. It
-changes: `update_service`, `set_dependencies`, `deploy_service`,
-`restart_service`, `start_service`, `stop_service`, `rollback_service`,
-`run_backup`, `create_redirect`, `update_redirect` and `delete_redirect`.
-Deleting a service is deliberately not a tool. Every tool goes through the REST
-API with your own permissions, checked per call, so a read-only account or an
-API key with read permissions can diagnose but not change anything.
+`list_volumes`, `list_backups`, `get_job`, `list_jobs`, `list_redirects`,
+`list_object_stores`, `list_buckets` and `get_bucket`. It changes:
+`update_service`, `set_dependencies`, `deploy_service`, `restart_service`,
+`start_service`, `stop_service`, `rollback_service`, `run_backup`,
+`create_redirect`, `update_redirect`, `delete_redirect`, `create_bucket`,
+`update_bucket` (expiry and public access) and `delete_bucket` (empty buckets
+only). Deleting a service is deliberately not a tool. Every tool goes through
+the REST API with your own permissions, checked per call, so a read-only account
+or an API key with read permissions can diagnose but not change anything.
 
 Secrets don't reach the agent, the rest stays readable:
 
@@ -331,9 +333,9 @@ nothing stored is refused rather than written. A secret under a name that
 doesn't look like one (`TMDB_API`) is caught only once you mark it secret under
 Environments & Deployments → Environment Variables; an app that prints its own
 secrets in some other form still leaks them in its logs. To disconnect Claude,
-revoke it under Profile → Authorized Clients (it can't refresh its access any
-more, and the token it holds expires within the hour), or delete its app on the
-IDP page to cut it off for everyone.
+revoke it under Profile → API Keys (it can't refresh its access any more, and
+the token it holds expires within the hour), or delete its app on the IDP page
+to cut it off for everyone.
 
 ## CLI
 
@@ -374,8 +376,8 @@ every later command just works with no flags.
 `homerun logout` revokes that API key on the server, then clears the local file
 regardless of whether the server call succeeded (an unreachable instance or an
 already-invalid key never blocks logging out locally). Approved CLI clients are
-also listed under **Profile → Authorized Clients** in the dashboard, where you
-can revoke one directly.
+also listed under **Profile → API Keys** in the dashboard, where you can revoke
+one directly.
 
 If you'd rather not use the device flow, generate an API key from your profile
 page and pass it per call or by environment:

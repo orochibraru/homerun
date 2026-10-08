@@ -42,9 +42,9 @@ four for admins, as in advanced mode).
 
 It hides **Deployments** (the instance-wide history), **Remote Hosts**,
 **Scheduling**, **Terminal**, **Build Cache**, **Object Storage**,
-**Infrastructure as Code**, **IDP**, **API Docs**, **System Logs**, **Registry**
-and **Docker Cleanup**. **Monitoring** stays with its traffic, uptime and host
-charts; its **Traces** and **Settings** tabs are hidden.
+**Infrastructure as Code**, **IDP**, **API Docs**, **System Logs**, **Docker
+Registry** and **Docker Cleanup**. **Monitoring** stays with its traffic, uptime
+and host charts; its **Traces** and **Settings** tabs are hidden.
 
 ### A service's tabs
 

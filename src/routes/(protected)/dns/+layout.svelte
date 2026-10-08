@@ -50,7 +50,7 @@
 		</p>
 	</div>
 
-	<TabNav active={activeTabId} tabs={tabs} />
-
-	{@render children()}
+	<TabNav active={activeTabId} tabs={tabs}>
+	  {@render children()}
+	</TabNav>
 </div>

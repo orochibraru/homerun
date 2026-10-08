@@ -85,8 +85,16 @@ two deploys of the same service racing each other, and what keeps a
   `cron_job`, `docker_cleanup`, `image_scan`. Only `notification_delivery` still
   runs fully in-process.
 - **`src/lib/services/queue/handlers.ts`** maps a `JobType` to an in-process
-  handler for whatever's left : today just `notification_delivery` →
-  `NotificationChannelService.retryDelivery`
+  handler for whatever's left : `notification_delivery` →
+  `NotificationChannelService.retryDelivery`, and `core_service` (turning the
+  built-in object store on or off, publishing it, the Docker registry's auth and
+  public hostname), queued by `enqueueCoreServiceJob`
+  (`src/lib/services/core-service-queue.ts`, one `lockKey` per service so its
+  changes run in order) and logged line by line with `JobDTO.appendLog`. The
+  form actions run the cheap checks first (`builtinPublicHostProblem`,
+  `authProblem`, `publicHostProblem`) so a typo fails at once, then return the
+  `jobId`; `queuedJobToast` (`src/lib/job-toast.ts`) turns that into a "View
+  task" button opening `/scheduling/jobs/[jobId]`
   (`jobHandlers: Partial<Record<JobType, JobHandler>>`, so a Go-executed type
   simply has no entry). A handler still parses its own payload through a zod
   schema in `queue/payloads.ts` rather than casting : a payload written by an
@@ -131,10 +139,15 @@ banner is suppressed during a first deploy.
   its "returns once the deploy is done" contract (and therefore
   `homerun services deploy`) is unchanged, verified by `tests/integration/`'s
   real deploy tests still passing untouched.
-- The Docker Cleanup page's six actions likewise enqueue-and-wait (via
-  `src/lib/services/docker-cleanup-queue.ts`, split out of the route file so the
-  route keeps no manual typing), since the page renders the reclaimed-space
-  summary.
+- The Docker Cleanup page's actions enqueue and return the `jobId` (via
+  `queueCleanup` in `src/lib/services/docker-cleanup-queue.ts`), like every
+  other dashboard-triggered job; the toast's "View task" opens the job's page,
+  which shows the reclaimed-space summary (`describeCleanupResult`,
+  `src/lib/cleanup-result.ts`) next to its log.
+- `job.worker_version` records which build ran a job: the Go worker stamps
+  `buildinfo.Version` when it claims one (`PGStore.Claim`), the app stamps
+  `APP_VERSION` before running an in-process handler. Unlike `worker_id` it's
+  kept after the job finishes, for the job list and the job page.
 - Backups (`/backups`'s and `storage/[volumeId]`'s "Run now", plus the backup
   scheduler) enqueue and return : a tar-and-upload could comfortably take a
   while, so the request just returns. The `backup_run` row is opened by the

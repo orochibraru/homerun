@@ -279,6 +279,7 @@ describe("createProject", () => {
 				async (slug) => slug === "home-lab",
 			),
 			spyOn(ObjectStoreDTO, "get").mockResolvedValue({} as Store),
+			spyOn(ObjectStorageService, "bucketNames").mockResolvedValue(["tfstate"]),
 		);
 		await IacStateService.createProject({
 			bucket: "tfstate",
@@ -292,6 +293,37 @@ describe("createProject", () => {
 			prefix: "terraform",
 			slug: "home-lab-2",
 		});
+	});
+
+	test("creates the bucket only when the store doesn't have it", async () => {
+		const createBucket = spyOn(
+			ObjectStorageService,
+			"createBucket",
+		).mockResolvedValue();
+		const names = spyOn(ObjectStorageService, "bucketNames").mockResolvedValue(
+			[],
+		);
+		restorers.push(
+			createBucket,
+			names,
+			spyOn(IacProjectDTO, "create").mockImplementation(
+				async (input) => input as unknown as Project,
+			),
+			spyOn(IacProjectDTO, "slugTaken").mockResolvedValue(false),
+			spyOn(ObjectStoreDTO, "get").mockResolvedValue({} as Store),
+		);
+		const input = {
+			bucket: "tfstate",
+			name: "lab",
+			prefix: "",
+			storeId: "s1",
+			userId: "u1",
+		};
+		await IacStateService.createProject(input);
+		expect(createBucket).toHaveBeenCalledTimes(1);
+		names.mockResolvedValue(["tfstate"]);
+		await IacStateService.createProject(input);
+		expect(createBucket).toHaveBeenCalledTimes(1);
 	});
 
 	test("refuses an empty name, a bad bucket or a missing store", async () => {

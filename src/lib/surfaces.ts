@@ -1,15 +1,15 @@
 export const SURFACE_STYLES = [
 	{
 		description:
-			"Flat and crisp: one solid content panel, hairline borders, a faint wash of your colour.",
-		id: "sleek",
-		name: "Sleek",
+			"Liquid glass: clear, lit-edged panels floating over your colour.",
+		id: "glass",
+		name: "Glass",
 	},
 	{
 		description:
-			"Liquid glass: clear, lit-edged panels floating over your colour, with solid pill buttons.",
-		id: "glass",
-		name: "Glass",
+			"Flat and crisp: one solid content panel, hairline borders, a faint wash of your colour.",
+		id: "sleek",
+		name: "Sleek",
 	},
 	{
 		description:
@@ -80,7 +80,7 @@ export type Preset = (typeof PRESETS)[number]["id"];
 
 export type SurfaceId = SurfaceStyle | Preset;
 
-export const DEFAULT_SURFACE: SurfaceStyle = "sleek";
+export const DEFAULT_SURFACE: SurfaceStyle = "glass";
 
 /** Whether `value` is one of the surface styles, for a stored or submitted value that might not be. */
 export function isSurfaceStyle(value: unknown): value is SurfaceStyle {

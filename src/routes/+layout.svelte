@@ -2,6 +2,7 @@
 	import "./layout.css";
 	import { ModeWatcher } from "mode-watcher";
 	import { onMount } from "svelte";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import TopLoadingBar from "#lib/components/top-loading-bar.svelte";
 	import { Toaster } from "#lib/components/ui/sonner/index.js";
 	import { title } from "#lib/store/title.js";
@@ -44,6 +45,8 @@
 <TopLoadingBar />
 <ModeWatcher />
 <svelte:element this={page.route.id?.startsWith("/(protected)") ? "div" : "main"}>
-	{@render children()}
+	<ErrorBoundary class="p-5 md:p-6">
+		{@render children()}
+	</ErrorBoundary>
 </svelte:element>
 <Toaster closeButton position="bottom-right" richColors />

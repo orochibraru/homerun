@@ -2,12 +2,17 @@ export const UNGROUPED_LABEL = "Ungrouped";
 
 import {
 	Activity,
+	ArchiveRestore,
 	Ban,
+	Bell,
 	BookOpen,
 	Box,
+	BrushCleaning,
+	CalendarClock,
 	ChartBar,
 	CheckCircle,
 	Clock,
+	CloudUpload,
 	Database,
 	Ghost,
 	Globe,
@@ -19,6 +24,9 @@ import {
 	Newspaper,
 	NotebookPen,
 	Play,
+	Rocket,
+	ScanSearch,
+	Server,
 	ShieldCheck,
 	Sparkles,
 	Terminal,
@@ -62,9 +70,21 @@ export const JOB_STATUS_CONFIG: Record<
 	},
 };
 
+export const JOB_TYPE_ICONS: Record<JobType, typeof Database> = {
+	backup: CloudUpload,
+	backup_restore: ArchiveRestore,
+	core_service: Server,
+	cron_job: CalendarClock,
+	deploy: Rocket,
+	docker_cleanup: BrushCleaning,
+	image_scan: ScanSearch,
+	notification_delivery: Bell,
+};
+
 export const JOB_TYPE_LABELS: Record<JobType, string> = {
 	backup: "Backup",
 	backup_restore: "Restore",
+	core_service: "Core service",
 	cron_job: "Cron job",
 	deploy: "Deploy",
 	docker_cleanup: "Cleanup",

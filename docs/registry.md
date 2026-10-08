@@ -1,4 +1,4 @@
-# Registry
+# Docker Registry
 
 Advanced mode: [simple mode](ui-modes.md) hides the Registry sidebar entry.
 Everything here keeps working either way, and a hidden page still opens from a
@@ -17,9 +17,11 @@ services whose image lives there (an image lands here the first time
 [image scanning](image-scanning.md) mirrors it, or the moment you push to it).
 The list loads in the background, a page of repositories at a time in name
 order, and the search box narrows it to the repositories whose name contains
-what you type. **Collect garbage** runs garbage collection on demand, the same
+what you type. **Collect garbage** queues garbage collection on demand, the same
 cleanup [Docker Cleanup](docker-cleanup.md#image-mirror) runs nightly and on its
-own **Clean up mirror** button, so it doesn't fight the scheduled job.
+own **Clean up mirror** button, so it doesn't fight the scheduled job. It runs
+in the background: the notice that it started has a **View task** button that
+opens the job and its log.
 
 Click a repository for its own page: a `docker pull` command to copy, links to
 the services using it, and every tag with the digest it points at and a button
@@ -86,6 +88,12 @@ so you don't have to go hunting for them —
   its DNS record (or Pangolin resource, with Pangolin's sign-in off, since
   `docker login` can't follow it) at the configured DNS provider, and removes
   the previous hostname's.
+
+Both take effect with **Save** and run in the background through the
+[job queue](scheduling.md#the-job-queue), since they recreate the registry's
+container: the notice that they started has a **View task** button that opens
+the job and its log. A change that can't work (turning auth off while the
+registry is published, publishing it with auth off) is refused straight away.
 
 ![The registry's Settings tab: status, Require authentication and Publish it](images/registry-settings.webp)
 

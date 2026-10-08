@@ -53,6 +53,7 @@ const requeueOrphaned = mock(async (_live?: string[]) => 0);
 const claimNext = mock(async () => null as unknown);
 const claimFinalize = mock(async () => null as unknown);
 const listStalledExecutions = mock(async (_since: Date) => [] as unknown[]);
+const stampWorkerVersion = mock(async (_id: string, _version: string) => {});
 
 const handler = mock(async (_entry: unknown) => ({ ok: true }) as unknown);
 
@@ -101,6 +102,7 @@ beforeEach(() => {
 		get,
 		listStalledExecutions,
 		requeueOrphaned,
+		stampWorkerVersion,
 	})) {
 		stub(JobDTO, key, fn);
 	}
@@ -114,6 +116,7 @@ beforeEach(() => {
 		claimNext,
 		claimFinalize,
 		listStalledExecutions,
+		stampWorkerVersion,
 		handler,
 		prepare,
 		finalize,

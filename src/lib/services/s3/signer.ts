@@ -8,7 +8,7 @@ export interface S3Credentials {
 }
 
 export interface S3Request {
-	body?: string;
+	body?: string | Uint8Array<ArrayBuffer>;
 	headers?: Record<string, string>;
 	method: "DELETE" | "GET" | "HEAD" | "POST" | "PUT";
 	path: string;
@@ -24,8 +24,11 @@ function hmac(key: Buffer | string, data: string): Buffer {
 	return createHmac("sha256", key).update(data, "utf8").digest();
 }
 
-function sha256Hex(data: string): string {
-	return createHash("sha256").update(data, "utf8").digest("hex");
+function sha256Hex(data: string | Uint8Array): string {
+	const hash = createHash("sha256");
+	return (
+		typeof data === "string" ? hash.update(data, "utf8") : hash.update(data)
+	).digest("hex");
 }
 
 /** RFC 3986 encoding, which is what SigV4's canonical request expects. */

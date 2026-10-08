@@ -106,8 +106,7 @@ sync by hand.
   WebDAV), scheduled backups of either volume kind, the backup history, and
   restoring.
 - **[Object storage](object-storage.md)**: the built-in S3 store, connecting
-  S3-compatible providers, buckets, lifecycle and access keys, and Terraform
-  state with versions, diff, rollback and locking.
+  S3-compatible providers, buckets, lifecycle and access keys.
 - **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
   images on a second machine, the standalone agent and installer.
 - **[Machine terminals](machine-terminals.md)**: a browser shell on this server
@@ -141,8 +140,8 @@ sync by hand.
   Traefik, and restarting or updating Traefik.
 - **[Docker Cleanup](docker-cleanup.md)**: previewing and pruning what Docker
   can reclaim, and the image mirror cleanup.
-- **[Registry](registry.md)**: turning the image mirror into a real private
-  registry, push/pull tokens, and publishing it at a hostname.
+- **[Docker Registry](registry.md)**: turning the image mirror into a real
+  private registry, push/pull tokens, and publishing it at a hostname.
 - **[Notifications](notifications.md)**: the bell, and sending events to
   Discord, Slack, Telegram, a webhook or email.
 - **[Status pages](status-pages.md)**: private or public uptime pages.
@@ -152,8 +151,9 @@ sync by hand.
   `homerun` CLI, and the MCP server for AI agents (Claude needs an OAuth client
   registered first).
 - **[Infrastructure as code](infrastructure-as-code.md)**: the Terraform
-  provider, Pulumi, generating a configuration from what's running, and drift
-  between a state and the instance.
+  provider, Pulumi, generating a configuration from what's running, Terraform
+  state with versions, diff, rollback and locking, and drift between a state and
+  the instance.
 
 ## Something's out of date
 

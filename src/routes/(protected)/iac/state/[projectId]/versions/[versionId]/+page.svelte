@@ -35,7 +35,7 @@
 <div class="space-y-5">
   <a
     class="text-text-muted hover:text-text inline-flex items-center gap-1 text-sm"
-    href={resolve("/(protected)/object-storage/state/[projectId]", {
+    href={resolve("/(protected)/iac/state/[projectId]", {
       projectId: data.project.id,
     })}
   >

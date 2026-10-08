@@ -1,7 +1,9 @@
 <script lang="ts">
 	import {
+		Activity,
 		CornerDownRight,
 		FileUp,
+		Layers,
 		LayoutGridIcon,
 		List,
 		Network,
@@ -62,6 +64,7 @@
 
 	const filters = $derived<FilterGroup[]>([
 		{
+			icon: Activity,
 			key: "status",
 			label: "Status",
 			options: data.facets.statuses.map((status) => ({
@@ -70,9 +73,11 @@
 			})),
 		},
 		{
+			icon: Layers,
 			key: "stack",
 			label: "Stack",
 			options: data.facets.stacks.map((name) => ({
+				icon: Layers,
 				label: name,
 				value: name,
 			})),

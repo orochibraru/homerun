@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { parseListQuery } from "#lib/server/list-query.js";
-import { runQueuedCleanup } from "#lib/services/docker-cleanup-queue.js";
+import { DashboardIconsService } from "#lib/services/dashboard-icons.service.js";
+import { enqueueCleanup } from "#lib/services/docker-cleanup-queue.js";
 import { ImageMirrorGcService } from "#lib/services/image-mirror-gc.service.js";
 import { RegistryService } from "#lib/services/registry.service.js";
 import { resolve } from "$app/paths";
@@ -13,7 +14,16 @@ export const load = async ({ parent, url }) => {
 	const { preferences } = await parent();
 	const query = parseListQuery(url, {}, preferences.perPage);
 	const listing = RegistryService.catalogPage(query)
-		.then((result) => ({ ...result, unreachable: null }))
+		.then(async (result) => ({
+			...result,
+			items: await Promise.all(
+				result.items.map(async (item) => ({
+					...item,
+					icon: await DashboardIconsService.matchRepository(item.repository),
+				})),
+			),
+			unreachable: null,
+		}))
 		.catch((error: unknown) => ({
 			items: [],
 			page: query.page,
@@ -33,6 +43,7 @@ export const actions = {
 		if (busy) {
 			return fail(409, { error: busy });
 		}
-		return await runQueuedCleanup("pruneMirror", false, locals.user.id);
+		const job = await enqueueCleanup("pruneMirror", false, locals.user.id);
+		return { jobId: job.id, success: true };
 	},
 };

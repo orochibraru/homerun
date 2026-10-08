@@ -51,10 +51,11 @@ export interface VersionDiff {
 class IacStateServiceClass {
 	/**
 	 * Creates a project whose state lives in `bucket` on `storeId`, under an
-	 * optional folder.
+	 * optional folder, creating the bucket first when the store doesn't have
+	 * it yet.
 	 *
-	 * @throws When the name is empty, the bucket name is invalid or the store
-	 *   doesn't exist.
+	 * @throws When the name is empty, the bucket name is invalid, the store
+	 *   doesn't exist or the bucket can't be listed or created.
 	 */
 	async createProject(input: {
 		bucket: string;
@@ -72,8 +73,14 @@ class IacStateServiceClass {
 		if (problem) {
 			throw new Error(problem);
 		}
-		if (!(await ObjectStoreDTO.get(input.storeId))) {
+		const store = await ObjectStoreDTO.get(input.storeId);
+		if (!store) {
 			throw new Error("That object store doesn't exist.");
+		}
+		if (
+			!(await ObjectStorageService.bucketNames(store)).includes(input.bucket)
+		) {
+			await ObjectStorageService.createBucket(store, input.bucket);
 		}
 		return await IacProjectDTO.create({
 			bucket: input.bucket,

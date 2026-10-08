@@ -48,9 +48,9 @@
       </p>
 		</div>
 
-		<TabNav active={activeTab.id} tabs={tabs} />
-
-		{@render children()}
+		<TabNav active={activeTab.id} tabs={tabs}>
+		  {@render children()}
+		</TabNav>
 	</div>
 {:else}
   {@render children()}

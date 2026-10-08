@@ -103,7 +103,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 			securitySchemes: {
 				apiKey: {
 					description:
-						"An API key from Profile → Authorized Clients (or `homerun login`). A key holds the permissions picked when it was created (read or write, per area), never more than its owner's, and may expire.",
+						"An API key from Profile → API Keys (or `homerun login`). A key holds the permissions picked when it was created (read or write, per area), never more than its owner's, and may expire.",
 					in: "header",
 					name: "x-api-key",
 					type: "apiKey",

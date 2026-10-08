@@ -1,6 +1,12 @@
 import { error, fail, redirect } from "@sveltejs/kit";
+import { config } from "#lib/config.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { PublicBucketDTO } from "#lib/dto/public-bucket-dto.js";
 import { MAX_EXPIRATION_DAYS } from "#lib/object-storage.js";
+import {
+	createBucketKeyAction,
+	revokeBucketKeyAction,
+} from "#lib/server/bucket-key-actions.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
 import { resolve } from "$app/paths";
 
@@ -8,7 +14,7 @@ function reason(cause: unknown): string {
 	return cause instanceof Error ? cause.message : String(cause);
 }
 
-export const load = async ({ params }) => {
+export const load = async ({ params, url }) => {
 	const store = await ObjectStoreDTO.get(params.storeId);
 	if (!store) {
 		error(404, "That object store doesn't exist.");
@@ -17,15 +23,36 @@ export const load = async ({ params }) => {
 		(cause: unknown) =>
 			error(503, `The bucket can't be read: ${reason(cause)}`),
 	);
+	if (!detail) {
+		error(404, `${params.bucket} doesn't exist on ${store.name}.`);
+	}
 	return {
 		bucket: params.bucket,
 		detail,
+		isPublic: await PublicBucketDTO.isPublic(store.id, params.bucket),
+		publicUrl: `${config.auth.origin ?? url.origin}/public/${store.id}/${encodeURIComponent(params.bucket)}/`,
 		store: store.summary(),
 		usage: ObjectStorageService.usage(store, params.bucket).catch(() => null),
 	};
 };
 
 export const actions = {
+	setPublic: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const store = await ObjectStoreDTO.get(params.storeId);
+		if (!store) {
+			return fail(404, { error: "That object store doesn't exist." });
+		}
+		await PublicBucketDTO.setPublic(
+			store.id,
+			params.bucket,
+			(await request.formData()).get("public") === "on",
+		);
+		return { success: true };
+	},
+
 	createKey: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
@@ -34,30 +61,11 @@ export const actions = {
 		if (!store) {
 			return fail(404, { error: "That object store doesn't exist." });
 		}
-		const formData = await request.formData();
-		const name = String(formData.get("name") ?? "").trim();
-		if (!name) {
-			return fail(400, { error: "Name the key after what uses it." });
-		}
-		const permissions = {
-			owner: formData.get("owner") === "on",
-			read: formData.get("read") === "on",
-			write: formData.get("write") === "on",
-		};
-		if (!(permissions.read || permissions.write || permissions.owner)) {
-			return fail(400, { error: "Give the key at least one permission." });
-		}
-		try {
-			const key = await ObjectStorageService.createKey(
-				store,
-				params.bucket,
-				name,
-				permissions,
-			);
-			return { createdKey: { ...key, name }, success: true };
-		} catch (cause) {
-			return fail(400, { error: reason(cause) });
-		}
+		return await createBucketKeyAction(
+			store,
+			params.bucket,
+			await request.formData(),
+		);
 	},
 
 	deleteBucket: async ({ params, locals }) => {
@@ -84,15 +92,7 @@ export const actions = {
 		if (!store) {
 			return fail(404, { error: "That object store doesn't exist." });
 		}
-		const accessKeyId = String(
-			(await request.formData()).get("accessKeyId") ?? "",
-		);
-		try {
-			await ObjectStorageService.revokeKey(store, accessKeyId);
-			return { success: true };
-		} catch (cause) {
-			return fail(400, { error: reason(cause) });
-		}
+		return await revokeBucketKeyAction(store, await request.formData());
 	},
 
 	setExpiration: async ({ request, params, locals }) => {

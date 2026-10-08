@@ -277,3 +277,25 @@ describe("DashboardIconsService.icon", () => {
 		]);
 	});
 });
+
+describe("matchRepository", () => {
+	test("matches an image's last path segment by icon name, then alias", async () => {
+		const { service } = setup();
+		expect(await service.matchRepository("docker.io/library/redis")).toBe(
+			"di:redis",
+		);
+		expect(await service.matchRepository("ghcr.io/acme/Dagster")).toBe(
+			"di:dagster",
+		);
+		expect(
+			await service.matchRepository("example.com/in-memory-database"),
+		).toBeNull();
+		expect(await service.matchRepository("docker.io/lissy93/dashy")).toBeNull();
+	});
+
+	test("returns null rather than failing when the catalog can't load", async () => {
+		const { failMetadata, service } = setup();
+		failMetadata();
+		expect(await service.matchRepository("docker.io/library/redis")).toBeNull();
+	});
+});

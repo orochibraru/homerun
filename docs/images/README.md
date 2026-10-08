@@ -155,7 +155,7 @@ feature pages under `docs/`.
 - `idp-settings.webp` — `/idp/:appId/settings`
 - `profile-personal.webp` — `/profile`
 - `profile-sessions.webp` — `/profile/sessions`
-- `profile-api-keys.webp` — `/profile/clients`
+- `profile-api-keys.webp` — `/profile/api-keys`
 - `upgrading-dialog.webp` — `/ (update status dialog)`
 - `upgrading-channel.webp` — `/settings (Release channel)`
 - `api-cli-login.webp` — `/cli-auth`

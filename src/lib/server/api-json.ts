@@ -108,6 +108,13 @@ export function bucketApiJson(
 	storeId: string,
 	name: string,
 	expirationDays: number | null,
+	isPublic: boolean,
 ) {
-	return { expirationDays, id: `${storeId}/${name}`, name, storeId };
+	return {
+		expirationDays,
+		id: `${storeId}/${name}`,
+		name,
+		public: isPublic,
+		storeId,
+	};
 }

@@ -142,6 +142,34 @@ export class DashboardIconsServiceClass {
 	}
 
 	/**
+	 * The `di:<name>` icon for an image repository (`docker.io/library/redis`,
+	 * `ghcr.io/linuxserver/sonarr`): its last path segment matched against the
+	 * catalog's icon names, then their aliases. Null when nothing matches or
+	 * the catalog can't be loaded, so a listing never fails over an icon.
+	 */
+	async matchRepository(repository: string): Promise<string | null> {
+		const slug = (repository.split("/").pop() ?? "")
+			.toLowerCase()
+			.replace(/[^a-z0-9-]/g, "-");
+		if (!slug) {
+			return null;
+		}
+		const catalog = await this.#loadCatalog().catch(() => null);
+		if (!catalog) {
+			return null;
+		}
+		if (catalog.entries.has(slug)) {
+			return `di:${slug}`;
+		}
+		for (const entry of catalog.entries.values()) {
+			if (entry.aliases.some((alias) => alias.toLowerCase() === slug)) {
+				return `di:${entry.name}`;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * The icon file for `name`, in its `theme` variant when it has one (see
 	 * `themedIconFile`), from disk or fetched once from jsDelivr and written to
 	 * disk under the variant's own name. Returns null for an invalid or unknown

@@ -5,7 +5,7 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import { formatBytes } from "#lib/formatting.js";
-	import { enhanceToast } from "#lib/toast.js";
+	import { queuedJobToast } from "#lib/job-toast.js";
 	import { enhance } from "$app/forms";
 
 	const { data } = $props();
@@ -14,7 +14,11 @@
 	$effect(() => {
 		publicHost = data.status.publicHost ?? "";
 	});
-	let toggleForm: HTMLFormElement | undefined = $state();
+	let enabled = $state(false);
+	$effect(() => {
+		enabled = data.status.enabled;
+	});
+	let toggling = $state(false);
 	let publishing = $state(false);
 </script>
 
@@ -23,7 +27,15 @@
     description="A single Garage node Homerun runs next to the registry, with its data in Docker volumes that survive turning it off."
     icon={HardDrive}
     title="Built-in object store"
-  />
+  >
+    {#snippet trailing()}
+      <SaveButton
+        disabled={enabled === data.status.enabled}
+        form="garage-enabled"
+        pending={toggling}
+      />
+    {/snippet}
+  </PanelHeader>
   <div class="space-y-4 px-5 py-4">
     <dl class="grid gap-3 text-sm sm:grid-cols-3">
       <div>
@@ -46,27 +58,27 @@
       </div>
     </dl>
     <form
-      bind:this={toggleForm}
+      id="garage-enabled"
       action="?/setEnabled"
       method="POST"
-      use:enhance={enhanceToast({
+      use:enhance={queuedJobToast({
         error: "Couldn't change the built-in store.",
-        loading: data.status.enabled
-          ? "Stopping the built-in store"
-          : "Starting the built-in store",
-        success: data.status.enabled
-          ? "Built-in store turned off."
-          : "Built-in store is up.",
+        loading: "Queueing the change",
+        onSettled: () => {
+          toggling = false;
+        },
+        onStart: () => {
+          toggling = true;
+        },
+        success: "The built-in store is being reconfigured in the background.",
       })}
     >
-      <input name="enabled" type="hidden" value={String(!data.status.enabled)} />
       <CheckBox
-        checked={data.status.enabled}
         helperText="Turning it off stops the container. Buckets and objects stay in their volumes for when it's back on."
         id="garageEnabled"
         label="Run the built-in object store"
-        name="garageEnabledToggle"
-        onCheckedChange={() => toggleForm?.requestSubmit()}
+        name="enabled"
+        bind:checked={enabled}
       />
     </form>
   </div>
@@ -91,16 +103,16 @@
     class="px-5 py-4"
     action="?/setPublicHost"
     method="POST"
-    use:enhance={enhanceToast({
+    use:enhance={queuedJobToast({
       error: "Couldn't publish the store.",
-      loading: "Reconfiguring the store",
+      loading: "Queueing the change",
       onSettled: () => {
         publishing = false;
       },
       onStart: () => {
         publishing = true;
       },
-      success: "Store updated.",
+      success: "The store's route is being reconfigured in the background.",
     })}
   >
     <label class={labelClass} for="garagePublicHost">Hostname</label>

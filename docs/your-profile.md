@@ -27,24 +27,23 @@ account:
 
   ![Profile → Sessions, listing every browser signed in to the account](images/profile-sessions.webp)
 
-- **Authorized Clients**, API keys, including the ones the
+- **API Keys**, see [below](#api-keys), including the ones the
   [CLI](api-and-cli.md#logging-in) created for itself through its device-code
-  login. Create a key here to use the REST API or CLI without a browser session,
-  and revoke one the same way. A key is shown once, at creation. Below the keys,
-  **Apps using your Homerun account** lists every app you signed in to with
-  "Sign in with Homerun" ([OIDC provider](authentication-providers.md)).
-  Revoking one deletes its tokens, so it's signed out of your account right away
-  and asks for your consent again next time.
+  login.
+- **Authorized Clients**, every app you signed in to with "Sign in with Homerun"
+  ([OIDC provider](authentication-providers.md)). Revoking one deletes its
+  tokens, so it's signed out of your account right away and asks for your
+  consent again next time.
 - **Appearance**, see [below](#appearance).
 - **Notifications**, which events each of your notification channels receives,
   see [Notifications](notifications.md).
 
 ## API keys
 
-Generate an API key from **Profile → Authorized Clients** to use the
-[REST API or CLI](api-and-cli.md) without a browser session, sent as `x-api-key`
-or `Authorization: Bearer <key>` on any `/api/v1/*` request. When you create
-one, pick:
+**Profile → API Keys** lists your keys; **New API key** opens the page that
+creates one, to use the [REST API or CLI](api-and-cli.md) without a browser
+session, sent as `x-api-key` or `Authorization: Bearer <key>` on any `/api/v1/*`
+request. When you create one, pick:
 
 - **Permissions**, per area (see
   [Users and roles](users-and-roles.md#permissions)): none, **Read** or
@@ -66,10 +65,13 @@ area. `homerun login` keys are created with all permissions and no expiry, and
 keys created before permissions existed were migrated: a read-only key became
 read on every area, a full-access key became "all permissions".
 
-![Profile → Authorized Clients: generating a key with its access, and the key list](images/profile-api-keys.webp)
+![Profile → API Keys: generating a key with its access, and the key list](images/profile-api-keys.webp)
 
 `homerun login` creates one for you through a device-code flow rather than
-making you copy-paste, and it shows up in this list like any other.
+making you copy-paste, and it shows up in this list like any other. Keys for
+Terraform can also be created and revoked from **Infrastructure as Code →
+Credentials** (see
+[Infrastructure as code](infrastructure-as-code.md#credentials)).
 
 ## Appearance
 
@@ -91,21 +93,24 @@ A per-account "Appearance" tab on your profile page controls:
 - **Theme**: light, dark, or match system (the default). Changes apply instantly
   and are saved to your account, so the choice follows you to a new browser or
   device, not just the one you set it on.
-- **Style**: how panels, cards and buttons are drawn: **Glass** (Apple-style
-  liquid glass: blurred panels with a lit edge and pill buttons, all tinted by
-  your accent), **Sleek** (the default, flat and crisp: one solid content panel,
-  hairline borders, a faint wash of your accent), **Neumorphism** (one flat
-  tone, panels raised by soft light and shade), **Boxy** (square corners, solid
-  panels, hard offset shadows), **Claymorphism** (puffy, round panels),
-  **Skeuomorphism** (textured, bevelled panels and buttons) or **Material You**
-  (Google's style: tonal surfaces derived from your accent, pill buttons, filled
-  fields, Roboto Flex). Each choice shows a small preview and previews on the
-  page itself when picked; **Save** keeps it. Works with either theme and any
-  palette.
+- **Style**: how panels, cards and buttons are drawn: **Glass** (the default,
+  Apple-style liquid glass: blurred panels with a lit edge, all tinted by your
+  accent), **Sleek** (flat and crisp: one solid content panel, hairline borders,
+  a faint wash of your accent), **Neumorphism** (one flat tone, panels raised by
+  soft light and shade), **Boxy** (square corners, solid panels, hard offset
+  shadows), **Claymorphism** (puffy, round panels), **Skeuomorphism** (textured,
+  bevelled panels and buttons) or **Material You** (Google's style: tonal
+  surfaces derived from your accent, pill buttons, filled fields, Roboto Flex).
+  Each choice shows a small preview and previews on the page itself when picked;
+  **Save** keeps it. Works with either theme and any palette.
 - **Colors**: a palette (Bordeaux, the default, Ocean, Forest, Sunset, Grape,
   Rose or Graphite) sets the accent for buttons, links and tab icons plus the
   hues charts, category tiles and the background use, all chosen to go together.
   **Custom** sets the accent alone from any color.
+- **Tabs**: where a page's tabs go: **Above the page** (the default) or **In a
+  column beside the page**, a second sidebar next to the main one that lists the
+  section's tabs while you're in it. On a narrow screen they stay above the
+  page.
 - **Lists**: how many rows every paginated list (services, stacks, templates,
   deployments, backups and the rest) shows per page: 25, 50 (the default), 100
   or 200. A `?perPage=` in the page's URL still wins for that one view.

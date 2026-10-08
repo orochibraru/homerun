@@ -1,283 +1,238 @@
 <script lang="ts">
 	import {
+		ArrowRight,
 		Check,
-		ChevronsUpDown,
-		Download,
+		ChevronRight,
+		Database,
 		FileCode2,
-		FolderTree,
+		GitCompareArrows,
+		KeyRound,
+		ListChecks,
+		Lock,
+		Package,
+		Plus,
 	} from "@lucide/svelte";
-	import CodeBlock from "#lib/components/code-block.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
-	import { inputClass, labelClass } from "#lib/components/form-styles.js";
-	import ObjectStoreSelect from "#lib/components/object-store-select.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Command from "#lib/components/ui/command/index.js";
-	import * as Popover from "#lib/components/ui/popover/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
-	import { matchBackend } from "#lib/iac/backend-match.js";
-	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
+	import { timeAgo } from "#lib/formatting.js";
 	import { resolve } from "$app/paths";
-
-	const NEW_BACKEND = "new";
 
 	const { data } = $props();
 
-	let scope = $derived(data.scope);
-	let scopeOpen = $state(false);
-	let selectedPath = $state("");
-	let creating = $state(false);
-
-	const scopeOption = $derived(
-		data.scopes.find((option) => option.value === scope),
+	const lockedCount = $derived(
+		data.projects.filter((project) => project.locked).length,
 	);
-	const suggestedBackend = $derived(
-		scopeOption
-			? (matchBackend(scopeOption.name, data.projects) ??
-					(data.stores.length > 0 ? NEW_BACKEND : ""))
-			: "",
+	const lastWrite = $derived(
+		data.projects
+			.map((project) => project.updatedAt)
+			.filter((date) => date !== null)
+			.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null,
 	);
-	let projectId = $derived(
-		data.scope && scope === data.scope ? data.projectId : suggestedBackend,
-	);
-	let newName = $derived(scopeOption?.name ?? "");
-	let storeId = $derived(data.stores[0]?.id ?? "");
-	let bucket = $derived(
-		data.projects.find((project) => project.storeId === storeId)?.bucket ??
-			"tfstate",
-	);
-
-	const projectLabel = $derived(
-		projectId === NEW_BACKEND
-			? "Create a new backend"
-			: (data.projects.find((project) => project.id === projectId)?.name ??
-					"No backend"),
-	);
-	const groups = $derived(
-		["Stacks", "Services"]
-			.map((group) => ({
-				group,
-				options: data.scopes.filter((option) => option.group === group),
-			}))
-			.filter((entry) => entry.options.length > 0),
-	);
-	const current = $derived(
-		data.files?.find((file) => file.path === selectedPath) ??
-			data.files?.find((file) => file.path.endsWith(".tf")) ??
-			data.files?.[0] ??
-			null,
-	);
-	const downloadHref = $derived(
-		`${resolve("/(protected)/iac/download")}?${new URLSearchParams({
-			...(data.projectId ? { project: data.projectId } : {}),
-			scope: data.scope,
-		})}`,
-	);
+	const statCards = $derived([
+		{
+			dot: "bg-accent",
+			label: "State backends",
+			value: String(data.projects.length),
+		},
+		{
+			dot: lockedCount > 0 ? "bg-amber-500" : "bg-text-subtle",
+			label: "Locked",
+			value: String(lockedCount),
+		},
+		{
+			dot: "bg-text-subtle",
+			label: "Last write",
+			value: lastWrite ? timeAgo(lastWrite) : "Never",
+		},
+	]);
+	const steps = $derived([
+		{
+			description:
+				"The state lives in a bucket: turn on the built-in store or connect a provider.",
+			done: data.stores.length > 0,
+			href: resolve("/(protected)/object-storage/built-in"),
+			label: "An object store",
+		},
+		{
+			description:
+				"A bucket Homerun versions and locks every Terraform state in.",
+			done: data.projects.length > 0,
+			href: resolve("/(protected)/iac/state/new"),
+			label: "A state backend",
+		},
+		{
+			description:
+				"The provider and the state backend both authenticate with one.",
+			done: data.apiKeyCount > 0,
+			href: resolve("/(protected)/iac/credentials/new"),
+			label: "An API key",
+		},
+		{
+			description:
+				"Generate a project for a stack or a service, then terraform init and apply.",
+			done: data.projects.some((project) => project.serial !== null),
+			href: resolve("/(protected)/iac/generate"),
+			label: "A first apply",
+		},
+	]);
+	const shortcuts = [
+		{
+			description:
+				"Terraform files for a stack or a service, imports included.",
+			href: resolve("/(protected)/iac/generate"),
+			icon: FileCode2,
+			label: "Generate",
+		},
+		{
+			description: "Backends, versions, rollbacks, locks and bucket keys.",
+			href: resolve("/(protected)/iac/state"),
+			icon: Database,
+			label: "State",
+		},
+		{
+			description: "API keys for the provider and the state backend.",
+			href: resolve("/(protected)/iac/credentials"),
+			icon: KeyRound,
+			label: "Credentials",
+		},
+		{
+			description: "Where a state and what's running disagree.",
+			href: resolve("/(protected)/iac/drift"),
+			icon: GitCompareArrows,
+			label: "Drift",
+		},
+		{
+			description: "The provider's source and configuration snippets.",
+			href: resolve("/(protected)/iac/provider"),
+			icon: Package,
+			label: "Provider",
+		},
+	];
 </script>
 
 <div class="space-y-5">
-  <section class="panel rounded-md">
-    <PanelHeader
-      description="A Terraform project for one stack (its substacks included) or one service, with an import block for everything in it, so terraform plan adopts what already runs."
-      icon={FileCode2}
-      title="Generate a project"
-    />
-    <form
-      id="iac-generate"
-      class="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
-      method="GET"
-    >
-      <div>
-        <label class={labelClass} for="iac-scope">Stack or service</label>
-        <input name="scope" type="hidden" value={scope}>
-        <Popover.Root bind:open={scopeOpen}>
-          <Popover.Trigger>
-            {#snippet child({ props })}
-              <Button
-                {...props}
-                class="w-full justify-between"
-                id="iac-scope"
-                role="combobox"
-                type="button"
-                variant="outline"
-              >
-                <span class="truncate {scopeOption ? '' : 'text-text-muted'}">
-                  {scopeOption?.label ?? "Pick a stack or a service…"}
-                </span>
-                <ChevronsUpDown class="size-4 shrink-0 opacity-50" />
-              </Button>
-            {/snippet}
-          </Popover.Trigger>
-          <Popover.Content class="w-(--bits-popover-anchor-width) p-0">
-            <Command.Root>
-              <Command.Input placeholder="Search stacks and services…" />
-              <Command.List>
-                <Command.Empty>No stack or service matches.</Command.Empty>
-                {#each groups as entry (entry.group)}
-                  <Command.Group heading={entry.group}>
-                    {#each entry.options as option (option.value)}
-                      <Command.Item
-                        onSelect={() => {
-                          scope = option.value;
-                          scopeOpen = false;
-                        }}
-                        value="{option.label} {option.value}"
-                      >
-                        <Check
-                          class="size-4 shrink-0 {scope === option.value ? '' : 'opacity-0'}"
-                        />
-                        <span class="truncate">{option.label}</span>
-                      </Command.Item>
-                    {/each}
-                  </Command.Group>
-                {/each}
-              </Command.List>
-            </Command.Root>
-          </Popover.Content>
-        </Popover.Root>
+  <div class="panel divide-border flex divide-x rounded-md">
+    {#each statCards as card (card.label)}
+      <div class="min-w-0 flex-1 px-4 py-3">
+        <p class="eyebrow flex items-center gap-1.5">
+          <span class="size-1.5 rounded-full {card.dot}"></span>
+          {card.label}
+        </p>
+        <p class="metric mt-2">{card.value}</p>
       </div>
-      <div>
-        <label class={labelClass} for="iac-project">State backend</label>
-        <Select.Root
-          name={projectId === NEW_BACKEND ? undefined : "project"}
-          type="single"
-          bind:value={projectId}
-        >
-          <Select.Trigger id="iac-project" class="w-full">{projectLabel}</Select.Trigger>
-          <Select.Content>
-            {#if data.stores.length > 0}
-              <Select.Item label="Create a new backend" value={NEW_BACKEND} />
-            {/if}
-            <Select.Item label="No backend" value="" />
-            {#each data.projects as project (project.id)}
-              <Select.Item label={project.name} value={project.id} />
-            {/each}
-          </Select.Content>
-        </Select.Root>
-      </div>
-      <Button
-        disabled={!scope || creating}
-        form={projectId === NEW_BACKEND ? "iac-new-backend" : "iac-generate"}
-        type="submit"
-      >
-        {#if creating}
-          <Spinner />
-        {/if}
-        Generate
-      </Button>
-    </form>
-    {#if projectId === NEW_BACKEND}
-      <form
-        id="iac-new-backend"
-        class="border-border grid gap-4 border-t px-5 py-4 sm:grid-cols-3"
-        action="?/createBackend"
-        method="POST"
-        use:enhance={enhanceToast({
-          error: "Couldn't create the backend.",
-          loading: "Creating the backend",
-          onSettled: () => {
-            creating = false;
-          },
-          onStart: () => {
-            creating = true;
-          },
-          onSuccess: async (result) => {
-            if (typeof result?.projectId === "string") {
-              await goto(
-                `${resolve("iac")}?${new URLSearchParams({
-                  project: result.projectId,
-                  scope,
-                })}`,
-              );
-            }
-          },
-          success: "Backend created.",
-        })}
-      >
-        <div>
-          <label class={labelClass} for="iac-backend-name">Backend name</label>
-          <input
-            id="iac-backend-name"
-            class={inputClass}
-            autocomplete="off"
-            name="name"
-            required
-            bind:value={newName}
-          >
-        </div>
-        <div>
-          <label class={labelClass} for="iac-backend-store">Store</label>
-          <ObjectStoreSelect
-            id="iac-backend-store"
-            name="storeId"
-            stores={data.stores}
-            bind:value={storeId}
-          />
-        </div>
-        <div>
-          <label class={labelClass} for="iac-backend-bucket">Bucket</label>
-          <input
-            id="iac-backend-bucket"
-            class={inputClass}
-            autocomplete="off"
-            name="bucket"
-            required
-            bind:value={bucket}
-          >
-        </div>
-      </form>
-    {/if}
-    {#if data.stores.length === 0 && data.projects.length === 0}
-      <p class="text-text-muted border-border border-t px-5 py-3 text-xs">
-        No object store yet:
-        <a class="text-accent hover:underline" href={resolve("/(protected)/object-storage")}>turn on the built-in one or connect one</a>
-        to keep the Terraform state on this instance.
-      </p>
-    {/if}
-  </section>
+    {/each}
+  </div>
 
-  {#if data.files && current}
+  {#if steps.some((step) => !step.done)}
     <section class="panel rounded-md">
       <PanelHeader
-        description={`${data.files.length} files for ${data.name}. Unzip, set HOMERUN_API_KEY, then terraform init and plan.`}
-        icon={FolderTree}
-        title="Project"
-      >
-        {#snippet trailing()}
-          <Button download href={downloadHref} size="sm">
-            <Download class="size-3.5" />
-            Download .zip
-          </Button>
-        {/snippet}
-      </PanelHeader>
-      <div class="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-        <ul class="flex flex-row flex-wrap gap-1 md:flex-col" aria-label="Files">
-          {#each data.files as file (file.path)}
-            <li>
-              <button
-                class="hover:bg-surface-2 w-full rounded-md px-2.5 py-1.5 text-left font-mono text-xs {file.path === current.path ? 'bg-surface-2 text-text font-bold' : 'text-text-muted'}"
-                aria-current={file.path === current.path ? "true" : undefined}
-                onclick={() => {
-                  selectedPath = file.path;
-                }}
-                type="button"
+        description="What Terraform needs to manage this instance."
+        icon={ListChecks}
+        title="Getting started"
+      />
+      <ol class="divide-border divide-y">
+        {#each steps as step, index (step.label)}
+          <li>
+            <a class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3" href={step.href}>
+              <span
+                class="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium {step.done ? 'bg-primary text-primary-foreground' : 'border-border text-text-muted border'}"
               >
-                {file.path}
-              </button>
-            </li>
-          {/each}
-        </ul>
-        <CodeBlock code={current.content} html={current.html} label={current.path} />
-      </div>
+                {#if step.done}
+                  <Check class="size-3.5" />
+                {:else}
+                  {index + 1}
+                {/if}
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="text-text block text-sm font-medium {step.done ? 'line-through opacity-60' : ''}">{step.label}</span>
+                <span class="text-text-muted block text-xs">{step.description}</span>
+              </span>
+              <ArrowRight class="text-text-subtle size-4 shrink-0" />
+            </a>
+          </li>
+        {/each}
+      </ol>
     </section>
-  {:else if !data.scope}
-    <EmptyState
-      icon={FolderTree}
-      subtitle="Pick a stack or a service above to generate its Terraform project."
-      title="Nothing generated yet"
-    />
   {/if}
+
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    {#each shortcuts as shortcut (shortcut.label)}
+      <a class="panel hover:bg-surface-2 flex items-start gap-3 rounded-md p-4" href={shortcut.href}>
+        <shortcut.icon class="text-accent mt-0.5 size-4 shrink-0" />
+        <span class="min-w-0">
+          <span class="text-text block text-sm font-medium">{shortcut.label}</span>
+          <span class="text-text-muted block text-xs">{shortcut.description}</span>
+        </span>
+      </a>
+    {/each}
+  </div>
+
+  <section class="panel rounded-md">
+    <PanelHeader
+      description="Every Terraform state kept on this instance."
+      icon={Database}
+      title="State backends"
+    >
+      {#snippet trailing()}
+        <Button href={resolve("/(protected)/iac/state/new")} size="sm" variant="outline">
+          <Plus class="size-3.5" />
+          New backend
+        </Button>
+      {/snippet}
+    </PanelHeader>
+    {#if data.projects.length > 0}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-border text-text-muted border-b text-left text-xs uppercase">
+              <th class="px-4 py-3 font-medium">Backend</th>
+              <th class="hidden px-4 py-3 font-medium md:table-cell">Bucket</th>
+              <th class="px-4 py-3 font-medium">Serial</th>
+              <th class="hidden px-4 py-3 font-medium md:table-cell">Last written</th>
+              <th class="w-8 px-4 py-3"><span class="sr-only">Open</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each data.projects as project (project.id)}
+              <tr class="border-border/60 hover:bg-surface-2 group relative border-b last:border-0">
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center gap-1.5">
+                    <a
+                      class="text-text group-hover:text-accent font-medium after:absolute after:inset-0"
+                      href={resolve("/(protected)/iac/state/[projectId]", {
+                        projectId: project.id,
+                      })}
+                    >
+                      {project.name}
+                    </a>
+                    {#if project.locked}
+                      <Lock aria-label="Locked" class="size-3.5 text-amber-500" />
+                    {/if}
+                  </span>
+                </td>
+                <td class="text-text-muted hidden px-4 py-3 md:table-cell">
+                  <span class="font-mono text-xs">{project.bucket}</span>
+                  {#if project.storeName}
+                    <span class="text-text-subtle text-xs">on {project.storeName}</span>
+                  {/if}
+                </td>
+                <td class="text-text-muted px-4 py-3 tabular-nums">{project.serial ?? "—"}</td>
+                <td class="text-text-muted hidden px-4 py-3 md:table-cell">
+                  {project.updatedAt ? timeAgo(project.updatedAt) : "Never"}
+                </td>
+                <td class="text-text-subtle px-4 py-3"><ChevronRight class="size-4" /></td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {:else}
+      <EmptyState
+        icon={Database}
+        subtitle="A state backend keeps each Terraform state in a bucket, versioned and locked by Homerun."
+        title="No state backend yet"
+      />
+    {/if}
+  </section>
 </div>

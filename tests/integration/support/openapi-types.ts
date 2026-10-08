@@ -5495,6 +5495,7 @@ export interface operations {
 						/** @description <storeId>/<name> */
 						id: string;
 						name: string;
+						public: boolean;
 						storeId: string;
 					}[];
 				};
@@ -5541,6 +5542,8 @@ export interface operations {
 					/** @description Delete objects this many days after they're written, null never. */
 					expirationDays?: number | null;
 					name: string;
+					/** @description Serve the bucket's objects to anyone at /public/<storeId>/<bucket>/<key>, without signing in. */
+					public?: boolean;
 				};
 			};
 		};
@@ -5556,6 +5559,7 @@ export interface operations {
 						/** @description <storeId>/<name> */
 						id: string;
 						name: string;
+						public: boolean;
 						storeId: string;
 					};
 				};
@@ -5623,6 +5627,7 @@ export interface operations {
 						/** @description <storeId>/<name> */
 						id: string;
 						name: string;
+						public: boolean;
 						storeId: string;
 					};
 				};
@@ -5740,7 +5745,9 @@ export interface operations {
 			content: {
 				"application/json": {
 					/** @description Delete objects this many days after they're written, null never. */
-					expirationDays: number | null;
+					expirationDays?: number | null;
+					/** @description Serve the bucket's objects to anyone at /public/<storeId>/<bucket>/<key>, without signing in. */
+					public?: boolean;
 				};
 			};
 		};
@@ -5756,6 +5763,7 @@ export interface operations {
 						/** @description <storeId>/<name> */
 						id: string;
 						name: string;
+						public: boolean;
 						storeId: string;
 					};
 				};

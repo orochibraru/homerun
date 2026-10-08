@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/orochibraru/homerun/internal/buildinfo"
 	"github.com/orochibraru/homerun/internal/db"
 )
 
@@ -48,9 +49,9 @@ func (s PGStore) Claim(ctx context.Context, workerID string) (*ClaimedJob, error
 			for update skip locked
 			limit 1
 		)
-		update job set worker_id = $1, heartbeat_at = `+db.UTCNow+`, progress_at = `+db.UTCNow+`
+		update job set worker_id = $1, worker_version = $2, heartbeat_at = `+db.UTCNow+`, progress_at = `+db.UTCNow+`
 		from next where job.id = next.id
-		returning job.id, job.type, coalesce(job.spec, ''), job.attempts`, workerID)
+		returning job.id, job.type, coalesce(job.spec, ''), job.attempts`, workerID, buildinfo.Version)
 	var job ClaimedJob
 	if err := row.Scan(&job.ID, &job.JobType, &job.Spec, &job.Attempts); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

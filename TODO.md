@@ -14,3 +14,8 @@ When done delete the entry, no bloat.
 ## Medium
 
 ## Large
+
+- [ ] Package registries: run language package registries (npm first, then PyPI,
+      Maven, Cargo...) from Homerun as core services like the Docker registry,
+      with tokens and an optional public hostname, listed under Registries in
+      the sidebar next to Docker Registry

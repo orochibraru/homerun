@@ -73,18 +73,18 @@ export const shots: ShotModule = {
 		] as const) {
 			await postAction(page, "/users?/createDirect", { email, name, role });
 		}
-		await postAction(page, "/profile/clients?/create", {
+		await postAction(page, "/profile/api-keys/new?/create", {
 			allPermissions: "on",
 			expiry: "never",
 			name: "Homerun CLI",
 		});
-		await postAction(page, "/profile/clients?/create", {
+		await postAction(page, "/profile/api-keys/new?/create", {
 			expiry: "90",
 			name: "Grafana dashboard",
 			"permission.services": "read",
 			"permission.stacks": "read",
 		});
-		await postAction(page, "/profile/clients?/create", {
+		await postAction(page, "/profile/api-keys/new?/create", {
 			expiry: "30",
 			name: "CI deploys",
 			"permission.services": "write",
@@ -272,10 +272,10 @@ export const shots: ShotModule = {
 			path: () => "/profile/sessions",
 		},
 		{
-			doc: "/profile/clients",
+			doc: "/profile/api-keys",
 			expect: /Grafana dashboard/,
 			name: "profile-api-keys",
-			path: () => "/profile/clients",
+			path: () => "/profile/api-keys",
 		},
 		{
 			doc: "/ (update status dialog)",

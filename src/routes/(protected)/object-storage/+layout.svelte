@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Database, FileCode2, HardDrive, Plug } from "@lucide/svelte";
+	import { Database, HardDrive, Plug } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import { title } from "#lib/store/title.js";
@@ -35,12 +35,6 @@
 			id: "built-in",
 			label: "Built-in",
 		},
-		{
-			href: resolve("/(protected)/object-storage/state"),
-			icon: FileCode2,
-			id: "state",
-			label: "Terraform State",
-		},
 	];
 
 	const activeTabId = $derived(
@@ -58,11 +52,11 @@
     <h1 class="text-text text-2xl font-semibold">Object Storage</h1>
     <p class="text-text-muted mt-1 text-sm">
       S3 buckets on the built-in store and on any S3-compatible provider you
-      connect, and Terraform state kept in them.
+      connect.
     </p>
   </header>
 
-  <TabNav active={activeTabId} {tabs} />
-
-  {@render children()}
+  <TabNav active={activeTabId} {tabs}>
+    {@render children()}
+  </TabNav>
 </div>

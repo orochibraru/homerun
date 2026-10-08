@@ -143,10 +143,11 @@ describe("API JSON", () => {
 			id: "p",
 			services: [{ includeChildren: true, serviceId: "s" }],
 		});
-		expect(bucketApiJson("s1", "state", 7)).toEqual({
+		expect(bucketApiJson("s1", "state", 7, true)).toEqual({
 			expirationDays: 7,
 			id: "s1/state",
 			name: "state",
+			public: true,
 			storeId: "s1",
 		});
 	});

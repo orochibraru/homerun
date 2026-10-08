@@ -119,7 +119,7 @@ class GitHubReportServiceClass {
 			: null;
 		const commit = deployment.toJSON().gitCommit ?? null;
 		const logUrl = config.auth.origin
-			? `${config.auth.origin.replace(/\/+$/, "")}/services/${svc.id}/deployments/${deployment.id}`
+			? `${config.auth.origin.replace(/\/+$/, "")}/services/${svc.id}/environments/revisions/${deployment.id}`
 			: null;
 		const pr = row.previewPrNumber;
 		const environment = pr ? svc.slug : deployEnvironment(row);

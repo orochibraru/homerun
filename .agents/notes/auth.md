@@ -75,8 +75,8 @@ compose imports needing them).
 (`toApiKeyPermissions` shape: area to `[level]`). A key created with "Allow all
 permissions" stores none, and `applyApiKeyAuth` then gives it whatever the owner
 holds, later grants included; otherwise `intersectPermissions(owner, key)`, so a
-key never outlives a demotion. Profile → Authorized Clients (`profile/clients/`)
-refuses a key requesting more than its creator holds and takes an expiry from
+key never outlives a demotion. Profile → API Keys (`profile/api-keys/`) refuses
+a key requesting more than its creator holds and takes an expiry from
 `API_KEY_EXPIRY_OPTIONS` (7, 30, 90 (default), 365 days or never, with a warning
 in the form); better-auth refuses an expired key. `homerun login` (CLI device
 flow) keys are all-permissions with no expiry. Migration 0109 turned the old

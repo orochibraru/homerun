@@ -6,6 +6,7 @@ import {
 	perPageSchema,
 	presetSchema,
 	surfaceSchema,
+	tabLayoutSchema,
 	themeSchema,
 	uiModeSchema,
 } from "#lib/server/validation/appearance.js";
@@ -105,6 +106,23 @@ export const actions = {
 			await prefs.updateColors({ palette: choice.palette });
 		}
 		logger.info("Colors updated", { userId: locals.user.id });
+		return { success: true };
+	},
+
+	/** Saves whether page tabs sit above the page or in a column beside it. */
+	updateTabLayout: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("auth/sign-in"));
+		}
+		const parsed = tabLayoutSchema.safeParse(
+			Object.fromEntries(await request.formData()),
+		);
+		if (!parsed.success) {
+			return fail(400, { error: "Pick above the page or beside it." });
+		}
+		const prefs = await UserPreferencesDTO.get(locals.user.id);
+		await prefs.updateTabLayout(parsed.data.tabLayout);
+		logger.info("Tab layout updated", { userId: locals.user.id });
 		return { success: true };
 	},
 

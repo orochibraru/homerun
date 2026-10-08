@@ -15,6 +15,7 @@
 	import { PALETTES } from "#lib/palettes.js";
 	import { title } from "#lib/store/title.js";
 	import { DEFAULT_SURFACE, PRESETS, SURFACE_STYLES } from "#lib/surfaces.js";
+	import { TAB_LAYOUT_LABELS, TAB_LAYOUTS } from "#lib/tab-layout.js";
 	import { saveToast } from "#lib/toast.js";
 	import { UI_MODE_LABELS } from "#lib/ui-mode.js";
 	import { enhance } from "$app/forms";
@@ -41,6 +42,7 @@
 		),
 	);
 	let perPage = $state(untrack(() => String(data.preferences.perPage)));
+	let tabLayout = $state(untrack(() => data.preferences.tabLayout));
 	let uiMode = $derived<string>(data.preferences.uiMode ?? "");
 	let surfaceStyle = $state(untrack(() => data.preferences.surfaceStyle));
 	let preset = $state<string>(untrack(() => data.preferences.preset ?? ""));
@@ -316,6 +318,35 @@
                     />
                 </label>
             </div>
+        </form>
+    </section>
+
+    <section class="panel rounded-md">
+        <PanelHeader title="Tabs">
+            {#snippet description()}
+                Where a page's tabs go. Beside the page, they become a column
+                of their own next to the content, on screens wide enough for
+                it.
+            {/snippet}
+            {#snippet trailing()}
+                <SaveButton form="appearance-tabs" />
+            {/snippet}
+        </PanelHeader>
+        <form
+            id="appearance-tabs"
+            action="?/updateTabLayout"
+            class="space-y-4 p-5"
+            method="POST"
+            use:enhance={saveToast("Tab layout")}
+        >
+            <SelectRoot name="tabLayout" type="single" bind:value={tabLayout}>
+                <SelectTrigger id="tabLayout">{TAB_LAYOUT_LABELS[tabLayout]}</SelectTrigger>
+                <SelectContent>
+                    {#each TAB_LAYOUTS as option (option)}
+                        <SelectItem label={TAB_LAYOUT_LABELS[option]} value={option} />
+                    {/each}
+                </SelectContent>
+            </SelectRoot>
         </form>
     </section>
 

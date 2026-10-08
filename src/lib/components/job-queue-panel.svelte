@@ -1,17 +1,46 @@
 <script lang="ts">
-	import { ListChecks } from "@lucide/svelte";
+	import { ListChecks, ListFilter } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityToolbar, {
+		type FilterGroup,
+	} from "#lib/components/entity-toolbar.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { JOB_STATUS_CONFIG, JOB_TYPE_LABELS } from "#lib/constants.js";
+	import {
+		JOB_STATUS_CONFIG,
+		JOB_TYPE_ICONS,
+		JOB_TYPE_LABELS,
+	} from "#lib/constants.js";
 	import { getJobQueue, type QueuedJob } from "#lib/remote/jobs.remote.js";
+	import { formatDuration } from "#lib/resource-incidents.js";
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 
 	const POLL_MS = 3000;
 
-	const queue = getJobQueue();
+	const q = $derived(page.url.searchParams.get("q") ?? "");
+	const types = $derived(
+		(page.url.searchParams.get("type") ?? "").split(",").filter(Boolean),
+	);
+	const queue = $derived(getJobQueue({ q, types }));
 
 	const active = $derived(queue.current?.active ?? []);
 	const recent = $derived(queue.current?.recent ?? []);
+	const filtered = $derived(q !== "" || types.length > 0);
+
+	const filters = $derived<FilterGroup[]>([
+		{
+			icon: ListFilter,
+			key: "type",
+			label: "Type",
+			options: (queue.current?.typeCounts ?? []).map(({ count, type }) => ({
+				count,
+				icon: JOB_TYPE_ICONS[type],
+				label: JOB_TYPE_LABELS[type],
+				value: type,
+			})),
+		},
+	]);
 
 	onMount(() => {
 		const timer = setInterval(() => {
@@ -25,15 +54,38 @@
 	function formatFinished(value: Date | null): string {
 		return value ? new Date(value).toLocaleString() : "";
 	}
+
+	function took(entry: QueuedJob): string | null {
+		return entry.startedAt && entry.finishedAt
+			? formatDuration(
+					new Date(entry.finishedAt).getTime() -
+						new Date(entry.startedAt).getTime(),
+				)
+			: null;
+	}
 </script>
 
 {#snippet row(entry: QueuedJob)}
   {@const meta = JOB_STATUS_CONFIG[entry.status]}
-  <div class="panel flex flex-col gap-2 rounded-md p-4 sm:flex-row sm:items-center sm:gap-4">
+  {@const TypeIcon = JOB_TYPE_ICONS[entry.type]}
+  {@const duration = took(entry)}
+  <a
+    class="panel hover:bg-surface-2 flex flex-col gap-2 rounded-md p-4 transition-colors sm:flex-row sm:items-center sm:gap-4"
+    href={resolve("/(protected)/scheduling/jobs/[jobId]", { jobId: entry.id })}
+  >
+    <span class="bg-accent-light text-accent hidden size-9 shrink-0 items-center justify-center rounded-lg sm:flex">
+      <TypeIcon class="size-4" />
+    </span>
     <div class="min-w-0 flex-1">
       <p class="text-text truncate text-sm font-semibold">{entry.title}</p>
       <p class="text-text-muted mt-0.5 line-clamp-2 text-xs break-all sm:line-clamp-none sm:truncate sm:break-normal">
         {JOB_TYPE_LABELS[entry.type]}
+        {#if duration}
+          · took {duration}
+        {/if}
+        {#if entry.workerVersion}
+          · worker {entry.workerVersion}
+        {/if}
         {#if entry.maxAttempts > 1}
           · attempt {entry.attempts}/{entry.maxAttempts}
         {/if}
@@ -57,7 +109,7 @@
         {meta.label}
       </span>
     </div>
-  </div>
+  </a>
 {/snippet}
 
 <section>
@@ -67,8 +119,11 @@
   </div>
   <p class="text-text-muted mb-3 text-xs">
     Deploys, builds, backups and Docker cleanups all run through one worker :
-    one job per service at a time, and a host-wide cleanup runs alone.
+    one job per service at a time, and a host-wide cleanup runs alone. Open a
+    job for its log.
   </p>
+
+  <EntityToolbar {filters} pageParams={[]} placeholder="Search jobs by name…" />
 
   {#if !queue.ready}
     <div class="space-y-2.5">
@@ -85,8 +140,10 @@
   {:else if active.length === 0 && recent.length === 0}
     <EmptyState
       icon={ListChecks}
-      subtitle="Deploys, backups and cleanups show up here while they run."
-      title="Nothing in the queue"
+      subtitle={filtered
+        ? "No job matches this search or filter."
+        : "Deploys, backups and cleanups show up here while they run."}
+      title={filtered ? "No matching job" : "Nothing in the queue"}
     />
   {:else}
     <div class="space-y-2.5">

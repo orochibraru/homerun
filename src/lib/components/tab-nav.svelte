@@ -1,5 +1,8 @@
 <script lang="ts">
-	import type { Component } from "svelte";
+	import { type Component, type Snippet, untrack } from "svelte";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
+	import { useSubNav } from "#lib/sub-nav.svelte.js";
+	import { page } from "$app/state";
 
 	export interface NavTab {
 		/** Rendered as a real link when set (route tabs); otherwise a button firing onSelect (in-page section tabs). */
@@ -11,18 +14,43 @@
 		hasWarning?: boolean;
 	}
 
-	// overflow-x-auto + shrink-0 on every tab is the actual fix for "tabs
-	// aren't responsive, can't scroll horizontally" : a plain `flex gap-1
-	// border-b` (this component's predecessor, still the shape services/
-	// [serviceId]'s own tab bar had) has no overflow handling at all, so a
-	// row of ten tabs on a narrow viewport just clips or forces the whole
-	// page to scroll sideways instead of the tab strip itself.
 	const {
 		active,
+		children,
 		onSelect,
 		tabs,
-	}: { active: string; onSelect?: (id: string) => void; tabs: NavTab[] } =
-		$props();
+	}: {
+		active: string;
+		children?: Snippet;
+		onSelect?: (id: string) => void;
+		tabs: NavTab[];
+	} = $props();
+
+	const subNav = useSubNav();
+	const owner = {};
+	const beside = $derived(
+		subNav !== undefined && page.data.preferences?.tabLayout === "vertical",
+	);
+
+	if (subNav && untrack(() => beside)) {
+		subNav.current = untrack(() => ({ active, onSelect, owner, tabs }));
+	}
+
+	$effect.pre(() => {
+		if (!subNav) {
+			return;
+		}
+		if (beside) {
+			subNav.current = { active, onSelect, owner, tabs };
+		} else if (subNav.current?.owner === owner) {
+			subNav.current = null;
+		}
+		return () => {
+			if (subNav.current?.owner === owner) {
+				subNav.current = null;
+			}
+		};
+	});
 
 	let strip = $state<HTMLDivElement>();
 
@@ -40,54 +68,62 @@
 				current.offsetLeft - (strip.clientWidth - current.offsetWidth) / 2;
 		}
 	});
+
+	function tabClass(isActive: boolean): string {
+		return `group flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-[0.8125rem] font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
+			isActive
+				? "bg-surface text-text shadow-sm ring-1 ring-border"
+				: "text-text-muted hover:bg-surface/60 hover:text-text"
+		}`;
+	}
 </script>
 
-<div bind:this={strip} class="border-border relative mb-5 flex gap-0.5 overflow-x-auto border-b">
-  {#each tabs as tab (tab.id)}
-    {@const isActive = tab.id === active}
-    {@const TabIcon = tab.icon}
-    {#if tab.href}
-      <a
-        class="
-          relative flex shrink-0 items-center gap-1.5 rounded-t-md border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset
-          {isActive
-          ? 'border-accent text-text'
-          : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
-       "
-        aria-current={isActive ? "page" : undefined}
-        data-active={isActive || undefined}
-        href={tab.href}
-      >
-        {#if TabIcon}<TabIcon class="text-accent size-3.5" />{/if}
-        {tab.label}
-        {#if tab.hasWarning}
-          <span
-            class="size-1.5 rounded-full bg-amber-400"
-            title="Needs attention"
-          ></span>
-        {/if}
-      </a>
-    {:else}
-      <button
-        class="
-          relative flex shrink-0 items-center gap-1.5 rounded-t-md border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset
-          {isActive
-          ? 'border-accent text-text'
-          : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
-       "
-        data-active={isActive || undefined}
-        onclick={() => onSelect?.(tab.id)}
-        type="button"
-      >
-        {#if TabIcon}<TabIcon class="text-accent size-3.5" />{/if}
-        {tab.label}
-        {#if tab.hasWarning}
-          <span
-            class="size-1.5 rounded-full bg-amber-400"
-            title="Needs attention"
-          ></span>
-        {/if}
-      </button>
-    {/if}
-  {/each}
+{#snippet content(tab: NavTab, isActive: boolean)}
+  {@const TabIcon = tab.icon}
+  {#if TabIcon}
+    <TabIcon
+      class="size-3.5 shrink-0 transition-colors {isActive ? 'text-accent' : 'text-text-subtle group-hover:text-accent'}"
+    />
+  {/if}
+  {tab.label}
+  {#if tab.hasWarning}
+    <span class="size-1.5 shrink-0 rounded-full bg-amber-400" title="Needs attention"></span>
+  {/if}
+{/snippet}
+
+<div
+  bind:this={strip}
+  class="mb-5 overflow-x-auto {beside ? 'md:hidden' : ''}"
+  data-slot="tab-nav"
+>
+  <div class="bg-surface-2 inline-flex min-w-max gap-1 rounded-lg p-1">
+    {#each tabs as tab (tab.id)}
+      {@const isActive = tab.id === active}
+      {#if tab.href}
+        <a
+          class={tabClass(isActive)}
+          aria-current={isActive ? "page" : undefined}
+          data-active={isActive || undefined}
+          href={tab.href}
+        >
+          {@render content(tab, isActive)}
+        </a>
+      {:else}
+        <button
+          class={tabClass(isActive)}
+          data-active={isActive || undefined}
+          onclick={() => onSelect?.(tab.id)}
+          type="button"
+        >
+          {@render content(tab, isActive)}
+        </button>
+      {/if}
+    {/each}
+  </div>
 </div>
+
+{#if children}
+  <ErrorBoundary title="This tab hit an error while rendering.">
+    {@render children()}
+  </ErrorBoundary>
+{/if}

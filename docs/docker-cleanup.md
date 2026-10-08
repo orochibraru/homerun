@@ -41,7 +41,9 @@ Two things worth knowing:
 
 A cleanup runs through the same [job queue](scheduling.md#the-job-queue) as
 deploys, and holds the queue while it runs, so it can't delete an image or build
-cache out from under a deploy in flight.
+cache out from under a deploy in flight. The page doesn't wait for it: the
+notice that it started has a **View task** button that opens the job, its log
+and what it reclaimed.
 
 ## Image mirror
 
@@ -51,8 +53,8 @@ The **Image mirror** panel shows how much disk the `homerun-mirror` registry
 [image scanning](image-scanning.md) copies images into is using, and **Clean up
 mirror** garbage-collects it. The same cleanup runs on its own every day at
 04:00 (postponed within that hour while a deploy or scan is queued or running),
-and on demand from the [Registry](registry.md#images) page's own **Collect
-garbage** button. It:
+and on demand from the [Docker Registry](registry.md#images) page's own
+**Collect garbage** button. It:
 
 1. keeps, per service, the current `image:tag`, the digest of its last
    successful deploy and its last two scanned digests. An older kept version

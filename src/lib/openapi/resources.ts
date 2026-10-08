@@ -194,6 +194,7 @@ export const bucketResponse = z.object({
 	expirationDays: z.number().int().nullable(),
 	id: z.string().meta({ description: "<storeId>/<name>" }),
 	name: z.string(),
+	public: z.boolean(),
 	storeId: z.string(),
 });
 

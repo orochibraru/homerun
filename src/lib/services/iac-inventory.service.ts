@@ -4,6 +4,7 @@ import { DnsConnectionDTO } from "#lib/dto/dns-connection-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { NotificationChannelDTO } from "#lib/dto/notification-channel-dto.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { PublicBucketDTO } from "#lib/dto/public-bucket-dto.js";
 import { RedirectDTO } from "#lib/dto/redirect-dto.js";
 import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
@@ -149,14 +150,18 @@ class IacInventoryServiceClass {
 				.filter((store) => store.kind !== "garage" || builtinOn)
 				.map(async (store) => {
 					try {
-						const names = await ObjectStorageService.bucketNames(store);
+						const [names, publicNames] = await Promise.all([
+							ObjectStorageService.bucketNames(store),
+							PublicBucketDTO.namesForStore(store.id),
+						]);
 						return await Promise.all(
 							names.map(async (name) =>
 								bucketApiJson(
 									store.id,
 									name,
 									(await ObjectStorageService.bucket(store, name))
-										.expirationDays,
+										?.expirationDays ?? null,
+									publicNames.has(name),
 								),
 							),
 						);

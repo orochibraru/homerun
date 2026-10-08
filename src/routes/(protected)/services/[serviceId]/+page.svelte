@@ -18,6 +18,7 @@
 	import Alert from "#lib/components/alert.svelte";
 	import AnsiLine from "#lib/components/ansi-line.svelte";
 	import ConnectionStrings from "#lib/components/connection-strings.svelte";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
 	import ReplicaStats from "#lib/components/replica-stats.svelte";
 	import ServiceGraph from "#lib/components/service-graph.svelte";
@@ -316,11 +317,15 @@
 </div>
 
 {#if svc.swarmServiceId}
-    <ReplicaStats serviceId={svc.id} />
+    <ErrorBoundary title="Replica stats didn't load.">
+      <ReplicaStats serviceId={svc.id} />
+    </ErrorBoundary>
 {/if}
 
 <div class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-    <UsageChart serviceId={svc.id} title="Resource usage" />
+    <ErrorBoundary title="Resource usage didn't load.">
+      <UsageChart serviceId={svc.id} title="Resource usage" />
+    </ErrorBoundary>
     <div class="space-y-4">
         <ServiceGraph
             dependsOn={data.dependsOn}

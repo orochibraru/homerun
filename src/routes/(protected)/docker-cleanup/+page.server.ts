@@ -1,5 +1,5 @@
 import { redirect } from "@sveltejs/kit";
-import { runQueuedCleanup } from "#lib/services/docker-cleanup-queue.js";
+import { queueCleanup } from "#lib/services/docker-cleanup-queue.js";
 import { resolve } from "$app/paths";
 
 export const actions = {
@@ -7,14 +7,14 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		return await runQueuedCleanup("pruneBuildCache", false, locals.user.id);
+		return await queueCleanup("pruneBuildCache", false, locals.user.id);
 	},
 
 	pruneContainers: async ({ locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		return await runQueuedCleanup("pruneContainers", false, locals.user.id);
+		return await queueCleanup("pruneContainers", false, locals.user.id);
 	},
 
 	pruneImages: async ({ locals, request }) => {
@@ -22,7 +22,7 @@ export const actions = {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const formData = await request.formData();
-		return await runQueuedCleanup(
+		return await queueCleanup(
 			"pruneImages",
 			formData.get("all") === "on",
 			locals.user.id,
@@ -33,38 +33,34 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		return await runQueuedCleanup("pruneMirror", false, locals.user.id);
+		return await queueCleanup("pruneMirror", false, locals.user.id);
 	},
 
 	reclaimStackNetworks: async ({ locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		return await runQueuedCleanup(
-			"reclaimStackNetworks",
-			false,
-			locals.user.id,
-		);
+		return await queueCleanup("reclaimStackNetworks", false, locals.user.id);
 	},
 
 	pruneNetworks: async ({ locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		return await runQueuedCleanup("pruneNetworks", false, locals.user.id);
+		return await queueCleanup("pruneNetworks", false, locals.user.id);
 	},
 
 	pruneSystem: async ({ locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		return await runQueuedCleanup("pruneSystem", false, locals.user.id);
+		return await queueCleanup("pruneSystem", false, locals.user.id);
 	},
 
 	pruneVolumes: async ({ locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		return await runQueuedCleanup("pruneVolumes", false, locals.user.id);
+		return await queueCleanup("pruneVolumes", false, locals.user.id);
 	},
 };

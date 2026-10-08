@@ -1,4 +1,5 @@
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { PublicBucketDTO } from "#lib/dto/public-bucket-dto.js";
 import { bucketApiJson } from "#lib/server/api-json.js";
 import { apiCaller, apiError, readApiBody } from "#lib/server/api-route.js";
 import { updateBucketApiBody } from "#lib/server/validation/api-resources.js";
@@ -33,9 +34,17 @@ export const GET = async ({ locals, params }) => {
 		return store;
 	}
 	try {
-		const detail = await ObjectStorageService.bucket(store, params.bucket);
+		const [detail, isPublic] = await Promise.all([
+			ObjectStorageService.bucket(store, params.bucket),
+			PublicBucketDTO.isPublic(store.id, params.bucket),
+		]);
 		return Response.json(
-			bucketApiJson(store.id, params.bucket, detail.expirationDays),
+			bucketApiJson(
+				store.id,
+				params.bucket,
+				detail?.expirationDays ?? null,
+				isPublic,
+			),
 		);
 	} catch (cause) {
 		return apiError(reason(cause), 502);
@@ -56,17 +65,35 @@ export const PATCH = async ({ locals, params, request }) => {
 		return body.response;
 	}
 	try {
-		await ObjectStorageService.setExpiration(
-			store,
-			params.bucket,
-			body.data.expirationDays,
+		if (body.data.expirationDays !== undefined) {
+			await ObjectStorageService.setExpiration(
+				store,
+				params.bucket,
+				body.data.expirationDays,
+			);
+		}
+		if (body.data.public !== undefined) {
+			await PublicBucketDTO.setPublic(
+				store.id,
+				params.bucket,
+				body.data.public,
+			);
+		}
+		const [detail, isPublic] = await Promise.all([
+			ObjectStorageService.bucket(store, params.bucket),
+			PublicBucketDTO.isPublic(store.id, params.bucket),
+		]);
+		return Response.json(
+			bucketApiJson(
+				store.id,
+				params.bucket,
+				detail?.expirationDays ?? null,
+				isPublic,
+			),
 		);
 	} catch (cause) {
 		return apiError(reason(cause));
 	}
-	return Response.json(
-		bucketApiJson(store.id, params.bucket, body.data.expirationDays),
-	);
 };
 
 export const DELETE = async ({ locals, params }) => {

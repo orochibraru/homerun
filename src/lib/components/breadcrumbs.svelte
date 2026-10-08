@@ -2,6 +2,25 @@
 	import { ChevronRight } from "@lucide/svelte";
 	import { page } from "$app/state";
 
+	const PAGE_PATTERNS = Object.keys(
+		import.meta.glob("/src/routes/**/+page.svelte"),
+	).map(
+		(file) =>
+			new RegExp(
+				`^${file
+					.replace(/^\/src\/routes/, "")
+					.replace(/\/\+page\.svelte$/, "")
+					.replace(/\/\([^/]+\)/g, "")
+					.replace(/\[\.\.\.[^\]]+\]/g, ".+")
+					.replace(/\[[^\]]+\]/g, "[^/]+")}/?$`,
+			),
+	);
+
+	/** Whether a page exists at `href`, so a crumb never links to a path that only exists as a URL prefix. */
+	function isPage(href: string): boolean {
+		return PAGE_PATTERNS.some((pattern) => pattern.test(href));
+	}
+
 	interface Crumb {
 		href: string;
 		label: string;
@@ -69,7 +88,10 @@
 				out.push(...root);
 				continue;
 			}
-			if (skip.includes(href)) {
+			if (
+				skip.includes(href) ||
+				(index < segments.length - 1 && !isPage(href))
+			) {
 				continue;
 			}
 			const label =

@@ -28,6 +28,8 @@ resource "homerun_bucket" "example" {
 
 - `expiration_days` (Number) Delete objects this many days after they're
   written.
+- `public` (Boolean) Serve the bucket's objects to anyone at
+  /public/{storeId}/{bucket}/{key}, without signing in. Defaults to `false`.
 
 ### Read-only
 

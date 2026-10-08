@@ -210,11 +210,15 @@ users, backups):
   and writes changes back with `goto(url, {reset: false, replace: true})`,
   debounced 300ms for the search box, clearing every page param in `pageParams`
   (default `["page"]`) on every change so a new search/filter always lands back
-  on page 1. Props are `filters` (`FilterGroup[]`, each
-  `{key, label, options: {label, value}[]}`), `pageParams`, `placeholder`, and a
-  `trailing` snippet slot (where a page renders `ViewModeToggle`); the old
-  bindable `search`/`selected` props and the exported `FilterSelection` type are
-  gone, filtering moved server-side (see Server-side list pagination above), so
+  on page 1. The filters drawer edits a draft copy of the selection and only
+  writes it to the URL on **Apply** (one navigation, one server query), never
+  per click. Props are `filters` (`FilterGroup[]`, each
+  `{icon?, key, label, options: {count?, icon?, label, value}[]}`: `count` is a
+  server-side SQL count shown next to the option, like the templates gallery's
+  `TemplateDTO.categoryCounts`), `pageParams`, `placeholder`, and a `trailing`
+  snippet slot (where a page renders `ViewModeToggle`); the old bindable
+  `search`/`selected` props and the exported `FilterSelection` type are gone,
+  filtering moved server-side (see Server-side list pagination above), so
   there's no client state left to bind. Replaced the bespoke
   search-input-plus-category-`Drawer` that used to be inlined in the templates
   gallery only (see Built-in template catalog and gallery below); pages without
@@ -334,10 +338,11 @@ now-fixed three), never `$derived`.
 Per-account, not instance-wide (contrast `instance_settings`, which every other
 "live-editable config" section in this document is about): a new "Appearance"
 tab on the profile layout (`profile/+layout.svelte`, alongside Personal
-Information/Security/Sessions/Authorized Clients/Notifications, the last of
-which sets the event x channel matrix for Outbound notification channels, see
-`observability.md`), backed by `profile/appearance/+page.server.ts`'s three
-actions (`updateTheme`/`updateAccent`, each validated by its own zod schema in
+Information/Security/Sessions/API Keys/Authorized Clients/Notifications, the
+last of which sets the event x channel matrix for Outbound notification
+channels, see `observability.md`), backed by
+`profile/appearance/+page.server.ts`'s three actions
+(`updateTheme`/`updateAccent`, each validated by its own zod schema in
 `src/lib/server/validation/appearance.ts`) calling
 `UserPreferencesDTO.get(userId)`'s `updateTheme`/`updateAccentColor`, which
 share `InstanceSettingsDTO`'s private-`persist()` -per-section shape but
@@ -405,16 +410,21 @@ per-user instead of a singleton row.
   and bottom highlights. `--color-border` itself is a dark translucent hairline:
   it used to be translucent white, which left every `border-border` control
   (outline buttons, segmented toggles, inputs) with no visible edge on a white
-  panel. Buttons are pills; outline, secondary and destructive ones are glass
-  capsules (`--glass-control` and `--glass-control-shadow`: a 0.5px dark ring, a
-  white top highlight and a drop shadow). The system font comes first
-  (`-apple-system`, then Inter).
-- **Sleek** (`sleek`, the default since migration 0092, which also moved every
-  stored `glass` to it, since a deliberate Glass pick and the old default look
-  the same) is flat: the sidebar sits straight on the page with no panel of its
-  own, the content is one solid panel with an accent-derived hairline and no
-  shadow, outline buttons and fields are solid with the same hairline, table
-  headers get a faint tint, and the page behind carries two faint accent washes.
+  panel. Buttons follow the theme radius (`--radius-lg`, they used to be pills);
+  outline, secondary and destructive ones are glass capsules (`--glass-control`
+  and `--glass-control-shadow`: a 0.5px dark ring, a white top highlight and a
+  drop shadow). Space Grotesk is its font, as it is the app's default
+  (`@theme`'s `--font-sans`). Popovers, menus, dialogs and drawers are 82%
+  opaque with a blur behind (55% left the filters drawer unreadable), and a
+  checkbox gets its own solid fill and accent hairline, since `--input` is white
+  on white there.
+- **Sleek** (`sleek`, the default from migration 0092 until 0111 made Glass the
+  default again for new accounts; 0092 also moved every stored `glass` to it,
+  since a deliberate Glass pick and the old default look the same) is flat: the
+  sidebar sits straight on the page with no panel of its own, the content is one
+  solid panel with an accent-derived hairline and no shadow, outline buttons and
+  fields are solid with the same hairline, table headers get a faint tint, and
+  the page behind carries two faint accent washes.
 - **Material You** (`material`) derives tonal surfaces, text and outline colours
   from the accent the same way, with no borders or shadows on panels, pill
   buttons (secondary is the tonal `--m3-tonal`), filled text fields with an
@@ -438,6 +448,24 @@ per-user instead of a singleton row.
   their `@font-face`s only download when a preset uses them.
   `tests/e2e/ui-appearance.spec.ts` saves every preset and checks it's
   server-rendered, leaving a screenshot of each in `test-results/`.
+- **Rendering cost.** A full-viewport layer is never filtered or blended for
+  nothing: `body::before` (the aurora) is plain gradients with no `filter`, and
+  it and `body::after` (the grain, `mix-blend-mode: soft-light`, which forces
+  the whole page to be re-blended every frame) are `display: none` through
+  `--aurora-display`/`--grain-display` wherever their opacity is 0, since an
+  invisible layer still costs its compositing. Glass keeps the grain off. A
+  `panel` inside a `panel` has no `backdrop-filter` in glass: its parent is
+  already frosted, and every backdrop blur re-samples on scroll.
+- **Tabs** (`tabLayout`: `horizontal` | `vertical`, `src/lib/tab-layout.ts`):
+  `TabNav` draws pill tabs above the page, or, beside it, hands its tabs to the
+  protected layout through the `SubNav` context (`src/lib/sub-nav.svelte.ts`),
+  which renders them as a second `data-slot="app-sidebar"` column next to the
+  main one, styled like its items. That column sits after the frame in the DOM
+  and is moved by `md:order-*`, so the server renders it on first paint (the
+  tabs are registered while the page renders, after the sidebar would have
+  been). It only shows while the URL is under one of its tab links, so leaving
+  the section drops it whatever the teardown order. Below `md` the pill strip is
+  used either way.
 - `(protected)/+layout.server.ts`'s shared `load` (same one that fetches
   notifications, see above) now also fetches `UserPreferencesDTO.get(...)` and
   returns `preferences: preferences.toJSON()`, since the sidebar itself, not
@@ -494,3 +522,15 @@ each mode shows: `docs/ui-modes.md`, keep the two in sync.
   the previous version" button (`?/rollback`,
   `RevisionService.findTarget(svc, null)`), shown only when there's a previous
   revision, since Revisions is hidden there.
+
+## Error boundaries (`error-boundary.svelte`)
+
+A render error never blanks more than the piece that broke. `ErrorBoundary` (a
+`svelte:boundary` with a retrying alert, or a small inline retry button with
+`compact`) wraps: the root layout's children (signed-out pages and the protected
+layout's own chrome), every page in the protected frame, every tab's content
+inside `TabNav` and every `SectionNav` subtab, the header's search, bell and
+profile menu and the sidebar's version badge (`compact`), and each self-loading
+panel at the place it's used (host resources, resource usage, replica stats, the
+job queue). A new panel that loads its own data gets wrapped the same way where
+it's used. Load errors are still `+error.svelte`'s job.

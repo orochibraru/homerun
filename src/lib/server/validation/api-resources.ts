@@ -238,9 +238,19 @@ const expirationDays = z
 	.nullable()
 	.describe("Delete objects this many days after they're written, null never.");
 
+const isPublic = z
+	.boolean()
+	.describe(
+		"Serve the bucket's objects to anyone at /public/<storeId>/<bucket>/<key>, without signing in.",
+	);
+
 export const bucketApiBody = z.object({
 	expirationDays: expirationDays.optional(),
 	name: text.min(1),
+	public: isPublic.optional(),
 });
 
-export const updateBucketApiBody = z.object({ expirationDays });
+export const updateBucketApiBody = z.object({
+	expirationDays: expirationDays.optional(),
+	public: isPublic.optional(),
+});

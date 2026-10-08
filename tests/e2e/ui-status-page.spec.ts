@@ -20,6 +20,10 @@ test.describe
 		}) => {
 			await signIn(page);
 
+			await page
+				.getByRole("button", { name: "Observability", exact: true })
+				.first()
+				.click();
 			await page.getByRole("link", { name: "Status Page" }).click();
 			await expect(page).toHaveURL(/\/status-pages$/);
 			await expect(page.getByText("No status pages yet")).toBeVisible();

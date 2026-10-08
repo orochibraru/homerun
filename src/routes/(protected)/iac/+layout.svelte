@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { FileCode2, GitCompareArrows, Package } from "@lucide/svelte";
+	import {
+		Database,
+		FileCode2,
+		GitCompareArrows,
+		KeyRound,
+		LayoutDashboard,
+		Package,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import { title } from "#lib/store/title.js";
@@ -19,9 +26,27 @@
 	const tabs: RouteTab[] = [
 		{
 			href: resolve("/(protected)/iac"),
+			icon: LayoutDashboard,
+			id: "overview",
+			label: "Overview",
+		},
+		{
+			href: resolve("/(protected)/iac/generate"),
 			icon: FileCode2,
 			id: "generate",
 			label: "Generate",
+		},
+		{
+			href: resolve("/(protected)/iac/state"),
+			icon: Database,
+			id: "state",
+			label: "State",
+		},
+		{
+			href: resolve("/(protected)/iac/credentials"),
+			icon: KeyRound,
+			id: "credentials",
+			label: "Credentials",
 		},
 		{
 			href: resolve("/(protected)/iac/drift"),
@@ -39,7 +64,7 @@
 
 	const activeTabId = $derived(
 		tabs.find((tab) =>
-			tab.id === "generate"
+			tab.id === "overview"
 				? page.url.pathname === tab.href
 				: page.url.pathname.startsWith(tab.href),
 		)?.id ?? "",
@@ -51,11 +76,12 @@
     <h1 class="text-text text-2xl font-semibold">Infrastructure as Code</h1>
     <p class="text-text-muted mt-1 text-sm">
       Manage this instance with Terraform or Pulumi: generate a configuration
-      from what's running, and see where a state and the instance disagree.
+      from what's running, keep its state here, and see where a state and the
+      instance disagree.
     </p>
   </header>
 
-  <TabNav active={activeTabId} {tabs} />
-
-  {@render children()}
+  <TabNav active={activeTabId} {tabs}>
+    {@render children()}
+  </TabNav>
 </div>

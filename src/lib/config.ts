@@ -328,6 +328,7 @@ export const parseConfig = (): AppConfig => {
 			// convention, fall back to it so a generated secret is honored.
 			secret: firstNonBlank(Bun.env.AUTH_SECRET, Bun.env.BETTER_AUTH_SECRET),
 		},
+		baseDomain: firstNonBlank(yamlConfig.baseDomain, Bun.env.BASE_DOMAIN),
 		authCheckUrl:
 			yamlConfig.authCheckUrl ??
 			`http://host.docker.internal:${port}/api/v1/auth-check`,

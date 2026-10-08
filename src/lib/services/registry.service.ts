@@ -264,6 +264,21 @@ class RegistryServiceClass {
 		logger.info(`Registry token revoked: ${token.username}`);
 	}
 
+	/** Why auth can't be set to `enabled` right now, or null, checked before the change is queued. */
+	async authProblem(enabled: boolean): Promise<string | null> {
+		const settings = (await InstanceSettingsDTO.get()).toJSON();
+		return !enabled && settings.registryPublicHost
+			? "The registry is exposed publicly : remove its hostname before turning auth off, or anyone could push to it."
+			: null;
+	}
+
+	/** Why the registry can't be published at `host` right now, or null, checked before the change is queued. */
+	async publicHostProblem(host: string): Promise<string | null> {
+		return host.trim() && !(await this.authEnabled())
+			? "Turn auth on first : a registry reachable from the internet has to require credentials."
+			: null;
+	}
+
 	/**
 	 * Turns htpasswd auth on or off, minting the internal token on the way on,
 	 * then rewrites the auth file and recreates the container so the registry

@@ -130,4 +130,26 @@ describe("ObjectStoreClient", () => {
 		expect(calls[2].url.pathname).toBe("/b/dir/k");
 		expect(calls[2].headers["content-type"]).toBe("application/json");
 	});
+
+	test("lists a folder: its sub-folders, its objects with decoded keys, and the next page", async () => {
+		const { calls, client } = fakeStore(
+			() =>
+				new Response(
+					"<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>t2</NextContinuationToken><Contents><Key>docs/</Key><Size>0</Size></Contents><Contents><Key>docs/a &amp; b.txt</Key><LastModified>2026-10-01T00:00:00Z</LastModified><Size>12</Size></Contents><CommonPrefixes><Prefix>docs/img/</Prefix></CommonPrefixes></ListBucketResult>",
+				),
+		);
+		expect(await client.listObjects("files", "docs/", null)).toEqual({
+			folders: ["docs/img/"],
+			nextToken: "t2",
+			objects: [
+				{
+					key: "docs/a & b.txt",
+					lastModified: "2026-10-01T00:00:00Z",
+					size: 12,
+				},
+			],
+		});
+		expect(calls[0].url.searchParams.get("delimiter")).toBe("/");
+		expect(calls[0].url.searchParams.get("prefix")).toBe("docs/");
+	});
 });

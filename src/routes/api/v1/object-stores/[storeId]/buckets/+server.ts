@@ -1,4 +1,5 @@
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { PublicBucketDTO } from "#lib/dto/public-bucket-dto.js";
 import { bucketApiJson } from "#lib/server/api-json.js";
 import { apiCaller, apiError, readApiBody } from "#lib/server/api-route.js";
 import { bucketApiBody } from "#lib/server/validation/api-resources.js";
@@ -18,14 +19,19 @@ export const GET = async ({ locals, params }) => {
 		return apiError("Not found", 404);
 	}
 	try {
-		const names = await ObjectStorageService.bucketNames(store);
+		const [names, publicNames] = await Promise.all([
+			ObjectStorageService.bucketNames(store),
+			PublicBucketDTO.namesForStore(store.id),
+		]);
 		return Response.json(
 			await Promise.all(
 				names.map(async (name) =>
 					bucketApiJson(
 						store.id,
 						name,
-						(await ObjectStorageService.bucket(store, name)).expirationDays,
+						(await ObjectStorageService.bucket(store, name))?.expirationDays ??
+							null,
+						publicNames.has(name),
 					),
 				),
 			),
@@ -57,7 +63,12 @@ export const POST = async ({ locals, params, request }) => {
 	} catch (cause) {
 		return apiError(reason(cause));
 	}
-	return Response.json(bucketApiJson(store.id, name, expirationDays ?? null), {
-		status: 201,
-	});
+	const isPublic = body.data.public === true;
+	if (isPublic) {
+		await PublicBucketDTO.setPublic(store.id, name, true);
+	}
+	return Response.json(
+		bucketApiJson(store.id, name, expirationDays ?? null, isPublic),
+		{ status: 201 },
+	);
 };

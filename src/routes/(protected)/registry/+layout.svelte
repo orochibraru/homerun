@@ -9,7 +9,7 @@
 	const { children } = $props();
 
 	onMount(() => {
-		title.set("Registry");
+		title.set("Docker Registry");
 	});
 
 	interface RouteTab extends NavTab {
@@ -68,14 +68,14 @@
 
 <div class="p-5 md:p-6">
   <header class="mb-6">
-    <h1 class="text-text text-2xl font-semibold">Registry</h1>
+    <h1 class="text-text text-2xl font-semibold">Docker Registry</h1>
     <p class="text-text-muted mt-1 text-sm">
       The built-in image registry. Homerun mirrors every image it scans through
       it, and it can double as a private registry you push to.
     </p>
   </header>
 
-  <TabNav active={activeTabId} {tabs} />
-
-  {@render children()}
+  <TabNav active={activeTabId} {tabs}>
+    {@render children()}
+  </TabNav>
 </div>

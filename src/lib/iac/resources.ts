@@ -525,6 +525,11 @@ export const IAC_RESOURCES: IacResource[] = [
 			attr("expirationDays", "int", {
 				description: "Delete objects this many days after they're written.",
 			}),
+			attr("public", "bool", {
+				...off,
+				description:
+					"Serve the bucket's objects to anyone at /public/{storeId}/{bucket}/{key}, without signing in.",
+			}),
 		],
 		collectionPath: "/object-stores/{storeId}/buckets",
 		description: "A bucket on an object store.",

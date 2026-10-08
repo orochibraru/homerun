@@ -44,7 +44,7 @@ export const load = async ({ parent, url }) => {
 	const [builtins, custom, categories, stack] = await Promise.all([
 		TemplateDTO.listPaged("builtin", builtinQuery),
 		TemplateDTO.listPaged("custom", customQuery),
-		TemplateDTO.listCategories(),
+		TemplateDTO.categoryCounts(builtinQuery.q),
 		rawStackId ? StackDTO.get(rawStackId) : null,
 	]);
 

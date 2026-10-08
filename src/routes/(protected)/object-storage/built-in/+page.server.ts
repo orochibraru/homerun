@@ -1,11 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { config } from "#lib/config.js";
+import { enqueueCoreServiceJob } from "#lib/services/core-service-queue.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
 import { resolve } from "$app/paths";
-
-function reason(cause: unknown): string {
-	return cause instanceof Error ? cause.message : String(cause);
-}
 
 export const load = async () => ({
 	status: await ObjectStorageService.builtinStatus(),
@@ -17,17 +14,14 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
-		const enabled = (await request.formData()).get("enabled") === "true";
-		try {
-			if (enabled) {
-				await ObjectStorageService.enableBuiltin(locals.user.id);
-			} else {
-				await ObjectStorageService.disableBuiltin();
-			}
-			return { success: true };
-		} catch (cause) {
-			return fail(500, { error: reason(cause) });
-		}
+		const enabled = (await request.formData()).get("enabled") === "on";
+		const job = await enqueueCoreServiceJob(
+			enabled
+				? { action: "enableBuiltinStore", userId: locals.user.id }
+				: { action: "disableBuiltinStore" },
+			locals.user.id,
+		);
+		return { jobId: job.id, success: true };
 	},
 
 	setPublicHost: async ({ request, locals }) => {
@@ -35,11 +29,14 @@ export const actions = {
 			throw redirect(302, resolve("auth/sign-in"));
 		}
 		const host = String((await request.formData()).get("publicHost") ?? "");
-		try {
-			await ObjectStorageService.setBuiltinPublicHost(host);
-			return { success: true };
-		} catch (cause) {
-			return fail(400, { error: reason(cause) });
+		const problem = await ObjectStorageService.builtinPublicHostProblem(host);
+		if (problem) {
+			return fail(400, { error: problem });
 		}
+		const job = await enqueueCoreServiceJob(
+			{ action: "publishBuiltinStore", host },
+			locals.user.id,
+		);
+		return { jobId: job.id, success: true };
 	},
 };

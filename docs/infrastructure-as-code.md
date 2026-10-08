@@ -3,8 +3,27 @@
 Homerun can be managed with Terraform (or OpenTofu) and Pulumi: stacks, services
 and every setting the dashboard has, plus the objects around them. The
 **Infrastructure as Code** page (Integrations, needs the Infrastructure as code
-permission) writes a starter configuration from what's already running, and
-compares a Terraform state with the instance to show what changed outside it.
+permission) writes a starter configuration from what's already running, keeps
+the Terraform state, and compares a state with the instance to show what changed
+outside it. Its tabs are **Overview**, **Generate**, **State**, **Credentials**,
+**Drift** and **Provider**.
+
+## Overview
+
+The **Overview** tab counts the state backends, how many are locked and when a
+state was last written, and lists every backend. Until everything is in place, a
+**Getting started** checklist walks through what Terraform needs: an object
+store, a state backend, an API key and a first apply.
+
+## Credentials
+
+The **Credentials** tab lists every API key on your account with its
+permissions, last use and expiry, and revokes them. **New Terraform key** opens
+a page that creates a key for the provider and the state backend in one go, with
+the permissions your account has today (not ones granted later), and shows it
+once as the two `export` lines Terraform reads. For a key narrowed to a few
+areas, use **Profile → API Keys**. Pulumi's keys for a state bucket are on that
+backend's page.
 
 ## The Terraform provider
 
@@ -97,10 +116,10 @@ status pages of those stacks. A service covers itself, its environments, the
 dependencies it declares, and its mounts with their volumes; its stack and the
 services it depends on stay outside, referenced by id. Search for the stack or
 service by name. The **State backend** adds an `http` backend block pointing at
-one of your [Terraform state projects](object-storage.md#terraform-state): it
-starts on the project whose name matches the stack or service, and when none
-does, on **Create a new backend**, which creates one named after it (pick the
-store and bucket) before generating. **No backend** leaves the block out.
+one of your [Terraform state backends](#terraform-state): it starts on the
+backend whose name matches the stack or service, and when none does, on **Create
+a new backend**, which creates one named after it (pick the store and bucket)
+before generating. **No backend** leaves the block out.
 
 The project is a folder you download as a zip, and preview file by file on the
 page, highlighted:
@@ -156,9 +175,66 @@ values. The CLI then prints the files it wrote and the commands to run next.
 `--zip <file>` saves the zip instead, and `--stdout` prints every file after a
 `# ==> <path> <==` line, for a quick look or a pipe.
 
+## Terraform state
+
+The **State** tab lists the state backends that keep each Terraform
+configuration's state in a bucket on one of your
+[object stores](object-storage.md), through Terraform's `http` backend. **New
+state backend** opens a page that takes a name, a store, a bucket and an
+optional folder inside it, and creates the bucket when the store doesn't have it
+yet. A backend's page has three subtabs: **State** (the backend block, the lock
+and the versions), **Access keys** (the bucket and Pulumi) and **Settings** (a
+danger zone to delete it). **State** shows the block to paste:
+
+```hcl
+terraform {
+  backend "http" {
+    address        = "https://homerun.example.com/api/v1/iac/projects/<id>/state"
+    lock_address   = "https://homerun.example.com/api/v1/iac/projects/<id>/lock"
+    unlock_address = "https://homerun.example.com/api/v1/iac/projects/<id>/lock"
+    lock_method    = "POST"
+    unlock_method  = "DELETE"
+    username       = "homerun"
+  }
+}
+```
+
+Terraform authenticates with HTTP Basic: any username, and a Homerun API key as
+the password, set as `TF_HTTP_PASSWORD` so it stays out of the file. The key
+comes from the [Credentials](#credentials) tab. It needs write access to
+Infrastructure as code to write or lock the state; with read access it can only
+read it. Terraform never needs a key for the bucket itself: it only talks to
+Homerun, which reads and writes the bucket with the store's own credentials.
+
+- **Versions.** Every state Terraform writes is kept as its own object in the
+  bucket and listed newest first, with its serial, when, who (the API key's
+  owner) and its size. Nothing is overwritten.
+- **Diff.** Open a version to see which resources it added, changed and removed
+  compared with the version before it.
+- **Rollback.** **Roll back** on an older version writes it back as the newest
+  state, with a serial past the latest so Terraform accepts it. The versions in
+  between stay in the history. It's refused while the state is locked.
+- **Lock.** Terraform locks the state for every plan and apply, and a second run
+  is refused with the first one's lock info until it finishes. The lock lives in
+  Homerun, not in the bucket, so it works on every store. **Force unlock**
+  releases a lock left behind by a run that died; only use it when that run is
+  really gone.
+
+**Settings → Delete backend** forgets it, its versions and its lock; the state
+files stay in the bucket.
+
+Pulumi doesn't speak Terraform's backend protocol, so the backend's **Access
+keys** subtab shows the bucket's endpoint and region and a `pulumi login`
+command that points Pulumi straight at the same bucket and folder, with an
+access key for the bucket in `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. On
+the built-in store, the same subtab creates and revokes keys scoped to the
+bucket; for a provider, keys come from its own console. Pulumi then keeps its
+own history and locks in the bucket; the versions, diff and rollback above only
+cover Terraform.
+
 ## Drift
 
-The **Drift** tab reads the latest version of a Terraform state project and
+The **Drift** tab reads the latest version of a Terraform state backend and
 compares every `homerun_*` resource in it with the live object, through the same
 mapping the provider uses:
 
@@ -212,5 +288,5 @@ new homerun.Service("api", {
 });
 ```
 
-Pulumi keeps its own state: the S3 login a Terraform state project shows works
+Pulumi keeps its own state: the S3 login a Terraform state backend shows works
 for it too.

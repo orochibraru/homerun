@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight } from "@lucide/svelte";
+	import { ChevronRight, Globe } from "@lucide/svelte";
 	import { formatBytes } from "#lib/formatting.js";
 	import { objectCountLabel } from "#lib/object-storage.js";
 	import { getBucketUsages } from "#lib/remote/object-storage.remote.js";
@@ -45,6 +45,12 @@
             >
               {row.name}
             </a>
+            {#if row.public}
+              <span class="text-accent border-accent/30 ml-2 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[0.65rem] font-medium tracking-wider uppercase">
+                <Globe class="size-3" />
+                Public
+              </span>
+            {/if}
           </td>
           <td class="text-text-muted px-4 py-3">{row.storeName}</td>
           <td class="text-text-muted hidden px-4 py-3 tabular-nums md:table-cell">

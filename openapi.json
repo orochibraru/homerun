@@ -2,7 +2,7 @@
 	"components": {
 		"securitySchemes": {
 			"apiKey": {
-				"description": "An API key from Profile → Authorized Clients (or `homerun login`). A key holds the permissions picked when it was created (read or write, per area), never more than its owner's, and may expire.",
+				"description": "An API key from Profile → API Keys (or `homerun login`). A key holds the permissions picked when it was created (read or write, per area), never more than its owner's, and may expire.",
 				"in": "header",
 				"name": "x-api-key",
 				"type": "apiKey"
@@ -8388,11 +8388,20 @@
 											"name": {
 												"type": "string"
 											},
+											"public": {
+												"type": "boolean"
+											},
 											"storeId": {
 												"type": "string"
 											}
 										},
-										"required": ["expirationDays", "id", "name", "storeId"],
+										"required": [
+											"expirationDays",
+											"id",
+											"name",
+											"public",
+											"storeId"
+										],
 										"type": "object"
 									},
 									"type": "array"
@@ -8483,6 +8492,10 @@
 									"name": {
 										"minLength": 1,
 										"type": "string"
+									},
+									"public": {
+										"description": "Serve the bucket's objects to anyone at /public/<storeId>/<bucket>/<key>, without signing in.",
+										"type": "boolean"
 									}
 								},
 								"required": ["name"],
@@ -8518,11 +8531,20 @@
 										"name": {
 											"type": "string"
 										},
+										"public": {
+											"type": "boolean"
+										},
 										"storeId": {
 											"type": "string"
 										}
 									},
-									"required": ["expirationDays", "id", "name", "storeId"],
+									"required": [
+										"expirationDays",
+										"id",
+										"name",
+										"public",
+										"storeId"
+									],
 									"type": "object"
 								}
 							}
@@ -8736,11 +8758,20 @@
 										"name": {
 											"type": "string"
 										},
+										"public": {
+											"type": "boolean"
+										},
 										"storeId": {
 											"type": "string"
 										}
 									},
-									"required": ["expirationDays", "id", "name", "storeId"],
+									"required": [
+										"expirationDays",
+										"id",
+										"name",
+										"public",
+										"storeId"
+									],
 									"type": "object"
 								}
 							}
@@ -8853,9 +8884,12 @@
 											}
 										],
 										"description": "Delete objects this many days after they're written, null never."
+									},
+									"public": {
+										"description": "Serve the bucket's objects to anyone at /public/<storeId>/<bucket>/<key>, without signing in.",
+										"type": "boolean"
 									}
 								},
-								"required": ["expirationDays"],
 								"type": "object"
 							}
 						}
@@ -8888,11 +8922,20 @@
 										"name": {
 											"type": "string"
 										},
+										"public": {
+											"type": "boolean"
+										},
 										"storeId": {
 											"type": "string"
 										}
 									},
-									"required": ["expirationDays", "id", "name", "storeId"],
+									"required": [
+										"expirationDays",
+										"id",
+										"name",
+										"public",
+										"storeId"
+									],
 									"type": "object"
 								}
 							}

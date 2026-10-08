@@ -131,8 +131,8 @@
                     <a
                       class="text-text hover:text-accent font-medium"
                       href={resolve(
-                        "/(protected)/services/[serviceId]/deployments/[deploymentId]",
-                        { deploymentId: dep.id, serviceId: dep.serviceId },
+                        "/(protected)/services/[serviceId]/environments/revisions/[revisionId]",
+                        { revisionId: dep.id, serviceId: dep.serviceId },
                       )}
                     >
                       {dep.serviceName}

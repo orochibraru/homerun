@@ -108,6 +108,55 @@ function rebuild(reason: string): void {
 	});
 }
 
+/** Runs a docker command, its trimmed output, or "" when it fails. */
+async function docker(args: string[]): Promise<string> {
+	const proc = Bun.spawn(["docker", ...args], {
+		stderr: "ignore",
+		stdout: "pipe",
+	});
+	const out = (await new Response(proc.stdout).text()).trim();
+	return (await proc.exited) === 0 ? out : "";
+}
+
+/**
+ * The base domain local services get when Docker runs on OrbStack:
+ * `traefik.<compose project>.orb.local`, the Traefik container's own OrbStack
+ * domain, whose subdomains OrbStack resolves to it. Null on any other Docker,
+ * or when the compose Traefik isn't running.
+ */
+async function orbstackBaseDomain(): Promise<string | null> {
+	if (!Bun.which("docker")) {
+		return null;
+	}
+	const os = await docker(["info", "--format", "{{.OperatingSystem}}"]);
+	if (!os.includes("OrbStack")) {
+		return null;
+	}
+	const project = (
+		await docker([
+			"ps",
+			"--filter",
+			"label=com.docker.compose.service=traefik",
+			"--format",
+			'{{.Label "com.docker.compose.project"}}',
+		])
+	).split("\n")[0];
+	return project ? `traefik.${project}.orb.local` : null;
+}
+
+if (!process.env.BASE_DOMAIN) {
+	const domain = await orbstackBaseDomain();
+	if (domain) {
+		process.env.BASE_DOMAIN = domain;
+		console.log(
+			paint(
+				36,
+				`OrbStack detected: services are routed under <slug>.${domain}`,
+			),
+		);
+	}
+}
+
 const children: ReturnType<typeof Bun.spawn>[] = [];
 
 if (runWorker) {

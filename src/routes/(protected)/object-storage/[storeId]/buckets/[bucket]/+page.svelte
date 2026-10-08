@@ -1,6 +1,9 @@
 <script lang="ts">
-	import { ArrowLeft, CalendarClock, Plug, Trash2 } from "@lucide/svelte";
+	import { CalendarClock, Globe, Plug, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import BucketAccessKeys from "#lib/components/bucket-access-keys.svelte";
+	import BucketConnection from "#lib/components/bucket-connection.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
@@ -15,7 +18,6 @@
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import AccessKeysPanel from "./access-keys-panel.svelte";
 
 	const { data, form } = $props();
 
@@ -29,19 +31,16 @@
 				: String(data.detail.expirationDays);
 	});
 	let savingLifecycle = $state(false);
+	let isPublic = $state(false);
+	$effect(() => {
+		isPublic = data.isPublic;
+	});
+	let savingPublic = $state(false);
 	let confirmOpen = $state(false);
 	let deleteForm: HTMLFormElement | undefined = $state();
 </script>
 
 <div class="space-y-5">
-  <a
-    class="text-text-muted hover:text-text inline-flex items-center gap-1 text-sm"
-    href={resolve("/(protected)/object-storage")}
-  >
-    <ArrowLeft class="size-4" />
-    All buckets
-  </a>
-
   <section class="panel rounded-md">
     <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
       <div class="min-w-0">
@@ -81,23 +80,11 @@
         </Button>
       </form>
     </div>
-    <div class="grid gap-4 px-5 py-4 text-sm md:grid-cols-3">
-      <div class="md:col-span-2">
-        <p class="text-text-subtle mb-1.5 text-xs">Endpoint</p>
-        <CopyBox label="endpoint" value={data.detail.endpoint} />
-        {#if data.store.kind === "garage" && !data.detail.endpoint.startsWith("https://")}
-          <p class="text-text-subtle mt-1.5 text-xs">
-            Reachable from containers on Homerun's network. Publish the
-            built-in store under Built-in to reach it from elsewhere.
-          </p>
-        {/if}
-      </div>
-      <div>
-        <p class="text-text-subtle mb-1.5 text-xs">Region</p>
-        <CopyBox label="region" value={data.detail.region} />
-        <p class="text-text-subtle mt-1.5 text-xs">Use path-style addressing.</p>
-      </div>
-    </div>
+    <BucketConnection
+      builtin={data.store.kind === "garage"}
+      endpoint={data.detail.endpoint}
+      region={data.detail.region}
+    />
   </section>
 
   <section class="panel rounded-md">
@@ -141,7 +128,54 @@
     </form>
   </section>
 
-  <AccessKeysPanel
+  <section class="panel rounded-md">
+    <PanelHeader
+      description="A public bucket's objects can be downloaded by anyone with their link, through this instance, without signing in. Listing and uploading still need an access key."
+      icon={Globe}
+      title="Public access"
+    >
+      {#snippet trailing()}
+        <SaveButton
+          disabled={isPublic === data.isPublic}
+          form="bucket-public"
+          pending={savingPublic}
+        />
+      {/snippet}
+    </PanelHeader>
+    <form
+      id="bucket-public"
+      class="space-y-3 px-5 py-4"
+      action="?/setPublic"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't change the bucket's access.",
+        loading: "Saving",
+        onSettled: () => {
+          savingPublic = false;
+        },
+        onStart: () => {
+          savingPublic = true;
+        },
+        success: "Saved.",
+      })}
+    >
+      <CheckBox
+        helperText="Off by default: objects need a signed request or an access key."
+        id="bucketPublic"
+        label="Public"
+        name="public"
+        bind:checked={isPublic}
+      />
+      {#if data.isPublic}
+        <div>
+          <p class="text-text-subtle mb-1.5 text-xs">Objects are served under</p>
+          <CopyBox label="public URL" value={`${data.publicUrl}<key>`} />
+        </div>
+      {/if}
+    </form>
+  </section>
+
+  <BucketAccessKeys
     createdKey={form?.createdKey ?? null}
     endpoint={data.detail.endpoint}
     keys={data.detail.keys}

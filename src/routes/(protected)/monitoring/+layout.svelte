@@ -63,8 +63,10 @@
   </div>
 
   {#if shown.length > 1}
-    <TabNav {active} tabs={shown} />
+    <TabNav {active} tabs={shown}>
+      {@render children()}
+    </TabNav>
+  {:else}
+    {@render children()}
   {/if}
-
-  {@render children()}
 </div>

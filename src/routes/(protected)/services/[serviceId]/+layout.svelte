@@ -16,11 +16,13 @@
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import * as Select from "#lib/components/ui/select/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
 	import { primaryHostname } from "#lib/service-domains.js";
 	import { internalUrl, maskUrlPassword } from "#lib/service-link.js";
 	import { currentHref, visibleIn } from "#lib/ui-mode.js";
+	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 
@@ -175,6 +177,29 @@
     />
     <h1 class="text-text text-lg font-semibold tracking-tight">{svc.name}</h1>
     <StatusBadge status={liveStatus} />
+    {#if data.environments.length > 0}
+      <Select.Root
+        onValueChange={(id) =>
+          void goto(page.url.pathname.replace(`/services/${svc.id}`, `/services/${id}`))}
+        type="single"
+        value={svc.id}
+      >
+        <Select.Trigger
+          class="h-6! rounded-full py-0 pr-1.5 pl-2 text-xs font-medium capitalize"
+          aria-label="Environment"
+        >
+          <span class="inline-flex items-center gap-1">
+            <Layers class="text-accent size-3" />
+            {data.environments.find((env) => env.id === svc.id)?.name ?? "production"}
+          </span>
+        </Select.Trigger>
+        <Select.Content>
+          {#each data.environments as env (env.id)}
+            <Select.Item class="capitalize" label={env.name} value={env.id} />
+          {/each}
+        </Select.Content>
+      </Select.Root>
+    {/if}
   </div>
   <p class="text-text-muted -mt-4 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
     <span>
@@ -237,7 +262,7 @@
   </p>
 
   <!-- ── Tabs ─────────────────────────────────────────────── -->
-  <TabNav active={activeTabId} tabs={shownTabs} />
-
-  {@render children()}
+  <TabNav active={activeTabId} tabs={shownTabs}>
+    {@render children()}
+  </TabNav>
 </div>

@@ -383,14 +383,14 @@ function indexPage(): string {
 				type: "resource",
 			},
 		]),
-		"Set the API key in `HOMERUN_API_KEY` rather than in the configuration. Create one under **Profile → Authorized Clients**, with an expiry and only the permissions the configuration needs.",
+		"Set the API key in `HOMERUN_API_KEY` rather than in the configuration. Create one under **Profile → API Keys**, with an expiry and only the permissions the configuration needs.",
 		"",
 		"## Schema",
 		"",
 		...section("### Optional", [
 			{
 				description:
-					"An API key (Profile → Authorized Clients). Defaults to the `HOMERUN_API_KEY` environment variable.",
+					"An API key (Profile → API Keys). Defaults to the `HOMERUN_API_KEY` environment variable.",
 				kind: "string",
 				name: "apiKey",
 				sensitive: true,

@@ -80,38 +80,40 @@ all of which describe infrastructure. `tests/e2e/ui-status-page.spec.ts` asserts
 both halves (a published page is readable signed out and leaks none of that; an
 unpublished one 404s).
 
-The sidebar nav is grouped into five labeled categories (`category` on each item
-in `(protected)/nav-items.ts`, color-coded per category, see Appearance
-preferences below for the per-user "single accent color" override):
+The sidebar nav is grouped into six labeled categories (`category` on each item
+in `(protected)/nav-items.ts`, in the order the items are listed there), and an
+item with a `parent` sits under a collapsible entry of that name inside its
+category (icon from `NAV_PARENT_ICONS`, `navLabel` when the item's own label
+would repeat the parent's):
 
 - **Workspace**: **Overview** (dashboard stats + recent deployments),
-  **Services**, **Deployments** (`/deployments`, every deploy/rollback across
-  all services, paged by `DeploymentDTO.listPaged` with `status`/`trigger`
-  filters; the trigger comes from the deploy job's payload via a correlated
-  subquery, since the `deployment` row doesn't store one, so it's lost once
-  `JobDTO.prune` drops the job; the dashboard's Recent Deployments "View all"
-  links here), **Stacks**, **Templates**, **Cron Jobs** (user-defined scheduled
-  tasks, see Cron jobs below), **Status Page** (service health and the public
-  pages themselves, see Status pages in `services-and-templates.md`).
-- **Storage**: **Volumes** (`/storage`), **Backups** (backup-run history + "Run
-  now", see S3 backups below), **Backup Destinations** (`/s3-destinations`,
-  reusable named targets: S3, SFTP, SMB, WebDAV), **Object Storage**
-  (`/object-storage`, admin-only, see Object storage in `docker.md`).
-- **Infrastructure**: **Remote Hosts**, **Redirects**, **Scheduling** (one
-  instance-wide view of every cron redeploy, enabled cron job and backup
-  schedule, plus the job queue).
-- **Integrations**: **Git Providers**, **Build Cache** (registry credentials for
-  cross-build cache reuse, see Git-based builds below), **Notification
-  Channels** (webhook/Discord/email destinations, see Outbound notification
-  channels in `observability.md`; which events each channel gets is set on
-  `/profile/notifications` instead, not in this nav), **API Docs**.
-- **Administration**: **Users** (admin-only), **Authentication** (admin-only,
-  sign-in methods for the instance and the per-app login wall, see
-  Authentication page below), **Settings** (admin-only), **System Logs**
-  (admin-only: its `load` and the Traefik-log `GET` both 403/redirect a
-  developer, it used to be readable by any signed-in user), **Docker Cleanup**
-  (admin-only, see below), **Registry** (admin-only, turns the image mirror into
-  a real push/pull registry, see Registry in `docker.md`).
+  **Services**, **Stacks**, **Templates**, **Deployments** (`/deployments`,
+  every deploy/rollback across all services, paged by `DeploymentDTO.listPaged`
+  with `status`/`trigger` filters; the trigger comes from the deploy job's
+  payload via a correlated subquery, since the `deployment` row doesn't store
+  one, so it's lost once `JobDTO.prune` drops the job; the dashboard's Recent
+  Deployments "View all" links here).
+- **Operations**: Observability (**Monitoring**, **Status Page**, see Status
+  pages in `services-and-templates.md`), **Notification Channels**, Scheduling
+  (**Overview**, the instance-wide view of every cron redeploy, enabled cron job
+  and backup schedule plus the job queue, and **Cron Jobs**, see Cron jobs
+  below), **Terminal**.
+- **Data**: **Volumes** (`/storage`), Backup & Restore (**Backups**, the run
+  history + "Run now", and **Backup Destinations**, `/s3-destinations`, reusable
+  targets: S3, SFTP, SMB, WebDAV), **Object Storage** (`/object-storage`,
+  admin-only, see Object storage in `docker.md`).
+- **Delivery**: Builds (**Git Providers**, **Build Cache**, registry credentials
+  for cross-build cache reuse, and **Remote Hosts**, the build servers),
+  Registries (**Docker Registry**, admin-only, see Registry in `docker.md`),
+  Developer (**Infrastructure as Code**, **API Docs**).
+- **Networking**: **Redirects**, **DNS**.
+- **Administration**: **Users** (admin-only), Identity (**Authentication**,
+  admin-only sign-in methods and the per-app login wall, and **IDP**),
+  **Settings** (admin-only), System (**System Logs**, admin-only, and **Docker
+  Cleanup**, admin-only).
+
+A nested entry is open while one of its pages is active, otherwise as the viewer
+last left it (`localStorage`, `homerun-nav-open`).
 
 Not in the nav but real routes: `/profile/**` (reached from the profile menu,
 see Appearance preferences below), `/cli-auth` (the CLI device-code approval

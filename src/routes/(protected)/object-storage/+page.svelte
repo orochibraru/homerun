@@ -2,27 +2,12 @@
 	import { Database, Plus } from "@lucide/svelte";
 	import Alert from "#lib/components/alert.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
-	import { inputClass, labelClass } from "#lib/components/form-styles.js";
-	import ObjectStoreSelect from "#lib/components/object-store-select.svelte";
-	import PanelHeader from "#lib/components/panel-header.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import BucketTable from "./bucket-table.svelte";
 
 	const { data } = $props();
-
-	let storeId = $state("");
-	let bucket = $state("");
-	let creating = $state(false);
-
-	$effect(() => {
-		if (!storeId && data.stores.length > 0) {
-			storeId = data.stores[0].id;
-		}
-	});
 </script>
 
 {#if data.stores.length === 0}
@@ -44,57 +29,12 @@
     </div>
   </EmptyState>
 {:else}
-  <section class="panel mb-6 rounded-md">
-    <PanelHeader
-      description="Bucket names are global on most providers: 3 to 63 lowercase letters, digits, dots or dashes."
-      icon={Plus}
-      title="New bucket"
-    />
-    <form
-      action="?/createBucket"
-      class="grid gap-4 px-5 py-4 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)_auto] sm:items-end"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't create that bucket.",
-        loading: "Creating the bucket",
-        onSettled: () => {
-          creating = false;
-        },
-        onStart: () => {
-          creating = true;
-        },
-        onSuccess: () => {
-          bucket = "";
-        },
-        success: "Bucket created.",
-      })}
-    >
-      <div>
-        <label class={labelClass} for="bucketStore">Store</label>
-        <ObjectStoreSelect
-          id="bucketStore"
-          name="storeId"
-          stores={data.stores}
-          bind:value={storeId}
-        />
-      </div>
-      <div>
-        <label class={labelClass} for="bucketName">Name</label>
-        <input
-          id="bucketName"
-          class={inputClass}
-          autocomplete="off"
-          name="bucket"
-          placeholder="tfstate"
-          required
-          bind:value={bucket}
-        />
-      </div>
-      <Button disabled={creating || !bucket || !storeId} type="submit">
-        Create bucket
-      </Button>
-    </form>
-  </section>
+  <div class="mb-4 flex justify-end">
+    <Button href={resolve("/(protected)/object-storage/new")} size="sm">
+      <Plus class="size-4" />
+      New bucket
+    </Button>
+  </div>
 
   {#await data.listing}
     <div class="space-y-2">
@@ -110,7 +50,7 @@
     {/each}
     {#if listing.rows.length === 0}
       <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
-        <p class="text-text-muted text-sm">No buckets yet. Create one above.</p>
+        <p class="text-text-muted text-sm">No buckets yet. Create one with New bucket.</p>
       </div>
     {:else}
       <BucketTable rows={listing.rows} />

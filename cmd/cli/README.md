@@ -48,10 +48,10 @@ They can go before or after the subcommand
 none of the three configured (no flags, no env vars, no saved login) prints "Not
 logged in" and points you at `homerun login` instead of a raw error.
 
-A read-only API key (created with **Access: Read-only** under Profile →
-Authorized Clients, or any key belonging to a read-only account) works with
-every read command and gets a `403` from anything that deploys, starts, stops,
-restarts, deletes or scans.
+A read-only API key (created with **Access: Read-only** under Profile → API
+Keys, or any key belonging to a read-only account) works with every read command
+and gets a `403` from anything that deploys, starts, stops, restarts, deletes or
+scans.
 
 `--version=vX.Y.Z` (on `install.sh`) pins a specific release instead of the
 latest one.

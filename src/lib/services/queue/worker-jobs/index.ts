@@ -12,6 +12,7 @@ export type { WorkerJob } from "./types.ts";
 export const workerJobs: Record<JobType, WorkerJob | null> = {
 	backup: backupWorkerJob,
 	backup_restore: backupRestoreWorkerJob,
+	core_service: null,
 	cron_job: cronJobWorkerJob,
 	deploy: deployWorkerJob,
 	docker_cleanup: dockerCleanupWorkerJob,

@@ -80,24 +80,3 @@ export function formatBytes(bytes: number): string {
 export function sumSize(items: CleanupItem[]): number {
 	return items.reduce((sum, item) => sum + (item.sizeBytes ?? 0), 0);
 }
-
-function isSystemResult(
-	result: unknown,
-): result is Record<
-	string,
-	{ itemsDeleted: number; spaceReclaimedBytes: number }
-> {
-	return !!result && typeof result === "object" && "containers" in result;
-}
-
-/** Toast line for a finished prune, summing every section of a system prune. */
-export function describeResult(result: unknown): string {
-	if (isSystemResult(result)) {
-		const parts = Object.values(result);
-		const items = parts.reduce((sum, p) => sum + p.itemsDeleted, 0);
-		const bytes = parts.reduce((sum, p) => sum + p.spaceReclaimedBytes, 0);
-		return `Cleaned up ${items} item(s), reclaimed ${formatBytes(bytes)}.`;
-	}
-	const r = result as { itemsDeleted: number; spaceReclaimedBytes: number };
-	return `Removed ${r.itemsDeleted} item(s), reclaimed ${formatBytes(r.spaceReclaimedBytes)}.`;
-}

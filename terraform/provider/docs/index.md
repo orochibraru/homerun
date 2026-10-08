@@ -42,15 +42,15 @@ resource "homerun_stack" "example" {
 ```
 
 Set the API key in `HOMERUN_API_KEY` rather than in the configuration. Create
-one under **Profile → Authorized Clients**, with an expiry and only the
-permissions the configuration needs.
+one under **Profile → API Keys**, with an expiry and only the permissions the
+configuration needs.
 
 ## Schema
 
 ### Optional
 
-- `api_key` (String, Sensitive) An API key (Profile → Authorized Clients).
-  Defaults to the `HOMERUN_API_KEY` environment variable.
+- `api_key` (String, Sensitive) An API key (Profile → API Keys). Defaults to the
+  `HOMERUN_API_KEY` environment variable.
 - `endpoint` (String) The instance's URL, for example
   `https://homerun.example.com`. Defaults to the `HOMERUN_ENDPOINT` environment
   variable.

@@ -6,6 +6,7 @@
 		HeartPulse,
 		ListChecks,
 	} from "@lucide/svelte";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
@@ -62,4 +63,6 @@
   sections={visibleItems(data.uiMode, sections, page.url.pathname)}
 />
 
-{@render children()}
+<ErrorBoundary title="This section hit an error while rendering.">
+  {@render children()}
+</ErrorBoundary>

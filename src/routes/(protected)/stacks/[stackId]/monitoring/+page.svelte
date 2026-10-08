@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Clock } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import MonitoringView from "#lib/components/monitoring/monitoring-view.svelte";
 	import ServiceBreakdownTable from "#lib/components/monitoring/service-breakdown.svelte";
 	import ServiceUsageTable from "#lib/components/service-usage-table.svelte";
@@ -49,7 +50,9 @@
     </div>
   </div>
 
-  <ServiceUsageTable serviceIds={serviceIds} title="Resource usage" />
+  <ErrorBoundary title="Resource usage didn't load.">
+    <ServiceUsageTable serviceIds={serviceIds} title="Resource usage" />
+  </ErrorBoundary>
 </div>
 
 <div class="panel rounded-xl">

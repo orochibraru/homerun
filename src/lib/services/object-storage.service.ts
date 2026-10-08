@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { PublicBucketDTO } from "#lib/dto/public-bucket-dto.js";
 import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
@@ -43,6 +44,7 @@ export interface BuiltinStatus {
 
 export interface BucketRow {
 	name: string;
+	public: boolean;
 	storeId: string;
 	storeKind: ObjectStoreDTO["kind"];
 	storeName: string;
@@ -187,6 +189,18 @@ class ObjectStorageServiceClass {
 		const settings = await InstanceSettingsDTO.get();
 		await settings.persistGarage({ garageEnabled: false });
 		await DockerService.reconcileGarage(null);
+	}
+
+	/** Why `host` can't be published right now (not a hostname, or the store is off), or null, checked before the change is queued. */
+	async builtinPublicHostProblem(host: string): Promise<string | null> {
+		const trimmed = host.trim().toLowerCase();
+		if (trimmed && !DOMAIN_RE.test(trimmed)) {
+			return "That isn't a hostname, e.g. s3.example.com.";
+		}
+		const settings = (await InstanceSettingsDTO.get()).toJSON();
+		return settings.garageEnabled === true
+			? null
+			: "Turn the built-in object store on first.";
 	}
 
 	/**
@@ -351,10 +365,14 @@ class ObjectStorageServiceClass {
 		await Promise.all(
 			stores.map(async (store) => {
 				try {
-					const names = await this.bucketNames(store);
+					const [names, publicNames] = await Promise.all([
+						this.bucketNames(store),
+						PublicBucketDTO.namesForStore(store.id),
+					]);
 					for (const name of names) {
 						rows.push({
 							name,
+							public: publicNames.has(name),
 							storeId: store.id,
 							storeKind: store.kind,
 							storeName: store.name,
@@ -416,30 +434,35 @@ class ObjectStorageServiceClass {
 	async deleteBucket(store: ObjectStoreDTO, bucket: string): Promise<void> {
 		if (store.kind === "garage") {
 			await (await this.#admin()).deleteBucket(bucket);
-			return;
+		} else {
+			await (await this.client(store)).deleteBucket(bucket);
 		}
-		await (await this.client(store)).deleteBucket(bucket);
+		await PublicBucketDTO.setPublic(store.id, bucket, false);
 	}
 
 	/**
 	 * A bucket's connection details, lifecycle and, on the built-in store,
-	 * the keys that can reach it (Homerun's own left out).
+	 * the keys that can reach it (Homerun's own left out), or null when the
+	 * built-in store has no bucket by that name.
 	 *
 	 * @throws When the bucket can't be read.
 	 */
-	async bucket(store: ObjectStoreDTO, bucket: string): Promise<BucketDetail> {
-		const [expirationDays, keys] = await Promise.all([
+	async bucket(
+		store: ObjectStoreDTO,
+		bucket: string,
+	): Promise<BucketDetail | null> {
+		const [expirationDays, info] = await Promise.all([
 			(await this.client(store)).expirationDays(bucket),
 			store.kind === "garage"
-				? (await this.#admin())
-						.bucket(bucket)
-						.then((info) =>
-							(info?.keys ?? []).filter(
-								(key) => key.accessKeyId !== store.accessKeyId,
-							),
-						)
-				: Promise.resolve(null),
+				? (await this.#admin()).bucket(bucket)
+				: Promise.resolve(undefined),
 		]);
+		if (info === null) {
+			return null;
+		}
+		const keys = info
+			? info.keys.filter((key) => key.accessKeyId !== store.accessKeyId)
+			: null;
 		return {
 			endpoint: await this.publicEndpoint(store),
 			expirationDays,

@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { Boxes, ChevronRight } from "@lucide/svelte";
+	import { Boxes, ChevronRight, Package } from "@lucide/svelte";
 	import Alert from "#lib/components/alert.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
+	import TemplateIcon from "#lib/components/template-icon.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatBytes } from "#lib/formatting.js";
-	import { enhanceToast } from "#lib/toast.js";
+	import { queuedJobToast } from "#lib/job-toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 
@@ -30,10 +31,10 @@
   <form
     action="?/collectGarbage"
     method="POST"
-    use:enhance={enhanceToast({
-      error: "Garbage collection failed.",
-      loading: "Collecting garbage",
-      success: "Garbage collection finished.",
+    use:enhance={queuedJobToast({
+      error: "Couldn't start garbage collection.",
+      loading: "Queueing garbage collection",
+      success: "Garbage collection is running in the background.",
     })}
   >
     <Button type="submit" variant="outline">Collect garbage</Button>
@@ -82,12 +83,15 @@
               })}
               <tr class="border-border/60 hover:bg-surface-2 group relative border-b last:border-0">
                 <td class="px-4 py-3">
-                  <a
-                    class="text-text group-hover:text-accent font-mono font-medium break-all after:absolute after:inset-0"
-                    {href}
-                  >
-                    {entry.repository}
-                  </a>
+                  <span class="flex items-center gap-3">
+                    <TemplateIcon class="size-8" fallback={Package} icon={entry.icon} />
+                    <a
+                      class="text-text group-hover:text-accent font-mono font-medium break-all after:absolute after:inset-0"
+                      {href}
+                    >
+                      {entry.repository}
+                    </a>
+                  </span>
                 </td>
                 <td class="px-4 py-3">
                   <span class="flex flex-wrap items-center gap-1.5">

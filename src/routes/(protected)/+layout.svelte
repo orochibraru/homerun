@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Menu, Plus, X } from "@lucide/svelte";
+	import { ChevronRight, Menu, Plus, X } from "@lucide/svelte";
 	import { modeStorageKey, setMode } from "mode-watcher";
-	import { onMount, tick } from "svelte";
+	import { type Component, onMount, tick } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
-	import { fly } from "svelte/transition";
+	import { fly, slide } from "svelte/transition";
 	import AppVersion from "#lib/components/app-version.svelte";
 	import BrandMark from "#lib/components/brand-mark.svelte";
 	import Breadcrumbs from "#lib/components/breadcrumbs.svelte";
@@ -14,13 +14,27 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { appearanceCss } from "#lib/palettes.js";
 	import { can, mayVisit } from "#lib/permissions.js";
+	import { provideSubNav } from "#lib/sub-nav.svelte.js";
 	import { DEFAULT_SURFACE, effectiveSurface } from "#lib/surfaces.js";
 	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import { allNavItems } from "./nav-items";
+	import { allNavItems, NAV_PARENT_ICONS, type NavItem } from "./nav-items";
 
 	const { data, children } = $props();
+
+	const subNav = provideSubNav();
+	const sectionTabs = $derived.by(() => {
+		const entry = subNav.current;
+		const path = page.url.pathname;
+		return entry?.tabs.some(
+			(tab) =>
+				tab.href !== undefined &&
+				(path === tab.href || path.startsWith(`${tab.href}/`)),
+		)
+			? entry
+			: null;
+	});
 
 	let sidebarOpen = $state(false);
 	let sidebarToggle = $state<HTMLElement | null>(null);
@@ -49,9 +63,13 @@
 		}
 	});
 
+	type NavEntry =
+		| { item: NavItem; kind: "item" }
+		| { icon: Component; items: NavItem[]; kind: "parent"; label: string };
+
 	interface NavGroup {
+		entries: NavEntry[];
 		heading: string;
-		items: (typeof allNavItems)[number][];
 	}
 
 	const accentCss = $derived(
@@ -67,16 +85,32 @@
 		};
 	});
 
-	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
-	function groupByCategory(items: typeof allNavItems): NavGroup[] {
+	/** Groups a flat item list into category-labeled sections, nesting items that share a `parent` under one collapsible entry, preserving first-seen order. */
+	function groupByCategory(items: NavItem[]): NavGroup[] {
 		const groups: NavGroup[] = [];
 		for (const item of items) {
 			let group = groups.find((g) => g.heading === item.category);
 			if (!group) {
-				group = { heading: item.category, items: [] };
+				group = { entries: [], heading: item.category };
 				groups.push(group);
 			}
-			group.items.push(item);
+			if (!item.parent) {
+				group.entries.push({ item, kind: "item" });
+				continue;
+			}
+			const parent = group.entries.find(
+				(entry) => entry.kind === "parent" && entry.label === item.parent,
+			);
+			if (parent?.kind === "parent") {
+				parent.items.push(item);
+			} else {
+				group.entries.push({
+					icon: NAV_PARENT_ICONS[item.parent] ?? item.icon,
+					items: [item],
+					kind: "parent",
+					label: item.parent,
+				});
+			}
 		}
 		return groups;
 	}
@@ -99,30 +133,89 @@
 		}
 		return page.url.pathname.startsWith(href);
 	}
+
+	const NAV_OPEN_KEY = "homerun-nav-open";
+	let openChoices = $state<Record<string, boolean>>({});
+
+	onMount(() => {
+		try {
+			openChoices = JSON.parse(localStorage.getItem(NAV_OPEN_KEY) ?? "{}");
+		} catch {
+			openChoices = {};
+		}
+	});
+
+	function hasActive(items: NavItem[]): boolean {
+		return items.some((item) => isActive(item.href, item.exact));
+	}
+
+	function parentOpen(label: string, items: NavItem[]): boolean {
+		return hasActive(items) || (openChoices[label] ?? false);
+	}
+
+	function toggleParent(label: string, items: NavItem[]) {
+		openChoices = { ...openChoices, [label]: !parentOpen(label, items) };
+		try {
+			localStorage.setItem(NAV_OPEN_KEY, JSON.stringify(openChoices));
+		} catch {
+			return;
+		}
+	}
 </script>
+
+{#snippet navLink(item: NavItem, onNavigate?: () => void)}
+  {@const active = isActive(item.href, item.exact)}
+  {@const NavIcon = item.icon}
+  <a
+    class="
+      group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
+      {active
+      ? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold'
+      : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium'}
+   "
+    aria-current={active ? "page" : undefined}
+    href={item.href}
+    onclick={onNavigate}
+  >
+    <NavIcon class="text-accent size-4 shrink-0" />
+    {(item.parent && item.navLabel) || item.label}
+  </a>
+{/snippet}
 
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
   {#each groups as group (group.heading)}
     <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium">
       {group.heading}
     </p>
-    {#each group.items as item (item.href)}
-      {@const active = isActive(item.href, item.exact)}
-      {@const NavIcon = item.icon}
-      <a
-        class="
-          group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
-          {active
-          ? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold'
-          : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium'}
-       "
-        aria-current={active ? "page" : undefined}
-        href={item.href}
-        onclick={onNavigate}
-      >
-        <NavIcon class="text-accent size-4 shrink-0" />
-        {item.label}
-      </a>
+    {#each group.entries as entry (entry.kind === "item" ? entry.item.href : entry.label)}
+      {#if entry.kind === "item"}
+        {@render navLink(entry.item, onNavigate)}
+      {:else}
+        {@const open = parentOpen(entry.label, entry.items)}
+        {@const ParentIcon = entry.icon}
+        <button
+          class="
+            mb-0.5 flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-left text-[0.8125rem] font-medium transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
+            {hasActive(entry.items) ? 'text-text' : 'text-text-muted hover:bg-surface-2 hover:text-text'}
+          "
+          aria-expanded={open}
+          onclick={() => toggleParent(entry.label, entry.items)}
+          type="button"
+        >
+          <ParentIcon class="text-accent size-4 shrink-0" />
+          <span class="flex-1">{entry.label}</span>
+          <ChevronRight
+            class="text-text-subtle size-3.5 transition-transform duration-150 {open ? 'rotate-90' : ''}"
+          />
+        </button>
+        {#if open}
+          <div class="border-border mb-1 ml-4.5 border-l pl-2" transition:slide={{ duration: 150 }}>
+            {#each entry.items as item (item.href)}
+              {@render navLink(item, onNavigate)}
+            {/each}
+          </div>
+        {/if}
+      {/if}
     {/each}
   {/each}
 {/snippet}
@@ -154,7 +247,7 @@
     Skip to content
   </a>
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
-  <aside class="hidden w-64 shrink-0 flex-col md:flex" data-slot="app-sidebar">
+  <aside class="hidden w-64 shrink-0 flex-col md:order-1 md:flex" data-slot="app-sidebar">
     <BrandMark class="px-3 py-2.5" />
 
     {#if can(data.permissions, "services", "write")}
@@ -167,7 +260,9 @@
     <nav class="flex-1 overflow-y-auto px-2 pb-3">
       {@render navGroups(navItemGroups)}
     </nav>
-    <AppVersion admin={can(data.permissions, "settings", "write")} />
+    <ErrorBoundary compact>
+      <AppVersion admin={can(data.permissions, "settings", "write")} />
+    </ErrorBoundary>
   </aside>
 
   <!-- ── Mobile sidebar overlay ────────────────────────────────── -->
@@ -205,13 +300,15 @@
           sidebarOpen = false;
         })}
       </nav>
+      <ErrorBoundary compact>
       <AppVersion admin={can(data.permissions, "settings", "write")} />
+    </ErrorBoundary>
     </div>
   {/if}
 
   <!-- ── Main content ───────────────────────────────────────────── -->
   <div
-    class="panel flex flex-1 flex-col overflow-hidden rounded-xl"
+    class="panel flex flex-1 flex-col overflow-hidden rounded-xl md:order-3"
     data-slot="app-frame"
     inert={sidebarOpen && !desktop.current}
   >
@@ -249,9 +346,15 @@
           Read-only
         </span>
       {/if}
-      <GlobalSearch permissions={data.permissions} />
-      <NotificationBell />
-      <ProfileMenu uiMode={data.uiMode} user={data.user} />
+      <ErrorBoundary compact>
+        <GlobalSearch permissions={data.permissions} />
+      </ErrorBoundary>
+      <ErrorBoundary compact>
+        <NotificationBell />
+      </ErrorBoundary>
+      <ErrorBoundary compact>
+        <ProfileMenu uiMode={data.uiMode} user={data.user} />
+      </ErrorBoundary>
     </header>
 
     <!-- Page content -->
@@ -261,4 +364,32 @@
       </ErrorBoundary>
     </main>
   </div>
+  {#if sectionTabs}
+    <aside
+      class="hidden w-56 shrink-0 flex-col md:order-2 md:flex"
+      aria-label="Sections"
+      data-slot="app-sidebar"
+    >
+      <nav class="flex-1 overflow-y-auto px-2 pt-3 pb-3">
+        {#each sectionTabs.tabs as tab (tab.id)}
+          {@const active = tab.id === sectionTabs.active}
+          {@const TabIcon = tab.icon}
+          {@const itemClass = `group/nav relative mb-0.5 flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-left text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "border-sidebar-border bg-sidebar-accent text-accent font-semibold" : "text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium"}`}
+          {#if tab.href}
+            <a class={itemClass} aria-current={active ? "page" : undefined} href={tab.href}>
+              {#if TabIcon}<TabIcon class="text-accent size-4 shrink-0" />{/if}
+              <span class="truncate">{tab.label}</span>
+              {#if tab.hasWarning}<span class="ml-auto size-1.5 shrink-0 rounded-full bg-amber-400" title="Needs attention"></span>{/if}
+            </a>
+          {:else}
+            <button class={itemClass} onclick={() => sectionTabs.onSelect?.(tab.id)} type="button">
+              {#if TabIcon}<TabIcon class="text-accent size-4 shrink-0" />{/if}
+              <span class="truncate">{tab.label}</span>
+              {#if tab.hasWarning}<span class="ml-auto size-1.5 shrink-0 rounded-full bg-amber-400" title="Needs attention"></span>{/if}
+            </button>
+          {/if}
+        {/each}
+      </nav>
+    </aside>
+  {/if}
 </div>

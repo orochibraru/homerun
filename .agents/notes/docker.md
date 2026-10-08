@@ -962,8 +962,17 @@ path-style only. The core-services watch calls
 `ObjectStorageService.reassertBuiltin()` on a worker restart, and the public
 host gets DNS through `syncCoreHostDns`, like the registry's.
 
+Public buckets (`public_bucket`, `PublicBucketDTO`) aren't a store feature:
+Garage has no bucket policies and its website endpoint picks the bucket from the
+hostname, and providers differ (R2 has no policy API). Homerun serves them
+itself instead: `src/routes/public/[storeId]/[bucket]/[...key]/+server.ts`
+(outside `(protected)/`, so anonymous) checks the flag, fetches the object with
+the store's key through `ObjectStoreClient.objectResponse` (range passed on) and
+streams the body back with only its content headers.
+
 Terraform state (`IacStateService`, `iac_project`/`iac_state_version`/
-`iac_state_lock`) is Terraform's `http` backend: every write is a new object
+`iac_state_lock`, managed from `/iac/state`, not from Object Storage) is
+Terraform's `http` backend: every write is a new object
 (`<prefix>/<slug>/<serial>-<versionId>.tfstate`) plus a version row, the lock is
 a row taken with `INSERT ... ON CONFLICT DO NOTHING`, a rollback rewrites an old
 body with `serial = latest + 1`. **Verified live** with Terraform 1.x against

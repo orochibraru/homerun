@@ -1,31 +1,17 @@
 <script lang="ts">
-	import { ArrowLeft, FileCode2, History, Lock, Trash2 } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { FileCode2, History, Lock } from "@lucide/svelte";
 	import CodeBlock from "#lib/components/code-block.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatBytes, timeAgo } from "#lib/formatting.js";
-	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
-	onMount(() => title.set(`Terraform State · ${data.project.name}`));
-
 	const versionCount = $derived(data.history.length);
-	const bucketHref = $derived(
-		data.store
-			? resolve("/(protected)/object-storage/[storeId]/buckets/[bucket]", {
-					bucket: data.project.bucket,
-					storeId: data.store.id,
-				})
-			: null,
-	);
-
 	let confirm = $state<{
 		description: string;
 		form: HTMLFormElement | null;
@@ -47,54 +33,20 @@
 </script>
 
 <div class="space-y-5">
-  <a
-    class="text-text-muted hover:text-text inline-flex items-center gap-1 text-sm"
-    href={resolve("/(protected)/object-storage/state")}
-  >
-    <ArrowLeft class="size-4" />
-    All projects
-  </a>
-
   <section class="panel rounded-md">
     <PanelHeader
-      description={`Kept in ${data.project.bucket}${data.store ? ` on ${data.store.name}` : ""}.`}
+      description="Paste it into your Terraform configuration."
       icon={FileCode2}
-      title={data.project.name}
-    >
-      {#snippet trailing()}
-        {#if bucketHref}
-          <Button href={bucketHref} size="sm" variant="outline">Open bucket</Button>
-        {/if}
-      {/snippet}
-    </PanelHeader>
-    <div class="space-y-4 px-5 py-4 text-sm">
-      <div>
-        <p class="text-text mb-1.5 font-medium">Terraform</p>
-        <CodeBlock code={data.snippets.terraform.code} html={data.snippets.terraform.html} label="backend block" />
-        <p class="text-text-muted mt-1.5 text-xs">
-          Then <code>export TF_HTTP_PASSWORD=&lt;a Homerun API key&gt;</code>
-          (Profile → Authorized Clients) and <code>terraform init</code>. Every write is
-          a version below, signed with that key's owner.
-        </p>
-      </div>
-      {#if data.snippets.pulumi}
-        <div>
-          <p class="text-text mb-1.5 font-medium">Pulumi</p>
-          <CodeBlock code={data.snippets.pulumi.code} html={data.snippets.pulumi.html} label="pulumi login" />
-          <p class="text-text-muted mt-1.5 text-xs">
-            With <code>AWS_ACCESS_KEY_ID</code> and
-            <code>AWS_SECRET_ACCESS_KEY</code> set to a key for this bucket.
-            {#if data.store?.kind === "garage" && bucketHref}
-              Create one under
-              <a class="text-accent hover:underline" href={bucketHref}>{data.project.bucket} → Access keys</a>.
-            {:else}
-              Create one in {data.store?.name ?? "the store"}'s own console.
-            {/if}
-            Pulumi talks to the bucket directly and keeps its own history, so
-            the versions below only cover Terraform.
-          </p>
-        </div>
-      {/if}
+      title="Backend block"
+    />
+    <div class="px-5 py-4 text-sm">
+      <CodeBlock code={data.terraform.code} html={data.terraform.html} label="backend block" />
+      <p class="text-text-muted mt-1.5 text-xs">
+        Export an API key as <code>TF_HTTP_PASSWORD</code> (create one under
+        <a class="text-accent hover:underline" href={resolve("/(protected)/iac/credentials/new")}>Credentials</a>),
+        then <code>terraform init</code>. Every write is a version below, signed
+        with that key's owner.
+      </p>
     </div>
   </section>
 
@@ -167,7 +119,7 @@
                   <a
                     class="text-text hover:text-accent font-medium"
                     href={resolve(
-                      "/(protected)/object-storage/state/[projectId]/versions/[versionId]",
+                      "/(protected)/iac/state/[projectId]/versions/[versionId]",
                       { projectId: data.project.id, versionId: version.id },
                     )}
                   >
@@ -222,32 +174,6 @@
       </div>
     {/if}
   </section>
-
-  <form
-    action="?/delete"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Couldn't delete the project.",
-      loading: "Deleting the project",
-      onSuccess: () => goto(resolve("/(protected)/object-storage/state")),
-      success: "Project deleted.",
-    })}
-  >
-    <Button
-      onclick={(event: MouseEvent) =>
-        requestConfirm(event, {
-          description:
-            "Homerun forgets the project, its versions and its lock. The state files stay in the bucket.",
-          label: "Delete",
-          title: `Delete ${data.project.name}?`,
-        })}
-      type="button"
-      variant="outline"
-    >
-      <Trash2 class="size-3.5" />
-      Delete project
-    </Button>
-  </form>
 </div>
 
 <ConfirmDialog

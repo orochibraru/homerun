@@ -35,7 +35,7 @@
     <p class="text-text-muted mt-1 text-sm">{vol.kind} · {vol.source}</p>
   </div>
 
-  <TabNav active={activeTabId} {tabs} />
-
-  {@render children()}
+  <TabNav active={activeTabId} {tabs}>
+    {@render children()}
+  </TabNav>
 </div>

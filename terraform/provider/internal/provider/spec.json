@@ -1402,6 +1402,13 @@
 					"name": "expirationDays",
 					"tf": "expiration_days",
 					"description": "Delete objects this many days after they're written."
+				},
+				{
+					"kind": "bool",
+					"name": "public",
+					"tf": "public",
+					"default": false,
+					"description": "Serve the bucket's objects to anyone at /public/{storeId}/{bucket}/{key}, without signing in."
 				}
 			],
 			"collectionPath": "/object-stores/{storeId}/buckets",

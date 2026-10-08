@@ -162,7 +162,7 @@
 		</p>
 	</div>
 
-	<TabNav active={activeTabId} tabs={shownTabs} />
-
-	{@render children()}
+	<TabNav active={activeTabId} tabs={shownTabs}>
+	  {@render children()}
+	</TabNav>
 </div>

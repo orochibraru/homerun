@@ -8,6 +8,7 @@ import {
 	integer,
 	jsonb,
 	pgTable,
+	primaryKey,
 	serial,
 	text,
 	timestamp,
@@ -32,6 +33,7 @@ import type { PublishedPort } from "#lib/published-ports.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
 import type { Preset, SurfaceStyle } from "#lib/surfaces.js";
+import type { TabLayout } from "#lib/tab-layout.js";
 import type {
 	ContainerStatus,
 	JobStage,
@@ -1328,6 +1330,18 @@ export const objectStore = pgTable(
 	(table) => [index("objectStore_userId_idx").on(table.userId)],
 );
 
+export const publicBucket = pgTable(
+	"public_bucket",
+	{
+		bucket: text("bucket").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		storeId: text("store_id")
+			.notNull()
+			.references(() => objectStore.id, { onDelete: "cascade" }),
+	},
+	(table) => [primaryKey({ columns: [table.storeId, table.bucket] })],
+);
+
 export const iacProject = pgTable(
 	"iac_project",
 	{
@@ -1803,6 +1817,7 @@ export const job = pgTable(
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 		workerId: text("worker_id"),
+		workerVersion: text("worker_version"),
 	},
 	(table) => [
 		index("job_status_runAt_idx").on(table.status, table.runAt),
@@ -1869,7 +1884,11 @@ export const userPreferences = pgTable("user_preferences", {
 	preset: text("preset").$type<Preset>(),
 	surfaceStyle: text("surface_style")
 		.$type<SurfaceStyle>()
-		.default("sleek")
+		.default("glass")
+		.notNull(),
+	tabLayout: text("tab_layout")
+		.$type<TabLayout>()
+		.default("horizontal")
 		.notNull(),
 	// "system" (default, off the OS's own light/dark preference) | "light" |
 	// "dark" : applied via the mode-watcher package already mounted in the
@@ -2329,6 +2348,7 @@ export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type RegistryToken = typeof registryToken.$inferSelect;
 export type ObjectStore = typeof objectStore.$inferSelect;
 export type TraceSpan = typeof traceSpan.$inferSelect;
+export type PublicBucket = typeof publicBucket.$inferSelect;
 export type IacProject = typeof iacProject.$inferSelect;
 export type IacStateVersion = typeof iacStateVersion.$inferSelect;
 export type IacStateLock = typeof iacStateLock.$inferSelect;

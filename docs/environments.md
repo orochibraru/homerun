@@ -46,6 +46,14 @@ A git environment deploys on its own when its branch gets a push (through the
 service's webhook, or by polling when there's none), if the service deploys on
 push.
 
+## Switching between environments
+
+The dropdown next to a service's name, on every tab of its page, switches the
+whole page to another of its environments: production, each named environment
+and the canary. You stay on the same tab, and everything on it (settings, env
+vars, domains, logs, deploys) is that environment's own, since each one is a
+service of its own copied from production when it was created.
+
 ## Editing and deleting
 
 The pencil changes an environment's branch or tag and domain, and sets more

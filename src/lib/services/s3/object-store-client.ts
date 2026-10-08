@@ -11,6 +11,18 @@ export interface BucketSummary {
 	name: string;
 }
 
+export interface BucketObject {
+	key: string;
+	lastModified: string | null;
+	size: number;
+}
+
+export interface ObjectListing {
+	folders: string[];
+	nextToken: string | null;
+	objects: BucketObject[];
+}
+
 export interface BucketUsage {
 	bytes: number;
 	capped: boolean;
@@ -19,8 +31,19 @@ export interface BucketUsage {
 
 const PAGE_SIZE = 1000;
 
+const XML_ENTITIES: Record<string, string> = {
+	"&amp;": "&",
+	"&apos;": "'",
+	"&gt;": ">",
+	"&lt;": "<",
+	"&quot;": '"',
+};
+
 function tagValue(xml: string, tag: string): string | null {
-	return xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1] ?? null;
+	const raw = xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1];
+	return raw === undefined
+		? null
+		: raw.replace(/&(amp|apos|gt|lt|quot);/g, (entity) => XML_ENTITIES[entity]);
 }
 
 function blocks(xml: string, tag: string): string[] {
@@ -224,6 +247,89 @@ export class ObjectStoreClient {
 	}
 
 	/**
+	 * One page of what sits directly under `prefix` in a bucket, the way a
+	 * file browser shows a folder: the sub-folders (common prefixes ending in
+	 * "/") and the objects, plus the token for the next page.
+	 *
+	 * @throws When the bucket can't be listed.
+	 */
+	async listObjects(
+		bucket: string,
+		prefix: string,
+		token: string | null,
+	): Promise<ObjectListing> {
+		const query: Record<string, string> = {
+			delimiter: "/",
+			"list-type": "2",
+			"max-keys": "200",
+			prefix,
+		};
+		if (token) {
+			query["continuation-token"] = token;
+		}
+		const response = await s3Fetch(
+			this.#credentials,
+			{ method: "GET", path: `/${bucket}`, query },
+			this.#fetch,
+		);
+		await expectS3Ok(response, "ListObjectsV2");
+		const xml = await response.text();
+		return {
+			folders: blocks(xml, "CommonPrefixes")
+				.map((entry) => tagValue(entry, "Prefix"))
+				.filter((value): value is string => value !== null),
+			nextToken:
+				tagValue(xml, "IsTruncated") === "true"
+					? tagValue(xml, "NextContinuationToken")
+					: null,
+			objects: blocks(xml, "Contents")
+				.map((entry) => ({
+					key: tagValue(entry, "Key") ?? "",
+					lastModified: tagValue(entry, "LastModified"),
+					size: Number.parseInt(tagValue(entry, "Size") ?? "0", 10),
+				}))
+				.filter((object) => object.key !== "" && object.key !== prefix),
+		};
+	}
+
+	/**
+	 * Deletes one object. Deleting a key that doesn't exist succeeds, as S3 does.
+	 *
+	 * @throws With the store's own error.
+	 */
+	async deleteObject(bucket: string, key: string): Promise<void> {
+		await expectS3Ok(
+			await s3Fetch(
+				this.#credentials,
+				{ method: "DELETE", path: `/${bucket}/${key}` },
+				this.#fetch,
+			),
+			"DeleteObject",
+		);
+	}
+
+	/**
+	 * The store's own response for an object, body unread, so it can be
+	 * streamed on: a `range` ("bytes=0-99") is passed through, and a missing
+	 * object comes back as the store's 404.
+	 */
+	async objectResponse(
+		bucket: string,
+		key: string,
+		range: string | null,
+	): Promise<Response> {
+		return await s3Fetch(
+			this.#credentials,
+			{
+				headers: range ? { range } : {},
+				method: "GET",
+				path: `/${bucket}/${key}`,
+			},
+			this.#fetch,
+		);
+	}
+
+	/**
 	 * Writes an object, replacing any object at the same key.
 	 *
 	 * @throws With the store's own error.
@@ -231,7 +337,7 @@ export class ObjectStoreClient {
 	async putObject(
 		bucket: string,
 		key: string,
-		body: string,
+		body: string | Uint8Array<ArrayBuffer>,
 		contentType = "application/octet-stream",
 	): Promise<void> {
 		await expectS3Ok(

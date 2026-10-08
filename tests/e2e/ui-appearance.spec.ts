@@ -117,7 +117,7 @@ test.describe
 			await page.goto("/");
 			await expect(page.locator("html")).toHaveAttribute(
 				"data-surface",
-				"sleek",
+				"glass",
 			);
 		});
 	});

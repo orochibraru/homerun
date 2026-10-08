@@ -262,7 +262,9 @@ that pattern for any new skill.
   `+page.server.ts`) per tab, not one big file with a client-side `activeTab`
   switch.** `services/[serviceId]/` is the reference shape: a `+layout.svelte`
   owns the tab bar (`TabNav` with `href`-based tabs, see
-  `src/lib/components/tab-nav.svelte`) and renders `{@render children()}`; a
+  `src/lib/components/tab-nav.svelte`) and renders `{@render children()}`
+  _inside_ it (`<TabNav ...>{@render children()}</TabNav>`, so the account's
+  "tabs beside the page" preference can move them into a second sidebar); a
   `+layout.server.ts` holds the shared guard/load every tab needs (a child
   route's own `load`, if it needs one at all, calls `parent()` rather than
   re-fetching); the first/default tab is the bare `+page.svelte` at that route's
@@ -352,6 +354,15 @@ that pattern for any new skill.
   is a third: the Terminal tab reports failures through its own `errored`
   banner, since a promise that only settles when the connection ends can't drive
   a toast. Anything that mutates state on the server gets a promise toast.
+- **A list page lists; creating happens on its own page.** A page that lists
+  things (API keys, state backends, credentials…) shows the list with a "New …"
+  button in its header that links to a dedicated `<list>/new` route holding the
+  form (and its `create` action), never a create form stacked above or below the
+  list. Once created, the new page either shows the one-time result (a key's
+  secret) with a way back, or redirects to the new item. An item's own page
+  splits into subtabs (`SectionNav`) when it has distinct concerns, with
+  destructive actions in a **Settings** subtab's danger zone, not at the bottom
+  of an overview.
 - **Never cap the width of a dashboard page.** A page under `(protected)/` fills
   the viewport : its root wrapper is `<div class="p-5 md:p-6">`, with **no
   `mx-auto` and no `max-w-*`**. This app is used on ultrawide monitors, and a

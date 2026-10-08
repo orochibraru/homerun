@@ -37,6 +37,16 @@ export const backupRestoreJobPayload = z.object({
 	wipe: z.boolean().default(false),
 });
 
+export const coreServiceJobPayload = z.discriminatedUnion("action", [
+	z.object({ action: z.literal("enableBuiltinStore"), userId: z.string() }),
+	z.object({ action: z.literal("disableBuiltinStore") }),
+	z.object({ action: z.literal("publishBuiltinStore"), host: z.string() }),
+	z.object({ action: z.literal("setRegistryAuth"), enabled: z.boolean() }),
+	z.object({ action: z.literal("publishRegistry"), host: z.string() }),
+]);
+
+export type CoreServiceJob = z.infer<typeof coreServiceJobPayload>;
+
 export const dockerCleanupActions = [
 	"reclaimStackNetworks",
 	"pruneBuildCache",

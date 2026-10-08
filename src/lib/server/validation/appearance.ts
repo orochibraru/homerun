@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
 import { PALETTES } from "#lib/palettes.js";
 import { PRESETS, SURFACE_STYLES } from "#lib/surfaces.js";
+import { TAB_LAYOUTS } from "#lib/tab-layout.js";
 import { UI_MODES } from "#lib/ui-mode.js";
 
 /** A bare "#rrggbb" hex color, the shape a native `<input type="color">` always submits. */
@@ -44,4 +45,9 @@ export const perPageSchema = z.object({
 /** The account's UI mode: simple, advanced, or "" to follow the instance default. */
 export const uiModeSchema = z.object({
 	uiMode: z.enum(["", ...UI_MODES]),
+});
+
+/** Where page tabs sit: above the page or in a column beside it. */
+export const tabLayoutSchema = z.object({
+	tabLayout: z.enum(TAB_LAYOUTS),
 });

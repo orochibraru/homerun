@@ -2,6 +2,7 @@
 	import { Clock, CloudUpload, Gauge, RefreshCw } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import JobQueuePanel from "#lib/components/job-queue-panel.svelte";
 	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
@@ -29,7 +30,9 @@
 
   <div class="space-y-8">
     <!-- ═══ Job queue ═══ -->
-    <JobQueuePanel />
+    <ErrorBoundary title="The job queue didn't load.">
+      <JobQueuePanel />
+    </ErrorBoundary>
 
     <!-- ═══ Cron redeploys ═══ -->
     <section>

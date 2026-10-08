@@ -1,4 +1,5 @@
 import { JobDTO } from "#lib/dto/job-dto.js";
+import { APP_VERSION } from "#lib/server/app-version.js";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { closeCancelledDeploys } from "./cancelled-deploys.ts";
 import { jobHandlers } from "./handlers.ts";
@@ -119,6 +120,7 @@ class JobWorkerClass extends BaseScheduler {
 			if (!handler) {
 				throw new Error(`No handler for job type ${entry.type}.`);
 			}
+			await JobDTO.stampWorkerVersion(entry.id, APP_VERSION);
 			const result = await handler(entry);
 			await entry.markSucceeded(result);
 			this.logger.info(`Job succeeded: type=${entry.type} job=${entry.id}`);

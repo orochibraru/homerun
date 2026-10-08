@@ -87,8 +87,13 @@ That buys four things worth knowing about as an operator:
   precedence over deploys that are merely queued.
 
 The **Scheduling** page has a Job queue panel showing what's running, what's
-waiting, and how recent jobs finished. Work that was still running when the app
-was restarted is put back on the queue at next boot.
+waiting, and how recent jobs finished. Each job shows an icon for its type, how
+long it took and which worker version ran it. Search jobs by name, or filter
+them by type in **Filters** (with how many of each there are). Click a job to
+open its own page: when it was queued, started and finished, its attempt and
+stage, its error, and its log, which keeps filling in while the job runs. Work
+that was still running when the app was restarted is put back on the queue at
+next boot.
 
 ![The job queue on the Scheduling page, with the latest deploys and how they finished](images/scheduling-job-queue.webp)
 
