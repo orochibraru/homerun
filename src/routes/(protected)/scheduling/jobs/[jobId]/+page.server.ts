@@ -1,6 +1,7 @@
 import { error } from "@sveltejs/kit";
 import { describeCleanupResult } from "#lib/cleanup-result.js";
 import { JobDTO } from "#lib/dto/job-dto.js";
+import { TraceSpanDTO } from "#lib/dto/trace-span-dto.js";
 
 export const load = async ({ params }) => {
 	const job = await JobDTO.get(params.jobId);
@@ -8,6 +9,7 @@ export const load = async ({ params }) => {
 		error(404, "That job doesn't exist, or it was pruned from the queue.");
 	}
 	const row = job.toJSON();
+	const spans = await TraceSpanDTO.spansOfJob(row.id);
 	return {
 		job: {
 			attempts: row.attempts,
@@ -28,5 +30,8 @@ export const load = async ({ params }) => {
 			type: row.type,
 			workerVersion: row.workerVersion,
 		},
+		traces: [...Map.groupBy(spans, (span) => span.traceId)].map(
+			([traceId, traceSpans]) => ({ spans: traceSpans, traceId }),
+		),
 	};
 };

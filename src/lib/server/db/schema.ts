@@ -2294,6 +2294,9 @@ export const traceSpan = pgTable(
 			table.startTime,
 		),
 		index("traceSpan_startTime_idx").on(table.startTime),
+		index("traceSpan_jobId_idx")
+			.on(sql`(${table.attributes} ->> 'homerun.job.id')`)
+			.where(sql`${table.serviceId} is null`),
 	],
 );
 

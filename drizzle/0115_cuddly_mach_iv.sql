@@ -1,0 +1,1 @@
+CREATE INDEX "traceSpan_jobId_idx" ON "trace_span" USING btree (("attributes" ->> 'homerun.job.id')) WHERE "trace_span"."service_id" is null;

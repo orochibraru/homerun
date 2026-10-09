@@ -10,11 +10,11 @@ how long it took and whether it failed. It runs its own OpenTelemetry collector,
 so any OpenTelemetry SDK works unchanged, and it records traces of its own
 background jobs too.
 
-## Turning on the collector
+## The collector
 
-An admin turns the collector on under **Monitoring → Settings**, with **Run the
-OpenTelemetry collector**. Homerun then runs it as one of its own containers,
-`homerun-otel`, on the Homerun network:
+The collector is on by default: Homerun runs it as one of its own containers,
+`homerun-otel`, on the Homerun network. An admin turns it off under **Monitoring
+→ Settings**, with **Run the OpenTelemetry collector**. It listens on:
 
 - OTLP over HTTP at `http://homerun-otel:4318`
 - OTLP over gRPC at `homerun-otel:4317`
@@ -94,3 +94,6 @@ each stage took.
 These traces are written straight to the database by the worker, so they're
 recorded with or without the collector running. A build server's agent records
 none.
+
+A job's page under **Scheduling** shows its trace too, one per attempt, as the
+same waterfall, with a link to the full trace.

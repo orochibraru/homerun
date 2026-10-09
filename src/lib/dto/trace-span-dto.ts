@@ -156,6 +156,29 @@ export class TraceSpanDTO extends BaseDTO<TraceSpan> {
 			.limit(MAX_SPANS_PER_TRACE);
 	}
 
+	/** Every span of the worker's traces of one job, one trace per attempt, in start order (the first 5000). */
+	static async spansOfJob(jobId: string): Promise<TraceSpan[]> {
+		return await db
+			.select()
+			.from(traceSpan)
+			.where(
+				inArray(
+					traceSpan.traceId,
+					db
+						.select({ traceId: traceSpan.traceId })
+						.from(traceSpan)
+						.where(
+							and(
+								isNull(traceSpan.serviceId),
+								sql`(${traceSpan.attributes} ->> 'homerun.job.id') = ${jobId}`,
+							),
+						),
+				),
+			)
+			.orderBy(traceSpan.startTime)
+			.limit(MAX_SPANS_PER_TRACE);
+	}
+
 	/**
 	 * Deletes spans that started before `cutoff`, `batchSize` at a time so a
 	 * big backlog never holds one long lock, and returns how many went.

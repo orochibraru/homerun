@@ -528,7 +528,9 @@ container when the image, address, token or file change. The app's address is
 `errorPagesTarget(config.authCheckUrl)`, the forwardAuth origin Traefik already
 reaches (the `homerun-auth` alias in production, `host.docker.internal:<port>`
 in dev, which is why the container gets `host-gateway` as an extra host).
-Re-asserted from `CoreServicesWatch` when the toggle is on.
+Re-asserted from `CoreServicesWatch` when the toggle is on, which it is by
+default (`otel_collector_enabled` null reads as on; only an explicit `false`
+turns it off).
 
 **Ingest** (`POST /api/v1/otlp/v1/traces`, not in the OpenAPI document): only
 the collector calls it, with `Bearer otlpIngestToken(AUTH_SECRET)` (an HMAC with
@@ -547,6 +549,12 @@ service list is cached 30s and dropped when a service's toggle changes.
 variables, never over a user-set one, and prepends `homerun.service.id=<id>` to
 the user's own `OTEL_RESOURCE_ATTRIBUTES`. Previews start with traces off (a new
 service row).
+
+**Job traces**: every worker job span carries `homerun.job.id`;
+`TraceSpanDTO.spansOfJob` finds its traces (one per attempt) through the partial
+expression index `traceSpan_jobId_idx` on `attributes ->> 'homerun.job.id'`
+where `service_id` is null, and the Scheduling job page renders each one's
+waterfall.
 
 **Retention**: `TraceRetentionScheduler`, hourly, deletes spans that started
 before `traceRetentionDays` (7 by default, 1 to 90, Monitoring → Settings, which

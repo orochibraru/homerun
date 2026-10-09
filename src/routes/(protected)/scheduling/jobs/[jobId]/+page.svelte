@@ -4,6 +4,7 @@
 	import DeployLogPanel from "#lib/components/deploy-log-panel.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import TraceWaterfall from "#lib/components/tracing/trace-waterfall.svelte";
 	import { JOB_STATUS_CONFIG, JOB_TYPE_LABELS } from "#lib/constants.js";
 	import { formatDuration } from "#lib/resource-incidents.js";
 	import { title } from "#lib/store/title.js";
@@ -93,6 +94,20 @@
     {#if data.job.summary}
       <p class="text-text border-border border-t px-5 py-3 text-sm font-medium">{data.job.summary}</p>
     {/if}
+    {#each data.traces as trace, index (trace.traceId)}
+      <div class="border-border space-y-2 border-t px-5 py-4">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="eyebrow">{data.traces.length > 1 ? `Trace · attempt ${index + 1}` : "Trace"}</h3>
+          <a
+            class="text-accent text-xs hover:underline"
+            href={resolve("/(protected)/monitoring/traces/[traceId]", { traceId: trace.traceId })}
+          >
+            Open trace
+          </a>
+        </div>
+        <TraceWaterfall spans={trace.spans} />
+      </div>
+    {/each}
     {#if data.job.log || data.job.error}
       <DeployLogPanel errorMessage={data.job.error} fill log={data.job.log} logName="job log" />
     {:else}

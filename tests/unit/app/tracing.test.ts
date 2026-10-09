@@ -362,7 +362,7 @@ describe("retention settings", () => {
 	test("fills in the defaults", () => {
 		expect(
 			tracingSettings({ otelCollectorEnabled: null, traceRetentionDays: null }),
-		).toEqual({ collectorEnabled: false, retentionDays: 7 });
+		).toEqual({ collectorEnabled: true, retentionDays: 7 });
 		expect(
 			tracingSettings({ otelCollectorEnabled: true, traceRetentionDays: 30 }),
 		).toEqual({ collectorEnabled: true, retentionDays: 30 });

@@ -15,7 +15,7 @@ export function tracingSettings(row: {
 	traceRetentionDays: number | null;
 }): { collectorEnabled: boolean; retentionDays: number } {
 	return {
-		collectorEnabled: row.otelCollectorEnabled === true,
+		collectorEnabled: row.otelCollectorEnabled !== false,
 		retentionDays: row.traceRetentionDays ?? DEFAULT_TRACE_RETENTION_DAYS,
 	};
 }
