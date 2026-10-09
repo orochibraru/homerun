@@ -3651,10 +3651,14 @@ export interface operations {
 						locked: boolean;
 						name: string;
 						prefix: string;
+						/** @description What the project manages: stack:<id> or service:<id> */
+						scope: string | null;
 						/** @description The latest state's serial, null before the first write */
 						serial: number | null;
 						slug: string;
 						storeId: string;
+						/** @enum {string} */
+						tool: "terraform" | "opentofu" | "pulumi";
 						/** @description When the latest state was written */
 						updatedAt: string | null;
 					}[];
@@ -3701,8 +3705,15 @@ export interface operations {
 					name: string;
 					/** @description A folder in the bucket, empty for its root */
 					prefix?: string;
+					/** @description What the project manages: stack:<id> or service:<id> */
+					scope?: string | null;
 					/** @description The object store holding the bucket */
 					storeId: string;
+					/**
+					 * @description The tool managing it, terraform when omitted
+					 * @enum {string}
+					 */
+					tool?: "terraform" | "opentofu" | "pulumi";
 				};
 			};
 		};
@@ -3720,10 +3731,14 @@ export interface operations {
 						locked: boolean;
 						name: string;
 						prefix: string;
+						/** @description What the project manages: stack:<id> or service:<id> */
+						scope: string | null;
 						/** @description The latest state's serial, null before the first write */
 						serial: number | null;
 						slug: string;
 						storeId: string;
+						/** @enum {string} */
+						tool: "terraform" | "opentofu" | "pulumi";
 						/** @description When the latest state was written */
 						updatedAt: string | null;
 					};
@@ -3792,10 +3807,14 @@ export interface operations {
 						locked: boolean;
 						name: string;
 						prefix: string;
+						/** @description What the project manages: stack:<id> or service:<id> */
+						scope: string | null;
 						/** @description The latest state's serial, null before the first write */
 						serial: number | null;
 						slug: string;
 						storeId: string;
+						/** @enum {string} */
+						tool: "terraform" | "opentofu" | "pulumi";
 						/** @description When the latest state was written */
 						updatedAt: string | null;
 					};
@@ -6961,12 +6980,16 @@ export interface operations {
 							| "paketo";
 						gitBuildTarget: string | null;
 						gitDockerfilePath: string | null;
+						/** @description Repo path globs whose changes alone never deploy on push */
+						gitIgnorePaths: string[];
 						gitLastSeenCommit: string | null;
 						gitPollEnabled: boolean;
 						gitProviderId: string | null;
 						gitRef: string | null;
 						gitRepo: string | null;
 						gitUrl: string | null;
+						/** @description Repo path globs a push has to change a file under to deploy, empty for any file */
+						gitWatchPaths: string[];
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
 						gitWebhookReconnect: boolean;
@@ -7174,11 +7197,15 @@ export interface operations {
 								| "paketo";
 							gitBuildTarget?: string;
 							gitDockerfilePath?: string;
+							/** @description Repo path globs whose changes never deploy on push, same syntax as gitWatchPaths: a push deploys when a changed file matches the watch paths and none of these. */
+							gitIgnorePaths?: string[];
 							gitPollEnabled?: boolean;
 							gitProviderId?: string;
 							gitRef?: string;
 							gitRepo?: string;
 							gitUrl?: string;
+							/** @description Repo path globs (apps/api/**, *.md) a push has to change a file under to deploy the service or one of its environments. Empty lets every file through. A pattern without a slash matches at any depth, a folder path everything under it. Only applies when the push payload lists its files (not on Bitbucket, not when polling). */
+							gitWatchPaths?: string[];
 							healthcheckCommand?: string | null;
 							healthcheckDisabled?: boolean;
 							healthcheckIntervalSeconds?: number | null;
@@ -7330,11 +7357,15 @@ export interface operations {
 								| "paketo";
 							gitBuildTarget?: string | null;
 							gitDockerfilePath?: string | null;
+							/** @description Repo path globs whose changes never deploy on push, same syntax as gitWatchPaths: a push deploys when a changed file matches the watch paths and none of these. */
+							gitIgnorePaths?: string[];
 							gitPollEnabled?: boolean;
 							gitProviderId?: string | null;
 							gitRef?: string | null;
 							gitRepo?: string | null;
 							gitUrl?: string | null;
+							/** @description Repo path globs (apps/api/**, *.md) a push has to change a file under to deploy the service or one of its environments. Empty lets every file through. A pattern without a slash matches at any depth, a folder path everything under it. Only applies when the push payload lists its files (not on Bitbucket, not when polling). */
+							gitWatchPaths?: string[];
 							healthcheckCommand?: string | null;
 							healthcheckDisabled?: boolean;
 							healthcheckIntervalSeconds?: number | null;
@@ -7501,12 +7532,16 @@ export interface operations {
 							| "paketo";
 						gitBuildTarget: string | null;
 						gitDockerfilePath: string | null;
+						/** @description Repo path globs whose changes alone never deploy on push */
+						gitIgnorePaths: string[];
 						gitLastSeenCommit: string | null;
 						gitPollEnabled: boolean;
 						gitProviderId: string | null;
 						gitRef: string | null;
 						gitRepo: string | null;
 						gitUrl: string | null;
+						/** @description Repo path globs a push has to change a file under to deploy, empty for any file */
+						gitWatchPaths: string[];
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
 						gitWebhookReconnect: boolean;
@@ -7741,12 +7776,16 @@ export interface operations {
 							| "paketo";
 						gitBuildTarget: string | null;
 						gitDockerfilePath: string | null;
+						/** @description Repo path globs whose changes alone never deploy on push */
+						gitIgnorePaths: string[];
 						gitLastSeenCommit: string | null;
 						gitPollEnabled: boolean;
 						gitProviderId: string | null;
 						gitRef: string | null;
 						gitRepo: string | null;
 						gitUrl: string | null;
+						/** @description Repo path globs a push has to change a file under to deploy, empty for any file */
+						gitWatchPaths: string[];
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
 						gitWebhookReconnect: boolean;
@@ -8025,11 +8064,15 @@ export interface operations {
 						| "paketo";
 					gitBuildTarget?: string | null;
 					gitDockerfilePath?: string | null;
+					/** @description Repo path globs whose changes never deploy on push, same syntax as gitWatchPaths: a push deploys when a changed file matches the watch paths and none of these. */
+					gitIgnorePaths?: string[];
 					gitPollEnabled?: boolean;
 					gitProviderId?: string | null;
 					gitRef?: string | null;
 					gitRepo?: string | null;
 					gitUrl?: string | null;
+					/** @description Repo path globs (apps/api/**, *.md) a push has to change a file under to deploy the service or one of its environments. Empty lets every file through. A pattern without a slash matches at any depth, a folder path everything under it. Only applies when the push payload lists its files (not on Bitbucket, not when polling). */
+					gitWatchPaths?: string[];
 					healthcheckCommand?: string | null;
 					healthcheckDisabled?: boolean;
 					healthcheckIntervalSeconds?: number | null;
@@ -8194,12 +8237,16 @@ export interface operations {
 							| "paketo";
 						gitBuildTarget: string | null;
 						gitDockerfilePath: string | null;
+						/** @description Repo path globs whose changes alone never deploy on push */
+						gitIgnorePaths: string[];
 						gitLastSeenCommit: string | null;
 						gitPollEnabled: boolean;
 						gitProviderId: string | null;
 						gitRef: string | null;
 						gitRepo: string | null;
 						gitUrl: string | null;
+						/** @description Repo path globs a push has to change a file under to deploy, empty for any file */
+						gitWatchPaths: string[];
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
 						gitWebhookReconnect: boolean;
@@ -8646,11 +8693,13 @@ export interface operations {
 								buildServerRemoteHostId: string | null;
 								buildTarget: string | null;
 								dockerfilePath: string | null;
+								ignorePaths: string[];
 								pollEnabled: boolean;
 								ref: string | null;
 								requireStatusChecks: boolean;
 								requiredStatusChecks: string[];
 								url: string | null;
+								watchPaths: string[];
 							} | null;
 							image: string;
 							previewBranchExclude: string[];

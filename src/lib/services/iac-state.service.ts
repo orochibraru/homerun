@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { IacProjectDTO } from "#lib/dto/iac-project-dto.js";
 import { IacStateVersionDTO } from "#lib/dto/iac-state-version-dto.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
+import { parseScope } from "#lib/iac/generate.js";
+import { type IacTool, isIacTool } from "#lib/iac/tools.js";
 import {
 	diffStates,
 	type StateDiff,
@@ -30,9 +32,11 @@ export interface IacProjectSummary {
 	locked: boolean;
 	name: string;
 	prefix: string;
+	scope: string | null;
 	serial: number | null;
 	slug: string;
 	storeId: string;
+	tool: IacTool;
 	updatedAt: Date | null;
 }
 
@@ -40,6 +44,26 @@ export interface VersionDiff {
 	diff: StateDiff;
 	previousSerial: number | null;
 	serial: number;
+}
+
+/**
+ * The tool and scope from a create or update, checked.
+ *
+ * @throws When the tool isn't supported or the scope isn't `stack:<id>` or `service:<id>`.
+ */
+function checkedToolAndScope(input: { scope?: string | null; tool?: string }): {
+	scope: string | null;
+	tool: IacTool;
+} {
+	const tool = input.tool || "terraform";
+	if (!isIacTool(tool)) {
+		throw new Error("Pick Terraform, OpenTofu or Pulumi.");
+	}
+	const scope = input.scope?.trim() || null;
+	if (scope && !parseScope(scope)) {
+		throw new Error("The scope must be stack:<id> or service:<id>.");
+	}
+	return { scope, tool };
 }
 
 /**
@@ -54,14 +78,17 @@ class IacStateServiceClass {
 	 * optional folder, creating the bucket first when the store doesn't have
 	 * it yet.
 	 *
-	 * @throws When the name is empty, the bucket name is invalid, the store
-	 *   doesn't exist or the bucket can't be listed or created.
+	 * @throws When the name is empty, the tool or scope is invalid, the
+	 *   bucket name is invalid, the store doesn't exist or the bucket can't be
+	 *   listed or created.
 	 */
 	async createProject(input: {
 		bucket: string;
 		name: string;
 		prefix: string;
+		scope?: string | null;
 		storeId: string;
+		tool?: string;
 		userId: string;
 	}): Promise<IacProjectDTO> {
 		const name = input.name.trim();
@@ -69,6 +96,7 @@ class IacStateServiceClass {
 		if (!base) {
 			throw new Error("Give the project a name.");
 		}
+		const { scope, tool } = checkedToolAndScope(input);
 		const problem = bucketNameProblem(input.bucket);
 		if (problem) {
 			throw new Error(problem);
@@ -86,10 +114,28 @@ class IacStateServiceClass {
 			bucket: input.bucket,
 			name,
 			prefix: input.prefix.trim().replace(/^\/+|\/+$/g, ""),
+			scope,
 			slug: await uniqueSlug(base, (slug) => IacProjectDTO.slugTaken(slug)),
 			storeId: input.storeId,
+			tool,
 			userId: input.userId,
 		});
+	}
+
+	/**
+	 * Renames a project, or changes its tool or scope.
+	 *
+	 * @throws When the name is empty or the tool or scope is invalid.
+	 */
+	async updateProject(
+		project: IacProjectDTO,
+		input: { name: string; scope?: string | null; tool?: string },
+	): Promise<void> {
+		const name = input.name.trim();
+		if (!name) {
+			throw new Error("Give the project a name.");
+		}
+		await project.update({ name, ...checkedToolAndScope(input) });
 	}
 
 	/** A project with its latest serial and whether it's locked, as the API and the CLI show it. */
@@ -106,9 +152,11 @@ class IacStateServiceClass {
 			locked: lock !== null,
 			name: row.name,
 			prefix: row.prefix,
+			scope: row.scope,
 			serial: latest?.serial ?? null,
 			slug: row.slug,
 			storeId: row.storeId,
+			tool: row.tool,
 			updatedAt: latest?.toJSON().createdAt ?? null,
 		};
 	}

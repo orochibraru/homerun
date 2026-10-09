@@ -1,4 +1,5 @@
 import { PROVIDER_SOURCE } from "#lib/iac/generate.js";
+import { IAC_TOOL_INFO, type IacTool } from "#lib/iac/tools.js";
 
 export interface ProviderSnippet {
 	code: string;
@@ -8,22 +9,30 @@ export interface ProviderSnippet {
 	title: string;
 }
 
-/** The Provider tab's how-to, with this instance's URL filled in. */
-export function providerSnippets(origin: string): ProviderSnippet[] {
+/** How to point `tool` at the provider, with this instance's URL filled in. */
+export function providerSnippets(
+	origin: string,
+	tool: IacTool,
+): ProviderSnippet[] {
+	if (tool !== "pulumi") {
+		const cli = IAC_TOOL_INFO[tool].cli;
+		return [
+			{
+				code: [
+					`export HOMERUN_ENDPOINT=${origin}`,
+					"export HOMERUN_API_KEY=<an API key from the Credentials tab>",
+					"export TF_HTTP_PASSWORD=$HOMERUN_API_KEY",
+					`${cli} init`,
+					`${cli} plan`,
+				].join("\n"),
+				description: `The provider is on the Terraform and OpenTofu registries as ${PROVIDER_SOURCE}, so ${cli} init downloads it. It reads its endpoint and key from these variables when the provider block doesn't set them, and the http state backend takes the same key as its password. The generated files above already have the provider and backend blocks, in providers.tf and versions.tf.`,
+				id: "run",
+				language: "shellscript",
+				title: `Run it with ${IAC_TOOL_INFO[tool].label}`,
+			},
+		];
+	}
 	return [
-		{
-			code: [
-				`export HOMERUN_ENDPOINT=${origin}`,
-				"export HOMERUN_API_KEY=<an API key from Profile → API Keys>",
-				"export TF_HTTP_PASSWORD=$HOMERUN_API_KEY",
-				"terraform init",
-				"terraform plan",
-			].join("\n"),
-			description: `The provider is on the Terraform and OpenTofu registries as ${PROVIDER_SOURCE}, so terraform init (or tofu init) downloads it. It reads its endpoint and key from these variables when the provider block doesn't set them, and the http state backend takes the same key as its password. A project from the Generate tab already has the provider and backend blocks, in providers.tf and versions.tf.`,
-			id: "run",
-			language: "shellscript",
-			title: "Terraform or OpenTofu",
-		},
 		{
 			code: [
 				`pulumi package add terraform-provider ${PROVIDER_SOURCE}`,

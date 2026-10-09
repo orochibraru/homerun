@@ -78,11 +78,15 @@ resource "homerun_service" "example" {
 - `git_build_method` (String) Defaults to `"dockerfile"`.
 - `git_build_target` (String)
 - `git_dockerfile_path` (String)
+- `git_ignore_paths` (List of String) Repo path globs whose changes alone never
+  deploy on push.
 - `git_poll_enabled` (Boolean) Defaults to `false`.
 - `git_provider_id` (String)
 - `git_ref` (String)
 - `git_repo` (String)
 - `git_url` (String)
+- `git_watch_paths` (List of String) Repo path globs a push has to change a file
+  under to deploy. Empty lets every file through.
 - `healthcheck_command` (String)
 - `healthcheck_disabled` (Boolean) Defaults to `false`.
 - `healthcheck_interval_seconds` (Number)

@@ -119,6 +119,13 @@ export const serviceResponse = z.object({
 	gitWebhookId: z.string().nullable(),
 	gitWebhookReconnect: z.boolean(),
 	gitPollEnabled: z.boolean(),
+	gitWatchPaths: z.array(z.string()).meta({
+		description:
+			"Repo path globs a push has to change a file under to deploy, empty for any file",
+	}),
+	gitIgnorePaths: z.array(z.string()).meta({
+		description: "Repo path globs whose changes alone never deploy on push",
+	}),
 	gitLastSeenCommit: z.string().nullable(),
 	previewAuthAllowedEmails: z.array(z.string()),
 	previewAuthAllowedGroups: z.array(z.string()),

@@ -1,4 +1,5 @@
 import { asc, eq } from "drizzle-orm";
+import type { IacTool } from "#lib/iac/tools.js";
 import { db } from "#lib/server/db/lib.js";
 import {
 	type IacProject,
@@ -13,8 +14,10 @@ export interface NewIacProjectInput {
 	bucket: string;
 	name: string;
 	prefix: string;
+	scope: string | null;
 	slug: string;
 	storeId: string;
+	tool: IacTool;
 	userId: string;
 }
 
@@ -25,7 +28,7 @@ export interface StateLockView {
 	userName: string | null;
 }
 
-/** Wraps the `iac_project` table: one Terraform state, kept in a bucket, with its lock. */
+/** Wraps the `iac_project` table: one IaC project (Terraform, OpenTofu or Pulumi), its state kept in a bucket, with its lock. */
 export class IacProjectDTO extends BaseDTO<IacProject> {
 	/** Loads one project by id; null when missing. */
 	static async get(id: string): Promise<IacProjectDTO | null> {
@@ -65,6 +68,17 @@ export class IacProjectDTO extends BaseDTO<IacProject> {
 		};
 		await db.insert(iacProject).values(row);
 		return new IacProjectDTO(row);
+	}
+
+	/** Changes the project's name, tool or scope. */
+	async update(
+		patch: Partial<Pick<IacProject, "name" | "scope" | "tool">>,
+	): Promise<void> {
+		await db
+			.update(iacProject)
+			.set(patch)
+			.where(eq(iacProject.id, this.row.id));
+		Object.assign(this.row, patch);
 	}
 
 	/** Deletes the project and its version and lock rows; the state objects stay in the bucket. */
@@ -155,5 +169,13 @@ export class IacProjectDTO extends BaseDTO<IacProject> {
 	/** The folder inside the bucket that project folders sit under; may be empty. */
 	get prefix(): string {
 		return this.row.prefix;
+	}
+	/** The tool the project is managed with. */
+	get tool(): IacTool {
+		return this.row.tool;
+	}
+	/** What the project manages, `stack:<id>` or `service:<id>`; null when unset. */
+	get scope(): string | null {
+		return this.row.scope;
 	}
 }

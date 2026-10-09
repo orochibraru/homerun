@@ -345,6 +345,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 			gitProviderId: input.gitProviderId ?? null,
 			gitRepo: input.gitRepo ?? null,
 			autoDeployOnPush: input.autoDeployOnPush ?? false,
+			gitIgnorePaths: input.gitIgnorePaths ?? [],
+			gitWatchPaths: input.gitWatchPaths ?? [],
 			gitWebhookId: null,
 			gitWebhookSecretEnc: null,
 			gitWebhookError: null,

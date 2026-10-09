@@ -1,238 +1,100 @@
 <script lang="ts">
-	import {
-		ArrowRight,
-		Check,
-		ChevronRight,
-		Database,
-		FileCode2,
-		GitCompareArrows,
-		KeyRound,
-		ListChecks,
-		Lock,
-		Package,
-		Plus,
-	} from "@lucide/svelte";
+	import { ChevronRight, FileCode2, Lock, Plus } from "@lucide/svelte";
+	import { onMount } from "svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
-	import PanelHeader from "#lib/components/panel-header.svelte";
+	import EntityList from "#lib/components/entity-list.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { timeAgo } from "#lib/formatting.js";
+	import { IAC_TOOL_INFO, usesHttpBackend } from "#lib/iac/tools.js";
+	import { title } from "#lib/store/title.js";
+	import { ViewMode } from "#lib/view-mode.svelte.js";
 	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
-	const lockedCount = $derived(
-		data.projects.filter((project) => project.locked).length,
+	onMount(() => title.set("Infrastructure as Code"));
+
+	const view = new ViewMode("iac-projects");
+
+	const rows = $derived(
+		data.projects.map((project) => ({
+			href: resolve("/(protected)/iac/[projectId]", { projectId: project.id }),
+			id: project.id,
+			locked: project.locked,
+			subtitle: [
+				project.scopeLabel ? `manages ${project.scopeLabel}` : null,
+				`${project.bucket}${project.prefix ? `/${project.prefix}` : ""}${project.storeName ? ` on ${project.storeName}` : ""}`,
+				usesHttpBackend(project.tool)
+					? project.updatedAt
+						? `serial ${project.serial} written ${timeAgo(project.updatedAt)}`
+						: "no state yet"
+					: null,
+			]
+				.filter(Boolean)
+				.join(" · "),
+			title: project.name,
+			tool: IAC_TOOL_INFO[project.tool].label,
+		})),
 	);
-	const lastWrite = $derived(
-		data.projects
-			.map((project) => project.updatedAt)
-			.filter((date) => date !== null)
-			.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null,
-	);
-	const statCards = $derived([
-		{
-			dot: "bg-accent",
-			label: "State backends",
-			value: String(data.projects.length),
-		},
-		{
-			dot: lockedCount > 0 ? "bg-amber-500" : "bg-text-subtle",
-			label: "Locked",
-			value: String(lockedCount),
-		},
-		{
-			dot: "bg-text-subtle",
-			label: "Last write",
-			value: lastWrite ? timeAgo(lastWrite) : "Never",
-		},
-	]);
-	const steps = $derived([
-		{
-			description:
-				"The state lives in a bucket: turn on the built-in store or connect a provider.",
-			done: data.stores.length > 0,
-			href: resolve("/(protected)/object-storage/built-in"),
-			label: "An object store",
-		},
-		{
-			description:
-				"A bucket Homerun versions and locks every Terraform state in.",
-			done: data.projects.length > 0,
-			href: resolve("/(protected)/iac/state/new"),
-			label: "A state backend",
-		},
-		{
-			description:
-				"The provider and the state backend both authenticate with one.",
-			done: data.apiKeyCount > 0,
-			href: resolve("/(protected)/iac/credentials/new"),
-			label: "An API key",
-		},
-		{
-			description:
-				"Generate a project for a stack or a service, then terraform init and apply.",
-			done: data.projects.some((project) => project.serial !== null),
-			href: resolve("/(protected)/iac/generate"),
-			label: "A first apply",
-		},
-	]);
-	const shortcuts = [
-		{
-			description:
-				"Terraform files for a stack or a service, imports included.",
-			href: resolve("/(protected)/iac/generate"),
-			icon: FileCode2,
-			label: "Generate",
-		},
-		{
-			description: "Backends, versions, rollbacks, locks and bucket keys.",
-			href: resolve("/(protected)/iac/state"),
-			icon: Database,
-			label: "State",
-		},
-		{
-			description: "API keys for the provider and the state backend.",
-			href: resolve("/(protected)/iac/credentials"),
-			icon: KeyRound,
-			label: "Credentials",
-		},
-		{
-			description: "Where a state and what's running disagree.",
-			href: resolve("/(protected)/iac/drift"),
-			icon: GitCompareArrows,
-			label: "Drift",
-		},
-		{
-			description: "The provider's source and configuration snippets.",
-			href: resolve("/(protected)/iac/provider"),
-			icon: Package,
-			label: "Provider",
-		},
-	];
+	type ProjectRow = (typeof rows)[number];
 </script>
 
-<div class="space-y-5">
-  <div class="panel divide-border flex divide-x rounded-md">
-    {#each statCards as card (card.label)}
-      <div class="min-w-0 flex-1 px-4 py-3">
-        <p class="eyebrow flex items-center gap-1.5">
-          <span class="size-1.5 rounded-full {card.dot}"></span>
-          {card.label}
-        </p>
-        <p class="metric mt-2">{card.value}</p>
-      </div>
-    {/each}
+{#snippet media(_item: ProjectRow)}
+  <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
+    <FileCode2 class="size-5" />
   </div>
+{/snippet}
 
-  {#if steps.some((step) => !step.done)}
-    <section class="panel rounded-md">
-      <PanelHeader
-        description="What Terraform needs to manage this instance."
-        icon={ListChecks}
-        title="Getting started"
-      />
-      <ol class="divide-border divide-y">
-        {#each steps as step, index (step.label)}
-          <li>
-            <a class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3" href={step.href}>
-              <span
-                class="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium {step.done ? 'bg-primary text-primary-foreground' : 'border-border text-text-muted border'}"
-              >
-                {#if step.done}
-                  <Check class="size-3.5" />
-                {:else}
-                  {index + 1}
-                {/if}
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="text-text block text-sm font-medium {step.done ? 'line-through opacity-60' : ''}">{step.label}</span>
-                <span class="text-text-muted block text-xs">{step.description}</span>
-              </span>
-              <ArrowRight class="text-text-subtle size-4 shrink-0" />
-            </a>
-          </li>
-        {/each}
-      </ol>
-    </section>
+{#snippet badge(item: ProjectRow)}
+  <span class="bg-surface-2 text-text-muted shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold">
+    {item.tool}
+  </span>
+  {#if item.locked}
+    <Lock aria-label="Locked" class="size-3.5 shrink-0 text-amber-500" />
   {/if}
+{/snippet}
 
-  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-    {#each shortcuts as shortcut (shortcut.label)}
-      <a class="panel hover:bg-surface-2 flex items-start gap-3 rounded-md p-4" href={shortcut.href}>
-        <shortcut.icon class="text-accent mt-0.5 size-4 shrink-0" />
-        <span class="min-w-0">
-          <span class="text-text block text-sm font-medium">{shortcut.label}</span>
-          <span class="text-text-muted block text-xs">{shortcut.description}</span>
-        </span>
-      </a>
-    {/each}
+{#snippet actions(item: ProjectRow)}
+  <Button href={item.href} size="icon-sm" title="Open" variant="ghost">
+    <ChevronRight class="size-4" />
+  </Button>
+{/snippet}
+
+<div class="p-5 md:p-6">
+  <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Infrastructure as Code</h1>
+      <p class="text-text-muted mt-1 text-sm">
+        Manage this instance with Terraform, OpenTofu or Pulumi. Each project
+        keeps its state here, generates its configuration from what's running
+        and shows where the two disagree.
+      </p>
+    </div>
+
+    {#if data.hasStore}
+      <Button href={resolve("iac/new")}><Plus class="size-4" />New project</Button>
+    {/if}
   </div>
 
-  <section class="panel rounded-md">
-    <PanelHeader
-      description="Every Terraform state kept on this instance."
-      icon={Database}
-      title="State backends"
-    >
-      {#snippet trailing()}
-        <Button href={resolve("/(protected)/iac/state/new")} size="sm" variant="outline">
-          <Plus class="size-3.5" />
-          New backend
-        </Button>
-      {/snippet}
-    </PanelHeader>
-    {#if data.projects.length > 0}
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-border text-text-muted border-b text-left text-xs uppercase">
-              <th class="px-4 py-3 font-medium">Backend</th>
-              <th class="hidden px-4 py-3 font-medium md:table-cell">Bucket</th>
-              <th class="px-4 py-3 font-medium">Serial</th>
-              <th class="hidden px-4 py-3 font-medium md:table-cell">Last written</th>
-              <th class="w-8 px-4 py-3"><span class="sr-only">Open</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each data.projects as project (project.id)}
-              <tr class="border-border/60 hover:bg-surface-2 group relative border-b last:border-0">
-                <td class="px-4 py-3">
-                  <span class="inline-flex items-center gap-1.5">
-                    <a
-                      class="text-text group-hover:text-accent font-medium after:absolute after:inset-0"
-                      href={resolve("/(protected)/iac/state/[projectId]", {
-                        projectId: project.id,
-                      })}
-                    >
-                      {project.name}
-                    </a>
-                    {#if project.locked}
-                      <Lock aria-label="Locked" class="size-3.5 text-amber-500" />
-                    {/if}
-                  </span>
-                </td>
-                <td class="text-text-muted hidden px-4 py-3 md:table-cell">
-                  <span class="font-mono text-xs">{project.bucket}</span>
-                  {#if project.storeName}
-                    <span class="text-text-subtle text-xs">on {project.storeName}</span>
-                  {/if}
-                </td>
-                <td class="text-text-muted px-4 py-3 tabular-nums">{project.serial ?? "—"}</td>
-                <td class="text-text-muted hidden px-4 py-3 md:table-cell">
-                  {project.updatedAt ? timeAgo(project.updatedAt) : "Never"}
-                </td>
-                <td class="text-text-subtle px-4 py-3"><ChevronRight class="size-4" /></td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
+  {#if data.projects.length === 0}
+    {#if data.hasStore}
+      <EmptyState
+        icon={FileCode2}
+        subtitle="A project picks a tool, keeps its state in a bucket and covers a stack or a service."
+        title="No IaC project yet"
+      ><Button href={resolve("iac/new")}><Plus class="size-4" />Create your first project</Button></EmptyState>
     {:else}
       <EmptyState
-        icon={Database}
-        subtitle="A state backend keeps each Terraform state in a bucket, versioned and locked by Homerun."
-        title="No state backend yet"
-      />
+        icon={FileCode2}
+        subtitle="A project keeps its state in a bucket: turn on the built-in object store or connect one first."
+        title="No object store yet"
+      ><Button href={resolve("object-storage/built-in")}>Set up object storage</Button></EmptyState>
     {/if}
-  </section>
+  {:else}
+    <div class="mb-4 flex justify-end">
+      <ViewModeToggle {view} />
+    </div>
+    <EntityList {actions} {badge} items={rows} {media} {view} />
+  {/if}
 </div>

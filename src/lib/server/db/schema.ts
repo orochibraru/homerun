@@ -19,6 +19,7 @@ import type { BuildMethod } from "#lib/build-methods.js";
 import type { DeployTrigger } from "#lib/deploy-trigger.js";
 import type { ErrorPagesSettings } from "#lib/error-pages.js";
 import type { StoredErrorEvent } from "#lib/error-tracking/event.js";
+import type { IacTool } from "#lib/iac/tools.js";
 import type {
 	BlockSeverity,
 	ImageScanFinding,
@@ -1086,6 +1087,14 @@ export const service = pgTable(
 		gitUrl: text("git_url"),
 		gitProviderId: text("git_provider_id"),
 		gitRepo: text("git_repo"),
+		gitWatchPaths: jsonb("git_watch_paths")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		gitIgnorePaths: jsonb("git_ignore_paths")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
 		autoDeployOnPush: boolean("auto_deploy_on_push").default(false).notNull(),
 		gitWebhookId: text("git_webhook_id"),
 		gitWebhookSecretEnc: text("git_webhook_secret_enc"),
@@ -1350,10 +1359,12 @@ export const iacProject = pgTable(
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
 		prefix: text("prefix").default("").notNull(),
+		scope: text("scope"),
 		slug: text("slug").notNull().unique(),
 		storeId: text("store_id")
 			.notNull()
 			.references(() => objectStore.id, { onDelete: "cascade" }),
+		tool: text("tool").$type<IacTool>().default("terraform").notNull(),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),

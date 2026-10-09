@@ -15,6 +15,7 @@ import { Logger } from "#lib/logger.js";
 import { matchesTagPattern } from "#lib/release-channels.js";
 import type { GitProviderKind } from "#lib/server/db/schema.js";
 import { inferProviderKind } from "#lib/status-checks.js";
+import { pushMatchesWatchPaths } from "#lib/watch-paths.js";
 import { DeploymentService } from "./deploy.service.ts";
 import { EnvironmentService } from "./environment.service.ts";
 import {
@@ -240,8 +241,9 @@ class GitWebhookServiceClass {
 	 * Handles one delivery to `/api/v1/webhooks/git/<serviceId>`: checks the
 	 * signature against the service's secret, then either hands a pull request
 	 * event to `PreviewService` when previews are on, or enqueues a deploy as
-	 * the service's owner when a push was to the branch it builds, and one for
-	 * each of its environments building a pushed branch.
+	 * the service's owner when a push was to the branch it builds and touched
+	 * a file its watch paths let through, and one for each of its environments
+	 * building a pushed branch.
 	 */
 	async handleDelivery(
 		svc: ServiceDTO | null,
@@ -305,6 +307,20 @@ class GitWebhookServiceClass {
 		}
 		if (push.commit) {
 			await svc.update({ gitLastSeenCommit: push.commit });
+		}
+		if (
+			!pushMatchesWatchPaths(push.files, {
+				ignore: svc.toJSON().gitIgnorePaths,
+				watch: svc.toJSON().gitWatchPaths,
+			})
+		) {
+			logger.info(
+				`Push to ${branch} (${push.commit ?? "unknown commit"}) skipped by watch paths: service=${svc.id}`,
+			);
+			return {
+				reason: "No changed file matches the watch paths.",
+				status: "ignored",
+			};
 		}
 
 		const { deploymentId, jobId } = await DeploymentService.enqueueDeploy({

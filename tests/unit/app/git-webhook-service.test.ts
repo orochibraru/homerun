@@ -54,11 +54,13 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 	const svc: Record<string, unknown> = {
 		autoDeployOnPush: true,
 		buildSource: "git",
+		gitIgnorePaths: [],
 		gitPollEnabled: false,
 		gitProviderId: "gh",
 		gitRef: "main",
 		gitRepo: "me/app",
 		gitUrl: "https://github.com/me/app.git",
+		gitWatchPaths: [],
 		gitWebhookError: null,
 		gitWebhookId: null,
 		gitWebhookReconnect: false,
@@ -419,6 +421,57 @@ describe("GitWebhookService.handleDelivery", () => {
 		const result = await GitWebhookService.handleDelivery(svc, headers, raw);
 		expect(result.status).toBe("deployed");
 		expect(updates).toHaveLength(0);
+	});
+
+	test("deploys a push touching a watched file", async () => {
+		const { svc } = fakeService({
+			gitIgnorePaths: ["*.md"],
+			gitWatchPaths: ["apps/api/**"],
+		});
+		const { headers, raw } = signed("push", {
+			after: "b".repeat(40),
+			commits: [
+				{ added: [], modified: ["README.md", "apps/api/main.ts"], removed: [] },
+			],
+			ref: "refs/heads/main",
+		});
+		const result = await GitWebhookService.handleDelivery(svc, headers, raw);
+		expect(result.status).toBe("deployed");
+	});
+
+	test("ignores a push touching no watched file but records its commit", async () => {
+		const { svc, state } = fakeService({
+			gitIgnorePaths: ["apps/api/README.md"],
+			gitWatchPaths: ["apps/api/**"],
+		});
+		const { headers, raw } = signed("push", {
+			after: "b".repeat(40),
+			commits: [
+				{
+					added: ["apps/web/page.ts"],
+					modified: ["apps/api/README.md"],
+					removed: [],
+				},
+			],
+			ref: "refs/heads/main",
+		});
+		const result = await GitWebhookService.handleDelivery(svc, headers, raw);
+		expect(result).toEqual({
+			reason: "No changed file matches the watch paths.",
+			status: "ignored",
+		});
+		expect(state.gitLastSeenCommit).toBe("b".repeat(40));
+		expect(enqueued).toHaveLength(0);
+	});
+
+	test("deploys despite watch paths when the payload lists no files", async () => {
+		const { svc } = fakeService({ gitWatchPaths: ["apps/api/**"] });
+		const { headers, raw } = signed("push", {
+			after: "b".repeat(40),
+			ref: "refs/heads/main",
+		});
+		const result = await GitWebhookService.handleDelivery(svc, headers, raw);
+		expect(result.status).toBe("deployed");
 	});
 
 	test("ignores a push to another branch", async () => {

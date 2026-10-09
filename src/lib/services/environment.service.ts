@@ -14,6 +14,7 @@ import {
 	serviceHostnames,
 } from "#lib/service-domains.js";
 import { childSlug } from "#lib/slug.js";
+import { pushMatchesWatchPaths } from "#lib/watch-paths.js";
 import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { syncServiceDomainsDns } from "./dns.service.ts";
@@ -108,6 +109,8 @@ class EnvironmentServiceClass {
 			...copiedSettings(parent),
 			autoDeployOnPush: parent.autoDeployOnPush,
 			buildSource: parent.buildSource,
+			gitIgnorePaths: parent.toJSON().gitIgnorePaths,
+			gitWatchPaths: parent.toJSON().gitWatchPaths,
 			domains: input.domain ? [input.domain] : [],
 			envVars: {},
 			gitRef: parent.buildSource === "git" ? input.ref : parent.gitRef,
@@ -221,7 +224,9 @@ class EnvironmentServiceClass {
 	/**
 	 * Deploys, as the parent's owner, every environment of a git service that
 	 * builds a branch one of `pushes` moved and deploys on push, unless it
-	 * already deployed that commit. Never throws: a failed enqueue is logged.
+	 * already deployed that commit or none of the pushed files passes its own
+	 * watch paths (the commit is still recorded as seen, so polling doesn't
+	 * deploy it either). Never throws: a failed enqueue is logged.
 	 *
 	 * @returns How many environments were queued.
 	 */
@@ -259,6 +264,14 @@ class EnvironmentServiceClass {
 				try {
 					if (push?.commit) {
 						await environment.update({ gitLastSeenCommit: push.commit });
+					}
+					if (
+						!pushMatchesWatchPaths(push?.files ?? null, {
+							ignore: environment.toJSON().gitIgnorePaths,
+							watch: environment.toJSON().gitWatchPaths,
+						})
+					) {
+						return 0;
 					}
 					await this.deploy(parent, environment, "push");
 					return 1;

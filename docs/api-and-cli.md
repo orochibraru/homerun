@@ -591,7 +591,7 @@ homerun buckets create <storeId> --set name=logs --set expirationDays=30
 #### Infrastructure as code
 
 `homerun iac generate --stack <id|slug>` (or `--service`) writes the same
-Terraform project as the Infrastructure as Code page's Generate tab, see
+Terraform project as an IaC project's Generate tab, see
 [From the CLI](infrastructure-as-code.md#from-the-cli).
 `homerun iac projects list|get|create|delete` manage the Terraform state
 projects, `homerun iac state pull <project>` prints a project's latest state,

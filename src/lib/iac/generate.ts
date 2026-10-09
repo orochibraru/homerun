@@ -26,6 +26,14 @@ export interface GenerateScope {
 	kind: "service" | "stack";
 }
 
+/** A stack or a service a project can cover, as a picker shows it. */
+export interface IacScopeOption {
+	group: "Services" | "Stacks";
+	label: string;
+	name: string;
+	value: string;
+}
+
 /** A scope from its `stack:<id>` or `service:<id>` form, null for anything else. */
 export function parseScope(value: string | null): GenerateScope | null {
 	const match = value?.match(/^(stack|service):([\w-]+)$/);
@@ -37,6 +45,8 @@ export function parseScope(value: string | null): GenerateScope | null {
 export interface GenerateOptions {
 	/** The Terraform state project's API base, `<origin>/api/v1/iac/projects/<id>`, or null for no backend block. */
 	backendAddress: string | null;
+	/** The command the README tells to run, `terraform` when unset (`tofu` for OpenTofu). */
+	cli?: string;
 	/** The instance's URL the provider talks to. */
 	endpoint: string;
 	generatedAt: Date;
@@ -380,6 +390,7 @@ function readme(
 	hasVariables: boolean,
 	hasBackend: boolean,
 ): string {
+	const cli = options.cli ?? "terraform";
 	const steps = [
 		`Export a Homerun API key: \`export HOMERUN_API_KEY=<key>\`${hasBackend ? " (and the same key as `TF_HTTP_PASSWORD`, for the state backend)" : ""}.`,
 		...(hasVariables
@@ -387,8 +398,8 @@ function readme(
 					"`terraform.tfvars` holds the secrets: env vars marked secret come filled in with what runs today, and the commented-out lines are secrets Homerun never reads back, to fill in. Keep it out of git (the `.gitignore` does); `terraform.tfvars.example` is the shareable, empty copy.",
 				]
 			: []),
-		"Run `terraform init`, then `terraform plan`: the `import` blocks adopt what already runs, so the plan only imports.",
-		"Run `terraform apply`. From then on, change the configuration and apply instead of clicking.",
+		`Run \`${cli} init\`, then \`${cli} plan\`: the \`import\` blocks adopt what already runs, so the plan only imports.`,
+		`Run \`${cli} apply\`. From then on, change the configuration and apply instead of clicking.`,
 	];
 	return [
 		`# ${options.name}`,

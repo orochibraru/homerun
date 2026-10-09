@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IAC_TOOLS } from "#lib/iac/tools.js";
 import { iacProjectApiBody } from "#lib/server/validation/iac.js";
 import type { ParamDef, RouteDef } from "./registry";
 import { errorResponse, successResponse } from "./schemas";
@@ -30,11 +31,15 @@ const projectResponse = z.object({
 	locked: z.boolean(),
 	name: z.string(),
 	prefix: z.string(),
+	scope: z.string().nullable().meta({
+		description: "What the project manages: stack:<id> or service:<id>",
+	}),
 	serial: z.number().nullable().meta({
 		description: "The latest state's serial, null before the first write",
 	}),
 	slug: z.string(),
 	storeId: z.string(),
+	tool: z.enum(IAC_TOOLS),
 	updatedAt: z
 		.string()
 		.nullable()

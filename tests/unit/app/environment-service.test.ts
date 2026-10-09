@@ -39,7 +39,9 @@ function fakeService(fields: Record<string, unknown>) {
 		domains: [],
 		environmentName: null,
 		envVars: {},
+		gitIgnorePaths: [],
 		gitRef: "main",
+		gitWatchPaths: [],
 		image: "app",
 		name: "App",
 		portProtocol: "tcp",
@@ -348,10 +350,32 @@ describe("EnvironmentService.deployPushes", () => {
 		environments = [staging.svc, demo.svc, manual.svc];
 		expect(
 			await EnvironmentService.deployPushes(parent.svc, [
-				{ branch: "develop", commit: "abc" },
+				{ branch: "develop", commit: "abc", files: null },
 			]),
 		).toBe(1);
 		expect(staging.state.gitLastSeenCommit).toBe("abc");
+		expect(enqueued).toHaveLength(1);
+	});
+
+	test("skips an environment whose watch paths the push misses", async () => {
+		const parent = fakeService({ id: "parent" });
+		const api = fakeService({
+			gitRef: "develop",
+			gitWatchPaths: ["apps/api/**"],
+			id: "a",
+		});
+		const web = fakeService({
+			gitIgnorePaths: ["docs/**"],
+			gitRef: "develop",
+			id: "w",
+		});
+		environments = [api.svc, web.svc];
+		expect(
+			await EnvironmentService.deployPushes(parent.svc, [
+				{ branch: "develop", commit: "abc", files: ["apps/web/page.ts"] },
+			]),
+		).toBe(1);
+		expect(api.state.gitLastSeenCommit).toBe("abc");
 		expect(enqueued).toHaveLength(1);
 	});
 
@@ -362,7 +386,7 @@ describe("EnvironmentService.deployPushes", () => {
 		];
 		expect(
 			await EnvironmentService.deployPushes(parent.svc, [
-				{ branch: "develop", commit: "abc" },
+				{ branch: "develop", commit: "abc", files: null },
 			]),
 		).toBe(0);
 		expect(enqueued).toHaveLength(0);
@@ -372,7 +396,7 @@ describe("EnvironmentService.deployPushes", () => {
 		const image = fakeService({ buildSource: "image", id: "i" });
 		expect(
 			await EnvironmentService.deployPushes(image.svc, [
-				{ branch: "main", commit: null },
+				{ branch: "main", commit: null, files: null },
 			]),
 		).toBe(0);
 		const parent = fakeService({ id: "p" });
@@ -387,7 +411,7 @@ describe("EnvironmentService.deployPushes", () => {
 		environments = [fakeService({ gitRef: "develop", id: "s" }).svc];
 		expect(
 			await EnvironmentService.deployPushes(parent.svc, [
-				{ branch: "develop", commit: null },
+				{ branch: "develop", commit: null, files: null },
 			]),
 		).toBe(0);
 	});

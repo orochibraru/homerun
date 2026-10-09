@@ -6,6 +6,7 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import * as Select from "#lib/components/ui/select/index.js";
+	import { IAC_TOOL_INFO, type IacTool } from "#lib/iac/tools.js";
 	import {
 		API_KEY_EXPIRY_OPTIONS,
 		type ApiKeyExpiry,
@@ -16,11 +17,13 @@
 
 	interface Props {
 		createdKey: string | null;
+		defaultName: string;
+		tool: IacTool;
 	}
 
-	const { createdKey }: Props = $props();
+	const { createdKey, defaultName, tool }: Props = $props();
 
-	let name = $state("Terraform");
+	let name = $derived(defaultName);
 	let expiry = $state<ApiKeyExpiry>(DEFAULT_API_KEY_EXPIRY);
 	let creating = $state(false);
 	const expiryLabel = $derived(
@@ -31,7 +34,9 @@
 
 <section class="panel rounded-md">
   <PanelHeader
-    description="One key for both the Terraform provider and the state backend, with the permissions your account has today."
+    description={tool === "pulumi"
+      ? "The key the provider authenticates with, holding the permissions your account has today."
+      : "One key for both the provider and the state backend, with the permissions your account has today."}
     icon={KeyRound}
     title="API key"
   >
@@ -44,11 +49,17 @@
       <div class="border-accent/40 rounded-lg border p-4">
         <p class="text-text text-sm font-medium">Key created</p>
         <p class="text-text-muted mt-1 mb-3 text-sm">
-          This is the only time it's shown. Export both before
-          <code>terraform init</code>.
+          {#if tool === "pulumi"}
+            This is the only time it's shown. Store it in the stack's config.
+          {:else}
+            This is the only time it's shown. Export both before
+            <code>{IAC_TOOL_INFO[tool].cli} init</code>.
+          {/if}
         </p>
         <CopyBox
-          value={`export HOMERUN_API_KEY=${createdKey}\nexport TF_HTTP_PASSWORD=${createdKey}`}
+          value={tool === "pulumi"
+            ? `pulumi config set --secret homerun:apiKey ${createdKey}`
+            : `export HOMERUN_API_KEY=${createdKey}\nexport TF_HTTP_PASSWORD=${createdKey}`}
         />
       </div>
     {/if}

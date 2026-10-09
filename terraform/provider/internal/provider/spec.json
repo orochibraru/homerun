@@ -250,6 +250,18 @@
 					"default": false
 				},
 				{
+					"kind": "strings",
+					"name": "gitWatchPaths",
+					"tf": "git_watch_paths",
+					"description": "Repo path globs a push has to change a file under to deploy. Empty lets every file through."
+				},
+				{
+					"kind": "strings",
+					"name": "gitIgnorePaths",
+					"tf": "git_ignore_paths",
+					"description": "Repo path globs whose changes alone never deploy on push."
+				},
+				{
 					"kind": "bool",
 					"name": "requireStatusChecks",
 					"tf": "require_status_checks",

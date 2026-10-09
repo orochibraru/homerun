@@ -21,6 +21,18 @@ never matches a push. Webhooks need the **Dashboard URL** set under Settings →
 General, and that address has to be reachable from the git provider.
 `GET /api/v1/services/{id}/webhook` returns the same URL and secret.
 
+**Watch paths** skip pushes that don't touch the part of the repo a service
+builds, for a monorepo. Under **Watch paths** and **Ignore paths** in the Source
+section, one glob per line relative to the repo root (`apps/api/**`, `*.md`,
+`docs`): a push deploys when at least one changed file matches a watch path (an
+empty list watches every file) and no ignore path. `**` crosses folders and `*`
+doesn't, a pattern without a slash matches a file name at any depth, and a
+folder path covers everything under it. An environment uses its own lists,
+copied from the service when it's created. Only webhook pushes that list their
+files are filtered (GitHub, GitLab, Gitea): a Bitbucket push and a commit found
+by polling always deploy. The API and Terraform call them `gitWatchPaths` /
+`git_watch_paths` and `gitIgnorePaths` / `git_ignore_paths`.
+
 **A dashboard the provider can't reach** (only on your LAN, behind a VPN):
 whenever Homerun couldn't register the webhook, it polls the branch instead,
 reading its head commit through the provider's API every two minutes with the

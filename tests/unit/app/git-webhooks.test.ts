@@ -113,13 +113,13 @@ describe("parsePushEvent", () => {
 				after: "abc123",
 				ref: "refs/heads/main",
 			}),
-		).toEqual([{ branch: "main", commit: "abc123" }]);
+		).toEqual([{ branch: "main", commit: "abc123", files: null }]);
 		expect(
 			parsePushEvent(new Headers({ "x-gitea-event": "push" }), {
 				after: "def456",
 				ref: "refs/heads/feature/x",
 			}),
-		).toEqual([{ branch: "feature/x", commit: "def456" }]);
+		).toEqual([{ branch: "feature/x", commit: "def456", files: null }]);
 	});
 
 	test("GitLab prefers checkout_sha", () => {
@@ -129,7 +129,7 @@ describe("parsePushEvent", () => {
 				checkout_sha: "bbb",
 				ref: "refs/heads/main",
 			}),
-		).toEqual([{ branch: "main", commit: "bbb" }]);
+		).toEqual([{ branch: "main", commit: "bbb", files: null }]);
 	});
 
 	test("Bitbucket lists every branch change", () => {
@@ -143,7 +143,54 @@ describe("parsePushEvent", () => {
 					],
 				},
 			}),
-		).toEqual([{ branch: "main", commit: "111" }]);
+		).toEqual([{ branch: "main", commit: "111", files: null }]);
+	});
+
+	test("collects the files every commit touched", () => {
+		expect(
+			parsePushEvent(new Headers({ "x-github-event": "push" }), {
+				after: "abc",
+				commits: [
+					{ added: ["a.ts"], modified: ["README.md"], removed: [] },
+					{ added: [], modified: ["a.ts"], removed: ["old/b.ts"] },
+				],
+				ref: "refs/heads/main",
+			}),
+		).toEqual([
+			{
+				branch: "main",
+				commit: "abc",
+				files: ["a.ts", "README.md", "old/b.ts"],
+			},
+		]);
+	});
+
+	test("files are unknown when the payload can't list them all", () => {
+		const files = (headers: Headers, payload: Record<string, unknown>) =>
+			parsePushEvent(headers, {
+				after: "abc",
+				ref: "refs/heads/main",
+				...payload,
+			})[0]?.files;
+		const github = new Headers({ "x-github-event": "push" });
+		const gitlab = new Headers({ "x-gitlab-event": "Push Hook" });
+		expect(files(github, { commits: [] })).toBeNull();
+		expect(files(github, { commits: [{ id: "abc" }] })).toBeNull();
+		expect(
+			files(github, { commits: [{ added: [], modified: [], removed: [] }] }),
+		).toBeNull();
+		expect(
+			files(gitlab, {
+				commits: [{ added: ["a.ts"], modified: [], removed: [] }],
+				total_commits_count: 30,
+			}),
+		).toBeNull();
+		expect(
+			files(gitlab, {
+				commits: [{ added: ["a.ts"], modified: [], removed: [] }],
+				total_commits_count: 1,
+			}),
+		).toEqual(["a.ts"]);
 	});
 
 	test("ignores pings, tags and deleted branches", () => {

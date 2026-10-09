@@ -4620,6 +4620,17 @@
 											"prefix": {
 												"type": "string"
 											},
+											"scope": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "What the project manages: stack:<id> or service:<id>"
+											},
 											"serial": {
 												"anyOf": [
 													{
@@ -4635,6 +4646,10 @@
 												"type": "string"
 											},
 											"storeId": {
+												"type": "string"
+											},
+											"tool": {
+												"enum": ["terraform", "opentofu", "pulumi"],
 												"type": "string"
 											},
 											"updatedAt": {
@@ -4656,9 +4671,11 @@
 											"locked",
 											"name",
 											"prefix",
+											"scope",
 											"serial",
 											"slug",
 											"storeId",
+											"tool",
 											"updatedAt"
 										],
 										"type": "object"
@@ -4740,9 +4757,25 @@
 										"description": "A folder in the bucket, empty for its root",
 										"type": "string"
 									},
+									"scope": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "What the project manages: stack:<id> or service:<id>"
+									},
 									"storeId": {
 										"description": "The object store holding the bucket",
 										"minLength": 1,
+										"type": "string"
+									},
+									"tool": {
+										"description": "The tool managing it, terraform when omitted",
+										"enum": ["terraform", "opentofu", "pulumi"],
 										"type": "string"
 									}
 								},
@@ -4778,6 +4811,17 @@
 										"prefix": {
 											"type": "string"
 										},
+										"scope": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "What the project manages: stack:<id> or service:<id>"
+										},
 										"serial": {
 											"anyOf": [
 												{
@@ -4793,6 +4837,10 @@
 											"type": "string"
 										},
 										"storeId": {
+											"type": "string"
+										},
+										"tool": {
+											"enum": ["terraform", "opentofu", "pulumi"],
 											"type": "string"
 										},
 										"updatedAt": {
@@ -4814,9 +4862,11 @@
 										"locked",
 										"name",
 										"prefix",
+										"scope",
 										"serial",
 										"slug",
 										"storeId",
+										"tool",
 										"updatedAt"
 									],
 									"type": "object"
@@ -5029,6 +5079,17 @@
 										"prefix": {
 											"type": "string"
 										},
+										"scope": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "What the project manages: stack:<id> or service:<id>"
+										},
 										"serial": {
 											"anyOf": [
 												{
@@ -5044,6 +5105,10 @@
 											"type": "string"
 										},
 										"storeId": {
+											"type": "string"
+										},
+										"tool": {
+											"enum": ["terraform", "opentofu", "pulumi"],
 											"type": "string"
 										},
 										"updatedAt": {
@@ -5065,9 +5130,11 @@
 										"locked",
 										"name",
 										"prefix",
+										"scope",
 										"serial",
 										"slug",
 										"storeId",
+										"tool",
 										"updatedAt"
 									],
 									"type": "object"
@@ -11282,6 +11349,13 @@
 													}
 												]
 											},
+											"gitIgnorePaths": {
+												"description": "Repo path globs whose changes alone never deploy on push",
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"gitLastSeenCommit": {
 												"anyOf": [
 													{
@@ -11334,6 +11408,13 @@
 														"type": "null"
 													}
 												]
+											},
+											"gitWatchPaths": {
+												"description": "Repo path globs a push has to change a file under to deploy, empty for any file",
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
 											},
 											"gitWebhookError": {
 												"anyOf": [
@@ -11804,6 +11885,8 @@
 											"gitWebhookId",
 											"gitWebhookReconnect",
 											"gitPollEnabled",
+											"gitWatchPaths",
+											"gitIgnorePaths",
 											"gitLastSeenCommit",
 											"previewAuthAllowedEmails",
 											"previewAuthAllowedGroups",
@@ -12231,6 +12314,16 @@
 											"gitDockerfilePath": {
 												"type": "string"
 											},
+											"gitIgnorePaths": {
+												"description": "Repo path globs whose changes never deploy on push, same syntax as gitWatchPaths: a push deploys when a changed file matches the watch paths and none of these.",
+												"items": {
+													"maxLength": 200,
+													"minLength": 1,
+													"type": "string"
+												},
+												"maxItems": 50,
+												"type": "array"
+											},
 											"gitPollEnabled": {
 												"type": "boolean"
 											},
@@ -12245,6 +12338,16 @@
 											},
 											"gitUrl": {
 												"type": "string"
+											},
+											"gitWatchPaths": {
+												"description": "Repo path globs (apps/api/**, *.md) a push has to change a file under to deploy the service or one of its environments. Empty lets every file through. A pattern without a slash matches at any depth, a folder path everything under it. Only applies when the push payload lists its files (not on Bitbucket, not when polling).",
+												"items": {
+													"maxLength": 200,
+													"minLength": 1,
+													"type": "string"
+												},
+												"maxItems": 50,
+												"type": "array"
 											},
 											"healthcheckCommand": {
 												"anyOf": [
@@ -12927,6 +13030,16 @@
 													}
 												]
 											},
+											"gitIgnorePaths": {
+												"description": "Repo path globs whose changes never deploy on push, same syntax as gitWatchPaths: a push deploys when a changed file matches the watch paths and none of these.",
+												"items": {
+													"maxLength": 200,
+													"minLength": 1,
+													"type": "string"
+												},
+												"maxItems": 50,
+												"type": "array"
+											},
 											"gitPollEnabled": {
 												"type": "boolean"
 											},
@@ -12969,6 +13082,16 @@
 														"type": "null"
 													}
 												]
+											},
+											"gitWatchPaths": {
+												"description": "Repo path globs (apps/api/**, *.md) a push has to change a file under to deploy the service or one of its environments. Empty lets every file through. A pattern without a slash matches at any depth, a folder path everything under it. Only applies when the push payload lists its files (not on Bitbucket, not when polling).",
+												"items": {
+													"maxLength": 200,
+													"minLength": 1,
+													"type": "string"
+												},
+												"maxItems": 50,
+												"type": "array"
 											},
 											"healthcheckCommand": {
 												"anyOf": [
@@ -13676,6 +13799,13 @@
 												}
 											]
 										},
+										"gitIgnorePaths": {
+											"description": "Repo path globs whose changes alone never deploy on push",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"gitLastSeenCommit": {
 											"anyOf": [
 												{
@@ -13728,6 +13858,13 @@
 													"type": "null"
 												}
 											]
+										},
+										"gitWatchPaths": {
+											"description": "Repo path globs a push has to change a file under to deploy, empty for any file",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"gitWebhookError": {
 											"anyOf": [
@@ -14193,6 +14330,8 @@
 										"gitWebhookId",
 										"gitWebhookReconnect",
 										"gitPollEnabled",
+										"gitWatchPaths",
+										"gitIgnorePaths",
 										"gitLastSeenCommit",
 										"previewAuthAllowedEmails",
 										"previewAuthAllowedGroups",
@@ -14811,6 +14950,13 @@
 												}
 											]
 										},
+										"gitIgnorePaths": {
+											"description": "Repo path globs whose changes alone never deploy on push",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"gitLastSeenCommit": {
 											"anyOf": [
 												{
@@ -14863,6 +15009,13 @@
 													"type": "null"
 												}
 											]
+										},
+										"gitWatchPaths": {
+											"description": "Repo path globs a push has to change a file under to deploy, empty for any file",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"gitWebhookError": {
 											"anyOf": [
@@ -15328,6 +15481,8 @@
 										"gitWebhookId",
 										"gitWebhookReconnect",
 										"gitPollEnabled",
+										"gitWatchPaths",
+										"gitIgnorePaths",
 										"gitLastSeenCommit",
 										"previewAuthAllowedEmails",
 										"previewAuthAllowedGroups",
@@ -15804,6 +15959,16 @@
 											}
 										]
 									},
+									"gitIgnorePaths": {
+										"description": "Repo path globs whose changes never deploy on push, same syntax as gitWatchPaths: a push deploys when a changed file matches the watch paths and none of these.",
+										"items": {
+											"maxLength": 200,
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
+									},
 									"gitPollEnabled": {
 										"type": "boolean"
 									},
@@ -15846,6 +16011,16 @@
 												"type": "null"
 											}
 										]
+									},
+									"gitWatchPaths": {
+										"description": "Repo path globs (apps/api/**, *.md) a push has to change a file under to deploy the service or one of its environments. Empty lets every file through. A pattern without a slash matches at any depth, a folder path everything under it. Only applies when the push payload lists its files (not on Bitbucket, not when polling).",
+										"items": {
+											"maxLength": 200,
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
 									},
 									"healthcheckCommand": {
 										"anyOf": [
@@ -16540,6 +16715,13 @@
 												}
 											]
 										},
+										"gitIgnorePaths": {
+											"description": "Repo path globs whose changes alone never deploy on push",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"gitLastSeenCommit": {
 											"anyOf": [
 												{
@@ -16592,6 +16774,13 @@
 													"type": "null"
 												}
 											]
+										},
+										"gitWatchPaths": {
+											"description": "Repo path globs a push has to change a file under to deploy, empty for any file",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"gitWebhookError": {
 											"anyOf": [
@@ -17057,6 +17246,8 @@
 										"gitWebhookId",
 										"gitWebhookReconnect",
 										"gitPollEnabled",
+										"gitWatchPaths",
+										"gitIgnorePaths",
 										"gitLastSeenCommit",
 										"previewAuthAllowedEmails",
 										"previewAuthAllowedGroups",
@@ -18256,6 +18447,12 @@
 																		}
 																	]
 																},
+																"ignorePaths": {
+																	"items": {
+																		"type": "string"
+																	},
+																	"type": "array"
+																},
 																"pollEnabled": {
 																	"type": "boolean"
 																},
@@ -18287,6 +18484,12 @@
 																			"type": "null"
 																		}
 																	]
+																},
+																"watchPaths": {
+																	"items": {
+																		"type": "string"
+																	},
+																	"type": "array"
 																}
 															},
 															"required": [
@@ -18299,11 +18502,13 @@
 																"buildMethod",
 																"buildServerRemoteHostId",
 																"dockerfilePath",
+																"ignorePaths",
 																"pollEnabled",
 																"ref",
 																"requireStatusChecks",
 																"requiredStatusChecks",
-																"url"
+																"url",
+																"watchPaths"
 															],
 															"type": "object"
 														},

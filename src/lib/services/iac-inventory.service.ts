@@ -17,6 +17,7 @@ import {
 	type GeneratedFile,
 	type GenerateScope,
 	generateStructure,
+	type IacScopeOption,
 	type Inventory,
 	type LiveObject,
 	scopeToService,
@@ -38,6 +39,7 @@ import {
 import { zipFiles } from "#lib/server/zip.js";
 import { GitProviderConfigService } from "#lib/services/git-provider-config.service.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
+import { stackPath } from "#lib/stack-tree.js";
 
 const logger = new Logger("IaC");
 
@@ -178,6 +180,48 @@ class IacInventoryServiceClass {
 	}
 
 	/**
+	 * Every stack (labelled by its path) and every service that isn't a
+	 * preview, as `stack:<id>` / `service:<id>` options for a project's scope.
+	 */
+	async scopeOptions(): Promise<IacScopeOption[]> {
+		const [stackRows, serviceRows] = await Promise.all([
+			StackDTO.list(),
+			ServiceDTO.list(),
+		]);
+		const stacks = stackRows.map((stack) => ({
+			id: stack.id,
+			name: stack.name,
+			parentId: stack.parentId,
+			slug: stack.slug,
+		}));
+		const byLabel = (a: IacScopeOption, b: IacScopeOption) =>
+			a.label.localeCompare(b.label);
+		return [
+			...stacks
+				.map(
+					(stack): IacScopeOption => ({
+						group: "Stacks",
+						label: stackPath(stack.id, stacks),
+						name: stack.name,
+						value: `stack:${stack.id}`,
+					}),
+				)
+				.sort(byLabel),
+			...serviceRows
+				.filter((service) => service.toJSON().previewParentId === null)
+				.map(
+					(service): IacScopeOption => ({
+						group: "Services",
+						label: service.name,
+						name: service.name,
+						value: `service:${service.id}`,
+					}),
+				)
+				.sort(byLabel),
+		];
+	}
+
+	/**
 	 * The Terraform project for one stack (its substacks included) or one
 	 * service, found by id or slug, as files, with the slug to name the
 	 * folder and the archive after. Null when the stack or service doesn't
@@ -186,7 +230,7 @@ class IacInventoryServiceClass {
 	async structure(
 		userId: string,
 		scope: GenerateScope,
-		options: { backendAddress: string | null; endpoint: string },
+		options: { backendAddress: string | null; cli?: string; endpoint: string },
 	): Promise<{ files: GeneratedFile[]; name: string; slug: string } | null> {
 		const inventory = await this.inventory(userId);
 		const type = scope.kind === "stack" ? "homerun_stack" : "homerun_service";

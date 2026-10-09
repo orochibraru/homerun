@@ -117,6 +117,13 @@ const serviceAttributes: IacAttribute[] = [
 	attr("gitBuildTarget", "string"),
 	attr("autoDeployOnPush", "bool", off),
 	attr("gitPollEnabled", "bool", off),
+	attr("gitWatchPaths", "strings", {
+		description:
+			"Repo path globs a push has to change a file under to deploy. Empty lets every file through.",
+	}),
+	attr("gitIgnorePaths", "strings", {
+		description: "Repo path globs whose changes alone never deploy on push.",
+	}),
 	attr("requireStatusChecks", "bool", off),
 	attr("requiredStatusChecks", "strings"),
 	attr("buildCacheBuiltin", "bool", {

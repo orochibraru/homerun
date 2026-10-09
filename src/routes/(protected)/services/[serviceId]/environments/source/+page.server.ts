@@ -6,6 +6,7 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
+import { watchPathPatterns } from "#lib/server/validation/api.js";
 import {
 	type UpdateSourceInput,
 	updateSourceSchema,
@@ -13,6 +14,7 @@ import {
 import { GitWebhookService } from "#lib/services/git-webhook.service.js";
 import { PreviewService } from "#lib/services/preview.service.js";
 import { encryptSecret } from "#lib/services/secrets.js";
+import { parseWatchPaths } from "#lib/watch-paths.js";
 import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
@@ -74,6 +76,41 @@ function statusCheckPatch(formData: FormData, isGitBuild: boolean) {
 			isGitBuild && formData.get("requireStatusChecks") === "on",
 		requiredStatusChecks: [...new Set(names)].slice(0, 50),
 	};
+}
+
+/**
+ * The watch and ignore paths the form posts, one glob per line, or field
+ * errors. A field the form didn't render keeps the stored list, and an
+ * image-built service has none.
+ */
+function watchPathsPatch(
+	formData: FormData,
+	isGitBuild: boolean,
+	stored: { gitIgnorePaths: string[]; gitWatchPaths: string[] },
+):
+	| { patch: { gitIgnorePaths: string[]; gitWatchPaths: string[] } }
+	| { errors: Record<string, string[]> } {
+	if (!isGitBuild) {
+		return { patch: { gitIgnorePaths: [], gitWatchPaths: [] } };
+	}
+	const patch = {
+		gitIgnorePaths: stored.gitIgnorePaths,
+		gitWatchPaths: stored.gitWatchPaths,
+	};
+	const errors: Record<string, string[]> = {};
+	for (const field of ["gitWatchPaths", "gitIgnorePaths"] as const) {
+		const text = formData.get(field);
+		if (text === null) {
+			continue;
+		}
+		const result = watchPathPatterns.safeParse(parseWatchPaths(String(text)));
+		if (result.success) {
+			patch[field] = result.data;
+		} else {
+			errors[field] = [result.error.issues[0]?.message ?? "Invalid paths."];
+		}
+	}
+	return Object.keys(errors).length > 0 ? { errors } : { patch };
 }
 
 interface BuildTargets {
@@ -187,6 +224,14 @@ export const actions = {
 			});
 		}
 
+		const watchPaths = watchPathsPatch(formData, isGitBuild, svc.toJSON());
+		if ("errors" in watchPaths) {
+			return fail(400, {
+				errors: watchPaths.errors,
+				values: Object.fromEntries(formData),
+			});
+		}
+
 		const buildServerError = await checkBuildServer({
 			buildCacheRegistryId,
 			buildServerRemoteHostId,
@@ -210,6 +255,7 @@ export const actions = {
 			buildServerRemoteHostId,
 			...checks,
 			...gitTriggerPatch(formData, isGitBuild),
+			...watchPaths.patch,
 			previewReportGithub:
 				isGitBuild && !svc.toJSON().previewParentId
 					? formData.get("previewReportGithub") === "on"

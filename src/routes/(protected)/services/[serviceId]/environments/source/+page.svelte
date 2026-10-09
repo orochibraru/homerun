@@ -26,6 +26,7 @@
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import WatchPathsFields from "./watch-paths-fields.svelte";
 	import WebhookPanel from "./webhook-panel.svelte";
 
 	const { data, form } = $props();
@@ -48,6 +49,8 @@
 			gitBuildContext: svc.gitBuildContext ?? "",
 			gitBuildMethod: svc.gitBuildMethod,
 			gitDockerfilePath: svc.gitDockerfilePath ?? "",
+			gitIgnorePaths: svc.gitIgnorePaths.join("\n"),
+			gitWatchPaths: svc.gitWatchPaths.join("\n"),
 			autoDeployOnPush: svc.autoDeployOnPush ? "on" : "",
 			gitProviderId: svc.gitProviderId ?? "",
 			gitRef: svc.gitRef ?? "main",
@@ -236,6 +239,15 @@
         serviceId={svc.id}
         bind:gitPollEnabled
       />
+      {#if autoDeployOnPush}
+        <WatchPathsFields
+          errorClass={errorClass}
+          errors={errors}
+          ignore={values.gitIgnorePaths ?? ""}
+          labelClass={label}
+          watch={values.gitWatchPaths ?? ""}
+        />
+      {/if}
       {#if !svc.previewParentId}
         <CheckBox
           helperText="Every deploy shows up on GitHub as a deployment with its outcome and URL: this service as production (or its environment's name), its canary and other environments under theirs, and each pull request preview under its own, with a comment on the pull request. Only for a repo picked from a connected GitHub provider whose app has the Pull requests and Deployments permissions."

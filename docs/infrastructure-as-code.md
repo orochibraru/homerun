@@ -1,29 +1,51 @@
 # Infrastructure as code
 
-Homerun can be managed with Terraform (or OpenTofu) and Pulumi: stacks, services
-and every setting the dashboard has, plus the objects around them. The
+Homerun can be managed with Terraform, OpenTofu or Pulumi: stacks, services and
+every setting the dashboard has, plus the objects around them. The
 **Infrastructure as Code** page (Integrations, needs the Infrastructure as code
-permission) writes a starter configuration from what's already running, keeps
-the Terraform state, and compares a state with the instance to show what changed
-outside it. Its tabs are **Overview**, **Generate**, **State**, **Credentials**,
-**Drift** and **Provider**.
+permission) lists your IaC projects. Each project picks a tool, keeps its state
+in a bucket on one of your [object stores](object-storage.md), covers a stack or
+a service, writes a starter configuration from what's already running and
+compares its state with the instance to show what changed outside it.
 
-## Overview
+## Projects
 
-The **Overview** tab counts the state backends, how many are locked and when a
-state was last written, and lists every backend. Until everything is in place, a
-**Getting started** checklist walks through what Terraform needs: an object
-store, a state backend, an API key and a first apply.
+**New project** opens a page that takes:
+
+- **Tool**: Terraform, OpenTofu or Pulumi. Terraform and OpenTofu use the state
+  backend Homerun serves (versions, diffs, rollbacks and locks below). Pulumi
+  doesn't speak that protocol and keeps its own state in the bucket.
+- **What it manages**: a stack (its substacks included) or a service, searched
+  by name, or nothing yet. It names the project when you haven't typed a name,
+  and it's what the Generate tab starts on.
+- **Name**, **Store**, **Bucket** (created when the store doesn't have it yet)
+  and an optional **Folder in the bucket**.
+
+The list shows each project's tool, what it manages, where its state lives, and
+for Terraform and OpenTofu the latest serial and when it was written, with a
+lock icon while a run holds the lock. Until an object store exists, the page
+points at Object Storage instead. A project's page has five tabs: **State**,
+**Generate**, **Drift**, **Credentials** and **Settings**.
+
+**Settings** renames the project, changes what it manages, or switches its tool.
+Switching between Terraform and OpenTofu changes nothing but the commands the
+pages show. Moving to or from Pulumi doesn't convert the state: the versions
+Homerun kept stay, Pulumi keeps its own. Its danger zone deletes the project,
+its versions and its lock; the state files stay in the bucket.
 
 ## Credentials
 
-The **Credentials** tab lists every API key on your account with its
-permissions, last use and expiry, and revokes them. **New Terraform key** opens
-a page that creates a key for the provider and the state backend in one go, with
-the permissions your account has today (not ones granted later), and shows it
-once as the two `export` lines Terraform reads. For a key narrowed to a few
-areas, use **Profile → API Keys**. Pulumi's keys for a state bucket are on that
-backend's page.
+A project's **Credentials** tab lists every API key on your account with its
+permissions, last use and expiry, and revokes them. **New API key** opens a page
+that creates a key with the permissions your account has today (not ones granted
+later), and shows it once, ready to paste: the two `export` lines
+(`HOMERUN_API_KEY` for the provider, `TF_HTTP_PASSWORD` for the state backend)
+for Terraform and OpenTofu, the `pulumi config set --secret homerun:apiKey`
+command for Pulumi. For a key narrowed to a few areas, use **Profile → API
+Keys**. A Pulumi project's Credentials tab also lists the bucket's access keys,
+which Pulumi reads and writes its state with: on the built-in store it creates
+and revokes keys scoped to the bucket; for a provider, keys come from its own
+console.
 
 ## The Terraform provider
 
@@ -102,29 +124,28 @@ The provider is published to the
 and the
 [OpenTofu Registry](https://search.opentofu.org/provider/orochibraru/homerun),
 with a version for every Homerun release, so `terraform init` (or `tofu init`)
-downloads it like any other provider: nothing to build or install by hand. The
-**Provider** tab of the Infrastructure as Code page has the commands to run,
-with your instance's URL filled in.
+downloads it like any other provider: nothing to build or install by hand. A
+project's **Generate** tab has the commands to run for its tool, with your
+instance's URL filled in.
 
 ## Generating a configuration
 
-The **Generate** tab writes a Terraform project for one stack or one service,
-never the whole instance at once: a project per stack or service keeps each plan
-small and each state independent. A stack covers itself, its substacks, their
-services with their environments, dependencies, mounts and volumes, and the
-status pages of those stacks. A service covers itself, its environments, the
-dependencies it declares, and its mounts with their volumes; its stack and the
-services it depends on stay outside, referenced by id. Search for the stack or
-service by name. The **State backend** adds an `http` backend block pointing at
-one of your [Terraform state backends](#terraform-state): it starts on the
-backend whose name matches the stack or service, and when none does, on **Create
-a new backend**, which creates one named after it (pick the store and bucket)
-before generating. **No backend** leaves the block out.
+A Terraform or OpenTofu project's **Generate** tab writes the configuration for
+one stack or one service, never the whole instance at once: a project per stack
+or service keeps each plan small and each state independent. A stack covers
+itself, its substacks, their services with their environments, dependencies,
+mounts and volumes, and the status pages of those stacks. A service covers
+itself, its environments, the dependencies it declares, and its mounts with
+their volumes; its stack and the services it depends on stay outside, referenced
+by id. It starts on what the project manages; search for another stack or
+service by name to generate for it instead. The `http` backend block always
+points at the project's own [state](#terraform-state), and the commands in the
+README use `tofu` for an OpenTofu project.
 
 The project is a folder you download as a zip, and preview file by file on the
 page, highlighted:
 
-- `versions.tf`: the provider's source, and the backend when you picked one.
+- `versions.tf`: the provider's source and the project's backend.
 - `providers.tf`: the provider, pointed at this instance.
 - One `service_<name>.tf` per service, with its environments, dependencies and
   volume mounts, each next to its `import` block.
@@ -177,14 +198,9 @@ values. The CLI then prints the files it wrote and the commands to run next.
 
 ## Terraform state
 
-The **State** tab lists the state backends that keep each Terraform
-configuration's state in a bucket on one of your
-[object stores](object-storage.md), through Terraform's `http` backend. **New
-state backend** opens a page that takes a name, a store, a bucket and an
-optional folder inside it, and creates the bucket when the store doesn't have it
-yet. A backend's page has three subtabs: **State** (the backend block, the lock
-and the versions), **Access keys** (the bucket and Pulumi) and **Settings** (a
-danger zone to delete it). **State** shows the block to paste:
+A Terraform or OpenTofu project's **State** tab keeps its state in the project's
+bucket through Terraform's `http` backend. It shows the block to paste (the
+Generate tab's files already have it), the lock and the versions:
 
 ```hcl
 terraform {
@@ -201,10 +217,10 @@ terraform {
 
 Terraform authenticates with HTTP Basic: any username, and a Homerun API key as
 the password, set as `TF_HTTP_PASSWORD` so it stays out of the file. The key
-comes from the [Credentials](#credentials) tab. It needs write access to
-Infrastructure as code to write or lock the state; with read access it can only
-read it. Terraform never needs a key for the bucket itself: it only talks to
-Homerun, which reads and writes the bucket with the store's own credentials.
+comes from the project's [Credentials](#credentials) tab. It needs write access
+to Infrastructure as code to write or lock the state; with read access it can
+only read it. Terraform never needs a key for the bucket itself: it only talks
+to Homerun, which reads and writes the bucket with the store's own credentials.
 
 - **Versions.** Every state Terraform writes is kept as its own object in the
   bucket and listed newest first, with its serial, when, who (the API key's
@@ -220,23 +236,18 @@ Homerun, which reads and writes the bucket with the store's own credentials.
   releases a lock left behind by a run that died; only use it when that run is
   really gone.
 
-**Settings → Delete backend** forgets it, its versions and its lock; the state
-files stay in the bucket.
-
-Pulumi doesn't speak Terraform's backend protocol, so the backend's **Access
-keys** subtab shows the bucket's endpoint and region and a `pulumi login`
-command that points Pulumi straight at the same bucket and folder, with an
-access key for the bucket in `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. On
-the built-in store, the same subtab creates and revokes keys scoped to the
-bucket; for a provider, keys come from its own console. Pulumi then keeps its
-own history and locks in the bucket; the versions, diff and rollback above only
-cover Terraform.
+Pulumi doesn't speak Terraform's backend protocol, so a Pulumi project's
+**State** tab shows the bucket's endpoint and region and a `pulumi login`
+command that points Pulumi straight at the project's bucket and folder, with an
+access key for the bucket (from the Credentials tab) in `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY`. Pulumi then keeps its own history and locks in the
+bucket; the versions, diff and rollback above only cover Terraform and OpenTofu.
 
 ## Drift
 
-The **Drift** tab reads the latest version of a Terraform state backend and
-compares every `homerun_*` resource in it with the live object, through the same
-mapping the provider uses:
+A Terraform or OpenTofu project's **Drift** tab reads the latest version of its
+state and compares every `homerun_*` resource in it with the live object,
+through the same mapping the provider uses:
 
 - **Drifted**: an attribute changed outside Terraform, with the value in the
   state and the live one. A sensitive attribute (env vars) only says it changed.
@@ -246,7 +257,8 @@ mapping the provider uses:
 - **Unmanaged**: running, with no resource in this state. The Generate tab
   writes its import block.
 
-Write-only attributes can't be compared and are left out.
+Write-only attributes can't be compared and are left out. Pulumi projects have
+no drift check yet: `pulumi refresh --preview-only` shows the same thing.
 
 ## Pulumi
 
@@ -288,5 +300,6 @@ new homerun.Service("api", {
 });
 ```
 
-Pulumi keeps its own state: the S3 login a Terraform state backend shows works
-for it too.
+A Pulumi project's Generate tab shows these snippets with your instance's URL
+filled in. Homerun doesn't write a Pulumi program from what's running yet: start
+from the example and adopt existing objects with `pulumi import`.

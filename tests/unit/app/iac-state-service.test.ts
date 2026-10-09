@@ -291,7 +291,34 @@ describe("createProject", () => {
 		expect(create.mock.calls[0][0]).toMatchObject({
 			name: "Home Lab",
 			prefix: "terraform",
+			scope: null,
 			slug: "home-lab-2",
+			tool: "terraform",
+		});
+	});
+
+	test("keeps the tool and the scope", async () => {
+		const create = spyOn(IacProjectDTO, "create").mockImplementation(
+			async (input) => input as unknown as Project,
+		);
+		restorers.push(
+			create,
+			spyOn(IacProjectDTO, "slugTaken").mockResolvedValue(false),
+			spyOn(ObjectStoreDTO, "get").mockResolvedValue({} as Store),
+			spyOn(ObjectStorageService, "bucketNames").mockResolvedValue(["state"]),
+		);
+		await IacStateService.createProject({
+			bucket: "state",
+			name: "web",
+			prefix: "",
+			scope: " stack:abc ",
+			storeId: "s1",
+			tool: "pulumi",
+			userId: "u1",
+		});
+		expect(create.mock.calls[0][0]).toMatchObject({
+			scope: "stack:abc",
+			tool: "pulumi",
 		});
 	});
 
@@ -341,8 +368,40 @@ describe("createProject", () => {
 		await expect(
 			IacStateService.createProject({ ...input, bucket: "Bad_Bucket" }),
 		).rejects.toThrow("bucket name");
+		await expect(
+			IacStateService.createProject({ ...input, tool: "ansible" }),
+		).rejects.toThrow("Pulumi");
+		await expect(
+			IacStateService.createProject({ ...input, scope: "volume:x" }),
+		).rejects.toThrow("scope");
 		await expect(IacStateService.createProject(input)).rejects.toThrow(
 			"doesn't exist",
 		);
+	});
+});
+
+describe("updateProject", () => {
+	test("renames and changes the tool and scope, clearing an empty scope", async () => {
+		const update = mock(async () => {});
+		await IacStateService.updateProject({ update } as unknown as Project, {
+			name: " Lab ",
+			scope: "",
+			tool: "opentofu",
+		});
+		expect(update).toHaveBeenCalledWith({
+			name: "Lab",
+			scope: null,
+			tool: "opentofu",
+		});
+	});
+
+	test("refuses an empty name or an unknown tool", async () => {
+		const target = { update: mock(async () => {}) } as unknown as Project;
+		await expect(
+			IacStateService.updateProject(target, { name: " " }),
+		).rejects.toThrow("name");
+		await expect(
+			IacStateService.updateProject(target, { name: "lab", tool: "chef" }),
+		).rejects.toThrow("Pulumi");
 	});
 });

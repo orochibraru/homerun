@@ -386,12 +386,23 @@ block next to its resource, `stacks.tf`, `volumes.tf`, `variables.tf` with a
 `terraform.tfvars.example`, `README.md`, `.gitignore`) for a scope parsed by
 `parseScope` (`stack:<id>` / `service:<id>`) and cut by `scopeToStack` /
 `scopeToService`; `IacInventoryService.structure` is the one entry point the
-Generate tab and `iac/download` (the zip, `src/lib/server/zip.ts`, store-only
-with its own CRC-32, checked against a real `unzip`) both call. Terraform, shell
-and TypeScript snippets render through `highlightCode`
+Generate tab and `iac/[projectId]/download` (the zip, `src/lib/server/zip.ts`,
+store-only with its own CRC-32, checked against a real `unzip`) both call.
+Terraform, shell and TypeScript snippets render through `highlightCode`
 (`src/lib/server/shiki.ts`, server-side only so Shiki never reaches the client,
 both themes as `--shiki-light`/`--shiki-dark` variables) and `CodeBlock`, bold
 JetBrains Mono.
+
+**The page is a list of projects, like services.** An `iac_project` row is the
+unit: its `tool` (`terraform`, `opentofu`, `pulumi`, `src/lib/iac/tools.ts`),
+its bucket, and an optional `scope` (`stack:<id>` / `service:<id>`) the Generate
+tab starts on. Every tab lives under `iac/[projectId]/` and switches on
+`usesHttpBackend(tool)`: Terraform and OpenTofu get the http backend's versions,
+lock, generated HCL and drift; Pulumi gets the `pulumi login` command and the
+bucket's access keys, and no generation or drift (Pulumi keeps its own
+checkpoint in the bucket, which nothing here reads). OpenTofu differs from
+Terraform only in the CLI name the pages and the generated README print
+(`GenerateOptions.cli`).
 
 **The provider is generic.** `terraform/provider` is its own Go module (module
 path `github.com/orochibraru/homerun/terraform/provider`), kept out of the root

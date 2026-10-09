@@ -9,6 +9,8 @@ export const GIT_CONNECT_RETURN_COOKIE = "homerun_git_connect_return";
 export interface PushedBranch {
 	branch: string;
 	commit: string | null;
+	/** The files the push added, changed or removed, null when the payload doesn't list them all. */
+	files: string[] | null;
 }
 
 export interface PushedTag {
@@ -97,7 +99,44 @@ function branchFromRef(ref: unknown): string | null {
 const ZERO_SHA = /^0+$/;
 
 /**
- * The branches a push delivery updated, with the commit each now points at.
+ * The files a GitHub, Gitea or GitLab push touched, from each commit's
+ * `added`, `modified` and `removed` lists. Null when the payload can't vouch
+ * for the whole set: no commits listed, fewer commits than the push carried
+ * (GitLab and Gitea cap the list), a commit without file lists, or no file
+ * at all.
+ */
+function pushedFiles(body: JsonRecord): string[] | null {
+	const commits = Array.isArray(body.commits) ? body.commits : [];
+	const total = [body.total_commits_count, body.total_commits].find(
+		(value) => typeof value === "number",
+	);
+	if (
+		commits.length === 0 ||
+		(typeof total === "number" && total > commits.length)
+	) {
+		return null;
+	}
+	const files = new Set<string>();
+	for (const commit of commits) {
+		const entry = record(commit);
+		const lists = [entry.added, entry.modified, entry.removed];
+		if (!lists.some(Array.isArray)) {
+			return null;
+		}
+		for (const file of lists.flatMap((list) =>
+			Array.isArray(list) ? list : [],
+		)) {
+			if (typeof file === "string" && file.length > 0) {
+				files.add(file);
+			}
+		}
+	}
+	return files.size > 0 ? [...files] : null;
+}
+
+/**
+ * The branches a push delivery updated, with the commit each now points at
+ * and the files it touched when the payload lists them (never on Bitbucket).
  * Empty for anything that isn't a branch push: a ping, a tag, a deleted
  * branch, another event type.
  */
@@ -122,6 +161,7 @@ export function parsePushEvent(
 				{
 					branch: next.name,
 					commit: typeof target?.hash === "string" ? target.hash : null,
+					files: null,
 				},
 			];
 		});
@@ -141,7 +181,7 @@ export function parsePushEvent(
 	}
 	const commit =
 		typeof body.checkout_sha === "string" ? body.checkout_sha : after;
-	return [{ branch, commit }];
+	return [{ branch, commit, files: pushedFiles(body) }];
 }
 
 /**

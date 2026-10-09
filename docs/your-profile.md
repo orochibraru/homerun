@@ -69,8 +69,8 @@ read on every area, a full-access key became "all permissions".
 
 `homerun login` creates one for you through a device-code flow rather than
 making you copy-paste, and it shows up in this list like any other. Keys for
-Terraform can also be created and revoked from **Infrastructure as Code →
-Credentials** (see
+Terraform, OpenTofu or Pulumi can also be created and revoked from an IaC
+project's **Credentials** tab (see
 [Infrastructure as code](infrastructure-as-code.md#credentials)).
 
 ## Appearance

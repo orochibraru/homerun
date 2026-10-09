@@ -26,6 +26,18 @@ const pathPatterns = z
 		}
 	});
 
+/** Repo path globs for a git service's watch or ignore paths: trimmed, without a leading slash, at most 50 of up to 200 characters. */
+export const watchPathPatterns = z
+	.array(
+		z
+			.string()
+			.trim()
+			.overwrite((pattern) => pattern.replace(/^\/+/, ""))
+			.min(1, "A watch path can't be empty.")
+			.max(200, "A watch path is at most 200 characters."),
+	)
+	.max(50, "At most 50 watch paths.");
+
 /**
  * Request-body schemas for the JSON REST API (`src/routes/api/v1/**`) : kept
  * separate from `validation/service.ts`'s FormData-shaped schemas (checkbox/
@@ -204,6 +216,16 @@ export const updateServiceApiBody = z.object({
 	gitRepo: z.string().nullable().optional(),
 	gitUrl: z.string().nullable().optional(),
 	gitPollEnabled: z.boolean().optional(),
+	gitWatchPaths: watchPathPatterns
+		.optional()
+		.describe(
+			"Repo path globs (apps/api/**, *.md) a push has to change a file under to deploy the service or one of its environments. Empty lets every file through. A pattern without a slash matches at any depth, a folder path everything under it. Only applies when the push payload lists its files (not on Bitbucket, not when polling).",
+		),
+	gitIgnorePaths: watchPathPatterns
+		.optional()
+		.describe(
+			"Repo path globs whose changes never deploy on push, same syntax as gitWatchPaths: a push deploys when a changed file matches the watch paths and none of these.",
+		),
 	healthcheckCommand: z.string().max(1000).nullable().optional(),
 	image: z.string().min(1).optional(),
 	imageScanEnabled: z.boolean().optional(),

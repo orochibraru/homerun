@@ -33,6 +33,8 @@ export interface NewServiceInput {
 	gitProviderId?: string | null;
 	gitRepo?: string | null;
 	autoDeployOnPush?: boolean;
+	gitIgnorePaths?: string[];
+	gitWatchPaths?: string[];
 	healthcheckCommand?: string | null;
 	healthcheckDisabled?: boolean;
 	healthcheckIntervalSeconds?: number | null;
@@ -110,6 +112,8 @@ export type ServiceUpdateInput = Partial<
 		| "gitProviderId"
 		| "gitRepo"
 		| "autoDeployOnPush"
+		| "gitIgnorePaths"
+		| "gitWatchPaths"
 		| "gitWebhookId"
 		| "gitWebhookSecretEnc"
 		| "gitWebhookError"

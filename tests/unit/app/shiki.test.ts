@@ -21,17 +21,22 @@ describe("highlightCode", () => {
 });
 
 describe("providerSnippets", () => {
-	test("fills in the instance's URL and installs the provider from the registry", () => {
-		const snippets = providerSnippets("https://h.example.com");
+	test("fills in the instance's URL and runs the tool's own command", () => {
+		const [terraform] = providerSnippets("https://h.example.com", "terraform");
+		expect(terraform.code).toContain("HOMERUN_ENDPOINT=https://h.example.com");
+		expect(terraform.code).toContain("terraform init");
+		const [tofu] = providerSnippets("https://h.example.com", "opentofu");
+		expect(tofu.code).toContain("tofu init");
+		expect(tofu.code).not.toContain("terraform init");
+	});
+
+	test("installs the provider from the registry for Pulumi", () => {
+		const snippets = providerSnippets("https://h.example.com", "pulumi");
 		expect(snippets.map((snippet) => snippet.language)).toEqual([
-			"shellscript",
 			"shellscript",
 			"typescript",
 		]);
 		expect(snippets[0].code).toContain(
-			"HOMERUN_ENDPOINT=https://h.example.com",
-		);
-		expect(snippets[1].code).toContain(
 			"pulumi package add terraform-provider orochibraru/homerun",
 		);
 		expect(snippets.map((snippet) => snippet.code).join("\n")).not.toContain(

@@ -21,7 +21,7 @@ export async function createIacApiKeyAction(
 	permissions: Permissions,
 	formData: FormData,
 ) {
-	const name = String(formData.get("name") ?? "").trim() || "Terraform";
+	const name = String(formData.get("name") ?? "").trim() || "IaC";
 	const expiry = API_KEY_EXPIRY_OPTIONS.find(
 		(option) => option.value === formData.get("expiry"),
 	);
