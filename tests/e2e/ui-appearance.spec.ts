@@ -135,7 +135,7 @@ test.describe
 		test.afterAll(async ({ browser }) => {
 			const page = await browser.newPage();
 			await signIn(page);
-			await saveStyle(page, "Sleek (default)");
+			await saveStyle(page, "Glass (default)");
 			await page.close();
 		});
 

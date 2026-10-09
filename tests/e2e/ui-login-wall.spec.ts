@@ -16,6 +16,10 @@ test.describe
 		}) => {
 			await signIn(page);
 			await page
+				.getByRole("button", { exact: true, name: "Identity" })
+				.first()
+				.click();
+			await page
 				.getByRole("link", { exact: true, name: "Authentication" })
 				.click();
 			await expect(page).toHaveURL(/\/authentication$/);

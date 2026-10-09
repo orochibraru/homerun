@@ -64,7 +64,9 @@ test.describe
 			await expect(
 				page.getByText("Publishing is refused while the registry accepts"),
 			).toBeVisible();
-			await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+			await expect(
+				page.locator("button[form='registry-public-host']"),
+			).toBeDisabled();
 		});
 
 		test("creating a token shows its secret once, then lists it", async ({
