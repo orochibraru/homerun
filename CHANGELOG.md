@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.0.56](https://github.com/orochibraru/homerun/compare/v1.0.55...v1.0.56) (2026-10-09)
+
+### Features
+
+- rework IaC, API keys, sidebar, tabs and glass default, background jobs with
+  job pages, error boundaries, environment switcher, public buckets, S3 file
+  browser and MCP toolsfeat: rework IaC, API keys, sidebar, tabs and glass
+  default, background jobs with job pages, error boundaries, environment
+  switcher, public buckets, S3 file browser and MCP tools
+  ([6ad2d28](https://github.com/orochibraru/homerun/commit/6ad2d28cb8fd8c6788445767580929d37ed7a3bc))
+- pull request previews for image-based services from CI, provider registry
+  docs, and IaC backend matching with a stack/service combobox
+  ([adca9c5](https://github.com/orochibraru/homerun/commit/adca9c59d0882c31fe9dc386c2b68c64f2a46ad1))
+
+### Bug Fixes
+
+- **auth:** answer 429 instead of 401 for rate-limited API keys and raise the
+  per-key limit
+  ([54fd9ec](https://github.com/orochibraru/homerun/commit/54fd9eca25e4916bb0cdde5b00ebe488516416d1))
+- **iac:** link state projects to their bucket's access keys for Pulumi
+  ([b74a62c](https://github.com/orochibraru/homerun/commit/b74a62c824ba5caf904f5e787329ce9f4984dd76))
+- **iac:** point the provider snippets at Authorized Clients
+  ([82628b0](https://github.com/orochibraru/homerun/commit/82628b066e05a0cf54641e74881bb2174a0bb625))
+
 ## [1.0.55](https://github.com/orochibraru/homerun/compare/v1.0.54...v1.0.55) (2026-10-07)
 
 ### Features
