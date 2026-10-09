@@ -58,9 +58,11 @@ API keys (limited to what they can read) and log in the CLI.
 
 **Custom** is for everyone in between. On **Users**, switch the account's role
 to **Custom**, then click the **Permissions** button on its row and pick an
-access level per area. Switching to Custom starts from the permissions of the
-role the account had, so you only adjust the difference. Invites and direct
-creation only offer the preset roles; change a new account to Custom afterwards.
+access level per area, or start from a preset (**Read-only**, **Developer**,
+**CI deploys**, **Infrastructure as code**). Switching to Custom starts from the
+permissions of the role the account had, so you only adjust the difference.
+Invites and direct creation only offer the preset roles; change a new account to
+Custom afterwards.
 
 **App access only** accounts never see the dashboard. They exist so you can let
 someone (a client, a friend, the family) through the [login wall](login-wall.md)

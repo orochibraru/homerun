@@ -62,7 +62,7 @@ export const PERMISSION_AREAS = [
 		],
 	},
 	{
-		description: "Object stores, their buckets and Terraform state storage.",
+		description: "Object stores, their buckets and IaC state storage.",
 		key: "object-storage",
 		label: "Object storage",
 		routes: ["/object-storage", "/api/v1/object-stores"],
@@ -111,7 +111,7 @@ export const PERMISSION_AREAS = [
 		routes: ["/terminal", "/system-logs", "/docker-cleanup", "/api/v1/jobs"],
 	},
 	{
-		description: "Terraform projects, state and code generation.",
+		description: "IaC projects, their state and code generation.",
 		key: "iac",
 		label: "Infrastructure as code",
 		routes: ["/iac", "/api/v1/iac"],
@@ -219,6 +219,67 @@ const DEVELOPER_PERMISSIONS: Permissions = {
 	storage: "write",
 	templates: "write",
 };
+
+export interface PermissionPreset {
+	description: string;
+	id: string;
+	label: string;
+	permissions: Permissions;
+}
+
+export const PERMISSION_PRESETS: PermissionPreset[] = [
+	{
+		description: "Sees every area, changes nothing.",
+		id: "read-only",
+		label: "Read-only",
+		permissions: allPermissions("read"),
+	},
+	{
+		description:
+			"What the Developer role holds: the dashboard minus Users and Settings.",
+		id: "developer",
+		label: "Developer",
+		permissions: DEVELOPER_PERMISSIONS,
+	},
+	{
+		description:
+			"A CI pipeline: pushes to the built-in registry and deploys services.",
+		id: "ci",
+		label: "CI deploys",
+		permissions: { registry: "write", services: "write", stacks: "read" },
+	},
+	{
+		description: "Everything the Terraform provider manages, plus IaC state.",
+		id: "iac",
+		label: "Infrastructure as code",
+		permissions: {
+			"build-cache": "write",
+			"cron-jobs": "write",
+			dns: "write",
+			"git-providers": "write",
+			iac: "write",
+			notifications: "write",
+			"object-storage": "write",
+			redirects: "write",
+			services: "write",
+			stacks: "write",
+			"status-pages": "write",
+			storage: "write",
+			templates: "read",
+		},
+	},
+];
+
+/** Whether two permission sets grant exactly the same areas at the same levels. */
+export function samePermissions(
+	first: Permissions,
+	second: Permissions,
+): boolean {
+	const areas = new Set([...Object.keys(first), ...Object.keys(second)]);
+	return [...areas].every(
+		(area) => first[area as PermissionArea] === second[area as PermissionArea],
+	);
+}
 
 export const API_KEY_EXPIRY_OPTIONS = [
 	{ days: 7, label: "7 days", value: "7" },

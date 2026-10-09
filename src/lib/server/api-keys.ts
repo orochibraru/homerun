@@ -1,6 +1,12 @@
 import { fail } from "@sveltejs/kit";
 import { Logger } from "#lib/logger.js";
-import { type Permissions, parsePermissions } from "#lib/permissions.js";
+import {
+	intersectPermissions,
+	type Permissions,
+	parsePermissions,
+	permissionsFromForm,
+	toApiKeyPermissions,
+} from "#lib/permissions.js";
 import { auth } from "#lib/services/auth.js";
 
 const logger = new Logger("ApiKeys");
@@ -83,4 +89,52 @@ export async function revokeApiKeyAction(request: Request, userId: string) {
 	}
 	logger.info(`API key revoked: key=${keyId} user=${userId}`);
 	return { revoked: true };
+}
+
+/**
+ * The `update` form action of an API key's page: renames the key and
+ * replaces its permissions, cut down to what its owner holds today, or lets
+ * it follow everything the owner can do when `allPermissions` is ticked.
+ * better-auth only takes permissions server-side and checks the key belongs
+ * to `userId` itself.
+ *
+ * @returns `{ updated: true }`, or a 400 failure.
+ */
+export async function updateApiKeyAction(
+	keyId: string,
+	userId: string,
+	grantable: Permissions,
+	formData: FormData,
+) {
+	const name = String(formData.get("name") ?? "").trim() || "API key";
+	const allPermissions = formData.get("allPermissions") === "on";
+	const permissions = intersectPermissions(
+		permissionsFromForm(formData),
+		grantable,
+	);
+	if (!allPermissions && Object.keys(permissions).length === 0) {
+		return fail(400, {
+			error: "Pick at least one permission, or allow all of them.",
+		});
+	}
+	try {
+		await auth.api.updateApiKey({
+			body: {
+				keyId,
+				name,
+				permissions: allPermissions ? null : toApiKeyPermissions(permissions),
+				userId,
+			},
+		});
+	} catch (error) {
+		logger.warn("Couldn't update API key", {
+			error: error instanceof Error ? error.message : String(error),
+			keyId,
+		});
+		return fail(400, { error: "Couldn't update that key." });
+	}
+	logger.info(
+		`API key updated: key=${keyId} permissions=${allPermissions ? "all" : JSON.stringify(permissions)} user=${userId}`,
+	);
+	return { updated: true };
 }

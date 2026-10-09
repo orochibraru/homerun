@@ -47,8 +47,10 @@ request. When you create one, pick:
 
 - **Permissions**, per area (see
   [Users and roles](users-and-roles.md#permissions)): none, **Read** or
-  **Write**. The **Read everything** and **Clear** shortcuts fill or empty the
-  whole list. A key can never hold more than the account that creates it, and at
+  **Write**. The presets (**Read-only**, **Developer**, **CI deploys** and
+  **Infrastructure as code**) fill the list in one click, cut down to what your
+  account holds, and the one matching the list stays highlighted; **Clear**
+  empties it. A key can never hold more than the account that creates it, and at
   request time it's always limited to what its owner holds _right now_, so
   demoting an account also demotes every key it owns. A key that needs one thing
   (deploy one service, read the status of everything) should get only that area.
@@ -59,6 +61,11 @@ request. When you create one, pick:
   or **Never**, which shows a warning because a leaked key then works until you
   revoke it. An expired key is refused and shows an **Expired** badge in the
   list.
+
+The pencil on a key opens its page, which renames it and changes its permissions
+(or switches it to all permissions and back) without changing the secret:
+whatever uses the key keeps working, with the new permissions from its next
+request. The expiry can't be changed; create a new key for that.
 
 A request that needs a permission the key doesn't have gets a `403` naming the
 area. `homerun login` keys are created with all permissions and no expiry, and

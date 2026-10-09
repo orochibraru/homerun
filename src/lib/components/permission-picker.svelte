@@ -5,9 +5,11 @@
 		can,
 		intersectPermissions,
 		PERMISSION_AREAS,
+		PERMISSION_PRESETS,
 		type PermissionArea,
 		type PermissionLevel,
 		type Permissions,
+		samePermissions,
 	} from "#lib/permissions.js";
 
 	interface Props {
@@ -42,6 +44,13 @@
 		value = next;
 	}
 
+	const presets = $derived(
+		PERMISSION_PRESETS.map((preset) => ({
+			...preset,
+			permissions: intersectPermissions(preset.permissions, grantable),
+		})).filter((preset) => Object.keys(preset.permissions).length > 0),
+	);
+
 	function selectable(area: PermissionArea, level: PermissionLevel | "none") {
 		return level === "none" || can(grantable, area, level);
 	}
@@ -52,19 +61,26 @@
 {/each}
 
 <div class="space-y-2">
-  <div class="flex items-center justify-end gap-1">
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="text-xs text-text-muted">Presets</span>
+    {#each presets as preset (preset.id)}
+      {@const active = samePermissions(value, preset.permissions)}
+      <Button
+        aria-pressed={active}
+        {disabled}
+        onclick={() => {
+          value = { ...preset.permissions };
+        }}
+        size="sm"
+        title={preset.description}
+        type="button"
+        variant={active ? "default" : "outline"}
+      >
+        {preset.label}
+      </Button>
+    {/each}
     <Button
-      {disabled}
-      onclick={() => {
-        value = intersectPermissions(allPermissions("read"), grantable);
-      }}
-      size="sm"
-      type="button"
-      variant="ghost"
-    >
-      Read everything
-    </Button>
-    <Button
+      class="ml-auto"
       {disabled}
       onclick={() => {
         value = {};
@@ -92,15 +108,17 @@
           {#each LEVELS as option (option.level)}
             <Button
               aria-checked={current === option.level}
-              class="h-auto px-2.5 py-1 text-xs {current === option.level
-                ? 'bg-surface-2'
-                : ''}"
+              class="h-auto px-2.5 py-1 text-xs"
               disabled={disabled || !selectable(area.key, option.level)}
               onclick={() => select(area.key, option.level)}
               role="radio"
               size="sm"
               type="button"
-              variant="ghost"
+              variant={current !== option.level
+                ? "ghost"
+                : option.level === "none"
+                  ? "secondary"
+                  : "default"}
             >
               {option.label}
             </Button>

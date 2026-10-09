@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { KeyRound, Trash2 } from "@lucide/svelte";
+	import { KeyRound, Pencil, Trash2 } from "@lucide/svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
@@ -11,6 +11,7 @@
 	import type { ApiKeyView } from "#lib/server/api-keys.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 
 	interface Props {
 		emptySubtitle: string;
@@ -49,7 +50,7 @@
 {:else}
   <div class="space-y-2.5">
     {#each keys as key (key.id)}
-      <div class="flex items-center gap-4 rounded-md border border-border p-4">
+      <div class="flex items-center gap-2 rounded-md border border-border p-4">
         <div class="min-w-0 flex-1">
           <p class="truncate text-sm font-medium text-text">
             {key.name ?? "Unnamed key"}
@@ -85,6 +86,14 @@
               : "never expires"}
           </p>
         </div>
+        <Button
+          href={resolve("/(protected)/profile/api-keys/[keyId]", { keyId: key.id })}
+          size="icon-sm"
+          title="Edit"
+          variant="ghost"
+        >
+          <Pencil class="size-4" />
+        </Button>
         <form
           action="?/revoke"
           method="POST"

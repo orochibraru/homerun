@@ -14,12 +14,15 @@ import {
 	isAppOnly,
 	isUserRole,
 	mayVisit,
+	PERMISSION_AREAS,
+	PERMISSION_PRESETS,
 	parsePermissions,
 	permissionDeniedMessage,
 	permissionsForRole,
 	permissionsFromForm,
 	requiredPermission,
 	roleLabel,
+	samePermissions,
 	toApiKeyPermissions,
 } from "../../../src/lib/permissions";
 import {
@@ -432,5 +435,39 @@ describe("appOnlyRejection", () => {
 		);
 		expect(response?.status).toBe(403);
 		expect(await response?.text()).toBe(APP_ONLY_MESSAGE);
+	});
+});
+
+describe("PERMISSION_PRESETS", () => {
+	test("only name real areas, and Developer matches the role", () => {
+		const areas = new Set(PERMISSION_AREAS.map((area) => area.key));
+		for (const preset of PERMISSION_PRESETS) {
+			for (const area of Object.keys(preset.permissions)) {
+				expect(areas.has(area as never)).toBe(true);
+			}
+		}
+		const developer = PERMISSION_PRESETS.find(
+			(preset) => preset.id === "developer",
+		);
+		expect(
+			samePermissions(
+				developer?.permissions ?? {},
+				permissionsForRole("developer", null),
+			),
+		).toBe(true);
+	});
+});
+
+describe("samePermissions", () => {
+	test("compares every area and level both ways", () => {
+		expect(samePermissions({}, {})).toBe(true);
+		expect(samePermissions({ services: "write" }, { services: "write" })).toBe(
+			true,
+		);
+		expect(samePermissions({ services: "write" }, { services: "read" })).toBe(
+			false,
+		);
+		expect(samePermissions({ services: "read" }, {})).toBe(false);
+		expect(samePermissions({}, { dns: "read" })).toBe(false);
 	});
 });
