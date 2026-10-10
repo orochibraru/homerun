@@ -1,136 +1,74 @@
 <script lang="ts">
-	import { Bell, CheckCheck, Trash2, X } from "@lucide/svelte";
+	import { Bell } from "@lucide/svelte";
+	import { onMount } from "svelte";
 	import { headerControlClass } from "#lib/components/header-styles.js";
-	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Popover from "#lib/components/ui/popover/index.js";
-	import { timeAgo } from "#lib/formatting.js";
 	import {
-		deleteAllNotifications,
-		deleteNotification,
-		getNotifications,
-		markAllNotificationsRead,
+		browserNotificationPermission,
+		notificationHref,
+	} from "#lib/notification-feed.js";
+	import {
+		getUnreadNotifications,
 		markNotificationRead,
 		type NotificationFeedItem,
 	} from "#lib/remote/notifications.remote.js";
+	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 
-	const feed = getNotifications();
+	const POLL_MS = 30_000;
 
-	let open = $state(false);
+	const unread = getUnreadNotifications();
+	const unreadCount = $derived(unread.current?.unreadCount ?? 0);
 
-	const notifications = $derived(feed.current?.items ?? []);
-	const unreadCount = $derived(feed.current?.unreadCount ?? 0);
+	let seen: Set<string> | null = null;
 
-	function onItemClick(n: NotificationFeedItem) {
-		open = false;
-		if (!n.readAt) {
-			void markNotificationRead(n.id);
+	$effect(() => {
+		const items = unread.current?.items;
+		if (!items) {
+			return;
 		}
+		if (seen === null) {
+			seen = new Set(items.map((item) => item.id));
+			return;
+		}
+		for (const item of items) {
+			if (!seen.has(item.id)) {
+				seen.add(item.id);
+				showBrowserNotification(item);
+			}
+		}
+	});
+
+	onMount(() => {
+		const timer = setInterval(() => void unread.refresh(), POLL_MS);
+		return () => clearInterval(timer);
+	});
+
+	function showBrowserNotification(item: NotificationFeedItem) {
+		if (browserNotificationPermission() !== "granted") {
+			return;
+		}
+		const shown = new Notification(
+			item.stackName ? `Homerun · ${item.stackName}` : "Homerun",
+			{
+				body: item.message,
+				tag: item.id,
+			},
+		);
+		shown.addEventListener("click", () => {
+			window.focus();
+			void markNotificationRead(item.id);
+			void goto(notificationHref(item) ?? resolve("notifications"));
+		});
 	}
 </script>
 
-<Popover.Root bind:open>
-  <div class="relative">
-    <Popover.Trigger>
-      {#snippet child({ props })}
-        <button {...props} aria-label="Notifications" class="{headerControlClass} w-9 sm:w-8" type="button">
-          <Bell class="size-3.5" />
-        </button>
-      {/snippet}
-    </Popover.Trigger>
-    {#if unreadCount > 0}
-      <span
-        class="bg-accent text-bg pointer-events-none absolute top-0.5 right-0.5 flex size-3.5 items-center justify-center rounded-full text-[0.6rem] font-bold"
-      >
-        {unreadCount > 9 ? "9+" : unreadCount}
-      </span>
-    {/if}
-  </div>
-
-  <Popover.Content
-    align="end"
-    class="max-h-[min(24rem,70dvh)] w-[min(20rem,calc(100vw-1rem))] gap-0 overflow-y-auto rounded-md p-0"
-  >
-    <div class="border-border flex items-center justify-between gap-2 border-b px-4 py-3">
-      <p class="text-text text-sm font-semibold">Notifications</p>
-      <div class="flex items-center gap-3">
-        {#if unreadCount > 0}
-          <Button class="h-auto p-0 text-xs" onclick={() => markAllNotificationsRead()} variant="link">
-            <CheckCheck class="size-3.5" />
-            Mark all read
-          </Button>
-        {/if}
-        {#if notifications.length > 0}
-          <Button
-            class="text-text-subtle hover:text-destructive h-auto p-0 text-xs"
-            onclick={() => deleteAllNotifications()}
-            variant="link"
-          >
-            <Trash2 class="size-3.5" />
-            Clear all
-          </Button>
-        {/if}
-      </div>
-    </div>
-    {#if !feed.ready}
-      <div class="space-y-3 p-4">
-        {#each [0, 1, 2] as row (row)}
-          <div class="space-y-1.5">
-            <Skeleton class="h-3 w-full" />
-            <Skeleton class="h-2.5 w-20" />
-          </div>
-        {/each}
-      </div>
-    {:else if notifications.length === 0}
-      <p class="text-text-muted p-4 text-center text-sm">No notifications yet.</p>
-    {:else}
-      <div>
-        {#each notifications as n (n.id)}
-          <div
-            class="border-border/60 hover:bg-surface-2 group flex items-start gap-1 border-b last:border-0 {n.readAt
-            ? ''
-            : 'bg-accent-light/40'}"
-          >
-            {#if n.serviceId}
-              <a
-                class="min-w-0 flex-1 px-4 py-3 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
-                href="{resolve('services')}/{n.serviceId}"
-                onclick={() => onItemClick(n)}
-              >
-                {#if n.stackName}
-                  <p class="text-text-subtle mb-0.5 text-[0.65rem] font-medium">
-                    {n.stackName}
-                  </p>
-                {/if}
-                <p class="text-text text-xs">{n.message}</p>
-                <p class="text-text-subtle mt-0.5 text-[0.65rem]">
-                  {timeAgo(n.createdAt)}
-                </p>
-              </a>
-            {:else}
-              <button
-                class="min-w-0 flex-1 px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
-                onclick={() => onItemClick(n)}
-                type="button"
-              >
-                <p class="text-text text-xs">{n.message}</p>
-                <p class="text-text-subtle mt-0.5 text-[0.65rem]">
-                  {timeAgo(n.createdAt)}
-                </p>
-              </button>
-            {/if}
-            <button
-              aria-label="Delete notification"
-              class="text-text-subtle hover:bg-surface-3 hover:text-text mt-2 mr-2 rounded-md p-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-              onclick={() => deleteNotification(n.id)}
-              type="button"
-            >
-              <X class="size-3" />
-            </button>
-          </div>
-        {/each}
-      </div>
-    {/if}
-  </Popover.Content>
-</Popover.Root>
+<a aria-label="Notifications" class="{headerControlClass} relative w-9 sm:w-8" href={resolve("notifications")}>
+  <Bell class="size-3.5" />
+  {#if unreadCount > 0}
+    <span
+      class="bg-accent text-bg pointer-events-none absolute top-0.5 right-0.5 flex size-3.5 items-center justify-center rounded-full text-[0.6rem] font-bold"
+    >
+      {unreadCount > 9 ? "9+" : unreadCount}
+    </span>
+  {/if}
+</a>

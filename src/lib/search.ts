@@ -292,6 +292,12 @@ export const SEARCH_PAGES: SearchPage[] = [
 		section: "Profile",
 	},
 	{
+		href: "/notifications",
+		keywords: ["bell", "unread", "alerts", "feed"],
+		label: "Notifications",
+		section: "Profile",
+	},
+	{
 		href: "/profile/notifications",
 		keywords: ["alerts", "events"],
 		label: "Notification Preferences",

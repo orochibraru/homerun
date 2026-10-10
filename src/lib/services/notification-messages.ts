@@ -15,6 +15,8 @@ import type { NotificationEvent } from "#lib/types.js";
 const LOG_TAIL_LINES = 15;
 
 export interface MessageField {
+	/** Whether a channel may lay it out beside others; decided from its length when unset. */
+	inline?: boolean;
 	name: string;
 	value: string;
 }

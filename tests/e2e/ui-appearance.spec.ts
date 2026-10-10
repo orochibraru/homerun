@@ -53,10 +53,10 @@ test.describe
 			expect(await cssVarOf(page, "html")).toBe(ACCENT);
 			expect(await cssVarOf(page, "html", "--chart-1")).toBe(CHART_1);
 
-			await page.getByRole("button", { name: "Notifications" }).click();
-			const popover = page.locator("[data-slot='popover-content']");
-			await expect(popover).toBeVisible();
-			expect(await cssVarOf(page, "[data-slot='popover-content']")).toBe(
+			await page.getByRole("button", { name: "Account menu" }).click();
+			const menu = page.locator("[data-slot='dropdown-menu-content']");
+			await expect(menu).toBeVisible();
+			expect(await cssVarOf(page, "[data-slot='dropdown-menu-content']")).toBe(
 				ACCENT,
 			);
 		});

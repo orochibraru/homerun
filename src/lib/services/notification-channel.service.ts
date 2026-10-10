@@ -3,6 +3,7 @@ import type { DeployTrigger } from "#lib/deploy-trigger.js";
 import type { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { JobDTO, type NewJobInput } from "#lib/dto/job-dto.js";
 import { NotificationChannelDTO } from "#lib/dto/notification-channel-dto.js";
+import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { Logger } from "#lib/logger.js";
@@ -19,6 +20,7 @@ import {
 	groupedMessage,
 	type MessageGroup,
 	NotificationGrouper,
+	scheduledNotification,
 } from "./notification-grouping";
 import {
 	type ChannelMessage,
@@ -121,7 +123,10 @@ export function messageBody(message: ChannelMessage): string {
 		"",
 		...(message.serviceName ? [`Service: ${message.serviceName}`] : []),
 		`Event: ${label}`,
-		...message.fields.map((field) => `${field.name}: ${field.value}`),
+		...message.fields.map(
+			(field) =>
+				`${field.name}:${field.value.includes("\n") ? "\n" : " "}${field.value}`,
+		),
 		`At: ${message.timestamp}`,
 	];
 	if (message.link) {
@@ -144,7 +149,7 @@ export function discordPayload(message: ChannelMessage) {
 				color: isFailureEvent(message.event) ? DISCORD_RED : DISCORD_GREEN,
 				description: detail ? `\`\`\`\n${detail}\n\`\`\`` : undefined,
 				fields: withService(message).map((field) => ({
-					inline: field.value.length <= DISCORD_INLINE_MAX,
+					inline: field.inline ?? field.value.length <= DISCORD_INLINE_MAX,
 					name: field.name,
 					value: keepHead(field.value, DISCORD_FIELD_LIMIT),
 				})),
@@ -169,7 +174,7 @@ export function slackPayload(message: ChannelMessage) {
 				color: isFailureEvent(message.event) ? SLACK_RED : SLACK_GREEN,
 				fallback: message.title,
 				fields: withService(message).map((field) => ({
-					short: field.value.length <= SLACK_INLINE_MAX,
+					short: field.inline ?? field.value.length <= SLACK_INLINE_MAX,
 					title: field.name,
 					value: keepHead(field.value, SLACK_TEXT_LIMIT),
 				})),
@@ -197,7 +202,8 @@ export function telegramPayload(chatId: string, message: ChannelMessage) {
 		`<b>${escapeHtml(message.title)}</b>`,
 		"",
 		...withService(message).map(
-			(field) => `<b>${escapeHtml(field.name)}:</b> ${escapeHtml(field.value)}`,
+			(field) =>
+				`<b>${escapeHtml(field.name)}:</b>${field.value.includes("\n") ? "\n" : " "}${escapeHtml(field.value)}`,
 		),
 	];
 	if (message.link) {
@@ -368,7 +374,7 @@ class NotificationChannelServiceClass {
 		await Promise.all(groups.map((group) => this.#deliverGroup(group)));
 	}
 
-	/** Delivers a group to every channel subscribed to any of its events: each channel gets the messages it subscribes to, one as itself, several folded by `groupedMessage`. */
+	/** Delivers a group to every channel subscribed to any of its events: each channel gets the messages it subscribes to, one as itself, several folded by `groupedMessage`. A scheduler run's group also leaves one in-app notification, channels or not. */
 	async #deliverGroup(group: MessageGroup): Promise<void> {
 		const events = [...new Set(group.messages.map((m) => m.event))];
 		const subscribed = await Promise.all(
@@ -377,7 +383,7 @@ class NotificationChannelServiceClass {
 		const byId = new Map(
 			subscribed.flat().map((channel) => [channel.id, channel]),
 		);
-		if (byId.size === 0) {
+		if (byId.size === 0 && !group.scheduled) {
 			return;
 		}
 		const titled = await Promise.all(
@@ -388,6 +394,9 @@ class NotificationChannelServiceClass {
 				),
 			),
 		);
+		if (group.scheduled) {
+			NotificationDTO.notify(scheduledNotification(titled));
+		}
 		const deliveries = [...byId.values()].map((channel) => ({
 			channel,
 			mine: titled.filter((m) => channel.events.includes(m.event)),

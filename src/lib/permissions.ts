@@ -140,6 +140,7 @@ const AREA_KEYS: PermissionArea[] = PERMISSION_AREAS.map((area) => area.key);
 
 const OPEN_ROUTES = [
 	"/",
+	"/notifications",
 	"/profile",
 	"/cli-auth",
 	"/api-docs",

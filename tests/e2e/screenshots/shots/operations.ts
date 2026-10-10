@@ -591,16 +591,10 @@ export const shots: ShotModule = {
 			prepare: (page) => scrollToTop(heading(page, "Source maps")),
 		},
 		{
-			doc: "/ (notifications open)",
-			expect: /Welcome back/i,
+			doc: "/notifications",
+			expect: /Each account reads and clears its own copy/,
 			name: "notifications-bell",
-			path: () => "/",
-			prepare: async (page) => {
-				await page
-					.getByRole("button", { exact: true, name: "Notifications" })
-					.click();
-				await expect(page.getByText("Clear all")).toBeVisible();
-			},
+			path: () => "/notifications",
 		},
 		{
 			doc: "/notification-channels",

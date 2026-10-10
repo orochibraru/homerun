@@ -115,51 +115,51 @@ start/success/failure of each operation, with entity + user ids for correlation.
 dead/aspirational, don't use it; the per-module `Logger` instance is the real
 pattern.
 
-## In-app notifications (`notification` table, `NotificationDTO`, `notification-bell.svelte`)
+## In-app notifications (`notification` table, `NotificationDTO`, `/notifications`)
 
 A curated lifecycle event feed, one copy per account, deliberately separate from
 the `app_log`/Errors-tab system above: written explicitly at each event site
 rather than derived from logs, so it stays a short, meaningful list rather than
-every warn/error the app produces. Shown via a bell icon
-(`src/lib/components/notification-bell.svelte`, a Popover-based dropdown) in the
-protected layout's header, next to `src/lib/components/profile-menu.svelte` (the
-account/sign-out dropdown, pulled out of `+layout.svelte`'s previously-inline
-markup as its own component alongside this feature).
+every warn/error the app produces. The header's bell
+(`src/lib/components/notification-bell.svelte`) is a link to the
+`/notifications` page with the unread badge; it used to be a Popover dropdown.
+`/notifications` is in `OPEN_ROUTES` (`permissions.ts`): every account reads its
+own feed, so no permission area gates it.
 
 - `notification` table: `id`, `userId` (FK, cascade delete), `serviceId`
-  (nullable FK, cascade delete), `message`, `type` (enum:
-  `deploy_success`/`deploy_failure`/`service_created`/`service_started`/
-  `service_stopped`/`auto_redeploy`/`app_runtime_error`), `createdAt`, `readAt`
-  (nullable, unread until set). Indexed on `(userId, createdAt)`.
-- `NotificationDTO`: `listForUser(userId, limit=30)` (joins in the related
-  service's slug so a feed entry can link straight to it),
-  `unreadCount(userId)`, `markRead`/`markAllRead`/`delete(id, userId)` (owner-
-  scoped, backs the bell dropdown's per-row remove button), and a
+  (nullable FK, cascade delete), `message`, `detail` (nullable multi-line text,
+  shown under the message on the page), `type` (a TS union on a text column, see
+  `schema.ts`), `createdAt`, `readAt` (nullable, unread until set). Indexed on
+  `(userId, createdAt)`.
+- `NotificationDTO`: `listForUser(userId, limit, unreadOnly)` (joins in the
+  related service's slug and stack name), `unreadCount(userId)`,
+  `markRead`/`markAllRead`/`delete`/`deleteAll` (owner-scoped), and a
   fire-and-forget static `notify(input)` helper, never awaited, swallows its own
-  errors, same posture as `Logger.warn`/`.error`'s `AppLogDTO` write, a
-  notification call can't fail the operation it's attached to. `notify` goes
-  through `broadcast(input)`, which inserts one row per account (resources are
-  shared, so every account hears about every event, and each reads and clears
-  its own copy) and amortized-prunes each feed back to its newest 200 rows on
-  ~5% of writes, same convention as `AppLogDTO`'s 5000-row prune.
-  `notifyServiceError(serviceId, message)` broadcasts too, used by
-  `Logger.error` to attribute a runtime error notification to a service.
-- Call sites: `deploy.service.ts` (deploy success, auto-redeploy, deploy
-  failure), `src/lib/logger.ts` (`Logger.error` → `notifyServiceError`),
-  `services/new/+page.server.ts` (service created), the service Overview page's
-  start/stop actions.
-- `notification-bell.svelte` owns its own data end to end through
-  `src/lib/remote/notifications.remote.ts` (see Remote functions above) : one
-  query for the feed plus unread count, and one command per
-  mark-read/mark-all-read/delete, each refreshing that query server-side so the
-  new feed comes back on the mutation's own response. It takes no props. This
-  replaced fetching the feed in `(protected)/+layout.server.ts` (paid for on
-  every protected page load, opened bell or not) and three one-line `+server.ts`
-  routes each followed by a full-page `refreshAll()`.
-
-This closes the "in-app lifecycle event feed" half of what Planned features
-below used to list as unbuilt; outbound channels on the same events now exist
-too, see Outbound notification channels next.
+  errors, same posture as `Logger.warn`/`.error`'s `AppLogDTO` write. `notify`
+  goes through `broadcast(input)`, which inserts one row per account and
+  amortized-prunes each feed back to its newest `MAX_ROWS_PER_USER` (200) rows
+  on ~5% of writes. `notifyServiceError(serviceId, message)` broadcasts too,
+  used by `Logger.error`.
+- **Scheduled work reports once per run**: `NotificationChannelService`'s
+  `#deliverGroup` writes `scheduledNotification(messages)`
+  (`notification-grouping.ts`) for every _scheduled_ group the grouper flushes,
+  channels subscribed or not: a lone outcome keeps its title, service and
+  detail; several become `Scheduled tasks: …` with `summaryFields` as the
+  detail. Type `scheduled_failure` when any failed, else `scheduled_summary`;
+  `notificationHref` sends both to `/scheduling`. A cron-triggered deploy writes
+  no in-app row of its own any more (the old cron-only `ScheduledBellDigest` is
+  gone). Held messages are in memory, so a restart drops the summary too.
+- `src/lib/remote/notifications.remote.ts`: `getNotifications` (the whole feed,
+  for the page) and `getUnreadNotifications` (unread count plus the newest five
+  unread, for the bell and the dashboard's `unread-notifications.svelte`), and
+  one command per mutation, each refreshing both queries server-side.
+- **Browser notifications** (`src/lib/notification-feed.ts`): the bell polls
+  `getUnreadNotifications` every 30s and, once permission is granted, shows a
+  `Notification` for each unread id it hadn't seen (seeded from the first
+  result, so a reload doesn't replay old ones; `tag` is the row id so two tabs
+  don't show it twice). Permission is asked from
+  `browser-notifications-button.svelte` (a click, since browsers ignore an
+  unprompted request), on the page and in the dashboard summary.
 
 ## Outbound notification channels (`notification_channel`, `NotificationChannelDTO`, `notification-channel.service.ts`)
 

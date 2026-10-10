@@ -1,20 +1,32 @@
 # Notifications
 
-The bell in the header is a per-account feed of lifecycle events on every
-service, whoever created it (each account gets its own copy to read and clear),
-deploy succeeded or failed, a build stopped by status checks, an unhealthy or
-rolled back revision, service created, started, stopped, an auto-redeploy
-firing, an image scan finding a critical vulnerability, and runtime errors
-attributed to a service, plus the server crossing a resource limit. Click an
-entry to jump to its service, mark everything read from the dropdown, or hover a
-row and use the `x` to drop it.
+The bell in the header opens **Notifications**, a per-account feed of lifecycle
+events on every service, whoever created it (each account gets its own copy to
+read and clear): deploy succeeded or failed, a build stopped by status checks,
+an unhealthy or rolled back revision, service created, started, stopped, an
+image scan finding a critical vulnerability, and runtime errors attributed to a
+service, plus the server crossing a resource limit. The bell shows how many are
+unread. Click an entry to jump to its service and mark it read, use **Mark all
+read**, drop one with its `x`, or **Clear all**.
 
-![The notification bell open over the Overview page](images/notifications-bell.webp)
+![The Notifications page](images/notifications-bell.webp)
 
-Scheduled redeploys are grouped in the bell too: their outcomes are held until
-90 seconds pass without another one (10 minutes at most), then show up as one "N
-services were auto-redeployed: …" entry and one "N scheduled redeploys failed:
-…" entry with each error. A single redeploy keeps its own entry.
+While anything is unread, the [dashboard](dashboard.md) shows a summary at the
+top: how many, the latest five, and links to mark them all read or open the
+page.
+
+Scheduled work reports once per run in the feed too: the outcomes of cron
+redeploys, scheduled backups and cron jobs are held like the channel summary
+below, then show up as one `Scheduled tasks: 14 ok` entry listing every outcome
+by event, failures first with their errors, which opens **Scheduling**. A run
+with a single outcome keeps that outcome's own entry.
+
+**Browser notifications**: click **Turn on browser notifications** on the
+Notifications page (or in the dashboard summary) and allow them, and every new
+notification also pops up as a desktop notification while a Homerun tab is open
+in that browser, checked every 30 seconds. Clicking one opens what it's about.
+The button disappears once the browser has allowed or blocked them; change that
+from the browser's site settings.
 
 It's deliberately a short curated list, not a log: everything Homerun logs at
 warn or error level is persisted separately and shown on the relevant service's
@@ -49,12 +61,13 @@ Notifications close together are grouped instead of arriving one by one. The
 first one goes out straight away; any that follow within a minute of the
 previous one are held and sent as a single message once a minute passes with
 nothing new (five minutes at most), titled like
-`3 notifications: 2 ok, 1 failed`, with one line per event and the error of each
-failure. The outcomes of scheduled work (cron redeploys, scheduled backups and
-cron jobs) are always held until every scheduled job still queued or running has
-finished, retries included, then sent as one `Scheduled tasks: …` summary, so a
-nightly run reports once (after an hour at most). A channel only ever gets the
-events it subscribes to: when only one of a group's is left for it, it gets that
+`3 notifications: 2 ok, 1 failed`, with a section per event (failures first),
+each listing its notifications one per line, and the error of each failure. The
+outcomes of scheduled work (cron redeploys, scheduled backups and cron jobs) are
+always held until every scheduled job still queued or running has finished,
+retries included, then sent as one `Scheduled tasks: …` summary, so a nightly
+run reports once (after an hour at most). A channel only ever gets the events it
+subscribes to: when only one of a group's is left for it, it gets that
 notification unchanged. Held notifications live in memory, so a restart while
 they wait drops them.
 

@@ -5,6 +5,7 @@ import {
 	groupedMessage,
 	NotificationGrouper,
 	SCHEDULED_MAX_HOLD_MS,
+	scheduledNotification,
 } from "../../../src/lib/services/notification-grouping";
 import {
 	backupMessage,
@@ -102,26 +103,69 @@ describe("groupedMessage", () => {
 		expect(grouped.title).toBe("Scheduled tasks: 2 ok, 1 failed");
 		expect(grouped.event).toBe("backup.failed");
 		expect(grouped.link).toBe("https://h.example.com/Backup of db failed");
-		expect(grouped.fields[1]).toEqual({
-			name: "Backup failed",
-			value: "Backup of db failed",
-		});
 		expect(grouped.detail).toStartWith("Backup of db failed\nline 20");
 		expect(grouped.detail).toEndWith("line 29");
 		expect(grouped.serviceId).toBeNull();
 	});
 
-	test("caps its fields and says how many it left out", () => {
+	test("stacks one field per event, failures first, each a bulleted list", () => {
+		const grouped = groupedMessage(
+			[
+				msg("web was updated"),
+				msg("Backup of db failed", "backup.failed"),
+				msg("api was updated"),
+			],
+			true,
+		);
+		expect(grouped.fields).toEqual([
+			{
+				inline: false,
+				name: "Backup failed (1)",
+				value: "• Backup of db failed",
+			},
+			{
+				inline: false,
+				name: "Update succeeded (2)",
+				value: "• web was updated\n• api was updated",
+			},
+		]);
+	});
+
+	test("caps each event's list and says how many it left out", () => {
 		const grouped = groupedMessage(
 			Array.from({ length: 25 }, (_, i) => msg(`s${i}`)),
 			false,
 		);
 		expect(grouped.title).toBe("25 notifications: 25 ok");
 		expect(grouped.detail).toBeNull();
-		expect(grouped.fields).toHaveLength(21);
-		expect(grouped.fields.at(-1)).toEqual({
-			name: "More",
-			value: "5 more not listed",
+		expect(grouped.fields).toHaveLength(1);
+		const lines = grouped.fields[0].value.split("\n");
+		expect(lines).toHaveLength(16);
+		expect(lines.at(-1)).toBe("• and 10 more");
+	});
+});
+
+describe("scheduledNotification", () => {
+	test("a lone outcome keeps its own title, service and detail", () => {
+		const only = {
+			...msg("Backup of db failed", "backup.failed", "S3 PUT failed"),
+			serviceId: "svc-1",
+		};
+		expect(scheduledNotification([only])).toEqual({
+			detail: "S3 PUT failed",
+			message: "Backup of db failed",
+			serviceId: "svc-1",
+			type: "scheduled_failure",
+		});
+	});
+
+	test("several outcomes become the summary, listed by event", () => {
+		expect(
+			scheduledNotification([msg("web was updated"), msg("api was updated")]),
+		).toEqual({
+			detail: "Update succeeded (2)\n• web was updated\n• api was updated",
+			message: "Scheduled tasks: 2 ok",
+			type: "scheduled_summary",
 		});
 	});
 });

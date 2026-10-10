@@ -29,12 +29,15 @@ test.describe
 			).toHaveCount(2);
 		});
 
-		test("the notification feed resolves when the bell is opened", async ({
+		test("the notification feed resolves on the notifications page", async ({
 			page,
 		}) => {
 			await signIn(page);
 
-			await page.getByRole("button", { name: "Notifications" }).click();
+			await page
+				.getByRole("link", { exact: true, name: "Notifications" })
+				.click();
+			await expect(page).toHaveURL(/\/notifications$/);
 			await expect(page.getByText("No notifications yet.")).toBeVisible();
 		});
 
@@ -54,7 +57,13 @@ test.describe
 			await page.getByRole("button", { name: "Create service" }).click();
 			await expect(page).toHaveURL(/\/services\/[0-9a-f-]{36}$/);
 
-			await page.getByRole("button", { name: "Notifications" }).click();
+			await page.goto("/");
+			await expect(
+				page.getByRole("heading", { name: /^\d+ unread notifications?$/ }),
+			).toBeVisible();
+			await page
+				.getByRole("link", { exact: true, name: "Notifications" })
+				.click();
 			const entry = page.getByText('"remote-fn-check" was created.');
 			await expect(entry).toBeVisible();
 

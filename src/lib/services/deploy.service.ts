@@ -48,7 +48,6 @@ import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
 import { RegistryService } from "./registry.service.ts";
 import { RevisionHealthService } from "./revision-health.service.ts";
-import { ScheduledBellDigest } from "./scheduled-bell-digest.ts";
 
 const logger = new Logger(DEPLOY_LOG_SCOPE);
 
@@ -247,14 +246,7 @@ class DeploymentServiceClass {
 			await notifyStatusChecksFailed(svc, err);
 			return errorMessage;
 		}
-		if (trigger === "cron") {
-			ScheduledBellDigest.add({
-				error: errorMessage,
-				ok: false,
-				serviceId: svc.id,
-				serviceName: svc.name,
-			});
-		} else {
+		if (trigger !== "cron") {
 			NotificationDTO.notify({
 				message: `"${svc.name}" failed to deploy: ${errorMessage}`,
 				serviceId: svc.id,
@@ -312,13 +304,7 @@ class DeploymentServiceClass {
 
 	/** Sends the in-app and channel notifications for a deploy that reached "running". */
 	#notifySuccess(dep: DeploymentDTO, svc: ServiceDTO, trigger: DeployTrigger) {
-		if (trigger === "cron") {
-			ScheduledBellDigest.add({
-				ok: true,
-				serviceId: svc.id,
-				serviceName: svc.name,
-			});
-		} else {
+		if (trigger !== "cron") {
 			NotificationDTO.notify({
 				message: `"${svc.name}" deployed successfully.`,
 				serviceId: svc.id,

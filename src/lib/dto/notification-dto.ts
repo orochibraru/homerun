@@ -10,6 +10,7 @@ import {
 import { BaseDTO } from "./base-dto";
 
 export interface NewNotificationInput {
+	detail?: string | null;
 	message: string;
 	serviceId?: string | null;
 	type: Notification["type"];
@@ -17,15 +18,16 @@ export interface NewNotificationInput {
 
 // Same amortized-prune convention as AppLogDTO, per user rather than
 // instance-wide (each user's own bell feed stays bounded independently).
-const MAX_ROWS_PER_USER = 200;
+export const MAX_ROWS_PER_USER = 200;
 const PRUNE_PROBABILITY = 0.05;
 
 /** Wraps the `notification` table : the bell-icon feed, see schema.ts's docstring on `notification`. */
 export class NotificationDTO extends BaseDTO<Notification> {
-	/** Most recent notifications for one user, newest first, with the related service's name/slug joined in for the feed to link out to it. */
+	/** Most recent notifications for one user (only the unread ones when `unreadOnly`), newest first, with the related service's slug and stack name joined in for the feed to link out to it. */
 	static async listForUser(
 		userId: string,
 		limit = 30,
+		unreadOnly = false,
 	): Promise<
 		Array<{
 			notification: NotificationDTO;
@@ -42,7 +44,12 @@ export class NotificationDTO extends BaseDTO<Notification> {
 			.from(notification)
 			.leftJoin(service, eq(notification.serviceId, service.id))
 			.leftJoin(stack, eq(service.stackId, stack.id))
-			.where(eq(notification.userId, userId))
+			.where(
+				and(
+					eq(notification.userId, userId),
+					unreadOnly ? isNull(notification.readAt) : undefined,
+				),
+			)
 			.orderBy(desc(notification.createdAt))
 			.limit(limit);
 		return rows.map((r) => ({
@@ -88,6 +95,7 @@ export class NotificationDTO extends BaseDTO<Notification> {
 			users.map(
 				(account): Notification => ({
 					createdAt,
+					detail: input.detail ?? null,
 					id: crypto.randomUUID(),
 					message: input.message,
 					readAt: null,

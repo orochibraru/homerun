@@ -1,3 +1,4 @@
+import type { NewNotificationInput } from "#lib/dto/notification-dto.js";
 import {
 	isFailureEvent,
 	NOTIFICATION_EVENTS,
@@ -8,7 +9,7 @@ export const GROUP_WINDOW_MS = 60_000;
 export const BURST_MAX_HOLD_MS = 5 * 60_000;
 export const SCHEDULED_MAX_HOLD_MS = 60 * 60_000;
 
-const MAX_GROUP_FIELDS = 20;
+const MAX_GROUP_ITEMS = 15;
 const DETAIL_TAIL_LINES = 10;
 
 interface Lane {
@@ -116,12 +117,39 @@ function detailTail(detail: string): string {
 }
 
 /**
+ * One field per event, failures first and otherwise in the order they came:
+ * the event's label with how many there were, then a bulleted line per
+ * message title (the first `MAX_GROUP_ITEMS`). Never inline, so a channel
+ * stacks them instead of tiling them into a grid.
+ */
+export function summaryFields(messages: ChannelMessage[]): MessageField[] {
+	return [...Map.groupBy(messages, eventLabel)]
+		.sort(
+			([, a], [, b]) =>
+				Number(isFailureEvent(b[0].event)) - Number(isFailureEvent(a[0].event)),
+		)
+		.map(([label, group]) => {
+			const lines = group
+				.slice(0, MAX_GROUP_ITEMS)
+				.map((message) => `• ${message.title}`);
+			if (group.length > MAX_GROUP_ITEMS) {
+				lines.push(`• and ${group.length - MAX_GROUP_ITEMS} more`);
+			}
+			return {
+				inline: false,
+				name: `${label} (${group.length})`,
+				value: lines.join("\n"),
+			};
+		});
+}
+
+/**
  * Folds several messages for one channel into one: the title counts what
- * succeeded and failed, each message becomes a field (event label → its
- * title, the first `MAX_GROUP_FIELDS` of them), and the detail is every
- * failure's title and detail tail. It takes the event of its first failure,
- * or of its first message when nothing failed, which is what colours it and
- * what a queued retry checks the channel is still subscribed to.
+ * succeeded and failed, `summaryFields` lists them by event, and the detail
+ * is every failure's title and detail tail. It takes the event of its first
+ * failure, or of its first message when nothing failed, which is what
+ * colours it and what a queued retry checks the channel is still subscribed
+ * to.
  */
 export function groupedMessage(
 	messages: ChannelMessage[],
@@ -135,15 +163,6 @@ export function groupedMessage(
 	]
 		.filter(Boolean)
 		.join(", ");
-	const fields: MessageField[] = messages
-		.slice(0, MAX_GROUP_FIELDS)
-		.map((message) => ({ name: eventLabel(message), value: message.title }));
-	if (messages.length > MAX_GROUP_FIELDS) {
-		fields.push({
-			name: "More",
-			value: `${messages.length - MAX_GROUP_FIELDS} more not listed`,
-		});
-	}
 	const details = failed
 		.map((message) =>
 			message.detail
@@ -155,11 +174,42 @@ export function groupedMessage(
 	return {
 		detail: details || null,
 		event: first.event,
-		fields,
+		fields: summaryFields(messages),
 		link: first.link,
 		serviceId: null,
 		serviceName: null,
 		timestamp: messages.at(-1)?.timestamp ?? first.timestamp,
 		title: `${scheduled ? "Scheduled tasks" : `${messages.length} notifications`}: ${counts}`,
+	};
+}
+
+/**
+ * The in-app notification for one scheduler run's outcomes: a lone outcome
+ * keeps its own title, service and detail; several become the grouped
+ * summary, with its fields as the detail followed by the failures' tails.
+ */
+export function scheduledNotification(
+	messages: ChannelMessage[],
+): NewNotificationInput {
+	const type = messages.some((message) => isFailureEvent(message.event))
+		? "scheduled_failure"
+		: "scheduled_summary";
+	const [only] = messages;
+	if (messages.length === 1 && only) {
+		return {
+			detail: only.detail,
+			message: only.title,
+			serviceId: only.serviceId,
+			type,
+		};
+	}
+	const grouped = groupedMessage(messages, true);
+	const listing = grouped.fields
+		.map((field) => `${field.name}\n${field.value}`)
+		.join("\n\n");
+	return {
+		detail: grouped.detail ? `${listing}\n\n${grouped.detail}` : listing,
+		message: grouped.title,
+		type,
 	};
 }

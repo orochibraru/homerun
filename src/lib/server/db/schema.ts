@@ -1634,6 +1634,7 @@ export const notification = pgTable(
 	"notification",
 	{
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		detail: text("detail"),
 		id: text("id").primaryKey(),
 		message: text("message").notNull(),
 		readAt: timestamp("read_at", { mode: "date" }),
@@ -1657,6 +1658,8 @@ export const notification = pgTable(
 				| "update_failed"
 				| "docker_wedged"
 				| "error_issue"
+				| "scheduled_summary"
+				| "scheduled_failure"
 			>()
 			.notNull(),
 		userId: text("user_id")

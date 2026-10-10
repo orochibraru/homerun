@@ -89,7 +89,7 @@ function htmlVersion(body: EmailBody): string {
 		? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:4px 0 18px;border:1px solid ${BORDER};border-radius:10px;border-collapse:separate;">${body.details
 				.map(
 					(row, i) =>
-						`<tr><td style="padding:9px 14px;${i > 0 ? `border-top:1px solid ${BORDER};` : ""}font-family:${FONT};font-size:13px;color:${MUTED};white-space:nowrap;vertical-align:top;">${escapeHtml(row.name)}</td><td style="padding:9px 14px;${i > 0 ? `border-top:1px solid ${BORDER};` : ""}font-family:${FONT};font-size:13px;color:${TEXT};word-break:break-word;">${escapeHtml(row.value)}</td></tr>`,
+						`<tr><td style="padding:9px 14px;${i > 0 ? `border-top:1px solid ${BORDER};` : ""}font-family:${FONT};font-size:13px;color:${MUTED};white-space:nowrap;vertical-align:top;">${escapeHtml(row.name)}</td><td style="padding:9px 14px;${i > 0 ? `border-top:1px solid ${BORDER};` : ""}font-family:${FONT};font-size:13px;color:${TEXT};word-break:break-word;white-space:pre-line;">${escapeHtml(row.value)}</td></tr>`,
 				)
 				.join("")}</table>`
 		: "";
