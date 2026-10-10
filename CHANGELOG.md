@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.57](https://github.com/orochibraru/homerun/compare/v1.0.56...v1.0.57) (2026-10-10)
+
+### Features
+
+- notifications page, dashboard unread summary, in-app scheduled tasks summary,
+  stacked grouped channel messages and browser notifications
+  ([72dc436](https://github.com/orochibraru/homerun/commit/72dc4361baea77adbde9a65ac028c9823198a3fa))
+- show job traces on the scheduling job page and run the OpenTelemetry collector
+  by default
+  ([ab39631](https://github.com/orochibraru/homerun/commit/ab39631b3652daf02eba05c3313df036bc631404))
+- permission presets and editable API key permissions
+  ([b94220b](https://github.com/orochibraru/homerun/commit/b94220b408dd673642e105f98d6fe48e8595adf1))
+- IaC projects with per-project tabs and tool choice, and git watch/ignore paths
+  for push deploys
+  ([3f9033e](https://github.com/orochibraru/homerun/commit/3f9033e39a3f55b8e14543b144d603f02560065f))
+
 ## [1.0.56](https://github.com/orochibraru/homerun/compare/v1.0.55...v1.0.56) (2026-10-09)
 
 ### Features
