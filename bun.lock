@@ -37,7 +37,7 @@
         "@j178/prek": "0.5.3",
         "@jridgewell/gen-mapping": "0.3.13",
         "@kitql/helpers": "0.8.15",
-        "@lucide/svelte": "1.33.0",
+        "@lucide/svelte": "1.55.0",
         "@playwright/test": "1.62.1",
         "@sveltejs/adapter-bun": "1.0.0",
         "@sveltejs/kit": "3.0.0",
@@ -361,7 +361,7 @@
 
     "@levischuck/tiny-cbor": ["@levischuck/tiny-cbor@0.2.11", "", {}, "sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow=="],
 
-    "@lucide/svelte": ["@lucide/svelte@1.33.0", "", { "peerDependencies": { "svelte": "^5" } }, "sha512-b+osTYG2V4dge5Lr7tnaTaahhy/4vH7Xb8zcqVjmctjwgkpXS0NNOJPkGzHHZoxtw/OO+2YAU28omeMfYCaawg=="],
+    "@lucide/svelte": ["@lucide/svelte@1.55.0", "", { "peerDependencies": { "svelte": "^5" } }, "sha512-CTxJ3qbkDK2oCW1VJYKhqAUfOongRJqc9YWmJZn8E06QpCU7i5yAnUny4h/zMNy/iYpMtGiJDRSb6AVIornuXg=="],
 
     "@modelcontextprotocol/core": ["@modelcontextprotocol/core@2.1.0", "", { "dependencies": { "zod": "^4.2.0" } }, "sha512-YdFj5gMRHr0gYNAhTbQDgjLHiEJdIAUYxomhKseUNye7ZGlISQmUoLh2sveFFCiQ7j2YMffT1kgSND0FSfIFjQ=="],
 
