@@ -15,6 +15,10 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Version pinning and update checks in the REST API, the CLI, the MCP tools
+      and the Terraform provider (pin/unpin, watch toggles, apply update), only
+      the Source tab has them today
+
 - [ ] Deleting a single service mid-deploy isn't refused either: same busy guard
       and force option as stack delete
 - [ ] Workstations behind the per-app login wall: the gate is service-shaped
