@@ -488,6 +488,10 @@ trial status/message, `notifiedKey` so an update is announced once). The UI is
   (`nightly|dev|rc|beta|...`) waits for the suffix-less release of equal or
   higher numbers. A non-version tag compares the registry digest with the live
   one instead; a locally pinned non-version tag is never checked.
+- **Trial** gates on the deploy's own readiness check (`dockerHealthcheck` of
+  the service's command, else `listeningHealthcheck` on its port) set as the
+  container's `Healthcheck`: a bare "still running after N seconds" passed apps
+  that retry their database for longer than N before exiting.
 - **Trial** runs in the app process over the worker's control API, not as a job:
   losing one to a restart costs nothing, the next check redoes it (a persisted
   `running` trial is treated as never run). No volumes and the default `bridge`

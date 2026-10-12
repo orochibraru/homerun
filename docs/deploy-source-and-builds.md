@@ -28,9 +28,10 @@ tag (`:latest`, `:nightly`) for the one you pick, most specific release first.
 The image doesn't change, so nothing redeploys. When no published tag matches,
 which is what a nightly build usually looks like, it offers to tag the running
 image on this host instead, suggesting the image's
-`org.opencontainers.image.version` label when it has one; the service's pull
-policy then moves to **If missing**, since no registry has that tag. Start a
-local tag with the version the build is ahead of (`1.25.0-dev`) and update
+`org.opencontainers.image.version` label when it has one (the default pick is a
+stable version tag, never another floating one like `:nightly`); the service's
+pull policy then moves to **If missing**, since no registry has that tag. Start
+a local tag with the version the build is ahead of (`1.25.0-dev`) and update
 checks will spot that release when it ships. **Unpin** puts the service back on
 the tag it was pinned from, picked up on the next deploy. A local tag only
 exists on the manager node in [swarm mode](swarm-mode.md).
@@ -47,11 +48,13 @@ With **Try new versions before notifying** on (the default), the new version is
 started first in a throwaway container with the service's env vars, command and
 entrypoint, but no volumes, no published ports, no Traefik route and only
 Docker's default bridge network, so it can't reach the live service's data or
-database. It passes once the image reports healthy, or is still running after 20
-seconds when it has no healthcheck; the outcome, with the last log lines of a
-failure, rides along in the notification. The container is removed either way;
-the pulled image stays for the real deploy. An app that can't start without its
-database or its data fails this trial, so turn it off for those.
+database. It passes once it's ready by the same check a deploy gates traffic on
+(the service's healthcheck command, else its port listening), or is still
+running after 20 seconds when healthchecks are off; the outcome, with the last
+log lines of a failure, rides along in the notification. The container is
+removed either way; the pulled image stays for the real deploy. An app that
+can't start without its database or its data fails this trial, so turn it off
+for those.
 
 ## Build methods
 

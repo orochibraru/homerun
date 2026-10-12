@@ -133,6 +133,12 @@ export function tagsMatchingDigest(
 		.sort((a, b) => rank(b) - rank(a) || b.localeCompare(a));
 }
 
+/** Whether pinning to `tag` actually pins: a stable version, not a floating name or a moving prerelease tag like `1.25-nightly`. */
+export function isPinnableTag(tag: string): boolean {
+	const parsed = parseVersionTag(tag);
+	return parsed !== null && !parsed.prerelease;
+}
+
 /** Turns free text (an image's version label, a user's input) into a valid Docker tag, or "" when nothing usable is left. */
 export function sanitizeTag(value: string): string {
 	return value

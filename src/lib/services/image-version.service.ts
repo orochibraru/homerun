@@ -20,13 +20,21 @@ import { Logger } from "#lib/logger.js";
 import { isNotFound } from "#lib/server/worker-client.js";
 import { ApiService } from "./api.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
+import {
+	dockerHealthcheck,
+	healthcheckTimingOf,
+} from "./docker/healthcheck.ts";
+import { listeningHealthcheck } from "./docker/readiness.ts";
 import { DockerService } from "./docker.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { updateAvailableMessage } from "./notification-messages.ts";
 
 const logger = new Logger("Updates");
 
-const VERSION_LABEL = "org.opencontainers.image.version";
+const VERSION_LABELS = [
+	"org.opencontainers.image.version",
+	"org.label-schema.version",
+];
 const TRIAL_LABEL = "homerun.update-trial";
 const TRIAL_SETTLE_MS = 20_000;
 const TRIAL_HEALTH_TIMEOUT_MS = 180_000;
@@ -88,7 +96,7 @@ class ImageVersionServiceClass {
 		return { digest: local.digest || null, imageId: local.id };
 	}
 
-	/** The `org.opencontainers.image.version` label of a local image, or null. */
+	/** A local image's version label (OCI, else label-schema), or null. */
 	async #versionLabel(ref: string): Promise<string | null> {
 		const inspected = await DockerService.worker
 			.get<{ Config?: { Labels?: Record<string, string> | null } }>(
@@ -96,7 +104,10 @@ class ImageVersionServiceClass {
 				{ ref },
 			)
 			.catch(() => null);
-		return inspected?.Config?.Labels?.[VERSION_LABEL] ?? null;
+		const labels = inspected?.Config?.Labels ?? {};
+		return (
+			VERSION_LABELS.map((key) => labels[key]).find((value) => value) ?? null
+		);
 	}
 
 	/** Lists the service image's registry tags, looking up digests for its version-shaped tags newest first when the registry doesn't hand them out. */
@@ -382,8 +393,9 @@ class ImageVersionServiceClass {
 	 * service's env, command and entrypoint but no volumes, no published
 	 * ports, no Traefik labels and only Docker's default bridge network, so it
 	 * can't touch the live service's data, its database or its traffic. Passes
-	 * once the container reports healthy, or is still running after
-	 * `TRIAL_SETTLE_MS` when the image has no healthcheck. The container is
+	 * once the container reports healthy on the readiness check a real deploy
+	 * would use, or is still running after `TRIAL_SETTLE_MS` when the service
+	 * has healthchecks off. The container is
 	 * always removed; the pulled image stays, ready for the real deploy.
 	 * @returns A one-line summary of how it passed.
 	 * @throws describing how it failed, with the container's last log lines.
@@ -418,6 +430,7 @@ class ImageVersionServiceClass {
 						NetworkMode: "bridge",
 						RestartPolicy: { Name: "no" },
 					},
+					Healthcheck: this.#trialHealthcheck(svc),
 					Image: ref,
 					Labels: { [TRIAL_LABEL]: svc.id },
 				},
@@ -435,6 +448,19 @@ class ImageVersionServiceClass {
 				.delete(`v1/containers/${created.id}`, { force: "1" })
 				.catch(() => undefined);
 		}
+	}
+
+	/** The readiness check a real deploy would gate traffic on: the service's own healthcheck command, else a wait for its port to listen, none when healthchecks are off. */
+	#trialHealthcheck(svc: ServiceDTO): object | undefined {
+		const row = svc.toJSON();
+		if (row.healthcheckDisabled) {
+			return;
+		}
+		const timing = healthcheckTimingOf(row);
+		return (
+			dockerHealthcheck(row.healthcheckCommand, timing) ??
+			listeningHealthcheck(row.containerPort, timing)
+		);
 	}
 
 	/** Polls a trial container until it's healthy, settled or dead, giving up `TRIAL_HEALTH_TIMEOUT_MS` after `started`. */

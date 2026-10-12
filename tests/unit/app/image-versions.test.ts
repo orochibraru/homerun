@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	isPinnableTag,
 	isValidTag,
 	newerVersionTag,
 	parseVersionTag,
@@ -100,5 +101,15 @@ describe("local tags", () => {
 		expect(
 			suggestLocalTag("nightly", null, new Date("2026-10-12T10:00:00Z")),
 		).toBe("nightly-20261012");
+	});
+});
+
+describe("isPinnableTag", () => {
+	test("only a stable version actually pins", () => {
+		expect(isPinnableTag("1.24.4")).toBe(true);
+		expect(isPinnableTag("1.24.4-rootless")).toBe(true);
+		expect(isPinnableTag("nightly")).toBe(false);
+		expect(isPinnableTag("main-nightly")).toBe(false);
+		expect(isPinnableTag("1.25-nightly")).toBe(false);
 	});
 });

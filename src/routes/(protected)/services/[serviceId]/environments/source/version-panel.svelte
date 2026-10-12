@@ -8,7 +8,11 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { timeAgo } from "#lib/formatting.js";
-	import type { PinCandidates } from "#lib/image-versions.js";
+	import {
+		isPinnableTag,
+		type PinCandidates,
+		parseVersionTag,
+	} from "#lib/image-versions.js";
 	import type { Service } from "#lib/server/db/schema.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -59,7 +63,7 @@
 	function openPinDialog(found: PinCandidates) {
 		candidates = found;
 		localTag = found.suggestion;
-		choice = found.matches[0] ?? "local";
+		choice = found.matches.find(isPinnableTag) ?? "local";
 		dialogOpen = true;
 	}
 </script>
@@ -267,6 +271,9 @@
         <label class="flex items-center gap-2 text-sm">
           <input form="pin-version" name="choice" type="radio" value={match} bind:group={choice} />
           <code class="font-mono">{service.image}:{match}</code>
+          {#if !isPinnableTag(match)}
+            <span class="text-text-muted text-xs">moves, not a real pin</span>
+          {/if}
         </label>
       {/each}
       <label class="flex items-center gap-2 text-sm">
@@ -286,6 +293,11 @@
           type="text"
           bind:value={localTag}
         />
+        {#if localTag.trim() && !parseVersionTag(localTag.trim())}
+          <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+            This tag has no version in it, so update checks can't tell when a release catches up. Start it with the version the build is ahead of, like <code class="font-mono">1.26.0-dev</code>.
+          </p>
+        {/if}
         <p class="text-text-subtle mt-1.5 text-xs">
           The running image is tagged <code class="font-mono">{service.image}:{localTag || "…"}</code> on this host only, and the pull policy moves to "If missing" so deploys don't look for it on the registry. Start the tag with the version it's ahead of (<code class="font-mono">1.25.0-dev</code>) and update checks will spot that release.
         </p>
