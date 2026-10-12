@@ -3,7 +3,7 @@
 	"name": "Flowise",
 	"description": "Drag-and-drop builder for LLM apps, agents and RAG pipelines.",
 	"image": "flowiseai/flowise",
-	"tag": "3.1.3",
+	"tag": "3.1.4",
 	"containerPort": 3000,
 	"icon": "di:flowise",
 	"tags": ["llm", "ai", "agents", "low-code"],
