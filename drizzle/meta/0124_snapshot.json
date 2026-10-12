@@ -1,5 +1,5 @@
 {
-	"id": "d4d098d7-9a69-4879-a696-96d15d8de378",
+	"id": "a1258ffa-f403-4ad1-8673-012d85ae227b",
 	"prevId": "c2ad34e2-78c7-4a7d-a60e-bc6a79007bec",
 	"version": "7",
 	"dialect": "postgresql",
@@ -6640,39 +6640,6 @@
 					"notNull": true,
 					"default": "'latest'"
 				},
-				"pinned_from_tag": {
-					"name": "pinned_from_tag",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": false
-				},
-				"pinned_locally": {
-					"name": "pinned_locally",
-					"type": "boolean",
-					"primaryKey": false,
-					"notNull": true,
-					"default": false
-				},
-				"update_check_enabled": {
-					"name": "update_check_enabled",
-					"type": "boolean",
-					"primaryKey": false,
-					"notNull": true,
-					"default": false
-				},
-				"update_trial_enabled": {
-					"name": "update_trial_enabled",
-					"type": "boolean",
-					"primaryKey": false,
-					"notNull": true,
-					"default": true
-				},
-				"update_check": {
-					"name": "update_check",
-					"type": "jsonb",
-					"primaryKey": false,
-					"notNull": false
-				},
 				"updated_at": {
 					"name": "updated_at",
 					"type": "timestamp",
@@ -8789,6 +8756,24 @@
 			"name": "workstation",
 			"schema": "",
 			"columns": {
+				"auto_stop_at": {
+					"name": "auto_stop_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"auto_stop_minutes": {
+					"name": "auto_stop_minutes",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"auto_stop_mode": {
+					"name": "auto_stop_mode",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"cpu_limit": {
 					"name": "cpu_limit",
 					"type": "double precision",

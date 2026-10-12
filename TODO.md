@@ -18,13 +18,18 @@ When done delete the entry, no bloat.
 - [ ] Version pinning and update checks in the REST API, the CLI, the MCP tools
       and the Terraform provider (pin/unpin, watch toggles, apply update), only
       the Source tab has them today
-
+- [ ] MCP tools for what has no REST route yet: DNS domains and records, uptime
+      and monitoring, the registry, remote hosts, users, system logs, Docker
+      cleanup; and a call on whether credential-holding admin config (DNS
+      connections, git providers, object stores) belongs on MCP at all
+- [ ] MCP `get_cron_job` hands a job's `files` contents and script `source` over
+      unredacted, unlike its command and env
 - [ ] Deleting a single service mid-deploy isn't refused either: same busy guard
       and force option as stack delete
 - [ ] Workstations behind the per-app login wall: the gate is service-shaped
       (`gatedService`, `AppAccessService`), a workstation only has the IDE's own
       password today
-- [ ] Workstations in the REST API, the CLI and the Terraform provider
+- [ ] Workstations in the REST API, MCP, the CLI and the Terraform provider
 - [ ] Workstations on a raw `docker` remote host (the worker's
       `dockerapi.NewRemote`), only agent hosts can run one today
 - [ ] Workstation start never re-pulls an image it already has, so a `:latest`

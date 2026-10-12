@@ -27,6 +27,7 @@ import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { SwarmDnsWatch } from "./cron/swarm-dns-watch.ts";
 import { TraceRetentionScheduler } from "./cron/trace-retention-scheduler.ts";
 import { UpdateCheckScheduler } from "./cron/update-check-scheduler.ts";
+import { WorkstationAutoStopScheduler } from "./cron/workstation-auto-stop-scheduler.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { StatsSampler } from "./stats/stats-sampler.ts";
@@ -93,6 +94,9 @@ class CronServiceClass {
 	private readonly swarmDnsWatch = new SwarmDnsWatch();
 
 	private readonly updateCheckScheduler = new UpdateCheckScheduler();
+
+	private readonly workstationAutoStopScheduler =
+		new WorkstationAutoStopScheduler();
 
 	/** Parses a 5-field cron expression for schedule-input validation, see `cron-expression.ts`'s `parseCronSchedule`. */
 	parseCronSchedule(schedule: string): ParsedCron | null {
@@ -168,6 +172,11 @@ class CronServiceClass {
 	/** Starts the watch that restarts a swarm service whose slug dropped out of Docker's DNS. */
 	startSwarmDnsWatch(): void {
 		this.swarmDnsWatch.start();
+	}
+
+	/** Starts the per-minute pass that stops workstations whose auto-stop deadline passed. */
+	startWorkstationAutoStop(): void {
+		this.workstationAutoStopScheduler.start();
 	}
 }
 
