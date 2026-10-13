@@ -8,12 +8,13 @@
 	import * as Select from "#lib/components/ui/select/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import WorkstationFields from "#lib/components/workstation-fields.svelte";
+	import { workstationDomainOwner } from "#lib/remote/workstations.remote.js";
 	import { slugify } from "#lib/slug.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import {
 		DEFAULT_WORKSTATION_FIELDS,
-		workstationHostname,
+		defaultWorkstationDomain,
 	} from "#lib/workstations.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
@@ -25,10 +26,25 @@
 
 	let submitting = $state(false);
 	let name = $state("");
+	let domain = $state("");
+	let checked = $state("");
+	let debounce: ReturnType<typeof setTimeout> | undefined;
 
 	const hostname = $derived(
-		workstationHostname(slugify(name) || "workstation", data.baseDomain),
+		domain.trim().toLowerCase() ||
+			defaultWorkstationDomain(slugify(name) || "workstation", data.baseDomain),
 	);
+
+	$effect(() => {
+		const next = hostname;
+		clearTimeout(debounce);
+		debounce = setTimeout(() => {
+			checked = next;
+		}, 400);
+		return () => clearTimeout(debounce);
+	});
+
+	const owner = $derived(checked ? workstationDomainOwner(checked) : null);
 
 	const presetId = $derived(data.preset?.id ?? "");
 	const picked = $derived(data.presets.find((p) => p.id === presetId));
@@ -105,24 +121,48 @@
         providers={data.gitProviders}
         values={data.preset ?? DEFAULT_WORKSTATION_FIELDS}
       >
-        <div>
-          <label class={labelClass} for="name">Name</label>
-          <Input
-            id="name"
-            name="name"
-            placeholder="my-app dev"
-            required
-            type="text"
-            bind:value={name}
-          />
-          <p class="text-text-subtle mt-1.5 text-xs">
-            Opens at <code>{hostname}</code>.
-          </p>
+        <div class="space-y-3">
+          <div>
+            <label class={labelClass} for="name">Name</label>
+            <Input
+              id="name"
+              name="name"
+              placeholder="my-app dev"
+              required
+              type="text"
+              bind:value={name}
+            />
+          </div>
+          <div>
+            <label class={labelClass} for="domain">Domain</label>
+            <Input
+              id="domain"
+              name="domain"
+              placeholder={defaultWorkstationDomain(
+                slugify(name) || "workstation",
+                data.baseDomain,
+              )}
+              type="text"
+              bind:value={domain}
+            />
+            {#if owner?.current}
+              <p class="mt-1.5 text-xs text-amber-600">
+                <code>{checked}</code> is already routed to {owner.current}.
+                Pick another domain: a workstation never takes one over.
+              </p>
+            {:else}
+              <p class="text-text-subtle mt-1.5 text-xs">
+                Opens at <code>{hostname}</code>. Under its own
+                <code>dev.</code> subdomain by default, so it never clashes with
+                a service of the same name.
+              </p>
+            {/if}
+          </div>
         </div>
       </WorkstationFields>
     {/key}
 
-    <Button disabled={submitting} type="submit">
+    <Button disabled={submitting || !!owner?.current} type="submit">
       {#if submitting}
         <Spinner />
       {:else}

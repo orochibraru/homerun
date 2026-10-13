@@ -83,7 +83,7 @@ class WorkstationSignInServiceClass {
 		}
 		const providerUsername = connection.toJSON().providerUsername;
 		return {
-			hostname: workstationHostname(ws.slug, config.baseDomain),
+			hostname: workstationHostname(ws, config.baseDomain),
 			id: ws.id,
 			ownerId: ws.userId,
 			provider,

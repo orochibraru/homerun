@@ -11,6 +11,7 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { WorkstationDTO } from "#lib/dto/workstation-dto.js";
 import { providerForGitUrl } from "#lib/git-clone-url.js";
 import { Logger } from "#lib/logger.js";
+import { hostnameOwner } from "#lib/server/hostname-owner.js";
 import { requirePermission } from "#lib/server/remote-auth.js";
 import type { ContainerSample } from "#lib/services/docker/containers.js";
 import { GitProviderService } from "#lib/services/git-provider.service.js";
@@ -67,6 +68,14 @@ export const detectDevcontainer = query(
 		);
 		const hit = found.find((file) => file.text !== null);
 		return hit?.text ? parseDevcontainer(hit.text, hit.path) : null;
+	},
+);
+
+export const workstationDomainOwner = query(
+	z.string().trim().toLowerCase().max(253),
+	async (domain): Promise<string | null> => {
+		requirePermission("workstations", "read");
+		return domain ? await hostnameOwner(domain) : null;
 	},
 );
 

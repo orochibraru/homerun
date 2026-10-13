@@ -15,8 +15,15 @@ Workstations, which the Developer role has.
 
 **New Workstation** asks for:
 
-- **Name**: also its address, `<name>.<your base domain>`. A name already used
-  by a service or another workstation gets a numbered suffix.
+- **Name**: a name already used by another workstation gets a numbered suffix.
+- **Domain**: where it opens, `<name>.dev.<your base domain>` by default. The
+  `dev.` subdomain keeps workstations apart from services, so a workstation and
+  a service can share a name. Any other hostname pointing at this server works
+  too. A domain Homerun already routes (the dashboard, the registry or object
+  storage, a service's default hostname or domains, a redirect, a status page or
+  another workstation) is refused, and the form warns as you type: a workstation
+  never takes a hostname over. The domain can't be changed after creation.
+  Workstations created before domains keep `<name>.<your base domain>`.
 - **Runs on**: **This server**, or one of your registered agent hosts. Only
   agent hosts are offered: a raw Docker connection can't run one.
 - **Repository** (optional): with a [git provider](git-providers.md) connected,
@@ -120,10 +127,10 @@ is on the Overview tab instead.
 
 **Settings → Self-test** checks the workstation end to end: the container runs,
 an agent host's published port answers this server, the hostname resolves, and
-`https://<name>.<your base domain>` reaches the IDE through Traefik with a
-certificate that verifies. A failed check says why: a 404 means Traefik has no
-router for the hostname (or DNS points elsewhere), a 502 means the router exists
-but nothing answers on the IDE port.
+`https://<its domain>` reaches the IDE through Traefik with a certificate that
+verifies. A failed check says why: a 404 means Traefik has no router for the
+hostname (or DNS points elsewhere), a 502 means the router exists but nothing
+answers on the IDE port.
 
 ## Signing in
 
@@ -185,10 +192,10 @@ plain **Stop**: the container and home volume stay, **Start** brings it back.
 ## On an agent host
 
 The workstation's IDE port is published on an ephemeral port of the agent host,
-and this server's Traefik routes `<name>.<your base domain>` to it through its
-file provider, so it gets the same TLS as everything else. That needs Traefik's
-dynamic config directory (set by every shipped compose file and the installer);
-without one, **Open IDE** links straight to `http://<agent host>:<port>`.
+and this server's Traefik routes its domain to it through its file provider, so
+it gets the same TLS as everything else. That needs Traefik's dynamic config
+directory (set by every shipped compose file and the installer); without one,
+**Open IDE** links straight to `http://<agent host>:<port>`.
 
 Either way the published port is open on the agent host's network, guarded by
 the IDE password (kept even with the git sign-in): firewall it if the agent host

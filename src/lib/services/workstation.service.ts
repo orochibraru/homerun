@@ -160,7 +160,7 @@ class WorkstationServiceClass {
 
 	/** The `<slug>.<baseDomain>` hostname `ws` is routed at. */
 	hostname(ws: WorkstationDTO): string {
-		return workstationHostname(ws.slug, config.baseDomain);
+		return workstationHostname(ws.toJSON(), config.baseDomain);
 	}
 
 	/**

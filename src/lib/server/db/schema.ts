@@ -556,6 +556,7 @@ export const workstation = pgTable(
 		desiredState: text("desired_state", { enum: ["running", "stopped"] })
 			.default("stopped")
 			.notNull(),
+		domain: text("domain"),
 		editorSettings: jsonb("editor_settings")
 			.$type<Record<string, unknown>>()
 			.default({})
@@ -589,6 +590,7 @@ export const workstation = pgTable(
 	},
 	(table) => [
 		uniqueIndex("workstation_slug_idx").on(table.slug),
+		uniqueIndex("workstation_domain_idx").on(table.domain),
 		index("workstation_userId_idx").on(table.userId),
 	],
 );

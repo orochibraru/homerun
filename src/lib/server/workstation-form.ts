@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseDotEnv } from "#lib/env-parse.js";
+import { DOMAIN_RE } from "#lib/service-domains.js";
 import {
 	AUTO_STOP_MODES,
 	type AutoStopMode,
@@ -128,6 +129,11 @@ const settingsShape = {
 
 const newWorkstationSchema = z.object({
 	...settingsShape,
+	domain: optionalText
+		.transform((value) => value?.toLowerCase().replace(/\.$/, "") ?? null)
+		.refine((value) => !value || DOMAIN_RE.test(value), {
+			message: "The domain must be a hostname, like ide.example.com.",
+		}),
 	name: z.string().trim().min(1, "Give the workstation a name.").max(80),
 });
 
@@ -167,6 +173,7 @@ export interface WorkstationSettings {
 
 /** The settings plus what only the create form picks. */
 export interface NewWorkstationForm extends WorkstationSettings {
+	domain: string | null;
 	name: string;
 	remoteHostId: string | null;
 }

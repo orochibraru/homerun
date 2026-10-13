@@ -22,6 +22,7 @@ import { BaseDTO } from "./base-dto";
 export type NewWorkstationInput = Pick<
 	Workstation,
 	| "cpuLimit"
+	| "domain"
 	| "editorSettings"
 	| "env"
 	| "extensions"
@@ -167,6 +168,12 @@ export class WorkstationDTO extends BaseDTO<Workstation> {
 					isNotNull(workstation.autoStopMode),
 				),
 			);
+		return rows.map((row) => new WorkstationDTO(row));
+	}
+
+	/** Every workstation, anyone's, for checking a new one's domain against them. */
+	static async listAll(): Promise<WorkstationDTO[]> {
+		const rows = await db.select().from(workstation);
 		return rows.map((row) => new WorkstationDTO(row));
 	}
 

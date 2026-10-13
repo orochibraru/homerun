@@ -26,6 +26,7 @@ import {
 	autoStopStep,
 	DEFAULT_WORKSTATION_HOME,
 	DEFAULT_WORKSTATION_IMAGE,
+	defaultWorkstationDomain,
 	isWorkstationBusy,
 	repoDirectory,
 	WORKSTATION_STATES,
@@ -77,10 +78,19 @@ describe("repoDirectory", () => {
 	});
 });
 
-test("a workstation lives at <slug>.<baseDomain>", () => {
-	expect(workstationHostname("alice-dev", "example.com")).toBe(
-		"alice-dev.example.com",
+test("a workstation lives at its own domain, or <slug>.<baseDomain> from before domains", () => {
+	expect(defaultWorkstationDomain("penombre", "example.com")).toBe(
+		"penombre.dev.example.com",
 	);
+	expect(
+		workstationHostname(
+			{ domain: "ide.example.org", slug: "alice-dev" },
+			"example.com",
+		),
+	).toBe("ide.example.org");
+	expect(
+		workstationHostname({ domain: null, slug: "alice-dev" }, "example.com"),
+	).toBe("alice-dev.example.com");
 });
 
 describe("routing", () => {
@@ -216,6 +226,7 @@ describe("workstation presets", () => {
 				cpuLimit: 2,
 				createdAt: new Date(),
 				desiredState: "running",
+				domain: "dev.dev.example.com",
 				editorSettings: { "editor.tabSize": 2 },
 				env: { A: "1" },
 				extensions: ["esbenp.prettier-vscode"],
@@ -267,6 +278,7 @@ describe("workstation forms", () => {
 		expect(result).toEqual({
 			parsed: {
 				cpuLimit: null,
+				domain: null,
 				editorSettings: {},
 				env: {},
 				extensions: [],
@@ -282,6 +294,18 @@ describe("workstation forms", () => {
 				port: 8080,
 				remoteHostId: null,
 			},
+		});
+	});
+
+	test("a picked domain is lowercased and must be a hostname", () => {
+		const ok = parseNewWorkstation(
+			form({ domain: " IDE.Example.com. ", name: "dev" }),
+		);
+		expect("parsed" in ok && ok.parsed.domain).toBe("ide.example.com");
+		expect(
+			parseNewWorkstation(form({ domain: "not a host", name: "dev" })),
+		).toEqual({
+			error: "The domain must be a hostname, like ide.example.com.",
 		});
 	});
 

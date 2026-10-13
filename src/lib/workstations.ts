@@ -60,9 +60,25 @@ export function workstationStateLabel(state: WorkstationState): string {
 	}
 }
 
-/** The `<slug>.<baseDomain>` hostname a workstation is routed at. */
-export function workstationHostname(slug: string, baseDomain: string): string {
-	return `${slug}.${baseDomain}`;
+export const WORKSTATION_SUBDOMAIN = "dev";
+
+/** The `<slug>.dev.<baseDomain>` domain a new workstation gets unless another is picked. */
+export function defaultWorkstationDomain(
+	slug: string,
+	baseDomain: string,
+): string {
+	return `${slug}.${WORKSTATION_SUBDOMAIN}.${baseDomain}`;
+}
+
+/**
+ * The hostname a workstation is routed at: its own domain, or
+ * `<slug>.<baseDomain>` for one created before workstations had a domain.
+ */
+export function workstationHostname(
+	ws: { domain: string | null; slug: string },
+	baseDomain: string,
+): string {
+	return ws.domain ?? `${ws.slug}.${baseDomain}`;
 }
 
 /** The directory a repository is cloned into under the home path: its last path segment, without `.git`. */

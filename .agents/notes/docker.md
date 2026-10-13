@@ -1531,6 +1531,18 @@ revokes it. A gate that's gone answers 403, never 200: code-server runs with
 and the image is code-server, since an agent's published port bypasses Traefik;
 everything else keeps `PASSWORD` behind the gate.
 
+**Domain.** `workstation.domain` is picked at creation, defaulting to
+`defaultWorkstationDomain` (`<slug>.dev.<baseDomain>`), so a workstation's slug
+only has to be unique among workstations. `workstationHostname(row)` falls back
+to `<slug>.<baseDomain>` for rows from before the column. The create action and
+the New page's `workstationDomainOwner` query both go through `hostnameOwner`
+(`src/lib/server/hostname-owner.ts`): the dashboard, registry and object storage
+public hosts, every service's `serviceHostnames`, redirect hosts, status page
+domains and the other workstations. A taken hostname is refused, never taken
+over; a unique index on `domain` catches a race between two workstations.
+Hostnames created outside Homerun (a DNS record or a Pangolin resource it
+doesn't know about) aren't checked.
+
 **Presets** (`workstation_preset`, `WorkstationPresetDTO`,
 `/workstations/presets`) are per-user copies of a workstation's settings,
 `remoteHostId` set null when the host goes. `/workstations/new?preset=<id>`
