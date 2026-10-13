@@ -37,6 +37,11 @@ Concretely:
   squash merge uses it as the commit message and
   `.github/workflows/pr-title.yaml` fails the PR otherwise. Same rule for the PR
   body as for commits: no Claude mention, no session link.
+- **A branch name is always `<type>/<kebab-case-summary>`**, with the same types
+  as a PR title (`feat/workstation-observability`, `fix/sign-in-reset`), saying
+  what the branch changes. A generated or random name (`feat/happy-rubin-xyz`,
+  `claude/...`) is renamed to this shape before the first push, or right after
+  if it was already pushed: push the new name, delete the old remote branch.
 
 **Work out of `TODO.md`.** It's the backlog, and it's the only one. Don't write
 a plan in chat, don't keep a task list somewhere else, don't hand back a
