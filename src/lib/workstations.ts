@@ -118,3 +118,39 @@ export function autoStopLabel(
 		? `After ${minutes} min with no browser connected`
 		: `${minutes} min after it starts`;
 }
+
+/** Every setting a workstation and a preset share, as the form fields take them. */
+export interface WorkstationFieldValues {
+	cpuLimit: number | null;
+	editorSettings: Record<string, unknown>;
+	env: Record<string, string>;
+	extensions: string[];
+	gitAuthorEmail: string | null;
+	gitAuthorName: string | null;
+	gitBranch: string | null;
+	gitProviderId: string | null;
+	gitUrl: string | null;
+	homePath: string;
+	image: string;
+	memoryLimitMb: number | null;
+	port: number;
+	remoteHostId: string | null;
+}
+
+/** The settings a new workstation starts from when no preset is picked. */
+export const DEFAULT_WORKSTATION_FIELDS: WorkstationFieldValues = {
+	cpuLimit: null,
+	editorSettings: {},
+	env: {},
+	extensions: [],
+	gitAuthorEmail: null,
+	gitAuthorName: null,
+	gitBranch: null,
+	gitProviderId: null,
+	gitUrl: null,
+	homePath: DEFAULT_WORKSTATION_HOME,
+	image: DEFAULT_WORKSTATION_IMAGE,
+	memoryLimitMb: null,
+	port: DEFAULT_WORKSTATION_PORT,
+	remoteHostId: null,
+};

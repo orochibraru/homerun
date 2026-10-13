@@ -5,15 +5,22 @@ import {
 	generateWorkstationPassword,
 	parseAutoStop,
 	parseNewWorkstation,
+	parseWorkstationPreset,
 	parseWorkstationSection,
 } from "#lib/server/workstation-form.js";
+import { presetFromWorkstation } from "#lib/server/workstation-presets.js";
 import {
 	agentHostAddress,
+	workstationAuthCheckUrl,
 	workstationLabels,
 	workstationRouteFile,
 	workstationRouter,
 	workstationRouteYaml,
 } from "#lib/services/workstation/routing.js";
+import {
+	isCodeServerImage,
+	workstationGateKey,
+} from "#lib/services/workstation/sign-in.js";
 import {
 	autoStopLabel,
 	autoStopStep,
@@ -107,11 +114,150 @@ describe("routing", () => {
 		expect(workstationRouteFile("bob")).toBe("homerun-workstation-bob.yml");
 	});
 
+	test("without git sign-in a route carries no forwardAuth", () => {
+		const labels = workstationLabels("alice", "alice.example.com", 8080);
+		expect(Object.keys(labels).some((key) => key.includes("forwardauth"))).toBe(
+			false,
+		);
+		const yaml = parse(
+			workstationRouteYaml("bob", "bob.example.com", "http://10.0.0.5:1"),
+		);
+		expect(yaml.http.middlewares).toBeUndefined();
+		expect(
+			yaml.http.routers[workstationRouter("bob")].middlewares,
+		).toBeUndefined();
+	});
+
+	test("git sign-in puts both route shapes behind the workstation's forwardAuth", () => {
+		const address = workstationAuthCheckUrl("ws 1");
+		expect(address).toBe(`${config.authCheckUrl}?workstation=ws%201`);
+		const labels = workstationLabels(
+			"alice",
+			"alice.example.com",
+			8080,
+			address,
+		);
+		expect(labels["traefik.http.routers.workstation-alice.middlewares"]).toBe(
+			"workstation-alice-auth",
+		);
+		expect(
+			labels[
+				"traefik.http.middlewares.workstation-alice-auth.forwardauth.address"
+			],
+		).toBe(address);
+		const yaml = parse(
+			workstationRouteYaml(
+				"bob",
+				"bob.example.com",
+				"http://10.0.0.5:1",
+				address,
+			),
+		);
+		expect(yaml.http.routers["workstation-bob"].middlewares).toEqual([
+			"workstation-bob-auth",
+		]);
+		expect(
+			yaml.http.middlewares["workstation-bob-auth"].forwardAuth.address,
+		).toBe(address);
+	});
+
+	test("only code-server images get their own password turned off", () => {
+		expect(isCodeServerImage("codercom/code-server:latest")).toBe(true);
+		expect(isCodeServerImage("ghcr.io/coder/code-server")).toBe(true);
+		expect(isCodeServerImage("lscr.io/linuxserver/code-server:4")).toBe(true);
+		expect(isCodeServerImage("gitpod/openvscode-server")).toBe(false);
+		expect(isCodeServerImage("acme/code-server-fork")).toBe(false);
+	});
+
+	test("a workstation's gate key can't collide with a service id", () => {
+		expect(workstationGateKey("abc")).toBe("workstation:abc");
+	});
+
 	test("an agent's address is its URL's hostname", () => {
 		expect(agentHostAddress("http://10.0.0.5:7430")).toBe("10.0.0.5");
 		expect(agentHostAddress("https://build.example.com")).toBe(
 			"build.example.com",
 		);
+	});
+});
+
+describe("workstation presets", () => {
+	test("a preset needs a name and keeps its description", () => {
+		expect(parseWorkstationPreset(form({ name: " " }))).toEqual({
+			error: "Give the preset a name.",
+		});
+		const result = parseWorkstationPreset(
+			form({
+				description: " node box ",
+				env: "A=1\nPASSWORD=x",
+				name: "Node",
+				remoteHostId: "",
+			}),
+		);
+		if ("error" in result) {
+			throw new Error(result.error);
+		}
+		expect(result.parsed).toMatchObject({
+			description: "node box",
+			env: { A: "1" },
+			homePath: DEFAULT_WORKSTATION_HOME,
+			image: DEFAULT_WORKSTATION_IMAGE,
+			name: "Node",
+			remoteHostId: null,
+		});
+	});
+
+	test("saving a workstation as a preset copies its settings, not its identity", () => {
+		const preset = presetFromWorkstation(
+			{
+				autoStopAt: null,
+				autoStopMinutes: 30,
+				autoStopMode: "idle",
+				cpuLimit: 2,
+				createdAt: new Date(),
+				desiredState: "running",
+				editorSettings: { "editor.tabSize": 2 },
+				env: { A: "1" },
+				extensions: ["esbenp.prettier-vscode"],
+				gitAuthorEmail: "a@example.com",
+				gitAuthorName: "A",
+				gitBranch: "main",
+				gitProviderId: "gh",
+				gitUrl: "https://github.com/acme/app.git",
+				homePath: "/home/coder",
+				id: "ws1",
+				image: "codercom/code-server:4",
+				lastError: "boom",
+				memoryLimitMb: 2048,
+				name: "dev",
+				port: 8080,
+				remoteHostId: "h1",
+				signInWithGit: true,
+				slug: "dev",
+				updatedAt: new Date(),
+				userId: "u1",
+			},
+			"Node",
+			null,
+		);
+		expect(preset).toEqual({
+			cpuLimit: 2,
+			description: null,
+			editorSettings: { "editor.tabSize": 2 },
+			env: { A: "1" },
+			extensions: ["esbenp.prettier-vscode"],
+			gitAuthorEmail: "a@example.com",
+			gitAuthorName: "A",
+			gitBranch: "main",
+			gitProviderId: "gh",
+			gitUrl: "https://github.com/acme/app.git",
+			homePath: "/home/coder",
+			image: "codercom/code-server:4",
+			memoryLimitMb: 2048,
+			name: "Node",
+			port: 8080,
+			remoteHostId: "h1",
+		});
 	});
 });
 

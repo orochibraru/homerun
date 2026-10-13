@@ -14,6 +14,9 @@ When done delete the entry, no bloat.
       onto its own `channels/new` route, like every other list page
 - [ ] Workstation observability: show the home volume's disk use next to CPU,
       memory and network
+- [ ] Workstation Settings tab doesn't offer the dev container detection New
+      Workstation and presets do: its sections are separate forms, so Apply
+      would need to save the Editor and Container sections itself
 - [ ] Workstation editor setup only drives code-server: support
       openvscode-server (its own extension CLI and settings path) for the
       extensions and settings.json

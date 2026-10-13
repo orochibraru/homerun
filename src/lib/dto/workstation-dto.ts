@@ -64,6 +64,7 @@ export type WorkstationUpdateInput = Partial<
 		| "name"
 		| "passwordEnc"
 		| "port"
+		| "signInWithGit"
 	>
 >;
 
@@ -78,6 +79,16 @@ export class WorkstationDTO extends BaseDTO<Workstation> {
 			.select()
 			.from(workstation)
 			.where(and(eq(workstation.id, id), eq(workstation.userId, userId)))
+			.limit(1);
+		return row ? new WorkstationDTO(row) : null;
+	}
+
+	/** Loads any workstation by id, whoever owns it, for the git sign-in check on its hostname. */
+	static async getForGate(id: string): Promise<WorkstationDTO | null> {
+		const [row] = await db
+			.select()
+			.from(workstation)
+			.where(eq(workstation.id, id))
 			.limit(1);
 		return row ? new WorkstationDTO(row) : null;
 	}
@@ -190,6 +201,7 @@ export class WorkstationDTO extends BaseDTO<Workstation> {
 			desiredState: "stopped",
 			id: crypto.randomUUID(),
 			lastError: null,
+			signInWithGit: false,
 			updatedAt: now,
 		};
 		await db.insert(workstation).values(row);
