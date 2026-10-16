@@ -60,8 +60,9 @@ your own. Order matters: GitHub labels a self-hosted Linux runner
 `self-hosted, linux, x64`, so `self-hosted` comes first. Put a more specific
 line, such as `ubuntu-latest-8-cores = 0.022`, above a general one. Saving new
 rates re-costs every stored run. The numbers are an estimate, not your bill:
-included free minutes and plan discounts aren't taken into account, and a re-run
-replaces the run's earlier attempt.
+included free minutes and plan discounts aren't taken into account. A re-run
+keeps the minutes of every attempt in the cost; its durations, queue time and
+trace are the latest attempt's, counted from when that attempt started.
 
 ## Traces
 

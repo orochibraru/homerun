@@ -116,7 +116,8 @@ export function pipelineTraceId(input: {
 
 /**
  * One finished run as an OTLP/JSON trace: a root span from queued to
- * finished, a span per job that ran, and a span per step under its job.
+ * finished, a span per job of its latest attempt that ran, and a span per
+ * step under its job.
  * Ids derive from the run so exporting it twice stores nothing new. The
  * resource names the service and marks the spans as CI, so the ingest keeps
  * them whether or not the service's own traces are on. Null when the run
@@ -158,7 +159,7 @@ export function buildPipelineTrace(
 		},
 	];
 	for (const [index, job] of input.jobs.entries()) {
-		if (!job.startedAt) {
+		if (!job.startedAt || job.attempt !== input.attempt) {
 			continue;
 		}
 		const jobId = hex(`${traceId}:job:${index}:${job.name}`, 16);

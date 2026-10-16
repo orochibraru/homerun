@@ -128,6 +128,7 @@ export function mapActionsJob(value: unknown): FetchedJob | null {
 		return null;
 	}
 	return {
+		attempt: numberOf(value.run_attempt),
 		createdAt: timeOf(value.created_at),
 		finishedAt: timeOf(value.completed_at),
 		labels: labelsOf(value.labels),
@@ -175,6 +176,7 @@ export function mapGitLabJob(value: unknown): FetchedJob | null {
 	}
 	const runner = isRecord(value.runner) ? value.runner : {};
 	return {
+		attempt: null,
 		createdAt: timeOf(value.created_at),
 		finishedAt: timeOf(value.finished_at),
 		labels: labelsOf(value.tag_list),
@@ -287,7 +289,7 @@ export class PipelineClient {
 		}
 		const param = this.#target.kind === "gitea" ? "limit" : "per_page";
 		const body = await this.#get(
-			`${this.#repo()}/actions/runs/${run.externalId}/jobs?${param}=100`,
+			`${this.#repo()}/actions/runs/${run.externalId}/jobs?${param}=100&filter=all`,
 		);
 		return {
 			jobs: listOf(isRecord(body) ? body.jobs : [])

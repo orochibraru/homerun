@@ -30,6 +30,7 @@ export interface PipelineStep {
 }
 
 export interface PipelineJob {
+	attempt: number;
 	billableMinutes: number;
 	costUsd: number;
 	durationMs: number | null;
@@ -45,6 +46,7 @@ export interface PipelineJob {
 }
 
 export interface FetchedJob {
+	attempt: number | null;
 	createdAt: string | null;
 	finishedAt: string | null;
 	labels: string[];

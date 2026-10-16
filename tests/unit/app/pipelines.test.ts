@@ -76,6 +76,7 @@ const GITHUB_JOB = {
 
 function job(overrides: Partial<FetchedJob> = {}): FetchedJob {
 	return {
+		attempt: null,
 		createdAt: "2026-10-01T10:00:00.000Z",
 		finishedAt: "2026-10-01T10:02:30.000Z",
 		labels: ["ubuntu-latest"],
@@ -265,7 +266,7 @@ describe("PipelineClient", () => {
 		const github = client(
 			"github",
 			{
-				"https://api.test/repos/group/sub/repo/actions/runs/42/jobs?per_page=100":
+				"https://api.test/repos/group/sub/repo/actions/runs/42/jobs?per_page=100&filter=all":
 					{ jobs: [GITHUB_JOB] },
 				"https://api.test/repos/group/sub/repo/actions/runs?per_page=20": {
 					workflow_runs: [GITHUB_RUN],
@@ -375,6 +376,48 @@ describe("summarizeRun", () => {
 		expect(summary.costUsd).toBeCloseTo(2 * 0.006 + 3 * 0.062, 6);
 		expect(summary.jobs[0]?.durationMs).toBe(90_000);
 		expect(summary.title).toBe("From the jobs");
+	});
+
+	test("costs every attempt of a re-run but times only the latest", () => {
+		const summary = summarizeRun(
+			run({
+				attempt: 2,
+				createdAt: "2026-10-01T08:00:00.000Z",
+				startedAt: "2026-10-01T10:00:00.000Z",
+				status: "success",
+			}),
+			{
+				jobs: [
+					job({
+						attempt: 1,
+						finishedAt: "2026-10-01T08:10:00.000Z",
+						startedAt: "2026-10-01T08:01:00.000Z",
+						status: "failure",
+					}),
+					job({ attempt: 2 }),
+				],
+				title: null,
+			},
+			defaultRates("github"),
+			now,
+		);
+		expect(summary.billableMinutes).toBe(11);
+		expect(summary.costUsd).toBeCloseTo(11 * 0.006, 6);
+		expect(summary.createdAt.toISOString()).toBe("2026-10-01T10:00:00.000Z");
+		expect(summary.queueMs).toBe(60_000);
+		expect(summary.durationMs).toBe(150_000);
+		expect(summary.jobs.map((entry) => entry.attempt)).toEqual([1, 2]);
+		const body = buildPipelineTrace({
+			...summary,
+			externalId: "42",
+			provider: "github",
+			serviceId: "svc-1",
+		});
+		const [resource] = parseOtlpTraces(body);
+		expect(resource?.spans.map((span) => span.name)).toEqual(["CI", "build"]);
+		expect(resource?.spans[0]?.startTime.toISOString()).toBe(
+			"2026-10-01T10:00:00.000Z",
+		);
 	});
 
 	test("leaves an unfinished run open and falls back on now", () => {

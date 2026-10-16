@@ -136,8 +136,8 @@ describe("PipelineService.sync", () => {
 
 		expect(result).toEqual({ exported: 1, fetched: 3, updated: 2 });
 		expect(fetched.filter((url) => url.includes("/jobs"))).toEqual([
-			`${API}/repos/acme/api/actions/runs/2/jobs?per_page=100`,
-			`${API}/repos/acme/api/actions/runs/3/jobs?per_page=100`,
+			`${API}/repos/acme/api/actions/runs/2/jobs?per_page=100&filter=all`,
+			`${API}/repos/acme/api/actions/runs/3/jobs?per_page=100&filter=all`,
 		]);
 		expect(upserts.map((row) => [row.externalId, row.status])).toEqual([
 			["2", "success"],
@@ -187,6 +187,7 @@ describe("PipelineService.saveSettings", () => {
 			{
 				jobs: [
 					{
+						attempt: 1,
 						billableMinutes: 3,
 						costUsd: 0,
 						labels: ["macos-14"],
@@ -214,6 +215,7 @@ describe("PipelineService.saveSettings", () => {
 				cost: 1.5,
 				jobs: [
 					{
+						attempt: 1,
 						billableMinutes: 3,
 						costUsd: 1.5,
 						labels: ["macos-14"],

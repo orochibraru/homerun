@@ -103,7 +103,7 @@
                 <td class="text-text-muted hidden px-4 py-3 text-right font-mono text-xs whitespace-nowrap md:table-cell">
                   {formatRunDuration(run.queueMs)}
                 </td>
-                <td class="text-text-muted hidden px-4 py-3 text-right sm:table-cell">{run.jobs.length}</td>
+                <td class="text-text-muted hidden px-4 py-3 text-right sm:table-cell">{run.jobs.filter((job) => job.attempt === run.attempt).length}</td>
                 <td
                   class="text-text px-4 py-3 text-right font-mono text-xs whitespace-nowrap"
                   title="{run.billableMinutes} billable minutes"

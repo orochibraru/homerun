@@ -54,7 +54,10 @@ function between(from: Date | null, to: Date | null): number | null {
  * A fetched run and its jobs as the row Homerun stores: queued, started and
  * finished times (falling back on the jobs' when the run lacks them), the
  * time spent queued before the first job started, the wall-clock duration,
- * and each job's billable minutes and cost at the service's rates.
+ * and each job's billable minutes and cost at the service's rates. Every
+ * attempt's jobs are costed, but times come from the latest attempt alone,
+ * and a re-run counts as queued from when it started, not from when the
+ * first attempt was created.
  */
 export function summarizeRun(
 	run: FetchedRun,
@@ -66,6 +69,7 @@ export function summarizeRun(
 		const minutes = billableMinutes(job.startedAt, job.finishedAt);
 		const cost = minutes * rateFor(rules, job.labels, job.runner);
 		return {
+			attempt: job.attempt ?? run.attempt,
 			billableMinutes: minutes,
 			costUsd: Math.round(cost * 10_000) / 10_000,
 			durationMs: between(dateOf(job.startedAt), dateOf(job.finishedAt)),
@@ -80,16 +84,21 @@ export function summarizeRun(
 			url: job.url,
 		};
 	});
-	const firstJobStart = dateOf(earliest(fetched.jobs.map((j) => j.startedAt)));
+	const current = fetched.jobs.filter(
+		(job) => (job.attempt ?? run.attempt) === run.attempt,
+	);
+	const firstJobStart = dateOf(earliest(current.map((j) => j.startedAt)));
+	const rerunStart = run.attempt > 1 ? dateOf(run.startedAt) : null;
 	const createdAt =
+		rerunStart ??
 		dateOf(run.createdAt) ??
-		dateOf(earliest(fetched.jobs.map((j) => j.createdAt))) ??
+		dateOf(earliest(current.map((j) => j.createdAt))) ??
 		dateOf(run.startedAt) ??
 		firstJobStart ??
 		now;
 	const startedAt = dateOf(run.startedAt) ?? firstJobStart;
 	const finishedAt = isFinished(run.status)
-		? (dateOf(latest(fetched.jobs.map((j) => j.finishedAt))) ??
+		? (dateOf(latest(current.map((j) => j.finishedAt))) ??
 			dateOf(run.finishedAt))
 		: null;
 	const minutes = jobs.reduce((sum, job) => sum + job.billableMinutes, 0);

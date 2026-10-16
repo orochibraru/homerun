@@ -609,14 +609,18 @@ owner's token) and reads GitHub/Gitea `actions/runs` (same shape, Gitea takes
 `limit` not `per_page`, 404 before 1.24) or GitLab `pipelines` + per-pipeline
 `jobs` (no steps, commit title only on jobs). A run's jobs are re-read only when
 it's new, unfinished, or its attempt/status changed (`PipelineRunDTO.known`);
-`upsert` on `(service_id, external_id)` resets `trace_exported`. Every status
-goes through `normalizeStatus` (conclusion wins once completed). Cost is
-`summarizeRun`: per job `ceil(minutes) × rateFor(rules, labels, runner)`, rules
-ordered `label = rate` lines in `service.pipelineRates`, null meaning
-`defaultRates(provider)` (GitHub hosted prices, nothing elsewhere); saving rates
-re-costs every stored run (`recostJobs`). Finished runs become OTLP/JSON
-(`buildPipelineTrace`, ids derived from service/provider/run/attempt so a
-re-export is a no-op) sent by `TracingService.exportSpans` to the collector's
+`upsert` on `(service_id, external_id)` resets `trace_exported`. Jobs are read
+with `filter=all` and tagged with their `attempt`: cost sums every attempt,
+while timings and the trace use the latest only, and a re-run's queue time
+starts at its own `run_started_at` (GitHub keeps the first attempt's
+`created_at`). Every status goes through `normalizeStatus` (conclusion wins once
+completed). Cost is `summarizeRun`: per job
+`ceil(minutes) × rateFor(rules, labels, runner)`, rules ordered `label = rate`
+lines in `service.pipelineRates`, null meaning `defaultRates(provider)` (GitHub
+hosted prices, nothing elsewhere); saving rates re-costs every stored run
+(`recostJobs`). Finished runs become OTLP/JSON (`buildPipelineTrace`, ids
+derived from service/provider/run/attempt so a re-export is a no-op) sent by
+`TracingService.exportSpans` to the collector's
 `http://homerun-otel:4318/v1/traces`, falling back to storing directly when the
 collector is off or unreachable (always the case from the dev server). The
 resource carries `homerun.pipeline: true`, which `spanOwner` accepts even when
