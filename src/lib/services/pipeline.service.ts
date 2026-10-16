@@ -1,3 +1,4 @@
+import { config } from "#lib/config.js";
 import {
 	type KnownRun,
 	PipelineRunDTO,
@@ -18,6 +19,7 @@ import {
 	type PipelineProvider,
 	type PipelineRateRule,
 } from "#lib/pipelines/types.js";
+import { pipelineSpanToken } from "#lib/tracing/ingest-token.js";
 import { StatusCheckService } from "./status-check.service.ts";
 import { TracingService } from "./tracing.service.ts";
 
@@ -155,7 +157,11 @@ class PipelineServiceClass {
 		let exported = 0;
 		for (const dto of await PipelineRunDTO.listUnexported(serviceId)) {
 			const run = dto.toJSON();
-			const body = buildPipelineTrace({ ...run, serviceId });
+			const body = buildPipelineTrace({
+				...run,
+				pipelineToken: pipelineSpanToken(config.auth.secret, serviceId),
+				serviceId,
+			});
 			if (!body) {
 				continue;
 			}

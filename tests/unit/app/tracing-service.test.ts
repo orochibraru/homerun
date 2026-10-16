@@ -17,7 +17,7 @@ const { TraceSpanDTO } = await import("../../../src/lib/dto/trace-span-dto");
 const { DockerService } = await import(
 	"../../../src/lib/services/docker.service"
 );
-const { otlpIngestToken } = await import(
+const { otlpIngestToken, pipelineSpanToken } = await import(
 	"../../../src/lib/tracing/ingest-token"
 );
 const { TracingService, MAX_OTLP_BODY_BYTES } = await import(
@@ -179,9 +179,28 @@ describe("TracingService.ingest", () => {
 
 describe("TracingService.exportSpans", () => {
 	const ci = body({
-		"homerun.pipeline": true,
+		"homerun.pipeline": pipelineSpanToken(config.auth.secret, "svc-2"),
 		"homerun.service.id": "svc-2",
 		"service.name": "github-actions",
+	});
+
+	test("stores CI spans of a service with traces off without the token, and drops forged ones", async () => {
+		collectorEnabled = false;
+		await TracingService.exportSpans(ci as never);
+		expect(inserted).toHaveLength(1);
+		expect(inserted[0]?.resourceAttributes).toEqual({
+			"homerun.service.id": "svc-2",
+			"service.name": "github-actions",
+		});
+		const forged = body({
+			"homerun.pipeline": true,
+			"homerun.service.id": "svc-2",
+			"service.name": "github-actions",
+		});
+		await TracingService.exportSpans(forged as never);
+		const response = await TracingService.ingest(request(forged));
+		expect(response.status).toBe(200);
+		expect(inserted).toHaveLength(1);
 	});
 
 	test("hands spans to the collector when it's on", async () => {

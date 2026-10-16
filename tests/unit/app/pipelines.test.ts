@@ -26,6 +26,10 @@ import {
 	type FetchedRun,
 	normalizeStatus,
 } from "../../../src/lib/pipelines/types";
+import {
+	pipelineSpanToken,
+	validPipelineSpanToken,
+} from "../../../src/lib/tracing/ingest-token";
 import { parseOtlpTraces, spanOwner } from "../../../src/lib/tracing/otlp";
 
 const GITHUB_RUN = {
@@ -410,6 +414,7 @@ describe("summarizeRun", () => {
 		const body = buildPipelineTrace({
 			...summary,
 			externalId: "42",
+			pipelineToken: "token",
 			provider: "github",
 			serviceId: "svc-1",
 		});
@@ -472,6 +477,7 @@ describe("buildPipelineTrace", () => {
 			new Date(),
 		),
 		externalId: "42",
+		pipelineToken: pipelineSpanToken("secret", "svc-1"),
 		provider: "github" as const,
 		serviceId: "svc-1",
 	};
@@ -481,7 +487,7 @@ describe("buildPipelineTrace", () => {
 		expect(body).not.toBeNull();
 		const [resource] = parseOtlpTraces(body);
 		expect(resource?.attributes).toMatchObject({
-			"homerun.pipeline": true,
+			"homerun.pipeline": pipelineSpanToken("secret", "svc-1"),
 			"homerun.service.id": "svc-1",
 			"service.name": "github-actions",
 		});
@@ -496,9 +502,11 @@ describe("buildPipelineTrace", () => {
 		expect(root?.durationMs).toBe(150_000);
 		expect(root?.attributes["homerun.pipeline.cost_usd"]).toBeCloseTo(0.012, 6);
 		expect(
-			spanOwner(resource?.attributes ?? {}, [
-				{ id: "svc-1", slug: "app", tracesEnabled: false },
-			]),
+			spanOwner(
+				resource?.attributes ?? {},
+				[{ id: "svc-1", slug: "app", tracesEnabled: false }],
+				(id, value) => validPipelineSpanToken(value, "secret", id),
+			),
 		).toEqual({ serviceId: "svc-1", serviceName: "github-actions" });
 	});
 
@@ -507,6 +515,13 @@ describe("buildPipelineTrace", () => {
 		expect(pipelineTraceId({ ...finished, attempt: 2 })).not.toBe(
 			pipelineTraceId(finished),
 		);
+		expect(
+			pipelineTraceId({
+				...finished,
+				finishedAt: new Date("2026-10-02T00:00:00Z"),
+				provider: "gitlab",
+			}),
+		).not.toBe(pipelineTraceId({ ...finished, provider: "gitlab" }));
 		expect(buildPipelineTrace({ ...finished, finishedAt: null })).toBeNull();
 	});
 });

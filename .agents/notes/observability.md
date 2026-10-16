@@ -623,9 +623,13 @@ derived from service/provider/run/attempt so a re-export is a no-op) sent by
 `TracingService.exportSpans` to the collector's
 `http://homerun-otel:4318/v1/traces`, falling back to storing directly when the
 collector is off or unreachable (always the case from the dev server). The
-resource carries `homerun.pipeline: true`, which `spanOwner` accepts even when
-the service's traces are off. Stats are SQL aggregates (`percentile_cont` for
-p50/p95) over 30 days and all time, plus per workflow.
+resource carries `homerun.pipeline` =
+`pipelineSpanToken(AUTH_SECRET, serviceId)` (an HMAC, since anything on the
+Docker network can post to the collector), which `spanOwner` accepts even when
+the service's traces are off and `#store` strips before saving. The trace id
+also hashes `finishedAt`, so a GitLab retry (same pipeline id, attempt 1) gets a
+fresh trace instead of colliding with the first. Stats are SQL aggregates
+(`percentile_cont` for p50/p95) over 30 days and all time, plus per workflow.
 
 **Job traces**: every worker job span carries `homerun.job.id`;
 `TraceSpanDTO.spansOfJob` finds its traces (one per attempt) through the partial

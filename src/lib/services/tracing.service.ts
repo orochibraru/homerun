@@ -9,10 +9,12 @@ import { OTEL_COLLECTOR_HOST, OTEL_HTTP_PORT } from "#lib/tracing/env.js";
 import {
 	otlpIngestToken,
 	validOtlpAuthorization,
+	validPipelineSpanToken,
 } from "#lib/tracing/ingest-token.js";
 import {
 	OtlpError,
 	type ParsedResource,
+	PIPELINE_ATTRIBUTE,
 	parseOtlpTraces,
 	spanOwner,
 	type TracedService,
@@ -147,14 +149,18 @@ class TracingServiceClass {
 		const services = await this.#tracedServices();
 		const rows: NewTraceSpan[] = [];
 		for (const resource of resources) {
-			const owner = spanOwner(resource.attributes, services);
+			const owner = spanOwner(resource.attributes, services, (id, value) =>
+				validPipelineSpanToken(value, config.auth.secret, id),
+			);
 			if (!owner) {
 				continue;
 			}
+			const { [PIPELINE_ATTRIBUTE]: _token, ...resourceAttributes } =
+				resource.attributes;
 			for (const span of resource.spans) {
 				rows.push({
 					...span,
-					resourceAttributes: resource.attributes,
+					resourceAttributes,
 					serviceId: owner.serviceId,
 					serviceName: owner.serviceName,
 				});

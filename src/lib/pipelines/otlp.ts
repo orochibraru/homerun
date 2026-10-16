@@ -22,6 +22,7 @@ export interface PipelineTraceInput {
 	jobs: PipelineJob[];
 	name: string;
 	number: number | null;
+	pipelineToken: string;
 	provider: PipelineProvider;
 	serviceId: string;
 	status: PipelineStatus;
@@ -101,15 +102,21 @@ function statusOf(status: PipelineStatus): { code: number; message?: string } {
 		: { code: STATUS_UNSET };
 }
 
-/** The trace id a run's spans share, stable across syncs so a re-export never duplicates them. */
+/**
+ * The trace id a run's spans share: stable across syncs of one finished
+ * attempt so a re-export never duplicates them, and new for each attempt,
+ * including a GitLab retry, which keeps its pipeline id and attempt but
+ * finishes again.
+ */
 export function pipelineTraceId(input: {
 	attempt: number;
 	externalId: string;
+	finishedAt: Date | null;
 	provider: PipelineProvider;
 	serviceId: string;
 }): string {
 	return hex(
-		`pipeline:${input.serviceId}:${input.provider}:${input.externalId}:${input.attempt}`,
+		`pipeline:${input.serviceId}:${input.provider}:${input.externalId}:${input.attempt}:${input.finishedAt?.toISOString() ?? ""}`,
 		32,
 	);
 }
@@ -119,8 +126,8 @@ export function pipelineTraceId(input: {
  * finished, a span per job of its latest attempt that ran, and a span per
  * step under its job.
  * Ids derive from the run so exporting it twice stores nothing new. The
- * resource names the service and marks the spans as CI, so the ingest keeps
- * them whether or not the service's own traces are on. Null when the run
+ * resource names the service and carries its CI span token, so the ingest
+ * keeps them whether or not the service's own traces are on. Null when the run
  * hasn't finished.
  */
 export function buildPipelineTrace(
@@ -210,7 +217,7 @@ export function buildPipelineTrace(
 			{
 				resource: {
 					attributes: attributes({
-						[PIPELINE_ATTRIBUTE]: true,
+						[PIPELINE_ATTRIBUTE]: input.pipelineToken,
 						[SERVICE_ID_ATTRIBUTE]: input.serviceId,
 						"service.name": pipelineServiceName(input.provider),
 					}),
