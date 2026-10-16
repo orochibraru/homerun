@@ -280,6 +280,25 @@ describe("spanOwner", () => {
 		expect(spanOwner({}, services)).toBeNull();
 	});
 
+	test("keeps a service's CI spans even with its traces off", () => {
+		expect(
+			spanOwner(
+				{
+					"homerun.pipeline": true,
+					"homerun.service.id": "svc-web",
+					"service.name": "github-actions",
+				},
+				services,
+			),
+		).toEqual({ serviceId: "svc-web", serviceName: "github-actions" });
+		expect(
+			spanOwner(
+				{ "homerun.pipeline": "true", "homerun.service.id": "svc-web" },
+				services,
+			),
+		).toBeNull();
+	});
+
 	test("keeps Homerun's own spans with no service", () => {
 		expect(spanOwner({ "service.name": "homerun-worker" }, services)).toEqual({
 			serviceId: null,
