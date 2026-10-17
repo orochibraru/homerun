@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.65](https://github.com/orochibraru/homerun/compare/v1.0.64...v1.0.65) (2026-10-17)
+
+### Features
+
+- **backups:** incremental restic snapshots per volume with forget/prune
+  retention, and stop logging 4xx responses as errors
+  ([ff112a2](https://github.com/orochibraru/homerun/commit/ff112a298ed2a56be46e2c7d648544438bb67052))
+- **pipelines:** watch repositories from a global Pipelines page, link them to
+  any service and sync through the job queue
+  ([9549f99](https://github.com/orochibraru/homerun/commit/9549f993627ed9aa3d60f825da12f07508ddae1a))
+- **observability:** add a Pipelines tab syncing GitHub, GitLab and Gitea CI
+  runs with stats, costs and traces (#119)
+  ([340d7b5](https://github.com/orochibraru/homerun/commit/340d7b5e835d1225683774d55fda237a0d56f88d))
+- **backups:** set backups to keep per destination, queue the cleanup as a job
+  and link each scheduled backup to its settings
+  ([b2bb724](https://github.com/orochibraru/homerun/commit/b2bb7241bb35884ae4502f2c57d008252e332564))
+- **backups:** clean up old archives past each volume's limit from the Backups
+  page
+  ([88612f1](https://github.com/orochibraru/homerun/commit/88612f196bfec9a582c7151029f527de82288492))
+
 ## [1.0.64](https://github.com/orochibraru/homerun/compare/v1.0.63...v1.0.64) (2026-10-16)
 
 ### Features
