@@ -17,12 +17,14 @@ func (s *Server) mountSwarm(r chi.Router) {
 	r.Post("/v1/swarm/init", httpapi.H(s.initSwarm))
 	r.Get("/v1/swarm/nodes", httpapi.H(s.listSwarmNodes))
 	r.Delete("/v1/swarm/nodes/{id}", httpapi.H(s.removeSwarmNode))
+	r.Put("/v1/swarm/nodes/{id}/labels", httpapi.H(s.setSwarmNodeLabels))
 	r.Get("/v1/swarm/join", httpapi.H(s.swarmJoin))
 	r.Post("/v1/swarm/overlay", httpapi.H(s.ensureOverlay))
 	r.Post("/v1/swarm/services", httpapi.H(s.createSwarmService))
 	r.Get("/v1/swarm/services/{id}", httpapi.H(s.inspectSwarmService))
 	r.Get("/v1/swarm/services/{id}/status", httpapi.H(s.swarmServiceStatus))
 	r.Get("/v1/swarm/services/{id}/replicas", httpapi.H(s.swarmServiceReplicas))
+	r.Get("/v1/swarm/services/{id}/running-tasks/count", httpapi.H(s.countRunningSwarmTasks))
 	r.Get("/v1/swarm/services/{id}/tasks", httpapi.H(s.swarmServiceTasks))
 	r.Get("/v1/swarm/services/{id}/logs", httpapi.H(s.swarmServiceLogs))
 	r.Post("/v1/swarm/services/{id}/scale", httpapi.H(s.scaleSwarmService))
@@ -168,6 +170,19 @@ func (s *Server) swarmServiceReplicas(w http.ResponseWriter, r *http.Request) er
 	return httpapi.Answer(w, http.StatusOK, map[string]int{"replicas": replicas})
 }
 
+// countRunningSwarmTasks answers with how many of a service's tasks are
+// running on any node.
+func (s *Server) countRunningSwarmTasks(w http.ResponseWriter, r *http.Request) error {
+	count, err := s.docker.CountRunningSwarmTasks(r.Context(), chi.URLParam(r, "id"))
+	if errors.Is(err, dockerapi.ErrNotFound) {
+		return httpapi.Error(w, http.StatusNotFound, "No such swarm service.")
+	}
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, map[string]int{"count": count})
+}
+
 // swarmServiceTasks answers with a service's tasks, optionally only the ones
 // the daemon wants running (the rest are previous generations swarm keeps).
 func (s *Server) swarmServiceTasks(w http.ResponseWriter, r *http.Request) error {
@@ -272,6 +287,20 @@ func (s *Server) removeSwarmService(w http.ResponseWriter, r *http.Request) erro
 // removeSwarmNode forcibly removes a node from the swarm.
 func (s *Server) removeSwarmNode(w http.ResponseWriter, r *http.Request) error {
 	if err := s.docker.RemoveSwarmNode(r.Context(), chi.URLParam(r, "id")); err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// setSwarmNodeLabels replaces a node's labels with the body's `labels` map.
+func (s *Server) setSwarmNodeLabels(w http.ResponseWriter, r *http.Request) error {
+	var body struct {
+		Labels map[string]string `json:"labels"`
+	}
+	if !httpapi.DecodeJSON(w, r, &body) {
+		return nil
+	}
+	if err := s.docker.SetSwarmNodeLabels(r.Context(), chi.URLParam(r, "id"), body.Labels); err != nil {
 		return err
 	}
 	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})

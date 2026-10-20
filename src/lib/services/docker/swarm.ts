@@ -2,6 +2,10 @@ import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
 import type { AuthPathsMode } from "#lib/path-patterns.js";
 import type { PublishedPort } from "#lib/published-ports.js";
+import {
+	type SwarmPlacement,
+	swarmPlacementSpec,
+} from "#lib/swarm-placement.js";
 import type { ContainerStatus } from "#lib/types.js";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RegistryAuth, VolumeMountParams } from "./containers.ts";
@@ -196,6 +200,7 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 			RestartPolicy: {
 				Condition: swarmRestartCondition(params.restartPolicy),
 			},
+			Placement: swarmPlacementSpec(params.placement),
 		},
 	};
 }
@@ -219,7 +224,11 @@ interface RawSwarmNode {
 	};
 	ID?: string;
 	ManagerStatus?: { Leader?: boolean } | null;
-	Spec?: { Availability?: string; Role?: string };
+	Spec?: {
+		Availability?: string;
+		Labels?: Record<string, string> | null;
+		Role?: string;
+	};
 	Status?: { Addr?: string; State?: string };
 }
 
@@ -232,6 +241,7 @@ export interface SwarmNodeInfo {
 	engineVersion: string;
 	hostname: string;
 	id: string;
+	labels: Record<string, string>;
 	leader: boolean;
 	memoryBytes: number;
 	role: string;
@@ -250,6 +260,7 @@ export function toSwarmNodeInfo(node: RawSwarmNode): SwarmNodeInfo {
 		engineVersion: description.Engine?.EngineVersion ?? "",
 		hostname: description.Hostname ?? node.ID ?? "",
 		id: node.ID ?? "",
+		labels: node.Spec?.Labels ?? {},
 		leader: node.ManagerStatus?.Leader ?? false,
 		memoryBytes: resources.MemoryBytes ?? 0,
 		role: node.Spec?.Role ?? "",
@@ -304,6 +315,7 @@ export interface CreateSwarmServiceParams {
 	healthcheckCommand?: string | null;
 	runtime?: ContainerRuntimeParams;
 	stackSlug?: string | null;
+	placement?: SwarmPlacement | null;
 	replicas: number;
 	restartPolicy: string;
 	serviceId: string;
@@ -465,6 +477,21 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 		}
 
 		/**
+		 * Replaces a swarm node's labels, the ones service placement
+		 * constraints and spread preferences match against.
+		 */
+		async setSwarmNodeLabels(
+			nodeId: string,
+			labels: Record<string, string>,
+		): Promise<void> {
+			await this.worker.put<{ ok: boolean }>(
+				`/v1/swarm/nodes/${encodeURIComponent(nodeId)}/labels`,
+				{ labels },
+			);
+			logger.info(`Swarm node labels set: ${nodeId}`);
+		}
+
+		/**
 		 * The worker join token and manager address a new node joins with.
 		 *
 		 * @throws When this daemon isn't a swarm manager.
@@ -533,6 +560,14 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 					(!localNodeId || task.NodeID === localNodeId),
 			);
 			return running?.Status?.ContainerStatus?.ContainerID ?? null;
+		}
+
+		/** How many of the service's tasks are running right now, on any node of the swarm, as the daemon counts them: no task list crosses the wire. */
+		async countRunningSwarmTasks(swarmServiceId: string): Promise<number> {
+			const { count } = await this.worker.get<{ count: number }>(
+				`/v1/swarm/services/${swarmServiceId}/running-tasks/count`,
+			);
+			return count;
 		}
 
 		/** Same Web ReadableStream shape and options as containers.ts's streamLogs, so a logs route doesn't need to know which mode it's in. The worker demuxes the frames, so what comes back is already plain text. */

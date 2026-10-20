@@ -551,12 +551,42 @@ func TestSwarmJoinInfoPrefersThisManagersAddress(t *testing.T) {
 	}
 }
 
+func TestCountRunningSwarmTasksAsksForStatus(t *testing.T) {
+	client, d := newDaemon(t, 200, `{"ServiceStatus":{"RunningTasks":2}}`)
+	running, err := client.CountRunningSwarmTasks(context.Background(), "s1")
+	if err != nil || running != 2 {
+		t.Fatalf("CountRunningSwarmTasks = %d, %v", running, err)
+	}
+	d.expect(t, http.MethodGet, "/services/s1", map[string][]string{"status": {"true"}})
+
+	d.set(200, `{}`)
+	if running, err := client.CountRunningSwarmTasks(context.Background(), "s1"); err != nil || running != 0 {
+		t.Errorf("no ServiceStatus = %d, %v", running, err)
+	}
+}
+
 func TestRemoveSwarmNodeForces(t *testing.T) {
 	client, d := newDaemon(t, 200, ``)
 	if err := client.RemoveSwarmNode(context.Background(), "n1"); err != nil {
 		t.Fatal(err)
 	}
 	d.expect(t, http.MethodDelete, "/nodes/n1", map[string][]string{"force": {"true"}})
+}
+
+func TestSetSwarmNodeLabelsKeepsTheRestOfTheSpec(t *testing.T) {
+	client, d := newDaemon(t, 200, `{"Spec":{"Availability":"active","Labels":{"old":"x"},"Role":"worker"},"Version":{"Index":12}}`)
+	if err := client.SetSwarmNodeLabels(context.Background(), "n1", map[string]string{"env": "staging"}); err != nil {
+		t.Fatal(err)
+	}
+	got := d.expect(t, http.MethodPost, "/nodes/n1/update", map[string][]string{"version": {"12"}})
+	var spec map[string]any
+	if err := json.Unmarshal(got.body, &spec); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]any{"Availability": "active", "Labels": map[string]any{"env": "staging"}, "Role": "worker"}
+	if !reflect.DeepEqual(spec, want) {
+		t.Errorf("spec = %v, want %v", spec, want)
+	}
 }
 
 func TestSwarmServiceSendsRegistryAuthToWorkers(t *testing.T) {
