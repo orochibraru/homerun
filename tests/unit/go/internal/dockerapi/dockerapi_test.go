@@ -551,16 +551,16 @@ func TestSwarmJoinInfoPrefersThisManagersAddress(t *testing.T) {
 	}
 }
 
-func TestSwarmServiceRunningTasksAsksForStatus(t *testing.T) {
+func TestCountRunningSwarmTasksAsksForStatus(t *testing.T) {
 	client, d := newDaemon(t, 200, `{"ServiceStatus":{"RunningTasks":2}}`)
-	running, err := client.SwarmServiceRunningTasks(context.Background(), "s1")
+	running, err := client.CountRunningSwarmTasks(context.Background(), "s1")
 	if err != nil || running != 2 {
-		t.Fatalf("SwarmServiceRunningTasks = %d, %v", running, err)
+		t.Fatalf("CountRunningSwarmTasks = %d, %v", running, err)
 	}
 	d.expect(t, http.MethodGet, "/services/s1", map[string][]string{"status": {"true"}})
 
 	d.set(200, `{}`)
-	if running, err := client.SwarmServiceRunningTasks(context.Background(), "s1"); err != nil || running != 0 {
+	if running, err := client.CountRunningSwarmTasks(context.Background(), "s1"); err != nil || running != 0 {
 		t.Errorf("no ServiceStatus = %d, %v", running, err)
 	}
 }

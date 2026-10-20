@@ -218,10 +218,10 @@ func (c *Client) SwarmTaskLogs(ctx context.Context, id string, tail int, follow 
 	return response.Body, nil
 }
 
-// SwarmServiceRunningTasks is how many of a service's tasks are running on any
-// node, as the daemon itself counts them (`?status=true`), so no task list is
-// fetched or walked.
-func (c *Client) SwarmServiceRunningTasks(ctx context.Context, id string) (int, error) {
+// CountRunningSwarmTasks counts a service's tasks running on any node, as the
+// daemon itself counts them (`?status=true`), so no task list is fetched or
+// walked.
+func (c *Client) CountRunningSwarmTasks(ctx context.Context, id string) (int, error) {
 	var inspected struct {
 		ServiceStatus *struct {
 			RunningTasks int `json:"RunningTasks"`

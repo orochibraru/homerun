@@ -23,7 +23,7 @@ func (s *Server) mountSwarm(r chi.Router) {
 	r.Get("/v1/swarm/services/{id}", httpapi.H(s.inspectSwarmService))
 	r.Get("/v1/swarm/services/{id}/status", httpapi.H(s.swarmServiceStatus))
 	r.Get("/v1/swarm/services/{id}/replicas", httpapi.H(s.swarmServiceReplicas))
-	r.Get("/v1/swarm/services/{id}/running", httpapi.H(s.swarmServiceRunning))
+	r.Get("/v1/swarm/services/{id}/running-tasks/count", httpapi.H(s.countRunningSwarmTasks))
 	r.Get("/v1/swarm/services/{id}/tasks", httpapi.H(s.swarmServiceTasks))
 	r.Get("/v1/swarm/services/{id}/logs", httpapi.H(s.swarmServiceLogs))
 	r.Post("/v1/swarm/services/{id}/scale", httpapi.H(s.scaleSwarmService))
@@ -169,17 +169,17 @@ func (s *Server) swarmServiceReplicas(w http.ResponseWriter, r *http.Request) er
 	return httpapi.Answer(w, http.StatusOK, map[string]int{"replicas": replicas})
 }
 
-// swarmServiceRunning answers with how many of a service's tasks are running
-// on any node.
-func (s *Server) swarmServiceRunning(w http.ResponseWriter, r *http.Request) error {
-	running, err := s.docker.SwarmServiceRunningTasks(r.Context(), chi.URLParam(r, "id"))
+// countRunningSwarmTasks answers with how many of a service's tasks are
+// running on any node.
+func (s *Server) countRunningSwarmTasks(w http.ResponseWriter, r *http.Request) error {
+	count, err := s.docker.CountRunningSwarmTasks(r.Context(), chi.URLParam(r, "id"))
 	if errors.Is(err, dockerapi.ErrNotFound) {
 		return httpapi.Error(w, http.StatusNotFound, "No such swarm service.")
 	}
 	if err != nil {
 		return err
 	}
-	return httpapi.Answer(w, http.StatusOK, map[string]int{"running": running})
+	return httpapi.Answer(w, http.StatusOK, map[string]int{"count": count})
 }
 
 // swarmServiceTasks answers with a service's tasks, optionally only the ones
