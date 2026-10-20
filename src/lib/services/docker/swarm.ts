@@ -535,6 +535,15 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 			return running?.Status?.ContainerStatus?.ContainerID ?? null;
 		}
 
+		/** How many of the service's tasks are running right now, on any node of the swarm. */
+		async countRunningSwarmTasks(swarmServiceId: string): Promise<number> {
+			const tasks = await this.worker.get<SwarmTask[]>(
+				`/v1/swarm/services/${swarmServiceId}/tasks`,
+				{ running: "1" },
+			);
+			return tasks.filter((task) => task.Status?.State === "running").length;
+		}
+
 		/** Same Web ReadableStream shape and options as containers.ts's streamLogs, so a logs route doesn't need to know which mode it's in. The worker demuxes the frames, so what comes back is already plain text. */
 		streamSwarmServiceLogs(
 			swarmServiceId: string,

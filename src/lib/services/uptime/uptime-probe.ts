@@ -240,9 +240,11 @@ export class UptimeProbe extends BaseScheduler {
 	/**
 	 * Probes a service from inside the Docker network: its own healthcheck if
 	 * it has one, else TCP or HTTP against its container address, or against
-	 * its overlay alias for a swarm service. A swarm service with no running
-	 * task on this node records a failure. The revision health watch calls it
-	 * too, to hold a deploy until the service actually answers.
+	 * its overlay alias for a swarm service. A swarm service whose replicas
+	 * all run on other nodes is probed through its overlay alias, or, when it
+	 * has a healthcheck swarm already enforces, counted up while a task runs.
+	 * The revision health watch calls it too, to hold a deploy until the
+	 * service actually answers.
 	 */
 	async probeInternal(svc: ServiceDTO): Promise<ProbeResult> {
 		const containerId =
@@ -251,12 +253,14 @@ export class UptimeProbe extends BaseScheduler {
 				? await DockerService.getRunningTaskContainerId(svc.swarmServiceId)
 				: null);
 		if (!containerId) {
-			return {
-				detail: "No running task on this node.",
-				kind: "internal",
-				ok: false,
-				serviceId: svc.id,
-			};
+			return svc.swarmServiceId
+				? await this.#remoteSwarmProbe(svc, svc.swarmServiceId)
+				: {
+						detail: "The container isn't running.",
+						kind: "internal",
+						ok: false,
+						serviceId: svc.id,
+					};
 		}
 
 		const health = await DockerService.containerHealth(containerId);
@@ -290,6 +294,48 @@ export class UptimeProbe extends BaseScheduler {
 					svc.id,
 					"internal",
 					`http://${address}:${svc.containerPort}/`,
+				);
+	}
+
+	/**
+	 * Internal probe for a swarm service with no running task on this node:
+	 * the remote containers' healthchecks can't be read from here, but swarm
+	 * replaces a task that turns unhealthy, so a running task of a service
+	 * with a healthcheck is up. Without one, its overlay alias is probed like
+	 * any other.
+	 */
+	async #remoteSwarmProbe(
+		svc: ServiceDTO,
+		swarmServiceId: string,
+	): Promise<ProbeResult> {
+		const running = await DockerService.countRunningSwarmTasks(swarmServiceId);
+		if (running === 0) {
+			return {
+				detail: "No running task on any node.",
+				kind: "internal",
+				ok: false,
+				serviceId: svc.id,
+			};
+		}
+		const method = internalProbeMethod(
+			svc.image,
+			Boolean(svc.healthcheckCommand) && !svc.healthcheckDisabled,
+		);
+		if (method === "healthcheck") {
+			return {
+				detail: `Healthcheck enforced by swarm · ${running} task${running === 1 ? "" : "s"} running on other nodes`,
+				kind: "internal",
+				ok: true,
+				serviceId: svc.id,
+				target: "swarm healthcheck",
+			};
+		}
+		return method === "tcp"
+			? await this.#tcpProbe(svc.id, svc.slug, svc.containerPort)
+			: await this.#probe(
+					svc.id,
+					"internal",
+					`http://${svc.slug}:${svc.containerPort}/`,
 				);
 	}
 
