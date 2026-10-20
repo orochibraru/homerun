@@ -252,15 +252,16 @@ export class UptimeProbe extends BaseScheduler {
 			(svc.swarmServiceId
 				? await DockerService.getRunningTaskContainerId(svc.swarmServiceId)
 				: null);
+		if (!containerId && svc.swarmServiceId) {
+			return await this.#remoteSwarmProbe(svc, svc.swarmServiceId);
+		}
 		if (!containerId) {
-			return svc.swarmServiceId
-				? await this.#remoteSwarmProbe(svc, svc.swarmServiceId)
-				: {
-						detail: "The container isn't running.",
-						kind: "internal",
-						ok: false,
-						serviceId: svc.id,
-					};
+			return {
+				detail: "The container isn't running.",
+				kind: "internal",
+				ok: false,
+				serviceId: svc.id,
+			};
 		}
 
 		const health = await DockerService.containerHealth(containerId);
@@ -288,13 +289,14 @@ export class UptimeProbe extends BaseScheduler {
 			};
 		}
 
-		return method === "tcp"
-			? await this.#tcpProbe(svc.id, address, svc.containerPort)
-			: await this.#probe(
-					svc.id,
-					"internal",
-					`http://${address}:${svc.containerPort}/`,
-				);
+		if (method === "tcp") {
+			return await this.#tcpProbe(svc.id, address, svc.containerPort);
+		}
+		return await this.#probe(
+			svc.id,
+			"internal",
+			`http://${address}:${svc.containerPort}/`,
+		);
 	}
 
 	/**
@@ -330,13 +332,14 @@ export class UptimeProbe extends BaseScheduler {
 				target: "swarm healthcheck",
 			};
 		}
-		return method === "tcp"
-			? await this.#tcpProbe(svc.id, svc.slug, svc.containerPort)
-			: await this.#probe(
-					svc.id,
-					"internal",
-					`http://${svc.slug}:${svc.containerPort}/`,
-				);
+		if (method === "tcp") {
+			return await this.#tcpProbe(svc.id, svc.slug, svc.containerPort);
+		}
+		return await this.#probe(
+			svc.id,
+			"internal",
+			`http://${svc.slug}:${svc.containerPort}/`,
+		);
 	}
 
 	/** Internal probe for a database-image service: a raw TCP connect, no HTTP request. */
