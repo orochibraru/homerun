@@ -11,6 +11,7 @@ import { OauthClientSecretDTO } from "#lib/dto/oauth-client-secret-dto.js";
 import {
 	CLAUDE_MCP_CALLBACK,
 	environmentProblem,
+	GEMINI_MCP_CALLBACK,
 	mcpAllowed,
 	mcpResource,
 	registeredCallbacks,
@@ -99,8 +100,8 @@ class OauthAppServiceClass {
 	 * Registers an app with its first environment, the dashboard's
 	 * registration form. A confidential app gets a client secret in that
 	 * environment, returned here once and never readable again. One with
-	 * Claude's connector callback sends its secret in the request body,
-	 * since Claude does whatever was picked.
+	 * Claude's or Gemini's connector callback sends its secret in the
+	 * request body, since neither offers a choice.
 	 *
 	 * @throws {OauthAppError} When the input is refused.
 	 */
@@ -111,8 +112,8 @@ class OauthAppServiceClass {
 		}
 		const app = await this.register({
 			...input,
-			tokenAuthMethod: input.environment.redirectUris.includes(
-				CLAUDE_MCP_CALLBACK,
+			tokenAuthMethod: input.environment.redirectUris.some(
+				(uri) => uri === CLAUDE_MCP_CALLBACK || uri === GEMINI_MCP_CALLBACK,
 			)
 				? "client_secret_post"
 				: input.tokenAuthMethod,

@@ -2,6 +2,8 @@
 	import { ArrowRight } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import Alert from "#lib/components/alert.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
+	import { labelClass } from "#lib/components/form-styles.js";
 	import OauthAppCredentials from "#lib/components/oauth-app-credentials.svelte";
 	import OauthAppFields, {
 		type OauthAppFieldValues,
@@ -10,7 +12,11 @@
 		type OauthEnvironmentFieldValues,
 	} from "#lib/components/oauth-environment-fields.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import { CLAUDE_MCP_CALLBACK } from "#lib/oidc-provider.js";
+	import {
+		CLAUDE_MCP_CALLBACK,
+		GEMINI_MCP_CALLBACK,
+		MCP_CONNECTOR_SCOPES,
+	} from "#lib/oidc-provider.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
@@ -40,11 +46,15 @@
 		environment.redirectUris.includes(CLAUDE_MCP_CALLBACK),
 	);
 
-	function useClaudePreset() {
+	const isGemini = $derived(
+		environment.redirectUris.includes(GEMINI_MCP_CALLBACK),
+	);
+
+	function useConnectorPreset(name: string, callback: string) {
 		values.confidential = true;
 		values.enableEndSession = false;
-		values.name = "Claude";
-		environment.redirectUris = [CLAUDE_MCP_CALLBACK];
+		values.name = name;
+		environment.redirectUris = [callback];
 		values.requirePkce = true;
 		values.tokenAuthMethod = "client_secret_post";
 		values.skipConsent = false;
@@ -81,11 +91,24 @@
           client ID and secret under Advanced settings.
         </p>
       {/if}
+      {#if isGemini && data.mcpUrl}
+        <p class="text-text-muted text-sm">
+          In Gemini Enterprise, add a Custom MCP server data store: pick OAuth
+          2.0, paste the server URL, the authorization and token endpoints, the
+          scopes and the client ID and secret, tick Enable PKCE
+          Support, then Verify Auth. Leave Authorization URL Parameters empty.
+        </p>
+        <div>
+          <p class={labelClass}>Server URL</p>
+          <CopyBox label="server URL" truncate value={data.mcpUrl} />
+        </div>
+      {/if}
       <OauthAppCredentials
         clientId={form.created.clientId}
         clientSecret={form.created.clientSecret}
         endpointBase={data.endpointBase ?? data.issuer}
         issuer={data.issuer}
+        scopes={isGemini ? MCP_CONNECTOR_SCOPES : undefined}
       />
 
       <div class="flex justify-end"><Button href={resolve('idp')}>Done <ArrowRight class="size-4" /></Button></div>
@@ -117,12 +140,17 @@
         {#if data.mcpUrl}
           <div class="border-border bg-surface-2 flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
             <p class="text-text-muted text-xs">
-              Connecting Claude to Homerun's MCP server? Start from the Claude
-              connector settings.
+              Connecting Claude or Gemini to Homerun's MCP server? Start from
+              its connector settings.
             </p>
-            <Button onclick={useClaudePreset} size="sm" type="button" variant="outline">
-              Claude connector
-            </Button>
+            <div class="flex gap-2">
+              <Button onclick={() => useConnectorPreset('Claude', CLAUDE_MCP_CALLBACK)} size="sm" type="button" variant="outline">
+                Claude connector
+              </Button>
+              <Button onclick={() => useConnectorPreset('Gemini', GEMINI_MCP_CALLBACK)} size="sm" type="button" variant="outline">
+                Gemini connector
+              </Button>
+            </div>
           </div>
         {/if}
 

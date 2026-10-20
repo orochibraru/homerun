@@ -38,6 +38,11 @@ export const MCP_PATH = "/api/v1/mcp";
 
 export const CLAUDE_MCP_CALLBACK = "https://claude.ai/api/mcp/auth_callback";
 
+export const GEMINI_MCP_CALLBACK =
+	"https://vertexaisearch.cloud.google.com/oauth-redirect";
+
+export const MCP_CONNECTOR_SCOPES = "openid profile email offline_access";
+
 /**
  * Whether the MCP server can run on this origin: MCP clients only accept an
  * HTTPS resource, or plain HTTP on a loopback host for development. On any
@@ -233,6 +238,32 @@ export function rebaseOnOrigin(request: Request, origin: string): Request {
 		return request;
 	}
 	return new Request(`${target.origin}${url.pathname}${url.search}`, request);
+}
+
+/**
+ * `request` with the MCP endpoint added as its RFC 8707 `resource` when it's
+ * an authorization request coming back to Gemini's connector callback
+ * without one. Gemini Enterprise only sends the client ID, callback and
+ * scopes, and without a resource the provider mints an opaque token the MCP
+ * endpoint refuses; the resource stored with the code carries over to the
+ * token and its refreshes. Any other request is returned as is.
+ */
+export function withGeminiMcpResource(
+	request: Request,
+	origin: string,
+): Request {
+	const url = new URL(request.url);
+	if (
+		request.method !== "GET" ||
+		url.pathname !== `${OIDC_BASE_PATH}/oauth2/authorize` ||
+		url.searchParams.get("redirect_uri") !== GEMINI_MCP_CALLBACK ||
+		url.searchParams.has("resource") ||
+		!mcpAllowed(origin)
+	) {
+		return request;
+	}
+	url.searchParams.set("resource", mcpResource(origin));
+	return new Request(url, request);
 }
 
 /**

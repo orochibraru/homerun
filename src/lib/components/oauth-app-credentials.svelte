@@ -7,11 +7,13 @@
 		clientSecret = null,
 		endpointBase,
 		issuer,
+		scopes = "openid profile email groups",
 	}: {
 		clientId: string;
 		clientSecret?: string | null;
 		endpointBase: string;
 		issuer: string;
+		scopes?: string;
 	} = $props();
 
 	const endpoints = $derived([
@@ -52,6 +54,6 @@
   {/each}
   <div>
     <p class={labelClass}>Scopes</p>
-    <CopyBox label="scopes" value="openid profile email groups" />
+    <CopyBox label="scopes" value={scopes} />
   </div>
 </div>

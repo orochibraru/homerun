@@ -38,16 +38,42 @@ allowed, the client shows up on the **IDP** page like any other app.
 
 ### A client an admin registers (client ID and secret)
 
-For an agent that asks for a client ID and secret instead, an admin registers
-one first. On the **IDP** page (under Integrations), click **Register app**. For
-claude.ai and Claude Desktop, click **Claude connector**: it fills in Claude's
-callback URL, a confidential client with PKCE and the consent screen on. Then
-click **Register app**, and the next screen shows the MCP URL, client ID and
-secret. In Claude, open Settings → Connectors → Add custom connector, paste the
-MCP URL, and the client ID and secret under Advanced settings.
+For an agent that asks for a client ID and secret instead (claude.ai, Claude
+Desktop, Gemini Enterprise), an admin registers one first. On the **IDP** page
+(under Integrations), click **Register app**. For claude.ai and Claude Desktop,
+click **Claude connector**: it fills in Claude's callback URL, a confidential
+client with PKCE and the consent screen on. Then click **Register app**, and the
+next screen shows the MCP URL, client ID and secret. In Claude, open Settings →
+Connectors → Add custom connector, paste the MCP URL, and the client ID and
+secret under Advanced settings.
 
-The **Claude connector** button only shows once the Dashboard URL is `https` (or
-plain HTTP on `localhost`).
+For Gemini Enterprise (and its Business edition), click **Gemini connector**
+instead: it fills in Gemini's callback URL
+(`https://vertexaisearch.cloud.google.com/oauth-redirect`), a confidential
+client sending its secret in the request body, with PKCE and the consent screen
+on. After **Register app**, the next screen shows everything Gemini asks for. In
+Gemini Enterprise, add a **Custom MCP server** data store, pick **OAuth 2.0**,
+and paste:
+
+| Gemini field                 | Value                                                   |
+| ---------------------------- | ------------------------------------------------------- |
+| Server URL                   | `https://<your dashboard>/api/v1/mcp`                   |
+| Authorization URL            | `https://<your dashboard>/api/v1/auth/oauth2/authorize` |
+| Token URL                    | `https://<your dashboard>/api/v1/auth/oauth2/token`     |
+| Client ID, Client Secret     | From the registration screen                            |
+| Scopes                       | `openid profile email offline_access`                   |
+| Authorization URL Parameters | Leave empty                                             |
+| Enable PKCE Support          | On                                                      |
+
+Then **Verify Auth**. Gemini doesn't tell Homerun which resource it wants a
+token for, so Homerun binds every token issued through Gemini's callback to the
+MCP endpoint itself. Gemini enables at most 100 actions at a time and they all
+start off: after **Reload custom actions**, turn on the ones you want. Read-only
+tools are marked as such, so Gemini runs them without asking; every other tool
+asks first.
+
+The **Claude connector** and **Gemini connector** buttons only show once the
+Dashboard URL is `https` (or plain HTTP on `localhost`).
 
 ### An API key (Claude Code and other headless agents)
 

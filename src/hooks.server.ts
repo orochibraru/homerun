@@ -13,7 +13,11 @@ import { isIngestPath } from "#lib/error-tracking/envelope.js";
 import { GIT_WEBHOOK_PATH } from "#lib/git-webhooks.js";
 import { basicAuthPassword, IAC_API_PREFIX } from "#lib/iac-state.js";
 import { Logger } from "#lib/logger.js";
-import { OIDC_BASE_PATH, rebaseOnOrigin } from "#lib/oidc-provider.js";
+import {
+	OIDC_BASE_PATH,
+	rebaseOnOrigin,
+	withGeminiMcpResource,
+} from "#lib/oidc-provider.js";
 import {
 	APP_ONLY_MESSAGE,
 	intersectPermissions,
@@ -673,7 +677,12 @@ const authHandler: Handle = async ({ event, resolve }) => {
 				await auth.handler(rebaseOnOrigin(event.request, config.auth.origin)),
 			);
 		}
-		return auth.handler(rebaseOnOrigin(event.request, config.auth.origin));
+		return auth.handler(
+			withGeminiMcpResource(
+				rebaseOnOrigin(event.request, config.auth.origin),
+				config.auth.origin,
+			),
+		);
 	}
 
 	return svelteKitHandler({ auth, building, event, resolve });

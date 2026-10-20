@@ -13,6 +13,7 @@ import {
 	rebaseOnOrigin,
 	registeredCallbacks,
 	tokenRequestCredentials,
+	withGeminiMcpResource,
 } from "../../../src/lib/oidc-provider";
 
 const ada = {
@@ -262,5 +263,41 @@ describe("environmentProblem", () => {
 				redirectUris: ["http://localhost:3000/callback"],
 			}),
 		).toBeNull();
+	});
+});
+
+describe("withGeminiMcpResource", () => {
+	const origin = "https://homerun.example.com";
+	const authorize = (query: string) =>
+		new Request(`${origin}/api/v1/auth/oauth2/authorize?${query}`);
+	const gemini = `client_id=abc&redirect_uri=${encodeURIComponent("https://vertexaisearch.cloud.google.com/oauth-redirect")}&scope=openid`;
+
+	test("adds the MCP endpoint as the resource of Gemini's authorization request", () => {
+		const url = new URL(withGeminiMcpResource(authorize(gemini), origin).url);
+		expect(url.searchParams.get("resource")).toBe(
+			"https://homerun.example.com/api/v1/mcp",
+		);
+		expect(url.searchParams.get("client_id")).toBe("abc");
+	});
+
+	test("keeps a resource Gemini was told to send", () => {
+		const request = authorize(`${gemini}&resource=https%3A%2F%2Fother.example`);
+		expect(withGeminiMcpResource(request, origin)).toBe(request);
+	});
+
+	test("leaves other apps' authorization requests alone", () => {
+		const request = authorize(
+			"client_id=abc&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcb",
+		);
+		expect(withGeminiMcpResource(request, origin)).toBe(request);
+	});
+
+	test("does nothing where the MCP server can't run", () => {
+		const request = new Request(
+			`http://192.168.1.10:3000/api/v1/auth/oauth2/authorize?${gemini}`,
+		);
+		expect(withGeminiMcpResource(request, "http://192.168.1.10:3000")).toBe(
+			request,
+		);
 	});
 });
