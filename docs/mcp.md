@@ -9,7 +9,7 @@ deploys and settings, change them, redeploy, roll back.
 | MCP URL        | `https://<your dashboard>/api/v1/mcp`                                      |
 | Transport      | Streamable HTTP                                                            |
 | Sign-in        | OAuth 2.1 with PKCE, or an API key in the `x-api-key` header               |
-| Client sign-up | Client ID Metadata Documents, or a client an admin registered on **IDP**   |
+| Client sign-up | Client ID Metadata Documents, Gemini's own registration, or **IDP**        |
 | Acts as        | The account that signed in, or the API key's owner, with their permissions |
 
 It only runs when the Dashboard URL is `https` (or plain HTTP on `localhost`),
@@ -19,7 +19,8 @@ agent runs: for claude.ai that's the public internet.
 
 ## Connecting an agent
 
-An agent connects one of three ways: pick the first one it supports.
+An agent connects one of three ways: pick the first one it supports. Gemini has
+its own way, see [Gemini](#gemini).
 
 ### Paste the URL (Client ID Metadata Documents)
 
@@ -36,44 +37,40 @@ document can claim any name, so the consent screen also shows the site it came
 from: only allow it when that's the site of the agent you're connecting. Once
 allowed, the client shows up on the **IDP** page like any other app.
 
+### Gemini
+
+The Gemini app connects as a custom app: on
+[gemini.google.com](https://gemini.google.com), open **Settings → Connected
+Apps**, click **Add a custom app**, paste the MCP URL and leave **Advanced
+features** empty. Gemini registers itself with Homerun, then sends you to
+Homerun's sign-in page; sign in and allow it. From then on, type `@` in a chat
+and pick it, on the web and in the mobile app. Google's own requirements apply
+to the Gemini side (a personal Google account, Keep Activity on, and the
+countries and languages custom apps are available in).
+
+Registration is open to Gemini only: Homerun accepts it when every callback is
+Google's relay for a Gemini custom app
+(`https://oauth-redirect.googleusercontent.com/r/user_bound_custom-mcp-…`), and
+stores it as a public app named Gemini, with PKCE and the consent screen always
+on and no secret. Anyone with a Google account can register one, so the consent
+screen is the gate: only allow a Gemini sign-in you started yourself. Each
+registration shows up on the **IDP** page; switch one off there to cut it off.
+
+Gemini asks before any tool that changes something; tools that only read are
+marked as such.
+
 ### A client an admin registers (client ID and secret)
 
-For an agent that asks for a client ID and secret instead (claude.ai, Claude
-Desktop, Gemini Enterprise), an admin registers one first. On the **IDP** page
-(under Integrations), click **Register app**. For claude.ai and Claude Desktop,
-click **Claude connector**: it fills in Claude's callback URL, a confidential
-client with PKCE and the consent screen on. Then click **Register app**, and the
-next screen shows the MCP URL, client ID and secret. In Claude, open Settings →
-Connectors → Add custom connector, paste the MCP URL, and the client ID and
-secret under Advanced settings.
+For an agent that asks for a client ID and secret instead, an admin registers
+one first. On the **IDP** page (under Integrations), click **Register app**. For
+claude.ai and Claude Desktop, click **Claude connector**: it fills in Claude's
+callback URL, a confidential client with PKCE and the consent screen on. Then
+click **Register app**, and the next screen shows the MCP URL, client ID and
+secret. In Claude, open Settings → Connectors → Add custom connector, paste the
+MCP URL, and the client ID and secret under Advanced settings.
 
-For Gemini Enterprise (and its Business edition), click **Gemini connector**
-instead: it fills in Gemini's callback URL
-(`https://vertexaisearch.cloud.google.com/oauth-redirect`), a confidential
-client sending its secret in the request body, with PKCE and the consent screen
-on. After **Register app**, the next screen shows everything Gemini asks for. In
-Gemini Enterprise, add a **Custom MCP server** data store, pick **OAuth 2.0**,
-and paste:
-
-| Gemini field                 | Value                                                   |
-| ---------------------------- | ------------------------------------------------------- |
-| Server URL                   | `https://<your dashboard>/api/v1/mcp`                   |
-| Authorization URL            | `https://<your dashboard>/api/v1/auth/oauth2/authorize` |
-| Token URL                    | `https://<your dashboard>/api/v1/auth/oauth2/token`     |
-| Client ID, Client Secret     | From the registration screen                            |
-| Scopes                       | `openid profile email offline_access`                   |
-| Authorization URL Parameters | Leave empty                                             |
-| Enable PKCE Support          | On                                                      |
-
-Then **Verify Auth**. Gemini doesn't tell Homerun which resource it wants a
-token for, so Homerun binds every token issued through Gemini's callback to the
-MCP endpoint itself. Gemini enables at most 100 actions at a time and they all
-start off: after **Reload custom actions**, turn on the ones you want. Read-only
-tools are marked as such, so Gemini runs them without asking; every other tool
-asks first.
-
-The **Claude connector** and **Gemini connector** buttons only show once the
-Dashboard URL is `https` (or plain HTTP on `localhost`).
+The **Claude connector** button only shows once the Dashboard URL is `https` (or
+plain HTTP on `localhost`).
 
 ### An API key (Claude Code and other headless agents)
 
@@ -197,13 +194,17 @@ Homerun follows the
   metadata is at
   `https://<your dashboard>/.well-known/oauth-authorization-server/issuer`
   (issuer `https://<your dashboard>/issuer`). It advertises
-  `client_id_metadata_document_supported: true` and no `registration_endpoint`:
-  dynamic client registration (RFC 7591) is turned off, so a client can't create
-  itself a stored client ID and secret.
+  `client_id_metadata_document_supported: true` and a `registration_endpoint`
+  that only takes Gemini custom apps: dynamic client registration (RFC 7591)
+  with any other callback is refused with `invalid_client_metadata`, and an
+  accepted one is stored as a public client (`none`), so no client gets itself a
+  secret.
 - Authorization is the code flow with PKCE (`S256`). Pass the MCP URL as the
   `resource` parameter: the access token is a JWT whose audience is that URL,
-  which is what the MCP endpoint checks. Scopes: `openid`, `profile`, `email`,
-  `offline_access` (for a refresh token) and `groups`.
+  which is what the MCP endpoint checks. Gemini doesn't send one, so Homerun
+  adds it to every authorization request coming back to a Gemini callback.
+  Scopes: `openid`, `profile`, `email`, `offline_access` (for a refresh token)
+  and `groups`.
 - A metadata document's URL must be `https`, resolve only to public addresses (a
   private, loopback or link-local address is refused with `invalid_client`
   before anything is fetched), and answer without a redirect. The document needs

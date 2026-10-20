@@ -36,7 +36,9 @@ import { db as appDb, getDb, resetDb } from "#lib/server/db/index.js";
 import { user as userTable } from "#lib/server/db/schema.js";
 import { seedBuiltinTemplates } from "#lib/server/db/seed.js";
 import {
+	guardRegistration,
 	guardTokenRequest,
+	OIDC_REGISTER_PATH,
 	OIDC_TOKEN_PATH,
 	withTokenCors,
 } from "#lib/server/oidc-client-guard.js";
@@ -667,26 +669,43 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		config.auth.origin &&
 		isOidcProviderPath(event.url.pathname)
 	) {
-		if (event.url.pathname === OIDC_TOKEN_PATH) {
-			const refused = await guardTokenRequest(event.request);
-			if (refused) {
-				return refused;
-			}
-			return await withTokenCors(
-				event.request,
-				await auth.handler(rebaseOnOrigin(event.request, config.auth.origin)),
-			);
-		}
-		return auth.handler(
-			withGeminiMcpResource(
-				rebaseOnOrigin(event.request, config.auth.origin),
-				config.auth.origin,
-			),
-		);
+		return await handleOidcProviderRequest(event, config.auth.origin);
 	}
 
 	return svelteKitHandler({ auth, building, event, resolve });
 };
+
+/**
+ * Hands a request for one of the provider's own endpoints to better-auth on
+ * the dashboard's origin, through the guards that narrow it: dynamic
+ * registration only for Gemini custom apps, the token endpoint's environment
+ * checks and CORS, and the MCP resource added to Gemini's authorize requests.
+ */
+async function handleOidcProviderRequest(
+	event: RequestEvent,
+	origin: string,
+): Promise<Response> {
+	if (event.url.pathname === OIDC_REGISTER_PATH) {
+		const registration = await guardRegistration(event.request);
+		if (registration instanceof Response) {
+			return registration;
+		}
+		return await auth.handler(rebaseOnOrigin(registration, origin));
+	}
+	if (event.url.pathname === OIDC_TOKEN_PATH) {
+		const refused = await guardTokenRequest(event.request);
+		if (refused) {
+			return refused;
+		}
+		return await withTokenCors(
+			event.request,
+			await auth.handler(rebaseOnOrigin(event.request, origin)),
+		);
+	}
+	return auth.handler(
+		withGeminiMcpResource(rebaseOnOrigin(event.request, origin), origin),
+	);
+}
 
 /**
  * Resolves the request with only content-length and content-type exposed to

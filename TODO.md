@@ -21,12 +21,6 @@ When done delete the entry, no bloat.
       destination forever; offer to delete them when a volume is deleted, or
       list them as orphans on the destination's page
 
-- [ ] CLAUDE.md, the `check-repo` skill and the `repo-gate` agent say
-      `bun run type-check`, but the package.json script is `typecheck`; rename
-      one side so they match; and `bun check -p tsconfig.scripts.json` (in that
-      script and the pre-push hook) fails with `Script not found "check"` on the
-      pinned Bun, so every push needs `--no-verify`
-
 ## Medium
 
 - [ ] Pipelines: expose watched repositories, their CI runs and stats in the
