@@ -97,7 +97,9 @@ describe("MCP server", () => {
 			registration_endpoint?: string;
 		};
 		expect(resourceBody.authorization_servers).toEqual([serverBody.issuer]);
-		expect(serverBody.registration_endpoint).toBeUndefined();
+		expect(serverBody.registration_endpoint).toBe(
+			`${origin}/api/v1/auth/oauth2/register`,
+		);
 		expect(serverBody.client_id_metadata_document_supported).toBe(true);
 	});
 
