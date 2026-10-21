@@ -1,5 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { openVsxHas, searchOpenVsx } from "../../../src/lib/services/open-vsx";
 import {
+	fetchSyncedEditor,
 	parseSyncedExtensions,
 	parseSyncedSettings,
 } from "../../../src/lib/services/vscode-settings-sync";
@@ -80,5 +82,119 @@ describe("parseSyncedSettings", () => {
 				}),
 			),
 		).toBeNull();
+	});
+});
+
+const realFetch = globalThis.fetch;
+
+afterEach(() => {
+	globalThis.fetch = realFetch;
+});
+
+function stubFetch(
+	handler: (url: string, init: RequestInit) => Response | Promise<Response>,
+): string[] {
+	const seen: string[] = [];
+	globalThis.fetch = (async (input: string | URL, init: RequestInit = {}) => {
+		seen.push(String(input));
+		return await handler(String(input), init);
+	}) as unknown as typeof fetch;
+	return seen;
+}
+
+describe("fetchSyncedEditor", () => {
+	test("reads both resources with the GitHub token and splits extensions by Open VSX", async () => {
+		const headers: Record<string, string>[] = [];
+		stubFetch((url, init) => {
+			if (url.includes("/resource/extensions/")) {
+				headers.push(init.headers as Record<string, string>);
+				return new Response(
+					body(6, [
+						{ identifier: { id: "golang.go" }, installed: true },
+						{ identifier: { id: "ms-python.vscode-pylance" }, installed: true },
+					]),
+				);
+			}
+			if (url.includes("/resource/settings/")) {
+				return new Response(
+					JSON.stringify({
+						content: JSON.stringify({ settings: '{"editor.tabSize": 4}' }),
+						version: 1,
+					}),
+				);
+			}
+			return new Response(null, {
+				status: url.includes("vscode-pylance") ? 404 : 200,
+			});
+		});
+		const synced = await fetchSyncedEditor("tok");
+		expect(synced).toEqual({
+			extensions: ["golang.go"],
+			missingExtensions: ["ms-python.vscode-pylance"],
+			settings: { "editor.tabSize": 4 },
+		});
+		expect(headers[0]?.authorization).toBe("Bearer tok");
+		expect(headers[0]?.["X-Account-Type"]).toBe("github");
+	});
+
+	test("a rejected token says to reconnect GitHub", async () => {
+		stubFetch(() => new Response("Failed to verify token", { status: 401 }));
+		await expect(fetchSyncedEditor("tok")).rejects.toThrow(/Reconnect GitHub/);
+	});
+
+	test("any other error status is reported", async () => {
+		stubFetch(() => new Response("", { status: 500 }));
+		await expect(fetchSyncedEditor("tok")).rejects.toThrow(/answered 500/);
+	});
+});
+
+describe("openVsxHas", () => {
+	test("is false only for a 404", async () => {
+		const seen = stubFetch(
+			(url) =>
+				new Response(null, { status: url.endsWith("/nope/nope") ? 404 : 200 }),
+		);
+		expect(await openVsxHas("golang.go")).toBe(true);
+		expect(await openVsxHas("nope.nope")).toBe(false);
+		expect(seen[0]).toBe("https://open-vsx.org/api/golang/go");
+	});
+
+	test("an unreachable registry counts as published", async () => {
+		stubFetch(() => {
+			throw new Error("offline");
+		});
+		expect(await openVsxHas("golang.go")).toBe(true);
+	});
+});
+
+describe("searchOpenVsx", () => {
+	test("maps search hits to picker entries", async () => {
+		stubFetch(() =>
+			Response.json({
+				extensions: [
+					{
+						name: "Go",
+						namespace: "golang",
+						downloadCount: 5,
+						version: "1.0.0",
+					},
+				],
+			}),
+		);
+		expect(await searchOpenVsx("go")).toEqual([
+			{
+				description: "",
+				displayName: "Go",
+				downloads: 5,
+				icon: null,
+				id: "golang.go",
+				version: "1.0.0",
+			},
+		]);
+	});
+
+	test("throws on an error status", async () => {
+		stubFetch(() => new Response("", { status: 503 }));
+		await expect(searchOpenVsx("go")).rejects.toThrow(/503/);
 	});
 });
