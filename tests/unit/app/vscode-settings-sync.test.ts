@@ -142,6 +142,23 @@ describe("fetchSyncedEditor", () => {
 		await expect(fetchSyncedEditor("tok")).rejects.toThrow(/Reconnect GitHub/);
 	});
 
+	test("fails when an extension can't be checked on Open VSX", async () => {
+		stubFetch((url) => {
+			if (url.includes("/resource/extensions/")) {
+				return new Response(
+					body(6, [{ identifier: { id: "golang.go" }, installed: true }]),
+				);
+			}
+			if (url.includes("/resource/settings/")) {
+				return new Response("");
+			}
+			return new Response(null, { status: 500 });
+		});
+		await expect(fetchSyncedEditor("tok")).rejects.toThrow(
+			/Couldn't reach Open VSX to check golang.go/,
+		);
+	});
+
 	test("any other error status is reported", async () => {
 		stubFetch(() => new Response("", { status: 500 }));
 		await expect(fetchSyncedEditor("tok")).rejects.toThrow(/answered 500/);
@@ -159,11 +176,13 @@ describe("openVsxHas", () => {
 		expect(seen[0]).toBe("https://open-vsx.org/api/golang/go");
 	});
 
-	test("an unreachable registry counts as published", async () => {
+	test("throws when the registry can't be reached or errors", async () => {
 		stubFetch(() => {
 			throw new Error("offline");
 		});
-		expect(await openVsxHas("golang.go")).toBe(true);
+		await expect(openVsxHas("golang.go")).rejects.toThrow("offline");
+		stubFetch(() => new Response(null, { status: 503 }));
+		await expect(openVsxHas("golang.go")).rejects.toThrow(/503/);
 	});
 });
 

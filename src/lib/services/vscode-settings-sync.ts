@@ -62,6 +62,24 @@ export function parseSyncedExtensions(body: string): string[] {
 }
 
 /**
+ * The `settings.json` text inside a parsed Settings Sync `settings` content:
+ * its `settings` field, or the raw content for data synced before VS Code
+ * wrapped it.
+ */
+function settingsFileOf(wrapped: unknown, raw: string): string {
+	if (typeof wrapped !== "object" || wrapped === null) {
+		return raw;
+	}
+	if (!("settings" in wrapped)) {
+		return raw;
+	}
+	if (typeof wrapped.settings !== "string") {
+		return raw;
+	}
+	return wrapped.settings;
+}
+
+/**
  * The user `settings.json` in a Settings Sync `settings` resource body, its
  * comments and trailing commas stripped, null when nothing was synced or the
  * synced file is empty.
@@ -76,14 +94,7 @@ export function parseSyncedSettings(
 	if (!data) {
 		return null;
 	}
-	const wrapped: unknown = JSON.parse(data.content);
-	const text =
-		typeof wrapped === "object" &&
-		wrapped !== null &&
-		"settings" in wrapped &&
-		typeof wrapped.settings === "string"
-			? wrapped.settings
-			: data.content;
+	const text = settingsFileOf(JSON.parse(data.content), data.content);
 	const stripped = stripJsonc(text).trim();
 	if (!stripped) {
 		return null;
@@ -138,17 +149,39 @@ async function readResource(
 export async function fetchSyncedEditor(
 	githubToken: string,
 ): Promise<SyncedEditor> {
-	const [extensionsBody, settingsBody] = await Promise.all([
+	const [extensionsRead, settingsRead] = await Promise.allSettled([
 		readResource(githubToken, "extensions"),
 		readResource(githubToken, "settings"),
 	]);
-	const ids = parseSyncedExtensions(extensionsBody);
-	const found = await Promise.all(
-		ids.map(async (id) => ({ id, ok: await openVsxHas(id) })),
-	);
+	if (extensionsRead.status === "rejected") {
+		throw extensionsRead.reason;
+	}
+	if (settingsRead.status === "rejected") {
+		throw settingsRead.reason;
+	}
+	const ids = parseSyncedExtensions(extensionsRead.value);
+	const checks = await Promise.allSettled(ids.map((id) => openVsxHas(id)));
+	const extensions: string[] = [];
+	const missingExtensions: string[] = [];
+	const unchecked: string[] = [];
+	for (const [i, check] of checks.entries()) {
+		const id = ids[i] ?? "";
+		if (check.status === "rejected") {
+			unchecked.push(id);
+		} else if (check.value) {
+			extensions.push(id);
+		} else {
+			missingExtensions.push(id);
+		}
+	}
+	if (unchecked.length > 0) {
+		throw new Error(
+			`Couldn't reach Open VSX to check ${unchecked.join(", ")}.`,
+		);
+	}
 	return {
-		extensions: found.filter((ext) => ext.ok).map((ext) => ext.id),
-		missingExtensions: found.filter((ext) => !ext.ok).map((ext) => ext.id),
-		settings: parseSyncedSettings(settingsBody),
+		extensions,
+		missingExtensions,
+		settings: parseSyncedSettings(settingsRead.value),
 	};
 }

@@ -29,9 +29,10 @@ const searchResponseSchema = z.object({
 });
 
 /**
- * Whether Open VSX publishes `id` (`publisher.name`). An unreachable registry
- * counts as yes, so a network blip doesn't drop an extension the install
- * would have found.
+ * Whether Open VSX publishes `id` (`publisher.name`).
+ *
+ * @throws When Open VSX can't be reached or answers with anything but a
+ * success or a 404.
  */
 export async function openVsxHas(id: string): Promise<boolean> {
 	const dot = id.indexOf(".");
@@ -39,15 +40,17 @@ export async function openVsxHas(id: string): Promise<boolean> {
 		`/api/${encodeURIComponent(id.slice(0, dot))}/${encodeURIComponent(id.slice(dot + 1))}`,
 		OPEN_VSX_URL,
 	);
-	try {
-		const response = await fetch(url, {
-			method: "HEAD",
-			signal: AbortSignal.timeout(10_000),
-		});
-		return response.status !== 404;
-	} catch {
-		return true;
+	const response = await fetch(url, {
+		method: "HEAD",
+		signal: AbortSignal.timeout(10_000),
+	});
+	if (response.status === 404) {
+		return false;
 	}
+	if (!response.ok) {
+		throw new Error(`Open VSX answered ${response.status} for ${id}.`);
+	}
+	return true;
 }
 
 /**

@@ -111,27 +111,56 @@ export const searchEditorExtensions = query(
 	},
 );
 
-export const importSettingsSync = command(async (): Promise<SyncedEditor> => {
-	const user = requirePermission("workstations", "read");
+/**
+ * The access token of the user's first connection to an enabled github.com
+ * provider, null when they have none.
+ *
+ * @throws When a connection lookup fails.
+ */
+async function githubSyncToken(userId: string): Promise<string | null> {
 	const settings = await InstanceSettingsDTO.get();
 	const providers = settings.gitProviders.filter(
 		(p) => p.enabled && p.kind === "github" && !p.baseUrl,
 	);
-	const connections = await Promise.all(
+	const lookups = await Promise.allSettled(
 		providers.map(async (provider) => ({
 			connection: await GitConnectionDTO.getForUserAndProvider(
-				user.id,
+				userId,
 				provider.id,
 			),
 			provider,
 		})),
 	);
-	const linked = connections.find((entry) => entry.connection);
-	const token = linked?.connection
-		? await GitProviderService.accessToken(linked.provider, linked.connection)
-		: null;
+	const entries = [];
+	for (const lookup of lookups) {
+		if (lookup.status === "rejected") {
+			throw new Error("Couldn't read your git provider connections.", {
+				cause: lookup.reason,
+			});
+		}
+		entries.push(lookup.value);
+	}
+	const linked = entries.find((entry) => entry.connection);
+	if (!linked?.connection) {
+		return null;
+	}
+	return await GitProviderService.accessToken(
+		linked.provider,
+		linked.connection,
+	);
+}
+
+export const importSettingsSync = command(async (): Promise<SyncedEditor> => {
+	const user = requirePermission("workstations", "read");
+	let token: string | null;
+	try {
+		token = await githubSyncToken(user.id);
+	} catch (err) {
+		logger.warn(`Settings Sync token lookup failed: user=${user.id}`, err);
+		throw error(500, "Couldn't read your git provider connections.");
+	}
 	if (!token) {
-		error(
+		throw error(
 			400,
 			"Connect a github.com account under Git providers to import from Settings Sync.",
 		);
@@ -140,10 +169,9 @@ export const importSettingsSync = command(async (): Promise<SyncedEditor> => {
 		return await fetchSyncedEditor(token);
 	} catch (err) {
 		logger.warn(`Settings Sync import failed: user=${user.id}`, err);
-		error(
-			502,
-			err instanceof Error ? err.message : "Couldn't reach Settings Sync.",
-		);
+		const message =
+			err instanceof Error ? err.message : "Couldn't reach Settings Sync.";
+		throw error(502, message);
 	}
 });
 
