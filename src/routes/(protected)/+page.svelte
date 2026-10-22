@@ -26,12 +26,34 @@
 		reapplyTraefikConfig,
 	} from "#lib/remote/setup.remote.js";
 	import { title } from "#lib/store/title.js";
+	import { Streamed } from "#lib/streamed.svelte.js";
 	import { enhanceToast, toastError } from "#lib/toast.js";
 	import type { ContainerStatus } from "#lib/types.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 
 	const { data } = $props();
+
+	const overviewData = new Streamed(
+		() => `dashboard:overview:${data.user.id}`,
+		() => data.overview,
+	);
+	const monitoringData = new Streamed(
+		() => `dashboard:monitoring:${data.user.id}`,
+		() => data.monitoring,
+	);
+	const overCapacityData = new Streamed(
+		() => "dashboard:over-capacity",
+		() => data.overCapacity,
+	);
+	const templatesData = new Streamed(
+		() => `dashboard:templates:${data.user.id}`,
+		() => data.frontPageTemplates,
+	);
+	const overview = $derived(overviewData.current);
+	const monitoring = $derived(monitoringData.current);
+	const overCapacity = $derived(overCapacityData.current);
+	const frontPageTemplates = $derived(templatesData.current);
 
 	const setup = getSetupStatus();
 	const setupIssues = $derived(
@@ -170,8 +192,7 @@
     </div>
   {/if}
 
-  {#await data.overCapacity then overCapacity}
-  {#if overCapacity.length > 0}
+  {#if overCapacity?.length}
     <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-2.5 text-xs">
       <CircleX class="size-3.5 shrink-0 text-red-500" />
       <p class="min-w-0 flex-1 text-red-700 dark:text-red-300">
@@ -187,10 +208,8 @@
       {/if}
     </div>
   {/if}
-  {/await}
 
-  {#await data.overview then overview}
-  {#if overview.uptimeDown.length > 0}
+  {#if overview?.uptimeDown.length}
     <div class="mb-4 rounded-xl border border-red-400/40 bg-red-500/10">
       <div class="flex items-center gap-2 border-b border-red-400/30 px-4 py-2.5">
         <CircleX class="size-3.5 text-red-500" />
@@ -217,10 +236,8 @@
       </div>
     </div>
   {/if}
-  {/await}
 
-  {#await data.frontPageTemplates then frontPageTemplates}
-  {#if frontPageTemplates.length > 0}
+  {#if frontPageTemplates?.length}
     <section class="panel mb-4 rounded-xl">
       <div class="panel-head">
         <h2 class="eyebrow flex items-center gap-1.5">
@@ -286,7 +303,6 @@
       </div>
     </section>
   {/if}
-  {/await}
 
   <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
     <div class="panel divide-border flex divide-x rounded-xl">
@@ -296,13 +312,9 @@
             <span class="size-1.5 rounded-full {card.dot}"></span>
             {card.label}
           </p>
-          {#await data.overview}
-            <Skeleton class="mt-2 h-7 w-10" />
-          {:then overview}
-            <p class="metric mt-2">{overview.stats[card.key]}</p>
-          {:catch}
-            <p class="metric text-text-subtle mt-2">–</p>
-          {/await}
+          <p class="metric mt-2 {overviewData.failed ? 'text-text-subtle' : ''}">
+            {overviewData.failed ? "–" : (overview?.stats[card.key] ?? 0)}
+          </p>
         </div>
       {/each}
     </div>
@@ -313,21 +325,21 @@
   </div>
 
   <div class="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-    {#await data.monitoring}
-      <div class="panel rounded-xl p-4">
-        <Skeleton class="h-56 w-full" />
-      </div>
-    {:then summary}
+    {#if monitoring}
       <MonitoringSummary
-        busiest={summary.busiest}
+        busiest={monitoring.busiest}
         href={resolve('monitoring')}
-        monitoring={summary.monitoring}
+        monitoring={monitoring.monitoring}
       />
-    {:catch}
+    {:else if monitoringData.failed}
       <div class="panel text-text-muted rounded-xl p-4 text-sm">
         Couldn't load today's monitoring.
       </div>
-    {/await}
+    {:else}
+      <div class="panel rounded-xl p-4">
+        <Skeleton class="h-56 w-full" />
+      </div>
+    {/if}
     <ErrorBoundary title="Resource usage didn't load.">
       <ServiceUsageTable limit={5} />
     </ErrorBoundary>
@@ -346,14 +358,19 @@
         >View all</a>
       </div>
 
-      {#await data.overview}
-        <div class="space-y-2 p-4">
-          <Skeleton class="h-9 w-full" />
-          <Skeleton class="h-9 w-full" />
-          <Skeleton class="h-9 w-2/3" />
-        </div>
-      {:then overview}
-      {#if overview.recentDeployments.length === 0}
+      {#if !overview}
+        {#if overviewData.failed}
+          <p class="text-text-muted px-4 py-6 text-center text-xs">
+            Couldn't load recent deployments.
+          </p>
+        {:else}
+          <div class="space-y-2 p-4">
+            <Skeleton class="h-9 w-full" />
+            <Skeleton class="h-9 w-full" />
+            <Skeleton class="h-9 w-2/3" />
+          </div>
+        {/if}
+      {:else if overview.recentDeployments.length === 0}
         <div class="flex flex-col items-center justify-center px-4 py-10 text-center">
           <Server class="text-text-subtle mb-2 size-5" />
           <p class="text-text-muted text-xs">No deployments yet</p>
@@ -405,11 +422,6 @@
           {/each}
         </div>
       {/if}
-      {:catch}
-        <p class="text-text-muted px-4 py-6 text-center text-xs">
-          Couldn't load recent deployments.
-        </p>
-      {/await}
     </div>
 
     <div class="panel rounded-xl">
@@ -419,8 +431,7 @@
           Recent errors
         </h2>
         <div class="flex items-center gap-3">
-          {#await data.overview then overview}
-          {#if overview.recentErrors.length > 0}
+          {#if overview?.recentErrors.length}
             <form
               action="?/clearErrors"
               method="POST"
@@ -445,7 +456,6 @@
               </button>
             </form>
           {/if}
-          {/await}
           {#if data.readsSystem}
             <a
               class="text-accent text-xs font-medium hover:underline"
@@ -454,13 +464,18 @@
           {/if}
         </div>
       </div>
-      {#await data.overview}
-        <div class="space-y-2 p-4">
-          <Skeleton class="h-9 w-full" />
-          <Skeleton class="h-9 w-2/3" />
-        </div>
-      {:then overview}
-      {#if overview.recentErrors.length === 0}
+      {#if !overview}
+        {#if overviewData.failed}
+          <p class="text-text-muted px-4 py-6 text-center text-xs">
+            Couldn't load recent errors.
+          </p>
+        {:else}
+          <div class="space-y-2 p-4">
+            <Skeleton class="h-9 w-full" />
+            <Skeleton class="h-9 w-2/3" />
+          </div>
+        {/if}
+      {:else if overview.recentErrors.length === 0}
         <p class="text-text-muted px-4 py-6 text-center text-xs">
           Nothing logged at warn or error level.
         </p>
@@ -495,11 +510,6 @@
           {/each}
         </div>
       {/if}
-      {:catch}
-        <p class="text-text-muted px-4 py-6 text-center text-xs">
-          Couldn't load recent errors.
-        </p>
-      {/await}
     </div>
 
     <div class="panel rounded-xl">
@@ -521,8 +531,7 @@
           <Plus class="text-text-subtle size-3.5 shrink-0" />
         </a>
 
-        {#await data.overview then overview}
-        {#if overview.stats.totalServices > 0}
+        {#if overview?.stats.totalServices}
           <a
             class="hover:bg-surface-2 group/qa flex items-center gap-3 px-3.5 py-2.5 transition-colors"
             href={resolve('services')}
@@ -537,7 +546,6 @@
             <ArrowRight class="text-text-subtle size-3.5 shrink-0" />
           </a>
         {/if}
-        {/await}
       </div>
     </div>
   </div>
