@@ -290,7 +290,7 @@
     <!-- Sticky header, every page, both breakpoints : page title on the
          left, notifications + account menu on the right. -->
     <header
-      class="border-border sticky top-0 z-30 flex h-12 shrink-0 items-center gap-1.5 border-b px-2 sm:gap-2 sm:px-3 md:px-5"
+      class="border-border sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b px-4 max-md:bg-bg/86 max-md:backdrop-blur-lg sm:px-3 md:h-12 md:px-5"
       data-slot="app-header"
     >
       <Breadcrumbs roots={allNavItems} />
