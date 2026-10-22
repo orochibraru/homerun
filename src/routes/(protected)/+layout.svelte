@@ -283,7 +283,7 @@
 
   <!-- ── Main content ───────────────────────────────────────────── -->
   <div
-    class="panel flex flex-1 flex-col overflow-hidden transition-[translate,scale,border-radius] duration-380 ease-snap max-md:border-0 md:order-3 md:rounded-xl {sidebarOpen ? 'max-md:translate-x-6 max-md:scale-[0.94] max-md:rounded-2xl' : ''}"
+    class="panel flex flex-1 flex-col overflow-hidden transition-[translate,scale,border-radius] duration-380 ease-snap max-md:border-0 md:order-3 md:rounded-xl {sidebarOpen ? 'max-md:scale-[0.94] max-md:rounded-2xl' : ''}"
     data-slot="app-frame"
     inert={sidebarOpen && !desktop.current}
   >
