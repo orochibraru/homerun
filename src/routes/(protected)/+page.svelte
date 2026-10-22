@@ -34,9 +34,21 @@
 
 	const { data } = $props();
 
-	const overviewData = new Streamed(
-		() => `dashboard:overview:${data.user.id}`,
-		() => data.overview,
+	const statsData = new Streamed(
+		() => `dashboard:stats:${data.user.id}`,
+		() => data.stats,
+	);
+	const deploymentsData = new Streamed(
+		() => `dashboard:deployments:${data.user.id}`,
+		() => data.recentDeployments,
+	);
+	const errorsData = new Streamed(
+		() => `dashboard:errors:${data.user.id}`,
+		() => data.recentErrors,
+	);
+	const uptimeData = new Streamed(
+		() => `dashboard:uptime:${data.user.id}`,
+		() => data.uptimeDown,
 	);
 	const monitoringData = new Streamed(
 		() => `dashboard:monitoring:${data.user.id}`,
@@ -50,7 +62,10 @@
 		() => `dashboard:templates:${data.user.id}`,
 		() => data.frontPageTemplates,
 	);
-	const overview = $derived(overviewData.current);
+	const stats = $derived(statsData.current);
+	const deployments = $derived(deploymentsData.current);
+	const errors = $derived(errorsData.current);
+	const uptimeDown = $derived(uptimeData.current);
 	const monitoring = $derived(monitoringData.current);
 	const overCapacity = $derived(overCapacityData.current);
 	const frontPageTemplates = $derived(templatesData.current);
@@ -209,17 +224,17 @@
     </div>
   {/if}
 
-  {#if overview?.uptimeDown.length}
+  {#if uptimeDown?.length}
     <div class="mb-4 rounded-xl border border-red-400/40 bg-red-500/10">
       <div class="flex items-center gap-2 border-b border-red-400/30 px-4 py-2.5">
         <CircleX class="size-3.5 text-red-500" />
         <span class="text-sm font-medium text-red-600 dark:text-red-400">
-          {overview.uptimeDown.length}
-          {overview.uptimeDown.length === 1 ? "probe is" : "probes are"} failing
+          {uptimeDown.length}
+          {uptimeDown.length === 1 ? "probe is" : "probes are"} failing
         </span>
       </div>
       <div class="divide-y divide-red-400/20">
-        {#each overview.uptimeDown as check (check.serviceId + check.kind)}
+        {#each uptimeDown as check (check.serviceId + check.kind)}
           <a
             class="flex items-center gap-3 px-4 py-2 text-xs transition-colors hover:bg-red-500/10"
             href="{resolve('services')}/{check.serviceId}/observability/events"
@@ -312,8 +327,8 @@
             <span class="size-1.5 rounded-full {card.dot}"></span>
             {card.label}
           </p>
-          <p class="metric mt-2 {overviewData.failed ? 'text-text-subtle' : ''}">
-            {overviewData.failed ? "–" : (overview?.stats[card.key] ?? 0)}
+          <p class="metric mt-2 {statsData.failed ? 'text-text-subtle' : ''}">
+            {statsData.failed ? "–" : (stats?.[card.key] ?? 0)}
           </p>
         </div>
       {/each}
@@ -358,8 +373,8 @@
         >View all</a>
       </div>
 
-      {#if !overview}
-        {#if overviewData.failed}
+      {#if !deployments}
+        {#if deploymentsData.failed}
           <p class="text-text-muted px-4 py-6 text-center text-xs">
             Couldn't load recent deployments.
           </p>
@@ -370,7 +385,7 @@
             <Skeleton class="h-9 w-2/3" />
           </div>
         {/if}
-      {:else if overview.recentDeployments.length === 0}
+      {:else if deployments.length === 0}
         <div class="flex flex-col items-center justify-center px-4 py-10 text-center">
           <Server class="text-text-subtle mb-2 size-5" />
           <p class="text-text-muted text-xs">No deployments yet</p>
@@ -380,7 +395,7 @@
         </div>
       {:else}
         <div class="divide-border divide-y">
-          {#each overview.recentDeployments as dep (dep.id)}
+          {#each deployments as dep (dep.id)}
             <a
               class="hover:bg-surface-2 flex items-start gap-3 px-4 py-2.5 transition-colors"
               href="{resolve('services')}/{dep.serviceId}"
@@ -431,7 +446,7 @@
           Recent errors
         </h2>
         <div class="flex items-center gap-3">
-          {#if overview?.recentErrors.length}
+          {#if errors?.length}
             <form
               action="?/clearErrors"
               method="POST"
@@ -464,8 +479,8 @@
           {/if}
         </div>
       </div>
-      {#if !overview}
-        {#if overviewData.failed}
+      {#if !errors}
+        {#if errorsData.failed}
           <p class="text-text-muted px-4 py-6 text-center text-xs">
             Couldn't load recent errors.
           </p>
@@ -475,13 +490,13 @@
             <Skeleton class="h-9 w-2/3" />
           </div>
         {/if}
-      {:else if overview.recentErrors.length === 0}
+      {:else if errors.length === 0}
         <p class="text-text-muted px-4 py-6 text-center text-xs">
           Nothing logged at warn or error level.
         </p>
       {:else}
         <div class="divide-border divide-y">
-          {#each overview.recentErrors as entry (entry.id)}
+          {#each errors as entry (entry.id)}
             {@const href = entry.serviceId
               ? `${resolve('services')}/${entry.serviceId}/observability/events`
               : resolve('system-logs')}
@@ -531,7 +546,7 @@
           <Plus class="text-text-subtle size-3.5 shrink-0" />
         </a>
 
-        {#if overview?.stats.totalServices}
+        {#if stats?.totalServices}
           <a
             class="hover:bg-surface-2 group/qa flex items-center gap-3 px-3.5 py-2.5 transition-colors"
             href={resolve('services')}

@@ -11,6 +11,10 @@
 
 	const { data } = $props();
 
+	const facets = new Streamed(
+		() => `services:facets:${data.user.id}`,
+		() => data.facets,
+	);
 	const listing = new Streamed(
 		() => `services:${data.user.id}:${page.url.search}`,
 		() => data.listing,
@@ -40,6 +44,7 @@
 
   {#if listing.current}
     <ServicesList
+      facets={facets.current}
       filtered={data.filtered}
       listing={listing.current}
       page={data.page}
