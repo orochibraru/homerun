@@ -1,3 +1,7 @@
+import {
+	isBuildConcurrency,
+	MAX_BUILD_CONCURRENCY,
+} from "#lib/build-servers.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { Logger } from "#lib/logger.js";
 import type { RemoteHost } from "#lib/server/db/schema.js";
@@ -16,6 +20,7 @@ export interface RemoteHostSettings {
 	agentUrl?: string | null;
 	dockerHost?: string | null;
 	kind?: RemoteHost["kind"];
+	maxConcurrentBuilds?: number | null;
 	name?: string | null;
 	tlsCa?: string | null;
 	tlsCert?: string | null;
@@ -73,6 +78,20 @@ function tlsColumns(input: RemoteHostSettings) {
 	};
 }
 
+/** The concurrent-build limit sent, null to follow the instance default, left out when not sent. */
+function buildLimitColumns(input: RemoteHostSettings) {
+	const limit = input.maxConcurrentBuilds;
+	if (limit === undefined) {
+		return {};
+	}
+	if (limit !== null && !isBuildConcurrency(limit)) {
+		throw new RemoteHostSettingsError(
+			`Concurrent builds must be between 0 (no limit) and ${MAX_BUILD_CONCURRENCY}.`,
+		);
+	}
+	return { maxConcurrentBuilds: limit };
+}
+
 /** Asks the agent at `agentUrl` to accept `token`. */
 async function verifyAgent(agentUrl: string, token: string): Promise<void> {
 	try {
@@ -111,11 +130,13 @@ class RemoteHostSettingsServiceClass {
 			if (!(agentUrl && agentToken)) {
 				throw new RemoteHostSettingsError("Agent URL and token are required.");
 			}
+			const limits = buildLimitColumns(input);
 			await verifyAgent(checkedAgentUrl(agentUrl), agentToken);
 			const host = await RemoteHostDTO.create({
 				agentTokenEnc: encryptSecret(agentToken),
 				agentUrl,
 				kind: "agent",
+				...limits,
 				name,
 				userId,
 			});
@@ -128,6 +149,7 @@ class RemoteHostSettingsServiceClass {
 		const host = await RemoteHostDTO.create({
 			dockerHost,
 			kind: "docker",
+			...buildLimitColumns(input),
 			name,
 			...tlsColumns(input),
 			userId,
@@ -152,6 +174,7 @@ class RemoteHostSettingsServiceClass {
 		if (!name) {
 			throw new RemoteHostSettingsError("Name is required.");
 		}
+		const limits = buildLimitColumns(input);
 		if (host.kind === "agent") {
 			const agentUrl = checkedAgentUrl(
 				input.agentUrl === undefined
@@ -169,6 +192,7 @@ class RemoteHostSettingsServiceClass {
 			}
 			await host.update({
 				agentUrl,
+				...limits,
 				name,
 				...(agentToken ? { agentTokenEnc: encryptSecret(agentToken) } : {}),
 			});
@@ -184,6 +208,7 @@ class RemoteHostSettingsServiceClass {
 			dockerHost !== host.dockerHost && dockerHost.startsWith("ssh://");
 		await host.update({
 			dockerHost,
+			...limits,
 			name,
 			...tlsColumns(input),
 			...(sshMoved ? { sshHostKey: null } : {}),

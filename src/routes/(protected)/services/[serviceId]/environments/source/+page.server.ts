@@ -1,6 +1,8 @@
 import { fail } from "@sveltejs/kit";
 import { buildCacheChoice } from "#lib/build-cache.js";
+import { buildServerChoice } from "#lib/build-servers.js";
 import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
@@ -22,11 +24,13 @@ const logger = new Logger("Services");
 export const load = async ({ parent, params }) => {
 	const { user } = await parent();
 	const svc = await ServiceDTO.get(params.serviceId);
-	const [gitProviders, cacheRegistries, buildServers] = await Promise.all([
-		connectedGitProviders(user.id),
-		BuildCacheRegistryDTO.list(),
-		RemoteHostDTO.listBuildServers(),
-	]);
+	const [gitProviders, cacheRegistries, buildServers, settings] =
+		await Promise.all([
+			connectedGitProviders(user.id),
+			BuildCacheRegistryDTO.list(),
+			RemoteHostDTO.listBuildServers(),
+			InstanceSettingsDTO.get(),
+		]);
 
 	const previewParentId = svc?.toJSON().previewParentId;
 	const previewParent = previewParentId
@@ -43,7 +47,9 @@ export const load = async ({ parent, params }) => {
 			: null,
 		pushWebhook: svc ? await GitWebhookService.describe(svc) : null,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
+		buildOnHost: settings.buildOnHost,
 		buildServers: buildServers.map((r) => r.toJSON()),
+		defaultBuildServer: settings.defaultBuildServer,
 		connectedGitProviders: gitProviders,
 	};
 };
@@ -191,9 +197,8 @@ export const actions = {
 		}
 		const input = result.data;
 		const isGitBuild = input.buildSource === "git";
-		const buildServerRemoteHostId = isGitBuild
-			? input.buildServerRemoteHostId || null
-			: null;
+		const buildServer = buildServerChoice(input);
+		const { buildServerRemoteHostId } = buildServer;
 		const buildCache = buildCacheChoice(input);
 		const { buildCacheRegistryId } = buildCache;
 
@@ -240,7 +245,7 @@ export const actions = {
 		const previousBuildSource = svc.buildSource;
 		await svc.update({
 			...buildCache,
-			buildServerRemoteHostId,
+			...buildServer,
 			...checks,
 			...gitTriggerPatch(formData, isGitBuild),
 			...watchPaths.patch,

@@ -16,6 +16,7 @@ export interface NewServiceInput {
 	uptimeEnabled?: boolean;
 	buildCacheRegistryId?: string | null;
 	buildCacheBuiltin?: boolean;
+	buildServerAny?: boolean;
 	buildServerRemoteHostId?: string | null;
 	buildSource?: "image" | "git";
 	containerPort: number;
@@ -85,6 +86,7 @@ export type ServiceUpdateInput = Partial<
 		| "autoRollback"
 		| "buildCacheRegistryId"
 		| "buildCacheBuiltin"
+		| "buildServerAny"
 		| "buildServerRemoteHostId"
 		| "buildSource"
 		| "containerId"

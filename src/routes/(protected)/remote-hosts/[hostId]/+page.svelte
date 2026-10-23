@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronDown, ChevronLeft, Server, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { MAX_BUILD_CONCURRENCY } from "#lib/build-servers.js";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
@@ -19,6 +20,7 @@
 
 	let showTls = $state(false);
 	let submitting = $state(false);
+	let savingBuilds = $state(false);
 	let deleteDialogOpen = $state(false);
 	let deleteForm: HTMLFormElement | undefined = $state();
 </script>
@@ -184,6 +186,49 @@
           </div>
         {/if}
       {/if}
+    </form>
+  </section>
+
+  <section class="panel mb-6 rounded-md">
+    <PanelHeader title="Builds">
+      {#snippet trailing()}
+        <SaveButton form="remote-host-builds" pending={savingBuilds} />
+      {/snippet}
+    </PanelHeader>
+    <form
+      id="remote-host-builds"
+      class="space-y-4 p-5"
+      action="?/updateBuilds"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't save the build limit.",
+        loading: "Saving the build limit",
+        onSettled: () => {
+          savingBuilds = false;
+        },
+        onStart: () => {
+          savingBuilds = true;
+        },
+        success: "Build limit saved.",
+      })}
+    >
+      <div>
+        <label class={label} for="maxConcurrentBuilds">Concurrent builds</label>
+        <Input
+          id="maxConcurrentBuilds"
+          max={MAX_BUILD_CONCURRENCY}
+          min={0}
+          name="maxConcurrentBuilds"
+          placeholder={`${data.buildConcurrency || "No limit"} (instance default)`}
+          type="number"
+          value={data.host.maxConcurrentBuilds ?? ""}
+        />
+        <p class="mt-1.5 text-xs text-text-subtle">
+          How many git builds run on this server at once, 0 for no limit. Leave
+          blank to follow the default on
+          <a class="underline" href={resolve('settings/docker')}>Settings → Docker</a>.
+        </p>
+      </div>
     </form>
   </section>
 

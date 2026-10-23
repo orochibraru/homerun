@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
 	import { isBuildMethod } from "#lib/build-methods.js";
+	import { ANY_BUILD_SERVER, buildServerValue } from "#lib/build-servers.js";
 	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import GitBuildFields from "#lib/components/git-build-fields.svelte";
@@ -38,12 +39,23 @@
 	const label = "block mb-1.5 text-sm font-medium text-text";
 	const errorClass = "mt-1.5 text-xs text-red-500";
 
+	const initialBuildServer = $derived(
+		data.defaultBuildServer === ANY_BUILD_SERVER ||
+			data.buildServers.some((r) => r.id === data.defaultBuildServer)
+			? data.defaultBuildServer
+			: "",
+	);
+	const hostBuildLabel = $derived(
+		data.buildOnHost ? "Build on deploy target" : "Any free build server",
+	);
+
 	const values = $derived(
 		(form?.values as Record<string, string> | undefined) ?? {
 			buildCacheRegistryId: svc.buildCacheBuiltin
 				? BUILTIN_BUILD_CACHE
 				: (svc.buildCacheRegistryId ?? ""),
-			buildServerRemoteHostId: svc.buildServerRemoteHostId ?? "",
+			buildServerRemoteHostId:
+				svc.buildSource === "git" ? buildServerValue(svc) : initialBuildServer,
 			buildSource: svc.buildSource,
 			gitBakeFile: svc.gitBakeFile ?? "",
 			gitBuildTarget: svc.gitBuildTarget ?? "",
@@ -66,8 +78,10 @@
 	let buildCacheRegistryId = $derived(values.buildCacheRegistryId ?? "");
 	let buildServerRemoteHostId = $derived(values.buildServerRemoteHostId ?? "");
 	const buildServerLabel = $derived(
-		data.buildServers.find((r) => r.id === buildServerRemoteHostId)?.name ??
-			"Build on deploy target",
+		buildServerRemoteHostId === ANY_BUILD_SERVER
+			? "Any free build server"
+			: (data.buildServers.find((r) => r.id === buildServerRemoteHostId)
+					?.name ?? hostBuildLabel),
 	);
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
@@ -300,16 +314,23 @@
                 {buildServerLabel}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem label="Build on deploy target" value="" />
+                {#if data.buildOnHost}
+                  <SelectItem label="Build on deploy target" value="" />
+                {/if}
+                <SelectItem label="Any free build server" value={ANY_BUILD_SERVER} />
                 {#each data.buildServers as host (host.id)}
                   <SelectItem label={host.name} value={host.id} />
                 {/each}
               </SelectContent>
             </SelectRoot>
             <p class="text-text-subtle mt-1.5 text-xs">
-              With a build cache registry above, the built image is published
-              there and pulled back onto this host. Without one it's streamed
-              straight back from the build server instead.
+              "Any free build server" picks the least busy one with a free
+              build slot each deploy{data.buildOnHost
+              ? ""
+              : ", and builds don't run on this host"}. With a build cache
+              registry above, the built image is published there and pulled
+              back onto this host. Without one it's streamed straight back from
+              the build server instead.
             </p>
           {/if}
         </div>

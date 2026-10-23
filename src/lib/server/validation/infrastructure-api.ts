@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_BUILD_CONCURRENCY } from "#lib/build-servers.js";
 import type { WorkstationLoginWall } from "#lib/dto/workstation-dto.js";
 import { isDomainName, isTarget } from "#lib/server/validation/dns-forms.js";
 import type { WorkstationSettings } from "#lib/server/workstation-form.js";
@@ -30,6 +31,16 @@ export const remoteHostApiBody = z.object({
 			"The Docker daemon (kind docker): tcp://host:2376 or ssh://user@host.",
 		),
 	kind: z.enum(["docker", "agent"]).default("docker"),
+	maxConcurrentBuilds: z
+		.number()
+		.int()
+		.min(0)
+		.max(MAX_BUILD_CONCURRENCY)
+		.nullable()
+		.optional()
+		.describe(
+			"How many builds run on it at once, 0 for no limit. Null follows the instance's buildConcurrency.",
+		),
 	name: text.min(1).max(100),
 	tlsCa: secret("TLS CA certificate (PEM) for a tcp:// daemon."),
 	tlsCert: secret("TLS client certificate (PEM) for a tcp:// daemon."),

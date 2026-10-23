@@ -1,3 +1,8 @@
+import {
+	ANY_BUILD_SERVER,
+	isBuildConcurrency,
+	MAX_BUILD_CONCURRENCY,
+} from "#lib/build-servers.js";
 import { serviceDomain } from "#lib/config.js";
 import {
 	type InstanceSettingsDockerInput,
@@ -5,6 +10,7 @@ import {
 	type InstanceSettingsSmtpInput,
 	type InstanceSettingsTraefikInput,
 } from "#lib/dto/instance-settings-dto.js";
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { errorPageTextsFromForm, isHexColor } from "#lib/error-pages.js";
 import type { BlockSeverity } from "#lib/image-scan.js";
 import { type IpBanSettings, MAX_BAN_WINDOW_MINUTES } from "#lib/ip-bans.js";
@@ -149,6 +155,42 @@ class InstanceSettingsServiceClass {
 		await settings.updateImageScan(input);
 		logger.info(
 			`Image scanning updated: enabled=${input.imageScanEnabled} block=${input.imageScanBlockSeverity ?? "off"} fixableOnly=${input.imageScanBlockFixableOnly} required=${input.imageScanRequired} user=${userId}`,
+		);
+	}
+
+	/**
+	 * Saves the build server defaults: the concurrent-build limit, whether git
+	 * builds may run on this host, and the build server new services start
+	 * with.
+	 *
+	 * @throws {InstanceSettingsError} When the limit is out of range or the
+	 *   default build server doesn't exist.
+	 */
+	async saveBuildServers(
+		input: {
+			buildConcurrency: number;
+			buildOnHost: boolean;
+			defaultBuildServer: string;
+		},
+		userId: string,
+	): Promise<void> {
+		if (!isBuildConcurrency(input.buildConcurrency)) {
+			throw new InstanceSettingsError(
+				`Concurrent builds must be between 0 (no limit) and ${MAX_BUILD_CONCURRENCY}.`,
+			);
+		}
+		const server = input.defaultBuildServer;
+		if (
+			server &&
+			server !== ANY_BUILD_SERVER &&
+			!(await RemoteHostDTO.get(server))
+		) {
+			throw new InstanceSettingsError("That build server wasn't found.");
+		}
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateBuildServers(input);
+		logger.info(
+			`Build server settings updated: concurrency=${input.buildConcurrency} buildOnHost=${input.buildOnHost} default=${server || "host"} user=${userId}`,
 		);
 	}
 

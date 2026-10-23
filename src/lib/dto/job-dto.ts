@@ -300,6 +300,7 @@ export class JobDTO extends BaseDTO<Job> {
 		const now = new Date();
 		const row: Job = {
 			attempts: 0,
+			buildHostId: null,
 			createdAt: now,
 			dedupeKey: input.dedupeKey ?? null,
 			dependsOnJobId: input.dependsOnJobId ?? null,

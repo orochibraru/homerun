@@ -32,6 +32,7 @@ import { isDatabaseImage } from "#lib/service-link.js";
 import { runtimeOptionsFrom } from "#lib/service-runtime.js";
 import type { ContainerStatus, PullPolicy } from "#lib/types.js";
 import { BaseDTO } from "./base-dto";
+import { RemoteHostDTO } from "./remote-host-dto";
 import type { NewServiceInput, ServiceUpdateInput } from "./service-input";
 import {
 	buildMethodColumns,
@@ -343,7 +344,6 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return {
 			buildCacheRegistryId: input.buildCacheRegistryId ?? null,
 			buildCacheBuiltin: input.buildCacheBuiltin ?? false,
-			buildServerRemoteHostId: input.buildServerRemoteHostId ?? null,
 			buildSource: input.buildSource ?? "image",
 			...buildMethodColumns(input),
 			gitRef: input.gitRef ?? null,
@@ -455,6 +455,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		const now = new Date();
 		const row: Service = {
 			...ServiceDTO.#buildColumns(input),
+			...(await RemoteHostDTO.newServiceBuildServer(input)),
 			...ServiceDTO.#runtimeColumns(input),
 			...ServiceDTO.#gitTriggerColumns(input),
 			...NEW_SERVICE_VERSION_COLUMNS,

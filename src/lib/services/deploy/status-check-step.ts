@@ -54,7 +54,10 @@ interface StatusCheckContext {
 	userId: string;
 }
 
-async function isCancelled(ctx: StatusCheckContext): Promise<boolean> {
+/** Whether the deploy was cancelled or its service deleted while it waited. */
+export async function isDeployCancelled(
+	ctx: Pick<StatusCheckContext, "dep" | "svc">,
+): Promise<boolean> {
 	const [dep, svc] = await Promise.all([
 		DeploymentDTO.get(ctx.dep.id),
 		ServiceDTO.get(ctx.svc.id),
@@ -104,7 +107,7 @@ export async function enforceStatusChecks(
 		const result = await waitForChecks({
 			fetchChecks: () => client.checks(pinned),
 			graceMs: STATUS_CHECK_GRACE_MS,
-			isCancelled: () => isCancelled(ctx),
+			isCancelled: () => isDeployCancelled(ctx),
 			log: (line) => dep.appendLog(line),
 			pollMs: STATUS_CHECK_POLL_MS,
 			required,

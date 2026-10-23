@@ -18,6 +18,7 @@ import { deployEnvironment } from "#lib/release-channels.js";
 import { snapshotRevisionConfig } from "#lib/revision-config.js";
 import { dependencyLayers } from "#lib/service-graph.js";
 import { isDeployed } from "#lib/service-state.js";
+import { acquireBuildServer } from "./deploy/build-server-step.ts";
 import { syncAutoDns } from "./deploy/helpers.ts";
 import { applyRepoManifest } from "./deploy/manifest-step.ts";
 import {
@@ -166,25 +167,29 @@ async function revisionSourceFor(
 class DeploymentServiceClass {
 	/**
 	 * Assembles the `DeployPlan` for a deploy: loads instance settings, the
-	 * build cache registry and build server the service is configured to use
-	 * (only relevant for a fresh git build, not a rollback), then delegates
-	 * the actual image/workload decision to `resolveDeployPlan`.
+	 * build cache registry, and reserves the build server a fresh git build
+	 * (not a rollback) runs on for job `jobId` (see `acquireBuildServer`,
+	 * which may wait for a free slot), then delegates the actual
+	 * image/workload decision to `resolveDeployPlan`.
 	 *
 	 * @param revision When set (a rollback), skips build-server/cache-registry
 	 *   resolution entirely and the plan reuses that revision's image.
 	 */
 	async #loadDeployPlan(
-		svc: ServiceDTO,
+		ctx: DeployContext,
+		jobId: string,
 		revision: RevisionSource | null,
 	): Promise<DeployPlan> {
+		const { dep, svc } = ctx;
 		const settings = await InstanceSettingsDTO.get();
 		const isGitBuild = svc.buildSource === "git" && !revision;
 
+		const buildHostId = isGitBuild
+			? await acquireBuildServer({ dep, jobId, settings, svc })
+			: null;
 		let buildServer: BuildServer | null = null;
-		if (isGitBuild && svc.buildServerRemoteHostId) {
-			const target = await RemoteHostDTO.resolveBuildTarget(
-				svc.buildServerRemoteHostId,
-			);
+		if (buildHostId) {
+			const target = await RemoteHostDTO.resolveBuildTarget(buildHostId);
 			buildServer = target.kind === "local" ? null : target;
 		}
 
@@ -207,7 +212,7 @@ class DeploymentServiceClass {
 			cacheRegistry,
 			orchestrationMode: settings.orchestrationMode,
 			revision,
-			service: svc.toJSON(),
+			service: { ...svc.toJSON(), buildServerRemoteHostId: buildHostId },
 		});
 	}
 
@@ -413,7 +418,7 @@ class DeploymentServiceClass {
 					volumeMounts: mounts.map(({ mount }) => mount.snapshot()),
 				},
 			});
-			const plan = await this.#loadDeployPlan(svc, revision);
+			const plan = await this.#loadDeployPlan(ctx, job.id, revision);
 			await dep.appendLog(phaseLine("volumes"));
 			const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 			const publicHosts = await syncAutoDns(svc, stack, dep);
