@@ -106,6 +106,16 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Download Go modules
+        timeout-minutes: 10
+        run: |
+          for attempt in 1 2 3; do
+            go mod download && exit 0
+            echo "::warning::go mod download attempt $attempt failed"
+            sleep 15
+          done
+          exit 1
+
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
