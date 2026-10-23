@@ -134,11 +134,13 @@ jobs:
         run: bun run build
 
       - name: Install Playwright's Chromium
-        timeout-minutes: 16
+        timeout-minutes: 20
         run: |
+          printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' |
+            sudo tee /etc/apt/apt.conf.d/99-ci-network > /dev/null
           for attempt in 1 2 3; do
-            timeout 300 bunx playwright install --with-deps chromium && exit 0
-            echo "::warning::Playwright install attempt $attempt failed or hung"
+            bunx playwright install --with-deps chromium && exit 0
+            echo "::warning::Playwright install attempt $attempt failed"
             sleep 10
           done
           exit 1
