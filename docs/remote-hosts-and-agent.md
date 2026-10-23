@@ -125,8 +125,10 @@ slot, picking at random between equally busy ones.
   0 for no limit (the default). A server overrides it with its own **Concurrent
   builds** on its `/remote-hosts` page; leave that blank to follow the default.
   A deploy that finds its server (or, with Any free build server, every server)
-  full waits, says so in its log, and starts as soon as a slot frees. It holds
-  the slot until the deploy finishes.
+  full goes back in the queue, says so in its log, and tries again every few
+  seconds until a slot frees, holding nothing while it waits. After 30 minutes
+  without one it fails, and the running version keeps running. Once it has a
+  slot it holds it until the deploy finishes.
 - **Default for new services**, the build server a new git service starts with:
   this host, any free build server, or one server. Existing services keep
   theirs.

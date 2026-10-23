@@ -1,13 +1,11 @@
-import {
-	isBuildConcurrency,
-	MAX_BUILD_CONCURRENCY,
-} from "#lib/build-servers.js";
+import { isBuildConcurrency } from "#lib/build-servers.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { Logger } from "#lib/logger.js";
 import type { RemoteHost } from "#lib/server/db/schema.js";
 import { AgentClientService } from "#lib/services/agent-client.service.js";
 import { encryptSecret } from "#lib/services/secrets.js";
 import { WorkstationService } from "#lib/services/workstation.service.js";
+import { settings } from "#lib/settings.js";
 
 const logger = new Logger("RemoteHosts");
 
@@ -86,7 +84,7 @@ function buildLimitColumns(input: RemoteHostSettings) {
 	}
 	if (limit !== null && !isBuildConcurrency(limit)) {
 		throw new RemoteHostSettingsError(
-			`Concurrent builds must be between 0 (no limit) and ${MAX_BUILD_CONCURRENCY}.`,
+			`Concurrent builds must be between 0 (no limit) and ${settings.docker.maxBuildConcurrency}.`,
 		);
 	}
 	return { maxConcurrentBuilds: limit };
@@ -124,13 +122,13 @@ class RemoteHostSettingsServiceClass {
 		if (!name) {
 			throw new RemoteHostSettingsError("Name is required.");
 		}
+		const limits = buildLimitColumns(input);
 		if (input.kind === "agent") {
 			const agentUrl = trimmed(input.agentUrl);
 			const agentToken = trimmed(input.agentToken);
 			if (!(agentUrl && agentToken)) {
 				throw new RemoteHostSettingsError("Agent URL and token are required.");
 			}
-			const limits = buildLimitColumns(input);
 			await verifyAgent(checkedAgentUrl(agentUrl), agentToken);
 			const host = await RemoteHostDTO.create({
 				agentTokenEnc: encryptSecret(agentToken),
@@ -149,7 +147,7 @@ class RemoteHostSettingsServiceClass {
 		const host = await RemoteHostDTO.create({
 			dockerHost,
 			kind: "docker",
-			...buildLimitColumns(input),
+			...limits,
 			name,
 			...tlsColumns(input),
 			userId,

@@ -6,37 +6,55 @@ import {
 import { reserveBuildHost } from "#lib/dto/build-slot-dto.js";
 import type { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import type { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import type { JobDTO } from "#lib/dto/job-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
-import { isDeployCancelled } from "./status-check-step.ts";
+import { settings } from "#lib/settings.js";
+import { JobDeferredError } from "../queue/deferred.ts";
 
-export const BUILD_SLOT_POLL_MS = 5000;
+/** Thrown when a deploy waited `settings.docker.buildSlotTimeoutMs` for a build slot without getting one. */
+export class BuildSlotTimeoutError extends Error {
+	override name = "BuildSlotTimeoutError";
+}
 
 interface BuildServerContext {
 	dep: DeploymentDTO;
-	jobId: string;
-	settings: InstanceSettingsDTO;
+	instance: InstanceSettingsDTO;
+	job: JobDTO;
 	svc: ServiceDTO;
+}
+
+/** The message a deploy logs while its build servers are full. */
+function fullMessage(candidates: string[], names: Map<string, string>): string {
+	if (candidates.length > 1) {
+		return "Every build server is running as many builds as it's allowed, waiting for a free slot.";
+	}
+	const name = names.get(candidates[0] ?? "") ?? "The build server";
+	return `${name} is running as many builds as it's allowed, waiting for a free slot.`;
 }
 
 /**
  * Picks the build server a git build runs on and holds one of its build
  * slots for the deploy job until the job stops running: the pinned server,
  * or the least busy registered one when the service takes any free server
- * or the instance doesn't build on this host. While every candidate is at
- * its concurrent-build limit (its own, else the instance's), waits and logs
- * that it's waiting.
+ * or the instance doesn't build on this host. Runs before the deploy's
+ * prepare step changes anything, so a full server puts the job back in the
+ * queue to try again in `settings.docker.buildSlotPollMs`, logging once that
+ * it's waiting.
  *
  * @returns The reserved host id, or null to build on this host.
- * @throws When the deploy is cancelled while waiting for a slot.
+ * @throws {JobDeferredError} When every candidate is at its concurrent-build
+ *   limit (its own, else the instance's).
+ * @throws {BuildSlotTimeoutError} When the job has been waiting longer than
+ *   `settings.docker.buildSlotTimeoutMs`.
  */
-export async function acquireBuildServer(
+export async function reserveBuildServer(
 	ctx: BuildServerContext,
 ): Promise<string | null> {
-	const { dep, jobId, settings, svc } = ctx;
+	const { dep, instance, job, svc } = ctx;
 	const servers = await RemoteHostDTO.listBuildServers();
 	const candidates = buildServerCandidates({
-		buildOnHost: settings.buildOnHost,
+		buildOnHost: instance.buildOnHost,
 		choice: {
 			buildServerAny: svc.toJSON().buildServerAny,
 			buildServerRemoteHostId: svc.buildServerRemoteHostId,
@@ -49,42 +67,41 @@ export async function acquireBuildServer(
 	const limits = new Map(
 		servers.map((s) => [
 			s.id,
-			s.maxConcurrentBuilds ?? settings.buildConcurrency,
+			s.maxConcurrentBuilds ?? instance.buildConcurrency,
 		]),
 	);
 	const names = new Map(servers.map((s) => [s.id, s.name]));
-	const reserve = () =>
-		reserveBuildHost(jobId, (active) =>
-			pickBuildServer(
-				candidates.map(
-					(id): BuildSlot => ({
-						active: active.get(id) ?? 0,
-						id,
-						limit: limits.get(id) ?? settings.buildConcurrency,
-					}),
-				),
-			),
+	const slots = (active: Map<string, number>) =>
+		candidates.map(
+			(id): BuildSlot => ({
+				active: active.get(id) ?? 0,
+				id,
+				limit: limits.get(id) ?? instance.buildConcurrency,
+			}),
 		);
-	let hostId = await reserve();
-	if (!hostId) {
+	const hostId = await reserveBuildHost(job.id, (active) =>
+		pickBuildServer(slots(active)),
+	);
+	if (hostId) {
 		await dep.appendLog(
-			candidates.length === 1
-				? `${names.get(candidates[0] ?? "") ?? "The build server"} is running as many builds as it's allowed, waiting for a free slot.`
-				: "Every build server is running as many builds as it's allowed, waiting for a free slot.",
+			`Building on ${names.get(hostId) ?? "a build server"}.`,
+		);
+		return hostId;
+	}
+
+	const { buildSlotPollMs, buildSlotTimeoutMs } = settings.docker;
+	const waitingSince = job.deferredSince;
+	if (
+		waitingSince &&
+		Date.now() - waitingSince.getTime() >= buildSlotTimeoutMs
+	) {
+		throw new BuildSlotTimeoutError(
+			`No build slot freed up within ${buildSlotTimeoutMs / 60_000} minutes. The build will not carry on.`,
 		);
 	}
-	while (!hostId) {
-		// oxlint-disable-next-line no-await-in-loop -- polling until a slot frees
-		if (await isDeployCancelled({ dep, svc })) {
-			throw new Error(
-				"The deploy was cancelled while waiting for a build slot.",
-			);
-		}
-		// oxlint-disable-next-line no-await-in-loop -- polling until a slot frees
-		await Bun.sleep(BUILD_SLOT_POLL_MS);
-		// oxlint-disable-next-line no-await-in-loop -- each attempt has to see the slots the previous one found full
-		hostId = await reserve();
+	const message = fullMessage(candidates, names);
+	if (!waitingSince) {
+		await dep.appendLog(message);
 	}
-	await dep.appendLog(`Building on ${names.get(hostId) ?? "a build server"}.`);
-	return hostId;
+	throw new JobDeferredError(message, new Date(Date.now() + buildSlotPollMs));
 }

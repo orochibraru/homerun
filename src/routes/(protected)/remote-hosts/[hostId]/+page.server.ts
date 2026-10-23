@@ -63,7 +63,7 @@ export const actions = {
 
 	updateBuilds: async ({ request, params, locals }) => {
 		if (!locals.user) {
-			redirectToSignIn();
+			return redirectToSignIn();
 		}
 		const host = await RemoteHostDTO.get(params.hostId);
 		if (!host) {

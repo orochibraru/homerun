@@ -302,6 +302,7 @@ export class JobDTO extends BaseDTO<Job> {
 			attempts: 0,
 			buildHostId: null,
 			createdAt: now,
+			deferredSince: null,
 			dedupeKey: input.dedupeKey ?? null,
 			dependsOnJobId: input.dependsOnJobId ?? null,
 			error: null,
@@ -774,6 +775,24 @@ export class JobDTO extends BaseDTO<Job> {
 	}
 
 	/**
+	 * Puts a claimed job back in the queue until `runAt` without spending the
+	 * attempt, releasing its build slot and keeping when it first had to wait.
+	 * Drops its dedupe key, which a newer queued job may already hold.
+	 */
+	async defer(runAt: Date): Promise<void> {
+		await this.update({
+			...CLEARED_STAGE,
+			attempts: Math.max(0, this.row.attempts - 1),
+			buildHostId: null,
+			dedupeKey: null,
+			deferredSince: this.row.deferredSince ?? new Date(),
+			runAt,
+			startedAt: null,
+			status: "queued",
+		});
+	}
+
+	/**
 	 * Hands a claimed job to the Go worker: stores `spec` encrypted and moves
 	 * the job to the `execute` stage, still `running`.
 	 */
@@ -796,6 +815,10 @@ export class JobDTO extends BaseDTO<Job> {
 			: null;
 	}
 
+	/** When the job was first deferred, null when it never was. */
+	get deferredSince(): Date | null {
+		return this.row.deferredSince;
+	}
 	/** How many times the job has been claimed so far. */
 	get attempts(): number {
 		return this.row.attempts;

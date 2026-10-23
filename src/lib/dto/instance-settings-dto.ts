@@ -514,7 +514,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		return this.row.buildOnHost ?? true;
 	}
 
-	/** The build server a new git service starts with: a host id, `ANY_BUILD_SERVER`, or empty for this host. */
+	/** The build server a new git service starts with: a host id, `settings.docker.anyBuildServer`, or empty for this host. */
 	get defaultBuildServer(): string {
 		return this.row.defaultBuildServer ?? "";
 	}

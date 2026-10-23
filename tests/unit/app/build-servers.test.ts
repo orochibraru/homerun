@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
-	ANY_BUILD_SERVER,
 	buildServerCandidates,
 	buildServerChoice,
-	buildServerValue,
+	buildServerPick,
 	isBuildConcurrency,
 	pickBuildServer,
 } from "../../../src/lib/build-servers";
+import { settings } from "../../../src/lib/settings";
+
+const ANY = settings.docker.anyBuildServer;
 
 const host = { buildServerAny: false, buildServerRemoteHostId: null };
 
@@ -14,7 +16,7 @@ describe("buildServerChoice", () => {
 	test("the any pick sets the flag and no host", () => {
 		expect(
 			buildServerChoice({
-				buildServerRemoteHostId: ANY_BUILD_SERVER,
+				buildServer: ANY,
 				buildSource: "git",
 			}),
 		).toEqual({ buildServerAny: true, buildServerRemoteHostId: null });
@@ -22,7 +24,7 @@ describe("buildServerChoice", () => {
 
 	test("a host id pins that host", () => {
 		expect(
-			buildServerChoice({ buildServerRemoteHostId: "h1", buildSource: "git" }),
+			buildServerChoice({ buildServer: "h1", buildSource: "git" }),
 		).toEqual({ buildServerAny: false, buildServerRemoteHostId: "h1" });
 	});
 
@@ -30,18 +32,18 @@ describe("buildServerChoice", () => {
 		expect(buildServerChoice({ buildSource: "git" })).toEqual(host);
 		expect(
 			buildServerChoice({
-				buildServerRemoteHostId: "h1",
+				buildServer: "h1",
 				buildSource: "image",
 			}),
 		).toEqual(host);
 	});
 
-	test("buildServerValue round-trips the picker value", () => {
-		for (const value of ["", "h1", ANY_BUILD_SERVER]) {
+	test("buildServerPick round-trips the picker value", () => {
+		for (const value of ["", "h1", ANY]) {
 			expect(
-				buildServerValue(
+				buildServerPick(
 					buildServerChoice({
-						buildServerRemoteHostId: value,
+						buildServer: value,
 						buildSource: "git",
 					}),
 				),

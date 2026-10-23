@@ -1,20 +1,17 @@
 <script lang="ts">
 	import { untrack } from "svelte";
-	import {
-		ANY_BUILD_SERVER,
-		MAX_BUILD_CONCURRENCY,
-	} from "#lib/build-servers.js";
 	import CheckBox from "#lib/components/check-box.svelte";
-	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
+	import { Label } from "#lib/components/ui/label/index.js";
 	import {
 		SelectContent,
 		SelectItem,
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
+	import { settings } from "#lib/settings.js";
 	import { saveToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -30,10 +27,8 @@
 		$props();
 
 	let defaultServer = $state(untrack(() => defaultBuildServer));
-	const defaultLabel = $derived(
-		defaultServer === ANY_BUILD_SERVER
-			? "Any free build server"
-			: (servers.find((s) => s.id === defaultServer)?.name ?? "This host"),
+	const defaultServerName = $derived(
+		servers.find((s) => s.id === defaultServer)?.name,
 	);
 </script>
 
@@ -57,12 +52,12 @@
     use:enhance={saveToast("Build server settings")}
   >
     <div>
-      <label class={label} for="buildConcurrency">
+      <Label class="mb-1.5" for="buildConcurrency">
         Concurrent builds per server
-      </label>
+      </Label>
       <Input
         id="buildConcurrency"
-        max={MAX_BUILD_CONCURRENCY}
+        max={settings.docker.maxBuildConcurrency}
         min={0}
         name="buildConcurrency"
         required
@@ -75,18 +70,26 @@
       </p>
     </div>
     <div>
-      <label class={label} for="defaultBuildServer">
+      <Label class="mb-1.5" for="defaultBuildServer">
         Default for new services
-      </label>
+      </Label>
       <SelectRoot
         name="defaultBuildServer"
         type="single"
         bind:value={defaultServer}
       >
-        <SelectTrigger id="defaultBuildServer">{defaultLabel}</SelectTrigger>
+        <SelectTrigger id="defaultBuildServer">
+          {#if defaultServerName}
+            {defaultServerName}
+          {:else if defaultServer === settings.docker.anyBuildServer}
+            Any free build server
+          {:else}
+            This host
+          {/if}
+        </SelectTrigger>
         <SelectContent>
           <SelectItem label="This host" value="" />
-          <SelectItem label="Any free build server" value={ANY_BUILD_SERVER} />
+          <SelectItem label="Any free build server" value={settings.docker.anyBuildServer} />
           {#each servers as server (server.id)}
             <SelectItem label={server.name} value={server.id} />
           {/each}

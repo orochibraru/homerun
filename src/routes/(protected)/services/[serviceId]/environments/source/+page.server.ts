@@ -1,6 +1,9 @@
 import { fail } from "@sveltejs/kit";
 import { buildCacheChoice } from "#lib/build-cache.js";
-import { buildServerChoice } from "#lib/build-servers.js";
+import {
+	type BuildServerChoice,
+	buildServerChoice,
+} from "#lib/build-servers.js";
 import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
@@ -107,30 +110,23 @@ function watchPathsPatch(
 	return Object.keys(errors).length > 0 ? { errors } : { patch };
 }
 
-interface BuildTargets {
-	buildCacheRegistryId: string | null;
-	buildServerRemoteHostId: string | null;
-}
-
 /**
- * Validates the chosen build server exists, returning field errors or
- * null. No cache registry is needed: without one the built image is streamed
- * back to this host. Both remote-host kinds (docker and agent) are real build servers,
- * see the worker's git-build step (internal/jobs) :
- * real, tested-in-review bug this replaced, a stale "docker only" leftover
- * from before that integration.
+ * Validates a pinned build server exists, returning field errors or null.
+ * This host and any free build server need no check, and no cache registry
+ * is needed: without one the built image is streamed back to this host. Both
+ * remote-host kinds (docker and agent) are real build servers, see the
+ * worker's git-build step (internal/jobs).
  */
 async function checkBuildServer(
-	targets: BuildTargets,
+	choice: BuildServerChoice,
 ): Promise<Record<string, string[]> | null> {
-	const { buildServerRemoteHostId } = targets;
-	if (!buildServerRemoteHostId) {
+	const hostId = choice.buildServerRemoteHostId;
+	if (!hostId) {
 		return null;
 	}
-
-	const buildServer = await RemoteHostDTO.get(buildServerRemoteHostId);
-	if (!buildServer) {
-		return { buildServerRemoteHostId: ["That build server wasn't found."] };
+	const host = await RemoteHostDTO.get(hostId);
+	if (!host) {
+		return { buildServer: ["That build server wasn't found."] };
 	}
 	return null;
 }
@@ -198,9 +194,7 @@ export const actions = {
 		const input = result.data;
 		const isGitBuild = input.buildSource === "git";
 		const buildServer = buildServerChoice(input);
-		const { buildServerRemoteHostId } = buildServer;
 		const buildCache = buildCacheChoice(input);
-		const { buildCacheRegistryId } = buildCache;
 
 		const checks = statusCheckPatch(formData, isGitBuild);
 		if (
@@ -225,10 +219,7 @@ export const actions = {
 			});
 		}
 
-		const buildServerError = await checkBuildServer({
-			buildCacheRegistryId,
-			buildServerRemoteHostId,
-		});
+		const buildServerError = await checkBuildServer(buildServer);
 		if (buildServerError) {
 			return fail(400, {
 				errors: buildServerError,

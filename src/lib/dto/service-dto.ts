@@ -35,10 +35,10 @@ import { BaseDTO } from "./base-dto";
 import { RemoteHostDTO } from "./remote-host-dto";
 import type { NewServiceInput, ServiceUpdateInput } from "./service-input";
 import {
-	buildMethodColumns,
 	NEW_SERVICE_PIPELINE_COLUMNS,
 	NEW_SERVICE_STATE_COLUMNS,
 	NEW_SERVICE_VERSION_COLUMNS,
+	newServiceBuildColumns,
 } from "./service-input";
 
 const preview = alias(service, "preview");
@@ -339,29 +339,6 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return !!row;
 	}
 
-	/** Where the image comes from : registry coordinates plus the git-build fields, all optional with a default. */
-	static #buildColumns(input: NewServiceInput) {
-		return {
-			buildCacheRegistryId: input.buildCacheRegistryId ?? null,
-			buildCacheBuiltin: input.buildCacheBuiltin ?? false,
-			buildSource: input.buildSource ?? "image",
-			...buildMethodColumns(input),
-			gitRef: input.gitRef ?? null,
-			gitUrl: input.gitUrl ?? null,
-			gitProviderId: input.gitProviderId ?? null,
-			gitRepo: input.gitRepo ?? null,
-			autoDeployOnPush: input.autoDeployOnPush ?? false,
-			gitIgnorePaths: input.gitIgnorePaths ?? [],
-			gitWatchPaths: input.gitWatchPaths ?? [],
-			gitWebhookId: null,
-			gitWebhookSecretEnc: null,
-			gitWebhookError: null,
-			registryPasswordEnc: input.registryPasswordEnc ?? null,
-			registryUrl: input.registryUrl ?? null,
-			registryUsername: input.registryUsername ?? null,
-		} satisfies Partial<Service>;
-	}
-
 	/** Push polling, webhook reconnect and pull request preview columns, all off for a new service unless it is itself a preview. */
 	static #gitTriggerColumns(input: NewServiceInput) {
 		return {
@@ -453,9 +430,9 @@ export class ServiceDTO extends BaseDTO<Service> {
 	 */
 	static async create(input: NewServiceInput): Promise<ServiceDTO> {
 		const now = new Date();
+		const buildServer = await RemoteHostDTO.newServiceBuildServer(input);
 		const row: Service = {
-			...ServiceDTO.#buildColumns(input),
-			...(await RemoteHostDTO.newServiceBuildServer(input)),
+			...newServiceBuildColumns(input, buildServer),
 			...ServiceDTO.#runtimeColumns(input),
 			...ServiceDTO.#gitTriggerColumns(input),
 			...NEW_SERVICE_VERSION_COLUMNS,

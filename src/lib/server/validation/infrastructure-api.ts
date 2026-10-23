@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { MAX_BUILD_CONCURRENCY } from "#lib/build-servers.js";
 import type { WorkstationLoginWall } from "#lib/dto/workstation-dto.js";
 import { isDomainName, isTarget } from "#lib/server/validation/dns-forms.js";
 import type { WorkstationSettings } from "#lib/server/workstation-form.js";
 import { DOMAIN_RE } from "#lib/service-domains.js";
 import { DNS_RECORD_TYPES } from "#lib/services/dns-providers/types.js";
+import { settings } from "#lib/settings.js";
 import {
 	AUTO_STOP_MODES,
 	DEFAULT_WORKSTATION_HOME,
@@ -35,7 +35,7 @@ export const remoteHostApiBody = z.object({
 		.number()
 		.int()
 		.min(0)
-		.max(MAX_BUILD_CONCURRENCY)
+		.max(settings.docker.maxBuildConcurrency)
 		.nullable()
 		.optional()
 		.describe(

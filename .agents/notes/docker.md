@@ -1505,28 +1505,39 @@ TLS material into what `internal/dockerapi.RemoteHost` expects, and
 adds the SSH half for an `ssh://` host.
 
 **Picking a server, and build slots.** `service.buildServerAny` (the Source
-picker's `ANY_BUILD_SERVER` value, `#lib/build-servers.js`'s
-`buildServerChoice`) builds on any registered server instead of a pinned one,
-and `instance_settings.build_on_host = false` does the same for a service that
-would build here (never with zero servers registered: then it builds here
-anyway). The pick happens in the deploy job's prepare step,
-`deploy/build-server-step.ts`'s `acquireBuildServer`, called from
-`#loadDeployPlan`, which then hands `resolveDeployPlan` the service with
-`buildServerRemoteHostId` swapped for the chosen host, so `plan.ts` never knew
-about "any". A slot is a `running` job whose `job.build_host_id` names the host:
-`reserveBuildHost` (`dto/build-slot-dto.ts`) counts them under
+picker's `settings.docker.anyBuildServer` pick, `#lib/build-servers.js`'s
+`buildServerChoice`; the form field is `buildServer`, not
+`buildServerRemoteHostId`, because it carries "any" too) builds on any
+registered server instead of a pinned one, and
+`instance_settings.build_on_host = false` does the same for a service that would
+build here (never with zero servers registered: then it builds here anyway). The
+limits live in `#lib/settings.js` (`settings.docker.maxBuildConcurrency`,
+`buildSlotPollMs`, `buildSlotTimeoutMs`). The pick is the very first thing the
+deploy job's prepare does, before it touches the deployment or the service:
+`deploy/build-server-step.ts`'s `reserveBuildServer`, called from
+`DeploymentService.#reserveBuildServer`, whose host id `#loadDeployPlan` then
+hands `resolveDeployPlan` in place of `buildServerRemoteHostId`, so `plan.ts`
+never knew about "any". A slot is a `running` job whose `job.build_host_id`
+names the host: `reserveBuildHost` (`dto/build-slot-dto.ts`) counts them under
 `pg_advisory_xact_lock` so two prepares can't both take the last one, and
 `pickBuildServer` takes the least busy server under its limit
 (`remote_host.max_concurrent_builds`, else
 `instance_settings.build_concurrency`, 0 for none), random among ties. The slot
-frees when the job leaves `running`, nothing clears the column. With every
-candidate full the prepare polls every 5s (checking for a cancel), which holds
-one of the app's in-process job slots: the queue has no "defer" that wouldn't
-re-run prepare's side effects. The slot is also taken before status checks wait,
-so a deploy blocked on checks holds it. `defaultBuildServer` is applied in
-`ServiceDTO.create` through `RemoteHostDTO.newServiceBuildServer`, only for a
-git service created without either column set, so previews, environments and
-canaries keep copying their parent's.
+frees when the job leaves `running`. **With every candidate full the prepare
+throws `JobDeferredError`** (`queue/deferred.ts`): `JobWorker.runJob` calls
+`JobDTO.defer`, which puts the job back to `queued` at `runAt` without spending
+the attempt, stamps `deferred_since` once, and drops its `dedupeKey` (a newer
+queued deploy may hold it, and the partial unique index would refuse the
+update). Nothing waits in-process, so a full build server never ties up the
+app's three job slots, and because the defer happens before any side effect the
+retry re-runs nothing. The deployment log gets the "waiting" line once (on the
+first deferral); after `buildSlotTimeoutMs` since `deferred_since` the deploy
+fails with `BuildSlotTimeoutError`, which `#recordFailure` counts as keeping the
+previous workload running. A slot is still held while required status checks are
+pending, since those run later in the same prepare. `defaultBuildServer` is
+applied in `ServiceDTO.create` through `RemoteHostDTO.newServiceBuildServer`,
+only for a git service created without either column set, so previews,
+environments and canaries keep copying their parent's.
 
 **`ssh://` Docker hosts** (`internal/dockerapi/ssh.go`). `NewRemote` opens no
 connection up front: an `sshTunnel` dials `user@host[:22]` with the instance's

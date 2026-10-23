@@ -63,7 +63,7 @@ export const actions = {
 
 	updateBuildServers: async ({ request, locals }) => {
 		if (!locals.user) {
-			redirectToSignIn();
+			return redirectToSignIn();
 		}
 		const formData = await request.formData();
 		try {

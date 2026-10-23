@@ -1,8 +1,5 @@
 import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
-import {
-	ANY_BUILD_SERVER,
-	type BuildServerChoice,
-} from "#lib/build-servers.js";
+import type { BuildServerChoice } from "#lib/build-servers.js";
 import { db } from "#lib/server/db/lib.js";
 import { type RemoteHost, remoteHost } from "#lib/server/db/schema.js";
 import {
@@ -16,6 +13,7 @@ import { WorkerClient } from "#lib/server/worker-client.js";
 import type { AgentConnection } from "#lib/services/agent-client.service.js";
 import type { RemoteHostConnection } from "#lib/services/docker.service.js";
 import { decryptSecret } from "#lib/services/secrets.js";
+import { settings } from "#lib/settings.js";
 import { BaseDTO } from "./base-dto";
 import { InstanceSettingsDTO } from "./instance-settings-dto";
 
@@ -153,11 +151,12 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 				buildServerRemoteHostId: input.buildServerRemoteHostId ?? null,
 			};
 		}
-		const value = (await InstanceSettingsDTO.get()).defaultBuildServer;
-		if (value === ANY_BUILD_SERVER) {
+		const instance = await InstanceSettingsDTO.get();
+		const pick = instance.defaultBuildServer;
+		if (pick === settings.docker.anyBuildServer) {
 			return { buildServerAny: true, buildServerRemoteHostId: null };
 		}
-		const host = value ? await RemoteHostDTO.get(value) : null;
+		const host = pick ? await RemoteHostDTO.get(pick) : null;
 		return { buildServerAny: false, buildServerRemoteHostId: host?.id ?? null };
 	}
 

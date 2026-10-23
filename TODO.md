@@ -37,10 +37,6 @@ When done delete the entry, no bloat.
 
 ## Medium
 
-- [ ] Build slots: a deploy waiting for a free build slot (or on status checks
-      after taking one) holds one of the app's in-process job slots; give the
-      queue a defer that requeues without re-running prepare's side effects
-
 - [ ] Pipelines: expose watched repositories, their CI runs and stats in the
       REST API, MCP server and CLI, and sync on the provider's workflow webhook
       instead of only polling

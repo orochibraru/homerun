@@ -1,5 +1,4 @@
-export const ANY_BUILD_SERVER = "any";
-export const MAX_BUILD_CONCURRENCY = 64;
+import { settings } from "#lib/settings.js";
 
 export interface BuildServerChoice {
 	buildServerAny: boolean;
@@ -14,27 +13,28 @@ export interface BuildSlot {
 
 /**
  * The service columns a build server pick sets: a pinned host by id, any
- * free build server (`ANY_BUILD_SERVER`), or this host (empty). Only a git
- * build has a build server.
+ * free build server (`settings.docker.anyBuildServer`), or this host (empty).
+ * Only a git build has a build server.
  */
 export function buildServerChoice(input: {
-	buildServerRemoteHostId?: string | null;
+	buildServer?: string | null;
 	buildSource: string;
 }): BuildServerChoice {
-	const value = input.buildServerRemoteHostId;
-	if (!(input.buildSource === "git" && value)) {
+	const pick = input.buildServer;
+	if (!(input.buildSource === "git" && pick)) {
 		return { buildServerAny: false, buildServerRemoteHostId: null };
 	}
-	return value === ANY_BUILD_SERVER
+	return pick === settings.docker.anyBuildServer
 		? { buildServerAny: true, buildServerRemoteHostId: null }
-		: { buildServerAny: false, buildServerRemoteHostId: value };
+		: { buildServerAny: false, buildServerRemoteHostId: pick };
 }
 
-/** The picker value for a service's build server columns, the inverse of `buildServerChoice`. */
-export function buildServerValue(choice: BuildServerChoice): string {
-	return choice.buildServerAny
-		? ANY_BUILD_SERVER
-		: (choice.buildServerRemoteHostId ?? "");
+/** The build server picker's value for a service's build server columns, the inverse of `buildServerChoice`. */
+export function buildServerPick(choice: BuildServerChoice): string {
+	if (choice.buildServerAny) {
+		return settings.docker.anyBuildServer;
+	}
+	return choice.buildServerRemoteHostId ?? "";
 }
 
 /**
@@ -76,9 +76,11 @@ export function pickBuildServer(
 	return idle[Math.floor(random() * idle.length)]?.id ?? null;
 }
 
-/** Whether `value` is a usable concurrent-build limit: a whole number from 0 (no limit) to `MAX_BUILD_CONCURRENCY`. */
+/** Whether `value` is a usable concurrent-build limit: a whole number from 0 (no limit) to `settings.docker.maxBuildConcurrency`. */
 export function isBuildConcurrency(value: number): boolean {
 	return (
-		Number.isInteger(value) && value >= 0 && value <= MAX_BUILD_CONCURRENCY
+		Number.isInteger(value) &&
+		value >= 0 &&
+		value <= settings.docker.maxBuildConcurrency
 	);
 }

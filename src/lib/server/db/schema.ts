@@ -2041,6 +2041,7 @@ export const job = pgTable(
 		buildHostId: text("build_host_id"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		dedupeKey: text("dedupe_key"),
+		deferredSince: timestamp("deferred_since", { mode: "date" }),
 		dependsOnJobId: text("depends_on_job_id"),
 		error: text("error"),
 		exclusive: boolean("exclusive").default(false).notNull(),

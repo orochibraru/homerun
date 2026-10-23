@@ -18,7 +18,10 @@ import { deployEnvironment } from "#lib/release-channels.js";
 import { snapshotRevisionConfig } from "#lib/revision-config.js";
 import { dependencyLayers } from "#lib/service-graph.js";
 import { isDeployed } from "#lib/service-state.js";
-import { acquireBuildServer } from "./deploy/build-server-step.ts";
+import {
+	BuildSlotTimeoutError,
+	reserveBuildServer,
+} from "./deploy/build-server-step.ts";
 import { syncAutoDns } from "./deploy/helpers.ts";
 import { applyRepoManifest } from "./deploy/manifest-step.ts";
 import {
@@ -47,6 +50,7 @@ import { GitHubReportService } from "./github-report.service.ts";
 import { ImageScanBlockedError } from "./image-scan.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { imageScanMessage } from "./notification-messages.ts";
+import { JobDeferredError } from "./queue/deferred.ts";
 import type { JobResult } from "./queue/handlers.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
@@ -167,26 +171,21 @@ async function revisionSourceFor(
 class DeploymentServiceClass {
 	/**
 	 * Assembles the `DeployPlan` for a deploy: loads instance settings, the
-	 * build cache registry, and reserves the build server a fresh git build
-	 * (not a rollback) runs on for job `jobId` (see `acquireBuildServer`,
-	 * which may wait for a free slot), then delegates the actual
+	 * build cache registry and the build server `buildHostId` reserved for a
+	 * fresh git build (not a rollback), then delegates the actual
 	 * image/workload decision to `resolveDeployPlan`.
 	 *
 	 * @param revision When set (a rollback), skips build-server/cache-registry
 	 *   resolution entirely and the plan reuses that revision's image.
 	 */
 	async #loadDeployPlan(
-		ctx: DeployContext,
-		jobId: string,
+		svc: ServiceDTO,
+		buildHostId: string | null,
 		revision: RevisionSource | null,
 	): Promise<DeployPlan> {
-		const { dep, svc } = ctx;
 		const settings = await InstanceSettingsDTO.get();
 		const isGitBuild = svc.buildSource === "git" && !revision;
 
-		const buildHostId = isGitBuild
-			? await acquireBuildServer({ dep, jobId, settings, svc })
-			: null;
 		let buildServer: BuildServer | null = null;
 		if (buildHostId) {
 			const target = await RemoteHostDTO.resolveBuildTarget(buildHostId);
@@ -216,7 +215,36 @@ class DeploymentServiceClass {
 		});
 	}
 
-	/** Marks the deployment failed (and the service too, unless a status-check block, an image-scan block or a failed health-gated rollout left its previous workload running, or a failed route check left the new one running), notifies, and returns the error message. */
+	/**
+	 * Reserves a build slot for a fresh git build before the deploy changes
+	 * anything (see `reserveBuildServer`), null for any other deploy.
+	 *
+	 * @throws {JobDeferredError} When every candidate server is full, so the
+	 *   job goes back in the queue.
+	 * @throws When the wait timed out or the server can't be resolved, after
+	 *   recording the failure on the deployment.
+	 */
+	async #reserveBuildServer(
+		ctx: DeployContext,
+		job: JobDTO,
+		trigger: DeployTrigger,
+	): Promise<string | null> {
+		const { dep, svc } = ctx;
+		if (svc.buildSource !== "git" || dep.rollbackOfDeploymentId) {
+			return null;
+		}
+		try {
+			const instance = await InstanceSettingsDTO.get();
+			return await reserveBuildServer({ dep, instance, job, svc });
+		} catch (err) {
+			if (err instanceof JobDeferredError) {
+				throw err;
+			}
+			throw new Error(await this.#recordFailure(ctx, err, trigger));
+		}
+	}
+
+	/** Marks the deployment failed (and the service too, unless a status-check block, an image-scan block, a build slot that never freed or a failed health-gated rollout left its previous workload running, or a failed route check left the new one running), notifies, and returns the error message. */
 	async #recordFailure(
 		ctx: DeployContext,
 		err: unknown,
@@ -228,6 +256,7 @@ class DeploymentServiceClass {
 		const keptRunning =
 			checksFailed ||
 			err instanceof ImageScanBlockedError ||
+			err instanceof BuildSlotTimeoutError ||
 			err instanceof RolloutFailedError ||
 			err instanceof RouteCheckFailedError;
 		if (keptRunning && (svc.containerId || svc.swarmServiceId)) {
@@ -379,13 +408,6 @@ class DeploymentServiceClass {
 			});
 			throw new Error(message);
 		}
-		logger.info(
-			`Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${
-				svc.buildSource === "git"
-					? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
-					: `image=${svc.image}:${svc.tag}`
-			} user=${userId}`,
-		);
 		const dep =
 			(await DeploymentDTO.get(deploymentId)) ??
 			(await DeploymentDTO.create({
@@ -396,11 +418,19 @@ class DeploymentServiceClass {
 				trigger,
 				userId,
 			}));
+		const ctx: DeployContext = { dep, svc, userId };
+		const buildHostId = await this.#reserveBuildServer(ctx, job, trigger);
+		logger.info(
+			`Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${
+				svc.buildSource === "git"
+					? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
+					: `image=${svc.image}:${svc.tag}`
+			} user=${userId}`,
+		);
 		await dep.update({ startedAt: new Date(), status: "pulling" });
 		await svc.update({ currentStatus: "pulling" });
 		NotificationChannelService.notifyDeployStarted({ dep, svc, trigger });
 
-		const ctx: DeployContext = { dep, svc, userId };
 		try {
 			await dep.appendLog(phaseLine("config"));
 			const revision = await revisionSourceFor(dep);
@@ -418,7 +448,7 @@ class DeploymentServiceClass {
 					volumeMounts: mounts.map(({ mount }) => mount.snapshot()),
 				},
 			});
-			const plan = await this.#loadDeployPlan(ctx, job.id, revision);
+			const plan = await this.#loadDeployPlan(svc, buildHostId, revision);
 			await dep.appendLog(phaseLine("volumes"));
 			const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 			const publicHosts = await syncAutoDns(svc, stack, dep);
