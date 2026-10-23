@@ -6,7 +6,6 @@ import {
 	applyEnv,
 	challengeDomainFor,
 	dnsChallengeFlags,
-	dnsChallengeResolverFor,
 	dnsChallengeSetup,
 	httpreqEnv,
 	wildcardNames,
@@ -43,41 +42,6 @@ describe("wildcardNames", () => {
 			"*.example.com",
 			"*.apps.example.com",
 		]);
-	});
-});
-
-describe("dnsChallengeResolverFor", () => {
-	test("leaves a host the wildcard covers to Traefik's store", () => {
-		expect(
-			dnsChallengeResolverFor(
-				"app.example.com",
-				"letsencrypt",
-				["example.com"],
-				"example.com",
-			),
-		).toBeNull();
-	});
-
-	test("gives a deeper host the DNS-01 resolver", () => {
-		expect(
-			dnsChallengeResolverFor(
-				"a.b.example.com",
-				"letsencrypt",
-				["example.com"],
-				"example.com",
-			),
-		).toBe("letsencrypt-dns");
-	});
-
-	test("is undefined for a host under no DNS-challenge domain", () => {
-		expect(
-			dnsChallengeResolverFor(
-				"app.other.org",
-				"letsencrypt",
-				["example.com"],
-				"example.com",
-			),
-		).toBeUndefined();
 	});
 });
 
@@ -159,7 +123,6 @@ describe("acmeWildcardRouterConfig", () => {
 		const yaml = acmeWildcardRouterConfig({
 			domains: ["example.com"],
 			entrypoint: "websecure",
-			resolver: "letsencrypt",
 			serviceDomain: "apps.example.com",
 		});
 		expect(parse(yaml ?? "")).toEqual({
@@ -189,7 +152,6 @@ describe("acmeWildcardRouterConfig", () => {
 			acmeWildcardRouterConfig({
 				domains: [],
 				entrypoint: "websecure",
-				resolver: "letsencrypt",
 				serviceDomain: "example.com",
 			}),
 		).toBeNull();

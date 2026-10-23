@@ -1,4 +1,8 @@
-import { dnsChallengeResolverFor } from "#lib/acme-dns.js";
+import {
+	challengeDomainFor,
+	DNS_CHALLENGE_RESOLVER,
+	wildcardNames,
+} from "#lib/acme-dns.js";
 import { config, serviceDomain } from "#lib/config.js";
 import { certificateCovers } from "#lib/tls-certificate.js";
 
@@ -31,11 +35,15 @@ export function certResolverFor(
 	) {
 		return null;
 	}
-	const viaDns = dnsChallengeResolverFor(
+	const dnsDomain = challengeDomainFor(
 		host,
-		resolver,
 		config.traefik.dnsChallengeDomains,
-		serviceDomain(),
 	);
-	return viaDns === undefined ? resolver : viaDns;
+	if (!dnsDomain) {
+		return resolver;
+	}
+	if (certificateCovers(wildcardNames(dnsDomain, serviceDomain()), host)) {
+		return null;
+	}
+	return DNS_CHALLENGE_RESOLVER;
 }

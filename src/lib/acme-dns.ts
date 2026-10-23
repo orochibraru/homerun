@@ -1,6 +1,5 @@
 import { createHmac } from "node:crypto";
 import { stringify } from "yaml";
-import { certificateCovers } from "#lib/tls-certificate.js";
 
 export const ACME_DNS_PATH = "/api/acme-dns";
 export const ACME_DNS_USERNAME = "homerun";
@@ -11,6 +10,20 @@ const DEFAULT_STORAGE = "/letsencrypt/acme.json";
 const PROPAGATION_TIMEOUT_SECONDS = "600";
 const POLLING_INTERVAL_SECONDS = "10";
 const HTTP_TIMEOUT_SECONDS = "120";
+const DNS_CHALLENGE_FLAGS = [
+	"dnschallenge.provider",
+	"dnschallenge.resolvers",
+	"email",
+	"storage",
+];
+const HTTPREQ_VARIABLES = [
+	"HTTPREQ_ENDPOINT",
+	"HTTPREQ_HTTP_TIMEOUT",
+	"HTTPREQ_PASSWORD",
+	"HTTPREQ_POLLING_INTERVAL",
+	"HTTPREQ_PROPAGATION_TIMEOUT",
+	"HTTPREQ_USERNAME",
+];
 
 export interface DnsChallengeSetup {
 	endpoint: string;
@@ -18,10 +31,7 @@ export interface DnsChallengeSetup {
 	username: string;
 }
 
-/** The name of the DNS-01 resolver Homerun adds next to the HTTP-01 one called `resolver`. */
-export function dnsChallengeResolver(resolver: string): string {
-	return `${resolver}-dns`;
-}
+export const DNS_CHALLENGE_RESOLVER = "letsencrypt-dns";
 
 /** The Basic auth password Traefik's httpreq provider presents, derived from the auth secret so nothing new is stored. */
 export function acmeDnsPassword(secret: string): string {
@@ -82,27 +92,6 @@ export function wildcardNames(domain: string, serviceDomain: string): string[] {
 	return names;
 }
 
-/**
- * The resolver a router for `host` takes when `host` sits under one of the
- * DNS-challenge `domains`: none when the domain's wildcard certificate
- * covers it (Traefik serves that from its store), the DNS-01 resolver for a
- * deeper name, and `undefined` when no DNS-challenge domain covers it.
- */
-export function dnsChallengeResolverFor(
-	host: string,
-	resolver: string,
-	domains: string[],
-	serviceDomain: string,
-): string | null | undefined {
-	const domain = challengeDomainFor(host, domains);
-	if (!domain) {
-		return undefined;
-	}
-	return certificateCovers(wildcardNames(domain, serviceDomain), host)
-		? null
-		: dnsChallengeResolver(resolver);
-}
-
 /** The value of `--key=value` in a Traefik command line, matched case-insensitively. */
 function flagValue(cmd: string[], key: string): string | null {
 	const prefix = `--${key.toLowerCase()}=`;
@@ -119,21 +108,25 @@ function flagValue(cmd: string[], key: string): string | null {
  * of them nulled so `applyFlags` removes it when `enabled` is false.
  */
 export function dnsChallengeFlags(
-	resolver: string,
+	httpResolver: string,
 	enabled: boolean,
 	cmd: string[],
 	acmeEmail: string | null,
 ): Record<string, string | null> {
-	const prefix = `certificatesresolvers.${dnsChallengeResolver(resolver)}.acme`;
-	const http = `certificatesresolvers.${resolver}.acme`;
+	const prefix = `certificatesresolvers.${DNS_CHALLENGE_RESOLVER}.acme`;
+	if (!enabled) {
+		return Object.fromEntries(
+			DNS_CHALLENGE_FLAGS.map((flag) => [`${prefix}.${flag}`, null]),
+		);
+	}
+	const http = `certificatesresolvers.${httpResolver}.acme`;
+	const storage = flagValue(cmd, `${http}.storage`) ?? DEFAULT_STORAGE;
 	const email = acmeEmail ?? flagValue(cmd, `${http}.email`);
 	return {
-		[`${prefix}.dnschallenge.provider`]: enabled ? "httpreq" : null,
-		[`${prefix}.dnschallenge.resolvers`]: enabled ? PUBLIC_RESOLVERS : null,
-		[`${prefix}.email`]: enabled && email ? email : null,
-		[`${prefix}.storage`]: enabled
-			? (flagValue(cmd, `${http}.storage`) ?? DEFAULT_STORAGE)
-			: null,
+		[`${prefix}.dnschallenge.provider`]: "httpreq",
+		[`${prefix}.dnschallenge.resolvers`]: PUBLIC_RESOLVERS,
+		[`${prefix}.email`]: email,
+		[`${prefix}.storage`]: storage,
 	};
 }
 
@@ -141,13 +134,16 @@ export function dnsChallengeFlags(
 export function httpreqEnv(
 	setup: DnsChallengeSetup | null,
 ): Record<string, string | null> {
+	if (!setup) {
+		return Object.fromEntries(HTTPREQ_VARIABLES.map((name) => [name, null]));
+	}
 	return {
-		HTTPREQ_ENDPOINT: setup?.endpoint ?? null,
-		HTTPREQ_HTTP_TIMEOUT: setup ? HTTP_TIMEOUT_SECONDS : null,
-		HTTPREQ_PASSWORD: setup?.password ?? null,
-		HTTPREQ_POLLING_INTERVAL: setup ? POLLING_INTERVAL_SECONDS : null,
-		HTTPREQ_PROPAGATION_TIMEOUT: setup ? PROPAGATION_TIMEOUT_SECONDS : null,
-		HTTPREQ_USERNAME: setup?.username ?? null,
+		HTTPREQ_ENDPOINT: setup.endpoint,
+		HTTPREQ_HTTP_TIMEOUT: HTTP_TIMEOUT_SECONDS,
+		HTTPREQ_PASSWORD: setup.password,
+		HTTPREQ_POLLING_INTERVAL: POLLING_INTERVAL_SECONDS,
+		HTTPREQ_PROPAGATION_TIMEOUT: PROPAGATION_TIMEOUT_SECONDS,
+		HTTPREQ_USERNAME: setup.username,
 	};
 }
 
@@ -181,7 +177,6 @@ export function applyEnv(
 export function acmeWildcardRouterConfig(params: {
 	domains: string[];
 	entrypoint: string;
-	resolver: string;
 	serviceDomain: string;
 }): string | null {
 	if (params.domains.length === 0) {
@@ -197,7 +192,7 @@ export function acmeWildcardRouterConfig(params: {
 					rule: `Host(\`_acme-wildcard.${domain}\`)`,
 					service: "noop@internal",
 					tls: {
-						certResolver: dnsChallengeResolver(params.resolver),
+						certResolver: DNS_CHALLENGE_RESOLVER,
 						domains: [{ main, sans }],
 					},
 				},

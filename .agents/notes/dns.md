@@ -35,10 +35,10 @@ as is, it's the same scheme), and `dns_provider` is now just Pangolin on/off.
 
 A domain linked to a connection can opt into DNS-01 (for wildcard certs and
 hosts behind Cloudflare's proxy where HTTP-01 fails). Traefik gets a second
-resolver, `<certResolver>-dns`, on lego's **httpreq** provider, whose
-`HTTPREQ_ENDPOINT` is this app (`/api/acme-dns/present|cleanup`, at the origin
-of `config.authCheckUrl`, the address Traefik already reaches it on for
-forwardAuth) with Basic auth `homerun:<HMAC of AUTH_SECRET>`.
+resolver, `letsencrypt-dns` (`DNS_CHALLENGE_RESOLVER`), on lego's **httpreq**
+provider, whose `HTTPREQ_ENDPOINT` is this app (`/api/acme-dns/present|cleanup`,
+at the origin of `config.authCheckUrl`, the address Traefik already reaches it
+on for forwardAuth) with Basic auth `homerun:<HMAC of AUTH_SECRET>`.
 `AcmeDnsService.handle` writes or removes the TXT record through the most
 specific opted-in domain's own `DnsProviderClient`, so all sixteen providers
 work with no per-provider lego mapping and Traefik never holds a credential.

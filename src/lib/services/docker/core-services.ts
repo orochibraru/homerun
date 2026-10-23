@@ -5,7 +5,7 @@ import {
 	applyEnv,
 	type DnsChallengeSetup,
 	dnsChallengeFlags,
-	dnsChallengeResolver,
+	DNS_CHALLENGE_RESOLVER,
 	httpreqEnv,
 } from "#lib/acme-dns.js";
 import { config } from "#lib/config.js";
@@ -147,7 +147,7 @@ export function expectedTraefikFlags(
 	}
 	if (expectation.dnsChallenge) {
 		groups["the DNS challenge resolver"] = {
-			[`certificatesresolvers.${dnsChallengeResolver(expectation.certResolver)}.acme.dnschallenge.provider`]:
+			[`certificatesresolvers.${DNS_CHALLENGE_RESOLVER}.acme.dnschallenge.provider`]:
 				"httpreq",
 		};
 	}

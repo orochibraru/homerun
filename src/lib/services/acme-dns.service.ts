@@ -77,7 +77,6 @@ class AcmeDnsServiceClass {
 			: acmeWildcardRouterConfig({
 					domains: config.traefik.dnsChallengeDomains,
 					entrypoint: config.traefik.entrypoint,
-					resolver: config.traefik.certResolver,
 					serviceDomain: serviceDomain(),
 				});
 		try {
