@@ -1,5 +1,5 @@
 {
-	"id": "821f76b7-dd3c-419c-86fc-5ddff7ea71c3",
+	"id": "6ad2f429-68c5-4708-ae4b-d90a16571e85",
 	"prevId": "a81b7cc5-8981-4737-b31a-d03e1fa6980e",
 	"version": "7",
 	"dialect": "postgresql",
@@ -1559,13 +1559,6 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"dns_challenge": {
-					"name": "dns_challenge",
-					"type": "boolean",
-					"primaryKey": false,
-					"notNull": true,
-					"default": false
-				},
 				"id": {
 					"name": "id",
 					"type": "text",
@@ -2705,6 +2698,24 @@
 					"primaryKey": false,
 					"notNull": false
 				},
+				"build_concurrency": {
+					"name": "build_concurrency",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"build_on_host": {
+					"name": "build_on_host",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"default_build_server": {
+					"name": "default_build_server",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"auth_cross_subdomain_cookies": {
 					"name": "auth_cross_subdomain_cookies",
 					"type": "boolean",
@@ -3357,6 +3368,12 @@
 					"notNull": true,
 					"default": 0
 				},
+				"build_host_id": {
+					"name": "build_host_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"created_at": {
 					"name": "created_at",
 					"type": "timestamp",
@@ -3366,6 +3383,18 @@
 				"dedupe_key": {
 					"name": "dedupe_key",
 					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"deferred_for": {
+					"name": "deferred_for",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"deferred_since": {
+					"name": "deferred_since",
+					"type": "timestamp",
 					"primaryKey": false,
 					"notNull": false
 				},
@@ -6023,6 +6052,12 @@
 					"notNull": true,
 					"default": "'docker'"
 				},
+				"max_concurrent_builds": {
+					"name": "max_concurrent_builds",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"name": {
 					"name": "name",
 					"type": "text",
@@ -6655,6 +6690,13 @@
 					"type": "text",
 					"primaryKey": false,
 					"notNull": false
+				},
+				"build_server_any": {
+					"name": "build_server_any",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
 				},
 				"build_source": {
 					"name": "build_source",

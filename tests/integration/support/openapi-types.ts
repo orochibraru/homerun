@@ -7064,9 +7064,12 @@ export interface operations {
 						authCheckUrl: string | null;
 						authCrossSubdomainCookies: boolean | null;
 						baseDomain: string | null;
+						buildConcurrency: number;
+						buildOnHost: boolean;
 						cpuHardThreshold: number;
 						cpuSoftThreshold: number;
 						dashboardUrl: string | null;
+						defaultBuildServer: string;
 						/** @enum {string} */
 						defaultUiMode: "simple" | "advanced";
 						diskHardThreshold: number;
@@ -7141,12 +7144,18 @@ export interface operations {
 					authCrossSubdomainCookies?: boolean | null;
 					/** @description Services get <slug>.<baseDomain>. A bare hostname. */
 					baseDomain?: string | null;
+					/** @description How many builds each build server runs at once unless it sets its own limit, 0 to 64, 0 for no limit. */
+					buildConcurrency?: number;
+					/** @description Whether git builds may run on this host while build servers are registered. Off sends every build to a build server. */
+					buildOnHost?: boolean;
 					/** @description A usage percentage that alerts, 1 to 100. */
 					cpuHardThreshold?: number;
 					/** @description A usage percentage that alerts, 1 to 100. */
 					cpuSoftThreshold?: number;
 					/** @description The dashboard's URL. Null derives it from the base domain, over https unless it was http before. */
 					dashboardUrl?: string | null;
+					/** @description The build server a new git service starts with: a remote host id, `any` for any free build server, or empty for this host. */
+					defaultBuildServer?: string;
 					/** @enum {string} */
 					defaultUiMode?: "simple" | "advanced";
 					/** @description A usage percentage that alerts, 1 to 100. */
@@ -7203,9 +7212,12 @@ export interface operations {
 						authCheckUrl: string | null;
 						authCrossSubdomainCookies: boolean | null;
 						baseDomain: string | null;
+						buildConcurrency: number;
+						buildOnHost: boolean;
 						cpuHardThreshold: number;
 						cpuSoftThreshold: number;
 						dashboardUrl: string | null;
+						defaultBuildServer: string;
 						/** @enum {string} */
 						defaultUiMode: "simple" | "advanced";
 						diskHardThreshold: number;
@@ -12125,6 +12137,7 @@ export interface operations {
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
+						maxConcurrentBuilds: number | null;
 						name: string;
 						tlsCaSet: boolean;
 						tlsCertSet: boolean;
@@ -12182,6 +12195,8 @@ export interface operations {
 					 * @enum {string}
 					 */
 					kind: "docker" | "agent";
+					/** @description How many builds run on it at once, 0 for no limit. Null follows the instance's buildConcurrency. */
+					maxConcurrentBuilds?: number | null;
 					name: string;
 					/** @description TLS CA certificate (PEM) for a tcp:// daemon. Write-only. */
 					tlsCa?: string;
@@ -12208,6 +12223,7 @@ export interface operations {
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
+						maxConcurrentBuilds: number | null;
 						name: string;
 						tlsCaSet: boolean;
 						tlsCertSet: boolean;
@@ -12283,6 +12299,7 @@ export interface operations {
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
+						maxConcurrentBuilds: number | null;
 						name: string;
 						tlsCaSet: boolean;
 						tlsCertSet: boolean;
@@ -12407,6 +12424,8 @@ export interface operations {
 					agentUrl?: string;
 					/** @description The Docker daemon (kind docker): tcp://host:2376 or ssh://user@host. */
 					dockerHost?: string;
+					/** @description How many builds run on it at once, 0 for no limit. Null follows the instance's buildConcurrency. */
+					maxConcurrentBuilds?: number | null;
 					name?: string;
 					/** @description TLS CA certificate (PEM) for a tcp:// daemon. Write-only. */
 					tlsCa?: string;
@@ -12433,6 +12452,7 @@ export interface operations {
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
+						maxConcurrentBuilds: number | null;
 						name: string;
 						tlsCaSet: boolean;
 						tlsCertSet: boolean;
@@ -13797,6 +13817,7 @@ export interface operations {
 						buildCacheRegistryId: string | null;
 						/** @description envVars keys also passed to a git build as build args or build env. */
 						buildEnvKeys: string[];
+						buildServerAny: boolean;
 						buildServerRemoteHostId: string | null;
 						/** @enum {string} */
 						buildSource: "image" | "git";
@@ -14065,6 +14086,8 @@ export interface operations {
 							buildCacheRegistryId?: string | null;
 							/** @description envVars keys also passed to a git build: as build args for a Dockerfile or Bake, as build env for Nixpacks, Railpack and buildpacks. */
 							buildEnvKeys?: string[];
+							/** @description Build on whichever build server has a free slot instead of buildServerRemoteHostId. */
+							buildServerAny?: boolean;
 							buildServerRemoteHostId?: string | null;
 							/**
 							 * @default image
@@ -14269,6 +14292,8 @@ export interface operations {
 							buildCacheRegistryId?: string | null;
 							/** @description envVars keys also passed to a git build: as build args for a Dockerfile or Bake, as build env for Nixpacks, Railpack and buildpacks. */
 							buildEnvKeys?: string[];
+							/** @description Build on whichever build server has a free slot instead of buildServerRemoteHostId. */
+							buildServerAny?: boolean;
 							buildServerRemoteHostId?: string | null;
 							/** @enum {string} */
 							buildSource?: "image" | "git";
@@ -14460,6 +14485,7 @@ export interface operations {
 						buildCacheRegistryId: string | null;
 						/** @description envVars keys also passed to a git build as build args or build env. */
 						buildEnvKeys: string[];
+						buildServerAny: boolean;
 						buildServerRemoteHostId: string | null;
 						/** @enum {string} */
 						buildSource: "image" | "git";
@@ -14774,6 +14800,7 @@ export interface operations {
 						buildCacheRegistryId: string | null;
 						/** @description envVars keys also passed to a git build as build args or build env. */
 						buildEnvKeys: string[];
+						buildServerAny: boolean;
 						buildServerRemoteHostId: string | null;
 						/** @enum {string} */
 						buildSource: "image" | "git";
@@ -15128,6 +15155,8 @@ export interface operations {
 					buildCacheRegistryId?: string | null;
 					/** @description envVars keys also passed to a git build: as build args for a Dockerfile or Bake, as build env for Nixpacks, Railpack and buildpacks. */
 					buildEnvKeys?: string[];
+					/** @description Build on whichever build server has a free slot instead of buildServerRemoteHostId. */
+					buildServerAny?: boolean;
 					buildServerRemoteHostId?: string | null;
 					/** @enum {string} */
 					buildSource?: "image" | "git";
@@ -15317,6 +15346,7 @@ export interface operations {
 						buildCacheRegistryId: string | null;
 						/** @description envVars keys also passed to a git build as build args or build env. */
 						buildEnvKeys: string[];
+						buildServerAny: boolean;
 						buildServerRemoteHostId: string | null;
 						/** @enum {string} */
 						buildSource: "image" | "git";
@@ -15920,6 +15950,7 @@ export interface operations {
 								buildCacheRegistryId: string | null;
 								buildContext: string | null;
 								buildMethod: string;
+								buildServerAny: boolean;
 								buildServerRemoteHostId: string | null;
 								buildTarget: string | null;
 								dockerfilePath: string | null;

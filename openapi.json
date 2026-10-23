@@ -8872,6 +8872,14 @@
 										"baseDomain": {
 											"type": ["string", "null"]
 										},
+										"buildConcurrency": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"buildOnHost": {
+											"type": "boolean"
+										},
 										"cpuHardThreshold": {
 											"maximum": 9007199254740991,
 											"minimum": -9007199254740991,
@@ -8884,6 +8892,9 @@
 										},
 										"dashboardUrl": {
 											"type": ["string", "null"]
+										},
+										"defaultBuildServer": {
+											"type": "string"
 										},
 										"defaultUiMode": {
 											"enum": ["simple", "advanced"],
@@ -8991,6 +9002,9 @@
 										"authCheckUrl",
 										"authCrossSubdomainCookies",
 										"baseDomain",
+										"buildConcurrency",
+										"buildOnHost",
+										"defaultBuildServer",
 										"serviceSubdomain",
 										"cpuHardThreshold",
 										"cpuSoftThreshold",
@@ -9094,6 +9108,16 @@
 										"description": "Services get <slug>.<baseDomain>. A bare hostname.",
 										"type": ["string", "null"]
 									},
+									"buildConcurrency": {
+										"description": "How many builds each build server runs at once unless it sets its own limit, 0 to 64, 0 for no limit.",
+										"maximum": 9007199254740991,
+										"minimum": -9007199254740991,
+										"type": "integer"
+									},
+									"buildOnHost": {
+										"description": "Whether git builds may run on this host while build servers are registered. Off sends every build to a build server.",
+										"type": "boolean"
+									},
 									"cpuHardThreshold": {
 										"description": "A usage percentage that alerts, 1 to 100.",
 										"maximum": 9007199254740991,
@@ -9109,6 +9133,10 @@
 									"dashboardUrl": {
 										"description": "The dashboard's URL. Null derives it from the base domain, over https unless it was http before.",
 										"type": ["string", "null"]
+									},
+									"defaultBuildServer": {
+										"description": "The build server a new git service starts with: a remote host id, `any` for any free build server, or empty for this host.",
+										"type": "string"
 									},
 									"defaultUiMode": {
 										"enum": ["simple", "advanced"],
@@ -9245,6 +9273,14 @@
 										"baseDomain": {
 											"type": ["string", "null"]
 										},
+										"buildConcurrency": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"buildOnHost": {
+											"type": "boolean"
+										},
 										"cpuHardThreshold": {
 											"maximum": 9007199254740991,
 											"minimum": -9007199254740991,
@@ -9257,6 +9293,9 @@
 										},
 										"dashboardUrl": {
 											"type": ["string", "null"]
+										},
+										"defaultBuildServer": {
+											"type": "string"
 										},
 										"defaultUiMode": {
 											"enum": ["simple", "advanced"],
@@ -9364,6 +9403,9 @@
 										"authCheckUrl",
 										"authCrossSubdomainCookies",
 										"baseDomain",
+										"buildConcurrency",
+										"buildOnHost",
+										"defaultBuildServer",
 										"serviceSubdomain",
 										"cpuHardThreshold",
 										"cpuSoftThreshold",
@@ -19093,6 +19135,18 @@
 												"enum": ["docker", "agent"],
 												"type": "string"
 											},
+											"maxConcurrentBuilds": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"name": {
 												"type": "string"
 											},
@@ -19120,6 +19174,7 @@
 											"dockerHost",
 											"id",
 											"kind",
+											"maxConcurrentBuilds",
 											"name",
 											"tlsCaSet",
 											"tlsCertSet",
@@ -19209,6 +19264,19 @@
 										"enum": ["docker", "agent"],
 										"type": "string"
 									},
+									"maxConcurrentBuilds": {
+										"anyOf": [
+											{
+												"maximum": 64,
+												"minimum": 0,
+												"type": "integer"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "How many builds run on it at once, 0 for no limit. Null follows the instance's buildConcurrency."
+									},
 									"name": {
 										"maxLength": 100,
 										"minLength": 1,
@@ -19261,6 +19329,18 @@
 											"enum": ["docker", "agent"],
 											"type": "string"
 										},
+										"maxConcurrentBuilds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"name": {
 											"type": "string"
 										},
@@ -19288,6 +19368,7 @@
 										"dockerHost",
 										"id",
 										"kind",
+										"maxConcurrentBuilds",
 										"name",
 										"tlsCaSet",
 										"tlsCertSet",
@@ -19491,6 +19572,18 @@
 											"enum": ["docker", "agent"],
 											"type": "string"
 										},
+										"maxConcurrentBuilds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"name": {
 											"type": "string"
 										},
@@ -19518,6 +19611,7 @@
 										"dockerHost",
 										"id",
 										"kind",
+										"maxConcurrentBuilds",
 										"name",
 										"tlsCaSet",
 										"tlsCertSet",
@@ -19628,6 +19722,19 @@
 										"description": "The Docker daemon (kind docker): tcp://host:2376 or ssh://user@host.",
 										"type": "string"
 									},
+									"maxConcurrentBuilds": {
+										"anyOf": [
+											{
+												"maximum": 64,
+												"minimum": 0,
+												"type": "integer"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "How many builds run on it at once, 0 for no limit. Null follows the instance's buildConcurrency."
+									},
 									"name": {
 										"maxLength": 100,
 										"minLength": 1,
@@ -19679,6 +19786,18 @@
 											"enum": ["docker", "agent"],
 											"type": "string"
 										},
+										"maxConcurrentBuilds": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"name": {
 											"type": "string"
 										},
@@ -19706,6 +19825,7 @@
 										"dockerHost",
 										"id",
 										"kind",
+										"maxConcurrentBuilds",
 										"name",
 										"tlsCaSet",
 										"tlsCertSet",
@@ -22302,6 +22422,9 @@
 												},
 												"type": "array"
 											},
+											"buildServerAny": {
+												"type": "boolean"
+											},
 											"buildServerRemoteHostId": {
 												"type": ["string", "null"]
 											},
@@ -23024,6 +23147,7 @@
 											"autoRollback",
 											"buildCacheBuiltin",
 											"buildCacheRegistryId",
+											"buildServerAny",
 											"buildServerRemoteHostId",
 											"buildSource",
 											"channelBranch",
@@ -23284,6 +23408,10 @@
 													"type": "string"
 												},
 												"type": "array"
+											},
+											"buildServerAny": {
+												"description": "Build on whichever build server has a free slot instead of buildServerRemoteHostId.",
+												"type": "boolean"
 											},
 											"buildServerRemoteHostId": {
 												"type": ["string", "null"]
@@ -23959,6 +24087,10 @@
 												},
 												"type": "array"
 											},
+											"buildServerAny": {
+												"description": "Build on whichever build server has a free slot instead of buildServerRemoteHostId.",
+												"type": "boolean"
+											},
 											"buildServerRemoteHostId": {
 												"type": ["string", "null"]
 											},
@@ -24623,6 +24755,9 @@
 											},
 											"type": "array"
 										},
+										"buildServerAny": {
+											"type": "boolean"
+										},
 										"buildServerRemoteHostId": {
 											"type": ["string", "null"]
 										},
@@ -25340,6 +25475,7 @@
 										"autoRollback",
 										"buildCacheBuiltin",
 										"buildCacheRegistryId",
+										"buildServerAny",
 										"buildServerRemoteHostId",
 										"buildSource",
 										"channelBranch",
@@ -25796,6 +25932,9 @@
 											},
 											"type": "array"
 										},
+										"buildServerAny": {
+											"type": "boolean"
+										},
 										"buildServerRemoteHostId": {
 											"type": ["string", "null"]
 										},
@@ -26513,6 +26652,7 @@
 										"autoRollback",
 										"buildCacheBuiltin",
 										"buildCacheRegistryId",
+										"buildServerAny",
 										"buildServerRemoteHostId",
 										"buildSource",
 										"channelBranch",
@@ -26794,6 +26934,10 @@
 											"type": "string"
 										},
 										"type": "array"
+									},
+									"buildServerAny": {
+										"description": "Build on whichever build server has a free slot instead of buildServerRemoteHostId.",
+										"type": "boolean"
 									},
 									"buildServerRemoteHostId": {
 										"type": ["string", "null"]
@@ -27446,6 +27590,9 @@
 											},
 											"type": "array"
 										},
+										"buildServerAny": {
+											"type": "boolean"
+										},
 										"buildServerRemoteHostId": {
 											"type": ["string", "null"]
 										},
@@ -28163,6 +28310,7 @@
 										"autoRollback",
 										"buildCacheBuiltin",
 										"buildCacheRegistryId",
+										"buildServerAny",
 										"buildServerRemoteHostId",
 										"buildSource",
 										"channelBranch",
@@ -29349,6 +29497,9 @@
 																"buildMethod": {
 																	"type": "string"
 																},
+																"buildServerAny": {
+																	"type": "boolean"
+																},
 																"buildServerRemoteHostId": {
 																	"type": ["string", "null"]
 																},
@@ -29397,6 +29548,7 @@
 																"buildCacheRegistryId",
 																"buildContext",
 																"buildMethod",
+																"buildServerAny",
 																"buildServerRemoteHostId",
 																"dockerfilePath",
 																"ignorePaths",
