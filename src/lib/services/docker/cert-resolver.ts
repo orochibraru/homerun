@@ -1,3 +1,5 @@
+import { dnsChallengeResolverFor } from "#lib/acme-dns.js";
+import { config, serviceDomain } from "#lib/config.js";
 import { certificateCovers } from "#lib/tls-certificate.js";
 
 const IPV4_HOST_RE = /(^|\.)\d{1,3}(\.\d{1,3}){3}$/;
@@ -8,8 +10,10 @@ const LOCAL_HOST_RE = /(^|\.)localhost$/;
  * none should be : behind Pangolin (which terminates TLS itself), no
  * resolver configured, `host` is covered by the instance certificate
  * (`instanceCertNames`, served as Traefik's default, which a resolver would
- * override), or `host` is a bare hostname/IPv4/`localhost` that ACME could
- * never issue a certificate for anyway.
+ * override), `host` is a bare hostname/IPv4/`localhost` that ACME could
+ * never issue a certificate for anyway, or the wildcard certificate of one of
+ * the DNS-challenge domains (`config.traefik.dnsChallengeDomains`) covers it. A deeper name
+ * under such a domain gets the DNS-01 resolver.
  */
 export function certResolverFor(
 	host: string,
@@ -27,5 +31,11 @@ export function certResolverFor(
 	) {
 		return null;
 	}
-	return resolver;
+	const viaDns = dnsChallengeResolverFor(
+		host,
+		resolver,
+		config.traefik.dnsChallengeDomains,
+		serviceDomain(),
+	);
+	return viaDns === undefined ? resolver : viaDns;
 }

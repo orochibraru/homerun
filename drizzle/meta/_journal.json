@@ -1015,6 +1015,13 @@
 			"when": 1792658177894,
 			"tag": "0144_tearful_makkari",
 			"breakpoints": true
+		},
+		{
+			"idx": 145,
+			"version": "7",
+			"when": 1792764062061,
+			"tag": "0145_red_wind_dancer",
+			"breakpoints": true
 		}
 	],
 	"version": "7"
