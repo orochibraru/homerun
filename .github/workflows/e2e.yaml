@@ -134,7 +134,14 @@ jobs:
         run: bun run build
 
       - name: Install Playwright's Chromium
-        run: bunx playwright install --with-deps chromium
+        timeout-minutes: 16
+        run: |
+          for attempt in 1 2 3; do
+            timeout 300 bunx playwright install --with-deps chromium && exit 0
+            echo "::warning::Playwright install attempt $attempt failed or hung"
+            sleep 10
+          done
+          exit 1
 
       - name: Tests (E2E)
         env:
