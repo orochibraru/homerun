@@ -90,7 +90,8 @@ export async function reserveBuildServer(
 	}
 
 	const { buildSlotPollMs, buildSlotTimeoutMs } = settings.docker;
-	const waitingSince = job.deferredSince;
+	const waitingSince =
+		job.deferral?.gate === "build-slot" ? job.deferral.since : null;
 	if (
 		waitingSince &&
 		Date.now() - waitingSince.getTime() >= buildSlotTimeoutMs
@@ -103,5 +104,9 @@ export async function reserveBuildServer(
 	if (!waitingSince) {
 		await dep.appendLog(message);
 	}
-	throw new JobDeferredError(message, new Date(Date.now() + buildSlotPollMs));
+	throw new JobDeferredError(
+		message,
+		"build-slot",
+		new Date(Date.now() + buildSlotPollMs),
+	);
 }

@@ -1512,10 +1512,10 @@ registered server instead of a pinned one, and
 `instance_settings.build_on_host = false` does the same for a service that would
 build here (never with zero servers registered: then it builds here anyway). The
 limits live in `#lib/settings.js` (`settings.docker.maxBuildConcurrency`,
-`buildSlotPollMs`, `buildSlotTimeoutMs`). The pick is the very first thing the
-deploy job's prepare does, before it touches the deployment or the service:
-`deploy/build-server-step.ts`'s `reserveBuildServer`, called from
-`DeploymentService.#reserveBuildServer`, whose host id `#loadDeployPlan` then
+`buildSlotPollMs`, `buildSlotTimeoutMs`). The pick is the deploy job's second
+gate, right after required status checks and before prepare touches the
+deployment or the service: `deploy/build-server-step.ts`'s `reserveBuildServer`,
+called from `DeploymentService.#passGates`, whose host id `#loadDeployPlan` then
 hands `resolveDeployPlan` in place of `buildServerRemoteHostId`, so `plan.ts`
 never knew about "any". A slot is a `running` job whose `job.build_host_id`
 names the host: `reserveBuildHost` (`dto/build-slot-dto.ts`) counts them under
@@ -1526,18 +1526,20 @@ names the host: `reserveBuildHost` (`dto/build-slot-dto.ts`) counts them under
 frees when the job leaves `running`. **With every candidate full the prepare
 throws `JobDeferredError`** (`queue/deferred.ts`): `JobWorker.runJob` calls
 `JobDTO.defer`, which puts the job back to `queued` at `runAt` without spending
-the attempt, stamps `deferred_since` once, and drops its `dedupeKey` (a newer
-queued deploy may hold it, and the partial unique index would refuse the
-update). Nothing waits in-process, so a full build server never ties up the
-app's three job slots, and because the defer happens before any side effect the
-retry re-runs nothing. The deployment log gets the "waiting" line once (on the
-first deferral); after `buildSlotTimeoutMs` since `deferred_since` the deploy
-fails with `BuildSlotTimeoutError`, which `#recordFailure` counts as keeping the
-previous workload running. A slot is still held while required status checks are
-pending, since those run later in the same prepare. `defaultBuildServer` is
-applied in `ServiceDTO.create` through `RemoteHostDTO.newServiceBuildServer`,
-only for a git service created without either column set, so previews,
-environments and canaries keep copying their parent's.
+the attempt, records the gate it waits on in `deferred_for` (stamping
+`deferred_since` when the gate changes, so the status-check wait and the slot
+wait each get their own timeout), and drops its `dedupeKey` (a newer queued
+deploy may hold it, and the partial unique index would refuse the update).
+Nothing waits in-process, so a full build server never ties up the app's three
+job slots, and because the defer happens before any side effect the retry
+re-runs nothing. The deployment log gets the "waiting" line once (on the first
+deferral); after `buildSlotTimeoutMs` of waiting on the slot the deploy fails
+with `BuildSlotTimeoutError`, which `#recordFailure` counts as keeping the
+previous workload running. Status checks are settled before the slot is taken,
+so a deploy waiting on them holds no slot. `defaultBuildServer` is applied in
+`ServiceDTO.create` through `RemoteHostDTO.newServiceBuildServer`, only for a
+git service created without either column set, so previews, environments and
+canaries keep copying their parent's.
 
 **`ssh://` Docker hosts** (`internal/dockerapi/ssh.go`). `NewRemote` opens no
 connection up front: an `sshTunnel` dials `user@host[:22]` with the instance's

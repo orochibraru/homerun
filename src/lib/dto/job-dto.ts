@@ -24,6 +24,7 @@ import {
 	type PagedResult,
 	searchCondition,
 } from "#lib/server/list-query.js";
+import type { Deferral } from "#lib/services/queue/deferred.js";
 import { isStaleJob } from "#lib/services/queue/stale.js";
 import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
 import type { JobStage, JobStatus, JobSummary, JobType } from "#lib/types.js";
@@ -302,6 +303,7 @@ export class JobDTO extends BaseDTO<Job> {
 			attempts: 0,
 			buildHostId: null,
 			createdAt: now,
+			deferredFor: null,
 			deferredSince: null,
 			dedupeKey: input.dedupeKey ?? null,
 			dependsOnJobId: input.dependsOnJobId ?? null,
@@ -776,16 +778,20 @@ export class JobDTO extends BaseDTO<Job> {
 
 	/**
 	 * Puts a claimed job back in the queue until `runAt` without spending the
-	 * attempt, releasing its build slot and keeping when it first had to wait.
-	 * Drops its dedupe key, which a newer queued job may already hold.
+	 * attempt, releasing its build slot and recording what it waits on
+	 * (`gate`) and since when: the start time stays while it keeps waiting on
+	 * the same gate. Drops its dedupe key, which a newer queued job may
+	 * already hold.
 	 */
-	async defer(runAt: Date): Promise<void> {
+	async defer(runAt: Date, gate: Deferral["gate"]): Promise<void> {
+		const sameGate = this.row.deferredFor === gate;
 		await this.update({
 			...CLEARED_STAGE,
 			attempts: Math.max(0, this.row.attempts - 1),
 			buildHostId: null,
 			dedupeKey: null,
-			deferredSince: this.row.deferredSince ?? new Date(),
+			deferredFor: gate,
+			deferredSince: (sameGate && this.row.deferredSince) || new Date(),
 			runAt,
 			startedAt: null,
 			status: "queued",
@@ -815,9 +821,10 @@ export class JobDTO extends BaseDTO<Job> {
 			: null;
 	}
 
-	/** When the job was first deferred, null when it never was. */
-	get deferredSince(): Date | null {
-		return this.row.deferredSince;
+	/** What the job was last deferred waiting on and since when, null when it never was. */
+	get deferral(): Deferral | null {
+		const { deferredFor: gate, deferredSince: since } = this.row;
+		return gate && since ? { gate, since } : null;
 	}
 	/** How many times the job has been claimed so far. */
 	get attempts(): number {

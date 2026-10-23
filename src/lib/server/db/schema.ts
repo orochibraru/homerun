@@ -53,6 +53,7 @@ import type { SwarmPlacement } from "#lib/swarm-placement.js";
 import type { TabLayout } from "#lib/tab-layout.js";
 import type {
 	ContainerStatus,
+	DeferGate,
 	JobStage,
 	JobStatus,
 	JobType,
@@ -2041,6 +2042,7 @@ export const job = pgTable(
 		buildHostId: text("build_host_id"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		dedupeKey: text("dedupe_key"),
+		deferredFor: text("deferred_for").$type<DeferGate>(),
 		deferredSince: timestamp("deferred_since", { mode: "date" }),
 		dependsOnJobId: text("depends_on_job_id"),
 		error: text("error"),

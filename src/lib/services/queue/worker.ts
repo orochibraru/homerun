@@ -128,7 +128,7 @@ class JobWorkerClass extends BaseScheduler {
 			this.logger.info(`Job succeeded: type=${entry.type} job=${entry.id}`);
 		} catch (err) {
 			if (err instanceof JobDeferredError) {
-				await entry.defer(err.runAt);
+				await entry.defer(err.runAt, err.gate);
 				this.logger.debug(
 					`Job deferred to ${err.runAt.toISOString()}: type=${entry.type} job=${entry.id} : ${err.message}`,
 				);

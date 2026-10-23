@@ -287,11 +287,13 @@ describe("JobWorker, Go-executed job types", () => {
 	test("a deferring prepare puts the job back in the queue without spending an attempt", async () => {
 		const entry = fakeJob({ attempts: 1, maxAttempts: 1, type: "backup" });
 		const runAt = new Date(Date.now() + 5000);
-		prepare.mockRejectedValueOnce(new JobDeferredError("server full", runAt));
+		prepare.mockRejectedValueOnce(
+			new JobDeferredError("server full", "build-slot", runAt),
+		);
 
 		await JobWorker.runJob(entry as never);
 
-		expect(entry.defer).toHaveBeenCalledWith(runAt);
+		expect(entry.defer).toHaveBeenCalledWith(runAt, "build-slot");
 		expect(entry.handOff).not.toHaveBeenCalled();
 		expect(entry.scheduleRetry).not.toHaveBeenCalled();
 		expect(entry.markFailed).not.toHaveBeenCalled();

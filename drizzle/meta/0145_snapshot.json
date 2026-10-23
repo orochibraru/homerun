@@ -1,5 +1,5 @@
 {
-	"id": "e18272ad-1a66-4e08-8f3a-dd202867c39c",
+	"id": "6ad2f429-68c5-4708-ae4b-d90a16571e85",
 	"prevId": "a81b7cc5-8981-4737-b31a-d03e1fa6980e",
 	"version": "7",
 	"dialect": "postgresql",
@@ -3382,6 +3382,12 @@
 				},
 				"dedupe_key": {
 					"name": "dedupe_key",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"deferred_for": {
+					"name": "deferred_for",
 					"type": "text",
 					"primaryKey": false,
 					"notNull": false

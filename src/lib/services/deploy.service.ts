@@ -37,6 +37,7 @@ import {
 } from "./deploy/revision-step.ts";
 import { RouteCheckFailedError } from "./deploy/route-check.ts";
 import {
+	gateStatusChecks,
 	notifyStatusChecksFailed,
 	StatusChecksFailedError,
 } from "./deploy/status-check-step.ts";
@@ -216,26 +217,32 @@ class DeploymentServiceClass {
 	}
 
 	/**
-	 * Reserves a build slot for a fresh git build before the deploy changes
-	 * anything (see `reserveBuildServer`), null for any other deploy.
+	 * The gates a fresh git build passes before its deploy changes anything:
+	 * its required status checks (`gateStatusChecks`), then a build slot
+	 * (`reserveBuildServer`). Rollbacks and image deploys pass straight
+	 * through.
 	 *
-	 * @throws {JobDeferredError} When every candidate server is full, so the
-	 *   job goes back in the queue.
-	 * @throws When the wait timed out or the server can't be resolved, after
-	 *   recording the failure on the deployment.
+	 * @returns The commit the status checks passed on and the reserved build
+	 *   server, each null when there's none.
+	 * @throws {JobDeferredError} While the checks are pending or every
+	 *   candidate server is full, so the job goes back in the queue.
+	 * @throws When a gate fails or times out, after recording the failure on
+	 *   the deployment.
 	 */
-	async #reserveBuildServer(
+	async #passGates(
 		ctx: DeployContext,
 		job: JobDTO,
 		trigger: DeployTrigger,
-	): Promise<string | null> {
+	): Promise<{ buildHostId: string | null; checkedCommit: string | null }> {
 		const { dep, svc } = ctx;
 		if (svc.buildSource !== "git" || dep.rollbackOfDeploymentId) {
-			return null;
+			return { buildHostId: null, checkedCommit: null };
 		}
 		try {
+			const checkedCommit = await gateStatusChecks({ ...ctx, job });
 			const instance = await InstanceSettingsDTO.get();
-			return await reserveBuildServer({ dep, instance, job, svc });
+			const buildHostId = await reserveBuildServer({ dep, instance, job, svc });
+			return { buildHostId, checkedCommit };
 		} catch (err) {
 			if (err instanceof JobDeferredError) {
 				throw err;
@@ -419,7 +426,11 @@ class DeploymentServiceClass {
 				userId,
 			}));
 		const ctx: DeployContext = { dep, svc, userId };
-		const buildHostId = await this.#reserveBuildServer(ctx, job, trigger);
+		const { buildHostId, checkedCommit } = await this.#passGates(
+			ctx,
+			job,
+			trigger,
+		);
 		logger.info(
 			`Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${
 				svc.buildSource === "git"
@@ -455,6 +466,7 @@ class DeploymentServiceClass {
 			await dep.appendLog(phaseLine("image"));
 			return await deployWorkerSpec({
 				...ctx,
+				checkedCommit,
 				manifestCommit,
 				mounts,
 				noCache,
