@@ -3,9 +3,9 @@ import { hostname } from "node:os";
 import { join } from "node:path";
 import {
 	applyEnv,
+	DNS_CHALLENGE_RESOLVER,
 	type DnsChallengeSetup,
 	dnsChallengeFlags,
-	DNS_CHALLENGE_RESOLVER,
 	httpreqEnv,
 } from "#lib/acme-dns.js";
 import { config } from "#lib/config.js";
