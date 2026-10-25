@@ -122,13 +122,14 @@ bun run type-check            # svelte-check --fail-on-warnings (no `--tsgo`: ts
 bun run lint             # markdownlint-cli2, scripts/lint-tailwind.ts (Tailwind class sorting) and oxlint --type-aware --deny-warnings (`.oxlintrc.json`; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
 bun run lint:fix         # the --fix half of all three
 bun run lint:ai          # agnix --strict over CLAUDE.md, AGENTS.md, .agents/ and .claude/ (`.agnix.toml` disables its prose heuristics), also a prek hook; agnix is a trusted dependency because its postinstall downloads the binary
-bun run format           # prettier --write over **/*.md, then biome format --write (formatting only, doesn't gate `bun run lint`; import sorting/formatting is enforced at commit time by the pre-commit hooks instead)
+bun run format           # prettier --write over **/*.md, then biome format --write (formatting only, doesn't gate `bun run lint`; formatting is applied at commit time by the pre-commit hook, which only formats and scans for secrets; every other hook runs in CI from `.github/prek-ci.yaml`)
 bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts, the app applies them itself at boot
 docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml, needs `docker network create homerun` once), required, the app has no fallback DB, see .agents/notes/docker.md
 ```
 
-`preinstall` (`only-allow bun`) and `prepare` (`prek install`, wires the git
-hooks from `.pre-commit-config.yaml`) run on `bun install`.
+`preinstall` (`only-allow bun`) and `prepare` (`prek install`, wires the
+pre-commit hook from `.pre-commit-config.yaml`: formatters and gitleaks only)
+run on `bun install`.
 
 ```bash
 bun run test              # svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/..., go -C terraform/provider test ./..., then bun --config=bunfig.unit.toml test tests/unit; unit only, no Postgres/Docker needed

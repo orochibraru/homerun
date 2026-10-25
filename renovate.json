@@ -10,7 +10,11 @@
 		"schedule": ["before 6am on the first day of the month"]
 	},
 	"pre-commit": {
-		"enabled": true
+		"enabled": true,
+		"managerFilePatterns": [
+			"/(^|/)\\.pre-commit-config\\.ya?ml$/",
+			"/^\\.github/prek-ci\\.ya?ml$/"
+		]
 	},
 	"packageRules": [
 		{
