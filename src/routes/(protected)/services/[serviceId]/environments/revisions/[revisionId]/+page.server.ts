@@ -43,7 +43,10 @@ export const load = async ({ params, parent }) => {
 			),
 		);
 	}
-	const deployments = await DeploymentDTO.listForService(service.id, 30);
+	const [deployments, ordinal] = await Promise.all([
+		DeploymentDTO.listForService(service.id, 30),
+		DeploymentDTO.countForServiceUpTo(service.id, revision.createdAt),
+	]);
 	return {
 		deployments: deployments
 			.map((deployment) => deployment.toJSON())
@@ -62,7 +65,7 @@ export const load = async ({ params, parent }) => {
 				status: deployment.status,
 				trigger: deployment.trigger,
 			})),
-		revision,
+		revision: { ...revision, title: `Deployment #${ordinal}` },
 	};
 };
 
