@@ -40,6 +40,8 @@ import { resolve } from "$app/paths";
 
 export interface NavItem {
 	category: string;
+	/** One line under the label in the mobile drawer. */
+	description: string;
 	exact: boolean;
 	href: string;
 	icon: Component;
@@ -61,9 +63,21 @@ export const NAV_PARENT_ICONS: Record<string, Component> = {
 	System: Wrench,
 };
 
+export const NAV_PARENT_DESCRIPTIONS: Record<string, string> = {
+	"Backup & Restore": "Backups and where they go",
+	Builds: "Git, build cache and build machines",
+	Developer: "API docs and infrastructure as code",
+	Identity: "Sign-in providers and OIDC apps",
+	Observability: "Monitoring, pipelines and status pages",
+	Registries: "Container image registries",
+	Scheduling: "Cron jobs and timed work",
+	System: "Logs and disk cleanup",
+};
+
 export const allNavItems: NavItem[] = [
 	{
 		category: "Workspace",
+		description: "Health of the instance at a glance",
 		exact: true,
 		href: resolve(""),
 		icon: LayoutDashboard,
@@ -71,6 +85,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Workspace",
+		description: "Deploy, scale and manage containers",
 		exact: false,
 		href: resolve("services"),
 		icon: Server,
@@ -78,6 +93,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Workspace",
+		description: "Group services on a shared network",
 		exact: false,
 		href: resolve("stacks"),
 		icon: FolderKanban,
@@ -85,6 +101,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Workspace",
+		description: "One-click apps ready to deploy",
 		exact: false,
 		href: resolve("templates"),
 		icon: LayoutGrid,
@@ -92,6 +109,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Workspace",
+		description: "Every deploy and how it went",
 		exact: false,
 		href: resolve("deployments"),
 		icon: History,
@@ -99,6 +117,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Workspace",
+		description: "Cloud dev environments in the browser",
 		exact: false,
 		href: resolve("workstations"),
 		icon: LaptopMinimal,
@@ -106,6 +125,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Operations",
+		description: "Traffic, latency and resource use",
 		exact: false,
 		href: resolve("monitoring"),
 		icon: BarChart3,
@@ -114,6 +134,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Operations",
+		description: "CI runs of linked repositories",
 		exact: false,
 		href: resolve("pipelines"),
 		icon: Workflow,
@@ -122,6 +143,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Operations",
+		description: "Public uptime pages for your users",
 		exact: false,
 		href: resolve("status-pages"),
 		icon: Activity,
@@ -130,6 +152,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Operations",
+		description: "Everything that runs on a timer",
 		exact: false,
 		href: resolve("scheduling"),
 		icon: CalendarClock,
@@ -139,6 +162,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Operations",
+		description: "Containers and scripts on a schedule",
 		exact: false,
 		href: resolve("cron-jobs"),
 		icon: Clock,
@@ -147,6 +171,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Operations",
+		description: "Shell into the host or a remote machine",
 		exact: false,
 		href: resolve("terminal"),
 		icon: TerminalSquare,
@@ -154,6 +179,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Data",
+		description: "Persistent data for your services",
 		exact: false,
 		href: resolve("storage"),
 		icon: HardDrive,
@@ -161,6 +187,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Data",
+		description: "Snapshots of your volumes",
 		exact: false,
 		href: resolve("backups"),
 		icon: CloudUpload,
@@ -169,6 +196,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Data",
+		description: "Where backups are shipped",
 		exact: false,
 		href: resolve("s3-destinations"),
 		icon: Database,
@@ -177,6 +205,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Data",
+		description: "S3 buckets and public files",
 		exact: false,
 		href: resolve("object-storage"),
 		icon: Cylinder,
@@ -184,6 +213,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Delivery",
+		description: "GitHub, GitLab and Gitea connections",
 		exact: false,
 		href: resolve("git-providers"),
 		icon: GitBranch,
@@ -192,6 +222,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Delivery",
+		description: "Speed up image builds",
 		exact: false,
 		href: resolve("build-cache-registries"),
 		icon: Container,
@@ -200,6 +231,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Delivery",
+		description: "Extra machines for builds and workstations",
 		exact: false,
 		href: resolve("remote-hosts"),
 		icon: Network,
@@ -208,6 +240,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Delivery",
+		description: "Your private image registry",
 		exact: false,
 		href: resolve("registry"),
 		icon: Boxes,
@@ -216,6 +249,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Delivery",
+		description: "Terraform state and projects",
 		exact: false,
 		href: resolve("iac"),
 		icon: FileCode2,
@@ -224,6 +258,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Delivery",
+		description: "The REST API reference",
 		exact: false,
 		href: resolve("api-docs"),
 		icon: BookOpen,
@@ -232,6 +267,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Networking",
+		description: "Send a hostname somewhere else",
 		exact: false,
 		href: resolve("redirects"),
 		icon: ArrowRightLeft,
@@ -239,6 +275,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Networking",
+		description: "Records managed for your domains",
 		exact: false,
 		href: resolve("dns"),
 		icon: Globe,
@@ -246,6 +283,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Administration",
+		description: "People with access to this instance",
 		exact: false,
 		href: resolve("users"),
 		icon: Users,
@@ -253,6 +291,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Administration",
+		description: "Machine identities for automation",
 		exact: false,
 		href: resolve("service-accounts"),
 		icon: Bot,
@@ -260,6 +299,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Administration",
+		description: "Sign-in providers and policies",
 		exact: false,
 		href: resolve("authentication"),
 		icon: KeyRound,
@@ -268,6 +308,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Administration",
+		description: "Use Homerun as an OIDC provider",
 		exact: false,
 		href: resolve("idp"),
 		icon: Fingerprint,
@@ -276,6 +317,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Administration",
+		description: "Instance-wide configuration",
 		exact: false,
 		href: resolve("settings"),
 		icon: Settings,
@@ -283,6 +325,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Administration",
+		description: "What Homerun itself logged",
 		exact: false,
 		href: resolve("system-logs"),
 		icon: ScrollText,
@@ -291,6 +334,7 @@ export const allNavItems: NavItem[] = [
 	},
 	{
 		category: "Administration",
+		description: "Reclaim disk from unused images",
 		exact: false,
 		href: resolve("docker-cleanup"),
 		icon: Trash2,
