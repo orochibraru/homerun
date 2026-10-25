@@ -70,7 +70,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">IDP</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">IDP</h1>
       <p class="text-text-muted mt-1 text-sm">
         Homerun is an OpenID Connect provider: apps you host can sign people in
         with their Homerun account, passkeys and two-factor included, instead of

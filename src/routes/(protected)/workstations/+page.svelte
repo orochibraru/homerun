@@ -129,7 +129,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Workstations</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Workstations</h1>
       <p class="text-text-muted mt-1 text-sm">
         Your own dev boxes : a browser IDE with a persistent home, on this
         server or on an agent host. Only you see yours.

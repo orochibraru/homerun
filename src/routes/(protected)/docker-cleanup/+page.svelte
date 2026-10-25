@@ -82,7 +82,7 @@
 
 <div class="p-5 md:p-6">
   <div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight">Docker Cleanup</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Docker Cleanup</h1>
     <p class="text-text-muted mt-1 text-sm">
       Reclaims disk space from unused Docker resources on this host. These
       actions apply to the whole host, not just what Homerun manages.

@@ -41,7 +41,7 @@
 
 <div class="p-5 md:p-6">
   <div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight">
+    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
       Notification settings
     </h1>
     <p class="text-text-muted mt-1 text-sm">

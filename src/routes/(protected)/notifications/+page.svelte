@@ -52,7 +52,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
     <div class="min-w-0">
-      <h1 class="text-text text-lg font-semibold tracking-tight">Notifications</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Notifications</h1>
       <p class="text-text-muted mt-1 text-sm">
         Deploys, scheduled tasks, health and server alerts across every service,
         newest first. Each account reads and clears its own copy.

@@ -18,7 +18,7 @@
 
 <div class="p-5 md:p-6">
   <div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight">Terminal</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Terminal</h1>
     <p class="text-text-muted mt-1 text-sm">
       A shell on this server or any remote host, over SSH, in the browser.
     </p>

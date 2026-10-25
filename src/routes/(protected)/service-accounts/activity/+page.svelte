@@ -19,7 +19,7 @@
     All service accounts
   </a>
   <div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight">Activity</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Activity</h1>
     <p class="text-text-muted mt-1 text-sm">
       The latest uses of every service account's keys, deleted accounts
       included.

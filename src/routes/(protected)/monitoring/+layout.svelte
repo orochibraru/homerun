@@ -67,7 +67,7 @@
 
 <div class="p-5 md:p-6">
   <div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight">Monitoring</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Monitoring</h1>
     <p class="text-text-muted mt-1 text-sm">
       Traffic and uptime across every service, this host's CPU and memory, and
       the traces of Homerun's own jobs.

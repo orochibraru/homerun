@@ -39,7 +39,7 @@
 {#if activeTab}
 	<div class="p-5 md:p-6">
 		<div class="mb-8">
-      <h1 class="text-text text-lg font-semibold tracking-tight">
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
         Authentication
       </h1>
       <p class="text-text-muted mt-1 text-sm">

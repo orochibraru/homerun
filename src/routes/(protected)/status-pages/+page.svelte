@@ -42,7 +42,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Status Page</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Status Page</h1>
       <p class="text-text-muted mt-1 text-sm">
         Publish what's up, and get told when it isn't.
       </p>

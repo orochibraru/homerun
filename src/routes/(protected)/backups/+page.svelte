@@ -108,7 +108,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Backups</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Backups</h1>
       <p class="text-text-muted mt-1 text-sm">
         Per-volume S3 backups, restores and their run history. Configure a volume's
         destination and schedule from its own page.

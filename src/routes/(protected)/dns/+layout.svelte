@@ -43,7 +43,7 @@
 
 <div class="p-5 md:p-6">
 	<div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight">DNS</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">DNS</h1>
 		<p class="text-text-muted mt-1 text-sm">
       Your domains and the DNS providers they live at. A service's hostname
       under a managed domain gets its record created and removed with it.

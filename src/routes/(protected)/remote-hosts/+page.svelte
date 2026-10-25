@@ -119,7 +119,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Remote Hosts</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Remote Hosts</h1>
       <p class="text-text-muted mt-1 text-sm">
         Build servers git builds can run on, and the swarm nodes swarm services
         are scheduled on. Add a server with one command and it becomes either.

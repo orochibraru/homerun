@@ -68,7 +68,7 @@
 
 <div class="p-5 md:p-6">
   <header class="mb-6">
-    <h1 class="text-text text-2xl font-semibold">Docker Registry</h1>
+    <h1 class="text-text text-2xl font-semibold max-md:hidden">Docker Registry</h1>
     <p class="text-text-muted mt-1 text-sm">
       The built-in image registry. Homerun mirrors every image it scans through
       it, and it can double as a private registry you push to.

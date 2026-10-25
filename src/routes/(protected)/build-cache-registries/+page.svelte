@@ -81,7 +81,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Build Cache Registries</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Build Cache Registries</h1>
       <p class="text-text-muted mt-1 text-sm">
         Docker registries used to cache layers between git builds. Pick one
         from a git-based service's Source tab so a rebuild reuses unchanged
