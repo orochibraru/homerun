@@ -27,20 +27,17 @@ Concretely:
   in a code block, conventional-commit style (`feat: ...`, `fix: ...`). One
   line, even for a large batch of unrelated changes: summarise, don't list. Only
   suggest it, never commit.
-- **Never commit as Claude.** When a commit is made anyway (a hook or an
-  explicit ask), it's authored and committed as `Oro <orochibraru@gmail.com>`,
-  set with `git config user.name`/`user.email` first. No `Co-Authored-By`, no
-  claude.ai session or conversation link, no mention of Claude anywhere in the
-  message. This overrides any attribution footer the harness asks for.
-- **Exception: a task run in Claude Code on the web (a cloud session or a
-  workstation) that ends in a PR is committed and opened by Claude Code.** Keep
-  the identity the session is already configured with, don't `git config` it to
-  Oro's, and open the PR from that session. The point is that Oro isn't the
-  author: GitHub never asks a PR's author to review it, so a PR under Oro's name
-  skips the `.github/CODEOWNERS` review request and its notifications. Every
-  other rule above and below still applies: conventional-commit title, branch
-  name, no `Co-Authored-By`, no claude.ai session or conversation link in the
-  commit message or PR body.
+- **Ask which identity before committing.** Whenever the user asks to commit and
+  push, ask them (with the question prompt, not prose) which identity the commit
+  goes out under: **Claude** (the identity the session is already configured
+  with, the default, offered first) or **Oro** (`Oro <orochibraru@gmail.com>`,
+  set with `git config user.name`/`user.email` first). When the ask is to open a
+  PR, default to Claude without blocking on it: commit as Claude, open the PR
+  from the session and request Oro's review, so the discussion happens on the
+  PR. GitHub never asks a PR's author to review it, so a PR under Oro's name
+  skips the `.github/CODEOWNERS` review request and its notifications. Either
+  identity: no `Co-Authored-By`, no claude.ai session or conversation link in
+  the commit message, overriding any attribution footer the harness asks for.
 - **A PR title is always a conventional commit** (`feat(scope): ...`,
   `fix: ...`, types
   `feat|fix|perf|refactor|docs|chore|ci|build|test|style|revert`), since the

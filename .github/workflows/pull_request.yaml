@@ -194,6 +194,7 @@ jobs:
       always() && github.event.pull_request.head.repo.full_name ==
       github.repository
     needs:
+      - changes
       - code_quality
       - binaries
       - build-app
@@ -284,11 +285,18 @@ jobs:
                 "</details>",
                 "",
               );
-            } else if (result("build-app") === "skipped") {
+            } else if (needs.changes?.outputs?.code !== "true") {
               lines.push(
                 "### Images",
                 "",
                 "Nothing built for this run : it only touches docs.",
+                "",
+              );
+            } else if (result("build-app") === "skipped") {
+              lines.push(
+                "### Images",
+                "",
+                "Nothing built for this run : a check the builds wait on failed, so they were skipped.",
                 "",
               );
             } else {

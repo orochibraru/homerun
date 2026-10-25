@@ -177,3 +177,7 @@ sshd
 (?i)booleans?
 (?i)restic('s)?
 (?i)deduplicated
+actionlint
+gitleaks
+hadolint
+zizmor
