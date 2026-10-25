@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/moby/moby/api/types/swarm"
 
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/httpapi"
@@ -87,11 +88,11 @@ func (s *Server) ensureOverlay(w http.ResponseWriter, r *http.Request) error {
 // app's own core services (the Newt tunnel in swarm mode); a deploy's services
 // are created by the deploy job instead.
 func (s *Server) createSwarmService(w http.ResponseWriter, r *http.Request) error {
-	var spec map[string]any
+	var spec swarm.ServiceSpec
 	if !httpapi.DecodeJSON(w, r, &spec) {
 		return nil
 	}
-	if name, _ := spec["Name"].(string); name == "" {
+	if spec.Name == "" {
 		return httpapi.Invalid(w, "Invalid request body",
 			[]httpapi.ValidationIssue{{Message: "Name is required", Path: []string{"Name"}}})
 	}

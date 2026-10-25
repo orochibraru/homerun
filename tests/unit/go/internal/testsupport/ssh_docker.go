@@ -60,7 +60,7 @@ type SSHDockerHost struct {
 // its daemon with handler, closed when the test ends.
 func ServeSSHDocker(t *testing.T, allowed ssh.PublicKey, handler http.Handler) *SSHDockerHost {
 	t.Helper()
-	daemon := httptest.NewServer(handler)
+	daemon := httptest.NewServer(Engine(handler))
 	t.Cleanup(daemon.Close)
 	_, hostPrivate, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {

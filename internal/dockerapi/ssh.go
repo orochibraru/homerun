@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moby/moby/client"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -98,14 +99,18 @@ func newRemoteSSH(parsed *url.URL, host RemoteHost) (*Client, *sshTunnel, error)
 		Timeout: sshDialTimeout,
 		User:    user,
 	}
-	transport := &http.Transport{
-		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+	docker, err := newClient(
+		client.WithHTTPClient(&http.Client{Transport: &http.Transport{IdleConnTimeout: sshIdleConnTimeout}}),
+		client.WithHost("unix://"+remoteDockerSocket),
+		client.WithScheme("http"),
+		client.WithDialContext(func(ctx context.Context, _, _ string) (net.Conn, error) {
 			return tunnel.dial(ctx)
-		},
-		IdleConnTimeout: sshIdleConnTimeout,
+		}),
+	)
+	if err != nil {
+		return nil, nil, err
 	}
-	client := &Client{dial: tunnel.dial, http: &http.Client{Transport: transport}, Base: "http://docker"}
-	return client, tunnel, nil
+	return docker, tunnel, nil
 }
 
 // ProbeSSH connects to an ssh:// Docker host, accepting whatever host key it
@@ -124,6 +129,11 @@ func ProbeSSH(ctx context.Context, host RemoteHost) (string, error) {
 		return "", err
 	}
 	defer tunnel.close()
+	conn, err := tunnel.dial(ctx)
+	if err != nil {
+		return "", err
+	}
+	_ = conn.Close()
 	if err := client.Ping(ctx); err != nil {
 		return "", unwrapURLError(err)
 	}

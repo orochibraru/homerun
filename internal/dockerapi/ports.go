@@ -2,29 +2,31 @@ package dockerapi
 
 import (
 	"context"
-	"net/http"
 	"strconv"
+
+	"github.com/moby/moby/api/types/network"
 )
 
 // PublishedPort is the host port the daemon bound for a container's
 // containerPort ("8080/tcp"), 0 when it isn't published or the container isn't
 // running.
 func (c *Client) PublishedPort(ctx context.Context, id, containerPort string) (int, error) {
-	var inspected struct {
-		NetworkSettings struct {
-			Ports map[string][]struct {
-				HostIP   string `json:"HostIp"`
-				HostPort string `json:"HostPort"`
-			} `json:"Ports"`
-		} `json:"NetworkSettings"`
-	}
-	if err := c.decode(ctx, http.MethodGet, "/containers/"+id+"/json", nil, nil, &inspected); err != nil {
+	port, err := network.ParsePort(containerPort)
+	if err != nil {
 		return 0, err
 	}
-	for _, binding := range inspected.NetworkSettings.Ports[containerPort] {
-		port, err := strconv.Atoi(binding.HostPort)
-		if err == nil && port > 0 {
-			return port, nil
+	result, err := c.inspect(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	settings := result.Container.NetworkSettings
+	if settings == nil {
+		return 0, nil
+	}
+	for _, binding := range settings.Ports[port] {
+		published, err := strconv.Atoi(binding.HostPort)
+		if err == nil && published > 0 {
+			return published, nil
 		}
 	}
 	return 0, nil

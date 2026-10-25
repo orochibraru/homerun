@@ -18,8 +18,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/moby/moby/api/types/network"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/workstation"
+	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
 )
 
 const id = "0b5f8a3e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
@@ -74,42 +76,42 @@ func TestCreateBodyJoinsANetworkLocallyAndPublishesOnAnAgent(t *testing.T) {
 	local.NanoCPUs = 2_000_000_000
 	local.MemoryBytes = 4 << 30
 	body := workstation.CreateBody(id, local)
-	host := body["HostConfig"].(map[string]any)
-	if host["NetworkMode"] != "homerun" || host["PortBindings"] != nil {
-		t.Errorf("a local workstation joins the network and publishes nothing, got %v", host)
+	host := body.HostConfig
+	if host.NetworkMode != "homerun" || host.PortBindings != nil {
+		t.Errorf("a local workstation joins the network and publishes nothing, got %+v", host)
 	}
-	if binds := host["Binds"].([]string); len(binds) != 1 || binds[0] != workstation.VolumeName(id)+":/home/coder" {
+	if binds := host.Binds; len(binds) != 1 || binds[0] != workstation.VolumeName(id)+":/home/coder" {
 		t.Errorf("the home volume is mounted at the home path, got %v", binds)
 	}
-	if host["NanoCpus"] != int64(2_000_000_000) || host["Memory"] != int64(4<<30) {
-		t.Errorf("limits are passed through, got %v", host)
+	if host.NanoCPUs != 2_000_000_000 || host.Memory != 4<<30 {
+		t.Errorf("limits are passed through, got %+v", host.Resources)
 	}
-	labels := body["Labels"].(map[string]string)
+	labels := body.Labels
 	if labels["traefik.enable"] != "true" || labels[dockerapi.ManagedLabel] != "true" || labels[workstation.IDLabel] != id {
 		t.Errorf("the app's labels plus the managed and id labels, got %v", labels)
 	}
-	if env := body["Env"].([]string); !slices.Contains(env, "PASSWORD=hunter2") {
-		t.Errorf("env is passed through, got %v", env)
+	if !slices.Contains(body.Env, "PASSWORD=hunter2") {
+		t.Errorf("env is passed through, got %v", body.Env)
 	}
 
-	if _, ok := body["Cmd"]; ok {
-		t.Errorf("no args keeps the image's own command, got %v", body["Cmd"])
+	if body.Cmd != nil {
+		t.Errorf("no args keeps the image's own command, got %v", body.Cmd)
 	}
 	withArgs := baseSpec()
 	withArgs.Args = []string{"--auth", "none"}
-	if cmd := workstation.CreateBody(id, withArgs)["Cmd"]; !slices.Equal(cmd.([]string), withArgs.Args) {
+	if cmd := workstation.CreateBody(id, withArgs).Cmd; !slices.Equal(cmd, withArgs.Args) {
 		t.Errorf("args become the container's command, got %v", cmd)
 	}
 
 	remote := baseSpec()
 	remote.Publish = true
-	host = workstation.CreateBody(id, remote)["HostConfig"].(map[string]any)
-	bindings, ok := host["PortBindings"].(map[string]any)["8080/tcp"]
-	if !ok || host["NetworkMode"] != nil || host["Memory"] != nil {
-		t.Errorf("an agent workstation publishes its port on an ephemeral host port, got %v", host)
+	host = workstation.CreateBody(id, remote).HostConfig
+	bindings, ok := host.PortBindings[network.MustParsePort("8080/tcp")]
+	if !ok || host.NetworkMode != "" || host.Memory != 0 {
+		t.Errorf("an agent workstation publishes its port on an ephemeral host port, got %+v", host)
 	}
-	if got := bindings.([]map[string]string); got[0]["HostPort"] != "" {
-		t.Errorf("the host port is left to the daemon, got %v", got)
+	if len(bindings) != 1 || bindings[0].HostPort != "" {
+		t.Errorf("the host port is left to the daemon, got %v", bindings)
 	}
 }
 
@@ -207,7 +209,7 @@ func (e *engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/containers/new/exec":
 		_, _ = io.WriteString(w, `{"Id":"exec1"}`)
 	case r.URL.Path == "/exec/exec1/start":
-		w.WriteHeader(http.StatusOK)
+		testsupport.Hijack(w, r, nil)
 	case r.URL.Path == "/exec/exec1/json":
 		_, _ = io.WriteString(w, `{"ExitCode":`+strconv.Itoa(e.exitCode)+`}`)
 	case r.URL.Path == "/containers/old/json":
@@ -219,7 +221,7 @@ func (e *engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if e.execOutput != "" {
 			output = e.execOutput
 		}
-		_, _ = w.Write(append([]byte{1, 0, 0, 0, 0, 0, byte(len(output) >> 8), byte(len(output) & 0xff)}, output...))
+		testsupport.Hijack(w, r, append([]byte{1, 0, 0, 0, 0, 0, byte(len(output) >> 8), byte(len(output) & 0xff)}, output...))
 	case r.URL.Path == "/exec/exec2/json":
 		_, _ = io.WriteString(w, `{"ExitCode":0}`)
 	case r.URL.Path == "/containers/old/stats":
@@ -518,7 +520,7 @@ func TestHubDrivesTheRemoteDaemonTheHeaderNames(t *testing.T) {
 	remote := &engine{listed: `[{"Id":"old","State":"exited"}]`}
 	localDaemon := httptest.NewServer(local)
 	t.Cleanup(localDaemon.Close)
-	remoteDaemon := httptest.NewServer(remote)
+	remoteDaemon := httptest.NewServer(testsupport.Engine(remote))
 	t.Cleanup(remoteDaemon.Close)
 	router := chi.NewRouter()
 	workstation.NewHub(workstation.NewManager(dockerapi.NewWithHTTP(localDaemon.Client(), localDaemon.URL))).Mount(router)

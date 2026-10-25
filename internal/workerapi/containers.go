@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/moby/moby/api/types/container"
 
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/httpapi"
@@ -80,8 +81,8 @@ func (s *Server) listContainers(w http.ResponseWriter, r *http.Request) error {
 // createContainerBody is a create request: the whole Engine create body the
 // app built, plus the name to give it.
 type createContainerBody struct {
-	Body map[string]any `json:"body"`
-	Name string         `json:"name"`
+	Body *container.CreateRequest `json:"body"`
+	Name string                   `json:"name"`
 }
 
 // createContainer creates a container from the app's own Engine create body.
@@ -94,7 +95,7 @@ func (s *Server) createContainer(w http.ResponseWriter, r *http.Request) error {
 		return httpapi.Invalid(w, "Invalid request body",
 			[]httpapi.ValidationIssue{{Message: "body is required", Path: []string{"body"}}})
 	}
-	id, err := s.docker.CreateContainerFrom(r.Context(), input.Name, input.Body)
+	id, err := s.docker.CreateContainerFrom(r.Context(), input.Name, *input.Body)
 	if err != nil {
 		return err
 	}
@@ -307,9 +308,8 @@ func (s *Server) connectContainer(w http.ResponseWriter, r *http.Request) error 
 	if errors.Is(err, dockerapi.ErrNotFound) {
 		return httpapi.Error(w, http.StatusNotFound, err.Error())
 	}
-	var apiErr *dockerapi.APIError
-	if errors.As(err, &apiErr) {
-		return httpapi.Error(w, apiErr.Status, apiErr.Message)
+	if status := dockerapi.Status(err); status != 0 {
+		return httpapi.Error(w, status, err.Error())
 	}
 	if err != nil {
 		return err

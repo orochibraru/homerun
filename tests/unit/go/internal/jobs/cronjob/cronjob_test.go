@@ -118,7 +118,7 @@ func TestRunHostCommand(t *testing.T) {
 	if result["exitCode"] != 3 || result["timedOut"] != false || result["output"] != "out\nmore\nerr\n" {
 		t.Errorf("result = %v", result)
 	}
-	if d.pulled != "alpine:3" || !d.removed {
+	if d.pulled != "docker.io/library/alpine:3" || !d.removed {
 		t.Errorf("pulled = %q removed = %v", d.pulled, d.removed)
 	}
 	host := d.created["HostConfig"].(map[string]any)
@@ -188,7 +188,7 @@ func TestRunWithoutTheSocketAddsNoGroup(t *testing.T) {
 	d := &fakeDaemon{}
 	run(t, d, cronjob.Spec{Image: "busybox:latest", RunID: "r1", TimeoutSeconds: 60})
 	host := d.created["HostConfig"].(map[string]any)
-	if host["Binds"] != nil || host["GroupAdd"] != nil || d.created["User"] != nil {
+	if host["Binds"] != nil || host["GroupAdd"] != nil || (d.created["User"] != nil && d.created["User"] != "") {
 		t.Errorf("HostConfig = %v User = %v", host, d.created["User"])
 	}
 }

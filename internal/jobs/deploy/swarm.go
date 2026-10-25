@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/moby/moby/api/types/swarm"
+	"github.com/moby/moby/client"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/tracing"
 	"go.opentelemetry.io/otel/attribute"
@@ -23,11 +25,7 @@ func (r *run) startSwarm(ctx context.Context, image resolvedImage) (string, erro
 	if err != nil {
 		return "", err
 	}
-	if _, err := r.docker.EnsureNetwork(ctx, map[string]any{
-		"Attachable": true,
-		"Driver":     "overlay",
-		"Name":       workload.Overlay,
-	}); err != nil {
+	if err := r.docker.EnsureOverlayNetwork(ctx, workload.Overlay, nil); err != nil {
 		return "", err
 	}
 	if PublishesThroughIngress(workload.Template) {
@@ -80,7 +78,11 @@ func (r *run) startSwarm(ctx context.Context, image resolvedImage) (string, erro
 	r.progress.line("Creating swarm service...")
 	var id string
 	if err := tracing.Stage(ctx, "create swarm service", func(ctx context.Context) error {
-		id, err = r.docker.CreateSwarmService(ctx, spec, r.registryAuth())
+		typed, err := dockerapi.Decode[swarm.ServiceSpec](spec)
+		if err != nil {
+			return fmt.Errorf("the swarm service template isn't a valid service spec: %w", err)
+		}
+		id, err = r.docker.CreateSwarmService(ctx, typed, r.registryAuth())
 		return err
 	}); err != nil {
 		return "", err
@@ -117,10 +119,9 @@ func PublishesThroughIngress(spec map[string]any) bool {
 // swarm refuses to publish a port without one. A failure is only logged: the
 // service update that follows reports the real error.
 func (r *run) ensureIngress(ctx context.Context) {
-	created, err := r.docker.EnsureNetwork(ctx, map[string]any{
-		"Driver":  "overlay",
-		"Ingress": true,
-		"Name":    "ingress",
+	created, err := r.docker.EnsureNetwork(ctx, dockerapi.NetworkSpec{
+		Name:                 "ingress",
+		NetworkCreateOptions: client.NetworkCreateOptions{Driver: "overlay", Ingress: true},
 	})
 	if err != nil {
 		log.Printf("[homerun-worker] couldn't ensure the swarm ingress network: service=%s : %s", r.spec.ServiceID, err)
@@ -186,7 +187,11 @@ func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any, 
 		previousStartedAt = inspected.UpdateStatus.StartedAt
 	}
 	if err := tracing.Stage(ctx, "update swarm service", func(ctx context.Context) error {
-		return r.docker.UpdateSwarmService(ctx, id, inspected.Version.Index, update, r.registryAuth())
+		typed, err := dockerapi.Decode[swarm.ServiceSpec](update)
+		if err != nil {
+			return fmt.Errorf("the swarm service template isn't a valid service spec: %w", err)
+		}
+		return r.docker.UpdateSwarmService(ctx, id, inspected.Version.Index, typed, r.registryAuth())
 	}, attribute.String("homerun.swarm.service_id", id), attribute.String("homerun.swarm.update_order", order)); err != nil {
 		return "", err
 	}

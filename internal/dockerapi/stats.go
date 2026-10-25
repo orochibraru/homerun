@@ -2,8 +2,11 @@ package dockerapi
 
 import (
 	"context"
-	"net/http"
-	"net/url"
+	"encoding/json"
+	"math"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 )
 
 // ContainerSample is one container's resource use at a moment, in the units
@@ -17,58 +20,39 @@ type ContainerSample struct {
 	NetTxBytes float64 `json:"netTxBytes"`
 }
 
-// statsPayload is the part of the daemon's stats answer a sample reads.
-type statsPayload struct {
-	CPUStats    cpuStats `json:"cpu_stats"`
-	MemoryStats struct {
-		Limit float64 `json:"limit"`
-		Usage float64 `json:"usage"`
-	} `json:"memory_stats"`
-	Networks map[string]struct {
-		RxBytes float64 `json:"rx_bytes"`
-		TxBytes float64 `json:"tx_bytes"`
-	} `json:"networks"`
-	PreCPUStats cpuStats `json:"precpu_stats"`
-}
-
-// cpuStats is one side of the daemon's CPU delta.
-type cpuStats struct {
-	CPUUsage struct {
-		PerCPUUsage []float64 `json:"percpu_usage"`
-		TotalUsage  float64   `json:"total_usage"`
-	} `json:"cpu_usage"`
-	OnlineCPUs     int     `json:"online_cpus"`
-	SystemCPUUsage float64 `json:"system_cpu_usage"`
-}
-
 // ContainerStats reads one container's resource use.
 //
-// The daemon's own `?stream=false` answer already carries the previous sample
-// in precpu_stats, so a percentage comes out of a single request with no
-// sampler state to keep on this side. A container the daemon can't stat at all
-// (gone, or never started) reports a nil sample rather than an error: a stats
-// panel showing one blank row is the right answer there, not a failed page.
+// It's the daemon's one-shot answer, which doesn't wait out a second sample,
+// so a percentage comes out of one request with no sampler state to keep on
+// this side.
 func (c *Client) ContainerStats(ctx context.Context, id string) (*ContainerSample, error) {
-	var payload statsPayload
-	err := c.decode(ctx, http.MethodGet, "/containers/"+id+"/stats",
-		url.Values{"one-shot": {"1"}, "stream": {"false"}}, nil, &payload)
+	stats, err := control(ctx, ControlTimeout, "stats "+shortID(id), id, func(ctx context.Context) (container.StatsResponse, error) {
+		var stats container.StatsResponse
+		result, err := c.api.ContainerStats(ctx, id, client.ContainerStatsOptions{})
+		if err != nil {
+			return stats, err
+		}
+		defer func() { _ = result.Body.Close() }()
+		err = json.NewDecoder(result.Body).Decode(&stats)
+		return stats, err
+	})
 	if err != nil {
 		return nil, err
 	}
-	sample := sampleFromStats(payload)
+	sample := sampleFromStats(stats)
 	return &sample, nil
 }
 
-// sampleFromStats reduces a raw stats answer to a ContainerSample, the direct
-// port of the TypeScript sampleContainerStats: the CPU delta is scaled by the
+// sampleFromStats reduces a stats answer to a ContainerSample, the direct port
+// of the TypeScript sampleContainerStats: the CPU delta is scaled by the
 // system-wide delta and the core count, and a non-positive delta reports 0
 // rather than a negative or infinite percentage.
-func sampleFromStats(payload statsPayload) ContainerSample {
-	cpuDelta := payload.CPUStats.CPUUsage.TotalUsage - payload.PreCPUStats.CPUUsage.TotalUsage
-	systemDelta := payload.CPUStats.SystemCPUUsage - payload.PreCPUStats.SystemCPUUsage
-	cores := payload.CPUStats.OnlineCPUs
+func sampleFromStats(stats container.StatsResponse) ContainerSample {
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage) - float64(stats.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stats.CPUStats.SystemUsage) - float64(stats.PreCPUStats.SystemUsage)
+	cores := int(stats.CPUStats.OnlineCPUs)
 	if cores == 0 {
-		cores = len(payload.CPUStats.CPUUsage.PerCPUUsage)
+		cores = len(stats.CPUStats.CPUUsage.PercpuUsage)
 	}
 	if cores == 0 {
 		cores = 1
@@ -77,17 +61,30 @@ func sampleFromStats(payload statsPayload) ContainerSample {
 	if systemDelta > 0 && cpuDelta > 0 {
 		cpuPercent = (cpuDelta / systemDelta) * float64(cores) * 100
 	}
-	if cpuPercent < 0 {
-		cpuPercent = 0
-	}
 	sample := ContainerSample{
 		CPUPercent: cpuPercent,
-		MemLimitMb: payload.MemoryStats.Limit / 1024 / 1024,
-		MemUsedMb:  payload.MemoryStats.Usage / 1024 / 1024,
+		MemLimitMb: float64(stats.MemoryStats.Limit) / 1024 / 1024,
+		MemUsedMb:  float64(stats.MemoryStats.Usage) / 1024 / 1024,
 	}
-	for _, network := range payload.Networks {
-		sample.NetRxBytes += network.RxBytes
-		sample.NetTxBytes += network.TxBytes
+	for _, network := range stats.Networks {
+		sample.NetRxBytes += float64(network.RxBytes)
+		sample.NetTxBytes += float64(network.TxBytes)
 	}
 	return sample
+}
+
+// toInt64 converts a daemon counter, saturating rather than wrapping.
+func toInt64(value uint64) int64 {
+	if value > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(value)
+}
+
+// toInt converts a daemon counter, saturating rather than wrapping.
+func toInt(value uint64) int {
+	if value > math.MaxInt {
+		return math.MaxInt
+	}
+	return int(value)
 }

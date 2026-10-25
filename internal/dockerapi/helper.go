@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
 
 	"github.com/orochibraru/homerun/internal/logging"
 )
@@ -112,28 +113,19 @@ func (c *Client) RunHelper(ctx context.Context, config HelperConfig) (HelperResu
 	if err := c.ensureImageMounts(ctx, config.ImageMounts); err != nil {
 		return HelperResult{}, err
 	}
-	id, err := c.CreateContainerFrom(ctx, "", helperBody(config))
+	id, err := c.CreateContainerFrom(ctx, "", helperRequest(config))
 	if err != nil {
 		return HelperResult{}, err
 	}
 	defer c.removeHelper(ctx, id)
 
-	path := "/containers/" + id + "/attach"
-	query := url.Values{"stream": {"1"}, "stdout": {"1"}, "stderr": {"1"}}
-	if config.Stdin != nil {
-		query.Set("stdin", "1")
-	}
-	attached, err := c.hijack(ctx, path, query, nil)
+	w, streamCtx := newWatch(ctx, "attach "+shortID(id), id, c.containerRunning(id))
+	defer w.stop()
+	attached, err := c.attach(streamCtx, id, config.Stdin != nil)
 	if err != nil {
-		return HelperResult{}, err
+		return HelperResult{}, w.explain(err)
 	}
-	w, streamCtx := newWatch(ctx, http.MethodPost, path, id, c.containerRunning(id))
-	stopClosing := context.AfterFunc(streamCtx, func() { _ = attached.Close() })
-	defer func() {
-		stopClosing()
-		w.stop()
-		_ = attached.Close()
-	}()
+	defer func() { _ = attached.Close() }()
 
 	if err := c.StartContainer(ctx, id); err != nil {
 		return HelperResult{}, err
@@ -175,10 +167,10 @@ func (c *Client) RunHelper(ctx context.Context, config HelperConfig) (HelperResu
 }
 
 // imageMounts is the HostConfig.Mounts entries for mounts, each read-only.
-func imageMounts(mounts []ImageMount) []map[string]any {
-	entries := make([]map[string]any, 0, len(mounts))
-	for _, mount := range mounts {
-		entries = append(entries, map[string]any{"ReadOnly": true, "Source": mount.Image, "Target": mount.Target, "Type": "image"})
+func imageMounts(mounts []ImageMount) []mount.Mount {
+	entries := make([]mount.Mount, 0, len(mounts))
+	for _, entry := range mounts {
+		entries = append(entries, mount.Mount{ReadOnly: true, Source: entry.Image, Target: entry.Target, Type: mount.TypeImage})
 	}
 	return entries
 }
@@ -193,35 +185,34 @@ func (c *Client) ensureImageMounts(ctx context.Context, mounts []ImageMount) err
 	return nil
 }
 
-// helperBody is the create body for config: no TTY, so stdout and stderr come
-// back framed, and stdin open for one attach when there's something to feed.
-func helperBody(config HelperConfig) map[string]any {
-	hostConfig := map[string]any{"Binds": config.Binds}
-	if len(config.ImageMounts) > 0 {
-		hostConfig["Mounts"] = imageMounts(config.ImageMounts)
-	}
-	if config.NetworkMode != "" {
-		hostConfig["NetworkMode"] = config.NetworkMode
-	}
+// helperRequest is the create request for config: no TTY, so stdout and
+// stderr come back framed, and stdin open for one attach when there's
+// something to feed.
+func helperRequest(config HelperConfig) container.CreateRequest {
 	withStdin := config.Stdin != nil
-	body := map[string]any{
-		"AttachStderr":    true,
-		"AttachStdin":     withStdin,
-		"AttachStdout":    true,
-		"Cmd":             config.Cmd,
-		"Env":             config.Env,
-		"HostConfig":      hostConfig,
-		"Image":           config.Image,
-		"Labels":          HelperLabels(config.Labels),
-		"NetworkDisabled": config.NetworkDisabled,
-		"OpenStdin":       withStdin,
-		"StdinOnce":       withStdin,
-		"Tty":             false,
+	hostConfig := &container.HostConfig{
+		Binds:       config.Binds,
+		NetworkMode: container.NetworkMode(config.NetworkMode),
 	}
-	if len(config.Entrypoint) > 0 {
-		body["Entrypoint"] = config.Entrypoint
+	if len(config.ImageMounts) > 0 {
+		hostConfig.Mounts = imageMounts(config.ImageMounts)
 	}
-	return body
+	return container.CreateRequest{
+		Config: &container.Config{
+			AttachStderr:    true,
+			AttachStdin:     withStdin,
+			AttachStdout:    true,
+			Cmd:             config.Cmd,
+			Entrypoint:      config.Entrypoint,
+			Env:             config.Env,
+			Image:           config.Image,
+			Labels:          HelperLabels(config.Labels),
+			NetworkDisabled: config.NetworkDisabled,
+			OpenStdin:       withStdin,
+			StdinOnce:       withStdin,
+		},
+		HostConfig: hostConfig,
+	}
 }
 
 // removeHelper force-removes a helper even when ctx is already cancelled,

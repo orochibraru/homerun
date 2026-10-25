@@ -42,7 +42,7 @@ func TestAControlCallTheDaemonNeverAnswersFailsWithAStall(t *testing.T) {
 	started := time.Now()
 	_, err := docker.InspectContainer(context.Background(), "abc123")
 	var stall *dockerapi.StallError
-	if !errors.As(err, &stall) || stall.Container != "abc123" || stall.Call != "GET /containers/abc123/json" {
+	if !errors.As(err, &stall) || stall.Container != "abc123" || stall.Call != "inspect abc123" {
 		t.Fatalf("want a StallError about abc123, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "stuck on container abc123") || !dockerapi.IsStall(err) {

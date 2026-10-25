@@ -1,7 +1,6 @@
 package dockerapi
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -9,6 +8,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+
+	"github.com/moby/moby/client"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 // RemoteHost is a remote Docker daemon as a remote_host row describes it: a
@@ -49,13 +51,9 @@ func NewRemote(host RemoteHost) (*Client, error) {
 	if port == "" {
 		port = "2375"
 	}
-	address := net.JoinHostPort(parsed.Hostname(), port)
-	plainDial := func(ctx context.Context) (net.Conn, error) {
-		var dialer net.Dialer
-		return dialer.DialContext(ctx, "tcp", address)
-	}
+	daemon := client.WithHost("tcp://" + net.JoinHostPort(parsed.Hostname(), port))
 	if host.TLSCA == "" || host.TLSCert == "" || host.TLSKey == "" {
-		return &Client{dial: plainDial, http: &http.Client{}, Base: "http://" + address}, nil
+		return newClient(daemon)
 	}
 	roots := x509.NewCertPool()
 	if !roots.AppendCertsFromPEM([]byte(host.TLSCA)) {
@@ -65,15 +63,21 @@ func NewRemote(host RemoteHost) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the remote host's client certificate: %w", err)
 	}
-	tlsConfig := &tls.Config{
+	transport := &http.Transport{TLSClientConfig: &tls.Config{
 		Certificates: []tls.Certificate{certificate},
 		MinVersion:   tls.VersionTLS12,
 		RootCAs:      roots,
+	}}
+	return newClient(client.WithHTTPClient(&http.Client{Transport: transport}), daemon)
+}
+
+// newClient builds a client from SDK options. The SDK's own per-request HTTP
+// spans are switched off: a job's trace records its stages, not every Engine
+// call under them.
+func newClient(options ...client.Opt) (*Client, error) {
+	api, err := client.New(append(options, client.WithTraceProvider(noop.NewTracerProvider()))...)
+	if err != nil {
+		return nil, err
 	}
-	transport := &http.Transport{TLSClientConfig: tlsConfig}
-	tlsDial := func(ctx context.Context) (net.Conn, error) {
-		dialer := &tls.Dialer{Config: tlsConfig}
-		return dialer.DialContext(ctx, "tcp", address)
-	}
-	return &Client{dial: tlsDial, http: &http.Client{Transport: transport}, Base: "https://" + address}, nil
+	return &Client{api: api}, nil
 }

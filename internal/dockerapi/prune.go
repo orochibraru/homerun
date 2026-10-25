@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/http"
-	"net/url"
+	"io"
+
+	"github.com/moby/moby/client"
 )
 
 // PruneReport is what one of the daemon's prune endpoints reclaimed.
@@ -28,26 +29,21 @@ type DiskUsageImage struct {
 
 // DiskUsageVolume is one volume of a `docker system df` answer.
 type DiskUsageVolume struct {
-	Driver    string `json:"Driver"`
-	Name      string `json:"Name"`
-	UsageData *struct {
-		RefCount int   `json:"RefCount"`
-		Size     int64 `json:"Size"`
-	} `json:"UsageData"`
+	Driver    string       `json:"Driver"`
+	Name      string       `json:"Name"`
+	UsageData *VolumeUsage `json:"UsageData"`
 }
 
 // DiskUsageContainer is one container of a `docker system df` answer.
 type DiskUsageContainer struct {
-	ID              string   `json:"Id"`
-	Image           string   `json:"Image"`
-	Names           []string `json:"Names"`
-	NetworkSettings *struct {
-		Networks map[string]json.RawMessage `json:"Networks"`
-	} `json:"NetworkSettings"`
-	SizeRootFs int64  `json:"SizeRootFs"`
-	SizeRw     int64  `json:"SizeRw"`
-	State      string `json:"State"`
-	Status     string `json:"Status"`
+	ID              string             `json:"Id"`
+	Image           string             `json:"Image"`
+	Names           []string           `json:"Names"`
+	NetworkSettings *ContainerNetworks `json:"NetworkSettings"`
+	SizeRootFs      int64              `json:"SizeRootFs"`
+	SizeRw          int64              `json:"SizeRw"`
+	State           string             `json:"State"`
+	Status          string             `json:"Status"`
 }
 
 // DiskUsageBuildCache is one build cache record of a `docker system df` answer.
@@ -62,8 +58,7 @@ type DiskUsageBuildCache struct {
 }
 
 // DiskUsage is `docker system df`, whole: the Docker Cleanup page previews
-// every category from it, so nothing is dropped here the way it was when only
-// a deploy read this.
+// every category from it.
 type DiskUsage struct {
 	BuildCache []DiskUsageBuildCache `json:"BuildCache"`
 	Containers []DiskUsageContainer  `json:"Containers"`
@@ -87,144 +82,180 @@ type ExecResult struct {
 	Stdout   string
 }
 
-// pruneDecode sends one call and decodes its JSON answer into target.
-func (c *Client) pruneDecode(ctx context.Context, method, path string, query url.Values, body, target any) error {
-	response, err := c.request(ctx, method, path, query, body, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = response.Body.Close() }()
-	return json.NewDecoder(response.Body).Decode(target)
-}
-
-// prune POSTs one prune endpoint and summarizes its answer into a PruneReport.
-func (c *Client) prune(ctx context.Context, path, deletedKey string, query url.Values) (PruneReport, error) {
-	var raw map[string]json.RawMessage
-	if err := c.pruneDecode(ctx, http.MethodPost, path, query, nil, &raw); err != nil {
-		return PruneReport{}, err
-	}
-	var report PruneReport
-	var deleted []json.RawMessage
-	if value, ok := raw[deletedKey]; ok {
-		_ = json.Unmarshal(value, &deleted)
-	}
-	if value, ok := raw["SpaceReclaimed"]; ok {
-		_ = json.Unmarshal(value, &report.SpaceReclaimed)
-	}
-	report.Deleted = len(deleted)
-	return report, nil
-}
-
-// pruneFilters is a prune endpoint's ?filters= query for one key=value filter.
-func pruneFilters(key, value string) url.Values {
-	encoded, _ := json.Marshal(map[string][]string{key: {value}})
-	return url.Values{"filters": {string(encoded)}}
-}
-
 // PruneContainers removes every stopped container (`docker container prune`).
 func (c *Client) PruneContainers(ctx context.Context) (PruneReport, error) {
-	return c.prune(ctx, "/containers/prune", "ContainersDeleted", nil)
+	result, err := control(ctx, SlowTimeout, "prune containers", "", func(ctx context.Context) (client.ContainerPruneResult, error) {
+		return c.api.ContainerPrune(ctx, client.ContainerPruneOptions{})
+	})
+	return PruneReport{Deleted: len(result.Report.ContainersDeleted), SpaceReclaimed: toInt64(result.Report.SpaceReclaimed)}, err
 }
 
 // PruneImages removes dangling images, or with all every image no container
 // uses (`docker image prune [-a]`).
 func (c *Client) PruneImages(ctx context.Context, all bool) (PruneReport, error) {
-	var query url.Values
+	filters := client.Filters{}
 	if all {
-		query = pruneFilters("dangling", "false")
+		filters.Add("dangling", "false")
 	}
-	return c.prune(ctx, "/images/prune", "ImagesDeleted", query)
+	result, err := control(ctx, SlowTimeout, "prune images", "", func(ctx context.Context) (client.ImagePruneResult, error) {
+		return c.api.ImagePrune(ctx, client.ImagePruneOptions{Filters: filters})
+	})
+	return PruneReport{Deleted: len(result.Report.ImagesDeleted), SpaceReclaimed: toInt64(result.Report.SpaceReclaimed)}, err
 }
 
 // PruneNetworks removes every unused network (`docker network prune`).
 func (c *Client) PruneNetworks(ctx context.Context) (PruneReport, error) {
-	return c.prune(ctx, "/networks/prune", "NetworksDeleted", nil)
+	result, err := control(ctx, SlowTimeout, "prune networks", "", func(ctx context.Context) (client.NetworkPruneResult, error) {
+		return c.api.NetworkPrune(ctx, client.NetworkPruneOptions{})
+	})
+	return PruneReport{Deleted: len(result.Report.NetworksDeleted)}, err
 }
 
 // PruneBuildCache clears the build cache (`docker builder prune`). The daemon
 // only reports reclaimed space, so Deleted stays 0.
 func (c *Client) PruneBuildCache(ctx context.Context) (PruneReport, error) {
-	report, err := c.prune(ctx, "/build/prune", "", nil)
-	report.Deleted = 0
-	return report, err
+	result, err := control(ctx, SlowTimeout, "prune build cache", "", func(ctx context.Context) (client.BuildCachePruneResult, error) {
+		return c.api.BuildCachePrune(ctx, client.BuildCachePruneOptions{})
+	})
+	return PruneReport{SpaceReclaimed: toInt64(result.Report.SpaceReclaimed)}, err
 }
 
 // PruneVolumes removes every unused volume, named ones included
 // (`docker volume prune --all`).
 func (c *Client) PruneVolumes(ctx context.Context) (PruneReport, error) {
-	return c.prune(ctx, "/volumes/prune", "VolumesDeleted", pruneFilters("all", "true"))
+	result, err := control(ctx, SlowTimeout, "prune volumes", "", func(ctx context.Context) (client.VolumePruneResult, error) {
+		return c.api.VolumePrune(ctx, client.VolumePruneOptions{All: true})
+	})
+	return PruneReport{Deleted: len(result.Report.VolumesDeleted), SpaceReclaimed: toInt64(result.Report.SpaceReclaimed)}, err
 }
 
 // SystemDiskUsage is `docker system df`, every category of it.
 func (c *Client) SystemDiskUsage(ctx context.Context) (DiskUsage, error) {
-	var usage DiskUsage
-	err := c.pruneDecode(ctx, http.MethodGet, "/system/df", nil, nil, &usage)
-	return usage, err
+	result, err := control(ctx, SlowTimeout, "system df", "", func(ctx context.Context) (client.DiskUsageResult, error) {
+		return c.api.DiskUsage(ctx, client.DiskUsageOptions{BuildCache: true, Containers: true, Images: true, Verbose: true, Volumes: true})
+	})
+	if err != nil {
+		return DiskUsage{}, err
+	}
+	usage := DiskUsage{
+		BuildCache: []DiskUsageBuildCache{},
+		Containers: []DiskUsageContainer{},
+		Images:     []DiskUsageImage{},
+		LayersSize: result.Images.TotalSize,
+		Volumes:    []DiskUsageVolume{},
+	}
+	for _, record := range result.BuildCache.Items {
+		entry := DiskUsageBuildCache{
+			Description: record.Description,
+			ID:          record.ID,
+			InUse:       record.InUse,
+			Shared:      record.Shared,
+			Size:        record.Size,
+			Type:        record.Type,
+		}
+		if record.LastUsedAt != nil {
+			entry.LastUsedAt = timestamp(*record.LastUsedAt)
+		}
+		usage.BuildCache = append(usage.BuildCache, entry)
+	}
+	for _, entry := range result.Containers.Items {
+		usage.Containers = append(usage.Containers, DiskUsageContainer{
+			ID:              entry.ID,
+			Image:           entry.Image,
+			Names:           entry.Names,
+			NetworkSettings: containerNetworks(entry),
+			SizeRootFs:      entry.SizeRootFs,
+			SizeRw:          entry.SizeRw,
+			State:           string(entry.State),
+			Status:          entry.Status,
+		})
+	}
+	for _, entry := range result.Images.Items {
+		usage.Images = append(usage.Images, DiskUsageImage{
+			Containers:  int(entry.Containers),
+			Created:     entry.Created,
+			ID:          entry.ID,
+			RepoDigests: entry.RepoDigests,
+			RepoTags:    entry.RepoTags,
+			SharedSize:  entry.SharedSize,
+			Size:        entry.Size,
+		})
+	}
+	for _, entry := range result.Volumes.Items {
+		usage.Volumes = append(usage.Volumes, DiskUsageVolume{Driver: entry.Driver, Name: entry.Name, UsageData: volumeUsage(entry.UsageData)})
+	}
+	return usage, nil
 }
 
 // RemoveUnusedImage removes one image without force, so an image a container
 // or a child image still needs is refused by the daemon.
 func (c *Client) RemoveUnusedImage(ctx context.Context, id string) error {
-	return c.Call(ctx, http.MethodDelete, "/images/"+id, url.Values{"force": {"0"}}, nil)
+	return c.RemoveImage(ctx, id, false)
 }
 
 // NetworkList lists every network on the daemon.
 func (c *Client) NetworkList(ctx context.Context) ([]Network, error) {
-	var networks []Network
-	err := c.pruneDecode(ctx, http.MethodGet, "/networks", nil, nil, &networks)
-	return networks, err
+	listed, err := control(ctx, ControlTimeout, "list networks", "", func(ctx context.Context) (client.NetworkListResult, error) {
+		return c.api.NetworkList(ctx, client.NetworkListOptions{})
+	})
+	if err != nil {
+		return nil, err
+	}
+	networks := make([]Network, 0, len(listed.Items))
+	for _, entry := range listed.Items {
+		networks = append(networks, Network{Driver: entry.Driver, ID: entry.ID, Name: entry.Name})
+	}
+	return networks, nil
 }
 
 // NetworkRemove removes one network.
 func (c *Client) NetworkRemove(ctx context.Context, id string) error {
-	return c.Call(ctx, http.MethodDelete, "/networks/"+id, nil, nil)
+	return discard(control(ctx, ControlTimeout, "remove network "+id, "", func(ctx context.Context) (client.NetworkRemoveResult, error) {
+		return c.api.NetworkRemove(ctx, id, client.NetworkRemoveOptions{})
+	}))
 }
 
 // ContainerIsRunning reports whether the named container exists and runs.
 func (c *Client) ContainerIsRunning(ctx context.Context, name string) (bool, error) {
-	var inspected struct {
-		State struct {
-			Running bool `json:"Running"`
-		} `json:"State"`
-	}
-	err := c.pruneDecode(ctx, http.MethodGet, "/containers/"+name+"/json", nil, nil, &inspected)
+	inspected, err := c.InspectContainer(ctx, name)
 	if errors.Is(err, ErrNotFound) {
 		return false, nil
 	}
-	return inspected.State.Running, err
+	if err != nil {
+		return false, err
+	}
+	return inspected.State.Running, nil
 }
 
 // ContainerRestart restarts the named container.
 func (c *Client) ContainerRestart(ctx context.Context, name string) error {
-	return c.Call(ctx, http.MethodPost, "/containers/"+name+"/restart", nil, nil)
+	return discard(control(ctx, 2*ControlTimeout, "restart "+name, name, func(ctx context.Context) (client.ContainerRestartResult, error) {
+		return c.api.ContainerRestart(ctx, name, client.ContainerRestartOptions{})
+	}))
 }
 
 // ContainerExec runs cmd inside the named running container and waits for it,
 // returning its exit code and its stdout and stderr kept apart.
 func (c *Client) ContainerExec(ctx context.Context, name string, cmd []string) (ExecResult, error) {
-	var created struct {
-		ID string `json:"Id"`
-	}
-	if err := c.pruneDecode(ctx, http.MethodPost, "/containers/"+name+"/exec", nil,
-		map[string]any{"AttachStderr": true, "AttachStdout": true, "Cmd": cmd}, &created); err != nil {
-		return ExecResult{}, err
-	}
-	response, err := c.stream(ctx, http.MethodPost, "/exec/"+created.ID+"/start", nil,
-		map[string]any{"Detach": false, "Tty": false}, nil, c.containerRunning(name))
+	id, err := c.CreateExec(ctx, name, ExecConfig{Cmd: cmd})
 	if err != nil {
 		return ExecResult{}, err
 	}
 	var stdout, stderr bytes.Buffer
-	err = DemuxSplit(response.Body, &stdout, &stderr)
-	_ = response.Body.Close()
+	output, err := streaming(ctx, "exec in "+name, name, c.containerRunning(name), func(ctx context.Context, _ *watch) (io.ReadCloser, error) {
+		return c.StartExecHijacked(ctx, id, false)
+	})
 	if err != nil {
 		return ExecResult{}, err
 	}
-	var inspected struct {
-		ExitCode int `json:"ExitCode"`
-	}
-	if err := c.pruneDecode(ctx, http.MethodGet, "/exec/"+created.ID+"/json", nil, nil, &inspected); err != nil {
+	err = DemuxSplit(output, &stdout, &stderr)
+	_ = output.Close()
+	if err != nil {
 		return ExecResult{}, err
 	}
-	return ExecResult{ExitCode: inspected.ExitCode, Stderr: stderr.String(), Stdout: stdout.String()}, nil
+	code, err := c.InspectExec(ctx, id)
+	if err != nil {
+		return ExecResult{}, err
+	}
+	return ExecResult{ExitCode: code, Stderr: stderr.String(), Stdout: stdout.String()}, nil
 }

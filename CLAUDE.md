@@ -170,10 +170,12 @@ to the app and as the standalone agent-mode binary on a remote build host (see
 libraries live under `internal/` (`internal/buildinfo`, the version stamped via
 `-ldflags` at build time; `internal/release`, release asset naming/URLs/
 download; `internal/homerun`, the CLI's config and API client;
-`internal/dockerapi`, a stdlib Docker Engine API client over the unix socket the
-worker drives). `go vet ./cmd/... ./internal/... ./tests/unit/go/...` plus
-`golangci-lint` over the same paths (part of `bun run type-check`) cover all of
-it in one pass; scope either to one sub-project by narrowing the path
+`internal/dockerapi`, the worker's Docker client: the official typed SDK,
+`github.com/moby/moby/client`, wrapped with deadlines, the stall watchdog and
+the projections the app reads; never hand-build an Engine path or body).
+`go vet ./cmd/... ./internal/... ./tests/unit/go/...` plus `golangci-lint` over
+the same paths (part of `bun run type-check`) cover all of it in one pass; scope
+either to one sub-project by narrowing the path
 (`./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`, etc.). All
 three still compile via `scripts/build-packages.ts`
 (`bun scripts/build-packages.ts`), and because Go's `GOOS`/`GOARCH`

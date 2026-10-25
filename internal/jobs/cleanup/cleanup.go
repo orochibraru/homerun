@@ -254,7 +254,10 @@ func (c cleaner) stackNetworks(ctx context.Context, prefix string, liveIDs []str
 	var removed []string
 	for _, network := range networks {
 		stackID, ok := strings.CutPrefix(network.Name, prefix)
-		if !ok || stackID == "" || live[stackID] || len(network.Containers) > 0 {
+		if !ok || stackID == "" || live[stackID] {
+			continue
+		}
+		if attached, err := c.docker.NetworkContainers(ctx, network.ID); err != nil || attached > 0 {
 			continue
 		}
 		if err := c.docker.NetworkRemove(ctx, network.ID); err != nil {

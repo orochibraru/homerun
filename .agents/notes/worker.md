@@ -109,30 +109,55 @@ live heartbeat only proves the worker process is up, not that the job is moving.
 **Timestamps.** Drizzle's `timestamp` columns hold UTC wall-clock time, so Go
 writes `db.UTCNow` (`now() at time zone 'utc'`), never bare `now()`.
 
+## The Docker client is the typed SDK
+
+`internal/dockerapi` wraps `github.com/moby/moby/client` (and its
+`github.com/moby/moby/api/types`). It used to be a hand-rolled stdlib client
+building paths and query strings by hand, which is how the swarm replica probe
+ended up asking `GET /services/{id}?status=true` for task counts, a parameter
+only the service _list_ takes (issue #122): typed options make that kind of
+mistake a compile error. What the package adds on top of the SDK is the
+deadline/watchdog layer below, `ErrNotFound`/`Status(err)` over the SDK's
+errdefs classes, job activity tracking, and the small projections (`SwarmTask`,
+`Info`, `DiskUsage`…) whose JSON the TypeScript app reads, so those shapes
+didn't move. A raw Engine body the app sends (a container or service template)
+is decoded once into the SDK's type with `dockerapi.Decode` or straight from the
+request JSON. The SDK's own otelhttp spans are switched off (`newClient`), a
+job's trace records stages, not Engine calls.
+
+Fake daemons in `tests/unit/go` go through `testsupport.Engine`, which answers
+the SDK's version-negotiation `HEAD /_ping` and strips `/v1.NN` so a handler
+routes on unversioned paths (`dockerapi.NewWithHTTP` pins the version and strips
+it client-side instead). An attach or exec start must answer a real `101`
+upgrade (`testsupport.Hijack`); the SDK rejects a plain 200. Filters arrive as
+`{"key":{"value":true}}`, and `system df` is the API 1.52+ shape
+(`ImageUsage.Items`, `VolumeUsage.Items`…).
+
 ## Nothing Docker can hang a job forever
 
 A dockerd deadlock can't be prevented from the client side, but the worker must
 never wait on one forever (see the backup incident in `jobs-and-queue.md`).
 Three layers, each a backstop for the one above:
 
-- **Every control call has a deadline** (`internal/dockerapi`'s `request` →
-  `bounded`): `ControlTimeout`, 60s (`WORKER_DOCKER_TIMEOUT`), covering headers
-  and body; twice that for a stop, restart or swarm init; `SlowTimeout` (30m)
-  for prunes, `system df` and image removal. A hijacked stream (terminal, helper
-  attach) gets the same deadline on its upgrade answer. Running out returns a
-  `*dockerapi.StallError` naming the call and the container it was about ("the
-  daemon may be stuck on container abc… sudo systemctl restart docker"), never
-  the caller's own cancellation, which stays itself.
-- **Streams get a stall watchdog, not a deadline** (`stream`/`upload`, logs,
-  attach, pull, push, save, load, exec output, a container wait): cancelled once
-  no byte moved either way for `StallTimeout`, 10m
-  (`WORKER_DOCKER_STALL_TIMEOUT`), so a huge backup that keeps streaming runs as
-  long as it needs. A stream that's legitimately silent (a cron container
-  sleeping, `tar -x` writing to disk, a `wait` on a long build) has a probe:
-  every tenth of the window the watchdog inspects its container (or pings the
-  daemon for swarm logs and image loads) and a running container counts as
-  progress. The probe is exactly what hangs on a wedged container, so the stream
-  is abandoned with a `StallError` instead of waiting on it.
+- **Every control call has a deadline** (`internal/dockerapi`'s `control`,
+  wrapping one typed SDK call): `ControlTimeout`, 60s (`WORKER_DOCKER_TIMEOUT`),
+  covering headers and body; twice that for a stop, restart or swarm init;
+  `SlowTimeout` (30m) for prunes, `system df` and image removal. A hijacked
+  stream (terminal, helper attach) gets the same deadline on its upgrade answer.
+  Running out returns a `*dockerapi.StallError` naming the call and the
+  container it was about ("the daemon may be stuck on container abc… sudo
+  systemctl restart docker"), never the caller's own cancellation, which stays
+  itself.
+- **Streams get a stall watchdog, not a deadline** (`streaming`, logs, attach,
+  pull, push, save, load, exec output, a container wait): cancelled once no byte
+  moved either way for `StallTimeout`, 10m (`WORKER_DOCKER_STALL_TIMEOUT`), so a
+  huge backup that keeps streaming runs as long as it needs. A stream that's
+  legitimately silent (a cron container sleeping, `tar -x` writing to disk, a
+  `wait` on a long build) has a probe: every tenth of the window the watchdog
+  inspects its container (or pings the daemon for swarm logs and image loads)
+  and a running container counts as progress. The probe is exactly what hangs on
+  a wedged container, so the stream is abandoned with a `StallError` instead of
+  waiting on it.
 - **A job-level no-progress watchdog** (`Worker.StallTimeout`, 15m,
   `WORKER_JOB_STALL_TIMEOUT`): each execution's context carries an
   `internal/activity.Tracker`, touched by every Docker call that answers, every

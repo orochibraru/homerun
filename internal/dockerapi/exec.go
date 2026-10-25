@@ -1,17 +1,11 @@
 package dockerapi
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
-	"net"
-	"net/http"
-	"net/url"
-	"time"
+
+	"github.com/moby/moby/client"
 )
 
 // ExecConfig is an interactive exec: a command to run inside a running
@@ -23,161 +17,110 @@ type ExecConfig struct {
 	Tty   bool
 }
 
-// HijackedStream is a duplex connection to a running exec. Reads take the
-// process's output, writes go to its stdin, and Close ends it. When Tty was
-// false the read side is still frame-multiplexed, so the caller demuxes it;
-// with a TTY it's the raw terminal byte stream.
+// HijackedStream is a duplex connection to a running exec or an attached
+// container. Reads take the process's output, writes go to its stdin, and
+// Close ends it. When there's no TTY the read side is frame-multiplexed, so
+// the caller demuxes it; with a TTY it's the raw terminal byte stream.
 type HijackedStream struct {
-	conn     net.Conn
-	reader   io.Reader
-	response *http.Response
+	response client.HijackedResponse
+	release  func() bool
 }
 
-// Read takes the next bytes of the exec's output.
+// newHijackedStream wraps a hijacked response, closing it as soon as ctx ends
+// so a reader blocked on it is released.
+func newHijackedStream(ctx context.Context, response client.HijackedResponse) *HijackedStream {
+	stream := &HijackedStream{response: response}
+	stream.release = context.AfterFunc(ctx, func() { response.Close() })
+	return stream
+}
+
+// Read takes the next bytes of the process's output.
 func (s *HijackedStream) Read(buffer []byte) (int, error) {
-	return s.reader.Read(buffer)
+	return s.response.Reader.Read(buffer)
 }
 
-// Write sends bytes to the exec's stdin.
+// Write sends bytes to the process's stdin.
 func (s *HijackedStream) Write(chunk []byte) (int, error) {
-	return s.conn.Write(chunk)
+	return s.response.Conn.Write(chunk)
 }
 
 // CloseWrite half-closes the connection, which the daemon takes as the end of
 // the process's stdin while its output keeps coming back.
 func (s *HijackedStream) CloseWrite() error {
-	if closer, ok := s.conn.(interface{ CloseWrite() error }); ok {
-		return closer.CloseWrite()
+	if _, ok := s.response.Conn.(client.CloseWriter); !ok {
+		return errors.New("dockerapi: this connection can't be half-closed")
 	}
-	return errors.New("dockerapi: this connection can't be half-closed")
+	return s.response.CloseWrite()
 }
 
-// Close ends the exec's connection, which the daemon takes as the end of its
-// stdin and tears the process down.
-//
-// The connection goes first: the upgrade response's body is that same
-// connection, so closing it while the connection is still open could block
-// draining a stream that never ends.
+// Close ends the connection, which the daemon takes as the end of the
+// process's stdin and tears an exec down.
 func (s *HijackedStream) Close() error {
-	err := s.conn.Close()
-	_ = s.response.Body.Close()
-	return err
+	s.release()
+	s.response.Close()
+	return nil
 }
 
 // CreateExec creates an exec instance inside a running container and returns
 // its id, without starting it.
 func (c *Client) CreateExec(ctx context.Context, container string, config ExecConfig) (string, error) {
-	body := map[string]any{
-		"AttachStderr": true,
-		"AttachStdin":  config.Stdin,
-		"AttachStdout": true,
-		"Cmd":          config.Cmd,
-		"Tty":          config.Tty,
-	}
-	var created struct {
-		ID string `json:"Id"`
-	}
-	if err := c.decode(ctx, http.MethodPost, "/containers/"+container+"/exec", nil, body, &created); err != nil {
-		return "", err
-	}
-	return created.ID, nil
+	created, err := control(ctx, ControlTimeout, "exec in "+shortID(container), container, func(ctx context.Context) (client.ExecCreateResult, error) {
+		return c.api.ExecCreate(ctx, container, client.ExecCreateOptions{
+			AttachStderr: true,
+			AttachStdin:  config.Stdin,
+			AttachStdout: true,
+			Cmd:          config.Cmd,
+			TTY:          config.Tty,
+		})
+	})
+	return created.ID, err
 }
 
-// StartExecHijacked starts an exec and hands back its duplex stream.
-//
-// This is the connection upgrade the Engine answers with 101, which Go's own
-// http.Client won't hand back as a socket, so the request goes out over a raw
-// connection and the response header block is read off it by hand. The same
-// step had to be hand-rolled in the TypeScript app too, but for a worse
-// reason: dockerode's hijack never resolved under Bun's node:http layer. Here
-// it's just what the Engine's protocol asks for.
+// StartExecHijacked starts an exec and hands back its duplex stream, which
+// stays open until the caller closes it or ctx ends. Only the handshake is
+// bounded by ControlTimeout.
 func (c *Client) StartExecHijacked(ctx context.Context, execID string, tty bool) (*HijackedStream, error) {
-	body, err := json.Marshal(map[string]any{"Detach": false, "Tty": tty})
+	response, err := control(ctx, ControlTimeout, "start exec "+shortID(execID), "", func(ctx context.Context) (client.ExecAttachResult, error) {
+		return c.api.ExecAttach(ctx, execID, client.ExecAttachOptions{TTY: tty})
+	})
 	if err != nil {
 		return nil, err
 	}
-	return c.hijack(ctx, "/exec/"+execID+"/start", nil, body)
+	return newHijackedStream(ctx, response.HijackedResponse), nil
 }
 
 // InspectExec reads a finished exec's exit code.
 func (c *Client) InspectExec(ctx context.Context, execID string) (int, error) {
-	var inspected struct {
-		ExitCode int `json:"ExitCode"`
-	}
-	if err := c.decode(ctx, http.MethodGet, "/exec/"+execID+"/json", nil, nil, &inspected); err != nil {
-		return 0, err
-	}
-	return inspected.ExitCode, nil
+	inspected, err := control(ctx, ControlTimeout, "inspect exec "+shortID(execID), "", func(ctx context.Context) (client.ExecInspectResult, error) {
+		return c.api.ExecInspect(ctx, execID, client.ExecInspectOptions{})
+	})
+	return inspected.ExitCode, err
 }
 
 // ResizeExec tells the daemon the terminal's new size, so a shell running
 // under a TTY rewraps its output instead of assuming 80x24 forever.
 func (c *Client) ResizeExec(ctx context.Context, execID string, height, width int) error {
-	return c.Call(ctx, http.MethodPost, "/exec/"+execID+"/resize",
-		url.Values{"h": {fmt.Sprint(height)}, "w": {fmt.Sprint(width)}}, nil)
+	return discard(control(ctx, ControlTimeout, "resize exec "+shortID(execID), "", func(ctx context.Context) (client.ExecResizeResult, error) {
+		return c.api.ExecResize(ctx, execID, client.ExecResizeOptions{Height: uint(max(height, 0)), Width: uint(max(width, 0))})
+	}))
 }
 
-// hijack sends one request over a raw connection and returns the connection as
-// a duplex stream once the daemon has answered 101 (or 200, which it uses when
-// the transport needs no upgrade). Anything else comes back as an APIError
-// carrying the daemon's own message, with the connection closed.
-func (c *Client) hijack(ctx context.Context, path string, query url.Values, body []byte) (*HijackedStream, error) {
-	if c.dial == nil {
-		return nil, errors.New("dockerapi: this client can't open a hijacked stream")
-	}
-	conn, err := c.dial(ctx)
+// attach hijacks a container's stdout and stderr, and its stdin when stdin is
+// set, for as long as ctx lasts. Only the handshake is bounded by
+// ControlTimeout.
+func (c *Client) attach(ctx context.Context, id string, stdin bool) (*HijackedStream, error) {
+	response, err := control(ctx, ControlTimeout, "attach "+shortID(id), id, func(ctx context.Context) (client.ContainerAttachResult, error) {
+		return c.api.ContainerAttach(ctx, id, client.ContainerAttachOptions{
+			Stderr: true,
+			Stdin:  stdin,
+			Stdout: true,
+			Stream: true,
+		})
+	})
 	if err != nil {
 		return nil, err
 	}
-	endpoint := c.Base + path
-	if len(query) > 0 {
-		endpoint += "?" + query.Encode()
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
-	if err != nil {
-		_ = conn.Close()
-		return nil, err
-	}
-	request.Header.Set("Connection", "Upgrade")
-	request.Header.Set("Upgrade", "tcp")
-	if body != nil {
-		request.Header.Set("Content-Type", "application/json")
-		request.Body = io.NopCloser(bytes.NewReader(body))
-		request.ContentLength = int64(len(body))
-	}
-	_ = conn.SetDeadline(time.Now().Add(ControlTimeout))
-	if err := request.Write(conn); err != nil {
-		_ = conn.Close()
-		return nil, err
-	}
-	reader := bufio.NewReader(conn)
-	response, err := http.ReadResponse(reader, request)
-	if err != nil {
-		_ = conn.Close()
-		var timeout net.Error
-		if errors.As(err, &timeout) && timeout.Timeout() {
-			return nil, &StallError{Call: http.MethodPost + " " + path, Container: containerOf(path), Idle: ControlTimeout}
-		}
-		return nil, err
-	}
-	_ = conn.SetDeadline(time.Time{})
-	if response.StatusCode != http.StatusSwitchingProtocols && response.StatusCode != http.StatusOK {
-		message, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-		_ = response.Body.Close()
-		_ = conn.Close()
-		return nil, &APIError{Message: decodeMessage(message), Status: response.StatusCode}
-	}
-	return &HijackedStream{conn: conn, reader: reader, response: response}, nil
+	return newHijackedStream(ctx, response.HijackedResponse), nil
 }
 
-// decodeMessage pulls the daemon's human-readable message out of an error
-// body, falling back to the raw body when it isn't the usual JSON shape.
-func decodeMessage(raw []byte) string {
-	var decoded struct {
-		Message string `json:"message"`
-	}
-	if err := json.Unmarshal(raw, &decoded); err == nil && decoded.Message != "" {
-		return decoded.Message
-	}
-	return string(raw)
-}
+var _ io.ReadWriteCloser = (*HijackedStream)(nil)
