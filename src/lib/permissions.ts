@@ -175,6 +175,7 @@ const OPEN_ROUTES = [
 	"/",
 	"/notifications",
 	"/profile",
+	"/search",
 	"/cli-auth",
 	"/api-docs",
 	"/api/v1/auth",
