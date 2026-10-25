@@ -16,15 +16,17 @@ sub-section still its own route: **Overview**, **Environments & Deployments**
 today, itself, its release channel canary and its pull request previews; Source;
 Environment Variables (`environments/variables`); Revisions; and, for a git
 service only, Previews and Channels), **Observability** (`observability/`:
-Monitoring, Events, Errors, Health), **Storage** (`volumes/`), **Networking**,
-**Container** (`container/`: Compute is the bare page, Runtime is
-`container/runtime`), **Security**, **Terminal**, **Settings**. In simple mode
-(see `ui.md`) every tab stays but several sections don't: each section layout
-filters its sections through `visibleItems` from `src/lib/ui-mode.ts`. Revisions
-is the deployment history that used to sit at the bottom of Overview, now with
-the `image:tag` that ran, its digest, how long it took and, for a git build, the
-commit linked to the provider. `logs/` still exists as a **route without a
-page**: its `+server.ts` is the SSE stream `live-log-viewer.svelte` fetches.
+Monitoring, Logs, Uptime, Errors with its own `SectionNav` of Issues, Board,
+Failed deployments and Application errors, Traces, Pipelines, Blocked IPs,
+Health), **Storage** (`volumes/`), **Networking**, **Container** (`container/`:
+Compute is the bare page, Runtime is `container/runtime`), **Security**,
+**Terminal**, **Settings**. In simple mode (see `ui.md`) every tab stays but
+several sections don't: each section layout filters its sections through
+`visibleItems` from `src/lib/ui-mode.ts`. Revisions is the deployment history
+that used to sit at the bottom of Overview, now with the `image:tag` that ran,
+its digest, how long it took and, for a git build, the commit linked to the
+provider. `logs/` still exists as a **route without a page**: its `+server.ts`
+is the SSE stream `live-log-viewer.svelte` fetches.
 
 **The entity a page shows is a path segment, never a query parameter.** A
 revision is `environments/revisions/[revisionId]` (the list only links to it),
@@ -195,13 +197,15 @@ deep-linking into `/settings`.
   split off Settings so "what gets deployed" has its own place; plus the
   Environments list, **Environment Variables**, **Revisions** and, for a git
   service, **Previews** and **Channels**), **Observability** (Monitoring;
-  **Events**, the live logs, streamed via a `+server.ts` GET returning a chunked
+  **Logs**, the live logs, streamed via a `+server.ts` GET returning a chunked
   `ReadableStream` and rendered through
   `src/lib/components/live-log-viewer.svelte`, the same component embedded in
-  Overview, then failed deployments, a live "container currently down" banner
-  and "Application errors", persisted app-level warn/error `Logger` output
-  attributed to this service, see `app_log`/`AppLogDTO` in Data model below;
-  **Errors**, error tracking; **Health**), **Storage** (mount/unmount
+  Overview, and a live "container currently down" banner; **Uptime**;
+  **Errors**, error tracking's Issues and Board plus **Failed deployments** and
+  **Application errors**, persisted app-level warn/error `Logger` output
+  attributed to this service, see `app_log`/`AppLogDTO` in Data model below,
+  each their own view sharing `#lib/server/error-dismissal.js` for the "N
+  earlier errors hidden" banner; **Health**), **Storage** (mount/unmount
   StorageVolumes, including a "New volume" modal,
   `src/lib/components/new-volume-fields.svelte` shared with `/storage/new`, so a
   volume can be created and mounted without leaving the service), **Networking**

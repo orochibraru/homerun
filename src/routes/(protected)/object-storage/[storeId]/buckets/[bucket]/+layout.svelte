@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { ArrowLeft, FolderOpen, Settings } from "@lucide/svelte";
-	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -40,8 +39,7 @@
 </a>
 
 <div>
-  <SectionNav label="Bucket sections" {sections} />
-  <ErrorBoundary title="This section hit an error while rendering.">
+  <SectionNav hubLabel="Bucket" label="Bucket sections" {sections}>
     {@render children()}
-  </ErrorBoundary>
+  </SectionNav>
 </div>

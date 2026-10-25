@@ -573,5 +573,9 @@ strip. The first tab shares the hub's path, so its card links to `?view=tab`;
 any query string (pagination too) means "show the page, not the hub".
 `NavTab.description` is the card's one-line summary, set only from data the
 layout already loads (the service layout does). Tabs driven by `onSelect` keep
-the strip. All of it is CSS-switched (`max-md:`/`md:hidden`), no `MediaQuery`,
-so SSR renders the right shape with no flash.
+the strip. `SectionNav` does the same for subtabs when the layout passes the
+page as its children (`<SectionNav ...>{@render children()}</SectionNav>`), with
+`hubLabel` naming its back row ("‹ Observability"); without children (an in-page
+view switch like the issue views) it stays a strip. All of it is CSS-switched
+(`max-md:`/`md:hidden`), no `MediaQuery`, so SSR renders the right shape with no
+flash.

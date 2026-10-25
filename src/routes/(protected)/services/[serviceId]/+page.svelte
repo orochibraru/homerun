@@ -404,7 +404,7 @@
         />
         <a
             class="text-accent mt-2 inline-block text-xs underline"
-            href={resolve("/(protected)/services/[serviceId]/observability/events", {
+            href={resolve("/(protected)/services/[serviceId]/observability/logs", {
                 serviceId: svc.id,
             })}
         >

@@ -1,13 +1,14 @@
 # Observability
 
 The **Observability** tab is where a service tells you how it's doing. It has
-seven sections: **Monitoring**, its traffic, response time, error rate, uptime
-and resource use over a range; **Events**, its uptime probes, live logs, failed
-deploys and the errors Homerun logged about it; **Errors**, the exceptions your
-app reports (see [Error tracking](error-tracking.md)); **Traces**, its
-OpenTelemetry traces (see [Tracing](tracing.md)); **Pipelines**, the CI runs of
-the repository linked to it (see [Pipelines](pipelines.md)); **Blocked IPs**,
-the addresses its blocked paths turned away (see
+eight sections: **Monitoring**, its traffic, response time, error rate, uptime
+and resource use over a range; **Logs**, its live container output; **Uptime**,
+its uptime probes; **Errors**, the exceptions your app reports (see
+[Error tracking](error-tracking.md)), its failed deployments and the errors
+Homerun logged about it; **Traces**, its OpenTelemetry traces (see
+[Tracing](tracing.md)); **Pipelines**, the CI runs of the repository linked to
+it (see [Pipelines](pipelines.md)); **Blocked IPs**, the addresses its blocked
+paths turned away (see
 [Blocked paths and IP bans](blocked-paths-and-ip-bans.md#blocked-request-stats));
 and **Health**, the healthcheck the running container was created with (see
 [Services](services.md#health)).
@@ -79,7 +80,7 @@ and the reason for the latest failure plus hints for fixing it:
   service that isn't DNS-resolvable, and while the base domain is a loopback
   address like `localhost`, since probing it from this machine proves nothing.
 
-![The Uptime panel on the Events section, with a heartbeat strip per probe](images/observability-uptime.webp)
+![The Uptime section, with a heartbeat strip per probe](images/observability-uptime.webp)
 
 Over HTTP any response under 500 counts as up, a 401 or 404 included, and a 5xx
 counts as down. Each probe opens a fresh connection and retries a failed
@@ -116,18 +117,20 @@ once, so recent output is visible without switching tabs.
 
 ## Errors
 
-In the **Events** section, below the logs, **Failed deployments** and
-**Application errors** (persisted warn/error-level app log lines that mention
-this service) sit alongside a "container currently down" banner when the
-container has crashed. A deploy that reaches running hides the errors logged
-before it, and **Clear errors** does the same by hand; a note says how many are
-hidden and what cleared them, with a link to show them again. If a service's
-container was removed outside Homerun (e.g. a manual `docker rm`), the section
-shows a distinct "container is gone" banner with a **Resolve** button instead:
-click it to clear the stale reference so the service goes back to its normal
-never-deployed state and Deploy works again.
+The **Errors** section has four views: **Issues** and **Board**, the exceptions
+your app reports (see [Error tracking](error-tracking.md)), **Failed
+deployments**, and **Application errors** (persisted warn/error-level app log
+lines that mention this service). The **Logs** section shows a "container
+currently down" banner below the logs when the container has crashed. A deploy
+that reaches running hides the errors logged before it, and **Clear errors**
+does the same by hand; a note says how many are hidden and what cleared them,
+with a link to show them again. Clearing on either view clears both. If a
+service's container was removed outside Homerun (e.g. a manual `docker rm`), the
+Logs section shows a distinct "container is gone" banner with a **Resolve**
+button instead: click it to clear the stale reference so the service goes back
+to its normal never-deployed state and Deploy works again.
 
-![Failed deployments and Application errors, below the logs](images/observability-errors.webp)
+![The Failed deployments view of the Errors section](images/observability-errors.webp)
 
 ## Terminal
 

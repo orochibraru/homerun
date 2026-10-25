@@ -43,6 +43,10 @@
 	let sidebarClose = $state<HTMLElement | null>(null);
 	const desktop = new MediaQuery("(min-width: 768px)");
 
+	const drawerRow =
+		"in-data-[slot=mobile-drawer]:min-h-12 in-data-[slot=mobile-drawer]:gap-4 in-data-[slot=mobile-drawer]:rounded-full in-data-[slot=mobile-drawer]:border-transparent in-data-[slot=mobile-drawer]:px-4 in-data-[slot=mobile-drawer]:text-[0.9375rem]";
+	const drawerIcon = "in-data-[slot=mobile-drawer]:size-5";
+
 	function closeSidebar() {
 		sidebarOpen = false;
 		void tick().then(() => sidebarToggle?.focus());
@@ -171,6 +175,7 @@
   <a
     class="
       group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
+      {drawerRow}
       {active
       ? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold'
       : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium'}
@@ -179,14 +184,14 @@
     href={item.href}
     onclick={onNavigate}
   >
-    <NavIcon class="text-accent size-4 shrink-0" />
+    <NavIcon class="text-accent size-4 shrink-0 {drawerIcon}" />
     {(item.parent && item.navLabel) || item.label}
   </a>
 {/snippet}
 
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
   {#each groups as group (group.heading)}
-    <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium">
+    <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium in-data-[slot=mobile-drawer]:mt-6 in-data-[slot=mobile-drawer]:px-4 in-data-[slot=mobile-drawer]:text-[0.8125rem]">
       {group.heading}
     </p>
     {#each group.entries as entry (entry.kind === "item" ? entry.item.href : entry.label)}
@@ -198,13 +203,14 @@
         <button
           class="
             mb-0.5 flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-left text-[0.8125rem] font-medium transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
+            {drawerRow}
             {hasActive(entry.items) ? 'text-text' : 'text-text-muted hover:bg-surface-2 hover:text-text'}
           "
           aria-expanded={open}
           onclick={() => toggleParent(entry.label, entry.items)}
           type="button"
         >
-          <ParentIcon class="text-accent size-4 shrink-0" />
+          <ParentIcon class="text-accent size-4 shrink-0 {drawerIcon}" />
           <span class="flex-1">{entry.label}</span>
           <ChevronRight
             class="text-text-subtle size-3.5 transition-transform duration-150 {open ? 'rotate-90' : ''}"
@@ -269,7 +275,7 @@
 
   <MobileDrawer bind:closeButton={sidebarClose} onClose={closeSidebar} open={sidebarOpen}>
     {#if can(data.permissions, "services", "write")}
-      <Button class="mt-1 w-full" href={resolve('services/new')} onclick={() => (sidebarOpen = false)}><Plus class="size-4" />Deploy a service</Button>
+      <Button class="mt-1 h-12 w-full rounded-full text-[0.9375rem]" href={resolve('services/new')} onclick={() => (sidebarOpen = false)}><Plus class="size-4" />Deploy a service</Button>
     {/if}
     {@render navGroups(navItemGroups, () => {
       sidebarOpen = false;
@@ -283,7 +289,7 @@
 
   <!-- ── Main content ───────────────────────────────────────────── -->
   <div
-    class="panel flex flex-1 flex-col overflow-hidden transition-[translate,scale,border-radius] duration-380 ease-snap max-md:border-0 md:order-3 md:rounded-xl {sidebarOpen ? 'max-md:scale-[0.94] max-md:rounded-2xl' : ''}"
+    class="panel relative flex flex-1 flex-col overflow-hidden transition-[translate,scale,border-radius] duration-380 ease-snap max-md:border-0 md:order-3 md:rounded-xl {sidebarOpen ? 'max-md:scale-[0.94] max-md:rounded-2xl' : ''}"
     data-slot="app-frame"
     inert={sidebarOpen && !desktop.current}
   >
@@ -316,7 +322,7 @@
     </header>
 
     <!-- Page content -->
-    <main class="relative flex-1 overflow-y-auto outline-none" id="main-content" tabindex="-1">
+    <main class="relative flex-1 overflow-y-auto outline-none max-md:pb-24" id="main-content" tabindex="-1">
       <ErrorBoundary class="p-5 md:p-6">
         {@render children()}
       </ErrorBoundary>

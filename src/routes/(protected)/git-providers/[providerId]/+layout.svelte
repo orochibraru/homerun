@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { ArrowLeft, Link2, Settings } from "@lucide/svelte";
-	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { resolve } from "$app/paths";
 
@@ -58,8 +57,7 @@
     </p>
   </div>
 
-  <SectionNav label="Git provider sections" {sections} />
-  <ErrorBoundary title="This section hit an error while rendering.">
+  <SectionNav hubLabel="Provider" label="Git provider sections" {sections}>
     {@render children()}
-  </ErrorBoundary>
+  </SectionNav>
 </div>

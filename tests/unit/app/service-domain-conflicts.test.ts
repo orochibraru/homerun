@@ -32,6 +32,15 @@ const { RedirectService } = await import(
 const { DomainConflictError, ServiceSettingsService } = await import(
 	"../../../src/lib/services/service-settings.service"
 );
+const { takeOverDomains } = await import(
+	"../../../src/lib/services/domain-takeover"
+);
+const { GitWebhookService } = await import(
+	"../../../src/lib/services/git-webhook.service"
+);
+const { ReleaseChannelError, ReleaseChannelService } = await import(
+	"../../../src/lib/services/release-channel.service"
+);
 
 type Row = Record<string, unknown> & {
 	defaultDomainEnabled: boolean;
@@ -308,5 +317,87 @@ describe("service domain conflicts", () => {
 		expect(disabledRedirects).toEqual(["r1"]);
 		expect(redirectSyncs).toBe(1);
 		expect(result.takenOver).toEqual(["the redirect from go.example.org/x"]);
+	});
+
+	test("taking over strips the entry from the owner's ports, main domain and path stripping", async () => {
+		services.push(
+			fakeService("rich", {
+				defaultDomainEnabled: false,
+				domainPorts: { "a.io": 8080, "b.io": 9090 },
+				domains: ["a.io", "b.io"],
+				primaryDomain: "a.io",
+				stackId: "s1",
+				stripPathDomains: ["a.io"],
+			}),
+		);
+		await apply(fakeService("new", {}), {
+			domains: ["a.io"],
+			takeOverDomains: true,
+		});
+		expect(updates[0]).toEqual([
+			"rich",
+			{
+				defaultDomainEnabled: false,
+				domainPorts: { "b.io": 9090 },
+				domains: ["b.io"],
+				primaryDomain: null,
+				stripPathDomains: [],
+			},
+		]);
+	});
+
+	test("an owner that can't give a hostname up is refused outright", async () => {
+		await expect(
+			takeOverDomains(
+				[
+					{
+						entry: "ide.dev.example.com",
+						owner: { id: null, kind: "workstation", label: "a workstation" },
+					},
+				] as unknown as Parameters<typeof takeOverDomains>[0],
+				"new",
+				"u1",
+			),
+		).rejects.toThrow("ide.dev.example.com belongs to a workstation");
+	});
+});
+
+describe("release channels through settings", () => {
+	test("configures channels and resyncs the webhook against what was there before", async () => {
+		const configure = mock(async () => {});
+		const sync = mock(async () => {});
+		stub(ReleaseChannelService, "configure", configure);
+		stub(GitWebhookService, "sync", sync);
+		await apply(fakeService("new", {}), {
+			channelBranch: "main",
+			channelsEnabled: true,
+		});
+		expect(configure).toHaveBeenCalledTimes(1);
+		expect(sync).toHaveBeenCalledTimes(1);
+	});
+
+	test("a channel setup the service can't take is a 400, not a crash", async () => {
+		stub(ReleaseChannelService, "configure", async () => {
+			throw new ReleaseChannelError("Channels need a git source.");
+		});
+		await expect(
+			apply(fakeService("new", {}), { channelsEnabled: true }),
+		).rejects.toMatchObject({ message: "Channels need a git source." });
+	});
+
+	test("any other failure propagates as is", async () => {
+		stub(ReleaseChannelService, "configure", async () => {
+			throw new Error("db down");
+		});
+		await expect(
+			apply(fakeService("new", {}), { channelsEnabled: true }),
+		).rejects.toThrow("db down");
+	});
+
+	test("no channel field sent leaves channels alone", async () => {
+		const configure = mock(async () => {});
+		stub(ReleaseChannelService, "configure", configure);
+		await apply(fakeService("new", {}), { name: "renamed" });
+		expect(configure).not.toHaveBeenCalled();
 	});
 });

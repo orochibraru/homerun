@@ -7,7 +7,6 @@
 		Layers,
 		SlidersHorizontal,
 	} from "@lucide/svelte";
-	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
@@ -81,11 +80,6 @@
 	]);
 </script>
 
-<SectionNav
-  label="Environments & Deployments sections"
-  sections={visibleItems(data.uiMode, sections, page.url.pathname)}
-/>
-
-<ErrorBoundary title="This section hit an error while rendering.">
+<SectionNav hubLabel="Environments" label="Environments & Deployments sections" sections={visibleItems(data.uiMode, sections, page.url.pathname)}>
   {@render children()}
-</ErrorBoundary>
+</SectionNav>

@@ -13,7 +13,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
+
+// MinCPUWindow is the shortest interval CPU% is measured over. Callers closer
+// together than this get the previous reading: a window of a few milliseconds
+// holds a jiffy or two, which reads as 0 or 100.
+const MinCPUWindow = time.Second
 
 // GPUStats is the first NVIDIA GPU's reading.
 type GPUStats struct {
@@ -40,11 +46,16 @@ type cpuSample struct {
 	total uint64
 }
 
-// StatsSampler samples host usage. CPU% is a delta against the previous
-// sample, so the sampler keeps the last one; the first call reports 0.
+// StatsSampler samples host usage. CPU% is a delta against a baseline sample
+// at least MinCPUWindow old, so the sampler keeps that baseline and the last
+// percentage; the first call reports 0.
 type StatsSampler struct {
-	mu   sync.Mutex
-	last *cpuSample
+	mu          sync.Mutex
+	last        *cpuSample
+	lastAt      time.Time
+	lastPercent int
+	// Now reads the clock, time.Now when nil.
+	Now func() time.Time
 	// ProcRoot is where /proc lives, "/proc" outside tests.
 	ProcRoot string
 	// RunCommand runs an external command and reports its stdout, real
@@ -68,8 +79,9 @@ func RunCommand(name string, args ...string) (string, bool) {
 	return string(output), true
 }
 
-// Sample reads CPU, memory, disk and GPU usage. Every call replaces the stored
-// CPU sample.
+// Sample reads CPU, memory, disk and GPU usage. A call at least MinCPUWindow
+// after the stored CPU baseline measures against it and replaces it; a sooner
+// one repeats the last percentage.
 //
 // /proc is the real path, since that's what Homerun deploys onto. A host
 // without it falls back to the darwin helpers so a developer running the
@@ -80,12 +92,17 @@ func (s *StatsSampler) Sample() SystemStats {
 
 	if sample, ok := s.sampleCPU(); ok {
 		s.mu.Lock()
-		if s.last != nil && sample.total > s.last.total {
+		now := s.now()
+		switch {
+		case s.last == nil:
+			s.last, s.lastAt = &sample, now
+		case now.Sub(s.lastAt) >= MinCPUWindow && sample.total > s.last.total:
 			idle := float64(sample.idle - s.last.idle)
 			total := float64(sample.total - s.last.total)
-			stats.CPUPercent = Clamp(int(math.Round(100*(1-idle/total))), 0, 100)
+			s.lastPercent = Clamp(int(math.Round(100*(1-idle/total))), 0, 100)
+			s.last, s.lastAt = &sample, now
 		}
-		s.last = &sample
+		stats.CPUPercent = s.lastPercent
 		s.mu.Unlock()
 	} else if percent, ok := s.darwinCPUPercent(); ok {
 		stats.CPUPercent = percent
@@ -108,6 +125,14 @@ func (s *StatsSampler) Sample() SystemStats {
 	}
 	stats.GPU = s.gpu()
 	return stats
+}
+
+// now reads the injected clock, or the real one.
+func (s *StatsSampler) now() time.Time {
+	if s.Now != nil {
+		return s.Now()
+	}
+	return time.Now()
 }
 
 // Clamp bounds value to [low, high].

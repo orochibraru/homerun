@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Activity, ArrowLeft, ScrollText } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
@@ -103,8 +102,6 @@
   {/if}
 </section>
 
-<SectionNav label="Run sections" {sections} />
-
-<ErrorBoundary title="This section hit an error while rendering.">
+<SectionNav hubLabel="Run" label="Run sections" {sections}>
   {@render children()}
-</ErrorBoundary>
+</SectionNav>
