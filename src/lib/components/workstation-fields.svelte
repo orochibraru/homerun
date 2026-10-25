@@ -21,11 +21,24 @@
 		children: Snippet;
 		hosts: { id: string; name: string }[];
 		providers: ConnectedGitProvider[];
+		/** Shows only this step's section (see `WORKSTATION_STEPS`), keeping the others mounted so their values survive; every section shows when unset. */
+		step?: number | null;
 		values: WorkstationFieldValues;
 		wall: Awaited<ReturnType<typeof loginWallOptions>>;
 	}
 
-	const { children, hosts, providers, values, wall }: Props = $props();
+	const {
+		children,
+		hosts,
+		providers,
+		step = null,
+		values,
+		wall,
+	}: Props = $props();
+
+	function shownAt(index: number): string {
+		return step === null || step === index ? "space-y-4" : "hidden";
+	}
 
 	let remoteHostId = $state(untrack(() => values.remoteHostId ?? ""));
 	let current = $state(untrack(() => ({ ...values })));
@@ -44,6 +57,7 @@
 	}
 </script>
 
+<div class={shownAt(0)}>
 <section bind:this={anchor} class="panel space-y-4 rounded-md p-5">
   <div class="grid gap-3 sm:grid-cols-2">
     {@render children()}
@@ -69,7 +83,9 @@
     </div>
   </div>
 </section>
+</div>
 
+<div class={shownAt(1)}>
 <WorkstationRepoFields
   onrepochange={(gitUrl, branch) => {
     repo = { branch, gitUrl };
@@ -82,19 +98,27 @@
   branch={repo.branch}
   gitUrl={repo.gitUrl}
   onapply={apply}
-  target="the Editor and Container sections below"
+  target={step === null ? "the Editor and Container sections below" : "the Editor and Container steps"}
 />
+</div>
 
+<div class={shownAt(2)}>
 {#key applied}
   <WorkstationEditorFields values={current} />
 {/key}
+</div>
 
+<div class={shownAt(3)}>
 <WorkstationGitFields {providers} {values} />
+</div>
 
+<div class={shownAt(4)}>
 {#key applied}
   <WorkstationContainerFields values={current} />
 {/key}
+</div>
 
+<div class={shownAt(5)}>
 <LoginWallSection
   dashboardOrigin={wall.dashboardOrigin}
   emailSignIn={wall.emailSignIn}
@@ -104,3 +128,4 @@
   svc={{ ...values, dnsResolvable: true, id: "" }}
   users={wall.users}
 />
+</div>

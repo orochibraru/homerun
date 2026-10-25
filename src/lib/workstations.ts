@@ -180,3 +180,31 @@ export const DEFAULT_WORKSTATION_FIELDS: WorkstationFieldValues = {
 	port: DEFAULT_WORKSTATION_PORT,
 	remoteHostId: null,
 };
+
+/** The new-workstation stepper's steps, in the order `WorkstationFields` lays its sections out. */
+export const WORKSTATION_STEPS = [
+	{
+		description: "Its name, the domain it opens at and the machine it runs on.",
+		label: "Basics",
+	},
+	{
+		description: "The repository cloned into its home directory, if any.",
+		label: "Repository",
+	},
+	{
+		description: "Which browser IDE it runs and how it's set up.",
+		label: "Editor",
+	},
+	{
+		description: "The identity and credentials git uses inside it.",
+		label: "Git",
+	},
+	{
+		description: "Image, resources and what else runs in the container.",
+		label: "Container",
+	},
+	{
+		description: "Who can open it, then create it.",
+		label: "Access",
+	},
+] as const;
