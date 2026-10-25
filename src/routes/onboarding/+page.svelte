@@ -33,12 +33,32 @@
 	const wizard = new OnboardingWizard(() => ({ data, form }));
 
 	const STEPS: StepperStep[] = [
-		{ icon: Globe, label: "Core" },
-		{ icon: Server, label: "Docker" },
-		{ icon: Cpu, label: "Traefik" },
-		{ icon: Mail, label: "Email" },
-		{ icon: Network, label: "DNS" },
-		{ label: "Review" },
+		{
+			description: "The address and base domain Homerun answers on.",
+			icon: Globe,
+			label: "Core",
+		},
+		{
+			description: "How Homerun reaches the Docker daemon.",
+			icon: Server,
+			label: "Docker",
+		},
+		{
+			description: "The proxy that routes traffic and issues TLS.",
+			icon: Cpu,
+			label: "Traefik",
+		},
+		{
+			description: "How Homerun sends invites and alerts.",
+			icon: Mail,
+			label: "Email",
+		},
+		{
+			description: "Automatic records for the domains you deploy.",
+			icon: Network,
+			label: "DNS",
+		},
+		{ description: "Check everything, then finish setup.", label: "Review" },
 	];
 
 	let activeStep = $state(0);
