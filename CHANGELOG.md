@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.71](https://github.com/orochibraru/homerun/compare/v1.0.70...v1.0.71) (2026-10-25)
+
+### Bug Fixes
+
+- **swarm:** switch to correct endpoint for probing service status (#152)
+  ([60227c8](https://github.com/orochibraru/homerun/commit/60227c897872be1b68c1eca6e92ac2ffa89462f6))
+
+### Code Refactoring
+
+- **worker:** drive Docker through the typed moby SDK (#153)
+  ([2021be1](https://github.com/orochibraru/homerun/commit/2021be1bacd2d7d0e60c29bd4fd961bd56767c7c))
+
 ## [1.0.70](https://github.com/orochibraru/homerun/compare/v1.0.69...v1.0.70) (2026-10-24)
 
 ### Features
