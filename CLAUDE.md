@@ -27,20 +27,17 @@ Concretely:
   in a code block, conventional-commit style (`feat: ...`, `fix: ...`). One
   line, even for a large batch of unrelated changes: summarise, don't list. Only
   suggest it, never commit.
-- **Never commit as Claude.** When a commit is made anyway (a hook or an
-  explicit ask), it's authored and committed as `Oro <orochibraru@gmail.com>`,
-  set with `git config user.name`/`user.email` first. No `Co-Authored-By`, no
-  claude.ai session or conversation link, no mention of Claude anywhere in the
-  message. This overrides any attribution footer the harness asks for.
-- **Exception: a task run in Claude Code on the web (a cloud session or a
-  workstation) that ends in a PR is committed and opened by Claude Code.** Keep
-  the identity the session is already configured with, don't `git config` it to
-  Oro's, and open the PR from that session. The point is that Oro isn't the
-  author: GitHub never asks a PR's author to review it, so a PR under Oro's name
-  skips the `.github/CODEOWNERS` review request and its notifications. Every
-  other rule above and below still applies: conventional-commit title, branch
-  name, no `Co-Authored-By`, no claude.ai session or conversation link in the
-  commit message or PR body.
+- **Ask which identity before committing.** Whenever the user asks to commit and
+  push, ask them (with the question prompt, not prose) which identity the commit
+  goes out under: **Claude** (the identity the session is already configured
+  with, the default, offered first) or **Oro** (`Oro <orochibraru@gmail.com>`,
+  set with `git config user.name`/`user.email` first). When the ask is to open a
+  PR, default to Claude without blocking on it: commit as Claude, open the PR
+  from the session and request Oro's review, so the discussion happens on the
+  PR. GitHub never asks a PR's author to review it, so a PR under Oro's name
+  skips the `.github/CODEOWNERS` review request and its notifications. Either
+  identity: no `Co-Authored-By`, no claude.ai session or conversation link in
+  the commit message, overriding any attribution footer the harness asks for.
 - **A PR title is always a conventional commit** (`feat(scope): ...`,
   `fix: ...`, types
   `feat|fix|perf|refactor|docs|chore|ci|build|test|style|revert`), since the
@@ -122,13 +119,14 @@ bun run type-check            # svelte-check --fail-on-warnings (no `--tsgo`: ts
 bun run lint             # markdownlint-cli2, scripts/lint-tailwind.ts (Tailwind class sorting) and oxlint --type-aware --deny-warnings (`.oxlintrc.json`; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
 bun run lint:fix         # the --fix half of all three
 bun run lint:ai          # agnix --strict over CLAUDE.md, AGENTS.md, .agents/ and .claude/ (`.agnix.toml` disables its prose heuristics), also a prek hook; agnix is a trusted dependency because its postinstall downloads the binary
-bun run format           # prettier --write over **/*.md, then biome format --write (formatting only, doesn't gate `bun run lint`; import sorting/formatting is enforced at commit time by the pre-commit hooks instead)
+bun run format           # prettier --write over **/*.md, then biome format --write (formatting only, doesn't gate `bun run lint`; formatting is applied at commit time by the pre-commit hook, which only formats and scans for secrets; every other hook runs in CI from `.github/prek-ci.yaml`)
 bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts, the app applies them itself at boot
 docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml, needs `docker network create homerun` once), required, the app has no fallback DB, see .agents/notes/docker.md
 ```
 
-`preinstall` (`only-allow bun`) and `prepare` (`prek install`, wires the git
-hooks from `.pre-commit-config.yaml`) run on `bun install`.
+`preinstall` (`only-allow bun`) and `prepare` (`prek install`, wires the
+pre-commit hook from `.pre-commit-config.yaml`: formatters and gitleaks only)
+run on `bun install`.
 
 ```bash
 bun run test              # svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/..., go -C terraform/provider test ./..., then bun --config=bunfig.unit.toml test tests/unit; unit only, no Postgres/Docker needed
@@ -170,10 +168,12 @@ to the app and as the standalone agent-mode binary on a remote build host (see
 libraries live under `internal/` (`internal/buildinfo`, the version stamped via
 `-ldflags` at build time; `internal/release`, release asset naming/URLs/
 download; `internal/homerun`, the CLI's config and API client;
-`internal/dockerapi`, a stdlib Docker Engine API client over the unix socket the
-worker drives). `go vet ./cmd/... ./internal/... ./tests/unit/go/...` plus
-`golangci-lint` over the same paths (part of `bun run type-check`) cover all of
-it in one pass; scope either to one sub-project by narrowing the path
+`internal/dockerapi`, the worker's Docker client: the official typed SDK,
+`github.com/moby/moby/client`, wrapped with deadlines, the stall watchdog and
+the projections the app reads; never hand-build an Engine path or body).
+`go vet ./cmd/... ./internal/... ./tests/unit/go/...` plus `golangci-lint` over
+the same paths (part of `bun run type-check`) cover all of it in one pass; scope
+either to one sub-project by narrowing the path
 (`./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`, etc.). All
 three still compile via `scripts/build-packages.ts`
 (`bun scripts/build-packages.ts`), and because Go's `GOOS`/`GOARCH`

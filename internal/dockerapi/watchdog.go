@@ -5,9 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -67,97 +64,46 @@ func shortID(id string) string {
 	return id
 }
 
-// containerOf is the container id or name a /containers/<id>/... path is
-// about, or "".
-func containerOf(path string) string {
-	rest, ok := strings.CutPrefix(path, "/containers/")
-	if !ok {
-		return ""
-	}
-	id, _, _ := strings.Cut(rest, "/")
-	if id == "create" || id == "json" || id == "prune" {
-		return ""
-	}
-	return id
+// discard drops a control call's result, keeping its error.
+func discard[T any](_ T, err error) error {
+	return err
 }
 
-// timeoutFor is the bound on one control call: SlowTimeout for prunes,
-// `system df` and image removal, twice ControlTimeout for a stop or restart
-// (the daemon waits out the container's own stop grace first), ControlTimeout
-// otherwise.
-func timeoutFor(method, path string) time.Duration {
-	switch {
-	case strings.HasSuffix(path, "/prune"), path == "/system/df",
-		method == http.MethodDelete && strings.HasPrefix(path, "/images/"):
-		return SlowTimeout
-	case strings.HasSuffix(path, "/stop"), strings.HasSuffix(path, "/restart"), path == "/swarm/init":
-		return 2 * ControlTimeout
-	}
-	return ControlTimeout
-}
-
-// stallFrom turns a call that failed because its own deadline passed into a
-// StallError, leaving every other error (the caller's own cancellation
-// included) as it was.
-func stallFrom(parent, call context.Context, err error, method, path string, idle time.Duration) error {
-	if err == nil || parent.Err() != nil || !errors.Is(call.Err(), context.DeadlineExceeded) {
-		return err
-	}
-	return &StallError{Call: method + " " + path, Container: containerOf(path), Idle: idle}
-}
-
-// bounded sends one call under timeout, which covers reading its body too:
-// the deadline is released when the caller closes the body.
-func (c *Client) bounded(
-	ctx context.Context,
-	timeout time.Duration,
-	method, path string,
-	query url.Values,
-	body any,
-	auth *AuthConfig,
-) (*http.Response, error) {
-	reader, contentType, err := jsonBody(body)
-	if err != nil {
-		return nil, err
-	}
+// control runs one control call under timeout, logging it and turning a call
+// cut by its own deadline into a StallError naming container, when the call is
+// about one. The caller's own cancellation stays a plain context error.
+func control[T any](ctx context.Context, timeout time.Duration, call, container string, run func(context.Context) (T, error)) (T, error) {
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
-	response, err := c.exchange(callCtx, method, path, query, reader, contentType, auth)
+	defer cancel()
+	started := time.Now()
+	result, err := run(callCtx)
+	logCall(call, started, err)
 	if err != nil {
-		cancel()
-		return nil, stallFrom(ctx, callCtx, err, method, path, timeout)
+		if ctx.Err() == nil && errors.Is(callCtx.Err(), context.DeadlineExceeded) {
+			return result, &StallError{Call: call, Container: container, Idle: timeout}
+		}
+		return result, normalize(err)
 	}
 	activity.Touch(ctx)
-	response.Body = &boundedBody{
-		ReadCloser: response.Body, cancel: cancel, call: callCtx, method: method, parent: ctx, path: path, timeout: timeout,
+	return result, nil
+}
+
+// streaming opens a streaming call guarded by the stall watchdog rather than a
+// deadline, and hands back its body wrapped so that bytes read count as
+// progress and closing it stops the watchdog. alive vouches for a stream
+// that's legitimately quiet; nil means only moving bytes count. open gets the
+// watch too, for a call whose request body is itself a stream.
+func streaming(ctx context.Context, call, container string, alive probe, open func(context.Context, *watch) (io.ReadCloser, error)) (io.ReadCloser, error) {
+	w, callCtx := newWatch(ctx, call, container, alive)
+	started := time.Now()
+	body, err := open(callCtx, w)
+	logCall(call, started, err)
+	if err != nil {
+		w.stop()
+		return nil, normalize(w.explain(err))
 	}
-	return response, nil
-}
-
-type boundedBody struct {
-	io.ReadCloser
-	call    context.Context
-	cancel  context.CancelFunc
-	method  string
-	parent  context.Context
-	path    string
-	timeout time.Duration
-}
-
-// Read reads the body, reporting a read cut by the call's deadline as a
-// StallError.
-func (b *boundedBody) Read(buffer []byte) (int, error) {
-	n, err := b.ReadCloser.Read(buffer)
-	if err != nil && !errors.Is(err, io.EOF) {
-		err = stallFrom(b.parent, b.call, err, b.method, b.path, b.timeout)
-	}
-	return n, err
-}
-
-// Close closes the body and releases the call's deadline.
-func (b *boundedBody) Close() error {
-	err := b.ReadCloser.Close()
-	b.cancel()
-	return err
+	w.touch()
+	return &watchedBody{ReadCloser: body, w: w}, nil
 }
 
 // probe reports whether whatever a quiet stream is waiting on is still alive
@@ -200,15 +146,12 @@ type watch struct {
 
 // newWatch starts the watchdog for call under ctx and returns it along with
 // the context the call itself must run under.
-func newWatch(ctx context.Context, method, path, container string, alive probe) (*watch, context.Context) {
+func newWatch(ctx context.Context, call, container string, alive probe) (*watch, context.Context) {
 	callCtx, cancel := context.WithCancel(ctx)
 	probeCtx, cancelProbe := context.WithCancel(ctx)
 	w := &watch{
-		call: method + " " + path, cancel: cancel, cancelProbe: cancelProbe, container: container,
+		call: call, cancel: cancel, cancelProbe: cancelProbe, container: container,
 		done: make(chan struct{}), exited: make(chan struct{}), limit: StallTimeout, parent: ctx, probeCtx: probeCtx,
-	}
-	if w.container == "" {
-		w.container = containerOf(path)
 	}
 	w.touch()
 	go w.run(alive)
@@ -307,48 +250,4 @@ func (b *watchedBody) Close() error {
 	err := b.ReadCloser.Close()
 	b.w.stop()
 	return err
-}
-
-// stream sends a streaming call with an optional JSON body, guarded by the
-// stall watchdog rather than a deadline. alive vouches for a stream that's
-// legitimately quiet; nil means only moving bytes count.
-func (c *Client) stream(
-	ctx context.Context,
-	method, path string,
-	query url.Values,
-	body any,
-	auth *AuthConfig,
-	alive probe,
-) (*http.Response, error) {
-	reader, contentType, err := jsonBody(body)
-	if err != nil {
-		return nil, err
-	}
-	return c.upload(ctx, method, path, query, reader, contentType, auth, alive)
-}
-
-// upload sends a streaming call whose request body is itself a stream (an
-// image load), guarded by the stall watchdog: bytes moving either way count
-// as progress.
-func (c *Client) upload(
-	ctx context.Context,
-	method, path string,
-	query url.Values,
-	body io.Reader,
-	contentType string,
-	auth *AuthConfig,
-	alive probe,
-) (*http.Response, error) {
-	w, callCtx := newWatch(ctx, method, path, "", alive)
-	if body != nil {
-		body = watchedReader{source: body, w: w}
-	}
-	response, err := c.exchange(callCtx, method, path, query, body, contentType, auth)
-	if err != nil {
-		w.stop()
-		return nil, w.explain(err)
-	}
-	w.touch()
-	response.Body = &watchedBody{ReadCloser: response.Body, w: w}
-	return response, nil
 }

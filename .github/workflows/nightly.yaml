@@ -54,7 +54,7 @@ jobs:
         env:
           SKIP: gen,oxlint,markdownlint,lint-tailwind,test-unit,check
         with:
-          extra-args: --all-files --no-fail-fast
+          extra-args: --all-files --no-fail-fast --config .github/prek-ci.yaml
 
   version:
     name: Compute Nightly Version

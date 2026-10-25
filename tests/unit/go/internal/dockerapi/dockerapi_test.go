@@ -15,6 +15,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/moby/moby/api/types/swarm"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 )
 
@@ -43,6 +44,9 @@ func newDaemon(t *testing.T, status int, body string) (*dockerapi.Client, *daemo
 		d.calls = append(d.calls, call{r.Method, r.URL.Path, r.URL.Query(), r.Header.Clone(), raw})
 		status, body := d.status, d.body
 		d.mu.Unlock()
+		if strings.HasPrefix(body, "{") || strings.HasPrefix(body, "[") {
+			w.Header().Set("Content-Type", "application/json")
+		}
 		w.WriteHeader(status)
 		_, _ = w.Write([]byte(body))
 	}))
@@ -89,35 +93,34 @@ func TestPing(t *testing.T) {
 	if err := client.Ping(context.Background()); err != nil {
 		t.Fatalf("Ping: %v", err)
 	}
-	d.expect(t, http.MethodGet, "/_ping", nil)
+	d.expect(t, http.MethodHead, "/_ping", nil)
 }
 
 func TestAPIErrors(t *testing.T) {
 	client, d := newDaemon(t, http.StatusInternalServerError, `{"message":"daemon exploded"}`)
 	err := client.Ping(context.Background())
-	var apiErr *dockerapi.APIError
-	if !errors.As(err, &apiErr) || apiErr.Status != 500 || apiErr.Message != "daemon exploded" {
-		t.Fatalf("JSON error body: err = %v, want *APIError 500 daemon exploded", err)
-	}
-	if err.Error() != "docker: 500 daemon exploded" {
-		t.Errorf("APIError.Error() = %q", err.Error())
+	if dockerapi.Status(err) != http.StatusInternalServerError || !strings.Contains(err.Error(), "daemon exploded") {
+		t.Fatalf("JSON error body: err = %v (status %d), want 500 daemon exploded", err, dockerapi.Status(err))
 	}
 
 	d.set(http.StatusInternalServerError, "  plain failure\n")
 	err = client.Ping(context.Background())
-	if !errors.As(err, &apiErr) || apiErr.Message != "plain failure" {
+	if err == nil || !strings.Contains(err.Error(), "plain failure") {
 		t.Errorf("non-JSON error body: err = %v, want message \"plain failure\"", err)
 	}
 
-	d.set(http.StatusInternalServerError, `{"other":"x"}`)
-	err = client.Ping(context.Background())
-	if !errors.As(err, &apiErr) || apiErr.Message != `{"other":"x"}` {
-		t.Errorf("JSON without message: err = %v, want the raw body", err)
+	d.set(http.StatusConflict, `{"message":"in use"}`)
+	if err := client.Ping(context.Background()); dockerapi.Status(err) != http.StatusConflict {
+		t.Errorf("409: status = %d, want 409", dockerapi.Status(err))
 	}
 
-	d.set(http.StatusNotFound, "")
-	if err := client.Ping(context.Background()); !errors.Is(err, dockerapi.ErrNotFound) {
+	d.set(http.StatusNotFound, `{"message":"no such thing"}`)
+	err = client.Ping(context.Background())
+	if !errors.Is(err, dockerapi.ErrNotFound) || dockerapi.Status(err) != http.StatusNotFound {
 		t.Errorf("404: err = %v, want ErrNotFound", err)
+	}
+	if dockerapi.Status(nil) != 0 || dockerapi.Status(errors.New("dropped")) != 0 {
+		t.Error("an error that isn't a daemon answer has no status")
 	}
 }
 
@@ -143,12 +146,6 @@ func TestTransportErrors(t *testing.T) {
 	}
 	if err := client.PushImage(ctx, "a", "b", dockerapi.AuthConfig{}, nil); err == nil {
 		t.Error("PushImage against a closed server succeeded")
-	}
-	if _, err := dockerapi.NewWithHTTP(http.DefaultClient, "http://bad host").ImageExists(ctx, "x"); err == nil {
-		t.Error("request with an unparseable base URL succeeded")
-	}
-	if err := client.Call(ctx, http.MethodPost, "/x", nil, func() {}); err == nil {
-		t.Error("request with an unmarshalable body succeeded")
 	}
 }
 
@@ -240,7 +237,7 @@ func TestPullImage(t *testing.T) {
 	if err := client.PullImage(ctx, "alpine", nil, nil); err != nil {
 		t.Fatalf("PullImage without auth or callback: %v", err)
 	}
-	got = d.expect(t, http.MethodPost, "/images/create", map[string][]string{"fromImage": {"alpine"}, "tag": {"latest"}})
+	got = d.expect(t, http.MethodPost, "/images/create", map[string][]string{"fromImage": {"docker.io/library/alpine"}, "tag": {"latest"}})
 	if _, ok := got.header["X-Registry-Auth"]; ok {
 		t.Error("X-Registry-Auth sent without auth")
 	}
@@ -303,7 +300,7 @@ func TestSaveImage(t *testing.T) {
 	if string(body) != "tarball-bytes" {
 		t.Errorf("SaveImage streamed %q", body)
 	}
-	d.expect(t, http.MethodGet, "/images/app:v1/get", nil)
+	d.expect(t, http.MethodGet, "/images/get", map[string][]string{"names": {"app:v1"}})
 
 	d.set(http.StatusNotFound, "")
 	if _, err := client.SaveImage(context.Background(), "gone"); !errors.Is(err, dockerapi.ErrNotFound) {
@@ -353,8 +350,7 @@ func TestCreateContainer(t *testing.T) {
 		t.Error("CreateContainer with a bad response body succeeded")
 	}
 	d.set(http.StatusConflict, `{"message":"name in use"}`)
-	var apiErr *dockerapi.APIError
-	if _, err := client.CreateContainer(context.Background(), config); !errors.As(err, &apiErr) || apiErr.Message != "name in use" {
+	if _, err := client.CreateContainer(context.Background(), config); dockerapi.Status(err) != http.StatusConflict || !strings.Contains(err.Error(), "name in use") {
 		t.Errorf("CreateContainer on 409 = %v", err)
 	}
 }
@@ -373,7 +369,7 @@ func TestWaitContainer(t *testing.T) {
 	if err != nil || code != 3 {
 		t.Fatalf("WaitContainer = %d, %v; want 3", code, err)
 	}
-	d.expect(t, http.MethodPost, "/containers/c1/wait", nil)
+	d.expect(t, http.MethodPost, "/containers/c1/wait", map[string][]string{"condition": {"not-running"}})
 
 	d.set(http.StatusOK, "garbage")
 	if _, err := client.WaitContainer(context.Background(), "c1"); err == nil {
@@ -511,9 +507,6 @@ func (w errWriter) Write([]byte) (int, error) { return 0, w.err }
 
 func TestNew(t *testing.T) {
 	client := dockerapi.New("/nonexistent/docker.sock")
-	if client.Base != "http://docker" {
-		t.Errorf("dockerapi.New base = %q", client.Base)
-	}
 	if err := client.Ping(context.Background()); err == nil {
 		t.Error("Ping over a missing socket succeeded")
 	}
@@ -557,7 +550,7 @@ func TestCountRunningSwarmTasksAsksForStatus(t *testing.T) {
 	if err != nil || running != 2 {
 		t.Fatalf("CountRunningSwarmTasks = %d, %v", running, err)
 	}
-	d.expect(t, http.MethodGet, "/services", map[string][]string{"status": {"true"}})
+	d.expect(t, http.MethodGet, "/services", map[string][]string{"filters": {`{"id":{"s1":true}}`}, "status": {"true"}})
 
 	d.set(200, `[{"ID":"s1"}]`)
 	if running, err := client.CountRunningSwarmTasks(context.Background(), "s1"); err != nil || running != 0 {
@@ -574,7 +567,7 @@ func TestRemoveSwarmNodeForces(t *testing.T) {
 	if err := client.RemoveSwarmNode(context.Background(), "n1"); err != nil {
 		t.Fatal(err)
 	}
-	d.expect(t, http.MethodDelete, "/nodes/n1", map[string][]string{"force": {"true"}})
+	d.expect(t, http.MethodDelete, "/nodes/n1", map[string][]string{"force": {"1"}})
 }
 
 func TestSetSwarmNodeLabelsKeepsTheRestOfTheSpec(t *testing.T) {
@@ -597,14 +590,14 @@ func TestSwarmServiceSendsRegistryAuthToWorkers(t *testing.T) {
 	ctx := context.Background()
 	auth := &dockerapi.AuthConfig{Password: "pw", ServerAddress: "ghcr.io", Username: "me"}
 	client, d := newDaemon(t, http.StatusCreated, `{"ID":"s1"}`)
-	id, err := client.CreateSwarmService(ctx, map[string]any{"Name": "app"}, auth)
+	id, err := client.CreateSwarmService(ctx, swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "app"}, TaskTemplate: swarm.TaskSpec{ContainerSpec: &swarm.ContainerSpec{Image: "app"}}}, auth)
 	if err != nil || id != "s1" {
 		t.Fatalf("CreateSwarmService = %q, %v", id, err)
 	}
 	created := d.expect(t, http.MethodPost, "/services/create", nil)
 
 	d.set(http.StatusOK, `{}`)
-	if err := client.UpdateSwarmService(ctx, "s1", 7, map[string]any{"Name": "app"}, auth); err != nil {
+	if err := client.UpdateSwarmService(ctx, "s1", 7, swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "app"}, TaskTemplate: swarm.TaskSpec{ContainerSpec: &swarm.ContainerSpec{Image: "app"}}}, auth); err != nil {
 		t.Fatalf("UpdateSwarmService: %v", err)
 	}
 	updated := d.expect(t, http.MethodPost, "/services/s1/update", map[string][]string{"version": {"7"}})
@@ -617,7 +610,7 @@ func TestSwarmServiceSendsRegistryAuthToWorkers(t *testing.T) {
 		}
 	}
 
-	if _, err := client.CreateSwarmService(ctx, map[string]any{"Name": "app"}, nil); err != nil {
+	if _, err := client.CreateSwarmService(ctx, swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "app"}, TaskTemplate: swarm.TaskSpec{ContainerSpec: &swarm.ContainerSpec{Image: "app"}}}, nil); err != nil {
 		t.Fatalf("CreateSwarmService without auth: %v", err)
 	}
 	if _, ok := d.last(t).header["X-Registry-Auth"]; ok {

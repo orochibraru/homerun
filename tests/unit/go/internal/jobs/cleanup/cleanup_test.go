@@ -56,7 +56,7 @@ func newFakeDaemon(t *testing.T, routes map[string]string) (*dockerapi.Client, *
 			if strings.HasSuffix(r.URL.Path, "/start") {
 				stdout, exit := d.execOut(d.execs[index])
 				d.exits[index] = exit
-				_, _ = w.Write(testsupport.DockerFrame(1, stdout))
+				testsupport.Hijack(w, r, testsupport.DockerFrame(1, stdout))
 				return
 			}
 			_, _ = fmt.Fprintf(w, `{"ExitCode":%d}`, d.exits[index])
@@ -64,6 +64,10 @@ func newFakeDaemon(t *testing.T, routes map[string]string) (*dockerapi.Client, *
 		}
 		if body, ok := d.routes[r.Method+" "+r.URL.Path]; ok {
 			_, _ = io.WriteString(w, body)
+			return
+		}
+		if r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/images/") {
+			_, _ = io.WriteString(w, `[{"Deleted":"`+strings.TrimPrefix(r.URL.Path, "/images/")+`"}]`)
 			return
 		}
 		if r.Method == http.MethodDelete || r.Method == http.MethodPost {
@@ -104,18 +108,18 @@ func runSpec(t *testing.T, docker *dockerapi.Client, spec cleanup.Spec) (map[str
 }
 
 const df = `{
-	"Images": [
+	"ImageUsage": {"Items": [
 		{"Id": "sha256:used", "Containers": 1, "RepoTags": ["app:1"], "Size": 1},
 		{"Id": "sha256:dangling", "Containers": 0, "RepoTags": ["<none>:<none>"], "Size": 10},
 		{"Id": "sha256:tagged", "Containers": 0, "RepoTags": ["old:1"], "Size": 20},
 		{"Id": "sha256:retained", "Containers": 0, "RepoTags": null, "Size": 40}
-	],
-	"Volumes": [
+	]},
+	"VolumeUsage": {"Items": [
 		{"Name": "in-use", "UsageData": {"RefCount": 1, "Size": 10}},
 		{"Name": "orphan", "UsageData": {"RefCount": 0, "Size": 20}},
 		{"Name": "homerun-vol-db", "UsageData": {"RefCount": 0, "Size": 30}},
 		{"Name": "unknown-usage", "UsageData": null}
-	]
+	]}
 }`
 
 func TestVolumesNeverPruneAMountedVolume(t *testing.T) {
@@ -149,7 +153,7 @@ func TestVolumesFallBackToTheDaemonPrune(t *testing.T) {
 func TestImagesKeepRetainedRevisions(t *testing.T) {
 	docker, daemon := newFakeDaemon(t, map[string]string{"GET /system/df": df})
 	result, _ := runSpec(t, docker, cleanup.Spec{Action: "pruneImages", All: true, KeepImageIDs: []string{"sha256:retained"}})
-	if want := []string{"DELETE /images/sha256:dangling?force=0", "DELETE /images/sha256:tagged?force=0"}; !reflect.DeepEqual(daemon.sent("DELETE"), want) {
+	if want := []string{"DELETE /images/sha256:dangling", "DELETE /images/sha256:tagged"}; !reflect.DeepEqual(daemon.sent("DELETE"), want) {
 		t.Errorf("removed = %v, want %v", daemon.sent("DELETE"), want)
 	}
 	if !reflect.DeepEqual(result, cleanup.PruneSummary(2, 30)) {
@@ -158,7 +162,7 @@ func TestImagesKeepRetainedRevisions(t *testing.T) {
 
 	docker, daemon = newFakeDaemon(t, map[string]string{"GET /system/df": df})
 	runSpec(t, docker, cleanup.Spec{Action: "pruneImages", KeepImageIDs: []string{"sha256:retained"}})
-	if want := []string{"DELETE /images/sha256:dangling?force=0"}; !reflect.DeepEqual(daemon.sent("DELETE"), want) {
+	if want := []string{"DELETE /images/sha256:dangling"}; !reflect.DeepEqual(daemon.sent("DELETE"), want) {
 		t.Errorf("dangling-only removed = %v", daemon.sent("DELETE"))
 	}
 }
@@ -189,9 +193,12 @@ func TestReclaimStackNetworksOnlyTakesOrphans(t *testing.T) {
 	docker, daemon := newFakeDaemon(t, map[string]string{"GET /networks": `[
 		{"Id": "n1", "Name": "homerun-stack-live"},
 		{"Id": "n2", "Name": "homerun-stack-gone"},
-		{"Id": "n3", "Name": "homerun-stack-busy", "Containers": {"c": {}}},
+		{"Id": "n3", "Name": "homerun-stack-busy"},
 		{"Id": "n4", "Name": "bridge"}
-	]`})
+	]`,
+		"GET /networks/n2": `{"Id": "n2", "Containers": {}}`,
+		"GET /networks/n3": `{"Id": "n3", "Containers": {"c": {}}}`,
+	})
 	result, _ := runSpec(t, docker, cleanup.Spec{Action: "reclaimStackNetworks", LiveStackIDs: []string{"live"}, StackNetworkPrefix: "homerun-stack-"})
 	if want := []string{"DELETE /networks/n2"}; !reflect.DeepEqual(daemon.sent("DELETE"), want) {
 		t.Errorf("removed = %v", daemon.sent("DELETE"))

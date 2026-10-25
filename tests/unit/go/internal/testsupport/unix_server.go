@@ -24,7 +24,7 @@ func ServeUnixSocket(t *testing.T, handler http.Handler) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := httptest.NewUnstartedServer(handler)
+	server := httptest.NewUnstartedServer(Engine(handler))
 	server.Listener = listener
 	server.Start()
 	t.Cleanup(server.Close)

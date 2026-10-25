@@ -1139,12 +1139,12 @@ the HTTP/1.1 Upgrade request itself, and treat the socket as the raw duplex TTY
 stream once the `101 UPGRADED` header block had been read past. That workaround
 is gone along with the rest of the app's dockerode usage — Go has no such bug,
 `internal/dockerapi`'s `CreateExec`/`StartExecHijacked`
-(`internal/dockerapi/exec.go`) do the Engine's normal hijack protocol directly
-over the daemon's unix socket with the standard library's own connection
-hijacking, no manual HTTP framing needed, and `internal/workerapi/terminal.go`'s
-`TerminalHub.Open`/`pump` are what actually run it. **Verified against a real
-container end-to-end** (real command in, real output back) round-tripping
-through the worker's control API before wiring it into the app's routes.
+(`internal/dockerapi/exec.go`) do the Engine's normal hijack protocol through
+the typed SDK's `ExecAttach`, no manual HTTP framing needed, and
+`internal/workerapi/terminal.go`'s `TerminalHub.Open`/`pump` are what actually
+run it. **Verified against a real container end-to-end** (real command in, real
+output back) round-tripping through the worker's control API before wiring it
+into the app's routes.
 
 Audit trail is session-level, not per-keystroke: open/close are logged via the
 standard `Logger` pattern on the app side (service/container/session/user ids)

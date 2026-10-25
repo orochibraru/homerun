@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moby/moby/api/types/container"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/jobs/imagescan"
 	"github.com/orochibraru/homerun/internal/tracing"
@@ -367,13 +368,14 @@ func (r *run) loadFromMirror(ctx context.Context, ref string) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, mirrorTimeout)
 	defer cancel()
-	id, err := r.docker.CreateContainerFrom(ctx, "", map[string]any{
-		"Cmd":        mirror.Archive.Cmd,
-		"Entrypoint": mirror.Archive.Entrypoint,
-		"HostConfig": map[string]any{"NetworkMode": r.spec.Network},
-		"Image":      mirror.SkopeoImage,
-		"Labels":     dockerapi.HelperLabels(nil),
-		"Tty":        false,
+	id, err := r.docker.CreateContainerFrom(ctx, "", container.CreateRequest{
+		Config: &container.Config{
+			Cmd:        mirror.Archive.Cmd,
+			Entrypoint: mirror.Archive.Entrypoint,
+			Image:      mirror.SkopeoImage,
+			Labels:     dockerapi.HelperLabels(nil),
+		},
+		HostConfig: &container.HostConfig{NetworkMode: container.NetworkMode(r.spec.Network)},
 	})
 	if err != nil {
 		return err

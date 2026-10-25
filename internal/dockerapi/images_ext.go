@@ -4,11 +4,10 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
-	"net/http"
-	"net/url"
 	"strings"
+
+	"github.com/moby/moby/client"
 )
 
 // ImageInspect is the part of an image's inspect a deploy reads.
@@ -40,68 +39,64 @@ func (i *ImageInspect) Digest() string {
 	return digest
 }
 
+// inspectImage is the daemon's full typed inspect of an image.
+func (c *Client) inspectImage(ctx context.Context, ref string) (client.ImageInspectResult, error) {
+	return control(ctx, ControlTimeout, "inspect image "+ref, "", func(ctx context.Context) (client.ImageInspectResult, error) {
+		return c.api.ImageInspect(ctx, ref)
+	})
+}
+
 // InspectImage inspects ref, returning ErrNotFound when the daemon lacks it.
 func (c *Client) InspectImage(ctx context.Context, ref string) (*ImageInspect, error) {
-	var inspected ImageInspect
-	if err := c.decode(ctx, http.MethodGet, "/images/"+ref+"/json", nil, nil, &inspected); err != nil {
+	result, err := c.inspectImage(ctx, ref)
+	if err != nil {
 		return nil, err
 	}
-	return &inspected, nil
+	inspected := &ImageInspect{Architecture: result.Architecture, ID: result.ID, RepoDigests: result.RepoDigests}
+	if config := result.Config; config != nil {
+		inspected.Config.Cmd = config.Cmd
+		inspected.Config.Entrypoint = config.Entrypoint
+		if config.Healthcheck != nil {
+			inspected.Config.Healthcheck = &struct {
+				Test []string `json:"Test"`
+			}{Test: config.Healthcheck.Test}
+		}
+	}
+	return inspected, nil
 }
 
 // PullImageEvents pulls ref like PullImage, but hands each progress event's
 // layer id along with its status, for a caller that dedupes per layer.
 func (c *Client) PullImageEvents(ctx context.Context, ref string, auth *AuthConfig, onEvent func(id, status string)) error {
-	repository, tag := SplitRef(ref)
-	response, err := c.stream(ctx, http.MethodPost, "/images/create",
-		url.Values{"fromImage": {repository}, "tag": {tag}}, nil, auth, nil)
+	encoded, err := auth.encode()
 	if err != nil {
 		return err
 	}
-	defer func() { _ = response.Body.Close() }()
-	return followEvents(response.Body, onEvent)
+	body, err := streaming(ctx, "pull "+ref, "", nil, func(ctx context.Context, _ *watch) (io.ReadCloser, error) {
+		return c.api.ImagePull(ctx, ref, client.ImagePullOptions{RegistryAuth: encoded})
+	})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = body.Close() }()
+	return followProgress(body, onEvent)
 }
 
 // LoadImage loads a `docker save` tarball into the daemon, consuming archive
 // as it arrives.
 func (c *Client) LoadImage(ctx context.Context, archive io.Reader) error {
-	response, err := c.upload(ctx, http.MethodPost, "/images/load", url.Values{"quiet": {"1"}},
-		archive, "application/x-tar", nil, c.daemonAnswers)
+	body, err := streaming(ctx, "load image", "", c.daemonAnswers, func(ctx context.Context, w *watch) (io.ReadCloser, error) {
+		return c.api.ImageLoad(ctx, watchedReader{source: archive, w: w}, client.ImageLoadWithQuiet(true))
+	})
 	if err != nil {
 		return err
 	}
-	defer func() { _ = response.Body.Close() }()
-	_, err = io.Copy(io.Discard, response.Body)
+	defer func() { _ = body.Close() }()
+	_, err = io.Copy(io.Discard, body)
 	return err
 }
 
-// followEvents reads a progress stream to the end like followProgress,
-// forwarding each event's id and status.
-func followEvents(body io.Reader, onEvent func(id, status string)) error {
-	decoder := json.NewDecoder(bufio.NewReader(body))
-	for {
-		var message struct {
-			Error       string `json:"error"`
-			ErrorDetail struct {
-				Message string `json:"message"`
-			} `json:"errorDetail"`
-			ID     string `json:"id"`
-			Status string `json:"status"`
-		}
-		if err := decoder.Decode(&message); err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
-			return err
-		}
-		if message.ErrorDetail.Message != "" {
-			return errors.New(message.ErrorDetail.Message)
-		}
-		if message.Error != "" {
-			return errors.New(message.Error)
-		}
-		if onEvent != nil && message.Status != "" {
-			onEvent(message.ID, message.Status)
-		}
-	}
+// newJSONDecoder decodes a stream of JSON messages off body.
+func newJSONDecoder(body io.Reader) *json.Decoder {
+	return json.NewDecoder(bufio.NewReader(body))
 }

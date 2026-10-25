@@ -76,8 +76,9 @@ jobs:
       - name: Sync SvelteKit
         run: bun run svelte-kit sync
 
-      # Same .pre-commit-config.yaml the local pre-commit hook runs: hygiene,
-      # actionlint, hadolint, gitleaks, typos, and the formatters. The fixer
+      # .github/prek-ci.yaml, the full hook set (the local pre-commit hook only
+      # formats and scans for secrets): hygiene, actionlint, hadolint,
+      # gitleaks, typos, and the formatters. The fixer
       # hooks autofix in place, so CI fails on any file one of them had to
       # modify. --no-fail-fast reports every failing hook in one run rather
       # than stopping at the first. The heavy gates below are skipped here and
@@ -87,7 +88,7 @@ jobs:
         env:
           SKIP: gen,oxlint,markdownlint,lint-tailwind,test-unit,check
         with:
-          extra-args: --all-files --no-fail-fast
+          extra-args: --all-files --no-fail-fast --config .github/prek-ci.yaml
 
       - name: Lint
         run: bun run lint

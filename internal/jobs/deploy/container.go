@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/tracing"
 	"go.opentelemetry.io/otel/attribute"
@@ -127,11 +129,15 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage, recreate 
 	if healthcheck := r.healthcheck(check); healthcheck != nil {
 		body["Healthcheck"] = healthcheck
 	}
+	request, err := dockerapi.Decode[container.CreateRequest](body)
+	if err != nil {
+		return "", fmt.Errorf("the container template isn't a valid create request: %w", err)
+	}
 	name := workload.NamePrefix + "-" + randomSuffix()
 	r.progress.line("Creating container...")
 	var id string
 	if err := tracing.Stage(ctx, "create container", func(ctx context.Context) error {
-		id, err = r.docker.CreateContainerFrom(ctx, name, body)
+		id, err = r.docker.CreateContainerFrom(ctx, name, request)
 		return err
 	}, attribute.String("homerun.container.name", name), attribute.String("homerun.deploy.image", image.ref())); err != nil {
 		return "", err
@@ -166,11 +172,12 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage, recreate 
 
 // ensureBridge creates the named bridge network if it doesn't already exist.
 func (r *run) ensureBridge(ctx context.Context, name string) error {
-	_, err := r.docker.EnsureNetwork(ctx, map[string]any{
-		"CheckDuplicate": true,
-		"Driver":         "bridge",
-		"Labels":         map[string]string{managedLabel: "true"},
-		"Name":           name,
+	_, err := r.docker.EnsureNetwork(ctx, dockerapi.NetworkSpec{
+		Name: name,
+		NetworkCreateOptions: client.NetworkCreateOptions{
+			Driver: "bridge",
+			Labels: map[string]string{managedLabel: "true"},
+		},
 	})
 	return err
 }

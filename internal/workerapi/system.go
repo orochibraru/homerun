@@ -92,11 +92,11 @@ func (s *Server) listNetworks(w http.ResponseWriter, r *http.Request) error {
 // createNetwork creates a network from the app's own Engine create body,
 // treating one that already exists as success.
 func (s *Server) createNetwork(w http.ResponseWriter, r *http.Request) error {
-	var body map[string]any
+	var body dockerapi.NetworkSpec
 	if !httpapi.DecodeJSON(w, r, &body) {
 		return nil
 	}
-	if body["Name"] == nil {
+	if body.Name == "" {
 		return httpapi.Invalid(w, "Invalid request body",
 			[]httpapi.ValidationIssue{{Message: "Name is required", Path: []string{"Name"}}})
 	}

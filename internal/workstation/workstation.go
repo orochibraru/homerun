@@ -23,6 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/logging"
 )
@@ -301,8 +304,8 @@ func (m *Manager) pull(ctx context.Context, id, image string) error {
 	return nil
 }
 
-// CreateBody is the Engine create body for workstation id.
-func CreateBody(id string, spec Spec) map[string]any {
+// CreateBody is the Engine create request for workstation id.
+func CreateBody(id string, spec Spec) container.CreateRequest {
 	env := make([]string, 0, len(spec.Env))
 	for key, value := range spec.Env {
 		env = append(env, key+"="+value)
@@ -313,34 +316,26 @@ func CreateBody(id string, spec Spec) map[string]any {
 	}
 	labels[dockerapi.ManagedLabel] = "true"
 	labels[IDLabel] = id
-	port := strconv.Itoa(spec.Port) + "/tcp"
-	hostConfig := map[string]any{
-		"Binds":         []string{VolumeName(id) + ":" + spec.HomePath},
-		"RestartPolicy": map[string]any{"Name": "unless-stopped"},
-	}
-	if spec.NanoCPUs > 0 {
-		hostConfig["NanoCpus"] = spec.NanoCPUs
-	}
-	if spec.MemoryBytes > 0 {
-		hostConfig["Memory"] = spec.MemoryBytes
-	}
-	if spec.Network != "" {
-		hostConfig["NetworkMode"] = spec.Network
+	port, _ := network.ParsePort(strconv.Itoa(spec.Port) + "/tcp")
+	hostConfig := &container.HostConfig{
+		Binds:         []string{VolumeName(id) + ":" + spec.HomePath},
+		NetworkMode:   container.NetworkMode(spec.Network),
+		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
+		Resources:     container.Resources{Memory: spec.MemoryBytes, NanoCPUs: spec.NanoCPUs},
 	}
 	if spec.Publish {
-		hostConfig["PortBindings"] = map[string]any{port: []map[string]string{{"HostPort": ""}}}
+		hostConfig.PortBindings = network.PortMap{port: []network.PortBinding{{}}}
 	}
-	body := map[string]any{
-		"Env":          env,
-		"ExposedPorts": map[string]any{port: map[string]any{}},
-		"HostConfig":   hostConfig,
-		"Image":        spec.Image,
-		"Labels":       labels,
+	return container.CreateRequest{
+		Config: &container.Config{
+			Cmd:          spec.Args,
+			Env:          env,
+			ExposedPorts: network.PortSet{port: struct{}{}},
+			Image:        spec.Image,
+			Labels:       labels,
+		},
+		HostConfig: hostConfig,
 	}
-	if len(spec.Args) > 0 {
-		body["Cmd"] = spec.Args
-	}
-	return body
 }
 
 const cloneScript = `set -e

@@ -29,7 +29,7 @@ kept out of the root `go.mod` deliberately, so its ~210 indirect dependencies
 don't feed minimum-version-selection into the binaries this repo ships), and run
 via `go tool`, not installed as a standalone binary:
 `go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...`
-(part of `bun run type-check` and a pre-commit hook, below). Bump it with
+(part of `bun run type-check`). Bump it with
 `cd tools/go && go get -tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint@vX`.
 
 mise can't install Docker itself, only check it: `mise run docker` (also run
@@ -106,23 +106,22 @@ into the worker, see [`cmd/worker/README.md`](cmd/worker/README.md).
 
 ## Before every change: the hard gates
 
-These are enforced by git hooks, not just CI. The hooks are run by
-[prek](https://github.com/j178/prek) from `.pre-commit-config.yaml`; prek comes
-from `mise install`, then `bun install` wires them up for you (`prepare` runs
-`prek install`, which installs the pre-commit, commit-msg and pre-push hooks). A
-commit only runs the fast, per-file hooks (oxlint, Biome format and import
-sorting, Prettier and markdownlint, gofmt, Tailwind, typos, Vale, secret
-scanning), a few seconds. A push runs the whole-repo gates: the type check, unit
-tests (80% coverage gate), golangci-lint and the Go tests. Hooks autofix in
-place, so a commit that gets rejected for "files were modified by this hook"
-just needs `git add` and a re-commit. After pulling this change, run
-`prek install` once so the pre-push hook exists.
+CI enforces these. The local git hook only formats and scans for secrets, so a
+commit stays fast: [prek](https://github.com/j178/prek) runs
+`.pre-commit-config.yaml` (line endings and trailing whitespace, Biome format,
+Prettier, gofmt, gitleaks); prek comes from `mise install`, and `bun install`
+wires it up (`prepare` runs `prek install`). Hooks autofix in place, so a commit
+that gets rejected for "files were modified by this hook" just needs `git add`
+and a re-commit. Everything else (typos, Vale, actionlint, zizmor, hadolint, the
+route rules, conventional commits) runs in CI from `.github/prek-ci.yaml`, next
+to the type check, lint and test steps; run it locally with
+`prek run --all-files --config .github/prek-ci.yaml`.
 
 Vale checks the prose of `docs/`, the READMEs and this file against the Google,
 proselint and write-good styles. Only its errors block a commit; warnings are
 advice. A product or tool name it flags as a misspelling goes in
 `.vale/styles/config/vocabularies/Homerun/accept.txt`. Run it on everything with
-`prek run vale --all-files`.
+`prek run vale --all-files --config .github/prek-ci.yaml`.
 
 ```sh
 bun run type-check   # svelte-check --fail-on-warnings over src/ and tests/, bun check over scripts/, go vet and golangci-lint over every package under cmd/ and internal/, zero errors AND zero warnings

@@ -2,13 +2,13 @@ package dockerapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
-	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/moby/moby/api/types/container"
 )
 
 const oneOffCleanupTimeout = 30 * time.Second
@@ -137,49 +137,26 @@ func (c *Client) RunOneOff(ctx context.Context, config OneOffConfig) (OneOffResu
 // createOneOff creates (but does not start) the one-off container for config,
 // labelled as a helper so the janitor can reap it if this process dies first.
 func (c *Client) createOneOff(ctx context.Context, config OneOffConfig) (string, error) {
-	hostConfig := map[string]any{"Privileged": config.Privileged}
-	if config.PidMode != "" {
-		hostConfig["PidMode"] = config.PidMode
-	}
-	if len(config.Binds) > 0 {
-		hostConfig["Binds"] = config.Binds
+	hostConfig := &container.HostConfig{
+		Binds:       config.Binds,
+		GroupAdd:    config.GroupAdd,
+		NetworkMode: container.NetworkMode(config.NetworkMode),
+		PidMode:     container.PidMode(config.PidMode),
+		Privileged:  config.Privileged,
 	}
 	if len(config.ImageMounts) > 0 {
-		hostConfig["Mounts"] = imageMounts(config.ImageMounts)
+		hostConfig.Mounts = imageMounts(config.ImageMounts)
 	}
-	if config.NetworkMode != "" {
-		hostConfig["NetworkMode"] = config.NetworkMode
-	}
-	if len(config.GroupAdd) > 0 {
-		hostConfig["GroupAdd"] = config.GroupAdd
-	}
-	body := map[string]any{
-		"Cmd":        config.Cmd,
-		"Env":        config.Env,
-		"HostConfig": hostConfig,
-		"Image":      config.Image,
-		"Labels":     HelperLabels(config.Labels),
-		"Tty":        false,
-	}
-	if len(config.Entrypoint) > 0 {
-		body["Entrypoint"] = config.Entrypoint
-	}
-	if config.WorkingDir != "" {
-		body["WorkingDir"] = config.WorkingDir
-	}
-	if config.User != "" {
-		body["User"] = config.User
-	}
-	response, err := c.request(ctx, http.MethodPost, "/containers/create", nil, body, nil)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = response.Body.Close() }()
-	var created struct {
-		ID string `json:"Id"`
-	}
-	if err := json.NewDecoder(response.Body).Decode(&created); err != nil {
-		return "", err
-	}
-	return created.ID, nil
+	return c.CreateContainerFrom(ctx, "", container.CreateRequest{
+		Config: &container.Config{
+			Cmd:        config.Cmd,
+			Entrypoint: config.Entrypoint,
+			Env:        config.Env,
+			Image:      config.Image,
+			Labels:     HelperLabels(config.Labels),
+			User:       config.User,
+			WorkingDir: config.WorkingDir,
+		},
+		HostConfig: hostConfig,
+	})
 }

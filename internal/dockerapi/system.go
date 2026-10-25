@@ -1,13 +1,16 @@
 package dockerapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
-	"net/http"
-	"net/url"
-	"strconv"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/api/types/volume"
+	"github.com/moby/moby/client"
 )
 
 // Info is the part of `docker info` this app reads: the swarm's state (is this
@@ -23,16 +26,24 @@ type Info struct {
 	} `json:"Swarm"`
 }
 
+// VolumeUsage is how much a volume holds and how many containers use it.
+type VolumeUsage struct {
+	RefCount int   `json:"RefCount"`
+	Size     int64 `json:"Size"`
+}
+
 // Volume is one entry of the daemon's volume list.
 type Volume struct {
 	CreatedAt  string            `json:"CreatedAt"`
 	Labels     map[string]string `json:"Labels"`
 	Mountpoint string            `json:"Mountpoint"`
 	Name       string            `json:"Name"`
-	UsageData  *struct {
-		RefCount int   `json:"RefCount"`
-		Size     int64 `json:"Size"`
-	} `json:"UsageData"`
+	UsageData  *VolumeUsage      `json:"UsageData"`
+}
+
+// ContainerNetworks is a listed container's networks, by name.
+type ContainerNetworks struct {
+	Networks map[string]json.RawMessage `json:"Networks"`
 }
 
 // ContainerListEntry is one row of the container list, with everything the
@@ -45,24 +56,13 @@ type ContainerListEntry struct {
 	HostConfig *struct {
 		NetworkMode string `json:"NetworkMode"`
 	} `json:"HostConfig"`
-	ID              string            `json:"Id"`
-	Image           string            `json:"Image"`
-	Labels          map[string]string `json:"Labels"`
-	Names           []string          `json:"Names"`
-	NetworkSettings *struct {
-		Networks map[string]json.RawMessage `json:"Networks"`
-	} `json:"NetworkSettings"`
-	State  string `json:"State"`
-	Status string `json:"Status"`
-}
-
-// SystemInfo reads `docker info`.
-func (c *Client) SystemInfo(ctx context.Context) (*Info, error) {
-	var info Info
-	if err := c.decode(ctx, http.MethodGet, "/info", nil, nil, &info); err != nil {
-		return nil, err
-	}
-	return &info, nil
+	ID              string             `json:"Id"`
+	Image           string             `json:"Image"`
+	Labels          map[string]string  `json:"Labels"`
+	Names           []string           `json:"Names"`
+	NetworkSettings *ContainerNetworks `json:"NetworkSettings"`
+	State           string             `json:"State"`
+	Status          string             `json:"Status"`
 }
 
 // Version is the part of `docker version` this app reads: the platform the
@@ -72,79 +72,153 @@ type Version struct {
 	Os   string `json:"Os"`
 }
 
-// ServerVersion reads `docker version`.
-func (c *Client) ServerVersion(ctx context.Context) (*Version, error) {
-	var version Version
-	if err := c.decode(ctx, http.MethodGet, "/version", nil, nil, &version); err != nil {
+// info is the daemon's full typed `docker info`.
+func (c *Client) info(ctx context.Context) (system.Info, error) {
+	result, err := control(ctx, ControlTimeout, "info", "", func(ctx context.Context) (client.SystemInfoResult, error) {
+		return c.api.Info(ctx, client.InfoOptions{})
+	})
+	return result.Info, err
+}
+
+// SystemInfo reads `docker info`.
+func (c *Client) SystemInfo(ctx context.Context) (*Info, error) {
+	full, err := c.info(ctx)
+	if err != nil {
 		return nil, err
 	}
-	return &version, nil
+	info := &Info{SecurityOptions: full.SecurityOptions, ServerVersion: full.ServerVersion}
+	info.Swarm.ControlAvailable = full.Swarm.ControlAvailable
+	info.Swarm.LocalNodeState = string(full.Swarm.LocalNodeState)
+	info.Swarm.NodeID = full.Swarm.NodeID
+	return info, nil
+}
+
+// ServerVersion reads `docker version`.
+func (c *Client) ServerVersion(ctx context.Context) (*Version, error) {
+	result, err := control(ctx, ControlTimeout, "version", "", func(ctx context.Context) (client.ServerVersionResult, error) {
+		return c.api.ServerVersion(ctx, client.ServerVersionOptions{})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &Version{Arch: result.Arch, Os: result.Os}, nil
+}
+
+// volumeUsage projects a volume's typed usage data.
+func volumeUsage(usage *volume.UsageData) *VolumeUsage {
+	if usage == nil {
+		return nil
+	}
+	return &VolumeUsage{RefCount: int(usage.RefCount), Size: usage.Size}
 }
 
 // ListVolumes lists every volume on the daemon.
 func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
-	var listed struct {
-		Volumes []Volume `json:"Volumes"`
+	listed, err := control(ctx, ControlTimeout, "list volumes", "", func(ctx context.Context) (client.VolumeListResult, error) {
+		return c.api.VolumeList(ctx, client.VolumeListOptions{})
+	})
+	if err != nil {
+		return nil, err
 	}
-	err := c.decode(ctx, http.MethodGet, "/volumes", nil, nil, &listed)
-	return listed.Volumes, err
+	volumes := make([]Volume, 0, len(listed.Items))
+	for _, entry := range listed.Items {
+		volumes = append(volumes, Volume{
+			CreatedAt:  entry.CreatedAt,
+			Labels:     entry.Labels,
+			Mountpoint: entry.Mountpoint,
+			Name:       entry.Name,
+			UsageData:  volumeUsage(entry.UsageData),
+		})
+	}
+	return volumes, nil
+}
+
+// containerNetworks projects a listed container's typed networks.
+func containerNetworks(entry container.Summary) *ContainerNetworks {
+	if entry.NetworkSettings == nil {
+		return nil
+	}
+	networks := &ContainerNetworks{Networks: map[string]json.RawMessage{}}
+	for name, endpoint := range entry.NetworkSettings.Networks {
+		encoded, err := json.Marshal(endpoint)
+		if err != nil {
+			continue
+		}
+		networks.Networks[name] = encoded
+	}
+	return networks
 }
 
 // ListContainers lists containers, running ones only unless all is set, and
 // filtered to one "key=value" label when label isn't empty.
 func (c *Client) ListContainers(ctx context.Context, all bool, label string) ([]ContainerListEntry, error) {
-	query := url.Values{}
-	if all {
-		query.Set("all", "1")
+	listed, err := c.listContainers(ctx, all, label)
+	if err != nil {
+		return nil, err
 	}
-	if label != "" {
-		filters, err := json.Marshal(map[string][]string{"label": {label}})
-		if err != nil {
-			return nil, err
-		}
-		query.Set("filters", string(filters))
+	containers := make([]ContainerListEntry, 0, len(listed))
+	for _, entry := range listed {
+		containers = append(containers, ContainerListEntry{
+			Created: entry.Created,
+			HostConfig: &struct {
+				NetworkMode string `json:"NetworkMode"`
+			}{NetworkMode: entry.HostConfig.NetworkMode},
+			ID:              entry.ID,
+			Image:           entry.Image,
+			Labels:          entry.Labels,
+			Names:           entry.Names,
+			NetworkSettings: containerNetworks(entry),
+			State:           string(entry.State),
+			Status:          entry.Status,
+		})
 	}
-	var containers []ContainerListEntry
-	err := c.decode(ctx, http.MethodGet, "/containers/json", query, nil, &containers)
-	return containers, err
+	return containers, nil
+}
+
+// rawObject decodes a daemon answer kept verbatim into a generic map.
+func rawObject(raw json.RawMessage) (map[string]any, error) {
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return nil, err
+	}
+	return decoded, nil
 }
 
 // InspectRaw inspects a container and hands back the daemon's answer whole,
 // for the callers that rebuild a container from its own config (recreating
 // Traefik with a changed flag) and would lose fields to a narrower struct.
 func (c *Client) InspectRaw(ctx context.Context, id string) (map[string]any, error) {
-	var inspected map[string]any
-	if err := c.decode(ctx, http.MethodGet, "/containers/"+id+"/json", nil, nil, &inspected); err != nil {
+	result, err := c.inspect(ctx, id)
+	if err != nil {
 		return nil, err
 	}
-	return inspected, nil
+	return rawObject(result.Raw)
 }
 
 // InspectImageRaw inspects an image and hands back the daemon's answer whole.
 func (c *Client) InspectImageRaw(ctx context.Context, ref string) (map[string]any, error) {
-	var inspected map[string]any
-	if err := c.decode(ctx, http.MethodGet, "/images/"+ref+"/json", nil, nil, &inspected); err != nil {
+	var raw bytes.Buffer
+	_, err := control(ctx, ControlTimeout, "inspect image "+ref, "", func(ctx context.Context) (client.ImageInspectResult, error) {
+		return c.api.ImageInspect(ctx, ref, client.ImageInspectWithRawResponse(&raw))
+	})
+	if err != nil {
 		return nil, err
 	}
-	return inspected, nil
+	return rawObject(raw.Bytes())
 }
 
 // ContainerLogsStream opens a container's logs, following them when follow is
 // set and starting from the last tail lines when tail is positive. The caller
 // closes the stream, which is what stops the daemon writing to it.
 func (c *Client) ContainerLogsStream(ctx context.Context, id string, tail int, follow bool) (io.ReadCloser, error) {
-	query := url.Values{"stderr": {"1"}, "stdout": {"1"}}
-	if follow {
-		query.Set("follow", "1")
-	}
-	if tail > 0 {
-		query.Set("tail", strconv.Itoa(tail))
-	}
-	response, err := c.stream(ctx, http.MethodGet, "/containers/"+id+"/logs", query, nil, nil, c.containerRunning(id))
-	if err != nil {
-		return nil, err
-	}
-	return response.Body, nil
+	return streaming(ctx, "logs "+shortID(id), id, c.containerRunning(id), func(ctx context.Context, _ *watch) (io.ReadCloser, error) {
+		return c.api.ContainerLogs(ctx, id, client.ContainerLogsOptions{
+			Follow:     follow,
+			ShowStderr: true,
+			ShowStdout: true,
+			Tail:       logsTail(tail),
+		})
+	})
 }
 
 // RemoveContainerOpts removes a container, forcing a running one to stop first
@@ -152,11 +226,9 @@ func (c *Client) ContainerLogsStream(ctx context.Context, id string, tail int, f
 // isn't silently killing a live workload. A container already gone isn't an
 // error: the caller asked for it to not be there.
 func (c *Client) RemoveContainerOpts(ctx context.Context, id string, force bool) error {
-	value := "0"
-	if force {
-		value = "1"
-	}
-	err := c.Call(ctx, http.MethodDelete, "/containers/"+id, url.Values{"force": {value}}, nil)
+	err := discard(control(ctx, ControlTimeout, "remove "+shortID(id), id, func(ctx context.Context) (client.ContainerRemoveResult, error) {
+		return c.api.ContainerRemove(ctx, id, client.ContainerRemoveOptions{Force: force})
+	}))
 	if errors.Is(err, ErrNotFound) {
 		return nil
 	}
@@ -165,15 +237,7 @@ func (c *Client) RemoveContainerOpts(ctx context.Context, id string, force bool)
 
 // RemoveImage removes one image, forcing it when force is set.
 func (c *Client) RemoveImage(ctx context.Context, id string, force bool) error {
-	value := "0"
-	if force {
-		value = "1"
-	}
-	return c.Call(ctx, http.MethodDelete, "/images/"+id, url.Values{"force": {value}}, nil)
-}
-
-// DisconnectNetwork detaches a container from a network.
-func (c *Client) DisconnectNetwork(ctx context.Context, network, containerID string, force bool) error {
-	return c.Call(ctx, http.MethodPost, "/networks/"+network+"/disconnect", nil,
-		map[string]any{"Container": containerID, "Force": force})
+	return discard(control(ctx, SlowTimeout, "remove image "+id, "", func(ctx context.Context) (client.ImageRemoveResult, error) {
+		return c.api.ImageRemove(ctx, id, client.ImageRemoveOptions{Force: force, PruneChildren: true})
+	}))
 }

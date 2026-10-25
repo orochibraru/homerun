@@ -1,22 +1,10 @@
-default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_install_hook_types: [pre-commit]
 default_stages: [pre-commit]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-      - id: check-merge-conflict
-        name: Look for Merge Conflicts
-
-      - id: check-case-conflict
-        name: Look for case conflicts
-
-      - id: check-yaml
-        name: Validate Yaml
-
-      - id: check-added-large-files
-        name: Look for large files
-
       - id: mixed-line-ending
         name: Fix line endings
         args: [--fix=lf]
@@ -39,83 +27,17 @@ repos:
         args: [--markdown-linebreak-ext=md]
         exclude: *generated
 
-  - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.4.0
-    hooks:
-      - id: conventional-pre-commit
-        name: Ensure conventional commits
-        stages: [commit-msg]
-
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
       - id: gitleaks
         name: Look for hardcoded secrets
 
-  - repo: https://github.com/crate-ci/typos
-    rev: v1.51.1
-    hooks:
-      - id: typos
-        name: Look for typos
-        args: [--force-exclude]
-
-  - repo: https://github.com/errata-ai/vale
-    rev: v3.24.0
-    hooks:
-      - id: vale
-        name: Lint docs prose (Vale)
-        entry: sh -c 'vale sync >/dev/null && vale "$@"' --
-        require_serial: true
-        files: ^(docs/.*|README|CONTRIBUTING|cmd/[^/]+/README)\.md$
-
-  - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.12
-    hooks:
-      - id: actionlint
-        name: Lint Github Actions
-
-  - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.30.1
-    hooks:
-      - id: zizmor
-        name: Audit Github Actions security
-
   - repo: local
     hooks:
-      - id: pinact
-        name: Pin Github Actions
-        entry: pinact run
-        language: golang
-        language_version: 1.27.2
-        additional_dependencies:
-          [github.com/suzuki-shunsuke/pinact/v5/cmd/pinact@v5.0.0]
-        files: ^\.github/workflows/.*\.ya?ml$
-
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.15.1
-    hooks:
-      - id: hadolint-docker
-        name: Lint Docker
-
-  - repo: local
-    hooks:
-      - id: gen
-        name: Regenerate OpenAPI, CLI types and config schema
-        entry: bun run gen
-        language: system
-        pass_filenames: false
-        files: ^(src/routes/api/|src/lib/openapi/|src/lib/config\.ts$|scripts/generate-|internal/installer/compose\.yaml$)
-
-      - id: oxlint
-        name: Lint (oxlint)
-        entry: node_modules/.bin/oxlint --type-aware --deny-warnings
-        language: system
-        require_serial: true
-        files: \.(ts|tsx|js|jsx|mjs|cjs|svelte)$
-
       - id: biome
-        name: Format and sort imports (Biome)
-        entry: node_modules/.bin/biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true
+        name: Format (Biome)
+        entry: node_modules/.bin/biome format --write --no-errors-on-unmatched --files-ignore-unknown=true
         language: system
         require_serial: true
         files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html)$
@@ -126,81 +48,8 @@ repos:
         language: system
         files: \.(md|mdx)$
 
-      - id: markdownlint
-        name: Markdown Lint
-        entry: bun run markdownlint-cli2 --fix
-        language: system
-        types: [markdown]
-
-      - id: agnix
-        name: Lint AI configs (agnix)
-        entry: node_modules/.bin/agnix --strict
-        language: system
-        pass_filenames: false
-        files: (^|/)(CLAUDE|AGENTS)\.md$|^\.agents/|^\.claude/|^\.agnix\.toml$|^\.mcp\.json$
-
       - id: format-go
         name: Formatting (Go)
         entry: gofmt -w
         language: system
         files: \.go$
-
-      - id: lint-tailwind
-        name: Lint (Tailwind)
-        entry: bun run scripts/lint-tailwind.ts
-        language: system
-        require_serial: true
-        files: ^src/.*\.(svelte|css|html)$
-
-      - id: check
-        name: Type Check
-        entry: bash -c 'bunx svelte-kit sync && bunx svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && bun check -p tsconfig.scripts.json'
-        language: system
-        pass_filenames: false
-        stages: [pre-push]
-        files: ^(src/|scripts/|tests/|vite\.config\.ts$|tsconfig.*\.json$)
-
-      - id: test-unit
-        name: Unit Tests
-        entry: bash -c 'bunx svelte-kit sync && bun --config=bunfig.unit.toml test tests/unit --timeout 120000'
-        language: system
-        pass_filenames: false
-        stages: [pre-push]
-        files: ^(src/|tests/unit/|bunfig.*\.toml$)
-
-      - id: lint-go
-        name: Lint (Go)
-        entry: go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...
-        language: system
-        pass_filenames: false
-        stages: [pre-push]
-        files: (^(cmd|internal|tests/unit/go)/.*\.go$|^go\.mod$|^tools/go/go\.mod$|^\.golangci\.yml$)
-
-      - id: test-go
-        name: Unit Tests (Go)
-        entry: go test ./cmd/... ./internal/... ./tests/unit/go/...
-        language: system
-        pass_filenames: false
-        stages: [pre-push]
-        files: (^(cmd|internal|tests/unit/go)/.*\.(go|sh|json)$|^go\.mod$)
-
-  - repo: local
-    hooks:
-      - id: no-manual-route-typing
-        name: "Look for injected inferred types in routes"
-        language: pygrep
-        entry: |-
-          (: (PageData|PageProps|LayoutData|ActionData|LayoutProps|PageServerLoad|LayoutServerLoad|Actions|RequestHandler)\b|from "\./\$types")
-        files: ^src/routes/.*\.(ts|svelte)$
-
-      - id: no-raw-drizzle-in-routes
-        name: "Make sure DTOs are used in routes, not drizzle directly"
-        language: pygrep
-        entry: \bdb\.(select|insert|update|delete)\(
-        files: ^src/routes/.*\.ts$
-
-      - id: internal-links-resolve
-        name: "Make sure all paths are resolved"
-        language: pygrep
-        entry: href="/
-        files: ^src/.*\.svelte$
