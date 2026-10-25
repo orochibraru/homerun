@@ -375,9 +375,9 @@ OIDC provider in `auth.md`) plus:
 - `app_log` (`AppLogDTO`), persisted warn/error-level `Logger` output: `level`,
   `scope`, `message`, `metadata` (JSON-stringified extra log args), `serviceId`
   (nullable, heuristically populated, see below). Backs the "Application errors"
-  section of a service's Observability → Events, a lightweight Sentry-adjacent
-  view of app-level failures alongside deployment failures (see
-  `services/[serviceId]/observability/events/` below).
+  section of a service's Observability, a lightweight Sentry-adjacent view of
+  app-level failures alongside deployment failures (see
+  `services/[serviceId]/observability/errors/app-errors/` below).
   `Logger.warn()`/`.error()` (`src/lib/logger.ts`) fire-and-forget a
   `AppLogDTO.create()` call on every warn/error log, dynamically imported (not a
   top-level import) since `logger.ts` isn't under `src/lib/server/`, keeping
@@ -387,7 +387,7 @@ OIDC provider in `auth.md`) plus:
   `service=<uuid>` convention already present in most Docker/deploy log
   messages, rather than threading an explicit serviceId through every existing
   call site, a log with no match is still visible on a future instance-wide log
-  view, just not attributed to one service's Events section.
+  view, just not attributed to one service's Application errors section.
   `AppLogDTO.create()` amortized-prunes the table back to the newest 5000 rows
   on ~2% of writes, rather than adding a third scheduler alongside
   `CronService`'s two.

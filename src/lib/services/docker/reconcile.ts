@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "#lib/server/db/lib.js";
 import { service } from "#lib/server/db/schema.js";
 import type { ContainerStatus } from "#lib/types.js";
@@ -48,7 +48,7 @@ export function DockerReconcileMixin<
 				const status = await this.inspectSwarmServiceStatus(row.swarmServiceId);
 				await db
 					.update(service)
-					.set({ currentStatus: status })
+					.set({ currentStatus: status, updatedAt: sql`${service.updatedAt}` })
 					.where(eq(service.id, serviceId));
 				return status;
 			}
@@ -64,7 +64,7 @@ export function DockerReconcileMixin<
 					: inspected;
 			await db
 				.update(service)
-				.set({ currentStatus: status })
+				.set({ currentStatus: status, updatedAt: sql`${service.updatedAt}` })
 				.where(eq(service.id, serviceId));
 
 			return status;

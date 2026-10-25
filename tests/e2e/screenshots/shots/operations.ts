@@ -57,7 +57,7 @@ function redirectedId(body: unknown): string {
 	return (body as { location: string }).location.split("/").at(-1) ?? "";
 }
 
-/** Reloads the Events section until the uptime probes have recorded a beat, capturing whatever is there after a minute and a half. */
+/** Reloads the Uptime section until the uptime probes have recorded a beat, capturing whatever is there after a minute and a half. */
 async function waitForBeats(page: Page): Promise<void> {
 	await expect(async () => {
 		await page.reload();
@@ -510,27 +510,26 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/observability/events (Uptime)",
+			doc: "/services/:id/observability/uptime",
 			expect: /From the network/,
 			name: "observability-uptime",
 			path: (seeded) =>
-				`/services/${seeded.serviceIds.web}/observability/events`,
+				`/services/${seeded.serviceIds.web}/observability/uptime`,
 			prepare: waitForBeats,
 		},
 		{
-			doc: "/services/:id/observability/events (Logs)",
+			doc: "/services/:id/observability/logs",
 			expect: /Reconnect/,
 			name: "observability-logs",
-			path: (seeded) =>
-				`/services/${seeded.serviceIds.web}/observability/events`,
+			path: (seeded) => `/services/${seeded.serviceIds.web}/observability/logs`,
 			prepare: (page) => scrollToTop(heading(page, "Logs")),
 		},
 		{
-			doc: "/services/:id/observability/events (Failed deployments, Application errors)",
+			doc: "/services/:id/observability/errors/failed-deployments",
 			expect: /Failed deployments/,
 			name: "observability-errors",
 			path: (seeded) =>
-				`/services/${seeded.serviceIds.web}/observability/events`,
+				`/services/${seeded.serviceIds.web}/observability/errors/failed-deployments`,
 			prepare: (page) => scrollToTop(heading(page, /^\s*Failed deployments/)),
 		},
 		{

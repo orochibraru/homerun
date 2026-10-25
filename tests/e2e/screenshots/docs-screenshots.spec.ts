@@ -102,10 +102,10 @@ const SHOTS: Shot[] = [
 		path: () => `/services/${seeded.serviceIds.web}`,
 	},
 	{
-		doc: "/services/:id/observability/events",
+		doc: "/services/:id/observability/logs",
 		expect: /Reconnect/i,
 		name: "logs",
-		path: () => `/services/${seeded.serviceIds.web}/observability/events`,
+		path: () => `/services/${seeded.serviceIds.web}/observability/logs`,
 	},
 	{
 		doc: "/services/:id/environments/revisions",

@@ -4,11 +4,11 @@
 		BarChart3,
 		Bug,
 		HeartPulse,
-		ListChecks,
+		Radio,
+		ScrollText,
 		ShieldBan,
 		Workflow,
 	} from "@lucide/svelte";
-	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
@@ -26,12 +26,20 @@
 			label: "Monitoring",
 		},
 		{
-			href: resolve("/(protected)/services/[serviceId]/observability/events", {
+			href: resolve("/(protected)/services/[serviceId]/observability/logs", {
 				serviceId: data.service.id,
 			}),
-			icon: ListChecks,
-			id: "service/observability/events",
-			label: "Events",
+			icon: ScrollText,
+			id: "service/observability/logs",
+			label: "Logs",
+		},
+		{
+			href: resolve("/(protected)/services/[serviceId]/observability/uptime", {
+				serviceId: data.service.id,
+			}),
+			icon: Radio,
+			id: "service/observability/uptime",
+			label: "Uptime",
 		},
 		{
 			href: resolve("/(protected)/services/[serviceId]/observability/errors", {
@@ -77,11 +85,6 @@
 	]);
 </script>
 
-<SectionNav
-  label="Observability sections"
-  sections={visibleItems(data.uiMode, sections, page.url.pathname)}
-/>
-
-<ErrorBoundary title="This section hit an error while rendering.">
+<SectionNav hubLabel="Observability" label="Observability sections" sections={visibleItems(data.uiMode, sections, page.url.pathname)}>
   {@render children()}
-</ErrorBoundary>
+</SectionNav>

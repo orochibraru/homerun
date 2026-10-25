@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/orochibraru/homerun/internal/hoststats"
 )
@@ -40,7 +41,8 @@ func TestSampleReadsProcDfAndNvidiaSmi(t *testing.T) {
 		"cpu  100 0 100 800 0 0 0 0 0 0\ncpu0 1 1 1 1 1 1 1\n",
 		"MemTotal:       8192000 kB\nMemFree:  100 kB\nMemAvailable:   2048000 kB\n",
 	)
-	sampler := &hoststats.StatsSampler{ProcRoot: root, RunCommand: commands(map[string]string{
+	clock := time.Unix(0, 0)
+	sampler := &hoststats.StatsSampler{ProcRoot: root, Now: func() time.Time { return clock }, RunCommand: commands(map[string]string{
 		"df":         "Filesystem 1024-blocks Used Available Capacity Mounted\n/dev/sda1 1048576 262144 786432 25% /\n",
 		"nvidia-smi": "NVIDIA RTX 4090, 24564, 1024, 37\n",
 	})}
@@ -62,9 +64,26 @@ func TestSampleReadsProcDfAndNvidiaSmi(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "stat"), []byte("cpu  200 0 200 900 0 0 0\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	clock = clock.Add(hoststats.MinCPUWindow)
 	second := sampler.Sample()
 	if second.CPUPercent != 67 {
 		t.Errorf("CPU is the busy share of the delta (200 of 300), want 67, got %d", second.CPUPercent)
+	}
+
+	if err := os.WriteFile(filepath.Join(root, "stat"), []byte("cpu  201 0 200 900 0 0 0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	clock = clock.Add(time.Millisecond)
+	if burst := sampler.Sample(); burst.CPUPercent != 67 {
+		t.Errorf("a call inside the window repeats the last reading instead of reading one busy jiffy as 100%%, got %d", burst.CPUPercent)
+	}
+
+	if err := os.WriteFile(filepath.Join(root, "stat"), []byte("cpu  250 0 250 1100 0 0 0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	clock = clock.Add(hoststats.MinCPUWindow)
+	if third := sampler.Sample(); third.CPUPercent != 33 {
+		t.Errorf("the burst call didn't move the baseline, so the delta is 100 busy of 300, want 33, got %d", third.CPUPercent)
 	}
 }
 

@@ -280,7 +280,7 @@ export function uptimeMessage(
 		fields,
 		link: dashboardLink(
 			input.origin,
-			`/services/${service.id}/observability/events`,
+			`/services/${service.id}/observability/uptime`,
 		),
 		serviceId: service.id,
 		serviceName: service.name,

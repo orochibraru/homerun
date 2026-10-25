@@ -15,12 +15,16 @@
 
 <Sonner
   class="toaster group"
+  mobileOffset={{ bottom: "var(--toast-bottom, 16px)" }}
+  offset={{ bottom: "var(--toast-bottom, 24px)" }}
   style="--normal-bg: var(--color-popover); --normal-text: var(--color-popover-foreground); --normal-border: var(--color-border)"
   theme={mode.current}
   toastOptions={{
     classes: {
       actionButton:
-        "border! border-current/30! bg-transparent! font-medium! text-current! hover:bg-current/10!",
+        "rounded-md! bg-ink! font-medium! text-ink-foreground! hover:opacity-90!",
+      cancelButton: "rounded-md! bg-surface-2! text-text-muted!",
+      closeButton: "border-border! bg-popover! text-text-muted! hover:text-text!",
     },
   }}
   {...restProps}

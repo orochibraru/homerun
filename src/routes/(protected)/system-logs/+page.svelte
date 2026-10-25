@@ -124,7 +124,7 @@
               {#if entry.serviceId}
                 <a
                   class="text-accent truncate text-xs hover:underline"
-                  href="{resolve('services')}/{entry.serviceId}/observability/events"
+                  href="{resolve('services')}/{entry.serviceId}/observability/errors/app-errors"
                 >{entry.serviceName ?? "Deleted service"}</a>
               {/if}
               <span class="tabular-nums text-text-subtle ml-auto shrink-0 text-[0.6875rem]">

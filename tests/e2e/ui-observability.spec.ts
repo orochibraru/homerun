@@ -61,12 +61,15 @@ test.describe
 			await signIn(page);
 			const id = await createService(page, "obs-clear-buttons");
 
-			await page.goto(`/services/${id}/observability/events`);
+			await page.goto(`/services/${id}/observability/uptime`);
 			// A service that was never deployed has no beats and no errors, so
 			// neither control should be offered.
 			await expect(
 				page.getByRole("button", { name: "Clear heartbeats" }),
 			).toHaveCount(0);
+			await page.goto(
+				`/services/${id}/observability/errors/failed-deployments`,
+			);
 			await expect(
 				page.getByRole("button", { name: "Clear errors" }),
 			).toHaveCount(0);
@@ -82,7 +85,9 @@ test.describe
 			await page.locator("#name").fill("obs-clear-errors");
 			await page.locator("button[form='service-settings']").click();
 
-			await page.goto(`/services/${id}/observability/events`);
+			await page.goto(
+				`/services/${id}/observability/errors/failed-deployments`,
+			);
 			const clear = page.getByRole("button", { name: "Clear errors" });
 			if ((await clear.count()) === 0) {
 				test.skip(true, "no errors recorded for this service in this run");

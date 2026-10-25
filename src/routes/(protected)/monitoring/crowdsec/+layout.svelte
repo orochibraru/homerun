@@ -27,8 +27,9 @@
 </script>
 
 {#if data.crowdsecConfigured}
-  <SectionNav label="CrowdSec sections" {sections} />
-  {@render children()}
+  <SectionNav hubLabel="CrowdSec" label="CrowdSec sections" {sections}>
+    {@render children()}
+  </SectionNav>
 {:else}
   <EmptyState
     icon={ShieldCheck}

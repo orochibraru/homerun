@@ -6,8 +6,12 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { cancelBackupRun, enqueueVolumeBackup, enqueueVolumeRestore } =
-	await import("../../../src/lib/services/backup-queue");
+const {
+	cancelBackupRun,
+	enqueueBackupPrune,
+	enqueueVolumeBackup,
+	enqueueVolumeRestore,
+} = await import("../../../src/lib/services/backup-queue");
 const { QueueService } = await import(
 	"../../../src/lib/services/queue.service"
 );
@@ -101,6 +105,24 @@ describe("enqueueVolumeBackup / enqueueVolumeRestore", () => {
 		expect(enqueue.mock.calls[0]?.[0].payload).toMatchObject({
 			scheduled: true,
 			volumeId: "vol-1",
+		});
+	});
+});
+
+describe("enqueueBackupPrune", () => {
+	test("is one deduped, locked, never-retried job per instance", async () => {
+		const enqueue = spyOn(QueueService, "enqueue").mockResolvedValue(
+			{} as never,
+		);
+		restorers.push(enqueue);
+		await enqueueBackupPrune("u1");
+		expect(enqueue.mock.calls[0]?.[0]).toMatchObject({
+			dedupeKey: "backup_prune",
+			lockKey: "backup_prune",
+			maxAttempts: 1,
+			payload: { userId: "u1" },
+			type: "backup_prune",
+			userId: "u1",
 		});
 	});
 });

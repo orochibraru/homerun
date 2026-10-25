@@ -33,9 +33,11 @@
 </script>
 
 {#if shown.length > 1}
-  <SectionNav label="Container sections" sections={shown} />
+  <SectionNav hubLabel="Container" label="Container sections" sections={shown}>
+    {@render children()}
+  </SectionNav>
+{:else}
+  <ErrorBoundary title="This section hit an error while rendering.">
+    {@render children()}
+  </ErrorBoundary>
 {/if}
-
-<ErrorBoundary title="This section hit an error while rendering.">
-  {@render children()}
-</ErrorBoundary>

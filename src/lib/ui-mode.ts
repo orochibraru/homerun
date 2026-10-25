@@ -51,7 +51,6 @@ const ADVANCED_ONLY: ReadonlySet<string> = new Set([
 	"service/environments/previews",
 	"service/environments/channels",
 	"service/environments/source#build",
-	"service/observability/errors",
 	"service/observability/traces",
 	"service/observability/pipelines",
 	"service/observability/health#settings",

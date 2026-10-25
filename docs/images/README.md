@@ -16,8 +16,8 @@ feature pages under `docs/`.
 - `services-dark.webp` — `/services`
 - `service.webp` — `/services/:id`
 - `service-dark.webp` — `/services/:id`
-- `logs.webp` — `/services/:id/observability/events`
-- `logs-dark.webp` — `/services/:id/observability/events`
+- `logs.webp` — `/services/:id/observability/logs`
+- `logs-dark.webp` — `/services/:id/observability/logs`
 - `revisions.webp` — `/services/:id/environments/revisions`
 - `revisions-dark.webp` — `/services/:id/environments/revisions`
 - `networking.webp` — `/services/:id/networking`
@@ -118,10 +118,10 @@ feature pages under `docs/`.
 - `docker-cleanup.webp` — `/docker-cleanup`
 - `docker-cleanup-mirror.webp` — `/docker-cleanup (Image mirror)`
 - `system-logs.webp` — `/system-logs`
-- `observability-uptime.webp` — `/services/:id/observability/events (Uptime)`
-- `observability-logs.webp` — `/services/:id/observability/events (Logs)`
+- `observability-uptime.webp` — `/services/:id/observability/uptime`
+- `observability-logs.webp` — `/services/:id/observability/logs`
 - `observability-errors.webp` —
-  `/services/:id/observability/events (Failed deployments, Application errors)`
+  `/services/:id/observability/errors/failed-deployments`
 - `observability-terminal.webp` — `/services/:id/terminal`
 - `error-tracking-setup.webp` —
   `/services/:id/observability/errors (SDK setup open)`

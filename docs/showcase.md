@@ -64,8 +64,8 @@ table of every service in it, busiest first:
 ## Live logs
 
 `stdout`/`stderr` streamed from the container as it runs, ANSI colours intact,
-in the Observability tab's Events section, next to its uptime probes and errors.
-The same viewer backs the tail on the overview page.
+in the Observability tab's Logs section. The same viewer backs the tail on the
+overview page.
 
 ![Streaming container logs](images/logs.webp)
 ![Streaming container logs, dark](images/logs-dark.webp)

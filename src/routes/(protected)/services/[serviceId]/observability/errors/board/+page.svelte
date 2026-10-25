@@ -11,7 +11,6 @@
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import IssueViewsNav from "../issue-views-nav.svelte";
 
 	const { data } = $props();
 	const svc = $derived(data.service);
@@ -120,7 +119,6 @@
       {/snippet}
     </EmptyState>
   {:else}
-    <IssueViewsNav serviceId={svc.id} />
 
     <EntityToolbar placeholder="Search issues by title or culprit…" sorts={sorts} />
 

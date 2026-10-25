@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { ArrowLeft, KeyRound, ScrollText, Settings } from "@lucide/svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
-	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { resolve } from "$app/paths";
 
@@ -60,8 +59,7 @@
     <CopyBox class="sm:w-96" label="the service account id" value={data.account.id} />
   </div>
 
-  <SectionNav label="Service account sections" {sections} />
-  <ErrorBoundary title="This section hit an error while rendering.">
+  <SectionNav hubLabel="Account" label="Service account sections" {sections}>
     {@render children()}
-  </ErrorBoundary>
+  </SectionNav>
 </div>

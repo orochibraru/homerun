@@ -36,8 +36,9 @@ class SystemStatsServiceClass {
 	 * Resources panel and the stats sampler. Read from the Go worker, which is
 	 * the process on the real Docker host : the app may be a container, and its
 	 * own `os`/`df` readings would describe that container's limits rather than
-	 * the machine's. CPU% is a delta against the worker's previous sample, so
-	 * the first call after the worker starts reports 0.
+	 * the machine's. CPU% is a delta over at least a second against the
+	 * worker's baseline sample, shared by every caller, so the first call after
+	 * the worker starts reports 0.
 	 */
 	async getSystemStats(): Promise<SystemStats> {
 		const host = await WorkerClient.get<HostStats>("/v1/host/stats");

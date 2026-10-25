@@ -49,4 +49,4 @@
 		{@render children()}
 	</ErrorBoundary>
 </svelte:element>
-<Toaster closeButton position="bottom-right" richColors />
+<Toaster closeButton position="bottom-right" />
