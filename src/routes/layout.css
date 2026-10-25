@@ -1962,6 +1962,33 @@ html[data-surface="retro"] {
 	}
 }
 
+[data-slot="panel-header"]:has([data-slot="save-button"]) {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	background-color: color-mix(in oklab, var(--color-bg) 86%, transparent);
+	backdrop-filter: blur(14px) saturate(160%);
+	-webkit-backdrop-filter: blur(14px) saturate(160%);
+	border-start-start-radius: inherit;
+	border-start-end-radius: inherit;
+}
+
+.panel:has(> [data-slot="panel-header"] [data-slot="save-button"]) {
+	overflow: visible;
+}
+
+[data-slot="panel-header"]:has([data-slot="save-button"][data-dirty])
+	.eyebrow::after {
+	content: "";
+	display: inline-block;
+	width: 0.375rem;
+	height: 0.375rem;
+	margin-inline-start: 0.5rem;
+	border-radius: 9999px;
+	background: oklch(0.76 0.15 75);
+	vertical-align: middle;
+}
+
 @keyframes sheet-up {
 	from {
 		translate: 0 100%;

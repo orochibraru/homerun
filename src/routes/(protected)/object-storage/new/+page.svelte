@@ -43,6 +43,7 @@
         <SaveButton
           disabled={!bucket || !storeId}
           form="new-bucket"
+          saveUnchanged
           label="Create bucket"
           pending={creating}
         />
