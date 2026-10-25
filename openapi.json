@@ -8556,6 +8556,9 @@
 								"schema": {
 									"additionalProperties": false,
 									"properties": {
+										"autoReportAbuse": {
+											"type": "boolean"
+										},
 										"crowdsecMachineId": {
 											"type": ["string", "null"]
 										},
@@ -8591,6 +8594,7 @@
 										}
 									},
 									"required": [
+										"autoReportAbuse",
 										"crowdsecMachineId",
 										"crowdsecPasswordSet",
 										"crowdsecUrl",
@@ -8664,6 +8668,10 @@
 							"schema": {
 								"additionalProperties": false,
 								"properties": {
+									"autoReportAbuse": {
+										"description": "Email the banned network's abuse contact once its lookup finds one.",
+										"type": "boolean"
+									},
 									"crowdsecMachineId": {
 										"type": ["string", "null"]
 									},
@@ -8717,6 +8725,9 @@
 								"schema": {
 									"additionalProperties": false,
 									"properties": {
+										"autoReportAbuse": {
+											"type": "boolean"
+										},
 										"crowdsecMachineId": {
 											"type": ["string", "null"]
 										},
@@ -8752,6 +8763,7 @@
 										}
 									},
 									"required": [
+										"autoReportAbuse",
 										"crowdsecMachineId",
 										"crowdsecPasswordSet",
 										"crowdsecUrl",

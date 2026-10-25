@@ -114,6 +114,7 @@ export const errorPagesResponse = z.object({
 });
 
 export const ipBanSettingsResponse = z.object({
+	autoReportAbuse: z.boolean(),
 	crowdsecMachineId: nullableText,
 	crowdsecPasswordSet: z.boolean(),
 	crowdsecUrl: nullableText,

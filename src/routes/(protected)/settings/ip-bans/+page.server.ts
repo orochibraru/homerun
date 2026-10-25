@@ -33,6 +33,7 @@ export const actions = {
 		try {
 			await InstanceSettingsService.saveIpBans(
 				{
+					autoReportAbuse: formData.get("autoReportAbuse") === "on",
 					disrespectMode: formData.get("disrespectMode") === "on",
 					durationHours: whole("durationHours"),
 					enabled: formData.get("enabled") === "on",

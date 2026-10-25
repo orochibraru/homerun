@@ -2130,6 +2130,12 @@
 					"tf": "disrespect_mode"
 				},
 				{
+					"kind": "bool",
+					"name": "autoReportAbuse",
+					"tf": "auto_report_abuse",
+					"description": "Email the banned network's abuse contact once its lookup finds one."
+				},
+				{
 					"kind": "string",
 					"name": "crowdsecUrl",
 					"tf": "crowdsec_url"

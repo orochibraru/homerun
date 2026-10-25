@@ -149,6 +149,12 @@ export const errorPagesApiBody = z.object({
 });
 
 export const ipBanSettingsApiBody = z.object({
+	autoReportAbuse: z
+		.boolean()
+		.optional()
+		.describe(
+			"Email the banned network's abuse contact once its lookup finds one.",
+		),
 	crowdsecMachineId: nullableText,
 	crowdsecPassword: secret(
 		"The CrowdSec machine password. Left out, the stored one stays.",

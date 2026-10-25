@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	abuseReportEmail,
 	BANS_ROUTER_PRIORITY,
 	banExpiry,
 	bannableIp,
@@ -17,6 +18,7 @@ describe("IP ban settings", () => {
 	test("nothing stored gives the defaults: on, 10 hits in 10 minutes, banned for good", () => {
 		expect(withIpBanDefaults(null)).toEqual(DEFAULT_IP_BAN_SETTINGS);
 		expect(DEFAULT_IP_BAN_SETTINGS).toEqual({
+			autoReportAbuse: false,
 			disrespectMode: false,
 			durationHours: 0,
 			enabled: true,
@@ -29,6 +31,7 @@ describe("IP ban settings", () => {
 	test("stored values are kept, out-of-range ones fall back", () => {
 		expect(
 			withIpBanDefaults({
+				autoReportAbuse: true,
 				disrespectMode: true,
 				durationHours: 24,
 				enabled: false,
@@ -37,6 +40,7 @@ describe("IP ban settings", () => {
 				windowMinutes: 5,
 			}),
 		).toEqual({
+			autoReportAbuse: true,
 			disrespectMode: true,
 			durationHours: 24,
 			enabled: false,
@@ -217,5 +221,44 @@ describe("bans file", () => {
 		expect(config.http.routers["homerun-banned"].rule).toBe(
 			"ClientIP(`203.0.113.9`) || Header(`X-Real-Ip`, `203.0.113.9`)",
 		);
+	});
+});
+
+describe("abuseReportEmail", () => {
+	const bannedAt = new Date("2026-10-25T12:00:00Z");
+
+	test("names the address, its network, the host, what it did and when", () => {
+		const email = abuseReportEmail({
+			bannedAt,
+			host: "app.example.com",
+			intel: { network: "203.0.113.0/24", networkName: "EXAMPLE-NET" },
+			ip: "203.0.113.7",
+			reason: "10 blocked requests in 10 min, last /.env",
+			userAgent: "curl/8",
+		});
+		expect(email.subject).toBe(
+			"Abuse report: 203.0.113.7 scanning for vulnerabilities",
+		);
+		expect(email.content).toContain(
+			"on your network EXAMPLE-NET (203.0.113.0/24)",
+		);
+		expect(email.content).toContain("Banned at: 2026-10-25T12:00:00.000Z");
+		expect(email.content).toContain("Target host: app.example.com");
+		expect(email.content).toContain("What it did: 10 blocked requests");
+		expect(email.content).toContain("User agent: curl/8");
+	});
+
+	test("leaves out what isn't known", () => {
+		const email = abuseReportEmail({
+			bannedAt,
+			host: null,
+			intel: null,
+			ip: "203.0.113.7",
+			reason: "10 blocked requests",
+			userAgent: null,
+		});
+		expect(email.content).not.toContain("your network");
+		expect(email.content).not.toContain("Target host");
+		expect(email.content).not.toContain("User agent");
 	});
 });

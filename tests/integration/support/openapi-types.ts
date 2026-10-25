@@ -6910,6 +6910,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
+						autoReportAbuse: boolean;
 						crowdsecMachineId: string | null;
 						crowdsecPasswordSet: boolean;
 						crowdsecUrl: string | null;
@@ -6958,6 +6959,8 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
+					/** @description Email the banned network's abuse contact once its lookup finds one. */
+					autoReportAbuse?: boolean;
 					crowdsecMachineId?: string | null;
 					/** @description The CrowdSec machine password. Left out, the stored one stays. Write-only. */
 					crowdsecPassword?: string;
@@ -6983,6 +6986,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
+						autoReportAbuse: boolean;
 						crowdsecMachineId: string | null;
 						crowdsecPasswordSet: boolean;
 						crowdsecUrl: string | null;

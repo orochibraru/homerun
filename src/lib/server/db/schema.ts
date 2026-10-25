@@ -678,6 +678,7 @@ export const workstationPreset = pgTable(
 );
 
 export const ipBan = pgTable("ip_ban", {
+	abuseReportedAt: timestamp("abuse_reported_at", { mode: "date" }),
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	expiresAt: timestamp("expires_at", { mode: "date" }),
 	host: text("host"),

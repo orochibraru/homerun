@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { ChartNoAxesColumn } from "@lucide/svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import type { BlockedSummary } from "#lib/dto/blocked-hit-dto.js";
+	import type {
+		BannedPerService,
+		BlockedSummary,
+	} from "#lib/dto/blocked-hit-dto.js";
 	import { formatBytes } from "#lib/formatting.js";
 
 	interface Props {
@@ -9,9 +12,17 @@
 		bans?: number | null;
 		days: number;
 		summary: BlockedSummary;
+		/** The service the most banned addresses were caught on, shown as a fifth stat when set. */
+		topService?: BannedPerService | null;
 	}
 
-	const { baiting, bans = null, days, summary }: Props = $props();
+	const {
+		baiting,
+		bans = null,
+		days,
+		summary,
+		topService = undefined,
+	}: Props = $props();
 
 	const plural = (n: number, word: string) =>
 		`${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
@@ -23,7 +34,7 @@
     icon={ChartNoAxesColumn}
     title="Summary"
   />
-  <dl class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
+  <dl class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 {topService === undefined ? 'xl:grid-cols-4' : 'xl:grid-cols-5'}">
     <div>
       <dt class="text-text-subtle text-xs">IPs blocked</dt>
       <dd class="text-text mt-1 text-2xl font-semibold tabular-nums">
@@ -54,6 +65,19 @@
         {summary.baitResponses === 1 ? "fake file or insult" : "fake files and insults"}
       </p>
     </div>
+    {#if topService !== undefined}
+      <div class="min-w-0">
+        <dt class="text-text-subtle text-xs">Most banned on</dt>
+        <dd class="text-text mt-1 truncate text-2xl font-semibold" title={topService?.serviceName}>
+          {topService?.serviceName ?? "—"}
+        </dd>
+        <p class="text-text-muted mt-0.5 text-xs">
+          {topService
+            ? `${plural(topService.bans, "banned address")} caught there`
+            : "No banned address hit a known service."}
+        </p>
+      </div>
+    {/if}
     <div>
       <dt class="text-text-subtle text-xs">Fed bait</dt>
       <dd class="text-text mt-1 text-2xl font-semibold tabular-nums">

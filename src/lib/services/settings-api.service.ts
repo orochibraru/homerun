@@ -536,6 +536,7 @@ class SettingsApiServiceClass {
 		const current = settings.ipBans;
 		if (
 			sends(body, [
+				"autoReportAbuse",
 				"disrespectMode",
 				"durationHours",
 				"enabled",
@@ -546,6 +547,7 @@ class SettingsApiServiceClass {
 		) {
 			await InstanceSettingsService.saveIpBans(
 				{
+					autoReportAbuse: pick(body.autoReportAbuse, current.autoReportAbuse),
 					disrespectMode: pick(body.disrespectMode, current.disrespectMode),
 					durationHours: pick(body.durationHours, current.durationHours),
 					enabled: pick(body.enabled, current.enabled),
