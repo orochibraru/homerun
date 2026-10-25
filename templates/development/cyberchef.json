@@ -1,0 +1,13 @@
+{
+	"$schema": "../schema.json",
+	"name": "CyberChef",
+	"description": "The cyber Swiss army knife: encode, decode, hash, encrypt and pick apart data in the browser.",
+	"image": "ghcr.io/gchq/cyberchef",
+	"tag": "11.5",
+	"containerPort": 8080,
+	"icon": "di:cyberchef",
+	"tags": ["encoding", "crypto", "tools", "security"],
+	"websiteUrl": "https://gchq.github.io/CyberChef",
+	"sourceUrl": "https://github.com/gchq/CyberChef",
+	"envVars": {}
+}
