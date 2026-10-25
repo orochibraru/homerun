@@ -9,6 +9,7 @@
 	import Breadcrumbs from "#lib/components/breadcrumbs.svelte";
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import GlobalSearch from "#lib/components/global-search.svelte";
+	import MobileCreateFab from "#lib/components/mobile-create-fab.svelte";
 	import MobileDrawer from "#lib/components/mobile-drawer.svelte";
 	import MobileTabBar from "#lib/components/mobile-tab-bar.svelte";
 	import NotificationBell from "#lib/components/notification-bell.svelte";
@@ -294,9 +295,6 @@
   </aside>
 
   <MobileDrawer bind:closeButton={sidebarClose} onClose={closeSidebar} open={sidebarOpen}>
-    {#if can(data.permissions, "services", "write")}
-      <Button class="mt-1 h-12 w-full rounded-full text-[0.9375rem]" href={resolve('services/new')} onclick={() => (sidebarOpen = false)}><Plus class="size-4" />Deploy a service</Button>
-    {/if}
     {@render navGroups(navItemGroups, () => {
       sidebarOpen = false;
     })}
@@ -347,6 +345,7 @@
         {@render children()}
       </ErrorBoundary>
     </main>
+    <MobileCreateFab permissions={data.permissions} />
     <ErrorBoundary compact>
       <MobileTabBar
         bind:menuButton={sidebarToggle}
