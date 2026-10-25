@@ -36,7 +36,7 @@ class JobWorkerClass extends BaseScheduler {
 	/** Stops the worker from claiming new jobs (already-running jobs finish normally). Used around operations that must not race a deploy, e.g. self-update. */
 	hold(): void {
 		holdState.__job_worker_held = true;
-		this.logger.warn("Job worker held: no new jobs will start.");
+		this.logger.info("Job worker held: no new jobs will start.");
 	}
 
 	/** Reverses `hold()`, letting the worker resume claiming jobs. */

@@ -88,7 +88,7 @@ class IpBanServiceClass {
 			userAgent,
 		});
 		if (banned) {
-			this.logger.warn(
+			this.logger.info(
 				`Banned ${ip} after ${hits} blocked requests${host ? ` on ${host}` : ""}`,
 			);
 			await this.sync();
