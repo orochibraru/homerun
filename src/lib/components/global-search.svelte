@@ -21,22 +21,22 @@
 
 	let open = $state(false);
 	let search = $state("");
-	let contentPromise = $state<Promise<SearchGroup[]> | null>(null);
+	let debounced = $state("");
 
 	const term = $derived(search.trim());
 	const pages = $derived(filterPages(SEARCH_PAGES, term, permissions));
 
 	$effect(() => {
 		const q = term;
-		if (q.length < SEARCH_MIN_LENGTH) {
-			contentPromise = null;
-			return;
-		}
 		const timer = setTimeout(() => {
-			contentPromise = searchContent(q.slice(0, SEARCH_MAX_LENGTH));
+			debounced = q.slice(0, SEARCH_MAX_LENGTH);
 		}, DEBOUNCE_MS);
 		return () => clearTimeout(timer);
 	});
+
+	const contentPromise = $derived<Promise<SearchGroup[]> | null>(
+		debounced.length >= SEARCH_MIN_LENGTH ? searchContent(debounced) : null,
+	);
 
 	function isTyping(target: EventTarget | null): boolean {
 		return (

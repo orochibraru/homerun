@@ -22,8 +22,24 @@ import {
 } from "#lib/search.js";
 import { requireUser } from "#lib/server/remote-auth.js";
 import { UserService } from "#lib/services/user.service.js";
-import { resolve } from "$app/paths";
 import { getRequestEvent, query } from "$app/server";
+
+/**
+ * The absolute path of dashboard route `id` (a route id like
+ * `/(protected)/services/[serviceId]` or a bare path like `users`), with
+ * `params` filled in. Not `resolve()`: with relative paths on, it reads the
+ * request's URL, which a remote query isn't allowed to touch.
+ */
+function pathTo(id: string, params: Record<string, string> = {}): string {
+	if (!id.startsWith("/")) {
+		return `/${id}`;
+	}
+	return id
+		.replace(/\/\([^/]+\)/g, "")
+		.replace(/\[([^\]]+)\]/g, (_, name: string) =>
+			encodeURIComponent(params[name] ?? ""),
+		);
+}
 
 function withQuery(path: string, q: string): string {
 	return `${path}?${new URLSearchParams({ q })}`;
@@ -51,7 +67,7 @@ async function searchWorkspace(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: row.primaryDomain ?? row.gitUrl ?? `${row.image}:${row.tag}`,
-				href: resolve("/(protected)/services/[serviceId]", {
+				href: pathTo("/(protected)/services/[serviceId]", {
 					serviceId: row.id,
 				}),
 				id: row.id,
@@ -62,7 +78,7 @@ async function searchWorkspace(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: row.description ?? row.slug,
-				href: resolve("/(protected)/stacks/[stackId]", {
+				href: pathTo("/(protected)/stacks/[stackId]", {
 					stackId: row.id,
 				}),
 				id: row.id,
@@ -73,7 +89,7 @@ async function searchWorkspace(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: `${row.image}:${row.tag}`,
-				href: resolve("/(protected)/templates/[templateId]", {
+				href: pathTo("/(protected)/templates/[templateId]", {
 					templateId: row.id,
 				}),
 				id: row.id,
@@ -84,7 +100,7 @@ async function searchWorkspace(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: row.schedule,
-				href: resolve("/(protected)/cron-jobs/[cronJobId]", {
+				href: pathTo("/(protected)/cron-jobs/[cronJobId]", {
 					cronJobId: row.id,
 				}),
 				id: row.id,
@@ -95,7 +111,7 @@ async function searchWorkspace(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: `/status/${row.slug}`,
-				href: resolve("/(protected)/status-pages/[statusPageId]", {
+				href: pathTo("/(protected)/status-pages/[statusPageId]", {
 					statusPageId: row.id,
 				}),
 				id: row.id,
@@ -129,7 +145,7 @@ async function searchInfrastructure(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: row.agentUrl ?? row.dockerHost,
-				href: resolve("/(protected)/remote-hosts/[hostId]", { hostId: row.id }),
+				href: pathTo("/(protected)/remote-hosts/[hostId]", { hostId: row.id }),
 				id: row.id,
 				kind: "remoteHost" as const,
 				label: row.name,
@@ -138,7 +154,7 @@ async function searchInfrastructure(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: row.source,
-				href: resolve("/(protected)/storage/[volumeId]", { volumeId: row.id }),
+				href: pathTo("/(protected)/storage/[volumeId]", { volumeId: row.id }),
 				id: row.id,
 				kind: "storageVolume" as const,
 				label: row.name,
@@ -147,7 +163,7 @@ async function searchInfrastructure(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: `${row.bucket} · ${row.endpoint}`,
-				href: withQuery(resolve("s3-destinations"), row.name),
+				href: withQuery(pathTo("s3-destinations"), row.name),
 				id: row.id,
 				kind: "s3Destination" as const,
 				label: row.name,
@@ -156,7 +172,7 @@ async function searchInfrastructure(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: row.registryUrl,
-				href: resolve("/(protected)/build-cache-registries/[registryId]", {
+				href: pathTo("/(protected)/build-cache-registries/[registryId]", {
 					registryId: row.id,
 				}),
 				id: row.id,
@@ -167,7 +183,7 @@ async function searchInfrastructure(
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
 				detail: row.kind,
-				href: resolve("notifications/settings/channels"),
+				href: pathTo("notifications/settings/channels"),
 				id: row.id,
 				kind: "notificationChannel" as const,
 				label: row.name,
@@ -193,7 +209,7 @@ async function searchInstance(
 	return [
 		...users.map((row) => ({
 			detail: row.role ? `${row.email} · ${row.role}` : row.email,
-			href: withQuery(resolve("users"), row.email),
+			href: withQuery(pathTo("users"), row.email),
 			id: row.id,
 			kind: "user" as const,
 			label: row.name,
@@ -203,7 +219,7 @@ async function searchInstance(
 			.slice(0, limit)
 			.map((p) => ({
 				detail: p.baseUrl ?? p.kind,
-				href: resolve("git-providers"),
+				href: pathTo("git-providers"),
 				id: p.id,
 				kind: "gitProvider" as const,
 				label: p.name,
@@ -213,7 +229,7 @@ async function searchInstance(
 			.slice(0, limit)
 			.map((p) => ({
 				detail: p.discoveryUrl,
-				href: resolve("/(protected)/authentication/[providerId]", {
+				href: pathTo("/(protected)/authentication/[providerId]", {
 					providerId: p.name,
 				}),
 				id: p.name,
