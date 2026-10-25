@@ -115,7 +115,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Redirects</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Redirects</h1>
       <p class="text-text-muted mt-1 text-sm">
         Send a hostname, or a path under it, to another URL. Served by
         Traefik, no container involved.

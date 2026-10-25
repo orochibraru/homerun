@@ -74,7 +74,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Stacks</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Stacks</h1>
       <p class="text-text-muted mt-1 text-sm">
         Group related services together.
       </p>

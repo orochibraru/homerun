@@ -13,11 +13,29 @@ async function signIn(page: Page) {
 	await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
 }
 
+/** Clicks `save` and waits for `saved`, unless the choice just made is the one already saved, which leaves Save disabled. */
+async function saveIfChanged(
+	page: Page,
+	form: string,
+	saved: string,
+): Promise<void> {
+	const save = page.locator(`button[form='${form}']`);
+	const changed = await expect(save)
+		.toBeEnabled({ timeout: 2000 })
+		.then(
+			() => true,
+			() => false,
+		);
+	if (changed) {
+		await save.click();
+		await expect(page.getByText(saved)).toBeVisible();
+	}
+}
+
 async function saveColors(page: Page, palette: string): Promise<void> {
 	await page.goto("/profile/appearance");
 	await page.getByRole("button", { name: palette }).click();
-	await page.locator("button[form='appearance-colors']").click();
-	await expect(page.getByText("Colors saved.")).toBeVisible();
+	await saveIfChanged(page, "appearance-colors", "Colors saved.");
 }
 
 function cssVarOf(
@@ -74,8 +92,7 @@ async function savePreset(page: Page, name: string): Promise<void> {
 	await page.goto("/profile/appearance");
 	const form = page.locator("form[action='?/updatePreset']");
 	await form.getByRole("button", { name }).click();
-	await page.locator("button[form='appearance-preset']").click();
-	await expect(page.getByText("Preset saved.")).toBeVisible();
+	await saveIfChanged(page, "appearance-preset", "Preset saved.");
 }
 
 test.describe
@@ -126,8 +143,7 @@ async function saveStyle(page: Page, name: string): Promise<void> {
 	await page.goto("/profile/appearance");
 	const form = page.locator("form[action='?/updateSurface']");
 	await form.getByRole("button", { name }).click();
-	await page.locator("button[form='appearance-style']").click();
-	await expect(page.getByText("Style saved.")).toBeVisible();
+	await saveIfChanged(page, "appearance-style", "Style saved.");
 }
 
 test.describe

@@ -41,7 +41,7 @@
     title="API key"
   >
     {#snippet trailing()}
-      <SaveButton form="iac-api-key" label="Create key" pending={creating} />
+      <SaveButton form="iac-api-key" label="Create key" pending={creating} saveUnchanged />
     {/snippet}
   </PanelHeader>
   <div class="space-y-4 px-5 py-4">

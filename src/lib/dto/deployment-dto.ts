@@ -283,6 +283,23 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return row?.total ?? 0;
 	}
 
+	/** How many deployments `serviceId` has had up to and including `until`, which numbers a deployment within its service ("Deployment #12"). */
+	static async countForServiceUpTo(
+		serviceId: string,
+		until: Date,
+	): Promise<number> {
+		const [row] = await db
+			.select({ total: count() })
+			.from(deployment)
+			.where(
+				and(
+					eq(deployment.serviceId, serviceId),
+					lte(deployment.createdAt, until),
+				),
+			);
+		return row?.total ?? 0;
+	}
+
 	/** Recent deployments across a set of services, for a stack's own summary. */
 	static async listRecentForServices(
 		serviceIds: string[],

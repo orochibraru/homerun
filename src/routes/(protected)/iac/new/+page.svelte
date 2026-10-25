@@ -51,6 +51,7 @@
           <SaveButton
             disabled={data.stores.length === 0}
             form="new-iac-project"
+            saveUnchanged
             label="Create"
             pending={creating}
           />

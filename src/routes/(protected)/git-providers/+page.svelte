@@ -152,7 +152,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Git Providers</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Git Providers</h1>
       <p class="text-text-muted mt-1 text-sm">
         Connect a git hosting account (GitHub, GitLab, self-hosted Gitea,
         Bitbucket) so a git-based service's Source tab can browse your repos

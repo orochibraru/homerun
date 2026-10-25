@@ -82,7 +82,7 @@ test.describe
 			const id = await createService(page, "obs-clear-errors");
 
 			await page.goto(`/services/${id}/settings`);
-			await page.locator("#name").fill("obs-clear-errors");
+			await page.locator("#name").fill("obs-clear-errors-renamed");
 			await page.locator("button[form='service-settings']").click();
 
 			await page.goto(

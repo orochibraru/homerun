@@ -9,6 +9,8 @@ export const BLOCKED_STATS_DAYS = 7;
 export const BLOCKED_HIT_RETENTION_MS = BLOCKED_STATS_DAYS * 86_400_000;
 
 export interface IpBanSettings {
+	/** Emails the banned network's abuse contact once its lookup finds one. */
+	autoReportAbuse: boolean;
 	disrespectMode: boolean;
 	durationHours: number;
 	enabled: boolean;
@@ -18,6 +20,7 @@ export interface IpBanSettings {
 }
 
 export const DEFAULT_IP_BAN_SETTINGS: IpBanSettings = {
+	autoReportAbuse: false,
 	disrespectMode: false,
 	durationHours: 0,
 	enabled: true,
@@ -40,6 +43,8 @@ export function withIpBanDefaults(
 	stored: Partial<IpBanSettings> | null | undefined,
 ): IpBanSettings {
 	return {
+		autoReportAbuse:
+			stored?.autoReportAbuse ?? DEFAULT_IP_BAN_SETTINGS.autoReportAbuse,
 		disrespectMode:
 			stored?.disrespectMode ?? DEFAULT_IP_BAN_SETTINGS.disrespectMode,
 		durationHours:
@@ -284,4 +289,43 @@ export function shouldBan(params: {
 		bannableIp(params.ip) &&
 		params.hits >= params.settings.threshold
 	);
+}
+
+/** What an abuse report is written from: one ban and what its lookup found. */
+export interface AbuseReportInput {
+	bannedAt: Date;
+	host: string | null;
+	intel: { network: string | null; networkName: string | null } | null;
+	ip: string;
+	reason: string;
+	userAgent: string | null;
+}
+
+/** The plain-text email sent to a banned address's abuse contact: what it did, when, and on which host. */
+export function abuseReportEmail(input: AbuseReportInput): {
+	content: string;
+	subject: string;
+} {
+	const network = input.intel?.networkName
+		? `${input.intel.networkName}${input.intel.network ? ` (${input.intel.network})` : ""}`
+		: (input.intel?.network ?? null);
+	const lines = [
+		"Hello,",
+		"",
+		`The address ${input.ip}${network ? `, on your network ${network},` : ""} repeatedly requested paths that only vulnerability scanners and credential harvesters ask for, and has been blocked.`,
+		"",
+		`Address: ${input.ip}`,
+		`Banned at: ${input.bannedAt.toISOString()}`,
+		...(input.host ? [`Target host: ${input.host}`] : []),
+		`What it did: ${input.reason}`,
+		...(input.userAgent ? [`User agent: ${input.userAgent}`] : []),
+		"",
+		"Please look into the host behind this address. Timestamps are UTC.",
+		"",
+		"This report was sent automatically by a self-hosted Homerun instance.",
+	];
+	return {
+		content: lines.join("\n"),
+		subject: `Abuse report: ${input.ip} scanning for vulnerabilities`,
+	};
 }

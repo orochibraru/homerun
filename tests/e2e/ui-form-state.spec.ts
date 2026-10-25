@@ -44,14 +44,22 @@ test.describe
 		}) => {
 			await signIn(page);
 			await page.goto("/settings/docker");
-			await page.locator("#dockerNetworkName").fill("homerun");
+			const network = page.locator("#dockerNetworkName");
+			const original = await network.inputValue();
+			await network.fill("homerun-form-state");
 
 			await page.getByRole("button", { name: "Save" }).first().click();
 			await expect(page.getByText("Docker settings saved")).toBeVisible();
 
-			await expect(page.locator("#dockerNetworkName")).toHaveValue("homerun");
+			await expect(network).toHaveValue("homerun-form-state");
 			await page.reload();
-			await expect(page.locator("#dockerNetworkName")).toHaveValue("homerun");
+			await expect(network).toHaveValue("homerun-form-state");
+
+			await network.fill(original);
+			await page.getByRole("button", { name: "Save" }).first().click();
+			await expect(
+				page.getByText("Docker settings saved").first(),
+			).toBeVisible();
 		});
 
 		test("importing a compose file accepts the one the preview just parsed", async ({

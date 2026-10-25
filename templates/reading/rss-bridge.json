@@ -1,0 +1,14 @@
+{
+	"$schema": "../schema.json",
+	"name": "RSS-Bridge",
+	"description": "Generates RSS and Atom feeds for sites that don't have one.",
+	"image": "rssbridge/rss-bridge",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "di:rss-bridge",
+	"tags": ["rss", "feeds", "scraping"],
+	"websiteUrl": "https://rss-bridge.org",
+	"sourceUrl": "https://github.com/RSS-Bridge/rss-bridge",
+	"envVars": {},
+	"volumes": ["/config"]
+}

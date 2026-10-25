@@ -1,55 +1,34 @@
 <script lang="ts">
-	import { Ban, Radar, Undo2 } from "@lucide/svelte";
-	import BlockedSummary from "#lib/components/blocked-summary.svelte";
+	import { Ban, MailWarning, Radar, Undo2 } from "@lucide/svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
+	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
+	import Pagination from "#lib/components/pagination.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatDate, timeAgo } from "#lib/formatting.js";
 	import { intelSummary } from "#lib/ip-intel.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data } = $props();
+
+	let reporting = $state<string | null>(null);
 </script>
 
 <div class="space-y-6">
-  {#if !data.published}
-    <p class="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600">
-      Traefik's dynamic config directory isn't set (Settings → Networking), so
-      blocked requests aren't counted and bans aren't enforced.
-    </p>
-  {:else if !data.ipBans.enabled}
-    <p class="text-text-muted text-sm">
-      Bans are off: blocked paths still answer 403, but nobody gets banned.
-      <a
-        class="text-accent hover:underline"
-        href={resolve("/(protected)/settings/ip-bans")}
-      >
-        Turn them on
-      </a>
-    </p>
-  {/if}
-
-  <BlockedSummary
-    baiting={data.ipBans.meanMode || data.ipBans.disrespectMode}
-    bans={data.bans.length}
-    days={data.statsDays}
-    summary={data.summary}
-  />
-
   <section class="panel rounded-md">
     <PanelHeader
       description="Addresses Traefik turns away with a 403 on every service. Notification channels subscribed to IP banned hear about each new one."
       icon={Ban}
       title="Banned addresses"
     />
-    <div class="p-5">
+    <div class="space-y-4 p-5">
+      <EntityToolbar placeholder="Search by address, host or reason…" />
       {#if data.bans.length === 0}
         <EmptyState
           icon={Ban}
-          subtitle="Addresses that keep requesting blocked paths show up here."
-          title="Nobody is banned"
+          subtitle={data.searching ? "Nothing banned matches that search." : "Addresses that keep requesting blocked paths show up here."}
+          title={data.searching ? "No match" : "Nobody is banned"}
         />
       {:else}
         <div class="space-y-2.5">
@@ -78,6 +57,9 @@
                     >
                       {ban.intel.abuseEmail}
                     </a>
+                    {#if ban.abuseReportedAt}
+                      · reported {timeAgo(ban.abuseReportedAt)}
+                    {/if}
                   </p>
                 {/if}
                 {#if ban.userAgent}
@@ -92,6 +74,36 @@
                     : "for good"}
                 </p>
               </div>
+              <div class="flex shrink-0 flex-col gap-2 sm:flex-row">
+              {#if ban.intel?.abuseEmail && !ban.abuseReportedAt}
+                <form
+                  action="?/reportAbuse"
+                  method="POST"
+                  use:enhance={enhanceToast({
+                    error: "Couldn't send the abuse report.",
+                    loading: `Reporting ${ban.ip}`,
+                    onSettled: () => {
+                      reporting = null;
+                    },
+                    onStart: () => {
+                      reporting = ban.ip;
+                    },
+                    success: (result) => `Reported to ${result?.to ?? "the abuse contact"}.`,
+                  })}
+                >
+                  <input name="ip" type="hidden" value={ban.ip}>
+                  <Button
+                    disabled={!data.smtpEnabled || reporting === ban.ip}
+                    size="sm"
+                    title={data.smtpEnabled ? `Email ${ban.intel.abuseEmail}` : "Set up SMTP in Settings → Email first"}
+                    type="submit"
+                    variant="outline"
+                  >
+                    <MailWarning class="size-4" />
+                    Report abuse
+                  </Button>
+                </form>
+              {/if}
               <form
                 action="?/unban"
                 method="POST"
@@ -107,9 +119,11 @@
                   Unban
                 </Button>
               </form>
+              </div>
             </div>
           {/each}
         </div>
+        <Pagination label="bans" page={data.page} perPage={data.perPage} total={data.total} />
       {/if}
     </div>
   </section>

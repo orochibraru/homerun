@@ -140,7 +140,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text flex items-baseline gap-2 text-lg font-semibold tracking-tight">
+      <h1 class="text-text flex items-baseline gap-2 text-lg font-semibold tracking-tight max-md:hidden">
         Templates
         <span class="text-text-muted text-sm font-medium tabular-nums">
           {data.builtinsTotal + data.customTotal}

@@ -29,7 +29,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Service accounts</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Service accounts</h1>
       <p class="text-text-muted mt-1 text-sm">
         Non-human accounts for CI and scripts. They can't sign in; their API
         keys get through the login walls that list them, and reach the

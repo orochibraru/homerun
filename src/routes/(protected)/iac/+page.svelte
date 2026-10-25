@@ -64,7 +64,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Infrastructure as Code</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Infrastructure as Code</h1>
       <p class="text-text-muted mt-1 text-sm">
         Manage this instance with Terraform, OpenTofu or Pulumi. Each project
         keeps its state here, generates its configuration from what's running

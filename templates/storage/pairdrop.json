@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "PairDrop",
+	"description": "AirDrop in the browser: send files between devices on the same network or paired over the internet.",
+	"image": "lscr.io/linuxserver/pairdrop",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:snapdrop",
+	"tags": ["file-sharing", "transfer", "p2p"],
+	"websiteUrl": "https://pairdrop.net",
+	"sourceUrl": "https://github.com/schlagmichdoch/PairDrop",
+	"envVars": {
+		"PGID": "1000",
+		"PUID": "1000",
+		"TZ": "UTC"
+	}
+}

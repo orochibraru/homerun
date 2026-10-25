@@ -4,15 +4,23 @@ import {
 	countDistinct,
 	desc,
 	eq,
+	gt,
 	gte,
 	isNotNull,
+	isNull,
 	lt,
 	max,
+	or,
 	sql,
 	sum,
 } from "drizzle-orm";
 import { db } from "#lib/server/db/lib.js";
-import { type BlockedHit, blockedHit } from "#lib/server/db/schema.js";
+import {
+	type BlockedHit,
+	blockedHit,
+	ipBan,
+	service,
+} from "#lib/server/db/schema.js";
 import { BaseDTO } from "./base-dto";
 
 /** One address's blocked requests within a window, newest first. */
@@ -35,6 +43,12 @@ export interface BlockedSummary {
 }
 
 /** Wraps the `blocked_hit` table: one row per request a service's blocked paths turned away, counted towards an IP ban. */
+export interface BannedPerService {
+	bans: number;
+	serviceId: string;
+	serviceName: string;
+}
+
 export class BlockedHitDTO extends BaseDTO<BlockedHit> {
 	/**
 	 * Records one blocked request, with the service and blocked-path pattern
@@ -97,6 +111,38 @@ export class BlockedHitDTO extends BaseDTO<BlockedHit> {
 			.orderBy(desc(lastAt))
 			.limit(limit);
 		return rows.map((row) => ({ ...row, lastAt: row.lastAt ?? since }));
+	}
+
+	/**
+	 * Services ranked by how many of the addresses banned at `now` were
+	 * caught on them, most first. An address that hit several services counts
+	 * once on each; hits on no known service are left out.
+	 */
+	static async bannedPerService(now = new Date()): Promise<BannedPerService[]> {
+		const bans = countDistinct(blockedHit.ip);
+		const rows = await db
+			.select({
+				bans,
+				serviceId: blockedHit.serviceId,
+				serviceName: service.name,
+			})
+			.from(blockedHit)
+			.innerJoin(ipBan, eq(ipBan.ip, blockedHit.ip))
+			.innerJoin(service, eq(service.id, blockedHit.serviceId))
+			.where(or(isNull(ipBan.expiresAt), gt(ipBan.expiresAt, now)))
+			.groupBy(blockedHit.serviceId, service.name)
+			.orderBy(desc(bans), service.name);
+		return rows.flatMap((row) =>
+			row.serviceId
+				? [
+						{
+							bans: row.bans,
+							serviceId: row.serviceId,
+							serviceName: row.serviceName,
+						},
+					]
+				: [],
+		);
 	}
 
 	/**

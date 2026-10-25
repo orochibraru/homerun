@@ -230,6 +230,7 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 	return betterAuth({
 		advanced: {
 			disableOriginCheck: false,
+			ipAddress: { ipAddressHeaders: ["x-real-ip"] },
 			...secureCookiesOption(directAccess),
 			// Opt-in (AUTH_CROSS_SUBDOMAIN=true) : see config.ts for the tradeoff.
 			// Required for a signed-in admin to be recognized on a gated deployed

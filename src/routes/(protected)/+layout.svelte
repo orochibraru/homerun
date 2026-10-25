@@ -9,6 +9,7 @@
 	import Breadcrumbs from "#lib/components/breadcrumbs.svelte";
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import GlobalSearch from "#lib/components/global-search.svelte";
+	import MobileCreateFab from "#lib/components/mobile-create-fab.svelte";
 	import MobileDrawer from "#lib/components/mobile-drawer.svelte";
 	import MobileTabBar from "#lib/components/mobile-tab-bar.svelte";
 	import NotificationBell from "#lib/components/notification-bell.svelte";
@@ -21,7 +22,12 @@
 	import { visibleItems } from "#lib/ui-mode.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import { allNavItems, NAV_PARENT_ICONS, type NavItem } from "./nav-items";
+	import {
+		allNavItems,
+		NAV_PARENT_DESCRIPTIONS,
+		NAV_PARENT_ICONS,
+		type NavItem,
+	} from "./nav-items";
 
 	const { data, children } = $props();
 
@@ -44,8 +50,12 @@
 	const desktop = new MediaQuery("(min-width: 768px)");
 
 	const drawerRow =
-		"in-data-[slot=mobile-drawer]:min-h-12 in-data-[slot=mobile-drawer]:gap-4 in-data-[slot=mobile-drawer]:rounded-full in-data-[slot=mobile-drawer]:border-transparent in-data-[slot=mobile-drawer]:px-4 in-data-[slot=mobile-drawer]:text-[0.9375rem]";
-	const drawerIcon = "in-data-[slot=mobile-drawer]:size-5";
+		"in-data-[slot=mobile-drawer]:mb-1.5 in-data-[slot=mobile-drawer]:min-h-14 in-data-[slot=mobile-drawer]:gap-3 in-data-[slot=mobile-drawer]:rounded-xl in-data-[slot=mobile-drawer]:px-2 in-data-[slot=mobile-drawer]:py-1.5 in-data-[slot=mobile-drawer]:text-sm";
+	const drawerTile =
+		"flex shrink-0 items-center justify-center in-data-[slot=mobile-drawer]:size-9 in-data-[slot=mobile-drawer]:rounded-lg in-data-[slot=mobile-drawer]:bg-accent-light";
+	const drawerIcon = "in-data-[slot=mobile-drawer]:size-4.5";
+	const drawerDescription =
+		"text-text-subtle block truncate text-[0.6875rem] font-normal";
 
 	function closeSidebar() {
 		sidebarOpen = false;
@@ -177,21 +187,26 @@
       group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
       {drawerRow}
       {active
-      ? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold'
-      : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium'}
+      ? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold in-data-[slot=mobile-drawer]:border-accent/40'
+      : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium in-data-[slot=mobile-drawer]:border-border in-data-[slot=mobile-drawer]:bg-surface'}
    "
     aria-current={active ? "page" : undefined}
     href={item.href}
     onclick={onNavigate}
   >
-    <NavIcon class="text-accent size-4 shrink-0 {drawerIcon}" />
-    {(item.parent && item.navLabel) || item.label}
+    <span class={drawerTile}><NavIcon class="text-accent size-4 shrink-0 {drawerIcon}" /></span>
+    <span class="flex min-w-0 flex-col">
+      {(item.parent && item.navLabel) || item.label}
+      {#if onNavigate}
+        <span class={drawerDescription}>{item.description}</span>
+      {/if}
+    </span>
   </a>
 {/snippet}
 
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
   {#each groups as group (group.heading)}
-    <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium in-data-[slot=mobile-drawer]:mt-6 in-data-[slot=mobile-drawer]:px-4 in-data-[slot=mobile-drawer]:text-[0.8125rem]">
+    <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium in-data-[slot=mobile-drawer]:mt-5 in-data-[slot=mobile-drawer]:px-1 in-data-[slot=mobile-drawer]:text-xs">
       {group.heading}
     </p>
     {#each group.entries as entry (entry.kind === "item" ? entry.item.href : entry.label)}
@@ -204,20 +219,26 @@
           class="
             mb-0.5 flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-left text-[0.8125rem] font-medium transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
             {drawerRow}
+            in-data-[slot=mobile-drawer]:border-border in-data-[slot=mobile-drawer]:bg-surface
             {hasActive(entry.items) ? 'text-text' : 'text-text-muted hover:bg-surface-2 hover:text-text'}
           "
           aria-expanded={open}
           onclick={() => toggleParent(entry.label, entry.items)}
           type="button"
         >
-          <ParentIcon class="text-accent size-4 shrink-0 {drawerIcon}" />
-          <span class="flex-1">{entry.label}</span>
+          <span class={drawerTile}><ParentIcon class="text-accent size-4 shrink-0 {drawerIcon}" /></span>
+          <span class="flex min-w-0 flex-1 flex-col">
+            {entry.label}
+            {#if onNavigate}
+              <span class={drawerDescription}>{NAV_PARENT_DESCRIPTIONS[entry.label]}</span>
+            {/if}
+          </span>
           <ChevronRight
             class="text-text-subtle size-3.5 transition-transform duration-150 {open ? 'rotate-90' : ''}"
           />
         </button>
         {#if open}
-          <div class="border-border mb-1 ml-4.5 border-l pl-2" transition:slide={{ duration: 150 }}>
+          <div class="border-border mb-1 ml-4.5 border-l pl-2 in-data-[slot=mobile-drawer]:ml-7" transition:slide={{ duration: 150 }}>
             {#each entry.items as item (item.href)}
               {@render navLink(item, onNavigate)}
             {/each}
@@ -274,9 +295,6 @@
   </aside>
 
   <MobileDrawer bind:closeButton={sidebarClose} onClose={closeSidebar} open={sidebarOpen}>
-    {#if can(data.permissions, "services", "write")}
-      <Button class="mt-1 h-12 w-full rounded-full text-[0.9375rem]" href={resolve('services/new')} onclick={() => (sidebarOpen = false)}><Plus class="size-4" />Deploy a service</Button>
-    {/if}
     {@render navGroups(navItemGroups, () => {
       sidebarOpen = false;
     })}
@@ -327,6 +345,7 @@
         {@render children()}
       </ErrorBoundary>
     </main>
+    <MobileCreateFab permissions={data.permissions} />
     <ErrorBoundary compact>
       <MobileTabBar
         bind:menuButton={sidebarToggle}

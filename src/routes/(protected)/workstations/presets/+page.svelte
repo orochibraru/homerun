@@ -38,7 +38,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Workstation Presets</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Workstation Presets</h1>
       <p class="text-text-muted mt-1 text-sm">
         Saved settings to start a new workstation from. Only you see yours.
       </p>

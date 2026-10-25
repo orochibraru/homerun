@@ -5,6 +5,7 @@ import { BlockedHitDTO } from "#lib/dto/blocked-hit-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { IpBanDTO } from "#lib/dto/ip-ban-dto.js";
 import {
+	abuseReportEmail,
 	BANS_FILE,
 	BLOCKED_HIT_RETENTION_MS,
 	banExpiry,
@@ -22,6 +23,7 @@ import {
 	BLOCKED_PROOF_HEADER,
 	validBlockedProof,
 } from "./docker/error-pages.ts";
+import { EmailService } from "./email.service.ts";
 import { IpIntelService } from "./ip-intel.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { ipBanMessage } from "./notification-messages.ts";
@@ -88,12 +90,17 @@ class IpBanServiceClass {
 			userAgent,
 		});
 		if (banned) {
-			this.logger.warn(
+			this.logger.info(
 				`Banned ${ip} after ${hits} blocked requests${host ? ` on ${host}` : ""}`,
 			);
 			await this.sync();
 			void CrowdsecService.ban(ip, settings.durationHours, reason);
-			void this.identify(ip).then((intel) =>
+			void this.identify(ip).then(async (intel) => {
+				if (settings.autoReportAbuse && intel.abuseEmail) {
+					await this.reportAbuse(ip).catch((err) =>
+						this.logger.error(`Couldn't report ${ip} for abuse`, err),
+					);
+				}
 				NotificationChannelService.notify(
 					ipBanMessage(
 						{
@@ -107,9 +114,42 @@ class IpBanServiceClass {
 						},
 						now.toISOString(),
 					),
-				),
-			);
+				);
+			});
 		}
+	}
+
+	/**
+	 * Emails banned address `ip`'s network abuse contact about it over the
+	 * instance's SMTP, and records when.
+	 *
+	 * @returns The address the report went to.
+	 * @throws When `ip` isn't banned, already reported, has no known abuse contact, or SMTP isn't set up or refuses.
+	 */
+	async reportAbuse(ip: string): Promise<string> {
+		const ban = (await IpBanDTO.get(ip))?.toJSON();
+		if (!ban) {
+			throw new Error("That address isn't banned.");
+		}
+		if (ban.abuseReportedAt) {
+			throw new Error(`${ip} was already reported.`);
+		}
+		const to = ban.intel?.abuseEmail;
+		if (!to) {
+			throw new Error(`No abuse contact is known for ${ip}.`);
+		}
+		const email = abuseReportEmail({
+			bannedAt: ban.createdAt,
+			host: ban.host,
+			intel: ban.intel,
+			ip,
+			reason: ban.reason,
+			userAgent: ban.userAgent,
+		});
+		await new EmailService({ ...email, to }).send();
+		await IpBanDTO.markAbuseReported(ip);
+		this.logger.info(`Abuse report sent: ip=${ip} to=${to}`);
+		return to;
 	}
 
 	/** Looks up who is behind banned address `ip` and stores it on the ban. Never throws: a failed lookup still stores what it found. */

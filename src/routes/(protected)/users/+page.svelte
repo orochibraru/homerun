@@ -61,7 +61,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Users</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Users</h1>
       <p class="text-text-muted mt-1 text-sm">
         Every account on this instance. Public sign-up is closed once the
         first account exists : every account after that is created here. A

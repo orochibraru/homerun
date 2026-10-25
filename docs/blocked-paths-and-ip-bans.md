@@ -57,8 +57,11 @@ rule, on by default:
 - **Within**: in how many minutes (10 by default, up to a day),
 - **Ban for**: how many hours the ban lasts (0, for good, by default).
 
-**Monitoring → Blocked IPs** (admins) lists the banned addresses, why and until
-when, who is behind each one and the user agent it sent, each with an **Unban**
+**Monitoring → Blocked IPs** (admins) opens on a summary of the last week,
+including **Most banned on**, the service the most banned addresses were caught
+on, and has two views. **Addresses** lists the banned addresses, newest first, a
+page at a time and searchable by address, host or reason: why and until when,
+who is behind each one and the user agent it sent, each with an **Unban**
 button, and under **Being counted** every address that requested a blocked path
 within the window but isn't banned yet: how many requests it made against the
 threshold, the last host and path it asked for, and when. Expired bans are
@@ -70,7 +73,15 @@ name, the network (AS) announcing it and its country through Team Cymru's DNS
 service, and the network's owner and abuse contact over RDAP (`rdap.org`). The
 result shows on Blocked IPs and in the ban's notification; a lookup that fails
 leaves those fields blank. Bans placed before this existed are looked up a few a
-minute. Reporting a scanner to its abuse contact is up to you.
+minute. **By service** ranks the services by how many banned addresses were
+caught on them; an address that hit several services counts on each.
+
+When the lookup found an abuse contact, **Report abuse** on the ban emails it
+the address, when it was banned, the host and what it asked for, over the
+instance's [SMTP](configuration.md), and the ban then shows when it was
+reported; an address is only ever reported once. **Email the abuse contact
+automatically** under Settings → IP bans, off by default, sends that report on
+its own as soon as a new ban's lookup finds a contact.
 
 The dashboard's own address is never blocked by a ban, so a banned admin can
 still sign in and lift it.

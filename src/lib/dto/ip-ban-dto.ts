@@ -1,6 +1,7 @@
 import {
 	and,
 	asc,
+	count,
 	desc,
 	eq,
 	gt,
@@ -12,6 +13,11 @@ import {
 import type { IpIntel } from "#lib/ip-intel.js";
 import { db } from "#lib/server/db/lib.js";
 import { type IpBan, ipBan } from "#lib/server/db/schema.js";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "#lib/server/list-query.js";
 import { BaseDTO } from "./base-dto";
 
 /** Wraps the `ip_ban` table: one row per banned client address, enforced by Traefik through `IpBanService`. */
@@ -24,6 +30,57 @@ export class IpBanDTO extends BaseDTO<IpBan> {
 			.where(or(isNull(ipBan.expiresAt), gt(ipBan.expiresAt, now)))
 			.orderBy(desc(ipBan.createdAt));
 		return rows.map((row) => new IpBanDTO(row));
+	}
+
+	/** One page of the bans in force at `now`, newest first, searched on address, host and reason, plus the unpaged total. */
+	static async listActivePaged(
+		query: ListQuery,
+		now = new Date(),
+	): Promise<PagedResult<IpBanDTO>> {
+		const where = and(
+			or(isNull(ipBan.expiresAt), gt(ipBan.expiresAt, now)),
+			searchCondition(query.q, [ipBan.ip, ipBan.host, ipBan.reason]),
+		);
+		const [rows, [totals]] = await Promise.all([
+			db
+				.select()
+				.from(ipBan)
+				.where(where)
+				.orderBy(desc(ipBan.createdAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(ipBan).where(where),
+		]);
+		return {
+			items: rows.map((row) => new IpBanDTO(row)),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals?.total ?? 0,
+		};
+	}
+
+	/** How many bans are in force at `now`. */
+	static async countActive(now = new Date()): Promise<number> {
+		const [row] = await db
+			.select({ total: count() })
+			.from(ipBan)
+			.where(or(isNull(ipBan.expiresAt), gt(ipBan.expiresAt, now)));
+		return row?.total ?? 0;
+	}
+
+	/** The ban on `ip`, expired or not, or null. */
+	static async get(ip: string): Promise<IpBanDTO | null> {
+		const [row] = await db
+			.select()
+			.from(ipBan)
+			.where(eq(ipBan.ip, ip))
+			.limit(1);
+		return row ? new IpBanDTO(row) : null;
+	}
+
+	/** Records that `ip`'s network was emailed about it, so it isn't reported twice. */
+	static async markAbuseReported(ip: string, at = new Date()): Promise<void> {
+		await db.update(ipBan).set({ abuseReportedAt: at }).where(eq(ipBan.ip, ip));
 	}
 
 	/** Every banned address still in force at `now`, oldest ban first, for the Traefik rule. */

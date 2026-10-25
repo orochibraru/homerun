@@ -58,7 +58,7 @@
     title="Connect a store"
   >
     {#snippet trailing()}
-      <SaveButton form="connect-store" label="Connect" pending={connecting} />
+      <SaveButton form="connect-store" label="Connect" pending={connecting} saveUnchanged />
     {/snippet}
   </PanelHeader>
   {#key formKey}

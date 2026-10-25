@@ -2,11 +2,11 @@
 	import { Bell, CheckCheck, Settings2, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import BrowserNotificationsButton from "#lib/components/browser-notifications-button.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import NotificationRow from "#lib/components/notification-row.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import * as Tooltip from "#lib/components/ui/tooltip/index.js";
 	import {
 		deleteAllNotifications,
 		deleteNotification,
@@ -52,14 +52,13 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
     <div class="min-w-0">
-      <h1 class="text-text text-lg font-semibold tracking-tight">Notifications</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Notifications</h1>
       <p class="text-text-muted mt-1 text-sm">
         Deploys, scheduled tasks, health and server alerts across every service,
         newest first. Each account reads and clears its own copy.
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <BrowserNotificationsButton showDisable />
       {#if unreadCount > 0}
         <Button onclick={handleMarkAllRead} size="sm" variant="outline">
           <CheckCheck class="size-3.5" />
@@ -72,10 +71,16 @@
           Clear all
         </Button>
       {/if}
-      <Button href={resolve('notifications/settings')} size="sm" variant="outline">
-        <Settings2 class="size-3.5" />
-        Settings
-      </Button>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          {#snippet child({ props })}
+            <Button {...props} aria-label="Notification settings" href={resolve('notifications/settings')} size="icon-sm" variant="outline">
+              <Settings2 class="size-4" />
+            </Button>
+          {/snippet}
+        </Tooltip.Trigger>
+        <Tooltip.Content>Notification settings</Tooltip.Content>
+      </Tooltip.Root>
     </div>
   </div>
 

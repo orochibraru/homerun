@@ -1,23 +1,7 @@
 <script lang="ts">
-	import {
-		Activity,
-		Clock,
-		Container,
-		Database,
-		FileText,
-		FolderKanban,
-		GitBranch,
-		HardDrive,
-		KeyRound,
-		LayoutGrid,
-		Network,
-		Search,
-		Send,
-		Server,
-		User,
-	} from "@lucide/svelte";
-	import type { Component } from "svelte";
+	import { FileText, Search } from "@lucide/svelte";
 	import { headerControlClass } from "#lib/components/header-styles.js";
+	import { SEARCH_KIND_ICONS as KIND_ICONS } from "#lib/components/search-kind-icons.js";
 	import * as Command from "#lib/components/ui/command/index.js";
 	import type { Permissions } from "#lib/permissions.js";
 	import { searchContent } from "#lib/remote/search.remote.js";
@@ -27,48 +11,32 @@
 		SEARCH_MIN_LENGTH,
 		SEARCH_PAGES,
 		type SearchGroup,
-		type SearchResultKind,
 	} from "#lib/search.js";
 	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 
 	const { permissions }: { permissions: Permissions } = $props();
 
 	const DEBOUNCE_MS = 250;
 
-	const KIND_ICONS: Record<SearchResultKind, Component> = {
-		authProvider: KeyRound,
-		buildCacheRegistry: Container,
-		cronJob: Clock,
-		gitProvider: GitBranch,
-		notificationChannel: Send,
-		stack: FolderKanban,
-		remoteHost: Network,
-		s3Destination: Database,
-		service: Server,
-		statusPage: Activity,
-		storageVolume: HardDrive,
-		template: LayoutGrid,
-		user: User,
-	};
-
 	let open = $state(false);
 	let search = $state("");
-	let contentPromise = $state<Promise<SearchGroup[]> | null>(null);
+	let debounced = $state("");
 
 	const term = $derived(search.trim());
 	const pages = $derived(filterPages(SEARCH_PAGES, term, permissions));
 
 	$effect(() => {
 		const q = term;
-		if (q.length < SEARCH_MIN_LENGTH) {
-			contentPromise = null;
-			return;
-		}
 		const timer = setTimeout(() => {
-			contentPromise = searchContent(q.slice(0, SEARCH_MAX_LENGTH));
+			debounced = q.slice(0, SEARCH_MAX_LENGTH);
 		}, DEBOUNCE_MS);
 		return () => clearTimeout(timer);
 	});
+
+	const contentPromise = $derived<Promise<SearchGroup[]> | null>(
+		debounced.length >= SEARCH_MIN_LENGTH ? searchContent(debounced) : null,
+	);
 
 	function isTyping(target: EventTarget | null): boolean {
 		return (
@@ -97,8 +65,12 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
+<a aria-label="Search" class="{headerControlClass} w-10 md:hidden" href={resolve("search")}>
+  <Search class="size-4" />
+</a>
+
 <button
-  class="{headerControlClass} px-2.5"
+  class="{headerControlClass} px-2.5 max-md:hidden"
   aria-label="Search"
   onclick={() => {
     open = true;

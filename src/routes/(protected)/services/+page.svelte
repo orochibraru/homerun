@@ -26,7 +26,7 @@
 <div class="p-5 md:p-6">
   <div class="border-border mb-5 flex flex-wrap items-end justify-between gap-3 border-b pb-4">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Services</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Services</h1>
       <p class="text-text-muted mt-0.5 text-xs">
         Containers deployed to this server.
       </p>

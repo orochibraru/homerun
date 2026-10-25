@@ -1,5 +1,7 @@
 <script lang="ts" module>
 	export interface StepperStep {
+		/** One line under the step's name in the mobile header, saying what the step asks for. */
+		description?: string;
 		icon?: Component<{ class?: string }>;
 		label: string;
 	}
@@ -8,6 +10,7 @@
 <script lang="ts">
   import { ArrowLeft, ArrowRight, Check } from "@lucide/svelte";
   import type { Component, Snippet } from "svelte";
+  import StepperMobileHeader from "#lib/components/stepper-mobile-header.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
 
   interface Props {
@@ -124,20 +127,7 @@
     {/each}
   </div>
 
-  <div class="sm:hidden">
-    <div class="flex items-center justify-between text-sm font-medium text-text">
-      <span class="text-xs">
-        Step {activeStep + 1} of {steps.length}
-      </span>
-      <span class="text-text-muted">{steps[activeStep]?.label}</span>
-    </div>
-    <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
-      <div
-        class="h-full rounded-full bg-accent transition-all duration-300"
-        style="width: {((activeStep + 1) / steps.length) * 100}%"
-      ></div>
-    </div>
-  </div>
+  <StepperMobileHeader {activeStep} {reachableStep} {steps} onselect={goToStep} />
 
   {@render children()}
 

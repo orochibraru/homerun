@@ -6,17 +6,18 @@ command, labels, run-as user, env files, added capabilities, devices and
 privileged mode) you can deploy from repeatedly without re-entering everything.
 Two kinds:
 
-- **Built-in**, a catalog of ~100 common self-hosted apps, media (Immich,
+- **Built-in**, a catalog of ~110 common self-hosted apps, media (Immich,
   Jellyfin, Plex, Navidrome, the *arr stack, qBittorrent), databases and caches
   (PostgreSQL, MySQL, MongoDB, Redis), networking (Pi-hole, AdGuard Home, Nginx
   Proxy Manager), monitoring (Uptime Kuma, Grafana, Prometheus, Gatus,
   Healthchecks), dashboards (Homepage, Dashy, Homarr, Portainer), productivity
-  (Vaultwarden, Trilium, Wiki.js, BookStack, Vikunja, NocoDB, Excalidraw),
-  identity (Keycloak, Pocket ID), git forges (Gitea, Forgejo), and more. Seeded
-  on every boot (idempotent), immutable, available to every account. Each
-  carries its real app logo, most of them from [Dashboard Icons](#icons) and a
-  few bundled with Homerun; an app with no official logo falls back to a colored
-  icon for its category.
+  (Vaultwarden, Trilium, Wiki.js, BookStack, Vikunja, NocoDB, Excalidraw,
+  PrivateBin), tools (CyberChef, PairDrop, LibreSpeed, RSS-Bridge), identity
+  (Keycloak, Pocket ID), git forges (Gitea, Forgejo), and more. Seeded on every
+  boot (idempotent), immutable, available to every account. Each carries its
+  real app logo, most of them from [Dashboard Icons](#icons) and a few bundled
+  with Homerun; an app with no official logo falls back to a colored icon for
+  its category.
 - **Custom**, save any service's current config as a template from its Settings
   tab, or build one from scratch under `Templates → New Template`, whose
   **Runtime** section takes the same fields as a service's **Container →

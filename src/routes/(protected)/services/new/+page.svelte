@@ -9,6 +9,7 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import Alert from "#lib/components/alert.svelte";
+	import StepperMobileHeader from "#lib/components/stepper-mobile-header.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
 	import type { DetectedConfig } from "#lib/image-config.js";
 	import { runtimeOptionsSummary } from "#lib/service-runtime.js";
@@ -38,11 +39,31 @@
 	const errorMessages = $derived(errors ? Object.values(errors).flat() : []);
 
 	const STEPS = [
-		{ icon: Server, label: "Basic info" },
-		{ icon: Network, label: "Networking" },
-		{ icon: SlidersHorizontal, label: "Environment" },
-		{ icon: HardDrive, label: "Volumes" },
-		{ icon: Cpu, label: "Compute" },
+		{
+			description: "Name it and pick the image or repository to run.",
+			icon: Server,
+			label: "Basic info",
+		},
+		{
+			description: "The port it listens on and the domains that reach it.",
+			icon: Network,
+			label: "Networking",
+		},
+		{
+			description: "Environment variables and secrets it starts with.",
+			icon: SlidersHorizontal,
+			label: "Environment",
+		},
+		{
+			description: "Persistent storage that survives redeploys.",
+			icon: HardDrive,
+			label: "Volumes",
+		},
+		{
+			description: "CPU and memory limits, then review and create.",
+			icon: Cpu,
+			label: "Compute",
+		},
 	];
 	// Every field lives in $state (not an uncontrolled `value={}`) so its
 	// value survives a step being hidden : steps are hidden with a CSS
@@ -81,7 +102,7 @@
   </div>
 
   <!-- ═══ Step indicator ═══ -->
-  <div class="flex items-center gap-1">
+  <div class="flex items-center gap-1 max-sm:hidden">
     {#each STEPS as step, i (step.label)}
       {@const StepIcon = step.icon}
       <button
@@ -115,9 +136,14 @@
       </button>
     {/each}
   </div>
-  <p class="text-text-muted -mt-3 text-xs sm:hidden">
-    Step {currentStep + 1} of {STEPS.length} : {STEPS[currentStep].label}
-  </p>
+  <StepperMobileHeader
+    activeStep={currentStep}
+    onselect={(step) => {
+      currentStep = step;
+    }}
+    reachableStep={STEPS.length - 1}
+    steps={STEPS}
+  />
 
   <form
     action="?/create"

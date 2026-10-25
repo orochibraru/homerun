@@ -196,6 +196,10 @@ export const IAC_SETTINGS_RESOURCES: IacResource[] = [
 			}),
 			setting("meanMode", "bool"),
 			setting("disrespectMode", "bool"),
+			setting("autoReportAbuse", "bool", {
+				description:
+					"Email the banned network's abuse contact once its lookup finds one.",
+			}),
 			setting("crowdsecUrl", "string"),
 			setting("crowdsecMachineId", "string"),
 			setting("crowdsecPassword", "string", {

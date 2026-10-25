@@ -1,0 +1,1 @@
+ALTER TABLE "ip_ban" ADD COLUMN "abuse_reported_at" timestamp;

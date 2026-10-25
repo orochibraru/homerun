@@ -111,6 +111,13 @@
           label="Disrespect mode"
           name="disrespectMode"
         />
+        <CheckBox
+          checked={data.ipBans.autoReportAbuse}
+          helperText="Once a ban's lookup finds the network's abuse contact, email it the address, when it was banned and what it asked for, over this instance's SMTP. Off, you can still report one by hand from Monitoring → Blocked IPs."
+          id="autoReportAbuse"
+          label="Email the abuse contact automatically"
+          name="autoReportAbuse"
+        />
       </div>
       <p class="text-text-subtle text-xs">
         0 hours bans for good. The address is the one Traefik sees the request

@@ -17,26 +17,27 @@ below, then show up as one `Scheduled tasks: 14 ok` entry listing every outcome
 by event, failures first with their errors, which opens **Scheduling**. A run
 with a single outcome keeps that outcome's own entry.
 
-**Browser notifications**: click **Turn on browser notifications** on the
-Notifications page, in the dashboard summary or under **Notifications →
-Settings**, and allow them. That browser is added as a **Browser** notification
-channel and gets notifications through its push service and Homerun's service
-worker, so they show up even with every Homerun tab closed (the browser itself
-has to be running). Each browser you turn it on in is its own channel, named
-after it (`Firefox on Linux`), with its own events in the matrix below; the
-matrix only ever shows the browser you're viewing it from, so each browser's
-events are set from that browser and other devices' columns stay hidden; it
-starts with the channel defaults plus **Build started**, **Build succeeded** and
-**Deploy failed**, so a git build announces itself and then replaces that
-notification with how it ended. Clicking one opens what it's about. **Turn off
-on this browser** removes its channel. While a browser has push on, an open
-Homerun tab no longer pops up the feed's own entries, so nothing shows twice. If
-the browser drops its subscription, the channel disables itself and says so;
-turn it on again from that browser. Push needs the dashboard served over HTTPS
-(or `localhost`). A Chromium build without Google's push service (Helium,
-ungoogled-chromium) refuses the subscription: Homerun then turns on
-notifications for that browser only while a Homerun tab is open (the feed's
-entries, checked every 30 seconds), adds no channel, and says so.
+**Browser notifications**: click **Turn on browser notifications** in the
+dashboard summary or under **Notifications → Settings** (the cog on the
+Notifications page), and allow them. That browser is added as a **Browser**
+notification channel and gets notifications through its push service and
+Homerun's service worker, so they show up even with every Homerun tab closed
+(the browser itself has to be running). Each browser you turn it on in is its
+own channel, named after it (`Firefox on Linux`), with its own events in the
+matrix below; the matrix only ever shows the browser you're viewing it from, so
+each browser's events are set from that browser and other devices' columns stay
+hidden; it starts with the channel defaults plus **Build started**, **Build
+succeeded** and **Deploy failed**, so a git build announces itself and then
+replaces that notification with how it ended. Clicking one opens what it's
+about. **Turn off on this browser**, under Notifications → Settings, removes its
+channel. While a browser has push on, an open Homerun tab no longer pops up the
+feed's own entries, so nothing shows twice. If the browser drops its
+subscription, the channel disables itself and says so; turn it on again from
+that browser. Push needs the dashboard served over HTTPS (or `localhost`). A
+Chromium build without Google's push service (Helium, ungoogled-chromium)
+refuses the subscription: Homerun then turns on notifications for that browser
+only while a Homerun tab is open (the feed's entries, checked every 30 seconds),
+adds no channel, and says so.
 
 It's deliberately a short curated list, not a log: everything Homerun logs at
 warn or error level is persisted separately and shown on the relevant service's

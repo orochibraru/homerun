@@ -1,8 +1,18 @@
 <script lang="ts">
-	import { Check, Layers } from "@lucide/svelte";
+	import {
+		Check,
+		Code,
+		GitBranch,
+		Info,
+		Layers,
+		Lock,
+		Package,
+		Settings2,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import Alert from "#lib/components/alert.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
+	import Stepper, { type StepperStep } from "#lib/components/stepper.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import * as Select from "#lib/components/ui/select/index.js";
@@ -15,6 +25,7 @@
 	import {
 		DEFAULT_WORKSTATION_FIELDS,
 		defaultWorkstationDomain,
+		WORKSTATION_STEPS,
 	} from "#lib/workstations.js";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
@@ -24,6 +35,14 @@
 
 	onMount(() => title.set("New Workstation"));
 
+	const STEP_ICONS = [Info, GitBranch, Code, Settings2, Package, Lock];
+	const steps: StepperStep[] = WORKSTATION_STEPS.map((step, index) => ({
+		...step,
+		icon: STEP_ICONS[index],
+	}));
+
+	let activeStep = $state(0);
+	let attempted = $state(false);
 	let submitting = $state(false);
 	let name = $state("");
 	let domain = $state("");
@@ -48,6 +67,15 @@
 
 	const presetId = $derived(data.preset?.id ?? "");
 	const picked = $derived(data.presets.find((p) => p.id === presetId));
+
+	/** Only the first step has anything that must be filled in: a name, and a domain nothing else routes. */
+	function canLeave(step: number): boolean {
+		if (step !== 0) {
+			return true;
+		}
+		attempted = true;
+		return name.trim() !== "" && !owner?.current;
+	}
 
 	function pickPreset(id: string) {
 		const base = resolve("workstations/new");
@@ -115,10 +143,12 @@
       success: "Workstation created.",
     })}
   >
+    <Stepper bind:activeStep onNext={canLeave} {steps}>
     {#key presetId}
       <WorkstationFields
         hosts={data.hosts}
         providers={data.gitProviders}
+        step={activeStep}
         values={data.preset ?? DEFAULT_WORKSTATION_FIELDS}
         wall={data.wall}
       >
@@ -133,6 +163,9 @@
               type="text"
               bind:value={name}
             />
+            {#if attempted && !name.trim()}
+              <p class="mt-1.5 text-xs text-red-500">Give it a name.</p>
+            {/if}
           </div>
           <div>
             <label class={labelClass} for="domain">Domain</label>
@@ -162,14 +195,16 @@
         </div>
       </WorkstationFields>
     {/key}
-
-    <Button disabled={submitting || !!owner?.current} type="submit">
-      {#if submitting}
-        <Spinner />
-      {:else}
-        <Check class="size-4" />
-      {/if}
-      Create workstation
-    </Button>
+      {#snippet finish()}
+        <Button disabled={submitting || !!owner?.current} type="submit">
+          {#if submitting}
+            <Spinner />
+          {:else}
+            <Check class="size-4" />
+          {/if}
+          Create workstation
+        </Button>
+      {/snippet}
+    </Stepper>
   </form>
 </div>

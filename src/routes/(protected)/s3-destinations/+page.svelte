@@ -99,7 +99,7 @@
 <div class="p-5 md:p-6">
   <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">Backup Destinations</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Backup Destinations</h1>
       <p class="text-text-muted mt-1 text-sm">
         Reusable backup destinations: S3-compatible buckets, and servers reached
         over SFTP, SMB or WebDAV. Pick one from any volume's page instead of

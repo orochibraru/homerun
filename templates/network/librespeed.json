@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "LibreSpeed",
+	"description": "Self-hosted speed test, no Flash, no Java, no third-party servers.",
+	"image": "lscr.io/linuxserver/librespeed",
+	"tag": "latest",
+	"containerPort": 80,
+	"icon": "di:librespeed",
+	"tags": ["speedtest", "network", "bandwidth"],
+	"websiteUrl": "https://librespeed.org",
+	"sourceUrl": "https://github.com/librespeed/speedtest",
+	"envVars": {
+		"PASSWORD": "change-me",
+		"PGID": "1000",
+		"PUID": "1000",
+		"TZ": "UTC"
+	},
+	"volumes": ["/config"]
+}

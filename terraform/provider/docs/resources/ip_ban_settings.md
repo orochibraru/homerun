@@ -30,6 +30,8 @@ resource "homerun_ip_ban_settings" "example" {
 
 ### Optional
 
+- `auto_report_abuse` (Boolean) Email the banned network's abuse contact once
+  its lookup finds one.
 - `crowdsec_machine_id` (String)
 - `crowdsec_password` (String, Sensitive) Left unset, the stored password stays.
   Write-only: the API never returns it, so Terraform can't detect a change made
