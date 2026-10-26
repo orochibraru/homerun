@@ -3,7 +3,7 @@
 	"name": "OpenCount",
 	"description": "Split expenses with friends, see who owes whom, settle up: a self-hosted Tricount alternative that installs as a PWA. Runs on SQLite, the setup code for the first admin account is in the logs.",
 	"image": "orochibraru/opencount",
-	"tag": "latest",
+	"tag": "canary",
 	"containerPort": 3000,
 	"icon": "opencount.svg",
 	"tags": ["finance", "expenses", "split", "money", "tricount-alternative"],
