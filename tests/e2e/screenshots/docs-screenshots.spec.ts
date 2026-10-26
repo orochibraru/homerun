@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
@@ -539,5 +540,5 @@ test("writes an index of what was captured", async () => {
 		"",
 	].join("\n");
 	await writeFile(readme, content);
-	Bun.spawnSync(["bun", "fmt", readme]);
+	execFileSync("bun", ["fmt", readme], { stdio: "inherit" });
 });
