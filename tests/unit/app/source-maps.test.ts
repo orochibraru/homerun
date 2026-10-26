@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	addMapping,
 	GenMapping,
 	setSourceContent,
 	toEncodedMap,
 } from "@jridgewell/gen-mapping";
+
 import type {
 	StoredErrorEvent,
 	StoredFrame,

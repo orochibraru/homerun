@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { openVsxHas, searchOpenVsx } from "../../../src/lib/services/open-vsx";
 import {
 	fetchSyncedEditor,

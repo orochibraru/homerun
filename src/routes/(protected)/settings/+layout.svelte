@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import {
 		Ban,
 		Container,
@@ -10,12 +12,11 @@
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import { title } from "#lib/store/title.js";
 	import { currentHref, visibleIn } from "#lib/ui-mode.js";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 
 	const { data, children } = $props();
 
@@ -153,16 +154,18 @@
 
 <div class="p-5 md:p-6">
 	<div class="mb-8">
-    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Settings</h1>
+		<h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
+			Settings
+		</h1>
 		<p class="text-text-muted mt-1 text-sm">
-      Instance-wide configuration : stored in the database and applied live, no
-      restart needed. Leave a field blank to fall back to its env-var default
-      (shown as the placeholder); env vars still work for anyone bootstrapping
-      via docker-compose before ever visiting this page.
+			Instance-wide configuration : stored in the database and applied live, no
+			restart needed. Leave a field blank to fall back to its env-var default
+			(shown as the placeholder); env vars still work for anyone bootstrapping
+			via docker-compose before ever visiting this page.
 		</p>
 	</div>
 
 	<TabNav active={activeTabId} tabs={shownTabs}>
-	  {@render children()}
+		{@render children()}
 	</TabNav>
 </div>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { stripJsonc } from "#lib/devcontainer.js";
 import { openVsxHas } from "#lib/services/open-vsx.js";
 import { EXTENSION_ID_RE } from "#lib/workstations.js";

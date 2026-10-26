@@ -1,4 +1,5 @@
 import process from "node:process";
+
 import { ciTimeout } from "./ci";
 import type { SpawnAppOptions, SpawnedApp } from "./server";
 

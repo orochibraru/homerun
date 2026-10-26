@@ -1,10 +1,11 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { normalizeIp } from "#lib/ip-bans.js";
 import { Logger } from "#lib/logger.js";
 import { can, permissionDeniedMessage } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { CrowdsecService } from "#lib/services/crowdsec.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("CrowdSec");
 

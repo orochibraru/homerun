@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+
 import type { GitProviderKind } from "#lib/server/db/schema.js";
 import { childSlug } from "#lib/slug.js";
 
@@ -149,8 +150,7 @@ export function parsePushEvent(
 	if (headers.get("x-event-key") === "repo:push") {
 		const changes =
 			((body.push as Record<string, unknown> | undefined)?.changes as
-				| Array<Record<string, unknown>>
-				| undefined) ?? [];
+				Array<Record<string, unknown>> | undefined) ?? [];
 		return changes.flatMap((change) => {
 			const next = change.new as Record<string, unknown> | null | undefined;
 			if (next?.type !== "branch" || typeof next.name !== "string") {

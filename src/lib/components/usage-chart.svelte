@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import { formatBytes } from "#lib/formatting.js";
 	import { getStatHistory } from "#lib/remote/stats.remote.js";
@@ -112,85 +113,106 @@
 </script>
 
 <section class="panel flex flex-col rounded-xl">
-  <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-    <div class="flex items-baseline gap-3">
-      <h2 class="eyebrow">{title}</h2>
-      <span class="tech text-text text-lg font-semibold">{label(latest)}</span>
-    </div>
-    <div class="flex flex-wrap items-center gap-1.5">
-      <div class="bg-surface-2 flex rounded-lg p-0.5">
-        {#each [["cpu", "CPU"], ["memory", "Memory"], ["network", "Traffic"]] as const as [value, text] (value)}
-          <button
-            class="rounded-md px-2 py-1 text-xs font-medium transition-colors {metric === value
-            ? 'bg-surface text-text shadow-sm'
-            : 'text-text-muted hover:text-text'}"
-            onclick={() => {
-              metric = value;
-            }}
-            type="button"
-          >
-            {text}
-          </button>
-        {/each}
-      </div>
-      <div class="bg-surface-2 flex rounded-lg p-0.5">
-        {#each RANGES as [value, text] (value)}
-          <button
-            class="rounded-md px-2 py-1 text-xs font-medium transition-colors {range === value
-            ? 'bg-surface text-text shadow-sm'
-            : 'text-text-muted hover:text-text'}"
-            onclick={() => {
-              range = value;
-            }}
-            type="button"
-          >
-            {text}
-          </button>
-        {/each}
-      </div>
-    </div>
-  </div>
+	<div
+		class="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3"
+	>
+		<div class="flex items-baseline gap-3">
+			<h2 class="eyebrow">{title}</h2>
+			<span class="tech text-text text-lg font-semibold">{label(latest)}</span>
+		</div>
+		<div class="flex flex-wrap items-center gap-1.5">
+			<div class="bg-surface-2 flex rounded-lg p-0.5">
+				{#each [["cpu", "CPU"], ["memory", "Memory"], ["network", "Traffic"]] as const as [value, text] (value)}
+					<button
+						class="rounded-md px-2 py-1 text-xs font-medium transition-colors {metric ===
+						value
+							? 'bg-surface text-text shadow-sm'
+							: 'text-text-muted hover:text-text'}"
+						onclick={() => {
+							metric = value;
+						}}
+						type="button"
+					>
+						{text}
+					</button>
+				{/each}
+			</div>
+			<div class="bg-surface-2 flex rounded-lg p-0.5">
+				{#each RANGES as [value, text] (value)}
+					<button
+						class="rounded-md px-2 py-1 text-xs font-medium transition-colors {range ===
+						value
+							? 'bg-surface text-text shadow-sm'
+							: 'text-text-muted hover:text-text'}"
+						onclick={() => {
+							range = value;
+						}}
+						type="button"
+					>
+						{text}
+					</button>
+				{/each}
+			</div>
+		</div>
+	</div>
 
-  <div class="flex flex-1 flex-col p-4">
-    {#if history.error}
-      <p class="text-text-muted py-8 text-center text-xs">
-        Couldn't load the history.
-      </p>
-    {:else if !history.ready}
-      <Skeleton class="h-28 w-full" />
-    {:else if points.length === 0}
-      <p class="text-text-muted py-8 text-center text-xs">
-        Nothing recorded yet : samples are taken every minute.
-      </p>
-    {:else}
-      <svg
-        class="min-h-28 w-full flex-1"
-        preserveAspectRatio="none"
-        role="img"
-        viewBox="0 0 100 40"
-        aria-label="{title} over the selected range"
-      >
-        <defs>
-          <linearGradient id="usage-fill-{workstationId ?? serviceId ?? 'host'}" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="var(--color-accent)" stop-opacity="0.35" />
-            <stop offset="100%" stop-color="var(--color-accent)" stop-opacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={area} fill="url(#usage-fill-{workstationId ?? serviceId ?? 'host'})" />
-        <path
-          d={path}
-          fill="none"
-          stroke="var(--color-accent)"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1"
-          vector-effect="non-scaling-stroke"
-        />
-      </svg>
-      <div class="text-text-subtle mt-2 flex justify-between text-[0.6875rem]">
-        <span>{spanLabel}</span>
-        <span>peak {label(peak)}</span>
-      </div>
-    {/if}
-  </div>
+	<div class="flex flex-1 flex-col p-4">
+		{#if history.error}
+			<p class="text-text-muted py-8 text-center text-xs">
+				Couldn't load the history.
+			</p>
+		{:else if !history.ready}
+			<Skeleton class="h-28 w-full" />
+		{:else if points.length === 0}
+			<p class="text-text-muted py-8 text-center text-xs">
+				Nothing recorded yet : samples are taken every minute.
+			</p>
+		{:else}
+			<svg
+				class="min-h-28 w-full flex-1"
+				preserveAspectRatio="none"
+				role="img"
+				viewBox="0 0 100 40"
+				aria-label="{title} over the selected range"
+			>
+				<defs>
+					<linearGradient
+						id="usage-fill-{workstationId ?? serviceId ?? 'host'}"
+						x1="0"
+						x2="0"
+						y1="0"
+						y2="1"
+					>
+						<stop
+							offset="0%"
+							stop-color="var(--color-accent)"
+							stop-opacity="0.35"
+						/>
+						<stop
+							offset="100%"
+							stop-color="var(--color-accent)"
+							stop-opacity="0"
+						/>
+					</linearGradient>
+				</defs>
+				<path
+					d={area}
+					fill="url(#usage-fill-{workstationId ?? serviceId ?? 'host'})"
+				/>
+				<path
+					d={path}
+					fill="none"
+					stroke="var(--color-accent)"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="1"
+					vector-effect="non-scaling-stroke"
+				/>
+			</svg>
+			<div class="text-text-subtle mt-2 flex justify-between text-[0.6875rem]">
+				<span>{spanLabel}</span>
+				<span>peak {label(peak)}</span>
+			</div>
+		{/if}
+	</div>
 </section>

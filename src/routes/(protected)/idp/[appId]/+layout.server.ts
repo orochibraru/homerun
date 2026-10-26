@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+
 import { config } from "#lib/config.js";
 import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
 import { OauthClientEnvironmentDTO } from "#lib/dto/oauth-client-environment-dto.js";

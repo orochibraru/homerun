@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	decryptSecret,
 	encryptSecret,
 } from "../../../src/lib/services/secrets";
-import fixture from "../go/internal/secrets/testdata/parity.json" with {
-	type: "json",
-};
+import fixture from "../go/internal/secrets/testdata/parity.json" with { type: "json" };
 
 describe("secrets parity with internal/secrets (Go)", () => {
 	test("decrypts what the Go worker encrypted", () => {

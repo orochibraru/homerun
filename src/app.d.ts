@@ -1,9 +1,10 @@
+import type { Path } from "$app/types";
 import type { HTMLAnchorAttributes } from "svelte/elements";
+
 import type { Logger } from "#lib/logger.js";
 import type { Permissions } from "#lib/permissions.js";
 import type { AuthType } from "#lib/services/auth.js";
 import type { SurfaceId } from "#lib/surfaces.js";
-import type { Path } from "$app/types";
 
 /// <reference types="vite-plugin-pwa/client" />
 /// <reference types="vite-plugin-pwa/info" />

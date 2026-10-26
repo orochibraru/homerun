@@ -12,9 +12,8 @@ const {
 	enqueueVolumeBackup,
 	enqueueVolumeRestore,
 } = await import("../../../src/lib/services/backup-queue");
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
 const { JobDTO } = await import("../../../src/lib/dto/job-dto");
 
 const restorers: { mockRestore: () => void }[] = [];

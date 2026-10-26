@@ -8,9 +8,8 @@ const {
 	lifecycleXml,
 	objectCountLabel,
 } = await import("../../../src/lib/object-storage");
-const { parseObjectStoreForm } = await import(
-	"../../../src/lib/server/validation/object-store"
-);
+const { parseObjectStoreForm } =
+	await import("../../../src/lib/server/validation/object-store");
 
 describe("bucketNameProblem", () => {
 	test("accepts S3-valid names", () => {

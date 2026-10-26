@@ -1,4 +1,5 @@
 import { type Page } from "@playwright/test";
+
 import { expect, test } from "./support/test";
 
 const PAGE_NAME = "E2E Status";
@@ -13,75 +14,68 @@ async function signIn(page: Page) {
 	await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
 }
 
-test.describe
-	.serial("status pages", () => {
-		test("the sidebar links to Status Page and it starts empty", async ({
-			page,
-		}) => {
-			await signIn(page);
+test.describe.serial("status pages", () => {
+	test("the sidebar links to Status Page and it starts empty", async ({
+		page,
+	}) => {
+		await signIn(page);
 
-			await page
-				.getByRole("button", { name: "Observability", exact: true })
-				.first()
-				.click();
-			await page.getByRole("link", { name: "Status Page" }).click();
-			await expect(page).toHaveURL(/\/status-pages$/);
-			await expect(page.getByText("No status pages yet")).toBeVisible();
-		});
-
-		test("creating a public page lands on its detail view", async ({
-			page,
-		}) => {
-			await signIn(page);
-
-			await page.goto("/status-pages/new");
-			await page.locator("#name").fill(PAGE_NAME);
-			await expect(page.locator("#slug")).toHaveValue(PAGE_SLUG);
-			await page.getByLabel("Publish this page").check();
-			await page.getByRole("button", { name: "Create status page" }).click();
-
-			await expect(page).toHaveURL(/\/status-pages\/[0-9a-f-]{36}$/);
-			await expect(
-				page.getByRole("heading", { name: PAGE_NAME }),
-			).toBeVisible();
-			await expect(page.getByText("Public", { exact: true })).toBeVisible();
-		});
-
-		test("a published page is readable signed out, and leaks no infrastructure", async ({
-			browser,
-		}) => {
-			const anon = await browser.newContext();
-			const page = await anon.newPage();
-
-			await page.goto(`/status/${PAGE_SLUG}`);
-			await expect(page).toHaveURL(new RegExp(`/status/${PAGE_SLUG}$`));
-			await expect(
-				page.getByRole("heading", { name: PAGE_NAME }),
-			).toBeVisible();
-
-			const body = (await page.locator("body").innerText()).toLowerCase();
-			expect(body).not.toContain("nginx");
-			expect(body).not.toContain("docker");
-			await expect(page.getByRole("link", { name: "Services" })).toHaveCount(0);
-
-			await anon.close();
-		});
-
-		test("an unpublished page 404s for a signed-out visitor", async ({
-			browser,
-			page,
-		}) => {
-			await signIn(page);
-			await page.goto("/status-pages");
-			await page.getByRole("link", { name: PAGE_NAME }).click();
-			await page.getByLabel("Publish this page").uncheck();
-			await page.locator("button[form='status-page-settings']").click();
-			await expect(page.getByText("Status page saved.")).toBeVisible();
-
-			const anon = await browser.newContext();
-			const anonPage = await anon.newPage();
-			const response = await anonPage.goto(`/status/${PAGE_SLUG}`);
-			expect(response?.status()).toBe(404);
-			await anon.close();
-		});
+		await page
+			.getByRole("button", { name: "Observability", exact: true })
+			.first()
+			.click();
+		await page.getByRole("link", { name: "Status Page" }).click();
+		await expect(page).toHaveURL(/\/status-pages$/);
+		await expect(page.getByText("No status pages yet")).toBeVisible();
 	});
+
+	test("creating a public page lands on its detail view", async ({ page }) => {
+		await signIn(page);
+
+		await page.goto("/status-pages/new");
+		await page.locator("#name").fill(PAGE_NAME);
+		await expect(page.locator("#slug")).toHaveValue(PAGE_SLUG);
+		await page.getByLabel("Publish this page").check();
+		await page.getByRole("button", { name: "Create status page" }).click();
+
+		await expect(page).toHaveURL(/\/status-pages\/[0-9a-f-]{36}$/);
+		await expect(page.getByRole("heading", { name: PAGE_NAME })).toBeVisible();
+		await expect(page.getByText("Public", { exact: true })).toBeVisible();
+	});
+
+	test("a published page is readable signed out, and leaks no infrastructure", async ({
+		browser,
+	}) => {
+		const anon = await browser.newContext();
+		const page = await anon.newPage();
+
+		await page.goto(`/status/${PAGE_SLUG}`);
+		await expect(page).toHaveURL(new RegExp(`/status/${PAGE_SLUG}$`));
+		await expect(page.getByRole("heading", { name: PAGE_NAME })).toBeVisible();
+
+		const body = (await page.locator("body").innerText()).toLowerCase();
+		expect(body).not.toContain("nginx");
+		expect(body).not.toContain("docker");
+		await expect(page.getByRole("link", { name: "Services" })).toHaveCount(0);
+
+		await anon.close();
+	});
+
+	test("an unpublished page 404s for a signed-out visitor", async ({
+		browser,
+		page,
+	}) => {
+		await signIn(page);
+		await page.goto("/status-pages");
+		await page.getByRole("link", { name: PAGE_NAME }).click();
+		await page.getByLabel("Publish this page").uncheck();
+		await page.locator("button[form='status-page-settings']").click();
+		await expect(page.getByText("Status page saved.")).toBeVisible();
+
+		const anon = await browser.newContext();
+		const anonPage = await anon.newPage();
+		const response = await anonPage.goto(`/status/${PAGE_SLUG}`);
+		expect(response?.status()).toBe(404);
+		await anon.close();
+	});
+});

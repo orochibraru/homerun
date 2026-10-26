@@ -1,10 +1,11 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import {
 	VolumeSettingsError,
 	VolumeSettingsService,
 } from "#lib/services/volume-settings.service.js";
-import { resolve } from "$app/paths";
 
 export const actions = {
 	create: async ({ request, locals }) => {

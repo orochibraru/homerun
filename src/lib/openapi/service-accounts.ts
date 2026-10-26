@@ -1,10 +1,12 @@
 import { z } from "zod";
+
 import { PERMISSION_AREAS, PERMISSION_LEVELS } from "#lib/permissions.js";
 import {
 	createServiceAccountApiBody,
 	createServiceAccountKeyApiBody,
 	updateServiceAccountApiBody,
 } from "#lib/server/validation/api.js";
+
 import type { ParamDef, RouteDef } from "./registry";
 import { errorResponse, successResponse } from "./schemas";
 

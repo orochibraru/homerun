@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+
 import type { EmailSignIn } from "#lib/auth-providers.js";
 import {
 	type ErrorPagesSettings,
@@ -30,6 +31,7 @@ import type { NewtCredentials } from "#lib/services/docker/newt.js";
 import { decryptSecret, encryptSecret } from "#lib/services/secrets.js";
 import type { TracingColumns } from "#lib/tracing/settings.js";
 import type { UpdateChannel } from "#lib/update-channel.js";
+
 import { BaseDTO } from "./base-dto";
 import { blankInstanceSettings } from "./instance-settings-blank";
 

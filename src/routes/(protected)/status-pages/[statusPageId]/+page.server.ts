@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
@@ -14,7 +16,6 @@ import {
 	picksFromForm,
 	statusPageServiceOptions,
 } from "#lib/status-page-members.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ params, parent, request, url }) => {
 	await parent();

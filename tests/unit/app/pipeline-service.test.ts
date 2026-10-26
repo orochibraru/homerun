@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -8,31 +9,23 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { GitConnectionDTO } = await import(
-	"../../../src/lib/dto/git-connection-dto"
-);
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { PipelineRunDTO } = await import(
-	"../../../src/lib/dto/pipeline-run-dto"
-);
+const { GitConnectionDTO } =
+	await import("../../../src/lib/dto/git-connection-dto");
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { PipelineRunDTO } =
+	await import("../../../src/lib/dto/pipeline-run-dto");
 const { RepositoryDTO } = await import("../../../src/lib/dto/repository-dto");
-const { GitProviderService } = await import(
-	"../../../src/lib/services/git-provider.service"
-);
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
-const { TracingService } = await import(
-	"../../../src/lib/services/tracing.service"
-);
-const { PipelineService } = await import(
-	"../../../src/lib/services/pipeline.service"
-);
-const { pipelineSpanToken } = await import(
-	"../../../src/lib/tracing/ingest-token"
-);
+const { GitProviderService } =
+	await import("../../../src/lib/services/git-provider.service");
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
+const { TracingService } =
+	await import("../../../src/lib/services/tracing.service");
+const { PipelineService } =
+	await import("../../../src/lib/services/pipeline.service");
+const { pipelineSpanToken } =
+	await import("../../../src/lib/tracing/ingest-token");
 const { formatRunDuration } = await import("../../../src/lib/pipelines/list");
 
 type Repo = Parameters<typeof PipelineService.sync>[0];

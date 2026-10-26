@@ -11,9 +11,10 @@ import {
 	type TrivySummary,
 } from "#lib/image-scan.js";
 import { Logger } from "#lib/logger.js";
+
 import { type ScanTarget } from "./deploy/scan-targets.ts";
-import { isMirrorRef } from "./docker/image-scan-refs.ts";
 import { DockerService } from "./docker.service.ts";
+import { isMirrorRef } from "./docker/image-scan-refs.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { imageScanMessage } from "./notification-messages.ts";
 import { QueueService } from "./queue.service.ts";

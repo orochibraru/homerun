@@ -17,24 +17,25 @@
 </script>
 
 <script lang="ts">
-	import { ArrowDownUp, Check, ListFilter, Search, X } from "@lucide/svelte";
-	import type { Snippet } from "svelte";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
+	import { ArrowDownUp, Check, ListFilter, Search, X } from "@lucide/svelte";
+	import type { Snippet } from "svelte";
+
 	import { Button } from "#lib/components/ui/button/index.js";
-	import {
-		SelectContent,
-		SelectItem,
-		Select as SelectRoot,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
-	import type { SortOption } from "#lib/list-sorts.js";
 	import {
 		Drawer,
 		DrawerContent,
 		DrawerHeader,
 		DrawerTitle,
 	} from "#lib/components/ui/drawer/index.js";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "#lib/components/ui/select/index.js";
+	import type { SortOption } from "#lib/list-sorts.js";
 
 	interface Props {
 		filters?: FilterGroup[];
@@ -159,120 +160,149 @@
 </script>
 
 <div class="mb-6 flex flex-wrap items-center gap-3">
-  <div class="relative min-w-52 flex-1">
-    <Search class="text-text-subtle absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-    <input
-      class="panel text-text placeholder:text-text-subtle focus:border-accent w-full rounded-lg py-2 pr-3 pl-9 text-sm focus:ring-3 focus:ring-ring/50 focus:outline-none"
-      oninput={(e) => onSearchInput(e.currentTarget.value)}
-      {placeholder}
-      type="search"
-      value={draft}
-    >
-  </div>
-  {#if sorts.length > 0}
-    <SelectRoot onValueChange={setSort} type="single" value={currentSort}>
-      <SelectTrigger class="w-48" aria-label="Sort">
-        <ArrowDownUp class="mr-1.5 inline size-4 align-text-bottom" />{sortLabel}
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem label="Default order" value="" />
-        {#each sorts as option (option.value)}
-          <SelectItem label={option.label} value={option.value} />
-        {/each}
-      </SelectContent>
-    </SelectRoot>
-  {/if}
-  {#if usableFilters.length > 0}
-    <Button onclick={openFilters} variant="outline">
-      <ListFilter class="size-4" />
-      Filters
-      {#if activeCount > 0}
-        <span class="bg-ink text-ink-foreground rounded-full px-1.5 text-xs">
-          {activeCount}
-        </span>
-      {/if}
-    </Button>
-  {/if}
-  {#if trailing}
-    {@render trailing()}
-  {/if}
+	<div class="relative min-w-52 flex-1">
+		<Search
+			class="text-text-subtle absolute top-1/2 left-3 size-4 -translate-y-1/2"
+		/>
+		<input
+			class="panel text-text placeholder:text-text-subtle focus:border-accent w-full rounded-lg py-2 pr-3 pl-9 text-sm focus:ring-3 focus:ring-ring/50 focus:outline-none"
+			oninput={(e) => onSearchInput(e.currentTarget.value)}
+			{placeholder}
+			type="search"
+			value={draft}
+		/>
+	</div>
+	{#if sorts.length > 0}
+		<SelectRoot onValueChange={setSort} type="single" value={currentSort}>
+			<SelectTrigger class="w-48" aria-label="Sort">
+				<ArrowDownUp
+					class="mr-1.5 inline size-4 align-text-bottom"
+				/>{sortLabel}
+			</SelectTrigger>
+			<SelectContent>
+				<SelectItem label="Default order" value="" />
+				{#each sorts as option (option.value)}
+					<SelectItem label={option.label} value={option.value} />
+				{/each}
+			</SelectContent>
+		</SelectRoot>
+	{/if}
+	{#if usableFilters.length > 0}
+		<Button onclick={openFilters} variant="outline">
+			<ListFilter class="size-4" />
+			Filters
+			{#if activeCount > 0}
+				<span class="bg-ink text-ink-foreground rounded-full px-1.5 text-xs">
+					{activeCount}
+				</span>
+			{/if}
+		</Button>
+	{/if}
+	{#if trailing}
+		{@render trailing()}
+	{/if}
 </div>
 
 <Drawer bind:open={filtersOpen} direction="right">
-  <DrawerContent class="flex flex-col">
-    <DrawerHeader class="border-border flex-row items-center gap-3 border-b px-5 py-4">
-      <span class="bg-accent-light text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-        <ListFilter class="size-4" />
-      </span>
-      <div class="min-w-0 flex-1">
-        <DrawerTitle class="text-text text-base">Filters</DrawerTitle>
-        <p class="text-text-muted text-xs">
-          {pendingCount === 0
-            ? "Nothing selected."
-            : `${pendingCount} selected`}
-        </p>
-      </div>
-      <Button aria-label="Close" onclick={() => { filtersOpen = false; }} size="icon-sm" variant="ghost">
-        <X class="size-4" />
-      </Button>
-    </DrawerHeader>
-    <div class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
-      {#each usableFilters as group (group.key)}
-        {@const GroupIcon = group.icon}
-        <section>
-          <h3 class="eyebrow mb-2.5 flex items-center gap-1.5">
-            {#if GroupIcon}<GroupIcon class="size-3.5" />{/if}
-            {group.label}
-          </h3>
-          <ul class="flex flex-col gap-1">
-            {#each group.options as option (option.value)}
-              {@const isOn = (pending[group.key] ?? []).includes(option.value)}
-              {@const OptionIcon = option.icon}
-              <li>
-                <button
-                  class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm transition-colors {isOn ? 'bg-accent-light text-text ring-accent/30 font-medium ring-1' : 'text-text hover:bg-surface-2'}"
-                  aria-pressed={isOn}
-                  onclick={() => toggle(group.key, option.value)}
-                  type="button"
-                >
-                  {#if OptionIcon}
-                    <span class="flex size-7 shrink-0 items-center justify-center rounded-md {isOn ? 'bg-accent text-white' : 'bg-surface-2 text-text-muted'}">
-                      <OptionIcon class="size-3.5" />
-                    </span>
-                  {/if}
-                  <span class="min-w-0 flex-1 truncate capitalize">{option.label}</span>
-                  {#if option.count !== undefined}
-                    <span class="text-text-muted bg-surface-2 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums">
-                      {option.count}
-                    </span>
-                  {/if}
-                  <span
-                    class="flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors {isOn ? 'border-accent bg-accent text-white' : 'border-text-subtle/60'}"
-                  >
-                    {#if isOn}<Check class="size-3" />{/if}
-                  </span>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        </section>
-      {/each}
-    </div>
-    <div class="border-border flex items-center justify-between gap-2 border-t px-5 py-3">
-      <Button
-        disabled={pendingCount === 0}
-        onclick={() => {
-          pending = {};
-        }}
-        size="sm"
-        variant="ghost"
-      >
-        Clear all
-      </Button>
-      <Button onclick={applyFilters} size="sm">
-        <Check class="size-4" />
-        Apply
-      </Button>
-    </div>
-  </DrawerContent>
+	<DrawerContent class="flex flex-col">
+		<DrawerHeader
+			class="border-border flex-row items-center gap-3 border-b px-5 py-4"
+		>
+			<span
+				class="bg-accent-light text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
+			>
+				<ListFilter class="size-4" />
+			</span>
+			<div class="min-w-0 flex-1">
+				<DrawerTitle class="text-text text-base">Filters</DrawerTitle>
+				<p class="text-text-muted text-xs">
+					{pendingCount === 0
+						? "Nothing selected."
+						: `${pendingCount} selected`}
+				</p>
+			</div>
+			<Button
+				aria-label="Close"
+				onclick={() => {
+					filtersOpen = false;
+				}}
+				size="icon-sm"
+				variant="ghost"
+			>
+				<X class="size-4" />
+			</Button>
+		</DrawerHeader>
+		<div class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
+			{#each usableFilters as group (group.key)}
+				{@const GroupIcon = group.icon}
+				<section>
+					<h3 class="eyebrow mb-2.5 flex items-center gap-1.5">
+						{#if GroupIcon}<GroupIcon class="size-3.5" />{/if}
+						{group.label}
+					</h3>
+					<ul class="flex flex-col gap-1">
+						{#each group.options as option (option.value)}
+							{@const isOn = (pending[group.key] ?? []).includes(option.value)}
+							{@const OptionIcon = option.icon}
+							<li>
+								<button
+									class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm transition-colors {isOn
+										? 'bg-accent-light text-text ring-accent/30 font-medium ring-1'
+										: 'text-text hover:bg-surface-2'}"
+									aria-pressed={isOn}
+									onclick={() => toggle(group.key, option.value)}
+									type="button"
+								>
+									{#if OptionIcon}
+										<span
+											class="flex size-7 shrink-0 items-center justify-center rounded-md {isOn
+												? 'bg-accent text-white'
+												: 'bg-surface-2 text-text-muted'}"
+										>
+											<OptionIcon class="size-3.5" />
+										</span>
+									{/if}
+									<span class="min-w-0 flex-1 truncate capitalize"
+										>{option.label}</span
+									>
+									{#if option.count !== undefined}
+										<span
+											class="text-text-muted bg-surface-2 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums"
+										>
+											{option.count}
+										</span>
+									{/if}
+									<span
+										class="flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors {isOn
+											? 'border-accent bg-accent text-white'
+											: 'border-text-subtle/60'}"
+									>
+										{#if isOn}<Check class="size-3" />{/if}
+									</span>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/each}
+		</div>
+		<div
+			class="border-border flex items-center justify-between gap-2 border-t px-5 py-3"
+		>
+			<Button
+				disabled={pendingCount === 0}
+				onclick={() => {
+					pending = {};
+				}}
+				size="sm"
+				variant="ghost"
+			>
+				Clear all
+			</Button>
+			<Button onclick={applyFilters} size="sm">
+				<Check class="size-4" />
+				Apply
+			</Button>
+		</div>
+	</DrawerContent>
 </Drawer>

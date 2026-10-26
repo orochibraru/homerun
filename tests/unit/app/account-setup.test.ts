@@ -92,21 +92,16 @@ mock.module("#lib/services/auth.js", () => ({
 	rebuildAuth: () => undefined,
 }));
 
-const { EMAIL_OTP_METHOD, oauthMethod, PASSWORD_METHOD } = await import(
-	"../../../src/lib/auth-providers"
-);
-const { applyInstanceSettings, config } = await import(
-	"../../../src/lib/config"
-);
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { EmailService } = await import(
-	"../../../src/lib/services/email.service"
-);
-const { AccountSetupService } = await import(
-	"../../../src/lib/services/account-setup.service"
-);
+const { EMAIL_OTP_METHOD, oauthMethod, PASSWORD_METHOD } =
+	await import("../../../src/lib/auth-providers");
+const { applyInstanceSettings, config } =
+	await import("../../../src/lib/config");
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { EmailService } =
+	await import("../../../src/lib/services/email.service");
+const { AccountSetupService } =
+	await import("../../../src/lib/services/account-setup.service");
 
 const SMTP = {
 	smtpEnabled: true,

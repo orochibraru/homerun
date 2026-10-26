@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	CORE_HASH_LABEL,
 	CORE_LABEL,

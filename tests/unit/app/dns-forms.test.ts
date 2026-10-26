@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	connectionFields,
 	isTarget,
@@ -122,9 +123,8 @@ describe("parseRecordForm", () => {
 
 describe("DNS_PROVIDERS", () => {
 	test("every provider has a unique id, a docs link and described credential fields", async () => {
-		const { DNS_PROVIDERS, dnsProviderById } = await import(
-			"../../../src/lib/services/dns-providers"
-		);
+		const { DNS_PROVIDERS, dnsProviderById } =
+			await import("../../../src/lib/services/dns-providers");
 		expect(DNS_PROVIDERS).toHaveLength(16);
 		expect(new Set(DNS_PROVIDERS.map((provider) => provider.id)).size).toBe(16);
 		for (const provider of DNS_PROVIDERS) {

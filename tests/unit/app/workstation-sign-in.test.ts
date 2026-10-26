@@ -15,23 +15,18 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const gitProviders = await import(
-	"../../../src/lib/services/git-provider.service"
-);
-const { GitConnectionDTO } = await import(
-	"../../../src/lib/dto/git-connection-dto"
-);
+const gitProviders =
+	await import("../../../src/lib/services/git-provider.service");
+const { GitConnectionDTO } =
+	await import("../../../src/lib/dto/git-connection-dto");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
 const { RemoteHostDTO } = await import("../../../src/lib/dto/remote-host-dto");
-const { signGateToken, verifyGateToken, GATE_CALLBACK_PATH } = await import(
-	"../../../src/lib/server/app-gate"
-);
-const { workstationHostProblem, workstationHosts } = await import(
-	"../../../src/lib/server/workstation-presets"
-);
-const { WorkstationSignInService, workstationGateKey } = await import(
-	"../../../src/lib/services/workstation/sign-in"
-);
+const { signGateToken, verifyGateToken, GATE_CALLBACK_PATH } =
+	await import("../../../src/lib/server/app-gate");
+const { workstationHostProblem, workstationHosts } =
+	await import("../../../src/lib/server/workstation-presets");
+const { WorkstationSignInService, workstationGateKey } =
+	await import("../../../src/lib/services/workstation/sign-in");
 
 type Connection = NonNullable<
 	Awaited<ReturnType<typeof GitConnectionDTO.getForUserAndProvider>>

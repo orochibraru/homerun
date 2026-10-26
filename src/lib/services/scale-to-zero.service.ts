@@ -3,9 +3,10 @@ import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { TrafficSampleDTO } from "#lib/dto/traffic-sample-dto.js";
 import { Logger } from "#lib/logger.js";
 import { SCALE_TO_ZERO_MAX_MINUTES, shouldSleep } from "#lib/scale-to-zero.js";
+
+import { DockerService } from "./docker.service.ts";
 import { errorPagesPublished } from "./docker/error-pages.ts";
 import { SWARM_REFRESH_SECONDS } from "./docker/swarm.ts";
-import { DockerService } from "./docker.service.ts";
 import { ServiceLifecycleService } from "./service-lifecycle.service.ts";
 
 const logger = new Logger("ScaleToZero");

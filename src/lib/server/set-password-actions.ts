@@ -1,6 +1,7 @@
-import { fail, type RequestEvent, redirect } from "@sveltejs/kit";
-import { AccountSetupService } from "#lib/services/account-setup.service.js";
 import { resolve } from "$app/paths";
+import { fail, redirect, type RequestEvent } from "@sveltejs/kit";
+
+import { AccountSetupService } from "#lib/services/account-setup.service.js";
 
 function signedInUser(event: RequestEvent): { email: string; id: string } {
 	if (!event.locals.user) {

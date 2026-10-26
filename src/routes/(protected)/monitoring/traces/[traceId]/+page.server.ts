@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+
 import { TraceSpanDTO } from "#lib/dto/trace-span-dto.js";
 import { normalizeTraceId } from "#lib/tracing/list.js";
 

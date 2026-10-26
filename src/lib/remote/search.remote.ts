@@ -1,4 +1,6 @@
+import { getRequestEvent, query } from "$app/server";
 import { z } from "zod";
+
 import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
 import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
@@ -22,7 +24,6 @@ import {
 } from "#lib/search.js";
 import { requireUser } from "#lib/server/remote-auth.js";
 import { UserService } from "#lib/services/user.service.js";
-import { getRequestEvent, query } from "$app/server";
 
 /**
  * The absolute path of dashboard route `id` (a route id like

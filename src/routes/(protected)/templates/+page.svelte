@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { LayoutGrid, Plus, Rocket, SettingsIcon, Tags } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import EntityList from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
@@ -16,8 +19,6 @@
 	import { templateCategoryLabel } from "#lib/template-categories.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -78,186 +79,193 @@
 </script>
 
 {#snippet templateActions(tmpl: Template)}
-  <form
-    action="?/quickDeploy"
-    class="flex-1"
-    method="POST"
-    use:enhance={quickDeployEnhance(tmpl)}
-  >
-    <input name="templateId" type="hidden" value={tmpl.id} />
-    {#if data.stack}
-      <input name="stackId" type="hidden" value={data.stack.id} />
-    {/if}
-    <Button
-      class="w-full"
-      disabled={quickDeploying !== null}
-      size="sm"
-      type="submit"
-    >
-      {#if quickDeploying === tmpl.id}
-        <Spinner />
-        Deploying…
-      {:else}
-        <Rocket class="size-3.5" />
-        Quick Deploy
-      {/if}
-    </Button>
-  </form>
-  <Button href={configureHref(tmpl)} size="sm" variant="outline">
-    <SettingsIcon class="size-3.5" />
-    Configure
-  </Button>
+	<form
+		action="?/quickDeploy"
+		class="flex-1"
+		method="POST"
+		use:enhance={quickDeployEnhance(tmpl)}
+	>
+		<input name="templateId" type="hidden" value={tmpl.id} />
+		{#if data.stack}
+			<input name="stackId" type="hidden" value={data.stack.id} />
+		{/if}
+		<Button
+			class="w-full"
+			disabled={quickDeploying !== null}
+			size="sm"
+			type="submit"
+		>
+			{#if quickDeploying === tmpl.id}
+				<Spinner />
+				Deploying…
+			{:else}
+				<Rocket class="size-3.5" />
+				Quick Deploy
+			{/if}
+		</Button>
+	</form>
+	<Button href={configureHref(tmpl)} size="sm" variant="outline">
+		<SettingsIcon class="size-3.5" />
+		Configure
+	</Button>
 {/snippet}
 
 {#snippet media(item: { id: string })}
-  {@const tmpl = byId(item.id)}
-  {#if tmpl}
-    <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
-  {/if}
+	{@const tmpl = byId(item.id)}
+	{#if tmpl}
+		<TemplateIcon category={tmpl.category} icon={tmpl.icon} />
+	{/if}
 {/snippet}
 
 {#snippet meta(item: { id: string })}
-  {@const tmpl = byId(item.id)}
-  {#if tmpl?.linkedNames && tmpl.linkedNames.length > 0}
-    <span class="text-accent truncate text-xs">
-      + {tmpl.linkedNames.join(", ")}
-    </span>
-  {/if}
-  {#if tmpl?.tags && tmpl.tags.length > 0}
-    <span class="text-text-subtle truncate font-mono text-[0.65rem]">
-      {tmpl.tags.join(" · ")}
-    </span>
-  {/if}
+	{@const tmpl = byId(item.id)}
+	{#if tmpl?.linkedNames && tmpl.linkedNames.length > 0}
+		<span class="text-accent truncate text-xs">
+			+ {tmpl.linkedNames.join(", ")}
+		</span>
+	{/if}
+	{#if tmpl?.tags && tmpl.tags.length > 0}
+		<span class="text-text-subtle truncate font-mono text-[0.65rem]">
+			{tmpl.tags.join(" · ")}
+		</span>
+	{/if}
 {/snippet}
 
 {#snippet actions(item: { id: string })}
-  {@const tmpl = byId(item.id)}
-  {#if tmpl}
-    {@render templateActions(tmpl)}
-  {/if}
+	{@const tmpl = byId(item.id)}
+	{#if tmpl}
+		{@render templateActions(tmpl)}
+	{/if}
 {/snippet}
 
 <div class="p-5 md:p-6">
-  <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
-    <div>
-      <h1 class="text-text flex items-baseline gap-2 text-lg font-semibold tracking-tight max-md:hidden">
-        Templates
-        <span class="text-text-muted text-sm font-medium tabular-nums">
-          {data.builtinsTotal + data.customTotal}
-        </span>
-      </h1>
-      <p class="text-text-muted mt-1 text-sm">
-        One-click configs for common services.
-      </p>
-    </div>
+	<div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+		<div>
+			<h1
+				class="text-text flex items-baseline gap-2 text-lg font-semibold tracking-tight max-md:hidden"
+			>
+				Templates
+				<span class="text-text-muted text-sm font-medium tabular-nums">
+					{data.builtinsTotal + data.customTotal}
+				</span>
+			</h1>
+			<p class="text-text-muted mt-1 text-sm">
+				One-click configs for common services.
+			</p>
+		</div>
 
-    <Button href={resolve('templates/new')} size="sm"><Plus class="size-4" />New Template</Button>
-  </div>
+		<Button href={resolve("templates/new")} size="sm"
+			><Plus class="size-4" />New Template</Button
+		>
+	</div>
 
-  <EntityToolbar
-    sorts={BASE_SORTS}
-    filters={filters}
-    pageParams={["bpage", "cpage"]}
-    placeholder="Search templates by name or image…"
-  >
-    {#snippet trailing()}
-      <ViewModeToggle view={view} />
-    {/snippet}
-  </EntityToolbar>
+	<EntityToolbar
+		sorts={BASE_SORTS}
+		{filters}
+		pageParams={["bpage", "cpage"]}
+		placeholder="Search templates by name or image…"
+	>
+		{#snippet trailing()}
+			<ViewModeToggle {view} />
+		{/snippet}
+	</EntityToolbar>
 
-  <div class="mb-8">
-    <h2 class="eyebrow mb-3">Built-in</h2>
-    {#if data.builtins.length === 0}
-      <p class="text-text-subtle text-sm">No built-in templates match.</p>
-    {:else}
-      <EntityList
-        actions={actions}
-        cardGridClass={CARD_GRID}
-        items={data.builtins.map((tmpl) => ({
-          description: tmpl.description,
-          href: detailsHref(tmpl),
-          id: tmpl.id,
-          subtitle: `${tmpl.image}:${tmpl.tag}`,
-          title: tmpl.name,
-        }))}
-        media={media}
-        meta={meta}
-        view={view}
-      />
-      <Pagination
-        label="built-in templates"
-        page={data.builtinsPage}
-        pageParam="bpage"
-        perPage={data.builtinsPerPage}
-        total={data.builtinsTotal}
-      />
-    {/if}
-  </div>
+	<div class="mb-8">
+		<h2 class="eyebrow mb-3">Built-in</h2>
+		{#if data.builtins.length === 0}
+			<p class="text-text-subtle text-sm">No built-in templates match.</p>
+		{:else}
+			<EntityList
+				{actions}
+				cardGridClass={CARD_GRID}
+				items={data.builtins.map((tmpl) => ({
+					description: tmpl.description,
+					href: detailsHref(tmpl),
+					id: tmpl.id,
+					subtitle: `${tmpl.image}:${tmpl.tag}`,
+					title: tmpl.name,
+				}))}
+				{media}
+				{meta}
+				{view}
+			/>
+			<Pagination
+				label="built-in templates"
+				page={data.builtinsPage}
+				pageParam="bpage"
+				perPage={data.builtinsPerPage}
+				total={data.builtinsTotal}
+			/>
+		{/if}
+	</div>
 
-  <div>
-    <h2 class="eyebrow mb-3">Custom</h2>
-    {#if data.customTotal === 0 && !data.filtered}
-      <div class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-12 text-center">
-        <LayoutGrid class="text-text-muted mb-3 size-8 opacity-40" />
-        <p class="text-text-muted text-sm font-medium">
-          No custom templates yet
-        </p>
-        <p class="text-text-subtle mt-1 text-xs">
-          Build one from scratch, or save an existing service as a template
-          from its Settings tab.
-        </p>
-      </div>
-    {:else if data.custom.length === 0}
-      <p class="text-text-subtle text-sm">No custom templates match.</p>
-    {:else}
-      <EntityList
-        actions={actions}
-        cardGridClass={CARD_GRID}
-        items={data.custom.map((tmpl) => ({
-          description: tmpl.description,
-          href: detailsHref(tmpl),
-          id: tmpl.id,
-          subtitle: `${tmpl.image}:${tmpl.tag}`,
-          title: tmpl.name,
-        }))}
-        media={media}
-        meta={meta}
-        view={view}
-      />
-      <Pagination
-        label="custom templates"
-        page={data.customPage}
-        pageParam="cpage"
-        perPage={data.customPerPage}
-        total={data.customTotal}
-      />
-    {/if}
-  </div>
+	<div>
+		<h2 class="eyebrow mb-3">Custom</h2>
+		{#if data.customTotal === 0 && !data.filtered}
+			<div
+				class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-12 text-center"
+			>
+				<LayoutGrid class="text-text-muted mb-3 size-8 opacity-40" />
+				<p class="text-text-muted text-sm font-medium">
+					No custom templates yet
+				</p>
+				<p class="text-text-subtle mt-1 text-xs">
+					Build one from scratch, or save an existing service as a template from
+					its Settings tab.
+				</p>
+			</div>
+		{:else if data.custom.length === 0}
+			<p class="text-text-subtle text-sm">No custom templates match.</p>
+		{:else}
+			<EntityList
+				{actions}
+				cardGridClass={CARD_GRID}
+				items={data.custom.map((tmpl) => ({
+					description: tmpl.description,
+					href: detailsHref(tmpl),
+					id: tmpl.id,
+					subtitle: `${tmpl.image}:${tmpl.tag}`,
+					title: tmpl.name,
+				}))}
+				{media}
+				{meta}
+				{view}
+			/>
+			<Pagination
+				label="custom templates"
+				page={data.customPage}
+				pageParam="cpage"
+				perPage={data.customPerPage}
+				total={data.customTotal}
+			/>
+		{/if}
+	</div>
 
-  <p class="text-text-subtle mt-10 text-center text-xs">
-    App icons by <a
-      class="hover:text-text-muted underline"
-      href="https://dashboardicons.com"
-      rel="noopener noreferrer"
-      target="_blank">Dashboard Icons</a
-    >, licensed under
-    <a
-      class="hover:text-text-muted underline"
-      href="https://www.apache.org/licenses/LICENSE-2.0"
-      rel="noopener noreferrer"
-      target="_blank">Apache 2.0</a
-    >; language and framework logos from
-    <a
-      class="hover:text-text-muted underline"
-      href="https://devicon.dev"
-      rel="noopener noreferrer"
-      target="_blank">Devicon</a
-    > (MIT) and
-    <a
-      class="hover:text-text-muted underline"
-      href="https://simpleicons.org"
-      rel="noopener noreferrer"
-      target="_blank">Simple Icons</a
-    > (CC0). Logos are their owners' trademarks.
-  </p>
+	<p class="text-text-subtle mt-10 text-center text-xs">
+		App icons by <a
+			class="hover:text-text-muted underline"
+			href="https://dashboardicons.com"
+			rel="noopener noreferrer"
+			target="_blank">Dashboard Icons</a
+		>, licensed under
+		<a
+			class="hover:text-text-muted underline"
+			href="https://www.apache.org/licenses/LICENSE-2.0"
+			rel="noopener noreferrer"
+			target="_blank">Apache 2.0</a
+		>; language and framework logos from
+		<a
+			class="hover:text-text-muted underline"
+			href="https://devicon.dev"
+			rel="noopener noreferrer"
+			target="_blank">Devicon</a
+		>
+		(MIT) and
+		<a
+			class="hover:text-text-muted underline"
+			href="https://simpleicons.org"
+			rel="noopener noreferrer"
+			target="_blank">Simple Icons</a
+		> (CC0). Logos are their owners' trademarks.
+	</p>
 </div>

@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { Plus } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import { OAUTH_PRESETS, type OauthPreset } from "#lib/auth-providers.js";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import OauthProviderFields, {
@@ -9,8 +12,6 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -42,71 +43,73 @@
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
-  <div>
-    <h1 class="text-text text-xl font-semibold">Add a provider</h1>
-    <p class="text-text-muted mt-1 text-sm">
-      Any OpenID Connect provider. Register an OAuth app on its side first, then
-      paste the client id and secret here.
-    </p>
-  </div>
+	<div>
+		<h1 class="text-text text-xl font-semibold">Add a provider</h1>
+		<p class="text-text-muted mt-1 text-sm">
+			Any OpenID Connect provider. Register an OAuth app on its side first, then
+			paste the client id and secret here.
+		</p>
+	</div>
 
-  <section class="panel rounded-md">
-    <div class="border-border border-b px-5 py-4">
-      <p class={label}>Start from a preset</p>
-      <div class="flex flex-wrap gap-2">
-        {#each OAUTH_PRESETS as preset (preset.id)}
-          <Button
-            onclick={() => applyPreset(preset)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <Plus class="size-3.5" />
-            {preset.label}
-          </Button>
-        {/each}
-      </div>
-      <p class="text-text-subtle mt-2 text-xs">
-        A preset fills in the discovery URL shape, scopes and PKCE default for
-        that product. Replace the
-        <span class="">{"{placeholders}"}</span>
-        with your own values.
-      </p>
-    </div>
+	<section class="panel rounded-md">
+		<div class="border-border border-b px-5 py-4">
+			<p class={label}>Start from a preset</p>
+			<div class="flex flex-wrap gap-2">
+				{#each OAUTH_PRESETS as preset (preset.id)}
+					<Button
+						onclick={() => applyPreset(preset)}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						<Plus class="size-3.5" />
+						{preset.label}
+					</Button>
+				{/each}
+			</div>
+			<p class="text-text-subtle mt-2 text-xs">
+				A preset fills in the discovery URL shape, scopes and PKCE default for
+				that product. Replace the
+				<span class="">{"{placeholders}"}</span>
+				with your own values.
+			</p>
+		</div>
 
-    <form
-      action="?/create"
-      class="space-y-5 p-5"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't add the provider.",
-        loading: "Adding the provider",
-        onSettled: () => {
-          submitting = false;
-        },
-        onStart: () => {
-          submitting = true;
-        },
-        success: "Provider added.",
-      })}
-    >
-      {#if form?.error}
-        <p class="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500">
-          {form.error}
-        </p>
-      {/if}
+		<form
+			action="?/create"
+			class="space-y-5 p-5"
+			method="POST"
+			use:enhance={enhanceToast({
+				error: "Couldn't add the provider.",
+				loading: "Adding the provider",
+				onSettled: () => {
+					submitting = false;
+				},
+				onStart: () => {
+					submitting = true;
+				},
+				success: "Provider added.",
+			})}
+		>
+			{#if form?.error}
+				<p
+					class="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500"
+				>
+					{form.error}
+				</p>
+			{/if}
 
-      <OauthProviderFields callbackBase={data.callbackBase} values={values} />
+			<OauthProviderFields callbackBase={data.callbackBase} {values} />
 
-      <div class="flex justify-end gap-2">
-        <Button
-          href={resolve('authentication/providers')}
-          type="button"
-          variant="ghost"
-        >Cancel</Button>
+			<div class="flex justify-end gap-2">
+				<Button
+					href={resolve("authentication/providers")}
+					type="button"
+					variant="ghost">Cancel</Button
+				>
 
-        <Button disabled={submitting} type="submit">Add provider</Button>
-      </div>
-    </form>
-  </section>
+				<Button disabled={submitting} type="submit">Add provider</Button>
+			</div>
+		</form>
+	</section>
 </div>

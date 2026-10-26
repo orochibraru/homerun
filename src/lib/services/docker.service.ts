@@ -28,14 +28,8 @@ export type {
 	RegistryAuth,
 	VolumeMountParams,
 } from "./docker/containers.ts";
-export type {
-	MirrorCopyResult,
-	ScanImageParams,
-} from "./docker/image-scan.ts";
-export type {
-	OneOffRunParams,
-	OneOffRunResult,
-} from "./docker/one-off.ts";
+export type { MirrorCopyResult, ScanImageParams } from "./docker/image-scan.ts";
+export type { OneOffRunParams, OneOffRunResult } from "./docker/one-off.ts";
 export type { SwarmNodeInfo } from "./docker/swarm.ts";
 export type { SwarmReplica } from "./docker/swarm-replicas.ts";
 
@@ -52,8 +46,8 @@ import { DockerOneOffMixin } from "./docker/one-off.ts";
 import { DockerOtelMixin } from "./docker/otel.ts";
 import { DockerReconcileMixin } from "./docker/reconcile.ts";
 import { DockerRevisionMixin } from "./docker/revisions.ts";
-import { DockerSwarmMixin } from "./docker/swarm.ts";
 import { DockerSwarmReplicasMixin } from "./docker/swarm-replicas.ts";
+import { DockerSwarmMixin } from "./docker/swarm.ts";
 import { DockerTerminalMixin } from "./docker/terminal.ts";
 
 // Merge order matters only where one concern calls another's methods via

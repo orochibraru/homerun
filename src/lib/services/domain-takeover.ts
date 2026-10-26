@@ -6,6 +6,7 @@ import { StackDTO } from "#lib/dto/stack-dto.js";
 import { Logger } from "#lib/logger.js";
 import type { DomainConflict } from "#lib/server/hostname-owner.js";
 import { defaultHostname, serviceHostnames } from "#lib/service-domains.js";
+
 import { RedirectService } from "./redirect.service.ts";
 
 const logger = new Logger("Services");

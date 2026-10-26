@@ -1,12 +1,13 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { onMount } from "svelte";
+
 	import RedirectFields from "#lib/components/redirect-fields.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
 
 	const { form } = $props();
 
@@ -16,46 +17,48 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <div class="mb-8">
-    <h1 class="text-text text-lg font-semibold tracking-tight">Add a redirect</h1>
-    <p class="text-text-muted mt-1 text-sm">
-      Send a hostname, or a path under it, to another URL.
-    </p>
-  </div>
+	<div class="mb-8">
+		<h1 class="text-text text-lg font-semibold tracking-tight">
+			Add a redirect
+		</h1>
+		<p class="text-text-muted mt-1 text-sm">
+			Send a hostname, or a path under it, to another URL.
+		</p>
+	</div>
 
-  <form
-    action="?/create"
-    class="panel mb-6 space-y-4 rounded-md p-5"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Check the form for errors.",
-      loading: "Adding the redirect",
-      onSettled: () => {
-        submitting = false;
-      },
-      onStart: () => {
-        submitting = true;
-      },
-      onSuccess: () => goto(resolve('redirects'), { refreshAll: true }),
-      success: "Redirect added."
-    })}
-  >
-    {#if form?.error}
-      <p class="text-sm text-red-500">{form.error}</p>
-    {/if}
-    <RedirectFields
-      values={{
-        destination: "",
-        enabled: true,
-        keepPath: true,
-        permanent: true,
-        source: "",
-      }}
-    />
-    <div class="flex justify-end gap-3">
-      <Button disabled={submitting} type="submit" variant="outline">
-        Add redirect
-      </Button>
-    </div>
-  </form>
+	<form
+		action="?/create"
+		class="panel mb-6 space-y-4 rounded-md p-5"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Check the form for errors.",
+			loading: "Adding the redirect",
+			onSettled: () => {
+				submitting = false;
+			},
+			onStart: () => {
+				submitting = true;
+			},
+			onSuccess: () => goto(resolve("redirects"), { refreshAll: true }),
+			success: "Redirect added.",
+		})}
+	>
+		{#if form?.error}
+			<p class="text-sm text-red-500">{form.error}</p>
+		{/if}
+		<RedirectFields
+			values={{
+				destination: "",
+				enabled: true,
+				keepPath: true,
+				permanent: true,
+				source: "",
+			}}
+		/>
+		<div class="flex justify-end gap-3">
+			<Button disabled={submitting} type="submit" variant="outline">
+				Add redirect
+			</Button>
+		</div>
+	</form>
 </div>

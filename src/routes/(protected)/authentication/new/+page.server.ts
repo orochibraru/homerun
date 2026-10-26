@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { config } from "#lib/config.js";
 import { readOauthProviderForm } from "#lib/server/oauth-provider-form.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
@@ -6,7 +8,6 @@ import {
 	OauthProviderConfigError,
 	OauthProviderConfigService,
 } from "#lib/services/oauth-provider-config.service.js";
-import { resolve } from "$app/paths";
 
 export const load = () => {
 	return { callbackBase: config.auth.origin ?? null };

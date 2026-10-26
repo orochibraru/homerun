@@ -1,4 +1,5 @@
 import { error, fail } from "@sveltejs/kit";
+
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { parseObjectStoreForm } from "#lib/server/validation/object-store.js";

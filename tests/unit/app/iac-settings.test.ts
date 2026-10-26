@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { detectDrift } from "../../../src/lib/iac/drift";
 import { inventoryCounts } from "../../../src/lib/iac/generate";
 import { providerDocs } from "../../../src/lib/iac/provider-docs";

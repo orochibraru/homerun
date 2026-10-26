@@ -35,18 +35,12 @@ repos:
 
   - repo: local
     hooks:
-      - id: biome
-        name: Format (Biome)
-        entry: node_modules/.bin/biome format --write --no-errors-on-unmatched --files-ignore-unknown=true
+      - id: bun-fmt
+        name: Format (bun fmt)
+        entry: bun fmt --ignore-unknown --no-error-on-unmatched-pattern
         language: system
         require_serial: true
-        files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html)$
-
-      - id: format-md
-        name: Formatting (MD)
-        entry: bun run prettier --log-level warn --write
-        language: system
-        files: \.(md|mdx)$
+        files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html|md|mdx|ya?ml)$
 
       - id: format-go
         name: Formatting (Go)

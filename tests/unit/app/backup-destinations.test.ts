@@ -8,14 +8,12 @@ mock.module("$app/env", () => ({
 
 const { DESTINATION_PRESETS, DESTINATION_TYPES, describeDestination } =
 	await import("../../../src/lib/backup-destinations");
-const { parseDestinationForm } = await import(
-	"../../../src/lib/server/backup-destination-form"
-);
+const { parseDestinationForm } =
+	await import("../../../src/lib/server/backup-destination-form");
 const { listRemoteBackups, rcloneRemote, splitHostPort, testRemote } =
 	await import("../../../src/lib/services/backup/rclone");
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
 
 const FAKE_KEY = ["-----BEGIN OPENSSH", "PRIVATE KEY-----\nabc\n-----END"].join(
 	" ",

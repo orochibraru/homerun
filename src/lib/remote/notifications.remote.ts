@@ -1,11 +1,12 @@
+import { command, query } from "$app/server";
 import { z } from "zod";
+
 import {
 	MAX_ROWS_PER_USER,
 	NotificationDTO,
 } from "#lib/dto/notification-dto.js";
 import type { Notification } from "#lib/server/db/schema.js";
 import { requireUser } from "#lib/server/remote-auth.js";
-import { command, query } from "$app/server";
 
 const UNREAD_PREVIEW_LIMIT = 5;
 

@@ -1,16 +1,12 @@
 import { and, desc, eq, gte, inArray, isNull, lt, min, sql } from "drizzle-orm";
+
 import { db } from "#lib/server/db/lib.js";
 import { type StatSample, statSample } from "#lib/server/db/schema.js";
+
 import { BaseDTO } from "./base-dto";
 
 export type StatRange =
-	| "live"
-	| "hour"
-	| "day"
-	| "week"
-	| "month"
-	| "year"
-	| "all";
+	"live" | "hour" | "day" | "week" | "month" | "year" | "all";
 
 export interface StatPoint {
 	at: Date;

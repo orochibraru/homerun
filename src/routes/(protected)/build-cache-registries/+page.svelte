@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { Container, Pencil, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityList from "#lib/components/entity-list.svelte";
@@ -12,8 +15,6 @@
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -46,94 +47,103 @@
 </script>
 
 {#snippet media(_reg: RegistryRow)}
-  <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
-    <Container class="size-5" />
-  </div>
+	<div
+		class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md"
+	>
+		<Container class="size-5" />
+	</div>
 {/snippet}
 
 {#snippet actions(reg: RegistryRow)}
-  <Button href={reg.href} size="icon-sm" title="Edit" variant="ghost">
-    <Pencil class="size-4" />
-  </Button>
-  <form
-    action="?/delete"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Couldn't delete : make sure no service still uses it.",
-      loading: "Deleting the registry",
-      success: "Registry deleted.",
-    })}
-  >
-    <input name="registryId" type="hidden" value={reg.id} />
-    <Button
-      class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-      onclick={(e) => requestDelete(e, reg.name)}
-      size="icon-sm"
-      title="Delete"
-      type="button"
-      variant="ghost"
-    >
-      <Trash2 class="size-4" />
-    </Button>
-  </form>
+	<Button href={reg.href} size="icon-sm" title="Edit" variant="ghost">
+		<Pencil class="size-4" />
+	</Button>
+	<form
+		action="?/delete"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Couldn't delete : make sure no service still uses it.",
+			loading: "Deleting the registry",
+			success: "Registry deleted.",
+		})}
+	>
+		<input name="registryId" type="hidden" value={reg.id} />
+		<Button
+			class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+			onclick={(e) => requestDelete(e, reg.name)}
+			size="icon-sm"
+			title="Delete"
+			type="button"
+			variant="ghost"
+		>
+			<Trash2 class="size-4" />
+		</Button>
+	</form>
 {/snippet}
 
 <div class="p-5 md:p-6">
-  <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Build Cache Registries</h1>
-      <p class="text-text-muted mt-1 text-sm">
-        Docker registries used to cache layers between git builds. Pick one
-        from a git-based service's Source tab so a rebuild reuses unchanged
-        layers instead of starting from scratch.
-      </p>
-    </div>
+	<div
+		class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between"
+	>
+		<div>
+			<h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
+				Build Cache Registries
+			</h1>
+			<p class="text-text-muted mt-1 text-sm">
+				Docker registries used to cache layers between git builds. Pick one from
+				a git-based service's Source tab so a rebuild reuses unchanged layers
+				instead of starting from scratch.
+			</p>
+		</div>
 
-    <Button href={resolve('build-cache-registries/new')}><Plus class="size-4" />Add Registry</Button>
-  </div>
+		<Button href={resolve("build-cache-registries/new")}
+			><Plus class="size-4" />Add Registry</Button
+		>
+	</div>
 
-  {#if data.total === 0 && !data.filtered}
-    <EmptyState
-      icon={Container}
-      subtitle="Add one, then pick it from a git-based service's Source tab."
-      title="No build cache registries yet"
-    >
-      <Button href={resolve('build-cache-registries/new')}><Plus class="size-4" />Add your first registry</Button>
-    </EmptyState>
-  {:else}
-    <EntityToolbar
-    sorts={BASE_SORTS} placeholder="Search registries by name, URL or username…">
-      {#snippet trailing()}
-        <ViewModeToggle view={view} />
-      {/snippet}
-    </EntityToolbar>
+	{#if data.total === 0 && !data.filtered}
+		<EmptyState
+			icon={Container}
+			subtitle="Add one, then pick it from a git-based service's Source tab."
+			title="No build cache registries yet"
+		>
+			<Button href={resolve("build-cache-registries/new")}
+				><Plus class="size-4" />Add your first registry</Button
+			>
+		</EmptyState>
+	{:else}
+		<EntityToolbar
+			sorts={BASE_SORTS}
+			placeholder="Search registries by name, URL or username…"
+		>
+			{#snippet trailing()}
+				<ViewModeToggle {view} />
+			{/snippet}
+		</EntityToolbar>
 
-    {#if data.registries.length === 0}
-      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
-        <p class="text-text-muted text-sm">No registries match your search.</p>
-      </div>
-    {:else}
-      <EntityList
-        actions={actions}
-        items={rows}
-        media={media}
-        view={view}
-      />
+		{#if data.registries.length === 0}
+			<div
+				class="border-border/70 rounded-md border border-dashed py-16 text-center"
+			>
+				<p class="text-text-muted text-sm">No registries match your search.</p>
+			</div>
+		{:else}
+			<EntityList {actions} items={rows} {media} {view} />
 
-      <Pagination
-        label="registries"
-        page={data.page}
-        perPage={data.perPage}
-        total={data.total}
-      />
-    {/if}
-  {/if}
+			<Pagination
+				label="registries"
+				page={data.page}
+				perPage={data.perPage}
+				total={data.total}
+			/>
+		{/if}
+	{/if}
 </div>
 
 <ConfirmDialog
-  bind:open={deleteDialogOpen}
-  confirmLabel="Delete"
-  description={`Delete "${pendingDeleteName}"? Any service still picking it will fall back to no build cache.`}
-  onConfirm={() => pendingDeleteForm?.requestSubmit()}
-  title="Delete build cache registry"
+	bind:open={deleteDialogOpen}
+	confirmLabel="Delete"
+	description={`Delete "${pendingDeleteName}"? Any service still picking it will fall back to no build cache.`}
+	onConfirm={() => pendingDeleteForm?.requestSubmit()}
+	title="Delete build cache registry"
 />

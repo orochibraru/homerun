@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { lostAliases } = await import(
-	"../../../src/lib/services/cron/swarm-dns-watch"
-);
+const { lostAliases } =
+	await import("../../../src/lib/services/cron/swarm-dns-watch");
 
 const entry = (slug: string, resolved: boolean) => ({
 	resolved,
@@ -37,19 +36,15 @@ describe("SwarmDnsWatch tick", () => {
 	test("restarts a service whose slug was lost, once per cooldown, and says so", async () => {
 		const { afterEach: _afterEach } = await import("bun:test");
 		const { restoreStubs, stub } = await import("../support/stub");
-		const { SwarmDnsWatch } = await import(
-			"../../../src/lib/services/cron/swarm-dns-watch"
-		);
-		const { InstanceSettingsDTO } = await import(
-			"../../../src/lib/dto/instance-settings-dto"
-		);
+		const { SwarmDnsWatch } =
+			await import("../../../src/lib/services/cron/swarm-dns-watch");
+		const { InstanceSettingsDTO } =
+			await import("../../../src/lib/dto/instance-settings-dto");
 		const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-		const { NotificationDTO } = await import(
-			"../../../src/lib/dto/notification-dto"
-		);
-		const { DockerService } = await import(
-			"../../../src/lib/services/docker.service"
-		);
+		const { NotificationDTO } =
+			await import("../../../src/lib/dto/notification-dto");
+		const { DockerService } =
+			await import("../../../src/lib/services/docker.service");
 		const svc = (slug: string) => ({
 			id: `${slug}-id`,
 			name: slug,
@@ -95,19 +90,15 @@ describe("SwarmDnsWatch tick", () => {
 describe("SwarmDnsWatch edges", () => {
 	test("a real lookup answers for localhost, and a failed restart is logged, not thrown", async () => {
 		const { restoreStubs, stub } = await import("../support/stub");
-		const { SwarmDnsWatch } = await import(
-			"../../../src/lib/services/cron/swarm-dns-watch"
-		);
-		const { InstanceSettingsDTO } = await import(
-			"../../../src/lib/dto/instance-settings-dto"
-		);
+		const { SwarmDnsWatch } =
+			await import("../../../src/lib/services/cron/swarm-dns-watch");
+		const { InstanceSettingsDTO } =
+			await import("../../../src/lib/dto/instance-settings-dto");
 		const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-		const { NotificationDTO } = await import(
-			"../../../src/lib/dto/notification-dto"
-		);
-		const { DockerService } = await import(
-			"../../../src/lib/services/docker.service"
-		);
+		const { NotificationDTO } =
+			await import("../../../src/lib/dto/notification-dto");
+		const { DockerService } =
+			await import("../../../src/lib/services/docker.service");
 		class Probe extends SwarmDnsWatch {
 			check(name: string) {
 				return this.resolves(name);

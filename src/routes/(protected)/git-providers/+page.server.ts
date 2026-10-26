@@ -1,15 +1,16 @@
 import { fail } from "@sveltejs/kit";
+
 import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { githubAppRegistration } from "#lib/github-app.js";
 import { can } from "#lib/permissions.js";
 import { browserOrigin } from "#lib/server/canonical-origin.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
-import { GitProviderService } from "#lib/services/git-provider.service.js";
 import {
 	GitProviderConfigError,
 	GitProviderConfigService,
 } from "#lib/services/git-provider-config.service.js";
+import { GitProviderService } from "#lib/services/git-provider.service.js";
 
 const GITHUB_ORG_PATTERN = /^[a-z\d](?:[a-z\d-]{0,38})$/i;
 

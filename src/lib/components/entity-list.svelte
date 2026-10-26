@@ -10,6 +10,7 @@
 
 <script lang="ts" generics="T extends EntityRow">
 	import type { Snippet } from "svelte";
+
 	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
 	import type { ViewMode } from "#lib/view-mode.svelte.js";
 
@@ -54,128 +55,142 @@
 </script>
 
 {#snippet text(item: EntityRow, clamp: boolean)}
-  <p class="text-text truncate text-sm font-medium">{item.title}</p>
-  {#if item.subtitle}
-    <p class="text-text-subtle truncate text-xs">{item.subtitle}</p>
-  {/if}
-  {#if item.description}
-    <p class="text-text-muted mt-0.5 text-xs {clamp ? 'line-clamp-2' : 'truncate'}">
-      {item.description}
-    </p>
-  {/if}
+	<p class="text-text truncate text-sm font-medium">{item.title}</p>
+	{#if item.subtitle}
+		<p class="text-text-subtle truncate text-xs">{item.subtitle}</p>
+	{/if}
+	{#if item.description}
+		<p
+			class="text-text-muted mt-0.5 text-xs {clamp
+				? 'line-clamp-2'
+				: 'truncate'}"
+		>
+			{item.description}
+		</p>
+	{/if}
 {/snippet}
 
 {#snippet listRow(item: T)}
-  <div
-        class="hover:bg-surface-2 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors sm:flex-nowrap {selected.has(
-        item.id,
-      )
-        ? 'bg-accent-light'
-        : ''}"
-      >
-        {#if selectable}
-          <Checkbox
-            aria-label={selectLabel(item)}
-            checked={selected.has(item.id)}
-            onCheckedChange={() => onToggleSelect?.(item.id)}
-          />
-        {/if}
-        <div class="flex min-w-0 flex-1 flex-col gap-2">
-          {#if item.href}
-            <a class="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href={item.href}>
-              {@render media?.(item)}
-              <span class="min-w-0 flex-1">
-                {@render text(item, false)}
-              </span>
-            </a>
-          {:else}
-            <div class="flex min-w-0 items-center gap-3">
-              {@render media?.(item)}
-              <span class="min-w-0 flex-1">
-                {@render text(item, false)}
-              </span>
-            </div>
-          {/if}
-          {@render details?.(item)}
-        </div>
-        <div class="flex w-full shrink-0 flex-wrap items-center gap-2 empty:hidden sm:w-auto sm:flex-nowrap {selectable ? 'pl-7 sm:pl-0' : ''}">
-          {@render badge?.(item)}
-          {@render meta?.(item)}
-          {@render actions?.(item)}
-        </div>
-  </div>
+	<div
+		class="hover:bg-surface-2 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors sm:flex-nowrap {selected.has(
+			item.id,
+		)
+			? 'bg-accent-light'
+			: ''}"
+	>
+		{#if selectable}
+			<Checkbox
+				aria-label={selectLabel(item)}
+				checked={selected.has(item.id)}
+				onCheckedChange={() => onToggleSelect?.(item.id)}
+			/>
+		{/if}
+		<div class="flex min-w-0 flex-1 flex-col gap-2">
+			{#if item.href}
+				<a
+					class="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+					href={item.href}
+				>
+					{@render media?.(item)}
+					<span class="min-w-0 flex-1">
+						{@render text(item, false)}
+					</span>
+				</a>
+			{:else}
+				<div class="flex min-w-0 items-center gap-3">
+					{@render media?.(item)}
+					<span class="min-w-0 flex-1">
+						{@render text(item, false)}
+					</span>
+				</div>
+			{/if}
+			{@render details?.(item)}
+		</div>
+		<div
+			class="flex w-full shrink-0 flex-wrap items-center gap-2 empty:hidden sm:w-auto sm:flex-nowrap {selectable
+				? 'pl-7 sm:pl-0'
+				: ''}"
+		>
+			{@render badge?.(item)}
+			{@render meta?.(item)}
+			{@render actions?.(item)}
+		</div>
+	</div>
 {/snippet}
 
 {#snippet gridCard(item: T)}
-      <div
-        class="panel flex h-full flex-col rounded-xl p-4 transition-colors {selected.has(
-        item.id,
-      )
-        ? 'border-accent/50 bg-accent-light'
-        : ''}"
-      >
-        <div class="mb-3 flex items-start gap-3">
-          {#if selectable}
-            <Checkbox
-              aria-label={selectLabel(item)}
-              checked={selected.has(item.id)}
-              onCheckedChange={() => onToggleSelect?.(item.id)}
-            />
-          {/if}
-          {@render media?.(item)}
-          <div class="min-w-0 flex-1">
-            {#if item.href}
-              <a class="block min-w-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href={item.href}>
-                {@render text(item, true)}
-              </a>
-            {:else}
-              {@render text(item, true)}
-            {/if}
-          </div>
-          {@render badge?.(item)}
-        </div>
-        {#if details}
-          <div class="mb-3">{@render details(item)}</div>
-        {/if}
-        {#if meta || actions}
-          <div class="border-border mt-auto flex flex-col gap-3 border-t pt-3">
-            {#if meta}
-              <div class="flex min-w-0 flex-col gap-1">{@render meta(item)}</div>
-            {/if}
-            {#if actions}
-              <div class="flex flex-wrap items-center gap-2">
-                {@render actions(item)}
-              </div>
-            {/if}
-          </div>
-        {/if}
-      </div>
+	<div
+		class="panel flex h-full flex-col rounded-xl p-4 transition-colors {selected.has(
+			item.id,
+		)
+			? 'border-accent/50 bg-accent-light'
+			: ''}"
+	>
+		<div class="mb-3 flex items-start gap-3">
+			{#if selectable}
+				<Checkbox
+					aria-label={selectLabel(item)}
+					checked={selected.has(item.id)}
+					onCheckedChange={() => onToggleSelect?.(item.id)}
+				/>
+			{/if}
+			{@render media?.(item)}
+			<div class="min-w-0 flex-1">
+				{#if item.href}
+					<a
+						class="block min-w-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+						href={item.href}
+					>
+						{@render text(item, true)}
+					</a>
+				{:else}
+					{@render text(item, true)}
+				{/if}
+			</div>
+			{@render badge?.(item)}
+		</div>
+		{#if details}
+			<div class="mb-3">{@render details(item)}</div>
+		{/if}
+		{#if meta || actions}
+			<div class="border-border mt-auto flex flex-col gap-3 border-t pt-3">
+				{#if meta}
+					<div class="flex min-w-0 flex-col gap-1">{@render meta(item)}</div>
+				{/if}
+				{#if actions}
+					<div class="flex flex-wrap items-center gap-2">
+						{@render actions(item)}
+					</div>
+				{/if}
+			</div>
+		{/if}
+	</div>
 {/snippet}
 
 {#if view.current === "list"}
-  <div class="panel divide-border divide-y overflow-hidden rounded-xl">
-    {#each items as item (item.id)}
-      {#snippet body()}
-        {@render listRow(item)}
-      {/snippet}
-      {#if wrapper}
-        {@render wrapper(item, body)}
-      {:else}
-        {@render body()}
-      {/if}
-    {/each}
-  </div>
+	<div class="panel divide-border divide-y overflow-hidden rounded-xl">
+		{#each items as item (item.id)}
+			{#snippet body()}
+				{@render listRow(item)}
+			{/snippet}
+			{#if wrapper}
+				{@render wrapper(item, body)}
+			{:else}
+				{@render body()}
+			{/if}
+		{/each}
+	</div>
 {:else}
-  <div class={cardGridClass}>
-    {#each items as item (item.id)}
-      {#snippet body()}
-        {@render gridCard(item)}
-      {/snippet}
-      {#if wrapper}
-        {@render wrapper(item, body)}
-      {:else}
-        {@render body()}
-      {/if}
-    {/each}
-  </div>
+	<div class={cardGridClass}>
+		{#each items as item (item.id)}
+			{#snippet body()}
+				{@render gridCard(item)}
+			{/snippet}
+			{#if wrapper}
+				{@render wrapper(item, body)}
+			{:else}
+				{@render body()}
+			{/if}
+		{/each}
+	</div>
 {/if}

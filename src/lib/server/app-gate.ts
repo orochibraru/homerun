@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+
 import { config } from "#lib/config.js";
 import { splitDomain } from "#lib/service-domains.js";
 

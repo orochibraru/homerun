@@ -1,5 +1,7 @@
 import { z } from "zod";
+
 import { manifestSchema } from "#lib/server/manifest.js";
+
 import type { RouteDef } from "./registry";
 import { domainConflictResponse, errorResponse } from "./schemas";
 

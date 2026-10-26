@@ -19,30 +19,24 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { WorkstationService, dockerRemoteHeader } = await import(
-	"../../../src/lib/services/workstation.service"
-);
+const { WorkstationService, dockerRemoteHeader } =
+	await import("../../../src/lib/services/workstation.service");
 const { WorkerClient } = await import("../../../src/lib/server/worker-client");
-const { AgentClientService } = await import(
-	"../../../src/lib/services/agent-client.service"
-);
+const { AgentClientService } =
+	await import("../../../src/lib/services/agent-client.service");
 const { RemoteHostDTO } = await import("../../../src/lib/dto/remote-host-dto");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
 const helpers = await import("../../../src/lib/services/deploy/helpers");
-const { PangolinService } = await import(
-	"../../../src/lib/services/pangolin.service"
-);
-const { DomainDnsService } = await import(
-	"../../../src/lib/services/domain-dns.service"
-);
+const { PangolinService } =
+	await import("../../../src/lib/services/pangolin.service");
+const { DomainDnsService } =
+	await import("../../../src/lib/services/domain-dns.service");
 const dnsService = await import("../../../src/lib/services/dns.service");
-const { WorkstationSignInService } = await import(
-	"../../../src/lib/services/workstation/sign-in"
-);
+const { WorkstationSignInService } =
+	await import("../../../src/lib/services/workstation/sign-in");
 
 type Workstation = NonNullable<Awaited<ReturnType<typeof WorkstationDTO.get>>>;
 type Host = NonNullable<Awaited<ReturnType<typeof RemoteHostDTO.get>>>;

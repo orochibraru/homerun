@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -7,9 +8,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { parseImageRef, parseWwwAuthenticate } = await import(
-	"../../../src/lib/registry-ref"
-);
+const { parseImageRef, parseWwwAuthenticate } =
+	await import("../../../src/lib/registry-ref");
 const { Logger } = await import("../../../src/lib/logger");
 const { ApiService } = await import("../../../src/lib/services/api.service");
 

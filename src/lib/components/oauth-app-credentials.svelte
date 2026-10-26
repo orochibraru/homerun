@@ -31,27 +31,27 @@
 </script>
 
 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-  <div>
-    <p class={labelClass}>Client ID</p>
-    <CopyBox label="client ID" value={clientId} />
-  </div>
-  {#if clientSecret}
-    <div>
-      <p class={labelClass}>Client secret</p>
-      <CopyBox label="client secret" value={clientSecret} />
-      <p class="text-text-subtle mt-1.5 text-xs">
-        Shown once. Copy it into the app now: Homerun only keeps a hash.
-      </p>
-    </div>
-  {/if}
-  {#each endpoints as endpoint (endpoint.label)}
-    <div>
-      <p class={labelClass}>{endpoint.label}</p>
-      <CopyBox label={endpoint.label} truncate value={endpoint.value} />
-    </div>
-  {/each}
-  <div>
-    <p class={labelClass}>Scopes</p>
-    <CopyBox label="scopes" value="openid profile email groups" />
-  </div>
+	<div>
+		<p class={labelClass}>Client ID</p>
+		<CopyBox label="client ID" value={clientId} />
+	</div>
+	{#if clientSecret}
+		<div>
+			<p class={labelClass}>Client secret</p>
+			<CopyBox label="client secret" value={clientSecret} />
+			<p class="text-text-subtle mt-1.5 text-xs">
+				Shown once. Copy it into the app now: Homerun only keeps a hash.
+			</p>
+		</div>
+	{/if}
+	{#each endpoints as endpoint (endpoint.label)}
+		<div>
+			<p class={labelClass}>{endpoint.label}</p>
+			<CopyBox label={endpoint.label} truncate value={endpoint.value} />
+		</div>
+	{/each}
+	<div>
+		<p class={labelClass}>Scopes</p>
+		<CopyBox label="scopes" value="openid profile email groups" />
+	</div>
 </div>

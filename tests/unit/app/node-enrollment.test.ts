@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { restoreStubs, stub } from "../support/stub";
 import { stubFetch } from "./dns-providers/stub-fetch";
 
@@ -11,28 +12,21 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { NodeEnrollmentService, EnrollError } = await import(
-	"../../../src/lib/services/node-enrollment.service"
-);
-const { NodeEnrollmentDTO } = await import(
-	"../../../src/lib/dto/node-enrollment-dto"
-);
+const { NodeEnrollmentService, EnrollError } =
+	await import("../../../src/lib/services/node-enrollment.service");
+const { NodeEnrollmentDTO } =
+	await import("../../../src/lib/dto/node-enrollment-dto");
 const { RemoteHostDTO } = await import("../../../src/lib/dto/remote-host-dto");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { AgentClientService } = await import(
-	"../../../src/lib/services/agent-client.service"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { enrollCommand, nodeInstallScript, releaseTagFor } = await import(
-	"../../../src/lib/server/node-install-script"
-);
-const { toSwarmNodeInfo } = await import(
-	"../../../src/lib/services/docker/swarm"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { AgentClientService } =
+	await import("../../../src/lib/services/agent-client.service");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { enrollCommand, nodeInstallScript, releaseTagFor } =
+	await import("../../../src/lib/server/node-install-script");
+const { toSwarmNodeInfo } =
+	await import("../../../src/lib/services/docker/swarm");
 
 interface Scenario {
 	agentOk: boolean;

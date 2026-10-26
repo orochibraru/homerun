@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
+
 import type { ServiceDTO as ServiceRow } from "../../../src/lib/dto/service-dto";
 import { restoreStubs, stub } from "../support/stub";
 
@@ -14,15 +16,12 @@ const { db } = await import("../../../src/lib/server/db/lib");
 const { Logger } = await import("../../../src/lib/logger");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { StatusCheckService } = await import(
-	"../../../src/lib/services/status-check.service"
-);
-const { GitPollScheduler } = await import(
-	"../../../src/lib/services/cron/git-poll-scheduler"
-);
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { StatusCheckService } =
+	await import("../../../src/lib/services/status-check.service");
+const { GitPollScheduler } =
+	await import("../../../src/lib/services/cron/git-poll-scheduler");
 
 function fakeService(overrides: Record<string, unknown>) {
 	const updates: Record<string, unknown>[] = [];

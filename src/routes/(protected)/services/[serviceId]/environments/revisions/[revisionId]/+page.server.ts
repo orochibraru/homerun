@@ -1,10 +1,11 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { RevisionService } from "#lib/services/revision.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Revisions");
 

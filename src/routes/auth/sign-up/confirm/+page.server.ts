@@ -1,6 +1,6 @@
-import { redirect } from "@sveltejs/kit";
 import { dev } from "$app/env";
 import { resolve } from "$app/paths";
+import { redirect } from "@sveltejs/kit";
 
 export const load = ({ locals }) => {
 	// No session at all → send back to sign-up

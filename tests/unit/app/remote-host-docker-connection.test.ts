@@ -7,9 +7,8 @@ mock.module("$app/env", () => ({
 }));
 
 const { RemoteHostDTO } = await import("../../../src/lib/dto/remote-host-dto");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 const { WorkerClient } = await import("../../../src/lib/server/worker-client");
 const { encryptSecret } = await import("../../../src/lib/services/secrets");
 
@@ -28,9 +27,7 @@ afterEach(() => {
 function host(row: Record<string, unknown>) {
 	const updates: Record<string, unknown>[] = [];
 	const instance = new (
-		RemoteHostDTO as unknown as new (
-			row: Record<string, unknown>,
-		) => Host
+		RemoteHostDTO as unknown as new (row: Record<string, unknown>) => Host
 	)({
 		dockerHost: null,
 		id: "h1",

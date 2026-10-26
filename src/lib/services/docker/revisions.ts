@@ -1,9 +1,10 @@
 import {
-	type SwarmTaskLike,
 	swarmSampleFromTasks,
+	type SwarmTaskLike,
 	type WorkloadHealthSample,
 } from "#lib/revisions.js";
 import { isNotFound } from "#lib/server/worker-client.js";
+
 import type { BaseDockerService, Constructor } from "./base.ts";
 import {
 	type ContainerHealthSample,

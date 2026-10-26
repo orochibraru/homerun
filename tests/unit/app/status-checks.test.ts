@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	type CheckResult,
-	type CheckTarget,
 	checkRound,
+	type CheckTarget,
 	evaluateChecks,
 	inferProviderKind,
 	mapBitbucketStatuses,

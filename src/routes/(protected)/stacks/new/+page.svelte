@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { Check } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import Alert from "#lib/components/alert.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
@@ -9,8 +12,6 @@
 	import { stackScopedSlug } from "#lib/slug.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -45,103 +46,99 @@
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
-  <div>
-    <h1 class="text-text text-lg font-semibold tracking-tight">
-      {data.parent ? "New Substack" : "New Stack"}
-    </h1>
-    <p class="mt-0.5 text-sm text-text-muted">
-      {data.parent
-        ? `Nested inside ${data.parent.path}.`
-        : "Group related services together."}
-    </p>
-  </div>
+	<div>
+		<h1 class="text-text text-lg font-semibold tracking-tight">
+			{data.parent ? "New Substack" : "New Stack"}
+		</h1>
+		<p class="mt-0.5 text-sm text-text-muted">
+			{data.parent
+				? `Nested inside ${data.parent.path}.`
+				: "Group related services together."}
+		</p>
+	</div>
 
-  <form
-    action="?/create"
-    class="space-y-5 rounded-md panel p-5"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Check the form for errors.",
-      loading: "Creating the stack",
-      onSettled: () => {
-        submitting = false;
-      },
-      onStart: () => {
-        submitting = true;
-      },
-      success: "Stack created.",
-    })}
-  >
-    <input
-      name="parentId"
-      type="hidden"
-      value={data.parent?.id ?? ""}
-    />
+	<form
+		action="?/create"
+		class="space-y-5 rounded-md panel p-5"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Check the form for errors.",
+			loading: "Creating the stack",
+			onSettled: () => {
+				submitting = false;
+			},
+			onStart: () => {
+				submitting = true;
+			},
+			success: "Stack created.",
+		})}
+	>
+		<input name="parentId" type="hidden" value={data.parent?.id ?? ""} />
 
-    {#if form?.error}
-      <Alert>
-        {form.error}
-      </Alert>
-    {/if}
+		{#if form?.error}
+			<Alert>
+				{form.error}
+			</Alert>
+		{/if}
 
-    <div>
-      <label class={label} for="name">
-        Name <span class="text-red-500">*</span>
-      </label>
-      <Input
-        id="name"
-        name="name"
-        oninput={onNameInput}
-        placeholder="e.g. Marketing site"
-        required
-        type="text"
-        bind:value={name}
-      />
-    </div>
+		<div>
+			<label class={label} for="name">
+				Name <span class="text-red-500">*</span>
+			</label>
+			<Input
+				id="name"
+				name="name"
+				oninput={onNameInput}
+				placeholder="e.g. Marketing site"
+				required
+				type="text"
+				bind:value={name}
+			/>
+		</div>
 
-    <div>
-      <label class={label} for="slug">
-        Slug <span class="text-red-500">*</span>
-      </label>
-      <Input
-        class=""
-        id="slug"
-        name="slug"
-        oninput={onSlugInput}
-        pattern={"[a-z0-9-]{1,63}"}
-        placeholder="marketing-site"
-        required
-        type="text"
-        bind:value={slug}
-      />
-      <p class="mt-1.5 text-xs text-text-subtle">
-        Prefixes every member service's container name and subdomain (e.g.
-        <code>{slug || "slug"}-my-service.example.com</code>).
-      </p>
-    </div>
+		<div>
+			<label class={label} for="slug">
+				Slug <span class="text-red-500">*</span>
+			</label>
+			<Input
+				class=""
+				id="slug"
+				name="slug"
+				oninput={onSlugInput}
+				pattern={"[a-z0-9-]{1,63}"}
+				placeholder="marketing-site"
+				required
+				type="text"
+				bind:value={slug}
+			/>
+			<p class="mt-1.5 text-xs text-text-subtle">
+				Prefixes every member service's container name and subdomain (e.g.
+				<code>{slug || "slug"}-my-service.example.com</code>).
+			</p>
+		</div>
 
-    <div>
-      <label class={label} for="description">Description</label>
-      <Textarea
-        class="resize-none"
-        id="description"
-        name="description"
-        placeholder="Optional"
-        rows={3}
-      />
-    </div>
+		<div>
+			<label class={label} for="description">Description</label>
+			<Textarea
+				class="resize-none"
+				id="description"
+				name="description"
+				placeholder="Optional"
+				rows={3}
+			/>
+		</div>
 
-    <div class="flex justify-end gap-3">
-      <Button href={resolve('stacks')} variant="outline">Cancel</Button>
-      <Button disabled={submitting} type="submit">
-        {#if submitting}
-          <Spinner />
-          Creating…
-        {:else}
-          <Check class="size-4" />
-          Create stack
-        {/if}
-      </Button>
-    </div>
-  </form>
+		<div class="flex justify-end gap-3">
+			<Button href={resolve("stacks")} variant="outline">Cancel</Button>
+			<Button disabled={submitting} type="submit">
+				{#if submitting}
+					<Spinner />
+					Creating…
+				{:else}
+					<Check class="size-4" />
+					Create stack
+				{/if}
+			</Button>
+		</div>
+	</form>
 </div>

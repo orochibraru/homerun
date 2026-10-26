@@ -8,6 +8,7 @@ import {
 	serviceRoutedHosts,
 } from "#lib/server/hostname-owner.js";
 import { defaultHostname, domainHosts } from "#lib/service-domains.js";
+
 import type { DnsSyncResult } from "./dns-result.ts";
 import { dashboardHostFrom } from "./docker/dashboard.ts";
 import { DomainDnsService } from "./domain-dns.service.ts";
@@ -67,13 +68,11 @@ async function fanOut(
 						? { ...result, detail: `${hostname}: ${result.detail}` }
 						: null,
 				)
-				.catch(
-					(err: unknown): DnsSyncResult => ({
-						detail: `${hostname}: ${err instanceof Error ? err.message : String(err)}`,
-						ok: false,
-						provider: provider.name,
-					}),
-				),
+				.catch((err: unknown): DnsSyncResult => ({
+					detail: `${hostname}: ${err instanceof Error ? err.message : String(err)}`,
+					ok: false,
+					provider: provider.name,
+				})),
 		),
 	);
 	const results = await Promise.all(tasks);

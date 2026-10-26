@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+
 import type { StoredErrorEvent, StoredFrame } from "./event";
 
 const DEFAULT_MARKERS = new Set(["{{ default }}", "{{default}}"]);

@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { oauthMethod } from "#lib/auth-providers.js";
 import { config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
@@ -9,7 +11,6 @@ import {
 	OauthProviderConfigError,
 	OauthProviderConfigService,
 } from "#lib/services/oauth-provider-config.service.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ params, parent }) => {
 	await parent();

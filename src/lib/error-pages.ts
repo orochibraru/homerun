@@ -5,11 +5,7 @@ export const ERROR_PAGE_HEADER = "X-Homerun-Error-Page";
 export const HOMERUN_URL = "https://orochibraru.com/homerun";
 
 export type ErrorPageKind =
-	| "blocked"
-	| "notFound"
-	| "notReady"
-	| "unavailable"
-	| "waking";
+	"blocked" | "notFound" | "notReady" | "unavailable" | "waking";
 
 export interface ErrorPageText {
 	message: string;

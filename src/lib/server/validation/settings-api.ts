@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { ERROR_PAGE_KINDS } from "#lib/error-pages.js";
 import { SCAN_SEVERITIES } from "#lib/image-scan.js";
 import { UI_MODES } from "#lib/ui-mode.js";

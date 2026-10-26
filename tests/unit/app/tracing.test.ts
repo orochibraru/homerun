@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { withTracingEnv } from "../../../src/lib/tracing/env";
 import {
 	otlpIngestToken,

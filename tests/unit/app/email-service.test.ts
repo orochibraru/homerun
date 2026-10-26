@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -9,9 +10,8 @@ mock.module("$app/env", () => ({
 
 const { config } = await import("../../../src/lib/config");
 const { Logger } = await import("../../../src/lib/logger");
-const { EmailService } = await import(
-	"../../../src/lib/services/email.service"
-);
+const { EmailService } =
+	await import("../../../src/lib/services/email.service");
 
 const originalSmtp = config.smtp;
 const smtp = {

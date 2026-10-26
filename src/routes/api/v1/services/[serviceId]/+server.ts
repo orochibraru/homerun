@@ -3,8 +3,8 @@ import { Logger } from "#lib/logger.js";
 import { can } from "#lib/permissions.js";
 import { serviceApiJson } from "#lib/server/api-json.js";
 import { updateServiceApiBody } from "#lib/server/validation/api.js";
-import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
 import { DockerService } from "#lib/services/docker.service.js";
+import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
 import {
 	ServiceBusyError,
 	ServiceLifecycleService,

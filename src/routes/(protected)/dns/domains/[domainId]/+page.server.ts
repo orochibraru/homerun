@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail } from "@sveltejs/kit";
+
 import { config } from "#lib/config.js";
 import { DnsConnectionDTO } from "#lib/dto/dns-connection-dto.js";
 import { DomainDTO } from "#lib/dto/domain-dto.js";
@@ -13,7 +15,6 @@ import {
 	DomainSettingsError,
 	DomainSettingsService,
 } from "#lib/services/domain-settings.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("DNS");
 

@@ -10,6 +10,7 @@ import {
 	lte,
 	or,
 } from "drizzle-orm";
+
 import type { IpIntel } from "#lib/ip-intel.js";
 import { db } from "#lib/server/db/lib.js";
 import { type IpBan, ipBan } from "#lib/server/db/schema.js";
@@ -18,6 +19,7 @@ import {
 	type PagedResult,
 	searchCondition,
 } from "#lib/server/list-query.js";
+
 import { BaseDTO } from "./base-dto";
 
 /** Wraps the `ip_ban` table: one row per banned client address, enforced by Traefik through `IpBanService`. */

@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 import { Logger } from "#lib/logger.js";

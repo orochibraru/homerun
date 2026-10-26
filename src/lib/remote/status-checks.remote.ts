@@ -1,9 +1,10 @@
+import { query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
+
 import { Logger } from "#lib/logger.js";
 import { requirePermission } from "#lib/server/remote-auth.js";
 import { StatusCheckService } from "#lib/services/status-check.service.js";
-import { query } from "$app/server";
 
 const logger = new Logger("StatusChecks");
 

@@ -5,8 +5,8 @@
 </script>
 
 <MigratePanel
-  {form}
-  label="Coolify"
-  tokenHelp="Coolify → Keys & Tokens → API tokens, with read and read:sensitive (without it, env values and database passwords come back hidden). Never stored."
-  urlPlaceholder="https://coolify.example.com"
+	{form}
+	label="Coolify"
+	tokenHelp="Coolify → Keys & Tokens → API tokens, with read and read:sensitive (without it, env values and database passwords come back hidden). Never stored."
+	urlPlaceholder="https://coolify.example.com"
 />

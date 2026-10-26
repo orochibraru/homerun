@@ -97,4 +97,4 @@ in sync by hand).
 ## 6. Finish
 
 Run the `check-repo` skill before considering this done — DTO/route additions
-are exactly the kind of change svelte-check and biome catch mistakes in.
+are exactly the kind of change svelte-check and oxlint catch mistakes in.

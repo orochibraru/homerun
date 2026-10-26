@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { ListChecks, ListFilter } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
@@ -13,8 +16,6 @@
 	} from "#lib/constants.js";
 	import { getJobQueue, type QueuedJob } from "#lib/remote/jobs.remote.js";
 	import { formatDuration } from "#lib/resource-incidents.js";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 
 	const POLL_MS = 3000;
 
@@ -66,93 +67,99 @@
 </script>
 
 {#snippet row(entry: QueuedJob)}
-  {@const meta = JOB_STATUS_CONFIG[entry.status]}
-  {@const TypeIcon = JOB_TYPE_ICONS[entry.type]}
-  {@const duration = took(entry)}
-  <a
-    class="panel hover:bg-surface-2 flex flex-col gap-2 rounded-md p-4 transition-colors sm:flex-row sm:items-center sm:gap-4"
-    href={resolve("/(protected)/scheduling/jobs/[jobId]", { jobId: entry.id })}
-  >
-    <span class="bg-accent-light text-accent hidden size-9 shrink-0 items-center justify-center rounded-lg sm:flex">
-      <TypeIcon class="size-4" />
-    </span>
-    <div class="min-w-0 flex-1">
-      <p class="text-text truncate text-sm font-semibold">{entry.title}</p>
-      <p class="text-text-muted mt-0.5 line-clamp-2 text-xs break-all sm:line-clamp-none sm:truncate sm:break-normal">
-        {JOB_TYPE_LABELS[entry.type]}
-        {#if duration}
-          · took {duration}
-        {/if}
-        {#if entry.workerVersion}
-          · worker {entry.workerVersion}
-        {/if}
-        {#if entry.maxAttempts > 1}
-          · attempt {entry.attempts}/{entry.maxAttempts}
-        {/if}
-        {#if entry.error}
-          · {entry.error}
-        {/if}
-      </p>
-    </div>
-    <div class="flex shrink-0 items-center gap-3">
-      {#if entry.finishedAt}
-        <span class="text-text-subtle text-xs">{formatFinished(entry.finishedAt)}</span>
-      {/if}
-      <span
-        class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[0.65rem] font-medium tracking-wider uppercase {meta.class}"
-      >
-        {#if entry.status === "running"}
-          <meta.icon class="size-3 animate-spin" />
-        {:else}
-          <meta.icon class="size-3" />
-        {/if}
-        {meta.label}
-      </span>
-    </div>
-  </a>
+	{@const meta = JOB_STATUS_CONFIG[entry.status]}
+	{@const TypeIcon = JOB_TYPE_ICONS[entry.type]}
+	{@const duration = took(entry)}
+	<a
+		class="panel hover:bg-surface-2 flex flex-col gap-2 rounded-md p-4 transition-colors sm:flex-row sm:items-center sm:gap-4"
+		href={resolve("/(protected)/scheduling/jobs/[jobId]", { jobId: entry.id })}
+	>
+		<span
+			class="bg-accent-light text-accent hidden size-9 shrink-0 items-center justify-center rounded-lg sm:flex"
+		>
+			<TypeIcon class="size-4" />
+		</span>
+		<div class="min-w-0 flex-1">
+			<p class="text-text truncate text-sm font-semibold">{entry.title}</p>
+			<p
+				class="text-text-muted mt-0.5 line-clamp-2 text-xs break-all sm:line-clamp-none sm:truncate sm:break-normal"
+			>
+				{JOB_TYPE_LABELS[entry.type]}
+				{#if duration}
+					· took {duration}
+				{/if}
+				{#if entry.workerVersion}
+					· worker {entry.workerVersion}
+				{/if}
+				{#if entry.maxAttempts > 1}
+					· attempt {entry.attempts}/{entry.maxAttempts}
+				{/if}
+				{#if entry.error}
+					· {entry.error}
+				{/if}
+			</p>
+		</div>
+		<div class="flex shrink-0 items-center gap-3">
+			{#if entry.finishedAt}
+				<span class="text-text-subtle text-xs"
+					>{formatFinished(entry.finishedAt)}</span
+				>
+			{/if}
+			<span
+				class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[0.65rem] font-medium tracking-wider uppercase {meta.class}"
+			>
+				{#if entry.status === "running"}
+					<meta.icon class="size-3 animate-spin" />
+				{:else}
+					<meta.icon class="size-3" />
+				{/if}
+				{meta.label}
+			</span>
+		</div>
+	</a>
 {/snippet}
 
 <section>
-  <div class="mb-3 flex items-center gap-2">
-    <ListChecks class="text-accent size-4" />
-    <h2 class="eyebrow">Job queue</h2>
-  </div>
-  <p class="text-text-muted mb-3 text-xs">
-    Deploys, builds, backups and Docker cleanups all run through one worker :
-    one job per service at a time, and a host-wide cleanup runs alone. Open a
-    job for its log.
-  </p>
+	<div class="mb-3 flex items-center gap-2">
+		<ListChecks class="text-accent size-4" />
+		<h2 class="eyebrow">Job queue</h2>
+	</div>
+	<p class="text-text-muted mb-3 text-xs">
+		Deploys, builds, backups and Docker cleanups all run through one worker :
+		one job per service at a time, and a host-wide cleanup runs alone. Open a
+		job for its log.
+	</p>
 
-  <EntityToolbar {filters} pageParams={[]} placeholder="Search jobs by name…" />
+	<EntityToolbar {filters} pageParams={[]} placeholder="Search jobs by name…" />
 
-  {#if !queue.ready}
-    <div class="space-y-2.5">
-      {#each [0, 1] as placeholder (placeholder)}
-        <div class="panel flex items-center gap-4 rounded-md p-4">
-          <div class="min-w-0 flex-1 space-y-1.5">
-            <Skeleton class="h-4 w-48" />
-            <Skeleton class="h-3 w-32" />
-          </div>
-          <Skeleton class="h-5 w-20" />
-        </div>
-      {/each}
-    </div>
-  {:else if active.length === 0 && recent.length === 0}
-    <EmptyState
-      icon={ListChecks}
-      subtitle={filtered
-        ? "No job matches this search or filter."
-        : "Deploys, backups and cleanups show up here while they run."}
-      title={filtered ? "No matching job" : "Nothing in the queue"}
-    />
-  {:else}
-    <div class="space-y-2.5">
-      {#each active as entry (entry.id)}
-        {@render row(entry)}
-      {/each}
-      {#each recent as entry (entry.id)}
-        {@render row(entry)}
-      {/each}
-    </div>
-  {/if}
+	{#if !queue.ready}
+		<div class="space-y-2.5">
+			{#each [0, 1] as placeholder (placeholder)}
+				<div class="panel flex items-center gap-4 rounded-md p-4">
+					<div class="min-w-0 flex-1 space-y-1.5">
+						<Skeleton class="h-4 w-48" />
+						<Skeleton class="h-3 w-32" />
+					</div>
+					<Skeleton class="h-5 w-20" />
+				</div>
+			{/each}
+		</div>
+	{:else if active.length === 0 && recent.length === 0}
+		<EmptyState
+			icon={ListChecks}
+			subtitle={filtered
+				? "No job matches this search or filter."
+				: "Deploys, backups and cleanups show up here while they run."}
+			title={filtered ? "No matching job" : "Nothing in the queue"}
+		/>
+	{:else}
+		<div class="space-y-2.5">
+			{#each active as entry (entry.id)}
+				{@render row(entry)}
+			{/each}
+			{#each recent as entry (entry.id)}
+				{@render row(entry)}
+			{/each}
+		</div>
+	{/if}
 </section>

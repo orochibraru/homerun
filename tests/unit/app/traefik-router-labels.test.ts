@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { hasTraefikRouterFor } = await import(
-	"../../../src/lib/services/docker/labels"
-);
+const { hasTraefikRouterFor } =
+	await import("../../../src/lib/services/docker/labels");
 
 const ROUTED = {
 	"traefik.enable": "true",

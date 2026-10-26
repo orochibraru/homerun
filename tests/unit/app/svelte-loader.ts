@@ -2,6 +2,7 @@ import { afterEach, beforeEach, mock } from "bun:test";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { plugin } from "bun";
 import { compile, compileModule } from "svelte/compiler";

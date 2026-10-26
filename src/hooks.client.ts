@@ -1,5 +1,5 @@
-import type { HandleClientError } from "@sveltejs/kit/hooks";
 import { dev } from "$app/env";
+import type { HandleClientError } from "@sveltejs/kit/hooks";
 
 function makeid(length: number) {
 	let result = "";

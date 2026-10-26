@@ -5,9 +5,8 @@ const promise = mock(
 );
 mock.module("svelte-sonner", () => ({ toast: { promise } }));
 
-const { enhanceToast, saveToast, toastError } = await import(
-	"../../../src/lib/toast"
-);
+const { enhanceToast, saveToast, toastError } =
+	await import("../../../src/lib/toast");
 
 type Settle = (result: unknown) => Promise<void>;
 

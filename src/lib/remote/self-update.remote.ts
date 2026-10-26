@@ -1,11 +1,12 @@
+import { command, query } from "$app/server";
 import { z } from "zod";
+
 import { requirePermission, requireUser } from "#lib/server/remote-auth.js";
-import type { UpdatePreflight } from "#lib/services/self-update/preflight.js";
 import {
 	type ReleaseStatus,
 	SelfUpdateService,
 } from "#lib/services/self-update.service.js";
-import { command, query } from "$app/server";
+import type { UpdatePreflight } from "#lib/services/self-update/preflight.js";
 
 export const getAppVersion = query((): string => {
 	requireUser();

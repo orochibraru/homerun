@@ -41,94 +41,94 @@
   "shared chrome, not shared shape" split as $lib/server/form-styles.ts.
 -->
 <div>
-  <label class={label} for="{idPrefix}name">
-    Name <span class="text-red-500">*</span>
-  </label>
-  <Input
-    id="{idPrefix}name"
-    name="name"
-    placeholder="e.g. Media library"
-    required
-    type="text"
-    bind:value={name}
-  />
+	<label class={label} for="{idPrefix}name">
+		Name <span class="text-red-500">*</span>
+	</label>
+	<Input
+		id="{idPrefix}name"
+		name="name"
+		placeholder="e.g. Media library"
+		required
+		type="text"
+		bind:value={name}
+	/>
 </div>
 
 <div>
-  <p class={label}>Type</p>
-  <div class="grid grid-cols-2 gap-3">
-    <label
-      class="
+	<p class={label}>Type</p>
+	<div class="grid grid-cols-2 gap-3">
+		<label
+			class="
         flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-all {kind ===
-        'volume'
-        ? 'border-accent bg-accent-light text-accent'
-        : 'border-border text-text-muted'}
+			'volume'
+				? 'border-accent bg-accent-light text-accent'
+				: 'border-border text-text-muted'}
      "
-    >
-      <input
-        class="sr-only"
-        name="kind"
-        type="radio"
-        value="volume"
-        bind:group={kind}
-      >
-      Docker volume
-    </label>
-    <label
-      class="
+		>
+			<input
+				class="sr-only"
+				name="kind"
+				type="radio"
+				value="volume"
+				bind:group={kind}
+			/>
+			Docker volume
+		</label>
+		<label
+			class="
         flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-all {kind ===
-        'bind'
-        ? 'border-accent bg-accent-light text-accent'
-        : 'border-border text-text-muted'}
+			'bind'
+				? 'border-accent bg-accent-light text-accent'
+				: 'border-border text-text-muted'}
      "
-    >
-      <input
-        class="sr-only"
-        name="kind"
-        type="radio"
-        value="bind"
-        bind:group={kind}
-      >
-      Host path
-    </label>
-  </div>
+		>
+			<input
+				class="sr-only"
+				name="kind"
+				type="radio"
+				value="bind"
+				bind:group={kind}
+			/>
+			Host path
+		</label>
+	</div>
 </div>
 
 <div>
-  <label class={label} for="{idPrefix}source">
-    {kind === "bind" ? "Host path" : "Volume name"}
-    <span class="text-red-500">*</span>
-  </label>
-  <Input
-    class=""
-    id="{idPrefix}source"
-    name="source"
-    oninput={() => {
-      sourceEdited = source !== "";
-    }}
-    placeholder={kind === "bind" ? "/mnt/data/media" : "homerun-media"}
-    required
-    type="text"
-    bind:value={source}
-  />
-  <p class="text-text-subtle mt-1 text-xs">
-    {#if kind === "bind"}
-      An absolute directory on this host : created automatically if it doesn't
-      exist. Filled in from the name until you change it.
-    {:else}
-      A Docker-managed named volume : created automatically on first use.
-      Filled in from the name until you change it.
-    {/if}
-  </p>
+	<label class={label} for="{idPrefix}source">
+		{kind === "bind" ? "Host path" : "Volume name"}
+		<span class="text-red-500">*</span>
+	</label>
+	<Input
+		class=""
+		id="{idPrefix}source"
+		name="source"
+		oninput={() => {
+			sourceEdited = source !== "";
+		}}
+		placeholder={kind === "bind" ? "/mnt/data/media" : "homerun-media"}
+		required
+		type="text"
+		bind:value={source}
+	/>
+	<p class="text-text-subtle mt-1 text-xs">
+		{#if kind === "bind"}
+			An absolute directory on this host : created automatically if it doesn't
+			exist. Filled in from the name until you change it.
+		{:else}
+			A Docker-managed named volume : created automatically on first use. Filled
+			in from the name until you change it.
+		{/if}
+	</p>
 </div>
 
 <div>
-  <label class={label} for="{idPrefix}description">Description</label>
-  <Textarea
-    class="resize-none"
-    id="{idPrefix}description"
-    name="description"
-    placeholder="Optional"
-    rows={2}
-  />
+	<label class={label} for="{idPrefix}description">Description</label>
+	<Textarea
+		class="resize-none"
+		id="{idPrefix}description"
+		name="description"
+		placeholder="Optional"
+		rows={2}
+	/>
 </div>

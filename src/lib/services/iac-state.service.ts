@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
+
 import { IacProjectDTO } from "#lib/dto/iac-project-dto.js";
 import { IacStateVersionDTO } from "#lib/dto/iac-state-version-dto.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
-import { parseScope } from "#lib/iac/generate.js";
-import { type IacTool, isIacTool } from "#lib/iac/tools.js";
 import {
 	diffStates,
 	type StateDiff,
@@ -11,9 +10,12 @@ import {
 	summarizeState,
 	withSerial,
 } from "#lib/iac-state.js";
+import { parseScope } from "#lib/iac/generate.js";
+import { type IacTool, isIacTool } from "#lib/iac/tools.js";
 import { bucketNameProblem } from "#lib/object-storage.js";
 import type { IacStateLock } from "#lib/server/db/schema.js";
 import { slugify, uniqueSlug } from "#lib/slug.js";
+
 import { ObjectStorageService } from "./object-storage.service.ts";
 import type { ObjectStoreClient } from "./s3/object-store-client.ts";
 
@@ -22,8 +24,7 @@ export type WriteResult =
 	| { lock: IacStateLock | null; ok: false; reason: "locked" };
 
 export type LockResult =
-	| { lock: IacStateLock; ok: true }
-	| { lock: IacStateLock; ok: false };
+	{ lock: IacStateLock; ok: true } | { lock: IacStateLock; ok: false };
 
 export interface IacProjectSummary {
 	bucket: string;
@@ -183,10 +184,9 @@ class IacStateServiceClass {
 		project: IacProjectDTO,
 		version: IacStateVersionDTO,
 	): Promise<string> {
-		const body = await (await this.#client(project)).getObject(
-			project.bucket,
-			version.objectKey,
-		);
+		const body = await (
+			await this.#client(project)
+		).getObject(project.bucket, version.objectKey);
 		if (body === null) {
 			throw new Error(
 				`State version ${version.serial} is missing from ${project.bucket}.`,
@@ -228,12 +228,9 @@ class IacStateServiceClass {
 			serial: summary.serial,
 			slug: project.slug,
 		});
-		await (await this.#client(project)).putObject(
-			project.bucket,
-			objectKey,
-			body,
-			"application/json",
-		);
+		await (
+			await this.#client(project)
+		).putObject(project.bucket, objectKey, body, "application/json");
 		const version = await IacStateVersionDTO.create({
 			createdAt: new Date(),
 			id,

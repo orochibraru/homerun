@@ -38,19 +38,15 @@ const message = {
 	title: "api failed to build",
 };
 
-const { NotificationChannelService } = await import(
-	"../../../src/lib/services/notification-channel.service"
-);
-const { NotificationChannelDTO } = await import(
-	"../../../src/lib/dto/notification-channel-dto"
-);
+const { NotificationChannelService } =
+	await import("../../../src/lib/services/notification-channel.service");
+const { NotificationChannelDTO } =
+	await import("../../../src/lib/dto/notification-channel-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
-const { EmailService } = await import(
-	"../../../src/lib/services/email.service"
-);
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
+const { EmailService } =
+	await import("../../../src/lib/services/email.service");
 const { config } = await import("../../../src/lib/config");
 const { JobDTO } = await import("../../../src/lib/dto/job-dto");
 

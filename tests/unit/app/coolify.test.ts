@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { CoolifyService } = await import(
-	"../../../src/lib/services/coolify.service"
-);
+const { CoolifyService } =
+	await import("../../../src/lib/services/coolify.service");
 const {
 	coolifyApplication,
 	coolifyDatabase,
@@ -17,9 +16,8 @@ const {
 	coolifyMemoryMb,
 	coolifyService,
 } = await import("../../../src/lib/migrate/coolify");
-const { coolifyStorages, parseDockerRunOptions } = await import(
-	"../../../src/lib/migrate/coolify-runtime"
-);
+const { coolifyStorages, parseDockerRunOptions } =
+	await import("../../../src/lib/migrate/coolify-runtime");
 
 const realFetch = globalThis.fetch;
 

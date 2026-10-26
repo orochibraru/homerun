@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { refreshAll } from "$app/navigation";
+	import { page } from "$app/state";
 	import { onMount } from "svelte";
+
 	import { formatBytes } from "#lib/formatting.js";
 	import {
 		formatCount as count,
@@ -10,8 +13,7 @@
 	import { monitoringChanges } from "#lib/monitoring-changes.js";
 	import { MONITORING_RANGES } from "#lib/monitoring-ranges.js";
 	import type { MonitoringSummary } from "#lib/services/monitoring.service.js";
-	import { refreshAll } from "$app/navigation";
-	import { page } from "$app/state";
+
 	import ChangeBadge from "./change-badge.svelte";
 	import MetricChart from "./metric-chart.svelte";
 
@@ -122,90 +124,98 @@
 </script>
 
 <div class="space-y-5">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="text-text-muted text-sm">
-      {#if monitoring.since}
-        Since {new Date(monitoring.since).toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: monitoring.range === "today" ? "short" : undefined,
-        })}
-      {:else}
-        Everything recorded, up to a year back
-      {/if}
-      {#if monitoring.previous}
-        <span class="text-text-subtle">· changes {monitoring.previous.label}</span>
-      {/if}
-    </p>
-    <nav
-      aria-label="Range"
-      class="border-border inline-flex flex-wrap rounded-lg border p-0.5"
-    >
-      {#each MONITORING_RANGES as range (range.id)}
-        <a
-          aria-current={monitoring.range === range.id ? "page" : undefined}
-          class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors {monitoring.range ===
-          range.id
-            ? 'bg-accent-light text-accent'
-            : 'text-text-muted hover:text-text'}"
-          data-sveltekit-noscroll
-          href={rangeHref(range.id)}
-        >
-          {range.label}
-        </a>
-      {/each}
-    </nav>
-  </div>
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<p class="text-text-muted text-sm">
+			{#if monitoring.since}
+				Since {new Date(monitoring.since).toLocaleString(undefined, {
+					dateStyle: "medium",
+					timeStyle: monitoring.range === "today" ? "short" : undefined,
+				})}
+			{:else}
+				Everything recorded, up to a year back
+			{/if}
+			{#if monitoring.previous}
+				<span class="text-text-subtle"
+					>· changes {monitoring.previous.label}</span
+				>
+			{/if}
+		</p>
+		<nav
+			aria-label="Range"
+			class="border-border inline-flex flex-wrap rounded-lg border p-0.5"
+		>
+			{#each MONITORING_RANGES as range (range.id)}
+				<a
+					aria-current={monitoring.range === range.id ? "page" : undefined}
+					class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors {monitoring.range ===
+					range.id
+						? 'bg-accent-light text-accent'
+						: 'text-text-muted hover:text-text'}"
+					data-sveltekit-noscroll
+					href={rangeHref(range.id)}
+				>
+					{range.label}
+				</a>
+			{/each}
+		</nav>
+	</div>
 
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    {#each cards as card (card.label)}
-      <div class="panel rounded-md p-4">
-        <p class="text-text-muted text-xs">{card.label}</p>
-        <p class="mt-1 flex items-baseline gap-2">
-          <span class="metric text-text">{card.value}</span>
-          <ChangeBadge change={changes[card.metric]} label={monitoring.previous?.label} />
-        </p>
-        <p class="text-text-subtle mt-1 truncate text-xs" title={card.hint}>
-          {card.hint}
-        </p>
-      </div>
-    {/each}
-  </div>
+	<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+		{#each cards as card (card.label)}
+			<div class="panel rounded-md p-4">
+				<p class="text-text-muted text-xs">{card.label}</p>
+				<p class="mt-1 flex items-baseline gap-2">
+					<span class="metric text-text">{card.value}</span>
+					<ChangeBadge
+						change={changes[card.metric]}
+						label={monitoring.previous?.label}
+					/>
+				</p>
+				<p class="text-text-subtle mt-1 truncate text-xs" title={card.hint}>
+					{card.hint}
+				</p>
+			</div>
+		{/each}
+	</div>
 
-  <div class="grid gap-3 xl:grid-cols-2">
-    <MetricChart
-      bucketSeconds={monitoring.bucketSeconds}
-      empty={trafficEmpty}
-      format={count}
-      kind="bar"
-      points={monitoring.trafficSeries.map((p) => ({ at: p.at, value: p.requests }))}
-      title="Requests"
-    />
-    <MetricChart
-      bucketSeconds={monitoring.bucketSeconds}
-      format={(value) => ms(value)}
-      points={monitoring.trafficSeries.map((p) => ({
-        at: p.at,
-        value: p.avgResponseMs,
-      }))}
-      title="Avg response time"
-    />
-    <MetricChart
-      bucketSeconds={monitoring.bucketSeconds}
-      format={(value) => `${value.toFixed(1)}%`}
-      points={monitoring.resourceSeries.map((p) => ({
-        at: p.at,
-        value: p.cpuPercent,
-      }))}
-      title="CPU{suffix}"
-    />
-    <MetricChart
-      bucketSeconds={monitoring.bucketSeconds}
-      format={mb}
-      points={monitoring.resourceSeries.map((p) => ({
-        at: p.at,
-        value: p.memUsedMb,
-      }))}
-      title="Memory{suffix}"
-    />
-  </div>
+	<div class="grid gap-3 xl:grid-cols-2">
+		<MetricChart
+			bucketSeconds={monitoring.bucketSeconds}
+			empty={trafficEmpty}
+			format={count}
+			kind="bar"
+			points={monitoring.trafficSeries.map((p) => ({
+				at: p.at,
+				value: p.requests,
+			}))}
+			title="Requests"
+		/>
+		<MetricChart
+			bucketSeconds={monitoring.bucketSeconds}
+			format={(value) => ms(value)}
+			points={monitoring.trafficSeries.map((p) => ({
+				at: p.at,
+				value: p.avgResponseMs,
+			}))}
+			title="Avg response time"
+		/>
+		<MetricChart
+			bucketSeconds={monitoring.bucketSeconds}
+			format={(value) => `${value.toFixed(1)}%`}
+			points={monitoring.resourceSeries.map((p) => ({
+				at: p.at,
+				value: p.cpuPercent,
+			}))}
+			title="CPU{suffix}"
+		/>
+		<MetricChart
+			bucketSeconds={monitoring.bucketSeconds}
+			format={mb}
+			points={monitoring.resourceSeries.map((p) => ({
+				at: p.at,
+				value: p.memUsedMb,
+			}))}
+			title="Memory{suffix}"
+		/>
+	</div>
 </div>

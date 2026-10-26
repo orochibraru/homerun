@@ -1,18 +1,16 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import type { CheckResult } from "../../../src/lib/status-checks";
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({ building: false, dev: false }));
 
-const { StatusCheckService } = await import(
-	"../../../src/lib/services/status-check.service"
-);
-const { JobDeferredError } = await import(
-	"../../../src/lib/services/queue/deferred"
-);
-const { gateStatusChecks, StatusChecksFailedError } = await import(
-	"../../../src/lib/services/deploy/status-check-step"
-);
+const { StatusCheckService } =
+	await import("../../../src/lib/services/status-check.service");
+const { JobDeferredError } =
+	await import("../../../src/lib/services/queue/deferred");
+const { gateStatusChecks, StatusChecksFailedError } =
+	await import("../../../src/lib/services/deploy/status-check-step");
 
 const SHA = "b".repeat(40);
 

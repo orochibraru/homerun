@@ -8,20 +8,17 @@ mock.module("$app/env", () => ({
 
 const updateApiKey = mock(async (_input: unknown) => ({}));
 const deleteApiKey = mock(async (_input: unknown) => ({}));
-const listApiKeys = mock(
-	async (_input: unknown): Promise<unknown> => ({
-		apiKeys: [],
-	}),
-);
+const listApiKeys = mock(async (_input: unknown): Promise<unknown> => ({
+	apiKeys: [],
+}));
 
 mock.module("#lib/services/auth.js", () => ({
 	auth: { api: { deleteApiKey, listApiKeys, updateApiKey } },
 	rebuildAuth: () => undefined,
 }));
 
-const { listOwnApiKeys, revokeApiKeyAction, updateApiKeyAction } = await import(
-	"../../../src/lib/server/api-keys"
-);
+const { listOwnApiKeys, revokeApiKeyAction, updateApiKeyAction } =
+	await import("../../../src/lib/server/api-keys");
 
 function form(fields: Record<string, string>): FormData {
 	const data = new FormData();

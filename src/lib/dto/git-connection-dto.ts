@@ -1,10 +1,12 @@
 import { and, eq } from "drizzle-orm";
+
 import { db } from "#lib/server/db/lib.js";
 import {
 	type GitConnection,
-	type GitProviderKind,
 	gitConnection,
+	type GitProviderKind,
 } from "#lib/server/db/schema.js";
+
 import { BaseDTO } from "./base-dto";
 
 export interface NewGitConnectionInput {

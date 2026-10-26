@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
 import { Box } from "@lucide/svelte";
 import { render } from "@testing-library/svelte";
 import { createRawSnippet } from "svelte";
+
 import EmptyState from "../../../src/lib/components/empty-state.svelte";
 
 describe("EmptyState", () => {

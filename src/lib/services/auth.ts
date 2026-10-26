@@ -1,4 +1,7 @@
 import process from "node:process";
+
+import { building, dev } from "$app/env";
+import { getRequestEvent } from "$app/server";
 import { apiKey } from "@better-auth/api-key";
 import { cimd } from "@better-auth/cimd";
 import { fetchClientMetadataResource } from "@better-auth/cimd/node";
@@ -23,6 +26,7 @@ import {
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { inArray } from "drizzle-orm";
 import { createLocalJWKSet, type JWK, jwtVerify } from "jose";
+
 import { resolveAdvertisedTokenAuth } from "#lib/auth-providers.js";
 import { config, isSmtpEnabled } from "#lib/config.js";
 import { OauthClientSecretDTO } from "#lib/dto/oauth-client-secret-dto.js";
@@ -32,9 +36,9 @@ import {
 	mcpResource,
 	OIDC_CLAIMS,
 	OIDC_SCOPES,
-	type OidcUser,
 	oidcClaimsFor,
 	oidcIssuer,
+	type OidcUser,
 } from "#lib/oidc-provider.js";
 import { can, permissionsForRole } from "#lib/permissions.js";
 import { passkeyRpId } from "#lib/security-policy.js";
@@ -44,21 +48,20 @@ import { db } from "#lib/server/db/lib.js";
 import * as schema from "#lib/server/db/schema.js";
 import { brandedEmail } from "#lib/server/email-layout.js";
 import { forgetGateAccess } from "#lib/server/gate-access-cache.js";
-import { building, dev } from "$app/env";
-import { getRequestEvent } from "$app/server";
+
 import { AdminService } from "./admin.service.ts";
 import {
-	type DirectAccessScheme,
 	directAccessOrigins,
+	type DirectAccessScheme,
 	directAccessScheme,
 	trustedOriginsFor,
 } from "./auth-origins.ts";
-import { EmailService } from "./email.service.ts";
 import {
 	emailSignInPlugins,
 	TWO_FACTOR_SIGN_IN_PATHS,
 	UNUSED_EMAIL_OTP_PATHS,
 } from "./email-sign-in.ts";
+import { EmailService } from "./email.service.ts";
 import { UserService } from "./user.service.ts";
 
 const logger = new Logger("Auth");
@@ -124,8 +127,7 @@ function oidcProviderPlugins(origin: string | undefined) {
 		},
 		clientPrivileges: ({ user }) => {
 			const owner = user as
-				| { permissions?: unknown; role?: string | null }
-				| undefined;
+				{ permissions?: unknown; role?: string | null } | undefined;
 			return can(
 				permissionsForRole(owner?.role, owner?.permissions),
 				"users",

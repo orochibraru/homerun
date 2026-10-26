@@ -1,8 +1,9 @@
+import { resolve } from "$app/paths";
 import { error } from "@sveltejs/kit";
+
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { ancestorIds } from "#lib/stack-tree.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ params, parent }) => {
 	await parent();

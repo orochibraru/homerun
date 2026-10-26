@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { createTemplateSchema, parseTags } = await import(
-	"../../../src/lib/server/validation/template"
-);
+const { createTemplateSchema, parseTags } =
+	await import("../../../src/lib/server/validation/template");
 
 describe("parseTags", () => {
 	test("splits, trims and lowercases what the Tags field holds", () => {

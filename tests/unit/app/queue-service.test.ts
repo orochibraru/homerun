@@ -7,9 +7,8 @@ mock.module("$app/env", () => ({
 }));
 
 const { JobDTO } = await import("../../../src/lib/dto/job-dto");
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
 
 type Job = Awaited<ReturnType<typeof JobDTO.get>>;
 

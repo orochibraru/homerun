@@ -7,13 +7,14 @@ import {
 	swarmPlacementSpec,
 } from "#lib/swarm-placement.js";
 import type { ContainerStatus } from "#lib/types.js";
+
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RegistryAuth, VolumeMountParams } from "./containers.ts";
 import { errorPagesPublished } from "./error-pages.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
 import {
-	type ContainerRuntimeParams,
 	capabilityName,
+	type ContainerRuntimeParams,
 	mergeLabels,
 } from "./runtime-options.ts";
 

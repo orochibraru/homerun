@@ -1,5 +1,7 @@
 import process from "node:process";
+
 import { SQL } from "bun";
+
 import { ciTimeout, stepLog } from "./ci";
 import { TEST_DB_NAME } from "./config";
 import { startPostgresContainer } from "./postgres-container";

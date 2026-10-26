@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { enhance, type SubmitFunction } from "$app/forms";
 	import { Play, RotateCw, Square, Trash2 } from "@lucide/svelte";
+
 	import { Button } from "#lib/components/ui/button/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
-	import { enhance, type SubmitFunction } from "$app/forms";
 
 	interface Props {
 		deleteVolumes: boolean;
@@ -22,100 +23,98 @@
 </script>
 
 <div class="flex shrink-0 items-center gap-1.5">
-  {#if svc.desiredState === "running"}
-    <form
-      action="?/stop"
-      data-row-action="stop"
-      data-service={svc.id}
-      method="POST"
-      use:enhance={submit("stop")}
-    >
-      <input name="serviceId" type="hidden" value={svc.id} />
-      <Button
-        disabled={pending}
-        size="icon-sm"
-        title="Stop"
-        type="submit"
-        variant="ghost"
-      >
-        {#if pending}
-          <Spinner />
-        {:else}
-          <Square class="size-4" />
-        {/if}
-      </Button>
-    </form>
-  {:else}
-    <form
-      action="?/start"
-      data-row-action="start"
-      data-service={svc.id}
-      method="POST"
-      use:enhance={submit("start")}
-    >
-      <input name="serviceId" type="hidden" value={svc.id} />
-      <Button
-        disabled={pending || !svc.containerId}
-        size="icon-sm"
-        title={svc.containerId
-        ? "Start"
-        : "Deploy first from the service page"}
-        type="submit"
-        variant="ghost"
-      >
-        {#if pending}
-          <Spinner />
-        {:else}
-          <Play class="size-4" />
-        {/if}
-      </Button>
-    </form>
-  {/if}
+	{#if svc.desiredState === "running"}
+		<form
+			action="?/stop"
+			data-row-action="stop"
+			data-service={svc.id}
+			method="POST"
+			use:enhance={submit("stop")}
+		>
+			<input name="serviceId" type="hidden" value={svc.id} />
+			<Button
+				disabled={pending}
+				size="icon-sm"
+				title="Stop"
+				type="submit"
+				variant="ghost"
+			>
+				{#if pending}
+					<Spinner />
+				{:else}
+					<Square class="size-4" />
+				{/if}
+			</Button>
+		</form>
+	{:else}
+		<form
+			action="?/start"
+			data-row-action="start"
+			data-service={svc.id}
+			method="POST"
+			use:enhance={submit("start")}
+		>
+			<input name="serviceId" type="hidden" value={svc.id} />
+			<Button
+				disabled={pending || !svc.containerId}
+				size="icon-sm"
+				title={svc.containerId ? "Start" : "Deploy first from the service page"}
+				type="submit"
+				variant="ghost"
+			>
+				{#if pending}
+					<Spinner />
+				{:else}
+					<Play class="size-4" />
+				{/if}
+			</Button>
+		</form>
+	{/if}
 
-  <form
-    action="?/restart"
-    data-row-action="restart"
-    data-service={svc.id}
-    method="POST"
-    use:enhance={submit("restart")}
-  >
-    <input name="serviceId" type="hidden" value={svc.id} />
-    <Button
-      disabled={pending || !svc.containerId}
-      size="icon-sm"
-      title="Restart"
-      type="submit"
-      variant="ghost"
-    >
-      <RotateCw class="size-4" />
-    </Button>
-  </form>
+	<form
+		action="?/restart"
+		data-row-action="restart"
+		data-service={svc.id}
+		method="POST"
+		use:enhance={submit("restart")}
+	>
+		<input name="serviceId" type="hidden" value={svc.id} />
+		<Button
+			disabled={pending || !svc.containerId}
+			size="icon-sm"
+			title="Restart"
+			type="submit"
+			variant="ghost"
+		>
+			<RotateCw class="size-4" />
+		</Button>
+	</form>
 
-  <form
-    action="?/delete"
-    data-row-action="delete"
-    data-service={svc.id}
-    method="POST"
-    use:enhance={submit("delete")}
-  >
-    <input name="serviceId" type="hidden" value={svc.id} />
+	<form
+		action="?/delete"
+		data-row-action="delete"
+		data-service={svc.id}
+		method="POST"
+		use:enhance={submit("delete")}
+	>
+		<input name="serviceId" type="hidden" value={svc.id} />
 
-    <input
-      name="deleteVolumes"
-      type="hidden"
-      value={deleteVolumes ? "true" : "false"}
-    />
+		<input
+			name="deleteVolumes"
+			type="hidden"
+			value={deleteVolumes ? "true" : "false"}
+		/>
 
-    <Button
-      class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-      disabled={pending}
-      onclick={ondelete}
-      size="icon-sm"
-      title="Delete"
-      type="button"
-      variant="ghost"
-    >
-      <Trash2 class="size-4" />
-    </Button>
-  </form>
+		<Button
+			class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+			disabled={pending}
+			onclick={ondelete}
+			size="icon-sm"
+			title="Delete"
+			type="button"
+			variant="ghost"
+		>
+			<Trash2 class="size-4" />
+		</Button>
+	</form>
 </div>

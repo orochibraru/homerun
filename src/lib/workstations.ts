@@ -99,9 +99,7 @@ export const AUTO_STOP_MODES = ["idle", "timer"] as const;
 export type AutoStopMode = (typeof AUTO_STOP_MODES)[number];
 
 export type AutoStopStep =
-	| { at: Date; kind: "arm" }
-	| { kind: "stop" }
-	| { kind: "wait" };
+	{ at: Date; kind: "arm" } | { kind: "stop" } | { kind: "wait" };
 
 /**
  * What the auto-stop pass does with one running workstation: push its

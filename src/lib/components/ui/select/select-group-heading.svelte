@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Select as SelectPrimitive } from "bits-ui";
 	import type { ComponentProps } from "svelte";
+
 	import { cn } from "#lib/utils.js";
 
 	let {
@@ -12,10 +13,10 @@
 </script>
 
 <SelectPrimitive.GroupHeading
-  class={cn("px-2 py-1.5 text-xs text-muted-foreground", className)}
-  data-slot="select-group-heading"
-  bind:ref
-  {...restProps}
+	class={cn("px-2 py-1.5 text-xs text-muted-foreground", className)}
+	data-slot="select-group-heading"
+	bind:ref
+	{...restProps}
 >
-  {@render children?.()}
+	{@render children?.()}
 </SelectPrimitive.GroupHeading>

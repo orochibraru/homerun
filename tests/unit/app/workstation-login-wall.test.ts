@@ -18,37 +18,30 @@ const { config } = await import("../../../src/lib/config");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { policyVersion } = await import("../../../src/lib/server/app-gate");
-const { gateTarget, serviceGateTarget } = await import(
-	"../../../src/lib/server/gate-target"
-);
-const { invalidateGatedService } = await import(
-	"../../../src/lib/server/gated-service-cache"
-);
-const loginWallOptions = await import(
-	"../../../src/lib/server/login-wall-options"
-);
+const { gateTarget, serviceGateTarget } =
+	await import("../../../src/lib/server/gate-target");
+const { invalidateGatedService } =
+	await import("../../../src/lib/server/gated-service-cache");
+const loginWallOptions =
+	await import("../../../src/lib/server/login-wall-options");
 const { updateWorkstationApiBody, workstationApiBody, workstationWallColumns } =
 	await import("../../../src/lib/server/validation/infrastructure-api");
 const { WorkerClient } = await import("../../../src/lib/server/worker-client");
 const helpers = await import("../../../src/lib/services/deploy/helpers");
-const { PangolinService } = await import(
-	"../../../src/lib/services/pangolin.service"
-);
-const { DomainDnsService } = await import(
-	"../../../src/lib/services/domain-dns.service"
-);
+const { PangolinService } =
+	await import("../../../src/lib/services/pangolin.service");
+const { DomainDnsService } =
+	await import("../../../src/lib/services/domain-dns.service");
 const {
 	WorkstationSignInService,
 	workstationGateKey,
 	workstationIdOf,
 	workstationWall,
 } = await import("../../../src/lib/services/workstation/sign-in");
-const { WorkstationSettingsError, WorkstationSettingsService } = await import(
-	"../../../src/lib/services/workstation/settings"
-);
-const { WorkstationService } = await import(
-	"../../../src/lib/services/workstation.service"
-);
+const { WorkstationSettingsError, WorkstationSettingsService } =
+	await import("../../../src/lib/services/workstation/settings");
+const { WorkstationService } =
+	await import("../../../src/lib/services/workstation.service");
 
 type WorkstationRow = Parameters<typeof workstationWall>[0];
 type Workstation = NonNullable<Awaited<ReturnType<typeof WorkstationDTO.get>>>;

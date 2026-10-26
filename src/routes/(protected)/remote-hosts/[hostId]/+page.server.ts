@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { Logger } from "#lib/logger.js";
@@ -8,7 +10,6 @@ import {
 	RemoteHostSettingsError,
 	RemoteHostSettingsService,
 } from "#lib/services/remote-host-settings.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("RemoteHosts");
 

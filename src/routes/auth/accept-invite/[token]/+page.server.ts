@@ -1,11 +1,12 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { InvitationDTO } from "#lib/dto/invitation-dto.js";
 import { Logger } from "#lib/logger.js";
 import { asAuthRole } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { auth } from "#lib/services/auth.js";
 import { emailSignInAvailability } from "#lib/services/email-sign-in.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("AcceptInvite");
 

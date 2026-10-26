@@ -14,9 +14,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { BaseScheduler } = await import(
-	"../../../src/lib/services/cron/base-scheduler"
-);
+const { BaseScheduler } =
+	await import("../../../src/lib/services/cron/base-scheduler");
 const { AppLogDTO } = await import("../../../src/lib/dto/app-log-dto");
 
 const registry = () =>

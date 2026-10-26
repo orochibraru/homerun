@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
+
 	import DevcontainerDetection from "#lib/components/devcontainer-detection.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import LoginWallSection from "#lib/components/login-wall-section.svelte";
@@ -58,74 +59,80 @@
 </script>
 
 <div class={shownAt(0)}>
-<section bind:this={anchor} class="panel space-y-4 rounded-md p-5">
-  <div class="grid gap-3 sm:grid-cols-2">
-    {@render children()}
-    <div>
-      <label class={labelClass} for="remoteHostId">Runs on</label>
-      <Select.Root name="remoteHostId" type="single" bind:value={remoteHostId}>
-        <Select.Trigger class="w-full" id="remoteHostId">
-          {hosts.find((host) => host.id === remoteHostId)?.name ??
-            "This server"}
-        </Select.Trigger>
-        <Select.Content>
-          <Select.Item label="This server" value="" />
-          {#each hosts as host (host.id)}
-            <Select.Item label={host.name} value={host.id} />
-          {/each}
-        </Select.Content>
-      </Select.Root>
-      <p class="text-text-subtle mt-1.5 text-xs">
-        Any registered agent or Docker host (tcp:// or ssh://) works too. Its
-        IDE port is published on that host and routed through this server's
-        Traefik.
-      </p>
-    </div>
-  </div>
-</section>
+	<section bind:this={anchor} class="panel space-y-4 rounded-md p-5">
+		<div class="grid gap-3 sm:grid-cols-2">
+			{@render children()}
+			<div>
+				<label class={labelClass} for="remoteHostId">Runs on</label>
+				<Select.Root
+					name="remoteHostId"
+					type="single"
+					bind:value={remoteHostId}
+				>
+					<Select.Trigger class="w-full" id="remoteHostId">
+						{hosts.find((host) => host.id === remoteHostId)?.name ??
+							"This server"}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Item label="This server" value="" />
+						{#each hosts as host (host.id)}
+							<Select.Item label={host.name} value={host.id} />
+						{/each}
+					</Select.Content>
+				</Select.Root>
+				<p class="text-text-subtle mt-1.5 text-xs">
+					Any registered agent or Docker host (tcp:// or ssh://) works too. Its
+					IDE port is published on that host and routed through this server's
+					Traefik.
+				</p>
+			</div>
+		</div>
+	</section>
 </div>
 
 <div class={shownAt(1)}>
-<WorkstationRepoFields
-  onrepochange={(gitUrl, branch) => {
-    repo = { branch, gitUrl };
-  }}
-  {providers}
-  {values}
-/>
+	<WorkstationRepoFields
+		onrepochange={(gitUrl, branch) => {
+			repo = { branch, gitUrl };
+		}}
+		{providers}
+		{values}
+	/>
 
-<DevcontainerDetection
-  branch={repo.branch}
-  gitUrl={repo.gitUrl}
-  onapply={apply}
-  target={step === null ? "the Editor and Container sections below" : "the Editor and Container steps"}
-/>
+	<DevcontainerDetection
+		branch={repo.branch}
+		gitUrl={repo.gitUrl}
+		onapply={apply}
+		target={step === null
+			? "the Editor and Container sections below"
+			: "the Editor and Container steps"}
+	/>
 </div>
 
 <div class={shownAt(2)}>
-{#key applied}
-  <WorkstationEditorFields values={current} />
-{/key}
+	{#key applied}
+		<WorkstationEditorFields values={current} />
+	{/key}
 </div>
 
 <div class={shownAt(3)}>
-<WorkstationGitFields {providers} {values} />
+	<WorkstationGitFields {providers} {values} />
 </div>
 
 <div class={shownAt(4)}>
-{#key applied}
-  <WorkstationContainerFields values={current} />
-{/key}
+	{#key applied}
+		<WorkstationContainerFields values={current} />
+	{/key}
 </div>
 
 <div class={shownAt(5)}>
-<LoginWallSection
-  dashboardOrigin={wall.dashboardOrigin}
-  emailSignIn={wall.emailSignIn}
-  embedded
-  oauthProviders={wall.oauthProviders}
-  subject="workstation"
-  svc={{ ...values, dnsResolvable: true, id: "" }}
-  users={wall.users}
-/>
+	<LoginWallSection
+		dashboardOrigin={wall.dashboardOrigin}
+		emailSignIn={wall.emailSignIn}
+		embedded
+		oauthProviders={wall.oauthProviders}
+		subject="workstation"
+		svc={{ ...values, dnsResolvable: true, id: "" }}
+		users={wall.users}
+	/>
 </div>

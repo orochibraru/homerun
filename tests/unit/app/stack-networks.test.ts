@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { stackIdFromNetworkName, stackNetworkName } = await import(
-	"../../../src/lib/services/docker/networks"
-);
+const { stackIdFromNetworkName, stackNetworkName } =
+	await import("../../../src/lib/services/docker/networks");
 
 describe("stackIdFromNetworkName", () => {
 	test("round-trips the name a stack's network is created under", () => {

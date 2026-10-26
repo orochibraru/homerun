@@ -23,9 +23,8 @@ export async function applyRepoManifest(ctx: {
 	if (row.buildSource !== "git" || !row.gitUrl) {
 		return null;
 	}
-	const { ManifestService, manifestScopeFor } = await import(
-		"../manifest.service.ts"
-	);
+	const { ManifestService, manifestScopeFor } =
+		await import("../manifest.service.ts");
 	const found = await ManifestService.readFromRepo(
 		svc,
 		row.gitRef ?? "main",

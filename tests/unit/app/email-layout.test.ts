@@ -7,9 +7,8 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { brandedEmail, escapeHtml } = await import(
-	"../../../src/lib/server/email-layout"
-);
+const { brandedEmail, escapeHtml } =
+	await import("../../../src/lib/server/email-layout");
 
 describe("brandedEmail", () => {
 	test("renders every block in both the HTML and the text version", () => {

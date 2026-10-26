@@ -1,6 +1,7 @@
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { Logger } from "#lib/logger.js";
 import { DockerService } from "#lib/services/docker.service.js";
+
 import type { DnsSyncResult } from "./dns-result";
 import {
 	matchPangolinDomain,

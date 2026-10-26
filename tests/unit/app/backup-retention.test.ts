@@ -6,21 +6,16 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { rcloneRemote } = await import(
-	"../../../src/lib/services/backup/rclone"
-);
-const { parseResticKey } = await import(
-	"../../../src/lib/services/backup/restic"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { S3DestinationDTO } = await import(
-	"../../../src/lib/dto/s3-destination-dto"
-);
-const { S3BackupService, backupKeyPattern } = await import(
-	"../../../src/lib/services/s3-backup.service"
-);
+const { rcloneRemote } =
+	await import("../../../src/lib/services/backup/rclone");
+const { parseResticKey } =
+	await import("../../../src/lib/services/backup/restic");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { S3DestinationDTO } =
+	await import("../../../src/lib/dto/s3-destination-dto");
+const { S3BackupService, backupKeyPattern } =
+	await import("../../../src/lib/services/s3-backup.service");
 
 const restorers: { mockRestore: () => void }[] = [];
 

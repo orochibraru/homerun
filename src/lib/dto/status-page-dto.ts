@@ -1,8 +1,9 @@
 import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
+
 import { db } from "#lib/server/db/lib.js";
 import {
-	type StatusPage,
 	service,
+	type StatusPage,
 	statusPage,
 	statusPageService,
 } from "#lib/server/db/schema.js";
@@ -13,6 +14,7 @@ import {
 	type StatusPagePick,
 } from "#lib/status-page-members.js";
 import type { StatusPageScope } from "#lib/types.js";
+
 import { BaseDTO } from "./base-dto";
 
 export interface NewStatusPageInput {

@@ -434,9 +434,10 @@ class ServiceSettingsServiceClass {
 		if (problem) {
 			fail(problem);
 		}
-		if (
-			!(template || (input.previewDefaultDomain ?? row.previewDefaultDomain))
-		) {
+		if (!(
+			template ||
+			(input.previewDefaultDomain ?? row.previewDefaultDomain)
+		)) {
 			fail(
 				"Set a preview domain template, or keep the default hostname: a preview needs at least one.",
 			);

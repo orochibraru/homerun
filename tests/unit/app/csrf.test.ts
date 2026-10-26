@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { isForbiddenCrossSiteForm } from "../../../src/lib/server/csrf";
 
 const url = new URL("https://homerun.example.com/settings?/save");

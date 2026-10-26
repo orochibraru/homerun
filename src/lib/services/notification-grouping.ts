@@ -3,6 +3,7 @@ import {
 	isFailureEvent,
 	NOTIFICATION_EVENTS,
 } from "#lib/notification-events.js";
+
 import type { ChannelMessage, MessageField } from "./notification-messages";
 
 export const GROUP_WINDOW_MS = 60_000;

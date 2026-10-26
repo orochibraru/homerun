@@ -23,18 +23,22 @@
 	);
 </script>
 
-<div class="mx-5 mb-3 overflow-hidden rounded-md {fill ? 'flex min-h-0 flex-1 flex-col' : ''}">
-  <div class="flex items-center justify-end bg-zinc-900 px-2 py-1">
-    <CopyButton
-      class="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-      label={errorMessage ? `the error and ${logName}` : `the ${logName}`}
-      text={errorMessage ? "Copy error and log" : "Copy log"}
-      value={copyValue}
-    />
-  </div>
-  <div class="overflow-y-auto log-output {fill ? 'flex-1' : 'max-h-64'}">
-    {#each lines as line, i (i)}
-      <AnsiLine {line} />
-    {/each}
-  </div>
+<div
+	class="mx-5 mb-3 overflow-hidden rounded-md {fill
+		? 'flex min-h-0 flex-1 flex-col'
+		: ''}"
+>
+	<div class="flex items-center justify-end bg-zinc-900 px-2 py-1">
+		<CopyButton
+			class="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+			label={errorMessage ? `the error and ${logName}` : `the ${logName}`}
+			text={errorMessage ? "Copy error and log" : "Copy log"}
+			value={copyValue}
+		/>
+	</div>
+	<div class="overflow-y-auto log-output {fill ? 'flex-1' : 'max-h-64'}">
+		{#each lines as line, i (i)}
+			<AnsiLine {line} />
+		{/each}
+	</div>
 </div>

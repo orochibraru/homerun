@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-const { GarageAdminClient, toBucketInfo } = await import(
-	"../../../src/lib/services/s3/garage-admin"
-);
+const { GarageAdminClient, toBucketInfo } =
+	await import("../../../src/lib/services/s3/garage-admin");
 
 interface Call {
 	body: unknown;

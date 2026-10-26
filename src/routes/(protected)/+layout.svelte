@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { ChevronRight, Plus } from "@lucide/svelte";
 	import { modeStorageKey, setMode } from "mode-watcher";
 	import { type Component, onMount, tick } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
 	import { slide } from "svelte/transition";
+
 	import AppVersion from "#lib/components/app-version.svelte";
 	import BrandMark from "#lib/components/brand-mark.svelte";
 	import Breadcrumbs from "#lib/components/breadcrumbs.svelte";
@@ -20,8 +23,7 @@
 	import { provideSubNav } from "#lib/sub-nav.svelte.js";
 	import { DEFAULT_SURFACE, effectiveSurface } from "#lib/surfaces.js";
 	import { visibleItems } from "#lib/ui-mode.js";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
+
 	import {
 		allNavItems,
 		NAV_PARENT_DESCRIPTIONS,
@@ -180,210 +182,256 @@
 </script>
 
 {#snippet navLink(item: NavItem, onNavigate?: () => void)}
-  {@const active = isActive(item.href, item.exact)}
-  {@const NavIcon = item.icon}
-  <a
-    class="
+	{@const active = isActive(item.href, item.exact)}
+	{@const NavIcon = item.icon}
+	<a
+		class="
       group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
       {drawerRow}
       {active
-      ? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold in-data-[slot=mobile-drawer]:border-accent/40'
-      : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium in-data-[slot=mobile-drawer]:border-border in-data-[slot=mobile-drawer]:bg-surface'}
+			? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold in-data-[slot=mobile-drawer]:border-accent/40'
+			: 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium in-data-[slot=mobile-drawer]:border-border in-data-[slot=mobile-drawer]:bg-surface'}
    "
-    aria-current={active ? "page" : undefined}
-    href={item.href}
-    onclick={onNavigate}
-  >
-    <span class={drawerTile}><NavIcon class="text-accent size-4 shrink-0 {drawerIcon}" /></span>
-    <span class="flex min-w-0 flex-col">
-      {(item.parent && item.navLabel) || item.label}
-      {#if onNavigate}
-        <span class={drawerDescription}>{item.description}</span>
-      {/if}
-    </span>
-  </a>
+		aria-current={active ? "page" : undefined}
+		href={item.href}
+		onclick={onNavigate}
+	>
+		<span class={drawerTile}
+			><NavIcon class="text-accent size-4 shrink-0 {drawerIcon}" /></span
+		>
+		<span class="flex min-w-0 flex-col">
+			{(item.parent && item.navLabel) || item.label}
+			{#if onNavigate}
+				<span class={drawerDescription}>{item.description}</span>
+			{/if}
+		</span>
+	</a>
 {/snippet}
 
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
-  {#each groups as group (group.heading)}
-    <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium in-data-[slot=mobile-drawer]:mt-5 in-data-[slot=mobile-drawer]:px-1 in-data-[slot=mobile-drawer]:text-xs">
-      {group.heading}
-    </p>
-    {#each group.entries as entry (entry.kind === "item" ? entry.item.href : entry.label)}
-      {#if entry.kind === "item"}
-        {@render navLink(entry.item, onNavigate)}
-      {:else}
-        {@const open = parentOpen(entry.label, entry.items)}
-        {@const ParentIcon = entry.icon}
-        <button
-          class="
+	{#each groups as group (group.heading)}
+		<p
+			class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium in-data-[slot=mobile-drawer]:mt-5 in-data-[slot=mobile-drawer]:px-1 in-data-[slot=mobile-drawer]:text-xs"
+		>
+			{group.heading}
+		</p>
+		{#each group.entries as entry (entry.kind === "item" ? entry.item.href : entry.label)}
+			{#if entry.kind === "item"}
+				{@render navLink(entry.item, onNavigate)}
+			{:else}
+				{@const open = parentOpen(entry.label, entry.items)}
+				{@const ParentIcon = entry.icon}
+				<button
+					class="
             mb-0.5 flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-left text-[0.8125rem] font-medium transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
             {drawerRow}
             in-data-[slot=mobile-drawer]:border-border in-data-[slot=mobile-drawer]:bg-surface
-            {hasActive(entry.items) ? 'text-text' : 'text-text-muted hover:bg-surface-2 hover:text-text'}
+            {hasActive(entry.items)
+						? 'text-text'
+						: 'text-text-muted hover:bg-surface-2 hover:text-text'}
           "
-          aria-expanded={open}
-          onclick={() => toggleParent(entry.label, entry.items)}
-          type="button"
-        >
-          <span class={drawerTile}><ParentIcon class="text-accent size-4 shrink-0 {drawerIcon}" /></span>
-          <span class="flex min-w-0 flex-1 flex-col">
-            {entry.label}
-            {#if onNavigate}
-              <span class={drawerDescription}>{NAV_PARENT_DESCRIPTIONS[entry.label]}</span>
-            {/if}
-          </span>
-          <ChevronRight
-            class="text-text-subtle size-3.5 transition-transform duration-150 {open ? 'rotate-90' : ''}"
-          />
-        </button>
-        {#if open}
-          <div class="border-border mb-1 ml-4.5 border-l pl-2 in-data-[slot=mobile-drawer]:ml-7" transition:slide={{ duration: 150 }}>
-            {#each entry.items as item (item.href)}
-              {@render navLink(item, onNavigate)}
-            {/each}
-          </div>
-        {/if}
-      {/if}
-    {/each}
-  {/each}
+					aria-expanded={open}
+					onclick={() => toggleParent(entry.label, entry.items)}
+					type="button"
+				>
+					<span class={drawerTile}
+						><ParentIcon
+							class="text-accent size-4 shrink-0 {drawerIcon}"
+						/></span
+					>
+					<span class="flex min-w-0 flex-1 flex-col">
+						{entry.label}
+						{#if onNavigate}
+							<span class={drawerDescription}
+								>{NAV_PARENT_DESCRIPTIONS[entry.label]}</span
+							>
+						{/if}
+					</span>
+					<ChevronRight
+						class="text-text-subtle size-3.5 transition-transform duration-150 {open
+							? 'rotate-90'
+							: ''}"
+					/>
+				</button>
+				{#if open}
+					<div
+						class="border-border mb-1 ml-4.5 border-l pl-2 in-data-[slot=mobile-drawer]:ml-7"
+						transition:slide={{ duration: 150 }}
+					>
+						{#each entry.items as item (item.href)}
+							{@render navLink(item, onNavigate)}
+						{/each}
+					</div>
+				{/if}
+			{/if}
+		{/each}
+	{/each}
 {/snippet}
 
 <svelte:window
-  onkeydown={(event) => {
-    if (sidebarOpen && event.key === "Escape") {
-      closeSidebar();
-    }
-  }}
+	onkeydown={(event) => {
+		if (sidebarOpen && event.key === "Escape") {
+			closeSidebar();
+		}
+	}}
 />
 
 <svelte:head>
-  {#if accentCss}
-    {@html `<style>${accentCss}</style>`}
-  {/if}
+	{#if accentCss}
+		{@html `<style>${accentCss}</style>`}
+	{/if}
 </svelte:head>
 
 <!-- Fills the full viewport : there's no global navbar above this. -->
 <div class="flex h-dvh overflow-hidden md:gap-2 md:p-2">
-  <a
-    class="bg-ink text-ink-foreground fixed top-4 left-4 z-60 rounded-md px-3 py-2 text-sm font-medium not-focus:sr-only"
-    href="#main-content"
-    onclick={(event) => {
-      event.preventDefault();
-      document.getElementById("main-content")?.focus();
-    }}
-  >
-    Skip to content
-  </a>
-  <!-- ── Desktop sidebar ───────────────────────────────────────── -->
-  <aside class="hidden w-64 shrink-0 flex-col md:order-1 md:flex" data-slot="app-sidebar">
-    <BrandMark class="px-3 py-2.5" />
+	<a
+		class="bg-ink text-ink-foreground fixed top-4 left-4 z-60 rounded-md px-3 py-2 text-sm font-medium not-focus:sr-only"
+		href="#main-content"
+		onclick={(event) => {
+			event.preventDefault();
+			document.getElementById("main-content")?.focus();
+		}}
+	>
+		Skip to content
+	</a>
+	<!-- ── Desktop sidebar ───────────────────────────────────────── -->
+	<aside
+		class="hidden w-64 shrink-0 flex-col md:order-1 md:flex"
+		data-slot="app-sidebar"
+	>
+		<BrandMark class="px-3 py-2.5" />
 
-    {#if can(data.permissions, "services", "write")}
-      <div class="px-2 pb-2">
-        <Button class="w-full" href={resolve('services/new')}><Plus class="size-4" />Deploy a service</Button>
-      </div>
-    {/if}
+		{#if can(data.permissions, "services", "write")}
+			<div class="px-2 pb-2">
+				<Button class="w-full" href={resolve("services/new")}
+					><Plus class="size-4" />Deploy a service</Button
+				>
+			</div>
+		{/if}
 
-    <!-- Nav links -->
-    <nav class="flex-1 overflow-y-auto px-2 pb-3">
-      {@render navGroups(navItemGroups)}
-    </nav>
-    <ErrorBoundary compact>
-      <AppVersion admin={can(data.permissions, "settings", "write")} />
-    </ErrorBoundary>
-  </aside>
+		<!-- Nav links -->
+		<nav class="flex-1 overflow-y-auto px-2 pb-3">
+			{@render navGroups(navItemGroups)}
+		</nav>
+		<ErrorBoundary compact>
+			<AppVersion admin={can(data.permissions, "settings", "write")} />
+		</ErrorBoundary>
+	</aside>
 
-  <MobileDrawer bind:closeButton={sidebarClose} onClose={closeSidebar} open={sidebarOpen}>
-    {@render navGroups(navItemGroups, () => {
-      sidebarOpen = false;
-    })}
-    {#snippet footer()}
-      <ErrorBoundary compact>
-        <AppVersion admin={can(data.permissions, "settings", "write")} />
-      </ErrorBoundary>
-    {/snippet}
-  </MobileDrawer>
+	<MobileDrawer
+		bind:closeButton={sidebarClose}
+		onClose={closeSidebar}
+		open={sidebarOpen}
+	>
+		{@render navGroups(navItemGroups, () => {
+			sidebarOpen = false;
+		})}
+		{#snippet footer()}
+			<ErrorBoundary compact>
+				<AppVersion admin={can(data.permissions, "settings", "write")} />
+			</ErrorBoundary>
+		{/snippet}
+	</MobileDrawer>
 
-  <!-- ── Main content ───────────────────────────────────────────── -->
-  <div
-    class="panel relative flex flex-1 flex-col overflow-hidden transition-[translate,scale,border-radius] duration-380 ease-snap max-md:border-0 md:order-3 md:rounded-xl {sidebarOpen ? 'max-md:scale-[0.94] max-md:rounded-2xl' : ''}"
-    data-slot="app-frame"
-    inert={sidebarOpen && !desktop.current}
-  >
-    <!-- Sticky header, every page, both breakpoints : page title on the
+	<!-- ── Main content ───────────────────────────────────────────── -->
+	<div
+		class="panel relative flex flex-1 flex-col overflow-hidden transition-[translate,scale,border-radius] duration-380 ease-snap max-md:border-0 md:order-3 md:rounded-xl {sidebarOpen
+			? 'max-md:scale-[0.94] max-md:rounded-2xl'
+			: ''}"
+		data-slot="app-frame"
+		inert={sidebarOpen && !desktop.current}
+	>
+		<!-- Sticky header, every page, both breakpoints : page title on the
          left, notifications + account menu on the right. -->
-    <header
-      class="border-border sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b px-4 max-md:bg-bg/86 max-md:backdrop-blur-lg sm:px-3 md:h-12 md:px-5"
-      data-slot="app-header"
-    >
-      <Breadcrumbs roots={allNavItems} />
-      {#if data.readOnly}
-        <span
-          class="text-text-muted border-border hidden rounded-full border px-2 py-0.5 text-[0.7rem] font-medium sm:inline"
-          title="This account or API key can view but can't change anything."
-        >
-          Read-only
-        </span>
-      {/if}
-      <ErrorBoundary compact>
-        <GlobalSearch permissions={data.permissions} />
-      </ErrorBoundary>
-      <div class="hidden md:contents">
-        <ErrorBoundary compact>
-          <NotificationBell />
-        </ErrorBoundary>
-      </div>
-      <ErrorBoundary compact>
-        <ProfileMenu uiMode={data.uiMode} user={data.user} />
-      </ErrorBoundary>
-    </header>
+		<header
+			class="border-border sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b px-4 max-md:bg-bg/86 max-md:backdrop-blur-lg sm:px-3 md:h-12 md:px-5"
+			data-slot="app-header"
+		>
+			<Breadcrumbs roots={allNavItems} />
+			{#if data.readOnly}
+				<span
+					class="text-text-muted border-border hidden rounded-full border px-2 py-0.5 text-[0.7rem] font-medium sm:inline"
+					title="This account or API key can view but can't change anything."
+				>
+					Read-only
+				</span>
+			{/if}
+			<ErrorBoundary compact>
+				<GlobalSearch permissions={data.permissions} />
+			</ErrorBoundary>
+			<div class="hidden md:contents">
+				<ErrorBoundary compact>
+					<NotificationBell />
+				</ErrorBoundary>
+			</div>
+			<ErrorBoundary compact>
+				<ProfileMenu uiMode={data.uiMode} user={data.user} />
+			</ErrorBoundary>
+		</header>
 
-    <!-- Page content -->
-    <main class="relative flex-1 overflow-y-auto outline-none max-md:pb-24" id="main-content" tabindex="-1">
-      <ErrorBoundary class="p-5 md:p-6">
-        {@render children()}
-      </ErrorBoundary>
-    </main>
-    <MobileCreateFab permissions={data.permissions} />
-    <ErrorBoundary compact>
-      <MobileTabBar
-        bind:menuButton={sidebarToggle}
-        menuOpen={sidebarOpen}
-        onMenu={() => {
-          sidebarOpen = true;
-          void tick().then(() => sidebarClose?.focus());
-        }}
-        permissions={data.permissions}
-      />
-    </ErrorBoundary>
-  </div>
-  {#if sectionTabs}
-    <aside
-      class="hidden w-56 shrink-0 flex-col md:order-2 md:flex"
-      aria-label="Sections"
-      data-slot="app-sidebar"
-    >
-      <nav class="flex-1 overflow-y-auto px-2 pt-3 pb-3">
-        {#each sectionTabs.tabs as tab (tab.id)}
-          {@const active = tab.id === sectionTabs.active}
-          {@const TabIcon = tab.icon}
-          {@const itemClass = `group/nav relative mb-0.5 flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-left text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "border-sidebar-border bg-sidebar-accent text-accent font-semibold" : "text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium"}`}
-          {#if tab.href}
-            <a class={itemClass} aria-current={active ? "page" : undefined} href={tab.href}>
-              {#if TabIcon}<TabIcon class="text-accent size-4 shrink-0" />{/if}
-              <span class="truncate">{tab.label}</span>
-              {#if tab.hasWarning}<span class="ml-auto size-1.5 shrink-0 rounded-full bg-amber-400" title="Needs attention"></span>{/if}
-            </a>
-          {:else}
-            <button class={itemClass} onclick={() => sectionTabs.onSelect?.(tab.id)} type="button">
-              {#if TabIcon}<TabIcon class="text-accent size-4 shrink-0" />{/if}
-              <span class="truncate">{tab.label}</span>
-              {#if tab.hasWarning}<span class="ml-auto size-1.5 shrink-0 rounded-full bg-amber-400" title="Needs attention"></span>{/if}
-            </button>
-          {/if}
-        {/each}
-      </nav>
-    </aside>
-  {/if}
+		<!-- Page content -->
+		<main
+			class="relative flex-1 overflow-y-auto outline-none max-md:pb-24"
+			id="main-content"
+			tabindex="-1"
+		>
+			<ErrorBoundary class="p-5 md:p-6">
+				{@render children()}
+			</ErrorBoundary>
+		</main>
+		<MobileCreateFab permissions={data.permissions} />
+		<ErrorBoundary compact>
+			<MobileTabBar
+				bind:menuButton={sidebarToggle}
+				menuOpen={sidebarOpen}
+				onMenu={() => {
+					sidebarOpen = true;
+					void tick().then(() => sidebarClose?.focus());
+				}}
+				permissions={data.permissions}
+			/>
+		</ErrorBoundary>
+	</div>
+	{#if sectionTabs}
+		<aside
+			class="hidden w-56 shrink-0 flex-col md:order-2 md:flex"
+			aria-label="Sections"
+			data-slot="app-sidebar"
+		>
+			<nav class="flex-1 overflow-y-auto px-2 pt-3 pb-3">
+				{#each sectionTabs.tabs as tab (tab.id)}
+					{@const active = tab.id === sectionTabs.active}
+					{@const TabIcon = tab.icon}
+					{@const itemClass = `group/nav relative mb-0.5 flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-left text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "border-sidebar-border bg-sidebar-accent text-accent font-semibold" : "text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium"}`}
+					{#if tab.href}
+						<a
+							class={itemClass}
+							aria-current={active ? "page" : undefined}
+							href={tab.href}
+						>
+							{#if TabIcon}<TabIcon class="text-accent size-4 shrink-0" />{/if}
+							<span class="truncate">{tab.label}</span>
+							{#if tab.hasWarning}<span
+									class="ml-auto size-1.5 shrink-0 rounded-full bg-amber-400"
+									title="Needs attention"
+								></span>{/if}
+						</a>
+					{:else}
+						<button
+							class={itemClass}
+							onclick={() => sectionTabs.onSelect?.(tab.id)}
+							type="button"
+						>
+							{#if TabIcon}<TabIcon class="text-accent size-4 shrink-0" />{/if}
+							<span class="truncate">{tab.label}</span>
+							{#if tab.hasWarning}<span
+									class="ml-auto size-1.5 shrink-0 rounded-full bg-amber-400"
+									title="Needs attention"
+								></span>{/if}
+						</button>
+					{/if}
+				{/each}
+			</nav>
+		</aside>
+	{/if}
 </div>

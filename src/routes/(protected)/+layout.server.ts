@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, redirect } from "@sveltejs/kit";
+
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { UserPreferencesDTO } from "#lib/dto/user-preferences-dto.js";
 import {
@@ -12,7 +14,6 @@ import { AccountSecurityService } from "#lib/services/account-security.service.j
 import { AdminService } from "#lib/services/admin.service.js";
 import { effectiveSurface } from "#lib/surfaces.js";
 import { DEFAULT_UI_MODE, effectiveUiMode } from "#lib/ui-mode.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ locals, route, url }) => {
 	if (!locals.user) {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
+
 	import { cn } from "#lib/utils.js";
 
 	let {
@@ -16,6 +17,9 @@
 	bind:ref
 	data-slot="context-menu-group-heading"
 	data-inset={inset}
-	class={cn("text-muted-foreground px-2 py-1.5 text-xs font-medium data-inset:pl-8", className)}
+	class={cn(
+		"text-muted-foreground px-2 py-1.5 text-xs font-medium data-inset:pl-8",
+		className,
+	)}
 	{...restProps}
 />

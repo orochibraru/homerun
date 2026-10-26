@@ -1,5 +1,6 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import { config } from "#lib/config.js";
 import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { Logger } from "#lib/logger.js";
@@ -10,6 +11,7 @@ import {
 } from "#lib/status-page-domains.js";
 import type { StatusPagePick } from "#lib/status-page-members.js";
 import type { StatusPageScope } from "#lib/types.js";
+
 import { deleteDns, syncDns } from "./dns.service.ts";
 import { certResolverFor } from "./docker/cert-resolver.ts";
 import { errorPagesTarget } from "./docker/error-pages.ts";

@@ -21,12 +21,10 @@ const {
 	pushEndpoint,
 	pushEndpointDigest,
 } = await import("../../../src/lib/notification-channel-target");
-const { notificationDeliveryJobPayload } = await import(
-	"../../../src/lib/services/queue/payloads"
-);
-const { deployEvent, deployTitle, isFailureEvent } = await import(
-	"../../../src/lib/notification-events"
-);
+const { notificationDeliveryJobPayload } =
+	await import("../../../src/lib/services/queue/payloads");
+const { deployEvent, deployTitle, isFailureEvent } =
+	await import("../../../src/lib/notification-events");
 const {
 	deployMessage,
 	formatDuration,
@@ -37,9 +35,8 @@ const {
 	uptimeMessage,
 	withStackTitle,
 } = await import("../../../src/lib/services/notification-messages");
-const { channelTargetFromForm, validateChannelTarget } = await import(
-	"../../../src/lib/server/validation/notification-channel"
-);
+const { channelTargetFromForm, validateChannelTarget } =
+	await import("../../../src/lib/server/validation/notification-channel");
 
 const BOT_TOKEN = "123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw";
 

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -9,16 +10,13 @@ mock.module("$app/env", () => ({
 
 const { config } = await import("../../../src/lib/config");
 const { Logger } = await import("../../../src/lib/logger");
-const { GitConnectionDTO } = await import(
-	"../../../src/lib/dto/git-connection-dto"
-);
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { GitConnectionDTO } =
+	await import("../../../src/lib/dto/git-connection-dto");
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-const { GitProviderService } = await import(
-	"../../../src/lib/services/git-provider.service"
-);
+const { GitProviderService } =
+	await import("../../../src/lib/services/git-provider.service");
 const { PREVIEW_COMMENT_MARKER, GitHubReportService, previewCommentBody } =
 	await import("../../../src/lib/services/github-report.service");
 

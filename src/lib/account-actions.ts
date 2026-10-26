@@ -1,9 +1,10 @@
+import { refreshAll } from "$app/navigation";
 import { toast } from "svelte-sonner";
+
 import { signOut } from "#lib/auth-client.js";
 import { setUiMode } from "#lib/remote/ui-mode.remote.js";
 import { toastError } from "#lib/toast.js";
 import { UI_MODE_LABELS, type UiMode } from "#lib/ui-mode.js";
-import { refreshAll } from "$app/navigation";
 
 async function signOutCallback(): Promise<void> {
 	await signOut();

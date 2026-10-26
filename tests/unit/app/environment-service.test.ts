@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { type DomainOwners, stubDomainOwners } from "../support/domain-owners";
 import { restoreStubs, stub } from "../support/stub";
 
@@ -12,20 +13,16 @@ const { config } = await import("../../../src/lib/config");
 const { Logger } = await import("../../../src/lib/logger");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
-const { CapacityService } = await import(
-	"../../../src/lib/services/capacity.service"
-);
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { ServiceLifecycleService } = await import(
-	"../../../src/lib/services/service-lifecycle.service"
-);
+const { CapacityService } =
+	await import("../../../src/lib/services/capacity.service");
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { ServiceLifecycleService } =
+	await import("../../../src/lib/services/service-lifecycle.service");
 const { deployEnvironment, ENVIRONMENT_PRESETS, newEnvironmentProblem } =
 	await import("../../../src/lib/release-channels");
-const { EnvironmentError, EnvironmentService, environmentSlug } = await import(
-	"../../../src/lib/services/environment.service"
-);
+const { EnvironmentError, EnvironmentService, environmentSlug } =
+	await import("../../../src/lib/services/environment.service");
 
 type Svc = Parameters<typeof EnvironmentService.list>[0];
 

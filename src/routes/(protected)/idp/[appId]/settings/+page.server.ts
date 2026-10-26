@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
 import { Logger } from "#lib/logger.js";
 import { parseOauthAppSettings } from "#lib/server/oauth-app-form.js";
@@ -7,7 +9,6 @@ import {
 	OauthAppError,
 	OauthAppService,
 } from "#lib/services/oauth-app.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("OidcProvider");
 

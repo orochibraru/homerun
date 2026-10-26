@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error } from "@sveltejs/kit";
+
 import { config, serviceDomain } from "#lib/config.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
@@ -8,7 +10,6 @@ import { StackDTO } from "#lib/dto/stack-dto.js";
 import { serviceHostname } from "#lib/services/dns.service.js";
 import { certResolverFor } from "#lib/services/docker/cert-resolver.js";
 import { ancestorIds } from "#lib/stack-tree.js";
-import { resolve } from "$app/paths";
 
 /**
  * The crumbs standing in for `/services`: the stack trail for a service in a

@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { Cpu, TerminalSquare } from "@lucide/svelte";
+
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { visibleItems } from "#lib/ui-mode.js";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 
 	const { children, data } = $props();
 
@@ -33,11 +34,11 @@
 </script>
 
 {#if shown.length > 1}
-  <SectionNav hubLabel="Container" label="Container sections" sections={shown}>
-    {@render children()}
-  </SectionNav>
+	<SectionNav hubLabel="Container" label="Container sections" sections={shown}>
+		{@render children()}
+	</SectionNav>
 {:else}
-  <ErrorBoundary title="This section hit an error while rendering.">
-    {@render children()}
-  </ErrorBoundary>
+	<ErrorBoundary title="This section hit an error while rendering.">
+		{@render children()}
+	</ErrorBoundary>
 {/if}

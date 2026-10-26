@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { DockerCleanupMixin, prunableVolumes } = await import(
-	"../../../src/lib/services/docker/cleanup"
-);
+const { DockerCleanupMixin, prunableVolumes } =
+	await import("../../../src/lib/services/docker/cleanup");
 
 const VOLUMES = [
 	{ Driver: "local", Name: "in-use", UsageData: { RefCount: 1, Size: 10 } },

@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { page } from "$app/state";
 	import { ChevronLeft, ChevronRight } from "@lucide/svelte";
 	import { type Component, type Snippet, untrack } from "svelte";
+
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import { useSubNav } from "#lib/sub-nav.svelte.js";
-	import { page } from "$app/state";
 
 	export interface NavTab {
 		/** Rendered as a real link when set (route tabs); otherwise a button firing onSelect (in-page section tabs). */
@@ -96,92 +97,125 @@
 </script>
 
 {#snippet content(tab: NavTab, isActive: boolean)}
-  {@const TabIcon = tab.icon}
-  {#if TabIcon}
-    <TabIcon
-      class="size-3.5 shrink-0 transition-colors {isActive ? 'text-accent' : 'text-text-subtle group-hover:text-accent'}"
-    />
-  {/if}
-  {tab.label}
-  {#if tab.hasWarning}
-    <span class="size-1.5 shrink-0 rounded-full bg-amber-400" title="Needs attention"></span>
-  {/if}
+	{@const TabIcon = tab.icon}
+	{#if TabIcon}
+		<TabIcon
+			class="size-3.5 shrink-0 transition-colors {isActive
+				? 'text-accent'
+				: 'text-text-subtle group-hover:text-accent'}"
+		/>
+	{/if}
+	{tab.label}
+	{#if tab.hasWarning}
+		<span
+			class="size-1.5 shrink-0 rounded-full bg-amber-400"
+			title="Needs attention"
+		></span>
+	{/if}
 {/snippet}
 
 <div
-  bind:this={strip}
-  class="mb-5 overflow-x-auto {routed ? 'max-md:hidden' : ''} {beside ? 'md:hidden' : ''}"
-  data-slot="tab-nav"
+	bind:this={strip}
+	class="mb-5 overflow-x-auto {routed ? 'max-md:hidden' : ''} {beside
+		? 'md:hidden'
+		: ''}"
+	data-slot="tab-nav"
 >
-  <div class="bg-surface-2 inline-flex min-w-max gap-1 rounded-lg p-1">
-    {#each tabs as tab (tab.id)}
-      {@const isActive = tab.id === active}
-      {#if tab.href}
-        <a
-          class={tabClass(isActive)}
-          aria-current={isActive ? "page" : undefined}
-          data-active={isActive || undefined}
-          href={tab.href}
-        >
-          {@render content(tab, isActive)}
-        </a>
-      {:else}
-        <button
-          class={tabClass(isActive)}
-          data-active={isActive || undefined}
-          onclick={() => onSelect?.(tab.id)}
-          type="button"
-        >
-          {@render content(tab, isActive)}
-        </button>
-      {/if}
-    {/each}
-  </div>
+	<div class="bg-surface-2 inline-flex min-w-max gap-1 rounded-lg p-1">
+		{#each tabs as tab (tab.id)}
+			{@const isActive = tab.id === active}
+			{#if tab.href}
+				<a
+					class={tabClass(isActive)}
+					aria-current={isActive ? "page" : undefined}
+					data-active={isActive || undefined}
+					href={tab.href}
+				>
+					{@render content(tab, isActive)}
+				</a>
+			{:else}
+				<button
+					class={tabClass(isActive)}
+					data-active={isActive || undefined}
+					onclick={() => onSelect?.(tab.id)}
+					type="button"
+				>
+					{@render content(tab, isActive)}
+				</button>
+			{/if}
+		{/each}
+	</div>
 </div>
 
 {#if atHub}
-  <nav class="grid grid-cols-2 gap-2.5 md:hidden" aria-label="Sections" data-slot="tab-hub">
-    {#each tabs as tab, index (tab.id)}
-      {@const TabIcon = tab.icon}
-      <a
-        class="border-border bg-surface active:bg-surface-2 relative flex min-h-24 flex-col justify-between gap-3 rounded-2xl border p-3.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 {tabs.length % 2 === 1 && index === tabs.length - 1 ? 'col-span-2' : ''}"
-        href={cardHref(tab, index)}
-      >
-        <span class="bg-accent-light text-accent flex size-9 items-center justify-center rounded-xl">
-          {#if TabIcon}<TabIcon class="size-4.5" />{:else}<ChevronRight class="size-4.5" />{/if}
-        </span>
-        <span class="flex flex-col gap-0.5">
-          <span class="text-text text-sm leading-snug font-semibold">{tab.label}</span>
-          {#if tab.description}
-            <span class="text-xs {tab.hasWarning ? 'text-amber-600 dark:text-amber-400' : 'text-text-subtle'}">{tab.description}</span>
-          {/if}
-        </span>
-        {#if tab.hasWarning}
-          <span class="absolute top-3.5 right-3.5 size-2 rounded-full bg-amber-400" title="Needs attention"></span>
-        {/if}
-      </a>
-    {/each}
-  </nav>
+	<nav
+		class="grid grid-cols-2 gap-2.5 md:hidden"
+		aria-label="Sections"
+		data-slot="tab-hub"
+	>
+		{#each tabs as tab, index (tab.id)}
+			{@const TabIcon = tab.icon}
+			<a
+				class="border-border bg-surface active:bg-surface-2 relative flex min-h-24 flex-col justify-between gap-3 rounded-2xl border p-3.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 {tabs.length %
+					2 ===
+					1 && index === tabs.length - 1
+					? 'col-span-2'
+					: ''}"
+				href={cardHref(tab, index)}
+			>
+				<span
+					class="bg-accent-light text-accent flex size-9 items-center justify-center rounded-xl"
+				>
+					{#if TabIcon}<TabIcon class="size-4.5" />{:else}<ChevronRight
+							class="size-4.5"
+						/>{/if}
+				</span>
+				<span class="flex flex-col gap-0.5">
+					<span class="text-text text-sm leading-snug font-semibold"
+						>{tab.label}</span
+					>
+					{#if tab.description}
+						<span
+							class="text-xs {tab.hasWarning
+								? 'text-amber-600 dark:text-amber-400'
+								: 'text-text-subtle'}">{tab.description}</span
+						>
+					{/if}
+				</span>
+				{#if tab.hasWarning}
+					<span
+						class="absolute top-3.5 right-3.5 size-2 rounded-full bg-amber-400"
+						title="Needs attention"
+					></span>
+				{/if}
+			</a>
+		{/each}
+	</nav>
 {:else if routed}
-  <div class="-mt-1 mb-4 flex items-center gap-2 md:hidden" data-slot="tab-back">
-    <a
-      class="text-accent -ml-2 flex min-h-11 items-center gap-0.5 rounded-lg pr-2 pl-1 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      href={hubHref}
-    >
-      <ChevronLeft class="size-5" />
-      Sections
-    </a>
-    {#if activeTab}
-      <span class="text-text-subtle" aria-hidden="true">/</span>
-      <span class="text-text truncate text-sm font-semibold">{activeTab.label}</span>
-    {/if}
-  </div>
+	<div
+		class="-mt-1 mb-4 flex items-center gap-2 md:hidden"
+		data-slot="tab-back"
+	>
+		<a
+			class="text-accent -ml-2 flex min-h-11 items-center gap-0.5 rounded-lg pr-2 pl-1 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+			href={hubHref}
+		>
+			<ChevronLeft class="size-5" />
+			Sections
+		</a>
+		{#if activeTab}
+			<span class="text-text-subtle" aria-hidden="true">/</span>
+			<span class="text-text truncate text-sm font-semibold"
+				>{activeTab.label}</span
+			>
+		{/if}
+	</div>
 {/if}
 
 {#if children}
-  <div class={atHub ? "max-md:hidden" : "contents"}>
-    <ErrorBoundary title="This tab hit an error while rendering.">
-      {@render children()}
-    </ErrorBoundary>
-  </div>
+	<div class={atHub ? "max-md:hidden" : "contents"}>
+		<ErrorBoundary title="This tab hit an error while rendering.">
+			{@render children()}
+		</ErrorBoundary>
+	</div>
 {/if}

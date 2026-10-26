@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Plus, X } from "@lucide/svelte";
+
 	import { errorClass, inputClass } from "#lib/components/form-styles.js";
 	import { Button } from "#lib/components/ui/button/index.js";
 
@@ -50,50 +51,58 @@
 </script>
 
 <div class="space-y-2">
-  {#each values as _, index (index)}
-    {@const problem = problemAt(index)}
-    {@const shown = values[index]?.trim() && !validate(values[index].trim()) ? preview?.(values[index].trim()) : null}
-    <div>
-      <div class="flex items-center gap-2">
-        <input
-          aria-invalid={problem ? "true" : undefined}
-          aria-label="{addLabel} {index + 1}"
-          autocomplete="off"
-          class="{inputClass} font-mono text-xs {problem ? 'border-red-500/60' : ''}"
-          id={index === 0 ? id : undefined}
-          inputmode="url"
-          {name}
-          onblur={() => {
-            touched[index] = true;
-          }}
-          {placeholder}
-          spellcheck="false"
-          type="text"
-          bind:this={inputs[index]}
-          bind:value={values[index]}
-        >
-        <Button
-          aria-label="Remove"
-          disabled={values.length === 1 && !values[0]}
-          onclick={() => remove(index)}
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-        >
-          <X class="size-4" />
-        </Button>
-      </div>
-      {#if problem}
-        <p class={errorClass}>{problem}</p>
-      {:else if shown}
-        <p class="text-text-subtle mt-1 truncate font-mono text-[0.6875rem]" title={shown}>
-          {shown}
-        </p>
-      {/if}
-    </div>
-  {/each}
-  <Button onclick={add} size="sm" type="button" variant="outline">
-    <Plus class="size-4" />
-    {addLabel}
-  </Button>
+	{#each values as _, index (index)}
+		{@const problem = problemAt(index)}
+		{@const shown =
+			values[index]?.trim() && !validate(values[index].trim())
+				? preview?.(values[index].trim())
+				: null}
+		<div>
+			<div class="flex items-center gap-2">
+				<input
+					aria-invalid={problem ? "true" : undefined}
+					aria-label="{addLabel} {index + 1}"
+					autocomplete="off"
+					class="{inputClass} font-mono text-xs {problem
+						? 'border-red-500/60'
+						: ''}"
+					id={index === 0 ? id : undefined}
+					inputmode="url"
+					{name}
+					onblur={() => {
+						touched[index] = true;
+					}}
+					{placeholder}
+					spellcheck="false"
+					type="text"
+					bind:this={inputs[index]}
+					bind:value={values[index]}
+				/>
+				<Button
+					aria-label="Remove"
+					disabled={values.length === 1 && !values[0]}
+					onclick={() => remove(index)}
+					size="icon-sm"
+					type="button"
+					variant="ghost"
+				>
+					<X class="size-4" />
+				</Button>
+			</div>
+			{#if problem}
+				<p class={errorClass}>{problem}</p>
+			{:else if shown}
+				<p
+					class="text-text-subtle mt-1 truncate font-mono text-[0.6875rem]"
+					title={shown}
+				>
+					{shown}
+				</p>
+			{/if}
+		</div>
+	{/each}
+	<Button onclick={add} size="sm" type="button" variant="outline">
+		<Plus class="size-4" />
+		{addLabel}
+	</Button>
 </div>

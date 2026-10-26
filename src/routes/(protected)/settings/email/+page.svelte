@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { page } from "$app/state";
+
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
@@ -7,8 +10,6 @@
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
-	import { page } from "$app/state";
 
 	const { data } = $props();
 
@@ -29,121 +30,121 @@
 </script>
 
 <section class="panel rounded-md">
-  <PanelHeader
-    description="Used for email verification on sign-up."
-    title="Email (SMTP)"
-  >
-    {#snippet trailing()}
-      <SaveButton form="smtp-settings" />
-    {/snippet}
-  </PanelHeader>
-  <form
-    id="smtp-settings"
-    action="?/updateSmtp"
-    class="space-y-4 p-5"
-    method="POST"
-    use:enhance={(input) => {
-      const test = input.action.search === "?/sendTest";
-      return enhanceToast({
-        error: test
-          ? "Couldn't send the test email."
-          : "Check the form for errors.",
-        loading: test
-          ? `Sending a test email to ${data.user.email}`
-          : "Saving SMTP settings",
-        success: test
-          ? `Test email sent to ${data.user.email}.`
-          : "SMTP settings saved.",
-      })(input);
-    }}
-  >
-    {#if issueFor("smtpHost")}
-      <p class="text-xs text-amber-600 dark:text-amber-400">
-        ⚠ {issueFor("smtpHost")}
-      </p>
-    {/if}
-    <CheckBox
-      checked={data.settings.smtpEnabled ?? false}
-      helperText="Send email through this SMTP server"
-      id="smtpEnabled"
-      label="Enabled"
-      name="smtpEnabled"
-    />
-    <div class="grid gap-4 sm:grid-cols-2">
-      <div>
-        <label class={label} for="smtpHost">Host</label>
-        <Input
-          class={highlightClass("smtpHost")}
-          id="smtpHost"
-          name="smtpHost"
-          placeholder={data.envDefaults.smtpHost ?? "smtp.example.com"}
-          type="text"
-          value={data.settings.smtpHost ?? ""}
-        />
-      </div>
-      <div>
-        <label class={label} for="smtpPort">Port</label>
-        <Input
-          class={highlightClass("smtpPort")}
-          id="smtpPort"
-          name="smtpPort"
-          placeholder={data.envDefaults.smtpPort?.toString() ?? "587"}
-          type="text"
-          value={data.settings.smtpPort ?? ""}
-        />
-      </div>
-      <div>
-        <label class={label} for="smtpUser">Username</label>
-        <Input
-          class={highlightClass("smtpUser")}
-          id="smtpUser"
-          name="smtpUser"
-          placeholder={data.envDefaults.smtpUser ?? ""}
-          type="text"
-          value={data.settings.smtpUser ?? ""}
-        />
-      </div>
-      <div>
-        <label class={label} for="smtpPassword">Password</label>
-        <Input
-          class={highlightClass("smtpPassword")}
-          id="smtpPassword"
-          name="smtpPassword"
-          placeholder={data.settings.smtpPasswordEnc
-          ? "Leave blank to keep current"
-          : "Password"}
-          type="password"
-        />
-      </div>
-      <div>
-        <label class={label} for="smtpFrom">From address</label>
-        <Input
-          class={highlightClass("smtpFrom")}
-          id="smtpFrom"
-          name="smtpFrom"
-          placeholder={data.envDefaults.smtpFrom ?? "no-reply@example.com"}
-          type="text"
-          value={data.settings.smtpFrom ?? ""}
-        />
-      </div>
-      <div class="sm:col-span-2">
-        <CheckBox
-          checked={data.settings.smtpSecure ?? false}
-          helperText="Use TLS when connecting to the SMTP server"
-          id="smtpSecure"
-          label="Secure (TLS)"
-          name="smtpSecure"
-        />
-      </div>
-    </div>
-    <div class="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
-      <p class="text-text-subtle mr-auto basis-full text-xs sm:basis-auto">
-        The test goes to {data.user.email} using the saved settings, so save
-        first if you've just changed anything.
-      </p>
-      <Button formaction="?/sendTest" type="submit" variant="outline">
-        Send test email
-      </Button>
-    </div>
-  </form>
+	<PanelHeader
+		description="Used for email verification on sign-up."
+		title="Email (SMTP)"
+	>
+		{#snippet trailing()}
+			<SaveButton form="smtp-settings" />
+		{/snippet}
+	</PanelHeader>
+	<form
+		id="smtp-settings"
+		action="?/updateSmtp"
+		class="space-y-4 p-5"
+		method="POST"
+		use:enhance={(input) => {
+			const test = input.action.search === "?/sendTest";
+			return enhanceToast({
+				error: test
+					? "Couldn't send the test email."
+					: "Check the form for errors.",
+				loading: test
+					? `Sending a test email to ${data.user.email}`
+					: "Saving SMTP settings",
+				success: test
+					? `Test email sent to ${data.user.email}.`
+					: "SMTP settings saved.",
+			})(input);
+		}}
+	>
+		{#if issueFor("smtpHost")}
+			<p class="text-xs text-amber-600 dark:text-amber-400">
+				⚠ {issueFor("smtpHost")}
+			</p>
+		{/if}
+		<CheckBox
+			checked={data.settings.smtpEnabled ?? false}
+			helperText="Send email through this SMTP server"
+			id="smtpEnabled"
+			label="Enabled"
+			name="smtpEnabled"
+		/>
+		<div class="grid gap-4 sm:grid-cols-2">
+			<div>
+				<label class={label} for="smtpHost">Host</label>
+				<Input
+					class={highlightClass("smtpHost")}
+					id="smtpHost"
+					name="smtpHost"
+					placeholder={data.envDefaults.smtpHost ?? "smtp.example.com"}
+					type="text"
+					value={data.settings.smtpHost ?? ""}
+				/>
+			</div>
+			<div>
+				<label class={label} for="smtpPort">Port</label>
+				<Input
+					class={highlightClass("smtpPort")}
+					id="smtpPort"
+					name="smtpPort"
+					placeholder={data.envDefaults.smtpPort?.toString() ?? "587"}
+					type="text"
+					value={data.settings.smtpPort ?? ""}
+				/>
+			</div>
+			<div>
+				<label class={label} for="smtpUser">Username</label>
+				<Input
+					class={highlightClass("smtpUser")}
+					id="smtpUser"
+					name="smtpUser"
+					placeholder={data.envDefaults.smtpUser ?? ""}
+					type="text"
+					value={data.settings.smtpUser ?? ""}
+				/>
+			</div>
+			<div>
+				<label class={label} for="smtpPassword">Password</label>
+				<Input
+					class={highlightClass("smtpPassword")}
+					id="smtpPassword"
+					name="smtpPassword"
+					placeholder={data.settings.smtpPasswordEnc
+						? "Leave blank to keep current"
+						: "Password"}
+					type="password"
+				/>
+			</div>
+			<div>
+				<label class={label} for="smtpFrom">From address</label>
+				<Input
+					class={highlightClass("smtpFrom")}
+					id="smtpFrom"
+					name="smtpFrom"
+					placeholder={data.envDefaults.smtpFrom ?? "no-reply@example.com"}
+					type="text"
+					value={data.settings.smtpFrom ?? ""}
+				/>
+			</div>
+			<div class="sm:col-span-2">
+				<CheckBox
+					checked={data.settings.smtpSecure ?? false}
+					helperText="Use TLS when connecting to the SMTP server"
+					id="smtpSecure"
+					label="Secure (TLS)"
+					name="smtpSecure"
+				/>
+			</div>
+		</div>
+		<div class="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
+			<p class="text-text-subtle mr-auto basis-full text-xs sm:basis-auto">
+				The test goes to {data.user.email} using the saved settings, so save first
+				if you've just changed anything.
+			</p>
+			<Button formaction="?/sendTest" type="submit" variant="outline">
+				Send test email
+			</Button>
+		</div>
+	</form>
 </section>

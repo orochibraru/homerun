@@ -1,5 +1,6 @@
 import { SQL } from "bun";
 import { type BunSQLDatabase, drizzle } from "drizzle-orm/bun-sql";
+
 import { config } from "#lib/config.js";
 
 /**

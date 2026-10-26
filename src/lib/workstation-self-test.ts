@@ -1,6 +1,6 @@
 import {
-	type WorkstationStatus,
 	workstationStateLabel,
+	type WorkstationStatus,
 } from "#lib/workstations.js";
 
 /** One line of a workstation self-test: what was checked, whether it passed, and why. */

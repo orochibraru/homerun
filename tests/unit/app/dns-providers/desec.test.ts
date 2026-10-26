@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { desec } from "../../../../src/lib/services/dns-providers/desec";
 import { stubFetch } from "./stub-fetch";
 

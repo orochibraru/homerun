@@ -8,6 +8,7 @@ import {
 	repoPathFromGitUrl,
 	StatusCheckClient,
 } from "#lib/status-checks.js";
+
 import { GitProviderService } from "./git-provider.service.ts";
 
 function embeddedToken(gitUrl: string): string | null {

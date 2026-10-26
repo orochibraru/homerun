@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
+
 import { desc, sql } from "drizzle-orm";
 import { PgDialect, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
 import {
 	BASE_SORTS,
-	STACK_SORTS,
 	sortKeysOf,
+	STACK_SORTS,
 } from "../../../src/lib/list-sorts";
 import {
 	DEFAULT_PER_PAGE,

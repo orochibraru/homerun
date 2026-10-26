@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { type DomainOwners, stubDomainOwners } from "../support/domain-owners";
 import { restoreStubs, stub } from "../support/stub";
 
@@ -10,32 +11,24 @@ mock.module("$app/env", () => ({
 
 const { parseComposeFile } = await import("../../../src/lib/compose-import");
 const { Logger } = await import("../../../src/lib/logger");
-const { NotificationDTO } = await import(
-	"../../../src/lib/dto/notification-dto"
-);
-const { ServiceDependencyDTO } = await import(
-	"../../../src/lib/dto/service-dependency-dto"
-);
+const { NotificationDTO } =
+	await import("../../../src/lib/dto/notification-dto");
+const { ServiceDependencyDTO } =
+	await import("../../../src/lib/dto/service-dependency-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-const { ServiceVolumeDTO } = await import(
-	"../../../src/lib/dto/service-volume-dto"
-);
+const { ServiceVolumeDTO } =
+	await import("../../../src/lib/dto/service-volume-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
-const { StorageVolumeDTO } = await import(
-	"../../../src/lib/dto/storage-volume-dto"
-);
-const { CapacityService } = await import(
-	"../../../src/lib/services/capacity.service"
-);
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { ComposeImportService, HostAccessError } = await import(
-	"../../../src/lib/services/compose-import.service"
-);
+const { StorageVolumeDTO } =
+	await import("../../../src/lib/dto/storage-volume-dto");
+const { CapacityService } =
+	await import("../../../src/lib/services/capacity.service");
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { ComposeImportService, HostAccessError } =
+	await import("../../../src/lib/services/compose-import.service");
 
 const COMPOSE = `
 services:

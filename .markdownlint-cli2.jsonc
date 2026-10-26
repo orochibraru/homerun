@@ -5,10 +5,10 @@
 			"code_blocks": false,
 			"headings": false,
 			"line_length": 80,
-			"tables": false
+			"tables": false,
 		},
-		"MD028": false
+		"MD028": false,
 	},
 	"gitignore": true,
-	"ignores": ["node_modules", "dist", "CHANGELOG.md", "test-results", ".vale"]
+	"ignores": ["node_modules", "dist", "CHANGELOG.md", "test-results", ".vale"],
 }

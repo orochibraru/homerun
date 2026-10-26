@@ -14,20 +14,16 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { RevisionHealthService } = await import(
-	"../../../src/lib/services/revision-health.service"
-);
+const { RevisionHealthService } =
+	await import("../../../src/lib/services/revision-health.service");
 const { DeploymentDTO } = await import("../../../src/lib/dto/deployment-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-const { NotificationDTO } = await import(
-	"../../../src/lib/dto/notification-dto"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { NotificationChannelService } = await import(
-	"../../../src/lib/services/notification-channel.service"
-);
+const { NotificationDTO } =
+	await import("../../../src/lib/dto/notification-dto");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { NotificationChannelService } =
+	await import("../../../src/lib/services/notification-channel.service");
 
 type Deployment = NonNullable<Awaited<ReturnType<typeof DeploymentDTO.get>>>;
 type Service = NonNullable<Awaited<ReturnType<typeof ServiceDTO.get>>>;

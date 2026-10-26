@@ -1,9 +1,10 @@
 import { fail } from "@sveltejs/kit";
+
 import { Logger } from "#lib/logger.js";
 import {
 	intersectPermissions,
-	type Permissions,
 	parsePermissions,
+	type Permissions,
 	permissionsFromForm,
 	toApiKeyPermissions,
 } from "#lib/permissions.js";

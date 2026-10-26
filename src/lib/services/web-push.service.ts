@@ -8,6 +8,7 @@ import {
 	sendWebPush,
 	type VapidKeys,
 } from "#lib/server/web-push.js";
+
 import { decryptSecret, encryptSecret } from "./secrets";
 
 const logger = new Logger("WebPush");

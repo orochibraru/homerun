@@ -7,7 +7,7 @@
 </script>
 
 <div class="break-all whitespace-pre-wrap">
-  {#each segments as segment, i (i)}
-    <span class={segment.className}>{segment.text}</span>
-  {/each}
+	{#each segments as segment, i (i)}
+		<span class={segment.className}>{segment.text}</span>
+	{/each}
 </div>

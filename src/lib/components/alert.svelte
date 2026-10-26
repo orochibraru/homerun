@@ -3,13 +3,9 @@
 </script>
 
 <script lang="ts">
-	import {
-		AlertTriangle,
-		CheckCircle2,
-		Info,
-		OctagonX,
-	} from "@lucide/svelte";
+	import { AlertTriangle, CheckCircle2, Info, OctagonX } from "@lucide/svelte";
 	import type { Snippet } from "svelte";
+
 	import { cn } from "#lib/utils.js";
 
 	const {
@@ -47,27 +43,27 @@
 </script>
 
 <div
-  class={cn(
-    "flex items-start gap-3 rounded-md border p-4 text-sm",
-    TONE[variant],
-    className,
-  )}
-  role={variant === "error" ? "alert" : "status"}
+	class={cn(
+		"flex items-start gap-3 rounded-md border p-4 text-sm",
+		TONE[variant],
+		className,
+	)}
+	role={variant === "error" ? "alert" : "status"}
 >
-  <Icon class="mt-0.5 size-4 shrink-0" />
-  <div class="min-w-0 flex-1">
-    {#if title}
-      <p class="font-medium">{title}</p>
-    {/if}
-    {#if children}
-      <div class={title ? "mt-0.5 text-xs opacity-90" : ""}>
-        {@render children()}
-      </div>
-    {/if}
-  </div>
-  {#if actions}
-    <div class="flex shrink-0 items-center gap-2">
-      {@render actions()}
-    </div>
-  {/if}
+	<Icon class="mt-0.5 size-4 shrink-0" />
+	<div class="min-w-0 flex-1">
+		{#if title}
+			<p class="font-medium">{title}</p>
+		{/if}
+		{#if children}
+			<div class={title ? "mt-0.5 text-xs opacity-90" : ""}>
+				{@render children()}
+			</div>
+		{/if}
+	</div>
+	{#if actions}
+		<div class="flex shrink-0 items-center gap-2">
+			{@render actions()}
+		</div>
+	{/if}
 </div>

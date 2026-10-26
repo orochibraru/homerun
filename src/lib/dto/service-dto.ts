@@ -14,6 +14,7 @@ import {
 	type SQL,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+
 import { PASSWORD_METHOD } from "#lib/auth-providers.js";
 import type { BuildMethod } from "#lib/build-methods.js";
 import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "#lib/constants.js";
@@ -31,6 +32,7 @@ import {
 import { isDatabaseImage } from "#lib/service-link.js";
 import { runtimeOptionsFrom } from "#lib/service-runtime.js";
 import type { ContainerStatus, PullPolicy } from "#lib/types.js";
+
 import { BaseDTO } from "./base-dto";
 import { RemoteHostDTO } from "./remote-host-dto";
 import type { NewServiceInput, ServiceUpdateInput } from "./service-input";

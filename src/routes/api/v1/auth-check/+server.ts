@@ -5,9 +5,9 @@ import {
 	GATE_LOGOUT_PATH,
 	GATE_REDIRECT_TTL_MS,
 	GATE_SESSION_TTL_MS,
-	type GateTarget,
 	gateCookie,
 	gatePrefix,
+	type GateTarget,
 	policyVersion,
 	readGateCookies,
 	signGateToken,
@@ -18,8 +18,8 @@ import { gateChallengeKind } from "#lib/server/gate-request.js";
 import { serviceGateTarget } from "#lib/server/gate-target.js";
 import { AppAccessService } from "#lib/services/app-access.service.js";
 import {
-	WorkstationSignInService,
 	workstationGateKey,
+	WorkstationSignInService,
 } from "#lib/services/workstation/sign-in.js";
 
 const logger = new Logger("AppGate");

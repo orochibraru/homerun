@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HTMLTextareaAttributes } from "svelte/elements";
+
 	import { type HighlightLanguage, loadHighlighter } from "#lib/highlight.js";
 
 	const MAX_HIGHLIGHT_CHARS = 200_000;
@@ -41,17 +42,17 @@
 	);
 </script>
 
-<div class="code panel focus-within:border-accent focus-within:ring-3 focus-within:ring-ring/50 grid min-h-112 rounded-md font-mono text-[0.8125rem] leading-relaxed">
-  <pre
-    class="pointer-events-none m-0 p-3 wrap-anywhere whitespace-pre-wrap [grid-area:1/1]"
-    aria-hidden="true"
-  >{#if html !== null}{@html html}{:else}{value}{/if}{"\n "}</pre>
-  <textarea
-    class="caret-text w-full resize-none overflow-hidden border-0 bg-transparent p-3 wrap-anywhere whitespace-pre-wrap text-transparent [grid-area:1/1] focus:ring-0 focus:outline-none"
-    spellcheck="false"
-    bind:value
-    {...rest}
-  ></textarea>
+<div
+	class="code panel focus-within:border-accent focus-within:ring-3 focus-within:ring-ring/50 grid min-h-112 rounded-md font-mono text-[0.8125rem] leading-relaxed"
+>
+	<pre
+		class="pointer-events-none m-0 p-3 wrap-anywhere whitespace-pre-wrap [grid-area:1/1]"
+		aria-hidden="true">{#if html !== null}{@html html}{:else}{value}{/if}{"\n "}</pre>
+	<textarea
+		class="caret-text w-full resize-none overflow-hidden border-0 bg-transparent p-3 wrap-anywhere whitespace-pre-wrap text-transparent [grid-area:1/1] focus:ring-0 focus:outline-none"
+		spellcheck="false"
+		bind:value
+		{...rest}></textarea>
 </div>
 
 <style>
@@ -73,19 +74,50 @@
 		color: var(--color-text-subtle);
 		font-style: italic;
 	}
-	.code :global(:is(.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-doctag, .hljs-section)) {
+	.code
+		:global(
+			:is(
+				.hljs-keyword,
+				.hljs-selector-tag,
+				.hljs-built_in,
+				.hljs-doctag,
+				.hljs-section
+			)
+		) {
 		color: var(--color-accent);
 	}
-	.code :global(:is(.hljs-string, .hljs-regexp, .hljs-addition, .hljs-template-tag)) {
+	.code
+		:global(
+			:is(.hljs-string, .hljs-regexp, .hljs-addition, .hljs-template-tag)
+		) {
 		color: var(--chart-4);
 	}
 	.code :global(:is(.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet)) {
 		color: var(--chart-5);
 	}
-	.code :global(:is(.hljs-title, .hljs-name, .hljs-selector-id, .hljs-selector-class, .hljs-type)) {
+	.code
+		:global(
+			:is(
+				.hljs-title,
+				.hljs-name,
+				.hljs-selector-id,
+				.hljs-selector-class,
+				.hljs-type
+			)
+		) {
 		color: var(--chart-3);
 	}
-	.code :global(:is(.hljs-attr, .hljs-attribute, .hljs-property, .hljs-variable, .hljs-template-variable, .hljs-params)) {
+	.code
+		:global(
+			:is(
+				.hljs-attr,
+				.hljs-attribute,
+				.hljs-property,
+				.hljs-variable,
+				.hljs-template-variable,
+				.hljs-params
+			)
+		) {
 		color: var(--chart-2);
 	}
 	.code :global(:is(.hljs-meta, .hljs-deletion, .hljs-subst)) {

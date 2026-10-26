@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { ChevronRight } from "@lucide/svelte";
 	import { page } from "$app/state";
+	import { ChevronRight } from "@lucide/svelte";
 
 	const PAGE_PATTERNS = Object.keys(
 		import.meta.glob("/src/routes/**/+page.svelte"),
@@ -105,26 +105,35 @@
 </script>
 
 <nav aria-label="Breadcrumb" class="min-w-0 flex-1">
-  <ol class="flex min-w-0 items-center gap-1 text-sm">
-    {#each crumbs as crumb, i (crumb.href)}
-      {@const last = i === crumbs.length - 1}
-      <li class="min-w-0 items-center gap-1 {last ? 'flex' : 'hidden shrink-0 sm:flex'}">
-        {#if i > 0}
-          <ChevronRight class="text-text-subtle hidden size-3.5 shrink-0 sm:block" />
-        {/if}
-        {#if last}
-          <span aria-current="page" class="text-text truncate text-xl font-semibold tracking-tight sm:text-sm sm:font-medium sm:tracking-normal">
-            {crumb.label}
-          </span>
-        {:else}
-          <a
-            class="text-text-muted hover:text-text max-w-48 truncate transition-colors"
-            href={crumb.href}
-          >
-            {crumb.label}
-          </a>
-        {/if}
-      </li>
-    {/each}
-  </ol>
+	<ol class="flex min-w-0 items-center gap-1 text-sm">
+		{#each crumbs as crumb, i (crumb.href)}
+			{@const last = i === crumbs.length - 1}
+			<li
+				class="min-w-0 items-center gap-1 {last
+					? 'flex'
+					: 'hidden shrink-0 sm:flex'}"
+			>
+				{#if i > 0}
+					<ChevronRight
+						class="text-text-subtle hidden size-3.5 shrink-0 sm:block"
+					/>
+				{/if}
+				{#if last}
+					<span
+						aria-current="page"
+						class="text-text truncate text-xl font-semibold tracking-tight sm:text-sm sm:font-medium sm:tracking-normal"
+					>
+						{crumb.label}
+					</span>
+				{:else}
+					<a
+						class="text-text-muted hover:text-text max-w-48 truncate transition-colors"
+						href={crumb.href}
+					>
+						{crumb.label}
+					</a>
+				{/if}
+			</li>
+		{/each}
+	</ol>
 </nav>

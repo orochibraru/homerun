@@ -1,16 +1,17 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+
 import {
 	type ApiCall,
 	asResult,
 	change,
 	read,
 } from "#lib/server/mcp-tool-kit.js";
-import { releaseChannelsApiBody } from "#lib/server/validation/api.js";
 import {
 	serviceEnvironmentApiBody,
 	updateServiceEnvironmentApiBody,
 } from "#lib/server/validation/api-resources.js";
+import { releaseChannelsApiBody } from "#lib/server/validation/api.js";
 
 /** Registers the tools over a service's long-lived copies: its environments (staging, demo...) and its release channels' canary. */
 export function registerEnvironmentTools(

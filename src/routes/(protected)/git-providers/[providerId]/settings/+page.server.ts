@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { can } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import {
@@ -6,7 +8,6 @@ import {
 	GitProviderConfigService,
 	type GitProviderSettings,
 } from "#lib/services/git-provider-config.service.js";
-import { resolve } from "$app/paths";
 
 const SELF_HOSTABLE = new Set(["gitlab", "gitea"]);
 

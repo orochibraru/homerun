@@ -1,22 +1,24 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import { config } from "#lib/config.js";
 import { BlockedHitDTO } from "#lib/dto/blocked-hit-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { IpBanDTO } from "#lib/dto/ip-ban-dto.js";
 import {
 	abuseReportEmail,
-	BANS_FILE,
-	BLOCKED_HIT_RETENTION_MS,
 	banExpiry,
 	bannableIp,
+	BANS_FILE,
 	bansConfig,
+	BLOCKED_HIT_RETENTION_MS,
 	clientIpFrom,
 	shouldBan,
 } from "#lib/ip-bans.js";
 import type { IpIntel } from "#lib/ip-intel.js";
 import { Logger } from "#lib/logger.js";
 import { matchingPathPattern } from "#lib/path-patterns.js";
+
 import { CrowdsecService } from "./crowdsec.service.ts";
 import { dashboardHostFrom } from "./docker/dashboard.ts";
 import {

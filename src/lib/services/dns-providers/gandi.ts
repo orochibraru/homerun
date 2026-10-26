@@ -7,9 +7,9 @@ import {
 import {
 	orNull,
 	type Rrset,
-	type RrsetStore,
 	rrsetEditor,
 	rrsetRecords,
+	type RrsetStore,
 } from "./rrset";
 import type {
 	DnsProviderClient,

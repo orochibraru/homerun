@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { gateChallengeKind } from "../../../src/lib/server/gate-request";
 
 function headers(values: Record<string, string>): Headers {

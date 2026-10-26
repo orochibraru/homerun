@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { Plus } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import Alert from "#lib/components/alert.svelte";
 	import StatusPageFields from "#lib/components/status-page-fields.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
@@ -8,8 +11,6 @@
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import type { StatusPageScope } from "#lib/types.js";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -37,52 +38,54 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <h1 class="text-text mb-6 text-lg font-semibold tracking-tight">
-    New status page
-  </h1>
+	<h1 class="text-text mb-6 text-lg font-semibold tracking-tight">
+		New status page
+	</h1>
 
-  {#if form?.errors?.slug}
-    <Alert class="mb-6">{form.errors.slug[0]}</Alert>
-  {/if}
+	{#if form?.errors?.slug}
+		<Alert class="mb-6">{form.errors.slug[0]}</Alert>
+	{/if}
 
-  <form
-    class="panel space-y-6 rounded-md p-5"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Couldn't create the status page.",
-      loading: "Creating the status page",
-      onSettled: () => {
-        saving = false;
-      },
-      onStart: () => {
-        saving = true;
-      },
-      success: "Status page created.",
-    })}
-  >
-    <StatusPageFields
-      bind:name
-      bind:slug
-      bind:description
-      bind:domains
-      bind:scope
-      bind:stackId
-      bind:isPublic
-      bind:picks
-      errors={form?.errors}
-      stacks={data.stacks}
-      services={data.services}
-    />
+	<form
+		class="panel space-y-6 rounded-md p-5"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Couldn't create the status page.",
+			loading: "Creating the status page",
+			onSettled: () => {
+				saving = false;
+			},
+			onStart: () => {
+				saving = true;
+			},
+			success: "Status page created.",
+		})}
+	>
+		<StatusPageFields
+			bind:name
+			bind:slug
+			bind:description
+			bind:domains
+			bind:scope
+			bind:stackId
+			bind:isPublic
+			bind:picks
+			errors={form?.errors}
+			stacks={data.stacks}
+			services={data.services}
+		/>
 
-    <div class="flex justify-end gap-3">
-      <Button href={resolve('status-pages')} variant="outline">Cancel</Button>
-      <Button disabled={saving} type="submit"><Plus class="size-4" />Create status page</Button>
-    </div>
-  </form>
+		<div class="flex justify-end gap-3">
+			<Button href={resolve("status-pages")} variant="outline">Cancel</Button>
+			<Button disabled={saving} type="submit"
+				><Plus class="size-4" />Create status page</Button
+			>
+		</div>
+	</form>
 </div>
 
 <svelte:window
-  onkeydown={() => {
-    slugTouched = document.activeElement?.id === "slug" || slugTouched;
-  }}
-></svelte:window>
+	onkeydown={() => {
+		slugTouched = document.activeElement?.id === "slug" || slugTouched;
+	}}
+/>

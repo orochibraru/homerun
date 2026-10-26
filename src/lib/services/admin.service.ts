@@ -1,5 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+
+import { dev } from "$app/env";
+
 import {
 	config,
 	isPlaceholderAuthSecret,
@@ -10,12 +13,12 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { db } from "#lib/server/db/lib.js";
 import { user as userTable } from "#lib/server/db/schema.js";
 import { WorkerClient } from "#lib/server/worker-client.js";
-import { dev } from "$app/env";
+
 import { traefikExpectation } from "./cron/core-services-watch.ts";
+import { DockerService } from "./docker.service.ts";
 import { DASHBOARD_ROUTER_FILE } from "./docker/dashboard.ts";
 import { hasTraefikRouterFor } from "./docker/labels.ts";
 import { type WedgedContainer, wedgedMessage } from "./docker/wedged.ts";
-import { DockerService } from "./docker.service.ts";
 
 export interface SetupCheck {
 	/** A fix the dashboard can run in one click, instead of a settings field to edit. */

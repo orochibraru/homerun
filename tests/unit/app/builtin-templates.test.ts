@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+
 import {
 	TEMPLATE_CATEGORY_COLORS,
 	TEMPLATE_CATEGORY_ICONS,

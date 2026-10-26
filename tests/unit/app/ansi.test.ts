@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { render } from "@testing-library/svelte";
 
 import { parseAnsiLine, stripAnsi } from "../../../src/lib/ansi";

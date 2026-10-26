@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import { render } from "@testing-library/svelte";
+
 import StatusBadge from "../../../src/lib/components/status-badge.svelte";
 import type { ContainerStatus } from "../../../src/lib/types";
 

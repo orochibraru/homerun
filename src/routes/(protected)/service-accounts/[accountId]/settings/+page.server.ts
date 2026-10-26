@@ -1,8 +1,9 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { intersectPermissions, permissionsFromForm } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { ServiceAccountService } from "#lib/services/service-account.service.js";
-import { resolve } from "$app/paths";
 
 export const load = ({ locals }) => ({
 	grantable: locals.permissions,

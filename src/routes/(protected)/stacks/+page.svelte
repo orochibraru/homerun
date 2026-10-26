@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import {
 		ExternalLink,
 		FolderInput,
@@ -10,6 +13,7 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { onMount, type Snippet, tick } from "svelte";
+
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityList, {
@@ -26,9 +30,6 @@
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
-	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -72,160 +73,174 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
-    <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Stacks</h1>
-      <p class="text-text-muted mt-1 text-sm">
-        Group related services together.
-      </p>
-    </div>
+	<div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+		<div>
+			<h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
+				Stacks
+			</h1>
+			<p class="text-text-muted mt-1 text-sm">
+				Group related services together.
+			</p>
+		</div>
 
-    <Button href={resolve('stacks/new')} size="sm"><Plus class="size-4" />New Stack</Button>
-  </div>
+		<Button href={resolve("stacks/new")} size="sm"
+			><Plus class="size-4" />New Stack</Button
+		>
+	</div>
 
-  {#if data.total === 0 && !data.filtered}
-    <EmptyState
-      icon={FolderKanban}
-      subtitle="Create one to group related services together."
-      title="No stacks yet"
-    ><Button href={resolve('stacks/new')}><Plus class="size-4" />New Stack</Button></EmptyState>
-  {:else}
-    <EntityToolbar
-    sorts={STACK_SORTS} placeholder="Search stacks by name…">
-      {#snippet trailing()}
-        <ViewModeToggle view={view} />
-      {/snippet}
-    </EntityToolbar>
+	{#if data.total === 0 && !data.filtered}
+		<EmptyState
+			icon={FolderKanban}
+			subtitle="Create one to group related services together."
+			title="No stacks yet"
+			><Button href={resolve("stacks/new")}
+				><Plus class="size-4" />New Stack</Button
+			></EmptyState
+		>
+	{:else}
+		<EntityToolbar sorts={STACK_SORTS} placeholder="Search stacks by name…">
+			{#snippet trailing()}
+				<ViewModeToggle {view} />
+			{/snippet}
+		</EntityToolbar>
 
-    {#if data.stacks.length === 0}
-      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
-        <p class="text-text-muted text-sm">No stacks match your search.</p>
-      </div>
-    {:else}
-      {#snippet wrapper(item: EntityRow, body: Snippet)}
-        {@const stack = data.stacks.find((p) => p.id === item.id)}
-        <ContextMenu.Root>
-          <ContextMenu.Trigger class="block h-full">
-            {@render body()}
-          </ContextMenu.Trigger>
-          <ContextMenu.Content class="w-56">
-            <ContextMenu.Item onSelect={() => goto(stackHref(item.id))}>
-              <FolderOpen class="size-4" />
-              Open
-            </ContextMenu.Item>
-            <ContextMenu.Item
-              onSelect={() => window.open(stackHref(item.id), "_blank")}
-            >
-              <ExternalLink class="size-4" />
-              Open in new tab
-            </ContextMenu.Item>
-            <ContextMenu.Item onSelect={() => askMove(item.id)}>
-              <FolderInput class="size-4" />
-              Move into…
-            </ContextMenu.Item>
-            <ContextMenu.Item onSelect={() => goto(settingsHref(item.id))}>
-              <SettingsIcon class="size-4" />
-              Settings
-            </ContextMenu.Item>
-            {#if stack}
-              <ContextMenu.Separator />
-              <ContextMenu.Item
-                onSelect={() => askDelete(stack)}
-                variant="destructive"
-              >
-                <Trash2 class="size-4" />
-                Delete
-              </ContextMenu.Item>
-            {/if}
-          </ContextMenu.Content>
-        </ContextMenu.Root>
-      {/snippet}
+		{#if data.stacks.length === 0}
+			<div
+				class="border-border/70 rounded-md border border-dashed py-16 text-center"
+			>
+				<p class="text-text-muted text-sm">No stacks match your search.</p>
+			</div>
+		{:else}
+			{#snippet wrapper(item: EntityRow, body: Snippet)}
+				{@const stack = data.stacks.find((p) => p.id === item.id)}
+				<ContextMenu.Root>
+					<ContextMenu.Trigger class="block h-full">
+						{@render body()}
+					</ContextMenu.Trigger>
+					<ContextMenu.Content class="w-56">
+						<ContextMenu.Item onSelect={() => goto(stackHref(item.id))}>
+							<FolderOpen class="size-4" />
+							Open
+						</ContextMenu.Item>
+						<ContextMenu.Item
+							onSelect={() => window.open(stackHref(item.id), "_blank")}
+						>
+							<ExternalLink class="size-4" />
+							Open in new tab
+						</ContextMenu.Item>
+						<ContextMenu.Item onSelect={() => askMove(item.id)}>
+							<FolderInput class="size-4" />
+							Move into…
+						</ContextMenu.Item>
+						<ContextMenu.Item onSelect={() => goto(settingsHref(item.id))}>
+							<SettingsIcon class="size-4" />
+							Settings
+						</ContextMenu.Item>
+						{#if stack}
+							<ContextMenu.Separator />
+							<ContextMenu.Item
+								onSelect={() => askDelete(stack)}
+								variant="destructive"
+							>
+								<Trash2 class="size-4" />
+								Delete
+							</ContextMenu.Item>
+						{/if}
+					</ContextMenu.Content>
+				</ContextMenu.Root>
+			{/snippet}
 
-      {#snippet media(item: { id: string })}
-        <TemplateIcon
-          class="size-8 rounded-lg"
-          fallback={FolderKanban}
-          icon={data.stacks.find((p) => p.id === item.id)?.icon ?? null}
-        />
-      {/snippet}
+			{#snippet media(item: { id: string })}
+				<TemplateIcon
+					class="size-8 rounded-lg"
+					fallback={FolderKanban}
+					icon={data.stacks.find((p) => p.id === item.id)?.icon ?? null}
+				/>
+			{/snippet}
 
-      {#snippet meta(item: { id: string })}
-        {@const stack = data.stacks.find((p) => p.id === item.id)}
-        {#if stack}
-          <span class="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
-            <Server class="size-3.5" />
-            {stack.serviceCount}
-            {serviceLabel(stack.serviceCount)}
-            {#if stack.substackCount > 0}
-              · {stack.substackCount}
-              {stack.substackCount === 1 ? "substack" : "substacks"}
-            {/if}
-          </span>
-        {/if}
-      {/snippet}
+			{#snippet meta(item: { id: string })}
+				{@const stack = data.stacks.find((p) => p.id === item.id)}
+				{#if stack}
+					<span
+						class="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs"
+					>
+						<Server class="size-3.5" />
+						{stack.serviceCount}
+						{serviceLabel(stack.serviceCount)}
+						{#if stack.substackCount > 0}
+							· {stack.substackCount}
+							{stack.substackCount === 1 ? "substack" : "substacks"}
+						{/if}
+					</span>
+				{/if}
+			{/snippet}
 
-      <EntityList
-        items={data.stacks.map((stack) => ({
-          description: stack.description,
-          href: stackHref(stack.id),
-          id: stack.id,
-          title: stack.path,
-        }))}
-        media={media}
-        meta={meta}
-        view={view}
-        wrapper={wrapper}
-      />
+			<EntityList
+				items={data.stacks.map((stack) => ({
+					description: stack.description,
+					href: stackHref(stack.id),
+					id: stack.id,
+					title: stack.path,
+				}))}
+				{media}
+				{meta}
+				{view}
+				{wrapper}
+			/>
 
-      <Pagination
-        label="stacks"
-        page={data.page}
-        perPage={data.perPage}
-        total={data.total}
-      />
-    {/if}
-  {/if}
+			<Pagination
+				label="stacks"
+				page={data.page}
+				perPage={data.perPage}
+				total={data.total}
+			/>
+		{/if}
+	{/if}
 </div>
 
-<StackMoveDialog stack={moveTarget} stacks={data.allStacks} bind:open={moveOpen} />
+<StackMoveDialog
+	stack={moveTarget}
+	stacks={data.allStacks}
+	bind:open={moveOpen}
+/>
 
 <form
-  action={deleteTarget ? `${settingsHref(deleteTarget.id)}?/delete` : undefined}
-  class="hidden"
-  method="POST"
-  bind:this={deleteForm}
-  use:enhance={enhanceToast({
-    error: "Couldn't delete the stack.",
-    loading: "Deleting the stack",
-    onFailure: (result) => {
-      if (result?.detachFailed && !forceDelete) {
-        detachError = String(result.error ?? "");
-        forceDeleteDialogOpen = true;
-      }
-      forceDelete = false;
-    },
-    success: "Stack deleted.",
-  })}
+	action={deleteTarget ? `${settingsHref(deleteTarget.id)}?/delete` : undefined}
+	class="hidden"
+	method="POST"
+	bind:this={deleteForm}
+	use:enhance={enhanceToast({
+		error: "Couldn't delete the stack.",
+		loading: "Deleting the stack",
+		onFailure: (result) => {
+			if (result?.detachFailed && !forceDelete) {
+				detachError = String(result.error ?? "");
+				forceDeleteDialogOpen = true;
+			}
+			forceDelete = false;
+		},
+		success: "Stack deleted.",
+	})}
 >
-  <input name="force" type="hidden" value={forceDelete ? "true" : "false"} />
+	<input name="force" type="hidden" value={forceDelete ? "true" : "false"} />
 </form>
 
 <ConfirmDialog
-  confirmLabel="Delete stack"
-  description="Every service in this stack and its container is removed. This can't be undone."
-  onConfirm={() => deleteForm?.requestSubmit()}
-  title="Delete {deleteTarget?.name ?? 'stack'}?"
-  bind:open={deleteDialogOpen}
+	confirmLabel="Delete stack"
+	description="Every service in this stack and its container is removed. This can't be undone."
+	onConfirm={() => deleteForm?.requestSubmit()}
+	title="Delete {deleteTarget?.name ?? 'stack'}?"
+	bind:open={deleteDialogOpen}
 />
 
 <ConfirmDialog
-  confirmLabel="Delete anyway"
-  description={`${detachError} Deleting anyway removes Homerun's records for this stack : any workload still on the host has to be removed by hand.`}
-  onConfirm={async () => {
-    forceDelete = true;
-    await tick();
-    deleteForm?.requestSubmit();
-  }}
-  title="Delete the stack anyway?"
-  bind:open={forceDeleteDialogOpen}
+	confirmLabel="Delete anyway"
+	description={`${detachError} Deleting anyway removes Homerun's records for this stack : any workload still on the host has to be removed by hand.`}
+	onConfirm={async () => {
+		forceDelete = true;
+		await tick();
+		deleteForm?.requestSubmit();
+	}}
+	title="Delete the stack anyway?"
+	bind:open={forceDeleteDialogOpen}
 />

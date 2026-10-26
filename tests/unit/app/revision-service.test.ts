@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -8,18 +9,14 @@ mock.module("$app/env", () => ({
 }));
 
 const { DeploymentDTO } = await import("../../../src/lib/dto/deployment-dto");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { RevisionError, RevisionService } = await import(
-	"../../../src/lib/services/revision.service"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { RevisionError, RevisionService } =
+	await import("../../../src/lib/services/revision.service");
 
 type Row = Record<string, unknown>;
 

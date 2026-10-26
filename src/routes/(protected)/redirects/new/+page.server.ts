@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { RedirectDTO } from "#lib/dto/redirect-dto.js";
 import { Logger } from "#lib/logger.js";
 import { parseRedirectInput } from "#lib/server/redirect-form.js";

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { resolveAdvertisedTokenAuth } from "../../../src/lib/auth-providers";
 
 describe("resolveAdvertisedTokenAuth", () => {

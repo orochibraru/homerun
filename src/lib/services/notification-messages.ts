@@ -12,7 +12,7 @@ import type {
 	ImageUpdateAvailable,
 	ImageUpdateTrial,
 } from "#lib/image-versions.js";
-import { type IpIntel, intelSummary } from "#lib/ip-intel.js";
+import { intelSummary, type IpIntel } from "#lib/ip-intel.js";
 import {
 	deployEvent,
 	deployStartedEvent,

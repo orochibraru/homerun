@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { config, isSmtpEnabled } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
 import { brandedEmail } from "#lib/server/email-layout.js";

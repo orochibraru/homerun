@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import process from "node:process";
+
 import { commandLines, Docs, normalizeCommand } from "./e2e/docs";
 import {
 	AGENT_PORT,

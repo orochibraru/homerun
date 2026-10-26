@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import {
 	PERMISSION_AREAS,
 	PERMISSION_LEVELS,

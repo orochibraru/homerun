@@ -1,16 +1,18 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
 	import { setMode } from "mode-watcher";
 	import { onMount, untrack } from "svelte";
+
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import SurfacePreview from "#lib/components/surface-preview.svelte";
+	import UiModePicker from "#lib/components/ui-mode-picker.svelte";
 	import {
+		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
-		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
-	import UiModePicker from "#lib/components/ui-mode-picker.svelte";
 	import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
 	import { PALETTES } from "#lib/palettes.js";
 	import { title } from "#lib/store/title.js";
@@ -18,7 +20,6 @@
 	import { TAB_LAYOUT_LABELS, TAB_LAYOUTS } from "#lib/tab-layout.js";
 	import { saveToast } from "#lib/toast.js";
 	import { UI_MODE_LABELS } from "#lib/ui-mode.js";
-	import { enhance } from "$app/forms";
 
 	const { data } = $props();
 
@@ -77,306 +78,303 @@
 </script>
 
 {#snippet overridden()}
-    {#if presetName}
-        <span class="text-accent mt-1 block text-xs font-medium">
-            The {presetName} preset overrides this while it's on. It's kept
-            for when you pick None.
-        </span>
-    {/if}
+	{#if presetName}
+		<span class="text-accent mt-1 block text-xs font-medium">
+			The {presetName} preset overrides this while it's on. It's kept for when you
+			pick None.
+		</span>
+	{/if}
 {/snippet}
 
 <div class="space-y-6">
-    <section class="panel rounded-md">
-        <PanelHeader title="Interface">
-            {#snippet description()}
-                How much of Homerun the dashboard shows you. Simple mode hides
-                the engineering features from the sidebar and the tabs; they
-                keep working and their pages stay reachable. The profile menu
-                switches it too.
-            {/snippet}
-            {#snippet trailing()}
-                <SaveButton form="appearance-ui-mode" />
-            {/snippet}
-        </PanelHeader>
-        <form
-            id="appearance-ui-mode"
-            action="?/updateUiMode"
-            class="space-y-4 p-5"
-            method="POST"
-            use:enhance={saveToast("Interface mode")}
-        >
-            <UiModePicker
-                follow={{
-                    description: `Whatever an admin set for this instance, ${UI_MODE_LABELS[data.instanceUiMode].toLowerCase()} today.`,
-                    label: "Follow the instance default",
-                }}
-                name="uiMode"
-                bind:value={uiMode}
-            />
-        </form>
-    </section>
+	<section class="panel rounded-md">
+		<PanelHeader title="Interface">
+			{#snippet description()}
+				How much of Homerun the dashboard shows you. Simple mode hides the
+				engineering features from the sidebar and the tabs; they keep working
+				and their pages stay reachable. The profile menu switches it too.
+			{/snippet}
+			{#snippet trailing()}
+				<SaveButton form="appearance-ui-mode" />
+			{/snippet}
+		</PanelHeader>
+		<form
+			id="appearance-ui-mode"
+			action="?/updateUiMode"
+			class="space-y-4 p-5"
+			method="POST"
+			use:enhance={saveToast("Interface mode")}
+		>
+			<UiModePicker
+				follow={{
+					description: `Whatever an admin set for this instance, ${UI_MODE_LABELS[data.instanceUiMode].toLowerCase()} today.`,
+					label: "Follow the instance default",
+				}}
+				name="uiMode"
+				bind:value={uiMode}
+			/>
+		</form>
+	</section>
 
-    <section class="panel rounded-md">
-        <PanelHeader title="Presets">
-            {#snippet description()}
-                A complete look from another era: its own theme, style and
-                colors, overriding the ones below while it's on. Picking one
-                previews it on this page; save to keep it.
-            {/snippet}
-            {#snippet trailing()}
-                <SaveButton form="appearance-preset" />
-            {/snippet}
-        </PanelHeader>
-        <form
-            id="appearance-preset"
-            action="?/updatePreset"
-            class="space-y-4 p-5"
-            method="POST"
-            use:enhance={saveToast("Preset")}
-        >
-            <input name="preset" type="hidden" value={preset} />
-            <div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
-                {#each [{ description: "Your own theme, style and colors below.", id: "", name: "None" }, ...PRESETS] as option (option.id)}
-                    <button
-                        aria-pressed={preset === option.id}
-                        class="flex flex-col gap-3 rounded-md border p-3 text-left transition-colors {preset ===
-                        option.id
-                            ? 'border-accent bg-accent-light'
-                            : 'border-border hover:bg-surface-2'}"
-                        onclick={() => {
-                            preset = option.id;
-                            preview();
-                        }}
-                        type="button"
-                    >
-                        <SurfacePreview surface={option.id || surfaceStyle} />
-                        <span>
-                            <span class="text-text block text-sm font-medium">
-                                {option.name}
-                            </span>
-                            <span class="text-text-muted block text-xs">
-                                {option.description}
-                            </span>
-                        </span>
-                    </button>
-                {/each}
-            </div>
-        </form>
-    </section>
+	<section class="panel rounded-md">
+		<PanelHeader title="Presets">
+			{#snippet description()}
+				A complete look from another era: its own theme, style and colors,
+				overriding the ones below while it's on. Picking one previews it on this
+				page; save to keep it.
+			{/snippet}
+			{#snippet trailing()}
+				<SaveButton form="appearance-preset" />
+			{/snippet}
+		</PanelHeader>
+		<form
+			id="appearance-preset"
+			action="?/updatePreset"
+			class="space-y-4 p-5"
+			method="POST"
+			use:enhance={saveToast("Preset")}
+		>
+			<input name="preset" type="hidden" value={preset} />
+			<div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
+				{#each [{ description: "Your own theme, style and colors below.", id: "", name: "None" }, ...PRESETS] as option (option.id)}
+					<button
+						aria-pressed={preset === option.id}
+						class="flex flex-col gap-3 rounded-md border p-3 text-left transition-colors {preset ===
+						option.id
+							? 'border-accent bg-accent-light'
+							: 'border-border hover:bg-surface-2'}"
+						onclick={() => {
+							preset = option.id;
+							preview();
+						}}
+						type="button"
+					>
+						<SurfacePreview surface={option.id || surfaceStyle} />
+						<span>
+							<span class="text-text block text-sm font-medium">
+								{option.name}
+							</span>
+							<span class="text-text-muted block text-xs">
+								{option.description}
+							</span>
+						</span>
+					</button>
+				{/each}
+			</div>
+		</form>
+	</section>
 
-    <!-- ═══ Theme ═══ -->
-    <section class="panel rounded-md">
-        <PanelHeader title="Theme">
-            {#snippet description()}
-                "Match system" follows your OS's own light/dark setting and
-                updates live if it changes.
-                {@render overridden()}
-            {/snippet}
-            {#snippet trailing()}
-                <SaveButton form="appearance-theme" />
-            {/snippet}
-        </PanelHeader>
-        <form
-            id="appearance-theme"
-            action="?/updateTheme"
-            class="space-y-4 p-5"
-            method="POST"
-            use:enhance={saveToast("Theme")}
-        >
-            <SelectRoot
-                name="theme"
-                type="single"
-                bind:value={theme}
-                onValueChange={(e) => setMode(theme)}
-            >
-                <SelectTrigger id="theme">
-                    {themeLabels[theme]}
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem label="Match system" value="system" />
-                    <SelectItem label="Light" value="light" />
-                    <SelectItem label="Dark" value="dark" />
-                </SelectContent>
-            </SelectRoot>
-        </form>
-    </section>
+	<!-- ═══ Theme ═══ -->
+	<section class="panel rounded-md">
+		<PanelHeader title="Theme">
+			{#snippet description()}
+				"Match system" follows your OS's own light/dark setting and updates live
+				if it changes.
+				{@render overridden()}
+			{/snippet}
+			{#snippet trailing()}
+				<SaveButton form="appearance-theme" />
+			{/snippet}
+		</PanelHeader>
+		<form
+			id="appearance-theme"
+			action="?/updateTheme"
+			class="space-y-4 p-5"
+			method="POST"
+			use:enhance={saveToast("Theme")}
+		>
+			<SelectRoot
+				name="theme"
+				type="single"
+				bind:value={theme}
+				onValueChange={(e) => setMode(theme)}
+			>
+				<SelectTrigger id="theme">
+					{themeLabels[theme]}
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem label="Match system" value="system" />
+					<SelectItem label="Light" value="light" />
+					<SelectItem label="Dark" value="dark" />
+				</SelectContent>
+			</SelectRoot>
+		</form>
+	</section>
 
-    <section class="panel rounded-md">
-        <PanelHeader title="Style">
-            {#snippet description()}
-                How panels, cards and buttons are drawn. Picking one previews
-                it on this page; save to keep it.
-                {@render overridden()}
-            {/snippet}
-            {#snippet trailing()}
-                <SaveButton form="appearance-style" />
-            {/snippet}
-        </PanelHeader>
-        <form
-            id="appearance-style"
-            action="?/updateSurface"
-            class="space-y-4 p-5"
-            method="POST"
-            use:enhance={saveToast("Style")}
-        >
-            <input name="surfaceStyle" type="hidden" value={surfaceStyle} />
-            <div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
-                {#each SURFACE_STYLES as style (style.id)}
-                    <button
-                        aria-pressed={surfaceStyle === style.id}
-                        class="flex flex-col gap-3 rounded-md border p-3 text-left transition-colors {surfaceStyle ===
-                        style.id
-                            ? 'border-accent bg-accent-light'
-                            : 'border-border hover:bg-surface-2'}"
-                        onclick={() => {
-                            surfaceStyle = style.id;
-                            preview();
-                        }}
-                        type="button"
-                    >
-                        <SurfacePreview surface={style.id} />
-                        <span>
-                            <span class="text-text block text-sm font-medium">
-                                {style.name}{style.id === DEFAULT_SURFACE ? " (default)" : ""}
-                            </span>
-                            <span class="text-text-muted block text-xs">
-                                {style.description}
-                            </span>
-                        </span>
-                    </button>
-                {/each}
-            </div>
-        </form>
-    </section>
+	<section class="panel rounded-md">
+		<PanelHeader title="Style">
+			{#snippet description()}
+				How panels, cards and buttons are drawn. Picking one previews it on this
+				page; save to keep it.
+				{@render overridden()}
+			{/snippet}
+			{#snippet trailing()}
+				<SaveButton form="appearance-style" />
+			{/snippet}
+		</PanelHeader>
+		<form
+			id="appearance-style"
+			action="?/updateSurface"
+			class="space-y-4 p-5"
+			method="POST"
+			use:enhance={saveToast("Style")}
+		>
+			<input name="surfaceStyle" type="hidden" value={surfaceStyle} />
+			<div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
+				{#each SURFACE_STYLES as style (style.id)}
+					<button
+						aria-pressed={surfaceStyle === style.id}
+						class="flex flex-col gap-3 rounded-md border p-3 text-left transition-colors {surfaceStyle ===
+						style.id
+							? 'border-accent bg-accent-light'
+							: 'border-border hover:bg-surface-2'}"
+						onclick={() => {
+							surfaceStyle = style.id;
+							preview();
+						}}
+						type="button"
+					>
+						<SurfacePreview surface={style.id} />
+						<span>
+							<span class="text-text block text-sm font-medium">
+								{style.name}{style.id === DEFAULT_SURFACE ? " (default)" : ""}
+							</span>
+							<span class="text-text-muted block text-xs">
+								{style.description}
+							</span>
+						</span>
+					</button>
+				{/each}
+			</div>
+		</form>
+	</section>
 
-    <!-- ═══ Colors ═══ -->
-    <section class="panel rounded-md">
-        <PanelHeader title="Colors">
-            {#snippet description()}
-                A palette sets the accent (buttons, links, tab icons) and the
-                hues charts, category tiles and the background use, all
-                picked to go together. Custom sets the accent alone.
-                {@render overridden()}
-            {/snippet}
-            {#snippet trailing()}
-                <SaveButton form="appearance-colors" />
-            {/snippet}
-        </PanelHeader>
-        <form
-            id="appearance-colors"
-            action="?/updateColors"
-            class="space-y-4 p-5"
-            method="POST"
-            use:enhance={saveToast("Colors")}
-        >
-            <input name="palette" type="hidden" value={palette} />
-            <input name="accentColor" type="hidden" value={accentColor} />
-            <div class="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-3">
-                {#each choices as choice (choice.id)}
-                    <button
-                        class="flex flex-col gap-2 rounded-md border p-3 text-left transition-colors {palette ===
-                        choice.id
-                            ? 'border-accent bg-accent-light'
-                            : 'border-border hover:bg-surface-2'}"
-                        onclick={() => {
-                            palette = choice.id;
-                        }}
-                        type="button"
-                    >
-                        <span class="text-text text-sm font-medium">
-                            {choice.name}{choice.id === "" ? " (default)" : ""}
-                        </span>
-                        <span class="flex gap-1">
-                            <span
-                                class="size-5 rounded-full"
-                                style="background-color: {choice.accent}"
-                            ></span>
-                            {#each choice.charts as hue, index (index)}
-                                <span
-                                    class="size-5 rounded-full opacity-80"
-                                    style="background-color: {hue}"
-                                ></span>
-                            {/each}
-                        </span>
-                    </button>
-                {/each}
-                <label
-                    class="flex cursor-pointer flex-col gap-2 rounded-md border p-3 transition-colors {palette ===
-                    'custom'
-                        ? 'border-accent bg-accent-light'
-                        : 'border-border hover:bg-surface-2'}"
-                >
-                    <span class="text-text text-sm font-medium">Custom</span>
-                    <input
-                        aria-label="Custom accent color"
-                        class="border-border h-5 w-16 cursor-pointer rounded border p-0"
-                        oninput={() => {
-                            palette = "custom";
-                        }}
-                        type="color"
-                        bind:value={accentColor}
-                    />
-                </label>
-            </div>
-        </form>
-    </section>
+	<!-- ═══ Colors ═══ -->
+	<section class="panel rounded-md">
+		<PanelHeader title="Colors">
+			{#snippet description()}
+				A palette sets the accent (buttons, links, tab icons) and the hues
+				charts, category tiles and the background use, all picked to go
+				together. Custom sets the accent alone.
+				{@render overridden()}
+			{/snippet}
+			{#snippet trailing()}
+				<SaveButton form="appearance-colors" />
+			{/snippet}
+		</PanelHeader>
+		<form
+			id="appearance-colors"
+			action="?/updateColors"
+			class="space-y-4 p-5"
+			method="POST"
+			use:enhance={saveToast("Colors")}
+		>
+			<input name="palette" type="hidden" value={palette} />
+			<input name="accentColor" type="hidden" value={accentColor} />
+			<div class="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-3">
+				{#each choices as choice (choice.id)}
+					<button
+						class="flex flex-col gap-2 rounded-md border p-3 text-left transition-colors {palette ===
+						choice.id
+							? 'border-accent bg-accent-light'
+							: 'border-border hover:bg-surface-2'}"
+						onclick={() => {
+							palette = choice.id;
+						}}
+						type="button"
+					>
+						<span class="text-text text-sm font-medium">
+							{choice.name}{choice.id === "" ? " (default)" : ""}
+						</span>
+						<span class="flex gap-1">
+							<span
+								class="size-5 rounded-full"
+								style="background-color: {choice.accent}"
+							></span>
+							{#each choice.charts as hue, index (index)}
+								<span
+									class="size-5 rounded-full opacity-80"
+									style="background-color: {hue}"
+								></span>
+							{/each}
+						</span>
+					</button>
+				{/each}
+				<label
+					class="flex cursor-pointer flex-col gap-2 rounded-md border p-3 transition-colors {palette ===
+					'custom'
+						? 'border-accent bg-accent-light'
+						: 'border-border hover:bg-surface-2'}"
+				>
+					<span class="text-text text-sm font-medium">Custom</span>
+					<input
+						aria-label="Custom accent color"
+						class="border-border h-5 w-16 cursor-pointer rounded border p-0"
+						oninput={() => {
+							palette = "custom";
+						}}
+						type="color"
+						bind:value={accentColor}
+					/>
+				</label>
+			</div>
+		</form>
+	</section>
 
-    <section class="panel rounded-md">
-        <PanelHeader title="Tabs">
-            {#snippet description()}
-                Where a page's tabs go. Beside the page, they become a column
-                of their own next to the content, on screens wide enough for
-                it.
-            {/snippet}
-            {#snippet trailing()}
-                <SaveButton form="appearance-tabs" />
-            {/snippet}
-        </PanelHeader>
-        <form
-            id="appearance-tabs"
-            action="?/updateTabLayout"
-            class="space-y-4 p-5"
-            method="POST"
-            use:enhance={saveToast("Tab layout")}
-        >
-            <SelectRoot name="tabLayout" type="single" bind:value={tabLayout}>
-                <SelectTrigger id="tabLayout">{TAB_LAYOUT_LABELS[tabLayout]}</SelectTrigger>
-                <SelectContent>
-                    {#each TAB_LAYOUTS as option (option)}
-                        <SelectItem label={TAB_LAYOUT_LABELS[option]} value={option} />
-                    {/each}
-                </SelectContent>
-            </SelectRoot>
-        </form>
-    </section>
+	<section class="panel rounded-md">
+		<PanelHeader title="Tabs">
+			{#snippet description()}
+				Where a page's tabs go. Beside the page, they become a column of their
+				own next to the content, on screens wide enough for it.
+			{/snippet}
+			{#snippet trailing()}
+				<SaveButton form="appearance-tabs" />
+			{/snippet}
+		</PanelHeader>
+		<form
+			id="appearance-tabs"
+			action="?/updateTabLayout"
+			class="space-y-4 p-5"
+			method="POST"
+			use:enhance={saveToast("Tab layout")}
+		>
+			<SelectRoot name="tabLayout" type="single" bind:value={tabLayout}>
+				<SelectTrigger id="tabLayout"
+					>{TAB_LAYOUT_LABELS[tabLayout]}</SelectTrigger
+				>
+				<SelectContent>
+					{#each TAB_LAYOUTS as option (option)}
+						<SelectItem label={TAB_LAYOUT_LABELS[option]} value={option} />
+					{/each}
+				</SelectContent>
+			</SelectRoot>
+		</form>
+	</section>
 
-    <section class="panel rounded-md">
-        <PanelHeader title="Lists">
-            {#snippet description()}
-                How many rows every paginated list shows per page by default.
-            {/snippet}
-            {#snippet trailing()}
-                <SaveButton form="appearance-lists" />
-            {/snippet}
-        </PanelHeader>
-        <form
-            id="appearance-lists"
-            action="?/updatePerPage"
-            class="space-y-4 p-5"
-            method="POST"
-            use:enhance={saveToast("Page size")}
-        >
-            <SelectRoot name="perPage" type="single" bind:value={perPage}>
-                <SelectTrigger id="perPage">{perPage} per page</SelectTrigger>
-                <SelectContent>
-                    {#each PER_PAGE_OPTIONS as option (option)}
-                        <SelectItem
-                            label="{option} per page"
-                            value={String(option)}
-                        />
-                    {/each}
-                </SelectContent>
-            </SelectRoot>
-        </form>
-    </section>
+	<section class="panel rounded-md">
+		<PanelHeader title="Lists">
+			{#snippet description()}
+				How many rows every paginated list shows per page by default.
+			{/snippet}
+			{#snippet trailing()}
+				<SaveButton form="appearance-lists" />
+			{/snippet}
+		</PanelHeader>
+		<form
+			id="appearance-lists"
+			action="?/updatePerPage"
+			class="space-y-4 p-5"
+			method="POST"
+			use:enhance={saveToast("Page size")}
+		>
+			<SelectRoot name="perPage" type="single" bind:value={perPage}>
+				<SelectTrigger id="perPage">{perPage} per page</SelectTrigger>
+				<SelectContent>
+					{#each PER_PAGE_OPTIONS as option (option)}
+						<SelectItem label="{option} per page" value={String(option)} />
+					{/each}
+				</SelectContent>
+			</SelectRoot>
+		</form>
+	</section>
 </div>

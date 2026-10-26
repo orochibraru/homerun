@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -8,64 +9,46 @@ mock.module("$app/env", () => ({
 }));
 
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-const { UptimeCheckDTO } = await import(
-	"../../../src/lib/dto/uptime-check-dto"
-);
-const { ServiceVolumeDTO } = await import(
-	"../../../src/lib/dto/service-volume-dto"
-);
+const { UptimeCheckDTO } =
+	await import("../../../src/lib/dto/uptime-check-dto");
+const { ServiceVolumeDTO } =
+	await import("../../../src/lib/dto/service-volume-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
-const { ImageVersionService } = await import(
-	"../../../src/lib/services/image-version.service"
-);
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { MonitoringService } = await import(
-	"../../../src/lib/services/monitoring.service"
-);
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
-const { RevisionService } = await import(
-	"../../../src/lib/services/revision.service"
-);
+const { ImageVersionService } =
+	await import("../../../src/lib/services/image-version.service");
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { MonitoringService } =
+	await import("../../../src/lib/services/monitoring.service");
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
+const { RevisionService } =
+	await import("../../../src/lib/services/revision.service");
 const { requiredPermission } = await import("../../../src/lib/permissions");
 
-const versionRoute = await import(
-	"../../../src/routes/api/v1/services/[serviceId]/version/+server"
-);
-const pinRoute = await import(
-	"../../../src/routes/api/v1/services/[serviceId]/version/pin/+server"
-);
-const checkRoute = await import(
-	"../../../src/routes/api/v1/services/[serviceId]/version/check/+server"
-);
-const updateRoute = await import(
-	"../../../src/routes/api/v1/services/[serviceId]/version/update/+server"
-);
-const serviceMonitoringRoute = await import(
-	"../../../src/routes/api/v1/services/[serviceId]/monitoring/+server"
-);
-const monitoringRoute = await import(
-	"../../../src/routes/api/v1/monitoring/+server"
-);
-const logsRoute = await import(
-	"../../../src/routes/api/v1/system/logs/+server"
-);
-const containersRoute = await import(
-	"../../../src/routes/api/v1/system/containers/+server"
-);
-const containerLogsRoute = await import(
-	"../../../src/routes/api/v1/system/containers/[containerId]/logs/+server"
-);
+const versionRoute =
+	await import("../../../src/routes/api/v1/services/[serviceId]/version/+server");
+const pinRoute =
+	await import("../../../src/routes/api/v1/services/[serviceId]/version/pin/+server");
+const checkRoute =
+	await import("../../../src/routes/api/v1/services/[serviceId]/version/check/+server");
+const updateRoute =
+	await import("../../../src/routes/api/v1/services/[serviceId]/version/update/+server");
+const serviceMonitoringRoute =
+	await import("../../../src/routes/api/v1/services/[serviceId]/monitoring/+server");
+const monitoringRoute =
+	await import("../../../src/routes/api/v1/monitoring/+server");
+const logsRoute =
+	await import("../../../src/routes/api/v1/system/logs/+server");
+const containersRoute =
+	await import("../../../src/routes/api/v1/system/containers/+server");
+const containerLogsRoute =
+	await import("../../../src/routes/api/v1/system/containers/[containerId]/logs/+server");
 const { AppLogDTO } = await import("../../../src/lib/dto/app-log-dto");
-const cleanupRoute = await import(
-	"../../../src/routes/api/v1/system/docker-cleanup/+server"
-);
+const cleanupRoute =
+	await import("../../../src/routes/api/v1/system/docker-cleanup/+server");
 
 afterEach(() => {
 	restoreStubs();
@@ -403,9 +386,8 @@ describe("the Docker cleanup route", () => {
 
 describe("the service PATCH body", () => {
 	test("takes the update watch settings", async () => {
-		const { updateServiceApiBody } = await import(
-			"../../../src/lib/server/validation/api"
-		);
+		const { updateServiceApiBody } =
+			await import("../../../src/lib/server/validation/api");
 		expect(
 			updateServiceApiBody.parse({
 				updateCheckEnabled: true,

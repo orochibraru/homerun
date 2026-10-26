@@ -4,6 +4,7 @@ import {
 	randomInt,
 	timingSafeEqual,
 } from "node:crypto";
+
 import {
 	EMAIL_OTP_METHOD,
 	type EmailSignIn,
@@ -15,12 +16,13 @@ import { config, isSmtpEnabled } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { Logger } from "#lib/logger.js";
 import { brandedEmail } from "#lib/server/email-layout.js";
+
 import { auth } from "./auth.ts";
-import { EmailService } from "./email.service.ts";
 import {
 	accountSetupPendingKey,
 	emailSignInAvailability,
 } from "./email-sign-in.ts";
+import { EmailService } from "./email.service.ts";
 
 const logger = new Logger("AccountSetup");
 

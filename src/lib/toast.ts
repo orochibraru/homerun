@@ -1,6 +1,6 @@
+import type { ActionResult, SubmitFunction } from "$app/forms";
 import type { ExternalToast } from "svelte-sonner";
 import { toast } from "svelte-sonner";
-import type { ActionResult, SubmitFunction } from "$app/forms";
 
 export type ActionData = Record<string, unknown> | undefined;
 
@@ -49,8 +49,7 @@ function resultError(
 		return new Error(toastError(result.error, fallback));
 	}
 	const data = result.data as
-		| { error?: string; errors?: Record<string, string[]> }
-		| undefined;
+		{ error?: string; errors?: Record<string, string[]> } | undefined;
 
 	const firstFieldError = data?.errors
 		? Object.values(data.errors).flat()[0]

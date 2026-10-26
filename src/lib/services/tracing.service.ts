@@ -14,8 +14,8 @@ import {
 import {
 	OtlpError,
 	type ParsedResource,
-	PIPELINE_ATTRIBUTE,
 	parseOtlpTraces,
+	PIPELINE_ATTRIBUTE,
 	spanOwner,
 	type TracedService,
 } from "#lib/tracing/otlp.js";
@@ -25,9 +25,10 @@ import {
 	retentionCutoff,
 	tracingSettings,
 } from "#lib/tracing/settings.js";
+
+import { DockerService } from "./docker.service.ts";
 import { errorPagesTarget } from "./docker/error-pages.ts";
 import type { OtelDesiredState } from "./docker/otel-container.ts";
-import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("Tracing");
 

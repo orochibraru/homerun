@@ -1,4 +1,5 @@
 import type { z } from "zod";
+
 import { isSmtpEnabled } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { RegistryTokenDTO } from "#lib/dto/registry-token-dto.js";
@@ -14,13 +15,14 @@ import type {
 	tlsSettingsApiBody,
 } from "#lib/server/validation/settings-api.js";
 import { DEFAULT_UI_MODE } from "#lib/ui-mode.js";
+
 import { enqueueCoreServiceJob } from "./core-service-queue.ts";
 import {
 	InstanceSettingsError,
 	InstanceSettingsService,
 } from "./instance-settings.service.ts";
-import type { CoreServiceJob } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
+import type { CoreServiceJob } from "./queue/payloads.ts";
 import { RegistryService } from "./registry.service.ts";
 
 type InstanceSettingsBody = z.infer<typeof instanceSettingsApiBody>;

@@ -224,15 +224,17 @@
 <svelte:window onpagehide={closeSession} />
 
 {#if connecting}
-  <p class="border-border text-text-muted flex items-center gap-2 border-b px-5 py-2 text-xs">
-    <Loader2 class="size-3.5 animate-spin" />
-    Opening session…
-  </p>
+	<p
+		class="border-border text-text-muted flex items-center gap-2 border-b px-5 py-2 text-xs"
+	>
+		<Loader2 class="size-3.5 animate-spin" />
+		Opening session…
+	</p>
 {:else if errored}
-  <p class="border-border text-destructive border-b px-5 py-2 text-xs">
-    {errored}
-  </p>
+	<p class="border-border text-destructive border-b px-5 py-2 text-xs">
+		{errored}
+	</p>
 {/if}
 <div class="bg-bg p-3 {className}">
-  <div class="size-full" bind:this={termEl}></div>
+	<div class="size-full" bind:this={termEl}></div>
 </div>

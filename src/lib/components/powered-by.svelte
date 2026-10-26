@@ -5,11 +5,11 @@
 </script>
 
 <p class="text-text-subtle text-center text-xs {className}">
-  Powered by
-  <a
-    class="hover:text-text underline underline-offset-2"
-    href={HOMERUN_URL}
-    rel="noopener noreferrer"
-    target="_blank">Homerun</a
-  >
+	Powered by
+	<a
+		class="hover:text-text underline underline-offset-2"
+		href={HOMERUN_URL}
+		rel="noopener noreferrer"
+		target="_blank">Homerun</a
+	>
 </p>

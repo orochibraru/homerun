@@ -4,13 +4,7 @@ import { SECRET_MASK } from "#lib/formatting.js";
 export type LinkFormat = "url" | "postgresql" | "jdbc" | "vars";
 
 export type LinkEngineId =
-	| "postgres"
-	| "mysql"
-	| "mariadb"
-	| "mongo"
-	| "redis"
-	| "rabbitmq"
-	| "generic";
+	"postgres" | "mysql" | "mariadb" | "mongo" | "redis" | "rabbitmq" | "generic";
 
 export interface LinkEngine {
 	defaultPort: number;

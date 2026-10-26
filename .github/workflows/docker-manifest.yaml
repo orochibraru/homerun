@@ -11,8 +11,7 @@ on:
         type: string
       registry_name:
         required: true
-        description:
-          "Docker registry target to authenticate against and push to"
+        description: "Docker registry target to authenticate against and push to"
         type: string
       registry_username:
         required: true

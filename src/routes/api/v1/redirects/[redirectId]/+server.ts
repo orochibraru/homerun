@@ -3,8 +3,8 @@ import { Logger } from "#lib/logger.js";
 import { parseRedirectInput } from "#lib/server/redirect-form.js";
 import { redirectApiBody } from "#lib/server/validation/api.js";
 import {
-	RedirectService,
 	redirectHost,
+	RedirectService,
 } from "#lib/services/redirect.service.js";
 
 const logger = new Logger("API");

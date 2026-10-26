@@ -1,11 +1,12 @@
+import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
+
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { convertGithubAppManifest } from "#lib/github-app.js";
 import { Logger } from "#lib/logger.js";
 import { can } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { GitProviderService } from "#lib/services/git-provider.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("GitProviders");
 

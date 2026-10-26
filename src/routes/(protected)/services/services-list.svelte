@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import {
 		Activity,
 		CornerDownRight,
@@ -11,6 +12,7 @@
 		Server,
 	} from "@lucide/svelte";
 	import type { Snippet } from "svelte";
+
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
 	import EntityList, {
@@ -51,7 +53,7 @@
 	import { enhanceToast } from "#lib/toast.js";
 	import type { ContainerStatus } from "#lib/types.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
-	import { resolve } from "$app/paths";
+
 	import BulkBar from "./bulk-bar.svelte";
 	import ServiceRowActions from "./service-row-actions.svelte";
 
@@ -205,216 +207,217 @@
 </script>
 
 <div class={selection.count > 0 ? "pb-28" : ""}>
-  {#if data.total === 0 && !filtered}
-    <div class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-20 text-center">
-      <Server class="text-text-muted mb-3 size-10 opacity-40" />
-      <p class="text-text-muted text-sm font-medium">No services yet</p>
-      <p class="text-text-subtle mt-1 text-xs">Point at an image, fill in a config, and deploy.</p>
+	{#if data.total === 0 && !filtered}
+		<div
+			class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-20 text-center"
+		>
+			<Server class="text-text-muted mb-3 size-10 opacity-40" />
+			<p class="text-text-muted text-sm font-medium">No services yet</p>
+			<p class="text-text-subtle mt-1 text-xs">
+				Point at an image, fill in a config, and deploy.
+			</p>
 
-      <div
-        class="flex flex-wrap items-center justify-center gap-2"
-      >
-        <Button
-          class="mt-5"
-          href={resolve('services/new')}
-          size="sm"
-        ><Plus class="size-4" />Deploy your first service</Button>
+			<div class="flex flex-wrap items-center justify-center gap-2">
+				<Button class="mt-5" href={resolve("services/new")} size="sm"
+					><Plus class="size-4" />Deploy your first service</Button
+				>
 
-        <Button
-          class="mt-5"
-          href={resolve('templates')}
-          size="sm"
-          variant="outline"
-        >
-          <LayoutGridIcon class="size-4" />
-          Start from a template
-        </Button>
-      </div>
-    </div>
-  {:else if tree}
-    <div class="mb-3 flex flex-wrap items-center gap-2">
-      <p class="text-text-subtle text-xs">
-        Every service, with what it connects to underneath. Connections are read
-        from env vars pointing at another service's slug.
-      </p>
-      <Button
-        class="ml-auto"
-        href={resolve('services')}
-        size="sm"
-        variant="outline"
-      >
-        <List class="size-4" />
-        Back to the list
-      </Button>
-    </div>
-    <ServiceTree
-      nodes={tree.forest}
-      previews={tree.previews}
-      services={tree.services}
-      stackNames={new Map()}
-      wrapper={treeWrapper}
-    />
-  {:else}
-    <EntityToolbar
-      sorts={BASE_SORTS}
-      filters={filters}
-      placeholder="Search services by name, image or domain…"
-    >
-      {#snippet trailing()}
-        <Button
-          href="{resolve('services')}?view=tree"
-          size="sm"
-          variant="outline"
-        ><Network class="size-4" />Dependencies</Button>
+				<Button
+					class="mt-5"
+					href={resolve("templates")}
+					size="sm"
+					variant="outline"
+				>
+					<LayoutGridIcon class="size-4" />
+					Start from a template
+				</Button>
+			</div>
+		</div>
+	{:else if tree}
+		<div class="mb-3 flex flex-wrap items-center gap-2">
+			<p class="text-text-subtle text-xs">
+				Every service, with what it connects to underneath. Connections are read
+				from env vars pointing at another service's slug.
+			</p>
+			<Button
+				class="ml-auto"
+				href={resolve("services")}
+				size="sm"
+				variant="outline"
+			>
+				<List class="size-4" />
+				Back to the list
+			</Button>
+		</div>
+		<ServiceTree
+			nodes={tree.forest}
+			previews={tree.previews}
+			services={tree.services}
+			stackNames={new Map()}
+			wrapper={treeWrapper}
+		/>
+	{:else}
+		<EntityToolbar
+			sorts={BASE_SORTS}
+			{filters}
+			placeholder="Search services by name, image or domain…"
+		>
+			{#snippet trailing()}
+				<Button
+					href="{resolve('services')}?view=tree"
+					size="sm"
+					variant="outline"><Network class="size-4" />Dependencies</Button
+				>
 
-        <ViewModeToggle view={view} />
-      {/snippet}
-    </EntityToolbar>
+				<ViewModeToggle {view} />
+			{/snippet}
+		</EntityToolbar>
 
-    {#if data.services.length === 0}
-      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
-        <p class="text-text-muted text-sm">No services match your filters.</p>
-      </div>
-    {:else}
-      <SelectAllRow
-        noun="services"
-        selection={selection}
-        visibleCount={data.services.length}
-      />
+		{#if data.services.length === 0}
+			<div
+				class="border-border/70 rounded-md border border-dashed py-16 text-center"
+			>
+				<p class="text-text-muted text-sm">No services match your filters.</p>
+			</div>
+		{:else}
+			<SelectAllRow
+				noun="services"
+				{selection}
+				visibleCount={data.services.length}
+			/>
 
-      {#snippet wrapper(item: EntityRow, body: import("svelte").Snippet)}
-        {@const svc = byId(item.id)}
-        {#if svc}
-          <ServiceContextMenu
-            onaction={(op, id) => menuHost?.run(op, id)}
-            ongroup={(s) => menuHost?.group(s)}
-            onlink={(s) => menuHost?.link(s)}
-            onungroup={(s) => menuHost?.ungroup(s)}
-            service={svc}
-          >
-            {@render body()}
-          </ServiceContextMenu>
-        {:else}
-          {@render body()}
-        {/if}
-      {/snippet}
+			{#snippet wrapper(item: EntityRow, body: import("svelte").Snippet)}
+				{@const svc = byId(item.id)}
+				{#if svc}
+					<ServiceContextMenu
+						onaction={(op, id) => menuHost?.run(op, id)}
+						ongroup={(s) => menuHost?.group(s)}
+						onlink={(s) => menuHost?.link(s)}
+						onungroup={(s) => menuHost?.ungroup(s)}
+						service={svc}
+					>
+						{@render body()}
+					</ServiceContextMenu>
+				{:else}
+					{@render body()}
+				{/if}
+			{/snippet}
 
-      {#snippet media(item: { id: string })}
-        {@const svc = byId(item.id)}
-        <TemplateIcon
-          category={svc?.category ?? null}
-          class="size-8 rounded-lg"
-          fallback={Server}
-          icon={svc?.icon ?? null}
-        />
-        {#if svc}
-          <span class="sr-only">{svc.name}</span>
-        {/if}
-      {/snippet}
+			{#snippet media(item: { id: string })}
+				{@const svc = byId(item.id)}
+				<TemplateIcon
+					category={svc?.category ?? null}
+					class="size-8 rounded-lg"
+					fallback={Server}
+					icon={svc?.icon ?? null}
+				/>
+				{#if svc}
+					<span class="sr-only">{svc.name}</span>
+				{/if}
+			{/snippet}
 
-      {#snippet badge(item: { id: string })}
-        {@const svc = byId(item.id)}
-        {#if svc}
-          <StatusBadge status={statusOf(svc)} />
-        {/if}
-      {/snippet}
+			{#snippet badge(item: { id: string })}
+				{@const svc = byId(item.id)}
+				{#if svc}
+					<StatusBadge status={statusOf(svc)} />
+				{/if}
+			{/snippet}
 
-      {#snippet details(item: { id: string })}
-        <PreviewRows class="ml-4 sm:ml-11" previews={byId(item.id)?.previews ?? []} />
-      {/snippet}
+			{#snippet details(item: { id: string })}
+				<PreviewRows
+					class="ml-4 sm:ml-11"
+					previews={byId(item.id)?.previews ?? []}
+				/>
+			{/snippet}
 
-      {#snippet actions(item: { id: string })}
-        {@const svc = byId(item.id)}
-        {#if svc}
-          <ServiceRowActions
-            deleteVolumes={deleteVolumes}
-            ondelete={(e) => requestDelete(e, svc.name)}
-            pending={pending[svc.id] ?? false}
-            service={svc}
-            submit={(action) => withPending(svc.id, action)}
-          />
-        {/if}
-      {/snippet}
+			{#snippet actions(item: { id: string })}
+				{@const svc = byId(item.id)}
+				{#if svc}
+					<ServiceRowActions
+						{deleteVolumes}
+						ondelete={(e) => requestDelete(e, svc.name)}
+						pending={pending[svc.id] ?? false}
+						service={svc}
+						submit={(action) => withPending(svc.id, action)}
+					/>
+				{/if}
+			{/snippet}
 
-      <div class="space-y-6">
-        {#each groups as { depth, key, label, services } (key)}
-          <div
-            class={depth > 0 ? "border-border border-l pl-4" : ""}
-            style:margin-left="{depth * 1.25}rem"
-          >
-            {#if groups.length > 1}
-              <h2 class="eyebrow mb-2 flex items-center gap-1.5">
-                {#if depth > 0}
-                  <CornerDownRight class="text-text-subtle size-3.5" />
-                {/if}
-                {label}
-              </h2>
-            {/if}
-            {#if services.length > 0}
-              <EntityList
-                actions={actions}
-                details={details}
-                wrapper={wrapper}
-                items={services.map((svc) => ({
-                  description: `${svc.image}:${svc.tag}`,
-                  href: `${resolve('services')}/${svc.id}`,
-                  id: svc.id,
-                subtitle:
-                  primaryHostname(
-                    svc,
-                    data.stacks.find((stack) => stack.id === svc.stackId)?.slug,
-                    serviceDomain,
-                  ) ?? svc.slug,
-                title: svc.name,
-                }))}
-                onToggleSelect={(id) => selection.toggle(id)}
-                badge={badge}
-                media={media}
-                selectedIds={selection.ids}
-                view={view}
-              />
-            {/if}
-          </div>
-        {/each}
-      </div>
+			<div class="space-y-6">
+				{#each groups as { depth, key, label, services } (key)}
+					<div
+						class={depth > 0 ? "border-border border-l pl-4" : ""}
+						style:margin-left="{depth * 1.25}rem"
+					>
+						{#if groups.length > 1}
+							<h2 class="eyebrow mb-2 flex items-center gap-1.5">
+								{#if depth > 0}
+									<CornerDownRight class="text-text-subtle size-3.5" />
+								{/if}
+								{label}
+							</h2>
+						{/if}
+						{#if services.length > 0}
+							<EntityList
+								{actions}
+								{details}
+								{wrapper}
+								items={services.map((svc) => ({
+									description: `${svc.image}:${svc.tag}`,
+									href: `${resolve("services")}/${svc.id}`,
+									id: svc.id,
+									subtitle:
+										primaryHostname(
+											svc,
+											data.stacks.find((stack) => stack.id === svc.stackId)
+												?.slug,
+											serviceDomain,
+										) ?? svc.slug,
+									title: svc.name,
+								}))}
+								onToggleSelect={(id) => selection.toggle(id)}
+								{badge}
+								{media}
+								selectedIds={selection.ids}
+								{view}
+							/>
+						{/if}
+					</div>
+				{/each}
+			</div>
 
-      <Pagination
-        label="services"
-        page={page}
-        perPage={perPage}
-        total={data.total}
-      />
-    {/if}
-  {/if}
+			<Pagination label="services" {page} {perPage} total={data.total} />
+		{/if}
+	{/if}
 </div>
 
 {#snippet treeWrapper(svc: GraphServiceInfo, body: Snippet)}
-  <ServiceContextMenu
-    onaction={(op, id) => menuHost?.run(op, id)}
-    ongroup={(s) => menuHost?.group(s)}
-    onlink={(s) => menuHost?.link(s)}
-    onungroup={(s) => menuHost?.ungroup(s)}
-    service={svc}
-  >
-    {@render body()}
-  </ServiceContextMenu>
+	<ServiceContextMenu
+		onaction={(op, id) => menuHost?.run(op, id)}
+		ongroup={(s) => menuHost?.group(s)}
+		onlink={(s) => menuHost?.link(s)}
+		onungroup={(s) => menuHost?.ungroup(s)}
+		service={svc}
+	>
+		{@render body()}
+	</ServiceContextMenu>
 {/snippet}
 
-<BulkBar selection={selection} />
+<BulkBar {selection} />
 
 <ConfirmDialog
-  bind:open={deleteDialogOpen}
-  confirmLabel="Delete"
-  confirmPhrase={pendingDeleteName}
-  description={`Delete "${pendingDeleteName}"? This removes its container and can't be undone.`}
-  onConfirm={() => pendingDeleteForm?.requestSubmit()}
-  title="Delete service"
+	bind:open={deleteDialogOpen}
+	confirmLabel="Delete"
+	confirmPhrase={pendingDeleteName}
+	description={`Delete "${pendingDeleteName}"? This removes its container and can't be undone.`}
+	onConfirm={() => pendingDeleteForm?.requestSubmit()}
+	title="Delete service"
 >
-  <DeleteVolumesOption bind:checked={deleteVolumes} />
+	<DeleteVolumesOption bind:checked={deleteVolumes} />
 </ConfirmDialog>
 
 <ServiceMenuHost
-  bind:this={menuHost}
-  services={data.services}
-  stacks={data.stacks}
+	bind:this={menuHost}
+	services={data.services}
+	stacks={data.stacks}
 />

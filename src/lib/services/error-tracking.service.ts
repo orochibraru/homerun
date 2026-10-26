@@ -1,4 +1,5 @@
 import type { TraceMap } from "@jridgewell/trace-mapping";
+
 import { config } from "#lib/config.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ErrorEventDTO } from "#lib/dto/error-event-dto.js";
@@ -44,8 +45,9 @@ import { providerForGitUrl } from "#lib/git-clone-url.js";
 import { Logger } from "#lib/logger.js";
 import { deployEnvironment } from "#lib/release-channels.js";
 import type { ErrorIssue, Service } from "#lib/server/db/schema.js";
-import { dashboardRouterPlan } from "./docker/dashboard.ts";
+
 import { DockerService } from "./docker.service.ts";
+import { dashboardRouterPlan } from "./docker/dashboard.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { errorIssueMessage } from "./notification-messages.ts";
 

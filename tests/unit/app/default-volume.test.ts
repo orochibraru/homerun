@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -7,15 +8,12 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { ServiceVolumeDTO } = await import(
-	"../../../src/lib/dto/service-volume-dto"
-);
-const { StorageVolumeDTO } = await import(
-	"../../../src/lib/dto/storage-volume-dto"
-);
-const { attachDefaultDataVolume, attachTemplateVolumes } = await import(
-	"../../../src/lib/services/default-volume"
-);
+const { ServiceVolumeDTO } =
+	await import("../../../src/lib/dto/service-volume-dto");
+const { StorageVolumeDTO } =
+	await import("../../../src/lib/dto/storage-volume-dto");
+const { attachDefaultDataVolume, attachTemplateVolumes } =
+	await import("../../../src/lib/services/default-volume");
 
 afterEach(() => restoreStubs());
 

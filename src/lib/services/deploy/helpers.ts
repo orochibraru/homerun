@@ -14,6 +14,7 @@ import {
 import { DEPLOY_LOG_SCOPE, Logger } from "#lib/logger.js";
 import type { GitProviderKind } from "#lib/server/db/schema.js";
 import { domainHosts, serviceHostnames } from "#lib/service-domains.js";
+
 import { syncDns } from "../dns.service.ts";
 import { GitProviderService } from "../git-provider.service.ts";
 

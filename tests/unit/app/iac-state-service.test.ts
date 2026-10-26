@@ -6,19 +6,15 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { IacStateService } = await import(
-	"../../../src/lib/services/iac-state.service"
-);
+const { IacStateService } =
+	await import("../../../src/lib/services/iac-state.service");
 const { IacProjectDTO } = await import("../../../src/lib/dto/iac-project-dto");
-const { IacStateVersionDTO } = await import(
-	"../../../src/lib/dto/iac-state-version-dto"
-);
-const { ObjectStoreDTO } = await import(
-	"../../../src/lib/dto/object-store-dto"
-);
-const { ObjectStorageService } = await import(
-	"../../../src/lib/services/object-storage.service"
-);
+const { IacStateVersionDTO } =
+	await import("../../../src/lib/dto/iac-state-version-dto");
+const { ObjectStoreDTO } =
+	await import("../../../src/lib/dto/object-store-dto");
+const { ObjectStorageService } =
+	await import("../../../src/lib/services/object-storage.service");
 
 type Project = NonNullable<Awaited<ReturnType<typeof IacProjectDTO.get>>>;
 type Version = NonNullable<Awaited<ReturnType<typeof IacStateVersionDTO.get>>>;

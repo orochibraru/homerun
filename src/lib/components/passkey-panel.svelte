@@ -1,13 +1,14 @@
 <script lang="ts">
+	import { refreshAll } from "$app/navigation";
 	import { Fingerprint, Plus, Trash2 } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
+
 	import { authClient } from "#lib/auth-client.js";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { toastError } from "#lib/toast.js";
-	import { refreshAll } from "$app/navigation";
 
 	interface PasskeyRow {
 		backedUp: boolean;
@@ -86,72 +87,77 @@
 </script>
 
 <div class="space-y-4">
-  {#if passkeys.length > 0}
-    <div class="divide-border border-border divide-y rounded-lg border">
-      {#each passkeys as key (key.id)}
-        <div class="flex items-center gap-3 px-3 py-2.5">
-          <div
-            class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
-          >
-            <Fingerprint class="size-4" />
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-text truncate text-sm font-medium">
-              {key.name || "Unnamed passkey"}
-            </p>
-            <p class="text-text-subtle text-xs">
-              Added {formatDate(key.createdAt)}
-              · {key.deviceType === "multiDevice" ? "synced" : "this device only"}
-            </p>
-          </div>
-          <Button
-            aria-label="Remove passkey"
-            disabled={busy}
-            onclick={() => {
-              pendingDelete = key;
-              confirmOpen = true;
-            }}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Trash2 class="size-4" />
-          </Button>
-        </div>
-      {/each}
-    </div>
-  {:else}
-    <p class="text-text-muted text-sm">No passkeys registered yet.</p>
-  {/if}
+	{#if passkeys.length > 0}
+		<div class="divide-border border-border divide-y rounded-lg border">
+			{#each passkeys as key (key.id)}
+				<div class="flex items-center gap-3 px-3 py-2.5">
+					<div
+						class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
+					>
+						<Fingerprint class="size-4" />
+					</div>
+					<div class="min-w-0 flex-1">
+						<p class="text-text truncate text-sm font-medium">
+							{key.name || "Unnamed passkey"}
+						</p>
+						<p class="text-text-subtle text-xs">
+							Added {formatDate(key.createdAt)}
+							· {key.deviceType === "multiDevice"
+								? "synced"
+								: "this device only"}
+						</p>
+					</div>
+					<Button
+						aria-label="Remove passkey"
+						disabled={busy}
+						onclick={() => {
+							pendingDelete = key;
+							confirmOpen = true;
+						}}
+						size="icon-sm"
+						variant="ghost"
+					>
+						<Trash2 class="size-4" />
+					</Button>
+				</div>
+			{/each}
+		</div>
+	{:else}
+		<p class="text-text-muted text-sm">No passkeys registered yet.</p>
+	{/if}
 
-  <form class="flex items-end gap-2" onsubmit={handleAdd}>
-    <div class="flex-1">
-      <label class="text-text mb-1.5 block text-sm font-medium" for="passkeyName">
-        Name
-      </label>
-      <Input
-        autocomplete="off"
-        class="h-10"
-        disabled={busy}
-        id="passkeyName"
-        placeholder="e.g. MacBook Touch ID"
-        bind:value={name}
-      />
-    </div>
-    <Button class="h-10" disabled={busy} type="submit">
-      {#if busy}
-        <Spinner />
-      {:else}
-        <Plus class="size-4" />
-      {/if}
-      Add passkey
-    </Button>
-  </form>
+	<form class="flex items-end gap-2" onsubmit={handleAdd}>
+		<div class="flex-1">
+			<label
+				class="text-text mb-1.5 block text-sm font-medium"
+				for="passkeyName"
+			>
+				Name
+			</label>
+			<Input
+				autocomplete="off"
+				class="h-10"
+				disabled={busy}
+				id="passkeyName"
+				placeholder="e.g. MacBook Touch ID"
+				bind:value={name}
+			/>
+		</div>
+		<Button class="h-10" disabled={busy} type="submit">
+			{#if busy}
+				<Spinner />
+			{:else}
+				<Plus class="size-4" />
+			{/if}
+			Add passkey
+		</Button>
+	</form>
 </div>
 
 <ConfirmDialog
-  confirmLabel="Remove"
-  description="You won't be able to sign in with it anymore."
-  onConfirm={handleDelete}
-  title="Remove {pendingDelete?.name || 'this passkey'}?"
-  bind:open={confirmOpen}
+	confirmLabel="Remove"
+	description="You won't be able to sign in with it anymore."
+	onConfirm={handleDelete}
+	title="Remove {pendingDelete?.name || 'this passkey'}?"
+	bind:open={confirmOpen}
 />

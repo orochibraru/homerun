@@ -7,6 +7,11 @@ When done delete the entry, no bloat.
 
 ## Small
 
+- [ ] PWA: the dashboard isn't installable; add a web app manifest (name,
+      `start_url`, `display: standalone`, 192/512 and maskable icons, theme
+      colors), link it plus `theme-color` and `apple-touch-icon` from
+      `app.html`, and let the service worker serve an offline fallback page
+
 - [ ] Mobile: `SectionNav` subtabs (container, environments, observability,
       bucket, run pages) are still a scrolling strip below `md`; give them the
       same nav-card hub `TabNav` got

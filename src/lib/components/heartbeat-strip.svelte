@@ -32,15 +32,15 @@
 </script>
 
 <div class={cn("flex items-end gap-0.75", className)}>
-  {#each beats as beat, i (i)}
-    <span
-      class="h-5 w-1.25 shrink-0 rounded-[2px] {beat.ok
-      ? 'bg-emerald-500'
-      : 'bg-red-500'}"
-      title={tooltip(beat)}
-    ></span>
-  {/each}
-  {#if beats.length === 0}
-    <span class="text-text-subtle text-xs">{emptyLabel}</span>
-  {/if}
+	{#each beats as beat, i (i)}
+		<span
+			class="h-5 w-1.25 shrink-0 rounded-[2px] {beat.ok
+				? 'bg-emerald-500'
+				: 'bg-red-500'}"
+			title={tooltip(beat)}
+		></span>
+	{/each}
+	{#if beats.length === 0}
+		<span class="text-text-subtle text-xs">{emptyLabel}</span>
+	{/if}
 </div>

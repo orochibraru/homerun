@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { scaleway } from "../../../../src/lib/services/dns-providers/scaleway";
 import { stubFetch } from "./stub-fetch";
 

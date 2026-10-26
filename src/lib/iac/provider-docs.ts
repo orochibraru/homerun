@@ -5,6 +5,7 @@ import {
 	type HclValue,
 	renderHcl,
 } from "#lib/iac/hcl.js";
+import { SINGLETON_ID } from "#lib/iac/resources-settings.js";
 import {
 	IAC_DATA_SOURCES,
 	IAC_RESOURCES,
@@ -14,7 +15,6 @@ import {
 	iacResource,
 	toSnakeCase,
 } from "#lib/iac/resources.js";
-import { SINGLETON_ID } from "#lib/iac/resources-settings.js";
 
 const DOCS_URL =
 	"https://github.com/orochibraru/homerun/blob/main/docs/infrastructure-as-code.md";

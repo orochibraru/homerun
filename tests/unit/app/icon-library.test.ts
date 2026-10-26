@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -9,9 +10,8 @@ mock.module("$app/env", () => ({
 
 const { TemplateDTO } = await import("../../../src/lib/dto/template-dto");
 const { EXTRA_ICONS } = await import("../../../src/lib/icon-library");
-const { listIconLibrary } = await import(
-	"../../../src/lib/server/icon-library"
-);
+const { listIconLibrary } =
+	await import("../../../src/lib/server/icon-library");
 
 afterEach(() => {
 	restoreStubs();

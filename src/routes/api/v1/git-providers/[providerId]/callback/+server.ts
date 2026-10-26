@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
+
 import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { GIT_CONNECT_RETURN_COOKIE } from "#lib/git-webhooks.js";
@@ -10,7 +12,6 @@ import { GitProviderService } from "#lib/services/git-provider.service.js";
 import { GitWebhookService } from "#lib/services/git-webhook.service.js";
 import { encryptSecret } from "#lib/services/secrets.js";
 import { WorkstationSignInService } from "#lib/services/workstation/sign-in.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("GitProviders");
 

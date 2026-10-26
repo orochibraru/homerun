@@ -1,10 +1,11 @@
 import { fail } from "@sveltejs/kit";
+
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { updateHealthSchema } from "#lib/server/validation/service.js";
-import { HEALTHCHECK_DEFAULTS } from "#lib/services/docker/healthcheck.js";
 import { DockerService } from "#lib/services/docker.service.js";
+import { HEALTHCHECK_DEFAULTS } from "#lib/services/docker/healthcheck.js";
 
 const logger = new Logger("Services");
 

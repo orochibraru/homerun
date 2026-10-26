@@ -9,6 +9,7 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { authClient } from "#lib/auth-client.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import PasskeyPanel from "#lib/components/passkey-panel.svelte";
@@ -23,6 +24,7 @@
 	} from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
+
 	import ConnectedAccountsSection from "./connected-accounts-section.svelte";
 	import DeleteAccountDialog from "./delete-account-dialog.svelte";
 
@@ -83,193 +85,184 @@
 </script>
 
 <div class="space-y-6">
-    {#if data.providers.length > 0}
-        <ConnectedAccountsSection
-            hasPassword={data.hasPassword}
-            providers={data.providers}
-        />
-    {/if}
+	{#if data.providers.length > 0}
+		<ConnectedAccountsSection
+			hasPassword={data.hasPassword}
+			providers={data.providers}
+		/>
+	{/if}
 
-    <section class="rounded-md panel">
-        <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-            <div
-                class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400"
-            >
-                <KeyRound class="size-4" />
-            </div>
-            <div>
-                <h2 class="eyebrow">Password</h2>
-                <p class="text-xs text-text-muted">
-                    {data.hasPassword
-                        ? "Change your password. All other sessions will be signed out."
-                        : "Add a password to sign in with it as well as your email or provider."}
-                </p>
-            </div>
-        </div>
+	<section class="rounded-md panel">
+		<div class="flex items-center gap-3 border-b border-border px-5 py-4">
+			<div
+				class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400"
+			>
+				<KeyRound class="size-4" />
+			</div>
+			<div>
+				<h2 class="eyebrow">Password</h2>
+				<p class="text-xs text-text-muted">
+					{data.hasPassword
+						? "Change your password. All other sessions will be signed out."
+						: "Add a password to sign in with it as well as your email or provider."}
+				</p>
+			</div>
+		</div>
 
-        {#if !data.hasPassword}
-            <div class="p-5">
-                <SetPasswordPanel
-                    email={data.email}
-                    emailEnabled={data.smtpEnabled}
-                />
-            </div>
-        {:else}
-            <form class="space-y-5 p-5" onsubmit={changePassword}>
-                <PasswordField
-                    autocomplete="current-password"
-                    id="currentPassword"
-                    label="Current password"
-                    required
-                    bind:value={currentPassword}
-                />
+		{#if !data.hasPassword}
+			<div class="p-5">
+				<SetPasswordPanel email={data.email} emailEnabled={data.smtpEnabled} />
+			</div>
+		{:else}
+			<form class="space-y-5 p-5" onsubmit={changePassword}>
+				<PasswordField
+					autocomplete="current-password"
+					id="currentPassword"
+					label="Current password"
+					required
+					bind:value={currentPassword}
+				/>
 
-                <div>
-                    <PasswordField
-                        autocomplete="new-password"
-                        id="newPassword"
-                        label="New password"
-                        placeholder="Min. 12 characters"
-                        required
-                        bind:value={newPassword}
-                    />
-                    {#if newPassword}
-                        <div class="mt-2.5">
-                            <div class="flex gap-1">
-                                {#each [1, 2, 3, 4] as level (level)}
-                                    <div
-                                        class="
+				<div>
+					<PasswordField
+						autocomplete="new-password"
+						id="newPassword"
+						label="New password"
+						placeholder="Min. 12 characters"
+						required
+						bind:value={newPassword}
+					/>
+					{#if newPassword}
+						<div class="mt-2.5">
+							<div class="flex gap-1">
+								{#each [1, 2, 3, 4] as level (level)}
+									<div
+										class="
                         h-1 flex-1 rounded-full transition-all duration-300 {level <=
-                                        passwordStrength
-                                            ? strengthMeta.bar
-                                            : 'bg-surface-3'}
+										passwordStrength
+											? strengthMeta.bar
+											: 'bg-surface-3'}
                      "
-                                    ></div>
-                                {/each}
-                            </div>
-                            <p class="mt-1 text-xs text-text-muted">
-                                Strength:
-                                <span class="font-medium {strengthMeta.text}"
-                                    >{strengthMeta.label}</span
-                                >
-                            </p>
-                        </div>
-                    {/if}
-                </div>
+									></div>
+								{/each}
+							</div>
+							<p class="mt-1 text-xs text-text-muted">
+								Strength:
+								<span class="font-medium {strengthMeta.text}"
+									>{strengthMeta.label}</span
+								>
+							</p>
+						</div>
+					{/if}
+				</div>
 
-                <div>
-                    <PasswordField
-                        autocomplete="new-password"
-                        class={confirmPasswordClass}
-                        id="confirmPassword"
-                        label="Confirm new password"
-                        placeholder="Repeat new password"
-                        required
-                        bind:value={confirmPassword}
-                    />
-                    {#if confirmPassword && confirmPassword !== newPassword}
-                        <p class="mt-1 text-xs text-red-500">
-                            Passwords don't match.
-                        </p>
-                    {:else if confirmPassword && confirmPassword === newPassword}
-                        <p
-                            class="mt-1 flex items-center gap-1 text-xs text-green-600"
-                        >
-                            <ShieldCheck class="size-3.5" />
-                            Passwords match
-                        </p>
-                    {/if}
-                </div>
+				<div>
+					<PasswordField
+						autocomplete="new-password"
+						class={confirmPasswordClass}
+						id="confirmPassword"
+						label="Confirm new password"
+						placeholder="Repeat new password"
+						required
+						bind:value={confirmPassword}
+					/>
+					{#if confirmPassword && confirmPassword !== newPassword}
+						<p class="mt-1 text-xs text-red-500">Passwords don't match.</p>
+					{:else if confirmPassword && confirmPassword === newPassword}
+						<p class="mt-1 flex items-center gap-1 text-xs text-green-600">
+							<ShieldCheck class="size-3.5" />
+							Passwords match
+						</p>
+					{/if}
+				</div>
 
-                <div class="flex justify-end">
-                    <Button
-                        disabled={passwordLoading ||
-                            !currentPassword ||
-                            !newPassword ||
-                            !confirmPassword}
-                        type="submit"
-                    >
-                        {#if passwordLoading}
-                            <Spinner />
-                            Updating…
-                        {:else}
-                            <Lock class="size-4" />
-                            Update password
-                        {/if}
-                    </Button>
-                </div>
-            </form>
-        {/if}
-    </section>
+				<div class="flex justify-end">
+					<Button
+						disabled={passwordLoading ||
+							!currentPassword ||
+							!newPassword ||
+							!confirmPassword}
+						type="submit"
+					>
+						{#if passwordLoading}
+							<Spinner />
+							Updating…
+						{:else}
+							<Lock class="size-4" />
+							Update password
+						{/if}
+					</Button>
+				</div>
+			</form>
+		{/if}
+	</section>
 
-    <section class="panel rounded-md">
-        <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-            <div
-                class="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-            >
-                <Smartphone class="size-4" />
-            </div>
-            <div>
-                <h2 class="eyebrow">Two-factor authentication</h2>
-                <p class="text-text-muted text-xs">
-                    Ask for a code from an authenticator app after your password
-                    when signing in.
-                </p>
-            </div>
-        </div>
-        <div class="p-5">
-            <TwoFactorPanel
-                enabled={data.twoFactorEnabled}
-                hasPassword={data.hasPassword}
-            />
-        </div>
-    </section>
+	<section class="panel rounded-md">
+		<div class="border-border flex items-center gap-3 border-b px-5 py-4">
+			<div
+				class="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+			>
+				<Smartphone class="size-4" />
+			</div>
+			<div>
+				<h2 class="eyebrow">Two-factor authentication</h2>
+				<p class="text-text-muted text-xs">
+					Ask for a code from an authenticator app after your password when
+					signing in.
+				</p>
+			</div>
+		</div>
+		<div class="p-5">
+			<TwoFactorPanel
+				enabled={data.twoFactorEnabled}
+				hasPassword={data.hasPassword}
+			/>
+		</div>
+	</section>
 
-    <section class="panel rounded-md">
-        <PanelHeader
-            description="Sign in with Touch ID, Windows Hello, a security key or your password manager instead of typing a password."
-            icon={Fingerprint}
-            title="Passkeys"
-        />
-        <div class="p-5">
-            <PasskeyPanel passkeys={data.passkeys} />
-        </div>
-    </section>
+	<section class="panel rounded-md">
+		<PanelHeader
+			description="Sign in with Touch ID, Windows Hello, a security key or your password manager instead of typing a password."
+			icon={Fingerprint}
+			title="Passkeys"
+		/>
+		<div class="p-5">
+			<PasskeyPanel passkeys={data.passkeys} />
+		</div>
+	</section>
 
-    <section
-        class="rounded-md border border-red-200 bg-surface dark:border-red-900/40"
-    >
-        <div
-            class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
-        >
-            <div
-                class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600"
-            >
-                <AlertTriangle class="size-4" />
-            </div>
-            <div>
-                <h2
-                    class="text-sm font-semibold text-red-600 dark:text-red-400"
-                >
-                    Danger zone
-                </h2>
-                <p class="text-xs text-text-muted">
-                    Irreversible actions. Proceed with caution.
-                </p>
-            </div>
-        </div>
+	<section
+		class="rounded-md border border-red-200 bg-surface dark:border-red-900/40"
+	>
+		<div
+			class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
+		>
+			<div
+				class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600"
+			>
+				<AlertTriangle class="size-4" />
+			</div>
+			<div>
+				<h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
+					Danger zone
+				</h2>
+				<p class="text-xs text-text-muted">
+					Irreversible actions. Proceed with caution.
+				</p>
+			</div>
+		</div>
 
-        <div class="p-5">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <p class="text-text text-sm font-medium">Delete account</p>
-                    <p class="text-text-muted mt-0.5 text-xs">
-                        Permanently removes your account. Everything you created
-                        is handed over to another admin. This cannot be undone.
-                    </p>
-                </div>
-                <DeleteAccountDialog />
-            </div>
-        </div>
-    </section>
+		<div class="p-5">
+			<div class="flex flex-wrap items-center justify-between gap-4">
+				<div>
+					<p class="text-text text-sm font-medium">Delete account</p>
+					<p class="text-text-muted mt-0.5 text-xs">
+						Permanently removes your account. Everything you created is handed
+						over to another admin. This cannot be undone.
+					</p>
+				</div>
+				<DeleteAccountDialog />
+			</div>
+		</div>
+	</section>
 </div>

@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { Activity, FileText, LayoutGrid, Settings } from "@lucide/svelte";
-	import TabNav from "#lib/components/tab-nav.svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import { Activity, FileText, LayoutGrid, Settings } from "@lucide/svelte";
+
+	import TabNav from "#lib/components/tab-nav.svelte";
 
 	const { data, children } = $props();
 	const ws = $derived(data.workstation);
@@ -48,14 +49,14 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight">{ws.name}</h1>
-    <p class="text-text-muted mt-1 text-sm">
-      {ws.image} · {data.hostName ?? "this server"} · {data.hostname}
-    </p>
-  </div>
+	<div class="mb-6">
+		<h1 class="text-text text-lg font-semibold tracking-tight">{ws.name}</h1>
+		<p class="text-text-muted mt-1 text-sm">
+			{ws.image} · {data.hostName ?? "this server"} · {data.hostname}
+		</p>
+	</div>
 
-  <TabNav active={activeTabId} {tabs}>
-    {@render children()}
-  </TabNav>
+	<TabNav active={activeTabId} {tabs}>
+		{@render children()}
+	</TabNav>
 </div>

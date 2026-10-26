@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { Logger } from "#lib/logger.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { CliAuthService } from "#lib/services/cli-auth.service.js";

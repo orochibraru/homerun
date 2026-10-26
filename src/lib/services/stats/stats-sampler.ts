@@ -11,11 +11,12 @@ import {
 	parseTraefikMetrics,
 	type TrafficCounters,
 } from "#lib/traffic-metrics.js";
+
 import { CapacityService } from "../capacity.service.ts";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
+import { DockerService } from "../docker.service.ts";
 import type { ContainerSample } from "../docker/containers.ts";
 import { sumReplicaSamples } from "../docker/swarm-replicas.ts";
-import { DockerService } from "../docker.service.ts";
 import { ScaleToZeroService } from "../scale-to-zero.service.ts";
 import { SystemStatsService } from "../system-stats.service.ts";
 import { WorkstationService } from "../workstation.service.ts";

@@ -6,21 +6,16 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { restoreVolumeBackup, restoredVolumeNames } = await import(
-	"../../../src/lib/services/backup/volume-restore"
-);
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { StorageVolumeDTO } = await import(
-	"../../../src/lib/dto/storage-volume-dto"
-);
-const { restoreBackupFormSchema } = await import(
-	"../../../src/lib/server/validation/volume-restore"
-);
+const { restoreVolumeBackup, restoredVolumeNames } =
+	await import("../../../src/lib/services/backup/volume-restore");
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { StorageVolumeDTO } =
+	await import("../../../src/lib/dto/storage-volume-dto");
+const { restoreBackupFormSchema } =
+	await import("../../../src/lib/server/validation/volume-restore");
 
 const restorers: { mockRestore: () => void }[] = [];
 

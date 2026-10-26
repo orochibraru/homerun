@@ -92,10 +92,8 @@ a blur/shadow stack, route it through a token here instead.
   (driven by `mode-watcher`). Every token that differs between them is redefined
   in both blocks, a color defined only in one is a bug.
 
-**`layout.css` is formatted by biome, not prettier.** Biome owns CSS here
-(`biome.json`'s `css.parser`), and it indents with tabs; prettier has no
-`useTabs` in `.prettierrc` and rewrites the whole file to spaces, which is a
-600-line diff that nothing then checks. Run `bunx biome check --write` on it.
+**`layout.css` is formatted by `bun fmt`** like every other file, with tabs
+(`useTabs` in `bunfig.toml`'s `[fmt]`).
 
 **Sweeping this file's tokens is how a global visual change is made**, not a
 per-route pass : both redesigns so far changed ~65 files, and almost all of that

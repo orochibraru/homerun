@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { parseCommand } from "../../../src/lib/command-parse";
 
 describe("parseCommand", () => {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown, GitBranch } from "@lucide/svelte";
 	import { untrack } from "svelte";
+
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Command from "#lib/components/ui/command/index.js";
 	import * as Popover from "#lib/components/ui/popover/index.js";
@@ -95,102 +96,100 @@
 </script>
 
 <div class="border-border rounded-md border p-4">
-  <p class={labelClass}>Browse repos</p>
-  <div class="flex flex-wrap gap-2">
-    {#if providers.length > 1}
-      <Select.Root type="single" bind:value={providerId}>
-        <Select.Trigger>{providerLabel}</Select.Trigger>
-        <Select.Content>
-          {#each providers as p (p.id)}
-            <Select.Item label={providerOptionLabel(p)} value={p.id} />
-          {/each}
-        </Select.Content>
-      </Select.Root>
-    {/if}
-  </div>
+	<p class={labelClass}>Browse repos</p>
+	<div class="flex flex-wrap gap-2">
+		{#if providers.length > 1}
+			<Select.Root type="single" bind:value={providerId}>
+				<Select.Trigger>{providerLabel}</Select.Trigger>
+				<Select.Content>
+					{#each providers as p (p.id)}
+						<Select.Item label={providerOptionLabel(p)} value={p.id} />
+					{/each}
+				</Select.Content>
+			</Select.Root>
+		{/if}
+	</div>
 
-  {#if reposPromise}
-    {#await reposPromise}
-      <p class="text-text-muted mt-3 flex items-center gap-2 text-xs">
-        <Spinner />
-        Listing repos…
-      </p>
-    {:then repos}
-      {#if repos.length === 0}
-        <p class="text-text-muted mt-3 text-xs">
-          No repositories on this connection.
-        </p>
-      {:else}
-        <Popover.Root bind:open>
-          <Popover.Trigger>
-            {#snippet child({ props })}
-              <Button
-                {...props}
-                class="mt-3 w-full justify-between"
-                role="combobox"
-                type="button"
-                variant="outline"
-              >
-                <span class="flex min-w-0 items-center gap-2">
-                  <GitBranch class="size-4 shrink-0" />
-                  <span class="truncate">
-                    {selectedRepo || `Search ${repos.length} repos…`}
-                  </span>
-                </span>
-                <ChevronsUpDown class="size-4 shrink-0 opacity-50" />
-              </Button>
-            {/snippet}
-          </Popover.Trigger>
-          <Popover.Content class="w-(--bits-popover-anchor-width) p-0">
-            <Command.Root>
-              <Command.Input placeholder="Filter repos…" />
-              <Command.List>
-                <Command.Empty>No repo matches.</Command.Empty>
-                <Command.Group>
-                  {#each repos as repo (repo.fullName)}
-                    <Command.Item
-                      onSelect={() => pickRepo(repos, repo.fullName)}
-                      value={repo.fullName}
-                    >
-                      <Check
-                        class="size-4 {selectedRepo === repo.fullName
-                        ? ''
-                        : 'opacity-0'}"
-                      />
-                      <span class="truncate">{repo.fullName}</span>
-                      {#if repo.private}
-                        <span class="text-text-subtle ml-auto text-[0.6875rem]">
-                          private
-                        </span>
-                      {/if}
-                    </Command.Item>
-                  {/each}
-                </Command.Group>
-              </Command.List>
-            </Command.Root>
-          </Popover.Content>
-        </Popover.Root>
-      {/if}
-    {:catch}
-      <p class="mt-3 text-xs text-amber-600">
-        Couldn't list repos for that provider.
-      </p>
-    {/await}
-  {/if}
+	{#if reposPromise}
+		{#await reposPromise}
+			<p class="text-text-muted mt-3 flex items-center gap-2 text-xs">
+				<Spinner />
+				Listing repos…
+			</p>
+		{:then repos}
+			{#if repos.length === 0}
+				<p class="text-text-muted mt-3 text-xs">
+					No repositories on this connection.
+				</p>
+			{:else}
+				<Popover.Root bind:open>
+					<Popover.Trigger>
+						{#snippet child({ props })}
+							<Button
+								{...props}
+								class="mt-3 w-full justify-between"
+								role="combobox"
+								type="button"
+								variant="outline"
+							>
+								<span class="flex min-w-0 items-center gap-2">
+									<GitBranch class="size-4 shrink-0" />
+									<span class="truncate">
+										{selectedRepo || `Search ${repos.length} repos…`}
+									</span>
+								</span>
+								<ChevronsUpDown class="size-4 shrink-0 opacity-50" />
+							</Button>
+						{/snippet}
+					</Popover.Trigger>
+					<Popover.Content class="w-(--bits-popover-anchor-width) p-0">
+						<Command.Root>
+							<Command.Input placeholder="Filter repos…" />
+							<Command.List>
+								<Command.Empty>No repo matches.</Command.Empty>
+								<Command.Group>
+									{#each repos as repo (repo.fullName)}
+										<Command.Item
+											onSelect={() => pickRepo(repos, repo.fullName)}
+											value={repo.fullName}
+										>
+											<Check
+												class="size-4 {selectedRepo === repo.fullName
+													? ''
+													: 'opacity-0'}"
+											/>
+											<span class="truncate">{repo.fullName}</span>
+											{#if repo.private}
+												<span class="text-text-subtle ml-auto text-[0.6875rem]">
+													private
+												</span>
+											{/if}
+										</Command.Item>
+									{/each}
+								</Command.Group>
+							</Command.List>
+						</Command.Root>
+					</Popover.Content>
+				</Popover.Root>
+			{/if}
+		{:catch}
+			<p class="mt-3 text-xs text-amber-600">
+				Couldn't list repos for that provider.
+			</p>
+		{/await}
+	{/if}
 
-  {#if dockerfilePromise}
-    {#await dockerfilePromise then exists}
-      <p class="mt-2 text-xs {exists ? 'text-emerald-600' : 'text-amber-600'}">
-        {
-          exists
-          ? "✓ Dockerfile found at the repo root."
-          : "⚠ No Dockerfile found at the repo root on this branch : set its path below, or pick Nixpacks, Railpack or buildpacks as the build method."
-        }
-      </p>
-    {:catch}
-      <p class="text-text-muted mt-2 text-xs">
-        Couldn't check for a Dockerfile on this branch.
-      </p>
-    {/await}
-  {/if}
+	{#if dockerfilePromise}
+		{#await dockerfilePromise then exists}
+			<p class="mt-2 text-xs {exists ? 'text-emerald-600' : 'text-amber-600'}">
+				{exists
+					? "✓ Dockerfile found at the repo root."
+					: "⚠ No Dockerfile found at the repo root on this branch : set its path below, or pick Nixpacks, Railpack or buildpacks as the build method."}
+			</p>
+		{:catch}
+			<p class="text-text-muted mt-2 text-xs">
+				Couldn't check for a Dockerfile on this branch.
+			</p>
+		{/await}
+	{/if}
 </div>

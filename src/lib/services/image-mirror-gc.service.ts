@@ -1,5 +1,7 @@
 import { JobDTO } from "#lib/dto/job-dto.js";
 import { listMirrorReferences } from "#lib/dto/mirror-reference-dto.js";
+
+import { DockerService } from "./docker.service.ts";
 import {
 	MIRROR_CONFIG_PATH,
 	MIRROR_CONTAINER_NAME,
@@ -9,7 +11,6 @@ import {
 	MIRROR_STORAGE_DIR,
 } from "./docker/image-scan-refs.ts";
 import { type MirrorKeepSet, mirrorKeepSet } from "./docker/mirror-registry.ts";
-import { DockerService } from "./docker.service.ts";
 
 const lockState = globalThis as unknown as { __mirror_gc_running?: boolean };
 

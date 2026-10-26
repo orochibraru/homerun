@@ -1,4 +1,5 @@
 import { parse as parseYaml } from "yaml";
+
 import type { BuildMethod } from "#lib/build-methods.js";
 import {
 	bindVolumeName,
@@ -7,6 +8,7 @@ import {
 	type ComposeVolumeDraft,
 } from "#lib/compose-import.js";
 import { normalizeDomain } from "#lib/service-domains.js";
+
 import {
 	composeDrafts,
 	imageSummary,

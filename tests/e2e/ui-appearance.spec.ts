@@ -1,4 +1,5 @@
 import { type Page } from "@playwright/test";
+
 import { expect, test } from "./support/test";
 
 const ACCENT = "#0b6fa4";
@@ -52,41 +53,40 @@ function cssVarOf(
 		);
 }
 
-test.describe
-	.serial("colour palette", () => {
-		test.afterAll(async ({ browser }) => {
-			const page = await browser.newPage();
-			await signIn(page);
-			await saveColors(page, "Bordeaux (default)");
-			await page.close();
-		});
-
-		test("a saved palette reaches portaled content, not just the page", async ({
-			page,
-		}) => {
-			await signIn(page);
-			await saveColors(page, "Ocean");
-
-			await page.goto("/");
-			expect(await cssVarOf(page, "html")).toBe(ACCENT);
-			expect(await cssVarOf(page, "html", "--chart-1")).toBe(CHART_1);
-
-			await page.getByRole("button", { name: "Account menu" }).click();
-			const menu = page.locator("[data-slot='dropdown-menu-content']");
-			await expect(menu).toBeVisible();
-			expect(await cssVarOf(page, "[data-slot='dropdown-menu-content']")).toBe(
-				ACCENT,
-			);
-		});
-
-		test("the default palette puts the stock accent back", async ({ page }) => {
-			await signIn(page);
-			await saveColors(page, "Bordeaux (default)");
-
-			await page.goto("/");
-			expect(await cssVarOf(page, "html")).not.toBe(ACCENT);
-		});
+test.describe.serial("colour palette", () => {
+	test.afterAll(async ({ browser }) => {
+		const page = await browser.newPage();
+		await signIn(page);
+		await saveColors(page, "Bordeaux (default)");
+		await page.close();
 	});
+
+	test("a saved palette reaches portaled content, not just the page", async ({
+		page,
+	}) => {
+		await signIn(page);
+		await saveColors(page, "Ocean");
+
+		await page.goto("/");
+		expect(await cssVarOf(page, "html")).toBe(ACCENT);
+		expect(await cssVarOf(page, "html", "--chart-1")).toBe(CHART_1);
+
+		await page.getByRole("button", { name: "Account menu" }).click();
+		const menu = page.locator("[data-slot='dropdown-menu-content']");
+		await expect(menu).toBeVisible();
+		expect(await cssVarOf(page, "[data-slot='dropdown-menu-content']")).toBe(
+			ACCENT,
+		);
+	});
+
+	test("the default palette puts the stock accent back", async ({ page }) => {
+		await signIn(page);
+		await saveColors(page, "Bordeaux (default)");
+
+		await page.goto("/");
+		expect(await cssVarOf(page, "html")).not.toBe(ACCENT);
+	});
+});
 
 async function savePreset(page: Page, name: string): Promise<void> {
 	await page.goto("/profile/appearance");
@@ -95,49 +95,45 @@ async function savePreset(page: Page, name: string): Promise<void> {
 	await saveIfChanged(page, "appearance-preset", "Preset saved.");
 }
 
-test.describe
-	.serial("presets", () => {
-		test.afterAll(async ({ browser }) => {
-			const page = await browser.newPage();
-			await signIn(page);
-			await savePreset(page, "None");
-			await page.close();
-		});
-
-		for (const [id, name] of [
-			["win95", "Windows 95"],
-			["win98", "Windows 98"],
-			["winxp", "Windows XP"],
-			["win7", "Windows 7"],
-			["msn", "MSN"],
-			["retro", "Retro"],
-		]) {
-			test(`${name} is rendered server-side and overrides the theme, style and colors`, async ({
-				page,
-			}, testInfo) => {
-				await signIn(page);
-				await savePreset(page, name);
-				await expect(
-					page.getByText(`The ${name} preset overrides this`).first(),
-				).toBeVisible();
-
-				const response = await page.goto("/");
-				expect(await response?.text()).toContain(`data-surface="${id}"`);
-				await expect(page.locator("html")).toHaveAttribute("data-surface", id);
-				await page.screenshot({ path: testInfo.outputPath(`${id}.png`) });
-			});
-		}
-
-		test("None goes back to the chosen style", async ({ page }) => {
-			await signIn(page);
-			await savePreset(page, "None");
-			await page.goto("/");
-			await expect(page.locator("html")).toHaveAttribute(
-				"data-surface",
-				"glass",
-			);
-		});
+test.describe.serial("presets", () => {
+	test.afterAll(async ({ browser }) => {
+		const page = await browser.newPage();
+		await signIn(page);
+		await savePreset(page, "None");
+		await page.close();
 	});
+
+	for (const [id, name] of [
+		["win95", "Windows 95"],
+		["win98", "Windows 98"],
+		["winxp", "Windows XP"],
+		["win7", "Windows 7"],
+		["msn", "MSN"],
+		["retro", "Retro"],
+	]) {
+		test(`${name} is rendered server-side and overrides the theme, style and colors`, async ({
+			page,
+		}, testInfo) => {
+			await signIn(page);
+			await savePreset(page, name);
+			await expect(
+				page.getByText(`The ${name} preset overrides this`).first(),
+			).toBeVisible();
+
+			const response = await page.goto("/");
+			expect(await response?.text()).toContain(`data-surface="${id}"`);
+			await expect(page.locator("html")).toHaveAttribute("data-surface", id);
+			await page.screenshot({ path: testInfo.outputPath(`${id}.png`) });
+		});
+	}
+
+	test("None goes back to the chosen style", async ({ page }) => {
+		await signIn(page);
+		await savePreset(page, "None");
+		await page.goto("/");
+		await expect(page.locator("html")).toHaveAttribute("data-surface", "glass");
+	});
+});
 
 async function saveStyle(page: Page, name: string): Promise<void> {
 	await page.goto("/profile/appearance");
@@ -146,48 +142,44 @@ async function saveStyle(page: Page, name: string): Promise<void> {
 	await saveIfChanged(page, "appearance-style", "Style saved.");
 }
 
-test.describe
-	.serial("styles", () => {
-		test.afterAll(async ({ browser }) => {
-			const page = await browser.newPage();
-			await signIn(page);
-			await saveStyle(page, "Glass (default)");
-			await page.close();
-		});
-
-		test("glass tints the page with the accent, bordeaux stays warm", async ({
-			page,
-		}, testInfo) => {
-			await signIn(page);
-			await saveStyle(page, "Glass");
-			await page.goto("/remote-hosts");
-			await expect(page.locator("html")).toHaveAttribute(
-				"data-surface",
-				"glass",
-			);
-			const [red, , blue] = await page.locator("html").evaluate((el) => {
-				const canvas = document.createElement("canvas").getContext("2d");
-				if (!canvas) {
-					return [0, 0, 0];
-				}
-				canvas.fillStyle = getComputedStyle(el).backgroundColor;
-				canvas.fillRect(0, 0, 1, 1);
-				return [...canvas.getImageData(0, 0, 1, 1).data];
-			});
-			expect(red).toBeGreaterThan(blue);
-			await page.screenshot({ path: testInfo.outputPath("glass.png") });
-		});
-
-		for (const [id, name] of [
-			["material", "Material You"],
-			["sleek", "Sleek"],
-		]) {
-			test(`${name} is rendered server-side`, async ({ page }, testInfo) => {
-				await signIn(page);
-				await saveStyle(page, name);
-				const response = await page.goto("/remote-hosts");
-				expect(await response?.text()).toContain(`data-surface="${id}"`);
-				await page.screenshot({ path: testInfo.outputPath(`${id}.png`) });
-			});
-		}
+test.describe.serial("styles", () => {
+	test.afterAll(async ({ browser }) => {
+		const page = await browser.newPage();
+		await signIn(page);
+		await saveStyle(page, "Glass (default)");
+		await page.close();
 	});
+
+	test("glass tints the page with the accent, bordeaux stays warm", async ({
+		page,
+	}, testInfo) => {
+		await signIn(page);
+		await saveStyle(page, "Glass");
+		await page.goto("/remote-hosts");
+		await expect(page.locator("html")).toHaveAttribute("data-surface", "glass");
+		const [red, , blue] = await page.locator("html").evaluate((el) => {
+			const canvas = document.createElement("canvas").getContext("2d");
+			if (!canvas) {
+				return [0, 0, 0];
+			}
+			canvas.fillStyle = getComputedStyle(el).backgroundColor;
+			canvas.fillRect(0, 0, 1, 1);
+			return [...canvas.getImageData(0, 0, 1, 1).data];
+		});
+		expect(red).toBeGreaterThan(blue);
+		await page.screenshot({ path: testInfo.outputPath("glass.png") });
+	});
+
+	for (const [id, name] of [
+		["material", "Material You"],
+		["sleek", "Sleek"],
+	]) {
+		test(`${name} is rendered server-side`, async ({ page }, testInfo) => {
+			await signIn(page);
+			await saveStyle(page, name);
+			const response = await page.goto("/remote-hosts");
+			expect(await response?.text()).toContain(`data-surface="${id}"`);
+			await page.screenshot({ path: testInfo.outputPath(`${id}.png`) });
+		});
+	}
+});

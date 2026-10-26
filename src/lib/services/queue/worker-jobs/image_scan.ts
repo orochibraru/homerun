@@ -2,6 +2,7 @@ import { config } from "#lib/config.js";
 import type { JobDTO } from "#lib/dto/job-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import type { TrivySummary } from "#lib/image-scan.js";
+
 import { DockerService } from "../../docker.service.ts";
 import {
 	DEPLOYED_SCAN_LABEL,

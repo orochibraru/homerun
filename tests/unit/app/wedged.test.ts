@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	type WedgedContainer,
-	WedgedReporter,
 	wedgedMessage,
+	WedgedReporter,
 } from "../../../src/lib/services/docker/wedged";
 
 const stuck: WedgedContainer = {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Cpu, HardDrive, MemoryStick, Network } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import UsageChart from "#lib/components/usage-chart.svelte";
@@ -48,87 +49,81 @@
 </script>
 
 <div class="space-y-4">
-  <section class="panel rounded-xl">
-    <PanelHeader
-      description="Read from the container every 5 seconds while this page is open, the home directory's size every minute."
-      title="Right now"
-    />
-    <div class="p-5">
-      {#if live.error}
-        <p class="text-text-muted text-xs">Couldn't read the workstation's stats.</p>
-      {:else if !live.ready}
-        <Skeleton class="h-20 w-full" />
-      {:else if !sample}
-        <p class="text-text-muted text-xs">
-          Not running. Start it from the Overview to see its resource use.
-        </p>
-      {:else}
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {#each [
-            {
-              cap: cpuCap,
-              detail: cpuCap ? `of ${ws.cpuLimit} cores` : "no CPU limit",
-              icon: Cpu,
-              label: "CPU",
-              text: `${sample.cpuPercent.toFixed(1)}%`,
-              value: sample.cpuPercent,
-            },
-            {
-              cap: memCap,
-              detail: memCap ? `of ${megabytes(memCap)}` : "no memory limit",
-              icon: MemoryStick,
-              label: "Memory",
-              text: megabytes(sample.memUsedMb),
-              value: sample.memUsedMb,
-            },
-          ] as metric (metric.label)}
-            <div class="border-border space-y-2 rounded-lg border p-4">
-              <div class="text-text-muted flex items-center gap-2 text-xs">
-                <metric.icon class="size-4" />
-                {metric.label}
-              </div>
-              <p class="tech text-text text-xl font-semibold">{metric.text}</p>
-              {#if metric.cap}
-                <div class="bg-surface-2 h-1.5 w-full overflow-hidden rounded-full">
-                  <div
-                    class="h-full rounded-full {share(metric.value, metric.cap) >= 90
-                    ? 'bg-red-500'
-                    : 'bg-accent'}"
-                    style:width="{share(metric.value, metric.cap)}%"
-                  ></div>
-                </div>
-              {/if}
-              <p class="text-text-subtle text-xs">{metric.detail}</p>
-            </div>
-          {/each}
-          <div class="border-border space-y-2 rounded-lg border p-4">
-            <div class="text-text-muted flex items-center gap-2 text-xs">
-              <Network class="size-4" />
-              Network since start
-            </div>
-            <p class="tech text-text text-xl font-semibold">
-              ↓ {formatBytes(sample.netRxBytes)}
-            </p>
-            <p class="text-text-subtle text-xs">↑ {formatBytes(sample.netTxBytes)} sent</p>
-          </div>
-          <div class="border-border space-y-2 rounded-lg border p-4">
-            <div class="text-text-muted flex items-center gap-2 text-xs">
-              <HardDrive class="size-4" />
-              Home volume
-            </div>
-            {#if !disk.ready}
-              <Skeleton class="h-7 w-24" />
-            {:else if disk.current === null || disk.current === undefined}
-              <p class="text-text-muted text-sm">Couldn't measure it.</p>
-            {:else}
-              <p class="tech text-text text-xl font-semibold">{formatBytes(disk.current)}</p>
-            {/if}
-            <p class="text-text-subtle text-xs">used under {ws.homePath}</p>
-          </div>
-        </div>
-      {/if}
-    </div>
-  </section>
+	<section class="panel rounded-xl">
+		<PanelHeader
+			description="Read from the container every 5 seconds while this page is open, the home directory's size every minute."
+			title="Right now"
+		/>
+		<div class="p-5">
+			{#if live.error}
+				<p class="text-text-muted text-xs">
+					Couldn't read the workstation's stats.
+				</p>
+			{:else if !live.ready}
+				<Skeleton class="h-20 w-full" />
+			{:else if !sample}
+				<p class="text-text-muted text-xs">
+					Not running. Start it from the Overview to see its resource use.
+				</p>
+			{:else}
+				<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					{#each [{ cap: cpuCap, detail: cpuCap ? `of ${ws.cpuLimit} cores` : "no CPU limit", icon: Cpu, label: "CPU", text: `${sample.cpuPercent.toFixed(1)}%`, value: sample.cpuPercent }, { cap: memCap, detail: memCap ? `of ${megabytes(memCap)}` : "no memory limit", icon: MemoryStick, label: "Memory", text: megabytes(sample.memUsedMb), value: sample.memUsedMb }] as metric (metric.label)}
+						<div class="border-border space-y-2 rounded-lg border p-4">
+							<div class="text-text-muted flex items-center gap-2 text-xs">
+								<metric.icon class="size-4" />
+								{metric.label}
+							</div>
+							<p class="tech text-text text-xl font-semibold">{metric.text}</p>
+							{#if metric.cap}
+								<div
+									class="bg-surface-2 h-1.5 w-full overflow-hidden rounded-full"
+								>
+									<div
+										class="h-full rounded-full {share(
+											metric.value,
+											metric.cap,
+										) >= 90
+											? 'bg-red-500'
+											: 'bg-accent'}"
+										style:width="{share(metric.value, metric.cap)}%"
+									></div>
+								</div>
+							{/if}
+							<p class="text-text-subtle text-xs">{metric.detail}</p>
+						</div>
+					{/each}
+					<div class="border-border space-y-2 rounded-lg border p-4">
+						<div class="text-text-muted flex items-center gap-2 text-xs">
+							<Network class="size-4" />
+							Network since start
+						</div>
+						<p class="tech text-text text-xl font-semibold">
+							↓ {formatBytes(sample.netRxBytes)}
+						</p>
+						<p class="text-text-subtle text-xs">
+							↑ {formatBytes(sample.netTxBytes)} sent
+						</p>
+					</div>
+					<div class="border-border space-y-2 rounded-lg border p-4">
+						<div class="text-text-muted flex items-center gap-2 text-xs">
+							<HardDrive class="size-4" />
+							Home volume
+						</div>
+						{#if !disk.ready}
+							<Skeleton class="h-7 w-24" />
+						{:else if disk.current === null || disk.current === undefined}
+							<p class="text-text-muted text-sm">Couldn't measure it.</p>
+						{:else}
+							<p class="tech text-text text-xl font-semibold">
+								{formatBytes(disk.current)}
+							</p>
+						{/if}
+						<p class="text-text-subtle text-xs">used under {ws.homePath}</p>
+					</div>
+				</div>
+			{/if}
+		</div>
+	</section>
 
-  <UsageChart title="History" workstationId={ws.id} />
+	<UsageChart title="History" workstationId={ws.id} />
 </div>

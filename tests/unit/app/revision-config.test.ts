@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	changedRevisionConfigFields,
-	type RevisionConfigSource,
 	restorableRuntimeOptions,
+	type RevisionConfigSource,
 	snapshotRevisionConfig,
 } from "#lib/revision-config.js";
 

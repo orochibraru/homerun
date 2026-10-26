@@ -7,11 +7,11 @@ import type {
 import { cloudflareClient } from "#lib/services/dns-providers/cloudflare.js";
 import { inZone } from "#lib/services/dns-providers/http.js";
 import { PangolinService } from "#lib/services/pangolin.service.js";
+
 import { checkbox, nullableText } from "./instance-settings-form";
 
 export type DnsTestOutcome =
-	| { detail: string | null; ok: true }
-	| { error: string; ok: false };
+	{ detail: string | null; ok: true } | { error: string; ok: false };
 
 type PangolinTargetFields = Pick<
 	InstanceSettingsPangolinInput,

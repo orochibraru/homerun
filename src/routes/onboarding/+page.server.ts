@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import {
 	config,
 	envDefaultsForDisplay,
@@ -21,7 +23,6 @@ import {
 	type OnboardingInput,
 	onboardingSchema,
 } from "#lib/server/validation/onboarding.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Onboarding");
 

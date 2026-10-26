@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import { ShieldCheck, Siren, Users } from "@lucide/svelte";
+
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import { resolve } from "$app/paths";
 
 	const { children, data } = $props();
 
@@ -27,17 +28,21 @@
 </script>
 
 {#if data.crowdsecConfigured}
-  <SectionNav hubLabel="CrowdSec" label="CrowdSec sections" {sections}>
-    {@render children()}
-  </SectionNav>
+	<SectionNav hubLabel="CrowdSec" label="CrowdSec sections" {sections}>
+		{@render children()}
+	</SectionNav>
 {:else}
-  <EmptyState
-    icon={ShieldCheck}
-    subtitle="Connect a CrowdSec Local API under Settings → IP bans to see and manage its decisions here."
-    title="CrowdSec isn't set up"
-  >
-    <Button href={resolve("/(protected)/settings/ip-bans")} size="sm" variant="outline">
-      Set it up
-    </Button>
-  </EmptyState>
+	<EmptyState
+		icon={ShieldCheck}
+		subtitle="Connect a CrowdSec Local API under Settings → IP bans to see and manage its decisions here."
+		title="CrowdSec isn't set up"
+	>
+		<Button
+			href={resolve("/(protected)/settings/ip-bans")}
+			size="sm"
+			variant="outline"
+		>
+			Set it up
+		</Button>
+	</EmptyState>
 {/if}

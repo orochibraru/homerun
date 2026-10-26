@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { baitFor, JUNK_BYTES } from "../../../src/lib/bait";
 
 const INSULT_RE =

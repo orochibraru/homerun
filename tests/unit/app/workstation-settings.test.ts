@@ -7,6 +7,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -19,25 +20,19 @@ const { config } = await import("../../../src/lib/config");
 const { Logger } = await import("../../../src/lib/logger");
 const { RemoteHostDTO } = await import("../../../src/lib/dto/remote-host-dto");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
-const { WorkstationPresetDTO } = await import(
-	"../../../src/lib/dto/workstation-preset-dto"
-);
-const loginWallOptions = await import(
-	"../../../src/lib/server/login-wall-options"
-);
-const hostnameOwnerModule = await import(
-	"../../../src/lib/server/hostname-owner"
-);
+const { WorkstationPresetDTO } =
+	await import("../../../src/lib/dto/workstation-preset-dto");
+const loginWallOptions =
+	await import("../../../src/lib/server/login-wall-options");
+const hostnameOwnerModule =
+	await import("../../../src/lib/server/hostname-owner");
 const { decryptSecret } = await import("../../../src/lib/services/secrets");
-const { WorkstationService } = await import(
-	"../../../src/lib/services/workstation.service"
-);
-const { WorkstationSettingsError, WorkstationSettingsService } = await import(
-	"../../../src/lib/services/workstation/settings"
-);
-const { DEFAULT_WORKSTATION_IMAGE, DEFAULT_WORKSTATION_PORT } = await import(
-	"../../../src/lib/workstations"
-);
+const { WorkstationService } =
+	await import("../../../src/lib/services/workstation.service");
+const { WorkstationSettingsError, WorkstationSettingsService } =
+	await import("../../../src/lib/services/workstation/settings");
+const { DEFAULT_WORKSTATION_IMAGE, DEFAULT_WORKSTATION_PORT } =
+	await import("../../../src/lib/workstations");
 
 type Preset = NonNullable<Awaited<ReturnType<typeof WorkstationPresetDTO.get>>>;
 type Workstation = NonNullable<Awaited<ReturnType<typeof WorkstationDTO.get>>>;

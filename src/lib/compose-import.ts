@@ -1,4 +1,5 @@
 import { parse as parseYaml } from "yaml";
+
 import type { BuildMethod } from "#lib/build-methods.js";
 import { parseDotEnv } from "#lib/env-parse.js";
 import { splitImageRef } from "#lib/image-ref.js";
@@ -7,10 +8,7 @@ import { isRunAsUser } from "#lib/service-runtime.js";
 import { argvFrom } from "#lib/shell-words.js";
 
 export type ComposeRestartPolicy =
-	| "no"
-	| "always"
-	| "on-failure"
-	| "unless-stopped";
+	"no" | "always" | "on-failure" | "unless-stopped";
 
 export interface ComposeVolumeDraft {
 	containerPath: string;

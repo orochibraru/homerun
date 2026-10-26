@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -8,14 +9,12 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 const { RedirectDTO } = await import("../../../src/lib/dto/redirect-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
-const { parseRedirectInput } = await import(
-	"../../../src/lib/server/redirect-form"
-);
+const { parseRedirectInput } =
+	await import("../../../src/lib/server/redirect-form");
 
 const originalOrigin = config.auth.origin;
 

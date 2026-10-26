@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { config } from "#lib/config.js";
 import { ImageScanDTO } from "#lib/dto/image-scan-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";

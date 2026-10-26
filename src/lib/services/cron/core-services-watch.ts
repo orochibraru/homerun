@@ -7,13 +7,14 @@ import {
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import { WorkerClient } from "#lib/server/worker-client.js";
+
 import { AcmeDnsService } from "../acme-dns.service.ts";
 import { DeploymentService } from "../deploy.service.ts";
 import { syncCoreHostDns, syncDashboardDns } from "../dns.service.ts";
+import { DockerService } from "../docker.service.ts";
 import type { TraefikExpectation } from "../docker/core-services.ts";
 import { syncErrorPages } from "../docker/error-pages.ts";
 import { type WedgedContainer, WedgedReporter } from "../docker/wedged.ts";
-import { DockerService } from "../docker.service.ts";
 import { ObjectStorageService } from "../object-storage.service.ts";
 import { AUTH_CHECK_ALIAS } from "../self-update/compose-target.ts";
 import { StatusPageSettingsService } from "../status-page-settings.service.ts";

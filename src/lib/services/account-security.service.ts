@@ -1,9 +1,10 @@
 import { and, count, desc, eq, isNotNull } from "drizzle-orm";
+
 import {
 	type SecurityPolicy,
 	type SecurityRequirement,
-	type UserSecurityState,
 	unmetSecurityRequirements,
+	type UserSecurityState,
 } from "#lib/security-policy.js";
 import { db } from "#lib/server/db/lib.js";
 import { account, passkey, user } from "#lib/server/db/schema.js";

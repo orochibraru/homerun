@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { vultr } from "../../../../src/lib/services/dns-providers/vultr";
 import { stubFetch } from "./stub-fetch";
 

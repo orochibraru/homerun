@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { UserPreferencesDTO } from "#lib/dto/user-preferences-dto.js";
 import { Logger } from "#lib/logger.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { perPageSchema } from "../../../src/lib/server/validation/appearance";
 
 describe("perPageSchema", () => {

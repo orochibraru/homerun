@@ -1,8 +1,5 @@
 export type StatusCheckProviderKind =
-	| "github"
-	| "gitlab"
-	| "gitea"
-	| "bitbucket";
+	"github" | "gitlab" | "gitea" | "bitbucket";
 
 export type CheckState = "pending" | "success" | "failure";
 

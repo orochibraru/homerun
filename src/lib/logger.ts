@@ -1,3 +1,4 @@
+import { building, dev } from "$app/env";
 import {
 	blue,
 	cyan,
@@ -8,8 +9,8 @@ import {
 	white,
 	yellow,
 } from "@kitql/helpers";
+
 import { config } from "#lib/config.js";
-import { building, dev } from "$app/env";
 
 // Matches this codebase's own `service=<uuid>` convention in log messages
 // (deploy.service.ts, docker/containers.ts, etc.) so a persisted warn/error

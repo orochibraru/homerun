@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { NotificationChannelDTO } from "#lib/dto/notification-channel-dto.js";
 import { Logger } from "#lib/logger.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
@@ -7,7 +9,6 @@ import {
 	notificationChannelSchema,
 	validateChannelTarget,
 } from "#lib/server/validation/notification-channel.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("NotificationChannels");
 

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { containerSampleFromInspect } from "../../../src/lib/services/docker/rollout";
 
 describe("containerSampleFromInspect", () => {

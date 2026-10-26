@@ -7,6 +7,7 @@ import { Logger } from "#lib/logger.js";
 import { deployEnvironment } from "#lib/release-channels.js";
 import type { GitProviderConfig } from "#lib/server/db/schema.js";
 import { primaryHostname, serviceHostnames } from "#lib/service-domains.js";
+
 import {
 	enabledGitProvider,
 	GitProviderService,

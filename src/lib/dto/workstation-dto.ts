@@ -7,6 +7,7 @@ import {
 	isNotNull,
 	type SQL,
 } from "drizzle-orm";
+
 import { db } from "#lib/server/db/lib.js";
 import { type Workstation, workstation } from "#lib/server/db/schema.js";
 import {
@@ -17,6 +18,7 @@ import {
 	sortOrder,
 } from "#lib/server/list-query.js";
 import { decryptSecret } from "#lib/services/secrets.js";
+
 import { BaseDTO } from "./base-dto";
 
 export type NewWorkstationInput = Pick<

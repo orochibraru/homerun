@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, redirect } from "@sveltejs/kit";
+
 import { signInMethodAvailable } from "#lib/auth-providers.js";
 import { config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
@@ -21,7 +23,6 @@ import {
 import { emailSignInAvailability } from "#lib/services/email-sign-in.js";
 import { ServiceAccountService } from "#lib/services/service-account.service.js";
 import { isServiceAccount } from "#lib/user-types.js";
-import { resolve } from "$app/paths";
 
 export const load = async (event) => {
 	const { request: incoming, url, locals } = event;

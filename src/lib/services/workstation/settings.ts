@@ -17,8 +17,8 @@ import {
 } from "#lib/server/workstation-form.js";
 import { workstationHostProblem } from "#lib/server/workstation-presets.js";
 import { encryptSecret } from "#lib/services/secrets.js";
-import { WorkstationSignInService } from "#lib/services/workstation/sign-in.js";
 import { WorkstationService } from "#lib/services/workstation.service.js";
+import { WorkstationSignInService } from "#lib/services/workstation/sign-in.js";
 import { slugify, uniqueSlug } from "#lib/slug.js";
 import {
 	type AutoStopMode,
@@ -58,8 +58,7 @@ const DEFAULT_SETTINGS: WorkstationSettings = {
 
 /** What a new workstation is made of: its settings and login wall (defaults fill the rest), a name, and the domain and host it can't change later. */
 export interface NewWorkstation
-	extends Partial<WorkstationSettings>,
-		Partial<WorkstationLoginWall> {
+	extends Partial<WorkstationSettings>, Partial<WorkstationLoginWall> {
 	domain?: string | null;
 	name: string;
 	remoteHostId?: string | null;
@@ -73,8 +72,7 @@ export interface AutoStopSetting {
 
 /** A change to a workstation: its name, settings, login wall, auto-stop and whether it should run. */
 export interface WorkstationPatch
-	extends Partial<WorkstationSettings>,
-		Partial<WorkstationLoginWall> {
+	extends Partial<WorkstationSettings>, Partial<WorkstationLoginWall> {
 	autoStop?: AutoStopSetting;
 	desiredState?: "running" | "stopped";
 	name?: string;

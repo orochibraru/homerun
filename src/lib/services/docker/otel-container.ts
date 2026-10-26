@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
+
 import {
 	OTEL_COLLECTOR_HOST,
 	OTEL_GRPC_PORT,
 	OTEL_HTTP_PORT,
 } from "#lib/tracing/env.js";
 import { OTLP_TRACES_PATH } from "#lib/tracing/otlp.js";
+
 import { MIRROR_LABEL } from "./image-scan-refs.ts";
 
 export const OTEL_CONTAINER_NAME = OTEL_COLLECTOR_HOST;

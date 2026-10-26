@@ -14,8 +14,7 @@ permissions:
 jobs:
   delete-images:
     name: Delete PR Images
-    if:
-      ${{ !github.event.pull_request.merged &&
+    if: ${{ !github.event.pull_request.merged &&
       github.event.pull_request.head.repo.full_name == github.repository }}
     uses: ./.github/workflows/delete-pr-images.yaml
     with:

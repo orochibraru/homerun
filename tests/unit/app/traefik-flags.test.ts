@@ -12,9 +12,8 @@ const {
 	infraContainersFrom,
 	missingTraefikFlags,
 } = await import("../../../src/lib/services/docker/core-services");
-const { tunnelTrustFlags } = await import(
-	"../../../src/lib/services/docker/newt"
-);
+const { tunnelTrustFlags } =
+	await import("../../../src/lib/services/docker/newt");
 
 const METRICS = [
 	"--entrypoints.metrics.address=:8082",

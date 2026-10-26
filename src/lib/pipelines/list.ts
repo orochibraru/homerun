@@ -1,5 +1,6 @@
-import { type SortOption, sortKeysOf } from "#lib/list-sorts.js";
+import { sortKeysOf, type SortOption } from "#lib/list-sorts.js";
 import { formatSpanDuration } from "#lib/tracing/waterfall.js";
+
 import type { PipelineProvider, PipelineStatus } from "./types.ts";
 
 export const PIPELINE_SORTS: SortOption[] = [

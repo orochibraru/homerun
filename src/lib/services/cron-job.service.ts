@@ -11,13 +11,14 @@ import { CronJobRunDTO } from "#lib/dto/cron-job-run-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { Logger } from "#lib/logger.js";
+
+import { type RegistryAuth } from "./docker.service.ts";
 import {
 	HOST_COMMAND_IMAGE,
 	HOST_COMMAND_TAG,
 	hostCommandArgs,
 } from "./docker/host-command.ts";
 import { MANAGED_LABEL } from "./docker/labels.ts";
-import { type RegistryAuth } from "./docker.service.ts";
 import { decryptSecret } from "./secrets.ts";
 
 const logger = new Logger("CronJob");

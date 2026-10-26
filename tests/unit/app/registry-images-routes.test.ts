@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -7,16 +8,13 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { RegistryService } = await import(
-	"../../../src/lib/services/registry.service"
-);
+const { RegistryService } =
+	await import("../../../src/lib/services/registry.service");
 const { requiredPermission } = await import("../../../src/lib/permissions");
-const repositoriesRoute = await import(
-	"../../../src/routes/api/v1/registry/repositories/+server"
-);
-const tagsRoute = await import(
-	"../../../src/routes/api/v1/registry/repositories/[...repository]/tags/+server"
-);
+const repositoriesRoute =
+	await import("../../../src/routes/api/v1/registry/repositories/+server");
+const tagsRoute =
+	await import("../../../src/routes/api/v1/registry/repositories/[...repository]/tags/+server");
 
 afterEach(() => {
 	restoreStubs();

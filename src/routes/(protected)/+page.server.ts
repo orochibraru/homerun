@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail } from "@sveltejs/kit";
+
 import { AppLogDTO } from "#lib/dto/app-log-dto.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
@@ -14,7 +16,6 @@ import { CapacityService } from "#lib/services/capacity.service.js";
 import { MonitoringService } from "#lib/services/monitoring.service.js";
 import { isProbed } from "#lib/services/uptime/uptime-probe.js";
 import { SIMPLE_FRONT_PAGE_TEMPLATES } from "#lib/ui-mode.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Dashboard");
 

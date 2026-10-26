@@ -2,6 +2,7 @@
 	import { ShieldCheck, UserCircle } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { authClient } from "#lib/auth-client.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
@@ -98,103 +99,111 @@
 </script>
 
 <section class="rounded-md panel">
-  <PanelHeader
-    description="Your display name and avatar shown across the platform, and the email you sign in with."
-    icon={UserCircle}
-    title="Account"
-  >
-    {#snippet trailing()}
-      <SaveButton form="account" pending={accountLoading} />
-    {/snippet}
-  </PanelHeader>
+	<PanelHeader
+		description="Your display name and avatar shown across the platform, and the email you sign in with."
+		icon={UserCircle}
+		title="Account"
+	>
+		{#snippet trailing()}
+			<SaveButton form="account" pending={accountLoading} />
+		{/snippet}
+	</PanelHeader>
 
-  <form id="account" class="space-y-5 p-5" onsubmit={saveAccount}>
-    <!-- Avatar preview + URL input -->
-    <div class="flex items-center gap-4">
-      <div class="shrink-0">
-        {#if accountImage}
-          <img
-            alt={accountName}
-            class="size-16 rounded-md object-cover ring-2 ring-border"
-            src={accountImage}
-          >
-        {:else}
-          <div class="bg-accent flex size-16 items-center justify-center rounded-md text-xl font-bold text-white">
-            {initials}
-          </div>
-        {/if}
-      </div>
-      <div class="min-w-0 flex-1">
-        <label class="mb-1.5 block text-sm font-medium text-text" for="accountImage">
-          Avatar URL
-        </label>
-        <Input
-          id="accountImage"
-          placeholder="https://example.com/avatar.jpg"
-          type="url"
-          bind:value={accountImage}
-        />
-        <p class="mt-1 text-xs text-text-subtle">
-          Paste a direct image link (JPEG, PNG, WebP).
-        </p>
-      </div>
-    </div>
+	<form id="account" class="space-y-5 p-5" onsubmit={saveAccount}>
+		<!-- Avatar preview + URL input -->
+		<div class="flex items-center gap-4">
+			<div class="shrink-0">
+				{#if accountImage}
+					<img
+						alt={accountName}
+						class="size-16 rounded-md object-cover ring-2 ring-border"
+						src={accountImage}
+					/>
+				{:else}
+					<div
+						class="bg-accent flex size-16 items-center justify-center rounded-md text-xl font-bold text-white"
+					>
+						{initials}
+					</div>
+				{/if}
+			</div>
+			<div class="min-w-0 flex-1">
+				<label
+					class="mb-1.5 block text-sm font-medium text-text"
+					for="accountImage"
+				>
+					Avatar URL
+				</label>
+				<Input
+					id="accountImage"
+					placeholder="https://example.com/avatar.jpg"
+					type="url"
+					bind:value={accountImage}
+				/>
+				<p class="mt-1 text-xs text-text-subtle">
+					Paste a direct image link (JPEG, PNG, WebP).
+				</p>
+			</div>
+		</div>
 
-    <!-- Display name -->
-    <div>
-      <label class="mb-1.5 block text-sm font-medium text-text" for="accountName">
-        Display name <span class="text-red-500">*</span>
-      </label>
-      <Input
-        id="accountName"
-        placeholder="Your full name"
-        required
-        type="text"
-        bind:value={accountName}
-      />
-    </div>
+		<!-- Display name -->
+		<div>
+			<label
+				class="mb-1.5 block text-sm font-medium text-text"
+				for="accountName"
+			>
+				Display name <span class="text-red-500">*</span>
+			</label>
+			<Input
+				id="accountName"
+				placeholder="Your full name"
+				required
+				type="text"
+				bind:value={accountName}
+			/>
+		</div>
 
-    <!-- Email -->
-    <div>
-      <div class="mb-1.5 flex items-center gap-2">
-        <label class="block text-sm font-medium text-text" for="accountEmail">
-          Email <span class="text-red-500">*</span>
-        </label>
-        {#if user?.emailVerified}
-          <span
-            class="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400"
-          >
-            <ShieldCheck class="size-3" />
-            Verified
-          </span>
-        {:else}
-          <span
-            class="rounded-full bg-amber-100 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-          >
-            Unverified
-          </span>
-        {/if}
-      </div>
-      <Input
-        disabled={emailLocked}
-        id="accountEmail"
-        placeholder="you@example.com"
-        required
-        type="email"
-        bind:value={accountEmail}
-      />
-      <p class="mt-1 text-xs text-text-subtle">
-        {#if emailLocked}
-          Changing a verified email needs a confirmation link, so it stays
-          locked until SMTP is configured in Settings → Email.
-        {:else if user?.emailVerified}
-          You'll get a confirmation link at {user.email}; the new address
-          takes effect once you follow it.
-        {:else}
-          This is also the address you sign in with. It changes as soon as you
-          save.
-        {/if}
-      </p>
-    </div>
-  </form>
+		<!-- Email -->
+		<div>
+			<div class="mb-1.5 flex items-center gap-2">
+				<label class="block text-sm font-medium text-text" for="accountEmail">
+					Email <span class="text-red-500">*</span>
+				</label>
+				{#if user?.emailVerified}
+					<span
+						class="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400"
+					>
+						<ShieldCheck class="size-3" />
+						Verified
+					</span>
+				{:else}
+					<span
+						class="rounded-full bg-amber-100 px-2 py-0.5 text-[0.65rem] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+					>
+						Unverified
+					</span>
+				{/if}
+			</div>
+			<Input
+				disabled={emailLocked}
+				id="accountEmail"
+				placeholder="you@example.com"
+				required
+				type="email"
+				bind:value={accountEmail}
+			/>
+			<p class="mt-1 text-xs text-text-subtle">
+				{#if emailLocked}
+					Changing a verified email needs a confirmation link, so it stays
+					locked until SMTP is configured in Settings → Email.
+				{:else if user?.emailVerified}
+					You'll get a confirmation link at {user.email}; the new address takes
+					effect once you follow it.
+				{:else}
+					This is also the address you sign in with. It changes as soon as you
+					save.
+				{/if}
+			</p>
+		</div>
+	</form>
 </section>

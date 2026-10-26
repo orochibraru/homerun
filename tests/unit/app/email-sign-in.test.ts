@@ -45,15 +45,12 @@ mock.module("#lib/services/auth.js", () => ({
 	rebuildAuth: () => undefined,
 }));
 
-const { applyInstanceSettings, config } = await import(
-	"../../../src/lib/config"
-);
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { EmailService } = await import(
-	"../../../src/lib/services/email.service"
-);
+const { applyInstanceSettings, config } =
+	await import("../../../src/lib/config");
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { EmailService } =
+	await import("../../../src/lib/services/email.service");
 const {
 	accountSetupPendingKey,
 	emailSignInAvailability,

@@ -1,5 +1,5 @@
-import type { IacAttribute, IacKind, IacResource } from "#lib/iac/resources.js";
 import { loginWallAttributes } from "#lib/iac/resources-identity.js";
+import type { IacAttribute, IacKind, IacResource } from "#lib/iac/resources.js";
 import {
 	DEFAULT_WORKSTATION_HOME,
 	DEFAULT_WORKSTATION_IMAGE,

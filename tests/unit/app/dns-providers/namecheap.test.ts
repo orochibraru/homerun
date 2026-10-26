@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { namecheap } from "../../../../src/lib/services/dns-providers/namecheap";
 import { stubFetch } from "./stub-fetch";
 

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -20,33 +21,25 @@ const {
 	parseTraefikMetrics,
 	slugForTraefikService,
 } = await import("../../../src/lib/traffic-metrics");
-const { MonitoringService, padBuckets } = await import(
-	"../../../src/lib/services/monitoring.service"
-);
-const { StatsSampler } = await import(
-	"../../../src/lib/services/stats/stats-sampler"
-);
+const { MonitoringService, padBuckets } =
+	await import("../../../src/lib/services/monitoring.service");
+const { StatsSampler } =
+	await import("../../../src/lib/services/stats/stats-sampler");
 const { StatSampleDTO } = await import("../../../src/lib/dto/stat-sample-dto");
-const { TrafficSampleDTO } = await import(
-	"../../../src/lib/dto/traffic-sample-dto"
-);
-const { UptimeCheckDTO } = await import(
-	"../../../src/lib/dto/uptime-check-dto"
-);
+const { TrafficSampleDTO } =
+	await import("../../../src/lib/dto/traffic-sample-dto");
+const { UptimeCheckDTO } =
+	await import("../../../src/lib/dto/uptime-check-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
-const { WorkstationService } = await import(
-	"../../../src/lib/services/workstation.service"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { SystemStatsService } = await import(
-	"../../../src/lib/services/system-stats.service"
-);
-const { CapacityService } = await import(
-	"../../../src/lib/services/capacity.service"
-);
+const { WorkstationService } =
+	await import("../../../src/lib/services/workstation.service");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { SystemStatsService } =
+	await import("../../../src/lib/services/system-stats.service");
+const { CapacityService } =
+	await import("../../../src/lib/services/capacity.service");
 const { Logger } = await import("../../../src/lib/logger");
 
 const METRICS = `# HELP traefik_service_requests_total How many HTTP requests processed.
@@ -433,9 +426,8 @@ describe("scoped monitoring", () => {
 
 describe("monitoring formatting and requests", () => {
 	test("formats counts, durations, shares and sizes", async () => {
-		const { formatCount, formatMb, formatMs, formatPercent } = await import(
-			"../../../src/lib/metrics-format"
-		);
+		const { formatCount, formatMb, formatMs, formatPercent } =
+			await import("../../../src/lib/metrics-format");
 		expect(formatCount(1234)).toBe((1234).toLocaleString());
 		expect(formatCount(25_000)).not.toContain("25,000");
 		expect(formatMs(null)).toBe("—");
@@ -449,9 +441,8 @@ describe("monitoring formatting and requests", () => {
 	});
 
 	test("reads the range and time zone, falling back to a week in UTC", async () => {
-		const { monitoringRequest } = await import(
-			"../../../src/lib/server/monitoring-request"
-		);
+		const { monitoringRequest } =
+			await import("../../../src/lib/server/monitoring-request");
 		const cookies = (tz?: string) => ({ get: () => tz });
 		expect(
 			monitoringRequest(
@@ -494,9 +485,8 @@ describe("period comparison", () => {
 	});
 
 	test("the previous window is yesterday so far, or the span right before", async () => {
-		const { previousWindow } = await import(
-			"../../../src/lib/monitoring-ranges"
-		);
+		const { previousWindow } =
+			await import("../../../src/lib/monitoring-ranges");
 		const now = new Date("2026-09-29T15:00:00Z");
 		expect(previousWindow("all", null, now)).toBeNull();
 		expect(
@@ -514,9 +504,8 @@ describe("period comparison", () => {
 	});
 
 	test("each metric compares in its own terms", async () => {
-		const { monitoringChanges } = await import(
-			"../../../src/lib/monitoring-changes"
-		);
+		const { monitoringChanges } =
+			await import("../../../src/lib/monitoring-changes");
 		const totals = (requests: number, ok: number, cpu: number) => ({
 			availability: {
 				external: { avgLatencyMs: 10, checks: 100, ok },

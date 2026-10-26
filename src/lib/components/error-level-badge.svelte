@@ -13,7 +13,7 @@
 </script>
 
 <span
-  class="inline-flex shrink-0 items-center rounded-sm border px-1.5 py-px text-[0.625rem] font-semibold tracking-[0.08em] uppercase {tone}"
+	class="inline-flex shrink-0 items-center rounded-sm border px-1.5 py-px text-[0.625rem] font-semibold tracking-[0.08em] uppercase {tone}"
 >
-  {level}
+	{level}
 </span>

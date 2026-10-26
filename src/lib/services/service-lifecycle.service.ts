@@ -8,12 +8,13 @@ import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { Logger } from "#lib/logger.js";
 import { serviceHostnames } from "#lib/service-domains.js";
 import type { ContainerStatus } from "#lib/types.js";
+
 import { deleteDns, releasedHosts } from "./dns.service.ts";
+import { DockerService } from "./docker.service.ts";
 import {
 	tryRemoveWorkload,
 	WorkloadDetachError,
 } from "./docker/workload-removal.ts";
-import { DockerService } from "./docker.service.ts";
 import { GitWebhookService } from "./git-webhook.service.ts";
 
 const logger = new Logger("ServiceLifecycle");

@@ -1,11 +1,12 @@
+import { command, query } from "$app/server";
 import { z } from "zod";
+
 import { NotificationChannelDTO } from "#lib/dto/notification-channel-dto.js";
 import { Logger } from "#lib/logger.js";
 import { DEFAULT_BROWSER_EVENTS } from "#lib/notification-events.js";
 import { requireUser } from "#lib/server/remote-auth.js";
 import { pushSubscriptionSchema } from "#lib/server/web-push.js";
 import { WebPushService } from "#lib/services/web-push.service.js";
-import { command, query } from "$app/server";
 
 const logger = new Logger("WebPush");
 

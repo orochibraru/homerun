@@ -6,13 +6,11 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { closeCancelledDeploys } = await import(
-	"../../../src/lib/services/queue/cancelled-deploys"
-);
+const { closeCancelledDeploys } =
+	await import("../../../src/lib/services/queue/cancelled-deploys");
 const { DeploymentDTO } = await import("../../../src/lib/dto/deployment-dto");
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
 
 const restorers: { mockRestore: () => void }[] = [];
 

@@ -2,6 +2,7 @@
 	import { ArrowUpCircle, CircleCheck, RefreshCw } from "@lucide/svelte";
 	import { onDestroy } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import Alert from "#lib/components/alert.svelte";
 	import AsyncBlock from "#lib/components/async-block.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -127,185 +128,210 @@
 </script>
 
 <div class="space-y-1.5 px-3 py-2">
-  {#if latest}
-    <button
-      class="border-accent/30 bg-accent-light text-accent hover:bg-accent-light/70 flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs font-medium transition-colors"
-      onclick={() => {
-        open = true;
-      }}
-      type="button"
-    >
-      <ArrowUpCircle class="size-4 shrink-0" />
-      <span class="truncate">v{latest.version} is available</span>
-    </button>
-  {/if}
-  {#if admin}
-    <button
-      class="text-text-subtle hover:text-text font-mono text-[0.6875rem] transition-colors"
-      onclick={() => {
-        open = true;
-      }}
-      title="Update status"
-      type="button"
-    >
-      {#if version.current}
-        v{version.current}
-      {:else}
-        &nbsp;
-      {/if}
-    </button>
-  {:else}
-    <p class="text-text-subtle font-mono text-[0.6875rem]">
-      {#if version.current}
-        v{version.current}
-      {:else}
-        &nbsp;
-      {/if}
-    </p>
-  {/if}
+	{#if latest}
+		<button
+			class="border-accent/30 bg-accent-light text-accent hover:bg-accent-light/70 flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs font-medium transition-colors"
+			onclick={() => {
+				open = true;
+			}}
+			type="button"
+		>
+			<ArrowUpCircle class="size-4 shrink-0" />
+			<span class="truncate">v{latest.version} is available</span>
+		</button>
+	{/if}
+	{#if admin}
+		<button
+			class="text-text-subtle hover:text-text font-mono text-[0.6875rem] transition-colors"
+			onclick={() => {
+				open = true;
+			}}
+			title="Update status"
+			type="button"
+		>
+			{#if version.current}
+				v{version.current}
+			{:else}
+				&nbsp;
+			{/if}
+		</button>
+	{:else}
+		<p class="text-text-subtle font-mono text-[0.6875rem]">
+			{#if version.current}
+				v{version.current}
+			{:else}
+				&nbsp;
+			{/if}
+		</p>
+	{/if}
 </div>
 
 {#if admin}
-  <Dialog.Root bind:open>
-    <Dialog.Content>
-      <Dialog.Header>
-        <Dialog.Title>
-          {latest ? `Update to v${latest.version}` : `Homerun v${version.current ?? ""}`}
-        </Dialog.Title>
-        <Dialog.Description>
-          {#if latest}
-            You're on v{version.current}.
-            <a class="text-accent underline" href={latest.url} rel="noreferrer" target="_blank">
-              Release notes
-            </a>
-          {:else if status}
-            Following the {status.channel} channel.
-            {#if status.checkedAt}
-              Last checked {new Date(status.checkedAt).toLocaleString()}.
-            {/if}
-          {/if}
-        </Dialog.Description>
-      </Dialog.Header>
+	<Dialog.Root bind:open>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>
+					{latest
+						? `Update to v${latest.version}`
+						: `Homerun v${version.current ?? ""}`}
+				</Dialog.Title>
+				<Dialog.Description>
+					{#if latest}
+						You're on v{version.current}.
+						<a
+							class="text-accent underline"
+							href={latest.url}
+							rel="noreferrer"
+							target="_blank"
+						>
+							Release notes
+						</a>
+					{:else if status}
+						Following the {status.channel} channel.
+						{#if status.checkedAt}
+							Last checked {new Date(status.checkedAt).toLocaleString()}.
+						{/if}
+					{/if}
+				</Dialog.Description>
+			</Dialog.Header>
 
-      {#if !latest}
-        {#if release?.error}
-          <Alert title="Couldn't load the update status" variant="warning">
-            Try checking again.
-          </Alert>
-        {:else if !status}
-          <Skeleton class="h-10 w-full" />
-        {:else if status.latest}
-          <p class="text-text-muted flex items-center gap-2 text-sm">
-            <CircleCheck class="text-accent size-4 shrink-0" />
-            Up to date: v{status.latest.version} is the newest {status.channel} release.
-          </p>
-        {:else}
-          <Alert title="Couldn't reach GitHub" variant="warning">
-            The newest {status.channel} release couldn't be looked up. Check again in a moment.
-          </Alert>
-        {/if}
-      {:else if updatingTo}
-        <Alert title="Updating to v{updatingTo}" variant="info">
-          <span class="flex items-center gap-2">
-            <Spinner class="size-3.5" />
-            Pulling the new image and restarting Homerun. This page reloads once it's back.
-          </span>
-          <span class="mt-1 block">
-            Nothing after a few minutes? Check <code>docker logs homerun-updater</code> on the host.
-          </span>
-        </Alert>
-      {:else if preflight}
-        <AsyncBlock errorTitle="Couldn't check whether Homerun can update." query={preflight}>
-          {#snippet pending()}
-            <Skeleton class="h-16 w-full" />
-          {/snippet}
-          {#snippet children(check)}
-            {#if !check.supported}
-              <Alert title="Not available here" variant="info">{check.reason}</Alert>
-            {:else if !check.ready}
-              <Alert title="Not right now" variant="warning">
-                {check.reason}
-                {#if check.blockers.length > 0}
-                  <div class="mt-2">
-                    <UpdateBlockers jobs={check.blockers} />
-                  </div>
-                {/if}
-                {#snippet actions()}
-                  <Button onclick={() => preflight.refresh()} size="sm" variant="outline">
-                    Check again
-                  </Button>
-                {/snippet}
-              </Alert>
-            {:else}
-              <p class="text-text-muted text-sm">
-                No new deployments or jobs start while the update runs. A helper container pulls
-                the new image and recreates the Homerun container, so the dashboard is unavailable
-                for a moment.
-              </p>
-            {/if}
-          {/snippet}
-        </AsyncBlock>
-      {/if}
+			{#if !latest}
+				{#if release?.error}
+					<Alert title="Couldn't load the update status" variant="warning">
+						Try checking again.
+					</Alert>
+				{:else if !status}
+					<Skeleton class="h-10 w-full" />
+				{:else if status.latest}
+					<p class="text-text-muted flex items-center gap-2 text-sm">
+						<CircleCheck class="text-accent size-4 shrink-0" />
+						Up to date: v{status.latest.version} is the newest {status.channel} release.
+					</p>
+				{:else}
+					<Alert title="Couldn't reach GitHub" variant="warning">
+						The newest {status.channel} release couldn't be looked up. Check again
+						in a moment.
+					</Alert>
+				{/if}
+			{:else if updatingTo}
+				<Alert title="Updating to v{updatingTo}" variant="info">
+					<span class="flex items-center gap-2">
+						<Spinner class="size-3.5" />
+						Pulling the new image and restarting Homerun. This page reloads once it's
+						back.
+					</span>
+					<span class="mt-1 block">
+						Nothing after a few minutes? Check <code
+							>docker logs homerun-updater</code
+						> on the host.
+					</span>
+				</Alert>
+			{:else if preflight}
+				<AsyncBlock
+					errorTitle="Couldn't check whether Homerun can update."
+					query={preflight}
+				>
+					{#snippet pending()}
+						<Skeleton class="h-16 w-full" />
+					{/snippet}
+					{#snippet children(check)}
+						{#if !check.supported}
+							<Alert title="Not available here" variant="info"
+								>{check.reason}</Alert
+							>
+						{:else if !check.ready}
+							<Alert title="Not right now" variant="warning">
+								{check.reason}
+								{#if check.blockers.length > 0}
+									<div class="mt-2">
+										<UpdateBlockers jobs={check.blockers} />
+									</div>
+								{/if}
+								{#snippet actions()}
+									<Button
+										onclick={() => preflight.refresh()}
+										size="sm"
+										variant="outline"
+									>
+										Check again
+									</Button>
+								{/snippet}
+							</Alert>
+						{:else}
+							<p class="text-text-muted text-sm">
+								No new deployments or jobs start while the update runs. A helper
+								container pulls the new image and recreates the Homerun
+								container, so the dashboard is unavailable for a moment.
+							</p>
+						{/if}
+					{/snippet}
+				</AsyncBlock>
+			{/if}
 
-      <Dialog.Footer>
-        <Button
-          onclick={() => {
-            open = false;
-          }}
-          type="button"
-          variant="outline"
-        >
-          Close
-        </Button>
-        {#if !updatingTo}
-          <Button
-            disabled={checking}
-            onclick={handleCheck}
-            type="button"
-            variant={latest ? "outline" : "default"}
-          >
-            {#if checking}
-              <Spinner class="size-4" />
-            {:else}
-              <RefreshCw class="size-4" />
-            {/if}
-            Check for updates
-          </Button>
-        {/if}
-        {#if !updatingTo && latest && preflight?.current?.ready}
-          <Button disabled={starting} onclick={() => handleUpdate()} type="button">
-            {#if starting}
-              <Spinner class="size-4" />
-            {/if}
-            Update now
-          </Button>
-        {/if}
-        {#if !updatingTo && latest && blockers.length > 0}
-          <Button
-            disabled={starting}
-            onclick={() => {
-              confirmingForce = true;
-            }}
-            type="button"
-            variant="destructive"
-          >
-            {#if starting}
-              <Spinner class="size-4" />
-            {/if}
-            Update anyway
-          </Button>
-        {/if}
-      </Dialog.Footer>
-    </Dialog.Content>
-  </Dialog.Root>
+			<Dialog.Footer>
+				<Button
+					onclick={() => {
+						open = false;
+					}}
+					type="button"
+					variant="outline"
+				>
+					Close
+				</Button>
+				{#if !updatingTo}
+					<Button
+						disabled={checking}
+						onclick={handleCheck}
+						type="button"
+						variant={latest ? "outline" : "default"}
+					>
+						{#if checking}
+							<Spinner class="size-4" />
+						{:else}
+							<RefreshCw class="size-4" />
+						{/if}
+						Check for updates
+					</Button>
+				{/if}
+				{#if !updatingTo && latest && preflight?.current?.ready}
+					<Button
+						disabled={starting}
+						onclick={() => handleUpdate()}
+						type="button"
+					>
+						{#if starting}
+							<Spinner class="size-4" />
+						{/if}
+						Update now
+					</Button>
+				{/if}
+				{#if !updatingTo && latest && blockers.length > 0}
+					<Button
+						disabled={starting}
+						onclick={() => {
+							confirmingForce = true;
+						}}
+						type="button"
+						variant="destructive"
+					>
+						{#if starting}
+							<Spinner class="size-4" />
+						{/if}
+						Update anyway
+					</Button>
+				{/if}
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
 
-  <ConfirmDialog
-    confirmLabel="Update anyway"
-    description="The restart interrupts these jobs. Once v{latest?.version ?? ''} is up, work that was interrupted runs again or picks up where it stopped, and queued jobs start as usual."
-    onConfirm={() => handleUpdate(true)}
-    title="Update over running jobs?"
-    bind:open={confirmingForce}
-  >
-    <UpdateBlockers jobs={blockers} />
-  </ConfirmDialog>
+	<ConfirmDialog
+		confirmLabel="Update anyway"
+		description="The restart interrupts these jobs. Once v{latest?.version ??
+			''} is up, work that was interrupted runs again or picks up where it stopped, and queued jobs start as usual."
+		onConfirm={() => handleUpdate(true)}
+		title="Update over running jobs?"
+		bind:open={confirmingForce}
+	>
+		<UpdateBlockers jobs={blockers} />
+	</ConfirmDialog>
 {/if}

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import {
 		Activity,
 		BarChart3,
@@ -6,11 +8,10 @@
 		ShieldBan,
 		ShieldCheck,
 	} from "@lucide/svelte";
+
 	import TabNav from "#lib/components/tab-nav.svelte";
 	import { can } from "#lib/permissions.js";
 	import { currentHref, visibleItems } from "#lib/ui-mode.js";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 
 	const { children, data } = $props();
 
@@ -66,19 +67,21 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Monitoring</h1>
-    <p class="text-text-muted mt-1 text-sm">
-      Traffic and uptime across every service, this host's CPU and memory, and
-      the traces of Homerun's own jobs.
-    </p>
-  </div>
+	<div class="mb-6">
+		<h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
+			Monitoring
+		</h1>
+		<p class="text-text-muted mt-1 text-sm">
+			Traffic and uptime across every service, this host's CPU and memory, and
+			the traces of Homerun's own jobs.
+		</p>
+	</div>
 
-  {#if shown.length > 1}
-    <TabNav {active} tabs={shown}>
-      {@render children()}
-    </TabNav>
-  {:else}
-    {@render children()}
-  {/if}
+	{#if shown.length > 1}
+		<TabNav {active} tabs={shown}>
+			{@render children()}
+		</TabNav>
+	{:else}
+		{@render children()}
+	{/if}
 </div>

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import type { GitConnectionDTO } from "../../../src/lib/dto/git-connection-dto";
 import type { GitProviderConfig } from "../../../src/lib/server/db/schema";
 import {
@@ -12,9 +13,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { GitProviderService, refusalFrom } = await import(
-	"../../../src/lib/services/git-provider.service"
-);
+const { GitProviderService, refusalFrom } =
+	await import("../../../src/lib/services/git-provider.service");
 
 const gitea: GitProviderConfig = {
 	baseUrl: "https://gitea.example.com",

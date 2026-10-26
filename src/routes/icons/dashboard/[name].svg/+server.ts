@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+
 import { DashboardIconsService } from "#lib/services/dashboard-icons.service.js";
 
 const LOCKDOWN = {

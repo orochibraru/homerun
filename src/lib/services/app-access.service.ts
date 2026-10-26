@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+
 import {
 	acceptsEmailSignIn,
 	accountProviderIdFor,
@@ -16,6 +17,7 @@ import {
 } from "#lib/server/db/schema.js";
 import { primaryHostname } from "#lib/service-domains.js";
 import { isServiceAccount } from "#lib/user-types.js";
+
 import { emailSignInAvailability } from "./email-sign-in.ts";
 
 const GROUP_CLAIMS = ["groups", "roles", "grp"];

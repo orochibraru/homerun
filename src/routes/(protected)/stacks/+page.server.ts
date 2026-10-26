@@ -1,5 +1,5 @@
 import { StackDTO } from "#lib/dto/stack-dto.js";
-import { STACK_SORTS, sortKeysOf } from "#lib/list-sorts.js";
+import { sortKeysOf, STACK_SORTS } from "#lib/list-sorts.js";
 import { parseListQuery } from "#lib/server/list-query.js";
 import { descendantIds, stackPath } from "#lib/stack-tree.js";
 

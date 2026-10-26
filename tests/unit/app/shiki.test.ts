@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 const { highlightCode } = await import("../../../src/lib/server/shiki");
-const { providerSnippets } = await import(
-	"../../../src/lib/iac/provider-snippets"
-);
+const { providerSnippets } =
+	await import("../../../src/lib/iac/provider-snippets");
 
 describe("highlightCode", () => {
 	test("highlights HCL with both themes as variables and escapes the source", async () => {

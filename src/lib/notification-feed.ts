@@ -1,5 +1,6 @@
-import type { Notification } from "#lib/server/db/schema.js";
 import { resolve } from "$app/paths";
+
+import type { Notification } from "#lib/server/db/schema.js";
 
 const FAILURE_TYPES = new Set<Notification["type"]>([
 	"app_runtime_error",
@@ -38,8 +39,7 @@ export function notificationHref(item: {
 
 /** The browser's notification permission, or "unsupported" where the Notification API doesn't exist. */
 export function browserNotificationPermission():
-	| NotificationPermission
-	| "unsupported" {
+	NotificationPermission | "unsupported" {
 	return typeof Notification === "undefined"
 		? "unsupported"
 		: Notification.permission;

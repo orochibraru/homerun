@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	GATE_COOKIE_NAME,
 	gateCookie,

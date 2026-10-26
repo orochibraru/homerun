@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+
 import { db } from "#lib/server/db/lib.js";
 import {
 	type ServiceDependency,
@@ -7,11 +8,12 @@ import {
 import {
 	backfillEdges,
 	createsCycle,
-	type DependencySource,
 	dependencyEdges,
 	dependencyMap,
+	type DependencySource,
 	replacementCycle,
 } from "#lib/service-graph.js";
+
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
 

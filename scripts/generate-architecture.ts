@@ -481,12 +481,12 @@ await Bun.write(
 	doc.slice(0, startAt) + generated + doc.slice(endAt + END.length),
 );
 
-const prettier = Bun.spawnSync(["bunx", "prettier", "--write", DOC_PATH], {
+const formatted = Bun.spawnSync(["bun", "fmt", DOC_PATH], {
 	stderr: "inherit",
 	stdout: "ignore",
 });
-if (prettier.exitCode !== 0) {
-	throw new Error(`prettier failed on ${DOC_PATH}`);
+if (formatted.exitCode !== 0) {
+	throw new Error(`bun fmt failed on ${DOC_PATH}`);
 }
 
 console.log(`Wrote ${DOC_PATH}`);

@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Bug, List, Rocket, SquareKanban } from "@lucide/svelte";
-	import SectionNav from "#lib/components/section-nav.svelte";
 	import { resolve } from "$app/paths";
+	import { Bug, List, Rocket, SquareKanban } from "@lucide/svelte";
+
+	import SectionNav from "#lib/components/section-nav.svelte";
 
 	const { children, data } = $props();
 
@@ -41,5 +42,5 @@
 </script>
 
 <SectionNav hubLabel="Errors" label="Error views" {sections}>
-  {@render children()}
+	{@render children()}
 </SectionNav>

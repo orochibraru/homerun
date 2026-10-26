@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
+
 	import { cn, type WithoutChild } from "#lib/utils.js";
 
 	let {
@@ -20,7 +21,7 @@
 	data-inset={inset}
 	class={cn(
 		"focus:bg-primary focus:text-primary-foreground data-open:bg-primary data-open:text-primary-foreground rounded-sm px-2 py-1.5 text-sm data-inset:pl-8 [&_svg:not([class*='size-'])]:size-4 flex cursor-default items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
-		className
+		className,
 	)}
 	{...restProps}
 >

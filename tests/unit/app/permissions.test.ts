@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync } from "node:fs";
 import { join, relative } from "node:path";
+
 import { parse } from "devalue";
+
 import {
+	allPermissions,
 	APP_ONLY_HOME,
 	APP_ONLY_MESSAGE,
-	allPermissions,
 	appOnlyMayRequest,
 	can,
 	hasAllPermissions,
@@ -14,9 +16,9 @@ import {
 	isAppOnly,
 	isUserRole,
 	mayVisit,
+	parsePermissions,
 	PERMISSION_AREAS,
 	PERMISSION_PRESETS,
-	parsePermissions,
 	permissionDeniedMessage,
 	permissionsForRole,
 	permissionsFromForm,

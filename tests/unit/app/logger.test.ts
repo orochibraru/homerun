@@ -15,13 +15,11 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { DEPLOY_LOG_SCOPE, Logger, jsonFields } = await import(
-	"../../../src/lib/logger"
-);
+const { DEPLOY_LOG_SCOPE, Logger, jsonFields } =
+	await import("../../../src/lib/logger");
 const { AppLogDTO } = await import("../../../src/lib/dto/app-log-dto");
-const { NotificationDTO } = await import(
-	"../../../src/lib/dto/notification-dto"
-);
+const { NotificationDTO } =
+	await import("../../../src/lib/dto/notification-dto");
 
 const SERVICE_ID = "0b8f5c1e-4d2a-4c3b-9e7f-1a2b3c4d5e6f";
 const original = { format: config.logFormat, level: config.logLevel };

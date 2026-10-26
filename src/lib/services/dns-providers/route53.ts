@@ -1,5 +1,5 @@
 import { bareTarget, DnsProviderError, normalizeName } from "./http";
-import { type SigV4Credentials, signV4 } from "./sigv4";
+import { signV4, type SigV4Credentials } from "./sigv4";
 import type {
 	DnsCredentials,
 	DnsProviderClient,

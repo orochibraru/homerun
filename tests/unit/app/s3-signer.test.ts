@@ -1,8 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 
-const { expectS3Ok, s3Fetch, signS3Request } = await import(
-	"../../../src/lib/services/s3/signer"
-);
+const { expectS3Ok, s3Fetch, signS3Request } =
+	await import("../../../src/lib/services/s3/signer");
 
 const aws = {
 	accessKeyId: "AKIAIOSFODNN7EXAMPLE",

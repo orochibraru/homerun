@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { buildCacheChoice } from "#lib/build-cache.js";
 import { config, serviceDomain } from "#lib/config.js";
 import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
@@ -42,7 +44,6 @@ import {
 	submittedSecret,
 } from "#lib/template-secrets.js";
 import { fillUrlInEnv } from "#lib/template-url.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
 

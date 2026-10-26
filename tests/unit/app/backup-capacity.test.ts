@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-const { capacityAlertChange, parseRcloneAbout, usedPercent } = await import(
-	"../../../src/lib/backup-capacity"
-);
+const { capacityAlertChange, parseRcloneAbout, usedPercent } =
+	await import("../../../src/lib/backup-capacity");
 
 describe("parseRcloneAbout", () => {
 	test("reads total, used and free", () => {

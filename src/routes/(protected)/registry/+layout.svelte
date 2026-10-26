@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { Boxes, KeyRound, Settings2, Ticket } from "@lucide/svelte";
-	import { onMount } from "svelte";
-	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
-	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import { Boxes, KeyRound, Settings2, Ticket } from "@lucide/svelte";
+	import { onMount } from "svelte";
+
+	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
+	import { title } from "#lib/store/title.js";
 
 	const { children } = $props();
 
@@ -67,15 +68,17 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <header class="mb-6">
-    <h1 class="text-text text-2xl font-semibold max-md:hidden">Docker Registry</h1>
-    <p class="text-text-muted mt-1 text-sm">
-      The built-in image registry. Homerun mirrors every image it scans through
-      it, and it can double as a private registry you push to.
-    </p>
-  </header>
+	<header class="mb-6">
+		<h1 class="text-text text-2xl font-semibold max-md:hidden">
+			Docker Registry
+		</h1>
+		<p class="text-text-muted mt-1 text-sm">
+			The built-in image registry. Homerun mirrors every image it scans through
+			it, and it can double as a private registry you push to.
+		</p>
+	</header>
 
-  <TabNav active={activeTabId} {tabs}>
-    {@render children()}
-  </TabNav>
+	<TabNav active={activeTabId} {tabs}>
+		{@render children()}
+	</TabNav>
 </div>

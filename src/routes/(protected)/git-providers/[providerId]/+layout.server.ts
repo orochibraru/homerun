@@ -1,9 +1,10 @@
+import { resolve } from "$app/paths";
 import { error } from "@sveltejs/kit";
+
 import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import { can } from "#lib/permissions.js";
 import { browserOrigin } from "#lib/server/canonical-origin.js";
 import { GitProviderConfigService } from "#lib/services/git-provider-config.service.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ locals, params, parent, request, url }) => {
 	const { user } = await parent();

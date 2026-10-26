@@ -6,24 +6,18 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { PushSubscriptionGoneError, sendWebPush, toBase64Url } = await import(
-	"../../../src/lib/server/web-push"
-);
-const { WebPushService } = await import(
-	"../../../src/lib/services/web-push.service"
-);
-const { NotificationChannelService } = await import(
-	"../../../src/lib/services/notification-channel.service"
-);
-const { NotificationChannelDTO } = await import(
-	"../../../src/lib/dto/notification-channel-dto"
-);
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
+const { PushSubscriptionGoneError, sendWebPush, toBase64Url } =
+	await import("../../../src/lib/server/web-push");
+const { WebPushService } =
+	await import("../../../src/lib/services/web-push.service");
+const { NotificationChannelService } =
+	await import("../../../src/lib/services/notification-channel.service");
+const { NotificationChannelDTO } =
+	await import("../../../src/lib/dto/notification-channel-dto");
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
 const { config } = await import("../../../src/lib/config");
 
@@ -93,9 +87,8 @@ const payload = {
 
 describe("sendWebPush", () => {
 	test("posts an encrypted aes128gcm body with a VAPID header", async () => {
-		const { generateVapidKeys } = await import(
-			"../../../src/lib/server/web-push"
-		);
+		const { generateVapidKeys } =
+			await import("../../../src/lib/server/web-push");
 		const keys = await generateVapidKeys();
 		const sent = stubFetch(() => new Response(null, { status: 201 }));
 		await sendWebPush(await subscription(), payload, keys, "mailto:a@b.c");
@@ -107,9 +100,8 @@ describe("sendWebPush", () => {
 	});
 
 	test("a 404 or 410 means the subscription is gone, anything else is an error", async () => {
-		const { generateVapidKeys } = await import(
-			"../../../src/lib/server/web-push"
-		);
+		const { generateVapidKeys } =
+			await import("../../../src/lib/server/web-push");
 		const keys = await generateVapidKeys();
 		const sub = await subscription();
 		stubFetch(() => new Response(null, { status: 410 }));

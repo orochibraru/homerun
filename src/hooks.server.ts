@@ -1,10 +1,13 @@
 import { join } from "node:path";
 import process, { cwd } from "node:process";
+
+import { building } from "$app/env";
 import type { RequestEvent } from "@sveltejs/kit";
 import { type Handle, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
+
 import { applyInstanceSettings, config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
@@ -51,8 +54,8 @@ import {
 	rebuildAuth,
 	verifyMcpAccessToken,
 } from "#lib/services/auth.js";
-import { detectAuthCheckUrl } from "#lib/services/cron/core-services-watch.js";
 import { CronService } from "#lib/services/cron.service.js";
+import { detectAuthCheckUrl } from "#lib/services/cron/core-services-watch.js";
 import { DeploymentService } from "#lib/services/deploy.service.js";
 import { IpBanService } from "#lib/services/ip-ban.service.js";
 import { OrchestrationService } from "#lib/services/orchestration.service.js";
@@ -66,7 +69,6 @@ import {
 	isServiceAccount,
 	SERVICE_ACCOUNT_DISABLED_MESSAGE,
 } from "#lib/user-types.js";
-import { building } from "$app/env";
 
 const ENDPOINT_ROUTE_IDS = new Set(
 	Object.keys(import.meta.glob("./routes/**/+server.ts")).map((path) =>

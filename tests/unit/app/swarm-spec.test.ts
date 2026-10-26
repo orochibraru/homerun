@@ -121,12 +121,10 @@ describe("swarmRestartCondition", () => {
 
 describe("swarmServiceTemplate", () => {
 	test("puts the run-as user on the container spec, and leaves it unset otherwise", async () => {
-		const { runtimeOptionsFrom } = await import(
-			"../../../src/lib/service-runtime"
-		);
-		const { swarmServiceTemplate } = await import(
-			"../../../src/lib/services/docker/swarm"
-		);
+		const { runtimeOptionsFrom } =
+			await import("../../../src/lib/service-runtime");
+		const { swarmServiceTemplate } =
+			await import("../../../src/lib/services/docker/swarm");
 		const params = {
 			containerPort: 80,
 			envVars: {},

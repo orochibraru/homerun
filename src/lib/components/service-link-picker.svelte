@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Link2 } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
+
 	import { labelClass } from "#lib/components/form-styles.js";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
 	import ServicePicker, {
@@ -9,9 +10,9 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import {
+		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
-		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
 	import type { ParsedEnvVar } from "#lib/env-parse.js";
@@ -21,8 +22,8 @@
 		defaultVarPrefix,
 		detectLinkEngine,
 		type LinkFormat,
-		type LinkTargetService,
 		linkFormatsFor,
+		type LinkTargetService,
 	} from "#lib/service-link.js";
 
 	const {
@@ -94,89 +95,87 @@
 </script>
 
 <Button class="mt-1 h-auto p-0" onclick={() => (open = true)} variant="link">
-  <Link2 class="size-3.5" />
-  Link a service
+	<Link2 class="size-3.5" />
+	Link a service
 </Button>
 
 <ResponsiveDialog
-  bind:open
-  description="Point this service at another one on this host. Homerun fills in the internal hostname, port and credentials it already knows about."
-  onsubmit={apply}
-  size="md"
-  submitDisabled={!target}
-  submitLabel="Add variables"
-  title="Link a service"
+	bind:open
+	description="Point this service at another one on this host. Homerun fills in the internal hostname, port and credentials it already knows about."
+	onsubmit={apply}
+	size="md"
+	submitDisabled={!target}
+	submitLabel="Add variables"
+	title="Link a service"
 >
-  {#if services.length === 0}
-    <p class="text-text-muted text-sm">
-      No other services to link to yet.
-    </p>
-  {:else}
-    <div class="space-y-4">
-      <div class="space-y-4">
-        <ServicePicker
-          id="linkService"
-          {services}
-          {stackId}
-          {stacks}
-          bind:value={serviceId}
-        />
-        {#if engine && target}
-          <p class="text-text-subtle mt-1.5 text-xs">
-            Detected {engine.label} · reachable at
-            <span class="">{target.slug}:{target.containerPort}</span>
-          </p>
-        {/if}
-      </div>
+	{#if services.length === 0}
+		<p class="text-text-muted text-sm">No other services to link to yet.</p>
+	{:else}
+		<div class="space-y-4">
+			<div class="space-y-4">
+				<ServicePicker
+					id="linkService"
+					{services}
+					{stackId}
+					{stacks}
+					bind:value={serviceId}
+				/>
+				{#if engine && target}
+					<p class="text-text-subtle mt-1.5 text-xs">
+						Detected {engine.label} · reachable at
+						<span class="">{target.slug}:{target.containerPort}</span>
+					</p>
+				{/if}
+			</div>
 
-      {#if target}
-        <div>
-          <label class={labelClass} for="linkFormat">Format</label>
-          <SelectRoot type="single" bind:value={format}>
-            <SelectTrigger class="w-full" id="linkFormat">
-              {formatLabel}
-            </SelectTrigger>
-            <SelectContent>
-              {#each formatOptions as [value, optionLabel] (value)}
-                <SelectItem label={optionLabel} value={value} />
-              {/each}
-            </SelectContent>
-          </SelectRoot>
-        </div>
+			{#if target}
+				<div>
+					<label class={labelClass} for="linkFormat">Format</label>
+					<SelectRoot type="single" bind:value={format}>
+						<SelectTrigger class="w-full" id="linkFormat">
+							{formatLabel}
+						</SelectTrigger>
+						<SelectContent>
+							{#each formatOptions as [value, optionLabel] (value)}
+								<SelectItem label={optionLabel} {value} />
+							{/each}
+						</SelectContent>
+					</SelectRoot>
+				</div>
 
-        {#if linkFormat === "vars"}
-          <div>
-            <label class={labelClass} for="linkPrefix">Variable prefix</label>
-            <Input
-              class=""
-              id="linkPrefix"
-              placeholder="POSTGRES"
-              type="text"
-              bind:value={prefix}
-            />
-          </div>
-        {:else}
-          <div>
-            <label class={labelClass} for="linkUrlKey">Variable name</label>
-            <Input
-              class=""
-              id="linkUrlKey"
-              placeholder="DATABASE_URL"
-              type="text"
-              bind:value={urlKey}
-            />
-          </div>
-        {/if}
+				{#if linkFormat === "vars"}
+					<div>
+						<label class={labelClass} for="linkPrefix">Variable prefix</label>
+						<Input
+							class=""
+							id="linkPrefix"
+							placeholder="POSTGRES"
+							type="text"
+							bind:value={prefix}
+						/>
+					</div>
+				{:else}
+					<div>
+						<label class={labelClass} for="linkUrlKey">Variable name</label>
+						<Input
+							class=""
+							id="linkUrlKey"
+							placeholder="DATABASE_URL"
+							type="text"
+							bind:value={urlKey}
+						/>
+					</div>
+				{/if}
 
-        <div class="bg-surface-2 border-border rounded-lg border p-3">
-          <p class={labelClass}>Preview</p>
-          {#each preview as row (row.key)}
-            <p class="text-text truncate text-xs">
-              {row.key}={row.value}
-            </p>
-          {/each}
-        </div>
-      {/if}
-    </div>
-  {/if}
+				<div class="bg-surface-2 border-border rounded-lg border p-3">
+					<p class={labelClass}>Preview</p>
+					{#each preview as row (row.key)}
+						<p class="text-text truncate text-xs">
+							{row.key}={row.value}
+						</p>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	{/if}
 </ResponsiveDialog>

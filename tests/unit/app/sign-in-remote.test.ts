@@ -7,6 +7,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
+
 import type { z } from "zod";
 
 mock.module("$app/env", () => ({
@@ -33,12 +34,10 @@ mock.module("#lib/services/auth.js", () => ({
 	rebuildAuth: () => undefined,
 }));
 
-const { AccountSetupService } = await import(
-	"../../../src/lib/services/account-setup.service"
-);
-const { completeAccountSetup, lookupSignIn, resendSetupCode } = await import(
-	"../../../src/lib/remote/sign-in.remote"
-);
+const { AccountSetupService } =
+	await import("../../../src/lib/services/account-setup.service");
+const { completeAccountSetup, lookupSignIn, resendSetupCode } =
+	await import("../../../src/lib/remote/sign-in.remote");
 
 const lookupCommand = lookupSignIn as unknown as (input: {
 	email: string;

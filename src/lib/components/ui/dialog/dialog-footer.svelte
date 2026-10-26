@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Dialog as DialogPrimitive } from "bits-ui";
 	import type { HTMLAttributes } from "svelte/elements";
+
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
@@ -16,17 +17,20 @@
 </script>
 
 <div
-  class={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
-  data-slot="dialog-footer"
-  bind:this={ref}
-  {...restProps}
+	class={cn(
+		"flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+		className,
+	)}
+	data-slot="dialog-footer"
+	bind:this={ref}
+	{...restProps}
 >
-  {@render children?.()}
-  {#if showCloseButton}
-    <DialogPrimitive.Close>
-      {#snippet child({ props })}
-        <Button variant="outline" {...props}>Close</Button>
-      {/snippet}
-    </DialogPrimitive.Close>
-  {/if}
+	{@render children?.()}
+	{#if showCloseButton}
+		<DialogPrimitive.Close>
+			{#snippet child({ props })}
+				<Button variant="outline" {...props}>Close</Button>
+			{/snippet}
+		</DialogPrimitive.Close>
+	{/if}
 </div>

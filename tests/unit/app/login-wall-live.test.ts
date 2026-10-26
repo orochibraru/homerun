@@ -6,12 +6,10 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { buildContainerLabels } = await import(
-	"../../../src/lib/services/docker/labels"
-);
-const { cachedGateAccess, forgetGateAccess, GATE_RECHECK_MS } = await import(
-	"../../../src/lib/server/gate-access-cache"
-);
+const { buildContainerLabels } =
+	await import("../../../src/lib/services/docker/labels");
+const { cachedGateAccess, forgetGateAccess, GATE_RECHECK_MS } =
+	await import("../../../src/lib/server/gate-access-cache");
 
 describe("login wall middleware labels", () => {
 	test("only a service behind the login wall gets the forwardAuth middleware", () => {

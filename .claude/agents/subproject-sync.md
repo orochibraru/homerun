@@ -137,5 +137,5 @@ something was verified live when it wasn't.
   same paths via `go tool -modfile=tools/go/go.mod golangci-lint run`).
 
 - Its unit tests, the same path scoping with `go test` instead of `go vet`.
-- `bun run lint` (oxlint/biome cover the whole repo including these directories,
-  though neither type-checks Go).
+- `bun run lint` (oxlint and markdownlint cover the whole repo including these
+  directories, though neither type-checks Go).

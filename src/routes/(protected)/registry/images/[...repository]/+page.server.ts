@@ -1,7 +1,8 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { RegistryService } from "#lib/services/registry.service.js";
-import { resolve } from "$app/paths";
 
 function reason(cause: unknown): string {
 	return cause instanceof Error ? cause.message : String(cause);

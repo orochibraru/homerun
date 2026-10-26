@@ -6,17 +6,17 @@
 </script>
 
 <div class="space-y-6">
-  <PipelineStats
-    allTime={data.overview.allTime}
-    window={data.overview.window}
-    windowDays={data.windowDays}
-    workflows={data.overview.workflows}
-  />
-  <PipelineRunList
-    emptySubtitle={data.repository.pipelinesEnabled
-      ? "Runs show up here after the first sync."
-      : "Turn syncing on under Settings to read this repository's runs."}
-    listing={data.listing}
-    searched={data.searched}
-  />
+	<PipelineStats
+		allTime={data.overview.allTime}
+		window={data.overview.window}
+		windowDays={data.windowDays}
+		workflows={data.overview.workflows}
+	/>
+	<PipelineRunList
+		emptySubtitle={data.repository.pipelinesEnabled
+			? "Runs show up here after the first sync."
+			: "Turn syncing on under Settings to read this repository's runs."}
+		listing={data.listing}
+		searched={data.searched}
+	/>
 </div>

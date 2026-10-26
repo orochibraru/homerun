@@ -21,6 +21,7 @@ import {
 	secretEnvKeysOf,
 } from "#lib/template-secrets.js";
 import { fillUrlInEnv } from "#lib/template-url.js";
+
 import { CapacityService } from "./capacity.service.ts";
 import {
 	attachDefaultDataVolume,

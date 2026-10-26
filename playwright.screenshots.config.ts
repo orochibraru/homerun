@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+
 import { E2E_BASE_URL } from "./tests/e2e/support/config";
 
 export default defineConfig({

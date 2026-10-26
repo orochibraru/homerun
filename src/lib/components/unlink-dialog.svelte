@@ -9,6 +9,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { enhanceToast } from "#lib/toast.js";
 
@@ -21,40 +22,40 @@
 </script>
 
 {#if link}
-  <form
-    bind:this={form}
-    class="hidden"
-    action="{resolve('services')}/{link.from.id}?/unlink"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: `Couldn't unlink ${link.from.name} from ${link.to.name}.`,
-      loading: `Unlinking ${link.from.name} from ${link.to.name}`,
-      success:
-        link.keys.length > 0
-          ? `${link.from.name} no longer points at ${link.to.name}. Redeploy it to apply.`
-          : `${link.from.name} no longer depends on ${link.to.name}.`,
-    })}
-  >
-    <input name="targetId" type="hidden" value={link.to.id} />
-  </form>
+	<form
+		bind:this={form}
+		class="hidden"
+		action="{resolve('services')}/{link.from.id}?/unlink"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: `Couldn't unlink ${link.from.name} from ${link.to.name}.`,
+			loading: `Unlinking ${link.from.name} from ${link.to.name}`,
+			success:
+				link.keys.length > 0
+					? `${link.from.name} no longer points at ${link.to.name}. Redeploy it to apply.`
+					: `${link.from.name} no longer depends on ${link.to.name}.`,
+		})}
+	>
+		<input name="targetId" type="hidden" value={link.to.id} />
+	</form>
 {/if}
 
 <ConfirmDialog
-  bind:open
-  confirmLabel="Unlink"
-  description={link
-    ? link.keys.length > 0
-      ? `Removes ${link.from.name}'s dependency on ${link.to.name} and the variables in it that point there. It keeps running as it is until its next deploy.`
-      : `Removes ${link.from.name}'s dependency on ${link.to.name}, so it no longer starts after it.`
-    : ""}
-  onConfirm={() => form?.requestSubmit()}
-  title={link ? `Unlink ${link.from.name} from ${link.to.name}` : "Unlink"}
+	bind:open
+	confirmLabel="Unlink"
+	description={link
+		? link.keys.length > 0
+			? `Removes ${link.from.name}'s dependency on ${link.to.name} and the variables in it that point there. It keeps running as it is until its next deploy.`
+			: `Removes ${link.from.name}'s dependency on ${link.to.name}, so it no longer starts after it.`
+		: ""}
+	onConfirm={() => form?.requestSubmit()}
+	title={link ? `Unlink ${link.from.name} from ${link.to.name}` : "Unlink"}
 >
-  {#if link}
-    <ul class="text-text space-y-1 font-mono text-xs">
-      {#each link.keys as key (key)}
-        <li>{key}</li>
-      {/each}
-    </ul>
-  {/if}
+	{#if link}
+		<ul class="text-text space-y-1 font-mono text-xs">
+			{#each link.keys as key (key)}
+				<li>{key}</li>
+			{/each}
+		</ul>
+	{/if}
 </ConfirmDialog>

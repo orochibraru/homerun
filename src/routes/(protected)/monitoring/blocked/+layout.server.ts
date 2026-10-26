@@ -1,11 +1,12 @@
+import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
+
 import { config, isSmtpEnabled } from "#lib/config.js";
 import { BlockedHitDTO } from "#lib/dto/blocked-hit-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { IpBanDTO } from "#lib/dto/ip-ban-dto.js";
 import { BLOCKED_STATS_DAYS } from "#lib/ip-bans.js";
 import { can } from "#lib/permissions.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ locals, parent }) => {
 	await parent();

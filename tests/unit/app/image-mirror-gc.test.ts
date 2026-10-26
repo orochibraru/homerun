@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
+
 import { splitImageRef } from "../../../src/lib/image-ref";
 import { mirrorRepository } from "../../../src/lib/services/docker/image-scan-refs";
 import {
 	isValidRepository,
 	MANIFEST_ACCEPT,
-	MirrorRegistryClient,
 	mirrorKeepSet,
+	MirrorRegistryClient,
 	nextCatalogPath,
 	parseDuKilobytes,
 } from "../../../src/lib/services/docker/mirror-registry";

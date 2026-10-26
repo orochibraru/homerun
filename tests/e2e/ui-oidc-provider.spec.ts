@@ -1,4 +1,5 @@
 import { type Browser, type Page } from "@playwright/test";
+
 import { E2E_BASE_URL } from "./support/config";
 import { expect, test } from "./support/test";
 
@@ -69,179 +70,176 @@ async function captureCallback(page: Page): Promise<URL> {
 	return await callback;
 }
 
-test.describe
-	.serial("Homerun as an OpenID Connect provider", () => {
-		let trusted: RegisteredApp;
-		let issuer = "";
-		let trustedAccessToken = "";
+test.describe.serial("Homerun as an OpenID Connect provider", () => {
+	let trusted: RegisteredApp;
+	let issuer = "";
+	let trustedAccessToken = "";
 
-		test("the discovery document advertises Homerun as the issuer", async ({
-			request,
-		}) => {
-			const res = await request.get(
-				`${E2E_BASE_URL}/issuer/.well-known/openid-configuration`,
-			);
-			expect(res.ok()).toBe(true);
-			const body = await res.json();
-			expect(body.issuer).toMatch(/^https?:\/\/[^/]+\/issuer$/);
-			expect(body.authorization_endpoint).toMatch(
-				/\/api\/v1\/auth\/oauth2\/authorize$/,
-			);
-			issuer = body.issuer;
-			expect(body.scopes_supported).toContain("groups");
-		});
-
-		test("cross-site form posts are still refused, except to the token endpoint", async ({
-			request,
-		}) => {
-			const page = await request.post("/authentication?/securityPolicy", {
-				form: { requireTwoFactor: "on" },
-				headers: { origin: "https://evil.example.com" },
-			});
-			expect(page.status()).toBe(403);
-
-			const token = await request.post(`${AUTH_BASE}/oauth2/token`, {
-				form: { code: "nope", grant_type: "authorization_code" },
-			});
-			expect(token.status()).not.toBe(403);
-		});
-
-		test("an admin registers an app and gets its credentials once", async ({
-			browser,
-		}) => {
-			trusted = await registerApp(browser, "E2E Grafana", true);
-			expect(trusted.clientId).not.toBe("");
-			expect(trusted.clientSecret).not.toBe("");
-		});
-
-		test("a browser token request from an origin the environment doesn't authorize is refused", async ({
-			request,
-		}) => {
-			const res = await request.post(`${AUTH_BASE}/oauth2/token`, {
-				form: {
-					code: "nope",
-					grant_type: "authorization_code",
-					redirect_uri: CALLBACK,
-				},
-				headers: {
-					authorization: `Basic ${Buffer.from(`${trusted.clientId}:${trusted.clientSecret}`).toString("base64")}`,
-					origin: "https://evil.example.com",
-				},
-			});
-			expect(res.status()).toBe(403);
-			expect((await res.json()).error_description).toContain(
-				"authorized origin",
-			);
-		});
-
-		test("a signed-out user signs in on Homerun and the app gets working tokens", async ({
-			browser,
-			request,
-		}) => {
-			const context = await browser.newContext();
-			const page = await context.newPage();
-			const callback = captureCallback(page);
-
-			await page.goto(authorizeUrl(trusted.clientId, "state-123"));
-			await expect(page).toHaveURL(/\/auth\/sign-in\?/);
-			await expect(
-				page.getByRole("heading", { name: "Sign in to E2E Grafana" }),
-			).toBeVisible();
-			await signIn(page);
-
-			const landed = await callback;
-			expect(landed.searchParams.get("state")).toBe("state-123");
-			const code = landed.searchParams.get("code");
-			expect(code).toBeTruthy();
-			await context.close();
-
-			const token = await request.post(`${AUTH_BASE}/oauth2/token`, {
-				form: {
-					code: code ?? "",
-					grant_type: "authorization_code",
-					redirect_uri: CALLBACK,
-				},
-				headers: {
-					authorization: `Basic ${Buffer.from(
-						`${trusted.clientId}:${trusted.clientSecret}`,
-					).toString("base64")}`,
-				},
-			});
-			expect(token.ok(), await token.text()).toBe(true);
-			const tokens = await token.json();
-			expect(tokens.access_token).toBeTruthy();
-			trustedAccessToken = tokens.access_token;
-
-			const [, payload] = String(tokens.id_token).split(".");
-			const claims = JSON.parse(
-				Buffer.from(payload ?? "", "base64url").toString("utf8"),
-			);
-			expect(claims.iss).toBe(issuer);
-			expect(claims.email).toBe("ada@example.com");
-			expect(claims.groups).toEqual(["admin"]);
-
-			const userinfo = await request.get(`${AUTH_BASE}/oauth2/userinfo`, {
-				headers: { authorization: `Bearer ${tokens.access_token}` },
-			});
-			expect(userinfo.ok(), await userinfo.text()).toBe(true);
-			const profile = await userinfo.json();
-			expect(profile.email).toBe("ada@example.com");
-			expect(profile.preferred_username).toBe("ada");
-		});
-
-		test("an app that asks for consent shows it, and Allow finishes the sign-in", async ({
-			browser,
-		}) => {
-			const asking = await registerApp(browser, "E2E Outline", false);
-
-			const context = await browser.newContext();
-			const page = await context.newPage();
-			const callback = captureCallback(page);
-
-			await page.goto(authorizeUrl(asking.clientId, "state-456"));
-			await signIn(page);
-
-			await expect(
-				page.getByRole("heading", { name: "Allow E2E Outline?" }),
-			).toBeVisible();
-			await expect(page.getByText("Your email address")).toBeVisible();
-			await page.waitForLoadState("networkidle");
-			await page.getByRole("button", { name: "Allow" }).click();
-
-			const landed = await callback;
-			expect(landed.searchParams.get("state")).toBe("state-456");
-			expect(landed.searchParams.get("code")).toBeTruthy();
-			await context.close();
-		});
-
-		test("the user sees the apps on their profile and revoking one kills its tokens", async ({
-			page,
-			request,
-		}) => {
-			await page.goto("/auth/sign-in");
-			await signIn(page);
-			await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
-
-			await page.goto("/profile/clients");
-			const grafana = page.locator("div.rounded-md.border", {
-				hasText: "E2E Grafana",
-			});
-			await expect(grafana).toBeVisible();
-			await expect(
-				page.locator("div.rounded-md.border", { hasText: "E2E Outline" }),
-			).toBeVisible();
-
-			await grafana.getByRole("button", { name: "Revoke" }).click();
-			await page
-				.getByRole("button", { exact: true, name: "Revoke" })
-				.last()
-				.click();
-			await expect(page.getByText("App revoked.")).toBeVisible();
-			await expect(grafana).toHaveCount(0);
-
-			const userinfo = await request.get(`${AUTH_BASE}/oauth2/userinfo`, {
-				headers: { authorization: `Bearer ${trustedAccessToken}` },
-			});
-			expect(userinfo.ok()).toBe(false);
-		});
+	test("the discovery document advertises Homerun as the issuer", async ({
+		request,
+	}) => {
+		const res = await request.get(
+			`${E2E_BASE_URL}/issuer/.well-known/openid-configuration`,
+		);
+		expect(res.ok()).toBe(true);
+		const body = await res.json();
+		expect(body.issuer).toMatch(/^https?:\/\/[^/]+\/issuer$/);
+		expect(body.authorization_endpoint).toMatch(
+			/\/api\/v1\/auth\/oauth2\/authorize$/,
+		);
+		issuer = body.issuer;
+		expect(body.scopes_supported).toContain("groups");
 	});
+
+	test("cross-site form posts are still refused, except to the token endpoint", async ({
+		request,
+	}) => {
+		const page = await request.post("/authentication?/securityPolicy", {
+			form: { requireTwoFactor: "on" },
+			headers: { origin: "https://evil.example.com" },
+		});
+		expect(page.status()).toBe(403);
+
+		const token = await request.post(`${AUTH_BASE}/oauth2/token`, {
+			form: { code: "nope", grant_type: "authorization_code" },
+		});
+		expect(token.status()).not.toBe(403);
+	});
+
+	test("an admin registers an app and gets its credentials once", async ({
+		browser,
+	}) => {
+		trusted = await registerApp(browser, "E2E Grafana", true);
+		expect(trusted.clientId).not.toBe("");
+		expect(trusted.clientSecret).not.toBe("");
+	});
+
+	test("a browser token request from an origin the environment doesn't authorize is refused", async ({
+		request,
+	}) => {
+		const res = await request.post(`${AUTH_BASE}/oauth2/token`, {
+			form: {
+				code: "nope",
+				grant_type: "authorization_code",
+				redirect_uri: CALLBACK,
+			},
+			headers: {
+				authorization: `Basic ${Buffer.from(`${trusted.clientId}:${trusted.clientSecret}`).toString("base64")}`,
+				origin: "https://evil.example.com",
+			},
+		});
+		expect(res.status()).toBe(403);
+		expect((await res.json()).error_description).toContain("authorized origin");
+	});
+
+	test("a signed-out user signs in on Homerun and the app gets working tokens", async ({
+		browser,
+		request,
+	}) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const callback = captureCallback(page);
+
+		await page.goto(authorizeUrl(trusted.clientId, "state-123"));
+		await expect(page).toHaveURL(/\/auth\/sign-in\?/);
+		await expect(
+			page.getByRole("heading", { name: "Sign in to E2E Grafana" }),
+		).toBeVisible();
+		await signIn(page);
+
+		const landed = await callback;
+		expect(landed.searchParams.get("state")).toBe("state-123");
+		const code = landed.searchParams.get("code");
+		expect(code).toBeTruthy();
+		await context.close();
+
+		const token = await request.post(`${AUTH_BASE}/oauth2/token`, {
+			form: {
+				code: code ?? "",
+				grant_type: "authorization_code",
+				redirect_uri: CALLBACK,
+			},
+			headers: {
+				authorization: `Basic ${Buffer.from(
+					`${trusted.clientId}:${trusted.clientSecret}`,
+				).toString("base64")}`,
+			},
+		});
+		expect(token.ok(), await token.text()).toBe(true);
+		const tokens = await token.json();
+		expect(tokens.access_token).toBeTruthy();
+		trustedAccessToken = tokens.access_token;
+
+		const [, payload] = String(tokens.id_token).split(".");
+		const claims = JSON.parse(
+			Buffer.from(payload ?? "", "base64url").toString("utf8"),
+		);
+		expect(claims.iss).toBe(issuer);
+		expect(claims.email).toBe("ada@example.com");
+		expect(claims.groups).toEqual(["admin"]);
+
+		const userinfo = await request.get(`${AUTH_BASE}/oauth2/userinfo`, {
+			headers: { authorization: `Bearer ${tokens.access_token}` },
+		});
+		expect(userinfo.ok(), await userinfo.text()).toBe(true);
+		const profile = await userinfo.json();
+		expect(profile.email).toBe("ada@example.com");
+		expect(profile.preferred_username).toBe("ada");
+	});
+
+	test("an app that asks for consent shows it, and Allow finishes the sign-in", async ({
+		browser,
+	}) => {
+		const asking = await registerApp(browser, "E2E Outline", false);
+
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const callback = captureCallback(page);
+
+		await page.goto(authorizeUrl(asking.clientId, "state-456"));
+		await signIn(page);
+
+		await expect(
+			page.getByRole("heading", { name: "Allow E2E Outline?" }),
+		).toBeVisible();
+		await expect(page.getByText("Your email address")).toBeVisible();
+		await page.waitForLoadState("networkidle");
+		await page.getByRole("button", { name: "Allow" }).click();
+
+		const landed = await callback;
+		expect(landed.searchParams.get("state")).toBe("state-456");
+		expect(landed.searchParams.get("code")).toBeTruthy();
+		await context.close();
+	});
+
+	test("the user sees the apps on their profile and revoking one kills its tokens", async ({
+		page,
+		request,
+	}) => {
+		await page.goto("/auth/sign-in");
+		await signIn(page);
+		await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
+
+		await page.goto("/profile/clients");
+		const grafana = page.locator("div.rounded-md.border", {
+			hasText: "E2E Grafana",
+		});
+		await expect(grafana).toBeVisible();
+		await expect(
+			page.locator("div.rounded-md.border", { hasText: "E2E Outline" }),
+		).toBeVisible();
+
+		await grafana.getByRole("button", { name: "Revoke" }).click();
+		await page
+			.getByRole("button", { exact: true, name: "Revoke" })
+			.last()
+			.click();
+		await expect(page.getByText("App revoked.")).toBeVisible();
+		await expect(grafana).toHaveCount(0);
+
+		const userinfo = await request.get(`${AUTH_BASE}/oauth2/userinfo`, {
+			headers: { authorization: `Bearer ${trustedAccessToken}` },
+		});
+		expect(userinfo.ok()).toBe(false);
+	});
+});

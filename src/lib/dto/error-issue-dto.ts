@@ -10,14 +10,15 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
+
 import type {
 	IssueStatus,
 	StoredErrorEvent,
 } from "#lib/error-tracking/event.js";
 import { db } from "#lib/server/db/lib.js";
 import {
-	type ErrorIssue,
 	errorEvent,
+	type ErrorIssue,
 	errorIssue,
 } from "#lib/server/db/schema.js";
 import {
@@ -26,6 +27,7 @@ import {
 	searchCondition,
 	sortOrder,
 } from "#lib/server/list-query.js";
+
 import { BaseDTO } from "./base-dto";
 
 export type ErrorIssueRow = ErrorIssue & { usersAffected: number };

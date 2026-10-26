@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { agentSetupCommands } from "#lib/server/node-install-script.js";
 
 describe("agentSetupCommands", () => {

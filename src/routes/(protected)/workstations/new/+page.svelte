@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import {
 		Check,
 		Code,
@@ -10,6 +13,7 @@
 		Settings2,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import Alert from "#lib/components/alert.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import Stepper, { type StepperStep } from "#lib/components/stepper.svelte";
@@ -27,9 +31,6 @@
 		defaultWorkstationDomain,
 		WORKSTATION_STEPS,
 	} from "#lib/workstations.js";
-	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -87,124 +88,128 @@
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
-  <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-    <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight">New Workstation</h1>
-      <p class="text-text-muted mt-0.5 text-sm">
-        A browser IDE in a container, with a home directory that survives
-        restarts. It starts as soon as it's created.
-      </p>
-    </div>
-    <Button href={resolve("workstations/presets")} variant="outline">
-      <Layers class="size-4" />Presets
-    </Button>
-  </div>
+	<div
+		class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center"
+	>
+		<div>
+			<h1 class="text-text text-lg font-semibold tracking-tight">
+				New Workstation
+			</h1>
+			<p class="text-text-muted mt-0.5 text-sm">
+				A browser IDE in a container, with a home directory that survives
+				restarts. It starts as soon as it's created.
+			</p>
+		</div>
+		<Button href={resolve("workstations/presets")} variant="outline">
+			<Layers class="size-4" />Presets
+		</Button>
+	</div>
 
-  {#if form?.error}
-    <Alert>
-      {form.error}
-    </Alert>
-  {/if}
+	{#if form?.error}
+		<Alert>
+			{form.error}
+		</Alert>
+	{/if}
 
-  {#if data.presets.length > 0}
-    <section class="panel rounded-md p-5">
-      <label class={labelClass} for="preset">Start from a preset</label>
-      <Select.Root onValueChange={pickPreset} type="single" value={presetId}>
-        <Select.Trigger class="w-full sm:w-96" id="preset">
-          {picked?.name ?? "No preset"}
-        </Select.Trigger>
-        <Select.Content>
-          <Select.Item label="No preset" value="" />
-          {#each data.presets as preset (preset.id)}
-            <Select.Item label={preset.name} value={preset.id} />
-          {/each}
-        </Select.Content>
-      </Select.Root>
-      <p class="text-text-subtle mt-1.5 text-xs">
-        {picked?.description ??
-          "Fills in the form below. Change anything before creating."}
-      </p>
-    </section>
-  {/if}
+	{#if data.presets.length > 0}
+		<section class="panel rounded-md p-5">
+			<label class={labelClass} for="preset">Start from a preset</label>
+			<Select.Root onValueChange={pickPreset} type="single" value={presetId}>
+				<Select.Trigger class="w-full sm:w-96" id="preset">
+					{picked?.name ?? "No preset"}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Item label="No preset" value="" />
+					{#each data.presets as preset (preset.id)}
+						<Select.Item label={preset.name} value={preset.id} />
+					{/each}
+				</Select.Content>
+			</Select.Root>
+			<p class="text-text-subtle mt-1.5 text-xs">
+				{picked?.description ??
+					"Fills in the form below. Change anything before creating."}
+			</p>
+		</section>
+	{/if}
 
-  <form
-    action="?/create"
-    class="space-y-4"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Couldn't create that workstation.",
-      loading: "Creating the workstation",
-      onSettled: () => {
-        submitting = false;
-      },
-      onStart: () => {
-        submitting = true;
-      },
-      success: "Workstation created.",
-    })}
-  >
-    <Stepper bind:activeStep onNext={canLeave} {steps}>
-    {#key presetId}
-      <WorkstationFields
-        hosts={data.hosts}
-        providers={data.gitProviders}
-        step={activeStep}
-        values={data.preset ?? DEFAULT_WORKSTATION_FIELDS}
-        wall={data.wall}
-      >
-        <div class="space-y-3">
-          <div>
-            <label class={labelClass} for="name">Name</label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="my-app dev"
-              required
-              type="text"
-              bind:value={name}
-            />
-            {#if attempted && !name.trim()}
-              <p class="mt-1.5 text-xs text-red-500">Give it a name.</p>
-            {/if}
-          </div>
-          <div>
-            <label class={labelClass} for="domain">Domain</label>
-            <Input
-              id="domain"
-              name="domain"
-              placeholder={defaultWorkstationDomain(
-                slugify(name) || "workstation",
-                data.baseDomain,
-              )}
-              type="text"
-              bind:value={domain}
-            />
-            {#if owner?.current}
-              <p class="mt-1.5 text-xs text-amber-600">
-                <code>{checked}</code> is already routed to {owner.current}.
-                Pick another domain: a workstation never takes one over.
-              </p>
-            {:else}
-              <p class="text-text-subtle mt-1.5 text-xs">
-                Opens at <code>{hostname}</code>. Under its own
-                <code>dev.</code> subdomain by default, so it never clashes with
-                a service of the same name.
-              </p>
-            {/if}
-          </div>
-        </div>
-      </WorkstationFields>
-    {/key}
-      {#snippet finish()}
-        <Button disabled={submitting || !!owner?.current} type="submit">
-          {#if submitting}
-            <Spinner />
-          {:else}
-            <Check class="size-4" />
-          {/if}
-          Create workstation
-        </Button>
-      {/snippet}
-    </Stepper>
-  </form>
+	<form
+		action="?/create"
+		class="space-y-4"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Couldn't create that workstation.",
+			loading: "Creating the workstation",
+			onSettled: () => {
+				submitting = false;
+			},
+			onStart: () => {
+				submitting = true;
+			},
+			success: "Workstation created.",
+		})}
+	>
+		<Stepper bind:activeStep onNext={canLeave} {steps}>
+			{#key presetId}
+				<WorkstationFields
+					hosts={data.hosts}
+					providers={data.gitProviders}
+					step={activeStep}
+					values={data.preset ?? DEFAULT_WORKSTATION_FIELDS}
+					wall={data.wall}
+				>
+					<div class="space-y-3">
+						<div>
+							<label class={labelClass} for="name">Name</label>
+							<Input
+								id="name"
+								name="name"
+								placeholder="my-app dev"
+								required
+								type="text"
+								bind:value={name}
+							/>
+							{#if attempted && !name.trim()}
+								<p class="mt-1.5 text-xs text-red-500">Give it a name.</p>
+							{/if}
+						</div>
+						<div>
+							<label class={labelClass} for="domain">Domain</label>
+							<Input
+								id="domain"
+								name="domain"
+								placeholder={defaultWorkstationDomain(
+									slugify(name) || "workstation",
+									data.baseDomain,
+								)}
+								type="text"
+								bind:value={domain}
+							/>
+							{#if owner?.current}
+								<p class="mt-1.5 text-xs text-amber-600">
+									<code>{checked}</code> is already routed to {owner.current}.
+									Pick another domain: a workstation never takes one over.
+								</p>
+							{:else}
+								<p class="text-text-subtle mt-1.5 text-xs">
+									Opens at <code>{hostname}</code>. Under its own
+									<code>dev.</code> subdomain by default, so it never clashes with
+									a service of the same name.
+								</p>
+							{/if}
+						</div>
+					</div>
+				</WorkstationFields>
+			{/key}
+			{#snippet finish()}
+				<Button disabled={submitting || !!owner?.current} type="submit">
+					{#if submitting}
+						<Spinner />
+					{:else}
+						<Check class="size-4" />
+					{/if}
+					Create workstation
+				</Button>
+			{/snippet}
+		</Stepper>
+	</form>
 </div>

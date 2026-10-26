@@ -1,4 +1,5 @@
 import createClient from "openapi-fetch";
+
 import { nativeFetch } from "./config";
 import type { paths } from "./openapi-types";
 

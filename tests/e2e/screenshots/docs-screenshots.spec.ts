@@ -1,9 +1,11 @@
+import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import process from "node:process";
+
 import { type Page } from "@playwright/test";
-import { format, resolveConfig } from "prettier";
+
 import { E2E_BASE_URL } from "../support/config";
 import { expect, test } from "../support/test";
 import { TRAEFIK_PORT } from "../templates/support";
@@ -537,11 +539,6 @@ test("writes an index of what was captured", async () => {
 		...lines,
 		"",
 	].join("\n");
-	await writeFile(
-		readme,
-		await format(content, {
-			...(await resolveConfig(readme)),
-			filepath: readme,
-		}),
-	);
+	await writeFile(readme, content);
+	execFileSync("bun", ["fmt", readme], { stdio: "inherit" });
 });
