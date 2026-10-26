@@ -25,6 +25,7 @@
 	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
 	import { primaryHostname } from "#lib/service-domains.js";
 	import { internalUrl, maskUrlPassword } from "#lib/service-link.js";
+	import type { ContainerStatus } from "#lib/types.js";
 	import { currentHref, visibleIn } from "#lib/ui-mode.js";
 
 	const { data, children } = $props();
@@ -43,6 +44,16 @@
 			: null;
 		return main ? [main] : [];
 	});
+
+	const DEPLOY_OUTCOME: Record<ContainerStatus, string> = {
+		failed: "failed",
+		missing: "lost its container",
+		pending: "in progress",
+		pulling: "in progress",
+		running: "succeeded",
+		starting: "in progress",
+		stopped: "succeeded",
+	};
 
 	const compact = new Intl.NumberFormat(undefined, { notation: "compact" });
 
@@ -100,7 +111,7 @@
 			id: "environments",
 			label: "Environments & Revisions",
 			summary: data.lastDeployment
-				? `Last deploy ${data.lastDeployment.status} · ${timeAgo(data.lastDeployment.at)}`
+				? `Last deploy ${DEPLOY_OUTCOME[data.lastDeployment.status]} · ${timeAgo(data.lastDeployment.at)}`
 				: "Never deployed",
 			link: visibleIn(data.uiMode, "service/environments/environments")
 				? undefined
@@ -166,7 +177,9 @@
 				serviceId: svc.id,
 			}),
 			description: "Image vulnerability scans and blocked paths",
-			hasWarning: (data.latestScan?.counts.critical ?? 0) > 0,
+			hasWarning:
+				data.latestScan?.status === "failed" ||
+				(data.latestScan?.counts.critical ?? 0) > 0,
 			icon: ShieldCheck,
 			id: "security",
 			label: "Security",
