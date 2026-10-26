@@ -1021,7 +1021,7 @@ bundled file name under `static/template-icons/` (`"redis.svg"`), an uploaded
 for the category's generic icon. Built-ins use `di:` wherever Dashboard Icons
 has the exact app (checked against the real `metadata.json`, not guessed); the
 bundled files stay for the handful it lacks (aiometadata, aiostreams, bercail,
-comet, mediaflow-proxy, nuvio, penombre) and for `icon-library.ts`'s
+comet, mediaflow-proxy, nuvio, opencount, penombre) and for `icon-library.ts`'s
 servers/languages/frameworks set where it lacks the logo; the library points at
 `di:` for the rest. A bundled file that duplicates a Dashboard Icon gets deleted
 together with a migration rewriting `service`/`stack`/`template.icon` from the
