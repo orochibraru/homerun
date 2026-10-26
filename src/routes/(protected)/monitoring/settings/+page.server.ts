@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { Logger } from "#lib/logger.js";
 import { can, permissionDeniedMessage } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
@@ -8,7 +10,6 @@ import {
 	MIN_TRACE_RETENTION_DAYS,
 	parseRetentionDays,
 } from "#lib/tracing/settings.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Tracing");
 

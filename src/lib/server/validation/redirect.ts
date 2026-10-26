@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { normalizeDestination, normalizeSource } from "#lib/redirects.js";
 
 const checkbox = z.preprocess(

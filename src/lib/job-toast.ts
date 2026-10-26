@@ -1,6 +1,7 @@
-import { type EnhanceToastOptions, enhanceToast } from "#lib/toast.js";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
+
+import { enhanceToast, type EnhanceToastOptions } from "#lib/toast.js";
 
 /**
  * `enhanceToast` for a form action that queues a background job and returns

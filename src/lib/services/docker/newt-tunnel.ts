@@ -1,5 +1,6 @@
 import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
+
 import type { BaseDockerService, Constructor } from "./base.ts";
 import {
 	type InfraContainer,
@@ -13,8 +14,8 @@ import {
 	CORE_HASH_LABEL,
 	CORE_LABEL,
 	NEWT_CONTAINER_NAME,
-	type NewtCredentials,
 	newtContainerSpec,
+	type NewtCredentials,
 	newtSwarmServiceSpec,
 	tunnelTrustFlags,
 } from "./newt.ts";

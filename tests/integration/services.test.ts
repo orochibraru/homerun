@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+
 import { expectOk } from "./support/assert";
 import { ServiceCleanup } from "./support/cleanup";
 import type { ApiClient } from "./support/client";
@@ -305,8 +306,7 @@ describe("services : image-mode deploy", () => {
 		// deploy call that itself completed but the underlying operation
 		// reported failure, this route never returns 200 with success:false.
 		const errorBody = deployed.error as
-			| { deploymentId?: string; error?: string }
-			| undefined;
+			{ deploymentId?: string; error?: string } | undefined;
 		expect(typeof errorBody?.error).toBe("string");
 		expect(errorBody?.error?.length).toBeGreaterThan(0);
 	});

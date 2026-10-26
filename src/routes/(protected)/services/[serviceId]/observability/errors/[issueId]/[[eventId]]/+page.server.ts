@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail } from "@sveltejs/kit";
+
 import { ErrorEventDTO } from "#lib/dto/error-event-dto.js";
 import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
@@ -9,7 +11,6 @@ import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { issueStatusFormSchema } from "#lib/server/validation/error-tracking.js";
 import { ErrorTrackingService } from "#lib/services/error-tracking.service.js";
 import { normalizeTraceId } from "#lib/tracing/list.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("ErrorTracking");
 

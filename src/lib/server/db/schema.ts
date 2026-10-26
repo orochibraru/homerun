@@ -14,6 +14,7 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+
 import type { DestinationType } from "#lib/backup-destinations.js";
 import type { BuildMethod } from "#lib/build-methods.js";
 import type {
@@ -1207,7 +1208,10 @@ export const service = pgTable(
 		defaultDomainEnabled: boolean("default_domain_enabled")
 			.default(true)
 			.notNull(),
-		domains: text("domains").array().default(sql`'{}'::text[]`).notNull(),
+		domains: text("domains")
+			.array()
+			.default(sql`'{}'::text[]`)
+			.notNull(),
 		category: text("category"),
 		httpCacheTtl: integer("http_cache_ttl"),
 		icon: text("icon"),

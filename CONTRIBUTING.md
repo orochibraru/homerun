@@ -108,13 +108,13 @@ into the worker, see [`cmd/worker/README.md`](cmd/worker/README.md).
 
 CI enforces these. The local git hook only formats and scans for secrets, so a
 commit stays fast: [prek](https://github.com/j178/prek) runs
-`.pre-commit-config.yaml` (line endings and trailing whitespace, Biome format,
-Prettier, gofmt, gitleaks); prek comes from `mise install`, and `bun install`
-wires it up (`prepare` runs `prek install`). Hooks autofix in place, so a commit
-that gets rejected for "files were modified by this hook" just needs `git add`
-and a re-commit. Everything else (typos, Vale, actionlint, zizmor, hadolint, the
-route rules, conventional commits) runs in CI from `.github/prek-ci.yaml`, next
-to the type check, lint and test steps; run it locally with
+`.pre-commit-config.yaml` (line endings and trailing whitespace, `bun fmt`,
+gofmt, gitleaks); prek comes from `mise install`, and `bun install` wires it up
+(`prepare` runs `prek install`). Hooks autofix in place, so a commit that gets
+rejected for "files were modified by this hook" just needs `git add` and a
+re-commit. Everything else (typos, Vale, actionlint, zizmor, hadolint, the route
+rules, conventional commits) runs in CI from `.github/prek-ci.yaml`, next to the
+type check, lint and test steps; run it locally with
 `prek run --all-files --config .github/prek-ci.yaml`.
 
 Vale checks the prose of `docs/`, the READMEs and this file against the Google,

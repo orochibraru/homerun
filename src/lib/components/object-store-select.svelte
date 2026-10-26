@@ -16,10 +16,10 @@
 </script>
 
 <Select.Root {name} type="single" bind:value>
-  <Select.Trigger class="w-full" {id}>{selected}</Select.Trigger>
-  <Select.Content>
-    {#each stores as store (store.id)}
-      <Select.Item label={store.name} value={store.id} />
-    {/each}
-  </Select.Content>
+	<Select.Trigger class="w-full" {id}>{selected}</Select.Trigger>
+	<Select.Content>
+		{#each stores as store (store.id)}
+			<Select.Item label={store.name} value={store.id} />
+		{/each}
+	</Select.Content>
 </Select.Root>

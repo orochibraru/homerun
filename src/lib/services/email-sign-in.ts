@@ -1,7 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+
 import type { BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP, magicLink } from "better-auth/plugins";
+
 import { type EmailSignIn, NO_EMAIL_SIGN_IN } from "#lib/auth-providers.js";
 import { config, isSmtpEnabled } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
@@ -10,6 +12,7 @@ import { REDIRECT_TO_PARAM, safeRedirectTarget } from "#lib/redirect-target.js";
 import { withDashboardOrigin } from "#lib/server/canonical-origin.js";
 import { brandedEmail } from "#lib/server/email-layout.js";
 import { isServiceAccountEmail } from "#lib/user-types.js";
+
 import { EmailService } from "./email.service.ts";
 
 const logger = new Logger("EmailSignIn");

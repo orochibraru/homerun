@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { mode } from "mode-watcher";
 	import type { Component } from "svelte";
+
 	import {
 		templateCategoryColor,
 		templateCategoryIcon,
 	} from "#lib/constants.js";
-	import { hasIconImage, type IconTheme, iconSrc } from "#lib/service-icon.js";
+	import { hasIconImage, iconSrc, type IconTheme } from "#lib/service-icon.js";
 
 	const {
 		icon,
@@ -29,23 +30,24 @@
 </script>
 
 {#if hasIconImage(icon) && failed !== icon}
-  <div
-    class="flex shrink-0 items-center justify-center rounded-md bg-surface-2 p-2 {className}"
-  >
-    <img
-      alt=""
-      class="size-full object-contain"
-      onerror={() => {
-        failed = icon;
-      }}
-      src={iconSrc(icon, theme)}
-    >
-  </div>
+	<div
+		class="flex shrink-0 items-center justify-center rounded-md bg-surface-2 p-2 {className}"
+	>
+		<img
+			alt=""
+			class="size-full object-contain"
+			onerror={() => {
+				failed = icon;
+			}}
+			src={iconSrc(icon, theme)}
+		/>
+	</div>
 {:else}
-  {@const Icon = !category && fallback ? fallback : templateCategoryIcon(category)}
-  <div
-    class="flex shrink-0 items-center justify-center rounded-md {color.bg} {color.text} {className}"
-  >
-    <Icon class="size-1/2" />
-  </div>
+	{@const Icon =
+		!category && fallback ? fallback : templateCategoryIcon(category)}
+	<div
+		class="flex shrink-0 items-center justify-center rounded-md {color.bg} {color.text} {className}"
+	>
+		<Icon class="size-1/2" />
+	</div>
 {/if}

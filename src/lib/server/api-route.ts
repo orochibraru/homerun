@@ -1,4 +1,5 @@
 import type { z } from "zod";
+
 import type { Permissions } from "#lib/permissions.js";
 
 /** A JSON `{ error }` response with `status`. */

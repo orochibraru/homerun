@@ -3,6 +3,7 @@
 		HTMLInputAttributes,
 		HTMLInputTypeAttribute,
 	} from "svelte/elements";
+
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	type InputType = Exclude<HTMLInputTypeAttribute, "file">;
@@ -27,28 +28,28 @@
 </script>
 
 {#if type === "file"}
-  <input
-    class={cn(
-      "h-9 rounded-lg border border-input bg-surface-2 px-3 py-1 text-base shadow-xs transition-[color,box-shadow] file:h-7 file:text-sm file:font-medium focus-visible:border-ring focus-visible:bg-surface focus-visible:ring-4 focus-visible:ring-accent-light aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-      className,
-    )}
-    data-slot={dataSlot}
-    type="file"
-    bind:this={ref}
-    bind:files
-    bind:value
-    {...restProps}
-  >
+	<input
+		class={cn(
+			"h-9 rounded-lg border border-input bg-surface-2 px-3 py-1 text-base shadow-xs transition-[color,box-shadow] file:h-7 file:text-sm file:font-medium focus-visible:border-ring focus-visible:bg-surface focus-visible:ring-4 focus-visible:ring-accent-light aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+			className,
+		)}
+		data-slot={dataSlot}
+		type="file"
+		bind:this={ref}
+		bind:files
+		bind:value
+		{...restProps}
+	/>
 {:else}
-  <input
-    class={cn(
-      "h-9 rounded-lg border border-input bg-surface-2 px-3 py-1 text-base shadow-xs transition-[color,box-shadow] file:h-7 file:text-sm file:font-medium focus-visible:border-ring focus-visible:bg-surface focus-visible:ring-4 focus-visible:ring-accent-light aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-      className,
-    )}
-    data-slot={dataSlot}
-    {type}
-    bind:this={ref}
-    bind:value
-    {...restProps}
-  >
+	<input
+		class={cn(
+			"h-9 rounded-lg border border-input bg-surface-2 px-3 py-1 text-base shadow-xs transition-[color,box-shadow] file:h-7 file:text-sm file:font-medium focus-visible:border-ring focus-visible:bg-surface focus-visible:ring-4 focus-visible:ring-accent-light aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+			className,
+		)}
+		data-slot={dataSlot}
+		{type}
+		bind:this={ref}
+		bind:value
+		{...restProps}
+	/>
 {/if}

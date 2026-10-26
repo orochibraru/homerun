@@ -2,18 +2,19 @@
 name: devex
 description: >-
   Use when asked to audit or improve the developer experience of this repo, or
-  after a change to tooling (package.json scripts, biome/markdownlint/prettier
-  config, tsconfigs, pre-commit, CI workflows, compose files, .env.example,
-  .agents/skills, .claude/agents). Walks the contributor path end to end — fresh
-  clone → install → docker compose up → migrate → dev → test → check/lint → PR
-  CI, and fixes the friction it finds: documented commands that don't exist or
-  don't work, scripts nobody documents, .env.example drifting from config.ts,
-  local gates that don't match CI, contributor notes (.agents/notes, CLAUDE.md,
-  AGENTS.md, CONTRIBUTING.md) contradicting the code, skills/agents pointing at
-  files that moved, dead dependencies and scripts, unclear startup errors, slow
-  or flaky tests, and oversized Svelte files (over 400 lines) that need
-  splitting into components. Not for operator-facing docs/ (docs-audit), JSDoc
-  (doc-comments) or reviewing a diff against conventions (repo-gate).
+  after a change to tooling (package.json scripts, bunfig
+  `[fmt]`/oxlint/markdownlint config, tsconfigs, pre-commit, CI workflows,
+  compose files, .env.example, .agents/skills, .claude/agents). Walks the
+  contributor path end to end — fresh clone → install → docker compose up →
+  migrate → dev → test → check/lint → PR CI, and fixes the friction it finds:
+  documented commands that don't exist or don't work, scripts nobody documents,
+  .env.example drifting from config.ts, local gates that don't match CI,
+  contributor notes (.agents/notes, CLAUDE.md, AGENTS.md, CONTRIBUTING.md)
+  contradicting the code, skills/agents pointing at files that moved, dead
+  dependencies and scripts, unclear startup errors, slow or flaky tests, and
+  oversized Svelte files (over 400 lines) that need splitting into components.
+  Not for operator-facing docs/ (docs-audit), JSDoc (doc-comments) or reviewing
+  a diff against conventions (repo-gate).
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---
@@ -63,14 +64,14 @@ one go, no plans, no severity tiers, out-of-scope findings go in `TODO.md`.
   the same commands a contributor runs locally. A CI step with no local
   equivalent, or a local gate CI skips, is a finding.
 - `.pre-commit-config.yaml` hooks exist, run, and don't duplicate or contradict
-  `bun run lint` (formatter disagreements between biome, prettier and tailwint
-  in particular).
+  `bun run lint` (formatter disagreements between `bun fmt`, markdownlint and
+  tailwint in particular).
 - Tool versions pinned in CI (Bun, Postgres image, Playwright) match what the
   repo expects locally.
 
 ### 4. Tooling isn't fighting itself
 
-- Overlapping formatters/linters (`biome.json`, `.prettierrc`,
+- Overlapping formatters/linters (`bunfig.toml`'s `[fmt]`, `.oxlintrc.json`,
   `.markdownlint-cli2.jsonc`, `_typos.toml`, `.editorconfig`) agree on the same
   files, or have clearly separate scopes. A listed-but-unwired tool is removed
   from `package.json` or wired up.

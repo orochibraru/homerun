@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { appearanceCss, PALETTES } from "#lib/palettes.js";
 
 describe("appearanceCss", () => {

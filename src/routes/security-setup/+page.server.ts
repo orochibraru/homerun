@@ -1,4 +1,5 @@
 import { redirect } from "@sveltejs/kit";
+
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { safeNextPath } from "#lib/security-policy.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";

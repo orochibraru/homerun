@@ -1,5 +1,6 @@
 import { generateRandomString } from "better-auth/crypto";
 import { desc, eq } from "drizzle-orm";
+
 import {
 	CLIENT_SECRET_MARKER,
 	OIDC_SCOPES,
@@ -12,6 +13,7 @@ import {
 	oauthClientResource,
 	oauthResource,
 } from "#lib/server/db/schema.js";
+
 import { BaseDTO } from "./base-dto";
 
 /** A string-array column the auth adapter stores as JSON text, read back as a list. */
@@ -30,9 +32,7 @@ function jsonList(value: string | null): string[] {
 }
 
 export type TokenEndpointAuthMethod =
-	| "client_secret_basic"
-	| "client_secret_post"
-	| "none";
+	"client_secret_basic" | "client_secret_post" | "none";
 
 export interface NewOauthClient {
 	applicationType: "native" | "web";

@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import type { WorkstationLoginWall } from "#lib/dto/workstation-dto.js";
 import { isDomainName, isTarget } from "#lib/server/validation/dns-forms.js";
 import type { WorkstationSettings } from "#lib/server/workstation-form.js";

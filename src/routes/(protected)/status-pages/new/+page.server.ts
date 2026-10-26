@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
@@ -11,7 +13,6 @@ import {
 	picksFromForm,
 	statusPageServiceOptions,
 } from "#lib/status-page-members.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ parent }) => {
 	await parent();

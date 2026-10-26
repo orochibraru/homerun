@@ -1,7 +1,8 @@
+import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
+
 import { envDefaultsForDisplay } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
-import { resolve } from "$app/paths";
 
 const FIELD_TAB: Record<string, string> = {
 	authCheckUrl: "",

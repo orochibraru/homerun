@@ -1,4 +1,5 @@
 import type { CallToolResult } from "@modelcontextprotocol/server";
+
 import { redactText } from "#lib/server/mcp-redact.js";
 
 /** Calls Homerun's own REST API as the MCP client's user. */

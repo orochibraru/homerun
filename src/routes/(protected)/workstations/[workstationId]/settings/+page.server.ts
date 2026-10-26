@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { config } from "#lib/config.js";
 import { WorkstationDTO } from "#lib/dto/workstation-dto.js";
 import { WorkstationPresetDTO } from "#lib/dto/workstation-preset-dto.js";
@@ -13,12 +15,11 @@ import {
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { saveWorkstationSection } from "#lib/server/workstation-actions.js";
 import { presetFromWorkstation } from "#lib/server/workstation-presets.js";
+import { WorkstationService } from "#lib/services/workstation.service.js";
 import {
 	WorkstationSettingsError,
 	WorkstationSettingsService,
 } from "#lib/services/workstation/settings.js";
-import { WorkstationService } from "#lib/services/workstation.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Workstation");
 

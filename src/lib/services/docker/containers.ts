@@ -2,11 +2,12 @@ import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
 import type { AuthPathsMode } from "#lib/path-patterns.js";
 import {
-	type PublishedPort,
 	portBindings,
 	portKey,
+	type PublishedPort,
 } from "#lib/published-ports.js";
 import type { ContainerStatus } from "#lib/types.js";
+
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";

@@ -1,11 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-const { parseRecordForm } = await import(
-	"../../../src/lib/server/validation/dns-forms"
-);
-const { recordFormData, workstationColumns } = await import(
-	"../../../src/lib/server/validation/infrastructure-api"
-);
+const { parseRecordForm } =
+	await import("../../../src/lib/server/validation/dns-forms");
+const { recordFormData, workstationColumns } =
+	await import("../../../src/lib/server/validation/infrastructure-api");
 
 describe("recordFormData", () => {
 	test("goes through the dashboard's record form checks", () => {

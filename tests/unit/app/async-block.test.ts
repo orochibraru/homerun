@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
+import type { RemoteQuery } from "$app/server";
 import { render } from "@testing-library/svelte";
 import { createRawSnippet } from "svelte";
-import type { RemoteQuery } from "$app/server";
+
 import AsyncBlock from "../../../src/lib/components/async-block.svelte";
 
 const pending = createRawSnippet(() => ({ render: () => "<p>loading…</p>" }));

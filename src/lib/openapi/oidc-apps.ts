@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import {
 	createOidcAppApiBody,
 	createOidcAppEnvironmentApiBody,
@@ -6,6 +7,7 @@ import {
 	updateOidcAppApiBody,
 	updateOidcAppEnvironmentApiBody,
 } from "#lib/server/validation/identity-api.js";
+
 import type { ParamDef, ResponseDef, RouteDef } from "./registry";
 import { errorResponse } from "./schemas";
 

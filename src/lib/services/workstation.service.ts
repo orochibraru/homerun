@@ -1,6 +1,7 @@
 import dns from "node:dns/promises";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import { config } from "#lib/config.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { WorkstationDTO } from "#lib/dto/workstation-dto.js";
@@ -40,8 +41,8 @@ import {
 	type AutoStopMode,
 	autoStopStep,
 	repoDirectory,
-	type WorkstationStatus,
 	workstationHostname,
+	type WorkstationStatus,
 } from "#lib/workstations.js";
 
 const logger = new Logger("Workstation");

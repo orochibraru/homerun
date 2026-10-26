@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { hostname } from "node:os";
+
 import { config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { JobDTO } from "#lib/dto/job-dto.js";
@@ -14,11 +15,12 @@ import {
 	resumeUptimeProbes,
 } from "#lib/services/uptime/quiet.js";
 import type { UpdateChannel } from "#lib/update-channel.js";
+
 import {
 	COMPOSE_PROJECT_LABEL,
 	COMPOSE_SERVICE_LABEL,
-	type ComposeTarget,
 	composeEnvDefaults,
+	type ComposeTarget,
 	composeTargetFrom,
 	containerIdFromMountinfo,
 	UPDATER_CONTAINER_NAME,

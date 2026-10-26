@@ -13,12 +13,13 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
+
 import { DEPLOY_TRIGGERS, type DeployTrigger } from "#lib/deploy-trigger.js";
 import type { RevisionConfig } from "#lib/revision-config.js";
 import {
 	CLEARED_ON_SUPERSEDE,
-	type RevisionLike,
 	retainedRevisions,
+	type RevisionLike,
 } from "#lib/revisions.js";
 import { db } from "#lib/server/db/lib.js";
 import {
@@ -34,6 +35,7 @@ import {
 	searchCondition,
 } from "#lib/server/list-query.js";
 import type { ContainerStatus, RevisionHealth } from "#lib/types.js";
+
 import { BaseDTO } from "./base-dto";
 import { InstanceSettingsDTO } from "./instance-settings-dto";
 

@@ -1,4 +1,5 @@
 import { type Page } from "@playwright/test";
+
 import { expect, test } from "./support/test";
 
 async function signIn(page: Page) {
@@ -24,76 +25,71 @@ async function createService(page: Page, name: string): Promise<string> {
 	return page.url().split("/").pop() ?? "";
 }
 
-test.describe
-	.serial("observability controls", () => {
-		test("pull policy defaults to Always and persists a change", async ({
-			page,
-		}) => {
-			await signIn(page);
-			const id = await createService(page, "obs-pull-policy");
+test.describe.serial("observability controls", () => {
+	test("pull policy defaults to Always and persists a change", async ({
+		page,
+	}) => {
+		await signIn(page);
+		const id = await createService(page, "obs-pull-policy");
 
-			await page.goto(`/services/${id}/settings`);
-			const trigger = page.locator("#pullPolicy");
-			await expect(trigger).toContainText("Always");
+		await page.goto(`/services/${id}/settings`);
+		const trigger = page.locator("#pullPolicy");
+		await expect(trigger).toContainText("Always");
 
-			await trigger.click();
-			await page.getByRole("option", { name: "If missing" }).click();
-			await expect(
-				page.getByText("Pull only when the image isn't already on the host.", {
-					exact: false,
-				}),
-			).toBeVisible();
+		await trigger.click();
+		await page.getByRole("option", { name: "If missing" }).click();
+		await expect(
+			page.getByText("Pull only when the image isn't already on the host.", {
+				exact: false,
+			}),
+		).toBeVisible();
 
-			const restart = page.locator("#restartPolicy");
-			await restart.click();
-			await page.getByRole("option", { name: "On failure" }).click();
+		const restart = page.locator("#restartPolicy");
+		await restart.click();
+		await page.getByRole("option", { name: "On failure" }).click();
 
-			await page.locator("button[form='service-settings']").click();
-			await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
-			await page.reload();
-			await expect(page.locator("#restartPolicy")).toContainText("On failure");
-			await expect(page.locator("#pullPolicy")).toContainText("If missing");
-		});
-
-		test("the clear buttons only appear when there's something to clear", async ({
-			page,
-		}) => {
-			await signIn(page);
-			const id = await createService(page, "obs-clear-buttons");
-
-			await page.goto(`/services/${id}/observability/uptime`);
-			// A service that was never deployed has no beats and no errors, so
-			// neither control should be offered.
-			await expect(
-				page.getByRole("button", { name: "Clear heartbeats" }),
-			).toHaveCount(0);
-			await page.goto(
-				`/services/${id}/observability/errors/failed-deployments`,
-			);
-			await expect(
-				page.getByRole("button", { name: "Clear errors" }),
-			).toHaveCount(0);
-		});
-
-		test("a failed deploy shows an error, and Clear errors hides it", async ({
-			page,
-		}) => {
-			await signIn(page);
-			const id = await createService(page, "obs-clear-errors");
-
-			await page.goto(`/services/${id}/settings`);
-			await page.locator("#name").fill("obs-clear-errors-renamed");
-			await page.locator("button[form='service-settings']").click();
-
-			await page.goto(
-				`/services/${id}/observability/errors/failed-deployments`,
-			);
-			const clear = page.getByRole("button", { name: "Clear errors" });
-			if ((await clear.count()) === 0) {
-				test.skip(true, "no errors recorded for this service in this run");
-			}
-			await clear.click();
-			await expect(page.getByText("Errors cleared.")).toBeVisible();
-			await expect(page.getByText("hidden")).toBeVisible();
-		});
+		await page.locator("button[form='service-settings']").click();
+		await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+		await page.reload();
+		await expect(page.locator("#restartPolicy")).toContainText("On failure");
+		await expect(page.locator("#pullPolicy")).toContainText("If missing");
 	});
+
+	test("the clear buttons only appear when there's something to clear", async ({
+		page,
+	}) => {
+		await signIn(page);
+		const id = await createService(page, "obs-clear-buttons");
+
+		await page.goto(`/services/${id}/observability/uptime`);
+		// A service that was never deployed has no beats and no errors, so
+		// neither control should be offered.
+		await expect(
+			page.getByRole("button", { name: "Clear heartbeats" }),
+		).toHaveCount(0);
+		await page.goto(`/services/${id}/observability/errors/failed-deployments`);
+		await expect(
+			page.getByRole("button", { name: "Clear errors" }),
+		).toHaveCount(0);
+	});
+
+	test("a failed deploy shows an error, and Clear errors hides it", async ({
+		page,
+	}) => {
+		await signIn(page);
+		const id = await createService(page, "obs-clear-errors");
+
+		await page.goto(`/services/${id}/settings`);
+		await page.locator("#name").fill("obs-clear-errors-renamed");
+		await page.locator("button[form='service-settings']").click();
+
+		await page.goto(`/services/${id}/observability/errors/failed-deployments`);
+		const clear = page.getByRole("button", { name: "Clear errors" });
+		if ((await clear.count()) === 0) {
+			test.skip(true, "no errors recorded for this service in this run");
+		}
+		await clear.click();
+		await expect(page.getByText("Errors cleared.")).toBeVisible();
+		await expect(page.getByText("hidden")).toBeVisible();
+	});
+});

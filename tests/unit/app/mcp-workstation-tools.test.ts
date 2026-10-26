@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import { createMcpHandler } from "@modelcontextprotocol/server";
+
 import { REDACTED } from "../../../src/lib/server/mcp-redact";
 import { createHomerunMcpServer } from "../../../src/lib/server/mcp-server";
 

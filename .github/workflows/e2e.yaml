@@ -23,8 +23,7 @@ on:
       pulled:
         required: false
         default: true
-        description:
-          "False when no image was pushed (forks), forcing a local build"
+        description: "False when no image was pushed (forks), forcing a local build"
         type: boolean
     secrets:
       registry_password:

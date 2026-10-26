@@ -3,8 +3,8 @@ import type { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { AcmeDnsService } from "#lib/services/acme-dns.service.js";
 import { rebuildAuth } from "#lib/services/auth.js";
 import { syncDashboardDns } from "#lib/services/dns.service.js";
-import { syncErrorPages } from "#lib/services/docker/error-pages.js";
 import { DockerService } from "#lib/services/docker.service.js";
+import { syncErrorPages } from "#lib/services/docker/error-pages.js";
 import { IpBanService } from "#lib/services/ip-ban.service.js";
 import { RedirectService } from "#lib/services/redirect.service.js";
 

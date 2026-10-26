@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { loginWallDrifted } = await import(
-	"../../../src/lib/services/docker/labels"
-);
+const { loginWallDrifted } =
+	await import("../../../src/lib/services/docker/labels");
 
 const CHECK = "http://homerun-auth:3000/api/v1/auth-check?service=s1";
 const auth = (address: string) => ({

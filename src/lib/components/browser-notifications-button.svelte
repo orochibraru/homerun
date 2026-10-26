@@ -2,6 +2,7 @@
 	import { BellOff, BellRing } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import {
 		browserPushSupported,
 		currentPushSubscription,
@@ -83,13 +84,13 @@
 </script>
 
 {#if supported && !denied && !subscribed}
-  <Button disabled={busy} onclick={handleEnable} size="sm" variant="outline">
-    <BellRing class="size-3.5" />
-    Turn on browser notifications
-  </Button>
+	<Button disabled={busy} onclick={handleEnable} size="sm" variant="outline">
+		<BellRing class="size-3.5" />
+		Turn on browser notifications
+	</Button>
 {:else if supported && subscribed && showDisable}
-  <Button disabled={busy} onclick={handleDisable} size="sm" variant="outline">
-    <BellOff class="size-3.5" />
-    Turn off on this browser
-  </Button>
+	<Button disabled={busy} onclick={handleDisable} size="sm" variant="outline">
+		<BellOff class="size-3.5" />
+		Turn off on this browser
+	</Button>
 {/if}

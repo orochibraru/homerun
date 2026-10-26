@@ -1,4 +1,5 @@
 import { connect } from "node:tls";
+
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { RegistryTokenDTO } from "#lib/dto/registry-token-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
@@ -9,13 +10,14 @@ import {
 	type RegistryCheck,
 } from "#lib/registry-self-test.js";
 import type { ListQuery, PagedResult } from "#lib/server/list-query.js";
+
 import { syncCoreHostDns } from "./dns.service.ts";
+import { DockerService } from "./docker.service.ts";
 import {
 	MIRROR_HOST_PORT,
 	mirrorRepository,
 	REGISTRY_INTERNAL_USERNAME,
 } from "./docker/image-scan-refs.ts";
-import { DockerService } from "./docker.service.ts";
 import { decryptSecret, encryptSecret } from "./secrets.ts";
 
 const logger = new Logger("Registry");

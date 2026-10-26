@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+
 import { config } from "#lib/config.js";
 import type { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
@@ -7,14 +8,15 @@ import {
 	deleteWebhookPath,
 	existingWebhookId,
 	openPullRequestsPath,
-	type PullRequestEvent,
 	parseOpenPullRequests,
-	type WebhookRequest,
+	type PullRequestEvent,
 	webhookIdFrom,
+	type WebhookRequest,
 } from "#lib/git-webhooks.js";
 import { Logger } from "#lib/logger.js";
 import type { GitProviderConfig } from "#lib/server/db/schema.js";
 import { providerApiBase } from "#lib/status-checks.js";
+
 import { decryptSecret, encryptSecret } from "./secrets.ts";
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
@@ -635,8 +637,7 @@ class GitProviderServiceClass {
 			gitlab: `/projects/${encodeURIComponent(repo)}/repository/branches?per_page=100`,
 		}[provider.kind];
 		const body = (await (await this.api(provider, connection, path)).json()) as
-			| Array<{ name: string }>
-			| { values: Array<{ name: string }> };
+			Array<{ name: string }> | { values: Array<{ name: string }> };
 		const rows = Array.isArray(body) ? body : body.values;
 		return rows.map((row) => row.name);
 	}

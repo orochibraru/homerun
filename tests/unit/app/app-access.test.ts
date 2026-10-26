@@ -24,19 +24,16 @@ mock.module("#lib/services/auth.js", () => ({
 }));
 
 const { db } = await import("../../../src/lib/server/db/lib");
-const { account: accountTable, user: userTable } = await import(
-	"../../../src/lib/server/db/schema"
-);
+const { account: accountTable, user: userTable } =
+	await import("../../../src/lib/server/db/schema");
 const { ACCESS_DENIAL_MESSAGES, AppAccessService, sharedAppLinks } =
 	await import("../../../src/lib/services/app-access.service");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
-const { applyInstanceSettings, config } = await import(
-	"../../../src/lib/config"
-);
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { applyInstanceSettings, config } =
+	await import("../../../src/lib/config");
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 
 type Service = Parameters<typeof AppAccessService.evaluate>[0];
 

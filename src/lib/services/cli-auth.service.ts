@@ -1,8 +1,11 @@
 import { randomBytes, randomInt } from "node:crypto";
+
 import { eq } from "drizzle-orm";
+
 import { Logger } from "#lib/logger.js";
 import { db } from "#lib/server/db/lib.js";
 import { apikey } from "#lib/server/db/schema.js";
+
 import { auth } from "./auth.ts";
 
 const logger = new Logger("CliAuth");

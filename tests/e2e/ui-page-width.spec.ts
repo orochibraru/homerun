@@ -1,4 +1,5 @@
 import { type Page } from "@playwright/test";
+
 import { expect, test } from "./support/test";
 
 const WIDTHS = [1440, 1280, 1024, 900, 768, 640, 390];

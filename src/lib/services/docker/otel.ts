@@ -2,6 +2,7 @@ import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
 import { isNotFound } from "#lib/server/worker-client.js";
 import { OTEL_GRPC_PORT, OTEL_HTTP_PORT } from "#lib/tracing/env.js";
+
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { PullImageParams } from "./containers.ts";
 import type { OneOffRunParams, OneOffRunResult } from "./one-off.ts";
@@ -12,8 +13,8 @@ import {
 	OTEL_CONTAINER_NAME,
 	OTEL_IMAGE,
 	OTEL_IMAGE_TAG,
-	type OtelDesiredState,
 	otelCollectorConfig,
+	type OtelDesiredState,
 	otelEnv,
 	otelLabels,
 	otelMatches,

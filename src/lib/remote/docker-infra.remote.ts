@@ -1,20 +1,21 @@
+import { query } from "$app/server";
 import { z } from "zod";
+
 import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { requirePermission } from "#lib/server/remote-auth.js";
+import { DockerService } from "#lib/services/docker.service.js";
 import type { CleanupPreview } from "#lib/services/docker/cleanup.js";
 import type {
 	InfraContainer,
 	TraefikInfo,
 } from "#lib/services/docker/core-services.js";
 import type { OrphanNetwork } from "#lib/services/docker/networks.js";
-import { DockerService } from "#lib/services/docker.service.js";
 import {
 	ImageMirrorGcService,
 	type MirrorUsage,
 } from "#lib/services/image-mirror-gc.service.js";
 import { RevisionService } from "#lib/services/revision.service.js";
-import { query } from "$app/server";
 
 export interface InfraStatus {
 	infra: InfraContainer[];

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { type DomainOwners, stubDomainOwners } from "../support/domain-owners";
 import { restoreStubs, stub } from "../support/stub";
 
@@ -13,21 +14,16 @@ const { Logger } = await import("../../../src/lib/logger");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { ServiceLifecycleService } = await import(
-	"../../../src/lib/services/service-lifecycle.service"
-);
-const { PreviewService, previewVolumeSource, renderEnvOverride } = await import(
-	"../../../src/lib/services/preview.service"
-);
-const { ServiceVolumeDTO } = await import(
-	"../../../src/lib/dto/service-volume-dto"
-);
-const { StorageVolumeDTO } = await import(
-	"../../../src/lib/dto/storage-volume-dto"
-);
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { ServiceLifecycleService } =
+	await import("../../../src/lib/services/service-lifecycle.service");
+const { PreviewService, previewVolumeSource, renderEnvOverride } =
+	await import("../../../src/lib/services/preview.service");
+const { ServiceVolumeDTO } =
+	await import("../../../src/lib/dto/service-volume-dto");
+const { StorageVolumeDTO } =
+	await import("../../../src/lib/dto/storage-volume-dto");
 
 type Svc = Parameters<typeof PreviewService.handle>[0];
 type Event = Parameters<typeof PreviewService.handle>[1];

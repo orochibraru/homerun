@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "#lib/host-access.js";
@@ -16,7 +18,6 @@ import {
 	parseTags,
 } from "#lib/server/validation/template.js";
 import { slugify } from "#lib/slug.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Templates");
 

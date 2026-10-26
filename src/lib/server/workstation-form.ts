@@ -1,8 +1,9 @@
 import { z } from "zod";
+
 import { parseDotEnv } from "#lib/env-parse.js";
 import {
-	type LoginWallPolicy,
 	loginWallFromForm,
+	type LoginWallPolicy,
 } from "#lib/server/login-wall-form.js";
 import { DOMAIN_RE } from "#lib/service-domains.js";
 import {
@@ -177,8 +178,7 @@ export interface WorkstationSettings {
 
 /** The settings and login wall plus what only the create form picks. */
 export interface NewWorkstationForm
-	extends WorkstationSettings,
-		LoginWallPolicy {
+	extends WorkstationSettings, LoginWallPolicy {
 	domain: string | null;
 	name: string;
 	remoteHostId: string | null;
@@ -186,8 +186,7 @@ export interface NewWorkstationForm
 
 /** A preset's fields and login wall, normalised into DTO-ready columns. */
 export interface WorkstationPresetForm
-	extends WorkstationSettings,
-		LoginWallPolicy {
+	extends WorkstationSettings, LoginWallPolicy {
 	description: string | null;
 	name: string;
 	remoteHostId: string | null;

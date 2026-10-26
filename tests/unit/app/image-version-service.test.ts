@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -9,31 +10,23 @@ mock.module("$app/env", () => ({
 
 const { Logger } = await import("../../../src/lib/logger");
 const { DeploymentDTO } = await import("../../../src/lib/dto/deployment-dto");
-const { NotificationDTO } = await import(
-	"../../../src/lib/dto/notification-dto"
-);
-const { WorkerClient, WorkerRequestError } = await import(
-	"../../../src/lib/server/worker-client"
-);
+const { NotificationDTO } =
+	await import("../../../src/lib/dto/notification-dto");
+const { WorkerClient, WorkerRequestError } =
+	await import("../../../src/lib/server/worker-client");
 const { ApiService } = await import("../../../src/lib/services/api.service");
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { NotificationChannelService } = await import(
-	"../../../src/lib/services/notification-channel.service"
-);
-const { dockerHealthcheck } = await import(
-	"../../../src/lib/services/docker/healthcheck"
-);
-const { listeningHealthcheck } = await import(
-	"../../../src/lib/services/docker/readiness"
-);
-const { ImageVersionService } = await import(
-	"../../../src/lib/services/image-version.service"
-);
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { NotificationChannelService } =
+	await import("../../../src/lib/services/notification-channel.service");
+const { dockerHealthcheck } =
+	await import("../../../src/lib/services/docker/healthcheck");
+const { listeningHealthcheck } =
+	await import("../../../src/lib/services/docker/readiness");
+const { ImageVersionService } =
+	await import("../../../src/lib/services/image-version.service");
 
 type Service = Parameters<typeof ImageVersionService.describe>[0];
 interface RegistryTag {

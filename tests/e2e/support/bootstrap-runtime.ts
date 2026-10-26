@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import process from "node:process";
+
 import {
 	imageUnderTest,
 	startAppContainer,

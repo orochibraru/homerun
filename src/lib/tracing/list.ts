@@ -1,4 +1,4 @@
-import { type SortOption, sortKeysOf } from "#lib/list-sorts.js";
+import { sortKeysOf, type SortOption } from "#lib/list-sorts.js";
 
 export const TRACE_SORTS: SortOption[] = [
 	{ label: "Newest", value: "-started" },

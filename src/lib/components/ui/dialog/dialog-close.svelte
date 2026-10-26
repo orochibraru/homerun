@@ -9,8 +9,8 @@
 </script>
 
 <DialogPrimitive.Close
-  data-slot="dialog-close"
-  {type}
-  bind:ref
-  {...restProps}
+	data-slot="dialog-close"
+	{type}
+	bind:ref
+	{...restProps}
 />

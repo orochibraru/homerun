@@ -7,9 +7,8 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { routeSpec } = await import(
-	"../../../src/lib/services/deploy/route-check"
-);
+const { routeSpec } =
+	await import("../../../src/lib/services/deploy/route-check");
 
 const original = {
 	certResolver: config.traefik.certResolver,

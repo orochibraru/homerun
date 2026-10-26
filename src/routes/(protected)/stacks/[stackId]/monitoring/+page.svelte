@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import { Clock } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import MonitoringView from "#lib/components/monitoring/monitoring-view.svelte";
 	import ServiceBreakdownTable from "#lib/components/monitoring/service-breakdown.svelte";
@@ -8,7 +10,6 @@
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
-	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -21,67 +22,70 @@
 </script>
 
 <div class="mb-5 space-y-5">
-  {#if data.substackCount > 0}
-    <p class="text-text-muted text-sm">
-      Covers this stack and its {data.substackCount} substack{data.substackCount === 1
-        ? ""
-        : "s"}.
-    </p>
-  {/if}
-  <MonitoringView monitoring={data.monitoring} zone={data.zone} />
-  <ServiceBreakdownTable rows={data.breakdown} />
+	{#if data.substackCount > 0}
+		<p class="text-text-muted text-sm">
+			Covers this stack and its {data.substackCount} substack{data.substackCount ===
+			1
+				? ""
+				: "s"}.
+		</p>
+	{/if}
+	<MonitoringView monitoring={data.monitoring} zone={data.zone} />
+	<ServiceBreakdownTable rows={data.breakdown} />
 </div>
 
-<div class="mb-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
-  <div class="panel divide-border flex divide-x rounded-xl">
-    <div class="min-w-0 flex-1 px-4 py-3">
-      <p class="eyebrow flex items-center gap-1.5">
-        <span class="bg-accent size-1.5 rounded-full"></span>
-        Services
-      </p>
-      <p class="metric mt-2">{data.scopedServices.length}</p>
-    </div>
-    <div class="min-w-0 flex-1 px-4 py-3">
-      <p class="eyebrow flex items-center gap-1.5">
-        <span class="size-1.5 rounded-full bg-emerald-500"></span>
-        Running
-      </p>
-      <p class="metric mt-2">{running}</p>
-    </div>
-  </div>
+<div
+	class="mb-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]"
+>
+	<div class="panel divide-border flex divide-x rounded-xl">
+		<div class="min-w-0 flex-1 px-4 py-3">
+			<p class="eyebrow flex items-center gap-1.5">
+				<span class="bg-accent size-1.5 rounded-full"></span>
+				Services
+			</p>
+			<p class="metric mt-2">{data.scopedServices.length}</p>
+		</div>
+		<div class="min-w-0 flex-1 px-4 py-3">
+			<p class="eyebrow flex items-center gap-1.5">
+				<span class="size-1.5 rounded-full bg-emerald-500"></span>
+				Running
+			</p>
+			<p class="metric mt-2">{running}</p>
+		</div>
+	</div>
 
-  <ErrorBoundary title="Resource usage didn't load.">
-    <ServiceUsageTable serviceIds={serviceIds} title="Resource usage" />
-  </ErrorBoundary>
+	<ErrorBoundary title="Resource usage didn't load.">
+		<ServiceUsageTable {serviceIds} title="Resource usage" />
+	</ErrorBoundary>
 </div>
 
 <div class="panel rounded-xl">
-  <div class="panel-head">
-    <h2 class="eyebrow flex items-center gap-1.5">
-      <Clock class="size-3" />
-      Recent deployments
-    </h2>
-  </div>
-  {#if data.recentDeployments.length === 0}
-    <p class="text-text-muted px-4 py-6 text-center text-xs">
-      Nothing deployed in this stack yet.
-    </p>
-  {:else}
-    <div class="divide-border divide-y">
-      {#each data.recentDeployments as dep (dep.id)}
-        <a
-          class="hover:bg-surface-2 flex items-center gap-3 px-4 py-2.5 transition-colors"
-          href="{resolve('services')}/{dep.serviceId}"
-        >
-          <StatusBadge status={dep.status} />
-          <span class="text-text min-w-0 flex-1 truncate text-sm">
-            {dep.serviceName ?? "Unknown service"}
-          </span>
-          <span class="tabular-nums text-text-subtle shrink-0 text-[0.6875rem]">
-            {timeAgo(dep.createdAt)}
-          </span>
-        </a>
-      {/each}
-    </div>
-  {/if}
+	<div class="panel-head">
+		<h2 class="eyebrow flex items-center gap-1.5">
+			<Clock class="size-3" />
+			Recent deployments
+		</h2>
+	</div>
+	{#if data.recentDeployments.length === 0}
+		<p class="text-text-muted px-4 py-6 text-center text-xs">
+			Nothing deployed in this stack yet.
+		</p>
+	{:else}
+		<div class="divide-border divide-y">
+			{#each data.recentDeployments as dep (dep.id)}
+				<a
+					class="hover:bg-surface-2 flex items-center gap-3 px-4 py-2.5 transition-colors"
+					href="{resolve('services')}/{dep.serviceId}"
+				>
+					<StatusBadge status={dep.status} />
+					<span class="text-text min-w-0 flex-1 truncate text-sm">
+						{dep.serviceName ?? "Unknown service"}
+					</span>
+					<span class="tabular-nums text-text-subtle shrink-0 text-[0.6875rem]">
+						{timeAgo(dep.createdAt)}
+					</span>
+				</a>
+			{/each}
+		</div>
+	{/if}
 </div>

@@ -11,25 +11,25 @@
 </script>
 
 <div class="space-y-3">
-  <div>
-    <label class={labelClass} for="name">Name</label>
-    <Input
-      id="name"
-      name="name"
-      placeholder="Node 22 + my-app"
-      required
-      type="text"
-      value={name}
-    />
-  </div>
-  <div>
-    <label class={labelClass} for="description">Description (optional)</label>
-    <Input
-      id="description"
-      name="description"
-      placeholder="What a workstation from this preset is for"
-      type="text"
-      value={description ?? ""}
-    />
-  </div>
+	<div>
+		<label class={labelClass} for="name">Name</label>
+		<Input
+			id="name"
+			name="name"
+			placeholder="Node 22 + my-app"
+			required
+			type="text"
+			value={name}
+		/>
+	</div>
+	<div>
+		<label class={labelClass} for="description">Description (optional)</label>
+		<Input
+			id="description"
+			name="description"
+			placeholder="What a workstation from this preset is for"
+			type="text"
+			value={description ?? ""}
+		/>
+	</div>
 </div>

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -9,12 +10,10 @@ mock.module("$app/env", () => ({
 
 const { Logger } = await import("../../../src/lib/logger");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
-const { WorkstationService } = await import(
-	"../../../src/lib/services/workstation.service"
-);
-const recreateRoute = await import(
-	"../../../src/routes/api/v1/workstations/[workstationId]/recreate/+server"
-);
+const { WorkstationService } =
+	await import("../../../src/lib/services/workstation.service");
+const recreateRoute =
+	await import("../../../src/routes/api/v1/workstations/[workstationId]/recreate/+server");
 
 afterEach(() => {
 	restoreStubs();

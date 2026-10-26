@@ -6,6 +6,7 @@
 		labelClass as label,
 	} from "#lib/components/form-styles.js";
 	import UiModePicker from "#lib/components/ui-mode-picker.svelte";
+
 	import StepPanel from "./step-panel.svelte";
 	import type { OnboardingWizard } from "./wizard-state.svelte";
 
@@ -19,53 +20,53 @@
 </script>
 
 <StepPanel
-  description="The domain this instance and everything it deploys lives under, and how you will use it."
-  {hidden}
-  title="Core"
+	description="The domain this instance and everything it deploys lives under, and how you will use it."
+	{hidden}
+	title="Core"
 >
-  <div>
-    <label class={label} for="baseDomain">Base domain</label>
-    <input
-      class={input}
-      id="baseDomain"
-      name="baseDomain"
-      placeholder="example.com"
-      type="text"
-      bind:value={wizard.baseDomain}
-    >
-    <p class="mt-1.5 text-xs text-text-subtle">
-      Deployed services are routed under &lt;slug&gt;.&lt;this&gt;.
-    </p>
-    {#if showError("baseDomain")}
-      <p class={errorClass}>{showError("baseDomain")}</p>
-    {/if}
-  </div>
-  <CheckBox
-    helperText={`Origin: ${wizard.originPreview}`}
-    id="useHttps"
-    label="Use HTTPS"
-    name="useHttps"
-    bind:checked={wizard.useHttps}
-  />
-  <CheckBox
-    helperText="Widens the session cookie to every subdomain of the base domain"
-    id="authCrossSubdomainCookies"
-    label="Cross-subdomain cookies"
-    name="authCrossSubdomainCookies"
-    bind:checked={wizard.authCrossSubdomainCookies}
-  />
-  <div>
-    <p class={label}>How will you use Homerun?</p>
-    <UiModePicker
-      advancedLabel="Engineering work"
-      name="defaultUiMode"
-      simpleLabel="Homelab, click-ops"
-      bind:value={wizard.defaultUiMode}
-    />
-    <p class="mt-1.5 text-xs text-text-subtle">
-      Sets what every account sees by default: simple or advanced mode. Each
-      account can switch from its profile menu, and Settings changes the
-      default.
-    </p>
-  </div>
+	<div>
+		<label class={label} for="baseDomain">Base domain</label>
+		<input
+			class={input}
+			id="baseDomain"
+			name="baseDomain"
+			placeholder="example.com"
+			type="text"
+			bind:value={wizard.baseDomain}
+		/>
+		<p class="mt-1.5 text-xs text-text-subtle">
+			Deployed services are routed under &lt;slug&gt;.&lt;this&gt;.
+		</p>
+		{#if showError("baseDomain")}
+			<p class={errorClass}>{showError("baseDomain")}</p>
+		{/if}
+	</div>
+	<CheckBox
+		helperText={`Origin: ${wizard.originPreview}`}
+		id="useHttps"
+		label="Use HTTPS"
+		name="useHttps"
+		bind:checked={wizard.useHttps}
+	/>
+	<CheckBox
+		helperText="Widens the session cookie to every subdomain of the base domain"
+		id="authCrossSubdomainCookies"
+		label="Cross-subdomain cookies"
+		name="authCrossSubdomainCookies"
+		bind:checked={wizard.authCrossSubdomainCookies}
+	/>
+	<div>
+		<p class={label}>How will you use Homerun?</p>
+		<UiModePicker
+			advancedLabel="Engineering work"
+			name="defaultUiMode"
+			simpleLabel="Homelab, click-ops"
+			bind:value={wizard.defaultUiMode}
+		/>
+		<p class="mt-1.5 text-xs text-text-subtle">
+			Sets what every account sees by default: simple or advanced mode. Each
+			account can switch from its profile menu, and Settings changes the
+			default.
+		</p>
+	</div>
 </StepPanel>

@@ -2,6 +2,7 @@
 	import { HardDrive, Plus, Trash2 } from "@lucide/svelte";
 	import { untrack } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { labelClass } from "#lib/components/form-styles.js";
 	import NewVolumeFields from "#lib/components/new-volume-fields.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
@@ -78,111 +79,115 @@
 </script>
 
 <section class="panel rounded-md">
-  <PanelHeader
-    description="Storage volumes mounted into the container, for a cache or data that outlives a run. A volume lives on this host, so a job running on another host can't mount one."
-    title="Volumes"
-  />
-  <div class="space-y-3 p-5">
-    {#if options.length === 0}
-      <p class="text-text-muted text-sm">
-        No storage volumes yet : create one with New volume.
-      </p>
-    {/if}
-    {#each rows as row, i (i)}
-      <div class="flex flex-wrap items-end gap-2">
-        <div class="min-w-48 flex-1">
-          <label class={labelClass} for="mountVolumeId-{i}">Volume</label>
-          <Select.Root type="single" bind:value={row.volumeId}>
-            <Select.Trigger class="w-full" id="mountVolumeId-{i}">
-              {options.find((volume) => volume.id === row.volumeId)?.name ??
-                "Pick a volume"}
-            </Select.Trigger>
-            <Select.Content>
-              {#each options as volume (volume.id)}
-                <Select.Item label={volume.name} value={volume.id} />
-              {/each}
-            </Select.Content>
-          </Select.Root>
-        </div>
-        <div class="min-w-48 flex-1">
-          <label class={labelClass} for="mountPath-{i}">Container path</label>
-          <Input
-            id="mountPath-{i}"
-            name="mountPath"
-            placeholder="/tmp/renovate"
-            type="text"
-            bind:value={row.containerPath}
-          />
-        </div>
-        <label class="flex h-9 items-center gap-2 text-sm">
-          <Checkbox bind:checked={row.readOnly} />
-          Read-only
-        </label>
-        <input name="mountVolumeId" type="hidden" value={row.volumeId}>
-        <input name="mountReadOnly" type="hidden" value={row.readOnly ? "1" : "0"}>
-        <Button
-          aria-label="Remove volume"
-          class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
-          onclick={() => removeRow(i)}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <Trash2 class="size-4" />
-        </Button>
-      </div>
-    {/each}
-    <div class="flex items-center gap-4">
-      {#if options.length > 0}
-        <Button class="h-auto p-0" onclick={addRow} variant="link">
-          <Plus class="size-3.5" />
-          Add volume
-        </Button>
-      {/if}
-      <Button
-        class="h-auto p-0"
-        onclick={() => {
-          newVolumeOpen = true;
-        }}
-        variant="link"
-      >
-        <HardDrive class="size-3.5" />
-        New volume
-      </Button>
-    </div>
-  </div>
+	<PanelHeader
+		description="Storage volumes mounted into the container, for a cache or data that outlives a run. A volume lives on this host, so a job running on another host can't mount one."
+		title="Volumes"
+	/>
+	<div class="space-y-3 p-5">
+		{#if options.length === 0}
+			<p class="text-text-muted text-sm">
+				No storage volumes yet : create one with New volume.
+			</p>
+		{/if}
+		{#each rows as row, i (i)}
+			<div class="flex flex-wrap items-end gap-2">
+				<div class="min-w-48 flex-1">
+					<label class={labelClass} for="mountVolumeId-{i}">Volume</label>
+					<Select.Root type="single" bind:value={row.volumeId}>
+						<Select.Trigger class="w-full" id="mountVolumeId-{i}">
+							{options.find((volume) => volume.id === row.volumeId)?.name ??
+								"Pick a volume"}
+						</Select.Trigger>
+						<Select.Content>
+							{#each options as volume (volume.id)}
+								<Select.Item label={volume.name} value={volume.id} />
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</div>
+				<div class="min-w-48 flex-1">
+					<label class={labelClass} for="mountPath-{i}">Container path</label>
+					<Input
+						id="mountPath-{i}"
+						name="mountPath"
+						placeholder="/tmp/renovate"
+						type="text"
+						bind:value={row.containerPath}
+					/>
+				</div>
+				<label class="flex h-9 items-center gap-2 text-sm">
+					<Checkbox bind:checked={row.readOnly} />
+					Read-only
+				</label>
+				<input name="mountVolumeId" type="hidden" value={row.volumeId} />
+				<input
+					name="mountReadOnly"
+					type="hidden"
+					value={row.readOnly ? "1" : "0"}
+				/>
+				<Button
+					aria-label="Remove volume"
+					class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+					onclick={() => removeRow(i)}
+					size="icon-sm"
+					variant="ghost"
+				>
+					<Trash2 class="size-4" />
+				</Button>
+			</div>
+		{/each}
+		<div class="flex items-center gap-4">
+			{#if options.length > 0}
+				<Button class="h-auto p-0" onclick={addRow} variant="link">
+					<Plus class="size-3.5" />
+					Add volume
+				</Button>
+			{/if}
+			<Button
+				class="h-auto p-0"
+				onclick={() => {
+					newVolumeOpen = true;
+				}}
+				variant="link"
+			>
+				<HardDrive class="size-3.5" />
+				New volume
+			</Button>
+		</div>
+	</div>
 </section>
 
 <Dialog.Root bind:open={newVolumeOpen}>
-  <Dialog.Content>
-    <Dialog.Header>
-      <Dialog.Title>New volume</Dialog.Title>
-      <Dialog.Description>
-        A local storage source, created now and added to this job's volumes.
-      </Dialog.Description>
-    </Dialog.Header>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>New volume</Dialog.Title>
+			<Dialog.Description>
+				A local storage source, created now and added to this job's volumes.
+			</Dialog.Description>
+		</Dialog.Header>
 
-    <form class="space-y-5" onsubmit={handleCreateVolume}>
-      <NewVolumeFields idPrefix="newVolume-" bind:kind={newVolumeKind} />
+		<form class="space-y-5" onsubmit={handleCreateVolume}>
+			<NewVolumeFields idPrefix="newVolume-" bind:kind={newVolumeKind} />
 
-      <Dialog.Footer>
-        <Button
-          onclick={() => {
-            newVolumeOpen = false;
-          }}
-          variant="outline"
-        >
-          Cancel
-        </Button>
-        <Button disabled={creating} type="submit">
-          {#if creating}
-            <Spinner />
-            Creating…
-          {:else}
-            <Plus class="size-3.5" />
-            Create volume
-          {/if}
-        </Button>
-      </Dialog.Footer>
-    </form>
-  </Dialog.Content>
+			<Dialog.Footer>
+				<Button
+					onclick={() => {
+						newVolumeOpen = false;
+					}}
+					variant="outline"
+				>
+					Cancel
+				</Button>
+				<Button disabled={creating} type="submit">
+					{#if creating}
+						<Spinner />
+						Creating…
+					{:else}
+						<Plus class="size-3.5" />
+						Create volume
+					{/if}
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
 </Dialog.Root>

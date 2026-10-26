@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -8,9 +9,8 @@ mock.module("$app/env", () => ({
 }));
 
 const { WorkerClient } = await import("../../../src/lib/server/worker-client");
-const { VolumeSizeService } = await import(
-	"../../../src/lib/services/volume-size.service"
-);
+const { VolumeSizeService } =
+	await import("../../../src/lib/services/volume-size.service");
 
 afterEach(() => restoreStubs());
 

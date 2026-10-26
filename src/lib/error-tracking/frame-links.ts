@@ -1,8 +1,8 @@
 import type { StoredErrorEvent } from "./event";
 import {
 	repoRelativePath,
-	type SourceProvider,
 	sourceFileUrl,
+	type SourceProvider,
 } from "./source-links";
 
 export interface FrameLinkSource {

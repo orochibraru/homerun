@@ -1,4 +1,5 @@
 import { and, count, desc, eq, lt, type SQL } from "drizzle-orm";
+
 import {
 	emptyCounts,
 	type ImageScanFinding,
@@ -12,6 +13,7 @@ import {
 	type PagedResult,
 	searchCondition,
 } from "#lib/server/list-query.js";
+
 import { BaseDTO } from "./base-dto";
 
 const KEEP_PER_SERVICE = 25;

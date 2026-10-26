@@ -1,12 +1,7 @@
 export type PipelineProvider = "github" | "gitlab" | "gitea";
 
 export type PipelineStatus =
-	| "queued"
-	| "running"
-	| "success"
-	| "failure"
-	| "cancelled"
-	| "skipped";
+	"queued" | "running" | "success" | "failure" | "cancelled" | "skipped";
 
 export const PIPELINE_STATUSES: PipelineStatus[] = [
 	"queued",

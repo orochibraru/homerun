@@ -1,4 +1,5 @@
 import { error, fail } from "@sveltejs/kit";
+
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
@@ -25,7 +26,9 @@ export const load = async ({ params, url }) => {
 	}
 	const prefix = folderPrefix(url.searchParams.get("prefix") ?? "");
 	const token = url.searchParams.get("token");
-	const listing = await (await ObjectStorageService.client(store))
+	const listing = await (
+		await ObjectStorageService.client(store)
+	)
 		.listObjects(params.bucket, prefix, token)
 		.catch((cause: unknown) =>
 			error(503, `The bucket can't be listed: ${reason(cause)}`),

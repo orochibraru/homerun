@@ -1,4 +1,6 @@
+import { query } from "$app/server";
 import { z } from "zod";
+
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { type StatPoint, StatSampleDTO } from "#lib/dto/stat-sample-dto.js";
 import { WorkstationDTO } from "#lib/dto/workstation-dto.js";
@@ -7,7 +9,6 @@ import {
 	DockerService,
 	type SwarmReplica,
 } from "#lib/services/docker.service.js";
-import { query } from "$app/server";
 
 const rangeSchema = z.enum([
 	"live",

@@ -15,8 +15,9 @@ the icon. No sizing classes on the icon.
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import SearchIcon from "@lucide/svelte/icons/search";
+  import SearchIcon from "@lucide/svelte/icons/search";
+
+  import { Button } from "#lib/components/ui/button/index.js";
 </script>
 
 <Button>
@@ -29,9 +30,10 @@ import SearchIcon from "@lucide/svelte/icons/search";
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
-import SearchIcon from "@lucide/svelte/icons/search";
+  import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+  import SearchIcon from "@lucide/svelte/icons/search";
+
+  import { Button } from "#lib/components/ui/button/index.js";
 </script>
 
 <Button>
@@ -58,8 +60,9 @@ for custom icon sizes.
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import SearchIcon from "@lucide/svelte/icons/search";
+  import SearchIcon from "@lucide/svelte/icons/search";
+
+  import { Button } from "#lib/components/ui/button/index.js";
 </script>
 
 <Button>
@@ -72,8 +75,9 @@ import SearchIcon from "@lucide/svelte/icons/search";
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import SearchIcon from "@lucide/svelte/icons/search";
+  import SearchIcon from "@lucide/svelte/icons/search";
+
+  import { Button } from "#lib/components/ui/button/index.js";
 </script>
 
 <Button>
@@ -102,10 +106,10 @@ Use a component reference, not a string key to a lookup map.
 
 ```svelte
 <script lang="ts">
-import CheckIcon from "@lucide/svelte/icons/check";
-import type { Component } from "svelte";
+  import CheckIcon from "@lucide/svelte/icons/check";
+  import type { Component } from "svelte";
 
-let { Icon }: { Icon: Component } = $props();
+  let { Icon }: { Icon: Component } = $props();
 </script>
 
 <Icon />

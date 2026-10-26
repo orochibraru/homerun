@@ -23,9 +23,8 @@ const {
 	buildContainerLabels,
 	GATE_ROUTER_PRIORITY,
 } = await import("../../../src/lib/services/docker/labels");
-const { blockedProofToken, errorPagesConfig, validBlockedProof } = await import(
-	"../../../src/lib/services/docker/error-pages"
-);
+const { blockedProofToken, errorPagesConfig, validBlockedProof } =
+	await import("../../../src/lib/services/docker/error-pages");
 const { REDIRECT_ROUTER_PRIORITY } = await import("../../../src/lib/redirects");
 
 function matches(path: string, patterns: string[]): boolean {

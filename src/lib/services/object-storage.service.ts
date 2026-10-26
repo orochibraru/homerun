@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import { config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
@@ -8,8 +9,8 @@ import { PublicBucketDTO } from "#lib/dto/public-bucket-dto.js";
 import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
-	BUILTIN_STORE_NAME,
 	bucketNameProblem,
+	BUILTIN_STORE_NAME,
 	GARAGE_REGION,
 } from "#lib/object-storage.js";
 import {
@@ -19,7 +20,9 @@ import {
 } from "#lib/public-bucket-routes.js";
 import type { ObjectStoreFormValues } from "#lib/server/validation/object-store.js";
 import { DOMAIN_RE } from "#lib/service-domains.js";
+
 import { syncCoreHostDns } from "./dns.service.ts";
+import { DockerService } from "./docker.service.ts";
 import { certResolverFor } from "./docker/cert-resolver.ts";
 import { errorPagesTarget } from "./docker/error-pages.ts";
 import {
@@ -27,7 +30,6 @@ import {
 	GARAGE_S3_PORT,
 	type GarageDesiredState,
 } from "./docker/garage-container.ts";
-import { DockerService } from "./docker.service.ts";
 import {
 	GarageAdminClient,
 	type GarageBucketKey,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { SCAN_SEVERITIES } from "#lib/image-scan.js";
 import {
 	authenticationSettingsApiBody,
@@ -12,6 +13,7 @@ import {
 } from "#lib/server/validation/settings-api.js";
 import { UI_MODES } from "#lib/ui-mode.js";
 import { UPDATE_CHANNELS } from "#lib/update-channel.js";
+
 import type { ParamDef, ResponseDef, RouteDef } from "./registry";
 import { errorResponse } from "./schemas";
 

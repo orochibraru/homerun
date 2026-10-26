@@ -10,6 +10,7 @@ import {
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -24,12 +25,10 @@ const { RedirectDTO } = await import("../../../src/lib/dto/redirect-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { REDIRECTS_FILE } = await import("../../../src/lib/redirects");
 const dnsModule = await import("../../../src/lib/services/dns.service");
-const { RedirectService, redirectHost } = await import(
-	"../../../src/lib/services/redirect.service"
-);
-const { redirectSchema } = await import(
-	"../../../src/lib/server/validation/redirect"
-);
+const { RedirectService, redirectHost } =
+	await import("../../../src/lib/services/redirect.service");
+const { redirectSchema } =
+	await import("../../../src/lib/server/validation/redirect");
 
 type DnsResult = Awaited<ReturnType<typeof dnsModule.syncDns>>[number];
 

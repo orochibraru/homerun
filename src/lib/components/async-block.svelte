@@ -1,6 +1,7 @@
 <script lang="ts" generics="T">
-	import type { Snippet } from "svelte";
 	import type { RemoteQuery } from "$app/server";
+	import type { Snippet } from "svelte";
+
 	import Alert from "./alert.svelte";
 	import { Button } from "./ui/button/index.js";
 
@@ -26,16 +27,16 @@
 </script>
 
 {#if query.error}
-  <Alert title={errorTitle}>
-    {message}
-    {#snippet actions()}
-      <Button onclick={() => query.refresh()} size="sm" variant="outline">
-        Retry
-      </Button>
-    {/snippet}
-  </Alert>
+	<Alert title={errorTitle}>
+		{message}
+		{#snippet actions()}
+			<Button onclick={() => query.refresh()} size="sm" variant="outline">
+				Retry
+			</Button>
+		{/snippet}
+	</Alert>
 {:else if query.ready}
-  {@render children(query.current)}
+	{@render children(query.current)}
 {:else}
-  {@render pending()}
+	{@render pending()}
 {/if}

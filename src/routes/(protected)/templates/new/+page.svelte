@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import {
 		Check,
 		LayoutGrid,
@@ -9,6 +11,7 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
+
 	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
 	import PublishedPortsFields from "#lib/components/published-ports-fields.svelte";
 	import RuntimeFields from "#lib/components/runtime-fields.svelte";
@@ -23,8 +26,6 @@
 	import { title } from "#lib/store/title.js";
 	import { TEMPLATE_CATEGORIES } from "#lib/template-categories.js";
 	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -85,318 +86,324 @@
 </script>
 
 <div class="mspace-y-6 p-6 md:p-8">
-  <div class="mb-3">
-    <h1 class="text-text text-lg font-semibold tracking-tight">New Template</h1>
-    <p class="text-sm text-text-muted">
-      A reusable config you can deploy from again later.
-    </p>
-  </div>
+	<div class="mb-3">
+		<h1 class="text-text text-lg font-semibold tracking-tight">New Template</h1>
+		<p class="text-sm text-text-muted">
+			A reusable config you can deploy from again later.
+		</p>
+	</div>
 
-  <form
-    action="?/create"
-    class="space-y-6"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Check the form for errors.",
-      loading: "Creating the template",
-      onSettled: () => {
-        submitting = false;
-      },
-      onStart: () => {
-        submitting = true;
-      },
-      success: "Template created.",
-    })}
-  >
-    <section class="rounded-md panel">
-      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <LayoutGrid class="size-4" />
-        </div>
-        <h2 class="eyebrow">Basics</h2>
-      </div>
+	<form
+		action="?/create"
+		class="space-y-6"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Check the form for errors.",
+			loading: "Creating the template",
+			onSettled: () => {
+				submitting = false;
+			},
+			onStart: () => {
+				submitting = true;
+			},
+			success: "Template created.",
+		})}
+	>
+		<section class="rounded-md panel">
+			<div class="flex items-center gap-3 border-b border-border px-5 py-4">
+				<div
+					class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
+				>
+					<LayoutGrid class="size-4" />
+				</div>
+				<h2 class="eyebrow">Basics</h2>
+			</div>
 
-      <div class="space-y-5 p-5">
-        <div>
-          <label class={label} for="name">
-            Name <span class="text-red-500">*</span>
-          </label>
-          <Input
-            id="name"
-            name="name"
-            placeholder="My stack"
-            required
-            type="text"
-            value={values?.name ?? ""}
-          />
-          {#if errors?.name}
-            <p class={errorClass}>{errors.name[0]}</p>
-          {/if}
-        </div>
+			<div class="space-y-5 p-5">
+				<div>
+					<label class={label} for="name">
+						Name <span class="text-red-500">*</span>
+					</label>
+					<Input
+						id="name"
+						name="name"
+						placeholder="My stack"
+						required
+						type="text"
+						value={values?.name ?? ""}
+					/>
+					{#if errors?.name}
+						<p class={errorClass}>{errors.name[0]}</p>
+					{/if}
+				</div>
 
-        <div>
-          <label class={label} for="description">Description</label>
-          <Textarea
-            class="resize-none"
-            content={values?.description ?? ""}
-            id="description"
-            name="description"
-            placeholder="Optional"
-            rows={2}
-          />
-        </div>
+				<div>
+					<label class={label} for="description">Description</label>
+					<Textarea
+						class="resize-none"
+						content={values?.description ?? ""}
+						id="description"
+						name="description"
+						placeholder="Optional"
+						rows={2}
+					/>
+				</div>
 
-        <div>
-          <label class={label} for="category">Category</label>
-          <Select.Root name="category" type="single" bind:value={category}>
-            <Select.Trigger class="w-full" id="category">
-              {categoryLabel}
-            </Select.Trigger>
-            <Select.Content>
-              {#each categoryOptions as opt (opt.value)}
-                <Select.Item label={opt.label} value={opt.value} />
-              {/each}
-            </Select.Content>
-          </Select.Root>
-        </div>
+				<div>
+					<label class={label} for="category">Category</label>
+					<Select.Root name="category" type="single" bind:value={category}>
+						<Select.Trigger class="w-full" id="category">
+							{categoryLabel}
+						</Select.Trigger>
+						<Select.Content>
+							{#each categoryOptions as opt (opt.value)}
+								<Select.Item label={opt.label} value={opt.value} />
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</div>
 
-        <div>
-          <label class={label} for="tags">Tags</label>
-          <Input
-            id="tags"
-            name="tags"
-            placeholder="sql, storage, self-hosted"
-            type="text"
-            value={values?.tags ?? ""}
-          />
-          <p class="mt-1.5 text-xs text-text-subtle">
-            Comma-separated keywords the gallery's search box matches on, on
-            top of the name, description and image.
-          </p>
-        </div>
+				<div>
+					<label class={label} for="tags">Tags</label>
+					<Input
+						id="tags"
+						name="tags"
+						placeholder="sql, storage, self-hosted"
+						type="text"
+						value={values?.tags ?? ""}
+					/>
+					<p class="mt-1.5 text-xs text-text-subtle">
+						Comma-separated keywords the gallery's search box matches on, on top
+						of the name, description and image.
+					</p>
+				</div>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div class="sm:col-span-2">
-            <label class={label} for="image">
-              Image <span class="text-red-500">*</span>
-            </label>
-            <Input
-              id="image"
-              name="image"
-              placeholder="ghcr.io/acme/api"
-              required
-              type="text"
-              value={values?.image ?? ""}
-            />
-            {#if errors?.image}
-              <p class={errorClass}>{errors.image[0]}</p>
-            {/if}
-          </div>
-          <div>
-            <label class={label} for="tag">Tag</label>
-            <Input
-              id="tag"
-              name="tag"
-              placeholder="latest"
-              type="text"
-              value={values?.tag ?? "latest"}
-            />
-          </div>
-        </div>
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+					<div class="sm:col-span-2">
+						<label class={label} for="image">
+							Image <span class="text-red-500">*</span>
+						</label>
+						<Input
+							id="image"
+							name="image"
+							placeholder="ghcr.io/acme/api"
+							required
+							type="text"
+							value={values?.image ?? ""}
+						/>
+						{#if errors?.image}
+							<p class={errorClass}>{errors.image[0]}</p>
+						{/if}
+					</div>
+					<div>
+						<label class={label} for="tag">Tag</label>
+						<Input
+							id="tag"
+							name="tag"
+							placeholder="latest"
+							type="text"
+							value={values?.tag ?? "latest"}
+						/>
+					</div>
+				</div>
 
-        <div>
-          <label class={label} for="containerPort">
-            Container port <span class="text-red-500">*</span>
-          </label>
-          <Input
-            id="containerPort"
-            max="65535"
-            min="1"
-            name="containerPort"
-            placeholder="3000"
-            required
-            type="number"
-            value={values?.containerPort ?? ""}
-          />
-          {#if errors?.containerPort}
-            <p class={errorClass}>{errors.containerPort[0]}</p>
-          {/if}
-        </div>
-      </div>
-    </section>
+				<div>
+					<label class={label} for="containerPort">
+						Container port <span class="text-red-500">*</span>
+					</label>
+					<Input
+						id="containerPort"
+						max="65535"
+						min="1"
+						name="containerPort"
+						placeholder="3000"
+						required
+						type="number"
+						value={values?.containerPort ?? ""}
+					/>
+					{#if errors?.containerPort}
+						<p class={errorClass}>{errors.containerPort[0]}</p>
+					{/if}
+				</div>
+			</div>
+		</section>
 
-    <section class="rounded-md panel">
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="eyebrow">Environment variables</h2>
-      </div>
-      <div class="space-y-2.5 p-5">
-        {#each envRows as row, i}
-          <div class="flex items-center gap-2">
-            <Input
-              class=""
-              name="envKey"
-              placeholder="KEY"
-              type="text"
-              bind:value={row.key}
-            />
-            <Input
-              class=""
-              name="envValue"
-              placeholder="value"
-              type="text"
-              bind:value={row.value}
-            />
-            <Button
-              aria-label="Remove"
-              class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
-              onclick={() => removeEnvRow(i)}
-              size="icon-sm"
-              variant="ghost"
-            >
-              <Trash2 class="size-4" />
-            </Button>
-          </div>
-        {/each}
-        <div class="mt-1 flex items-center gap-4">
-          <Button class="h-auto p-0" onclick={addEnvRow} variant="link">
-            <Plus class="size-3.5" />
-            Add variable
-          </Button>
-          <EnvPasteButton onImport={importEnvRows} />
-        </div>
-      </div>
-    </section>
+		<section class="rounded-md panel">
+			<div class="border-b border-border px-5 py-4">
+				<h2 class="eyebrow">Environment variables</h2>
+			</div>
+			<div class="space-y-2.5 p-5">
+				{#each envRows as row, i}
+					<div class="flex items-center gap-2">
+						<Input
+							class=""
+							name="envKey"
+							placeholder="KEY"
+							type="text"
+							bind:value={row.key}
+						/>
+						<Input
+							class=""
+							name="envValue"
+							placeholder="value"
+							type="text"
+							bind:value={row.value}
+						/>
+						<Button
+							aria-label="Remove"
+							class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+							onclick={() => removeEnvRow(i)}
+							size="icon-sm"
+							variant="ghost"
+						>
+							<Trash2 class="size-4" />
+						</Button>
+					</div>
+				{/each}
+				<div class="mt-1 flex items-center gap-4">
+					<Button class="h-auto p-0" onclick={addEnvRow} variant="link">
+						<Plus class="size-3.5" />
+						Add variable
+					</Button>
+					<EnvPasteButton onImport={importEnvRows} />
+				</div>
+			</div>
+		</section>
 
-    <section class="rounded-md panel">
-      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <TerminalSquare class="size-4" />
-        </div>
-        <div>
-          <h2 class="eyebrow">Runtime</h2>
-          <p class="text-xs text-text-muted">
-            How containers deployed from this template start and what they can
-            reach on the host. Deploying a template that asks for host access
-            needs write access to System.
-          </p>
-        </div>
-      </div>
-      <div class="space-y-5 p-5">
-        <RuntimeFields
-          errors={errors}
-          hostAccess={data.hostAccess}
-          showEnvFiles
-          values={values ?? {}}
-        />
-      </div>
-    </section>
+		<section class="rounded-md panel">
+			<div class="flex items-center gap-3 border-b border-border px-5 py-4">
+				<div
+					class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
+				>
+					<TerminalSquare class="size-4" />
+				</div>
+				<div>
+					<h2 class="eyebrow">Runtime</h2>
+					<p class="text-xs text-text-muted">
+						How containers deployed from this template start and what they can
+						reach on the host. Deploying a template that asks for host access
+						needs write access to System.
+					</p>
+				</div>
+			</div>
+			<div class="space-y-5 p-5">
+				<RuntimeFields
+					{errors}
+					hostAccess={data.hostAccess}
+					showEnvFiles
+					values={values ?? {}}
+				/>
+			</div>
+		</section>
 
-    <section class="rounded-md panel">
-      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <Plug class="size-4" />
-        </div>
-        <div>
-          <h2 class="eyebrow">Published ports</h2>
-          <p class="text-xs text-text-muted">
-            Host ports bound straight to the container, for what Traefik can't
-            route by domain : SSH, UDP, raw TCP. A host port another service
-            already publishes is skipped when the template is deployed.
-          </p>
-        </div>
-      </div>
-      <div class="p-5">
-        <PublishedPortsFields />
-      </div>
-    </section>
+		<section class="rounded-md panel">
+			<div class="flex items-center gap-3 border-b border-border px-5 py-4">
+				<div
+					class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
+				>
+					<Plug class="size-4" />
+				</div>
+				<div>
+					<h2 class="eyebrow">Published ports</h2>
+					<p class="text-xs text-text-muted">
+						Host ports bound straight to the container, for what Traefik can't
+						route by domain : SSH, UDP, raw TCP. A host port another service
+						already publishes is skipped when the template is deployed.
+					</p>
+				</div>
+			</div>
+			<div class="p-5">
+				<PublishedPortsFields />
+			</div>
+		</section>
 
-    {#if data.linkableTemplates.length > 0}
-      <section class="rounded-md panel">
-        <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-          <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-            <Link2 class="size-4" />
-          </div>
-          <div>
-            <h2 class="eyebrow">Linked containers</h2>
-            <p class="text-xs text-text-muted">
-              Check any to deploy them alongside this template automatically,
-              e.g. a database or cache. Each gets an alias (defaults to its
-              name if you don't set one) that's also its internal hostname :
-              reference it in an env var above as
-              <code class="">{"{{alias}}"}</code> (or, for one of the
-              linked container's own env vars,
-              <code class="">{"{{alias.ENV_KEY}}"}</code>).
-            </p>
-          </div>
-        </div>
-        <div class="divide-y divide-border">
-          {#each data.linkableTemplates as linkable (linkable.id)}
-            {@const envEntries = Object.entries(linkable.envVars ?? {})}
-            {@const enabled = linkEnabled[linkable.id] ?? false}
-            <div class="flex flex-wrap items-start gap-3 px-5 py-3 sm:flex-nowrap">
-              <Checkbox
-                class="mt-1"
-                id="linkEnabled-{linkable.id}"
-                bind:checked={linkEnabled[linkable.id]}
-              />
-              <TemplateIcon
-                category={linkable.category}
-                class="mt-0.5 size-6"
-                icon={linkable.icon}
-              />
-              <label
-                class="min-w-0 flex-1 cursor-pointer"
-                for="linkEnabled-{linkable.id}"
-              >
-                <p class="truncate text-sm font-medium text-text">
-                  {linkable.name}
-                </p>
-                <p class="truncate text-xs text-text-subtle">
-                  {linkable.image}:{linkable.tag} · port {linkable.containerPort}
-                </p>
-                {#if envEntries.length > 0}
-                  <p class="truncate text-xs text-text-subtle">
-                    {envEntries.map(([k, v]) => `${k}=${v}`).join(", ")}
-                  </p>
-                {/if}
-              </label>
-              <Input
-                class="w-full shrink-0 sm:w-32"
-                disabled={!enabled}
-                name="linkAlias.{linkable.id}"
-                placeholder={slugify(linkable.name)}
-                type="text"
-                bind:value={linkAliases[linkable.id]}
-              />
+		{#if data.linkableTemplates.length > 0}
+			<section class="rounded-md panel">
+				<div class="flex items-center gap-3 border-b border-border px-5 py-4">
+					<div
+						class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
+					>
+						<Link2 class="size-4" />
+					</div>
+					<div>
+						<h2 class="eyebrow">Linked containers</h2>
+						<p class="text-xs text-text-muted">
+							Check any to deploy them alongside this template automatically,
+							e.g. a database or cache. Each gets an alias (defaults to its name
+							if you don't set one) that's also its internal hostname :
+							reference it in an env var above as
+							<code class="">{"{{alias}}"}</code> (or, for one of the linked
+							container's own env vars,
+							<code class="">{"{{alias.ENV_KEY}}"}</code>).
+						</p>
+					</div>
+				</div>
+				<div class="divide-y divide-border">
+					{#each data.linkableTemplates as linkable (linkable.id)}
+						{@const envEntries = Object.entries(linkable.envVars ?? {})}
+						{@const enabled = linkEnabled[linkable.id] ?? false}
+						<div
+							class="flex flex-wrap items-start gap-3 px-5 py-3 sm:flex-nowrap"
+						>
+							<Checkbox
+								class="mt-1"
+								id="linkEnabled-{linkable.id}"
+								bind:checked={linkEnabled[linkable.id]}
+							/>
+							<TemplateIcon
+								category={linkable.category}
+								class="mt-0.5 size-6"
+								icon={linkable.icon}
+							/>
+							<label
+								class="min-w-0 flex-1 cursor-pointer"
+								for="linkEnabled-{linkable.id}"
+							>
+								<p class="truncate text-sm font-medium text-text">
+									{linkable.name}
+								</p>
+								<p class="truncate text-xs text-text-subtle">
+									{linkable.image}:{linkable.tag} · port {linkable.containerPort}
+								</p>
+								{#if envEntries.length > 0}
+									<p class="truncate text-xs text-text-subtle">
+										{envEntries.map(([k, v]) => `${k}=${v}`).join(", ")}
+									</p>
+								{/if}
+							</label>
+							<Input
+								class="w-full shrink-0 sm:w-32"
+								disabled={!enabled}
+								name="linkAlias.{linkable.id}"
+								placeholder={slugify(linkable.name)}
+								type="text"
+								bind:value={linkAliases[linkable.id]}
+							/>
 
-              <input
-                name="linkTemplateId"
-                type="hidden"
-                value={linkable.id}
-              />
+							<input name="linkTemplateId" type="hidden" value={linkable.id} />
 
-              <input
-                name="linkEnabled"
-                type="hidden"
-                value={enabled ? "true" : "false"}
-              />
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
+							<input
+								name="linkEnabled"
+								type="hidden"
+								value={enabled ? "true" : "false"}
+							/>
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/if}
 
-    <div class="flex justify-end gap-3">
-      <Button href={resolve('templates')} variant="outline">Cancel</Button>
-      <Button disabled={submitting} type="submit">
-        {#if submitting}
-          <Spinner />
-          Creating…
-        {:else}
-          <Check class="size-4" />
-          Create template
-        {/if}
-      </Button>
-    </div>
-  </form>
+		<div class="flex justify-end gap-3">
+			<Button href={resolve("templates")} variant="outline">Cancel</Button>
+			<Button disabled={submitting} type="submit">
+				{#if submitting}
+					<Spinner />
+					Creating…
+				{:else}
+					<Check class="size-4" />
+					Create template
+				{/if}
+			</Button>
+		</div>
+	</form>
 </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
 	import type { SVGAttributes } from "svelte/elements";
+
 	import { cn } from "#lib/utils.js";
 
 	let {
@@ -16,11 +17,11 @@
 </script>
 
 <Loader2Icon
-  aria-label={ariaLabel}
-  class={cn("size-4 animate-spin", className)}
-  color={color ?? undefined}
-  {role}
-  {...name == null ? {} : { name }}
-  {...stroke == null ? {} : { stroke }}
-  {...restProps}
+	aria-label={ariaLabel}
+	class={cn("size-4 animate-spin", className)}
+	color={color ?? undefined}
+	{role}
+	{...name == null ? {} : { name }}
+	{...stroke == null ? {} : { stroke }}
+	{...restProps}
 />

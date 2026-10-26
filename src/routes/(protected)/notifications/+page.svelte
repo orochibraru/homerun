@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import { Bell, CheckCheck, Settings2, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import NotificationRow from "#lib/components/notification-row.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
@@ -15,7 +17,6 @@
 	} from "#lib/remote/notifications.remote.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
-	import { resolve } from "$app/paths";
 
 	const feed = getNotifications();
 
@@ -50,57 +51,65 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
-    <div class="min-w-0">
-      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Notifications</h1>
-      <p class="text-text-muted mt-1 text-sm">
-        Deploys, scheduled tasks, health and server alerts across every service,
-        newest first. Each account reads and clears its own copy.
-      </p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      {#if unreadCount > 0}
-        <Button onclick={handleMarkAllRead} size="sm" variant="outline">
-          <CheckCheck class="size-3.5" />
-          Mark all read
-        </Button>
-      {/if}
-      {#if items.length > 0}
-        <Button onclick={handleClearAll} size="sm" variant="outline">
-          <Trash2 class="size-3.5" />
-          Clear all
-        </Button>
-      {/if}
-      <Tooltip.Root>
-        <Tooltip.Trigger>
-          {#snippet child({ props })}
-            <Button {...props} aria-label="Notification settings" href={resolve('notifications/settings')} size="icon-sm" variant="outline">
-              <Settings2 class="size-4" />
-            </Button>
-          {/snippet}
-        </Tooltip.Trigger>
-        <Tooltip.Content>Notification settings</Tooltip.Content>
-      </Tooltip.Root>
-    </div>
-  </div>
+	<div class="mb-8 flex flex-wrap items-start justify-between gap-4">
+		<div class="min-w-0">
+			<h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
+				Notifications
+			</h1>
+			<p class="text-text-muted mt-1 text-sm">
+				Deploys, scheduled tasks, health and server alerts across every service,
+				newest first. Each account reads and clears its own copy.
+			</p>
+		</div>
+		<div class="flex flex-wrap items-center gap-2">
+			{#if unreadCount > 0}
+				<Button onclick={handleMarkAllRead} size="sm" variant="outline">
+					<CheckCheck class="size-3.5" />
+					Mark all read
+				</Button>
+			{/if}
+			{#if items.length > 0}
+				<Button onclick={handleClearAll} size="sm" variant="outline">
+					<Trash2 class="size-3.5" />
+					Clear all
+				</Button>
+			{/if}
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							aria-label="Notification settings"
+							href={resolve("notifications/settings")}
+							size="icon-sm"
+							variant="outline"
+						>
+							<Settings2 class="size-4" />
+						</Button>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content>Notification settings</Tooltip.Content>
+			</Tooltip.Root>
+		</div>
+	</div>
 
-  {#if !feed.ready}
-    <div class="space-y-2">
-      {#each { length: 6 }, i (i)}
-        <Skeleton class="h-14 w-full" />
-      {/each}
-    </div>
-  {:else if items.length === 0}
-    <EmptyState
-      icon={Bell}
-      subtitle="Deploys, scheduled task summaries and alerts show up here."
-      title="No notifications yet."
-    />
-  {:else}
-    <div class="panel divide-border divide-y overflow-hidden rounded-md">
-      {#each items as item (item.id)}
-        <NotificationRow {item} onDelete={handleDelete} showDetail />
-      {/each}
-    </div>
-  {/if}
+	{#if !feed.ready}
+		<div class="space-y-2">
+			{#each { length: 6 }, i (i)}
+				<Skeleton class="h-14 w-full" />
+			{/each}
+		</div>
+	{:else if items.length === 0}
+		<EmptyState
+			icon={Bell}
+			subtitle="Deploys, scheduled task summaries and alerts show up here."
+			title="No notifications yet."
+		/>
+	{:else}
+		<div class="panel divide-border divide-y overflow-hidden rounded-md">
+			{#each items as item (item.id)}
+				<NotificationRow {item} onDelete={handleDelete} showDetail />
+			{/each}
+		</div>
+	{/if}
 </div>

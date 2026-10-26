@@ -39,9 +39,8 @@ const resolveGitCredential = mock(async () => ({
 	username: "u",
 }));
 
-const { ServiceSettingsService } = await import(
-	"../../../src/lib/services/service-settings.service"
-);
+const { ServiceSettingsService } =
+	await import("../../../src/lib/services/service-settings.service");
 const saveSpy = spyOn(ServiceSettingsService, "save").mockImplementation(
 	save as unknown as typeof ServiceSettingsService.save,
 );
@@ -58,9 +57,8 @@ const post = spyOn(WorkerClient, "post").mockImplementation((async () => ({
 	path: "",
 })) as unknown as typeof WorkerClient.post);
 
-const { ManifestError, ManifestService, manifestScopeFor } = await import(
-	"../../../src/lib/services/manifest.service"
-);
+const { ManifestError, ManifestService, manifestScopeFor } =
+	await import("../../../src/lib/services/manifest.service");
 
 type Service = Parameters<typeof ManifestService.apply>[0];
 

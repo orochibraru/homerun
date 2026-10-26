@@ -1,6 +1,8 @@
 import { cp } from "node:fs/promises";
 import process from "node:process";
+
 import type { Locator, Page } from "@playwright/test";
+
 import { E2E_BASE_URL } from "../../support/config";
 import { expect } from "../../support/test";
 import { postAction, type Seeded, type ShotModule } from "./types";

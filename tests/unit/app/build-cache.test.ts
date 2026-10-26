@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
+
 import {
-	BUILTIN_BUILD_CACHE,
 	buildCacheChoice,
+	BUILTIN_BUILD_CACHE,
 } from "../../../src/lib/build-cache";
 
 describe("buildCacheChoice", () => {

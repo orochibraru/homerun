@@ -1,5 +1,7 @@
 import process from "node:process";
+
 import { type Page, type TestInfo } from "@playwright/test";
+
 import { E2E_BASE_URL } from "../support/config";
 import { expect, test } from "../support/test";
 import {

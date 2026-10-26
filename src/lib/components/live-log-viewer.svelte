@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import { Loader2, RefreshCw, Terminal } from "@lucide/svelte";
 	import { onDestroy, tick } from "svelte";
+
 	import AnsiLine from "#lib/components/ansi-line.svelte";
-	import { resolve } from "$app/paths";
 
 	// Extracted from the Logs tab (services/[serviceId]/logs/+page.svelte) so
 	// the same live-streamed, ANSI-colored log panel can also be embedded
@@ -118,47 +119,48 @@
 </script>
 
 <section class="panel rounded-md">
-  <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
-    <div class="flex items-center gap-2">
-      <Terminal class="text-text-muted size-4" />
-      <h2 class="eyebrow">Logs</h2>
-      {#if connected}
-        <span class="flex items-center gap-1 text-xs text-green-600">
-          <span class="size-1.5 rounded-full bg-green-500"></span>
-          live
-        </span>
-      {/if}
-    </div>
-    <button
-      class="text-text-muted hover:bg-surface-2 hover:text-text flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
-      disabled={!workloadId}
-      onclick={reconnect}
-      type="button"
-    >
-      <RefreshCw class="size-3.5" />
-      Reconnect
-    </button>
-  </div>
+	<div
+		class="border-border flex items-center justify-between gap-3 border-b px-5 py-4"
+	>
+		<div class="flex items-center gap-2">
+			<Terminal class="text-text-muted size-4" />
+			<h2 class="eyebrow">Logs</h2>
+			{#if connected}
+				<span class="flex items-center gap-1 text-xs text-green-600">
+					<span class="size-1.5 rounded-full bg-green-500"></span>
+					live
+				</span>
+			{/if}
+		</div>
+		<button
+			class="text-text-muted hover:bg-surface-2 hover:text-text flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
+			disabled={!workloadId}
+			onclick={reconnect}
+			type="button"
+		>
+			<RefreshCw class="size-3.5" />
+			Reconnect
+		</button>
+	</div>
 
-  <div
-    class="{heightClass} overflow-y-auto log-output"
-    bind:this={logEl}
-  >
-    {#if !workloadId}
-      <p class="text-zinc-500">This service hasn't been deployed yet.</p>
-    {:else if errored}
-      <p class="text-red-400">
-        Couldn't connect to the log stream{errorMessage ? `: ${errorMessage}` : ". Try Reconnect."}
-      </p>
-    {:else if lines.length === 0}
-      <p class="flex items-center gap-2 text-zinc-500">
-        <Loader2 class="size-3.5 animate-spin" />
-        Waiting for output…
-      </p>
-    {:else}
-      {#each lines as line, i (i)}
-        <AnsiLine {line} />
-      {/each}
-    {/if}
-  </div>
+	<div class="{heightClass} overflow-y-auto log-output" bind:this={logEl}>
+		{#if !workloadId}
+			<p class="text-zinc-500">This service hasn't been deployed yet.</p>
+		{:else if errored}
+			<p class="text-red-400">
+				Couldn't connect to the log stream{errorMessage
+					? `: ${errorMessage}`
+					: ". Try Reconnect."}
+			</p>
+		{:else if lines.length === 0}
+			<p class="flex items-center gap-2 text-zinc-500">
+				<Loader2 class="size-3.5 animate-spin" />
+				Waiting for output…
+			</p>
+		{:else}
+			{#each lines as line, i (i)}
+				<AnsiLine {line} />
+			{/each}
+		{/if}
+	</div>
 </section>

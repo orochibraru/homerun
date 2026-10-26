@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Check, Copy } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
+
 	import { cn } from "#lib/utils.js";
 
 	const {
@@ -65,21 +66,21 @@
 </script>
 
 <button
-  aria-label={label ? `Copy ${label}` : "Copy"}
-  class={cn(
-    "text-text-subtle hover:bg-surface-3 hover:text-text inline-flex shrink-0 items-center gap-1.5 rounded-md p-1.5 text-xs transition-colors",
-    className,
-  )}
-  onclick={handleCopy}
-  type="button"
-  bind:this={button}
+	aria-label={label ? `Copy ${label}` : "Copy"}
+	class={cn(
+		"text-text-subtle hover:bg-surface-3 hover:text-text inline-flex shrink-0 items-center gap-1.5 rounded-md p-1.5 text-xs transition-colors",
+		className,
+	)}
+	onclick={handleCopy}
+	type="button"
+	bind:this={button}
 >
-  {#if copied}
-    <Check class="size-3.5 text-emerald-500" />
-  {:else}
-    <Copy class="size-3.5" />
-  {/if}
-  {#if text}
-    <span>{text}</span>
-  {/if}
+	{#if copied}
+		<Check class="size-3.5 text-emerald-500" />
+	{:else}
+		<Copy class="size-3.5" />
+	{/if}
+	{#if text}
+		<span>{text}</span>
+	{/if}
 </button>

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { type Box, edgePaths } from "../../../src/lib/diagram-edges";
 
 const box = (left: number, top: number): Box => ({

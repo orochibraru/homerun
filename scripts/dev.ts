@@ -1,6 +1,7 @@
 import { watch } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import process from "node:process";
+
 import Bun from "bun";
 
 const WORKER_BINARY = "node_modules/.cache/homerun/homerun-worker";

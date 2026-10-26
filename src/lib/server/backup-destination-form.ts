@@ -14,8 +14,7 @@ export interface ParsedDestinationForm {
 }
 
 export type DestinationFormResult =
-	| { error: string }
-	| { parsed: ParsedDestinationForm };
+	{ error: string } | { parsed: ParsedDestinationForm };
 
 /** Where the fields come from: the form's FormData, or a Map built from a JSON body. */
 export interface DestinationFields {
@@ -39,16 +38,14 @@ function validate(
 	const { accessKeyId, bucket, endpoint, name, region, secretAccessKey, type } =
 		parsed;
 	if (type === "s3") {
-		if (
-			!(
-				name &&
-				endpoint &&
-				bucket &&
-				region &&
-				accessKeyId &&
-				(secretAccessKey || keepSecret)
-			)
-		) {
+		if (!(
+			name &&
+			endpoint &&
+			bucket &&
+			region &&
+			accessKeyId &&
+			(secretAccessKey || keepSecret)
+		)) {
 			return "Every field is required.";
 		}
 		return URL.canParse(endpoint) ? null : "Endpoint must be a full URL.";

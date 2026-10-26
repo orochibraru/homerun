@@ -8,9 +8,8 @@ mock.module("$app/env", () => ({
 
 const { alertFrom, banAlert, CrowdsecService, decisionsFrom, goDurationMs } =
 	await import("../../../src/lib/services/crowdsec.service");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 
 const credentials = {
 	machineId: "homerun",

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -13,21 +14,16 @@ mock.module("$app/env", () => ({
 const { config } = await import("../../../src/lib/config");
 const { JobDTO } = await import("../../../src/lib/dto/job-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-const { TrafficSampleDTO } = await import(
-	"../../../src/lib/dto/traffic-sample-dto"
-);
-const { ERROR_PAGES_FILE } = await import(
-	"../../../src/lib/services/docker/error-pages"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { ServiceLifecycleService } = await import(
-	"../../../src/lib/services/service-lifecycle.service"
-);
-const { ScaleToZeroService } = await import(
-	"../../../src/lib/services/scale-to-zero.service"
-);
+const { TrafficSampleDTO } =
+	await import("../../../src/lib/dto/traffic-sample-dto");
+const { ERROR_PAGES_FILE } =
+	await import("../../../src/lib/services/docker/error-pages");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { ServiceLifecycleService } =
+	await import("../../../src/lib/services/service-lifecycle.service");
+const { ScaleToZeroService } =
+	await import("../../../src/lib/services/scale-to-zero.service");
 
 interface Row {
 	containerId: string | null;

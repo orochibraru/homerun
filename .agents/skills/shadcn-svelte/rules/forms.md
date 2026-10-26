@@ -17,8 +17,8 @@ Always use `Field.FieldGroup` + `Field.Field`, never raw `div` with `space-y-*`:
 
 ```svelte
 <script lang="ts">
-    import * as Field from "#lib/components/ui/field/index.js";
-    import { Input } from "#lib/components/ui/input/index.js";
+  import * as Field from "#lib/components/ui/field/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
 </script>
 
 <Field.FieldGroup>
@@ -58,8 +58,8 @@ Never use raw `Input` or `Textarea` inside an `InputGroup.Root`.
 
 ```svelte
 <script lang="ts">
-import { Input } from "#lib/components/ui/input/index.js";
-import * as InputGroup from "#lib/components/ui/input-group/index.js";
+  import * as InputGroup from "#lib/components/ui/input-group/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
 </script>
 
 <InputGroup.Root>
@@ -71,7 +71,7 @@ import * as InputGroup from "#lib/components/ui/input-group/index.js";
 
 ```svelte
 <script lang="ts">
-import * as InputGroup from "#lib/components/ui/input-group/index.js";
+  import * as InputGroup from "#lib/components/ui/input-group/index.js";
 </script>
 
 <InputGroup.Root>
@@ -90,9 +90,10 @@ positioning.
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import { Input } from "#lib/components/ui/input/index.js";
-import SearchIcon from "@lucide/svelte/icons/search";
+  import SearchIcon from "@lucide/svelte/icons/search";
+
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
 </script>
 
 <div class="relative">
@@ -107,9 +108,10 @@ import SearchIcon from "@lucide/svelte/icons/search";
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import * as InputGroup from "#lib/components/ui/input-group/index.js";
-import SearchIcon from "@lucide/svelte/icons/search";
+  import SearchIcon from "@lucide/svelte/icons/search";
+
+  import { Button } from "#lib/components/ui/button/index.js";
+  import * as InputGroup from "#lib/components/ui/input-group/index.js";
 </script>
 
 <InputGroup.Root>
@@ -132,8 +134,8 @@ Don't manually loop `Button` components with active state.
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-let selected = $state("daily");
+  import { Button } from "#lib/components/ui/button/index.js";
+  let selected = $state("daily");
 </script>
 
 <div class="flex gap-2">
@@ -152,8 +154,8 @@ let selected = $state("daily");
 
 ```svelte
 <script lang="ts">
-import * as ToggleGroup from "#lib/components/ui/toggle-group/index.js";
-let selected = $state("daily");
+  import * as ToggleGroup from "#lib/components/ui/toggle-group/index.js";
+  let selected = $state("daily");
 </script>
 
 <ToggleGroup.Root bind:value={selected} spacing={2}>
@@ -167,8 +169,8 @@ Combine with `Field` for labelled toggle groups:
 
 ```svelte
 <script lang="ts">
-import * as Field from "#lib/components/ui/field/index.js";
-import * as ToggleGroup from "#lib/components/ui/toggle-group/index.js";
+  import * as Field from "#lib/components/ui/field/index.js";
+  import * as ToggleGroup from "#lib/components/ui/toggle-group/index.js";
 </script>
 
 <Field.Field orientation="horizontal">
@@ -190,8 +192,8 @@ switches, not `div` with a heading:
 
 ```svelte
 <script lang="ts">
-import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-import * as Field from "#lib/components/ui/field/index.js";
+  import { Checkbox } from "#lib/components/ui/checkbox/index.js";
+  import * as Field from "#lib/components/ui/field/index.js";
 </script>
 
 <Field.FieldSet>
@@ -201,7 +203,8 @@ import * as Field from "#lib/components/ui/field/index.js";
     <Field.Field orientation="horizontal">
       <Checkbox id="dark" />
       <Field.FieldLabel for="dark" class="font-normal"
-      >Dark mode</Field.FieldLabel>
+        >Dark mode</Field.FieldLabel
+      >
     </Field.Field>
   </Field.FieldGroup>
 </Field.FieldSet>
@@ -216,8 +219,8 @@ Both attributes are needed, `data-invalid`/`data-disabled` styles the field
 
 ```svelte
 <script lang="ts">
-import * as Field from "#lib/components/ui/field/index.js";
-import { Input } from "#lib/components/ui/input/index.js";
+  import * as Field from "#lib/components/ui/field/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
 </script>
 
 <!-- Invalid. -->

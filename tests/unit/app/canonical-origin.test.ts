@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { config } from "../../../src/lib/config";
 import {
 	browserOrigin,

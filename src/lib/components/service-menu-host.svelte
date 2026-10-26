@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { enhance, type SubmitFunction } from "$app/forms";
 	import { tick } from "svelte";
+
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
 	import GroupDialog from "#lib/components/service-group-dialog.svelte";
@@ -9,7 +11,6 @@
 		type ServiceAction,
 	} from "#lib/service-actions.js";
 	import { enhanceToast } from "#lib/toast.js";
-	import { enhance, type SubmitFunction } from "$app/forms";
 
 	interface MenuService {
 		id: string;
@@ -87,17 +88,13 @@
 </script>
 
 <form
-  action="{actionBase}?/{op}"
-  class="hidden"
-  method="POST"
-  bind:this={opForm}
-  use:enhance={submitOp}
+	action="{actionBase}?/{op}"
+	class="hidden"
+	method="POST"
+	bind:this={opForm}
+	use:enhance={submitOp}
 >
-	<input
-		name="serviceId"
-		type="hidden"
-		value={target?.id ?? ""}
-	/>
+	<input name="serviceId" type="hidden" value={target?.id ?? ""} />
 
 	<input
 		name="deleteVolumes"
@@ -107,47 +104,38 @@
 </form>
 
 <form
-  action="{actionBase}?/group"
-  class="hidden"
-  method="POST"
-  bind:this={ungroupForm}
-  use:enhance={enhanceToast({
-    error: "Couldn't ungroup the service.",
-    loading: "Ungrouping",
-    success: "Removed from its stack.",
-  })}
+	action="{actionBase}?/group"
+	class="hidden"
+	method="POST"
+	bind:this={ungroupForm}
+	use:enhance={enhanceToast({
+		error: "Couldn't ungroup the service.",
+		loading: "Ungrouping",
+		success: "Removed from its stack.",
+	})}
 >
-	<input
-		name="serviceId"
-		type="hidden"
-		value={target?.id ?? ""}
-	/>
+	<input name="serviceId" type="hidden" value={target?.id ?? ""} />
 
 	<input name="stackId" type="hidden" value="" />
 </form>
 
 <ConfirmDialog
-  confirmLabel="Delete"
-  confirmPhrase={target?.name ?? ""}
-  description={`Delete "${target?.name ?? ""}"? This removes its container and can't be undone.`}
-  onConfirm={() => opForm?.requestSubmit()}
-  title="Delete service"
-  bind:open={deleteOpen}
+	confirmLabel="Delete"
+	confirmPhrase={target?.name ?? ""}
+	description={`Delete "${target?.name ?? ""}"? This removes its container and can't be undone.`}
+	onConfirm={() => opForm?.requestSubmit()}
+	title="Delete service"
+	bind:open={deleteOpen}
 >
-  <DeleteVolumesOption bind:checked={deleteVolumes} />
+	<DeleteVolumesOption bind:checked={deleteVolumes} />
 </ConfirmDialog>
 
 <LinkDialog
 	bind:this={linkDialog}
-	actionBase={actionBase}
+	{actionBase}
 	service={target}
-	services={services}
-	stacks={stacks}
+	{services}
+	{stacks}
 />
 
-<GroupDialog
-	bind:this={groupDialog}
-	actionBase={actionBase}
-	service={target}
-	stacks={stacks}
-/>
+<GroupDialog bind:this={groupDialog} {actionBase} service={target} {stacks} />

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -7,15 +8,12 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { deployedServices, OrchestrationService } = await import(
-	"../../../src/lib/services/orchestration.service"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
+const { deployedServices, OrchestrationService } =
+	await import("../../../src/lib/services/orchestration.service");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
 const { UserService } = await import("../../../src/lib/services/user.service");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { Logger } = await import("../../../src/lib/logger");

@@ -8,51 +8,50 @@ import { expect, test } from "./support/test";
  * since every Playwright test gets its own fresh browser context (no cookies
  * carried over) regardless of file or `describe` order.
  */
-test.describe
-	.serial("onboarding wizard", () => {
-		test.beforeEach(async ({ page }) => {
-			await page.goto("/auth/sign-in");
-			await page.locator("#email").fill("ada@example.com");
-			await page.getByRole("button", { exact: true, name: "Continue" }).click();
-			await page.locator("#password").fill("a-real-strong-password-123");
-			await page.getByRole("button", { name: "Sign in" }).click();
-		});
-
-		test("signing back in as the admin lands on the onboarding wizard, not the dashboard", async ({
-			page,
-		}) => {
-			await expect(page).toHaveURL(/\/onboarding$/);
-			await expect(
-				page.getByRole("heading", { name: "Let's get this instance running" }),
-			).toBeVisible();
-		});
-
-		test("clicking through every step with default values finishes onboarding and lands on the dashboard", async ({
-			page,
-		}) => {
-			await expect(page).toHaveURL(/\/onboarding$/);
-
-			// Core / Docker / Traefik / Email / DNS : every field pre-fills with the
-			// effective current value (DB override, falling back to the env
-			// default, see +page.svelte's own comment), so "required" is trivially
-			// satisfied by just clicking through without touching anything.
-			for (let step = 0; step < 5; step++) {
-				await page.getByRole("button", { name: "Next" }).click();
-			}
-
-			// Review, the 6th step : the page's own submit button replaces
-			// Stepper's "Next" here.
-			await page.getByRole("button", { name: "Finish setup" }).click();
-
-			await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
-			await expect(
-				page.getByRole("heading", { name: /Welcome back, Ada/ }),
-			).toBeVisible();
-
-			// onboarding/+layout.server.ts redirects away once
-			// instance_settings.onboardingCompletedAt is set : a second visit no
-			// longer shows the wizard at all, from any session.
-			await page.goto("/onboarding");
-			await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
-		});
+test.describe.serial("onboarding wizard", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto("/auth/sign-in");
+		await page.locator("#email").fill("ada@example.com");
+		await page.getByRole("button", { exact: true, name: "Continue" }).click();
+		await page.locator("#password").fill("a-real-strong-password-123");
+		await page.getByRole("button", { name: "Sign in" }).click();
 	});
+
+	test("signing back in as the admin lands on the onboarding wizard, not the dashboard", async ({
+		page,
+	}) => {
+		await expect(page).toHaveURL(/\/onboarding$/);
+		await expect(
+			page.getByRole("heading", { name: "Let's get this instance running" }),
+		).toBeVisible();
+	});
+
+	test("clicking through every step with default values finishes onboarding and lands on the dashboard", async ({
+		page,
+	}) => {
+		await expect(page).toHaveURL(/\/onboarding$/);
+
+		// Core / Docker / Traefik / Email / DNS : every field pre-fills with the
+		// effective current value (DB override, falling back to the env
+		// default, see +page.svelte's own comment), so "required" is trivially
+		// satisfied by just clicking through without touching anything.
+		for (let step = 0; step < 5; step++) {
+			await page.getByRole("button", { name: "Next" }).click();
+		}
+
+		// Review, the 6th step : the page's own submit button replaces
+		// Stepper's "Next" here.
+		await page.getByRole("button", { name: "Finish setup" }).click();
+
+		await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
+		await expect(
+			page.getByRole("heading", { name: /Welcome back, Ada/ }),
+		).toBeVisible();
+
+		// onboarding/+layout.server.ts redirects away once
+		// instance_settings.onboardingCompletedAt is set : a second visit no
+		// longer shows the wizard at all, from any session.
+		await page.goto("/onboarding");
+		await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
+	});
+});

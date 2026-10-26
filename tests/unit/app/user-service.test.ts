@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -11,14 +13,12 @@ mock.module("$app/env", () => ({
 
 const { db } = await import("../../../src/lib/server/db/lib");
 const schema = await import("../../../src/lib/server/db/schema");
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
 const { Logger } = await import("../../../src/lib/logger");
 const { UserService } = await import("../../../src/lib/services/user.service");
-const { WorkstationService } = await import(
-	"../../../src/lib/services/workstation.service"
-);
+const { WorkstationService } =
+	await import("../../../src/lib/services/workstation.service");
 
 interface Call {
 	args: unknown[];

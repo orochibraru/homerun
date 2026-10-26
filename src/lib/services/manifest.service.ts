@@ -1,4 +1,5 @@
 import { posix } from "node:path";
+
 import type { BuildMethod } from "#lib/build-methods.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
 import {
@@ -8,13 +9,14 @@ import {
 } from "#lib/image-config.js";
 import { Logger } from "#lib/logger.js";
 import {
-	type ManifestInput,
-	type ManifestScope,
 	manifestFields,
+	type ManifestInput,
 	manifestPaths,
+	type ManifestScope,
 	parseManifest,
 } from "#lib/server/manifest.js";
 import { WorkerClient } from "#lib/server/worker-client.js";
+
 import { resolveGitCredential } from "./deploy/helpers.ts";
 import {
 	ServiceSettingsService,

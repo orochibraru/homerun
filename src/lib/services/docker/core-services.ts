@@ -1,16 +1,18 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { join } from "node:path";
+
 import {
 	applyEnv,
 	DNS_CHALLENGE_RESOLVER,
-	type DnsChallengeSetup,
 	dnsChallengeFlags,
+	type DnsChallengeSetup,
 	httpreqEnv,
 } from "#lib/acme-dns.js";
 import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
 import { WorkerRequestError } from "#lib/server/worker-client.js";
+
 import {
 	quietUptimeProbes,
 	TRAEFIK_RESTART_QUIET_MS,

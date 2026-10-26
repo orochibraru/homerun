@@ -1,4 +1,5 @@
 import type { Cookies } from "@sveltejs/kit";
+
 import {
 	isMonitoringRange,
 	isTimeZone,

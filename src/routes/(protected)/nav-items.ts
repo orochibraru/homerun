@@ -1,3 +1,4 @@
+import { resolve } from "$app/paths";
 import {
 	Activity,
 	ArchiveRestore,
@@ -36,7 +37,6 @@ import {
 	Wrench,
 } from "@lucide/svelte";
 import type { Component } from "svelte";
-import { resolve } from "$app/paths";
 
 export interface NavItem {
 	category: string;

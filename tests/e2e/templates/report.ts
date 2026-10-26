@@ -1,6 +1,7 @@
 import { appendFileSync } from "node:fs";
 import process from "node:process";
 import { stripVTControlCharacters } from "node:util";
+
 import type { Reporter, TestCase, TestResult } from "@playwright/test/reporter";
 
 const ICONS: Record<string, string> = {

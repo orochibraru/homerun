@@ -7084,8 +7084,7 @@ export interface operations {
 						gpuSoftThreshold: number;
 						imageScanBlockFixableOnly: boolean;
 						imageScanBlockSeverity:
-							| ("CRITICAL" | "HIGH" | "MEDIUM" | "LOW")
-							| null;
+							("CRITICAL" | "HIGH" | "MEDIUM" | "LOW") | null;
 						imageScanEnabled: boolean;
 						imageScanRequired: boolean;
 						memoryHardThreshold: number;
@@ -7175,8 +7174,7 @@ export interface operations {
 					imageScanBlockFixableOnly?: boolean;
 					/** @description Refuse to deploy an image with a finding this severe or worse. Null blocks nothing. */
 					imageScanBlockSeverity?:
-						| ("CRITICAL" | "HIGH" | "MEDIUM" | "LOW")
-						| null;
+						("CRITICAL" | "HIGH" | "MEDIUM" | "LOW") | null;
 					imageScanEnabled?: boolean;
 					imageScanRequired?: boolean;
 					/** @description A usage percentage that alerts, 1 to 100. */
@@ -7232,8 +7230,7 @@ export interface operations {
 						gpuSoftThreshold: number;
 						imageScanBlockFixableOnly: boolean;
 						imageScanBlockSeverity:
-							| ("CRITICAL" | "HIGH" | "MEDIUM" | "LOW")
-							| null;
+							("CRITICAL" | "HIGH" | "MEDIUM" | "LOW") | null;
 						imageScanEnabled: boolean;
 						imageScanRequired: boolean;
 						memoryHardThreshold: number;
@@ -7626,18 +7623,13 @@ export interface operations {
 								serviceName: string | null;
 								/** @description prepare and finalize(ing) run in the app, execute in the Go worker, null for a job the app runs itself */
 								stage:
-									| ("prepare" | "execute" | "finalize" | "finalizing")
-									| null;
+									("prepare" | "execute" | "finalize" | "finalizing") | null;
 								/** @description Running in execute with no heartbeat (or, never leased, no claim) for over two minutes: no live worker is on it */
 								stale: boolean;
 								startedAt: string | null;
 								/** @enum {string} */
 								status:
-									| "queued"
-									| "running"
-									| "succeeded"
-									| "failed"
-									| "cancelled";
+									"queued" | "running" | "succeeded" | "failed" | "cancelled";
 								title: string;
 								type: string;
 								/** @description The Go worker holding the job's lease */
@@ -10105,8 +10097,7 @@ export interface operations {
 						skipConsent: boolean;
 						/** @description null for a public app */
 						tokenAuthMethod:
-							| ("client_secret_basic" | "client_secret_post")
-							| null;
+							("client_secret_basic" | "client_secret_post") | null;
 					}[];
 				};
 			};
@@ -10199,8 +10190,7 @@ export interface operations {
 						skipConsent: boolean;
 						/** @description null for a public app */
 						tokenAuthMethod:
-							| ("client_secret_basic" | "client_secret_post")
-							| null;
+							("client_secret_basic" | "client_secret_post") | null;
 					};
 				};
 			};
@@ -10275,8 +10265,7 @@ export interface operations {
 						skipConsent: boolean;
 						/** @description null for a public app */
 						tokenAuthMethod:
-							| ("client_secret_basic" | "client_secret_post")
-							| null;
+							("client_secret_basic" | "client_secret_post") | null;
 					};
 				};
 			};
@@ -10423,8 +10412,7 @@ export interface operations {
 						skipConsent: boolean;
 						/** @description null for a public app */
 						tokenAuthMethod:
-							| ("client_secret_basic" | "client_secret_post")
-							| null;
+							("client_secret_basic" | "client_secret_post") | null;
 					};
 				};
 			};
@@ -16364,8 +16352,7 @@ export interface operations {
 							| "missing";
 						/** @description What started it: manual, cron (scheduled), push (git push), promote (a pull request preview promoted) or rollback; null for a deploy from before triggers were recorded */
 						trigger:
-							| ("manual" | "cron" | "push" | "promote" | "rollback")
-							| null;
+							("manual" | "cron" | "push" | "promote" | "rollback") | null;
 					}[];
 				};
 			};
@@ -17381,8 +17368,7 @@ export interface operations {
 							gitCommit: string | null;
 							gitRef: string | null;
 							health:
-								| ("watching" | "healthy" | "unhealthy" | "rolled_back")
-								| null;
+								("watching" | "healthy" | "unhealthy" | "rolled_back") | null;
 							healthReason: string | null;
 							/** @description The revision's deployment id on the preview */
 							id: string;
@@ -17504,8 +17490,7 @@ export interface operations {
 							gitCommit: string | null;
 							gitRef: string | null;
 							health:
-								| ("watching" | "healthy" | "unhealthy" | "rolled_back")
-								| null;
+								("watching" | "healthy" | "unhealthy" | "rolled_back") | null;
 							healthReason: string | null;
 							/** @description The revision's deployment id on the preview */
 							id: string;
@@ -17654,8 +17639,7 @@ export interface operations {
 							gitCommit: string | null;
 							gitRef: string | null;
 							health:
-								| ("watching" | "healthy" | "unhealthy" | "rolled_back")
-								| null;
+								("watching" | "healthy" | "unhealthy" | "rolled_back") | null;
 							healthReason: string | null;
 							/** @description The revision's deployment id on the preview */
 							id: string;
@@ -18038,8 +18022,7 @@ export interface operations {
 						gitRef: string | null;
 						/** @description Health of its latest run. watching and healthy only ever appear on the current revision; unhealthy and rolled_back are kept as history; null otherwise */
 						health:
-							| ("watching" | "healthy" | "unhealthy" | "rolled_back")
-							| null;
+							("watching" | "healthy" | "unhealthy" | "rolled_back") | null;
 						/** @description Why the health watch judged it unhealthy or rolled it back (a failing healthcheck, a restart loop, failed swarm tasks and their error), null otherwise */
 						healthReason: string | null;
 						/** @description The revision's original deployment id, what POST /services/{serviceId}/revisions/{revisionId}/deploy takes */

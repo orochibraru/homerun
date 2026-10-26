@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { page } from "$app/state";
 	import { Check } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import { Button } from "#lib/components/ui/button/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
-	import { page } from "$app/state";
 
 	interface Props {
 		disabled?: boolean;
@@ -84,17 +85,17 @@
 </script>
 
 <Button
-  data-dirty={dirty || undefined}
-  data-slot="save-button"
-  disabled={disabled || pending || (!saveUnchanged && !dirty)}
-  {form}
-  size="sm"
-  type="submit"
+	data-dirty={dirty || undefined}
+	data-slot="save-button"
+	disabled={disabled || pending || (!saveUnchanged && !dirty)}
+	{form}
+	size="sm"
+	type="submit"
 >
-  {#if pending}
-    <Spinner />
-  {:else}
-    <Check class="size-4" />
-  {/if}
-  {label}
+	{#if pending}
+		<Spinner />
+	{:else}
+		<Check class="size-4" />
+	{/if}
+	{label}
 </Button>

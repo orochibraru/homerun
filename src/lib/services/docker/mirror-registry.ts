@@ -1,4 +1,5 @@
 import { splitImageRef } from "#lib/image-ref.js";
+
 import { mirrorRepository } from "./image-scan-refs.ts";
 
 export const MANIFEST_ACCEPT = [

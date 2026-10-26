@@ -1,5 +1,7 @@
+import { command, query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
+
 import { GitConnectionDTO } from "#lib/dto/git-connection-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { Logger } from "#lib/logger.js";
@@ -8,7 +10,6 @@ import {
 	GitProviderService,
 	type GitRepo,
 } from "#lib/services/git-provider.service.js";
-import { command, query } from "$app/server";
 
 const logger = new Logger("GitProviders");
 

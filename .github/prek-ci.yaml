@@ -113,18 +113,12 @@ repos:
         require_serial: true
         files: \.(ts|tsx|js|jsx|mjs|cjs|svelte)$
 
-      - id: biome
-        name: Format and sort imports (Biome)
-        entry: node_modules/.bin/biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true
+      - id: bun-fmt
+        name: Format and sort imports (bun fmt)
+        entry: bun fmt --ignore-unknown --no-error-on-unmatched-pattern
         language: system
         require_serial: true
-        files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html)$
-
-      - id: format-md
-        name: Formatting (MD)
-        entry: bun run prettier --log-level warn --write
-        language: system
-        files: \.(md|mdx)$
+        files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html|md|mdx|ya?ml)$
 
       - id: markdownlint
         name: Markdown Lint

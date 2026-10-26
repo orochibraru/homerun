@@ -7,6 +7,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -15,15 +16,12 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { RemoteHostSettingsError, RemoteHostSettingsService } = await import(
-	"../../../src/lib/services/remote-host-settings.service"
-);
-const { WorkstationService } = await import(
-	"../../../src/lib/services/workstation.service"
-);
-const { AgentClientService } = await import(
-	"../../../src/lib/services/agent-client.service"
-);
+const { RemoteHostSettingsError, RemoteHostSettingsService } =
+	await import("../../../src/lib/services/remote-host-settings.service");
+const { WorkstationService } =
+	await import("../../../src/lib/services/workstation.service");
+const { AgentClientService } =
+	await import("../../../src/lib/services/agent-client.service");
 const { decryptSecret } = await import("../../../src/lib/services/secrets");
 const { Logger } = await import("../../../src/lib/logger");
 const { RemoteHostDTO } = await import("../../../src/lib/dto/remote-host-dto");

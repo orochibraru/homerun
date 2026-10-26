@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { Logger } from "#lib/logger.js";
 import {
 	API_KEY_EXPIRY_OPTIONS,

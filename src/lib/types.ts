@@ -12,11 +12,7 @@ export type ContainerStatus =
 	| "missing";
 
 export type JobStatus =
-	| "queued"
-	| "running"
-	| "succeeded"
-	| "failed"
-	| "cancelled";
+	"queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export type JobStage = "prepare" | "execute" | "finalize" | "finalizing";
 
@@ -52,20 +48,12 @@ export interface JobSummary {
 }
 
 export type RevisionHealth =
-	| "watching"
-	| "healthy"
-	| "unhealthy"
-	| "rolled_back";
+	"watching" | "healthy" | "unhealthy" | "rolled_back";
 
 export type StatusPageScope = "global" | "stack" | "custom";
 
 export type NotificationChannelKind =
-	| "webhook"
-	| "discord"
-	| "slack"
-	| "telegram"
-	| "email"
-	| "browser";
+	"webhook" | "discord" | "slack" | "telegram" | "email" | "browser";
 
 export type NotificationEvent =
 	| "build.started"

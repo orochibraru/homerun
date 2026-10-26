@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import type { Service } from "#lib/server/db/schema.js";
 import { serviceConfig, serviceConfigSchema } from "#lib/service-config.js";
 

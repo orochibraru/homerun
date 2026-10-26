@@ -1,9 +1,10 @@
+import { command } from "$app/server";
 import { z } from "zod";
+
 import { UserPreferencesDTO } from "#lib/dto/user-preferences-dto.js";
 import { Logger } from "#lib/logger.js";
 import { requireUser } from "#lib/server/remote-auth.js";
 import { UI_MODES } from "#lib/ui-mode.js";
-import { command } from "$app/server";
 
 const logger = new Logger("Appearance");
 

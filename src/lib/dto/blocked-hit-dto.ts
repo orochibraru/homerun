@@ -14,6 +14,7 @@ import {
 	sql,
 	sum,
 } from "drizzle-orm";
+
 import { db } from "#lib/server/db/lib.js";
 import {
 	type BlockedHit,
@@ -21,6 +22,7 @@ import {
 	ipBan,
 	service,
 } from "#lib/server/db/schema.js";
+
 import { BaseDTO } from "./base-dto";
 
 /** One address's blocked requests within a window, newest first. */

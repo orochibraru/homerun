@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import {
 		Bird,
 		Clock,
@@ -7,10 +9,9 @@
 		Layers,
 		SlidersHorizontal,
 	} from "@lucide/svelte";
+
 	import SectionNav from "#lib/components/section-nav.svelte";
 	import { visibleItems } from "#lib/ui-mode.js";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 
 	const { children, data } = $props();
 
@@ -80,6 +81,10 @@
 	]);
 </script>
 
-<SectionNav hubLabel="Environments" label="Environments & Deployments sections" sections={visibleItems(data.uiMode, sections, page.url.pathname)}>
-  {@render children()}
+<SectionNav
+	hubLabel="Environments"
+	label="Environments & Deployments sections"
+	sections={visibleItems(data.uiMode, sections, page.url.pathname)}
+>
+	{@render children()}
 </SectionNav>

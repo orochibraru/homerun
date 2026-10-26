@@ -4,6 +4,7 @@ import {
 	randomBytes,
 	scryptSync,
 } from "node:crypto";
+
 import { config } from "#lib/config.js";
 
 // Registry credentials (service.registryPasswordEnc) are encrypted at

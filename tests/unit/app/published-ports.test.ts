@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { portBindings, publishedPortsProblem } from "#lib/published-ports.js";
 
 describe("portBindings", () => {

@@ -7,7 +7,9 @@ import {
 	setSystemTime,
 	test,
 } from "bun:test";
+
 import type { CancelledJob } from "#lib/dto/job-dto.js";
+
 import { restoreStubs, stub } from "../support/stub";
 
 interface FakeJob {
@@ -75,14 +77,12 @@ mock.module("../../../src/lib/services/queue/worker-jobs/index", () => ({
 	workerJobs: { backup: { finalize, prepare }, deploy: null },
 }));
 
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
 const { JobWorker } = await import("../../../src/lib/services/queue/worker");
 const { JobDTO } = await import("../../../src/lib/dto/job-dto");
-const { JobDeferredError } = await import(
-	"../../../src/lib/services/queue/deferred"
-);
+const { JobDeferredError } =
+	await import("../../../src/lib/services/queue/deferred");
 
 type EnqueuedJob = Awaited<ReturnType<typeof QueueService.enqueue>>;
 

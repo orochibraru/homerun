@@ -2,6 +2,7 @@
 	import { ArrowRight, MailCheck } from "@lucide/svelte";
 	import { onDestroy, onMount, type Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { authClient } from "#lib/auth-client.js";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
@@ -130,69 +131,71 @@
 </script>
 
 {#snippet resend()}
-  <div class="text-center">
-    <button
-      class="text-text-muted hover:text-text text-xs underline-offset-4 hover:underline disabled:no-underline disabled:opacity-60"
-      disabled={loading || sending || cooldown > 0}
-      onclick={handleSend}
-      type="button"
-    >
-      {#if cooldown > 0}
-        Send another in {cooldown}s
-      {:else}
-        {mode === "code" ? "Send a new code" : "Send a new link"}
-      {/if}
-    </button>
-  </div>
+	<div class="text-center">
+		<button
+			class="text-text-muted hover:text-text text-xs underline-offset-4 hover:underline disabled:no-underline disabled:opacity-60"
+			disabled={loading || sending || cooldown > 0}
+			onclick={handleSend}
+			type="button"
+		>
+			{#if cooldown > 0}
+				Send another in {cooldown}s
+			{:else}
+				{mode === "code" ? "Send a new code" : "Send a new link"}
+			{/if}
+		</button>
+	</div>
 {/snippet}
 
 {#if mode === "code"}
-  <form class="space-y-4" novalidate onsubmit={handleVerify}>
-    {@render summary()}
-    <p class="text-text-muted text-sm">
-      Enter the 6-digit code we emailed you. It expires in 10 minutes.
-    </p>
-    <div>
-      <label class="text-text mb-1.5 block text-sm font-medium" for="emailCode">
-        Sign-in code
-      </label>
-      <Input
-        autocomplete="one-time-code"
-        class="h-10 font-mono tracking-widest"
-        disabled={loading}
-        id="emailCode"
-        inputmode="numeric"
-        oninput={onCodeInput}
-        placeholder="123456"
-        required
-        value={code}
-      />
-    </div>
-    <Button
-      class="h-10 w-full"
-      disabled={loading || code.length !== CODE_LENGTH}
-      type="submit"
-    >
-      {#if loading}
-        <Spinner />
-        Signing in…
-      {:else}
-        Sign in
-        <ArrowRight class="size-4 opacity-70" />
-      {/if}
-    </Button>
-    {@render resend()}
-  </form>
+	<form class="space-y-4" novalidate onsubmit={handleVerify}>
+		{@render summary()}
+		<p class="text-text-muted text-sm">
+			Enter the 6-digit code we emailed you. It expires in 10 minutes.
+		</p>
+		<div>
+			<label class="text-text mb-1.5 block text-sm font-medium" for="emailCode">
+				Sign-in code
+			</label>
+			<Input
+				autocomplete="one-time-code"
+				class="h-10 font-mono tracking-widest"
+				disabled={loading}
+				id="emailCode"
+				inputmode="numeric"
+				oninput={onCodeInput}
+				placeholder="123456"
+				required
+				value={code}
+			/>
+		</div>
+		<Button
+			class="h-10 w-full"
+			disabled={loading || code.length !== CODE_LENGTH}
+			type="submit"
+		>
+			{#if loading}
+				<Spinner />
+				Signing in…
+			{:else}
+				Sign in
+				<ArrowRight class="size-4 opacity-70" />
+			{/if}
+		</Button>
+		{@render resend()}
+	</form>
 {:else}
-  <div class="space-y-4">
-    {@render summary()}
-    <div class="flex items-start gap-3 rounded-md border border-border bg-surface-2 p-3">
-      <MailCheck class="text-accent mt-0.5 size-4 shrink-0" />
-      <p class="text-text-muted text-sm">
-        We emailed a sign-in link to {email}. Open it within 10 minutes to
-        finish signing in; you can close this tab.
-      </p>
-    </div>
-    {@render resend()}
-  </div>
+	<div class="space-y-4">
+		{@render summary()}
+		<div
+			class="flex items-start gap-3 rounded-md border border-border bg-surface-2 p-3"
+		>
+			<MailCheck class="text-accent mt-0.5 size-4 shrink-0" />
+			<p class="text-text-muted text-sm">
+				We emailed a sign-in link to {email}. Open it within 10 minutes to
+				finish signing in; you can close this tab.
+			</p>
+		</div>
+		{@render resend()}
+	</div>
 {/if}

@@ -3,6 +3,7 @@
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import CodeEditor from "#lib/components/code-editor.svelte";
 	import ExtensionPicker from "#lib/components/extension-picker.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
@@ -84,52 +85,54 @@
 </script>
 
 <section class="panel rounded-xl">
-  <PanelHeader
-    description="Applied by code-server or openvscode-server on every start. A repository's dev container config can fill this in."
-    title="Editor"
-  >
-    {#snippet trailing()}
-      <div class="flex items-center gap-2">
-        <Button
-          disabled={importing}
-          onclick={handleImport}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <RefreshCw class="size-3.5" />
-          Import from Settings Sync
-        </Button>
-        {@render outerTrailing?.()}
-      </div>
-    {/snippet}
-  </PanelHeader>
-  <div class="space-y-4 p-5">
-    <div>
-      <label class={labelClass} for="extensions">Extensions</label>
-      <ExtensionPicker id="extensions" bind:value={extensions} />
-      <p class="text-text-subtle mt-1.5 text-xs">
-        Installed from Open VSX. One removed here is uninstalled on the next
-        start; extensions you install from the IDE itself are left alone.
-      </p>
-    </div>
-    <div>
-      <label class={labelClass} for="editorSettings">Settings (settings.json)</label>
-      <CodeEditor
-        id="editorSettings"
-        class="min-h-40"
-        language="json"
-        name="editorSettings"
-        placeholder={'{\n  "workbench.colorTheme": "Default Dark Modern",\n  "editor.formatOnSave": true\n}'}
-        bind:value={settings}
-      />
-      <p class="text-text-subtle mt-1.5 text-xs">
-        Replaces code-server's user settings.json (openvscode-server's machine
-        settings.json) on every start. Leave it empty to keep whatever you set
-        from the IDE. Import from Settings Sync fills both from what VS Code
-        synced for your connected GitHub account; synced settings win over the
-        ones already here.
-      </p>
-    </div>
-  </div>
+	<PanelHeader
+		description="Applied by code-server or openvscode-server on every start. A repository's dev container config can fill this in."
+		title="Editor"
+	>
+		{#snippet trailing()}
+			<div class="flex items-center gap-2">
+				<Button
+					disabled={importing}
+					onclick={handleImport}
+					size="sm"
+					type="button"
+					variant="ghost"
+				>
+					<RefreshCw class="size-3.5" />
+					Import from Settings Sync
+				</Button>
+				{@render outerTrailing?.()}
+			</div>
+		{/snippet}
+	</PanelHeader>
+	<div class="space-y-4 p-5">
+		<div>
+			<label class={labelClass} for="extensions">Extensions</label>
+			<ExtensionPicker id="extensions" bind:value={extensions} />
+			<p class="text-text-subtle mt-1.5 text-xs">
+				Installed from Open VSX. One removed here is uninstalled on the next
+				start; extensions you install from the IDE itself are left alone.
+			</p>
+		</div>
+		<div>
+			<label class={labelClass} for="editorSettings"
+				>Settings (settings.json)</label
+			>
+			<CodeEditor
+				id="editorSettings"
+				class="min-h-40"
+				language="json"
+				name="editorSettings"
+				placeholder={'{\n  "workbench.colorTheme": "Default Dark Modern",\n  "editor.formatOnSave": true\n}'}
+				bind:value={settings}
+			/>
+			<p class="text-text-subtle mt-1.5 text-xs">
+				Replaces code-server's user settings.json (openvscode-server's machine
+				settings.json) on every start. Leave it empty to keep whatever you set
+				from the IDE. Import from Settings Sync fills both from what VS Code
+				synced for your connected GitHub account; synced settings win over the
+				ones already here.
+			</p>
+		</div>
+	</div>
 </section>

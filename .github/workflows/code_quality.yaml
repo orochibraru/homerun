@@ -7,8 +7,7 @@ on:
       tests:
         required: false
         default: true
-        description:
-          "Run the unit + integration suite. False for docs-only changes."
+        description: "Run the unit + integration suite. False for docs-only changes."
         type: boolean
       ref:
         required: false
@@ -61,8 +60,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # The hooks shell out to the repo's own tooling (bun run gen, biome,
-      # prettier, markdownlint, tailwint, svelte-check), so deps have to exist
+      # The hooks shell out to the repo's own tooling (bun run gen, bun fmt,
+      # oxlint, markdownlint, tailwint, svelte-check), so deps have to exist
       # first.
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
@@ -164,10 +163,8 @@ jobs:
       HOMERUN_TEST_POSTGRES_URL: postgres://homerun:homerun@127.0.0.1:5432/homerun_test
       HOMERUN_TEST_S3_ENDPOINT: ${{ vars.HOMERUN_TEST_S3_ENDPOINT }}
       HOMERUN_TEST_S3_BUCKET: ${{ vars.HOMERUN_TEST_S3_BUCKET }}
-      HOMERUN_TEST_S3_ACCESS_KEY_ID:
-        ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
-      HOMERUN_TEST_S3_SECRET_ACCESS_KEY:
-        ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
+      HOMERUN_TEST_S3_ACCESS_KEY_ID: ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
+      HOMERUN_TEST_S3_SECRET_ACCESS_KEY: ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -216,8 +213,7 @@ jobs:
 
       - name: Tests (Integration)
         timeout-minutes: 30
-        run:
-          bun run test:integration -- --coverage-reporter=lcov
+        run: bun run test:integration -- --coverage-reporter=lcov
           --coverage-dir=coverage/integration
 
       - name: Record result

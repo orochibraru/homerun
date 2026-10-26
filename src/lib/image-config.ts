@@ -173,8 +173,7 @@ function addPort(ports: DetectedPort[], spec: string): void {
 	}
 	const port = Number(match[1]);
 	const protocol = (match[2]?.toLowerCase() ?? "tcp") as
-		| DetectedPort["protocol"]
-		| "sctp";
+		DetectedPort["protocol"] | "sctp";
 	if (protocol === "sctp" || port < 1 || port > 65535) {
 		return;
 	}

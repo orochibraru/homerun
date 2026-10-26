@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { yamlConfigSchema } from "../src/lib/config";
 import { builtinTemplateFileSchema } from "../src/lib/server/db/builtin-templates";
 import { manifestJsonSchema } from "../src/lib/server/manifest";
@@ -33,9 +34,9 @@ for (const [path, schema] of outputs) {
 	await Bun.write(path, JSON.stringify(sortKeysDeep(schema), null, "\t"));
 }
 
-Bun.spawnSync(
-	["bunx", "biome", "check", "--write", ...outputs.map(([path]) => path)],
-	{ stderr: "inherit", stdout: "inherit" },
-);
+Bun.spawnSync(["bun", "fmt", ...outputs.map(([path]) => path)], {
+	stderr: "inherit",
+	stdout: "inherit",
+});
 
 console.log(`Wrote ${outputs.map(([path]) => path).join(", ")}`);

@@ -14,6 +14,7 @@ import {
 	User,
 } from "@lucide/svelte";
 import type { Component } from "svelte";
+
 import type { SearchResultKind } from "#lib/search.js";
 
 export const SEARCH_KIND_ICONS: Record<SearchResultKind, Component> = {

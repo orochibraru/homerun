@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { Bell, History, LayoutDashboard, Menu, Server } from "@lucide/svelte";
-	import type { Component } from "svelte";
-	import { mayVisit, type Permissions } from "#lib/permissions.js";
-	import { getUnreadNotifications } from "#lib/remote/notifications.remote.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import { Bell, History, LayoutDashboard, Menu, Server } from "@lucide/svelte";
+	import type { Component } from "svelte";
+
+	import { mayVisit, type Permissions } from "#lib/permissions.js";
+	import { getUnreadNotifications } from "#lib/remote/notifications.remote.js";
 
 	let {
 		menuButton = $bindable(null),
@@ -75,44 +76,50 @@
 </script>
 
 <nav
-  class="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden"
-  aria-label="Primary"
-  data-slot="mobile-tab-bar"
+	class="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden"
+	aria-label="Primary"
+	data-slot="mobile-tab-bar"
 >
-  <div class="border-border bg-bg/88 pointer-events-auto flex items-stretch gap-0.5 rounded-[1.75rem] border px-1.5 py-1 shadow-xl backdrop-blur-xl">
-    {#each items as item (item.href)}
-      {@const active = isActive(item)}
-      {@const Icon = item.icon}
-      <a
-        class="{itemClass} {active ? 'text-text font-semibold' : 'text-text-muted font-medium'}"
-        aria-current={active ? "page" : undefined}
-        href={item.href}
-      >
-        <span class="{pillClass} {active ? activePill : idlePill}">
-          <Icon class="size-5.5" />
-          {#if item.label === "Alerts" && unreadCount > 0}
-            <span
-              class="bg-accent text-bg ring-bg absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] leading-none font-bold ring-2"
-            >
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          {/if}
-        </span>
-        {item.label}
-      </a>
-    {/each}
-    <button
-      class="{itemClass} {menuOpen ? 'text-text font-semibold' : 'text-text-muted font-medium'}"
-      aria-expanded={menuOpen}
-      aria-label="Open menu"
-      bind:this={menuButton}
-      onclick={onMenu}
-      type="button"
-    >
-      <span class="{pillClass} {menuOpen ? activePill : idlePill}">
-        <Menu class="size-5.5" />
-      </span>
-      Menu
-    </button>
-  </div>
+	<div
+		class="border-border bg-bg/88 pointer-events-auto flex items-stretch gap-0.5 rounded-[1.75rem] border px-1.5 py-1 shadow-xl backdrop-blur-xl"
+	>
+		{#each items as item (item.href)}
+			{@const active = isActive(item)}
+			{@const Icon = item.icon}
+			<a
+				class="{itemClass} {active
+					? 'text-text font-semibold'
+					: 'text-text-muted font-medium'}"
+				aria-current={active ? "page" : undefined}
+				href={item.href}
+			>
+				<span class="{pillClass} {active ? activePill : idlePill}">
+					<Icon class="size-5.5" />
+					{#if item.label === "Alerts" && unreadCount > 0}
+						<span
+							class="bg-accent text-bg ring-bg absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] leading-none font-bold ring-2"
+						>
+							{unreadCount > 9 ? "9+" : unreadCount}
+						</span>
+					{/if}
+				</span>
+				{item.label}
+			</a>
+		{/each}
+		<button
+			class="{itemClass} {menuOpen
+				? 'text-text font-semibold'
+				: 'text-text-muted font-medium'}"
+			aria-expanded={menuOpen}
+			aria-label="Open menu"
+			bind:this={menuButton}
+			onclick={onMenu}
+			type="button"
+		>
+			<span class="{pillClass} {menuOpen ? activePill : idlePill}">
+				<Menu class="size-5.5" />
+			</span>
+			Menu
+		</button>
+	</div>
 </nav>

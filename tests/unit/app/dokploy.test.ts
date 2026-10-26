@@ -6,14 +6,12 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { DokployService } = await import(
-	"../../../src/lib/services/dokploy.service"
-);
+const { DokployService } =
+	await import("../../../src/lib/services/dokploy.service");
 const { dokployApplication, dokployCompose, dokployDatabase, dokployRefs } =
 	await import("../../../src/lib/migrate/dokploy");
-const { interpolate, parseEnvBlob, previewEntries } = await import(
-	"../../../src/lib/migrate/common"
-);
+const { interpolate, parseEnvBlob, previewEntries } =
+	await import("../../../src/lib/migrate/common");
 
 const realFetch = globalThis.fetch;
 

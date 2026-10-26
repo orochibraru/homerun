@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { certificateCheck, publicProbeCheck } from "#lib/registry-self-test.js";
 
 describe("publicProbeCheck", () => {

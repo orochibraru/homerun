@@ -1,8 +1,9 @@
+import { query } from "$app/server";
 import { z } from "zod";
+
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { requirePermission } from "#lib/server/remote-auth.js";
 import { VolumeSizeService } from "#lib/services/volume-size.service.js";
-import { query } from "$app/server";
 
 export interface VolumeSizeRow {
 	bytes: number | null;

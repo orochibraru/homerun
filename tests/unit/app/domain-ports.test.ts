@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { buildContainerLabels } = await import(
-	"../../../src/lib/services/docker/labels"
-);
+const { buildContainerLabels } =
+	await import("../../../src/lib/services/docker/labels");
 const { config } = await import("../../../src/lib/config");
 
 describe("per-domain container ports", () => {

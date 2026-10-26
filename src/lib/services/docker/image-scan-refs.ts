@@ -48,9 +48,7 @@ export interface RegistryCredentials {
 }
 
 export type TrivySource =
-	| { insecure: boolean; kind: "remote" }
-	| { kind: "docker" }
-	| { kind: "any" };
+	{ insecure: boolean; kind: "remote" } | { kind: "docker" } | { kind: "any" };
 
 /**
  * Splits an image ref into registry/repository/tag, applying Docker's own

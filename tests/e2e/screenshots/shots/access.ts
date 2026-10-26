@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import { expect } from "../../support/test";
 import { postAction, type ShotModule } from "./types";
 

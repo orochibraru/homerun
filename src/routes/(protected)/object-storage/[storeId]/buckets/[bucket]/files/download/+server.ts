@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
 
@@ -18,7 +19,9 @@ export const GET = async ({ locals, params, url }) => {
 	if (!store) {
 		error(404, "Not found");
 	}
-	const upstream = await (await ObjectStorageService.client(store))
+	const upstream = await (
+		await ObjectStorageService.client(store)
+	)
 		.objectResponse(params.bucket, key, null)
 		.catch(() => error(503, "The object store can't be reached."));
 	if (!upstream.ok) {

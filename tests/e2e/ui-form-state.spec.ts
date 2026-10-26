@@ -37,48 +37,45 @@ const COMPOSE = `services:
       - 6379:6379
 `;
 
-test.describe
-	.serial("form state survives a submit", () => {
-		test("saving a settings section leaves its fields filled in", async ({
-			page,
-		}) => {
-			await signIn(page);
-			await page.goto("/settings/docker");
-			const network = page.locator("#dockerNetworkName");
-			const original = await network.inputValue();
-			await network.fill("homerun-form-state");
+test.describe.serial("form state survives a submit", () => {
+	test("saving a settings section leaves its fields filled in", async ({
+		page,
+	}) => {
+		await signIn(page);
+		await page.goto("/settings/docker");
+		const network = page.locator("#dockerNetworkName");
+		const original = await network.inputValue();
+		await network.fill("homerun-form-state");
 
-			await page.getByRole("button", { name: "Save" }).first().click();
-			await expect(page.getByText("Docker settings saved")).toBeVisible();
+		await page.getByRole("button", { name: "Save" }).first().click();
+		await expect(page.getByText("Docker settings saved")).toBeVisible();
 
-			await expect(network).toHaveValue("homerun-form-state");
-			await page.reload();
-			await expect(network).toHaveValue("homerun-form-state");
+		await expect(network).toHaveValue("homerun-form-state");
+		await page.reload();
+		await expect(network).toHaveValue("homerun-form-state");
 
-			await network.fill(original);
-			await page.getByRole("button", { name: "Save" }).first().click();
-			await expect(
-				page.getByText("Docker settings saved").first(),
-			).toBeVisible();
-		});
-
-		test("importing a compose file accepts the one the preview just parsed", async ({
-			page,
-		}) => {
-			await signIn(page);
-			await page.goto("/services/import");
-			await page.locator("#compose").fill(COMPOSE);
-
-			await page.getByRole("button", { name: "Parse" }).click();
-			await expect(page.getByText("Services (2)")).toBeVisible();
-
-			// Imported ungrouped on purpose: a stack is a Docker network, and
-			// this harness deliberately doesn't wire a daemon into the app it
-			// spawns (see tests/e2e/README.md).
-			await page.locator("#stackName").fill("");
-			await page.getByRole("button", { name: /Import 2 services/ }).click();
-
-			await expect(page).toHaveURL(/\/services$/);
-			await expect(page.getByText("nginx:alpine").first()).toBeVisible();
-		});
+		await network.fill(original);
+		await page.getByRole("button", { name: "Save" }).first().click();
+		await expect(page.getByText("Docker settings saved").first()).toBeVisible();
 	});
+
+	test("importing a compose file accepts the one the preview just parsed", async ({
+		page,
+	}) => {
+		await signIn(page);
+		await page.goto("/services/import");
+		await page.locator("#compose").fill(COMPOSE);
+
+		await page.getByRole("button", { name: "Parse" }).click();
+		await expect(page.getByText("Services (2)")).toBeVisible();
+
+		// Imported ungrouped on purpose: a stack is a Docker network, and
+		// this harness deliberately doesn't wire a daemon into the app it
+		// spawns (see tests/e2e/README.md).
+		await page.locator("#stackName").fill("");
+		await page.getByRole("button", { name: /Import 2 services/ }).click();
+
+		await expect(page).toHaveURL(/\/services$/);
+		await expect(page.getByText("nginx:alpine").first()).toBeVisible();
+	});
+});

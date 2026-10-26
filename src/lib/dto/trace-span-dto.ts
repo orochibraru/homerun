@@ -9,6 +9,7 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
+
 import { db } from "#lib/server/db/lib.js";
 import { type TraceSpan, traceSpan } from "#lib/server/db/schema.js";
 import {
@@ -18,6 +19,7 @@ import {
 	sortOrder,
 } from "#lib/server/list-query.js";
 import type { TraceSummary } from "#lib/tracing/waterfall.js";
+
 import { BaseDTO } from "./base-dto";
 
 const INSERT_CHUNK = 1000;

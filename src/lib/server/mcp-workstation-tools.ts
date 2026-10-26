@@ -1,5 +1,6 @@
 import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+
 import { mergeEnvChanges, redactEnvValue } from "#lib/server/mcp-redact.js";
 import {
 	type ApiCall,

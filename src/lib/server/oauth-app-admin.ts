@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+
 import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 

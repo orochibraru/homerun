@@ -2,6 +2,7 @@ import { config, serviceDomain } from "#lib/config.js";
 import { type AuthPathsMode, pathPatternsRegex } from "#lib/path-patterns.js";
 import { GATE_CALLBACK_PATH, GATE_LOGOUT_PATH } from "#lib/server/app-gate.js";
 import { serviceHostnames, splitDomain } from "#lib/service-domains.js";
+
 import { certResolverFor } from "./cert-resolver.ts";
 import {
 	BLOCKED_PAGE_MIDDLEWARE,

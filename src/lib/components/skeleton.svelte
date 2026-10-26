@@ -5,6 +5,6 @@
 </script>
 
 <div
-  aria-hidden="true"
-  class={cn("bg-surface-2 animate-pulse rounded-md", className)}
+	aria-hidden="true"
+	class={cn("bg-surface-2 animate-pulse rounded-md", className)}
 ></div>

@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { BlockedHitDTO } from "#lib/dto/blocked-hit-dto.js";
 import { IpBanDTO } from "#lib/dto/ip-ban-dto.js";
 import { bannableIp, normalizeIp } from "#lib/ip-bans.js";

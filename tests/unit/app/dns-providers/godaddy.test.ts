@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { godaddy } from "../../../../src/lib/services/dns-providers/godaddy";
 import { stubFetch } from "./stub-fetch";
 

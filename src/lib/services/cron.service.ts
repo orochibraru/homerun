@@ -15,10 +15,12 @@
 import { CronJobDTO } from "#lib/dto/cron-job-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
+
 import { enqueueVolumeBackup } from "./backup-queue.ts";
+import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { BackupCapacityScheduler } from "./cron/backup-capacity-scheduler.ts";
 import { CoreServicesWatch } from "./cron/core-services-watch.ts";
-import { type ParsedCron, parseCronSchedule } from "./cron/cron-expression.ts";
+import { parseCronSchedule, type ParsedCron } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
 import { ErrorRetentionScheduler } from "./cron/error-retention-scheduler.ts";
 import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
@@ -29,7 +31,6 @@ import { SwarmDnsWatch } from "./cron/swarm-dns-watch.ts";
 import { TraceRetentionScheduler } from "./cron/trace-retention-scheduler.ts";
 import { UpdateCheckScheduler } from "./cron/update-check-scheduler.ts";
 import { WorkstationAutoStopScheduler } from "./cron/workstation-auto-stop-scheduler.ts";
-import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { StatsSampler } from "./stats/stats-sampler.ts";
 import { BOOT_QUIET_MS, quietUptimeProbes } from "./uptime/quiet.ts";

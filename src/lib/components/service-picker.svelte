@@ -9,6 +9,7 @@
 
 <script lang="ts">
 	import { Check, ChevronsUpDown } from "@lucide/svelte";
+
 	import { labelClass } from "#lib/components/form-styles.js";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Command from "#lib/components/ui/command/index.js";
@@ -61,71 +62,73 @@
 </script>
 
 {#each groups as group (group.key)}
-  {#if group.list.length > 0}
-    {@const picked = group.list.find((svc) => svc.id === value)}
-    <div>
-      <label class={labelClass} for="{id}-{group.key}">{group.label}</label>
-      <Popover.Root
-        onOpenChange={(open) => {
-          openKey = open ? group.key : null;
-        }}
-        open={openKey === group.key}
-      >
-        <Popover.Trigger>
-          {#snippet child({ props })}
-            <Button
-              {...props}
-              class="h-auto min-h-9 w-full justify-between py-1.5"
-              id="{id}-{group.key}"
-              role="combobox"
-              type="button"
-              variant="outline"
-            >
-              {#if picked}
-                <span class="flex min-w-0 flex-col items-start">
-                  <span class="truncate">{picked.name}</span>
-                  <span class="text-text-subtle truncate text-[0.6875rem]">
-                    {stackLabel(picked)} · {picked.image}
-                  </span>
-                </span>
-              {:else}
-                <span class="text-text-muted truncate">Pick a service…</span>
-              {/if}
-              <ChevronsUpDown class="size-4 shrink-0 opacity-50" />
-            </Button>
-          {/snippet}
-        </Popover.Trigger>
-        <Popover.Content class="w-(--bits-popover-anchor-width) p-0">
-          <Command.Root>
-            <Command.Input placeholder="Search services…" />
-            <Command.List>
-              <Command.Empty>No service matches.</Command.Empty>
-              <Command.Group>
-                {#each group.list as svc (svc.id)}
-                  <Command.Item
-                    keywords={[svc.image, stackLabel(svc)]}
-                    onSelect={() => {
-                      value = svc.id;
-                      openKey = null;
-                    }}
-                    value="{svc.name} {svc.id}"
-                  >
-                    <Check
-                      class="size-4 shrink-0 {value === svc.id ? '' : 'opacity-0'}"
-                    />
-                    <span class="flex min-w-0 flex-col">
-                      <span class="truncate">{svc.name}</span>
-                      <span class="text-text-subtle truncate text-[0.6875rem]">
-                        {stackLabel(svc)} · {svc.image}
-                      </span>
-                    </span>
-                  </Command.Item>
-                {/each}
-              </Command.Group>
-            </Command.List>
-          </Command.Root>
-        </Popover.Content>
-      </Popover.Root>
-    </div>
-  {/if}
+	{#if group.list.length > 0}
+		{@const picked = group.list.find((svc) => svc.id === value)}
+		<div>
+			<label class={labelClass} for="{id}-{group.key}">{group.label}</label>
+			<Popover.Root
+				onOpenChange={(open) => {
+					openKey = open ? group.key : null;
+				}}
+				open={openKey === group.key}
+			>
+				<Popover.Trigger>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							class="h-auto min-h-9 w-full justify-between py-1.5"
+							id="{id}-{group.key}"
+							role="combobox"
+							type="button"
+							variant="outline"
+						>
+							{#if picked}
+								<span class="flex min-w-0 flex-col items-start">
+									<span class="truncate">{picked.name}</span>
+									<span class="text-text-subtle truncate text-[0.6875rem]">
+										{stackLabel(picked)} · {picked.image}
+									</span>
+								</span>
+							{:else}
+								<span class="text-text-muted truncate">Pick a service…</span>
+							{/if}
+							<ChevronsUpDown class="size-4 shrink-0 opacity-50" />
+						</Button>
+					{/snippet}
+				</Popover.Trigger>
+				<Popover.Content class="w-(--bits-popover-anchor-width) p-0">
+					<Command.Root>
+						<Command.Input placeholder="Search services…" />
+						<Command.List>
+							<Command.Empty>No service matches.</Command.Empty>
+							<Command.Group>
+								{#each group.list as svc (svc.id)}
+									<Command.Item
+										keywords={[svc.image, stackLabel(svc)]}
+										onSelect={() => {
+											value = svc.id;
+											openKey = null;
+										}}
+										value="{svc.name} {svc.id}"
+									>
+										<Check
+											class="size-4 shrink-0 {value === svc.id
+												? ''
+												: 'opacity-0'}"
+										/>
+										<span class="flex min-w-0 flex-col">
+											<span class="truncate">{svc.name}</span>
+											<span class="text-text-subtle truncate text-[0.6875rem]">
+												{stackLabel(svc)} · {svc.image}
+											</span>
+										</span>
+									</Command.Item>
+								{/each}
+							</Command.Group>
+						</Command.List>
+					</Command.Root>
+				</Popover.Content>
+			</Popover.Root>
+		</div>
+	{/if}
 {/each}

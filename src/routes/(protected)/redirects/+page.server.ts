@@ -1,12 +1,13 @@
 import { fail } from "@sveltejs/kit";
+
 import { RedirectDTO } from "#lib/dto/redirect-dto.js";
 import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
 import { Logger } from "#lib/logger.js";
 import { parseListQuery } from "#lib/server/list-query.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import {
-	RedirectService,
 	redirectHost,
+	RedirectService,
 } from "#lib/services/redirect.service.js";
 
 const logger = new Logger("Redirects");

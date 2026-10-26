@@ -3,9 +3,9 @@ bun = true
 
 [test]
 preload = [
-    "./tests/unit/app/svelte-loader.ts",
-    "./tests/unit/support/homedir-preload.ts",
-    "./tests/integration/support/setup.ts",
+	"./tests/unit/app/svelte-loader.ts",
+	"./tests/unit/support/homedir-preload.ts",
+	"./tests/integration/support/setup.ts",
 ]
 
 # Global test timeout only (whole suite), individual test timeout should be set via cli with --timeout
@@ -20,3 +20,19 @@ pathIgnorePatterns = ["**/tests/e2e/**"]
 
 coverage = true
 coveragePathIgnorePatterns = ["tests/**"]
+
+[fmt]
+printWidth = 80
+svelte = true
+sortImports = true
+ignorePatterns = [
+	"src/lib/nuvio/nuvio-public-api.json",
+	"tests/unit/go/internal/agent/testdata/bake-print-*.json",
+	"static/template-icons",
+	"drizzle/meta",
+	"CHANGELOG.md",
+]
+
+[[fmt.overrides]]
+files = ["*.md"]
+options = { proseWrap = "always" }

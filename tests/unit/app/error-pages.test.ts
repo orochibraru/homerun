@@ -18,9 +18,8 @@ const {
 } = await import("../../../src/lib/error-pages");
 const { ERROR_PAGES_MIDDLEWARE, errorPagesConfig, errorPagesTarget } =
 	await import("../../../src/lib/services/docker/error-pages");
-const { buildContainerLabels } = await import(
-	"../../../src/lib/services/docker/labels"
-);
+const { buildContainerLabels } =
+	await import("../../../src/lib/services/docker/labels");
 
 describe("withErrorPageDefaults", () => {
 	test("nothing stored gives the defaults", () => {

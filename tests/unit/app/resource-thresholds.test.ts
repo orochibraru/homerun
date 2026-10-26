@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import {
 	DEFAULT_THRESHOLDS,
 	describeReading,
 	levelFor,
 	parseThresholds,
-	type ResourceReading,
 	readResources,
+	type ResourceReading,
 	withDefaults,
 } from "../../../src/lib/resource-thresholds";
 import { restoreStubs, stub } from "../support/stub";
@@ -16,26 +17,20 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { groupIncidentEvents, resourceAlertMessage } = await import(
-	"../../../src/lib/services/capacity.service"
-);
-const { ResourceIncidentDTO } = await import(
-	"../../../src/lib/dto/resource-incident-dto"
-);
-const { CapacityService, CapacityError } = await import(
-	"../../../src/lib/services/capacity.service"
-);
+const { groupIncidentEvents, resourceAlertMessage } =
+	await import("../../../src/lib/services/capacity.service");
+const { ResourceIncidentDTO } =
+	await import("../../../src/lib/dto/resource-incident-dto");
+const { CapacityService, CapacityError } =
+	await import("../../../src/lib/services/capacity.service");
 const { messageBody, discordPayload, NotificationChannelService } =
 	await import("../../../src/lib/services/notification-channel.service");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { NotificationDTO } = await import(
-	"../../../src/lib/dto/notification-dto"
-);
-const { SystemStatsService } = await import(
-	"../../../src/lib/services/system-stats.service"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { NotificationDTO } =
+	await import("../../../src/lib/dto/notification-dto");
+const { SystemStatsService } =
+	await import("../../../src/lib/services/system-stats.service");
 const { WorkerClient } = await import("../../../src/lib/server/worker-client");
 
 const host = {

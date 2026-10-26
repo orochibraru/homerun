@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -7,18 +8,14 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { GitConnectionDTO } = await import(
-	"../../../src/lib/dto/git-connection-dto"
-);
-const { GitProviderService } = await import(
-	"../../../src/lib/services/git-provider.service"
-);
-const { StatusCheckService } = await import(
-	"../../../src/lib/services/status-check.service"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { GitConnectionDTO } =
+	await import("../../../src/lib/dto/git-connection-dto");
+const { GitProviderService } =
+	await import("../../../src/lib/services/git-provider.service");
+const { StatusCheckService } =
+	await import("../../../src/lib/services/status-check.service");
 
 const SHA = "b".repeat(40);
 

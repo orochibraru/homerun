@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-const { ObjectStoreClient } = await import(
-	"../../../src/lib/services/s3/object-store-client"
-);
+const { ObjectStoreClient } =
+	await import("../../../src/lib/services/s3/object-store-client");
 
 interface Call {
 	body: string | null;

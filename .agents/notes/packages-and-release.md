@@ -243,9 +243,9 @@ three times: `publish.yaml`'s `version` job dry-runs it (`dry-run: "true"`)
 purely to read the next `version` for the canary stamp (falling back to
 `package.json`'s version when nothing is releasable); the `canary` job runs it
 for real with `release-pr: true` and
-`prepare: bunx prettier --write CHANGELOG.md` to keep the release PR current;
-the `stable` job dry-runs it for the stable version and tag, and
-`stable-release` runs it for real with `draft: "true"`. One version number
+`prepare: bun fmt --no-config --prose-wrap always CHANGELOG.md` to keep the
+release PR current; the `stable` job dry-runs it for the stable version and tag,
+and `stable-release` runs it for real with `draft: "true"`. One version number
 covers the whole repo: `releaser` bumps `package.json`'s `version` field and
 `CHANGELOG.md` itself (none of the three `cmd/` Go programs carry a
 `package.json` of their own to bump, they read the root one's version directly

@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+
 import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { BEAT_WINDOW, UptimeCheckDTO } from "#lib/dto/uptime-check-dto.js";
 

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { isCommitSha, pollOutcome } from "../../../src/lib/git-ref";
 
 const sha = "68c1b9e0f1a2b3c4d5e6f708192a3b4c5d6e7f80";

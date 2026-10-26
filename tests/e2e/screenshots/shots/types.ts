@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+
 import { E2E_BASE_URL } from "../../support/config";
 
 /** What the screenshot run seeded before any feature shot: the Acme stack and its services by slug (`web`, `cache`, `api`). */

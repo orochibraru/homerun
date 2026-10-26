@@ -18,6 +18,7 @@ import { deployEnvironment } from "#lib/release-channels.js";
 import { snapshotRevisionConfig } from "#lib/revision-config.js";
 import { dependencyLayers } from "#lib/service-graph.js";
 import { isDeployed } from "#lib/service-state.js";
+
 import {
 	BuildSlotTimeoutError,
 	reserveBuildServer,
@@ -28,8 +29,8 @@ import {
 	type BuildServer,
 	type CacheRegistryCredentials,
 	type DeployPlan,
-	type RevisionSource,
 	resolveDeployPlan,
+	type RevisionSource,
 } from "./deploy/plan.ts";
 import {
 	restoreRevisionConfig,
@@ -43,18 +44,18 @@ import {
 } from "./deploy/status-check-step.ts";
 import { deployWorkerSpec } from "./deploy/worker-spec.ts";
 import { releaseStaleServiceDns } from "./dns.service.ts";
+import { DockerService } from "./docker.service.ts";
 import { MIRROR_HOST_PORT } from "./docker/image-scan-refs.ts";
 import { authCheckUrlFor, loginWallDrifted } from "./docker/labels.ts";
 import { RolloutFailedError } from "./docker/rollout.ts";
-import { DockerService } from "./docker.service.ts";
 import { GitHubReportService } from "./github-report.service.ts";
 import { ImageScanBlockedError } from "./image-scan.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { imageScanMessage } from "./notification-messages.ts";
+import { QueueService } from "./queue.service.ts";
 import { JobDeferredError } from "./queue/deferred.ts";
 import type { JobResult } from "./queue/handlers.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
-import { QueueService } from "./queue.service.ts";
 import { RegistryService } from "./registry.service.ts";
 import { RevisionHealthService } from "./revision-health.service.ts";
 
@@ -408,7 +409,9 @@ class DeploymentServiceClass {
 		const svc = await ServiceDTO.get(serviceId);
 		if (!svc) {
 			const message = "The service was deleted before its deploy ran.";
-			await (await DeploymentDTO.get(deploymentId))?.update({
+			await (
+				await DeploymentDTO.get(deploymentId)
+			)?.update({
 				errorMessage: message,
 				finishedAt: new Date(),
 				status: "failed",

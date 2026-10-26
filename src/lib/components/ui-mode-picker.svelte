@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Building2, House, SlidersHorizontal } from "@lucide/svelte";
 	import type { Component } from "svelte";
+
 	import { UI_MODE_DESCRIPTIONS, UI_MODE_LABELS } from "#lib/ui-mode.js";
 
 	interface Props {
@@ -52,27 +53,30 @@
 	]);
 </script>
 
-<input {name} type="hidden" {value}>
-<div class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3" role="radiogroup">
-  {#each options as option (option.value)}
-    {@const Icon = option.icon}
-    <button
-      aria-checked={value === option.value}
-      class="flex items-start gap-3 rounded-md border p-3 text-left transition-colors {value ===
-      option.value
-        ? 'border-accent bg-accent-light'
-        : 'border-border hover:bg-surface-2'}"
-      onclick={() => {
-        value = option.value;
-      }}
-      role="radio"
-      type="button"
-    >
-      <Icon class="text-accent mt-0.5 size-4 shrink-0" />
-      <span>
-        <span class="text-text block text-sm font-medium">{option.label}</span>
-        <span class="text-text-muted block text-xs">{option.description}</span>
-      </span>
-    </button>
-  {/each}
+<input {name} type="hidden" {value} />
+<div
+	class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3"
+	role="radiogroup"
+>
+	{#each options as option (option.value)}
+		{@const Icon = option.icon}
+		<button
+			aria-checked={value === option.value}
+			class="flex items-start gap-3 rounded-md border p-3 text-left transition-colors {value ===
+			option.value
+				? 'border-accent bg-accent-light'
+				: 'border-border hover:bg-surface-2'}"
+			onclick={() => {
+				value = option.value;
+			}}
+			role="radio"
+			type="button"
+		>
+			<Icon class="text-accent mt-0.5 size-4 shrink-0" />
+			<span>
+				<span class="text-text block text-sm font-medium">{option.label}</span>
+				<span class="text-text-muted block text-xs">{option.description}</span>
+			</span>
+		</button>
+	{/each}
 </div>

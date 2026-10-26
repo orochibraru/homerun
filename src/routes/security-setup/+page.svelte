@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { refreshAll } from "$app/navigation";
 	import {
 		CheckCircle2,
 		Fingerprint,
@@ -7,6 +8,7 @@
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { signOut } from "#lib/auth-client.js";
 	import AuthShell from "#lib/components/auth-shell.svelte";
 	import PasskeyPanel from "#lib/components/passkey-panel.svelte";
@@ -14,7 +16,6 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
-	import { refreshAll } from "$app/navigation";
 
 	const { data } = $props();
 
@@ -41,52 +42,52 @@
 </script>
 
 <AuthShell
-  eyebrow="Account security"
-  heading="Secure your account"
-  subheading="An admin requires extra sign-in protection on this instance. Finish the steps below to continue to the dashboard."
+	eyebrow="Account security"
+	heading="Secure your account"
+	subheading="An admin requires extra sign-in protection on this instance. Finish the steps below to continue to the dashboard."
 >
-  <div class="space-y-6">
-    <p class="text-text-muted text-xs">
-      Signed in as <span class="text-text font-medium">{data.email}</span>
-    </p>
+	<div class="space-y-6">
+		<p class="text-text-muted text-xs">
+			Signed in as <span class="text-text font-medium">{data.email}</span>
+		</p>
 
-    {#if data.policy.requireTwoFactor}
-      <section class="space-y-3">
-        <h2 class="text-text flex items-center gap-2 text-sm font-semibold">
-          {#if needsTwoFactor}
-            <Smartphone class="size-4" />
-          {:else}
-            <CheckCircle2 class="size-4 text-emerald-500" />
-          {/if}
-          Two-factor authentication
-        </h2>
-        {#if needsTwoFactor}
-          <TwoFactorPanel enabled={false} hasPassword={data.hasPassword} />
-        {:else}
-          <p class="text-text-muted text-xs">Authenticator app is set up.</p>
-        {/if}
-      </section>
-    {/if}
+		{#if data.policy.requireTwoFactor}
+			<section class="space-y-3">
+				<h2 class="text-text flex items-center gap-2 text-sm font-semibold">
+					{#if needsTwoFactor}
+						<Smartphone class="size-4" />
+					{:else}
+						<CheckCircle2 class="size-4 text-emerald-500" />
+					{/if}
+					Two-factor authentication
+				</h2>
+				{#if needsTwoFactor}
+					<TwoFactorPanel enabled={false} hasPassword={data.hasPassword} />
+				{:else}
+					<p class="text-text-muted text-xs">Authenticator app is set up.</p>
+				{/if}
+			</section>
+		{/if}
 
-    {#if data.policy.requirePasskey}
-      <section class="space-y-3">
-        <h2 class="text-text flex items-center gap-2 text-sm font-semibold">
-          {#if needsPasskey}
-            <Fingerprint class="size-4" />
-          {:else}
-            <CheckCircle2 class="size-4 text-emerald-500" />
-          {/if}
-          Passkey
-        </h2>
-        <PasskeyPanel passkeys={data.passkeys} />
-      </section>
-    {/if}
-  </div>
+		{#if data.policy.requirePasskey}
+			<section class="space-y-3">
+				<h2 class="text-text flex items-center gap-2 text-sm font-semibold">
+					{#if needsPasskey}
+						<Fingerprint class="size-4" />
+					{:else}
+						<CheckCircle2 class="size-4 text-emerald-500" />
+					{/if}
+					Passkey
+				</h2>
+				<PasskeyPanel passkeys={data.passkeys} />
+			</section>
+		{/if}
+	</div>
 
-  {#snippet footer()}
-    <Button onclick={handleSignOut} size="sm" variant="ghost">
-      <LogOut class="size-4" />
-      Sign out
-    </Button>
-  {/snippet}
+	{#snippet footer()}
+		<Button onclick={handleSignOut} size="sm" variant="ghost">
+			<LogOut class="size-4" />
+			Sign out
+		</Button>
+	{/snippet}
 </AuthShell>

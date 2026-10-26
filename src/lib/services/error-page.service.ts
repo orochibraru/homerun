@@ -3,8 +3,8 @@ import type { ServiceDTO } from "#lib/dto/service-dto.js";
 import {
 	ERROR_PAGE_HEADER,
 	type ErrorPageKind,
-	type ErrorPagesSettings,
 	errorPageKind,
+	type ErrorPagesSettings,
 	renderErrorPage,
 } from "#lib/error-pages.js";
 import { wakeRedirectTarget } from "#lib/scale-to-zero.js";

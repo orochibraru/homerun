@@ -9,8 +9,8 @@ import {
 	type ImageUpdateTrial,
 	isValidTag,
 	newerVersionTag,
-	type PinCandidates,
 	parseVersionTag,
+	type PinCandidates,
 	type RegistryTag,
 	suggestLocalTag,
 	tagsMatchingDigest,
@@ -18,14 +18,15 @@ import {
 } from "#lib/image-versions.js";
 import { Logger } from "#lib/logger.js";
 import { isNotFound } from "#lib/server/worker-client.js";
+
 import { ApiService } from "./api.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
+import { DockerService } from "./docker.service.ts";
 import {
 	dockerHealthcheck,
 	healthcheckTimingOf,
 } from "./docker/healthcheck.ts";
 import { listeningHealthcheck } from "./docker/readiness.ts";
-import { DockerService } from "./docker.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { updateAvailableMessage } from "./notification-messages.ts";
 

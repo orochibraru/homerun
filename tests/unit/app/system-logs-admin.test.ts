@@ -7,6 +7,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -23,9 +24,8 @@ let streamed = false;
 let traefikFailure: unknown = null;
 let traefikCalls: string[] = [];
 
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
 
 beforeEach(() => {
 	stub(DockerService, "listInfraContainers", async () => [{ id: "traefik" }]);
@@ -52,12 +52,10 @@ afterEach(() => {
 	restoreStubs();
 });
 
-const logsRoute = await import(
-	"../../../src/routes/(protected)/system-logs/containers/[containerId]/logs/+server"
-);
-const pageRoute = await import(
-	"../../../src/routes/(protected)/system-logs/+page.server"
-);
+const logsRoute =
+	await import("../../../src/routes/(protected)/system-logs/containers/[containerId]/logs/+server");
+const pageRoute =
+	await import("../../../src/routes/(protected)/system-logs/+page.server");
 
 const { AppLogDTO } = await import("../../../src/lib/dto/app-log-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");

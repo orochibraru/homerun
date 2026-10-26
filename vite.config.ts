@@ -1,8 +1,10 @@
 import process from "node:process";
+
 import adapter from "@sveltejs/adapter-bun";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+
 import { isIngestPath } from "./src/lib/error-tracking/envelope.ts";
 
 process.env.BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT = "1";

@@ -1,4 +1,5 @@
 import { and, desc, eq, isNull, lt, ne } from "drizzle-orm";
+
 import { db } from "#lib/server/db/lib.js";
 import {
 	type Notification,
@@ -8,6 +9,7 @@ import {
 	user,
 } from "#lib/server/db/schema.js";
 import { SERVICE_ACCOUNT } from "#lib/user-types.js";
+
 import { BaseDTO } from "./base-dto";
 
 export interface NewNotificationInput {
@@ -96,18 +98,16 @@ export class NotificationDTO extends BaseDTO<Notification> {
 		}
 		const createdAt = new Date();
 		await db.insert(notification).values(
-			users.map(
-				(account): Notification => ({
-					createdAt,
-					detail: input.detail ?? null,
-					id: crypto.randomUUID(),
-					message: input.message,
-					readAt: null,
-					serviceId: input.serviceId ?? null,
-					type: input.type,
-					userId: account.id,
-				}),
-			),
+			users.map((account): Notification => ({
+				createdAt,
+				detail: input.detail ?? null,
+				id: crypto.randomUUID(),
+				message: input.message,
+				readAt: null,
+				serviceId: input.serviceId ?? null,
+				type: input.type,
+				userId: account.id,
+			})),
 		);
 
 		if (Math.random() < PRUNE_PROBABILITY) {

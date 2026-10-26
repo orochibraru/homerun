@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { Activity, ExternalLink, Trash2 } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
+
 	import Alert from "#lib/components/alert.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
@@ -13,8 +16,6 @@
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import type { StatusPageScope } from "#lib/types.js";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data, form } = $props();
 
@@ -53,154 +54,172 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <div class="mb-6 flex flex-wrap items-center gap-3">
-    <h1 class="text-text text-lg font-semibold tracking-tight">{page.name}</h1>
-    {#if page.isPublic}
-      <span class="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-        Public
-      </span>
-    {:else}
-      <span class="bg-surface-2 text-text-muted rounded-md px-2 py-0.5 text-xs font-medium">
-        Private
-      </span>
-    {/if}
-  </div>
+	<div class="mb-6 flex flex-wrap items-center gap-3">
+		<h1 class="text-text text-lg font-semibold tracking-tight">{page.name}</h1>
+		{#if page.isPublic}
+			<span
+				class="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+			>
+				Public
+			</span>
+		{:else}
+			<span
+				class="bg-surface-2 text-text-muted rounded-md px-2 py-0.5 text-xs font-medium"
+			>
+				Private
+			</span>
+		{/if}
+	</div>
 
-  {#if page.isPublic}
-    <div class="mb-6 flex flex-wrap items-center gap-3">
-      <CopyBox class="min-w-0 flex-1" label="the public URL" value={publicUrl} />
-      <Button
-        href={resolve("/status/[slug]", { slug: page.slug })}
-        target="_blank"
-        variant="outline"
-      >
-        <ExternalLink class="size-4" />
-        Open
-      </Button>
-    </div>
-  {/if}
+	{#if page.isPublic}
+		<div class="mb-6 flex flex-wrap items-center gap-3">
+			<CopyBox
+				class="min-w-0 flex-1"
+				label="the public URL"
+				value={publicUrl}
+			/>
+			<Button
+				href={resolve("/status/[slug]", { slug: page.slug })}
+				target="_blank"
+				variant="outline"
+			>
+				<ExternalLink class="size-4" />
+				Open
+			</Button>
+		</div>
+	{/if}
 
-  {#if form?.error}
-    <Alert class="mb-6">{form.error}</Alert>
-  {/if}
+	{#if form?.error}
+		<Alert class="mb-6">{form.error}</Alert>
+	{/if}
 
-  <section class="panel mb-6 rounded-md">
-    <div class="panel-head">
-      <h2 class="eyebrow flex items-center gap-1.5">
-        <Activity class="size-3" />
-        Tracked services
-      </h2>
-      <span class="text-text-subtle text-[0.6875rem]">
-        Last {data.beatWindow} internal probes
-      </span>
-    </div>
-    {#if data.tracked.length === 0}
-      <p class="text-text-muted px-5 py-6 text-center text-xs">
-        This page doesn't cover any services yet.
-      </p>
-    {:else}
-      <div class="divide-border divide-y">
-        {#each data.tracked as svc (svc.id)}
-          <div class="flex items-center gap-4 py-3 pr-5 {svc.childOf ? 'pl-10' : 'pl-5'}">
-            <div class="min-w-0 flex-1">
-              <a
-                class="text-text truncate text-sm font-medium hover:underline"
-                href="{resolve('services')}/{svc.id}"
-              >{svc.name}</a>
+	<section class="panel mb-6 rounded-md">
+		<div class="panel-head">
+			<h2 class="eyebrow flex items-center gap-1.5">
+				<Activity class="size-3" />
+				Tracked services
+			</h2>
+			<span class="text-text-subtle text-[0.6875rem]">
+				Last {data.beatWindow} internal probes
+			</span>
+		</div>
+		{#if data.tracked.length === 0}
+			<p class="text-text-muted px-5 py-6 text-center text-xs">
+				This page doesn't cover any services yet.
+			</p>
+		{:else}
+			<div class="divide-border divide-y">
+				{#each data.tracked as svc (svc.id)}
+					<div
+						class="flex items-center gap-4 py-3 pr-5 {svc.childOf
+							? 'pl-10'
+							: 'pl-5'}"
+					>
+						<div class="min-w-0 flex-1">
+							<a
+								class="text-text truncate text-sm font-medium hover:underline"
+								href="{resolve('services')}/{svc.id}">{svc.name}</a
+							>
 
-              <HeartbeatStrip beats={svc.beats} class="mt-2" />
-            </div>
-            <span class="text-text-muted shrink-0 text-xs tabular-nums">
-              {uptimeOf(svc.beats)}
-            </span>
-          </div>
-        {/each}
-      </div>
-    {/if}
-  </section>
+							<HeartbeatStrip beats={svc.beats} class="mt-2" />
+						</div>
+						<span class="text-text-muted shrink-0 text-xs tabular-nums">
+							{uptimeOf(svc.beats)}
+						</span>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
 
-  <section class="panel rounded-md">
-    <PanelHeader title="Settings">
-      {#snippet trailing()}
-        <SaveButton form="status-page-settings" pending={saving} />
-      {/snippet}
-    </PanelHeader>
-    <form
-      id="status-page-settings"
-      action="?/update"
-      class="space-y-6 p-5"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't save the status page.",
-        loading: "Saving the status page",
-        onSettled: () => {
-          saving = false;
-        },
-        onStart: () => {
-          saving = true;
-        },
-        success: "Status page saved.",
-      })}
-    >
-      <StatusPageFields
-        bind:name
-        bind:slug
-        bind:description
-        bind:domains
-        bind:scope
-        bind:stackId
-        bind:isPublic
-        bind:picks
-        errors={form?.errors}
-        stacks={data.stacks}
-        services={data.services}
-      />
-    </form>
-  </section>
+	<section class="panel rounded-md">
+		<PanelHeader title="Settings">
+			{#snippet trailing()}
+				<SaveButton form="status-page-settings" pending={saving} />
+			{/snippet}
+		</PanelHeader>
+		<form
+			id="status-page-settings"
+			action="?/update"
+			class="space-y-6 p-5"
+			method="POST"
+			use:enhance={enhanceToast({
+				error: "Couldn't save the status page.",
+				loading: "Saving the status page",
+				onSettled: () => {
+					saving = false;
+				},
+				onStart: () => {
+					saving = true;
+				},
+				success: "Status page saved.",
+			})}
+		>
+			<StatusPageFields
+				bind:name
+				bind:slug
+				bind:description
+				bind:domains
+				bind:scope
+				bind:stackId
+				bind:isPublic
+				bind:picks
+				errors={form?.errors}
+				stacks={data.stacks}
+				services={data.services}
+			/>
+		</form>
+	</section>
 
-  <section class="bg-surface mt-6 rounded-md border border-red-200 dark:border-red-900/40">
-    <div class="flex flex-wrap items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
-      <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
-        <Trash2 class="size-4" />
-      </span>
-      <div class="min-w-0 flex-1 basis-56">
-        <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
-          Delete this status page
-        </h2>
-        <p class="text-text-muted text-xs">
-          The services it tracks are untouched. Any public link stops working.
-        </p>
-      </div>
-      <form
-        action="?/delete"
-        bind:this={deleteForm}
-        class="ml-auto"
-        method="POST"
-        use:enhance={enhanceToast({
-          error: "Couldn't delete the status page.",
-          loading: "Deleting the status page",
-          success: "Status page deleted.",
-        })}
-      >
-        <Button
-          onclick={() => {
-            deleteDialogOpen = true;
-          }}
-          type="button"
-          variant="destructive"
-        >
-          Delete status page
-        </Button>
-      </form>
-    </div>
-  </section>
+	<section
+		class="bg-surface mt-6 rounded-md border border-red-200 dark:border-red-900/40"
+	>
+		<div
+			class="flex flex-wrap items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
+		>
+			<span
+				class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600"
+			>
+				<Trash2 class="size-4" />
+			</span>
+			<div class="min-w-0 flex-1 basis-56">
+				<h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
+					Delete this status page
+				</h2>
+				<p class="text-text-muted text-xs">
+					The services it tracks are untouched. Any public link stops working.
+				</p>
+			</div>
+			<form
+				action="?/delete"
+				bind:this={deleteForm}
+				class="ml-auto"
+				method="POST"
+				use:enhance={enhanceToast({
+					error: "Couldn't delete the status page.",
+					loading: "Deleting the status page",
+					success: "Status page deleted.",
+				})}
+			>
+				<Button
+					onclick={() => {
+						deleteDialogOpen = true;
+					}}
+					type="button"
+					variant="destructive"
+				>
+					Delete status page
+				</Button>
+			</form>
+		</div>
+	</section>
 </div>
 
 <ConfirmDialog
-  bind:open={deleteDialogOpen}
-  confirmLabel="Delete"
-  confirmPhrase={page.name}
-  description="This removes the status page and its public URL. The services it tracks are untouched."
-  onConfirm={() => deleteForm?.requestSubmit()}
-  title="Delete {page.name}?"
+	bind:open={deleteDialogOpen}
+	confirmLabel="Delete"
+	confirmPhrase={page.name}
+	description="This removes the status page and its public URL. The services it tracks are untouched."
+	onConfirm={() => deleteForm?.requestSubmit()}
+	title="Delete {page.name}?"
 />

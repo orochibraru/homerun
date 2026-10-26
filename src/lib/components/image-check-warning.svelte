@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { AlertTriangle } from "@lucide/svelte";
+
 	import {
 		checkImage,
 		type ImageCheck,
@@ -39,14 +40,14 @@
 </script>
 
 {#if result?.checked && !result.exists}
-  <div
-    class="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
-  >
-    <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
-    <span>
-      <strong>{image}:{tag}</strong>
-      wasn't found in its registry. You can still save : this doesn't block
-      deploying, in case you're still preparing the image.
-    </span>
-  </div>
+	<div
+		class="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
+	>
+		<AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+		<span>
+			<strong>{image}:{tag}</strong>
+			wasn't found in its registry. You can still save : this doesn't block deploying,
+			in case you're still preparing the image.
+		</span>
+	</div>
 {/if}

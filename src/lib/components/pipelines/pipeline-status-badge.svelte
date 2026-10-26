@@ -18,6 +18,10 @@
 	};
 </script>
 
-<span class="rounded-full px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap uppercase {tone[status]}">
-  {PIPELINE_STATUS_LABELS[status]}
+<span
+	class="rounded-full px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap uppercase {tone[
+		status
+	]}"
+>
+	{PIPELINE_STATUS_LABELS[status]}
 </span>

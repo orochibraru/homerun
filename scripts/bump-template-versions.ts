@@ -1,6 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import process from "node:process";
+
 import { Glob } from "bun";
+
 import { parseImageRef, parseWwwAuthenticate } from "../src/lib/registry-ref";
 import {
 	isStableVersion,

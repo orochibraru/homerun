@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { stubDomainOwners } from "../support/domain-owners";
 import { restoreStubs, stub } from "../support/stub";
 
@@ -9,19 +10,16 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
 const { Logger } = await import("../../../src/lib/logger");
-const { DomainDnsService } = await import(
-	"../../../src/lib/services/domain-dns.service"
-);
-const { PangolinService } = await import(
-	"../../../src/lib/services/pangolin.service"
-);
+const { DomainDnsService } =
+	await import("../../../src/lib/services/domain-dns.service");
+const { PangolinService } =
+	await import("../../../src/lib/services/pangolin.service");
 const {
 	deleteDns,
 	markStaleServiceDns,
@@ -33,10 +31,7 @@ const {
 } = await import("../../../src/lib/services/dns.service");
 
 type Verdict =
-	| { detail: string; ok: boolean; provider: string }
-	| null
-	| Error
-	| string;
+	{ detail: string; ok: boolean; provider: string } | null | Error | string;
 
 const calls: unknown[][] = [];
 const logs: string[] = [];

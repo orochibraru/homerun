@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { createHmac } from "node:crypto";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -10,34 +11,25 @@ mock.module("$app/env", () => ({
 
 const { config } = await import("../../../src/lib/config");
 const { Logger } = await import("../../../src/lib/logger");
-const { GitConnectionDTO } = await import(
-	"../../../src/lib/dto/git-connection-dto"
-);
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { GitConnectionDTO } =
+	await import("../../../src/lib/dto/git-connection-dto");
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { GitProviderRefusedError, GitProviderService } = await import(
-	"../../../src/lib/services/git-provider.service"
-);
-const { PreviewService } = await import(
-	"../../../src/lib/services/preview.service"
-);
-const { EnvironmentService } = await import(
-	"../../../src/lib/services/environment.service"
-);
-const { ReleaseChannelError, ReleaseChannelService } = await import(
-	"../../../src/lib/services/release-channel.service"
-);
-const { decryptSecret, encryptSecret } = await import(
-	"../../../src/lib/services/secrets"
-);
-const { GitWebhookService } = await import(
-	"../../../src/lib/services/git-webhook.service"
-);
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { GitProviderRefusedError, GitProviderService } =
+	await import("../../../src/lib/services/git-provider.service");
+const { PreviewService } =
+	await import("../../../src/lib/services/preview.service");
+const { EnvironmentService } =
+	await import("../../../src/lib/services/environment.service");
+const { ReleaseChannelError, ReleaseChannelService } =
+	await import("../../../src/lib/services/release-channel.service");
+const { decryptSecret, encryptSecret } =
+	await import("../../../src/lib/services/secrets");
+const { GitWebhookService } =
+	await import("../../../src/lib/services/git-webhook.service");
 
 type Svc = Parameters<typeof GitWebhookService.sync>[0];
 

@@ -191,8 +191,7 @@
 	--glass-rim:
 		inset 1.5px 1.5px 0 -0.5px oklch(1 0 0 / 0.95),
 		inset -1px -1px 0 -0.5px oklch(1 0 0 / 0.55),
-		inset 0 0 0 0.5px oklch(1 0 0 / 0.35),
-		inset 0 0 16px 0 oklch(1 0 0 / 0.22);
+		inset 0 0 0 0.5px oklch(1 0 0 / 0.35), inset 0 0 16px 0 oklch(1 0 0 / 0.22);
 	--glass-control: oklch(1 0 0 / 0.26);
 	--glass-field-bg: oklch(1 0 0 / 0.72);
 	--glass-field-border: oklch(from var(--color-accent) 0.3 0.04 h / 0.42);
@@ -269,8 +268,7 @@
 	--glass-rim:
 		inset 1.5px 1.5px 0 -0.5px oklch(1 0 0 / 0.38),
 		inset -1px -1px 0 -0.5px oklch(1 0 0 / 0.16),
-		inset 0 0 0 0.5px oklch(1 0 0 / 0.1),
-		inset 0 0 16px 0 oklch(1 0 0 / 0.05);
+		inset 0 0 0 0.5px oklch(1 0 0 / 0.1), inset 0 0 16px 0 oklch(1 0 0 / 0.05);
 	--glass-control: oklch(1 0 0 / 0.08);
 	--glass-field-bg: oklch(0 0 0 / 0.22);
 	--glass-field-border: oklch(1 0 0 / 0.22);
@@ -408,11 +406,11 @@
 
 	[data-bits-floating-content-wrapper]:has(
 		> :is(
-				[data-slot="context-menu-content"],
-				[data-slot="context-menu-sub-content"],
-				[data-slot="dropdown-menu-content"],
-				[data-slot="dropdown-menu-sub-content"]
-			)
+			[data-slot="context-menu-content"],
+			[data-slot="context-menu-sub-content"],
+			[data-slot="dropdown-menu-content"],
+			[data-slot="dropdown-menu-sub-content"]
+		)
 	) {
 		position: fixed !important;
 		inset: auto 0 0 !important;
@@ -879,14 +877,17 @@
 	--panel-backdrop: none;
 	--panel-border-width: 0px;
 	--panel-shadow:
-		inset -6px -8px 14px oklch(0.6 0.08 300 / 0.16), inset 6px 6px
-		12px oklch(1 0 0 / 0.9), 0 18px 32px -14px oklch(0.45 0.12 300 / 0.35);
+		inset -6px -8px 14px oklch(0.6 0.08 300 / 0.16),
+		inset 6px 6px 12px oklch(1 0 0 / 0.9),
+		0 18px 32px -14px oklch(0.45 0.12 300 / 0.35);
 	--panel-shadow-lg:
-		inset -6px -8px 14px oklch(0.6 0.08 300 / 0.16), inset 6px
-		6px 12px oklch(1 0 0 / 0.9), 0 24px 40px -14px oklch(0.45 0.12 300 / 0.45);
+		inset -6px -8px 14px oklch(0.6 0.08 300 / 0.16),
+		inset 6px 6px 12px oklch(1 0 0 / 0.9),
+		0 24px 40px -14px oklch(0.45 0.12 300 / 0.45);
 	--button-shadow:
-		inset -2px -3px 6px oklch(0 0 0 / 0.14), inset 2px 2px 4px
-		oklch(1 0 0 / 0.45), 0 6px 12px -6px var(--color-accent-glow);
+		inset -2px -3px 6px oklch(0 0 0 / 0.14),
+		inset 2px 2px 4px oklch(1 0 0 / 0.45),
+		0 6px 12px -6px var(--color-accent-glow);
 	--popover: oklch(0.99 0.012 300);
 	--aurora-opacity: 0.35;
 	--grain-opacity: 0;
@@ -898,11 +899,11 @@
 	--color-bg: oklch(0.22 0.03 295);
 	--panel-bg: oklch(0.28 0.035 295);
 	--panel-shadow:
-		inset -6px -8px 14px oklch(0 0 0 / 0.35), inset 6px 6px 12px
-		oklch(1 0 0 / 0.08), 0 18px 32px -14px oklch(0 0 0 / 0.7);
+		inset -6px -8px 14px oklch(0 0 0 / 0.35),
+		inset 6px 6px 12px oklch(1 0 0 / 0.08), 0 18px 32px -14px oklch(0 0 0 / 0.7);
 	--panel-shadow-lg:
-		inset -6px -8px 14px oklch(0 0 0 / 0.35), inset 6px 6px
-		12px oklch(1 0 0 / 0.08), 0 24px 40px -14px oklch(0 0 0 / 0.8);
+		inset -6px -8px 14px oklch(0 0 0 / 0.35),
+		inset 6px 6px 12px oklch(1 0 0 / 0.08), 0 24px 40px -14px oklch(0 0 0 / 0.8);
 	--popover: oklch(0.28 0.035 295);
 }
 

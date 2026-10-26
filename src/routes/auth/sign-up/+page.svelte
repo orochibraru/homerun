@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { ArrowRight, ShieldCheck } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { signUp, useSession } from "#lib/auth-client.js";
 	import AuthShell from "#lib/components/auth-shell.svelte";
 	import PasswordField from "#lib/components/password-field.svelte";
@@ -11,8 +14,6 @@
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
 
 	const session = useSession();
 
@@ -85,101 +86,97 @@
 </script>
 
 <AuthShell
-  eyebrow="First run"
-  heading="Create your admin account"
-  subheading="This is the first account on this instance, so it becomes the admin. Later accounts are created from the Users page."
+	eyebrow="First run"
+	heading="Create your admin account"
+	subheading="This is the first account on this instance, so it becomes the admin. Later accounts are created from the Users page."
 >
-  <form class="space-y-4" novalidate onsubmit={handleSignUp}>
-    <div>
-      <label class="text-text mb-1.5 block text-sm font-medium" for="name">
-        Full name
-      </label>
-      <Input
-        autocomplete="name"
-        class="h-10"
-        disabled={loading}
-        id="name"
-        placeholder="Jane Smith"
-        required
-        type="text"
-        bind:value={name}
-      />
-    </div>
+	<form class="space-y-4" novalidate onsubmit={handleSignUp}>
+		<div>
+			<label class="text-text mb-1.5 block text-sm font-medium" for="name">
+				Full name
+			</label>
+			<Input
+				autocomplete="name"
+				class="h-10"
+				disabled={loading}
+				id="name"
+				placeholder="Jane Smith"
+				required
+				type="text"
+				bind:value={name}
+			/>
+		</div>
 
-    <div>
-      <label class="text-text mb-1.5 block text-sm font-medium" for="email">
-        Email
-      </label>
-      <Input
-        autocomplete="email"
-        class="h-10"
-        disabled={loading}
-        id="email"
-        placeholder="you@example.com"
-        required
-        type="email"
-        bind:value={email}
-      />
-    </div>
+		<div>
+			<label class="text-text mb-1.5 block text-sm font-medium" for="email">
+				Email
+			</label>
+			<Input
+				autocomplete="email"
+				class="h-10"
+				disabled={loading}
+				id="email"
+				placeholder="you@example.com"
+				required
+				type="email"
+				bind:value={email}
+			/>
+		</div>
 
-    <div>
-      <PasswordField
-        autocomplete="new-password"
-        disabled={loading}
-        id="password"
-        label="Password"
-        placeholder="Min. 12 characters"
-        required
-        bind:value={password}
-      />
-      <PasswordStrength password={password} />
-    </div>
+		<div>
+			<PasswordField
+				autocomplete="new-password"
+				disabled={loading}
+				id="password"
+				label="Password"
+				placeholder="Min. 12 characters"
+				required
+				bind:value={password}
+			/>
+			<PasswordStrength {password} />
+		</div>
 
-    <div>
-      <PasswordField
-        autocomplete="new-password"
-        class={confirmClass}
-        disabled={loading}
-        id="confirm"
-        label="Confirm password"
-        placeholder="Repeat your password"
-        required
-        bind:value={confirm}
-      />
-      {#if confirm && confirm !== password}
-        <p class="mt-1.5 text-xs text-red-500">
-          Passwords don't match.
-        </p>
-      {:else if confirm && confirm === password}
-        <p
-          class="mt-1.5 flex items-center gap-1.5 text-xs text-green-500"
-        >
-          <ShieldCheck class="size-3.5" />
-          Passwords match
-        </p>
-      {/if}
-    </div>
+		<div>
+			<PasswordField
+				autocomplete="new-password"
+				class={confirmClass}
+				disabled={loading}
+				id="confirm"
+				label="Confirm password"
+				placeholder="Repeat your password"
+				required
+				bind:value={confirm}
+			/>
+			{#if confirm && confirm !== password}
+				<p class="mt-1.5 text-xs text-red-500">Passwords don't match.</p>
+			{:else if confirm && confirm === password}
+				<p class="mt-1.5 flex items-center gap-1.5 text-xs text-green-500">
+					<ShieldCheck class="size-3.5" />
+					Passwords match
+				</p>
+			{/if}
+		</div>
 
-    <Button
-      class="mt-2 h-10 w-full"
-      disabled={loading || !name || !email || !password || !confirm}
-      type="submit"
-    >
-      {#if loading}
-        <Spinner />
-        Creating account…
-      {:else}
-        Create account
-        <ArrowRight class="size-4 opacity-70" />
-      {/if}
-    </Button>
-  </form>
+		<Button
+			class="mt-2 h-10 w-full"
+			disabled={loading || !name || !email || !password || !confirm}
+			type="submit"
+		>
+			{#if loading}
+				<Spinner />
+				Creating account…
+			{:else}
+				Create account
+				<ArrowRight class="size-4 opacity-70" />
+			{/if}
+		</Button>
+	</form>
 
-  {#snippet footer()}
-    Already have an account?
-    <a
-      class="text-accent font-medium hover:underline"
-      href={resolve('auth/sign-in')}
-    >Sign in</a>
-  {/snippet}
+	{#snippet footer()}
+		Already have an account?
+		<a
+			class="text-accent font-medium hover:underline"
+			href={resolve("auth/sign-in")}>Sign in</a
+		>
+	{/snippet}
 </AuthShell>

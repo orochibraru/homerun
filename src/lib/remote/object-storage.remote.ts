@@ -1,8 +1,9 @@
+import { query } from "$app/server";
 import { z } from "zod";
+
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
 import { requirePermission } from "#lib/server/remote-auth.js";
 import { ObjectStorageService } from "#lib/services/object-storage.service.js";
-import { query } from "$app/server";
 
 export interface BucketUsageRow {
 	bucket: string;

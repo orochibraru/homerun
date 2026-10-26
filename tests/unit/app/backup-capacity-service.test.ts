@@ -6,19 +6,15 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { BackupCapacityService } = await import(
-	"../../../src/lib/services/backup-capacity.service"
-);
-const { S3BackupService } = await import(
-	"../../../src/lib/services/s3-backup.service"
-);
-const { NotificationChannelService } = await import(
-	"../../../src/lib/services/notification-channel.service"
-);
+const { BackupCapacityService } =
+	await import("../../../src/lib/services/backup-capacity.service");
+const { S3BackupService } =
+	await import("../../../src/lib/services/s3-backup.service");
+const { NotificationChannelService } =
+	await import("../../../src/lib/services/notification-channel.service");
 const rclone = await import("../../../src/lib/services/backup/rclone");
-const { S3DestinationDTO } = await import(
-	"../../../src/lib/dto/s3-destination-dto"
-);
+const { S3DestinationDTO } =
+	await import("../../../src/lib/dto/s3-destination-dto");
 
 type Destination = NonNullable<
 	Awaited<ReturnType<typeof S3DestinationDTO.get>>

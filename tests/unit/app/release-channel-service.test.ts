@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { type DomainOwners, stubDomainOwners } from "../support/domain-owners";
 import { restoreStubs, stub } from "../support/stub";
 
@@ -13,18 +14,14 @@ const { Logger } = await import("../../../src/lib/logger");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
-const { CapacityService } = await import(
-	"../../../src/lib/services/capacity.service"
-);
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { ServiceLifecycleService } = await import(
-	"../../../src/lib/services/service-lifecycle.service"
-);
-const { ReleaseChannelError, ReleaseChannelService } = await import(
-	"../../../src/lib/services/release-channel.service"
-);
+const { CapacityService } =
+	await import("../../../src/lib/services/capacity.service");
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { ServiceLifecycleService } =
+	await import("../../../src/lib/services/service-lifecycle.service");
+const { ReleaseChannelError, ReleaseChannelService } =
+	await import("../../../src/lib/services/release-channel.service");
 
 type Svc = Parameters<typeof ReleaseChannelService.status>[0];
 

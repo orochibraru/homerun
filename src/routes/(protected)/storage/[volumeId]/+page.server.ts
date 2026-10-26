@@ -1,16 +1,17 @@
 import { error, fail } from "@sveltejs/kit";
+
 import { BackupRunDTO } from "#lib/dto/backup-run-dto.js";
 import { JobDTO } from "#lib/dto/job-dto.js";
 import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { Logger } from "#lib/logger.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
-import { VolumeServices } from "#lib/services/backup/volume-services.js";
 import {
 	cancelBackupRun,
 	enqueueVolumeBackup,
 	enqueueVolumeRestore,
 } from "#lib/services/backup-queue.js";
+import { VolumeServices } from "#lib/services/backup/volume-services.js";
 import {
 	VolumeSettingsError,
 	VolumeSettingsService,
@@ -119,8 +120,7 @@ export const actions = {
 				backupEnabled,
 				backupPreCommand: formData.get("backupPreCommand") as string | null,
 				backupPreCommandServiceId: formData.get("backupPreCommandServiceId") as
-					| string
-					| null,
+					string | null,
 				backupPrefix: formData.get("backupPrefix") as string | null,
 				backupSchedule: formData.get("backupSchedule") as string | null,
 				backupStopServices: formData.get("backupStopServices") === "on",

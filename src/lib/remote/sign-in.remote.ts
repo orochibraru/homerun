@@ -1,11 +1,12 @@
+import { dev } from "$app/env";
+import { command, getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
+
 import {
 	AccountSetupService,
 	type SignInLookup,
 } from "#lib/services/account-setup.service.js";
-import { dev } from "$app/env";
-import { command, getRequestEvent } from "$app/server";
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 20;

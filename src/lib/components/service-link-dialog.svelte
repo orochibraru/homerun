@@ -1,14 +1,16 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
 	import { Link2 } from "@lucide/svelte";
+
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
 	import ServicePicker from "#lib/components/service-picker.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import {
+		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
-		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
 	import {
@@ -18,7 +20,6 @@
 		linkRoles,
 	} from "#lib/service-link.js";
 	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
 
 	interface LinkableService {
 		id: string;
@@ -84,71 +85,72 @@
 </script>
 
 <ResponsiveDialog
-  description={roles
-    ? `Makes ${roles.consumer.name} depend on ${roles.provider.name}, so it starts after it, and writes the connection variables into its environment unless you pick dependency only. Variables take effect on its next deploy.`
-    : "Makes whichever of the two uses the other depend on it, so it starts second, and writes the connection variables into it: a database or cache always goes into the app. Variables take effect on its next deploy."}
-  size="sm"
-  title="Link {service?.name ?? 'service'}"
-  bind:open
+	description={roles
+		? `Makes ${roles.consumer.name} depend on ${roles.provider.name}, so it starts after it, and writes the connection variables into its environment unless you pick dependency only. Variables take effect on its next deploy.`
+		: "Makes whichever of the two uses the other depend on it, so it starts second, and writes the connection variables into it: a database or cache always goes into the app. Variables take effect on its next deploy."}
+	size="sm"
+	title="Link {service?.name ?? 'service'}"
+	bind:open
 >
-  <form
-    action="{actionBase}?/link"
-    class="space-y-4"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Couldn't link the services.",
-      loading: "Linking",
-      onSuccess: () => {
-        open = false;
-      },
-      success: (result) => {
-        const data = result as
-          | { consumer?: string; grouped?: boolean; linked?: string[] }
-          | undefined;
-        const keys = data?.linked ?? [];
-        const vars =
-          keys.length > 0
-            ? `Added ${keys.join(", ")} to ${data?.consumer ?? "the service"}`
-            : "Linked";
-        return data?.grouped ? `${vars}, and grouped them.` : `${vars}.`;
-      },
-    })}
-  >
-    <input name="serviceId" type="hidden" value={service?.id ?? ""}>
-    <input name="targetId" type="hidden" value={linkTargetId}>
-    <ServicePicker
-      id="linkTarget"
-      services={linkCandidates}
-      stackId={service?.stackId ?? null}
-      {stacks}
-      bind:value={linkTargetId}
-    />
-    <div>
-      <label class={label} for="format">Inject as</label>
-      <SelectRoot name="format" type="single" bind:value={linkFormat}>
-        <SelectTrigger class="w-full" id="format">
-          {formats.find(([value]) => value === linkFormat)?.[1] ?? "Connection URL"}
-        </SelectTrigger>
-        <SelectContent>
-          {#each formats as [value, formatLabel] (value)}
-            <SelectItem label={formatLabel} {value} />
-          {/each}
-        </SelectContent>
-      </SelectRoot>
-    </div>
-    <CheckBox
-      helperText={groupHint}
-      id="alsoGroup"
-      label="Also put them in the same stack"
-      name="alsoGroup"
-      bind:checked={alsoGroup}
-    />
+	<form
+		action="{actionBase}?/link"
+		class="space-y-4"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Couldn't link the services.",
+			loading: "Linking",
+			onSuccess: () => {
+				open = false;
+			},
+			success: (result) => {
+				const data = result as
+					| { consumer?: string; grouped?: boolean; linked?: string[] }
+					| undefined;
+				const keys = data?.linked ?? [];
+				const vars =
+					keys.length > 0
+						? `Added ${keys.join(", ")} to ${data?.consumer ?? "the service"}`
+						: "Linked";
+				return data?.grouped ? `${vars}, and grouped them.` : `${vars}.`;
+			},
+		})}
+	>
+		<input name="serviceId" type="hidden" value={service?.id ?? ""} />
+		<input name="targetId" type="hidden" value={linkTargetId} />
+		<ServicePicker
+			id="linkTarget"
+			services={linkCandidates}
+			stackId={service?.stackId ?? null}
+			{stacks}
+			bind:value={linkTargetId}
+		/>
+		<div>
+			<label class={label} for="format">Inject as</label>
+			<SelectRoot name="format" type="single" bind:value={linkFormat}>
+				<SelectTrigger class="w-full" id="format">
+					{formats.find(([value]) => value === linkFormat)?.[1] ??
+						"Connection URL"}
+				</SelectTrigger>
+				<SelectContent>
+					{#each formats as [value, formatLabel] (value)}
+						<SelectItem label={formatLabel} {value} />
+					{/each}
+				</SelectContent>
+			</SelectRoot>
+		</div>
+		<CheckBox
+			helperText={groupHint}
+			id="alsoGroup"
+			label="Also put them in the same stack"
+			name="alsoGroup"
+			bind:checked={alsoGroup}
+		/>
 
-    <div class="flex justify-end gap-2">
-      <Button disabled={!linkTargetId} type="submit">
-        <Link2 class="size-4" />
-        Link
-      </Button>
-    </div>
-  </form>
+		<div class="flex justify-end gap-2">
+			<Button disabled={!linkTargetId} type="submit">
+				<Link2 class="size-4" />
+				Link
+			</Button>
+		</div>
+	</form>
 </ResponsiveDialog>

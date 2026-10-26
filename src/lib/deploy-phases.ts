@@ -1,10 +1,5 @@
 export type DeployPhaseId =
-	| "config"
-	| "volumes"
-	| "image"
-	| "container"
-	| "network"
-	| "ready";
+	"config" | "volumes" | "image" | "container" | "network" | "ready";
 
 export interface DeployPhase {
 	id: DeployPhaseId;

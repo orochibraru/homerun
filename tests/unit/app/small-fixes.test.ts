@@ -7,13 +7,11 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { dashboardOrigin } = await import(
-	"../../../src/lib/server/canonical-origin"
-);
+const { dashboardOrigin } =
+	await import("../../../src/lib/server/canonical-origin");
 const { isInviteLive } = await import("../../../src/lib/dto/invitation-dto");
-const { updateServiceApiBody } = await import(
-	"../../../src/lib/server/validation/api"
-);
+const { updateServiceApiBody } =
+	await import("../../../src/lib/server/validation/api");
 const { serviceResponse } = await import("../../../src/lib/openapi/schemas");
 
 const originalOrigin = config.auth.origin;

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	BURST_MAX_HOLD_MS,
 	GROUP_WINDOW_MS,

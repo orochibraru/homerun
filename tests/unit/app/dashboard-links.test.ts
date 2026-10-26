@@ -7,9 +7,8 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { withDashboardOrigin } = await import(
-	"../../../src/lib/server/canonical-origin"
-);
+const { withDashboardOrigin } =
+	await import("../../../src/lib/server/canonical-origin");
 
 const originalOrigin = config.auth.origin;
 

@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { Logger } from "#lib/logger.js";
 import { listIconLibrary } from "#lib/server/icon-library.js";
@@ -13,7 +15,6 @@ import {
 	StackSettingsService,
 } from "#lib/services/stack-settings.service.js";
 import { descendantIds, stackPath } from "#lib/stack-tree.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Stacks");
 

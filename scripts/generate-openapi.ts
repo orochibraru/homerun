@@ -8,13 +8,6 @@ import { buildOpenApiDocument } from "../src/lib/openapi/build";
 // this app (no prerendered routes), so a `building`-gated branch in there
 // is dead code.
 //
-// Keys are sorted recursively before writing : biome.json's
-// `assist.actions.source.useSortedKeys` enforces alphabetical key order on
-// every JSON file in the repo, including this one, and this script now runs
-// automatically on every integration-test run (tests/integration/support/
-// setup.ts), not just a one-off `bun run build` — an unsorted write here would
-// leave the working tree lint-dirty after every test run, real friction this
-// replaces.
 function sortKeysDeep(value: unknown): unknown {
 	if (Array.isArray(value)) {
 		return value.map(sortKeysDeep);
@@ -32,13 +25,7 @@ function sortKeysDeep(value: unknown): unknown {
 const doc = buildOpenApiDocument("http://localhost:3000");
 await Bun.write("openapi.json", JSON.stringify(sortKeysDeep(doc), null, "\t"));
 
-// Key order alone isn't enough to satisfy biome's own JSON formatter (it
-// also collapses short arrays like `"enum": ["a", "b"]` onto one line,
-// a width-based heuristic not worth hand-reproducing here) : shelling out
-// to biome itself for a real formatting pass is what actually guarantees
-// `bun run lint` stays clean after this script runs, rather than
-// approximating its rules.
-Bun.spawnSync(["bunx", "biome", "check", "--write", "openapi.json"], {
+Bun.spawnSync(["bun", "fmt", "openapi.json"], {
 	stderr: "inherit",
 	stdout: "inherit",
 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import {
 	PERMISSION_AREAS,
 	PERMISSION_LEVELS,
@@ -10,6 +11,7 @@ import {
 	updateOauthProviderApiBody,
 	updateUserApiBody,
 } from "#lib/server/validation/identity-api.js";
+
 import { oidcAppRoutes } from "./oidc-apps";
 import type { ParamDef, ResponseDef, RouteDef } from "./registry";
 import { errorResponse } from "./schemas";

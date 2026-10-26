@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";

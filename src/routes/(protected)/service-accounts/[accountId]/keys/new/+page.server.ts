@@ -1,4 +1,5 @@
 import { error, fail } from "@sveltejs/kit";
+
 import { Logger } from "#lib/logger.js";
 import { API_KEY_EXPIRY_OPTIONS } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";

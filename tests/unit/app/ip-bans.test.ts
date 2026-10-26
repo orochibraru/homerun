@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	abuseReportEmail,
-	BANS_ROUTER_PRIORITY,
 	banExpiry,
 	bannableIp,
+	BANS_ROUTER_PRIORITY,
 	bansConfig,
-	CLOUDFLARE_RANGES,
 	clientIpFrom,
+	CLOUDFLARE_RANGES,
 	DEFAULT_IP_BAN_SETTINGS,
 	ipInCidr,
 	normalizeIp,

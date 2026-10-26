@@ -7,11 +7,11 @@ import {
 	workstationColumns,
 	workstationWallColumns,
 } from "#lib/server/validation/infrastructure-api.js";
+import { WorkstationService } from "#lib/services/workstation.service.js";
 import {
 	WorkstationSettingsError,
 	WorkstationSettingsService,
 } from "#lib/services/workstation/settings.js";
-import { WorkstationService } from "#lib/services/workstation.service.js";
 
 const logger = new Logger("Workstation");
 

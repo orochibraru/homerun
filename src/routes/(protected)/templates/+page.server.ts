@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
@@ -7,7 +9,6 @@ import { can } from "#lib/permissions.js";
 import { parseListQuery } from "#lib/server/list-query.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { quickDeployFromTemplate } from "#lib/services/template-links.js";
-import { resolve } from "$app/paths";
 
 async function withLinkedNames(templates: TemplateDTO[]) {
 	const links = await Promise.all(

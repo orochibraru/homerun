@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { gandi } from "../../../../src/lib/services/dns-providers/gandi";
 import { stubFetch } from "./stub-fetch";
 

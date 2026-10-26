@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight } from "@lucide/svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { goto } from "$app/navigation";
 	import { page as appPage } from "$app/state";
+	import { ChevronLeft, ChevronRight } from "@lucide/svelte";
+
+	import { Button } from "#lib/components/ui/button/index.js";
 
 	interface Props {
 		label?: string;
@@ -39,33 +40,33 @@
 </script>
 
 {#if total > perPage}
-  <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-    <p class="text-text-subtle tabular-nums text-xs">
-      {first}–{last} of {total}
-      {label}
-    </p>
-    <div class="flex items-center gap-2">
-      <Button
-        disabled={page <= 1}
-        onclick={() => goToPage(page - 1)}
-        size="sm"
-        variant="outline"
-      >
-        <ChevronLeft class="size-4" />
-        Previous
-      </Button>
-      <span class="text-text-muted tabular-nums text-xs">
-        Page {page} of {lastPage}
-      </span>
-      <Button
-        disabled={page >= lastPage}
-        onclick={() => goToPage(page + 1)}
-        size="sm"
-        variant="outline"
-      >
-        Next
-        <ChevronRight class="size-4" />
-      </Button>
-    </div>
-  </div>
+	<div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+		<p class="text-text-subtle tabular-nums text-xs">
+			{first}–{last} of {total}
+			{label}
+		</p>
+		<div class="flex items-center gap-2">
+			<Button
+				disabled={page <= 1}
+				onclick={() => goToPage(page - 1)}
+				size="sm"
+				variant="outline"
+			>
+				<ChevronLeft class="size-4" />
+				Previous
+			</Button>
+			<span class="text-text-muted tabular-nums text-xs">
+				Page {page} of {lastPage}
+			</span>
+			<Button
+				disabled={page >= lastPage}
+				onclick={() => goToPage(page + 1)}
+				size="sm"
+				variant="outline"
+			>
+				Next
+				<ChevronRight class="size-4" />
+			</Button>
+		</div>
+	</div>
 {/if}

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+
 import { SQL } from "bun";
+
 import { expectOk } from "./support/assert";
 import { docker, insertDestination } from "./support/backups";
 import { ServiceCleanup } from "./support/cleanup";
@@ -208,8 +210,7 @@ describe("restoring a backup from a service's Storage tab", () => {
 				params: { path: { serviceId: svc.id } },
 			});
 			const row = svcNow.data as
-				| { containerId?: string | null; currentStatus?: string }
-				| undefined;
+				{ containerId?: string | null; currentStatus?: string } | undefined;
 			return row?.currentStatus === "running" &&
 				row.containerId &&
 				row.containerId !== first.containerId
@@ -293,8 +294,7 @@ describe("restoring a backup from a service's Storage tab", () => {
 					params: { path: { serviceId: svc.id } },
 				});
 				const row = svcNow.data as
-					| { containerId?: string | null; currentStatus?: string }
-					| undefined;
+					{ containerId?: string | null; currentStatus?: string } | undefined;
 				return row?.currentStatus === "running" && row.containerId
 					? row.containerId
 					: null;

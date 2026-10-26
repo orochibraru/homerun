@@ -9,13 +9,7 @@ import * as versions from "#lib/iac/resources-versions.js";
 import { PERMISSION_AREAS, PERMISSION_LEVELS } from "#lib/permissions.js";
 
 export type IacKind =
-	| "bool"
-	| "int"
-	| "intMap"
-	| "objects"
-	| "string"
-	| "stringMap"
-	| "strings";
+	"bool" | "int" | "intMap" | "objects" | "string" | "stringMap" | "strings";
 
 export interface IacAttribute {
 	/** Sent on create only and never read back; changing it replaces the resource. */

@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
+
 import { PASSWORD_METHOD } from "#lib/auth-providers.js";
 import { config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
@@ -13,7 +15,6 @@ import {
 } from "#lib/server/canonical-origin.js";
 import { AdminService } from "#lib/services/admin.service.js";
 import { PASSKEY_SIGN_IN } from "#lib/sign-in-methods.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ request, url, locals }) => {
 	const hasUsers = await AdminService.hasAnyUser();

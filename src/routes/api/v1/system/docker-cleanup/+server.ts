@@ -2,8 +2,8 @@ import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { apiCaller, readApiBody } from "#lib/server/api-route.js";
 import { dockerCleanupApiBody } from "#lib/server/validation/operations-api.js";
-import { DockerService } from "#lib/services/docker.service.js";
 import { enqueueCleanup } from "#lib/services/docker-cleanup-queue.js";
+import { DockerService } from "#lib/services/docker.service.js";
 import { RevisionService } from "#lib/services/revision.service.js";
 
 export const GET = async ({ locals }) => {

@@ -1,7 +1,8 @@
 import type { JobDTO } from "#lib/dto/job-dto.js";
 import { Logger } from "#lib/logger.js";
-import type { DockerCleanupAction } from "./queue/payloads.ts";
+
 import { QueueService } from "./queue.service.ts";
+import type { DockerCleanupAction } from "./queue/payloads.ts";
 
 const logger = new Logger("DockerCleanup");
 

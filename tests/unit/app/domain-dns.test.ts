@@ -6,16 +6,13 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { DomainDnsService, recordFor } = await import(
-	"../../../src/lib/services/domain-dns.service"
-);
+const { DomainDnsService, recordFor } =
+	await import("../../../src/lib/services/domain-dns.service");
 const { DomainDTO } = await import("../../../src/lib/dto/domain-dto");
-const { DnsConnectionDTO } = await import(
-	"../../../src/lib/dto/dns-connection-dto"
-);
-const { DnsManagedRecordDTO } = await import(
-	"../../../src/lib/dto/dns-managed-record-dto"
-);
+const { DnsConnectionDTO } =
+	await import("../../../src/lib/dto/dns-connection-dto");
+const { DnsManagedRecordDTO } =
+	await import("../../../src/lib/dto/dns-managed-record-dto");
 
 import type {
 	DnsProviderClient,

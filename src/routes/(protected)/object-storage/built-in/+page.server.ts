@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { config } from "#lib/config.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { enqueueCoreServiceJob } from "#lib/services/core-service-queue.js";

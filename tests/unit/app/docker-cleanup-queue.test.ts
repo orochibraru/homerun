@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -8,12 +9,10 @@ mock.module("$app/env", () => ({
 }));
 
 const { Logger } = await import("../../../src/lib/logger");
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
-const { enqueueCleanup, queueCleanup } = await import(
-	"../../../src/lib/services/docker-cleanup-queue"
-);
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
+const { enqueueCleanup, queueCleanup } =
+	await import("../../../src/lib/services/docker-cleanup-queue");
 
 const enqueued: Record<string, unknown>[] = [];
 const logged: string[] = [];

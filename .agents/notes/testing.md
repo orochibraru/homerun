@@ -393,10 +393,9 @@ in the app did, and image blobs don't delta-compress. The commit step rebases
 onto the branch tip before pushing, since main can move during the ~20 minute
 capture. Run the refresh workflow by hand to update between releases.
 
-`docs/images/README.md` is written by the run itself and must come out already
-prettier-formatted (the spec hard-wraps its one prose line exactly where
-prettier would): a generated file that the pre-commit hook then reformats fights
-the next regeneration forever.
+`docs/images/README.md` is written by the run itself and is passed through
+`bun fmt` right after the run writes it: a generated file that the pre-commit
+hook then reformats fights the next regeneration forever.
 
 **A spec file that signs in as the bootstrap admin must sort after
 `onboarding.spec.ts`**, hence the `ui-` prefix on the ones that do: Playwright

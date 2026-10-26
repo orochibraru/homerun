@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { enhance, type SubmitFunction } from "$app/forms";
 	import { Loader2 } from "@lucide/svelte";
 	import type { Component, Snippet } from "svelte";
+
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import type { CleanupItem } from "#lib/services/docker.service.js";
-	import { enhance, type SubmitFunction } from "$app/forms";
+
 	import CleanupItemList from "./cleanup-item-list.svelte";
 
 	interface Props {
@@ -35,12 +37,8 @@
 </script>
 
 <section class="panel rounded-md">
-	<form
-		action="?/{action}"
-		method="POST"
-		use:enhance={submit}
-	>
-		<PanelHeader icon={icon} title={title}>
+	<form action="?/{action}" method="POST" use:enhance={submit}>
+		<PanelHeader {icon} {title}>
 			{#snippet trailing()}
 				<Button
 					disabled={pendingAction !== null}
@@ -58,7 +56,7 @@
 		</PanelHeader>
 		<div class="space-y-3 p-5">
 			{@render extraFields?.()}
-			<CleanupItemList dimTagged={dimTagged} items={items} />
+			<CleanupItemList {dimTagged} {items} />
 		</div>
 	</form>
 </section>

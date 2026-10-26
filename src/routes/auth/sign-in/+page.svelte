@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto, onNavigate, refreshAll } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import {
 		ArrowRight,
 		Fingerprint,
@@ -8,10 +10,11 @@
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { authClient, signIn, useSession } from "#lib/auth-client.js";
 	import {
-		type EmailSignIn,
 		emailOnlyStep,
+		type EmailSignIn,
 		NO_EMAIL_SIGN_IN,
 	} from "#lib/auth-providers.js";
 	import Alert from "#lib/components/alert.svelte";
@@ -25,8 +28,7 @@
 	import type { SignInProvider } from "#lib/services/account-setup.service.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
-	import { goto, onNavigate, refreshAll } from "$app/navigation";
-	import { resolve } from "$app/paths";
+
 	import EmailSignInForm from "./email-sign-in-form.svelte";
 	import SetupForm from "./setup-form.svelte";
 	import TwoFactorForm from "./two-factor-form.svelte";
@@ -325,100 +327,102 @@
 </script>
 
 {#snippet emailSummary()}
-    <div class="border-border flex items-center justify-between gap-2 rounded-md border px-3 py-2">
-        <span class="text-text truncate text-sm">{email}</span>
-        <Button disabled={loading} onclick={backToEmail} size="sm" variant="ghost">
-            Change
-        </Button>
-    </div>
+	<div
+		class="border-border flex items-center justify-between gap-2 rounded-md border px-3 py-2"
+	>
+		<span class="text-text truncate text-sm">{email}</span>
+		<Button disabled={loading} onclick={backToEmail} size="sm" variant="ghost">
+			Change
+		</Button>
+	</div>
 {/snippet}
 
 {#snippet orDivider()}
-    <div class="my-6 flex items-center gap-3">
-        <span class="bg-border h-px flex-1"></span>
-        <span class="eyebrow">or</span>
-        <span class="bg-border h-px flex-1"></span>
-    </div>
+	<div class="my-6 flex items-center gap-3">
+		<span class="bg-border h-px flex-1"></span>
+		<span class="eyebrow">or</span>
+		<span class="bg-border h-px flex-1"></span>
+	</div>
 {/snippet}
 
 {#snippet emailButtons()}
-    {#if stepEmail.emailOtp || offerLink}
-        <div class="space-y-2">
-            {#if stepEmail.emailOtp}
-                <Button
-                    class="h-10 w-full"
-                    disabled={loading}
-                    onclick={() => {
-                        step = "code";
-                    }}
-                    variant="outline"
-                >
-                    <Mail class="size-4" />
-                    Email me a code
-                </Button>
-            {/if}
-            {#if offerLink}
-                <Button
-                    class="h-10 w-full"
-                    disabled={loading}
-                    onclick={() => {
-                        step = "link";
-                    }}
-                    variant="outline"
-                >
-                    <Link class="size-4" />
-                    Email me a sign-in link
-                </Button>
-            {/if}
-        </div>
-    {/if}
+	{#if stepEmail.emailOtp || offerLink}
+		<div class="space-y-2">
+			{#if stepEmail.emailOtp}
+				<Button
+					class="h-10 w-full"
+					disabled={loading}
+					onclick={() => {
+						step = "code";
+					}}
+					variant="outline"
+				>
+					<Mail class="size-4" />
+					Email me a code
+				</Button>
+			{/if}
+			{#if offerLink}
+				<Button
+					class="h-10 w-full"
+					disabled={loading}
+					onclick={() => {
+						step = "link";
+					}}
+					variant="outline"
+				>
+					<Link class="size-4" />
+					Email me a sign-in link
+				</Button>
+			{/if}
+		</div>
+	{/if}
 {/snippet}
 
 {#snippet oauthButtons(providers: SignInProvider[])}
-    {#if data.canonicalSignInUrl}
-        <div
-            class="flex items-start gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400"
-        >
-            <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
-            <span>
-                You've reached this instance on a different address than its
-                configured Origin, and single sign-on has to start there so the
-                provider can hand you back.
-                <a class="font-medium underline" href={data.canonicalSignInUrl}>
-                    Sign in on the configured address
-                </a>
-                instead.
-            </span>
-        </div>
-    {:else}
-        <div class="space-y-2">
-            {#each providers as provider (provider.name)}
-                <Button
-                    class="h-10 w-full"
-                    disabled={loading}
-                    onclick={() => handleOauthSignIn(provider.name, provider.label)}
-                    variant="outline"
-                >
-                    Continue with {provider.label}
-                </Button>
-            {/each}
-        </div>
-    {/if}
+	{#if data.canonicalSignInUrl}
+		<div
+			class="flex items-start gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400"
+		>
+			<TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
+			<span>
+				You've reached this instance on a different address than its configured
+				Origin, and single sign-on has to start there so the provider can hand
+				you back.
+				<a class="font-medium underline" href={data.canonicalSignInUrl}>
+					Sign in on the configured address
+				</a>
+				instead.
+			</span>
+		</div>
+	{:else}
+		<div class="space-y-2">
+			{#each providers as provider (provider.name)}
+				<Button
+					class="h-10 w-full"
+					disabled={loading}
+					onclick={() => handleOauthSignIn(provider.name, provider.label)}
+					variant="outline"
+				>
+					Continue with {provider.label}
+				</Button>
+			{/each}
+		</div>
+	{/if}
 {/snippet}
 
 <AuthShell
-    branding={data.branding}
-    eyebrow={data.oauthSignIn
-        ? "Sign in with Homerun"
-        : data.appName
-          ? "Protected app"
-          : "Sign in"}
-    heading={data.appName ? `Sign in to ${data.appName}` : "Welcome back"}
-    subheading={data.oauthSignIn
-        ? `Use your Homerun account to sign in to ${data.appName ?? "this app"}.`
-        : data.appName
-          ? `${data.appName} is behind ${data.branding?.brandName ?? "Homerun"}'s login. Sign in to continue.`
-          : "Sign in to manage your services."}
+	branding={data.branding}
+	eyebrow={data.oauthSignIn
+		? "Sign in with Homerun"
+		: data.appName
+			? "Protected app"
+			: "Sign in"}
+	heading={data.appName ? `Sign in to ${data.appName}` : "Welcome back"}
+	subheading={data.oauthSignIn
+		? `Use your Homerun account to sign in to ${data.appName ?? "this app"}.`
+		: data.appName
+			? `${data.appName} is behind ${data.branding?.brandName ?? "Homerun"}'s login. Sign in to continue.`
+			: "Sign in to manage your services."}
 >
 	{#if signInError}
 		<Alert class="mb-4" title="Sign-in failed">{signInError}</Alert>
@@ -435,8 +439,8 @@
 				{#if data.oauthSignIn}
 					Taking you back to {destinationName}…
 				{:else}
-                    Taking you to {destinationName} in {redirectCountdown}
-                    {redirectCountdown === 1 ? "second" : "seconds"}…
+					Taking you to {destinationName} in {redirectCountdown}
+					{redirectCountdown === 1 ? "second" : "seconds"}…
 				{/if}
 			</p>
 		</div>
@@ -451,11 +455,11 @@
 		/>
 	{:else}
 		{#if step === "email"}
-            <form class="space-y-4" novalidate onsubmit={handleContinue}>
+			<form class="space-y-4" novalidate onsubmit={handleContinue}>
 				<div>
-                    <label class="text-text mb-1.5 block text-sm font-medium" for="email">
-                        Email
-                    </label>
+					<label class="text-text mb-1.5 block text-sm font-medium" for="email">
+						Email
+					</label>
 					<Input
 						autocomplete="email webauthn"
 						class="h-10"
@@ -467,13 +471,13 @@
 						bind:value={email}
 					/>
 				</div>
-                <Button class="h-10 w-full" disabled={loading || !email} type="submit">
+				<Button class="h-10 w-full" disabled={loading || !email} type="submit">
 					{#if loading}
-                        <Spinner />
-                        Checking…
+						<Spinner />
+						Checking…
 					{:else}
-                        Continue
-                        <ArrowRight class="size-4 opacity-70" />
+						Continue
+						<ArrowRight class="size-4 opacity-70" />
 					{/if}
 				</Button>
 			</form>
@@ -490,7 +494,7 @@
 				</Button>
 			{/if}
 		{:else if step === "password"}
-            <form class="space-y-4" novalidate onsubmit={handleSignIn}>
+			<form class="space-y-4" novalidate onsubmit={handleSignIn}>
 				{@render emailSummary()}
 				<PasswordField
 					autocomplete="current-password"
@@ -499,13 +503,17 @@
 					label="Password"
 					bind:value={password}
 				/>
-                <Button class="h-10 w-full" disabled={loading || !password} type="submit">
+				<Button
+					class="h-10 w-full"
+					disabled={loading || !password}
+					type="submit"
+				>
 					{#if loading}
-                        <Spinner />
-                        Signing in…
+						<Spinner />
+						Signing in…
 					{:else}
-                        Sign in
-                        <ArrowRight class="size-4 opacity-70" />
+						Sign in
+						<ArrowRight class="size-4 opacity-70" />
 					{/if}
 				</Button>
 			</form>
@@ -521,27 +529,27 @@
 		{:else if step === "sso"}
 			<div class="space-y-4">
 				{@render emailSummary()}
-                <p class="text-text-muted text-sm">
-                    This account signs in through single sign-on.
-                </p>
+				<p class="text-text-muted text-sm">
+					This account signs in through single sign-on.
+				</p>
 				{@render oauthButtons(stepProviders)}
 			</div>
 			{#if stepEmail.emailOtp || offerLink}
-                {@render orDivider()}
-                {@render emailButtons()}
+				{@render orDivider()}
+				{@render emailButtons()}
 			{/if}
 		{:else if step === "choose"}
 			<div class="space-y-4">
 				{@render emailSummary()}
-                <p class="text-text-muted text-sm">
-                    This account signs in by email. How should we send it?
-                </p>
+				<p class="text-text-muted text-sm">
+					This account signs in by email. How should we send it?
+				</p>
 				{@render emailButtons()}
 			</div>
 		{:else if step === "code" || step === "link"}
 			{#key step}
 				<EmailSignInForm
-					email={email}
+					{email}
 					mode={step}
 					onSignedIn={finishSignIn}
 					onTwoFactor={() => {
@@ -555,12 +563,12 @@
 			{/key}
 		{:else}
 			<SetupForm
-				email={email}
+				{email}
 				emailed={setupEmailed}
 				onEmailCode={stepEmail.emailOtp
 					? () => {
-						step = "code";
-					}
+							step = "code";
+						}
 					: undefined}
 				onSignedIn={finishSignIn}
 				successMessage={signedInToast("Your account is ready").success}

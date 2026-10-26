@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { config } from "#lib/config.js";
 import { WorkstationPresetDTO } from "#lib/dto/workstation-preset-dto.js";
 import { can } from "#lib/permissions.js";
@@ -11,7 +13,6 @@ import {
 	WorkstationSettingsError,
 	WorkstationSettingsService,
 } from "#lib/services/workstation/settings.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ locals, parent, url }) => {
 	const { user } = await parent();

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
+
 	import { cn } from "#lib/utils.js";
 
 	let {
@@ -20,7 +21,7 @@
 	data-inset={inset}
 	class={cn(
 		"gap-2 rounded-sm px-2 py-1.5 text-sm focus:bg-surface-2 focus:text-text not-data-[variant=destructive]:focus:**:text-text data-open:bg-surface-2 data-open:text-text [&_svg:not([class*='size-'])]:size-4 flex cursor-default items-center outline-hidden select-none data-inset:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-		className
+		className,
 	)}
 	{...restProps}
 >

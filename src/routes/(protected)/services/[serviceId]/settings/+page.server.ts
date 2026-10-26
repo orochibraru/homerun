@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
@@ -18,7 +20,6 @@ import {
 	ServiceSettingsError,
 	ServiceSettingsService,
 } from "#lib/services/service-settings.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("Services");
 

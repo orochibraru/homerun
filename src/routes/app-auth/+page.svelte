@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { refreshAll } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { LockKeyhole, ShieldX } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { signOut } from "#lib/auth-client.js";
 	import BrandLogo from "#lib/components/brand-logo.svelte";
 	import BrandMark from "#lib/components/brand-mark.svelte";
@@ -10,8 +13,6 @@
 	import { brandAccentStyle } from "#lib/error-pages.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
-	import { refreshAll } from "$app/navigation";
-	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -43,69 +44,69 @@
 </script>
 
 <div
-  class="flex min-h-screen flex-col items-center justify-center px-6 py-12"
-  style={brandAccentStyle(data.branding)}
+	class="flex min-h-screen flex-col items-center justify-center px-6 py-12"
+	style={brandAccentStyle(data.branding)}
 >
-  <div class="w-full max-w-md">
-    {#if data.branding}
-      <BrandLogo class="mb-8" branding={data.branding} size="lg" />
-    {/if}
-    <div class="panel overflow-hidden rounded-md">
-      <div
-        class="bg-surface-2 border-border flex items-center gap-3 border-b px-6 py-5"
-      >
-        <div
-          class="bg-accent/10 text-accent flex size-11 shrink-0 items-center justify-center rounded-md"
-        >
-          {#if data.denial}
-            <ShieldX class="size-5" />
-          {:else}
-            <LockKeyhole class="size-5" />
-          {/if}
-        </div>
-        <div class="min-w-0">
-          <p class="eyebrow">Protected app</p>
-          <h1 class="text-text mt-0.5 truncate text-lg font-semibold">
-            {data.appName}
-          </h1>
-        </div>
-      </div>
+	<div class="w-full max-w-md">
+		{#if data.branding}
+			<BrandLogo class="mb-8" branding={data.branding} size="lg" />
+		{/if}
+		<div class="panel overflow-hidden rounded-md">
+			<div
+				class="bg-surface-2 border-border flex items-center gap-3 border-b px-6 py-5"
+			>
+				<div
+					class="bg-accent/10 text-accent flex size-11 shrink-0 items-center justify-center rounded-md"
+				>
+					{#if data.denial}
+						<ShieldX class="size-5" />
+					{:else}
+						<LockKeyhole class="size-5" />
+					{/if}
+				</div>
+				<div class="min-w-0">
+					<p class="eyebrow">Protected app</p>
+					<h1 class="text-text mt-0.5 truncate text-lg font-semibold">
+						{data.appName}
+					</h1>
+				</div>
+			</div>
 
-      <div class="p-6">
-        {#if data.noMethods}
-          <p class="text-text-muted text-sm">
-            This app is gated, but no sign-in method has been enabled for it
-            yet, so nobody can be let through. An admin needs to pick one on the
-            service's Security tab.
-          </p>
-        {:else if data.denial}
-          <p class="text-text-muted mb-4 text-sm">{data.denial}</p>
-          <p class="text-text-subtle mb-5 text-xs">
-            Signed in as {data.signedInAs}
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <Button
-              disabled={loading}
-              onclick={handleSwitchAccount}
-              variant="outline"
-            >
-              Sign in as someone else
-            </Button>
-            <Button href={resolve("")} variant="ghost">
-              Back to {data.branding?.brandName ?? "Homerun"}
-            </Button>
-          </div>
-        {/if}
-      </div>
-    </div>
+			<div class="p-6">
+				{#if data.noMethods}
+					<p class="text-text-muted text-sm">
+						This app is gated, but no sign-in method has been enabled for it
+						yet, so nobody can be let through. An admin needs to pick one on the
+						service's Security tab.
+					</p>
+				{:else if data.denial}
+					<p class="text-text-muted mb-4 text-sm">{data.denial}</p>
+					<p class="text-text-subtle mb-5 text-xs">
+						Signed in as {data.signedInAs}
+					</p>
+					<div class="flex flex-wrap gap-2">
+						<Button
+							disabled={loading}
+							onclick={handleSwitchAccount}
+							variant="outline"
+						>
+							Sign in as someone else
+						</Button>
+						<Button href={resolve("")} variant="ghost">
+							Back to {data.branding?.brandName ?? "Homerun"}
+						</Button>
+					</div>
+				{/if}
+			</div>
+		</div>
 
-    {#if !data.branding}
-      <div class="mt-6 flex items-center justify-center gap-2 opacity-60">
-        <span class="text-text-subtle text-xs">gated by</span>
-        <BrandMark />
-      </div>
-    {:else if data.branding.poweredBy}
-      <PoweredBy class="mt-6" />
-    {/if}
-  </div>
+		{#if !data.branding}
+			<div class="mt-6 flex items-center justify-center gap-2 opacity-60">
+				<span class="text-text-subtle text-xs">gated by</span>
+				<BrandMark />
+			</div>
+		{:else if data.branding.poweredBy}
+			<PoweredBy class="mt-6" />
+		{/if}
+	</div>
 </div>

@@ -4,7 +4,9 @@
 		HTMLButtonAttributes,
 	} from "svelte/elements";
 	import { tv, type VariantProps } from "tailwind-variants";
+
 	import { cn, type WithElementRef } from "#lib/utils.js";
+
 	import Spinner from "../spinner/spinner.svelte";
 
 	export const buttonVariants = tv({
@@ -55,52 +57,52 @@
 </script>
 
 <script lang="ts">
-let {
-  class: className,
-  variant = "default",
-  size = "default",
-  ref = $bindable(null),
-  href,
-  type = "button",
-  disabled,
-  loading,
-  children,
-  ...restProps
-}: ButtonProps = $props();
+	let {
+		class: className,
+		variant = "default",
+		size = "default",
+		ref = $bindable(null),
+		href,
+		type = "button",
+		disabled,
+		loading,
+		children,
+		...restProps
+	}: ButtonProps = $props();
 </script>
 
 {#if href}
-  <a
-    aria-disabled={disabled}
-    class={cn(buttonVariants({ size, variant }), className)}
-    data-slot="button"
-    data-variant={variant}
-    href={disabled ? undefined : href}
-    role={disabled ? "link" : undefined}
-    tabindex={disabled ? -1 : undefined}
-    bind:this={ref}
-    {...restProps}
-  >
-    {#if loading}
-      <Spinner />
-    {:else}
-      {@render children?.()}
-    {/if}
-  </a>
+	<a
+		aria-disabled={disabled}
+		class={cn(buttonVariants({ size, variant }), className)}
+		data-slot="button"
+		data-variant={variant}
+		href={disabled ? undefined : href}
+		role={disabled ? "link" : undefined}
+		tabindex={disabled ? -1 : undefined}
+		bind:this={ref}
+		{...restProps}
+	>
+		{#if loading}
+			<Spinner />
+		{:else}
+			{@render children?.()}
+		{/if}
+	</a>
 {:else}
-  <button
-    class={cn(buttonVariants({ size, variant }), className)}
-    data-slot="button"
-    data-variant={variant}
-    {disabled}
-    {type}
-    bind:this={ref}
-    {...restProps}
-  >
-    {#if loading}
-      <Spinner />
-    {:else}
-      {@render children?.()}
-    {/if}
-  </button>
+	<button
+		class={cn(buttonVariants({ size, variant }), className)}
+		data-slot="button"
+		data-variant={variant}
+		{disabled}
+		{type}
+		bind:this={ref}
+		{...restProps}
+	>
+		{#if loading}
+			<Spinner />
+		{:else}
+			{@render children?.()}
+		{/if}
+	</button>
 {/if}

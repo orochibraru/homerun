@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { isDeployed, workloadId } from "#lib/service-state.js";
 
 describe("isDeployed", () => {

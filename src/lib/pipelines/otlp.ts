@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+
 import { PIPELINE_ATTRIBUTE, SERVICE_ID_ATTRIBUTE } from "#lib/tracing/otlp.js";
+
 import { pipelineServiceName } from "./providers.ts";
 import type { PipelineJob, PipelineProvider, PipelineStatus } from "./types.ts";
 

@@ -10,8 +10,8 @@
 </script>
 
 <DrawerPrimitive.Root
-  {shouldScaleBackground}
-  bind:activeSnapPoint
-  bind:open
-  {...restProps}
+	{shouldScaleBackground}
+	bind:activeSnapPoint
+	bind:open
+	{...restProps}
 />

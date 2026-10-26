@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import { render } from "@testing-library/svelte";
+
 import UpdateBlockers from "../../../src/lib/components/update-blockers.svelte";
 import {
 	isStaleJob,

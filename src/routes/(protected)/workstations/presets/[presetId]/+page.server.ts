@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { WorkstationPresetDTO } from "#lib/dto/workstation-preset-dto.js";
 import { Logger } from "#lib/logger.js";
 import { can } from "#lib/permissions.js";
@@ -11,7 +13,6 @@ import {
 	WorkstationSettingsError,
 	WorkstationSettingsService,
 } from "#lib/services/workstation/settings.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("WorkstationPreset");
 

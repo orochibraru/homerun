@@ -11,10 +11,11 @@ import {
 import {
 	describeReading,
 	type HostUsageInput,
+	readResources,
 	RESOURCE_LABELS,
 	type ResourceReading,
-	readResources,
 } from "#lib/resource-thresholds.js";
+
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import type { ChannelMessage } from "./notification-messages.ts";
 import { SystemStatsService } from "./system-stats.service.ts";
@@ -27,9 +28,7 @@ const FRESH_MS = 3 * 60 * 1000;
 export class CapacityError extends Error {}
 
 export type ResourceAlertEvent =
-	| "resource.critical"
-	| "resource.recovered"
-	| "resource.warning";
+	"resource.critical" | "resource.recovered" | "resource.warning";
 
 export interface ResourceAlert {
 	event: ResourceAlertEvent;

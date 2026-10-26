@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { gzipSync } from "node:zlib";
+
 import {
 	addMapping,
 	GenMapping,
@@ -13,35 +14,27 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { ErrorTrackingService, MAX_BODY_BYTES } = await import(
-	"../../../src/lib/services/error-tracking.service"
-);
-const { ErrorRetentionScheduler } = await import(
-	"../../../src/lib/services/cron/error-retention-scheduler"
-);
-const { ErrorProjectDTO } = await import(
-	"../../../src/lib/dto/error-project-dto"
-);
+const { ErrorTrackingService, MAX_BODY_BYTES } =
+	await import("../../../src/lib/services/error-tracking.service");
+const { ErrorRetentionScheduler } =
+	await import("../../../src/lib/services/cron/error-retention-scheduler");
+const { ErrorProjectDTO } =
+	await import("../../../src/lib/dto/error-project-dto");
 const { ErrorIssueDTO } = await import("../../../src/lib/dto/error-issue-dto");
 const { ErrorEventDTO } = await import("../../../src/lib/dto/error-event-dto");
-const { ErrorSourceMapDTO } = await import(
-	"../../../src/lib/dto/error-source-map-dto"
-);
+const { ErrorSourceMapDTO } =
+	await import("../../../src/lib/dto/error-source-map-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-const { NotificationDTO } = await import(
-	"../../../src/lib/dto/notification-dto"
-);
+const { NotificationDTO } =
+	await import("../../../src/lib/dto/notification-dto");
 const { DeploymentDTO } = await import("../../../src/lib/dto/deployment-dto");
 const { RepositoryDTO } = await import("../../../src/lib/dto/repository-dto");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
-const { NotificationChannelService } = await import(
-	"../../../src/lib/services/notification-channel.service"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
+const { NotificationChannelService } =
+	await import("../../../src/lib/services/notification-channel.service");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
 const { config } = await import("../../../src/lib/config");
 
 const restorers: { mockRestore: () => void }[] = [];

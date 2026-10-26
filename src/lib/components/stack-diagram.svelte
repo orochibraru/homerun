@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import {
 		FolderKanban,
 		Maximize,
@@ -8,6 +9,7 @@
 		Server,
 	} from "@lucide/svelte";
 	import { type Snippet, tick } from "svelte";
+
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
@@ -18,7 +20,6 @@
 	} from "#lib/service-graph.js";
 	import type { StackNode } from "#lib/stack-tree.js";
 	import type { ContainerStatus } from "#lib/types.js";
-	import { resolve } from "$app/paths";
 
 	interface Props {
 		deps: Record<string, string[]>;
@@ -239,13 +240,11 @@
 
 	/** Pans the canvas so an element that just took keyboard focus sits inside the visible area, undoing the browser's own scroll of the clipped viewport. */
 	function reveal(target: EventTarget | null) {
-		if (
-			!(
-				viewport &&
-				target instanceof HTMLElement &&
-				target.matches(":focus-visible")
-			)
-		) {
+		if (!(
+			viewport &&
+			target instanceof HTMLElement &&
+			target.matches(":focus-visible")
+		)) {
 			return;
 		}
 		viewport.scrollLeft = 0;
@@ -346,10 +345,10 @@
 			onkeydown={(event) => nudge(event, svc.id)}
 			onpointerdown={(event) => beginDrag(event, svc.id)}
 			style:transform={offsetOf(svc.id)}
-			onblur={() => focused = null}
-			onfocus={() => focused = svc.id}
-			onmouseenter={() => focused = svc.id}
-			onmouseleave={() => focused = null}
+			onblur={() => (focused = null)}
+			onfocus={() => (focused = svc.id)}
+			onmouseenter={() => (focused = svc.id)}
+			onmouseleave={() => (focused = null)}
 		>
 			<TemplateIcon
 				category={svc.category}
@@ -358,13 +357,13 @@
 				icon={svc.icon}
 			/>
 			<span class="min-w-0 flex-1">
-				<span
-					class="text-text block truncate text-sm font-medium"
-				>{svc.name}</span>
+				<span class="text-text block truncate text-sm font-medium"
+					>{svc.name}</span
+				>
 
-				<span
-					class="text-text-subtle block truncate font-mono text-[0.6875rem]"
-				>{svc.slug}</span>
+				<span class="text-text-subtle block truncate font-mono text-[0.6875rem]"
+					>{svc.slug}</span
+				>
 			</span>
 
 			<StatusBadge status={svc.currentStatus as ContainerStatus} />
@@ -378,121 +377,121 @@
 {/snippet}
 
 {#snippet layers(ids: string[])}
-  {#each dependencyLayers(ids, depMap) as row, i (i)}
-    <div class="flex flex-wrap justify-center gap-4">
-      {#each row as id (id)}
-        {@const svc = byId.get(id)}
-        {#if svc}
-          {@render card(svc)}
-        {/if}
-      {/each}
-    </div>
-  {/each}
+	{#each dependencyLayers(ids, depMap) as row, i (i)}
+		<div class="flex flex-wrap justify-center gap-4">
+			{#each row as id (id)}
+				{@const svc = byId.get(id)}
+				{#if svc}
+					{@render card(svc)}
+				{/if}
+			{/each}
+		</div>
+	{/each}
 {/snippet}
 
 {#snippet group(stack: StackNode, depth: number)}
-  {@const members = membersOf(stack.id)}
-  {@const children = childrenOf(stack.id)}
-  <section
-    class="border-border rounded-xl border p-4 {depth === 0
-      ? 'bg-transparent'
-      : 'bg-surface-2/40 cursor-grab'}"
-    aria-label={stack.name}
-    data-group={stack.id}
-    onpointerdown={depth > 0
-      ? (event) => beginDrag(event, `stack:${stack.id}`)
-      : undefined}
-    role="group"
-    style:transform={depth > 0 ? offsetOf(`stack:${stack.id}`) : undefined}
-  >
-    {#if depth > 0}
-      <a
-        class="eyebrow text-text-muted hover:text-text mb-3 inline-flex items-center gap-2"
-        aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
-        draggable="false"
-        href={resolve("/(protected)/stacks/[stackId]", { stackId: stack.id })}
-        onkeydown={(event) => nudge(event, `stack:${stack.id}`)}
-      >
-        <TemplateIcon
-          class="size-7 rounded-md"
-          fallback={FolderKanban}
-          icon={stack.icon ?? null}
-        />
-        {stack.name}
-      </a>
-    {/if}
-    <div class="space-y-10">
-      {#if members.length > 0}
-        {@render layers(members)}
-      {:else if children.length === 0}
-        <p class="text-text-subtle text-center text-xs">No services yet.</p>
-      {/if}
-      {#if children.length > 0}
-        <div class="flex flex-wrap items-start justify-center gap-6">
-          {#each children as child (child.id)}
-            {@render group(child, depth + 1)}
-          {/each}
-        </div>
-      {/if}
-    </div>
-  </section>
+	{@const members = membersOf(stack.id)}
+	{@const children = childrenOf(stack.id)}
+	<section
+		class="border-border rounded-xl border p-4 {depth === 0
+			? 'bg-transparent'
+			: 'bg-surface-2/40 cursor-grab'}"
+		aria-label={stack.name}
+		data-group={stack.id}
+		onpointerdown={depth > 0
+			? (event) => beginDrag(event, `stack:${stack.id}`)
+			: undefined}
+		role="group"
+		style:transform={depth > 0 ? offsetOf(`stack:${stack.id}`) : undefined}
+	>
+		{#if depth > 0}
+			<a
+				class="eyebrow text-text-muted hover:text-text mb-3 inline-flex items-center gap-2"
+				aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
+				draggable="false"
+				href={resolve("/(protected)/stacks/[stackId]", { stackId: stack.id })}
+				onkeydown={(event) => nudge(event, `stack:${stack.id}`)}
+			>
+				<TemplateIcon
+					class="size-7 rounded-md"
+					fallback={FolderKanban}
+					icon={stack.icon ?? null}
+				/>
+				{stack.name}
+			</a>
+		{/if}
+		<div class="space-y-10">
+			{#if members.length > 0}
+				{@render layers(members)}
+			{:else if children.length === 0}
+				<p class="text-text-subtle text-center text-xs">No services yet.</p>
+			{/if}
+			{#if children.length > 0}
+				<div class="flex flex-wrap items-start justify-center gap-6">
+					{#each children as child (child.id)}
+						{@render group(child, depth + 1)}
+					{/each}
+				</div>
+			{/if}
+		</div>
+	</section>
 {/snippet}
 
 <div class="mb-2 flex flex-wrap items-center justify-end gap-2">
-  <p class="text-text-subtle mr-auto hidden text-xs md:block">
-    Drag the background to pan, scroll to move around, Ctrl or ⌘ and scroll to
-    zoom. Drag a card or a substack to rearrange it, or focus it and press Alt
-    with the arrow keys (add Shift for bigger steps).
-  </p>
-  {#if Object.keys(offsets).length > 0}
-    <Button onclick={resetLayout} size="sm" variant="outline">
-      <RotateCcw class="size-4" />
-      Reset layout
-    </Button>
-  {/if}
-  <div class="flex items-center">
-    <Button
-      aria-label="Zoom out"
-      onclick={() => zoomBy(1 / 1.2)}
-      size="icon-sm"
-      variant="ghost"
-    >
-      <Minus class="size-4" />
-    </Button>
-    <span class="text-text-muted w-12 text-center text-xs tabular-nums">
-      {Math.round(view.zoom * 100)}%
-    </span>
-    <Button
-      aria-label="Zoom in"
-      onclick={() => zoomBy(1.2)}
-      size="icon-sm"
-      variant="ghost"
-    >
-      <Plus class="size-4" />
-    </Button>
-  </div>
-  <Button onclick={fit} size="sm" variant="outline">
-    <Maximize class="size-4" />
-    Fit
-  </Button>
+	<p class="text-text-subtle mr-auto hidden text-xs md:block">
+		Drag the background to pan, scroll to move around, Ctrl or ⌘ and scroll to
+		zoom. Drag a card or a substack to rearrange it, or focus it and press Alt
+		with the arrow keys (add Shift for bigger steps).
+	</p>
+	{#if Object.keys(offsets).length > 0}
+		<Button onclick={resetLayout} size="sm" variant="outline">
+			<RotateCcw class="size-4" />
+			Reset layout
+		</Button>
+	{/if}
+	<div class="flex items-center">
+		<Button
+			aria-label="Zoom out"
+			onclick={() => zoomBy(1 / 1.2)}
+			size="icon-sm"
+			variant="ghost"
+		>
+			<Minus class="size-4" />
+		</Button>
+		<span class="text-text-muted w-12 text-center text-xs tabular-nums">
+			{Math.round(view.zoom * 100)}%
+		</span>
+		<Button
+			aria-label="Zoom in"
+			onclick={() => zoomBy(1.2)}
+			size="icon-sm"
+			variant="ghost"
+		>
+			<Plus class="size-4" />
+		</Button>
+	</div>
+	<Button onclick={fit} size="sm" variant="outline">
+		<Maximize class="size-4" />
+		Fit
+	</Button>
 </div>
 
 <div
-  class="border-border bg-surface-2/20 relative h-[70vh] min-h-96 cursor-grab touch-none overflow-hidden rounded-xl border select-none"
-  onclickcapture={(event) => {
-    if (suppressClick) {
-      event.preventDefault();
-      event.stopPropagation();
-      suppressClick = false;
-    }
-  }}
-  onfocusin={(event) => {
-    const target = event.target;
-    requestAnimationFrame(() => reveal(target));
-  }}
-  onpointerdown={(event) => beginDrag(event, null)}
-  role="presentation"
-  bind:this={viewport}
+	class="border-border bg-surface-2/20 relative h-[70vh] min-h-96 cursor-grab touch-none overflow-hidden rounded-xl border select-none"
+	onclickcapture={(event) => {
+		if (suppressClick) {
+			event.preventDefault();
+			event.stopPropagation();
+			suppressClick = false;
+		}
+	}}
+	onfocusin={(event) => {
+		const target = event.target;
+		requestAnimationFrame(() => reveal(target));
+	}}
+	onpointerdown={(event) => beginDrag(event, null)}
+	role="presentation"
+	bind:this={viewport}
 >
 	<div
 		class="absolute top-0 left-0 w-full origin-top-left"
@@ -514,14 +513,15 @@
 					refX="5"
 					refY="3"
 					viewBox="0 0 6 6"
-				><path d="M0,0 L6,3 L0,6 z" fill="currentColor"></path></marker>
+					><path d="M0,0 L6,3 L0,6 z" fill="currentColor"></path></marker
+				>
 			</defs>
 			{#each edges as edge (edge.key)}
 				{@const lit = focused === edge.from || focused === edge.to}
 				<path
-          class="transition-opacity {lit ? 'text-accent' : ''} {focused && !lit
-            ? 'opacity-15'
-            : ''}"
+					class="transition-opacity {lit ? 'text-accent' : ''} {focused && !lit
+						? 'opacity-15'
+						: ''}"
 					d={edge.d}
 					fill="none"
 					marker-end="url(#stack-diagram-arrow)"
@@ -550,7 +550,7 @@
 								{@render card(svc)}
 								<span class="text-text-subtle text-[0.6875rem]">
 									{svc.stackId
-										? stackNames.get(svc.stackId) ?? "another stack"
+										? (stackNames.get(svc.stackId) ?? "another stack")
 										: "no stack"}
 								</span>
 							</div>

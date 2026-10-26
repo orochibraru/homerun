@@ -1,7 +1,8 @@
 import { and, asc, eq } from "drizzle-orm";
+
 import { AuditLogDTO, type NewAuditLogInput } from "#lib/dto/audit-log-dto.js";
 import { Logger } from "#lib/logger.js";
-import { type Permissions, parsePermissions } from "#lib/permissions.js";
+import { parsePermissions, type Permissions } from "#lib/permissions.js";
 import { db } from "#lib/server/db/lib.js";
 import {
 	apikey as apikeyTable,
@@ -13,6 +14,7 @@ import {
 	SERVICE_ACCOUNT,
 	SERVICE_ACCOUNT_EMAIL_DOMAIN,
 } from "#lib/user-types.js";
+
 import { isBanned } from "./app-access.service.ts";
 import { auth } from "./auth.ts";
 import { UserService } from "./user.service.ts";

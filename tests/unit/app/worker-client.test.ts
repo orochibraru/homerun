@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+
 import type { WorkerRequestError as WorkerRequestErrorType } from "../../../src/lib/server/worker-client";
 
-const { WorkerClient, WorkerRequestError, isNotFound } = await import(
-	"../../../src/lib/server/worker-client"
-);
+const { WorkerClient, WorkerRequestError, isNotFound } =
+	await import("../../../src/lib/server/worker-client");
 
 interface Recorded {
 	body: string | null;

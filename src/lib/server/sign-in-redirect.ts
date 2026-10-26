@@ -1,5 +1,5 @@
-import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { redirect } from "@sveltejs/kit";
 
 /**
  * Sends a signed-out request to the sign-in page.

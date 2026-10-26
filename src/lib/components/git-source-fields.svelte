@@ -61,164 +61,168 @@
 	}
 </script>
 
-<input name="gitProviderId" type="hidden" value={manualUrl ? "" : gitProviderId}>
-<input name="gitRepo" type="hidden" value={manualUrl ? "" : gitRepo}>
+<input
+	name="gitProviderId"
+	type="hidden"
+	value={manualUrl ? "" : gitProviderId}
+/>
+<input name="gitRepo" type="hidden" value={manualUrl ? "" : gitRepo} />
 
 {#if manualUrl}
-  <div>
-    <label class={labelClass} for="gitUrl">
-      Repository URL <span class="text-red-500">*</span>
-    </label>
-    <Input
-      id="gitUrl"
-      name="gitUrl"
-      placeholder="https://github.com/acme/api.git"
-      required
-      type="text"
-      bind:value={gitUrl}
-    />
-    <p class="text-text-subtle mt-1.5 text-xs">
-      Any git-clone-able HTTPS URL. Private repos on a connected git provider
-      are cloned with that account's access; anything else needs a token in the
-      URL (<code>https://TOKEN@host/...</code>).
-      {#if providers.length > 0}
-        <button
-          class="text-accent font-medium hover:underline"
-          onclick={() => {
-            manualUrl = false;
-          }}
-          type="button"
-        >
-          Pick from a connected account instead
-        </button>
-      {/if}
-    </p>
-    {#if errors?.gitUrl}
-      <p class={errorClass}>{errors.gitUrl[0]}</p>
-    {/if}
-  </div>
-  <div>
-    <label class={labelClass} for="gitRef">Branch, tag or commit</label>
-    <Input
-      id="gitRef"
-      name="gitRef"
-      placeholder="main"
-      type="text"
-      bind:value={gitRef}
-    />
-    <p class="text-text-subtle mt-1.5 text-xs">
-      A full 40-character commit SHA pins the service to that commit.
-    </p>
-  </div>
+	<div>
+		<label class={labelClass} for="gitUrl">
+			Repository URL <span class="text-red-500">*</span>
+		</label>
+		<Input
+			id="gitUrl"
+			name="gitUrl"
+			placeholder="https://github.com/acme/api.git"
+			required
+			type="text"
+			bind:value={gitUrl}
+		/>
+		<p class="text-text-subtle mt-1.5 text-xs">
+			Any git-clone-able HTTPS URL. Private repos on a connected git provider
+			are cloned with that account's access; anything else needs a token in the
+			URL (<code>https://TOKEN@host/...</code>).
+			{#if providers.length > 0}
+				<button
+					class="text-accent font-medium hover:underline"
+					onclick={() => {
+						manualUrl = false;
+					}}
+					type="button"
+				>
+					Pick from a connected account instead
+				</button>
+			{/if}
+		</p>
+		{#if errors?.gitUrl}
+			<p class={errorClass}>{errors.gitUrl[0]}</p>
+		{/if}
+	</div>
+	<div>
+		<label class={labelClass} for="gitRef">Branch, tag or commit</label>
+		<Input
+			id="gitRef"
+			name="gitRef"
+			placeholder="main"
+			type="text"
+			bind:value={gitRef}
+		/>
+		<p class="text-text-subtle mt-1.5 text-xs">
+			A full 40-character commit SHA pins the service to that commit.
+		</p>
+	</div>
 {:else}
-  <input name="gitUrl" type="hidden" value={gitUrl}>
-  <GitRepoPicker
-    initialProviderId={gitProviderId || null}
-    initialRepo={gitRepo || null}
-    {labelClass}
-    onpick={(repo, providerId) => {
-      gitProviderId = providerId;
-      gitRepo = repo.fullName;
-      gitUrl = repo.cloneUrl;
-      gitRef = repo.defaultBranch;
-      autoDeployOnPush = true;
-    }}
-    {providers}
-  />
-  {#if errors?.gitUrl}
-    <p class={errorClass}>Pick a repository.</p>
-  {/if}
+	<input name="gitUrl" type="hidden" value={gitUrl} />
+	<GitRepoPicker
+		initialProviderId={gitProviderId || null}
+		initialRepo={gitRepo || null}
+		{labelClass}
+		onpick={(repo, providerId) => {
+			gitProviderId = providerId;
+			gitRepo = repo.fullName;
+			gitUrl = repo.cloneUrl;
+			gitRef = repo.defaultBranch;
+			autoDeployOnPush = true;
+		}}
+		{providers}
+	/>
+	{#if errors?.gitUrl}
+		<p class={errorClass}>Pick a repository.</p>
+	{/if}
 
-  {#if picked && customRef}
-    <div>
-      <label class={labelClass} for="gitRef">Tag or commit</label>
-      <Input
-        id="gitRef"
-        name="gitRef"
-        placeholder="v1.2.0 or a full commit SHA"
-        type="text"
-        bind:value={gitRef}
-      />
-      <p class="text-text-subtle mt-1.5 text-xs">
-        <button
-          class="text-accent font-medium hover:underline"
-          onclick={() => {
-            customRef = false;
-          }}
-          type="button"
-        >
-          Pick a branch instead
-        </button>
-      </p>
-    </div>
-  {:else if picked}
-    <div>
-      <label class={labelClass} for="gitRef">Branch</label>
-      {#await branchesPromise}
-        <p class="text-text-muted flex items-center gap-2 text-xs">
-          <Spinner />
-          Listing branches…
-        </p>
-        <input name="gitRef" type="hidden" value={gitRef}>
-      {:then branches}
-        <Select.Root name="gitRef" type="single" bind:value={gitRef}>
-          <Select.Trigger class="w-full" id="gitRef">{gitRef}</Select.Trigger>
-          <Select.Content>
-            {#if !branches?.includes(gitRef)}
-              <Select.Item label={gitRef} value={gitRef} />
-            {/if}
-            {#each branches ?? [] as branch (branch)}
-              <Select.Item label={branch} value={branch} />
-            {/each}
-          </Select.Content>
-        </Select.Root>
-      {:catch}
-        <Input
-          id="gitRef"
-          name="gitRef"
-          placeholder="main"
-          type="text"
-          bind:value={gitRef}
-        />
-        <p class="mt-1.5 text-xs text-amber-600">
-          Couldn't list branches, type the branch name instead.
-        </p>
-      {/await}
-      <p class="text-text-subtle mt-1.5 text-xs">
-        <button
-          class="text-accent font-medium hover:underline"
-          onclick={() => {
-            customRef = true;
-          }}
-          type="button"
-        >
-          Use a tag or commit instead
-        </button>
-      </p>
-    </div>
-  {:else}
-    <input name="gitRef" type="hidden" value={gitRef}>
-  {/if}
+	{#if picked && customRef}
+		<div>
+			<label class={labelClass} for="gitRef">Tag or commit</label>
+			<Input
+				id="gitRef"
+				name="gitRef"
+				placeholder="v1.2.0 or a full commit SHA"
+				type="text"
+				bind:value={gitRef}
+			/>
+			<p class="text-text-subtle mt-1.5 text-xs">
+				<button
+					class="text-accent font-medium hover:underline"
+					onclick={() => {
+						customRef = false;
+					}}
+					type="button"
+				>
+					Pick a branch instead
+				</button>
+			</p>
+		</div>
+	{:else if picked}
+		<div>
+			<label class={labelClass} for="gitRef">Branch</label>
+			{#await branchesPromise}
+				<p class="text-text-muted flex items-center gap-2 text-xs">
+					<Spinner />
+					Listing branches…
+				</p>
+				<input name="gitRef" type="hidden" value={gitRef} />
+			{:then branches}
+				<Select.Root name="gitRef" type="single" bind:value={gitRef}>
+					<Select.Trigger class="w-full" id="gitRef">{gitRef}</Select.Trigger>
+					<Select.Content>
+						{#if !branches?.includes(gitRef)}
+							<Select.Item label={gitRef} value={gitRef} />
+						{/if}
+						{#each branches ?? [] as branch (branch)}
+							<Select.Item label={branch} value={branch} />
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			{:catch}
+				<Input
+					id="gitRef"
+					name="gitRef"
+					placeholder="main"
+					type="text"
+					bind:value={gitRef}
+				/>
+				<p class="mt-1.5 text-xs text-amber-600">
+					Couldn't list branches, type the branch name instead.
+				</p>
+			{/await}
+			<p class="text-text-subtle mt-1.5 text-xs">
+				<button
+					class="text-accent font-medium hover:underline"
+					onclick={() => {
+						customRef = true;
+					}}
+					type="button"
+				>
+					Use a tag or commit instead
+				</button>
+			</p>
+		</div>
+	{:else}
+		<input name="gitRef" type="hidden" value={gitRef} />
+	{/if}
 
-  <p class="text-text-subtle text-xs">
-    <button
-      class="text-accent font-medium hover:underline"
-      onclick={useManualUrl}
-      type="button"
-    >
-      Use a clone URL instead
-    </button>
-  </p>
+	<p class="text-text-subtle text-xs">
+		<button
+			class="text-accent font-medium hover:underline"
+			onclick={useManualUrl}
+			type="button"
+		>
+			Use a clone URL instead
+		</button>
+	</p>
 {/if}
 
 <CheckBox
-  helperText={pinnedToCommit
-  ? "The service is pinned to a commit, so pushes never match it. Pick a branch to deploy on push."
-  : picked
-    ? `Homerun adds a webhook to the repo on ${pickedProviderName}, and every push to this branch deploys the service.`
-    : "Every push to this branch deploys the service. Homerun can't add the webhook to a pasted URL itself, so it gives you the URL and secret to add in the repo's settings."}
-  id="autoDeployOnPush"
-  label="Deploy on push"
-  name="autoDeployOnPush"
-  bind:checked={autoDeployOnPush}
+	helperText={pinnedToCommit
+		? "The service is pinned to a commit, so pushes never match it. Pick a branch to deploy on push."
+		: picked
+			? `Homerun adds a webhook to the repo on ${pickedProviderName}, and every push to this branch deploys the service.`
+			: "Every push to this branch deploys the service. Homerun can't add the webhook to a pasted URL itself, so it gives you the URL and secret to add in the repo's settings."}
+	id="autoDeployOnPush"
+	label="Deploy on push"
+	name="autoDeployOnPush"
+	bind:checked={autoDeployOnPush}
 />

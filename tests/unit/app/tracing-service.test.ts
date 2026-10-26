@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { gzipSync } from "node:zlib";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -9,20 +10,16 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { TraceSpanDTO } = await import("../../../src/lib/dto/trace-span-dto");
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { otlpIngestToken, pipelineSpanToken } = await import(
-	"../../../src/lib/tracing/ingest-token"
-);
-const { TracingService, MAX_OTLP_BODY_BYTES } = await import(
-	"../../../src/lib/services/tracing.service"
-);
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { otlpIngestToken, pipelineSpanToken } =
+	await import("../../../src/lib/tracing/ingest-token");
+const { TracingService, MAX_OTLP_BODY_BYTES } =
+	await import("../../../src/lib/services/tracing.service");
 
 const TRACE = "5b8efff798038103d269b633813fc60c";
 

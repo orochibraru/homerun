@@ -3,6 +3,7 @@ import {
 	type SMTPSentMessageInfo,
 	type Transporter,
 } from "nodemailer";
+
 import { config, isSmtpEnabled } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
 

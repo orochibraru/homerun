@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { updateComputeSchema } from "../../../src/lib/server/validation/service";
 import {
 	formatNodeLabels,
@@ -130,9 +131,8 @@ describe("updateComputeSchema placement", () => {
 
 describe("updateServiceApiBody swarmPlacement", () => {
 	test("normalizes lines and defaults the rest", async () => {
-		const { updateServiceApiBody } = await import(
-			"../../../src/lib/server/validation/api"
-		);
+		const { updateServiceApiBody } =
+			await import("../../../src/lib/server/validation/api");
 		const result = updateServiceApiBody.parse({
 			swarmPlacement: { constraints: ["node.labels.env == staging"] },
 		});

@@ -6,18 +6,14 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { GET } = await import(
-	"../../../src/routes/public/[storeId]/[bucket]/[...key]/+server"
-);
-const { PublicBucketDTO } = await import(
-	"../../../src/lib/dto/public-bucket-dto"
-);
-const { ObjectStoreDTO } = await import(
-	"../../../src/lib/dto/object-store-dto"
-);
-const { ObjectStorageService } = await import(
-	"../../../src/lib/services/object-storage.service"
-);
+const { GET } =
+	await import("../../../src/routes/public/[storeId]/[bucket]/[...key]/+server");
+const { PublicBucketDTO } =
+	await import("../../../src/lib/dto/public-bucket-dto");
+const { ObjectStoreDTO } =
+	await import("../../../src/lib/dto/object-store-dto");
+const { ObjectStorageService } =
+	await import("../../../src/lib/services/object-storage.service");
 
 type Store = NonNullable<Awaited<ReturnType<typeof ObjectStoreDTO.get>>>;
 type Client = Awaited<ReturnType<typeof ObjectStorageService.client>>;

@@ -3,8 +3,8 @@ import { manifestFromRequest } from "#lib/server/manifest.js";
 import { DeploymentService } from "#lib/services/deploy.service.js";
 import {
 	ManifestError,
-	ManifestService,
 	manifestScopeFor,
+	ManifestService,
 } from "#lib/services/manifest.service.js";
 
 export const PUT = async ({ params, request, locals, url }) => {

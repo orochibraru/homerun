@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { Globe, KeyRound, Waypoints } from "@lucide/svelte";
-	import { onMount } from "svelte";
-	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
-	import { title } from "#lib/store/title.js";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import { Globe, KeyRound, Waypoints } from "@lucide/svelte";
+	import { onMount } from "svelte";
+
+	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
+	import { title } from "#lib/store/title.js";
 
 	const { children } = $props();
 
@@ -43,14 +44,16 @@
 
 <div class="p-5 md:p-6">
 	<div class="mb-6">
-    <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">DNS</h1>
+		<h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
+			DNS
+		</h1>
 		<p class="text-text-muted mt-1 text-sm">
-      Your domains and the DNS providers they live at. A service's hostname
-      under a managed domain gets its record created and removed with it.
+			Your domains and the DNS providers they live at. A service's hostname
+			under a managed domain gets its record created and removed with it.
 		</p>
 	</div>
 
-	<TabNav active={activeTabId} tabs={tabs}>
-	  {@render children()}
+	<TabNav active={activeTabId} {tabs}>
+		{@render children()}
 	</TabNav>
 </div>

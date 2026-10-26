@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+
 import { DEFAULT_PER_PAGE } from "#lib/list-sorts.js";
 import { db } from "#lib/server/db/lib.js";
 import {
@@ -12,6 +13,7 @@ import {
 } from "#lib/surfaces.js";
 import type { TabLayout } from "#lib/tab-layout.js";
 import type { UiMode } from "#lib/ui-mode.js";
+
 import { BaseDTO } from "./base-dto";
 
 export type ThemePreference = "light" | "dark" | "system";

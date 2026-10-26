@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { azureDns } from "../../../../src/lib/services/dns-providers/azure-dns";
 import { type StubbedCall, stubFetch } from "./stub-fetch";
 

@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+
 import { ServiceAccountService } from "#lib/services/service-account.service.js";
 
 export const load = async ({ params }) => {

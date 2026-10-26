@@ -1,15 +1,17 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
 import { config } from "#lib/config.js";
 import { RedirectDTO } from "#lib/dto/redirect-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
-	REDIRECTS_FILE,
 	type RedirectRule,
+	REDIRECTS_FILE,
 	redirectsConfig,
 	splitSource,
 } from "#lib/redirects.js";
+
 import { deleteDns, syncDns } from "./dns.service.ts";
 import { certResolverFor } from "./docker/cert-resolver.ts";
 

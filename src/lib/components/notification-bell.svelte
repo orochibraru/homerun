@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { Bell } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import {
 		currentPushSubscription,
 		tabNotificationsEnabled,
@@ -12,8 +15,6 @@
 		markNotificationRead,
 		type NotificationFeedItem,
 	} from "#lib/remote/notifications.remote.js";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
 
 	const POLL_MS = 30_000;
 
@@ -69,13 +70,17 @@
 	}
 </script>
 
-<a aria-label="Notifications" class="{headerControlClass} relative w-9 sm:w-8" href={resolve("notifications")}>
-  <Bell class="size-3.5" />
-  {#if unreadCount > 0}
-    <span
-      class="bg-accent text-bg pointer-events-none absolute top-0.5 right-0.5 flex size-3.5 items-center justify-center rounded-full text-[0.6rem] font-bold"
-    >
-      {unreadCount > 9 ? "9+" : unreadCount}
-    </span>
-  {/if}
+<a
+	aria-label="Notifications"
+	class="{headerControlClass} relative w-9 sm:w-8"
+	href={resolve("notifications")}
+>
+	<Bell class="size-3.5" />
+	{#if unreadCount > 0}
+		<span
+			class="bg-accent text-bg pointer-events-none absolute top-0.5 right-0.5 flex size-3.5 items-center justify-center rounded-full text-[0.6rem] font-bold"
+		>
+			{unreadCount > 9 ? "9+" : unreadCount}
+		</span>
+	{/if}
 </a>

@@ -5,6 +5,7 @@ import {
 } from "@modelcontextprotocol/server";
 import type { RequestEvent } from "@sveltejs/kit";
 import { z } from "zod";
+
 import { config } from "#lib/config.js";
 import { MCP_PATH, mcpAllowed } from "#lib/oidc-provider.js";
 import { APP_VERSION } from "#lib/server/app-version.js";

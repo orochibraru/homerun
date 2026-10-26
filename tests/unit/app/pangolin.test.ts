@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -20,19 +21,15 @@ const settings = {
 
 let detectedTargetHost = "homerun-traefik-1";
 
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 
-const { PangolinService } = await import(
-	"../../../src/lib/services/pangolin.service"
-);
-const { matchPangolinDomain, targetScheme } = await import(
-	"../../../src/lib/services/pangolin/domains"
-);
+const { PangolinService } =
+	await import("../../../src/lib/services/pangolin.service");
+const { matchPangolinDomain, targetScheme } =
+	await import("../../../src/lib/services/pangolin/domains");
 
 const BASE_URL = "https://api.pangolin.test/v1";
 

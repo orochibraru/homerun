@@ -12,19 +12,19 @@
 </script>
 
 {#if !branding}
-  <BrandMark class={className} {size} />
+	<BrandMark class={className} {size} />
 {:else if branding.logoUrl}
-  <img
-    class="w-auto {size === 'lg' ? 'h-8' : 'h-6'} {className}"
-    alt={branding.brandName}
-    src={branding.logoUrl}
-  />
+	<img
+		class="w-auto {size === 'lg' ? 'h-8' : 'h-6'} {className}"
+		alt={branding.brandName}
+		src={branding.logoUrl}
+	/>
 {:else}
-  <span
-    class="text-text font-semibold tracking-tight {size === 'lg'
-      ? 'text-lg'
-      : 'text-[0.95rem]'} {className}"
-  >
-    {branding.brandName}
-  </span>
+	<span
+		class="text-text font-semibold tracking-tight {size === 'lg'
+			? 'text-lg'
+			: 'text-[0.95rem]'} {className}"
+	>
+		{branding.brandName}
+	</span>
 {/if}

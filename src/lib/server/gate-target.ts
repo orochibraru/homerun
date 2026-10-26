@@ -1,8 +1,8 @@
 import type { GateTarget } from "#lib/server/app-gate.js";
 import { gatedService } from "#lib/server/gated-service-cache.js";
 import {
-	WorkstationSignInService,
 	workstationIdOf,
+	WorkstationSignInService,
 } from "#lib/services/workstation/sign-in.js";
 
 /**

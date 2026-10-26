@@ -1,14 +1,15 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
 	import { FolderKanban } from "@lucide/svelte";
+
 	import { Button } from "#lib/components/ui/button/index.js";
 	import {
+		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
-		Select as SelectRoot,
 		SelectTrigger,
 	} from "#lib/components/ui/select/index.js";
 	import { enhanceToast } from "#lib/toast.js";
-	import { enhance } from "$app/forms";
 
 	interface Props {
 		stackId: string | null;
@@ -24,40 +25,44 @@
 </script>
 
 <section class="panel rounded-md">
-  <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-    <div class="flex items-center gap-3">
-      <div class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
-        <FolderKanban class="size-4" />
-      </div>
-      <div>
-        <p class="text-text text-sm font-medium">Stack</p>
-        <p class="text-text-muted text-xs">
-          Move this service into a different stack, or ungroup it.
-        </p>
-      </div>
-    </div>
-    <form
-      action="?/moveStack"
-      class="flex w-full items-center gap-2 sm:w-75"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't move the service.",
-        loading: "Moving the service",
-        success: "Moved.",
-      })}
-    >
-      <SelectRoot name="stackId" type="single" bind:value={stackId}>
-        <SelectTrigger class="w-full">
-          {stackLabel}
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem label="Ungrouped" value="" />
-          {#each stacks as stack (stack.id)}
-            <SelectItem label={stack.name} value={stack.id} />
-          {/each}
-        </SelectContent>
-      </SelectRoot>
-      <Button class="shrink-0" type="submit" variant="outline">Move</Button>
-    </form>
-  </div>
+	<div
+		class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
+	>
+		<div class="flex items-center gap-3">
+			<div
+				class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
+			>
+				<FolderKanban class="size-4" />
+			</div>
+			<div>
+				<p class="text-text text-sm font-medium">Stack</p>
+				<p class="text-text-muted text-xs">
+					Move this service into a different stack, or ungroup it.
+				</p>
+			</div>
+		</div>
+		<form
+			action="?/moveStack"
+			class="flex w-full items-center gap-2 sm:w-75"
+			method="POST"
+			use:enhance={enhanceToast({
+				error: "Couldn't move the service.",
+				loading: "Moving the service",
+				success: "Moved.",
+			})}
+		>
+			<SelectRoot name="stackId" type="single" bind:value={stackId}>
+				<SelectTrigger class="w-full">
+					{stackLabel}
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem label="Ungrouped" value="" />
+					{#each stacks as stack (stack.id)}
+						<SelectItem label={stack.name} value={stack.id} />
+					{/each}
+				</SelectContent>
+			</SelectRoot>
+			<Button class="shrink-0" type="submit" variant="outline">Move</Button>
+		</form>
+	</div>
 </section>

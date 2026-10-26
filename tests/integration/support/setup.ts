@@ -48,6 +48,7 @@
  */
 import { afterAll, beforeAll } from "bun:test";
 import process from "node:process";
+
 import { config as appConfig } from "../../../src/lib/config";
 import { bootstrapAdmin } from "./bootstrap";
 import { ciTimeout, dumpDockerDiagnostics, stepLog } from "./ci";

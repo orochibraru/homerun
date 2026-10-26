@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { can } from "#lib/permissions.js";
 import { connectedGitProviders } from "#lib/server/git-connections.js";
 import { loginWallOptions } from "#lib/server/login-wall-options.js";
@@ -9,7 +11,6 @@ import {
 	WorkstationSettingsError,
 	WorkstationSettingsService,
 } from "#lib/services/workstation/settings.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ locals, parent }) => {
 	const { user } = await parent();

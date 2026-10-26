@@ -11,10 +11,11 @@ import {
 	previousRevision,
 	type ReadinessSample,
 	revisionRoot,
-	type WorkloadHealthSample,
 	withReadiness,
+	type WorkloadHealthSample,
 } from "#lib/revisions.js";
 import type { Deployment } from "#lib/server/db/schema.js";
+
 import { DockerService } from "./docker.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { revisionHealthMessage } from "./notification-messages.ts";

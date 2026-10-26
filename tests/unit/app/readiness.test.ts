@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import process from "node:process";
+
 import {
 	listeningHealthcheck,
 	listeningScript,

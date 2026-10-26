@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { config, isSmtpEnabled } from "#lib/config.js";
 import { InvitationDTO } from "#lib/dto/invitation-dto.js";
 import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";

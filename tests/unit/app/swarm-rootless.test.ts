@@ -6,9 +6,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { isRootlessDaemon } = await import(
-	"../../../src/lib/services/docker/swarm"
-);
+const { isRootlessDaemon } =
+	await import("../../../src/lib/services/docker/swarm");
 
 describe("isRootlessDaemon", () => {
 	test("spots the rootless marker a rootless daemon reports", () => {

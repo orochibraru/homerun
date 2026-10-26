@@ -9,8 +9,8 @@
 </script>
 
 <DialogPrimitive.Trigger
-  data-slot="dialog-trigger"
-  {type}
-  bind:ref
-  {...restProps}
+	data-slot="dialog-trigger"
+	{type}
+	bind:ref
+	{...restProps}
 />

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+
 import { hetzner } from "../../../../src/lib/services/dns-providers/hetzner";
 import { stubFetch } from "./stub-fetch";
 

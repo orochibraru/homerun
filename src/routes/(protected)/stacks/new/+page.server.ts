@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import {
@@ -6,7 +8,6 @@ import {
 	StackSettingsService,
 } from "#lib/services/stack-settings.service.js";
 import { stackPath } from "#lib/stack-tree.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ parent, url }) => {
 	await parent();

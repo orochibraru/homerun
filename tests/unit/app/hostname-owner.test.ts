@@ -15,17 +15,15 @@ mock.module("$app/env", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { InstanceSettingsDTO } = await import(
-	"../../../src/lib/dto/instance-settings-dto"
-);
+const { InstanceSettingsDTO } =
+	await import("../../../src/lib/dto/instance-settings-dto");
 const { RedirectDTO } = await import("../../../src/lib/dto/redirect-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
-const { coreHosts, hostnameOwner, serviceDomainConflicts } = await import(
-	"../../../src/lib/server/hostname-owner"
-);
+const { coreHosts, hostnameOwner, serviceDomainConflicts } =
+	await import("../../../src/lib/server/hostname-owner");
 
 type Settings = Awaited<ReturnType<typeof InstanceSettingsDTO.get>>;
 type Service = Awaited<ReturnType<typeof ServiceDTO.list>>[number];

@@ -12,7 +12,7 @@ description: >-
 allowed-tools:
   Bash(bun run type-check), Bash(bun run lint), Bash(bun run lint:fix), Bash(bun
   run test), Bash(bun run gen), Bash(go vet *), Bash(go test *), Bash(go tool
-  *), Bash(bunx biome check *), Bash(git diff *), Bash(git status *)
+  *), Bash(bun fmt *), Bash(git diff *), Bash(git status *)
 ---
 
 # check-repo
@@ -40,11 +40,11 @@ actually reading the failing file first.
 
 2. **`bun run lint`** — `markdownlint-cli2`, `scripts/lint-tailwind.ts` and
    `oxlint --type-aware --deny-warnings`, must be clean, whole repo. If anything
-   is fixable, `bun run lint:fix` before re-checking. Note: this script no
-   longer runs Biome — formatting/import-order is enforced by the pre-commit
-   hooks instead, and `.claude/settings.json` already runs `biome check --write`
-   on every edited code file and `prettier --write` on every edited markdown
-   file as PostToolUse hooks, so most formatting drift is caught immediately.
+   is fixable, `bun run lint:fix` before re-checking. Note: this script doesn't
+   format: formatting and import order are `bun fmt` (config in `bunfig.toml`'s
+   `[fmt]`), run by the pre-commit hook, and `.claude/settings.json` runs it on
+   every edited file as a PostToolUse hook, so most formatting drift is caught
+   immediately. `bun fmt --check` confirms the whole repo.
 
 3. **If a REST API route under `src/routes/api/v1/`, `src/lib/openapi/` or
    `src/lib/config.ts` changed**: `bun run gen`, and keep the regenerated
@@ -60,8 +60,8 @@ actually reading the failing file first.
 
 5. **IDE diagnostics are not ground truth in this repo.** If an inline IDE error
    looks suspicious or doesn't match what `bun run type-check` reports, trust
-   `bunx biome check <file>` and `bun run type-check` over the IDE — this repo
-   has a documented history of stale/phantom inline diagnostics.
+   `oxlint <file>` and `bun run type-check` over the IDE — this repo has a
+   documented history of stale/phantom inline diagnostics.
 
 ## Reporting
 

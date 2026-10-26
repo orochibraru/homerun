@@ -9,167 +9,160 @@ async function signIn(page: import("@playwright/test").Page) {
 	await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
 }
 
-test.describe
-	.serial("list pages render through EntityList", () => {
-		test.beforeEach(async ({ page }) => {
-			await signIn(page);
-		});
-
-		test("a build cache registry lists, edits and keeps its password", async ({
-			page,
-		}) => {
-			await page.goto("/build-cache-registries/new");
-			await page.locator("#name").fill("Cache one");
-			await page.locator("#registryUrl").fill("registry.example.com");
-			await page.locator("#username").fill("robot");
-			await page.locator("#password").fill("hunter2");
-			await page.getByRole("button", { name: "Add registry" }).click();
-
-			await expect(page).toHaveURL(/\/build-cache-registries$/);
-			await expect(page.getByText("Cache one")).toBeVisible();
-			await expect(
-				page.getByText("registry.example.com · robot"),
-			).toBeVisible();
-
-			await page.getByTitle("Edit").first().click();
-			await expect(page.locator("#name")).toHaveValue("Cache one");
-			await expect(page.locator("#password")).toHaveAttribute(
-				"placeholder",
-				"Leave blank to keep current",
-			);
-			await page.locator("#registryUrl").fill("registry.internal:5000");
-			await page.locator("button[form='build-cache-registry']").click();
-			await expect(page.getByText("Registry saved.")).toBeVisible();
-
-			await page.goto("/build-cache-registries");
-			await expect(
-				page.getByText("registry.internal:5000 · robot"),
-			).toBeVisible();
-		});
-
-		test("a remote host lists with its connection subtitle", async ({
-			page,
-		}) => {
-			await page.goto("/remote-hosts/new");
-			await page.locator("#name").fill("Build box");
-			await page.locator("#dockerHost").fill("tcp://10.0.0.5:2375");
-			await page.getByRole("button", { name: /Add host/i }).click();
-			await expect(page.getByText("Remote host added.")).toBeVisible();
-
-			await page.goto("/remote-hosts");
-			await expect(page.getByText("Build box")).toBeVisible();
-			await expect(page.getByText("tcp://10.0.0.5:2375")).toBeVisible();
-		});
-
-		test("a backup destination lists, shows its details, edits and reports a failed test", async ({
-			page,
-		}) => {
-			await page.goto("/s3-destinations/new");
-			await page.locator("#name").fill("Backups");
-			await page.locator("#endpoint").fill("http://127.0.0.1:9");
-			await page.locator("#bucket").fill("homerun");
-			await page.locator("#region").fill("eu-central-1");
-			await page.locator("#accessKeyId").fill("key");
-			await page.locator("#secretAccessKey").fill("secret");
-			await page.getByRole("button", { name: /Add destination/i }).click();
-			await expect(page.getByText("Destination added.")).toBeVisible();
-			await expect(page).toHaveURL(/\/s3-destinations\/[0-9a-f-]{36}$/);
-
-			await page.goto("/s3-destinations");
-			const listPanel = page.locator(".panel");
-			await expect(listPanel.getByText("Backups")).toBeVisible();
-			await expect(
-				page.getByText("http://127.0.0.1:9 · homerun · eu-central-1"),
-			).toBeVisible();
-
-			await page.getByTitle("Details").first().click();
-			await expect(page.locator("#name")).toHaveValue("Backups");
-			await expect(page.locator("#secretAccessKey")).toHaveAttribute(
-				"placeholder",
-				"Leave blank to keep current",
-			);
-			await expect(
-				page.getByText("No volume uses this destination yet."),
-			).toBeVisible();
-			await page.locator("#bucket").fill("homerun-two");
-			await page.locator("button[form='destination-settings']").click();
-			await expect(page.getByText("Destination saved.")).toBeVisible();
-
-			await page.getByRole("button", { name: "Test destination" }).click();
-			await expect(page.getByText("The test failed")).toBeVisible();
-
-			await page.goto("/s3-destinations");
-			await expect(
-				page.getByText("http://127.0.0.1:9 · homerun-two · eu-central-1"),
-			).toBeVisible();
-		});
-
-		test("the Hetzner Storage Box preset derives the host from the username", async ({
-			page,
-		}) => {
-			await page.goto("/s3-destinations/new");
-			await page.locator("#preset").click();
-			await page.getByRole("option", { name: "Hetzner Storage Box" }).click();
-			await expect(page.locator("#name")).toHaveValue("Hetzner Storage Box");
-			await expect(page.locator("#bucket")).toHaveValue("backups/homerun");
-			await expect(page.locator("#region")).toHaveCount(0);
-			await page.locator("#accessKeyId").fill("u123456-sub1");
-			await expect(page.locator("#endpoint")).toHaveValue(
-				"u123456-sub1.your-storagebox.de:23",
-			);
-
-			await page.locator("#preset").click();
-			await page.getByRole("option", { name: "Cloudflare R2" }).click();
-			await expect(page.locator("#region")).toHaveValue("auto");
-			await expect(page.locator("#endpoint")).toHaveValue("");
-		});
-
-		test("the cron jobs page lists a job with its schedule", async ({
-			page,
-		}) => {
-			await page.goto("/cron-jobs/new");
-			await page.locator("#name").fill("Nightly");
-			await page.getByLabel("Time of day").fill("03:00");
-			await page.locator("#image").fill("alpine");
-			await page
-				.getByRole("button", { name: /Create/i })
-				.first()
-				.click();
-			await expect(page).toHaveURL(/\/cron-jobs\/[0-9a-f-]{36}$/);
-
-			await page.goto("/cron-jobs");
-			await expect(page.getByText("Nightly")).toBeVisible();
-			await expect(page.getByText(/0 3 \* \* \*/)).toBeVisible();
-		});
-
-		test("storage volumes bulk-toggle backups and bulk-delete", async ({
-			page,
-		}) => {
-			for (const name of ["bulk-one", "bulk-two"]) {
-				await page.goto("/storage/new");
-				await page.locator("#name").fill(name);
-				await page.locator("#source").fill(name);
-				await page.getByRole("button", { name: "Create volume" }).click();
-				await expect(page).toHaveURL(/\/storage$/);
-			}
-
-			await page.getByRole("checkbox", { name: "Select all volumes" }).click();
-			await expect(page.getByText("2 volumes selected")).toBeVisible();
-
-			await page.getByRole("button", { name: "Enable backups" }).click();
-			await expect(
-				page.getByText(
-					"0 volumes now backed up, 2 skipped (set a schedule and destination first).",
-				),
-			).toBeVisible();
-
-			await page.getByRole("checkbox", { name: "Select all volumes" }).click();
-			await page
-				.locator('form[action="?/bulk"]')
-				.getByRole("button", { exact: true, name: "Delete" })
-				.click();
-			await page.getByRole("button", { name: "Delete 2 volumes" }).click();
-			await expect(page.getByText("2 volumes deleted.")).toBeVisible();
-			await expect(page.getByText("bulk-one")).toHaveCount(0);
-		});
+test.describe.serial("list pages render through EntityList", () => {
+	test.beforeEach(async ({ page }) => {
+		await signIn(page);
 	});
+
+	test("a build cache registry lists, edits and keeps its password", async ({
+		page,
+	}) => {
+		await page.goto("/build-cache-registries/new");
+		await page.locator("#name").fill("Cache one");
+		await page.locator("#registryUrl").fill("registry.example.com");
+		await page.locator("#username").fill("robot");
+		await page.locator("#password").fill("hunter2");
+		await page.getByRole("button", { name: "Add registry" }).click();
+
+		await expect(page).toHaveURL(/\/build-cache-registries$/);
+		await expect(page.getByText("Cache one")).toBeVisible();
+		await expect(page.getByText("registry.example.com · robot")).toBeVisible();
+
+		await page.getByTitle("Edit").first().click();
+		await expect(page.locator("#name")).toHaveValue("Cache one");
+		await expect(page.locator("#password")).toHaveAttribute(
+			"placeholder",
+			"Leave blank to keep current",
+		);
+		await page.locator("#registryUrl").fill("registry.internal:5000");
+		await page.locator("button[form='build-cache-registry']").click();
+		await expect(page.getByText("Registry saved.")).toBeVisible();
+
+		await page.goto("/build-cache-registries");
+		await expect(
+			page.getByText("registry.internal:5000 · robot"),
+		).toBeVisible();
+	});
+
+	test("a remote host lists with its connection subtitle", async ({ page }) => {
+		await page.goto("/remote-hosts/new");
+		await page.locator("#name").fill("Build box");
+		await page.locator("#dockerHost").fill("tcp://10.0.0.5:2375");
+		await page.getByRole("button", { name: /Add host/i }).click();
+		await expect(page.getByText("Remote host added.")).toBeVisible();
+
+		await page.goto("/remote-hosts");
+		await expect(page.getByText("Build box")).toBeVisible();
+		await expect(page.getByText("tcp://10.0.0.5:2375")).toBeVisible();
+	});
+
+	test("a backup destination lists, shows its details, edits and reports a failed test", async ({
+		page,
+	}) => {
+		await page.goto("/s3-destinations/new");
+		await page.locator("#name").fill("Backups");
+		await page.locator("#endpoint").fill("http://127.0.0.1:9");
+		await page.locator("#bucket").fill("homerun");
+		await page.locator("#region").fill("eu-central-1");
+		await page.locator("#accessKeyId").fill("key");
+		await page.locator("#secretAccessKey").fill("secret");
+		await page.getByRole("button", { name: /Add destination/i }).click();
+		await expect(page.getByText("Destination added.")).toBeVisible();
+		await expect(page).toHaveURL(/\/s3-destinations\/[0-9a-f-]{36}$/);
+
+		await page.goto("/s3-destinations");
+		const listPanel = page.locator(".panel");
+		await expect(listPanel.getByText("Backups")).toBeVisible();
+		await expect(
+			page.getByText("http://127.0.0.1:9 · homerun · eu-central-1"),
+		).toBeVisible();
+
+		await page.getByTitle("Details").first().click();
+		await expect(page.locator("#name")).toHaveValue("Backups");
+		await expect(page.locator("#secretAccessKey")).toHaveAttribute(
+			"placeholder",
+			"Leave blank to keep current",
+		);
+		await expect(
+			page.getByText("No volume uses this destination yet."),
+		).toBeVisible();
+		await page.locator("#bucket").fill("homerun-two");
+		await page.locator("button[form='destination-settings']").click();
+		await expect(page.getByText("Destination saved.")).toBeVisible();
+
+		await page.getByRole("button", { name: "Test destination" }).click();
+		await expect(page.getByText("The test failed")).toBeVisible();
+
+		await page.goto("/s3-destinations");
+		await expect(
+			page.getByText("http://127.0.0.1:9 · homerun-two · eu-central-1"),
+		).toBeVisible();
+	});
+
+	test("the Hetzner Storage Box preset derives the host from the username", async ({
+		page,
+	}) => {
+		await page.goto("/s3-destinations/new");
+		await page.locator("#preset").click();
+		await page.getByRole("option", { name: "Hetzner Storage Box" }).click();
+		await expect(page.locator("#name")).toHaveValue("Hetzner Storage Box");
+		await expect(page.locator("#bucket")).toHaveValue("backups/homerun");
+		await expect(page.locator("#region")).toHaveCount(0);
+		await page.locator("#accessKeyId").fill("u123456-sub1");
+		await expect(page.locator("#endpoint")).toHaveValue(
+			"u123456-sub1.your-storagebox.de:23",
+		);
+
+		await page.locator("#preset").click();
+		await page.getByRole("option", { name: "Cloudflare R2" }).click();
+		await expect(page.locator("#region")).toHaveValue("auto");
+		await expect(page.locator("#endpoint")).toHaveValue("");
+	});
+
+	test("the cron jobs page lists a job with its schedule", async ({ page }) => {
+		await page.goto("/cron-jobs/new");
+		await page.locator("#name").fill("Nightly");
+		await page.getByLabel("Time of day").fill("03:00");
+		await page.locator("#image").fill("alpine");
+		await page
+			.getByRole("button", { name: /Create/i })
+			.first()
+			.click();
+		await expect(page).toHaveURL(/\/cron-jobs\/[0-9a-f-]{36}$/);
+
+		await page.goto("/cron-jobs");
+		await expect(page.getByText("Nightly")).toBeVisible();
+		await expect(page.getByText(/0 3 \* \* \*/)).toBeVisible();
+	});
+
+	test("storage volumes bulk-toggle backups and bulk-delete", async ({
+		page,
+	}) => {
+		for (const name of ["bulk-one", "bulk-two"]) {
+			await page.goto("/storage/new");
+			await page.locator("#name").fill(name);
+			await page.locator("#source").fill(name);
+			await page.getByRole("button", { name: "Create volume" }).click();
+			await expect(page).toHaveURL(/\/storage$/);
+		}
+
+		await page.getByRole("checkbox", { name: "Select all volumes" }).click();
+		await expect(page.getByText("2 volumes selected")).toBeVisible();
+
+		await page.getByRole("button", { name: "Enable backups" }).click();
+		await expect(
+			page.getByText(
+				"0 volumes now backed up, 2 skipped (set a schedule and destination first).",
+			),
+		).toBeVisible();
+
+		await page.getByRole("checkbox", { name: "Select all volumes" }).click();
+		await page
+			.locator('form[action="?/bulk"]')
+			.getByRole("button", { exact: true, name: "Delete" })
+			.click();
+		await page.getByRole("button", { name: "Delete 2 volumes" }).click();
+		await expect(page.getByText("2 volumes deleted.")).toBeVisible();
+		await expect(page.getByText("bulk-one")).toHaveCount(0);
+	});
+});

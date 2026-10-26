@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ArrowDownRight, ArrowUpRight, Minus } from "@lucide/svelte";
+
 	import type { Change } from "#lib/metrics-format.js";
 
 	const {
@@ -17,14 +18,17 @@
 </script>
 
 {#if change}
-  <span class="inline-flex items-center gap-0.5 text-xs font-medium tabular-nums {tone}" title={label}>
-    {#if change.text.startsWith("+")}
-      <ArrowUpRight class="size-3" />
-    {:else if change.text.startsWith("−")}
-      <ArrowDownRight class="size-3" />
-    {:else}
-      <Minus class="size-3" />
-    {/if}
-    {change.text}
-  </span>
+	<span
+		class="inline-flex items-center gap-0.5 text-xs font-medium tabular-nums {tone}"
+		title={label}
+	>
+		{#if change.text.startsWith("+")}
+			<ArrowUpRight class="size-3" />
+		{:else if change.text.startsWith("−")}
+			<ArrowDownRight class="size-3" />
+		{:else}
+			<Minus class="size-3" />
+		{/if}
+		{change.text}
+	</span>
 {/if}

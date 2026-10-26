@@ -1,11 +1,12 @@
+import { command } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
+
 import { requirePermission } from "#lib/server/remote-auth.js";
 import {
 	VolumeSettingsError,
 	VolumeSettingsService,
 } from "#lib/services/volume-settings.service.js";
-import { command } from "$app/server";
 
 /**
  * Registers a storage volume (a host path or a Docker volume) the same way

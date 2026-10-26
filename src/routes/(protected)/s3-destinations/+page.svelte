@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { CloudUpload, Pencil, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+
 	import { describeDestination } from "#lib/backup-destinations.js";
 	import CapacityBar from "#lib/components/capacity-bar.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -14,8 +17,6 @@
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
-	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 
@@ -53,106 +54,116 @@
 </script>
 
 {#snippet details(dest: DestinationRow)}
-  {#if dest.type !== "s3"}
-    <CapacityBar
-      capacity={dest.capacity}
-      checkedAt={dest.capacityCheckedAt}
-      error={dest.capacityError}
-      thresholdPercent={dest.capacityAlertPercent}
-    />
-  {/if}
+	{#if dest.type !== "s3"}
+		<CapacityBar
+			capacity={dest.capacity}
+			checkedAt={dest.capacityCheckedAt}
+			error={dest.capacityError}
+			thresholdPercent={dest.capacityAlertPercent}
+		/>
+	{/if}
 {/snippet}
 
 {#snippet media(_dest: DestinationRow)}
-  <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
-    <CloudUpload class="size-5" />
-  </div>
+	<div
+		class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md"
+	>
+		<CloudUpload class="size-5" />
+	</div>
 {/snippet}
 
 {#snippet actions(dest: DestinationRow)}
-  <Button href={dest.href} size="icon-sm" title="Details" variant="ghost">
-    <Pencil class="size-4" />
-  </Button>
-  <form
-    action="?/delete"
-    method="POST"
-    use:enhance={enhanceToast({
-      error: "Couldn't delete : make sure no volume still uses it.",
-      loading: "Deleting the destination",
-      success: "Destination deleted.",
-    })}
-  >
-    <input name="destinationId" type="hidden" value={dest.id} />
-    <Button
-      class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-      onclick={(e) => requestDelete(e, dest.name)}
-      size="icon-sm"
-      title="Delete"
-      type="button"
-      variant="ghost"
-    >
-      <Trash2 class="size-4" />
-    </Button>
-  </form>
+	<Button href={dest.href} size="icon-sm" title="Details" variant="ghost">
+		<Pencil class="size-4" />
+	</Button>
+	<form
+		action="?/delete"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Couldn't delete : make sure no volume still uses it.",
+			loading: "Deleting the destination",
+			success: "Destination deleted.",
+		})}
+	>
+		<input name="destinationId" type="hidden" value={dest.id} />
+		<Button
+			class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+			onclick={(e) => requestDelete(e, dest.name)}
+			size="icon-sm"
+			title="Delete"
+			type="button"
+			variant="ghost"
+		>
+			<Trash2 class="size-4" />
+		</Button>
+	</form>
 {/snippet}
 
 <div class="p-5 md:p-6">
-  <div class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">Backup Destinations</h1>
-      <p class="text-text-muted mt-1 text-sm">
-        Reusable backup destinations: S3-compatible buckets, and servers reached
-        over SFTP, SMB or WebDAV. Pick one from any volume's page instead of
-        retyping the same credentials everywhere.
-      </p>
-    </div>
+	<div
+		class="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between"
+	>
+		<div>
+			<h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
+				Backup Destinations
+			</h1>
+			<p class="text-text-muted mt-1 text-sm">
+				Reusable backup destinations: S3-compatible buckets, and servers reached
+				over SFTP, SMB or WebDAV. Pick one from any volume's page instead of
+				retyping the same credentials everywhere.
+			</p>
+		</div>
 
-    <Button href={resolve('s3-destinations/new')}><Plus class="size-4" />Add Destination</Button>
-  </div>
+		<Button href={resolve("s3-destinations/new")}
+			><Plus class="size-4" />Add Destination</Button
+		>
+	</div>
 
-  {#if data.total === 0 && !data.filtered}
-    <EmptyState
-      icon={CloudUpload}
-      subtitle="Add one, then pick it from a volume's backup config."
-      title="No backup destinations yet"
-    >
-      <Button href={resolve('s3-destinations/new')}><Plus class="size-4" />Add your first destination</Button>
-    </EmptyState>
-  {:else}
-    <EntityToolbar
-    sorts={BASE_SORTS} placeholder="Search destinations by name, host or path…">
-      {#snippet trailing()}
-        <ViewModeToggle view={view} />
-      {/snippet}
-    </EntityToolbar>
+	{#if data.total === 0 && !data.filtered}
+		<EmptyState
+			icon={CloudUpload}
+			subtitle="Add one, then pick it from a volume's backup config."
+			title="No backup destinations yet"
+		>
+			<Button href={resolve("s3-destinations/new")}
+				><Plus class="size-4" />Add your first destination</Button
+			>
+		</EmptyState>
+	{:else}
+		<EntityToolbar
+			sorts={BASE_SORTS}
+			placeholder="Search destinations by name, host or path…"
+		>
+			{#snippet trailing()}
+				<ViewModeToggle {view} />
+			{/snippet}
+		</EntityToolbar>
 
-    {#if data.destinations.length === 0}
-      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
-        <p class="text-text-muted text-sm">No destinations match your search.</p>
-      </div>
-    {:else}
-      <EntityList
-        actions={actions}
-        details={details}
-        items={rows}
-        media={media}
-        view={view}
-      />
+		{#if data.destinations.length === 0}
+			<div
+				class="border-border/70 rounded-md border border-dashed py-16 text-center"
+			>
+				<p class="text-text-muted text-sm">
+					No destinations match your search.
+				</p>
+			</div>
+		{:else}
+			<EntityList {actions} {details} items={rows} {media} {view} />
 
-      <Pagination
-        label="destinations"
-        page={data.page}
-        perPage={data.perPage}
-        total={data.total}
-      />
-    {/if}
-  {/if}
+			<Pagination
+				label="destinations"
+				page={data.page}
+				perPage={data.perPage}
+				total={data.total}
+			/>
+		{/if}
+	{/if}
 </div>
 
 <ConfirmDialog
-  bind:open={deleteDialogOpen}
-  confirmLabel="Delete"
-  description={`Delete "${pendingDeleteName}"? Any volume still picking it will fall back to no destination.`}
-  onConfirm={() => pendingDeleteForm?.requestSubmit()}
-  title="Delete backup destination"
+	bind:open={deleteDialogOpen}
+	confirmLabel="Delete"
+	description={`Delete "${pendingDeleteName}"? Any volume still picking it will fall back to no destination.`}
+	onConfirm={() => pendingDeleteForm?.requestSubmit()}
+	title="Delete backup destination"
 />

@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
+
 import {
 	ComposeParseError,
 	type ComposeServiceDraft,
@@ -11,7 +13,6 @@ import { can } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { CapacityService } from "#lib/services/capacity.service.js";
 import { ComposeImportService } from "#lib/services/compose-import.service.js";
-import { resolve } from "$app/paths";
 
 const logger = new Logger("ComposeImport");
 

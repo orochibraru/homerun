@@ -1,11 +1,12 @@
+import { command, query } from "$app/server";
+
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { requirePermission, requireUser } from "#lib/server/remote-auth.js";
 import { AdminService, type SetupCheck } from "#lib/services/admin.service.js";
 import { traefikExpectation } from "#lib/services/cron/core-services-watch.js";
+import { DockerService } from "#lib/services/docker.service.js";
 import type { InfraContainer } from "#lib/services/docker/core-services.js";
 import type { SwarmReadiness } from "#lib/services/docker/swarm.js";
-import { DockerService } from "#lib/services/docker.service.js";
-import { command, query } from "$app/server";
 
 export interface SetupStatus {
 	checks: SetupCheck[];

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import type { GitConnectionDTO } from "../../../src/lib/dto/git-connection-dto";
 import type { GitProviderConfig } from "../../../src/lib/server/db/schema";
 import { encryptSecret } from "../../../src/lib/services/secrets";
@@ -9,9 +10,8 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { GitProviderRefusedError, GitProviderService } = await import(
-	"../../../src/lib/services/git-provider.service"
-);
+const { GitProviderRefusedError, GitProviderService } =
+	await import("../../../src/lib/services/git-provider.service");
 const { config } = await import("../../../src/lib/config");
 
 interface FakeRow {

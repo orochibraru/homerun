@@ -6,6 +6,7 @@ import {
 	parseWwwAuthenticate,
 	type WwwAuthenticate,
 } from "#lib/registry-ref.js";
+
 import type { RegistryAuth } from "./docker/containers.ts";
 
 const logger = new Logger("Docker");

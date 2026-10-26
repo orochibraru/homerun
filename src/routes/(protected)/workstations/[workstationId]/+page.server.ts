@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { WorkstationDTO } from "#lib/dto/workstation-dto.js";
 import { Logger } from "#lib/logger.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
@@ -8,11 +9,11 @@ import {
 	parseAutoStop,
 } from "#lib/server/workstation-form.js";
 import { encryptSecret } from "#lib/services/secrets.js";
+import { WorkstationService } from "#lib/services/workstation.service.js";
 import {
 	isCodeServerImage,
 	WorkstationSignInService,
 } from "#lib/services/workstation/sign-in.js";
-import { WorkstationService } from "#lib/services/workstation.service.js";
 
 const logger = new Logger("Workstation");
 

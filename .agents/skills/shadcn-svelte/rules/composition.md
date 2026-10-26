@@ -26,7 +26,7 @@ Never render items directly inside the content container.
 
 ```svelte
 <script lang="ts">
-import * as Select from "#lib/components/ui/select/index.js";
+  import * as Select from "#lib/components/ui/select/index.js";
 </script>
 
 <Select.Content>
@@ -39,7 +39,7 @@ import * as Select from "#lib/components/ui/select/index.js";
 
 ```svelte
 <script lang="ts">
-import * as Select from "#lib/components/ui/select/index.js";
+  import * as Select from "#lib/components/ui/select/index.js";
 </script>
 
 <Select.Content>
@@ -66,7 +66,7 @@ This applies to all group-based components:
 
 ```svelte
 <script lang="ts">
-import * as Alert from "#lib/components/ui/alert/index.js";
+  import * as Alert from "#lib/components/ui/alert/index.js";
 </script>
 
 <Alert.Root>
@@ -81,17 +81,18 @@ import * as Alert from "#lib/components/ui/alert/index.js";
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import * as Empty from "#lib/components/ui/empty/index.js";
-import FolderIcon from "@lucide/svelte/icons/folder";
+  import FolderIcon from "@lucide/svelte/icons/folder";
+
+  import { Button } from "#lib/components/ui/button/index.js";
+  import * as Empty from "#lib/components/ui/empty/index.js";
 </script>
 
 <Empty.Root>
   <Empty.Header>
     <Empty.Media variant="icon"><FolderIcon /></Empty.Media>
     <Empty.Title>No projects yet</Empty.Title>
-    <Empty.Description>Get started by creating a new
-      project.</Empty.Description>
+    <Empty.Description>Get started by creating a new project.</Empty.Description
+    >
   </Empty.Header>
   <Empty.Content>
     <Button>Create Project</Button>
@@ -105,7 +106,7 @@ import FolderIcon from "@lucide/svelte/icons/folder";
 
 ```svelte
 <script lang="ts">
-import { toast } from "svelte-sonner";
+  import { toast } from "svelte-sonner";
 </script>
 ```
 
@@ -142,7 +143,7 @@ Use `class="sr-only"` if visually hidden.
 
 ```svelte
 <script lang="ts">
-import * as Dialog from "#lib/components/ui/dialog/index.js";
+  import * as Dialog from "#lib/components/ui/dialog/index.js";
 </script>
 
 <Dialog.Content>
@@ -162,8 +163,8 @@ Use full composition, don't dump everything into `Card.Content`:
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import * as Card from "#lib/components/ui/card/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import * as Card from "#lib/components/ui/card/index.js";
 </script>
 
 <Card.Root>
@@ -186,8 +187,8 @@ Compose with `Spinner` inside `Button` + `disabled`:
 
 ```svelte
 <script lang="ts">
-import { Button } from "#lib/components/ui/button/index.js";
-import { Spinner } from "#lib/components/ui/spinner/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Spinner } from "#lib/components/ui/spinner/index.js";
 </script>
 
 <Button disabled>
@@ -205,8 +206,8 @@ Never render `Tabs.Trigger` directly inside `Tabs.Root`, always wrap in
 
 ```svelte
 <script lang="ts">
-import * as Tabs from "#lib/components/ui/tabs/index.js";
-let tab = $state("account");
+  import * as Tabs from "#lib/components/ui/tabs/index.js";
+  let tab = $state("account");
 </script>
 
 <Tabs.Root bind:value={tab}>
@@ -226,7 +227,7 @@ Always include `Avatar.Fallback` for when the image fails to load:
 
 ```svelte
 <script lang="ts">
-import * as Avatar from "#lib/components/ui/avatar/index.js";
+  import * as Avatar from "#lib/components/ui/avatar/index.js";
 </script>
 
 <Avatar.Root>

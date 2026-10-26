@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { ArrowLeft, FolderOpen, Settings } from "@lucide/svelte";
-	import SectionNav from "#lib/components/section-nav.svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import { ArrowLeft, FolderOpen, Settings } from "@lucide/svelte";
+
+	import SectionNav from "#lib/components/section-nav.svelte";
 
 	const { children } = $props();
 
@@ -31,15 +32,15 @@
 </script>
 
 <a
-  class="text-text-muted hover:text-text mb-5 inline-flex items-center gap-1 text-sm"
-  href={resolve("/(protected)/object-storage")}
+	class="text-text-muted hover:text-text mb-5 inline-flex items-center gap-1 text-sm"
+	href={resolve("/(protected)/object-storage")}
 >
-  <ArrowLeft class="size-4" />
-  All buckets
+	<ArrowLeft class="size-4" />
+	All buckets
 </a>
 
 <div>
-  <SectionNav hubLabel="Bucket" label="Bucket sections" {sections}>
-    {@render children()}
-  </SectionNav>
+	<SectionNav hubLabel="Bucket" label="Bucket sections" {sections}>
+		{@render children()}
+	</SectionNav>
 </div>

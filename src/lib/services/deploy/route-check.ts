@@ -5,6 +5,7 @@ import {
 	splitDomain,
 } from "#lib/service-domains.js";
 import { isDatabaseImage } from "#lib/service-link.js";
+
 import { certResolverFor } from "../docker/cert-resolver.ts";
 
 /** A deploy whose workload started but whose route through Traefik doesn't answer: the new workload runs, visitors can't reach it. */

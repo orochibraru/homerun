@@ -153,7 +153,7 @@ you hadn't gotten to yet. Skim CLAUDE.md's section headers
 sure a new section landed in the right place, not orphaned at the end of an
 unrelated section or duplicating an existing page instead of extending it. If a
 markdown formatter/linter is configured in this repo (check for
-`.markdownlint-cli2.jsonc`, a `markdownlint-cli2`/`prettier` devDependency), run
+`.markdownlint-cli2.jsonc`, a `markdownlint-cli2` devDependency, `bun fmt`), run
 it against every file you touched before finishing, `docs/`'s tables in
 particular are easy to leave misaligned by hand.
 

@@ -1,5 +1,7 @@
 import process from "node:process";
+
 import Bun from "bun";
+
 import pkg from "../package.json" with { type: "json" };
 
 const TARGET_NAMES = [

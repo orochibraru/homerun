@@ -1,7 +1,8 @@
+import { resolve } from "$app/paths";
 import { error, redirect } from "@sveltejs/kit";
+
 import { OauthClientDTO } from "#lib/dto/oauth-client-dto.js";
 import { describeScopes } from "#lib/oidc-provider.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ locals, url }) => {
 	if (!locals.user) {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { normalizeBaseDomain } from "../../../src/lib/server/validation/base-domain";
 
 describe("normalizeBaseDomain", () => {

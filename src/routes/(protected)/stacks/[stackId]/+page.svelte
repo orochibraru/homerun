@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import {
 		FolderInput,
 		FolderKanban,
@@ -7,6 +8,7 @@
 		Server,
 	} from "@lucide/svelte";
 	import { onMount, type Snippet } from "svelte";
+
 	import EntityList from "#lib/components/entity-list.svelte";
 	import PreviewRows from "#lib/components/preview-rows.svelte";
 	import ServiceContextMenu from "#lib/components/service-context-menu.svelte";
@@ -31,7 +33,6 @@
 	import { flattenStackTree, type StackNode } from "#lib/stack-tree.js";
 	import { title } from "#lib/store/title.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
-	import { resolve } from "$app/paths";
 
 	const { data } = $props();
 	const stack = $derived(data.stack);
@@ -112,159 +113,169 @@
 </script>
 
 {#if members.length === 0 && data.graph.stacks.length === 1}
-  <div class="border-border flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
-    <Server class="text-text-subtle mb-3 size-8" />
-    <p class="text-text-muted text-sm font-medium">
-      No services in this stack yet
-    </p>
-    <div class="mt-5 flex flex-wrap justify-center gap-2">
-      <Button
-        href="{resolve('templates')}?stackId={stack.id}"
-        variant="outline"
-      ><LayoutGrid class="size-4" />From Template</Button>
+	<div
+		class="border-border flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center"
+	>
+		<Server class="text-text-subtle mb-3 size-8" />
+		<p class="text-text-muted text-sm font-medium">
+			No services in this stack yet
+		</p>
+		<div class="mt-5 flex flex-wrap justify-center gap-2">
+			<Button href="{resolve('templates')}?stackId={stack.id}" variant="outline"
+				><LayoutGrid class="size-4" />From Template</Button
+			>
 
-      <Button
-        href="{resolve('services/new')}?stackId={stack.id}"
-      ><Plus class="size-4" />Add Service</Button>
-    </div>
-  </div>
+			<Button href="{resolve('services/new')}?stackId={stack.id}"
+				><Plus class="size-4" />Add Service</Button
+			>
+		</div>
+	</div>
 {:else}
-  <div class="mb-3 flex flex-wrap items-center gap-2">
-    <Input
-      class="sm:max-w-xs"
-      placeholder="Search services…"
-      type="search"
-      bind:value={search}
-    />
-    <p class="text-text-subtle hidden text-xs sm:block {architecture ? '' : 'sm:hidden'}">
-      {view.current === "card"
-        ? "Arrows point from a service to what it connects to."
-        : "Each service lists what it connects to underneath."}
-      Connections are read from env vars pointing at another service's slug.
-    </p>
-    <div class="ml-auto flex items-center gap-3">
-      <label class="text-text-muted flex items-center gap-2 text-xs">
-        <Switch checked={architecture} onCheckedChange={setArchitecture} />
-        Architecture
-      </label>
-      <ViewModeToggle view={view} />
-    </div>
-  </div>
+	<div class="mb-3 flex flex-wrap items-center gap-2">
+		<Input
+			class="sm:max-w-xs"
+			placeholder="Search services…"
+			type="search"
+			bind:value={search}
+		/>
+		<p
+			class="text-text-subtle hidden text-xs sm:block {architecture
+				? ''
+				: 'sm:hidden'}"
+		>
+			{view.current === "card"
+				? "Arrows point from a service to what it connects to."
+				: "Each service lists what it connects to underneath."}
+			Connections are read from env vars pointing at another service's slug.
+		</p>
+		<div class="ml-auto flex items-center gap-3">
+			<label class="text-text-muted flex items-center gap-2 text-xs">
+				<Switch checked={architecture} onCheckedChange={setArchitecture} />
+				Architecture
+			</label>
+			<ViewModeToggle {view} />
+		</div>
+	</div>
 
-  {#if search.trim() || !architecture}
-    {#if matches.length === 0}
-      <div class="border-border/70 rounded-xl border border-dashed py-12 text-center">
-        <p class="text-text-muted text-sm">No services match your search.</p>
-      </div>
-    {:else}
-      <EntityList
-        items={matches.map((svc) => ({
-          description: svc.image,
-          href: `${resolve('services')}/${svc.id}`,
-          id: svc.id,
-          subtitle: svc.slug,
-          title: svc.name,
-        }))}
-        view={view}
-      >
-        {#snippet details(item: { id: string })}
-          <PreviewRows class="ml-4 sm:ml-11" previews={previews.get(item.id) ?? []} />
-        {/snippet}
-        {#snippet media(item: { id: string })}
-          {@const svc = services.get(item.id)}
-          <TemplateIcon
-            category={svc?.category ?? null}
-            class="size-8 rounded-lg"
-            fallback={Server}
-            icon={svc?.icon ?? null}
-          />
-        {/snippet}
-      </EntityList>
-    {/if}
-  {:else if view.current === "card"}
-    <StackDiagram
-      deps={data.graph.deps}
-      rootStackId={stack.id}
-      services={data.graph.services}
-      stackNames={stackNames}
-      stacks={data.graph.stacks}
-      wrapper={wrapper}
-    />
-  {:else}
-    <div class="space-y-6">
-      {#each sections as { depth, stack: section } (section.id)}
-        {@const forest = forestFor(section.id)}
-        <section
-          class="ml-[calc(var(--depth)*0.75rem)] sm:ml-[calc(var(--depth)*1.5rem)]"
-          style:--depth={depth}
-        >
-          {#if section.id !== stack.id}
-            <ContextMenu.Root>
-              <ContextMenu.Trigger class="mb-2 inline-block">
-                <a
-                  class="eyebrow text-text-muted hover:text-text flex items-center gap-2"
-                  href={resolve("/(protected)/stacks/[stackId]", {
-                    stackId: section.id,
-                  })}
-                >
-                  <TemplateIcon
-                    class="size-7 rounded-md"
-                    fallback={FolderKanban}
-                    icon={section.icon ?? null}
-                  />
-                  {section.name}
-                </a>
-              </ContextMenu.Trigger>
-              <ContextMenu.Content class="w-48">
-                <ContextMenu.Item
-                  onSelect={() => {
-                    moveTarget = section;
-                    moveOpen = true;
-                  }}
-                >
-                  <FolderInput class="size-4" />
-                  Move into…
-                </ContextMenu.Item>
-              </ContextMenu.Content>
-            </ContextMenu.Root>
-          {/if}
-          {#if forest.length > 0}
-            <ServiceTree
-              localStackIds={new Set([section.id])}
-              nodes={forest}
-              previews={previews}
-              services={services}
-              stackNames={stackNames}
-              wrapper={wrapper}
-            />
-          {:else if !sections.some(({ stack: s }) => s.parentId === section.id)}
-            <p class="text-text-subtle text-xs">No services yet.</p>
-          {/if}
-        </section>
-      {/each}
-    </div>
-  {/if}
+	{#if search.trim() || !architecture}
+		{#if matches.length === 0}
+			<div
+				class="border-border/70 rounded-xl border border-dashed py-12 text-center"
+			>
+				<p class="text-text-muted text-sm">No services match your search.</p>
+			</div>
+		{:else}
+			<EntityList
+				items={matches.map((svc) => ({
+					description: svc.image,
+					href: `${resolve("services")}/${svc.id}`,
+					id: svc.id,
+					subtitle: svc.slug,
+					title: svc.name,
+				}))}
+				{view}
+			>
+				{#snippet details(item: { id: string })}
+					<PreviewRows
+						class="ml-4 sm:ml-11"
+						previews={previews.get(item.id) ?? []}
+					/>
+				{/snippet}
+				{#snippet media(item: { id: string })}
+					{@const svc = services.get(item.id)}
+					<TemplateIcon
+						category={svc?.category ?? null}
+						class="size-8 rounded-lg"
+						fallback={Server}
+						icon={svc?.icon ?? null}
+					/>
+				{/snippet}
+			</EntityList>
+		{/if}
+	{:else if view.current === "card"}
+		<StackDiagram
+			deps={data.graph.deps}
+			rootStackId={stack.id}
+			services={data.graph.services}
+			{stackNames}
+			stacks={data.graph.stacks}
+			{wrapper}
+		/>
+	{:else}
+		<div class="space-y-6">
+			{#each sections as { depth, stack: section } (section.id)}
+				{@const forest = forestFor(section.id)}
+				<section
+					class="ml-[calc(var(--depth)*0.75rem)] sm:ml-[calc(var(--depth)*1.5rem)]"
+					style:--depth={depth}
+				>
+					{#if section.id !== stack.id}
+						<ContextMenu.Root>
+							<ContextMenu.Trigger class="mb-2 inline-block">
+								<a
+									class="eyebrow text-text-muted hover:text-text flex items-center gap-2"
+									href={resolve("/(protected)/stacks/[stackId]", {
+										stackId: section.id,
+									})}
+								>
+									<TemplateIcon
+										class="size-7 rounded-md"
+										fallback={FolderKanban}
+										icon={section.icon ?? null}
+									/>
+									{section.name}
+								</a>
+							</ContextMenu.Trigger>
+							<ContextMenu.Content class="w-48">
+								<ContextMenu.Item
+									onSelect={() => {
+										moveTarget = section;
+										moveOpen = true;
+									}}
+								>
+									<FolderInput class="size-4" />
+									Move into…
+								</ContextMenu.Item>
+							</ContextMenu.Content>
+						</ContextMenu.Root>
+					{/if}
+					{#if forest.length > 0}
+						<ServiceTree
+							localStackIds={new Set([section.id])}
+							nodes={forest}
+							{previews}
+							{services}
+							{stackNames}
+							{wrapper}
+						/>
+					{:else if !sections.some(({ stack: s }) => s.parentId === section.id)}
+						<p class="text-text-subtle text-xs">No services yet.</p>
+					{/if}
+				</section>
+			{/each}
+		</div>
+	{/if}
 {/if}
 
 {#snippet wrapper(svc: GraphServiceInfo, body: Snippet)}
-  <ServiceContextMenu
-    onaction={(op, id) => menuHost?.run(op, id)}
-    ongroup={(s) => menuHost?.group(s)}
-    onlink={(s) => menuHost?.link(s)}
-    onungroup={(s) => menuHost?.ungroup(s)}
-    links={data.graph.links[svc.id] ?? []}
-    onunlink={(from, to) => {
-      unlink = {
-        from: { id: from.id, name: from.name },
-        keys: to.keys,
-        to: { id: to.id, name: to.name },
-      };
-      unlinkOpen = true;
-    }}
-    service={svc}
-  >
-    {@render body()}
-  </ServiceContextMenu>
+	<ServiceContextMenu
+		onaction={(op, id) => menuHost?.run(op, id)}
+		ongroup={(s) => menuHost?.group(s)}
+		onlink={(s) => menuHost?.link(s)}
+		onungroup={(s) => menuHost?.ungroup(s)}
+		links={data.graph.links[svc.id] ?? []}
+		onunlink={(from, to) => {
+			unlink = {
+				from: { id: from.id, name: from.name },
+				keys: to.keys,
+				to: { id: to.id, name: to.name },
+			};
+			unlinkOpen = true;
+		}}
+		service={svc}
+	>
+		{@render body()}
+	</ServiceContextMenu>
 {/snippet}
 
 <UnlinkDialog link={unlink} bind:open={unlinkOpen} />
@@ -272,8 +283,8 @@
 <StackMoveDialog stack={moveTarget} stacks={data.stacks} bind:open={moveOpen} />
 
 <ServiceMenuHost
-  bind:this={menuHost}
-  actionBase={resolve('services')}
-  services={data.allServices}
-  stacks={data.stacks}
+	bind:this={menuHost}
+	actionBase={resolve("services")}
+	services={data.allServices}
+	stacks={data.stacks}
 />

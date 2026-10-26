@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ScanSearch } from "@lucide/svelte";
+
 	import type { BuildMethod } from "#lib/build-methods.js";
 	import {
 		type DetectedConfig,
@@ -132,42 +133,44 @@
 </script>
 
 {#if loading && !detected}
-  <p class="text-xs text-text-subtle">
-    {buildSource === "image" ? "Reading the image's config…" : "Reading the repository…"}
-  </p>
+	<p class="text-xs text-text-subtle">
+		{buildSource === "image"
+			? "Reading the image's config…"
+			: "Reading the repository…"}
+	</p>
 {:else if facts.length > 0}
-  <div class="rounded-md border border-border bg-surface-2 p-3 text-xs">
-    <p class="flex items-center gap-1.5 font-medium text-text">
-      <ScanSearch class="size-3.5" />
-      Detected from {detected ? detectedFrom(detected) : ""}
-    </p>
-    {#if detected?.manifest?.errors.length}
-      <div class="mt-2 text-amber-700 dark:text-amber-400">
-        {detected.manifest.path} isn't a valid Homerun Manifest, so deploys
-        will fail until it's fixed:
-        <ul class="ml-4 list-disc">
-          {#each detected.manifest.errors as problem (problem)}
-            <li>{problem}</li>
-          {/each}
-        </ul>
-      </div>
-    {/if}
-    <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-      {#each facts as fact (fact.label)}
-        <dt class="text-text-muted">{fact.label}</dt>
-        <dd class="font-mono break-all text-text">{fact.value}</dd>
-      {/each}
-    </dl>
-    <p class="mt-2 text-text-subtle">
-      The port and volumes are filled in on their steps, and the env can be
-      imported on the Environment step.
-      {#if detected?.manifest}
-        {detected.manifest.path} is applied again on every deploy and wins
-        for the keys it sets.
-      {:else}
-        The rest already applies from the image; override any of it on the
-        service's tabs.
-      {/if}
-    </p>
-  </div>
+	<div class="rounded-md border border-border bg-surface-2 p-3 text-xs">
+		<p class="flex items-center gap-1.5 font-medium text-text">
+			<ScanSearch class="size-3.5" />
+			Detected from {detected ? detectedFrom(detected) : ""}
+		</p>
+		{#if detected?.manifest?.errors.length}
+			<div class="mt-2 text-amber-700 dark:text-amber-400">
+				{detected.manifest.path} isn't a valid Homerun Manifest, so deploys will fail
+				until it's fixed:
+				<ul class="ml-4 list-disc">
+					{#each detected.manifest.errors as problem (problem)}
+						<li>{problem}</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+		<dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+			{#each facts as fact (fact.label)}
+				<dt class="text-text-muted">{fact.label}</dt>
+				<dd class="font-mono break-all text-text">{fact.value}</dd>
+			{/each}
+		</dl>
+		<p class="mt-2 text-text-subtle">
+			The port and volumes are filled in on their steps, and the env can be
+			imported on the Environment step.
+			{#if detected?.manifest}
+				{detected.manifest.path} is applied again on every deploy and wins for the
+				keys it sets.
+			{:else}
+				The rest already applies from the image; override any of it on the
+				service's tabs.
+			{/if}
+		</p>
+	</div>
 {/if}

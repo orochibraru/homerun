@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import { TriangleAlert } from "@lucide/svelte";
+
 	import { JOB_STATUS_CONFIG, JOB_TYPE_LABELS } from "#lib/constants.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import type { JobSummary } from "#lib/types.js";
-	import { resolve } from "$app/paths";
 
 	const { jobs }: { jobs: JobSummary[] } = $props();
 </script>
@@ -37,7 +38,8 @@
 					<a
 						class="text-accent underline"
 						href={resolve(`services/${entry.serviceId}`)}
-					>{entry.serviceName ?? "service"}</a>
+						>{entry.serviceName ?? "service"}</a
+					>
 				{/if}
 				{#if entry.stage}
 					· {entry.stage}

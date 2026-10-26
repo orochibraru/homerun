@@ -1,5 +1,7 @@
 import { z } from "zod";
+
 import { permissionDeniedMessage } from "#lib/permissions.js";
+
 import { routes } from "./registry";
 
 /** zod's toJSONSchema() emits a top-level `$schema` pointer meant for a standalone document : an embedded OpenAPI schema object shouldn't carry one. */

@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { APP_VERSION } from "#lib/server/app-version.js";
 import { agentSetupCommands } from "#lib/server/node-install-script.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";

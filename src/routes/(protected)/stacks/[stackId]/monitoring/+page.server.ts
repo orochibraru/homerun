@@ -1,3 +1,5 @@
+import { resolve } from "$app/paths";
+
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
@@ -5,7 +7,6 @@ import { rangeStart } from "#lib/monitoring-ranges.js";
 import { monitoringRequest } from "#lib/server/monitoring-request.js";
 import { MonitoringService } from "#lib/services/monitoring.service.js";
 import { descendantIds } from "#lib/stack-tree.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ cookies, parent, url }) => {
 	const { stack } = await parent();

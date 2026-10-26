@@ -91,8 +91,8 @@ only touch them when they state a fact you just corrected elsewhere, and say so.
 
 ## Verify
 
-- `bun run lint` clean (markdownlint is part of it), and
-  `bun run prettier --check "**/*.md"` clean for the files you touched.
+- `bun run lint` clean (markdownlint is part of it), and `bun fmt --check` clean
+  for the files you touched.
 - `prek run vale --all-files` passes: Vale's errors block a commit. A product or
   tool name it flags as a misspelling goes in
   `.vale/styles/config/vocabularies/Homerun/accept.txt`, a real misspelling gets

@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+
 import { OauthClientEnvironmentDTO } from "#lib/dto/oauth-client-environment-dto.js";
 import { OauthClientSecretDTO } from "#lib/dto/oauth-client-secret-dto.js";
 import { Logger } from "#lib/logger.js";

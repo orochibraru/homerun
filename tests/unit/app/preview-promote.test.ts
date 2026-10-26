@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -9,21 +10,16 @@ mock.module("$app/env", () => ({
 
 const { Logger } = await import("../../../src/lib/logger");
 const { DeploymentDTO } = await import("../../../src/lib/dto/deployment-dto");
-const { DeploymentService } = await import(
-	"../../../src/lib/services/deploy.service"
-);
-const { QueueService } = await import(
-	"../../../src/lib/services/queue.service"
-);
-const { PreviewApiService } = await import(
-	"../../../src/lib/services/preview-api.service"
-);
-const { PreviewService } = await import(
-	"../../../src/lib/services/preview.service"
-);
-const { RevisionService } = await import(
-	"../../../src/lib/services/revision.service"
-);
+const { DeploymentService } =
+	await import("../../../src/lib/services/deploy.service");
+const { QueueService } =
+	await import("../../../src/lib/services/queue.service");
+const { PreviewApiService } =
+	await import("../../../src/lib/services/preview-api.service");
+const { PreviewService } =
+	await import("../../../src/lib/services/preview.service");
+const { RevisionService } =
+	await import("../../../src/lib/services/revision.service");
 const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
 

@@ -1,6 +1,7 @@
 import type { JobDTO } from "#lib/dto/job-dto.js";
-import type { CoreServiceJob } from "./queue/payloads.ts";
+
 import { QueueService } from "./queue.service.ts";
+import type { CoreServiceJob } from "./queue/payloads.ts";
 
 const titles: Record<CoreServiceJob["action"], string> = {
 	disableBuiltinStore: "Turn off the built-in object store",

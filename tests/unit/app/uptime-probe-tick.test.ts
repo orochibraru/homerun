@@ -6,19 +6,15 @@ mock.module("$app/env", () => ({
 	dev: false,
 }));
 
-const { UptimeProbe, externalHostFor } = await import(
-	"../../../src/lib/services/uptime/uptime-probe"
-);
+const { UptimeProbe, externalHostFor } =
+	await import("../../../src/lib/services/uptime/uptime-probe");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
-const { UptimeCheckDTO } = await import(
-	"../../../src/lib/dto/uptime-check-dto"
-);
-const { DockerService } = await import(
-	"../../../src/lib/services/docker.service"
-);
-const { DOWN_CONFIRM_FAILURES, StatusAlertService } = await import(
-	"../../../src/lib/services/status-alert.service"
-);
+const { UptimeCheckDTO } =
+	await import("../../../src/lib/dto/uptime-check-dto");
+const { DockerService } =
+	await import("../../../src/lib/services/docker.service");
+const { DOWN_CONFIRM_FAILURES, StatusAlertService } =
+	await import("../../../src/lib/services/status-alert.service");
 const { config } = await import("../../../src/lib/config");
 
 type ProbeResult = Parameters<typeof UptimeCheckDTO.recordMany>[0][number];

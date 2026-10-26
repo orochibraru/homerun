@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -10,15 +11,12 @@ mock.module("$app/env", () => ({
 const { config } = await import("../../../src/lib/config");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { UserService } = await import("../../../src/lib/services/user.service");
-const { gatedService, invalidateGatedService } = await import(
-	"../../../src/lib/server/gated-service-cache"
-);
-const { parseLoginWallForm, splitList } = await import(
-	"../../../src/lib/server/login-wall-form"
-);
-const { loginWallAvailability, loginWallOptions } = await import(
-	"../../../src/lib/server/login-wall-options"
-);
+const { gatedService, invalidateGatedService } =
+	await import("../../../src/lib/server/gated-service-cache");
+const { parseLoginWallForm, splitList } =
+	await import("../../../src/lib/server/login-wall-form");
+const { loginWallAvailability, loginWallOptions } =
+	await import("../../../src/lib/server/login-wall-options");
 
 afterEach(() => restoreStubs());
 

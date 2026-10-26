@@ -21,7 +21,7 @@
 
 ## Checklist
 
-- [ ] My code follows the project's code style (Biome)
+- [ ] My code follows the project's code style (`bun fmt`, oxlint)
 - [ ] I have performed a self-review of my code
 - [ ] I have added/updated tests where applicable
 - [ ] I have updated documentation where applicable

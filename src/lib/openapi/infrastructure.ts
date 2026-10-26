@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import {
 	dnsRecordApiBody,
 	domainApiBody,
@@ -12,6 +13,7 @@ import {
 	workstationPresetApiBody,
 } from "#lib/server/validation/infrastructure-api.js";
 import { AUTO_STOP_MODES } from "#lib/workstations.js";
+
 import type { ParamDef, RouteDef } from "./registry";
 import { errorResponse } from "./schemas";
 

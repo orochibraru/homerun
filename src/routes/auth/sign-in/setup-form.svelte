@@ -2,6 +2,7 @@
 	import { ArrowRight } from "@lucide/svelte";
 	import type { Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
+
 	import { signIn } from "#lib/auth-client.js";
 	import PasswordField from "#lib/components/password-field.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
@@ -91,82 +92,82 @@
 </script>
 
 <form class="space-y-4" novalidate onsubmit={handleSetup}>
-  {@render summary()}
-  <p class="text-text-muted text-sm">
-    {#if emailed}
-      Enter the 6-digit code we emailed you, then choose your password.
-    {:else}
-      Your account is new: choose your password.
-    {/if}
-  </p>
-  {#if emailed}
-    <div>
-      <label class="text-text mb-1.5 block text-sm font-medium" for="setupCode">
-        Verification code
-      </label>
-      <Input
-        autocomplete="one-time-code"
-        class="h-10 font-mono tracking-widest"
-        disabled={loading}
-        id="setupCode"
-        inputmode="numeric"
-        placeholder="123456"
-        required
-        bind:value={setupCode}
-      />
-    </div>
-  {/if}
-  <PasswordField
-    autocomplete="new-password"
-    disabled={loading}
-    id="newPassword"
-    label="New password"
-    bind:value={newPassword}
-  />
-  <PasswordField
-    autocomplete="new-password"
-    disabled={loading}
-    id="confirmPassword"
-    label="Confirm password"
-    bind:value={confirmPassword}
-  />
-  <p class="text-text-subtle text-xs">At least 12 characters.</p>
-  <Button
-    class="h-10 w-full"
-    disabled={loading ||
-      !newPassword ||
-      !confirmPassword ||
-      (emailed && !setupCode.trim())}
-    type="submit"
-  >
-    {#if loading}
-      <Spinner />
-      Setting up…
-    {:else}
-      Set password and sign in
-      <ArrowRight class="size-4 opacity-70" />
-    {/if}
-  </Button>
-  {#if onEmailCode}
-    <Button
-      class="h-10 w-full"
-      disabled={loading}
-      onclick={onEmailCode}
-      variant="outline"
-    >
-      Skip the password, sign in with emailed codes
-    </Button>
-  {/if}
-  {#if emailed}
-    <div class="text-center">
-      <button
-        class="text-text-muted hover:text-text text-xs underline-offset-4 hover:underline"
-        disabled={loading}
-        onclick={handleResend}
-        type="button"
-      >
-        Send a new code
-      </button>
-    </div>
-  {/if}
+	{@render summary()}
+	<p class="text-text-muted text-sm">
+		{#if emailed}
+			Enter the 6-digit code we emailed you, then choose your password.
+		{:else}
+			Your account is new: choose your password.
+		{/if}
+	</p>
+	{#if emailed}
+		<div>
+			<label class="text-text mb-1.5 block text-sm font-medium" for="setupCode">
+				Verification code
+			</label>
+			<Input
+				autocomplete="one-time-code"
+				class="h-10 font-mono tracking-widest"
+				disabled={loading}
+				id="setupCode"
+				inputmode="numeric"
+				placeholder="123456"
+				required
+				bind:value={setupCode}
+			/>
+		</div>
+	{/if}
+	<PasswordField
+		autocomplete="new-password"
+		disabled={loading}
+		id="newPassword"
+		label="New password"
+		bind:value={newPassword}
+	/>
+	<PasswordField
+		autocomplete="new-password"
+		disabled={loading}
+		id="confirmPassword"
+		label="Confirm password"
+		bind:value={confirmPassword}
+	/>
+	<p class="text-text-subtle text-xs">At least 12 characters.</p>
+	<Button
+		class="h-10 w-full"
+		disabled={loading ||
+			!newPassword ||
+			!confirmPassword ||
+			(emailed && !setupCode.trim())}
+		type="submit"
+	>
+		{#if loading}
+			<Spinner />
+			Setting up…
+		{:else}
+			Set password and sign in
+			<ArrowRight class="size-4 opacity-70" />
+		{/if}
+	</Button>
+	{#if onEmailCode}
+		<Button
+			class="h-10 w-full"
+			disabled={loading}
+			onclick={onEmailCode}
+			variant="outline"
+		>
+			Skip the password, sign in with emailed codes
+		</Button>
+	{/if}
+	{#if emailed}
+		<div class="text-center">
+			<button
+				class="text-text-muted hover:text-text text-xs underline-offset-4 hover:underline"
+				disabled={loading}
+				onclick={handleResend}
+				type="button"
+			>
+				Send a new code
+			</button>
+		</div>
+	{/if}
 </form>

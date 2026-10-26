@@ -1,6 +1,6 @@
 import {
-	type BuildSlot,
 	buildServerCandidates,
+	type BuildSlot,
 	pickBuildServer,
 } from "#lib/build-servers.js";
 import { reserveBuildHost } from "#lib/dto/build-slot-dto.js";
@@ -10,6 +10,7 @@ import type { JobDTO } from "#lib/dto/job-dto.js";
 import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
 import { settings } from "#lib/settings.js";
+
 import { JobDeferredError } from "../queue/deferred.ts";
 
 /** Thrown when a deploy waited `settings.docker.buildSlotTimeoutMs` for a build slot without getting one. */
@@ -72,13 +73,11 @@ export async function reserveBuildServer(
 	);
 	const names = new Map(servers.map((s) => [s.id, s.name]));
 	const slots = (active: Map<string, number>) =>
-		candidates.map(
-			(id): BuildSlot => ({
-				active: active.get(id) ?? 0,
-				id,
-				limit: limits.get(id) ?? instance.buildConcurrency,
-			}),
-		);
+		candidates.map((id): BuildSlot => ({
+			active: active.get(id) ?? 0,
+			id,
+			limit: limits.get(id) ?? instance.buildConcurrency,
+		}));
 	const hostId = await reserveBuildHost(job.id, (active) =>
 		pickBuildServer(slots(active)),
 	);

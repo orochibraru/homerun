@@ -1,5 +1,7 @@
+import { command, query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
+
 import {
 	DEVCONTAINER_PATHS,
 	type DevcontainerConfig,
@@ -25,7 +27,6 @@ import {
 	type WorkstationView,
 } from "#lib/services/workstation.service.js";
 import type { WorkstationCheck } from "#lib/workstation-self-test.js";
-import { command, query } from "$app/server";
 
 const logger = new Logger("Workstation");
 

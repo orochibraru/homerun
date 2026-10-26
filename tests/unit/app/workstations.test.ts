@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import { parse } from "yaml";
+
 import { config } from "#lib/config.js";
 import {
 	generateWorkstationPassword,

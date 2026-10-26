@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/env", () => ({
@@ -14,9 +15,8 @@ const {
 	RECOVERY_STABLE_MS,
 	StatusAlertService,
 } = await import("../../../src/lib/services/status-alert.service");
-const { NotificationChannelService } = await import(
-	"../../../src/lib/services/notification-channel.service"
-);
+const { NotificationChannelService } =
+	await import("../../../src/lib/services/notification-channel.service");
 const { config } = await import("../../../src/lib/config");
 const { Logger } = await import("../../../src/lib/logger");
 

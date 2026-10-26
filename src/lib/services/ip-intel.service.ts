@@ -1,4 +1,5 @@
 import { resolveTxt, reverse } from "node:dns/promises";
+
 import {
 	cymruOriginName,
 	type IpIntel,

@@ -56,8 +56,7 @@ export interface CronJobLists {
 }
 
 export type CronJobFormResult =
-	| { error: string }
-	| { parsed: ParsedCronJobForm };
+	{ error: string } | { parsed: ParsedCronJobForm };
 
 function validate(
 	input: CronJobInput,

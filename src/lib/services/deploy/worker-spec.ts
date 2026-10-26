@@ -8,10 +8,12 @@ import { splitImageRef } from "#lib/image-ref.js";
 import { runtimeOptionsFrom } from "#lib/service-runtime.js";
 import { stackScopedSlug } from "#lib/slug.js";
 import { withTracingEnv } from "#lib/tracing/env.js";
+
 import {
 	VOLUME_HELPER_IMAGE,
 	VOLUME_HELPER_TAG,
 } from "../backup/volume-services.ts";
+import { DockerService } from "../docker.service.ts";
 import {
 	containerCreateTemplate,
 	type RegistryAuth,
@@ -37,7 +39,6 @@ import {
 import { stackNetworkName } from "../docker/networks.ts";
 import { listeningHealthcheck } from "../docker/readiness.ts";
 import { swarmNetworkName, swarmServiceTemplate } from "../docker/swarm.ts";
-import { DockerService } from "../docker.service.ts";
 import { ErrorTrackingService } from "../error-tracking.service.ts";
 import { ImageMirrorGcService } from "../image-mirror-gc.service.ts";
 import { ImageScanService, type ScanPolicy } from "../image-scan.service.ts";

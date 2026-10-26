@@ -1,18 +1,19 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	CLEARED_ON_SUPERSEDE,
 	HEALTH_WINDOW,
 	healthVerdict,
 	previousRevision,
-	type RevisionLike,
 	retainedRevisions,
 	revisionEntries,
 	revisionImageRefs,
+	type RevisionLike,
 	revisionRoot,
 	supersededHealth,
 	swarmSampleFromTasks,
-	type WorkloadHealthSample,
 	withReadiness,
+	type WorkloadHealthSample,
 } from "../../../src/lib/revisions";
 
 let clock = 0;

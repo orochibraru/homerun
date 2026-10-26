@@ -101,10 +101,8 @@ jobs:
       != 'true'
     uses: ./.github/workflows/code_quality.yaml
     secrets:
-      HOMERUN_TEST_S3_ACCESS_KEY_ID:
-        ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
-      HOMERUN_TEST_S3_SECRET_ACCESS_KEY:
-        ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
+      HOMERUN_TEST_S3_ACCESS_KEY_ID: ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
+      HOMERUN_TEST_S3_SECRET_ACCESS_KEY: ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
 
   go:
     name: Go
@@ -195,8 +193,7 @@ jobs:
       - code_quality
       - go
       - version
-    if:
-      ${{ !cancelled() && !contains(needs.*.result, 'failure') &&
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') &&
       needs.version.result == 'success' }}
     with:
       version: ${{ needs.version.outputs.version }}
@@ -246,8 +243,7 @@ jobs:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
   promote:
-    name:
-      Promote pr-${{ needs.resolve.outputs.pr }} to ${{
+    name: Promote pr-${{ needs.resolve.outputs.pr }} to ${{
       needs.version.outputs.tag }}
     needs: [resolve, version]
     if: needs.resolve.outputs.promote == 'true'
@@ -281,8 +277,7 @@ jobs:
   cleanup:
     name: PR Cleanup
     needs: [resolve, promote, publish-app, publish-worker]
-    if:
-      ${{ !cancelled() && needs.resolve.outputs.pr != '' &&
+    if: ${{ !cancelled() && needs.resolve.outputs.pr != '' &&
       !contains(needs.*.result, 'failure') }}
     uses: ./.github/workflows/delete-pr-images.yaml
     with:
@@ -304,8 +299,7 @@ jobs:
       - publish-app
       - publish-worker
       - promote
-    if:
-      ${{ !cancelled() && !contains(needs.*.result, 'failure') &&
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') &&
       (needs.promote.result == 'success' || (needs.publish-app.result ==
       'success' && needs.publish-worker.result == 'success')) }}
     permissions:
@@ -351,7 +345,7 @@ jobs:
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch
-          prepare: bunx prettier --write CHANGELOG.md
+          prepare: bun fmt --no-config --prose-wrap always CHANGELOG.md
           release-pr: "true"
           token: ${{ secrets.RELEASE_TOKEN }}
 
@@ -528,8 +522,7 @@ jobs:
 
       - name: Package and sign the provider
         env:
-          TERRAFORM_PROVIDER_GPG_PASSPHRASE:
-            ${{ secrets.TERRAFORM_PROVIDER_GPG_PASSPHRASE }}
+          TERRAFORM_PROVIDER_GPG_PASSPHRASE: ${{ secrets.TERRAFORM_PROVIDER_GPG_PASSPHRASE }}
         run: scripts/package-terraform-provider.sh "$VERSION"
 
       - name: Push the provider source to the mirror repo

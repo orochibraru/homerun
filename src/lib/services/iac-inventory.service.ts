@@ -213,25 +213,21 @@ class IacInventoryServiceClass {
 			a.label.localeCompare(b.label);
 		return [
 			...stacks
-				.map(
-					(stack): IacScopeOption => ({
-						group: "Stacks",
-						label: stackPath(stack.id, stacks),
-						name: stack.name,
-						value: `stack:${stack.id}`,
-					}),
-				)
+				.map((stack): IacScopeOption => ({
+					group: "Stacks",
+					label: stackPath(stack.id, stacks),
+					name: stack.name,
+					value: `stack:${stack.id}`,
+				}))
 				.sort(byLabel),
 			...serviceRows
 				.filter((service) => service.toJSON().previewParentId === null)
-				.map(
-					(service): IacScopeOption => ({
-						group: "Services",
-						label: service.name,
-						name: service.name,
-						value: `service:${service.id}`,
-					}),
-				)
+				.map((service): IacScopeOption => ({
+					group: "Services",
+					label: service.name,
+					name: service.name,
+					value: `service:${service.id}`,
+				}))
 				.sort(byLabel),
 		];
 	}

@@ -78,10 +78,8 @@ jobs:
     with:
       tests: ${{ needs.changes.outputs.code == 'true' }}
     secrets:
-      HOMERUN_TEST_S3_ACCESS_KEY_ID:
-        ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
-      HOMERUN_TEST_S3_SECRET_ACCESS_KEY:
-        ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
+      HOMERUN_TEST_S3_ACCESS_KEY_ID: ${{ secrets.HOMERUN_TEST_S3_ACCESS_KEY_ID }}
+      HOMERUN_TEST_S3_SECRET_ACCESS_KEY: ${{ secrets.HOMERUN_TEST_S3_SECRET_ACCESS_KEY }}
 
   go:
     name: Go
@@ -190,8 +188,7 @@ jobs:
 
   summary:
     name: PR Summary
-    if:
-      always() && github.event.pull_request.head.repo.full_name ==
+    if: always() && github.event.pull_request.head.repo.full_name ==
       github.repository
     needs:
       - changes

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import {
 	TEMPLATE_CATEGORY_COLORS,
 	TEMPLATE_CATEGORY_ICONS,

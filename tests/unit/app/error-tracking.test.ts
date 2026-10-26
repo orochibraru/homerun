@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { deflateSync, gzipSync } from "node:zlib";
+
 import { internalDsn, publicDsn, sentryEnv } from "#lib/error-tracking/dsn.js";
 import {
 	decodeBody,

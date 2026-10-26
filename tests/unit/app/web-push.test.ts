@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+
 import { importJWK, jwtVerify } from "jose";
 
 mock.module("$app/env", () => ({
@@ -14,21 +15,17 @@ const {
 	toBase64Url,
 	vapidAuthorization,
 } = await import("../../../src/lib/server/web-push");
-const { pushPayload } = await import(
-	"../../../src/lib/services/notification-channel.service"
-);
-const { deployStartedMessage } = await import(
-	"../../../src/lib/services/notification-messages"
-);
+const { pushPayload } =
+	await import("../../../src/lib/services/notification-channel.service");
+const { deployStartedMessage } =
+	await import("../../../src/lib/services/notification-messages");
 const { DEFAULT_BROWSER_EVENTS, deployStartedEvent, isFailureEvent } =
 	await import("../../../src/lib/notification-events");
 const { browserDeviceName } = await import("../../../src/lib/browser-device");
-const { channelTargetLabel, pushServiceHost } = await import(
-	"../../../src/lib/notification-channel-target"
-);
-const { channelTargetFromForm, validateChannelTarget } = await import(
-	"../../../src/lib/server/validation/notification-channel"
-);
+const { channelTargetLabel, pushServiceHost } =
+	await import("../../../src/lib/notification-channel-target");
+const { channelTargetFromForm, validateChannelTarget } =
+	await import("../../../src/lib/server/validation/notification-channel");
 
 const encoder = new TextEncoder();
 

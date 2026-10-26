@@ -1,4 +1,6 @@
+import { resolve } from "$app/paths";
 import { error, fail, redirect } from "@sveltejs/kit";
+
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { TemplateDTO } from "#lib/dto/template-dto.js";
 import { TemplateLinkDTO } from "#lib/dto/template-link-dto.js";
@@ -9,7 +11,6 @@ import {
 	quickDeployFromTemplate,
 	templateHostAccessRefusal,
 } from "#lib/services/template-links.js";
-import { resolve } from "$app/paths";
 
 export const load = async ({ params, parent, url, locals }) => {
 	await parent();
