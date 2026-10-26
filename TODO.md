@@ -7,6 +7,12 @@ When done delete the entry, no bloat.
 
 ## Small
 
+- [ ] #113 is back on 1.0.72: a fresh git build published to a private cache
+      registry reportedly fails on swarm worker nodes with "No such image". The
+      typed SDK keeps `X-Registry-Auth` on service create, update, restart and
+      scale against a real daemon; needs the failing deploy's log (image ref,
+      build kind) to find where the credentials go missing.
+
 - [ ] PWA: the dashboard isn't installable; add a web app manifest (name,
       `start_url`, `display: standalone`, 192/512 and maskable icons, theme
       colors), link it plus `theme-color` and `apple-touch-icon` from

@@ -53,6 +53,7 @@ import {
 	type DeployPlan,
 	type GitBuildPlan,
 	type ImagePlan,
+	revisionAuth,
 	unreachable,
 	type WorkloadPlan,
 } from "./plan.ts";
@@ -265,14 +266,14 @@ async function imageSpec(ctx: WorkerSpecContext, image: ImagePlan) {
 			};
 		}
 		case "revision": {
-			const { revision } = image;
+			const { registry, revision } = image;
 			await dep.update({
 				buildSource: revision.buildSource,
 				gitCommit: revision.gitCommit,
 				gitRef: revision.gitRef,
 			});
 			return {
-				auth: auth ?? null,
+				auth: revisionAuth(revision.imageRef, registry, auth) ?? null,
 				kind: "revision",
 				revision: {
 					...splitImageRef(revision.imageRef),

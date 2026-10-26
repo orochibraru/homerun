@@ -7,6 +7,7 @@ import {
 	type DeployPlanInput,
 	type DeployPlanService,
 	resolveDeployPlan,
+	revisionAuth,
 } from "../../../src/lib/services/deploy/plan";
 
 const registry: CacheRegistryCredentials = {
@@ -93,7 +94,39 @@ describe("resolveDeployPlan, legal combinations", () => {
 			resolveDeployPlan(
 				input({ revision, service: gitService({ gitUrl: null }) }),
 			).image,
-		).toEqual({ kind: "revision", revision });
+		).toEqual({ kind: "revision", registry: null, revision });
+	});
+
+	test("a git revision keeps the cache registry its image was published to", () => {
+		const revision = {
+			buildSource: "git" as const,
+			digest: "sha256:abc",
+			gitCommit: "abc",
+			gitRef: "main",
+			id: "dep-1",
+			imageId: "sha256:1",
+			imageRef: "registry.example.com/homerun-build-api:m1",
+		};
+		expect(
+			resolveDeployPlan(
+				input({ cacheRegistry: registry, revision, service: gitService() }),
+			).image,
+		).toEqual({ kind: "revision", registry, revision });
+	});
+
+	test("an image revision ignores a leftover cache registry", () => {
+		const revision = {
+			buildSource: "image" as const,
+			digest: null,
+			gitCommit: null,
+			gitRef: null,
+			id: "dep-1",
+			imageId: null,
+			imageRef: "ghcr.io/acme/api:latest",
+		};
+		expect(
+			resolveDeployPlan(input({ cacheRegistry: registry, revision })).image,
+		).toEqual({ kind: "revision", registry: null, revision });
 	});
 
 	test("image source, swarm : a pull into a swarm service carrying replicas", () => {
@@ -290,5 +323,35 @@ describe("resolveDeployPlan, illegal combinations", () => {
 				}),
 			),
 		).toThrow("Build server gone not found.");
+	});
+});
+
+describe("revisionAuth", () => {
+	const own = { password: "pw", serveraddress: "ghcr.io", username: "me" };
+	const scoped: CacheRegistryCredentials = {
+		password: "secret",
+		registryUrl: "ghcr.io/acme",
+		username: "builder",
+	};
+
+	test("an image published under the cache registry pulls with its credentials", () => {
+		expect(
+			revisionAuth("ghcr.io/acme/homerun-build-api:m1", scoped, own),
+		).toEqual({
+			password: "secret",
+			serveraddress: "ghcr.io",
+			username: "builder",
+		});
+	});
+
+	test("an image elsewhere keeps the service's own credentials", () => {
+		expect(revisionAuth("homerun-build-api:m1", scoped, own)).toBe(own);
+		expect(revisionAuth("ghcr.io/acmeco/api:1", scoped, undefined)).toBe(
+			undefined,
+		);
+	});
+
+	test("no cache registry keeps the service's own credentials", () => {
+		expect(revisionAuth("ghcr.io/acme/api:1", null, own)).toBe(own);
 	});
 });
