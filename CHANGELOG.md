@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.72](https://github.com/orochibraru/homerun/compare/v1.0.71...v1.0.72) (2026-10-26)
+
+### Features
+
+- make the mobile dashboard feel like a native app and extend blocked IPs with
+  rankings and abuse reports (#157)
+  ([9d31af0](https://github.com/orochibraru/homerun/commit/9d31af04c5f59168318e4b29c14fdfafe6fa5528))
+- theme toasts, float the mobile tab bar and split Observability into Logs,
+  Uptime and Errors views (#155)
+  ([6f470bd](https://github.com/orochibraru/homerun/commit/6f470bd716a1fc7f9be6680b47661a0d2fcf4484))
+
 ## [1.0.71](https://github.com/orochibraru/homerun/compare/v1.0.70...v1.0.71) (2026-10-25)
 
 ### Bug Fixes
