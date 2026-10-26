@@ -1,0 +1,83 @@
+app:
+  - changed-files:
+      - any-glob-to-any-file: ["src/**", "static/**"]
+
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          ["src/routes/api/**", "src/lib/openapi/**", "openapi.json"]
+
+database:
+  - changed-files:
+      - any-glob-to-any-file: ["src/lib/server/db/**", "drizzle/**"]
+
+worker:
+  - changed-files:
+      - any-glob-to-any-file:
+          ["cmd/worker/**", "internal/worker/**", "internal/jobs/**"]
+
+cli:
+  - changed-files:
+      - any-glob-to-any-file: ["cmd/cli/**", "internal/cli/**"]
+
+installer:
+  - changed-files:
+      - any-glob-to-any-file: ["cmd/installer/**", "internal/installer/**"]
+
+go:
+  - changed-files:
+      - any-glob-to-any-file: ["**/*.go", "go.mod", "go.sum"]
+
+terraform:
+  - changed-files:
+      - any-glob-to-any-file: ["terraform/**", "src/lib/iac/**"]
+
+templates:
+  - changed-files:
+      - any-glob-to-any-file: ["templates/**", "static/template-icons/**"]
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file: ["docs/**", "README.md", "CONTRIBUTING.md"]
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: ["tests/**", "playwright*.config.ts"]
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          [".github/**", ".pre-commit-config.yaml", "actions/**", "action.yaml"]
+
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          ["Dockerfile", "compose*.yaml", "docker-bake.hcl", ".dockerignore"]
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          ["package.json", "bun.lock", "go.mod", "go.sum", "tools/go/**"]
+
+ai:
+  - changed-files:
+      - any-glob-to-any-file:
+          [".agents/**", ".claude/**", "CLAUDE.md", "AGENTS.md"]
+
+feature:
+  - head-branch: ["^feat/"]
+
+bug:
+  - head-branch: ["^fix/"]
+
+performance:
+  - head-branch: ["^perf/"]
+
+refactor:
+  - head-branch: ["^refactor/"]
+
+chore:
+  - head-branch: ["^(chore|build|style|revert)/"]
+
+renovate:
+  - head-branch: ["^renovate/"]
