@@ -1,24 +1,24 @@
 # Pull request previews
 
 Advanced mode: [simple mode](ui-modes.md) hides the Previews section of a
-service's Environments & Deployments tab. Everything here keeps working either
+service's Environments & Revisions tab. Everything here keeps working either
 way, and a hidden page still opens from a link.
 
 Tick **Enable pull request previews** in a git service's **Environments &
-Deployments → Previews** section and every pull request opened on its repo gets
-a service of its own, `<slug>-pr-<number>` (so
-`<slug>-pr-<number>.<baseDomain>`), built from the pull request's head and
-deployed as the service's owner. Each push to the pull request redeploys the
-preview; closing or merging it deletes the preview, container, DNS records and
-all. GitHub, Gitea and GitLab previews build the exact head commit; Bitbucket
-only sends an abbreviated hash, so its previews build the head branch, which
-covers every pull request previews are made for anyway.
+Revisions → Previews** section and every pull request opened on its repo gets a
+service of its own, `<slug>-pr-<number>` (so `<slug>-pr-<number>.<baseDomain>`),
+built from the pull request's head and deployed as the service's owner. Each
+push to the pull request redeploys the preview; closing or merging it deletes
+the preview, container, DNS records and all. GitHub, Gitea and GitLab previews
+build the exact head commit; Bitbucket only sends an abbreviated hash, so its
+previews build the head branch, which covers every pull request previews are
+made for anyway.
 
 A service whose CI builds and pushes its own image gets previews too, created by
 the pipeline instead of the webhook, see
 [Previews of an image-based service](#previews-of-an-image-based-service).
 
-![A git service's Environments & Deployments → Previews with pull request previews enabled](images/previews-tab.webp)
+![A git service's Environments & Revisions → Previews with pull request previews enabled](images/previews-tab.webp)
 
 **Pull requests from forks are never previewed.** On a public repo anyone can
 open one, and a preview builds and runs its code with the service's env vars.
@@ -200,9 +200,9 @@ matching tags deploy the service itself. See
 An image-based service has no repo for Homerun to watch, so its CI creates the
 previews: after pushing the pull request's image, it runs
 `homerun previews deploy <service> <pr> --tag <tag>`. With **Enable pull request
-previews** ticked in the service's **Environments & Deployments → Previews**,
-the first call for a pull request creates `<slug>-pr-<number>` the same way a
-git preview is created: the service's settings, env vars and overrides, domain
+previews** ticked in the service's **Environments & Revisions → Previews**, the
+first call for a pull request creates `<slug>-pr-<number>` the same way a git
+preview is created: the service's settings, env vars and overrides, domain
 template, login wall, stack, icon and category, plus volume copies when that
 option is on. The preview runs the service's own image at that tag, pulled with
 the service's registry credentials. Each later call switches the preview to the

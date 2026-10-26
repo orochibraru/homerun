@@ -1,11 +1,11 @@
 # Environment variables
 
-Plain key/value rows under a service's **Environments & Deployments →
-Environment Variables**, stored as-is (not encrypted, don't put a raw plaintext
-secret you'd mind leaking in the DB dump into an env var if you can avoid it;
-registry passwords and similar have their own encrypted fields instead).
+Plain key/value rows under a service's **Environments & Revisions → Environment
+Variables**, stored as-is (not encrypted, don't put a raw plaintext secret you'd
+mind leaking in the DB dump into an env var if you can avoid it; registry
+passwords and similar have their own encrypted fields instead).
 
-![Environments & Deployments → Environment Variables, one row per variable, each with the lock that marks it secret](images/env.webp)
+![Environments & Revisions → Environment Variables, one row per variable, each with the lock that marks it secret](images/env.webp)
 
 **Link a service** in the new-service wizard's Environment step fills those rows
 in for you from a service you already run, in any stack or none: pick it, and

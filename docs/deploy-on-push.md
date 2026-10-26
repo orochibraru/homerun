@@ -1,6 +1,6 @@
 # Deploy on push
 
-Turn on **Deploy on push** in the service's **Environments & Deployments →
+Turn on **Deploy on push** in the service's **Environments & Revisions →
 Source** section (or in the wizard) and every push to the service's branch
 deploys it, as its owner, without you touching the dashboard.
 
@@ -13,7 +13,7 @@ deploys it, as its owner, without you touching the dashboard.
   repository's settings with those, sending push events as JSON. On GitLab the
   secret goes in **Secret token**.
 
-![Environments & Deployments → Source with Deploy on push ticked, the webhook URL and secret to add by hand, and the polling option](images/deploy-on-push-webhook.webp)
+![Environments & Revisions → Source with Deploy on push ticked, the webhook URL and secret to add by hand, and the polling option](images/deploy-on-push-webhook.webp)
 
 Pushes to other branches, tags and pings are acknowledged and ignored, and a
 delivery with a wrong signature is refused. A service pinned to a commit SHA

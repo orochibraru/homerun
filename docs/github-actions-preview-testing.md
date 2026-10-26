@@ -31,8 +31,8 @@ image.
 ## Homerun settings
 
 - The service builds from git, and **Enable pull request previews** is ticked
-  under its **Environments & Deployments → Previews**.
-- **Deploy on push is off** under its **Environments & Deployments → Source**.
+  under its **Environments & Revisions → Previews**.
+- **Deploy on push is off** under its **Environments & Revisions → Source**.
   With it on, the push to main from the merge would rebuild and redeploy the
   service right after ship promoted the tested image, replacing it with a fresh
   build of the same commit: a second deploy, and not the artifact you tested.
@@ -304,7 +304,7 @@ running or failed.
   section, and the recent deliveries of the webhook in the repository settings.
   A service with previews off fails straight away instead of waiting.
 - **Wait fails with the deploy's error.** The preview's build or deploy failed;
-  the preview's own **Environments & Deployments → Revisions** has the full log.
+  the preview's own **Environments & Revisions → Revisions** has the full log.
 - **Wait fails with "unhealthy".** The preview started but its health check or
   readiness probe failed, with the reason. Previews run with the service's env
   vars: a database URL pointing at production is a bug here, not in Homerun.

@@ -50,7 +50,7 @@ and host charts; its **Traces**, **CrowdSec** and **Settings** tabs are hidden.
 
 Every tab stays. Inside them, simple mode hides:
 
-- **Environments & Deployments**: the **Environments** list, **Revisions**,
+- **Environments & Revisions**: the **Environments** list, **Revisions**,
   **Previews** and **Channels**. The tab opens on **Source**, and **Environment
   Variables** stays. On a git service, the build method, build cache and build
   server sit behind a collapsed **Advanced** section on **Source**.

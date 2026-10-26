@@ -14,8 +14,10 @@
 		label: string;
 		/** Small amber dot next to the label : a field on this tab needs attention (e.g. Settings' setup-issue highlight) even while it's not the active tab. */
 		hasWarning?: boolean;
-		/** One-line summary under the label on the mobile nav-card hub, from data the layout already loads. */
+		/** What the tab is for, under its label on the mobile nav-card hub. */
 		description?: string;
+		/** Live state under the description on the mobile hub (last deploy, traffic, findings), from data the layout already loads. */
+		summary?: string;
 	}
 
 	const {
@@ -149,45 +151,49 @@
 
 {#if atHub}
 	<nav
-		class="grid grid-cols-2 gap-2.5 md:hidden"
+		class="flex flex-col gap-2 md:hidden"
 		aria-label="Sections"
 		data-slot="tab-hub"
 	>
 		{#each tabs as tab, index (tab.id)}
 			{@const TabIcon = tab.icon}
 			<a
-				class="border-border bg-surface active:bg-surface-2 relative flex min-h-24 flex-col justify-between gap-3 rounded-2xl border p-3.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 {tabs.length %
-					2 ===
-					1 && index === tabs.length - 1
-					? 'col-span-2'
-					: ''}"
+				class="border-border bg-surface active:bg-surface-2 flex items-center gap-3 rounded-2xl border p-3.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 				href={cardHref(tab, index)}
 			>
 				<span
-					class="bg-accent-light text-accent flex size-9 items-center justify-center rounded-xl"
+					class="bg-accent-light text-accent flex size-10 shrink-0 items-center justify-center self-start rounded-xl"
 				>
 					{#if TabIcon}<TabIcon class="size-4.5" />{:else}<ChevronRight
 							class="size-4.5"
 						/>{/if}
 				</span>
-				<span class="flex flex-col gap-0.5">
-					<span class="text-text text-sm leading-snug font-semibold"
-						>{tab.label}</span
+				<span class="flex min-w-0 flex-1 flex-col gap-0.5">
+					<span
+						class="text-text flex items-center gap-1.5 text-sm leading-snug font-semibold"
 					>
+						{tab.label}
+						{#if tab.hasWarning}
+							<span
+								class="size-2 shrink-0 rounded-full bg-amber-400"
+								title="Needs attention"
+							></span>
+						{/if}
+					</span>
 					{#if tab.description}
+						<span class="text-text-subtle text-xs leading-snug"
+							>{tab.description}</span
+						>
+					{/if}
+					{#if tab.summary}
 						<span
-							class="text-xs {tab.hasWarning
+							class="mt-1 truncate text-xs font-medium {tab.hasWarning
 								? 'text-amber-600 dark:text-amber-400'
-								: 'text-text-subtle'}">{tab.description}</span
+								: 'text-text-muted'}">{tab.summary}</span
 						>
 					{/if}
 				</span>
-				{#if tab.hasWarning}
-					<span
-						class="absolute top-3.5 right-3.5 size-2 rounded-full bg-amber-400"
-						title="Needs attention"
-					></span>
-				{/if}
+				<ChevronRight class="text-text-subtle size-4 shrink-0" />
 			</a>
 		{/each}
 	</nav>
