@@ -177,8 +177,10 @@ class DeploymentServiceClass {
 	 * fresh git build (not a rollback), then delegates the actual
 	 * image/workload decision to `resolveDeployPlan`.
 	 *
-	 * @param revision When set (a rollback), skips build-server/cache-registry
-	 *   resolution entirely and the plan reuses that revision's image.
+	 * @param revision When set (a rollback), skips build-server resolution and
+	 *   the plan reuses that revision's image, still carrying the service's
+	 *   own cache registry so a git build's published image can be pulled
+	 *   again with its credentials.
 	 */
 	async #loadDeployPlan(
 		svc: ServiceDTO,
@@ -195,7 +197,7 @@ class DeploymentServiceClass {
 		}
 
 		const cacheRegistryRow =
-			isGitBuild && svc.buildCacheRegistryId
+			svc.buildSource === "git" && svc.buildCacheRegistryId
 				? await BuildCacheRegistryDTO.get(svc.buildCacheRegistryId)
 				: null;
 		const cacheRegistry: CacheRegistryCredentials | null = cacheRegistryRow

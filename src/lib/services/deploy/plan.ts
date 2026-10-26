@@ -1,6 +1,7 @@
 import type { BuildMethod } from "#lib/build-methods.js";
 import type { RemoteExecutionTarget } from "#lib/dto/remote-host-dto.js";
 import type { Service } from "#lib/server/db/schema.js";
+import type { RegistryAuth } from "#lib/services/docker/containers.js";
 import type { PullPolicy } from "#lib/types.js";
 
 export interface CacheRegistryCredentials {
@@ -33,7 +34,11 @@ export interface RevisionSource {
 
 export type ImagePlan =
 	| { image: string; kind: "pull"; pullPolicy: PullPolicy; tag: string }
-	| { kind: "revision"; revision: RevisionSource }
+	| {
+			kind: "revision";
+			registry: CacheRegistryCredentials | null;
+			revision: RevisionSource;
+	  }
 	| {
 			cacheRegistry: CacheRegistryCredentials | null;
 			git: GitSource;
@@ -108,6 +113,27 @@ export function unreachable(value: never): never {
 }
 
 /**
+ * The credentials a rollback pulls its revision's image with: the cache
+ * registry's when the image was published under it by a git build, the
+ * service's own otherwise. Swarm hands them to every node, so a worker node
+ * can pull a private build image too.
+ */
+export function revisionAuth(
+	imageRef: string,
+	registry: CacheRegistryCredentials | null,
+	auth: RegistryAuth | undefined,
+): RegistryAuth | undefined {
+	if (!registry || !imageRef.startsWith(`${registry.registryUrl}/`)) {
+		return auth;
+	}
+	return {
+		password: registry.password,
+		serveraddress: registry.registryUrl.split("/")[0],
+		username: registry.username,
+	};
+}
+
+/**
  * Builds the `GitBuildPlan` for a `buildSource: "git"` service : a local
  * build when no build server is configured, otherwise a docker-remote or
  * agent build depending on the build server's kind, publishing through the
@@ -169,9 +195,13 @@ function resolveGitBuild(input: DeployPlanInput): GitBuildPlan {
  *   configured, or via `resolveGitBuild`'s own checks for the git path.
  */
 function resolveImage(input: DeployPlanInput): ImagePlan {
-	const { revision, service } = input;
+	const { cacheRegistry, revision, service } = input;
 	if (revision) {
-		return { kind: "revision", revision };
+		return {
+			kind: "revision",
+			registry: revision.buildSource === "git" ? cacheRegistry : null,
+			revision,
+		};
 	}
 	switch (service.buildSource) {
 		case "image":
