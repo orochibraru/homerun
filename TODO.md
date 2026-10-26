@@ -16,6 +16,10 @@ When done delete the entry, no bloat.
       bucket, run pages) are still a scrolling strip below `md`; give them the
       same nav-card hub `TabNav` got
 
+- [ ] Mobile: the `TabNav` hub now shows a description and a live summary per
+      row, but only the service page fills them; give the other hubs (stack,
+      settings, profile, monitoring, workstation, …) the same
+
 - [ ] Git providers: the Add provider form (and the GitHub App manifest flow)
       still sits on top of the list; move it to `/git-providers/new`
 

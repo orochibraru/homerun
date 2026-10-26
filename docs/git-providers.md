@@ -32,7 +32,7 @@ takes two steps, done by different people:
 
 ![Git Providers, with the Add provider form open above a registered provider and its Connect button](images/git-providers.webp)
 
-Once connected, a service's **Environments & Deployments → Source** section (and
+Once connected, a service's **Environments & Revisions → Source** section (and
 the new-service wizard) picks the repository and branch from that account
 instead of asking for a clone URL, and checks the repo for a `Dockerfile`.
 Picking one also turns on [Deploy on push](deploy-on-push.md), with the webhook

@@ -1,7 +1,7 @@
 # Release channels
 
 Advanced mode: [simple mode](ui-modes.md) hides the Channels section of a
-service's Environments & Deployments tab. Everything here keeps working either
+service's Environments & Revisions tab. Everything here keeps working either
 way, and a hidden page still opens from a link.
 
 Release channels split one git service into two environments, for the common "a
@@ -18,9 +18,9 @@ on.
 
 ## Turning them on
 
-![Environments & Deployments → Channels with release channels ticked and a canary domain filled in](images/release-channels-tab.webp)
+![Environments & Revisions → Channels with release channels ticked and a canary domain filled in](images/release-channels-tab.webp)
 
-Open a git service's **Environments & Deployments → Channels** section, tick
+Open a git service's **Environments & Revisions → Channels** section, tick
 **Enable release channels**, and optionally change:
 
 - **Canary branch**: the branch whose pushes deploy the canary.
@@ -96,7 +96,7 @@ too. Stable rebuilds its current ref, the last tag it deployed.
 
 Every deployment records the environment it deployed: `production` for a normal
 service and a stable one, `canary`, or `preview` for a pull request preview. A
-service's Environments & Deployments → Revisions and the instance-wide
+service's Environments & Revisions → Revisions and the instance-wide
 **Deployments** page show it as a badge, and the Deployments page filters on it.
 The API's deployment and revision shapes carry it as `environment`.
 

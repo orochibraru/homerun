@@ -4,9 +4,12 @@ import { error } from "@sveltejs/kit";
 import { config, serviceDomain } from "#lib/config.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ErrorIssueDTO } from "#lib/dto/error-issue-dto.js";
+import { ImageScanDTO } from "#lib/dto/image-scan-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
+import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
+import { TrafficSampleDTO } from "#lib/dto/traffic-sample-dto.js";
 import { serviceHostname } from "#lib/services/dns.service.js";
 import { certResolverFor } from "#lib/services/docker/cert-resolver.js";
 import { ancestorIds } from "#lib/stack-tree.js";
@@ -48,14 +51,28 @@ export const load = async ({ params, parent }) => {
 	}
 
 	const previewParentId = svc.toJSON().previewParentId;
-	const [stack, [lastDeploy], stacks, openErrors, previewParent] =
-		await Promise.all([
-			svc.stackId ? StackDTO.get(svc.stackId) : null,
-			DeploymentDTO.listRevisions(svc.id, 1),
-			svc.stackId ? StackDTO.list() : [],
-			ErrorIssueDTO.countOpenByService([svc.id]),
-			previewParentId ? ServiceDTO.get(previewParentId) : null,
-		]);
+	const [
+		stack,
+		[lastDeploy],
+		[lastAttempt],
+		stacks,
+		openErrors,
+		previewParent,
+		traffic,
+		mounts,
+		latestScan,
+	] = await Promise.all([
+		svc.stackId ? StackDTO.get(svc.stackId) : null,
+		DeploymentDTO.listRevisions(svc.id, 1),
+		DeploymentDTO.listForService(svc.id, 1),
+		svc.stackId ? StackDTO.list() : [],
+		ErrorIssueDTO.countOpenByService([svc.id]),
+		previewParentId ? ServiceDTO.get(previewParentId) : null,
+		TrafficSampleDTO.totals([svc.id], new Date(Date.now() - 86_400_000)),
+		ServiceVolumeDTO.listForService(svc.id),
+		ImageScanDTO.latestForService(svc.id),
+	]);
+	const scan = latestScan?.toJSON();
 	const root = previewParentId
 		? svc.toJSON().previewPrNumber === null
 			? previewParent
@@ -102,7 +119,18 @@ export const load = async ({ params, parent }) => {
 					...(canary ? [{ id: canary.id, name: "canary" }] : []),
 				]
 			: [],
+		lastDeployment: lastAttempt
+			? {
+					at: lastAttempt.toJSON().finishedAt ?? lastAttempt.toJSON().createdAt,
+					status: lastAttempt.toJSON().status,
+				}
+			: null,
+		latestScan: scan
+			? { at: scan.scannedAt, counts: scan.counts, status: scan.status }
+			: null,
+		mountCount: mounts.length,
 		openErrors: openErrors.get(svc.id) ?? 0,
+		traffic,
 		stackSlug: stack?.slug ?? null,
 		publicScheme: config.traefik.entrypoint === "web" ? "http" : "https",
 		service: svc.toJSON(),

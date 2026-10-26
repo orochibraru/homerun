@@ -5,13 +5,13 @@ Deployments sidebar entry, and puts a **Roll back to the previous version**
 button on the service's Overview instead. Everything here keeps working either
 way, and a hidden page still opens from a link.
 
-![A service's Environments & Deployments → Revisions, with the current revision marked](images/revisions.webp)
+![A service's Environments & Revisions → Revisions, with the current revision marked](images/revisions.webp)
 
 Every deploy that reaches running is a **revision**: the exact image it ran
 (`image:tag` plus the registry digest when there is one, or the local
 `homerun-build-<slug>:<tag>` for a git build), the commit and branch for a git
-build, and whether it stayed healthy. The service's **Environments & Deployments
-→ Revisions** section lists them with the current one marked, next to failed
+build, and whether it stayed healthy. The service's **Environments & Revisions →
+Revisions** section lists them with the current one marked, next to failed
 attempts and their logs.
 
 The list is in the order revisions were first deployed and deploying one never

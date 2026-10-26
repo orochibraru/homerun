@@ -41,7 +41,7 @@ sync by hand.
   applied to any service with the CLI; its published JSON schema.
 - **[Connecting a git provider](git-providers.md)**: GitHub, GitLab, Gitea or
   Bitbucket OAuth apps, and browsing your repos from a service's Environments &
-  Deployments → Source section.
+  Revisions → Source section.
 - **[Deploy on push](deploy-on-push.md)**: webhooks registered for you, manual
   webhooks, and polling the branch when the provider can't reach you.
 - **[Deploying from CI](ci-cd.md)**: the GitHub Action, the CLI image for GitLab

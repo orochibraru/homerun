@@ -134,13 +134,13 @@ rest of the API.
 
 An image-based service can have
 [pull request previews](pull-request-previews.md) too: tick **Enable pull
-request previews** in its **Environments & Deployments → Previews**, then have
-the pipeline push an image for the pull request and run
-`homerun previews deploy`. The first run creates `<slug>-pr-<number>` with the
-service's preview settings, every later one switches it to the new tag and
-redeploys it, and the command waits until the preview is healthy, prints its
-URL, and exits non-zero when the deploy fails. Homerun can't delete the preview
-when the pull request closes, so the workflow does that too.
+request previews** in its **Environments & Revisions → Previews**, then have the
+pipeline push an image for the pull request and run `homerun previews deploy`.
+The first run creates `<slug>-pr-<number>` with the service's preview settings,
+every later one switches it to the new tag and redeploys it, and the command
+waits until the preview is healthy, prints its URL, and exits non-zero when the
+deploy fails. Homerun can't delete the preview when the pull request closes, so
+the workflow does that too.
 
 ```yaml
 name: Preview

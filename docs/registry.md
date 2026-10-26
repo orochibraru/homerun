@@ -75,7 +75,7 @@ so you don't have to go hunting for them —
   [`/build-cache-registries`](deploy-source-and-builds.md#build-servers-and-build-cache),
   with a link to edit each one;
 - every service that carries its own pull credentials in its **Environments &
-  Deployments → Source** section, with a link straight to that service.
+  Revisions → Source** section, with a link straight to that service.
 
 ![The Credentials tab: stored registry credentials, and a service with its own](images/registry-credentials.webp)
 

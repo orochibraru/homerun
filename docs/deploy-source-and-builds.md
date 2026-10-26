@@ -5,7 +5,7 @@ machine builds it.
 
 ## Deploy source: image or git repo
 
-![Environments & Deployments → Source for a service built from a git repository](images/source-git.webp)
+![Environments & Revisions → Source for a service built from a git repository](images/source-git.webp)
 
 Every service is either:
 
@@ -24,7 +24,7 @@ environment, resources, health check, domains, login wall and previews.
 
 ## Version pinning and update checks
 
-An image-built service's **Environments & Deployments → Source** tab has a
+An image-built service's **Environments & Revisions → Source** tab has a
 **Version** panel below the source form.
 
 **Pin version** finds the tags the running image is published under in its
@@ -71,7 +71,7 @@ switches on `homerun_service`, what a check found in the
 
 ![The Source section's build method picker, open on the six methods](images/source-build-methods.webp)
 
-A git-based service picks how it's built in its **Environments & Deployments →
+A git-based service picks how it's built in its **Environments & Revisions →
 Source** section (and in the wizard):
 
 - **Dockerfile** (the default): the repo's `Dockerfile`, or the path you set,

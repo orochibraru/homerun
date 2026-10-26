@@ -114,10 +114,10 @@ if you have more than a page's worth, searched/paginated server-side.
 
 ## Picking a build server and limiting builds
 
-A git service's **Build server** (its Environments & Deployments → Source
-section) is this host, one pinned build server, or **Any free build server**:
-each deploy then takes the least busy registered server that has a free build
-slot, picking at random between equally busy ones.
+A git service's **Build server** (its Environments & Revisions → Source section)
+is this host, one pinned build server, or **Any free build server**: each deploy
+then takes the least busy registered server that has a free build slot, picking
+at random between equally busy ones.
 
 **Settings → Docker → Build servers** sets the defaults:
 
@@ -146,7 +146,7 @@ The built image only exists on the build server's own daemon, so it has to reach
 this host before the container can start. Two ways, picked by whether the
 service has a **build cache registry** (a registry credential registered under
 `/build-cache-registries` and picked in the service's
-[Environments & Deployments → Source](deploy-source-and-builds.md#deploy-source-image-or-git-repo)
+[Environments & Revisions → Source](deploy-source-and-builds.md#deploy-source-image-or-git-repo)
 section):
 
 - **With a cache registry**, the build pushes the final image there and this
@@ -189,7 +189,7 @@ env var and HTTP surface reference, plus install options (a Docker image, a
 prebuilt binary, or the installer below).
 
 **Wired into the main app**: registering an agent-kind build server and picking
-it in a git-based service's Environments & Deployments → Source section routes
+it in a git-based service's Environments & Revisions → Source section routes
 that service's builds through this agent's HTTP API instead of a raw Docker
 connection. An agent host can also run [dev workstations](workstations.md): pick
 it under **Runs on** when creating one, the same as a Docker host.

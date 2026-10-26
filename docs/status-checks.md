@@ -1,7 +1,7 @@
 # Required status checks
 
 A git-mode service can refuse to build until its CI agrees. In the service's
-**Environments & Deployments → Source** section, tick **Require status checks to
+**Environments & Revisions → Source** section, tick **Require status checks to
 pass before building** and pick the checks that must pass. The picker lists
 every check name reported on the latest commits of the service's branch, read
 live from the git provider: GitHub check runs and commit statuses, GitLab job
@@ -9,7 +9,7 @@ statuses plus the pipeline itself (as `pipeline`), Gitea/Forgejo commit
 statuses, and Bitbucket build statuses (by key). A check that hasn't run
 recently can be added by name.
 
-![Environments & Deployments → Source's status checks, with the checks reported on the branch to pick from](images/status-checks-picker.webp)
+![Environments & Revisions → Source's status checks, with the checks reported on the branch to pick from](images/status-checks-picker.webp)
 
 On every deploy of that service, whatever triggered it (Deploy, the API or CLI,
 a scheduled redeploy, a stack or template deploy), Homerun first resolves the

@@ -25,6 +25,7 @@
 	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
 	import { primaryHostname } from "#lib/service-domains.js";
 	import { internalUrl, maskUrlPassword } from "#lib/service-link.js";
+	import type { ContainerStatus } from "#lib/types.js";
 	import { currentHref, visibleIn } from "#lib/ui-mode.js";
 
 	const { data, children } = $props();
@@ -44,6 +45,46 @@
 		return main ? [main] : [];
 	});
 
+	const DEPLOY_OUTCOME: Record<ContainerStatus, string> = {
+		failed: "failed",
+		missing: "lost its container",
+		pending: "in progress",
+		pulling: "in progress",
+		running: "succeeded",
+		starting: "in progress",
+		stopped: "succeeded",
+	};
+
+	const compact = new Intl.NumberFormat(undefined, { notation: "compact" });
+
+	const observabilitySummary = $derived.by(() => {
+		const parts = [
+			`${compact.format(data.traffic.requests)} requests`,
+			`${compact.format(data.traffic.status5xx)} 5xx`,
+		];
+		if (data.traffic.avgResponseMs !== null) {
+			parts.push(`${Math.round(data.traffic.avgResponseMs)} ms avg`);
+		}
+		const line = `${parts.join(" · ")} (24h)`;
+		return data.openErrors > 0
+			? `${data.openErrors} open ${data.openErrors === 1 ? "error" : "errors"} · ${line}`
+			: line;
+	});
+
+	const securitySummary = $derived.by(() => {
+		const scan = data.latestScan;
+		if (!scan) {
+			return "Never scanned";
+		}
+		if (scan.status !== "ok") {
+			return `Last scan ${scan.status} · ${timeAgo(scan.at)}`;
+		}
+		const { critical, high, medium } = scan.counts;
+		return critical + high + medium === 0
+			? `No critical, high or medium findings · ${timeAgo(scan.at)}`
+			: `${critical} critical · ${high} high · ${medium} medium · ${timeAgo(scan.at)}`;
+	});
+
 	interface RouteTab extends NavTab {
 		exact: boolean;
 		href: string;
@@ -54,6 +95,7 @@
 		{
 			exact: true,
 			href: resolve("/(protected)/services/[serviceId]", { serviceId: svc.id }),
+			description: "Status, live resources and recent activity",
 			icon: LayoutGrid,
 			id: "overview",
 			label: "Overview",
@@ -63,12 +105,14 @@
 			href: resolve("/(protected)/services/[serviceId]/environments", {
 				serviceId: svc.id,
 			}),
-			description: data.lastDeployedAt
-				? `Deployed ${timeAgo(data.lastDeployedAt)}`
-				: undefined,
+			description: "Source, variables, revisions, previews and channels",
+			hasWarning: data.lastDeployment?.status === "failed",
 			icon: Layers,
 			id: "environments",
-			label: "Environments & Deployments",
+			label: "Environments & Revisions",
+			summary: data.lastDeployment
+				? `Last deploy ${DEPLOY_OUTCOME[data.lastDeployment.status]} · ${timeAgo(data.lastDeployment.at)}`
+				: "Never deployed",
 			link: visibleIn(data.uiMode, "service/environments/environments")
 				? undefined
 				: resolve("/(protected)/services/[serviceId]/environments/source", {
@@ -80,66 +124,87 @@
 			href: resolve("/(protected)/services/[serviceId]/observability", {
 				serviceId: svc.id,
 			}),
-			description:
-				data.openErrors > 0
-					? `${data.openErrors} open ${data.openErrors === 1 ? "error" : "errors"}`
-					: undefined,
+			description: "Logs, health, uptime, traces and errors",
 			hasWarning: data.openErrors > 0,
 			icon: FileText,
 			id: "observability",
 			label: "Observability",
+			summary: observabilitySummary,
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/services/[serviceId]/volumes", {
 				serviceId: svc.id,
 			}),
+			description: "Volumes mounted into the container",
 			icon: HardDrive,
 			id: "volumes",
 			label: "Storage",
+			summary:
+				data.mountCount > 0
+					? `${data.mountCount} ${data.mountCount === 1 ? "volume" : "volumes"} mounted`
+					: "No volumes mounted",
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/services/[serviceId]/networking", {
 				serviceId: svc.id,
 			}),
-			description: publicDomains[0] ?? "Not publicly routed",
+			description: "Domains, ports, TLS and routing",
 			icon: Network,
 			id: "networking",
 			label: "Networking",
+			summary: publicDomains[0] ?? "Not publicly routed",
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/services/[serviceId]/container", {
 				serviceId: svc.id,
 			}),
+			description: "Resources, replicas, command and health check",
 			icon: Cpu,
 			id: "container",
 			label: "Container",
+			summary: [
+				`${svc.replicas} ${svc.replicas === 1 ? "replica" : "replicas"}`,
+				svc.cpuLimit ? `${svc.cpuLimit} CPU` : "no CPU limit",
+				svc.memoryLimitMb ? `${svc.memoryLimitMb} MB` : "no memory limit",
+			].join(" · "),
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/services/[serviceId]/security", {
 				serviceId: svc.id,
 			}),
+			description: "Image vulnerability scans and blocked paths",
+			hasWarning:
+				data.latestScan?.status === "failed" ||
+				(data.latestScan?.counts.critical ?? 0) > 0,
 			icon: ShieldCheck,
 			id: "security",
 			label: "Security",
+			summary: securitySummary,
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/services/[serviceId]/terminal", {
 				serviceId: svc.id,
 			}),
+			description: "A shell inside the running container",
 			icon: Terminal,
 			id: "terminal",
 			label: "Terminal",
+			summary:
+				svc.containerId || svc.swarmServiceId
+					? undefined
+					: "No container running",
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/services/[serviceId]/settings", {
 				serviceId: svc.id,
 			}),
+			description: "Name, stack, auto-redeploy, rollback and danger zone",
 			icon: Settings,
 			id: "settings",
 			label: "Settings",

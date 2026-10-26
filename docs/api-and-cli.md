@@ -271,7 +271,7 @@ to create (image-based services) and test against (see
   (an existing preview of it is deleted), the preview's slug is taken or the
   instance is out of capacity.
 - `DELETE /api/v1/services/:id/previews/:prNumber` deletes it, like the Delete
-  button in Environments & Deployments → Previews (`409` when its container
+  button in Environments & Revisions → Previews (`409` when its container
   couldn't be removed). An image-based service's CI calls it when the pull
   request closes, since no webhook does.
 - `POST /api/v1/services/:id/previews/:prNumber/promote` deploys the image the

@@ -83,7 +83,7 @@
 
 <SectionNav
 	hubLabel="Environments"
-	label="Environments & Deployments sections"
+	label="Environments & Revisions sections"
 	sections={visibleItems(data.uiMode, sections, page.url.pathname)}
 >
 	{@render children()}

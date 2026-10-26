@@ -27,7 +27,7 @@ An absolute path you don't paste is kept as an [env file](env-vars.md#env-files)
 and read from the host at every deploy. A relative one left blank is skipped.
 
 What comes back as a warning instead of being applied: `build:` (import it, then
-point the service's **Environments & Deployments → Source** section at a git
+point the service's **Environments & Revisions → Source** section at a git
 repository), `healthcheck`, `cap_drop`, `extra_hosts`, `sysctls`, `tmpfs`,
 secrets/configs, relative bind mounts (Homerun needs an absolute host path), and
 anonymous volumes.
