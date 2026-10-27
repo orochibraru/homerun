@@ -1,6 +1,6 @@
 import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
-import { isNotFound } from "#lib/server/worker-client.js";
+import { isNotFound, WorkerRequestError } from "#lib/server/worker-client.js";
 import { OTEL_GRPC_PORT, OTEL_HTTP_PORT } from "#lib/tracing/env.js";
 
 import type { BaseDockerService, Constructor } from "./base.ts";
@@ -19,6 +19,7 @@ import {
 	otelLabels,
 	otelMatches,
 } from "./otel-container.ts";
+import { swarmNetworkName } from "./swarm.ts";
 
 const logger = new Logger("OtelCollector");
 
@@ -31,6 +32,7 @@ interface RequiresOtelDeps {
 interface OtelInspect {
 	Config?: { Env?: string[]; Image?: string };
 	Id: string;
+	NetworkSettings?: { Networks?: Record<string, unknown> | null };
 	State?: { Running?: boolean };
 }
 
@@ -78,6 +80,31 @@ export function DockerOtelMixin<
 			});
 		}
 
+		/**
+		 * Attaches the collector to the swarm overlay so swarm services, which
+		 * only sit on that overlay, resolve it by name. A no-op when it's
+		 * already attached or swarm mode never created the overlay.
+		 */
+		async attachOtelToSwarm(): Promise<void> {
+			const info = await this.#inspectOtel();
+			const network = swarmNetworkName();
+			if (!info || info.NetworkSettings?.Networks?.[network]) {
+				return;
+			}
+			try {
+				await this.worker.post(`/v1/containers/${info.Id}/connect`, {
+					aliases: [],
+					network,
+				});
+				logger.info(`OpenTelemetry collector attached to ${network}`);
+			} catch (err) {
+				const status = err instanceof WorkerRequestError ? err.status : 0;
+				if (![403, 404, 409].includes(status)) {
+					throw err;
+				}
+			}
+		}
+
 		/** Pulls the collector's image when missing, then creates and starts its container. */
 		async #createOtel(state: OtelDesiredState): Promise<void> {
 			const image = `${OTEL_IMAGE}:${OTEL_IMAGE_TAG}`;
@@ -110,6 +137,7 @@ export function DockerOtelMixin<
 			});
 			await this.worker.post(`/v1/containers/${created.id}/start`);
 			logger.info(`OpenTelemetry collector created: ${OTEL_CONTAINER_NAME}`);
+			await this.attachOtelToSwarm();
 		}
 
 		/**
@@ -135,6 +163,7 @@ export function DockerOtelMixin<
 				if (!info.State?.Running) {
 					await this.worker.post(`/v1/containers/${info.Id}/start`);
 				}
+				await this.attachOtelToSwarm();
 				return;
 			}
 			await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
