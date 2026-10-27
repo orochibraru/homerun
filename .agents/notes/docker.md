@@ -1041,8 +1041,11 @@ The third core container on the Garage pattern: `DockerOtelMixin` (merged
 outermost, it needs `runOneOff`/`pullImage`) creates `homerun-otel` on the
 shared network with no published port and no Traefik label, its config written
 into `homerun-otel-config` by a one-off `alpine`, its export address and token
-as env vars, `reconcileOtel(null)` removing it. See `observability.md`'s Tracing
-section for what it's configured with and why.
+as env vars, `reconcileOtel(null)` removing it. It also joins the swarm overlay
+(`attachOtelToSwarm`, on every reconcile and from `enableSwarmMode`): swarm
+services sit only on that overlay, so without it they got
+`ENOTFOUND homerun-otel` and every span was dropped. See `observability.md`'s
+Tracing section for what it's configured with and why.
 
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 

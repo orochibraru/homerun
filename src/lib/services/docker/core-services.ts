@@ -27,6 +27,7 @@ import {
 } from "./dashboard.ts";
 import { MANAGED_LABEL } from "./labels.ts";
 import { CORE_LABEL, type NewtEndpoint } from "./newt.ts";
+import { OTEL_CONTAINER_NAME } from "./otel-container.ts";
 import { SWARM_REFRESH_SECONDS, swarmNetworkName } from "./swarm.ts";
 import {
 	TRAEFIK_METRICS_COMMAND,
@@ -616,6 +617,7 @@ export function DockerCoreServicesMixin<
 			await this.ensureSwarmNetwork(network);
 			steps.push(`Overlay network ${network} is ready.`);
 			await this.#connect(hostname(), network, true);
+			await this.#connect(OTEL_CONTAINER_NAME, network, true);
 
 			const traefik = await this.findTraefikContainer();
 			if (!traefik) {
