@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.73](https://github.com/orochibraru/homerun/compare/v1.0.72...v1.0.73) (2026-10-27)
+
+### Features
+
+* **templates:** add OpenCount built-in template (#164) ([b254fb1](https://github.com/orochibraru/homerun/commit/b254fb158032ac65fd02a54e8a5a77937e49d573))
+* **services:** single-column mobile tab hub with per-tab descriptions and live summaries (#161) ([12978c2](https://github.com/orochibraru/homerun/commit/12978c241ab4e0dd1203f58e76b9ab1541cd6653))
+
+### Bug Fixes
+
+* **tracing:** attach the otel collector to the swarm overlay so swarm services can resolve it (#165) ([844817c](https://github.com/orochibraru/homerun/commit/844817ccae9c36f4481547e35562990089620219))
+* **deploy:** pull a git revision's image with its cache registry credentials on rollback and promote (#163) ([6b9829b](https://github.com/orochibraru/homerun/commit/6b9829bde2d996bcd3ddbdc1950e14dbc720b364))
+
 ## [1.0.72](https://github.com/orochibraru/homerun/compare/v1.0.71...v1.0.72) (2026-10-26)
 
 ### Features
