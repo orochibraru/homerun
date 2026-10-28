@@ -1803,6 +1803,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/services/{serviceId}/logs/history": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Search a service's log history
+		 * @description Searches the service's stored logs: every line its containers and swarm tasks wrote, across deploys, kept for the instance's log retention (Monitoring → Settings). Newest first, one page at a time.
+		 */
+		get: operations["get_services__serviceId__logs_history"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/manifest": {
 		parameters: {
 			query?: never;
@@ -16806,6 +16826,117 @@ export interface operations {
 				};
 			};
 			/** @description Not deployed yet, or an invalid tail */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__logs_history: {
+		parameters: {
+			query?: {
+				/** @description Only lines containing this text, case-insensitive (a POSIX regex with regex=true) */
+				q?: string;
+				/** @description true to read q as a regular expression */
+				regex?: string;
+				/** @description Only lines written at or after this ISO 8601 time */
+				from?: string;
+				/** @description Only lines written at or before this ISO 8601 time */
+				to?: string;
+				/** @description Instead of from/to: 15m, 1h, 6h, 24h, 7d or all (default all) */
+				range?: string;
+				/** @description Only lines written while this deployment was running */
+				deploymentId?: string;
+				/** @description Only lines from this container (short id) or swarm task */
+				instance?: string;
+				/** @description stdout or stderr */
+				stream?: string;
+				/** @description Lines per page, 1 to 1000 (default 200) */
+				limit?: string;
+				/** @description The nextCursor of the previous page, for older lines */
+				before?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of lines */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Newest first */
+						lines: {
+							/** @description The deployment (revision) that was running when the line was written, null when it couldn't be told */
+							deploymentId: string | null;
+							id: number;
+							/** @description The container (short id) or swarm task that wrote the line */
+							instance: string;
+							line: string;
+							/**
+							 * @description stdout for a TTY container, which every service Homerun deploys is, since a TTY has one stream
+							 * @enum {string}
+							 */
+							stream: "stdout" | "stderr";
+							/** @description When the line was written, UTC, microseconds */
+							time: string;
+						}[];
+						/** @description Pass as before to read the page of older lines; null when this is the oldest */
+						nextCursor: string | null;
+					};
+				};
+			};
+			/** @description An invalid parameter or regular expression */
 			400: {
 				headers: {
 					[name: string]: unknown;

@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"time"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/system"
@@ -240,4 +242,29 @@ func (c *Client) RemoveImage(ctx context.Context, id string, force bool) error {
 	return discard(control(ctx, SlowTimeout, "remove image "+id, "", func(ctx context.Context) (client.ImageRemoveResult, error) {
 		return c.api.ImageRemove(ctx, id, client.ImageRemoveOptions{Force: force, PruneChildren: true})
 	}))
+}
+
+// ContainerLogsSince follows a container's logs from since onwards, every line
+// prefixed with its RFC 3339 timestamp, for the log shipper. A zero since
+// starts from the first line the daemon still holds. The caller closes the
+// stream.
+func (c *Client) ContainerLogsSince(ctx context.Context, id string, since time.Time) (io.ReadCloser, error) {
+	return streaming(ctx, "ship logs "+shortID(id), id, c.containerRunning(id), func(ctx context.Context, _ *watch) (io.ReadCloser, error) {
+		return c.api.ContainerLogs(ctx, id, client.ContainerLogsOptions{
+			Follow:     true,
+			ShowStderr: true,
+			ShowStdout: true,
+			Since:      logsSince(since),
+			Timestamps: true,
+		})
+	})
+}
+
+// logsSince is since in the seconds.nanoseconds form the daemon's since
+// parameter takes, empty for the zero time.
+func logsSince(since time.Time) string {
+	if since.IsZero() {
+		return ""
+	}
+	return fmt.Sprintf("%d.%09d", since.Unix(), since.Nanosecond())
 }

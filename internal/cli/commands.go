@@ -407,6 +407,58 @@ func ServiceLogs(client *Client, id string, follow bool, tail int) {
 	}
 }
 
+// LogHistoryLine is one stored line as the history endpoint returns it.
+type LogHistoryLine struct {
+	DeploymentID *string `json:"deploymentId"`
+	Instance     string  `json:"instance"`
+	Line         string  `json:"line"`
+	Stream       string  `json:"stream"`
+	Time         string  `json:"time"`
+}
+
+// ServiceLogHistory prints a service's stored logs matching the filters,
+// oldest first, one "time [instance] line" per row, paging back until limit
+// lines (or every line in range) are read. since is a Go duration counted back
+// from now; zero means the endpoint's default (everything kept).
+func ServiceLogHistory(client *Client, id string, since time.Duration, grep string, regex bool, deploymentID string, limit int) {
+	query := url.Values{}
+	if since > 0 {
+		query.Set("from", time.Now().Add(-since).UTC().Format(time.RFC3339Nano))
+	}
+	if grep != "" {
+		query.Set("q", grep)
+	}
+	if regex {
+		query.Set("regex", "true")
+	}
+	if deploymentID != "" {
+		query.Set("deploymentId", deploymentID)
+	}
+	if limit <= 0 {
+		limit = 1000
+	}
+	var lines []LogHistoryLine
+	for len(lines) < limit {
+		query.Set("limit", strconv.Itoa(min(1000, limit-len(lines))))
+		body, _ := client.do("GET", fmt.Sprintf("/services/%s/logs/history", url.PathEscape(id)), query)
+		var page struct {
+			Lines      []LogHistoryLine `json:"lines"`
+			NextCursor *string          `json:"nextCursor"`
+		}
+		if err := json.Unmarshal(body, &page); err != nil {
+			Fail(err.Error())
+		}
+		lines = append(lines, page.Lines...)
+		if page.NextCursor == nil {
+			break
+		}
+		query.Set("before", *page.NextCursor)
+	}
+	for i := len(lines) - 1; i >= 0; i-- {
+		fmt.Printf("%s [%s] %s\n", lines[i].Time, lines[i].Instance, lines[i].Line)
+	}
+}
+
 // ServiceRollback redeploys a service from one of its revisions, the previous
 // one when revisionID is empty. With restoreConfig it also puts back the env
 // vars, resources and networking that revision ran with.

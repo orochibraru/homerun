@@ -107,6 +107,19 @@ describe("MCP tools", () => {
 			{ method: "GET", path: "/services/svc/logs?tail=5" },
 		],
 		[
+			"search_service_logs",
+			{ serviceId: "svc" },
+			{ method: "GET", path: "/services/svc/logs/history?" },
+		],
+		[
+			"search_service_logs",
+			{ limit: 50, q: "panic", regex: true, serviceId: "svc" },
+			{
+				method: "GET",
+				path: "/services/svc/logs/history?limit=50&q=panic&regex=true",
+			},
+		],
+		[
 			"list_revisions",
 			{ serviceId: "svc" },
 			{ method: "GET", path: "/services/svc/revisions" },

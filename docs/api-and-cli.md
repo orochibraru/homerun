@@ -436,6 +436,7 @@ homerun services sourcemaps list <id> [--json]
 homerun services sourcemaps delete <id> <release>
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
 homerun services logs <id> [--tail <lines>] [--follow]
+homerun services logs <id> --history [--since <duration>] [--grep <text>] [--regex] [--deployment <id>] [--limit <lines>]
 homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
 homerun services version <id>
@@ -580,7 +581,12 @@ seconds), also exits non-zero.
 
 `homerun services logs <id>` prints the last 200 lines of a service's logs
 (`--tail <lines>` for more or fewer), and `--follow` keeps streaming until you
-interrupt it.
+interrupt it. `--history` searches the logs kept across deploys instead (see
+[Log history](observability.md#log-history)): `--since 2h` for the last two
+hours, `--grep <text>` (`--regex` to read it as a regular expression),
+`--deployment <id>` for one revision's lines, `--limit` for at most that many
+(1000 by default), printed oldest first as `time [replica] line`. Any of those
+flags implies `--history`.
 
 `homerun services revisions <id>` prints a service's revisions with the current
 and previous one marked and, for an unhealthy one, the reason, and

@@ -56,6 +56,10 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Log history only follows services: workstations and Homerun's own
+      containers (Traefik, the app, the worker) still lose their output on
+      recreate; give them the same shipper
+
 - [ ] Pipelines: expose watched repositories, their CI runs and stats in the
       REST API, MCP server and CLI, and sync on the provider's workflow webhook
       instead of only polling

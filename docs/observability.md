@@ -1,9 +1,10 @@
 # Observability
 
 The **Observability** tab is where a service tells you how it's doing. It has
-eight sections: **Monitoring**, its traffic, response time, error rate, uptime
-and resource use over a range; **Logs**, its live container output; **Uptime**,
-its uptime probes; **Errors**, the exceptions your app reports (see
+nine sections: **Monitoring**, its traffic, response time, error rate, uptime
+and resource use over a range; **Logs**, its live container output; **Log
+history**, every line it wrote across deploys, searchable; **Uptime**, its
+uptime probes; **Errors**, the exceptions your app reports (see
 [Error tracking](error-tracking.md)), its failed deployments and the errors
 Homerun logged about it; **Traces**, its OpenTelemetry traces (see
 [Tracing](tracing.md)); **Pipelines**, the CI runs of the repository linked to
@@ -59,7 +60,8 @@ sidebar's Monitoring page also has a **Traces** tab, the traces of Homerun's own
 background jobs, and for admins a **Blocked IPs** tab (see
 [Blocked paths and IP bans](blocked-paths-and-ip-bans.md)), a **CrowdSec** tab
 (see [CrowdSec](blocked-paths-and-ip-bans.md#crowdsec)) and a **Settings** tab
-for the OpenTelemetry collector (see [Tracing](tracing.md)).
+for the OpenTelemetry collector (see [Tracing](tracing.md)) and how long log
+history is kept (see [Log history](#log-history)).
 
 ![A stack's Monitoring tab, with its By service table](images/stack-monitoring.webp)
 
@@ -114,6 +116,37 @@ of the same viewer is on the Overview tab once a service has deployed at least
 once, so recent output is visible without switching tabs.
 
 ![The live log panel streaming a container's output](images/observability-logs.webp)
+
+## Log history
+
+Docker only keeps a container's output while the container exists, so a redeploy
+used to take the previous revision's logs with it. Homerun's worker now copies
+every deployed service's output into Postgres as it's written (standalone
+containers and every task of a swarm service, on any node), and **Log history**
+searches it:
+
+- **Search**: text the line contains, case-insensitive, or a POSIX regular
+  expression with **Regular expression** ticked.
+- **Time**: a preset (last 15 minutes to everything kept) or an exact **From**
+  and **To**, in your browser's time zone.
+- **Revision**: only lines written while one deployment was running. Each line
+  carries the deployment that was live when it was written.
+- **Replica**: one container, or one swarm task.
+- **Stream**: stdout or stderr. Services Homerun deploys run with a TTY, which
+  merges the two into stdout.
+
+Results show oldest first, up to 200 lines a page, with **Older** to page back.
+**Download** saves everything the current search matches (up to 50,000 lines) as
+a text file.
+
+Lines are kept for 7 days by default; an admin sets 1 to 90 days under
+Monitoring → Settings → **Log history**, and an hourly pass deletes what's
+older. When the worker first sees a container, it copies what Docker still holds
+from inside that window, so logs written before you upgraded are there too.
+
+The same search is `GET /api/v1/services/{serviceId}/logs/history`,
+`homerun services logs <id> --history` (with `--since`, `--grep`, `--regex`,
+`--deployment`) and the MCP tool `search_service_logs`.
 
 ## Errors
 

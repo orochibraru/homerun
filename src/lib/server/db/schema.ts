@@ -931,6 +931,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	defaultUiMode: text("default_ui_mode").$type<UiMode>(),
 	otelCollectorEnabled: boolean("otel_collector_enabled"),
 	traceRetentionDays: integer("trace_retention_days"),
+	logRetentionDays: integer("log_retention_days"),
 	requirePasskey: boolean("require_passkey"),
 	requireTwoFactor: boolean("require_two_factor"),
 	resourceAlertReminderMinutes: integer("resource_alert_reminder_minutes"),
@@ -2633,6 +2634,34 @@ export const traceSpan = pgTable(
 	],
 );
 
+export const serviceLog = pgTable(
+	"service_log",
+	{
+		deploymentId: text("deployment_id").references(() => deployment.id, {
+			onDelete: "set null",
+		}),
+		id: bigint("id", { mode: "number" })
+			.primaryKey()
+			.generatedAlwaysAsIdentity(),
+		instance: text("instance").notNull(),
+		line: text("line").notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		stream: text("stream").$type<"stdout" | "stderr">().notNull(),
+		time: timestamp("time", { mode: "date", precision: 6 }).notNull(),
+	},
+	(table) => [
+		index("serviceLog_serviceId_time_idx").on(table.serviceId, table.time),
+		index("serviceLog_deploymentId_idx").on(table.deploymentId),
+		index("serviceLog_time_idx").on(table.time),
+		index("serviceLog_line_trgm_idx").using(
+			"gin",
+			sql`${table.line} gin_trgm_ops`,
+		),
+	],
+);
+
 export const errorEvent = pgTable(
 	"error_event",
 	{
@@ -2714,6 +2743,7 @@ export type Job = typeof job.$inferSelect;
 export type ErrorProject = typeof errorProject.$inferSelect;
 export type ErrorIssue = typeof errorIssue.$inferSelect;
 export type ErrorEvent = typeof errorEvent.$inferSelect;
+export type ServiceLog = typeof serviceLog.$inferSelect;
 export type ImageScan = typeof imageScan.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;

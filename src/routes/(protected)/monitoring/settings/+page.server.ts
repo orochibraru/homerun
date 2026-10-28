@@ -2,8 +2,14 @@ import { resolve } from "$app/paths";
 import { fail, redirect } from "@sveltejs/kit";
 
 import { Logger } from "#lib/logger.js";
+import {
+	MAX_LOG_RETENTION_DAYS,
+	MIN_LOG_RETENTION_DAYS,
+	parseLogRetentionDays,
+} from "#lib/logs/history.js";
 import { can, permissionDeniedMessage } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
+import { LogHistoryService } from "#lib/services/log-history.service.js";
 import { TracingService } from "#lib/services/tracing.service.js";
 import {
 	MAX_TRACE_RETENTION_DAYS,
@@ -20,6 +26,8 @@ export const load = async ({ locals, parent }) => {
 	}
 	return {
 		limits: { max: MAX_TRACE_RETENTION_DAYS, min: MIN_TRACE_RETENTION_DAYS },
+		logLimits: { max: MAX_LOG_RETENTION_DAYS, min: MIN_LOG_RETENTION_DAYS },
+		logRetentionDays: await LogHistoryService.retentionDays(),
 		status: await TracingService.collectorStatus(),
 	};
 };
@@ -56,5 +64,29 @@ export const actions = {
 			`Tracing settings saved by user=${locals.user.id}: collector=${collectorEnabled} retention=${retentionDays}d`,
 		);
 		return { collectorEnabled };
+	},
+	saveLogs: async ({ request, locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		if (!can(locals.permissions, "settings", "write")) {
+			return fail(403, { error: permissionDeniedMessage("settings", "write") });
+		}
+		const formData = await request.formData();
+		const days = parseLogRetentionDays(formData.get("logRetentionDays"));
+		if (days === null) {
+			return fail(400, {
+				errors: {
+					logRetentionDays: [
+						`Keep logs between ${MIN_LOG_RETENTION_DAYS} and ${MAX_LOG_RETENTION_DAYS} days.`,
+					],
+				},
+			});
+		}
+		await LogHistoryService.saveRetention(days);
+		logger.info(
+			`Log retention saved by user=${locals.user.id}: retention=${days}d`,
+		);
+		return { logRetentionDays: days };
 	},
 };

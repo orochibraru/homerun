@@ -6,6 +6,7 @@
 		BarChart3,
 		Bug,
 		HeartPulse,
+		History,
 		Radio,
 		ScrollText,
 		ShieldBan,
@@ -33,6 +34,15 @@
 			icon: ScrollText,
 			id: "service/observability/logs",
 			label: "Logs",
+		},
+		{
+			href: resolve(
+				"/(protected)/services/[serviceId]/observability/log-history",
+				{ serviceId: data.service.id },
+			),
+			icon: History,
+			id: "service/observability/log-history",
+			label: "Log history",
 		},
 		{
 			href: resolve("/(protected)/services/[serviceId]/observability/uptime", {

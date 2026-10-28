@@ -12,6 +12,7 @@ import { channelRoutes } from "./channels";
 import { dependencyRoutes } from "./dependencies";
 import { errorRoutes } from "./errors";
 import { iacRoutes } from "./iac";
+import { logHistoryRoutes } from "./log-history";
 import { previewRoutes } from "./previews";
 import { redirectRoutes } from "./redirects";
 import { resourceRoutes } from "./resources";
@@ -226,6 +227,7 @@ export const routes: RouteDef[] = [
 		summary: "Read a service's logs",
 		tags: ["Services"],
 	},
+	...logHistoryRoutes,
 	{
 		method: "post",
 		path: "/services/{serviceId}/start",

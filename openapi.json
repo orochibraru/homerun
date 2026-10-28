@@ -31664,6 +31664,257 @@
 				"tags": ["Services"]
 			}
 		},
+		"/services/{serviceId}/logs/history": {
+			"get": {
+				"description": "Searches the service's stored logs: every line its containers and swarm tasks wrote, across deploys, kept for the instance's log retention (Monitoring → Settings). Newest first, one page at a time.",
+				"operationId": "get_services__serviceId__logs_history",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Only lines containing this text, case-insensitive (a POSIX regex with regex=true)",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "true to read q as a regular expression",
+						"in": "query",
+						"name": "regex",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Only lines written at or after this ISO 8601 time",
+						"in": "query",
+						"name": "from",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Only lines written at or before this ISO 8601 time",
+						"in": "query",
+						"name": "to",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Instead of from/to: 15m, 1h, 6h, 24h, 7d or all (default all)",
+						"in": "query",
+						"name": "range",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Only lines written while this deployment was running",
+						"in": "query",
+						"name": "deploymentId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Only lines from this container (short id) or swarm task",
+						"in": "query",
+						"name": "instance",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "stdout or stderr",
+						"in": "query",
+						"name": "stream",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Lines per page, 1 to 1000 (default 200)",
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The nextCursor of the previous page, for older lines",
+						"in": "query",
+						"name": "before",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"lines": {
+											"description": "Newest first",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"deploymentId": {
+														"description": "The deployment (revision) that was running when the line was written, null when it couldn't be told",
+														"type": ["string", "null"]
+													},
+													"id": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"instance": {
+														"description": "The container (short id) or swarm task that wrote the line",
+														"type": "string"
+													},
+													"line": {
+														"type": "string"
+													},
+													"stream": {
+														"description": "stdout for a TTY container, which every service Homerun deploys is, since a TTY has one stream",
+														"enum": ["stdout", "stderr"],
+														"type": "string"
+													},
+													"time": {
+														"description": "When the line was written, UTC, microseconds",
+														"type": "string"
+													}
+												},
+												"required": [
+													"deploymentId",
+													"id",
+													"instance",
+													"line",
+													"stream",
+													"time"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"nextCursor": {
+											"description": "Pass as before to read the page of older lines; null when this is the oldest",
+											"type": ["string", "null"]
+										}
+									},
+									"required": ["lines", "nextCursor"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "One page of lines"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "An invalid parameter or regular expression"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Search a service's log history",
+				"tags": ["Services"]
+			}
+		},
 		"/services/{serviceId}/manifest": {
 			"put": {
 				"description": "Applies a Homerun Manifest to the service, through the same checks as the dashboard. Send JSON, or YAML with a YAML content type. Keys left out keep their value; envVars are merged into the environment. Host access (privileged, devices, capabilities, env files), labels, networking mode, published ports and registry credentials can't be set this way. Add ?deploy=true to queue a deploy afterwards. A git service re-applies the manifest in its repository on every deploy, which wins over this one for the keys it sets.",

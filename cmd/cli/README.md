@@ -114,6 +114,7 @@ homerun services sourcemaps list <id> [--json]
 homerun services sourcemaps delete <id> <release>
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
 homerun services logs <id> [--tail <lines>] [--follow]
+homerun services logs <id> --history [--since <duration>] [--grep <text>] [--regex] [--deployment <id>] [--limit <lines>]
 homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
 homerun services version <id>
@@ -355,7 +356,11 @@ prints the JSON answer.
 `homerun services logs <id>` calls `GET /services/{serviceId}/logs` and writes
 the plain-text body to stdout as it arrives: the last 200 lines by default,
 `--tail <lines>` adds `?tail=`, and `-f`/`--follow` adds `?follow=true`, which
-keeps streaming until the connection ends or you interrupt it.
+keeps streaming until the connection ends or you interrupt it. With `--history`
+(or any of `--since`, `--grep`, `--deployment`) it calls
+`GET /services/{serviceId}/logs/history` instead, paging back through
+`nextCursor` until `--limit` lines (1000 by default) are read, and prints them
+oldest first as `time [instance] line`.
 
 `homerun services revisions <id>` calls `GET /services/{serviceId}/revisions`
 and prints a table of the service's revisions, one row per revision with
