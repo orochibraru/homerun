@@ -391,6 +391,13 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		await this.persist(input);
 	}
 
+	/** Persists how many days of service logs to keep. */
+	async persistLogRetention(input: {
+		logRetentionDays: number;
+	}): Promise<void> {
+		await this.persist(input);
+	}
+
 	/** Persists the Docker socket path and network name overrides. */
 	async updateDocker(input: InstanceSettingsDockerInput): Promise<void> {
 		await this.persist(input);

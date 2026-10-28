@@ -456,3 +456,20 @@ func (c *Client) SwarmServiceReplicas(ctx context.Context, id string) (int, erro
 	}
 	return toInt(*replicated.Replicas), nil
 }
+
+// SwarmServiceLogsSince follows a swarm service's task logs from since
+// onwards, every line prefixed with its timestamp and the task's details
+// (node, service and task ids), for the log shipper. The caller closes the
+// stream.
+func (c *Client) SwarmServiceLogsSince(ctx context.Context, id string, since time.Time) (io.ReadCloser, error) {
+	return streaming(ctx, "ship logs of swarm service "+id, "", c.daemonAnswers, func(ctx context.Context, _ *watch) (io.ReadCloser, error) {
+		return c.api.ServiceLogs(ctx, id, client.ServiceLogsOptions{
+			Details:    true,
+			Follow:     true,
+			ShowStderr: true,
+			ShowStdout: true,
+			Since:      logsSince(since),
+			Timestamps: true,
+		})
+	})
+}

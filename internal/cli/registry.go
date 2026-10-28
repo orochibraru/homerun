@@ -220,12 +220,25 @@ var baseCommands = []Command{
 	{
 		Args:    "<id>",
 		Name:    "services logs",
-		Summary: "print a service's logs",
+		Summary: "print a service's logs, or search the ones kept across deploys",
 		Setup: func(set *flag.FlagSet) Runner {
 			tail := set.Int("tail", 0, "how many `lines` of backlog to print, 1 to 10000 (default 200)")
 			follow := set.Bool("follow", false, "keep streaming new lines until interrupted")
 			set.BoolVar(follow, "f", false, "shorthand for --follow")
-			return func(env Env, args []string) { ServiceLogs(env.Client(), serviceID(env, args[0]), *follow, *tail) }
+			history := set.Bool("history", false, "search the stored logs, every revision's, instead of the running container's")
+			since := set.Duration("since", 0, "with --history: only lines from the last `duration` (e.g. 2h, 72h)")
+			grep := set.String("grep", "", "with --history: only lines containing this `text`")
+			regex := set.Bool("regex", false, "with --history: read --grep as a POSIX regex")
+			deployment := set.String("deployment", "", "with --history: only lines from this deployment `id`")
+			limit := set.Int("limit", 0, "with --history: at most this many `lines`, newest kept (default 1000)")
+			return func(env Env, args []string) {
+				id := serviceID(env, args[0])
+				if *history || *since > 0 || *grep != "" || *deployment != "" {
+					ServiceLogHistory(env.Client(), id, *since, *grep, *regex, *deployment, *limit)
+					return
+				}
+				ServiceLogs(env.Client(), id, *follow, *tail)
+			}
 		},
 	},
 	{

@@ -24,6 +24,7 @@ import (
 	"github.com/orochibraru/homerun/internal/janitor"
 	"github.com/orochibraru/homerun/internal/jobs"
 	"github.com/orochibraru/homerun/internal/logging"
+	"github.com/orochibraru/homerun/internal/logship"
 	"github.com/orochibraru/homerun/internal/secrets"
 	"github.com/orochibraru/homerun/internal/tracing"
 )
@@ -127,6 +128,13 @@ func run(config Config) error {
 	}
 	defer stopAPI()
 	go sweeper.Run(ctx)
+	shipper := &logship.Shipper{Docker: docker, Store: logship.PGStore{Pool: pool}}
+	shipperDone := make(chan struct{})
+	go func() {
+		shipper.Run(ctx)
+		close(shipperDone)
+	}()
+	defer func() { <-shipperDone }()
 
 	logging.Infof(scope, "ready: id=%s concurrency=%d docker=%s version=%s",
 		config.ID, config.Concurrency, config.DockerSocketPath, buildinfo.Version)

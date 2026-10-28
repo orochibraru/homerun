@@ -326,6 +326,7 @@ export const init = async () => {
 	CronService.startPipelineSync();
 	CronService.startErrorRetention();
 	CronService.startTraceRetention();
+	CronService.startLogRetention();
 	CronService.startIpBanScheduler();
 	CronService.startBackupCapacityScheduler();
 	CronService.startCoreServicesWatch();

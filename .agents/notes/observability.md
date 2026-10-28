@@ -557,6 +557,44 @@ the fixed windows), through the DTOs' optional `until`.
 error rate and uptime; `HIGHER_IS_BETTER` decides the colour, null for requests
 and bandwidth, which are neither good nor bad news).
 
+## Log history (`service_log`, `internal/logship`, `ServiceLogDTO`, `LogHistoryService`, Observability → Log history)
+
+Docker drops a container's output with the container, so the worker keeps a
+copy. `logship.Shipper` runs inside the worker next to the janitor (`run()` in
+`internal/worker/main.go`, and waits for it on shutdown so the last batch
+flushes): every 15s it lists services with a `container_id` or
+`swarm_service_id` and keeps one follower goroutine per workload, cancelling the
+ones whose workload went (a redeploy swaps the container id). A follower opens
+`ContainerLogsSince` / `SwarmServiceLogsSince` (`Timestamps: true`,
+`Follow: true`, swarm with `Details: true` for the task id) from the last line
+stored for that container (whole service for swarm, task ids change every
+update), floored at the retention so first sight of an old container doesn't
+copy history only to prune it. The daemon's `since` is inclusive, so lines at or
+before the last one seen are skipped. `ReadChunks` sniffs framed vs raw (every
+Homerun service is TTY, one raw stream, stored as stdout), `Splitter` assembles
+lines per stream, `ParseLine` peels the timestamp and swarm details, `Clean`
+drops NULs (Postgres text refuses them), fixes UTF-8 and cuts at 16 KiB. Batches
+of up to 500 go in through `CopyFrom` every second; a failed batch (service
+deleted mid-flight, FK) is logged and dropped, never retried. A stream that ends
+(stopped container) is reopened after 5s, doubling to a minute while nothing new
+arrives. Each line gets `deployment_id` from `DeploymentAt`: the latest
+deployment with that `container_id` (which is the swarm service id in swarm
+mode) that started at or before the line, re-read every 30s.
+
+Search is Postgres, deliberately no search sidecar: a `pg_trgm` GIN index
+(`serviceLog_line_trgm_idx`, the migration creates the extension, trusted since
+PG 13) serves `ILIKE` substring search and `~*` regex; `(service_id, time)`
+serves the range scan. Meilisearch was considered and rejected: typo tolerance
+is wrong for logs (an exact error code is the whole point), it's weak at
+append-heavy ingest and range deletes, and it's one more container to keep in
+sync. `parseLogHistoryQuery` (`src/lib/logs/history.ts`) is the one parser for
+the page, the download, the REST route and (through REST) MCP/CLI; paging is
+keyset on `(time, id)` with the time as microsecond text in the cursor, since a
+JS `Date` would round it to milliseconds and skip or repeat lines.
+`LogRetentionScheduler` prunes hourly in batches of 5000 past
+`instance_settings.log_retention_days` (null = 7, 1 to 90, Monitoring →
+Settings).
+
 ## Tracing (`trace_span`, `TraceSpanDTO`, `TracingService`, `src/lib/tracing/`, Observability → Traces, Monitoring → Traces)
 
 OpenTelemetry traces, opt-in per service (`service.tracesEnabled`). There's no

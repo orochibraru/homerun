@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Activity } from "@lucide/svelte";
+	import { Activity, ScrollText } from "@lucide/svelte";
 	import { onMount } from "svelte";
 
 	import CheckBox from "#lib/components/check-box.svelte";
@@ -20,6 +20,7 @@
 	onMount(() => title.set("Monitoring · Settings"));
 
 	let saving = $state(false);
+	let savingLogs = $state(false);
 
 	const facts = $derived([
 		["Container", data.status.running ? "Running" : "Not running"],
@@ -95,6 +96,55 @@
 			<p class="text-text-subtle mt-1.5 text-xs">
 				Spans older than this are deleted every hour, for services and Homerun
 				alike.
+			</p>
+		</div>
+	</form>
+</section>
+
+<section class="panel mt-6 rounded-md">
+	<PanelHeader
+		description="Every deployed service's container output is copied here as it's written, so a service's logs outlive the revision that wrote them."
+		icon={ScrollText}
+		title="Log history"
+	>
+		{#snippet trailing()}
+			<SaveButton form="log-settings" pending={savingLogs} />
+		{/snippet}
+	</PanelHeader>
+	<form
+		id="log-settings"
+		action="?/saveLogs"
+		class="p-5"
+		method="POST"
+		use:enhance={enhanceToast({
+			error: "Couldn't save the log retention.",
+			loading: "Saving the log retention",
+			onSettled: () => {
+				savingLogs = false;
+			},
+			onStart: () => {
+				savingLogs = true;
+			},
+			success: "Log retention saved.",
+		})}
+	>
+		<div class="w-full sm:w-64">
+			<label
+				class="text-text mb-1.5 block text-sm font-medium"
+				for="logRetentionDays">Keep logs for (days)</label
+			>
+			<Input
+				id="logRetentionDays"
+				max={data.logLimits.max}
+				min={data.logLimits.min}
+				name="logRetentionDays"
+				required
+				type="number"
+				value={String(data.logRetentionDays)}
+			/>
+			<p class="text-text-subtle mt-1.5 text-xs">
+				Lines older than this are deleted every hour. Search them from a
+				service's Observability → Log history.
 			</p>
 		</div>
 	</form>

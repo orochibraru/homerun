@@ -27,6 +27,7 @@ export function blankInstanceSettings(id: string, now: Date): InstanceSettings {
 		defaultUiMode: null,
 		otelCollectorEnabled: null,
 		traceRetentionDays: null,
+		logRetentionDays: null,
 		garageAdminTokenEnc: null,
 		garageEnabled: null,
 		garagePublicHost: null,

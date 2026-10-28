@@ -41,7 +41,7 @@ export type { ApiCall } from "#lib/server/mcp-tool-kit.js";
 
 const INSTRUCTIONS = `Homerun is a self-hosted PaaS: each service is one Docker container or swarm service, routed by Traefik at its domains.
 
-To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs, list_deployments (each deploy attempt's error and log, the place to look when a deploy failed) and list_revisions (each revision's health and the reason it failed). When the app reports errors through a Sentry SDK, list_errors and get_error give the grouped exceptions with stack traces and links to the source, and update_error resolves or ignores one. Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network. list_notifications is the caller's in-app feed (failed or rolled back deploys, unhealthy revisions, app errors, resource alerts), a quick way to see what went wrong lately.
+To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs (what the running container wrote lately), search_service_logs (every line kept across deploys, searchable by text, time and revision), list_deployments (each deploy attempt's error and log, the place to look when a deploy failed) and list_revisions (each revision's health and the reason it failed). When the app reports errors through a Sentry SDK, list_errors and get_error give the grouped exceptions with stack traces and links to the source, and update_error resolves or ignores one. Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network. list_notifications is the caller's in-app feed (failed or rolled back deploys, unhealthy revisions, app errors, resource alerts), a quick way to see what went wrong lately.
 
 Stacks group services: list_stacks, get_stack, create_stack and update_stack. create_service makes a service from scratch or from a template (list_templates, get_template); it isn't deployed until deploy_service. A service can have environments (list_environments, create_environment, update_environment: copies running another ref, each one a service of its own), pull request previews (list_previews, get_preview, and promote_preview deploys a healthy preview's image to its service) and release channels (get_release_channels, set_release_channels). list_scans, get_scan and scan_service cover its image's vulnerability scans.
 
@@ -66,6 +66,65 @@ const serviceId = z.string().describe("The service's id, from list_services");
 /** A path under a service, with its id escaped. */
 function servicePath(id: string, suffix = ""): string {
 	return `/services/${encodeURIComponent(id)}${suffix}`;
+}
+
+/** Registers the tool that searches the logs a service's containers wrote, kept across deploys. */
+function registerLogHistoryTools(server: McpServer, api: ApiCall): void {
+	server.registerTool(
+		"search_service_logs",
+		{
+			annotations: read,
+			description:
+				"Searches a service's stored logs: every line its containers and swarm tasks wrote, across deploys and restarts, for as long as the instance keeps them. Newest first; each line has its time, the container or task that wrote it and the deployment that was running. Use this to find what happened before the current revision, or when a crash's output scrolled away.",
+			inputSchema: z.object({
+				before: z
+					.string()
+					.optional()
+					.describe("The nextCursor a previous call returned, for older lines"),
+				deploymentId: z
+					.string()
+					.optional()
+					.describe(
+						"Only lines written while this deployment ran, from list_deployments",
+					),
+				from: z
+					.string()
+					.optional()
+					.describe("Only lines at or after this ISO 8601 time"),
+				limit: z
+					.number()
+					.int()
+					.min(1)
+					.max(1000)
+					.optional()
+					.describe("How many lines to return (default 200)"),
+				q: z
+					.string()
+					.optional()
+					.describe("Only lines containing this text, case-insensitive"),
+				regex: z
+					.boolean()
+					.optional()
+					.describe("Read q as a POSIX regular expression"),
+				serviceId,
+				to: z
+					.string()
+					.optional()
+					.describe("Only lines at or before this ISO 8601 time"),
+			}),
+		},
+		async ({ serviceId: id, ...filters }) => {
+			const query = new URLSearchParams();
+			for (const [key, value] of Object.entries(filters)) {
+				if (value !== undefined && value !== "") {
+					query.set(key, String(value));
+				}
+			}
+			return asResult(
+				await api("GET", servicePath(id, `/logs/history?${query}`)),
+			);
+		},
+	);
 }
 
 /** Registers the tool that reads a service's deploy attempts, failed ones included. */
@@ -602,6 +661,7 @@ export function createHomerunMcpServer(api: ApiCall): McpServer {
 	);
 	registerReadTools(server, api);
 	registerDeploymentTools(server, api);
+	registerLogHistoryTools(server, api);
 	registerDependencyTools(server, api);
 	registerErrorTools(server, api);
 	registerInstanceTools(server, api);

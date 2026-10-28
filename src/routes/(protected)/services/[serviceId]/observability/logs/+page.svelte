@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { Ghost, Loader2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 
@@ -23,6 +24,16 @@
 		serviceId={data.service.id}
 		heightClass="h-96"
 	/>
+	<p class="text-text-muted mt-2 text-xs">
+		This is the running container's output. Earlier revisions' logs are in
+		<a
+			class="text-accent hover:underline"
+			href={resolve(
+				"/(protected)/services/[serviceId]/observability/log-history",
+				{ serviceId: data.service.id },
+			)}>Log history</a
+		>.
+	</p>
 </div>
 
 {#if data.service.currentStatus === "failed"}
