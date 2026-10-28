@@ -111,6 +111,14 @@ const baseServiceSchema = z.object({
 	// in standalone mode.
 	replicas: optionalNumber(z.coerce.number().int().min(0).max(50)),
 	healthcheckCommand: z.string().trim().max(2000).optional(),
+	command: z.string().trim().max(4000).optional(),
+	runAsUser: z
+		.string()
+		.trim()
+		.refine((value) => !value || isRunAsUser(value), {
+			message: "Use uid, uid:gid, name or name:group.",
+		})
+		.optional(),
 	pullPolicy: z.enum(["always", "missing", "never"]).default("always"),
 	restartPolicy: z
 		.enum(["no", "always", "on-failure", "unless-stopped"])

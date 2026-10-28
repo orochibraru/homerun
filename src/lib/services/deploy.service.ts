@@ -399,7 +399,8 @@ class DeploymentServiceClass {
 	 * configuration (a rollback's revision and its restored config, the config
 	 * snapshot, the deploy plan, the volumes) and, for a git build, waits on its
 	 * required status checks, then returns the worker's spec (see
-	 * `deployWorkerSpec`). Writes the config, volumes and image phase lines.
+	 * `deployWorkerSpec`). Writes the config and volumes phase lines; the worker
+	 * writes the rest.
 	 *
 	 * @throws When the service is gone, or anything before the hand-off fails,
 	 *   after recording the failure on the deployment and service and notifying
@@ -468,7 +469,6 @@ class DeploymentServiceClass {
 			await dep.appendLog(phaseLine("volumes"));
 			const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 			const publicHosts = await syncAutoDns(svc, stack, dep);
-			await dep.appendLog(phaseLine("image"));
 			return await deployWorkerSpec({
 				...ctx,
 				checkedCommit,

@@ -90,6 +90,7 @@ func TestRunPullsAndReplacesTheContainer(t *testing.T) {
 		t.Errorf("a scan-less deploy records a skipped scan, got %v", scans)
 	}
 	want := []string{
+		deploy.PhaseImage,
 		"Pulling nginx:alpine...",
 		"Pulling fs layer: a",
 		"Pull complete: a",

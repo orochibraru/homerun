@@ -171,21 +171,24 @@ deep-linking into `/settings`.
   admin-only `settings/migrate/` tab (source picker, then one nested route per
   source), see "Migrating from Dokploy or Coolify" in
   `services-and-templates.md`.
-- `new/+page.svelte`, click-config create form, a 5-step wizard (Basic info /
-  Networking / Environment / Volumes / Compute, one `<form>` throughout, steps
-  hidden via a CSS class rather than `{#if}` so field state survives navigating
-  between them); accepts `?stackId=` and/or `?templateId=` query params to
-  pre-fill from a stack or template context. "Deploy from" toggles between a
-  Docker image and a git repo (see Git-based builds below), same toggle repeated
-  on the service's own Environments & Deployments → Source section for editing
-  after creation. Two submit actions share one `createServiceFromForm()` helper
-  (`new/+page.server.ts`) that validates + creates the row: `create` (secondary
-  button, "Create service", persists config only, same as before) and
-  `createAndDeploy` (primary button, "Create and Deploy", calls
-  `DeploymentService.deployService()` before redirecting straight to the new
-  service's Overview tab instead of the services/stack list). A min-height
-  wrapper around the step content keeps the Next/Back button row's vertical
-  position stable as steps of different heights swap in.
+- `new/+page.svelte`, click-config create form, a 6-step wizard (Basic info /
+  Networking / Environment / Volumes / Runtime / Review, one `<form>`
+  throughout; Review reads `new FormData(form)` each time it's shown, and each
+  step autofills from detection through `autofill.ts`, which never overwrites a
+  field the operator changed, steps hidden via a CSS class rather than `{#if}`
+  so field state survives navigating between them); accepts `?stackId=` and/or
+  `?templateId=` query params to pre-fill from a stack or template context.
+  "Deploy from" toggles between a Docker image and a git repo (see Git-based
+  builds below), same toggle repeated on the service's own Environments &
+  Deployments → Source section for editing after creation. Two submit actions
+  share one `createServiceFromForm()` helper (`new/+page.server.ts`) that
+  validates + creates the row: `create` (secondary button, "Create service",
+  persists config only, same as before) and `createAndDeploy` (primary button,
+  "Create and Deploy", calls `DeploymentService.deployService()` before
+  redirecting straight to the new service's Overview tab instead of the
+  services/stack list). A min-height wrapper around the step content keeps the
+  Next/Back button row's vertical position stable as steps of different heights
+  swap in.
 - `[serviceId]/+layout.server.ts`, existence guard (unknown id, 404) + syncs
   live Docker status on every visit. Tabs (see A service's tabs above for the
   grouping): **Overview** (deploy/start/stop/restart, live deploy progress

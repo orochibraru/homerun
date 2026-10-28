@@ -150,6 +150,7 @@ func (r *run) scanTargets(ctx context.Context, ref, digest string) error {
 		r.result.Scans = append(r.result.Scans, ScanRecord{Error: "Scanning is turned off.", ImageRef: ref, Source: "none", Status: "skipped"})
 		return nil
 	}
+	r.progress.line(PhaseScan)
 	return r.scan(ctx, spec.Targets, digest)
 }
 

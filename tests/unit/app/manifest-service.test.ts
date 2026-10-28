@@ -253,7 +253,11 @@ describe("ManifestService.detectConfig", () => {
 		const config = await ManifestService.detectConfig(source, "u1");
 		expect(config?.source).toBe("manifest");
 		expect(config?.manifest?.keys).toEqual(["gitBuildMethod", "replicas"]);
-		expect(post).toHaveBeenCalledTimes(1);
+		expect(config?.prefill).toEqual({
+			gitBuildMethod: "railpack",
+			replicas: 2,
+		});
+		expect(post).toHaveBeenCalledTimes(2);
 		post.mockClear();
 		files({});
 		expect(
@@ -263,6 +267,25 @@ describe("ManifestService.detectConfig", () => {
 			),
 		).toBeNull();
 		expect(post).toHaveBeenCalledTimes(1);
+	});
+
+	test("no Dockerfile: the first marker file suggests the build method", async () => {
+		files({
+			"apps/web/package.json": JSON.stringify({
+				dependencies: { next: "15" },
+				name: "@acme/storefront",
+			}),
+		});
+		const config = await ManifestService.detectConfig(source, "u1");
+		expect(config?.source).toBe("repository");
+		expect(config?.build).toEqual({
+			method: "railpack",
+			reason: "package.json found, no Dockerfile",
+		});
+		expect(config?.runtime).toBe("Node.js (Next.js)");
+		expect(config?.ports).toEqual([{ port: 3000, protocol: "tcp" }]);
+		expect(config?.prefill.name).toBe("storefront");
+		expect(post).toHaveBeenCalledTimes(3);
 	});
 
 	test("a Dockerfile alone, an invalid manifest and an unreadable repository", async () => {

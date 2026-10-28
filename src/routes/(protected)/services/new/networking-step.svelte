@@ -16,6 +16,8 @@
 	import { isDatabaseImage } from "#lib/service-link.js";
 	import { visibleIn } from "#lib/ui-mode.js";
 
+	import { Autofill } from "./autofill";
+	import DetectedHint from "./detected-hint.svelte";
 	import { errorClass, label } from "./field-classes";
 	import type { WizardData } from "./wizard-types";
 
@@ -46,21 +48,7 @@
 				? "both"
 				: "tcp",
 	);
-	let autoPort = "";
-
-	$effect(() => {
-		const found = primaryPort(detected);
-		untrack(() => {
-			if (!found || (containerPort !== "" && containerPort !== autoPort)) {
-				return;
-			}
-			containerPort = String(found.port);
-			autoPort = containerPort;
-			if (found.protocol !== "tcp") {
-				portProtocol = found.protocol;
-			}
-		});
-	});
+	let domain = $derived(values?.domain ?? "");
 
 	// Datastores default to private : they're reached by their siblings over
 	// the stack network, and a public hostname for a Postgres is a mistake
@@ -70,6 +58,40 @@
 			? !isDatabaseImage(image)
 			: values.dnsResolvable !== "off" && values.dnsResolvable !== "false",
 	);
+
+	const autofill = new Autofill();
+
+	$effect(() => {
+		const found = primaryPort(detected);
+		const prefill = detected?.prefill ?? {};
+		untrack(() => {
+			containerPort = autofill.pick(
+				"containerPort",
+				containerPort,
+				found ? String(found.port) : null,
+				"",
+			);
+			portProtocol = autofill.pick(
+				"portProtocol",
+				portProtocol,
+				found?.protocol,
+				"tcp",
+			);
+			domain = autofill.pick("domain", domain, prefill.domain, "");
+			dnsResolvable = autofill.pick(
+				"dnsResolvable",
+				dnsResolvable,
+				prefill.dnsResolvable,
+				dnsResolvable,
+			);
+			authRequired = autofill.pick(
+				"authRequired",
+				authRequired,
+				prefill.authRequired,
+				false,
+			);
+		});
+	});
 </script>
 
 <section class="rounded-md panel" class:hidden>
@@ -83,6 +105,7 @@
 		<div>
 			<label class={label} for="containerPort">
 				Container port <span class="text-red-500">*</span>
+				<DetectedHint show={autofill.holds("containerPort", containerPort)} />
 			</label>
 			<Input
 				id="containerPort"
@@ -113,13 +136,17 @@
 
 		{#if dnsResolvable}
 			<div>
-				<label class={label} for="domain">Domain</label>
+				<label class={label} for="domain"
+					>Domain <DetectedHint
+						show={autofill.holds("domain", domain)}
+					/></label
+				>
 				<Input
 					id="domain"
 					name="domain"
 					placeholder="app.example.com"
 					type="text"
-					value={values?.domain ?? ""}
+					bind:value={domain}
 				/>
 				<p class="mt-1 text-xs text-text-subtle">
 					Optional hostname of your own, used as the service's main link. Point

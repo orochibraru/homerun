@@ -32,12 +32,36 @@ command.
   base image only reports what the Dockerfile adds. The repository is read the
   same way a deploy reads it, so a public one works without a connected git
   provider.
+- **A git repository without a Dockerfile**: the first marker file in the build
+  context (`docker-bake.hcl`, `package.json`, `deno.json`, `go.mod`,
+  `Cargo.toml`, `pyproject.toml`, `requirements.txt`, `Gemfile`,
+  `composer.json`, `pom.xml`, `build.gradle`, `mix.exs`, `index.html`) names the
+  runtime and the framework when a dependency gives it away (Next.js, Astro,
+  Django, chi…), and switches the build method to Docker Bake or Railpack so the
+  first deploy doesn't fail looking for a Dockerfile. A framework with a
+  well-known default port (Next.js 3000, Astro 4321, Django 8000…) fills in the
+  port when nothing else declared one.
 
 What it fills in for you:
 
+Every field filled in this way is marked _detected_. Change it and it's yours: a
+later detection (another tag, another branch) never overwrites it.
+
+- **Name**: the manifest's `name`, the image's `org.opencontainers.image.title`
+  label, or the project's name from `package.json` / `go.mod`, unless you
+  already typed one.
+- **Build settings**: the manifest's `gitBuildMethod`, `gitBuildContext`,
+  `gitDockerfilePath`, `gitBuildTarget` and `gitBakeFile`, or the suggested
+  build method.
+- **Routing**: the manifest's `primaryDomain` (else its first `domains` entry),
+  `dnsResolvable` and `authRequired`.
+- **Runtime**: the manifest's `restartPolicy`, `pullPolicy`, `cpuLimit`,
+  `memoryLimitMb` and `replicas`.
+
 - **Container port**: the manifest's `containerPort`, else the first exposed TCP
-  port (UDP when that's all there is), unless you, a template or a previous
-  submit already set one.
+  port (UDP when that's all there is), else a numeric `PORT` environment
+  variable, else the framework's default port, unless you, a template or a
+  previous submit already set one.
 - **Volumes**: one new named volume per declared `VOLUME` path not already in
   the list. Change the source or the path and it stays yours; switch to another
   image and the untouched ones are swapped out.

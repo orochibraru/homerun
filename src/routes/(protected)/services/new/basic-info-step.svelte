@@ -16,6 +16,7 @@
 
 <script lang="ts">
 	import { GitBranch, Server } from "@lucide/svelte";
+	import { untrack } from "svelte";
 
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
 	import { isBuildMethod } from "#lib/build-methods.js";
@@ -31,11 +32,14 @@
 	import { stackScopedSlug } from "#lib/slug.js";
 	import { visibleIn } from "#lib/ui-mode.js";
 
+	import { Autofill } from "./autofill";
 	import DetectedConfigPanel from "./detected-config-panel.svelte";
+	import DetectedHint from "./detected-hint.svelte";
 	import { errorClass, label } from "./field-classes";
 	import type { WizardData } from "./wizard-types";
 
 	interface Props {
+		buildSource: "image" | "git";
 		data: WizardData;
 		detected: DetectedConfig | null;
 		errors?: Record<string, string[]>;
@@ -47,6 +51,7 @@
 	}
 
 	let {
+		buildSource = $bindable(),
 		data,
 		detected = $bindable(),
 		errors,
@@ -61,9 +66,6 @@
 	let slugTouched = $state(false);
 	let showRegistry = $derived(!!values?.registryUsername);
 
-	let buildSource = $derived<"image" | "git">(
-		(values?.buildSource as "image" | "git" | undefined) ?? "image",
-	);
 	let registryUrl = $derived(values?.registryUrl ?? "");
 	let registryUsername = $derived(values?.registryUsername ?? "");
 	let gitUrl = $derived(values?.gitUrl ?? "");
@@ -83,6 +85,61 @@
 	let buildCacheRegistryId = $derived(
 		values?.buildCacheRegistryId ??
 			(data.builtinCacheRunning ? BUILTIN_BUILD_CACHE : ""),
+	);
+
+	const autofill = new Autofill();
+
+	$effect(() => {
+		const prefill = detected?.prefill ?? {};
+		const suggested = detected?.build?.method;
+		untrack(() => {
+			if (!data.template) {
+				const before = name;
+				name = autofill.pick("name", name, prefill.name, "");
+				if (name !== before) {
+					onNameInput();
+				}
+			}
+			if (buildSource !== "git") {
+				return;
+			}
+			gitBuildMethod = autofill.pick(
+				"gitBuildMethod",
+				gitBuildMethod,
+				prefill.gitBuildMethod ?? suggested,
+				"dockerfile",
+			);
+			gitBuildContext = autofill.pick(
+				"gitBuildContext",
+				gitBuildContext,
+				prefill.gitBuildContext,
+				"",
+			);
+			gitDockerfilePath = autofill.pick(
+				"gitDockerfilePath",
+				gitDockerfilePath,
+				prefill.gitDockerfilePath,
+				"",
+			);
+			gitBuildTarget = autofill.pick(
+				"gitBuildTarget",
+				gitBuildTarget,
+				prefill.gitBuildTarget,
+				"",
+			);
+			gitBakeFile = autofill.pick(
+				"gitBakeFile",
+				gitBakeFile,
+				prefill.gitBakeFile,
+				"",
+			);
+		});
+	});
+
+	const buildDetected = $derived(
+		autofill.holds("gitBuildMethod", gitBuildMethod) ||
+			autofill.holds("gitBuildContext", gitBuildContext) ||
+			autofill.holds("gitDockerfilePath", gitDockerfilePath),
 	);
 
 	function onNameInput() {
@@ -109,6 +166,7 @@
 		<div>
 			<label class={label} for="name">
 				Name <span class="text-red-500">*</span>
+				<DetectedHint show={autofill.holds("name", name)} />
 			</label>
 			<Input
 				id="name"
@@ -235,7 +293,8 @@
 				bind:gitUrl
 			/>
 			<AdvancedDisclosure
-				collapsible={!visibleIn(data.uiMode, "services/new#build")}
+				collapsible={!visibleIn(data.uiMode, "services/new#build") &&
+					!buildDetected}
 				description="Build method and cache"
 			>
 				<GitBuildFields

@@ -245,6 +245,7 @@ func (r *run) removeQuietly(ctx context.Context, id string) {
 // On failure it logs the container's last output and removes it, so the
 // previous container keeps serving.
 func (r *run) awaitReadyOrDiscard(ctx context.Context, id string, check Readiness) error {
+	r.progress.line(PhaseHealth)
 	started := time.Now()
 	current := Verdict{State: "pending"}
 	for current.State == "pending" {

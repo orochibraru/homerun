@@ -2,6 +2,7 @@
 	import { enhance } from "$app/forms";
 	import {
 		Check,
+		ClipboardCheck,
 		Cpu,
 		HardDrive,
 		Network,
@@ -21,9 +22,10 @@
 	import { visibleIn } from "#lib/ui-mode.js";
 
 	import BasicInfoStep, { slugify } from "./basic-info-step.svelte";
-	import ComputeStep from "./compute-step.svelte";
 	import EnvironmentStep from "./environment-step.svelte";
 	import NetworkingStep from "./networking-step.svelte";
+	import ReviewStep from "./review-step.svelte";
+	import RuntimeStep from "./runtime-step.svelte";
 	import VolumesStep from "./volumes-step.svelte";
 	import WizardNav from "./wizard-nav.svelte";
 
@@ -62,9 +64,14 @@
 			label: "Volumes",
 		},
 		{
-			description: "CPU and memory limits, then review and create.",
+			description: "Restart policy, limits, command and healthcheck.",
 			icon: Cpu,
-			label: "Compute",
+			label: "Runtime",
+		},
+		{
+			description: "Check everything, then create it.",
+			icon: ClipboardCheck,
+			label: "Review",
 		},
 	];
 	// Every field lives in $state (not an uncontrolled `value={}`) so its
@@ -81,7 +88,11 @@
 	);
 	let image = $derived(values?.image ?? data.template?.image ?? "");
 	let tag = $derived(values?.tag ?? data.template?.tag ?? "latest");
+	let buildSource = $derived<"image" | "git">(
+		values?.buildSource === "git" ? "git" : "image",
+	);
 	let detected = $state<DetectedConfig | null>(null);
+	let formEl = $state<HTMLFormElement>();
 	let submittingAction = $state<"create" | "createAndDeploy" | null>(null);
 
 	function stepButtonClass(i: number): string {
@@ -150,6 +161,7 @@
 	/>
 
 	<form
+		bind:this={formEl}
 		action="?/create"
 		class="space-y-6"
 		method="POST"
@@ -232,6 +244,7 @@
 			<div class="flex-1 space-y-6">
 				<BasicInfoStep
 					{data}
+					bind:buildSource
 					{errors}
 					hidden={currentStep !== 0}
 					{values}
@@ -260,14 +273,30 @@
 					templateVolumes={data.template?.volumes ?? []}
 					volumes={data.volumes}
 				/>
-				<ComputeStep
+				<RuntimeStep
+					{buildSource}
 					collapsible={!visibleIn(data.uiMode, "services/new#compute") &&
 						!errors?.cpuLimit &&
-						!errors?.memoryLimitMb}
+						!errors?.memoryLimitMb &&
+						!errors?.command &&
+						!errors?.runAsUser &&
+						!errors?.replicas}
+					{detected}
 					{errors}
 					hidden={currentStep !== 4}
+					swarm={data.swarm}
 					template={data.template}
 					{values}
+				/>
+				<ReviewStep
+					form={formEl}
+					hidden={currentStep !== 5}
+					onedit={(step) => {
+						currentStep = step;
+					}}
+					serviceDomain={data.serviceDomain}
+					stackSlug={data.stackSlug}
+					volumes={data.volumes}
 				/>
 			</div>
 

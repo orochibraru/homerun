@@ -195,6 +195,7 @@ func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any, 
 	}, attribute.String("homerun.swarm.service_id", id), attribute.String("homerun.swarm.update_order", order)); err != nil {
 		return "", err
 	}
+	r.progress.line(PhaseHealth)
 	if err := tracing.Stage(ctx, "wait for the rollout", func(ctx context.Context) error {
 		return r.awaitSwarmUpdate(ctx, id, previousStartedAt)
 	}, attribute.String("homerun.swarm.service_id", id)); err != nil {

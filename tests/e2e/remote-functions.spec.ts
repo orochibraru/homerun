@@ -53,6 +53,7 @@ test.describe.serial("remote functions", () => {
 		await page.getByRole("button", { name: "Next" }).click();
 		await page.getByRole("button", { name: "Next" }).click();
 		await page.getByRole("button", { name: "Next" }).click();
+		await page.getByRole("button", { name: "Next" }).click();
 		await page.getByRole("button", { name: "Create service" }).click();
 		await expect(page).toHaveURL(/\/services\/[0-9a-f-]{36}$/);
 

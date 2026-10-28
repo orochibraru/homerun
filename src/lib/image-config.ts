@@ -1,3 +1,4 @@
+import type { BuildMethod } from "#lib/build-methods.js";
 import type { ManifestInput } from "#lib/server/manifest.js";
 
 export interface DetectedPort {
@@ -11,14 +12,39 @@ export interface DetectedManifest {
 	path: string;
 }
 
+export interface DetectedPrefill {
+	authRequired?: boolean;
+	cpuLimit?: string;
+	dnsResolvable?: boolean;
+	domain?: string;
+	gitBakeFile?: string;
+	gitBuildContext?: string;
+	gitBuildMethod?: BuildMethod;
+	gitBuildTarget?: string;
+	gitDockerfilePath?: string;
+	memoryLimitMb?: number;
+	name?: string;
+	pullPolicy?: "always" | "missing" | "never";
+	replicas?: number;
+	restartPolicy?: "always" | "no" | "on-failure" | "unless-stopped";
+}
+
+export interface DetectedBuild {
+	method: BuildMethod;
+	reason: string;
+}
+
 export interface DetectedConfig {
+	build: DetectedBuild | null;
 	command: string[] | null;
 	entrypoint: string[] | null;
 	env: Record<string, string>;
 	healthcheck: string | null;
 	manifest: DetectedManifest | null;
 	ports: DetectedPort[];
-	source: "dockerfile" | "image" | "manifest";
+	prefill: DetectedPrefill;
+	runtime: string | null;
+	source: "dockerfile" | "image" | "manifest" | "repository";
 	user: string | null;
 	volumes: string[];
 	workdir: string | null;
@@ -30,12 +56,17 @@ export interface OciImageConfig {
 	Env?: string[] | null;
 	ExposedPorts?: Record<string, unknown> | null;
 	Healthcheck?: { Test?: string[] | null } | null;
+	Labels?: Record<string, string> | null;
 	User?: string | null;
 	Volumes?: Record<string, unknown> | null;
 	WorkingDir?: string | null;
 }
 
-type StageConfig = Omit<DetectedConfig, "manifest" | "source"> & {
+type StageConfig = Omit<
+	DetectedConfig,
+	"build" | "manifest" | "prefill" | "runtime" | "source"
+> & {
+	labels: Record<string, string>;
 	ownCommand: boolean;
 	vars: Record<string, string>;
 };
@@ -50,6 +81,7 @@ const SYSTEM_ENV_KEYS = new Set([
 	"PATH",
 	"TERM",
 ]);
+const OCI_TITLE_LABEL = "org.opencontainers.image.title";
 const SYSTEM_ENV_SUFFIX_RE = /_(VERSION|SHA256|SHA512|DOWNLOAD_URL|GPG_KEYS?)$/;
 const ESCAPE_DIRECTIVE_RE = /^#\s*escape\s*=\s*([\\`])\s*$/i;
 const HEREDOC_RE = /<<-?\s*["']?([A-Za-z_][A-Za-z0-9_]*)["']?/g;
@@ -67,6 +99,7 @@ function emptyStage(vars: Record<string, string> = {}): StageConfig {
 		entrypoint: null,
 		env: {},
 		healthcheck: null,
+		labels: {},
 		ownCommand: false,
 		ports: [],
 		user: null,
@@ -83,6 +116,7 @@ function cloneStage(stage: StageConfig): StageConfig {
 		command: stage.command ? [...stage.command] : null,
 		entrypoint: stage.entrypoint ? [...stage.entrypoint] : null,
 		env: { ...stage.env },
+		labels: { ...stage.labels },
 		ownCommand: false,
 		ports: stage.ports.map((p) => ({ ...p })),
 		vars: { ...stage.vars },
@@ -257,6 +291,19 @@ function applyEnv(stage: StageConfig, args: string): void {
 	}
 }
 
+/** Applies a `LABEL` instruction's `key=value` pairs to `stage`. */
+function applyLabel(stage: StageConfig, args: string): void {
+	for (const part of tokens(args)) {
+		const eq = part.indexOf("=");
+		if (eq > 0) {
+			stage.labels[unquote(part.slice(0, eq))] = substitute(
+				unquote(part.slice(eq + 1)),
+				stage.vars,
+			);
+		}
+	}
+}
+
 /** Applies an `ARG` instruction's defaults to `vars`, taking a bare name's value from `globals`. */
 function applyArg(
 	vars: Record<string, string>,
@@ -324,6 +371,7 @@ const INSTRUCTIONS: Record<
 		}
 	},
 	HEALTHCHECK: (stage, args) => applyHealthcheck(stage, args),
+	LABEL: (stage, args) => applyLabel(stage, args),
 	USER: (stage, args) => {
 		stage.user = substitute(args, stage.vars) || null;
 	},
@@ -356,13 +404,35 @@ function applyHealthcheck(stage: StageConfig, args: string): void {
 	stage.healthcheck = exec ? exec.join(" ") : body || null;
 }
 
-/** Strips a stage's private build variables from its public config. */
+/**
+ * Strips a stage's private build variables from its public config, falls
+ * back to a numeric `PORT` env for the port when nothing is exposed, and
+ * suggests the OCI title label as the service's name.
+ */
 function finish(
 	stage: StageConfig,
 	source: DetectedConfig["source"],
 ): DetectedConfig {
-	const { ownCommand: _own, vars: _vars, ...config } = stage;
-	return { ...config, manifest: null, source };
+	const { labels, ownCommand: _own, vars: _vars, ...config } = stage;
+	if (config.ports.length === 0 && config.env.PORT) {
+		addPort(config.ports, config.env.PORT);
+	}
+	const title = labels[OCI_TITLE_LABEL]?.trim();
+	return {
+		...config,
+		build: null,
+		manifest: null,
+		prefill: title ? { name: title } : {},
+		runtime: null,
+		source,
+	};
+}
+
+/** A config that found nothing yet, from `source`. */
+export function emptyDetected(
+	source: DetectedConfig["source"],
+): DetectedConfig {
+	return finish(emptyStage(), source);
 }
 
 /**
@@ -430,6 +500,7 @@ export function configFromImage(
 	stage.workdir = config?.WorkingDir || null;
 	stage.command = config?.Cmd?.length ? config.Cmd : null;
 	stage.entrypoint = config?.Entrypoint?.length ? config.Entrypoint : null;
+	stage.labels = { ...config?.Labels };
 	return finish(stage, "image");
 }
 
@@ -475,7 +546,10 @@ export function hasDetected(
 			!!config.user ||
 			!!config.workdir ||
 			!!config.command ||
-			!!config.entrypoint)
+			!!config.entrypoint ||
+			!!config.build ||
+			!!config.runtime ||
+			Object.keys(config.prefill).length > 0)
 	);
 }
 
@@ -491,6 +565,34 @@ const MANIFEST_APPLIED_KEYS = new Set([
 ]);
 
 /**
+ * What the new service wizard can fill in from a manifest: its name, build
+ * settings, routing and limits. The rest of the manifest still applies on
+ * every deploy.
+ */
+function manifestPrefill(manifest: ManifestInput): DetectedPrefill {
+	const domain = manifest.primaryDomain ?? manifest.domains?.[0];
+	const entries: [keyof DetectedPrefill, unknown][] = [
+		["authRequired", manifest.authRequired],
+		["cpuLimit", manifest.cpuLimit],
+		["dnsResolvable", manifest.dnsResolvable],
+		["domain", domain],
+		["gitBakeFile", manifest.gitBakeFile],
+		["gitBuildContext", manifest.gitBuildContext],
+		["gitBuildMethod", manifest.gitBuildMethod],
+		["gitBuildTarget", manifest.gitBuildTarget],
+		["gitDockerfilePath", manifest.gitDockerfilePath],
+		["memoryLimitMb", manifest.memoryLimitMb],
+		["name", manifest.name],
+		["pullPolicy", manifest.pullPolicy],
+		["replicas", manifest.replicas],
+		["restartPolicy", manifest.restartPolicy],
+	];
+	return Object.fromEntries(
+		entries.filter(([, value]) => value !== undefined && value !== null),
+	) as DetectedPrefill;
+}
+
+/**
  * Lays a repository's Homerun Manifest over what its Dockerfile declares
  * (or over nothing, when there's no Dockerfile to read): the manifest wins
  * for the port, env, healthcheck, user, command and entrypoint it sets, the
@@ -503,9 +605,15 @@ export function withManifest(
 	file: { errors: string[]; manifest: ManifestInput | null; path: string },
 ): DetectedConfig {
 	const config: DetectedConfig = base
-		? { ...base, env: { ...base.env }, ports: [...base.ports] }
+		? {
+				...base,
+				env: { ...base.env },
+				ports: [...base.ports],
+				prefill: { ...base.prefill },
+			}
 		: { ...finish(emptyStage(), "manifest") };
 	const manifest = file.manifest ?? {};
+	config.prefill = { ...config.prefill, ...manifestPrefill(manifest) };
 	config.manifest = {
 		errors: file.errors,
 		keys: Object.keys(manifest).filter(
@@ -538,12 +646,12 @@ export function withManifest(
 
 /** Where `config` came from, for a label: "the image", "the Dockerfile", ".homerun.json and the Dockerfile". */
 export function detectedFrom(config: DetectedConfig): string {
-	const base =
-		config.source === "manifest"
-			? null
-			: config.source === "dockerfile"
-				? "the Dockerfile"
-				: "the image";
+	const base = {
+		dockerfile: "the Dockerfile",
+		image: "the image",
+		manifest: null,
+		repository: "the repository",
+	}[config.source];
 	const manifest = config.manifest?.path.split("/").pop() ?? null;
 	return [manifest, base].filter(Boolean).join(" and ");
 }

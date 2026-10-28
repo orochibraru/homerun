@@ -43,6 +43,7 @@ async function createService(page: Page, name: string): Promise<string> {
 	await page.getByRole("button", { name: "Next" }).click();
 	await page.getByRole("button", { name: "Next" }).click();
 	await page.getByRole("button", { name: "Next" }).click();
+	await page.getByRole("button", { name: "Next" }).click();
 	await page.getByRole("button", { name: "Create service" }).click();
 	await expect(page).toHaveURL(/\/services\/[0-9a-f-]{36}$/);
 	return page.url().split("/").pop() ?? "";

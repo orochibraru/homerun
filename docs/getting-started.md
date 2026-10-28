@@ -214,15 +214,22 @@ skips is hidden in a file, see [Configuration](configuration.md).
    something from the built-in catalog, which is the fastest way to see it work
    end to end. **Quick Deploy** on a template card creates and deploys it with
    no further input.
-2. The wizard walks five steps: basic info, networking (container port and
+2. The wizard walks six steps: basic info, networking (container port and
    whether it gets a public subdomain), environment variables, volumes (a new
    named volume, an existing one, or one already on this machine, mounted at a
-   path), and compute limits. The port, volumes and environment variables the
-   image, Dockerfile or repository's manifest declares are detected and filled
-   in for you, see
+   path), runtime (restart and pull policy, CPU and memory limits, replicas on a
+   swarm, a start command, the user it runs as and a healthcheck), then a review
+   of everything before you create it. What the image, Dockerfile or
+   repository's manifest declares (port, volumes, env, name, limits, domain,
+   build settings) is detected and filled in for you, marked _detected_, and a
+   repository without a Dockerfile gets a build method suggested from its
+   `package.json`, `go.mod` and the like, see
    [Services](services.md#detected-from-the-image-dockerfile-or-manifest).
 3. **Create and Deploy** drops you on the service's Overview tab with live
-   progress, pull, create, start, streaming as it happens.
+   progress: a stepper through configuration, volumes, clone and build (or
+   pull), the image scan, start, health check, routing and live, with the time
+   each phase took, above the log streaming as it happens. A phase the deploy
+   didn't need (no scan when scanning is off) shows as skipped.
 4. Once it's running, it's reachable at `<slug>.<your base domain>` over TLS,
    with no DNS or reverse-proxy work on your side beyond pointing the domain at
    this host.
