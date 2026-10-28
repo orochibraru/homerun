@@ -181,3 +181,4 @@ actionlint
 gitleaks
 hadolint
 zizmor
+Astro
