@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.74](https://github.com/orochibraru/homerun/compare/v1.0.73...v1.0.74) (2026-10-28)
+
+### Features
+
+* **logs:** keep every service's logs across revisions, searchable (#166) ([ff7b03c](https://github.com/orochibraru/homerun/commit/ff7b03cea4b8efd35407458a1fee5e3790a9313f))
+
 ## [1.0.73](https://github.com/orochibraru/homerun/compare/v1.0.72...v1.0.73) (2026-10-27)
 
 ### Features
