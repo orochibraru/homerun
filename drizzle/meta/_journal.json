@@ -1050,6 +1050,13 @@
       "when": 1793269884958,
       "tag": "0149_slimy_young_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 150,
+      "version": "7",
+      "when": 1793296379506,
+      "tag": "0150_unique_energizer",
+      "breakpoints": true
     }
   ],
   "version": "7"

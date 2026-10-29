@@ -397,6 +397,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			domainPorts: {},
 			httpCacheTtl: null,
 			icon: input.icon ?? null,
+			exposedPorts: input.exposedPorts ?? [],
 			publishedPorts: input.publishedPorts ?? [],
 			stackId: input.stackId ?? null,
 			pullPolicy: input.pullPolicy ?? "always",
@@ -845,6 +846,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 	/** Host ports published straight to the container, bypassing Traefik. */
 	get publishedPorts(): Service["publishedPorts"] {
 		return this.row.publishedPorts;
+	}
+	/** Extra container ports declared in Docker's `ExposedPorts`: metadata only, the shared network reaches every port either way. */
+	get exposedPorts(): Service["exposedPorts"] {
+		return this.row.exposedPorts;
 	}
 	/** Which protocol(s) the container port is exposed under. */
 	get portProtocol(): Service["portProtocol"] {

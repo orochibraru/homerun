@@ -4,6 +4,11 @@ export interface PublishedPort {
 	protocol: "tcp" | "udp";
 }
 
+export interface ExposedPort {
+	port: number;
+	protocol: "tcp" | "udp";
+}
+
 export const RESERVED_HOST_PORTS = ["80/tcp", "443/tcp", "443/udp"];
 
 /** The `<containerPort>/<protocol>` key Docker uses for a port in `ExposedPorts` and `PortBindings`. */
@@ -47,6 +52,25 @@ export function publishedPortsProblem(ports: PublishedPort[]): string | null {
 		}
 		if (seen.has(key)) {
 			return `Host port ${key} is listed twice.`;
+		}
+		seen.add(key);
+	}
+	return null;
+}
+
+/**
+ * The first problem with a service's exposed ports, or null: a port outside
+ * 1-65535, or the same port and protocol listed twice.
+ */
+export function exposedPortsProblem(ports: ExposedPort[]): string | null {
+	const seen = new Set<string>();
+	for (const port of ports) {
+		const key = `${port.port}/${port.protocol}`;
+		if (!Number.isInteger(port.port) || port.port < 1 || port.port > 65_535) {
+			return `Exposed port ${key} is outside 1-65535.`;
+		}
+		if (seen.has(key)) {
+			return `Exposed port ${key} is listed twice.`;
 		}
 		seen.add(key);
 	}

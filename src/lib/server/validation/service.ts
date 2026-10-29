@@ -6,6 +6,8 @@ import {
 	BUILD_METHODS,
 } from "#lib/build-methods.js";
 import {
+	type ExposedPort,
+	exposedPortsProblem,
 	type PublishedPort,
 	publishedPortsProblem,
 } from "#lib/published-ports.js";
@@ -470,6 +472,36 @@ export const updateEnvFilesSchema = z.object({
 });
 
 const portNumber = z.number().int().min(1).max(65_535);
+
+/** The Networking tab's exposed ports, posted as one JSON array. */
+export const exposedPortsSchema = z.array(
+	z.object({
+		port: portNumber,
+		protocol: z.enum(["tcp", "udp"]),
+	}),
+);
+
+/**
+ * Reads an exposed ports list posted as one JSON array form field, empty
+ * when the field is missing, or the first problem with it: unreadable JSON,
+ * a port outside 1-65535 or one listed twice.
+ */
+export function parseExposedPortsField(
+	value: FormDataEntryValue | null,
+): { ports: ExposedPort[] } | { error: string } {
+	let raw: unknown;
+	try {
+		raw = JSON.parse(String(value ?? "[]"));
+	} catch {
+		return { error: "Couldn't read the port list." };
+	}
+	const result = exposedPortsSchema.safeParse(raw);
+	if (!result.success) {
+		return { error: "Every port must be a number between 1 and 65535." };
+	}
+	const problem = exposedPortsProblem(result.data);
+	return problem ? { error: problem } : { ports: result.data };
+}
 
 /** The Networking tab's published ports, posted as one JSON array. */
 export const publishedPortsSchema = z.array(

@@ -78,6 +78,7 @@ describe("visibleIn", () => {
 			"service/observability/traces",
 			"service/container/runtime",
 			"service/networking#published-ports",
+			"service/networking#exposed-ports",
 			"service/security#blocked-paths",
 			"settings/ip-bans",
 			"monitoring/traces",

@@ -1,4 +1,4 @@
-import type { PublishedPort } from "#lib/published-ports.js";
+import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
 import {
 	runtimeOptionsFrom,
 	type ServiceRuntimeOptions,
@@ -18,6 +18,7 @@ export interface RevisionConfig extends Partial<ServiceRuntimeOptions> {
 	memoryLimitMb: number | null;
 	networkMode: "bridge" | "host";
 	portProtocol: "tcp" | "udp" | "both";
+	exposedPorts?: ExposedPort[];
 	publishedPorts?: PublishedPort[];
 	replicas: number;
 	volumeMounts?: VolumeMountSnapshot[];
@@ -58,6 +59,7 @@ export function snapshotRevisionConfig(
 		memoryLimitMb: service.memoryLimitMb,
 		networkMode: service.networkMode,
 		portProtocol: service.portProtocol,
+		exposedPorts: structuredClone(service.exposedPorts),
 		publishedPorts: structuredClone(service.publishedPorts),
 		replicas: service.replicas,
 	};

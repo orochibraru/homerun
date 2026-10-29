@@ -13881,6 +13881,12 @@ export interface operations {
 						};
 						/** @description Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it. */
 						environmentName: string | null;
+						/** @description Extra container ports declared exposed (Docker's ExposedPorts), metadata only */
+						exposedPorts: {
+							port: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						gitBakeFile: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
@@ -14153,6 +14159,15 @@ export interface operations {
 							};
 							/** @description The environment this service's deployments are recorded under, e.g. staging. null or production resets it to production. Canaries and previews keep canary and preview. */
 							environmentName?: string | null;
+							/** @description Extra container ports declared exposed (Docker's ExposedPorts, compose's expose:). Metadata only: services on the shared network reach every port anyway. */
+							exposedPorts?: {
+								port: number;
+								/**
+								 * @default tcp
+								 * @enum {string}
+								 */
+								protocol: "tcp" | "udp";
+							}[];
 							gitBakeFile?: string;
 							gitBuildContext?: string;
 							/**
@@ -14352,6 +14367,15 @@ export interface operations {
 							};
 							/** @description The environment this service's deployments are recorded under, e.g. staging. null or production resets it to production. Canaries and previews keep canary and preview. */
 							environmentName?: string | null;
+							/** @description Extra container ports declared exposed (Docker's ExposedPorts, compose's expose:). Metadata only: services on the shared network reach every port anyway. */
+							exposedPorts?: {
+								port: number;
+								/**
+								 * @default tcp
+								 * @enum {string}
+								 */
+								protocol: "tcp" | "udp";
+							}[];
 							gitBakeFile?: string | null;
 							gitBuildContext?: string | null;
 							/** @enum {string} */
@@ -14561,6 +14585,12 @@ export interface operations {
 						};
 						/** @description Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it. */
 						environmentName: string | null;
+						/** @description Extra container ports declared exposed (Docker's ExposedPorts), metadata only */
+						exposedPorts: {
+							port: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						gitBakeFile: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
@@ -14878,6 +14908,12 @@ export interface operations {
 						};
 						/** @description Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it. */
 						environmentName: string | null;
+						/** @description Extra container ports declared exposed (Docker's ExposedPorts), metadata only */
+						exposedPorts: {
+							port: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						gitBakeFile: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
@@ -15224,6 +15260,15 @@ export interface operations {
 					};
 					/** @description The environment this service's deployments are recorded under, e.g. staging. null or production resets it to production. Canaries and previews keep canary and preview. */
 					environmentName?: string | null;
+					/** @description Extra container ports declared exposed (Docker's ExposedPorts, compose's expose:). Metadata only: services on the shared network reach every port anyway. */
+					exposedPorts?: {
+						port: number;
+						/**
+						 * @default tcp
+						 * @enum {string}
+						 */
+						protocol: "tcp" | "udp";
+					}[];
 					gitBakeFile?: string | null;
 					gitBuildContext?: string | null;
 					/** @enum {string} */
@@ -15431,6 +15476,12 @@ export interface operations {
 						};
 						/** @description Custom environment name its deployments are recorded under, null for production. Canaries and previews ignore it. */
 						environmentName: string | null;
+						/** @description Extra container ports declared exposed (Docker's ExposedPorts), metadata only */
+						exposedPorts: {
+							port: number;
+							/** @enum {string} */
+							protocol: "tcp" | "udp";
+						}[];
 						gitBakeFile: string | null;
 						gitBuildContext: string | null;
 						/** @enum {string} */
@@ -15912,6 +15963,11 @@ export interface operations {
 								[key: string]: number;
 							};
 							domains: string[];
+							exposedPorts: {
+								port: number;
+								/** @enum {string} */
+								protocol: "tcp" | "udp";
+							}[];
 							httpCacheTtl: number | null;
 							/** @enum {string} */
 							networkMode: "bridge" | "host";

@@ -535,6 +535,25 @@
 				},
 				{
 					"kind": "objects",
+					"name": "exposedPorts",
+					"tf": "exposed_ports",
+					"fields": [
+						{
+							"kind": "int",
+							"name": "port",
+							"tf": "port",
+							"required": true
+						},
+						{
+							"kind": "string",
+							"name": "protocol",
+							"tf": "protocol",
+							"default": "tcp"
+						}
+					]
+				},
+				{
+					"kind": "objects",
 					"name": "publishedPorts",
 					"tf": "published_ports",
 					"fields": [

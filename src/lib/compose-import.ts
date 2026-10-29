@@ -3,7 +3,7 @@ import { parse as parseYaml } from "yaml";
 import type { BuildMethod } from "#lib/build-methods.js";
 import { parseDotEnv } from "#lib/env-parse.js";
 import { splitImageRef } from "#lib/image-ref.js";
-import type { PublishedPort } from "#lib/published-ports.js";
+import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
 import { isRunAsUser } from "#lib/service-runtime.js";
 import { argvFrom } from "#lib/shell-words.js";
 
@@ -59,6 +59,7 @@ export interface ComposeServiceDraft {
 	name: string;
 	networkMode: "bridge" | "host";
 	portProtocol: "tcp" | "udp" | "both";
+	exposedPorts: ExposedPort[];
 	publishedPorts: PublishedPort[];
 	privileged: boolean;
 	registry: ComposeRegistryDraft | null;
@@ -387,6 +388,27 @@ function publishedPortsFor(
 	return ports;
 }
 
+/**
+ * The `expose:` ports worth declaring: every one except the main container
+ * port, de-duplicated on port and protocol.
+ */
+function exposedPortsFor(
+	exposed: PortMapping[],
+	containerPort: number,
+): ExposedPort[] {
+	const ports: ExposedPort[] = [];
+	for (const m of exposed) {
+		if (
+			m.port === containerPort ||
+			ports.some((p) => p.port === m.port && p.protocol === m.protocol)
+		) {
+			continue;
+		}
+		ports.push({ port: m.port, protocol: m.protocol });
+	}
+	return ports;
+}
+
 function protocolFor(mappings: PortMapping[]): "tcp" | "udp" | "both" {
 	const hasTcp = mappings.some((m) => m.protocol === "tcp");
 	const hasUdp = mappings.some((m) => m.protocol === "udp");
@@ -587,15 +609,19 @@ function unsupportedWarnings(raw: Record<string, unknown>): string[] {
  * when none are found.
  *
  * @returns `published` is true when the service had host `ports:`, which the
- * import treats as meaning it should be publicly routed.
+ * import treats as meaning it should be publicly routed; `exposed` is the
+ * `expose:` entries alone.
  */
 function portsFor(
 	raw: Record<string, unknown>,
 	warnings: string[],
-): { mappings: PortMapping[]; published: boolean } {
+): { exposed: PortMapping[]; mappings: PortMapping[]; published: boolean } {
 	const portEntries = Array.isArray(raw.ports) ? raw.ports : [];
 	const exposeEntries = Array.isArray(raw.expose) ? raw.expose : [];
 	const mappings = [...portEntries, ...exposeEntries]
+		.map(parsePortEntry)
+		.filter((m): m is PortMapping => m !== null);
+	const exposed = exposeEntries
 		.map(parsePortEntry)
 		.filter((m): m is PortMapping => m !== null);
 
@@ -604,7 +630,7 @@ function portsFor(
 			`No published port found : defaulting to ${DEFAULT_CONTAINER_PORT}, change it on the Networking tab.`,
 		);
 	}
-	return { mappings, published: portEntries.length > 0 };
+	return { exposed, mappings, published: portEntries.length > 0 };
 }
 
 /**
@@ -652,7 +678,7 @@ function draftFor(
 			: `${slug}:latest`;
 	const { image: imageName, tag } = splitImageRef(image);
 
-	const { mappings, published } = portsFor(raw, warnings);
+	const { exposed, mappings, published } = portsFor(raw, warnings);
 	const containerPort = mappings[0]?.port ?? DEFAULT_CONTAINER_PORT;
 	const networkMode = raw.network_mode === "host" ? "host" : "bridge";
 	const volumes = (Array.isArray(raw.volumes) ? raw.volumes : [])
@@ -681,6 +707,8 @@ function draftFor(
 		name,
 		networkMode,
 		portProtocol: protocolFor(mappings),
+		exposedPorts:
+			networkMode === "host" ? [] : exposedPortsFor(exposed, containerPort),
 		publishedPorts:
 			networkMode === "host" ? [] : publishedPortsFor(mappings, containerPort),
 		privileged: raw.privileged === true,

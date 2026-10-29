@@ -60,7 +60,7 @@ Every tab stays. Inside them, simple mode hides:
   **Uptime**, **Errors** and **Health** stay, and Health only shows the current
   healthcheck, not the override settings.
 - **Networking**: the network mode sits behind a collapsed **Advanced** section,
-  and **Response cache** and **Published ports** are hidden.
+  and **Response cache**, **Published ports** and **Exposed ports** are hidden.
 - **Container**: **Runtime** (entrypoint, command, labels, capabilities,
   devices…). On a swarm instance, **Replicas** and placement sit behind a
   collapsed **Advanced** section on **Compute**.
@@ -68,8 +68,8 @@ Every tab stays. Inside them, simple mode hides:
   wall itself and image scanning stay.
 
 A setting simple mode tucks away still shows when a service already uses it:
-blocked paths that are set, a response cache, published ports, healthcheck
-overrides, host network mode or more than one replica.
+blocked paths that are set, a response cache, published or exposed ports,
+healthcheck overrides, host network mode or more than one replica.
 
 ### Settings
 

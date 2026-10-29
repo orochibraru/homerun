@@ -2,6 +2,7 @@ import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
 import type { AuthPathsMode } from "#lib/path-patterns.js";
 import {
+	type ExposedPort,
 	portBindings,
 	portKey,
 	type PublishedPort,
@@ -176,6 +177,7 @@ export interface CreateContainerParams {
 	// itself : publishedPorts does that; matters for host-visible
 	// reachability only in combination with networkMode: "host" above.
 	portProtocol?: "tcp" | "udp" | "both";
+	exposedPorts?: ExposedPort[];
 	publishedPorts?: PublishedPort[];
 	// Prefixes the container name and public subdomain when the service
 	// belongs to a stack (e.g. "<stackSlug>-<slug>.<baseDomain>").
@@ -259,6 +261,10 @@ export function containerCreateTemplate(params: CreateContainerParams) {
 		...runtimeArgv(params.runtime),
 		ExposedPorts: Object.fromEntries([
 			...protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
+			...(params.exposedPorts ?? []).map((port) => [
+				`${port.port}/${port.protocol}`,
+				{},
+			]),
 			...(params.publishedPorts ?? []).map((port) => [portKey(port), {}]),
 		]),
 		HostConfig: containerHostConfig(params),

@@ -7,7 +7,10 @@ import { StackDTO } from "#lib/dto/stack-dto.js";
 import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "#lib/host-access.js";
 import { Logger } from "#lib/logger.js";
 import { authPathsProblem, pathFiltersChanged } from "#lib/path-patterns.js";
-import { publishedPortsProblem } from "#lib/published-ports.js";
+import {
+	exposedPortsProblem,
+	publishedPortsProblem,
+} from "#lib/published-ports.js";
 import { normalizeEnvironmentName } from "#lib/release-channels.js";
 import { invalidateGatedService } from "#lib/server/gated-service-cache.js";
 import {
@@ -444,11 +447,16 @@ class ServiceSettingsServiceClass {
 		}
 	}
 
-	/** Published ports: valid, and not published by another service. */
+	/** Exposed ports valid; published ports valid and not published by another service. */
 	async #checkNetwork(
 		svc: ServiceDTO,
 		input: ServiceSettingsInput,
 	): Promise<void> {
+		const exposed =
+			input.exposedPorts && exposedPortsProblem(input.exposedPorts);
+		if (exposed) {
+			fail(exposed);
+		}
 		if (!input.publishedPorts) {
 			return;
 		}

@@ -1,6 +1,40 @@
 import { describe, expect, test } from "bun:test";
 
-import { portBindings, publishedPortsProblem } from "#lib/published-ports.js";
+import {
+	exposedPortsProblem,
+	portBindings,
+	publishedPortsProblem,
+} from "#lib/published-ports.js";
+
+describe("exposedPortsProblem", () => {
+	test("accepts distinct ports, and the same number on both protocols", () => {
+		expect(
+			exposedPortsProblem([
+				{ port: 53, protocol: "tcp" },
+				{ port: 53, protocol: "udp" },
+				{ port: 8088, protocol: "tcp" },
+			]),
+		).toBeNull();
+	});
+
+	test("refuses a port listed twice", () => {
+		expect(
+			exposedPortsProblem([
+				{ port: 8088, protocol: "tcp" },
+				{ port: 8088, protocol: "tcp" },
+			]),
+		).toBe("Exposed port 8088/tcp is listed twice.");
+	});
+
+	test("refuses a port outside 1-65535", () => {
+		expect(exposedPortsProblem([{ port: 0, protocol: "tcp" }])).toBe(
+			"Exposed port 0/tcp is outside 1-65535.",
+		);
+		expect(exposedPortsProblem([{ port: 70_000, protocol: "udp" }])).toBe(
+			"Exposed port 70000/udp is outside 1-65535.",
+		);
+	});
+});
 
 describe("portBindings", () => {
 	test("binds each host port under its container port and protocol", () => {

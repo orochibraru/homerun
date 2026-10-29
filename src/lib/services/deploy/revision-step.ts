@@ -57,6 +57,7 @@ export async function restoreRevisionConfig(
 		memoryLimitMb: snapshot.memoryLimitMb,
 		networkMode: snapshot.networkMode,
 		portProtocol: snapshot.portProtocol,
+		...(snapshot.exposedPorts ? { exposedPorts: snapshot.exposedPorts } : {}),
 		...(snapshot.publishedPorts
 			? { publishedPorts: snapshot.publishedPorts }
 			: {}),

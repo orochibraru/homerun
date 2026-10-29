@@ -88,6 +88,8 @@ resource "homerun_service" "example" {
 - `env_files` (List of String)
 - `env_vars` (Map of String, Sensitive)
 - `environment_name` (String)
+- `exposed_ports` (List of Object) See the nested schema for `exposed_ports`
+  below.
 - `git_bake_file` (String)
 - `git_build_context` (String)
 - `git_build_method` (String) Defaults to `"dockerfile"`.
@@ -192,6 +194,16 @@ resource "homerun_service" "example" {
   dashboard, the API or the CLI. Pinning here is setting tag.
 - `pinned_locally` (Boolean)
 - `registry_password_set` (Boolean)
+
+### Nested schema for `exposed_ports`
+
+Required:
+
+- `port` (Number)
+
+Optional:
+
+- `protocol` (String) Defaults to `"tcp"`.
 
 ### Nested schema for `published_ports`
 
