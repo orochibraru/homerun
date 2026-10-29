@@ -25,6 +25,7 @@ func TestRunVersionDispatches(t *testing.T) {
 		{"unpin", []string{"unpin", versionServiceID}, "DELETE", base + "/pin", ""},
 		{"watch on, trial off", []string{"watch", versionServiceID, "--check", "--trial=false"}, "PATCH", base, `{"updateCheckEnabled":true,"updateTrialEnabled":false}`},
 		{"watch off", []string{"watch", versionServiceID, "--check=false"}, "PATCH", base, `{"updateCheckEnabled":false}`},
+		{"watch minor only", []string{"watch", versionServiceID, "--scope", "minor"}, "PATCH", base, `{"updateScope":"minor"}`},
 		{"check", []string{"check", versionServiceID}, "POST", base + "/check", ""},
 		{"update", []string{"update", versionServiceID}, "POST", base + "/update", ""},
 	}
@@ -56,7 +57,7 @@ func TestVersionWatchNeedsAFlag(t *testing.T) {
 	_, failed := runCLI(t, func() {
 		cli.Execute(cli.Env{Client: func() *cli.Client { return client }}, []string{"services", "version", "watch", versionServiceID})
 	})
-	if failed != "Nothing to change: pass --check, --trial or both." {
+	if failed != "Nothing to change: pass --check, --trial, --scope or any of them." {
 		t.Errorf("got %q", failed)
 	}
 	if len(*seen) != 0 {

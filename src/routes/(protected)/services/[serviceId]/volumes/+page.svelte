@@ -25,6 +25,7 @@
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 
+	import EditMount from "./edit-mount.svelte";
 	import MountBackup from "./mount-backup.svelte";
 	import VolumeBackupsMenu from "./volume-backups-menu.svelte";
 
@@ -112,6 +113,7 @@
 						<VolumeBackupsMenu volume={vol} />
 						<MountBackup destinations={data.destinations} volume={vol} />
 					{/if}
+					<EditMount {mount} />
 					<form
 						action="?/detachVolume"
 						method="POST"

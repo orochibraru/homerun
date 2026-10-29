@@ -41,6 +41,10 @@ export const serviceVersionResponse = z.object({
 	trialStatus: z.enum(["running", "passed", "failed"]).nullable(),
 	trialTag: z.string().nullable(),
 	updateCheckEnabled: z.boolean(),
+	updateScope: z.enum(["major", "minor", "patch"]).meta({
+		description:
+			"How far an update may go: any newer release, the same major, or the same major.minor",
+	}),
 	updateTrialEnabled: z.boolean(),
 });
 

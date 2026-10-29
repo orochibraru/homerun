@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { UPDATE_SCOPES } from "#lib/image-versions.js";
 import { dockerCleanupActions } from "#lib/services/queue/payloads.js";
 
 export const serviceVersionWatchApiBody = z
@@ -10,18 +11,25 @@ export const serviceVersionWatchApiBody = z
 			.describe(
 				"Watch the registry for a newer release (a version tag) or a new image behind a floating tag like latest.",
 			),
+		updateScope: z
+			.enum(UPDATE_SCOPES)
+			.optional()
+			.describe(
+				"How far an update may go from the running version tag: major (any newer release), minor (same major) or patch (same major.minor).",
+			),
 		updateTrialEnabled: z
 			.boolean()
 			.optional()
 			.describe(
-				"Try each update in a throwaway container, off every network and volume, before notifying it.",
+				"Try each update in a throwaway container on its networks, with no volumes or routing, before notifying it.",
 			),
 	})
 	.refine(
 		(body) =>
 			body.updateCheckEnabled !== undefined ||
+			body.updateScope !== undefined ||
 			body.updateTrialEnabled !== undefined,
-		"Send updateCheckEnabled, updateTrialEnabled or both.",
+		"Send updateCheckEnabled, updateScope, updateTrialEnabled or any of them.",
 	);
 
 export const servicePinApiBody = z.object({

@@ -162,7 +162,7 @@ function derivedColumns(
 	} else if (fields.buildServerRemoteHostId) {
 		columns.buildServerAny = false;
 	}
-	if (fields.updateCheckEnabled === false) {
+	if (fields.updateCheckEnabled === false || fields.updateScope !== undefined) {
 		columns.updateCheck = null;
 	}
 	if (input.registryPassword) {

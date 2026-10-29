@@ -91,9 +91,11 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		pullPolicy: "always",
 		registryUrl: null,
 		slug: "gitea",
+		stackId: null,
 		tag: "1.24.3",
 		updateCheck: null,
 		updateCheckEnabled: true,
+		updateScope: "major",
 		updateTrialEnabled: false,
 		...overrides,
 	};
@@ -114,6 +116,7 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		"name",
 		"registryUrl",
 		"slug",
+		"stackId",
 		"tag",
 	]) {
 		Object.defineProperty(svc, key, { get: () => row[key] });
@@ -321,6 +324,7 @@ describe("ImageVersionService.unsupportedReason and describe", () => {
 			trialStatus: "passed",
 			trialTag: "1.24.4",
 			updateCheckEnabled: true,
+			updateScope: "major",
 			updateTrialEnabled: false,
 		});
 		expect(ImageVersionService.describe(fakeService().svc)).toMatchObject({
@@ -343,6 +347,7 @@ describe("ImageVersionService.setWatch", () => {
 			{
 				updateCheck: null,
 				updateCheckEnabled: false,
+				updateScope: "major",
 				updateTrialEnabled: true,
 			},
 		]);
@@ -358,11 +363,27 @@ describe("ImageVersionService.setWatch", () => {
 		});
 		expect(updates[0]).toEqual({
 			updateCheckEnabled: true,
+			updateScope: "major",
 			updateTrialEnabled: true,
 		});
 		expect(updates[1]).toMatchObject({
 			updateCheck: { available: null, error: null },
 		});
+	});
+
+	test("changing the scope forgets the last check and checks again", async () => {
+		const { svc, updates } = fakeService({
+			updateCheck: { available: { tag: "18.1" }, checkedAt: "t" },
+		});
+		registryTags = [];
+		await ImageVersionService.setWatch(svc, { updateScope: "minor" });
+		expect(updates[0]).toEqual({
+			updateCheck: null,
+			updateCheckEnabled: true,
+			updateScope: "minor",
+			updateTrialEnabled: false,
+		});
+		expect(updates.length).toBeGreaterThan(1);
 	});
 
 	test("an existing check isn't rerun when only the trial setting changes", async () => {
@@ -371,7 +392,11 @@ describe("ImageVersionService.setWatch", () => {
 		});
 		await ImageVersionService.setWatch(svc, { updateTrialEnabled: true });
 		expect(updates).toEqual([
-			{ updateCheckEnabled: true, updateTrialEnabled: true },
+			{
+				updateCheckEnabled: true,
+				updateScope: "major",
+				updateTrialEnabled: true,
+			},
 		]);
 		expect(listTagsCalls).toEqual([]);
 	});
@@ -669,8 +694,11 @@ describe("ImageVersionService.check", () => {
 });
 
 describe("ImageVersionService update trials", () => {
-	test("runs the update off every network and volume and passes once healthy", async () => {
-		const { svc, updates } = fakeService({ updateTrialEnabled: true });
+	test("runs the update on the service's networks, off every volume, and passes once healthy", async () => {
+		const { svc, updates } = fakeService({
+			stackId: "st1",
+			updateTrialEnabled: true,
+		});
 		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
 		inspects = [
 			{ Health: { Status: "starting" }, Running: true },
@@ -690,10 +718,13 @@ describe("ImageVersionService update trials", () => {
 				Cmd: ["serve"],
 				Entrypoint: undefined,
 				Env: ["A=1"],
-				HostConfig: { NetworkMode: "bridge", RestartPolicy: { Name: "no" } },
+				HostConfig: { NetworkMode: "homerun", RestartPolicy: { Name: "no" } },
 				Healthcheck: listeningHealthcheck(3000, NO_TIMING),
 				Image: "gitea/gitea@sha256:new",
 				Labels: { "homerun.update-trial": "s1" },
+				NetworkingConfig: {
+					EndpointsConfig: { homerun: {}, "homerun-stack-st1": {} },
+				},
 			},
 			name: "homerun-trial-gitea",
 		});
@@ -702,13 +733,22 @@ describe("ImageVersionService update trials", () => {
 			["delete", "v1/containers/homerun-trial-gitea", { force: "1" }],
 			["delete", "v1/containers/trial-1", { force: "1" }],
 		]);
-		expect(
-			updates.map(
-				(patch) =>
-					(patch.updateCheck as { trial: { status: string } | null }).trial
-						?.status ?? null,
-			),
-		).toEqual([null, "running", "passed", "passed"]);
+		const statuses = updates.map(
+			(patch) =>
+				(patch.updateCheck as { trial: { status: string } | null }).trial
+					?.status ?? null,
+		);
+		expect(statuses[0]).toBeNull();
+		expect(statuses.slice(1, -2).every((status) => status === "running")).toBe(
+			true,
+		);
+		expect(statuses.slice(-2)).toEqual(["passed", "passed"]);
+		expect(state?.trial?.log?.filter((line) => line.startsWith("▸ "))).toEqual([
+			"▸ Fetching image",
+			"▸ Provisioning container",
+			"▸ Waiting until healthy",
+			"▸ Ready",
+		]);
 		expect(notifications[0].message).toBe(
 			'"Gitea" can update to 1.24.4. Its trial run started cleanly.',
 		);

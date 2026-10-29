@@ -1416,6 +1416,9 @@ export const service = pgTable(
 			.default(false)
 			.notNull(),
 		updateTrialEnabled: boolean("update_trial_enabled").default(true).notNull(),
+		updateScope: text("update_scope", { enum: ["major", "minor", "patch"] })
+			.default("major")
+			.notNull(),
 		updateCheck: jsonb("update_check").$type<ImageUpdateState | null>(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())

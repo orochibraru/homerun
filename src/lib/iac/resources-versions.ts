@@ -18,6 +18,11 @@ export function versionAttributes(attr: AttributeFactory): IacAttribute[] {
 			description:
 				"Image services: watch the registry for a newer release of tag, or a new image behind a floating tag. The homerun_service_version data source reads what it found.",
 		}),
+		attr("updateScope", "string", {
+			default: "major",
+			description:
+				"Image services: how far an update may go from a version tag: major (any newer release), minor (same major) or patch (same major.minor).",
+		}),
 		attr("updateTrialEnabled", "bool", {
 			default: true,
 			description:
@@ -44,6 +49,7 @@ export function serviceVersionDataSource(
 			attr("pinnedFromTag", "string"),
 			attr("pinnedLocally", "bool"),
 			attr("updateCheckEnabled", "bool"),
+			attr("updateScope", "string"),
 			attr("updateTrialEnabled", "bool"),
 			attr("checkedAt", "string"),
 			attr("checkError", "string"),

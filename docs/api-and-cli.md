@@ -83,18 +83,18 @@ Infrastructure as code (and read for `GET`).
   or null for a deploy from before triggers were recorded)
 - `GET/PATCH /api/v1/services/:id/version`: an image service's
   [version pin and update checks](deploy-source-and-builds.md#version-pinning-and-update-checks),
-  flat: `tag`, `pinnedFromTag`, `pinnedLocally`, the watch switches
-  (`updateCheckEnabled`, `updateTrialEnabled`, which `PATCH` takes) and what the
-  last check found (`availableTag`, `checkError`, `trialStatus`,
-  `trialMessage`…). Turning the watch on runs the first check, off forgets the
-  last one. `GET /version/pin` lists the registry tags matching the running
-  image (`matches`) and a tag to make on this host (`suggestion`);
-  `POST /version/pin {"tag": "1.25.3"}` pins (`"local": true` tags the running
-  image on this host), `DELETE /version/pin` unpins; `POST /version/check`
-  checks now (a `502` when the registry can't be read) and
-  `POST /version/update` moves the service onto the update found and queues its
-  deploy (`202`, `409` with nothing to apply). A git service, or an environment,
-  preview or canary, is a `400`
+  flat: `tag`, `pinnedFromTag`, `pinnedLocally`, the watch settings
+  (`updateCheckEnabled`, `updateTrialEnabled` and `updateScope`: `major`,
+  `minor` or `patch`, which `PATCH` takes) and what the last check found
+  (`availableTag`, `checkError`, `trialStatus`, `trialMessage`…). Turning the
+  watch on runs the first check, off forgets the last one. `GET /version/pin`
+  lists the registry tags matching the running image (`matches`) and a tag to
+  make on this host (`suggestion`); `POST /version/pin {"tag": "1.25.3"}` pins
+  (`"local": true` tags the running image on this host), `DELETE /version/pin`
+  unpins; `POST /version/check` checks now (a `502` when the registry can't be
+  read) and `POST /version/update` moves the service onto the update found and
+  queues its deploy (`202`, `409` with nothing to apply). A git service, or an
+  environment, preview or canary, is a `400`
 - `GET /api/v1/monitoring?range=week` and
   `GET /api/v1/services/:id/monitoring?range=week`: requests, errors and
   response time, uptime probe availability, CPU and memory over `today`, `week`
@@ -443,7 +443,7 @@ homerun services version <id>
 homerun services version tags <id>
 homerun services version pin <id> <tag> [--local]
 homerun services version unpin <id>
-homerun services version watch <id> [--check[=false]] [--trial[=false]]
+homerun services version watch <id> [--check[=false]] [--trial[=false]] [--scope major|minor|patch]
 homerun services version check <id>
 homerun services version update <id>
 homerun previews list <id> [--json]
@@ -526,9 +526,10 @@ update its last check found, the Source tab's **Version** panel: `tags` lists
 the registry tags matching the image it runs, `pin <id> <tag>` pins it to one
 (`--local` tags the running image on this host instead), `unpin` goes back to
 the floating tag, `watch --check --trial=false` turns the update watch on and
-its trial runs off (a flag left out keeps its setting), `check` asks the
-registry now and `update` moves the service onto the update found and deploys
-it.
+its trial runs off, `--scope minor` only offers releases on the same major
+(`patch` on the same major.minor, `major` any) (a flag left out keeps its
+setting), `check` asks the registry now and `update` moves the service onto the
+update found and deploys it.
 
 Every `list` command also accepts `--page`, `--per-page` (default 100, max 100)
 and `--search <term>` for a large result set; if what's printed is only part of

@@ -68,6 +68,40 @@ class VolumeSettingsServiceClass {
 	}
 
 	/**
+	 * Registers a new Docker volume that starts as a copy of `from` (a volume
+	 * name or host path). Only the row is written: the worker fills it from
+	 * `from` on the first deploy that mounts it, leaving `from` untouched.
+	 *
+	 * @throws {VolumeSettingsError} When the name is blank.
+	 */
+	async duplicate(input: {
+		from: string;
+		name: string;
+		serviceSlug: string;
+		userId: string;
+	}): Promise<StorageVolumeDTO> {
+		const name = input.name.trim();
+		if (!name) {
+			throw new VolumeSettingsError("Name is required.");
+		}
+		const safe = name.toLowerCase().replaceAll(/[^a-z0-9_.-]+/g, "-");
+		const suffix = crypto.randomUUID().slice(0, 8);
+		const volume = await StorageVolumeDTO.create({
+			description: `Copy of ${input.from}`,
+			kind: "volume",
+			name,
+			seedFrom: input.from,
+			source:
+				`homerun-${input.serviceSlug}-${safe}`.slice(0, 180) + `-${suffix}`,
+			userId: input.userId,
+		});
+		logger.info(
+			`Storage volume duplicated: volume=${volume.id} from=${input.from} user=${input.userId}`,
+		);
+		return volume;
+	}
+
+	/**
 	 * Applies the fields `input` carries to `volume`. Turning backups on
 	 * without a schedule picks the default nightly one.
 	 *

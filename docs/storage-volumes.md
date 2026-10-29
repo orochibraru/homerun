@@ -86,6 +86,15 @@ Mount a storage volume into the container path of your choice, read-write or
 read-only, from a service's Storage tab, including creating a brand-new volume
 inline without leaving the page.
 
+The pencil button on a mount edits it: its container path and whether it's
+read-only. Tick **Duplicate the volume first** to mount a new copy of the volume
+instead, at the new path, so the original stays exactly as it was: the copy is a
+new Docker volume, filled from the original on the next deploy, and the original
+stays listed in Storage (unmounted) to fall back on. That's the safe way to move
+a database's data, say a Postgres 17 volume at `/var/lib/postgresql/data` to
+`/var/lib/postgresql` for Postgres 18. Stop the service first so the copy is
+consistent, and note the copy starts with backups off.
+
 ![A database's Storage tab: its data volume mounted at /var/lib/postgresql, with its size, Browse, Backups, the backup switch and its settings](images/storage-volumes-service-tab.webp)
 
 ### Restoring a backup

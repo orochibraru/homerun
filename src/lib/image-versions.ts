@@ -31,8 +31,20 @@ export interface ImageUpdateAvailable {
 
 export type UpdateTrialStatus = "running" | "passed" | "failed";
 
+export const UPDATE_SCOPES = ["major", "minor", "patch"] as const;
+
+export type UpdateScope = (typeof UPDATE_SCOPES)[number];
+
+/** How a newer release may differ from the running one: any release, the same major line, or the same major.minor line. */
+export const UPDATE_SCOPE_LABELS: Record<UpdateScope, string> = {
+	major: "Any newer release",
+	minor: "Minor and patch releases only",
+	patch: "Patch releases only",
+};
+
 export interface ImageUpdateTrial {
 	at: string;
+	log?: string[];
 	message: string | null;
 	status: UpdateTrialStatus;
 	tag: string;
@@ -90,10 +102,30 @@ function sameTrack(current: VersionTag, candidate: VersionTag): boolean {
 	return (candidate.suffix ?? "") === (current.suffix ?? "");
 }
 
-/** The newest stable tag on `current`'s track that sorts above it, or null when `current` isn't a version or nothing newer exists. */
+/** The update scope a form field names, or undefined when it names none. */
+export function parseUpdateScope(
+	value: FormDataEntryValue | null,
+): UpdateScope | undefined {
+	return UPDATE_SCOPES.find((scope) => scope === value);
+}
+
+/** Whether `candidate` stays within `scope` of `current`: the same major number for `minor`, the same major and minor for `patch`. */
+function withinScope(
+	current: VersionTag,
+	candidate: VersionTag,
+	scope: UpdateScope,
+): boolean {
+	const fixed = scope === "patch" ? 2 : scope === "minor" ? 1 : 0;
+	return current.numbers
+		.slice(0, fixed)
+		.every((number, i) => (candidate.numbers[i] ?? 0) === number);
+}
+
+/** The newest stable tag on `current`'s track that sorts above it and stays within `scope`, or null when `current` isn't a version or nothing newer exists. */
 export function newerVersionTag(
 	current: string,
 	tags: string[],
+	scope: UpdateScope = "major",
 ): string | null {
 	const parsed = parseVersionTag(current);
 	if (!parsed) {
@@ -105,6 +137,7 @@ export function newerVersionTag(
 		if (
 			candidate &&
 			sameTrack(parsed, candidate) &&
+			withinScope(parsed, candidate, scope) &&
 			compareVersions(candidate, parsed) > 0 &&
 			(!best || compareVersions(candidate, best) > 0)
 		) {

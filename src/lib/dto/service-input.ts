@@ -191,6 +191,7 @@ export type ServiceUpdateInput = Partial<
 		| "pinnedLocally"
 		| "updateCheck"
 		| "updateCheckEnabled"
+		| "updateScope"
 		| "updateTrialEnabled"
 	>
 > &
@@ -208,12 +209,14 @@ export const NEW_SERVICE_VERSION_COLUMNS: Pick<
 	| "pinnedLocally"
 	| "updateCheck"
 	| "updateCheckEnabled"
+	| "updateScope"
 	| "updateTrialEnabled"
 > = {
 	pinnedFromTag: null,
 	pinnedLocally: false,
 	updateCheck: null,
 	updateCheckEnabled: false,
+	updateScope: "major",
 	updateTrialEnabled: true,
 };
 

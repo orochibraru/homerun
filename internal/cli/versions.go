@@ -40,13 +40,16 @@ func VersionUnpin(client *Client, id string) {
 
 // WatchBody is the PATCH body for /services/{id}/version: only the settings
 // whose flag was passed, nil when none was.
-func WatchBody(set *flag.FlagSet, check, trial bool) map[string]any {
+func WatchBody(set *flag.FlagSet, check, trial bool, scope string) map[string]any {
 	body := map[string]any{}
 	if flagSet(set, "check") {
 		body["updateCheckEnabled"] = check
 	}
 	if flagSet(set, "trial") {
 		body["updateTrialEnabled"] = trial
+	}
+	if flagSet(set, "scope") {
+		body["updateScope"] = scope
 	}
 	if len(body) == 0 {
 		return nil
@@ -100,14 +103,15 @@ var versionCommands = []Command{
 	{
 		Args:    "<id>",
 		Name:    "services version watch",
-		Summary: "turn watching the registry for updates, and trying each one first, on or off",
+		Summary: "turn watching the registry for updates, and trying each one first, on or off, and set how far an update may go",
 		Setup: func(set *flag.FlagSet) Runner {
 			check := set.Bool("check", false, "watch for updates (--check=false stops)")
 			trial := set.Bool("trial", false, "try each update in a throwaway container first (--trial=false skips it)")
+			scope := set.String("scope", "", "how far an update may go: major (any newer release), minor (same major) or patch (same major.minor)")
 			return func(env Env, args []string) {
-				body := WatchBody(set, *check, *trial)
+				body := WatchBody(set, *check, *trial, *scope)
 				if body == nil {
-					Fail("Nothing to change: pass --check, --trial or both.")
+					Fail("Nothing to change: pass --check, --trial, --scope or any of them.")
 					return
 				}
 				VersionWatch(env.Client(), serviceID(env, args[0]), body)

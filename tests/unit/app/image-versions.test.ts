@@ -49,6 +49,17 @@ describe("newerVersionTag", () => {
 		"1.25.0-rc1",
 	];
 
+	test("stays within the update scope", () => {
+		const postgres = ["17.2", "17.6", "18.0", "18.1"];
+		expect(newerVersionTag("17.2", postgres)).toBe("18.1");
+		expect(newerVersionTag("17.2", postgres, "major")).toBe("18.1");
+		expect(newerVersionTag("17.2", postgres, "minor")).toBe("17.6");
+		expect(newerVersionTag("17.6", postgres, "minor")).toBeNull();
+		const app = ["1.4.2", "1.4.9", "1.5.0", "2.0.0"];
+		expect(newerVersionTag("1.4.2", app, "minor")).toBe("1.5.0");
+		expect(newerVersionTag("1.4.2", app, "patch")).toBe("1.4.9");
+	});
+
 	test("finds the newest stable release on the same track", () => {
 		expect(newerVersionTag("1.24.3", gitea)).toBe("1.24.4");
 		expect(

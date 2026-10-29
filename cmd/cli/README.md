@@ -121,7 +121,7 @@ homerun services version <id>
 homerun services version tags <id>
 homerun services version pin <id> <tag> [--local]
 homerun services version unpin <id>
-homerun services version watch <id> [--check[=false]] [--trial[=false]]
+homerun services version watch <id> [--check[=false]] [--trial[=false]] [--scope major|minor|patch]
 homerun services version check <id>
 homerun services version update <id>
 homerun previews list <id> [--json]
@@ -349,9 +349,9 @@ in `internal/cli/commands.go`); a failed or cancelled job, or a wait past
 `POST /version/pin {"tag", "local"}` (`--local` sets it), `unpin` is
 `DELETE /version/pin`, `watch` sends `PATCH /version` with only the switches
 whose flag was passed (`--check` for `updateCheckEnabled`, `--trial` for
-`updateTrialEnabled`, `=false` to turn one off; neither fails before calling),
-and `check` and `update` `POST /version/check` and `/version/update`. Each
-prints the JSON answer.
+`updateTrialEnabled`, `=false` to turn one off, `--scope major|minor|patch` for
+`updateScope`; none fails before calling), and `check` and `update`
+`POST /version/check` and `/version/update`. Each prints the JSON answer.
 
 `homerun services logs <id>` calls `GET /services/{serviceId}/logs` and writes
 the plain-text body to stdout as it arrives: the last 200 lines by default,

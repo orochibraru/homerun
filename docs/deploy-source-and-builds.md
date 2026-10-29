@@ -49,19 +49,31 @@ a newer stable release on the same track (`1.24.3` → `1.24.4`, `-rootless` sta
 candidates are ignored), a floating tag for a new image behind it. A new update
 sends an **Update available** [notification](notifications.md), once per update,
 and the panel shows it with **Update now**, which moves the service to the new
-tag and deploys it, and **Check now**.
+tag and deploys it. **Offer** limits how far a version tag's update may go:
+**Any newer release** (the default), **Minor and patch releases only** (a
+service on `1.4.2` is offered `1.9.0` but never `2.0.0`) or **Patch releases
+only** (`1.4.x`). Changing it forgets the last check and checks again. A
+floating tag ignores it. **Check for updates**, in the panel's header, asks the
+registry right away, whether or not the watch is on.
 
 With **Try new versions before notifying** on (the default), the new version is
-started first in a throwaway container with the service's env vars, command and
-entrypoint, but no volumes, no published ports, no Traefik route and only
-Docker's default bridge network, so it can't reach the live service's data or
-database. It passes once it's ready by the same check a deploy gates traffic on
-(the service's healthcheck command, else its port listening), or is still
+started first in a throwaway container with the service's env vars, command,
+entrypoint and networks (Homerun's shared network and its stack's, so it
+resolves its database and the other services it talks to), but no volumes, no
+published ports, no Traefik route and not under the service's own name, so it
+never gets the live service's files or traffic. The panel follows it with the
+same stepper as a deploy (pull, start, health check, passed) and its output
+underneath. It passes once it's ready by the same check a deploy gates traffic
+on (the service's healthcheck command, else its port listening), or is still
 running after 20 seconds when healthchecks are off; the outcome, with the last
 log lines of a failure, rides along in the notification. The container is
-removed either way; the pulled image stays for the real deploy. An app that
-can't start without its database or its data fails this trial, so turn it off
-for those.
+removed either way; the pulled image stays for the real deploy. Since it reaches
+the real database, an app that migrates its schema on startup migrates the live
+one during the trial: turn trials off for those. An app that can't start without
+its own data still fails it.
+
+Every service with an update waiting is listed under **Available updates** on
+the dashboard, with its trial's outcome and an **Update now** button.
 
 The same pin, watch and update are on the [REST API and the CLI](api-and-cli.md)
 (`/api/v1/services/:id/version`, `homerun services version`), the
