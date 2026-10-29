@@ -2,11 +2,13 @@ import { query } from "$app/server";
 import { z } from "zod";
 
 import { BUILD_METHODS } from "#lib/build-methods.js";
+import { ServiceDTO } from "#lib/dto/service-dto.js";
 import {
 	configFromImage,
 	type DetectedConfig,
 	type OciImageConfig,
 } from "#lib/image-config.js";
+import { sortTagsForPicker } from "#lib/image-versions.js";
 import { Logger } from "#lib/logger.js";
 import { requirePermission } from "#lib/server/remote-auth.js";
 import { ApiService } from "#lib/services/api.service.js";
@@ -25,6 +27,8 @@ const imageCheckInput = z.object({
 	registryUsername: z.string().optional(),
 	tag: z.string().optional(),
 });
+
+const TAG_PICKER_LIMIT = 500;
 
 const logger = new Logger("Docker");
 
@@ -98,5 +102,40 @@ export const detectRepoConfig = query(
 	async (input): Promise<DetectedConfig | null> => {
 		const user = requirePermission("services", "read");
 		return await ManifestService.detectConfig(input, user.id);
+	},
+);
+
+export const listImageTags = query(
+	z.object({
+		image: z.string(),
+		registryUrl: z.string().optional(),
+		registryUsername: z.string().optional(),
+		serviceId: z.string().optional(),
+	}),
+	async (input): Promise<string[]> => {
+		requirePermission("services", "read");
+
+		const image = input.image.trim();
+		if (!image) {
+			return [];
+		}
+		const registryUrl = input.registryUrl?.trim() || null;
+		const username = input.registryUsername?.trim();
+		const svc = input.serviceId ? await ServiceDTO.get(input.serviceId) : null;
+		const auth =
+			svc && username && svc.registryUsername === username
+				? DockerService.buildAuthConfig(svc.toJSON())
+				: undefined;
+
+		const tags = await ApiService.listTags(image, { auth, registryUrl }).catch(
+			(err: unknown) => {
+				logger.warn(`Tag listing failed: ${image}`, err);
+				return [];
+			},
+		);
+		return sortTagsForPicker(tags.map((tag) => tag.name)).slice(
+			0,
+			TAG_PICKER_LIMIT,
+		);
 	},
 );

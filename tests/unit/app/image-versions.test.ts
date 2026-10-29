@@ -6,6 +6,7 @@ import {
 	newerVersionTag,
 	parseVersionTag,
 	sanitizeTag,
+	sortTagsForPicker,
 	suggestLocalTag,
 	tagsMatchingDigest,
 } from "../../../src/lib/image-versions";
@@ -112,5 +113,13 @@ describe("isPinnableTag", () => {
 		expect(isPinnableTag("nightly")).toBe(false);
 		expect(isPinnableTag("main-nightly")).toBe(false);
 		expect(isPinnableTag("1.25-nightly")).toBe(false);
+	});
+});
+
+describe("sortTagsForPicker", () => {
+	test("puts floating tags first, then versions newest first", () => {
+		expect(
+			sortTagsForPicker(["1.2", "latest", "1.10", "1.10-rc1", "alpine", "2.0"]),
+		).toEqual(["latest", "alpine", "2.0", "1.10", "1.10-rc1", "1.2"]);
 	});
 });

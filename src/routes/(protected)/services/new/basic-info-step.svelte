@@ -24,6 +24,7 @@
 	import GitBuildFields from "#lib/components/git-build-fields.svelte";
 	import GitSourceFields from "#lib/components/git-source-fields.svelte";
 	import ImageCheckWarning from "#lib/components/image-check-warning.svelte";
+	import ImageTagField from "#lib/components/image-tag-field.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RegistryFields from "#lib/components/registry-fields.svelte";
 	import { Input } from "#lib/components/ui/input/index.js";
@@ -269,13 +270,7 @@
 				</div>
 				<div>
 					<label class={label} for="tag">Tag</label>
-					<Input
-						id="tag"
-						name="tag"
-						placeholder="latest"
-						type="text"
-						bind:value={tag}
-					/>
+					<ImageTagField {image} {registryUrl} {registryUsername} bind:tag />
 				</div>
 			</div>
 

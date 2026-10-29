@@ -171,3 +171,19 @@ export function suggestLocalTag(
 export function updateKey(update: ImageUpdateAvailable): string {
 	return `${update.tag}@${update.digest ?? ""}`;
 }
+
+/** Orders tags for a picker: floating tags (`latest`, `alpine`) first in the registry's order, then version tags newest first. */
+export function sortTagsForPicker(names: string[]): string[] {
+	const floating: string[] = [];
+	const versions: VersionTag[] = [];
+	for (const name of names) {
+		const parsed = parseVersionTag(name);
+		if (parsed) {
+			versions.push(parsed);
+		} else {
+			floating.push(name);
+		}
+	}
+	versions.sort((a, b) => compareVersions(b, a) || a.tag.localeCompare(b.tag));
+	return [...floating, ...versions.map((version) => version.tag)];
+}
