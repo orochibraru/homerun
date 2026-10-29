@@ -7,6 +7,7 @@ import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { Logger } from "#lib/logger.js";
 import { requirePermission, requireUser } from "#lib/server/remote-auth.js";
 import {
+	GitProviderRefusedError,
 	GitProviderService,
 	type GitRepo,
 } from "#lib/services/git-provider.service.js";
@@ -50,7 +51,12 @@ export const listProviderRepos = query(
 			return await GitProviderService.listRepos(provider, connection);
 		} catch (err) {
 			logger.warn(`Repo listing failed: provider=${provider.id}`, err);
-			error(502, "Couldn't list repos.");
+			error(
+				502,
+				err instanceof GitProviderRefusedError
+					? err.message
+					: `Couldn't list the repositories on ${provider.name}.`,
+			);
 		}
 	},
 );
@@ -70,7 +76,12 @@ export const listRepoBranches = query(
 				`Branch listing failed: provider=${provider.id} repo=${repo}`,
 				err,
 			);
-			error(502, "Couldn't list branches.");
+			error(
+				502,
+				err instanceof GitProviderRefusedError
+					? err.message
+					: "Couldn't list branches.",
+			);
 		}
 	},
 );

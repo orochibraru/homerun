@@ -197,6 +197,25 @@ describe("refusalFrom", () => {
 		expect(refusalFrom("GitHub", 403, "").reconnectHelps).toBe(true);
 	});
 
+	test("a 401 after the provider stopped recognising the OAuth client says to fix the client credentials", () => {
+		const refusal = refusalFrom(
+			"Gitea",
+			401,
+			JSON.stringify({ message: "invalid username, password or token" }),
+			'Token exchange failed: 400 {"error":"invalid_client","error_description":"cannot load client with client id"}',
+		);
+		expect(refusal.reconnectHelps).toBe(false);
+		expect(refusal.message).toContain("no longer recognises the OAuth app");
+		expect(refusal.message).toContain("client ID and secret");
+	});
+
+	test("a 401 after an unrelated refresh failure still suggests reconnecting", () => {
+		expect(
+			refusalFrom("Gitea", 401, "{}", "Token exchange failed: 500")
+				.reconnectHelps,
+		).toBe(true);
+	});
+
 	test("reads GitLab and Bitbucket error shapes", () => {
 		expect(
 			refusalFrom(

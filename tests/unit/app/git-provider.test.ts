@@ -462,8 +462,15 @@ describe("listRepos", () => {
 		for (const provider of [github, gitlab, gitea, bitbucket]) {
 			await expect(
 				GitProviderService.listRepos(provider, validConnection()),
-			).rejects.toThrow("Couldn't list repos: 502");
+			).rejects.toThrow("answered 502");
 		}
+	});
+
+	test("a refused listing says how to fix the connection", async () => {
+		stubFetch(() => new Response("{}", { status: 401 }));
+		await expect(
+			GitProviderService.listRepos(gitea, validConnection()),
+		).rejects.toThrow("Reconnect it");
 	});
 
 	test("an undecryptable access token is reported, not sent", async () => {
