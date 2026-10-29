@@ -22,10 +22,13 @@ const (
 func (r *run) resolveImage(ctx context.Context) (resolvedImage, error) {
 	switch r.spec.Image.Kind {
 	case "pull":
+		r.progress.line(PhaseImage)
 		return r.pullForDeploy(ctx)
 	case "revision":
+		r.progress.line(PhaseImage)
 		return r.revisionImage(ctx)
 	case "local-build", "docker-build", "agent-build":
+		r.progress.line(PhaseSource)
 		return r.buildImage(ctx)
 	}
 	return resolvedImage{}, fmt.Errorf("Unhandled deploy plan variant: %q", r.spec.Image.Kind)

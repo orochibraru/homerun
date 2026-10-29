@@ -38,6 +38,7 @@ test.describe.serial("service creation wizard", () => {
 		await page.getByRole("button", { name: "Next" }).click();
 		await page.getByRole("button", { name: "Next" }).click();
 		await page.getByRole("button", { name: "Next" }).click();
+		await page.getByRole("button", { name: "Next" }).click();
 
 		const create = page.getByRole("button", { name: "Create service" });
 		await expect(create).toBeEnabled();
@@ -62,7 +63,7 @@ test.describe.serial("service creation wizard", () => {
 		// failure rather than hanging on a stuck spinner.
 		await page.locator("#name").fill("wizard-invalid");
 		await page.locator("#image").fill("nginx");
-		for (let i = 0; i < 4; i++) {
+		for (let i = 0; i < 5; i++) {
 			await page.getByRole("button", { name: "Next" }).click();
 		}
 		await page.getByRole("button", { name: "Create service" }).click();
@@ -75,7 +76,7 @@ test.describe.serial("service creation wizard", () => {
 		// onFailure sends you back to step 1, where the submit buttons aren't
 		// rendered at all : stepping forward again is what shows the button
 		// reset to "Create service" rather than stuck on "Creating…".
-		for (let i = 0; i < 4; i++) {
+		for (let i = 0; i < 5; i++) {
 			await page.getByRole("button", { name: "Next" }).click();
 		}
 		await expect(

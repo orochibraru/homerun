@@ -126,6 +126,42 @@ describe("configFromImage", () => {
 	});
 });
 
+describe("labels, PORT and prefill", () => {
+	test("the OCI title names the service and PORT stands in for EXPOSE", () => {
+		const config = parseDockerfile(
+			'FROM a\nENV PORT=8080\nLABEL org.opencontainers.image.title="Shop API" other=x\n',
+		);
+		expect(config.prefill).toEqual({ name: "Shop API" });
+		expect(primaryPort(config)).toEqual({ port: 8080, protocol: "tcp" });
+		expect(
+			configFromImage({
+				Labels: { "org.opencontainers.image.title": "whoami" },
+			}).prefill.name,
+		).toBe("whoami");
+	});
+
+	test("a manifest prefills the wizard's fields", () => {
+		const config = withManifest(null, {
+			errors: [],
+			manifest: {
+				cpuLimit: "0.5",
+				domains: ["shop.example.com"],
+				memoryLimitMb: 256,
+				name: "Shop",
+				restartPolicy: "always",
+			},
+			path: ".homerun.json",
+		});
+		expect(config.prefill).toEqual({
+			cpuLimit: "0.5",
+			domain: "shop.example.com",
+			memoryLimitMb: 256,
+			name: "Shop",
+			restartPolicy: "always",
+		});
+	});
+});
+
 describe("withManifest", () => {
 	const dockerfile = parseDockerfile(
 		'FROM a\nEXPOSE 8080\nENV MODE=dev KEEP=1\nUSER app\nCMD ["serve"]\n',

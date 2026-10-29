@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ScanSearch } from "@lucide/svelte";
 
-	import type { BuildMethod } from "#lib/build-methods.js";
+	import { BUILD_METHOD_LABELS, type BuildMethod } from "#lib/build-methods.js";
 	import {
 		type DetectedConfig,
 		detectedFrom,
@@ -90,6 +90,18 @@
 			return [];
 		}
 		const rows: { label: string; value: string }[] = [];
+		if (detected.runtime) {
+			rows.push({ label: "Runtime", value: detected.runtime });
+		}
+		if (detected.build) {
+			rows.push({
+				label: "Build",
+				value: `${BUILD_METHOD_LABELS[detected.build.method]} (${detected.build.reason})`,
+			});
+		}
+		if (detected.prefill.name) {
+			rows.push({ label: "Name", value: detected.prefill.name });
+		}
 		if (detected.ports.length > 0) {
 			rows.push({
 				label: "Ports",
@@ -162,11 +174,13 @@
 			{/each}
 		</dl>
 		<p class="mt-2 text-text-subtle">
-			The port and volumes are filled in on their steps, and the env can be
-			imported on the Environment step.
+			Fields marked detected are filled in for you, the env can be imported on
+			the Environment step.
 			{#if detected?.manifest}
 				{detected.manifest.path} is applied again on every deploy and wins for the
 				keys it sets.
+			{:else if detected?.source === "repository"}
+				The builder works the rest out from the repository at build time.
 			{:else}
 				The rest already applies from the image; override any of it on the
 				service's tabs.

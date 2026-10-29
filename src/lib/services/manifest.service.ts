@@ -4,10 +4,12 @@ import type { BuildMethod } from "#lib/build-methods.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
 import {
 	type DetectedConfig,
+	emptyDetected,
 	parseDockerfile,
 	withManifest,
 } from "#lib/image-config.js";
 import { Logger } from "#lib/logger.js";
+import { REPO_MARKERS, sniffRepo, withSniff } from "#lib/repo-detect.js";
 import {
 	manifestFields,
 	type ManifestInput,
@@ -39,6 +41,15 @@ function dockerfilePathIn(
 		)
 		.replace(/^\/+/, "");
 	return path.startsWith("..") ? null : path;
+}
+
+/** `files` inside the build context, none when the context climbs out of the repository. */
+function filesIn(context: string | null, files: string[]): string[] {
+	const dir = posix.normalize(context?.trim() || ".").replace(/^\/+/, "");
+	if (dir.startsWith("..")) {
+		return [];
+	}
+	return files.map((file) => posix.join(dir, file));
 }
 
 /** A manifest that can't be applied: unreadable, invalid, or refused by the service's settings checks. */
@@ -173,10 +184,14 @@ class ManifestServiceClass {
 	 * `source.context` first) laid over its Dockerfile, the manifest winning
 	 * the way it does on deploy. The manifest's own build method, context and
 	 * Dockerfile path pick which Dockerfile is read, and none is read for a
-	 * build method other than a Dockerfile. Reads through the worker, so a
+	 * build method other than a Dockerfile. Without a Dockerfile, the first
+	 * language marker file (`package.json`, `go.mod`, a Bake file…) names the
+	 * runtime and, when the Dockerfile method was asked for, suggests the
+	 * build method that would work instead. Reads through the worker, so a
 	 * public repository works without a connected git provider.
 	 *
-	 * @returns null when the repository has neither file, or can't be read.
+	 * @returns null when the repository has none of those files, or can't be
+	 *   read.
 	 */
 	async detectConfig(
 		source: {
@@ -198,28 +213,45 @@ class ManifestServiceClass {
 			: null;
 		const manifest = parsed && "manifest" in parsed ? parsed.manifest : null;
 		const method = manifest?.gitBuildMethod ?? source.method;
+		const context = manifest?.gitBuildContext ?? source.context;
 		const dockerfile =
 			method === "dockerfile"
 				? await this.#readRepoFile(
 						source,
 						[
 							dockerfilePathIn(
-								manifest?.gitBuildContext ?? source.context,
+								context,
 								manifest?.gitDockerfilePath ?? source.dockerfilePath,
 							),
 						].filter((path): path is string => path !== null),
 						userId,
 					)
 				: null;
-		const base = dockerfile ? parseDockerfile(dockerfile.content) : null;
-		if (!manifestFile) {
-			return base;
+		const marker =
+			dockerfile || method === "bake"
+				? null
+				: await this.#readRepoFile(
+						source,
+						filesIn(context, REPO_MARKERS),
+						userId,
+					);
+		const sniff = marker ? sniffRepo(marker.path, marker.content) : null;
+		let config = dockerfile ? parseDockerfile(dockerfile.content) : null;
+		if (manifestFile) {
+			config = withManifest(config, {
+				errors: parsed && "errors" in parsed ? parsed.errors : [],
+				manifest,
+				path: manifestFile.path,
+			});
 		}
-		return withManifest(base, {
-			errors: parsed && "errors" in parsed ? parsed.errors : [],
-			manifest,
-			path: manifestFile.path,
-		});
+		if (sniff) {
+			config = withSniff(
+				config ?? emptyDetected("repository"),
+				sniff,
+				method === "dockerfile" || method === sniff.method,
+			);
+		}
+		return config;
 	}
 
 	/** The first of `paths` in the repository at `source.ref`, or null when none exists or the repository can't be read. */

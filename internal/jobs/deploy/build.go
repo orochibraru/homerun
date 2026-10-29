@@ -124,7 +124,7 @@ func (r *run) dockerBuild(ctx context.Context, docker *dockerapi.Client, socket 
 	if cache != nil {
 		input.Cache = &agent.CacheRegistry{Password: cache.Password, RegistryURL: cache.RegistryURL, Username: cache.Username}
 	}
-	result := agent.NewBuilder(docker, socket).BuildWithProgress(ctx, input, r.progress.line)
+	result := agent.NewBuilder(docker, socket).BuildWithProgress(ctx, input, r.progress.building())
 	if !result.Success {
 		message := result.Error
 		if message == "" {
@@ -161,6 +161,8 @@ func (r *run) agentBuild(ctx context.Context, built resolvedImage) error {
 		method := "dockerfile"
 		input.BuildMethod = &method
 	}
+	r.progress.line(PhaseImage)
+	r.progress.line(fmt.Sprintf("Cloning and building on agent %s...", build.Server.HostID))
 	body, err := json.Marshal(input)
 	if err != nil {
 		return err

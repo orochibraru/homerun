@@ -81,9 +81,10 @@ back when a setup issue points at one of its fields.
 
 The wizard keeps all its steps, with the essentials first and the rest behind a
 collapsed **Advanced** section: the build method and cache for a git repo, the
-network mode and protocol, and on the **Compute** step the restart policy and
-CPU and memory limits, summarized above the section so you can see the defaults
-you're getting.
+network mode and protocol, and on the **Runtime** step the restart policy,
+limits, command and healthcheck, summarized above the section so you can see the
+defaults you're getting. The Runtime section opens on its own when detection
+filled any of it in.
 
 ## The Overview in simple mode
 

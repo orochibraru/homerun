@@ -5,6 +5,7 @@ import { buildCacheChoice } from "#lib/build-cache.js";
 import { config, serviceDomain } from "#lib/config.js";
 import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
 import { BuildCacheRegistryDTO } from "#lib/dto/build-cache-registry-dto.js";
+import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
@@ -36,6 +37,7 @@ import {
 	resolveEnvVarsWithLinks,
 	templateHostAccessRefusal,
 } from "#lib/services/template-links.js";
+import { splitShellWords } from "#lib/shell-words.js";
 import {
 	fillSecretInEnv,
 	fillSecretInRuntime,
@@ -89,24 +91,50 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 	};
 }
 
-/** The type and icon a service created from `template` starts with, none without one. */
 /**
  * The runtime options a service created from `template` in the wizard starts
  * with: the template's own, its `{{secret}}` filled with the password the form
  * submitted for it (the operator may have changed the generated one), or a
- * fresh one when the form had none.
+ * fresh one when the form had none; then the start command and user the
+ * Runtime step set, which win over the template's.
  */
 function wizardRuntime(
 	template: TemplateDTO | null,
 	envVars: Record<string, string>,
+	input: Pick<CreateServiceInput, "command" | "runAsUser">,
 ) {
-	if (!template) {
-		return undefined;
+	const base = template
+		? fillSecretInRuntime(
+				template.runtimeOptions,
+				submittedSecret(template.toJSON().envVars ?? {}, envVars) ??
+					generateTemplateSecret(),
+			)
+		: undefined;
+	const command = splitShellWords(input.command ?? "");
+	if (command.length === 0 && !input.runAsUser) {
+		return base;
 	}
-	const secret =
-		submittedSecret(template.toJSON().envVars ?? {}, envVars) ??
-		generateTemplateSecret();
-	return fillSecretInRuntime(template.runtimeOptions, secret);
+	return {
+		...base,
+		...(command.length > 0 ? { command } : {}),
+		...(input.runAsUser ? { runAsUser: input.runAsUser } : {}),
+	};
+}
+
+/** What the Runtime step sets on a new service: restart and pull policies, replicas, healthcheck, command and user. */
+function runtimeFields(
+	input: CreateServiceInput,
+	template: TemplateDTO | null,
+	envVars: Record<string, string>,
+) {
+	return {
+		healthcheckCommand:
+			input.healthcheckCommand || template?.healthcheckCommand || null,
+		pullPolicy: input.buildSource === "image" ? input.pullPolicy : undefined,
+		replicas: input.replicas,
+		restartPolicy: input.restartPolicy,
+		runtime: wizardRuntime(template, envVars, input),
+	};
 }
 
 /** The template's published ports still free on this host, none without a template or under host networking. */
@@ -142,6 +170,7 @@ export const load = async ({ url, parent, locals }) => {
 		existing,
 		volumes,
 		stacks,
+		settings,
 	] = await Promise.all([
 		connectedGitProviders(user.id),
 		BuildCacheRegistryDTO.list(),
@@ -149,6 +178,7 @@ export const load = async ({ url, parent, locals }) => {
 		ServiceDTO.list(),
 		StorageVolumeDTO.list(),
 		StackDTO.list(),
+		InstanceSettingsDTO.get(),
 	]);
 
 	return {
@@ -172,6 +202,7 @@ export const load = async ({ url, parent, locals }) => {
 		stackId: stack,
 		stackSlug: stackRow?.slug ?? null,
 		stacks: stacks.map((row) => ({ id: row.id, name: row.name })),
+		swarm: settings.orchestrationMode === "swarm",
 		template: template
 			? {
 					...template.toJSON(),
@@ -507,8 +538,6 @@ async function createServiceFromForm(
 		secretEnvKeys: secretEnvKeysOf(template?.toJSON().envVars ?? {}).filter(
 			(key) => key in envVars,
 		),
-		healthcheckCommand:
-			input.healthcheckCommand || template?.healthcheckCommand || null,
 		memoryLimitMb: input.memoryLimitMb ?? null,
 		name: input.name,
 		publishedPorts: await wizardPorts(template, input.networkMode),
@@ -518,8 +547,7 @@ async function createServiceFromForm(
 			: null,
 		registryUrl: input.registryUrl || null,
 		registryUsername: input.registryUsername || null,
-		restartPolicy: input.restartPolicy,
-		runtime: wizardRuntime(template, envVars),
+		...runtimeFields(input, template, envVars),
 		slug: input.slug,
 		userId,
 		...buildSourceFields(input, input.slug),

@@ -25,6 +25,7 @@ export interface WizardData {
 	stackId: string | null;
 	stackSlug: string | null;
 	stacks: ComponentProps<typeof ServiceLinkPicker>["stacks"];
+	swarm: boolean;
 	template: WizardTemplate | null;
 	uiMode: UiMode;
 }

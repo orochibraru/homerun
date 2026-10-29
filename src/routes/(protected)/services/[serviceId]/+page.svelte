@@ -3,8 +3,6 @@
 	import { resolve } from "$app/paths";
 	import {
 		Ban,
-		CheckCircle2,
-		Circle,
 		Download,
 		Hammer,
 		Play,
@@ -13,7 +11,6 @@
 		Sparkles,
 		Square,
 		Undo2,
-		XCircle,
 		Zap,
 	} from "@lucide/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
@@ -21,6 +18,7 @@
 	import Alert from "#lib/components/alert.svelte";
 	import AnsiLine from "#lib/components/ansi-line.svelte";
 	import ConnectionStrings from "#lib/components/connection-strings.svelte";
+	import DeployStepper from "#lib/components/deploy-stepper.svelte";
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
 	import ReplicaStats from "#lib/components/replica-stats.svelte";
@@ -28,7 +26,6 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import UsageChart from "#lib/components/usage-chart.svelte";
-	import { deployPhaseStates } from "#lib/deploy-phases.js";
 	import { DeployProgress } from "#lib/deploy-progress.svelte.js";
 	import { isDeployed, workloadId } from "#lib/service-state.js";
 	import { title } from "#lib/store/title.js";
@@ -335,25 +332,11 @@
 
 {#if progress.pendingAction === "deploy"}
 	<div class="panel mb-6 rounded-md">
-		<ul class="border-border grid gap-2 border-b px-5 py-4 sm:grid-cols-3">
-			{#each deployPhaseStates(progress.progressLines.join("\n"), progress.progressStatus, svc.buildSource) as { phase, state } (phase.id)}
-				<li class="flex items-center gap-2 text-xs">
-					{#if state === "done"}
-						<CheckCircle2 class="size-3.5 shrink-0 text-emerald-500" />
-						<span class="text-text">{phase.label}</span>
-					{:else if state === "active"}
-						<Spinner class="size-3.5 shrink-0" />
-						<span class="text-text font-medium">{phase.label}</span>
-					{:else if state === "failed"}
-						<XCircle class="size-3.5 shrink-0 text-red-500" />
-						<span class="text-red-500">{phase.label}</span>
-					{:else}
-						<Circle class="text-text-subtle size-3.5 shrink-0" />
-						<span class="text-text-subtle">{phase.label}</span>
-					{/if}
-				</li>
-			{/each}
-		</ul>
+		<DeployStepper
+			buildSource={svc.buildSource}
+			log={progress.progressLines.join("\n")}
+			status={progress.progressStatus}
+		/>
 		<div
 			class="h-48 overflow-y-auto rounded-b-md log-output"
 			bind:this={progressEl}

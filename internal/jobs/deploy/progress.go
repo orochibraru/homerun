@@ -3,15 +3,27 @@ package deploy
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/orochibraru/homerun/internal/jobs"
 )
 
 const (
+	// PhaseSource is the deploy log line marking the start of a git build's
+	// clone.
+	PhaseSource = "▸ Cloning repository"
+	// PhaseImage is the deploy log line marking the start of the image's pull
+	// or build.
+	PhaseImage = "▸ Fetching image"
+	// PhaseScan is the deploy log line marking the start of the image scan.
+	PhaseScan = "▸ Scanning image"
 	// PhaseContainer is the deploy log line marking the start of container
 	// provisioning.
 	PhaseContainer = "▸ Provisioning container"
+	// PhaseHealth is the deploy log line marking the wait for the new workload
+	// to become ready.
+	PhaseHealth = "▸ Waiting until healthy"
 	// PhaseNetwork is the deploy log line marking the start of Traefik routing.
 	PhaseNetwork = "▸ Routing traffic"
 )
@@ -38,6 +50,19 @@ func (p progress) line(line string) {
 		`update deployment set log = coalesce(log, '') || $2 || E'\n' where id = $1`,
 		p.deploymentID, line); err != nil {
 		log.Printf("[homerun-worker] couldn't append to deployment %s's log: %s", p.deploymentID, err)
+	}
+}
+
+// building passes a builder's output on to line, writing PhaseImage once the
+// clone is done and the build itself starts.
+func (p progress) building() func(string) {
+	started := false
+	return func(line string) {
+		if !started && strings.HasPrefix(line, "Building with ") {
+			started = true
+			p.line(PhaseImage)
+		}
+		p.line(line)
 	}
 }
 

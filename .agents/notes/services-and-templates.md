@@ -717,20 +717,22 @@ dropped connection. The JSON `progress/+server.ts` endpoint stays for exactly
 that fallback.
 
 **Deploy phases** (`src/lib/deploy-phases.ts`) give that panel structure instead
-of a raw log tail: `deployService` appends a marker line (`phaseLine(id)`,
-rendered `▸ Fetching image`) as it enters each of
-`config`/`volumes`/`image`/`container`/ `network`/`ready`, and
+of a raw log tail: the app (`config`, `volumes`, `ready`) and the Go worker
+(`source`, `image`, `scan`, `container`, `health`, `network`, constants in
+`internal/jobs/deploy/progress.go`) append a marker line (`phaseLine(id)`,
+rendered `▸ Fetching image`; the marker text is stable, the display label is
+`DeployPhase.label`) as the deploy enters each phase, and
 `deployPhaseStates(log, status)` derives per-phase
-`done`/`active`/`failed`/`pending` from the last marker in the log plus the
-deployment's status. The markers are ordinary log lines, so the deployment
-history's raw-log panel keeps working untouched and nothing else in the pipeline
-had to learn about phases. There is deliberately **no "checking container
-health" phase**: the rollout's readiness wait happens inside the `container`
-phase and logs its own `Readiness: ...` line (see "Readiness gate" in
-`docker.md`), and a phase that passes instantly for every service without a gate
-would be a lie. Longer-term health is watched _after_ the deploy finishes (see
-Revisions and rollback above) and shows on Environments & Deployments →
-Revisions.
+`done`/`active`/`failed`/`skipped`/`pending` from the markers in the log plus
+the deployment's status; `deploy-stepper.svelte` renders it, timing each phase
+client-side. The markers are ordinary log lines, so the deployment history's
+raw-log panel keeps working untouched and nothing else in the pipeline had to
+learn about phases. The `health` phase is only entered when the rollout actually
+waits on readiness (a blue-green container rollout or a swarm update);
+everywhere else it shows as skipped rather than passing instantly, the same for
+`scan` with scanning off. Longer-term health is watched _after_ the deploy
+finishes (see Revisions and rollback above) and shows on Environments &
+Deployments → Revisions.
 
 ## Remote functions (`src/lib/remote/*.remote.ts`, `src/lib/server/remote-auth.ts`)
 
