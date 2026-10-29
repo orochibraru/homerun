@@ -111,19 +111,19 @@ a published `1194/udp` plus a DNS record for `vpn.example.com`.
 
 ## Exposed ports
 
-**Exposed ports** is compose's `expose:`: a list of other ports the container
-listens on (container port, TCP or UDP), written to Docker's `ExposedPorts`. It
-documents them, and they show up in `docker inspect` and to tools that read that
-list. It opens nothing: services on the same network already reach every port of
-each other by slug, and nothing outside the network reaches any of them without
-a [published port](#published-ports).
+**Exposed ports** is the `expose:` key of a compose file: a list of other ports
+the container listens on (container port, TCP or UDP), written to Docker's
+`ExposedPorts`. It documents them, and they show up in `docker inspect` and to
+tools that read that list. It opens nothing: services on the same network
+already reach every port of each other by slug, and nothing outside the network
+reaches any of them without a [published port](#published-ports).
 
-So when something can't reach a port, exposing it won't help. The usual cause is
+When something can't reach a port, exposing it won't help. The usual cause is
 that the client sits on another Docker network. A CI runner holding the Docker
 socket is the classic case: the job containers it starts land on the runner's
 own network, not the stack's, so they can't reach the runner's cache server.
 Point the runner at the stack's network (`homerun-stack-<stack id>`, Gitea's
-act_runner takes it as `container.network`, with `cache.host` set to the
+`act_runner` takes it as `container.network`, with `cache.host` set to the
 runner's slug) instead of publishing the port on the host.
 
 - Host networking has nothing to expose.
