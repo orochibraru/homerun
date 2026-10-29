@@ -92,6 +92,7 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		registryUrl: null,
 		slug: "gitea",
 		stackId: null,
+		swarmServiceId: null,
 		tag: "1.24.3",
 		updateCheck: null,
 		updateCheckEnabled: true,
@@ -117,6 +118,7 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		"registryUrl",
 		"slug",
 		"stackId",
+		"swarmServiceId",
 		"tag",
 	]) {
 		Object.defineProperty(svc, key, { get: () => row[key] });
@@ -728,6 +730,11 @@ describe("ImageVersionService update trials", () => {
 			},
 			name: "homerun-trial-gitea",
 		});
+		expect(
+			workerCalls
+				.filter((call) => call[0] === "post" && call[1] === "/v1/networks")
+				.map((call) => (call[2] as { Name: string }).Name),
+		).toEqual(["homerun", "homerun-stack-st1"]);
 		const deletes = workerCalls.filter((call) => call[0] === "delete");
 		expect(deletes).toEqual([
 			["delete", "v1/containers/homerun-trial-gitea", { force: "1" }],
@@ -752,6 +759,28 @@ describe("ImageVersionService update trials", () => {
 		expect(notifications[0].message).toBe(
 			'"Gitea" can update to 1.24.4. Its trial run started cleanly.',
 		);
+	});
+
+	test("a swarm service's trial joins the swarm overlay its stack talks on", async () => {
+		const { svc } = fakeService({
+			stackId: "st1",
+			swarmServiceId: "swarm-1",
+			updateTrialEnabled: true,
+		});
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		inspects = [{ Health: { Status: "healthy" }, Running: true }];
+		await ImageVersionService.check(svc);
+		expect(containerCreate()?.body).toMatchObject({
+			HostConfig: { NetworkMode: "homerun-swarm" },
+			NetworkingConfig: {
+				EndpointsConfig: { homerun: {}, "homerun-swarm": {} },
+			},
+		});
+		expect(
+			workerCalls.some(
+				(call) => call[0] === "post" && call[1] === "/v1/networks",
+			),
+		).toBe(false);
 	});
 
 	test("a failed healthcheck fails the trial with the container's last log lines", async () => {
