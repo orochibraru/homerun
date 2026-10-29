@@ -357,7 +357,7 @@
 				</span>
 			{/if}
 			<ErrorBoundary compact>
-				<GlobalSearch permissions={data.permissions} />
+				<GlobalSearch navItems={allNavItems} permissions={data.permissions} />
 			</ErrorBoundary>
 			<div class="hidden md:contents">
 				<ErrorBoundary compact>

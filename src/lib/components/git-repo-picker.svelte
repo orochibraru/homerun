@@ -172,9 +172,9 @@
 					</Popover.Content>
 				</Popover.Root>
 			{/if}
-		{:catch}
+		{:catch err}
 			<p class="mt-3 text-xs text-amber-600">
-				Couldn't list repos for that provider.
+				{err?.body?.message ?? "Couldn't list repos for that provider."}
 			</p>
 		{/await}
 	{/if}

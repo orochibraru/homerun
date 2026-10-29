@@ -11,12 +11,6 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Dialog from "#lib/components/ui/dialog/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import VolumeSizeLabel from "#lib/components/volume-size-label.svelte";
 	import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
@@ -28,6 +22,7 @@
 	import EditMount from "./edit-mount.svelte";
 	import MountBackup from "./mount-backup.svelte";
 	import VolumeBackupsMenu from "./volume-backups-menu.svelte";
+	import VolumeCombobox from "./volume-combobox.svelte";
 
 	let volumeId = $state("");
 
@@ -51,15 +46,6 @@
 	let newVolumeKind = $state<"bind" | "volume">("volume");
 	let creatingVolume = $state(false);
 	let createError = $state<string | null>(null);
-
-	const selectedLabel = $derived.by(() => {
-		if (volumeId.startsWith(HOST_VOLUME_PREFIX)) {
-			return volumeId.slice(HOST_VOLUME_PREFIX.length);
-		}
-		return (
-			data.volumes.find((v) => v.id === volumeId)?.name ?? "Select a volume"
-		);
-	});
 </script>
 
 <section class="panel rounded-md">
@@ -174,26 +160,13 @@
 							New volume
 						</button>
 					</div>
-					<SelectRoot name="volumeId" type="single" bind:value={volumeId}>
-						<SelectTrigger class="w-full" id="volumeId">
-							{selectedLabel}
-						</SelectTrigger>
-						<SelectContent>
-							{#each data.volumes as vol (vol.id)}
-								<SelectItem label={vol.name} value={vol.id} />
-							{/each}
-							{#if hostVolumes.length > 0}
-								<div
-									class="text-text-subtle px-2 py-1.5 text-[0.6875rem] font-medium"
-								>
-									On this machine
-								</div>
-								{#each hostVolumes as name (name)}
-									<SelectItem label={name} value="{HOST_VOLUME_PREFIX}{name}" />
-								{/each}
-							{/if}
-						</SelectContent>
-					</SelectRoot>
+					<VolumeCombobox
+						{hostVolumes}
+						id="volumeId"
+						name="volumeId"
+						volumes={data.volumes}
+						bind:value={volumeId}
+					/>
 					{#if volumeId.startsWith(HOST_VOLUME_PREFIX)}
 						<p class="text-text-subtle mt-1.5 text-xs">
 							Already on this machine : mounting it adds it to Storage too.

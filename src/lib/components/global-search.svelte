@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { FileText, Search } from "@lucide/svelte";
+	import { CornerDownLeft, FileText, Search } from "@lucide/svelte";
+	import type { Component } from "svelte";
 
 	import { headerControlClass } from "#lib/components/header-styles.js";
 	import { SEARCH_KIND_ICONS as KIND_ICONS } from "#lib/components/search-kind-icons.js";
@@ -16,7 +17,13 @@
 		type SearchGroup,
 	} from "#lib/search.js";
 
-	const { permissions }: { permissions: Permissions } = $props();
+	const {
+		navItems = [],
+		permissions,
+	}: {
+		navItems?: { href: string; icon: Component }[];
+		permissions: Permissions;
+	} = $props();
 
 	const DEBOUNCE_MS = 250;
 
@@ -26,6 +33,27 @@
 
 	const term = $derived(search.trim());
 	const pages = $derived(filterPages(SEARCH_PAGES, term, permissions));
+	const sections = $derived(
+		[...new Set(pages.map((page) => page.section))].map((section) => ({
+			pages: pages.filter((page) => page.section === section),
+			section,
+		})),
+	);
+
+	/** The sidebar icon of the nav item whose href is the longest prefix of `href`, or a page icon when none matches. */
+	function pageIcon(href: string): Component {
+		let best: { href: string; icon: Component } | null = null;
+		for (const item of navItems) {
+			const matches =
+				item.href === "/"
+					? href === "/"
+					: href === item.href || href.startsWith(`${item.href}/`);
+			if (matches && (!best || item.href.length > best.href.length)) {
+				best = item;
+			}
+		}
+		return best?.icon ?? FileText;
+	}
 
 	$effect(() => {
 		const q = term;
@@ -90,30 +118,57 @@
 	>
 </button>
 
+{#snippet row(Icon: Component, label: string, detail: string | null)}
+	<span
+		class="bg-surface-2 text-text-muted group-data-selected/command-item:bg-accent/10 group-data-selected/command-item:text-accent flex size-7 shrink-0 items-center justify-center rounded-md"
+	>
+		<Icon class="size-3.5" />
+	</span>
+	<span class="truncate">{label}</span>
+	{#if detail}
+		<Command.Shortcut
+			class="text-text-subtle max-w-[45%] truncate tracking-normal"
+		>
+			{detail}
+		</Command.Shortcut>
+	{/if}
+{/snippet}
+
 <Command.Dialog
 	bind:open
-	class="sm:max-w-2xl"
+	class="sm:max-w-2xl **:data-[slot=command-input-wrapper]:border-border **:data-[slot=command-input-wrapper]:border-b **:data-[slot=command-input-wrapper]:p-2 **:data-[slot=input-group]:h-11! **:data-[slot=input-group]:border-0! **:data-[slot=input-group]:bg-transparent! **:data-[slot=input-group]:ring-0! **:data-[slot=command-input]:text-base"
 	description="Search pages, services, stacks, templates and more"
 	shouldFilter={false}
 	title="Search"
 >
 	<Command.Input bind:value={search} placeholder="Search pages and content…" />
-	<Command.List class="max-h-[min(28rem,60vh)]">
-		{#if pages.length > 0}
+	<Command.List class="max-h-[min(30rem,60vh)] p-1.5">
+		{#if term && pages.length > 0}
 			<Command.Group heading="Pages">
-				{#each pages.slice(0, term ? 8 : pages.length) as p (p.href)}
+				{#each pages.slice(0, 8) as page (page.href)}
 					<Command.Item
-						onSelect={() => navigate(p.href)}
-						value={`page:${p.href}`}
+						class="py-1.5"
+						onSelect={() => navigate(page.href)}
+						value={`page:${page.href}`}
 					>
-						<FileText class="text-text-muted" />
-						<span class="truncate">{p.label}</span>
-						<span class="text-text-subtle ml-auto shrink-0 text-xs"
-							>{p.section}</span
-						>
+						{@render row(pageIcon(page.href), page.label, page.section)}
 					</Command.Item>
 				{/each}
 			</Command.Group>
+		{:else if !term}
+			{#each sections as { pages: sectionPages, section } (section)}
+				<Command.Group heading={section}>
+					{#each sectionPages as page (page.href)}
+						<Command.Item
+							class="py-1.5"
+							onSelect={() => navigate(page.href)}
+							value={`page:${page.href}`}
+						>
+							{@render row(pageIcon(page.href), page.label, null)}
+						</Command.Item>
+					{/each}
+				</Command.Group>
+			{/each}
 		{/if}
 
 		{#if contentPromise}
@@ -123,27 +178,24 @@
 				</Command.Loading>
 			{:then groups}
 				{#each groups as group (group.kind)}
-					{@const KindIcon = KIND_ICONS[group.kind]}
 					<Command.Group heading={group.heading}>
 						{#each group.results as result (result.id)}
 							<Command.Item
+								class="py-1.5"
 								onSelect={() => navigate(result.href)}
 								value={`${result.kind}:${result.id}`}
 							>
-								<KindIcon class="text-text-muted" />
-								<span class="truncate">{result.label}</span>
-								{#if result.detail}
-									<span
-										class="text-text-subtle ml-auto max-w-[50%] truncate text-xs"
-										>{result.detail}</span
-									>
-								{/if}
+								{@render row(
+									KIND_ICONS[group.kind],
+									result.label,
+									result.detail ?? null,
+								)}
 							</Command.Item>
 						{/each}
 					</Command.Group>
 				{/each}
 				{#if groups.length === 0 && pages.length === 0}
-					<p class="text-text-muted px-2 py-6 text-center text-sm">
+					<p class="text-text-muted px-2 py-8 text-center text-sm">
 						No results for “{term}”.
 					</p>
 				{/if}
@@ -153,9 +205,27 @@
 				</p>
 			{/await}
 		{:else if term && pages.length === 0}
-			<p class="text-text-muted px-2 py-6 text-center text-sm">
+			<p class="text-text-muted px-2 py-8 text-center text-sm">
 				No pages match “{term}”.
 			</p>
 		{/if}
 	</Command.List>
+	<div
+		class="border-border text-text-subtle flex items-center gap-4 border-t px-4 py-2 text-[0.6875rem]"
+	>
+		<span class="inline-flex items-center gap-1.5">
+			<kbd class="border-border rounded border px-1 font-sans">↑↓</kbd>
+			Navigate
+		</span>
+		<span class="inline-flex items-center gap-1.5">
+			<kbd class="border-border rounded border px-1 font-sans">
+				<CornerDownLeft class="size-2.5" />
+			</kbd>
+			Open
+		</span>
+		<span class="inline-flex items-center gap-1.5">
+			<kbd class="border-border rounded border px-1 font-sans">Esc</kbd>
+			Close
+		</span>
+	</div>
 </Command.Dialog>

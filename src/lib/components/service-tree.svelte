@@ -47,7 +47,7 @@
 						localStackIds !== undefined &&
 						!(svc.stackId && localStackIds.has(svc.stackId))}
 					<a
-						class="border-border hover:bg-surface-2 flex flex-col gap-2 rounded-md border px-3 py-2 transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex-row sm:items-center sm:gap-3 {outside ||
+						class="panel hover:border-accent/40 flex flex-col gap-2 rounded-md px-3 py-2 transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex-row sm:items-center sm:gap-3 {outside ||
 						node.repeat
 							? 'border-dashed opacity-80'
 							: ''}"

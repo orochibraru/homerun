@@ -150,9 +150,10 @@
 					{/each}
 				</div>
 			{/if}
-		{:catch}
+		{:catch err}
 			<p class="text-sm text-amber-600">
-				Couldn't list the repositories on that provider.
+				{err?.body?.message ??
+					"Couldn't list the repositories on that provider."}
 			</p>
 		{/await}
 	{/if}

@@ -14,7 +14,10 @@ import {
 	type WebhookRequest,
 } from "#lib/git-webhooks.js";
 import { Logger } from "#lib/logger.js";
-import type { GitProviderConfig } from "#lib/server/db/schema.js";
+import type {
+	GitProviderConfig,
+	GitProviderKind,
+} from "#lib/server/db/schema.js";
 import { providerApiBase } from "#lib/status-checks.js";
 
 import { decryptSecret, encryptSecret } from "./secrets.ts";
@@ -88,6 +91,8 @@ const STALE_GRANT_PATTERN = /token scope=/i;
 
 const APP_PERMISSION_PATTERN = /not accessible by integration/i;
 
+const INVALID_CLIENT_PATTERN = /invalid_client|cannot load client|client id/i;
+
 /** The human-readable reason in a provider's error body, whichever of the common shapes it uses. */
 function providerErrorDetail(bodyText: string): string {
 	try {
@@ -112,13 +117,28 @@ function providerErrorDetail(bodyText: string): string {
  * about the token (always for a 401). A GitHub App missing a permission says
  * which ones to add, since reconnecting can't grant them. Gitea's scope mismatch says to revoke
  * the app first: Gitea reuses an existing authorization on reconnect, scopes
- * included, so reconnecting alone hands back the same token scopes.
+ * included, so reconnecting alone hands back the same token scopes. A 401
+ * after the token's renewal failed because the provider no longer knows the
+ * OAuth client says to fix the provider's client credentials, since
+ * reconnecting through a missing app can't work.
  */
 export function refusalFrom(
 	providerName: string,
 	status: number,
 	bodyText: string,
+	refreshFailure?: string,
 ): GitProviderRefusedError {
+	if (
+		status === 401 &&
+		refreshFailure &&
+		INVALID_CLIENT_PATTERN.test(refreshFailure)
+	) {
+		return new GitProviderRefusedError(
+			`${providerName} refused the request (401): its token expired and ${providerName} no longer recognises the OAuth app Homerun renews it with. The app was probably deleted or recreated on ${providerName}: put its current client ID and secret on the provider under Git providers, then reconnect.`,
+			status,
+			false,
+		);
+	}
 	const detail = providerErrorDetail(bodyText);
 	const reconnectHelps =
 		status === 401 || detail === "" || TOKEN_REFUSAL_PATTERN.test(detail);
@@ -135,6 +155,64 @@ export function refusalFrom(
 		status,
 		reconnectHelps,
 	);
+}
+
+/** The repositories in a provider's repo-listing answer, in Homerun's shape. */
+function parseRepos(kind: GitProviderKind, body: unknown): GitRepo[] {
+	switch (kind) {
+		case "github":
+		case "gitea":
+			return (
+				body as Array<{
+					clone_url: string;
+					default_branch: string;
+					full_name: string;
+					private: boolean;
+				}>
+			).map((r) => ({
+				cloneUrl: r.clone_url,
+				defaultBranch: r.default_branch,
+				fullName: r.full_name,
+				private: r.private,
+			}));
+		case "gitlab":
+			return (
+				body as Array<{
+					default_branch: string;
+					http_url_to_repo: string;
+					path_with_namespace: string;
+					visibility: string;
+				}>
+			).map((r) => ({
+				cloneUrl: r.http_url_to_repo,
+				defaultBranch: r.default_branch,
+				fullName: r.path_with_namespace,
+				private: r.visibility !== "public",
+			}));
+		case "bitbucket":
+			return (
+				body as {
+					values: Array<{
+						full_name: string;
+						is_private: boolean;
+						links: { clone: Array<{ href: string; name: string }> };
+						mainbranch?: { name: string };
+					}>;
+				}
+			).values.map((r) => ({
+				cloneUrl:
+					r.links.clone.find((c) => c.name === "https")?.href ??
+					r.links.clone[0]?.href ??
+					"",
+				defaultBranch: r.mainbranch?.name ?? "main",
+				fullName: r.full_name,
+				private: r.is_private,
+			}));
+		default: {
+			const exhaustive: never = kind;
+			throw new Error(`Unknown git provider kind: ${exhaustive}`);
+		}
+	}
 }
 
 interface ProviderEndpoints {
@@ -226,6 +304,7 @@ function authHeader(token: string): Record<string, string> {
  */
 class GitProviderServiceClass {
 	readonly #refreshing = new Map<string, Promise<string | null>>();
+	readonly #refreshFailures = new Map<string, string>();
 
 	/**
 	 * Signed, stateless CSRF state param for the OAuth redirect round-trip :
@@ -347,10 +426,18 @@ class GitProviderServiceClass {
 			return await pending;
 		}
 		const refresh = this.#refresh(provider, connection)
+			.then((token) => {
+				this.#refreshFailures.delete(connection.id);
+				return token;
+			})
 			.catch((err) => {
 				logger.warn(
 					`Token refresh failed: provider=${provider.id} connection=${connection.id}`,
 					err,
+				);
+				this.#refreshFailures.set(
+					connection.id,
+					err instanceof Error ? err.message : String(err),
 				);
 				return current;
 			})
@@ -486,103 +573,16 @@ class GitProviderServiceClass {
 		provider: GitProviderConfig,
 		connection: GitConnectionDTO,
 	): Promise<GitRepo[]> {
-		const { api } = endpoints(provider);
-		const accessToken = await this.accessToken(provider, connection);
-		if (!accessToken) {
-			throw new Error("Couldn't decrypt the stored access token.");
-		}
-		const headers = authHeader(accessToken);
-
-		switch (provider.kind) {
-			case "github": {
-				const res = await fetch(`${api}/user/repos?per_page=100&sort=updated`, {
-					headers,
-				});
-				if (!res.ok) {
-					throw new Error(`Couldn't list repos: ${res.status}`);
-				}
-				const body = (await res.json()) as Array<{
-					clone_url: string;
-					default_branch: string;
-					full_name: string;
-					private: boolean;
-				}>;
-				return body.map((r) => ({
-					cloneUrl: r.clone_url,
-					defaultBranch: r.default_branch,
-					fullName: r.full_name,
-					private: r.private,
-				}));
-			}
-			case "gitlab": {
-				const res = await fetch(
-					`${api}/projects?membership=true&per_page=100`,
-					{ headers },
-				);
-				if (!res.ok) {
-					throw new Error(`Couldn't list repos: ${res.status}`);
-				}
-				const body = (await res.json()) as Array<{
-					default_branch: string;
-					http_url_to_repo: string;
-					path_with_namespace: string;
-					visibility: string;
-				}>;
-				return body.map((r) => ({
-					cloneUrl: r.http_url_to_repo,
-					defaultBranch: r.default_branch,
-					fullName: r.path_with_namespace,
-					private: r.visibility !== "public",
-				}));
-			}
-			case "gitea": {
-				const res = await fetch(`${api}/user/repos?limit=50`, { headers });
-				if (!res.ok) {
-					throw new Error(`Couldn't list repos: ${res.status}`);
-				}
-				const body = (await res.json()) as Array<{
-					clone_url: string;
-					default_branch: string;
-					full_name: string;
-					private: boolean;
-				}>;
-				return body.map((r) => ({
-					cloneUrl: r.clone_url,
-					defaultBranch: r.default_branch,
-					fullName: r.full_name,
-					private: r.private,
-				}));
-			}
-			case "bitbucket": {
-				const res = await fetch(`${api}/repositories?role=member&pagelen=100`, {
-					headers,
-				});
-				if (!res.ok) {
-					throw new Error(`Couldn't list repos: ${res.status}`);
-				}
-				const body = (await res.json()) as {
-					values: Array<{
-						full_name: string;
-						is_private: boolean;
-						links: { clone: Array<{ href: string; name: string }> };
-						mainbranch?: { name: string };
-					}>;
-				};
-				return body.values.map((r) => ({
-					cloneUrl:
-						r.links.clone.find((c) => c.name === "https")?.href ??
-						r.links.clone[0]?.href ??
-						"",
-					defaultBranch: r.mainbranch?.name ?? "main",
-					fullName: r.full_name,
-					private: r.is_private,
-				}));
-			}
-			default: {
-				const exhaustive: never = provider.kind;
-				throw new Error(`Unknown git provider kind: ${exhaustive}`);
-			}
-		}
+		const path = {
+			bitbucket: "/repositories?role=member&pagelen=100",
+			gitea: "/user/repos?limit=50",
+			github: "/user/repos?per_page=100&sort=updated",
+			gitlab: "/projects?membership=true&per_page=100",
+		}[provider.kind];
+		const body: unknown = await (
+			await this.api(provider, connection, path)
+		).json();
+		return parseRepos(provider.kind, body);
 	}
 
 	/**
@@ -614,7 +614,12 @@ class GitProviderServiceClass {
 			method: init.method ?? "GET",
 		});
 		if (res.status === 401 || res.status === 403) {
-			throw refusalFrom(provider.name, res.status, await res.text());
+			throw refusalFrom(
+				provider.name,
+				res.status,
+				await res.text(),
+				this.#refreshFailures.get(connection.id),
+			);
 		}
 		if (!res.ok) {
 			throw new Error(
