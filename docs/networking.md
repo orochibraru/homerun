@@ -121,10 +121,21 @@ reaches any of them without a [published port](#published-ports).
 When something can't reach a port, exposing it won't help. The usual cause is
 that the client sits on another Docker network. A CI runner holding the Docker
 socket is the classic case: the job containers it starts land on the runner's
-own network, not the stack's, so they can't reach the runner's cache server.
-Point the runner at the stack's network (`homerun-stack-<stack id>`, Gitea's
-`act_runner` takes it as `container.network`, with `cache.host` set to the
-runner's slug) instead of publishing the port on the host.
+own network, not the stack's, so they can't reach the runner's cache server. Put
+the job containers on a network the runner is on, and address the runner by its
+slug, instead of publishing the port on the host. Which network depends on how
+the runner runs:
+
+- **A standalone container** joins its stack's network,
+  `homerun-stack-<stack id>`, where only that stack's services can reach it. The
+  stack id is the last part of the stack page's URL.
+- **A [swarm](swarm-mode.md) service** joins only the shared overlay,
+  `homerun-swarm` (on an instance with the default network name). Job containers
+  on it can reach every swarm service on the instance, not just the runner's
+  stack.
+
+For Gitea's `act_runner`, that's `container.network` set to that network and
+`cache.host` set to the runner's slug.
 
 - Host networking has nothing to expose.
 - [Swarm mode](swarm-mode.md) ignores the list: Docker has no per-service
