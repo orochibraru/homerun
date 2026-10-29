@@ -283,6 +283,76 @@ export const actions = {
 			throw err;
 		}
 	},
+	updateMount: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		const formData = await request.formData();
+		const mountId = String(formData.get("mountId") ?? "");
+		const containerPath = String(formData.get("containerPath") ?? "").trim();
+		const readOnly = formData.get("readOnly") === "on";
+		const duplicate = formData.get("duplicate") === "on";
+		const copyName = String(formData.get("copyName") ?? "").trim();
+
+		if (!containerPath.startsWith("/")) {
+			return fail(400, {
+				error: "Mount path must be absolute (start with /).",
+			});
+		}
+		const mounts = await ServiceVolumeDTO.listForService(svc.id);
+		const target = mounts.find((m) => m.mount.id === mountId);
+		if (!target) {
+			return fail(404, { error: "Mount not found." });
+		}
+		if (
+			mounts.some(
+				(m) =>
+					m.mount.id !== mountId &&
+					m.mount.toJSON().containerPath === containerPath,
+			)
+		) {
+			return fail(400, {
+				error: `Another volume is already mounted at ${containerPath}.`,
+			});
+		}
+		if (!duplicate) {
+			await target.mount.update({ containerPath, readOnly });
+			logger.info(
+				`Mount updated: service=${svc.id} mount=${mountId} path=${containerPath} user=${locals.user.id}`,
+			);
+			return { mountUpdated: true };
+		}
+		if (!copyName) {
+			return fail(400, { error: "Name the copy." });
+		}
+		try {
+			const copy = await VolumeSettingsService.duplicate({
+				from: target.volumeSource,
+				name: copyName,
+				serviceSlug: svc.slug,
+				userId: locals.user.id,
+			});
+			await target.mount.update({
+				containerPath,
+				readOnly,
+				volumeId: copy.id,
+			});
+			logger.info(
+				`Mount moved to a copy: service=${svc.id} mount=${mountId} from=${target.mount.toJSON().volumeId} to=${copy.id} path=${containerPath} user=${locals.user.id}`,
+			);
+			return { mountUpdated: true };
+		} catch (err) {
+			if (err instanceof VolumeSettingsError) {
+				return fail(400, { error: err.message });
+			}
+			throw err;
+		}
+	},
 	detachVolume: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			redirectToSignIn();

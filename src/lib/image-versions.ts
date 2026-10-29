@@ -31,8 +31,20 @@ export interface ImageUpdateAvailable {
 
 export type UpdateTrialStatus = "running" | "passed" | "failed";
 
+export const UPDATE_SCOPES = ["major", "minor", "patch"] as const;
+
+export type UpdateScope = (typeof UPDATE_SCOPES)[number];
+
+/** How a newer release may differ from the running one: any release, the same major line, or the same major.minor line. */
+export const UPDATE_SCOPE_LABELS: Record<UpdateScope, string> = {
+	major: "Any newer release",
+	minor: "Minor and patch releases only",
+	patch: "Patch releases only",
+};
+
 export interface ImageUpdateTrial {
 	at: string;
+	log?: string[];
 	message: string | null;
 	status: UpdateTrialStatus;
 	tag: string;
@@ -90,10 +102,30 @@ function sameTrack(current: VersionTag, candidate: VersionTag): boolean {
 	return (candidate.suffix ?? "") === (current.suffix ?? "");
 }
 
-/** The newest stable tag on `current`'s track that sorts above it, or null when `current` isn't a version or nothing newer exists. */
+/** The update scope a form field names, or undefined when it names none. */
+export function parseUpdateScope(
+	value: FormDataEntryValue | null,
+): UpdateScope | undefined {
+	return UPDATE_SCOPES.find((scope) => scope === value);
+}
+
+/** Whether `candidate` stays within `scope` of `current`: the same major number for `minor`, the same major and minor for `patch`. */
+function withinScope(
+	current: VersionTag,
+	candidate: VersionTag,
+	scope: UpdateScope,
+): boolean {
+	const fixed = scope === "patch" ? 2 : scope === "minor" ? 1 : 0;
+	return current.numbers
+		.slice(0, fixed)
+		.every((number, i) => (candidate.numbers[i] ?? 0) === number);
+}
+
+/** The newest stable tag on `current`'s track that sorts above it and stays within `scope`, or null when `current` isn't a version or nothing newer exists. */
 export function newerVersionTag(
 	current: string,
 	tags: string[],
+	scope: UpdateScope = "major",
 ): string | null {
 	const parsed = parseVersionTag(current);
 	if (!parsed) {
@@ -105,6 +137,7 @@ export function newerVersionTag(
 		if (
 			candidate &&
 			sameTrack(parsed, candidate) &&
+			withinScope(parsed, candidate, scope) &&
 			compareVersions(candidate, parsed) > 0 &&
 			(!best || compareVersions(candidate, best) > 0)
 		) {
@@ -186,4 +219,44 @@ export function sortTagsForPicker(names: string[]): string[] {
 	}
 	versions.sort((a, b) => compareVersions(b, a) || a.tag.localeCompare(b.tag));
 	return [...floating, ...versions.map((version) => version.tag)];
+}
+
+/** A tag with its numbers and commit hashes turned into `*`, so `pr-123` and `pr-456` read alike. */
+function tagPattern(value: string): string {
+	return value
+		.replaceAll(/(?<![a-z])[0-9a-f]{7,40}(?![a-z0-9])/gi, "*")
+		.replaceAll(/\d+(?:\.\d+)*/g, "*");
+}
+
+/**
+ * The family a tag belongs to in a picker's filters: `Releases` and
+ * `Prereleases` for plain version tags, `*-<variant>` for a version with a
+ * suffix (`18.6-alpine3.22` is `*-alpine*`), the tag's pattern for anything
+ * numbered (`pr-123` is `pr-*`), and `Named` for every other floating tag
+ * (`latest`, `stable`).
+ */
+export function tagFamily(tag: string): string {
+	const parsed = parseVersionTag(tag);
+	if (parsed) {
+		if (parsed.prerelease) {
+			return "Prereleases";
+		}
+		return parsed.suffix ? `*-${tagPattern(parsed.suffix)}` : "Releases";
+	}
+	const pattern = tagPattern(tag);
+	return pattern.includes("*") ? pattern : "Named";
+}
+
+/** Every family `tags` fall into with how many tags each holds, biggest first. */
+export function tagFamilies(
+	tags: string[],
+): { count: number; family: string }[] {
+	const counts = new Map<string, number>();
+	for (const tag of tags) {
+		const family = tagFamily(tag);
+		counts.set(family, (counts.get(family) ?? 0) + 1);
+	}
+	return [...counts]
+		.map(([family, count]) => ({ count, family }))
+		.toSorted((a, b) => b.count - a.count || a.family.localeCompare(b.family));
 }

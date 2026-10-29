@@ -197,9 +197,11 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 		};
 	}
 
-	/** Moves the mount or switches it read-only; applied on the next deploy. */
+	/** Moves the mount, switches it read-only or points it at another volume; applied on the next deploy. */
 	async update(
-		input: Partial<Pick<ServiceVolume, "containerPath" | "readOnly">>,
+		input: Partial<
+			Pick<ServiceVolume, "containerPath" | "readOnly" | "volumeId">
+		>,
 	): Promise<void> {
 		await db
 			.update(serviceVolume)

@@ -14016,6 +14016,8 @@ export interface operations {
 								 * @example 2026-08-20T12:00:00.000Z
 								 */
 								at: string;
+								/** @description What the trial run did so far, with the deploy log's phase markers */
+								log?: string[];
 								message: string | null;
 								/** @enum {string} */
 								status: "running" | "passed" | "failed";
@@ -14277,6 +14279,11 @@ export interface operations {
 							tracesEnabled?: boolean;
 							/** @description Image services: watch the registry for a newer release of the tag, or a new image behind a floating tag. Turning it off forgets the last check. */
 							updateCheckEnabled?: boolean;
+							/**
+							 * @description Image services: how far an update may go from a version tag: major (any newer release), minor (same major) or patch (same major.minor). Changing it forgets the last check.
+							 * @enum {string}
+							 */
+							updateScope?: "major" | "minor" | "patch";
 							/** @description Image services: try each update in a throwaway container before notifying it. */
 							updateTrialEnabled?: boolean;
 							uptimeEnabled?: boolean;
@@ -14462,6 +14469,11 @@ export interface operations {
 							tracesEnabled?: boolean;
 							/** @description Image services: watch the registry for a newer release of the tag, or a new image behind a floating tag. Turning it off forgets the last check. */
 							updateCheckEnabled?: boolean;
+							/**
+							 * @description Image services: how far an update may go from a version tag: major (any newer release), minor (same major) or patch (same major.minor). Changing it forgets the last check.
+							 * @enum {string}
+							 */
+							updateScope?: "major" | "minor" | "patch";
 							/** @description Image services: try each update in a throwaway container before notifying it. */
 							updateTrialEnabled?: boolean;
 							uptimeEnabled?: boolean;
@@ -14684,6 +14696,8 @@ export interface operations {
 								 * @example 2026-08-20T12:00:00.000Z
 								 */
 								at: string;
+								/** @description What the trial run did so far, with the deploy log's phase markers */
+								log?: string[];
 								message: string | null;
 								/** @enum {string} */
 								status: "running" | "passed" | "failed";
@@ -14999,6 +15013,8 @@ export interface operations {
 								 * @example 2026-08-20T12:00:00.000Z
 								 */
 								at: string;
+								/** @description What the trial run did so far, with the deploy log's phase markers */
+								log?: string[];
 								message: string | null;
 								/** @enum {string} */
 								status: "running" | "passed" | "failed";
@@ -15323,6 +15339,11 @@ export interface operations {
 					tracesEnabled?: boolean;
 					/** @description Image services: watch the registry for a newer release of the tag, or a new image behind a floating tag. Turning it off forgets the last check. */
 					updateCheckEnabled?: boolean;
+					/**
+					 * @description Image services: how far an update may go from a version tag: major (any newer release), minor (same major) or patch (same major.minor). Changing it forgets the last check.
+					 * @enum {string}
+					 */
+					updateScope?: "major" | "minor" | "patch";
 					/** @description Image services: try each update in a throwaway container before notifying it. */
 					updateTrialEnabled?: boolean;
 					uptimeEnabled?: boolean;
@@ -15545,6 +15566,8 @@ export interface operations {
 								 * @example 2026-08-20T12:00:00.000Z
 								 */
 								at: string;
+								/** @description What the trial run did so far, with the deploy log's phase markers */
+								log?: string[];
 								message: string | null;
 								/** @enum {string} */
 								status: "running" | "passed" | "failed";
@@ -19128,6 +19151,11 @@ export interface operations {
 						trialStatus: ("running" | "passed" | "failed") | null;
 						trialTag: string | null;
 						updateCheckEnabled: boolean;
+						/**
+						 * @description How far an update may go: any newer release, the same major, or the same major.minor
+						 * @enum {string}
+						 */
+						updateScope: "major" | "minor" | "patch";
 						updateTrialEnabled: boolean;
 					};
 				};
@@ -19197,7 +19225,12 @@ export interface operations {
 				"application/json": {
 					/** @description Watch the registry for a newer release (a version tag) or a new image behind a floating tag like latest. */
 					updateCheckEnabled?: boolean;
-					/** @description Try each update in a throwaway container, off every network and volume, before notifying it. */
+					/**
+					 * @description How far an update may go from the running version tag: major (any newer release), minor (same major) or patch (same major.minor).
+					 * @enum {string}
+					 */
+					updateScope?: "major" | "minor" | "patch";
+					/** @description Try each update in a throwaway container on its networks, with no volumes or routing, before notifying it. */
 					updateTrialEnabled?: boolean;
 				};
 			};
@@ -19232,6 +19265,11 @@ export interface operations {
 						trialStatus: ("running" | "passed" | "failed") | null;
 						trialTag: string | null;
 						updateCheckEnabled: boolean;
+						/**
+						 * @description How far an update may go: any newer release, the same major, or the same major.minor
+						 * @enum {string}
+						 */
+						updateScope: "major" | "minor" | "patch";
 						updateTrialEnabled: boolean;
 					};
 				};
@@ -19327,6 +19365,11 @@ export interface operations {
 						trialStatus: ("running" | "passed" | "failed") | null;
 						trialTag: string | null;
 						updateCheckEnabled: boolean;
+						/**
+						 * @description How far an update may go: any newer release, the same major, or the same major.minor
+						 * @enum {string}
+						 */
+						updateScope: "major" | "minor" | "patch";
 						updateTrialEnabled: boolean;
 					};
 				};
@@ -19524,6 +19567,11 @@ export interface operations {
 						trialStatus: ("running" | "passed" | "failed") | null;
 						trialTag: string | null;
 						updateCheckEnabled: boolean;
+						/**
+						 * @description How far an update may go: any newer release, the same major, or the same major.minor
+						 * @enum {string}
+						 */
+						updateScope: "major" | "minor" | "patch";
 						updateTrialEnabled: boolean;
 					};
 				};
@@ -19619,6 +19667,11 @@ export interface operations {
 						trialStatus: ("running" | "passed" | "failed") | null;
 						trialTag: string | null;
 						updateCheckEnabled: boolean;
+						/**
+						 * @description How far an update may go: any newer release, the same major, or the same major.minor
+						 * @enum {string}
+						 */
+						updateScope: "major" | "minor" | "patch";
 						updateTrialEnabled: boolean;
 					};
 				};
@@ -19714,6 +19767,11 @@ export interface operations {
 						trialStatus: ("running" | "passed" | "failed") | null;
 						trialTag: string | null;
 						updateCheckEnabled: boolean;
+						/**
+						 * @description How far an update may go: any newer release, the same major, or the same major.minor
+						 * @enum {string}
+						 */
+						updateScope: "major" | "minor" | "patch";
 						updateTrialEnabled: boolean;
 					};
 				};

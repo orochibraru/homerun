@@ -1,5 +1,6 @@
 import { stripAnsi } from "#lib/ansi.js";
 import { config } from "#lib/config.js";
+import { phaseLine } from "#lib/deploy-phases.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
@@ -15,6 +16,7 @@ import {
 	suggestLocalTag,
 	tagsMatchingDigest,
 	updateKey,
+	type UpdateScope,
 } from "#lib/image-versions.js";
 import { Logger } from "#lib/logger.js";
 import { isNotFound } from "#lib/server/worker-client.js";
@@ -26,6 +28,7 @@ import {
 	dockerHealthcheck,
 	healthcheckTimingOf,
 } from "./docker/healthcheck.ts";
+import { stackNetworkName } from "./docker/networks.ts";
 import { listeningHealthcheck } from "./docker/readiness.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { updateAvailableMessage } from "./notification-messages.ts";
@@ -42,6 +45,7 @@ const TRIAL_HEALTH_TIMEOUT_MS = 180_000;
 const TRIAL_POLL_MS = 2000;
 const TRIAL_LOG_LINES = 20;
 const MAX_TRIAL_MESSAGE = 4000;
+const MAX_TRIAL_LOG_LINES = 300;
 
 /** A service's version pinning and update-check state, flat, as the REST API, the CLI and the Terraform data source read it. */
 export interface ServiceVersionState {
@@ -61,6 +65,7 @@ export interface ServiceVersionState {
 	trialStatus: ImageUpdateTrial["status"] | null;
 	trialTag: string | null;
 	updateCheckEnabled: boolean;
+	updateScope: UpdateScope;
 	updateTrialEnabled: boolean;
 }
 
@@ -112,8 +117,8 @@ function messageOf(err: unknown): string {
  * Version pinning and update checks for image-sourced services: finding the
  * registry tag the running image was published under, pinning to it (or to a
  * tag made on this host when none matches), watching the registry for a newer
- * release, trying that release in a throwaway container off every network and
- * volume, and telling the user about it.
+ * release, trying that release in a throwaway container with no volumes or
+ * routing, and telling the user about it.
  */
 class ImageVersionServiceClass {
 	readonly #inFlight = new Set<string>();
@@ -145,27 +150,38 @@ class ImageVersionServiceClass {
 			pinnedLocally: row.pinnedLocally,
 			tag: svc.tag,
 			updateCheckEnabled: row.updateCheckEnabled,
+			updateScope: row.updateScope,
 			updateTrialEnabled: row.updateTrialEnabled,
 		};
 	}
 
 	/**
 	 * Turns watching the registry for updates, and trying each one first, on
-	 * or off; a setting left out keeps its value. Turning the watch off
+	 * or off, and sets how far an update may go (any release, minor or patch
+	 * only); a setting left out keeps its value. Turning the watch off
 	 * forgets the last check, turning it on runs the first check in the
-	 * background.
+	 * background, and so does a scope change, since the update found may no
+	 * longer qualify.
 	 */
 	async setWatch(
 		svc: ServiceDTO,
-		input: { updateCheckEnabled?: boolean; updateTrialEnabled?: boolean },
+		input: {
+			updateCheckEnabled?: boolean;
+			updateScope?: UpdateScope;
+			updateTrialEnabled?: boolean;
+		},
 	): Promise<void> {
 		const updateCheckEnabled =
 			input.updateCheckEnabled ?? svc.toJSON().updateCheckEnabled;
+		const scopeChanged =
+			input.updateScope !== undefined &&
+			input.updateScope !== svc.toJSON().updateScope;
 		await svc.update({
 			updateCheckEnabled,
+			updateScope: input.updateScope ?? svc.toJSON().updateScope,
 			updateTrialEnabled:
 				input.updateTrialEnabled ?? svc.toJSON().updateTrialEnabled,
-			...(updateCheckEnabled ? {} : { updateCheck: null }),
+			...(updateCheckEnabled && !scopeChanged ? {} : { updateCheck: null }),
 		});
 		if (updateCheckEnabled && !svc.toJSON().updateCheck) {
 			await this.check(svc, { background: true });
@@ -312,8 +328,8 @@ class ImageVersionServiceClass {
 	}
 
 	/**
-	 * Looks for an update: a newer stable release on the same track when the
-	 * tag is a version (a locally made tag included, `1.25.0-dev-…` waits for
+	 * Looks for an update: a newer stable release on the same track, within
+	 * the service's update scope, when the tag is a version (a locally made tag included, `1.25.0-dev-…` waits for
 	 * `1.25.0`), or a new digest behind a floating tag like `latest`.
 	 */
 	async #findUpdate(svc: ServiceDTO): Promise<ImageUpdateAvailable | null> {
@@ -326,6 +342,7 @@ class ImageVersionServiceClass {
 			const newer = newerVersionTag(
 				svc.tag,
 				tags.map((tag) => tag.name),
+				svc.toJSON().updateScope,
 			);
 			if (!newer) {
 				return null;
@@ -450,26 +467,34 @@ class ImageVersionServiceClass {
 		await svc.update({ updateCheck: { ...state } });
 	}
 
-	/** Records a trial as running, runs it, then records and returns its outcome. */
+	/** Records a trial as running, runs it while recording its progress, then records and returns its outcome. */
 	async #trial(
 		svc: ServiceDTO,
 		update: ImageUpdateAvailable,
 		state: ImageUpdateState,
 	): Promise<ImageUpdateTrial> {
-		state.trial = {
+		const running: ImageUpdateTrial = {
 			at: new Date().toISOString(),
+			log: [],
 			message: null,
 			status: "running",
 			tag: update.tag,
 		};
+		state.trial = running;
 		await svc.update({ updateCheck: { ...state } });
+		const progress = async (...lines: string[]) => {
+			running.log = [...(running.log ?? []), ...lines].slice(
+				-MAX_TRIAL_LOG_LINES,
+			);
+			await svc.update({ updateCheck: { ...state } });
+		};
 		let trial: ImageUpdateTrial;
 		try {
-			const message = await this.#runTrial(svc, update);
-			trial = { ...state.trial, message, status: "passed" };
+			const message = await this.#runTrial(svc, update, progress);
+			trial = { ...running, message, status: "passed" };
 		} catch (err) {
 			trial = {
-				...state.trial,
+				...running,
 				message: messageOf(err).slice(0, MAX_TRIAL_MESSAGE),
 				status: "failed",
 			};
@@ -485,12 +510,14 @@ class ImageVersionServiceClass {
 
 	/**
 	 * Pulls the update and starts it in a container of its own, with the
-	 * service's env, command and entrypoint but no volumes, no published
-	 * ports, no Traefik labels and only Docker's default bridge network, so it
-	 * can't touch the live service's data, its database or its traffic. Passes
+	 * service's env, command and entrypoint on its networks (Homerun's and its
+	 * stack's, without the service's alias, so it reaches its database but
+	 * never gets its traffic), and no volumes, published ports or Traefik
+	 * labels, so it can't touch the live service's files or domains. Passes
 	 * once the container reports healthy on the readiness check a real deploy
 	 * would use, or is still running after `TRIAL_SETTLE_MS` when the service
-	 * has healthchecks off. The container is
+	 * has healthchecks off. Each step, and the container's own output, goes
+	 * to `progress` with the deploy log's phase markers. The container is
 	 * always removed; the pulled image stays, ready for the real deploy.
 	 * @returns A one-line summary of how it passed.
 	 * @throws describing how it failed, with the container's last log lines.
@@ -498,20 +525,33 @@ class ImageVersionServiceClass {
 	async #runTrial(
 		svc: ServiceDTO,
 		update: ImageUpdateAvailable,
+		progress: (...lines: string[]) => Promise<void>,
 	): Promise<string> {
 		const auth = DockerService.buildAuthConfig(svc.toJSON());
-		await DockerService.pullImage({
-			auth,
-			image: svc.image,
-			tag: update.digest ? `${update.tag}@${update.digest}` : update.tag,
-		});
 		const ref = update.digest
 			? `${svc.image}@${update.digest}`
 			: `${svc.image}:${update.tag}`;
+		await progress(phaseLine("image"), `Pulling ${svc.image}:${update.tag}`);
+		try {
+			await DockerService.pullImage({
+				auth,
+				image: svc.image,
+				tag: update.digest ? `${update.tag}@${update.digest}` : update.tag,
+			});
+		} catch (err) {
+			await progress(`Pull failed: ${messageOf(err)}`);
+			throw err;
+		}
+		await progress(
+			`Pulled ${ref}`,
+			phaseLine("container"),
+			"Starting a throwaway container on the service's networks, with no volumes, ports or domains",
+		);
 		const name = `homerun-trial-${svc.slug}`;
 		await DockerService.worker
 			.delete(`v1/containers/${name}`, { force: "1" })
 			.catch(() => undefined);
+		const healthcheck = this.#trialHealthcheck(svc);
 		const created = await DockerService.worker.post<{ id: string }>(
 			"v1/containers",
 			{
@@ -522,27 +562,54 @@ class ImageVersionServiceClass {
 						([key, value]) => `${key}=${value}`,
 					),
 					HostConfig: {
-						NetworkMode: "bridge",
+						NetworkMode: config.docker.networkName,
 						RestartPolicy: { Name: "no" },
 					},
-					Healthcheck: this.#trialHealthcheck(svc),
+					Healthcheck: healthcheck,
 					Image: ref,
 					Labels: { [TRIAL_LABEL]: svc.id },
+					NetworkingConfig: {
+						EndpointsConfig: Object.fromEntries(
+							this.#trialNetworks(svc).map((network) => [network, {}]),
+						),
+					},
 				},
 				name,
 			},
 		);
 		try {
 			await DockerService.worker.post(`v1/containers/${created.id}/start`);
-			return await this.#watchTrial(created.id);
+			await progress(
+				`Started ${name}`,
+				phaseLine("health"),
+				healthcheck
+					? "Waiting for it to report healthy"
+					: `Healthchecks are off, waiting ${TRIAL_SETTLE_MS / 1000}s to see it stays up`,
+			);
+			const message = await this.#watchTrial(created.id);
+			const logs = await this.#trialLogs(created.id);
+			await progress(
+				...(logs ? logs.split("\n") : []),
+				phaseLine("ready"),
+				message,
+			);
+			return message;
 		} catch (err) {
 			const logs = await this.#trialLogs(created.id);
+			await progress(...(logs ? logs.split("\n") : []), messageOf(err));
 			throw new Error(logs ? `${messageOf(err)}\n\n${logs}` : messageOf(err));
 		} finally {
 			await DockerService.worker
 				.delete(`v1/containers/${created.id}`, { force: "1" })
 				.catch(() => undefined);
 		}
+	}
+
+	/** The networks a trial container joins: Homerun's shared one and the service's stack network, so it resolves the services it talks to. */
+	#trialNetworks(svc: ServiceDTO): string[] {
+		return svc.stackId
+			? [config.docker.networkName, stackNetworkName(svc.stackId)]
+			: [config.docker.networkName];
 	}
 
 	/** The readiness check a real deploy would gate traffic on: the service's own healthcheck command, else a wait for its port to listen, none when healthchecks are off. */

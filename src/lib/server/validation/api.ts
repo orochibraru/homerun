@@ -387,6 +387,12 @@ export const updateServiceApiBody = z.object({
 		.describe(
 			"Image services: watch the registry for a newer release of the tag, or a new image behind a floating tag. Turning it off forgets the last check.",
 		),
+	updateScope: z
+		.enum(["major", "minor", "patch"])
+		.optional()
+		.describe(
+			"Image services: how far an update may go from a version tag: major (any newer release), minor (same major) or patch (same major.minor). Changing it forgets the last check.",
+		),
 	updateTrialEnabled: z
 		.boolean()
 		.optional()

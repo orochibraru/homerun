@@ -313,12 +313,21 @@ export const shots: ShotModule = {
 						.or(page.getByText(/No checks have reported|Couldn't read checks/))
 						.first(),
 				).toBeVisible({ timeout: 20_000 });
-				const count = await checks.count();
-				if (count > 0) {
-					await checks.first().click();
-				}
-				if (count > 1) {
-					await checks.nth(1).click();
+				await expect(
+					page.getByText(/Reading the checks on the latest/),
+				).toBeHidden({
+					timeout: 30_000,
+				});
+				const unchecked = page.locator(
+					"label:has(span.font-mono) [data-slot='checkbox'][aria-checked='false']",
+				);
+				for (let clicked = 0; clicked < 2; clicked++) {
+					// oxlint-disable-next-line no-await-in-loop -- each click changes what's unchecked
+					if ((await unchecked.count()) === 0) {
+						break;
+					}
+					// oxlint-disable-next-line no-await-in-loop -- see above
+					await unchecked.first().click();
 				}
 				await scrollToTop(page.getByText("Status checks", { exact: true }), 32);
 			},

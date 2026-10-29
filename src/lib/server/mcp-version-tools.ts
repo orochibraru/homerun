@@ -78,10 +78,11 @@ export function registerVersionTools(server: McpServer, api: ApiCall): void {
 		{
 			annotations: change,
 			description:
-				"Turn an image service's update watch on or off (a newer release of its tag, or a new image behind a floating tag), and whether each update is tried in a throwaway container first. Turning the watch on runs the first check.",
+				"Turn an image service's update watch on or off (a newer release of its tag, or a new image behind a floating tag), whether each update is tried in a throwaway container first, and how far an update may go (updateScope: major for any newer release, minor to stay on the same major, patch to stay on the same major.minor). Turning the watch on runs the first check.",
 			inputSchema: z.object({
 				serviceId,
 				updateCheckEnabled: z.boolean().optional(),
+				updateScope: z.enum(["major", "minor", "patch"]).optional(),
 				updateTrialEnabled: z.boolean().optional(),
 			}),
 		},

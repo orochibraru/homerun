@@ -41,4 +41,5 @@ data "homerun_service_version" "example" {
 - `trial_status` (String) The update's trial run: running, passed or failed.
 - `trial_tag` (String)
 - `update_check_enabled` (Boolean)
+- `update_scope` (String)
 - `update_trial_enabled` (Boolean)

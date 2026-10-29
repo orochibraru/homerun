@@ -23,9 +23,9 @@
 	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
 	import ReplicaStats from "#lib/components/replica-stats.svelte";
 	import ServiceGraph from "#lib/components/service-graph.svelte";
+	import ServiceSummary from "#lib/components/service-summary.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
-	import UsageChart from "#lib/components/usage-chart.svelte";
 	import { DeployProgress } from "#lib/deploy-progress.svelte.js";
 	import { isDeployed, workloadId } from "#lib/service-state.js";
 	import { title } from "#lib/store/title.js";
@@ -94,6 +94,28 @@
 		}
 	});
 </script>
+
+{#if progress.pendingAction === "deploy"}
+	<div class="panel mb-6 rounded-md">
+		<DeployStepper
+			buildSource={svc.buildSource}
+			log={progress.progressLines.join("\n")}
+			status={progress.progressStatus}
+		/>
+		<div
+			class="h-48 overflow-y-auto rounded-b-md log-output"
+			bind:this={progressEl}
+		>
+			{#if progress.progressLines.length === 0}
+				<span class="text-zinc-500">Waiting for the deploy to start…</span>
+			{:else}
+				{#each progress.progressLines as line, i (i)}
+					<AnsiLine {line} />
+				{/each}
+			{/if}
+		</div>
+	</div>
+{/if}
 
 {#if progress.failedDeploymentId && progress.pendingAction !== "deploy"}
 	{@const failedId = progress.failedDeploymentId}
@@ -307,10 +329,38 @@
 <div
 	class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
 >
-	<ErrorBoundary title="Resource usage didn't load.">
-		<UsageChart serviceId={svc.id} title="Resource usage" />
-	</ErrorBoundary>
+	{#if isDeployed(svc)}
+		<div>
+			<LiveLogViewer
+				heightClass="h-[32rem]"
+				serviceId={svc.id}
+				workloadId={workloadId(svc)}
+			/>
+			<a
+				class="text-accent mt-2 inline-block text-xs underline"
+				href={resolve("/(protected)/services/[serviceId]/observability/logs", {
+					serviceId: svc.id,
+				})}
+			>
+				View full logs
+			</a>
+		</div>
+	{:else if progress.pendingAction !== "deploy"}
+		<div
+			class="border-border bg-surface-2 text-text-muted rounded-md border p-4 text-sm"
+		>
+			This service hasn't been deployed yet : click <strong>Deploy</strong> to
+			pull
+			<span class="text-text">{svc.image}:{svc.tag}</span>
+			and start it.
+		</div>
+	{/if}
 	<div class="space-y-4">
+		<ServiceSummary
+			lastDeployment={data.lastDeployment}
+			mountCount={data.mountCount}
+			service={svc}
+		/>
 		<ServiceGraph
 			dependsOn={data.dependsOn}
 			name={svc.name}
@@ -329,56 +379,3 @@
 		/>
 	</div>
 </div>
-
-{#if progress.pendingAction === "deploy"}
-	<div class="panel mb-6 rounded-md">
-		<DeployStepper
-			buildSource={svc.buildSource}
-			log={progress.progressLines.join("\n")}
-			status={progress.progressStatus}
-		/>
-		<div
-			class="h-48 overflow-y-auto rounded-b-md log-output"
-			bind:this={progressEl}
-		>
-			{#if progress.progressLines.length === 0}
-				<span class="text-zinc-500">Waiting for the deploy to start…</span>
-			{:else}
-				{#each progress.progressLines as line, i (i)}
-					<AnsiLine {line} />
-				{/each}
-			{/if}
-		</div>
-	</div>
-{/if}
-
-{#if !(isDeployed(svc) || progress.pendingAction === "deploy")}
-	<div
-		class="border-border bg-surface-2 text-text-muted mb-6 rounded-md border p-4 text-sm"
-	>
-		This service hasn't been deployed yet : click <strong>Deploy</strong> to
-		pull
-		<span class="text-text">{svc.image}:{svc.tag}</span>
-		and start it.
-	</div>
-{:else if progress.pendingAction !== "deploy"}
-	<!-- Live container logs, right on the Overview tab : same panel as the
-       Logs tab (see $lib/components/live-log-viewer.svelte), just shorter.
-       Hidden mid-deploy since the progress panel above already covers
-       live output for that. -->
-	<div class="mb-6">
-		<LiveLogViewer
-			heightClass="h-56"
-			serviceId={svc.id}
-			workloadId={workloadId(svc)}
-		/>
-		<a
-			class="text-accent mt-2 inline-block text-xs underline"
-			href={resolve("/(protected)/services/[serviceId]/observability/logs", {
-				serviceId: svc.id,
-			})}
-		>
-			View full logs
-		</a>
-	</div>
-{/if}

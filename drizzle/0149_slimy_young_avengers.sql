@@ -1,0 +1,1 @@
+ALTER TABLE "service" ADD COLUMN "update_scope" text DEFAULT 'major' NOT NULL;

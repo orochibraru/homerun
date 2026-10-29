@@ -245,6 +245,10 @@ export const serviceResponse = z.object({
 			trial: z
 				.object({
 					at: isoTimestamp,
+					log: z.array(z.string()).optional().meta({
+						description:
+							"What the trial run did so far, with the deploy log's phase markers",
+					}),
 					message: z.string().nullable(),
 					status: z.enum(["running", "passed", "failed"]),
 					tag: z.string(),

@@ -13,6 +13,7 @@
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
+	import AvailableUpdates from "#lib/components/available-updates.svelte";
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import HostResources from "#lib/components/host-resources.svelte";
 	import MonitoringSummary from "#lib/components/monitoring/monitoring-summary.svelte";
@@ -63,7 +64,12 @@
 		() => `dashboard:templates:${data.user.id}`,
 		() => data.frontPageTemplates,
 	);
+	const updatesData = new Streamed(
+		() => `dashboard:updates:${data.user.id}`,
+		() => data.availableUpdates,
+	);
 	const stats = $derived(statsData.current);
+	const updates = $derived(updatesData.current);
 	const deployments = $derived(deploymentsData.current);
 	const errors = $derived(errorsData.current);
 	const uptimeDown = $derived(uptimeData.current);
@@ -265,6 +271,13 @@
 				{/each}
 			</div>
 		</div>
+	{/if}
+
+	{#if updates?.length}
+		<AvailableUpdates
+			canWrite={can(data.permissions, "services", "write")}
+			{updates}
+		/>
 	{/if}
 
 	{#if frontPageTemplates?.length}

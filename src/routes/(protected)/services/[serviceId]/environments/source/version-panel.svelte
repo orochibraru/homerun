@@ -2,19 +2,33 @@
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { Pin, PinOff, RefreshCw } from "@lucide/svelte";
+	import { tick } from "svelte";
 
+	import AnsiLine from "#lib/components/ansi-line.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
+	import DeployStepper from "#lib/components/deploy-stepper.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "#lib/components/ui/select/index.js";
+	import { isPhaseLine, TRIAL_PHASES } from "#lib/deploy-phases.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import {
 		isPinnableTag,
+		parseUpdateScope,
 		parseVersionTag,
 		type PinCandidates,
+		UPDATE_SCOPE_LABELS,
+		UPDATE_SCOPES,
+		type UpdateTrialStatus,
 	} from "#lib/image-versions.js";
 	import type { Service } from "#lib/server/db/schema.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -29,13 +43,22 @@
 			| "tag"
 			| "updateCheck"
 			| "updateCheckEnabled"
+			| "updateScope"
 			| "updateTrialEnabled"
 		>;
 	}
 
 	const { labelClass, service }: Props = $props();
 
-	const TRIAL_POLL_MS = 5000;
+	const TRIAL_POLL_MS = 2000;
+
+	const TRIAL_STATUS: Record<UpdateTrialStatus, string> = {
+		failed: "failed",
+		passed: "running",
+		running: "starting",
+	};
+
+	let trialLogEl = $state<HTMLElement | undefined>();
 
 	let candidates = $state<PinCandidates | null>(null);
 	let dialogOpen = $state(false);
@@ -44,8 +67,13 @@
 	let pinning = $state(false);
 	let pinForm = $state<HTMLFormElement | null>(null);
 	let watchSaving = $state(false);
+	let checking = $state(false);
 	let updateCheckEnabled = $derived(service.updateCheckEnabled);
 	let updateTrialEnabled = $derived(service.updateTrialEnabled);
+	let updateScope = $derived<string>(service.updateScope);
+	const scopeLabel = $derived(
+		UPDATE_SCOPE_LABELS[parseUpdateScope(updateScope) ?? "major"],
+	);
 
 	const check = $derived(service.updateCheck);
 	const trial = $derived(check?.trial ?? null);
@@ -59,6 +87,15 @@
 		}
 		const timer = setInterval(() => refreshAll(), TRIAL_POLL_MS);
 		return () => clearInterval(timer);
+	});
+
+	$effect(() => {
+		const lineCount = trial?.log?.length ?? 0;
+		if (lineCount > 0 && trialLogEl) {
+			void tick().then(() => {
+				trialLogEl?.scrollTo({ top: trialLogEl.scrollHeight });
+			});
+		}
 	});
 
 	function openPinDialog(found: PinCandidates) {
@@ -76,6 +113,29 @@
 		title="Version"
 	>
 		{#snippet trailing()}
+			<form
+				action="?/checkUpdates"
+				method="POST"
+				use:enhance={enhanceToast({
+					loading: "Checking the registry",
+					onComplete: () => refreshAll(),
+					onSettled: () => {
+						checking = false;
+					},
+					onStart: () => {
+						checking = true;
+					},
+					success: (data) =>
+						data?.available
+							? `Found :${String(data.available)}.`
+							: "No update found.",
+				})}
+			>
+				<Button loading={checking} size="sm" type="submit" variant="outline">
+					<RefreshCw class="size-4" />
+					Check for updates
+				</Button>
+			</form>
 			{#if service.pinnedFromTag}
 				<form
 					action="?/unpin"
@@ -156,14 +216,33 @@
 				bind:checked={updateCheckEnabled}
 			/>
 			{#if updateCheckEnabled}
+				<div>
+					<label class={labelClass} for="updateScope">Offer</label>
+					<SelectRoot name="updateScope" type="single" bind:value={updateScope}>
+						<SelectTrigger class="w-full sm:w-80" id="updateScope">
+							{scopeLabel}
+						</SelectTrigger>
+						<SelectContent>
+							{#each UPDATE_SCOPES as scope (scope)}
+								<SelectItem label={UPDATE_SCOPE_LABELS[scope]} value={scope} />
+							{/each}
+						</SelectContent>
+					</SelectRoot>
+					<p class="text-text-subtle mt-1.5 text-xs">
+						For a version tag: "Minor and patch releases only" offers 1.x
+						releases to a service on 1.4.2 and never 2.0. A floating tag like
+						<code class="font-mono">latest</code> ignores this.
+					</p>
+				</div>
 				<CheckBox
-					helperText="Starts the new version in a throwaway container first, with this service's environment but no volumes, no ports and no access to its networks, and reports whether it came up. An app that can't start without its database or data will fail this, turn it off for those."
+					helperText="Starts the new version in a throwaway container first, with this service's environment and networks (so it reaches its database) but no volumes, ports or domains, and reports whether it came up. An app that migrates its database on startup will migrate the live one during the trial, turn it off for those."
 					id="updateTrialEnabled"
 					label="Try new versions before notifying"
 					name="updateTrialEnabled"
 					bind:checked={updateTrialEnabled}
 				/>
 			{:else}
+				<input name="updateScope" type="hidden" value={updateScope} />
 				<input
 					name="updateTrialEnabled"
 					type="hidden"
@@ -175,7 +254,7 @@
 			</div>
 		</form>
 
-		{#if service.updateCheckEnabled && check}
+		{#if check}
 			<div class="border-border space-y-3 rounded-md border p-4">
 				<div class="flex flex-wrap items-center gap-3">
 					<div class="min-w-0 grow text-sm">
@@ -192,22 +271,6 @@
 							Checked {timeAgo(check.checkedAt)}
 						</div>
 					</div>
-					<form
-						action="?/checkUpdates"
-						method="POST"
-						use:enhance={enhanceToast({
-							loading: "Checking the registry",
-							success: (data) =>
-								data?.available
-									? `Found :${String(data.available)}.`
-									: "No update found.",
-						})}
-					>
-						<Button size="sm" type="submit" variant="outline">
-							<RefreshCw class="size-4" />
-							Check now
-						</Button>
-					</form>
 					{#if check.available}
 						<form
 							action="?/applyUpdate"
@@ -231,24 +294,45 @@
 					<p class="text-xs text-red-500">{check.error}</p>
 				{/if}
 				{#if check.available && trial}
-					<div class="space-y-2">
-						<div class="flex items-center gap-2 text-xs">
-							<span class="text-text-muted">Trial run of :{trial.tag}</span>
-							<RunStatusBadge
-								error={trial.message}
-								success={trial.status === "running"
-									? null
-									: trial.status === "passed"}
+					{#if trial.log}
+						<div class="panel rounded-md">
+							<DeployStepper
+								buildSource="image"
+								log={trial.log.join("\n")}
+								noun="Trial run of :{trial.tag}"
+								phases={TRIAL_PHASES}
+								status={TRIAL_STATUS[trial.status]}
+								successLabel="Trial run of :{trial.tag} passed"
 							/>
-							{#if trial.status === "passed" && trial.message}
-								<span class="text-text-muted">{trial.message}</span>
+							<div
+								class="log-output h-48 overflow-y-auto rounded-b-md"
+								bind:this={trialLogEl}
+							>
+								{#each trial.log.filter((line) => !isPhaseLine(line)) as line, i (i)}
+									<AnsiLine {line} />
+								{/each}
+							</div>
+						</div>
+					{:else}
+						<div class="space-y-2">
+							<div class="flex items-center gap-2 text-xs">
+								<span class="text-text-muted">Trial run of :{trial.tag}</span>
+								<RunStatusBadge
+									error={trial.message}
+									success={trial.status === "running"
+										? null
+										: trial.status === "passed"}
+								/>
+								{#if trial.status === "passed" && trial.message}
+									<span class="text-text-muted">{trial.message}</span>
+								{/if}
+							</div>
+							{#if trial.status === "failed" && trial.message}
+								<pre
+									class="bg-surface-2 max-h-48 overflow-auto rounded-md p-3 font-mono text-xs whitespace-pre-wrap">{trial.message}</pre>
 							{/if}
 						</div>
-						{#if trial.status === "failed" && trial.message}
-							<pre
-								class="bg-surface-2 max-h-48 overflow-auto rounded-md p-3 font-mono text-xs whitespace-pre-wrap">{trial.message}</pre>
-						{/if}
-					</div>
+					{/if}
 				{/if}
 			</div>
 		{/if}

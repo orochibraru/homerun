@@ -160,6 +160,9 @@ data "homerun_service" "example" {
 - `update_check_enabled` (Boolean) Image services: watch the registry for a
   newer release of tag, or a new image behind a floating tag. The
   homerun_service_version data source reads what it found.
+- `update_scope` (String) Image services: how far an update may go from a
+  version tag: major (any newer release), minor (same major) or patch (same
+  major.minor).
 - `update_trial_enabled` (Boolean) Image services: try each update in a
   throwaway container before notifying it.
 - `uptime_enabled` (Boolean)

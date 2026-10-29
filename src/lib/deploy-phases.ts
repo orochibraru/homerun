@@ -75,6 +75,33 @@ export const DEPLOY_PHASES: DeployPhase[] = [
 	},
 ];
 
+export const TRIAL_PHASES: DeployPhase[] = [
+	{
+		hint: "Pulls the new version from its registry.",
+		id: "image",
+		label: "Pull",
+		marker: "Fetching image",
+	},
+	{
+		hint: "Starts the new version in a throwaway container with no volumes, ports or domains.",
+		id: "container",
+		label: "Start",
+		marker: "Provisioning container",
+	},
+	{
+		hint: "Waits for it to pass the readiness check a real deploy would use.",
+		id: "health",
+		label: "Health check",
+		marker: "Waiting until healthy",
+	},
+	{
+		hint: "The new version came up.",
+		id: "ready",
+		label: "Passed",
+		marker: "Ready",
+	},
+];
+
 export type DeployPhaseState =
 	"pending" | "active" | "done" | "failed" | "skipped";
 
@@ -150,15 +177,16 @@ export function phasesFor(buildSource: "git" | "image"): DeployPhase[] {
  * @param status The service status; `running` or `stopped` marks every entered
  * phase done, `failed` marks the current phase failed.
  * @param buildSource Picks the phases and their labels, see `phasesFor`.
+ * @param phases Overrides the phases, for a run that isn't a deploy (an update trial).
  */
 export function deployPhaseStates(
 	log: string,
 	status: string,
 	buildSource: "git" | "image" = "image",
+	phases: DeployPhase[] = phasesFor(buildSource),
 ): Array<{ phase: DeployPhase; state: DeployPhaseState }> {
 	const entered = enteredPhases(log);
 	const current = entered.at(-1) ?? null;
-	const phases = phasesFor(buildSource);
 	const index = current ? phases.findIndex((p) => p.id === current) : -1;
 	const failed = status === "failed";
 	const finished = status === "running" || status === "stopped";

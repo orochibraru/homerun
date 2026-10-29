@@ -21,6 +21,7 @@
 
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
+		type DeployPhase,
 		type DeployPhaseId,
 		type DeployPhaseState,
 		deployPhaseStates,
@@ -29,10 +30,20 @@
 	interface Props {
 		buildSource: "git" | "image";
 		log: string;
+		noun?: string;
+		phases?: DeployPhase[];
 		status: string;
+		successLabel?: string;
 	}
 
-	const { buildSource, log, status }: Props = $props();
+	const {
+		buildSource,
+		log,
+		noun = "Deploy",
+		phases,
+		status,
+		successLabel = "Deployed",
+	}: Props = $props();
 
 	const ICONS: Record<DeployPhaseId, Component> = $derived({
 		config: Settings2,
@@ -46,7 +57,7 @@
 		volumes: HardDrive,
 	});
 
-	const states = $derived(deployPhaseStates(log, status, buildSource));
+	const states = $derived(deployPhaseStates(log, status, buildSource, phases));
 	const active = $derived(
 		states.find((s) => s.state === "active" || s.state === "failed") ?? null,
 	);
@@ -164,11 +175,11 @@
 			{#if failed}
 				<XCircle class="size-4 shrink-0 text-red-500" />
 				<span class="text-text font-medium">
-					Deploy failed{active ? ` at ${active.phase.label.toLowerCase()}` : ""}
+					{noun} failed{active ? ` at ${active.phase.label.toLowerCase()}` : ""}
 				</span>
 			{:else if finished}
 				<CheckCircle2 class="size-4 shrink-0 text-emerald-500" />
-				<span class="text-text font-medium">Deployed</span>
+				<span class="text-text font-medium">{successLabel}</span>
 			{:else if active}
 				<Spinner class="size-4 shrink-0" />
 				<span class="text-text font-medium">{active.phase.label}</span>
@@ -177,7 +188,9 @@
 				>
 			{:else}
 				<Spinner class="size-4 shrink-0" />
-				<span class="text-text-muted">Waiting for the deploy to start…</span>
+				<span class="text-text-muted"
+					>Waiting for the {noun.toLowerCase()} to start…</span
+				>
 			{/if}
 		</div>
 		<span class="text-text-muted shrink-0 font-mono text-xs tabular-nums"

@@ -48,7 +48,8 @@ type Healthchecks struct {
 }
 
 // VolumeSeed is a volume that starts as a copy of another the first time it's
-// deployed: a pull request preview's copy of its parent's data.
+// deployed: a pull request preview's copy of its parent's data, or a mount
+// moved onto a duplicate of its volume.
 type VolumeSeed struct {
 	From   string `json:"from"`
 	Image  string `json:"image"`
@@ -325,7 +326,7 @@ func (r *run) seedVolumes(ctx context.Context) error {
 		if exists {
 			continue
 		}
-		r.progress.line(fmt.Sprintf("Copying %s into %s for this preview", seed.Name, seed.Source))
+		r.progress.line(fmt.Sprintf("Copying %s into %s", seed.Name, seed.Source))
 		started := time.Now()
 		if err := r.docker.CopyVolume(ctx, seed.From, seed.Source, seed.Image); err != nil {
 			_ = r.docker.RemoveVolume(context.WithoutCancel(ctx), seed.Source)

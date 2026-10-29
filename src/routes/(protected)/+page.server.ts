@@ -129,6 +129,31 @@ async function uptimeDown(pending: Promise<ServiceDTO[]>) {
 		}));
 }
 
+/** Every service whose update check found a newer image, with how its trial run went, newest find first. */
+async function availableUpdates(pending: Promise<ServiceDTO[]>) {
+	const services = await pending;
+	return services
+		.flatMap((svc) => {
+			const check = svc.toJSON().updateCheck;
+			if (!check?.available) {
+				return [];
+			}
+			return [
+				{
+					currentTag: svc.tag,
+					foundAt: check.available.foundAt,
+					image: svc.image,
+					serviceId: svc.id,
+					serviceName: svc.name,
+					tag: check.available.tag,
+					trialMessage: check.trial?.message ?? null,
+					trialStatus: check.trial?.status ?? null,
+				},
+			];
+		})
+		.toSorted((a, b) => b.foundAt.localeCompare(a.foundAt));
+}
+
 export const load = async ({ cookies, locals, parent, url }) => {
 	const { uiMode } = await parent();
 
@@ -140,6 +165,9 @@ export const load = async ({ cookies, locals, parent, url }) => {
 	const zone = monitoringRequest(url, cookies).zone;
 
 	return {
+		availableUpdates: readsServices
+			? availableUpdates(services)
+			: Promise.resolve([]),
 		frontPageTemplates:
 			uiMode === "simple" && can(locals.permissions, "services", "write")
 				? frontPageTemplates()
