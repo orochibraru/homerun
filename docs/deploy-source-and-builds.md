@@ -12,7 +12,11 @@ Every service is either:
 - **Bring-your-own-image** (the default), an image + tag, optionally with
   private registry credentials. Once the image is filled in, the **Tag** field's
   picker lists the tags its registry publishes (floating tags first, then
-  versions newest first); typing any tag by hand still works.
+  versions newest first), with a filter chip per family of tags above them
+  (**Releases**, **Prereleases**, variants like `*-alpine*`, numbered ones like
+  `pr-*` or `sha-*`, and **Named** floating tags) so a registry full of pull
+  request builds stays searchable: pick one or more chips to show only those.
+  Typing any tag by hand still works.
 - **Build from a git repo**, Homerun clones the repo (shallow, by branch, tag or
   full 40-character commit SHA, which pins the service to that commit) and
   builds it locally with the service's **build method**. No registry involved:

@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown } from "@lucide/svelte";
 
+	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Command from "#lib/components/ui/command/index.js";
 	import * as InputGroup from "#lib/components/ui/input-group/index.js";
 	import * as Popover from "#lib/components/ui/popover/index.js";
 	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { tagFamilies, tagFamily } from "#lib/image-versions.js";
 	import { listImageTags } from "#lib/remote/image-check.remote.js";
 
 	const DEBOUNCE_MS = 600;
@@ -32,6 +34,20 @@
 	let tags = $state<string[]>([]);
 	let loading = $state(false);
 	let open = $state(false);
+	let shown = $state<string[]>([]);
+
+	const families = $derived(tagFamilies(tags));
+	const visible = $derived(
+		shown.length > 0
+			? tags.filter((value) => shown.includes(tagFamily(value)))
+			: tags,
+	);
+
+	function toggleFamily(family: string) {
+		shown = shown.includes(family)
+			? shown.filter((other) => other !== family)
+			: [...shown, family];
+	}
 
 	$effect(() => {
 		const args = {
@@ -90,19 +106,39 @@
 					</InputGroup.Button>
 				{/snippet}
 			</Popover.Trigger>
-			<Popover.Content align="end" class="w-72 p-0">
+			<Popover.Content align="end" class="w-80 p-0">
+				{#if families.length > 1}
+					<div
+						class="border-border flex max-h-28 flex-wrap gap-1 overflow-y-auto border-b p-2"
+					>
+						{#each families as { count, family } (family)}
+							<Button
+								aria-pressed={shown.includes(family)}
+								onclick={() => toggleFamily(family)}
+								size="xs"
+								type="button"
+								variant={shown.includes(family) ? "default" : "outline"}
+							>
+								<span class="font-mono">{family}</span>
+								<span class="opacity-60">{count}</span>
+							</Button>
+						{/each}
+					</div>
+				{/if}
 				<Command.Root>
 					<Command.Input placeholder="Filter tags…" />
 					<Command.List>
 						<Command.Empty>No tag matches.</Command.Empty>
-						<Command.Group>
-							{#each tags as value (value)}
-								<Command.Item onSelect={() => pick(value)} {value}>
-									<Check class="size-4 {tag === value ? '' : 'opacity-0'}" />
-									<span class="truncate">{value}</span>
-								</Command.Item>
-							{/each}
-						</Command.Group>
+						{#if visible.length > 0}
+							<Command.Group>
+								{#each visible as value (value)}
+									<Command.Item onSelect={() => pick(value)} {value}>
+										<Check class="size-4 {tag === value ? '' : 'opacity-0'}" />
+										<span class="truncate">{value}</span>
+									</Command.Item>
+								{/each}
+							</Command.Group>
+						{/if}
 					</Command.List>
 				</Command.Root>
 			</Popover.Content>

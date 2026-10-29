@@ -8,6 +8,8 @@ import {
 	sanitizeTag,
 	sortTagsForPicker,
 	suggestLocalTag,
+	tagFamilies,
+	tagFamily,
 	tagsMatchingDigest,
 } from "../../../src/lib/image-versions";
 
@@ -132,5 +134,31 @@ describe("sortTagsForPicker", () => {
 		expect(
 			sortTagsForPicker(["1.2", "latest", "1.10", "1.10-rc1", "alpine", "2.0"]),
 		).toEqual(["latest", "alpine", "2.0", "1.10", "1.10-rc1", "1.2"]);
+	});
+});
+
+describe("tagFamily", () => {
+	test("groups tags by what they are", () => {
+		expect(tagFamily("18.6")).toBe("Releases");
+		expect(tagFamily("v1.24.3")).toBe("Releases");
+		expect(tagFamily("1.25-nightly")).toBe("Prereleases");
+		expect(tagFamily("1.25.0-rc1")).toBe("Prereleases");
+		expect(tagFamily("18.6-alpine3.22")).toBe("*-alpine*");
+		expect(tagFamily("1.24.3-rootless")).toBe("*-rootless");
+		expect(tagFamily("pr-123")).toBe("pr-*");
+		expect(tagFamily("sha-4f2a9c1")).toBe("sha-*");
+		expect(tagFamily("canary-42")).toBe("canary-*");
+		expect(tagFamily("latest")).toBe("Named");
+		expect(tagFamily("alpine")).toBe("Named");
+	});
+
+	test("counts each family, biggest first", () => {
+		expect(
+			tagFamilies(["pr-1", "pr-2", "pr-3", "1.0", "1.1", "latest"]),
+		).toEqual([
+			{ count: 3, family: "pr-*" },
+			{ count: 2, family: "Releases" },
+			{ count: 1, family: "Named" },
+		]);
 	});
 });

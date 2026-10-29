@@ -220,3 +220,43 @@ export function sortTagsForPicker(names: string[]): string[] {
 	versions.sort((a, b) => compareVersions(b, a) || a.tag.localeCompare(b.tag));
 	return [...floating, ...versions.map((version) => version.tag)];
 }
+
+/** A tag with its numbers and commit hashes turned into `*`, so `pr-123` and `pr-456` read alike. */
+function tagPattern(value: string): string {
+	return value
+		.replaceAll(/(?<![a-z])[0-9a-f]{7,40}(?![a-z0-9])/gi, "*")
+		.replaceAll(/\d+(?:\.\d+)*/g, "*");
+}
+
+/**
+ * The family a tag belongs to in a picker's filters: `Releases` and
+ * `Prereleases` for plain version tags, `*-<variant>` for a version with a
+ * suffix (`18.6-alpine3.22` is `*-alpine*`), the tag's pattern for anything
+ * numbered (`pr-123` is `pr-*`), and `Named` for every other floating tag
+ * (`latest`, `stable`).
+ */
+export function tagFamily(tag: string): string {
+	const parsed = parseVersionTag(tag);
+	if (parsed) {
+		if (parsed.prerelease) {
+			return "Prereleases";
+		}
+		return parsed.suffix ? `*-${tagPattern(parsed.suffix)}` : "Releases";
+	}
+	const pattern = tagPattern(tag);
+	return pattern.includes("*") ? pattern : "Named";
+}
+
+/** Every family `tags` fall into with how many tags each holds, biggest first. */
+export function tagFamilies(
+	tags: string[],
+): { count: number; family: string }[] {
+	const counts = new Map<string, number>();
+	for (const tag of tags) {
+		const family = tagFamily(tag);
+		counts.set(family, (counts.get(family) ?? 0) + 1);
+	}
+	return [...counts]
+		.map(([family, count]) => ({ count, family }))
+		.toSorted((a, b) => b.count - a.count || a.family.localeCompare(b.family));
+}
