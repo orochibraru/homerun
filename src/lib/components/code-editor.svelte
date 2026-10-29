@@ -62,6 +62,8 @@
 	}
 	.code textarea,
 	.code textarea:focus {
+		font: inherit;
+		letter-spacing: inherit;
 		background: transparent;
 		border: 0;
 		border-radius: 0;
