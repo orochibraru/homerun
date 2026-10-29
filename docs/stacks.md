@@ -63,13 +63,18 @@ as a dependency graph rather than a flat list, in either view:
   `*_BROKER`…) — so `POSTGRES_DB=vortex` no longer counts as pointing at a
   service slugged `vortex`, only a value that actually names it as a host does.
   A dependency recorded by **Link to** (including a dependency-only link with no
-  env vars, see [Env vars](env-vars.md)) counts too. Each substack gets its own
-  indented section. A dependency outside the stack is marked "in `<stack>`" or
-  "no stack" rather than expanded further; one already shown elsewhere in the
-  tree is marked "shown above" instead of repeating its own dependencies a
-  second time. Right-click a service for **Unlink from**, a submenu of what it
-  points at or depends on; confirming lists the exact env vars it will remove
-  (none for a dependency-only link) and drops the recorded dependency.
+  env vars, see [Env vars](env-vars.md)) counts too. Everything sits in one
+  panel, one compact row per service with a status dot, its slug and its image
+  tag, dependencies joined to their parent by guide lines. Each substack gets a
+  header row with its service count and health ("all running", "2 of 3
+  running"); click its arrow to fold it, or **Collapse all** above the list. A
+  dependency outside the substack, or one already drawn elsewhere in the tree,
+  shows as a one-line "uses" reference linking to it (with its stack's name when
+  it lives elsewhere) instead of being drawn twice, and a service several others
+  depend on says "used by" whom. Right-click a service for **Unlink from**, a
+  submenu of what it points at or depends on; confirming lists the exact env
+  vars it will remove (none for a dependency-only link) and drops the recorded
+  dependency.
 - **Card view** is an architecture diagram: each service is a card, consumers
   sit above what they use with an arrow between them, substacks are nested
   boxes, and anything the stack depends on outside itself sits in its own
@@ -89,10 +94,10 @@ as a dependency graph rather than a flat list, in either view:
 Searching drops the graph for a flat, filtered list, since a matched subset
 doesn't have a tree worth drawing. The **Architecture** switch next to the view
 toggle turns the graph off entirely, for a plain list or plain cards; your
-browser remembers the choice. On a phone, each tree row puts the full name on
-its own line, with the slug, labels and status underneath. A service's own
-Overview tab has the same **Connections** panel and unlink button, just for that
-one service, see [Deploying](deploying.md).
+browser remembers the choice. On a phone, each tree row keeps only the status
+dot, icon and name. A service's own Overview tab has the same **Connections**
+panel and unlink button, just for that one service, see
+[Deploying](deploying.md).
 
 `/stacks` has a search box, a sort (the same ones as services, plus **Most
 services**), a list/card view toggle, and a pager once you have more than a

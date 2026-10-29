@@ -23,7 +23,7 @@
 			href: resolve("/(protected)/stacks/[stackId]", { stackId: stack.id }),
 			icon: Server,
 			id: "services",
-			label: `Services (${data.services.filter((svc) => !svc.previewParentId).length})`,
+			label: `Services (${data.serviceCount})`,
 		},
 		{
 			href: resolve("/(protected)/stacks/[stackId]/monitoring", {

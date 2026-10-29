@@ -249,13 +249,15 @@
 				Back to the list
 			</Button>
 		</div>
-		<ServiceTree
-			nodes={tree.forest}
-			previews={tree.previews}
-			services={tree.services}
-			stackNames={new Map()}
-			wrapper={treeWrapper}
-		/>
+		<div class="panel overflow-hidden rounded-xl">
+			<ServiceTree
+				nodes={tree.forest}
+				previews={tree.previews}
+				services={tree.services}
+				stackNames={new Map()}
+				wrapper={treeWrapper}
+			/>
+		</div>
 	{:else}
 		<EntityToolbar
 			sorts={BASE_SORTS}

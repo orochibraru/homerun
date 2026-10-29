@@ -294,27 +294,32 @@ subtree (this stack plus every nested one, `descendantIds`), not a flat list:
 page, over every member service plus anything they reference outside the tree,
 using the shared `toGraphService` row mapper (also behind `/services`' own tree
 view, see below) and a `links` map (`linkKeys` per dependency) that feeds the
-right-click **Unlink from** submenu. List view (`ServiceTree`, one instance per
-substack section via `flattenStackTree`) nests each service's dependencies
-underneath it, marking one outside the tree "in `<stack>`"/"no stack" and one
-already expanded elsewhere "shown above" rather than repeating its subtree. Card
-view (`StackDiagram`) is the same graph as nested boxes per substack, arrows
-drawn from consumer to dependency with `src/lib/diagram-edges.ts`'s `edgePaths`
-(measures each rendered card, spreads same-side arrows so none overlap, redrawn
-on `ResizeObserver`), everything outside the tree collected into one "Outside
-this stack" box, hovering a card highlighting only its own edges. A card can
-also be dragged (pointer events, not native drag-and-drop) to an arbitrary
-offset kept in `localStorage` per stack (`homerun:stack-diagram:<stackId>`,
-`stack-diagram.svelte`'s `offsets`/`saveOffsets`), so a manually untangled
-layout survives a reload; **Reset layout** clears it and re-measures. Both views
-fall back to `EntityList`'s flat search results the moment the search box has
-anything in it, since a matched-and-filtered set has no tree structure worth
-drawing, and the same fallback is one click away without searching: the
-**Architecture** switch next to the view toggle (`localStorage`
-`homerun:stack-architecture`, default on) turns the graph off in favour of a
-plain list/cards, same as `EntityList`'s search fallback. `ServiceTree`'s own
-row (`service-tree.svelte`) stacks vertically below `sm:` (icon+name, then
-slug/labels/status wrapped underneath) rather than the single-line desktop row.
+right-click **Unlink from** submenu. List view is one `panel`: per substack
+section (`flattenStackTree`) a collapsible header row (count, "all running"/"n
+of m running", fold state is page-local `collapsed`, hiding nested substacks
+too) and one `ServiceTree`, which flattens the forest into fixed-height rows
+with guide rails (`depth` prop indents a substack's rows). A dependency outside
+the section or already expanded (`repeat`) is a one-line "uses" reference chip,
+not a second full row; previews/canaries/environments are child rows; a service
+with more than one dependent names them ("used by", from the page's `usedBy`
+map). Status is a `StatusDot` (`SERVICE_STATUS_CONFIG[...].dot`), not a badge
+per row. Card view (`StackDiagram`) is the same graph as nested boxes per
+substack, arrows drawn from consumer to dependency with
+`src/lib/diagram-edges.ts`'s `edgePaths` (measures each rendered card, spreads
+same-side arrows so none overlap, redrawn on `ResizeObserver`), everything
+outside the tree collected into one "Outside this stack" box, hovering a card
+highlighting only its own edges. A card can also be dragged (pointer events, not
+native drag-and-drop) to an arbitrary offset kept in `localStorage` per stack
+(`homerun:stack-diagram:<stackId>`, `stack-diagram.svelte`'s
+`offsets`/`saveOffsets`), so a manually untangled layout survives a reload;
+**Reset layout** clears it and re-measures. Both views fall back to
+`EntityList`'s flat search results the moment the search box has anything in it,
+since a matched-and-filtered set has no tree structure worth drawing, and the
+same fallback is one click away without searching: the **Architecture** switch
+next to the view toggle (`localStorage` `homerun:stack-architecture`, default
+on) turns the graph off in favour of a plain list/cards, same as `EntityList`'s
+search fallback. `ServiceTree`'s rows stay one line on every width, dropping the
+slug below `sm:`, the image below `md:` and "used by" below `lg:`.
 Right-clicking a service in either view also offers **Unlink from**
 (`ServiceContextMenu`'s `onunlink`/`UnlinkDialog`, the same `unlink` action
 Overview's Connections panel uses, see above), and right-clicking a stack row on

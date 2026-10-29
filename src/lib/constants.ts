@@ -100,45 +100,52 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
 
 export const SERVICE_STATUS_CONFIG: Record<
 	ContainerStatus,
-	{ label: string; class: string; icon: typeof CheckCircle }
+	{ label: string; class: string; dot: string; icon: typeof CheckCircle }
 > = {
 	failed: {
 		class: "border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400",
+		dot: "bg-red-500",
 		icon: XCircle,
 		label: "Failed",
 	},
 	missing: {
 		class:
 			"border-violet-500/25 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+		dot: "bg-violet-500",
 		icon: Ghost,
 		label: "Missing",
 	},
 	pending: {
 		class:
 			"border-slate-500/25 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+		dot: "bg-slate-400",
 		icon: Clock,
 		label: "Pending",
 	},
 	pulling: {
 		class: "border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+		dot: "bg-blue-500",
 		icon: Loader2,
 		label: "Pulling",
 	},
 	running: {
 		class:
 			"border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+		dot: "bg-emerald-500",
 		icon: CheckCircle,
 		label: "Running",
 	},
 	starting: {
 		class:
 			"border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+		dot: "bg-amber-500",
 		icon: Loader2,
 		label: "Starting",
 	},
 	stopped: {
 		class:
 			"border-orange-500/25 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+		dot: "bg-orange-500",
 		icon: XCircle,
 		label: "Stopped",
 	},
