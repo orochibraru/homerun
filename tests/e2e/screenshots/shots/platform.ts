@@ -471,19 +471,19 @@ export const shots: ShotModule = {
 		},
 		{
 			doc: "/stacks/:id (list view)",
-			expect: /Each service lists what it connects to underneath/,
+			expect: /\d+\s+services?\s+·/,
 			name: "stacks-graph-list",
 			path: (seeded) => `/stacks/${seeded.stackId}`,
 		},
 		{
 			doc: "/stacks/:id (card view)",
-			expect: /Each service lists what it connects to underneath/,
+			expect: /\d+\s+services?\s+·/,
 			name: "stacks-graph-cards",
 			path: (seeded) => `/stacks/${seeded.stackId}`,
 			prepare: async (page) => {
 				await page.getByRole("button", { name: "Card view" }).click();
 				await expect(
-					page.getByText("Arrows point from a service to what it connects to."),
+					page.getByRole("button", { name: "Zoom in" }),
 				).toBeVisible();
 			},
 		},
