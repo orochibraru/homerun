@@ -12179,6 +12179,370 @@
 				"tags": ["Monitoring"]
 			}
 		},
+		"/monitoring/traces": {
+			"get": {
+				"description": "Homerun's own traces (the worker's jobs: deploys, builds, backups, and CI pipeline runs filed under no service), newest first. Paginated like the other lists.",
+				"operationId": "get_monitoring_traces",
+				"parameters": [
+					{
+						"description": "Only traces with a span whose name, or whose trace id, matches",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "error to keep only traces with a failed span",
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "started, duration or spans, with a leading - for descending (default -started)",
+						"in": "query",
+						"name": "sort",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Traces per page (default 50, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"durationMs": {
+												"description": "From the first span's start to the last span's end",
+												"type": "number"
+											},
+											"errorCount": {
+												"description": "Spans that failed",
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"rootName": {
+												"description": "The parentless span's name, else the earliest span's",
+												"type": "string"
+											},
+											"serviceName": {
+												"description": "The root span's service.name",
+												"type": "string"
+											},
+											"spanCount": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"startTime": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"traceId": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"durationMs",
+											"errorCount",
+											"rootName",
+											"serviceName",
+											"spanCount",
+											"startTime",
+											"traceId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of traces"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List Homerun's own traces",
+				"tags": ["Traces"]
+			}
+		},
+		"/monitoring/traces/{traceId}": {
+			"get": {
+				"description": "Every span of one of Homerun's own traces; a job's log lines are its spans' events.",
+				"operationId": "get_monitoring_traces__traceId_",
+				"parameters": [
+					{
+						"description": "The trace id, 32 hex digits",
+						"in": "path",
+						"name": "traceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"spans": {
+											"description": "Every span of the trace, from every service that took part, in start order (the first 5000)",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"attributes": {
+														"additionalProperties": {},
+														"propertyNames": {
+															"type": "string"
+														},
+														"type": "object"
+													},
+													"durationMs": {
+														"type": "number"
+													},
+													"endTime": {
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													"events": {
+														"description": "What happened during the span; a Homerun job's log lines land here",
+														"items": {
+															"additionalProperties": false,
+															"properties": {
+																"attributes": {
+																	"additionalProperties": {},
+																	"propertyNames": {
+																		"type": "string"
+																	},
+																	"type": "object"
+																},
+																"name": {
+																	"type": "string"
+																},
+																"time": {
+																	"type": "string"
+																}
+															},
+															"required": ["attributes", "name", "time"],
+															"type": "object"
+														},
+														"type": "array"
+													},
+													"kind": {
+														"description": "OpenTelemetry span kind: 0 unspecified, 1 internal, 2 server, 3 client, 4 producer, 5 consumer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"name": {
+														"type": "string"
+													},
+													"parentSpanId": {
+														"type": ["string", "null"]
+													},
+													"resourceAttributes": {
+														"additionalProperties": {},
+														"propertyNames": {
+															"type": "string"
+														},
+														"type": "object"
+													},
+													"serviceId": {
+														"description": "The Homerun service, null for Homerun's own spans",
+														"type": ["string", "null"]
+													},
+													"serviceName": {
+														"type": "string"
+													},
+													"spanId": {
+														"type": "string"
+													},
+													"startTime": {
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													"statusCode": {
+														"description": "0 unset, 1 ok, 2 error",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"statusMessage": {
+														"type": ["string", "null"]
+													},
+													"traceId": {
+														"type": "string"
+													}
+												},
+												"required": [
+													"attributes",
+													"durationMs",
+													"endTime",
+													"events",
+													"kind",
+													"name",
+													"parentSpanId",
+													"resourceAttributes",
+													"serviceId",
+													"serviceName",
+													"spanId",
+													"startTime",
+													"statusCode",
+													"statusMessage",
+													"traceId"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"traceId": {
+											"type": "string"
+										}
+									},
+									"required": ["spans", "traceId"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The trace"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Trace not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get one of Homerun's own traces",
+				"tags": ["Traces"]
+			}
+		},
 		"/notification-channels": {
 			"get": {
 				"description": "Every notification channel, in one response.",
@@ -28781,6 +29145,163 @@
 				"tags": ["Services"]
 			}
 		},
+		"/services/{serviceId}/app-errors": {
+			"get": {
+				"description": "Homerun's own warnings and errors about the service (failed deploys, health checks, its container), newest first: the Errors tab's App errors.",
+				"operationId": "get_services__serviceId__app_errors",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "How many entries, 1 to 500 (default 50)",
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"id": {
+												"type": "string"
+											},
+											"level": {
+												"enum": ["warn", "error"],
+												"type": "string"
+											},
+											"message": {
+												"type": "string"
+											},
+											"metadata": {
+												"type": ["string", "null"]
+											},
+											"scope": {
+												"type": ["string", "null"]
+											},
+											"serviceId": {
+												"type": ["string", "null"]
+											}
+										},
+										"required": [
+											"createdAt",
+											"id",
+											"level",
+											"message",
+											"metadata",
+											"scope",
+											"serviceId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The entries"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "An invalid limit"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's app errors",
+				"tags": ["Errors"]
+			}
+		},
 		"/services/{serviceId}/channels": {
 			"get": {
 				"description": "A git service's release channel settings: the canary branch, the tag pattern that deploys stable, and its canary service.",
@@ -36799,6 +37320,406 @@
 				],
 				"summary": "Stop a service's container",
 				"tags": ["Services"]
+			}
+		},
+		"/services/{serviceId}/traces": {
+			"get": {
+				"description": "The service's OpenTelemetry traces (when its traces are on), newest first. Paginated like the other lists: the body is the page, x-total-count, x-page and x-per-page carry the rest.",
+				"operationId": "get_services__serviceId__traces",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Only traces with a span whose name, or whose trace id, matches",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "error to keep only traces with a failed span",
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "started, duration or spans, with a leading - for descending (default -started)",
+						"in": "query",
+						"name": "sort",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Traces per page (default 50, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"durationMs": {
+												"description": "From the first span's start to the last span's end",
+												"type": "number"
+											},
+											"errorCount": {
+												"description": "Spans that failed",
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"rootName": {
+												"description": "The parentless span's name, else the earliest span's",
+												"type": "string"
+											},
+											"serviceName": {
+												"description": "The root span's service.name",
+												"type": "string"
+											},
+											"spanCount": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"startTime": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"traceId": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"durationMs",
+											"errorCount",
+											"rootName",
+											"serviceName",
+											"spanCount",
+											"startTime",
+											"traceId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of traces"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's traces",
+				"tags": ["Traces"]
+			}
+		},
+		"/services/{serviceId}/traces/{traceId}": {
+			"get": {
+				"description": "Every span of one of the service's traces, the spans other services added to it included.",
+				"operationId": "get_services__serviceId__traces__traceId_",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "The trace id, 32 hex digits",
+						"in": "path",
+						"name": "traceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"spans": {
+											"description": "Every span of the trace, from every service that took part, in start order (the first 5000)",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"attributes": {
+														"additionalProperties": {},
+														"propertyNames": {
+															"type": "string"
+														},
+														"type": "object"
+													},
+													"durationMs": {
+														"type": "number"
+													},
+													"endTime": {
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													"events": {
+														"description": "What happened during the span; a Homerun job's log lines land here",
+														"items": {
+															"additionalProperties": false,
+															"properties": {
+																"attributes": {
+																	"additionalProperties": {},
+																	"propertyNames": {
+																		"type": "string"
+																	},
+																	"type": "object"
+																},
+																"name": {
+																	"type": "string"
+																},
+																"time": {
+																	"type": "string"
+																}
+															},
+															"required": ["attributes", "name", "time"],
+															"type": "object"
+														},
+														"type": "array"
+													},
+													"kind": {
+														"description": "OpenTelemetry span kind: 0 unspecified, 1 internal, 2 server, 3 client, 4 producer, 5 consumer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"name": {
+														"type": "string"
+													},
+													"parentSpanId": {
+														"type": ["string", "null"]
+													},
+													"resourceAttributes": {
+														"additionalProperties": {},
+														"propertyNames": {
+															"type": "string"
+														},
+														"type": "object"
+													},
+													"serviceId": {
+														"description": "The Homerun service, null for Homerun's own spans",
+														"type": ["string", "null"]
+													},
+													"serviceName": {
+														"type": "string"
+													},
+													"spanId": {
+														"type": "string"
+													},
+													"startTime": {
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													"statusCode": {
+														"description": "0 unset, 1 ok, 2 error",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"statusMessage": {
+														"type": ["string", "null"]
+													},
+													"traceId": {
+														"type": "string"
+													}
+												},
+												"required": [
+													"attributes",
+													"durationMs",
+													"endTime",
+													"events",
+													"kind",
+													"name",
+													"parentSpanId",
+													"resourceAttributes",
+													"serviceId",
+													"serviceName",
+													"spanId",
+													"startTime",
+													"statusCode",
+													"statusMessage",
+													"traceId"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"traceId": {
+											"type": "string"
+										}
+									},
+									"required": ["spans", "traceId"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The trace"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service or trace not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a service's trace",
+				"tags": ["Traces"]
 			}
 		},
 		"/services/{serviceId}/version": {

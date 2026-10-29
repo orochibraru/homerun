@@ -298,6 +298,19 @@ The MCP server exposes the same as `list_errors` and `get_error`, and the CLI as
 `homerun services errors resolve <id> <issueId>`. `GET`, `POST` (multipart) and
 `DELETE ?release=` on `/api/v1/services/:id/sourcemaps` list, upload and delete
 a release's [source maps](error-tracking.md#source-maps).
+`GET /api/v1/services/:id/app-errors` (`?limit=`, 1 to 500, default 50) is what
+Homerun itself logged about the service, the Errors tab's Application errors,
+and MCP's `list_app_errors`.
+
+### Traces
+
+`GET /api/v1/services/:id/traces` lists a service's OpenTelemetry traces (`q`
+matches a span name or trace id, `status=error` keeps failed ones, `sort` by
+`started`, `duration` or `spans`, and the usual paging) and
+`GET /api/v1/services/:id/traces/:traceId` returns every span of one.
+`GET /api/v1/monitoring/traces` and `GET /api/v1/monitoring/traces/:traceId` do
+the same for Homerun's own traces, its worker's jobs. The MCP server exposes
+them as `list_traces` and `get_trace` (no `serviceId` for Homerun's own).
 
 ### Backups and jobs
 

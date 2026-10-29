@@ -814,6 +814,46 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/monitoring/traces": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List Homerun's own traces
+		 * @description Homerun's own traces (the worker's jobs: deploys, builds, backups, and CI pipeline runs filed under no service), newest first. Paginated like the other lists.
+		 */
+		get: operations["get_monitoring_traces"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/monitoring/traces/{traceId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get one of Homerun's own traces
+		 * @description Every span of one of Homerun's own traces; a job's log lines are its spans' events.
+		 */
+		get: operations["get_monitoring_traces__traceId_"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/notification-channels": {
 		parameters: {
 			query?: never;
@@ -1631,6 +1671,26 @@ export interface paths {
 		patch: operations["patch_services__serviceId_"];
 		trace?: never;
 	};
+	"/services/{serviceId}/app-errors": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's app errors
+		 * @description Homerun's own warnings and errors about the service (failed deploys, health checks, its container), newest first: the Errors tab's App errors.
+		 */
+		get: operations["get_services__serviceId__app_errors"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/channels": {
 		parameters: {
 			query?: never;
@@ -2102,6 +2162,46 @@ export interface paths {
 		put?: never;
 		/** Stop a service's container */
 		post: operations["post_services__serviceId__stop"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/traces": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's traces
+		 * @description The service's OpenTelemetry traces (when its traces are on), newest first. Paginated like the other lists: the body is the page, x-total-count, x-page and x-per-page carry the rest.
+		 */
+		get: operations["get_services__serviceId__traces"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/traces/{traceId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a service's trace
+		 * @description Every span of one of the service's traces, the spans other services added to it included.
+		 */
+		get: operations["get_services__serviceId__traces__traceId_"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -8444,6 +8544,169 @@ export interface operations {
 					"application/json": {
 						/** @example You don't have permission to change Services. */
 						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_monitoring_traces: {
+		parameters: {
+			query?: {
+				/** @description Only traces with a span whose name, or whose trace id, matches */
+				q?: string;
+				/** @description error to keep only traces with a failed span */
+				status?: string;
+				/** @description started, duration or spans, with a leading - for descending (default -started) */
+				sort?: string;
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Traces per page (default 50, max 200) */
+				perPage?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of traces */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description From the first span's start to the last span's end */
+						durationMs: number;
+						/** @description Spans that failed */
+						errorCount: number;
+						/** @description The parentless span's name, else the earliest span's */
+						rootName: string;
+						/** @description The root span's service.name */
+						serviceName: string;
+						spanCount: number;
+						/** @description ISO 8601 timestamp */
+						startTime: string;
+						traceId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_monitoring_traces__traceId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The trace id, 32 hex digits */
+				traceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The trace */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Every span of the trace, from every service that took part, in start order (the first 5000) */
+						spans: {
+							attributes: {
+								[key: string]: unknown;
+							};
+							durationMs: number;
+							/** @description ISO 8601 timestamp */
+							endTime: string;
+							/** @description What happened during the span; a Homerun job's log lines land here */
+							events: {
+								attributes: {
+									[key: string]: unknown;
+								};
+								name: string;
+								time: string;
+							}[];
+							/** @description OpenTelemetry span kind: 0 unspecified, 1 internal, 2 server, 3 client, 4 producer, 5 consumer */
+							kind: number;
+							name: string;
+							parentSpanId: string | null;
+							resourceAttributes: {
+								[key: string]: unknown;
+							};
+							/** @description The Homerun service, null for Homerun's own spans */
+							serviceId: string | null;
+							serviceName: string;
+							spanId: string;
+							/** @description ISO 8601 timestamp */
+							startTime: string;
+							/** @description 0 unset, 1 ok, 2 error */
+							statusCode: number;
+							statusMessage: string | null;
+							traceId: string;
+						}[];
+						traceId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Trace not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};
@@ -15719,6 +15982,90 @@ export interface operations {
 			};
 		};
 	};
+	get_services__serviceId__app_errors: {
+		parameters: {
+			query?: {
+				/** @description How many entries, 1 to 500 (default 50) */
+				limit?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The entries */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						id: string;
+						/** @enum {string} */
+						level: "warn" | "error";
+						message: string;
+						metadata: string | null;
+						scope: string | null;
+						serviceId: string | null;
+					}[];
+				};
+			};
+			/** @description An invalid limit */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	get_services__serviceId__channels: {
 		parameters: {
 			query?: never;
@@ -19153,6 +19500,186 @@ export interface operations {
 				};
 			};
 			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__traces: {
+		parameters: {
+			query?: {
+				/** @description Only traces with a span whose name, or whose trace id, matches */
+				q?: string;
+				/** @description error to keep only traces with a failed span */
+				status?: string;
+				/** @description started, duration or spans, with a leading - for descending (default -started) */
+				sort?: string;
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Traces per page (default 50, max 200) */
+				perPage?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of traces */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description From the first span's start to the last span's end */
+						durationMs: number;
+						/** @description Spans that failed */
+						errorCount: number;
+						/** @description The parentless span's name, else the earliest span's */
+						rootName: string;
+						/** @description The root span's service.name */
+						serviceName: string;
+						spanCount: number;
+						/** @description ISO 8601 timestamp */
+						startTime: string;
+						traceId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Service not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__traces__traceId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+				/** @description The trace id, 32 hex digits */
+				traceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The trace */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Every span of the trace, from every service that took part, in start order (the first 5000) */
+						spans: {
+							attributes: {
+								[key: string]: unknown;
+							};
+							durationMs: number;
+							/** @description ISO 8601 timestamp */
+							endTime: string;
+							/** @description What happened during the span; a Homerun job's log lines land here */
+							events: {
+								attributes: {
+									[key: string]: unknown;
+								};
+								name: string;
+								time: string;
+							}[];
+							/** @description OpenTelemetry span kind: 0 unspecified, 1 internal, 2 server, 3 client, 4 producer, 5 consumer */
+							kind: number;
+							name: string;
+							parentSpanId: string | null;
+							resourceAttributes: {
+								[key: string]: unknown;
+							};
+							/** @description The Homerun service, null for Homerun's own spans */
+							serviceId: string | null;
+							serviceName: string;
+							spanId: string;
+							/** @description ISO 8601 timestamp */
+							startTime: string;
+							/** @description 0 unset, 1 ok, 2 error */
+							statusCode: number;
+							statusMessage: string | null;
+							traceId: string;
+						}[];
+						traceId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Service or trace not found */
 			404: {
 				headers: {
 					[name: string]: unknown;

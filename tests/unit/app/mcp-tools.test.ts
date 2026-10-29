@@ -77,6 +77,9 @@ describe("MCP tools", () => {
 			"mount_volume",
 			"list_backup_destinations",
 			"update_error",
+			"list_traces",
+			"get_trace",
+			"list_app_errors",
 			"list_status_pages",
 			"list_notifications",
 			"delete_notification_channel",
@@ -118,6 +121,20 @@ describe("MCP tools", () => {
 				method: "GET",
 				path: "/services/svc/logs/history?limit=50&q=panic&regex=true",
 			},
+		],
+		["list_traces", {}, { method: "GET", path: "/monitoring/traces" }],
+		[
+			"list_traces",
+			{ errorsOnly: true, q: "GET /", serviceId: "svc", sort: "slowest" },
+			{
+				method: "GET",
+				path: "/services/svc/traces?q=GET+%2F&status=error&sort=-duration",
+			},
+		],
+		[
+			"list_app_errors",
+			{ limit: 5, serviceId: "svc" },
+			{ method: "GET", path: "/services/svc/app-errors?limit=5" },
 		],
 		[
 			"list_revisions",
@@ -600,6 +617,43 @@ describe("MCP tools", () => {
 			expect(calls).toEqual([expected]);
 		});
 	}
+
+	test("list_traces carries the total, get_trace states each resource once", async () => {
+		const { call, calls } = harness(({ path }) =>
+			path.endsWith("/traces")
+				? Response.json([{ traceId: "t1" }], {
+						headers: { "x-page": "1", "x-total-count": "7" },
+					})
+				: Response.json({
+						spans: [
+							{ name: "a", resourceAttributes: { r: 1 }, serviceName: "web" },
+							{ name: "b", resourceAttributes: { r: 1 }, serviceName: "web" },
+						],
+						traceId: "t1",
+					}),
+		);
+		const list = await call("list_traces", { serviceId: "svc" });
+		expect(JSON.parse(list.content[0]?.text ?? "")).toEqual({
+			page: 1,
+			total: 7,
+			traces: [{ traceId: "t1" }],
+		});
+		const trace = await call("get_trace", { traceId: "t1" });
+		expect(JSON.parse(trace.content[0]?.text ?? "")).toEqual({
+			resources: { web: { r: 1 } },
+			spans: [
+				{ name: "a", serviceName: "web" },
+				{ name: "b", serviceName: "web" },
+			],
+			traceId: "t1",
+		});
+		await call("get_trace", { serviceId: "svc", traceId: "t1" });
+		expect(calls.map((c) => c.path)).toEqual([
+			"/services/svc/traces",
+			"/monitoring/traces/t1",
+			"/services/svc/traces/t1",
+		]);
+	});
 
 	test("a refused API call comes back as a tool error with its status", async () => {
 		const { call } = harness(() =>
