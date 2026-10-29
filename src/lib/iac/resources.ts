@@ -84,6 +84,11 @@ const off = { default: false };
 const on = { default: true };
 const templated = { description: "Required unless template_id is set." };
 
+const exposedPortFields = [
+	attr("port", "int", required),
+	attr("protocol", "string", { default: "tcp" }),
+];
+
 const publishedPortFields = [
 	attr("containerPort", "int", required),
 	attr("hostPort", "int", required),
@@ -163,6 +168,7 @@ const serviceAttributes: IacAttribute[] = [
 			"Domains with a path whose prefix is stripped before the request reaches the container (/api/v2 arrives as /v2).",
 	}),
 	attr("httpCacheTtl", "int"),
+	attr("exposedPorts", "objects", { fields: exposedPortFields }),
 	attr("publishedPorts", "objects", { fields: publishedPortFields }),
 	attr("customSslCert", "string", secret),
 	attr("customSslKey", "string", secret),

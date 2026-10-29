@@ -261,6 +261,7 @@ export function singleDraft(input: SingleDraftInput): ComposeServiceDraft {
 		name: input.name,
 		networkMode: "bridge",
 		portProtocol: "tcp",
+		exposedPorts: [],
 		privileged: input.privileged ?? false,
 		publishedPorts: [],
 		registry: input.registry ?? null,

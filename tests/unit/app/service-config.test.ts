@@ -69,6 +69,7 @@ function row(overrides: Partial<Service> = {}): Service {
 		primaryDomain: null,
 		privileged: false,
 		runAsUser: null,
+		exposedPorts: [{ port: 8088, protocol: "tcp" }],
 		publishedPorts: [{ containerPort: 5432, hostPort: 5432, protocol: "tcp" }],
 		pullPolicy: "always",
 		registryPasswordEnc: "password-ciphertext",
@@ -104,6 +105,9 @@ describe("serviceConfig", () => {
 		const config = serviceConfig(row(), extras);
 		expect(serviceConfigSchema.safeParse(config).success).toBe(true);
 		expect(config.networking.publishedPorts).toHaveLength(1);
+		expect(config.networking.exposedPorts).toEqual([
+			{ port: 8088, protocol: "tcp" },
+		]);
 		expect(config.volumes[0]?.containerPath).toBe("/var/lib/postgresql/data");
 		expect(config.settings.stack).toEqual({ id: "stack-1", name: "App" });
 		expect(config.source.git).toBeNull();

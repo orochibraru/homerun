@@ -871,6 +871,18 @@ verified live: with `NetworkingConfig` correctly omitted, the container comes up
 with `NetworkSettings.Networks: { host: {...} }` and no IP address, as expected
 for real host networking.
 
+## Exposed ports (`service.exposedPorts`, Networking tab)
+
+Compose's `expose:`: `{ port, protocol }` entries added to the container's
+`ExposedPorts` next to `containerPort` and the published ports, nothing else. No
+`PortBindings`, no rollout change, and swarm ignores it (`ContainerSpec` has no
+`ExposedPorts`). It's metadata on purpose: every service already reaches every
+port of a sibling by slug on the shared and stack networks, so a "can't reach
+port X" report is a network-membership problem (typically a socket-holding CI
+runner whose job containers sit on their own network), not a missing expose.
+Compose import fills it from `expose:` minus the main port; revisions snapshot
+it like `publishedPorts`.
+
 ## Docker Cleanup (`src/lib/services/docker/cleanup.ts`, `(protected)/docker-cleanup/`)
 
 Admin-only (nav item, Administration category, `adminOnly: true`), host-wide

@@ -325,6 +325,7 @@ function workloadSpec(ctx: WorkerSpecContext, workload: WorkloadPlan) {
 		image: "",
 		memoryLimitMb: svc.memoryLimitMb,
 		portProtocol: svc.portProtocol,
+		exposedPorts: svc.exposedPorts,
 		publishedPorts: svc.publishedPorts,
 		restartPolicy: svc.restartPolicy,
 		runtime,

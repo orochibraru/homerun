@@ -46,7 +46,7 @@ import type {
 	PipelineRateRule,
 	PipelineStatus,
 } from "#lib/pipelines/types.js";
-import type { PublishedPort } from "#lib/published-ports.js";
+import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
 import type { Preset, SurfaceStyle } from "#lib/surfaces.js";
@@ -1349,6 +1349,10 @@ export const service = pgTable(
 		portProtocol: text("port_protocol")
 			.$type<"tcp" | "udp" | "both">()
 			.default("tcp")
+			.notNull(),
+		exposedPorts: jsonb("exposed_ports")
+			.$type<ExposedPort[]>()
+			.default([])
 			.notNull(),
 		publishedPorts: jsonb("published_ports")
 			.$type<PublishedPort[]>()

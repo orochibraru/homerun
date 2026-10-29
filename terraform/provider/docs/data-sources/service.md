@@ -76,6 +76,8 @@ data "homerun_service" "example" {
 - `env_files` (List of String)
 - `env_vars` (Map of String, Sensitive)
 - `environment_name` (String)
+- `exposed_ports` (List of Object) See the nested schema for `exposed_ports`
+  below.
 - `git_bake_file` (String)
 - `git_build_context` (String)
 - `git_build_method` (String)
@@ -166,6 +168,16 @@ data "homerun_service" "example" {
 - `update_trial_enabled` (Boolean) Image services: try each update in a
   throwaway container before notifying it.
 - `uptime_enabled` (Boolean)
+
+### Nested schema for `exposed_ports`
+
+Required:
+
+- `port` (Number)
+
+Optional:
+
+- `protocol` (String) Defaults to `"tcp"`.
 
 ### Nested schema for `published_ports`
 

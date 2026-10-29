@@ -20,6 +20,7 @@ function source(
 		entrypoint: null,
 		envFiles: [],
 		envVars: { A: "1", B: "2" },
+		exposedPorts: [],
 		labels: {},
 		memoryLimitMb: 512,
 		networkMode: "bridge",
@@ -46,6 +47,16 @@ describe("snapshotRevisionConfig", () => {
 		]);
 		expect(changedRevisionConfigFields(service, snapshot)).toEqual([
 			"publishedPorts",
+		]);
+	});
+
+	test("records exposed ports as a copy, and a rollback compares them", () => {
+		const service = source({ exposedPorts: [{ port: 8088, protocol: "tcp" }] });
+		const snapshot = snapshotRevisionConfig(service);
+		service.exposedPorts[0].port = 8089;
+		expect(snapshot.exposedPorts).toEqual([{ port: 8088, protocol: "tcp" }]);
+		expect(changedRevisionConfigFields(service, snapshot)).toEqual([
+			"exposedPorts",
 		]);
 	});
 

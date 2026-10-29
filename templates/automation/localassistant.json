@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "LocalAssistant",
+	"description": "Blinds, heat pumps, radiators, cameras and energy on one page : Tuya blinds over the LAN, Mitsubishi heat pumps, Zigbee2MQTT, Shelly and Linky meters, routines, and AI apps over MCP. Talks to devices on your network directly, so deploy it on a node in the same LAN. The first visit asks for the setup code printed in the logs.",
+	"image": "orochibraru/localassistant",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "localassistant.svg",
+	"tags": ["home", "automation", "smart-home", "iot", "energy"],
+	"websiteUrl": "https://github.com/orochibraru/localassistant",
+	"sourceUrl": "https://github.com/orochibraru/localassistant",
+	"envVars": {
+		"AUTH_SECRET": "{{secret}}",
+		"ORIGIN": "{{url}}"
+	},
+	"volumes": ["/data"]
+}

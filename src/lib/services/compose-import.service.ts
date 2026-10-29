@@ -206,6 +206,7 @@ class ComposeImportServiceClass {
 			name: draft.name,
 			networkMode: draft.networkMode,
 			portProtocol: draft.portProtocol,
+			exposedPorts: draft.exposedPorts,
 			publishedPorts: draft.publishedPorts,
 			stackId,
 			restartPolicy: draft.restartPolicy,

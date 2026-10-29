@@ -6,6 +6,7 @@
 
 	import CacheSection from "./cache-section.svelte";
 	import DomainsSection from "./domains-section.svelte";
+	import ExposedPortsSection from "./exposed-ports-section.svelte";
 	import NetworkSection from "./network-section.svelte";
 	import PublishedPortsSection from "./published-ports-section.svelte";
 	import SslSection from "./ssl-section.svelte";
@@ -48,5 +49,8 @@
 	{/if}
 	{#if visibleIn(data.uiMode, "service/networking#published-ports") || svc.publishedPorts.length > 0}
 		<PublishedPortsSection {svc} />
+	{/if}
+	{#if visibleIn(data.uiMode, "service/networking#exposed-ports") || svc.exposedPorts.length > 0}
+		<ExposedPortsSection {svc} />
 	{/if}
 </div>

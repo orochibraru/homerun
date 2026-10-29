@@ -26,6 +26,18 @@ export const errorResponse = z.object({
 	issues: z.unknown().optional(),
 });
 
+const exposedPortsField = z
+	.array(
+		z.object({
+			port: z.number().int(),
+			protocol: z.enum(["tcp", "udp"]),
+		}),
+	)
+	.meta({
+		description:
+			"Extra container ports declared exposed (Docker's ExposedPorts), metadata only",
+	});
+
 const publishedPortsField = z
 	.array(
 		z.object({
@@ -166,6 +178,7 @@ export const serviceResponse = z.object({
 	name: z.string(),
 	networkMode: z.enum(["bridge", "host"]),
 	portProtocol: z.enum(["tcp", "udp", "both"]),
+	exposedPorts: exposedPortsField,
 	publishedPorts: publishedPortsField,
 	domainPorts: z.record(z.string(), z.number().int()).meta({
 		description:

@@ -131,6 +131,39 @@ services:
 		]);
 	});
 
+	test("declares every other expose: port, not the main one", () => {
+		const services = parseComposeFile(`
+services:
+  runner:
+    image: gitea/act_runner
+    expose:
+      - "2375"
+      - "8088"
+      - "8088"
+      - "9000/udp"
+  web:
+    image: nginx
+    ports:
+      - "8080:80"
+    expose:
+      - "9090"
+  host:
+    image: nginx
+    network_mode: host
+    expose:
+      - "9090"
+`).services;
+		expect(services.find((s) => s.key === "runner")?.exposedPorts).toEqual([
+			{ port: 8088, protocol: "tcp" },
+			{ port: 9000, protocol: "udp" },
+		]);
+		expect(services.find((s) => s.key === "web")?.exposedPorts).toEqual([
+			{ port: 9090, protocol: "tcp" },
+		]);
+		expect(services.find((s) => s.key === "host")?.exposedPorts).toEqual([]);
+		expect(api?.exposedPorts).toEqual([]);
+	});
+
 	test("maps the command instead of warning about it", () => {
 		expect(api?.command).toEqual(["./serve"]);
 		expect(api?.warnings.some((w) => w.startsWith("command:"))).toBe(false);

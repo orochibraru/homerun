@@ -109,6 +109,29 @@ a published `1194/udp` plus a DNS record for `vpn.example.com`.
 - [Compose import](compose-import.md) publishes a compose file's `ports:` except
   the main one, which goes through Traefik.
 
+## Exposed ports
+
+**Exposed ports** is the `expose:` key of a compose file: a list of other ports
+the container listens on (container port, TCP or UDP), written to Docker's
+`ExposedPorts`. It documents them, and they show up in `docker inspect` and to
+tools that read that list. It opens nothing: services on the same network
+already reach every port of each other by slug, and nothing outside the network
+reaches any of them without a [published port](#published-ports).
+
+When something can't reach a port, exposing it won't help. The usual cause is
+that the client sits on another Docker network. A CI runner holding the Docker
+socket is the classic case: the job containers it starts land on the runner's
+own network, not the stack's, so they can't reach the runner's cache server.
+Point the runner at the stack's network (`homerun-stack-<stack id>`, Gitea's
+`act_runner` takes it as `container.network`, with `cache.host` set to the
+runner's slug) instead of publishing the port on the host.
+
+- Host networking has nothing to expose.
+- [Swarm mode](swarm-mode.md) ignores the list: Docker has no per-service
+  equivalent.
+- [Compose import](compose-import.md) declares every `expose:` port except the
+  main one.
+
 ## Domains & SSL
 
 Traefik serves every domain over HTTP/3 as well as HTTP/1.1 and HTTP/2: it

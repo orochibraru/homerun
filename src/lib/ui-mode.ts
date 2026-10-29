@@ -59,6 +59,7 @@ const ADVANCED_ONLY: ReadonlySet<string> = new Set([
 	"service/networking#network-mode",
 	"service/networking#http-cache",
 	"service/networking#published-ports",
+	"service/networking#exposed-ports",
 	"service/security#blocked-paths",
 	"service/security#login-wall-paths",
 	"services/new#build",

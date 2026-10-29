@@ -39,6 +39,12 @@ export const serviceConfigSchema = z.object({
 		portProtocol: z.enum(["tcp", "udp", "both"]),
 		primaryDomain: z.string().nullable(),
 		stripPathDomains: z.array(z.string()),
+		exposedPorts: z.array(
+			z.object({
+				port: z.number().int(),
+				protocol: z.enum(["tcp", "udp"]),
+			}),
+		),
 		publishedPorts: z.array(
 			z.object({
 				containerPort: z.number().int(),
@@ -205,6 +211,7 @@ export function serviceConfig(
 			portProtocol: row.portProtocol,
 			primaryDomain: row.primaryDomain,
 			stripPathDomains: row.stripPathDomains,
+			exposedPorts: row.exposedPorts,
 			publishedPorts: row.publishedPorts,
 		},
 		runtime: {

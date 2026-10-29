@@ -1,7 +1,7 @@
 import type { BuildMethod } from "#lib/build-methods.js";
 import type { BuildServerChoice } from "#lib/build-servers.js";
 import type { AuthPathsMode } from "#lib/path-patterns.js";
-import type { PublishedPort } from "#lib/published-ports.js";
+import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
 import type { Service } from "#lib/server/db/schema.js";
 import type { runtimeOptionsFrom } from "#lib/service-runtime.js";
 import { swarmPlacementFrom } from "#lib/swarm-placement.js";
@@ -57,6 +57,7 @@ export interface NewServiceInput {
 	name: string;
 	networkMode?: "bridge" | "host";
 	portProtocol?: "tcp" | "udp" | "both";
+	exposedPorts?: ExposedPort[];
 	publishedPorts?: PublishedPort[];
 	category?: string | null;
 	icon?: string | null;
@@ -167,6 +168,7 @@ export type ServiceUpdateInput = Partial<
 		| "httpCacheTtl"
 		| "icon"
 		| "domainPorts"
+		| "exposedPorts"
 		| "publishedPorts"
 		| "stackId"
 		| "pullPolicy"

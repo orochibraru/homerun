@@ -192,6 +192,17 @@ const serviceSettingsFields = {
 	previewAuthRequired: z.boolean().optional(),
 	previewDefaultDomain: z.boolean().optional(),
 	previewDomainTemplate: z.string().trim().toLowerCase().nullable().optional(),
+	exposedPorts: z
+		.array(
+			z.object({
+				port: portNumber,
+				protocol: z.enum(["tcp", "udp"]).default("tcp"),
+			}),
+		)
+		.optional()
+		.describe(
+			"Extra container ports declared exposed (Docker's ExposedPorts, compose's expose:). Metadata only: services on the shared network reach every port anyway.",
+		),
 	publishedPorts: z
 		.array(
 			z.object({

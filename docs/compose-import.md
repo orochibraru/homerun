@@ -11,7 +11,8 @@ resolved, plus a warning for anything it had to drop.
 What maps across: `image`, `environment` (both the map and the `KEY=VALUE` list
 form), `ports`/`expose` (the first port becomes the container port Traefik
 routes to, every other host mapping becomes a
-[published port](networking.md#published-ports), port ranges are skipped),
+[published port](networking.md#published-ports) and every other `expose:` port
+an [exposed port](networking.md#exposed-ports), port ranges are skipped),
 `restart`, `volumes` (named volumes and absolute bind mounts, in both the short
 `src:dst:ro` and long `type:/source:` forms), `depends_on`,
 `network_mode: host`, `container_name`, `deploy.resources.limits.cpus`/`memory`,
