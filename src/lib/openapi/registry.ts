@@ -38,6 +38,7 @@ import {
 	templateResponse,
 } from "./schemas";
 import { serviceRoutes } from "./services";
+import { traceRoutes } from "./traces";
 
 export interface ResponseDef {
 	description: string;
@@ -583,6 +584,7 @@ export const routes: RouteDef[] = [
 	...channelRoutes,
 	...dependencyRoutes,
 	...errorRoutes,
+	...traceRoutes,
 	...backupRoutes,
 	...redirectRoutes,
 	...iacRoutes,

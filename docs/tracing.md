@@ -104,3 +104,11 @@ none.
 A job's page under **Scheduling** shows its trace too, one per attempt, as the
 same waterfall, with a link to the full trace, and so does each cron job run's
 **Traces** tab (see [Scheduling](scheduling.md#cron-jobs)).
+
+## From the API and MCP
+
+A service's traces are `GET /api/v1/services/{serviceId}/traces` and
+`GET /api/v1/services/{serviceId}/traces/{traceId}`; Homerun's own are
+`GET /api/v1/monitoring/traces` and `GET /api/v1/monitoring/traces/{traceId}`
+(see [API and CLI](api-and-cli.md#traces)). An AI agent connected to the
+[MCP server](mcp.md) reads both with `list_traces` and `get_trace`.

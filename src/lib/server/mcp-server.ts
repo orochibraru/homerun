@@ -14,6 +14,7 @@ import { registerCronJobTools } from "#lib/server/mcp-cron-job-tools.js";
 import { registerEnvironmentTools } from "#lib/server/mcp-environment-tools.js";
 import { registerNotificationTools } from "#lib/server/mcp-notification-tools.js";
 import { registerObjectStorageTools } from "#lib/server/mcp-object-storage-tools.js";
+import { registerObservabilityTools } from "#lib/server/mcp-observability-tools.js";
 import { registerPreviewTools } from "#lib/server/mcp-preview-tools.js";
 import {
 	mergeEnvChanges,
@@ -41,7 +42,7 @@ export type { ApiCall } from "#lib/server/mcp-tool-kit.js";
 
 const INSTRUCTIONS = `Homerun is a self-hosted PaaS: each service is one Docker container or swarm service, routed by Traefik at its domains.
 
-To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs (what the running container wrote lately), search_service_logs (every line kept across deploys, searchable by text, time and revision), list_deployments (each deploy attempt's error and log, the place to look when a deploy failed) and list_revisions (each revision's health and the reason it failed). When the app reports errors through a Sentry SDK, list_errors and get_error give the grouped exceptions with stack traces and links to the source, and update_error resolves or ignores one. Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network. list_notifications is the caller's in-app feed (failed or rolled back deploys, unhealthy revisions, app errors, resource alerts), a quick way to see what went wrong lately.
+To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs (what the running container wrote lately), search_service_logs (every line kept across deploys, searchable by text, time and revision), list_deployments (each deploy attempt's error and log, the place to look when a deploy failed) and list_revisions (each revision's health and the reason it failed). When the app reports errors through a Sentry SDK, list_errors and get_error give the grouped exceptions with stack traces and links to the source, and update_error resolves or ignores one; list_app_errors is what Homerun itself logged about the service (failed deploys, health checks). When the service sends OpenTelemetry traces, list_traces and get_trace show each request's spans, timings and failures; without a serviceId they read Homerun's own traces, one per worker job (deploy, build, backup), with the job's log lines as span events. Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network. list_notifications is the caller's in-app feed (failed or rolled back deploys, unhealthy revisions, app errors, resource alerts), a quick way to see what went wrong lately.
 
 Stacks group services: list_stacks, get_stack, create_stack and update_stack. create_service makes a service from scratch or from a template (list_templates, get_template); it isn't deployed until deploy_service. A service can have environments (list_environments, create_environment, update_environment: copies running another ref, each one a service of its own), pull request previews (list_previews, get_preview, and promote_preview deploys a healthy preview's image to its service) and release channels (get_release_channels, set_release_channels). list_scans, get_scan and scan_service cover its image's vulnerability scans.
 
@@ -664,6 +665,7 @@ export function createHomerunMcpServer(api: ApiCall): McpServer {
 	registerLogHistoryTools(server, api);
 	registerDependencyTools(server, api);
 	registerErrorTools(server, api);
+	registerObservabilityTools(server, api);
 	registerInstanceTools(server, api);
 	registerBackupTools(server, api);
 	registerRedirectTools(server, api);
