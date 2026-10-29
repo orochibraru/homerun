@@ -80,6 +80,7 @@ plaintext
 Portainer
 portless
 prek
+(?i)prereleases?
 PRs
 qBittorrent
 Railpack
