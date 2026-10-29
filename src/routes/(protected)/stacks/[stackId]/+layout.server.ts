@@ -3,7 +3,7 @@ import { error } from "@sveltejs/kit";
 
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
-import { ancestorIds } from "#lib/stack-tree.js";
+import { ancestorIds, descendantIds } from "#lib/stack-tree.js";
 
 export const load = async ({ params, parent }) => {
 	await parent();
@@ -19,6 +19,13 @@ export const load = async ({ params, parent }) => {
 	const parents = new Map(all.map((s) => [s.id, s.parentId]));
 	const names = new Map(all.map((s) => [s.id, s.name]));
 
+	const nested = await Promise.all(
+		descendantIds(stack.id, all).map((id) => ServiceDTO.listByStack(id)),
+	);
+	const serviceCount = [services, ...nested]
+		.flat()
+		.filter((s) => !s.toJSON().previewParentId).length;
+
 	const ancestors = ancestorIds(stack.id, parents)
 		.reverse()
 		.map((id) => ({ id, name: names.get(id) ?? "?" }));
@@ -31,6 +38,7 @@ export const load = async ({ params, parent }) => {
 				label: a.name,
 			})),
 		],
+		serviceCount,
 		services: services.map((s) => s.toJSON()),
 		stack: stack.toJSON(),
 	};

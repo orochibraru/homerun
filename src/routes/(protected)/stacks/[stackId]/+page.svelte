@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import {
+		ChevronRight,
 		FolderInput,
 		FolderKanban,
 		LayoutGrid,
@@ -16,6 +17,7 @@
 	import ServiceTree from "#lib/components/service-tree.svelte";
 	import StackDiagram from "#lib/components/stack-diagram.svelte";
 	import StackMoveDialog from "#lib/components/stack-move-dialog.svelte";
+	import StatusDot from "#lib/components/status-dot.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
@@ -104,6 +106,55 @@
 		),
 	);
 
+	const usedBy = $derived.by(() => {
+		const map = new Map<string, string[]>();
+		for (const [from, targets] of depMap) {
+			const name = services.get(from)?.name;
+			if (!name) {
+				continue;
+			}
+			for (const target of targets) {
+				map.set(target, [...(map.get(target) ?? []), name]);
+			}
+		}
+		return map;
+	});
+	const running = $derived(
+		members.filter((svc) => svc.currentStatus === "running").length,
+	);
+	const parents = $derived(
+		new Map(data.graph.stacks.map((s) => [s.id, s.parentId])),
+	);
+	let collapsed = $state<string[]>([]);
+
+	/** Opens or folds one substack's rows. */
+	function toggle(id: string) {
+		collapsed = collapsed.includes(id)
+			? collapsed.filter((c) => c !== id)
+			: [...collapsed, id];
+	}
+
+	/** Whether a substack sits under a folded one, so its header is hidden too. */
+	function hidden(id: string): boolean {
+		let parent = parents.get(id);
+		while (parent && parent !== stack.id) {
+			if (collapsed.includes(parent)) {
+				return true;
+			}
+			parent = parents.get(parent);
+		}
+		return false;
+	}
+
+	/** How many of a stack's own services exist and how many of them run. */
+	function healthOf(stackId: string) {
+		const own = members.filter((svc) => svc.stackId === stackId);
+		return {
+			running: own.filter((svc) => svc.currentStatus === "running").length,
+			total: own.length,
+		};
+	}
+
 	function forestFor(stackId: string) {
 		return dependencyForest(
 			members.filter((svc) => svc.stackId === stackId).map((svc) => svc.id),
@@ -139,16 +190,39 @@
 			bind:value={search}
 		/>
 		<p
-			class="text-text-subtle hidden text-xs sm:block {architecture
-				? ''
-				: 'sm:hidden'}"
+			class="text-text-muted hidden text-xs sm:block"
+			title="{view.current === 'card'
+				? 'Arrows point from a service to what it connects to.'
+				: 'Each service lists what it connects to underneath.'} Connections are read from env vars pointing at another service's slug."
 		>
-			{view.current === "card"
-				? "Arrows point from a service to what it connects to."
-				: "Each service lists what it connects to underneath."}
-			Connections are read from env vars pointing at another service's slug.
+			{members.length}
+			{members.length === 1 ? "service" : "services"} ·
+			<span
+				class={running === members.length
+					? "text-emerald-600 dark:text-emerald-400"
+					: "text-amber-600 dark:text-amber-400"}
+			>
+				{running === members.length
+					? "all running"
+					: `${running} of ${members.length} running`}
+			</span>
 		</p>
 		<div class="ml-auto flex items-center gap-3">
+			{#if architecture && !search.trim() && view.current !== "card" && sections.length > 1}
+				<Button
+					onclick={() =>
+						(collapsed =
+							collapsed.length > 0
+								? []
+								: sections
+										.map(({ stack: s }) => s.id)
+										.filter((id) => id !== stack.id))}
+					size="sm"
+					variant="ghost"
+				>
+					{collapsed.length > 0 ? "Expand all" : "Collapse all"}
+				</Button>
+			{/if}
 			<label class="text-text-muted flex items-center gap-2 text-xs">
 				<Switch checked={architecture} onCheckedChange={setArchitecture} />
 				Architecture
@@ -202,56 +276,107 @@
 			{wrapper}
 		/>
 	{:else}
-		<div class="space-y-6">
+		<div class="panel overflow-hidden rounded-xl">
 			{#each sections as { depth, stack: section } (section.id)}
-				{@const forest = forestFor(section.id)}
-				<section
-					class="ml-[calc(var(--depth)*0.75rem)] sm:ml-[calc(var(--depth)*1.5rem)]"
-					style:--depth={depth}
-				>
+				{#if !hidden(section.id)}
+					{@const forest = forestFor(section.id)}
+					{@const health = healthOf(section.id)}
 					{#if section.id !== stack.id}
-						<ContextMenu.Root>
-							<ContextMenu.Trigger class="mb-2 inline-block">
-								<a
-									class="eyebrow text-text-muted hover:text-text flex items-center gap-2"
-									href={resolve("/(protected)/stacks/[stackId]", {
-										stackId: section.id,
-									})}
+						<div
+							class="bg-surface-2/60 border-border/60 flex h-11 items-center gap-2 border-y pr-4 pl-[calc(0.5rem+var(--depth)*1.25rem)] first:border-t-0"
+							style:--depth={depth - 1}
+						>
+							<button
+								class="text-text-subtle hover:text-text grid size-6 shrink-0 place-items-center rounded-md transition-colors"
+								aria-expanded={!collapsed.includes(section.id)}
+								aria-label={collapsed.includes(section.id)
+									? `Expand ${section.name}`
+									: `Collapse ${section.name}`}
+								onclick={() => toggle(section.id)}
+								type="button"
+							>
+								<ChevronRight
+									class="size-4 transition-transform {collapsed.includes(
+										section.id,
+									)
+										? ''
+										: 'rotate-90'}"
+								/>
+							</button>
+							<ContextMenu.Root>
+								<ContextMenu.Trigger class="min-w-0">
+									<a
+										class="text-text hover:text-accent flex min-w-0 items-center gap-2.5 text-sm font-semibold transition-colors"
+										href={resolve("/(protected)/stacks/[stackId]", {
+											stackId: section.id,
+										})}
+									>
+										<TemplateIcon
+											class="size-6 shrink-0 rounded-md"
+											fallback={FolderKanban}
+											icon={section.icon ?? null}
+										/>
+										<span class="truncate">{section.name}</span>
+									</a>
+								</ContextMenu.Trigger>
+								<ContextMenu.Content class="w-48">
+									<ContextMenu.Item
+										onSelect={() => {
+											moveTarget = section;
+											moveOpen = true;
+										}}
+									>
+										<FolderInput class="size-4" />
+										Move into…
+									</ContextMenu.Item>
+								</ContextMenu.Content>
+							</ContextMenu.Root>
+							<span class="text-text-subtle shrink-0 text-xs">
+								{health.total}
+								{health.total === 1 ? "service" : "services"}
+							</span>
+							<span class="flex-1"></span>
+							{#if health.total > 0}
+								<span
+									class="flex shrink-0 items-center gap-2 text-xs {health.running ===
+									health.total
+										? 'text-emerald-600 dark:text-emerald-400'
+										: 'text-amber-600 dark:text-amber-400'}"
 								>
-									<TemplateIcon
-										class="size-7 rounded-md"
-										fallback={FolderKanban}
-										icon={section.icon ?? null}
+									<StatusDot
+										status={health.running === health.total
+											? "running"
+											: "stopped"}
 									/>
-									{section.name}
-								</a>
-							</ContextMenu.Trigger>
-							<ContextMenu.Content class="w-48">
-								<ContextMenu.Item
-									onSelect={() => {
-										moveTarget = section;
-										moveOpen = true;
-									}}
-								>
-									<FolderInput class="size-4" />
-									Move into…
-								</ContextMenu.Item>
-							</ContextMenu.Content>
-						</ContextMenu.Root>
+									{health.running === health.total
+										? "all running"
+										: `${health.running} of ${health.total} running`}
+								</span>
+							{/if}
+						</div>
 					{/if}
-					{#if forest.length > 0}
-						<ServiceTree
-							localStackIds={new Set([section.id])}
-							nodes={forest}
-							{previews}
-							{services}
-							{stackNames}
-							{wrapper}
-						/>
-					{:else if !sections.some(({ stack: s }) => s.parentId === section.id)}
-						<p class="text-text-subtle text-xs">No services yet.</p>
+					{#if !collapsed.includes(section.id)}
+						{#if forest.length > 0}
+							<ServiceTree
+								depth={section.id === stack.id ? 0 : depth}
+								localStackIds={new Set([section.id])}
+								nodes={forest}
+								{previews}
+								{services}
+								{stackNames}
+								{usedBy}
+								{wrapper}
+							/>
+						{:else if !sections.some(({ stack: s }) => s.parentId === section.id)}
+							<p
+								class="text-text-subtle py-3 pr-4 pl-[calc(2.75rem+var(--depth)*1.25rem)] text-xs"
+								style:--depth={depth - 1}
+							>
+								No services yet.
+							</p>
+						{/if}
 					{/if}
-				</section>
+				{/if}
 			{/each}
 		</div>
 	{/if}
