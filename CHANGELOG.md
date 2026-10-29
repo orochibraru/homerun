@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.75](https://github.com/orochibraru/homerun/compare/v1.0.74...v1.0.75) (2026-10-29)
+
+### Features
+
+* **networking:** exposed ports, plus a LocalAssistant template (#175) ([d1b428b](https://github.com/orochibraru/homerun/commit/d1b428b168f1a979ce11e9445a489690e89a2957))
+* **stacks:** redesign stack services tree and fix code editor caret drift (#174) ([12fc78f](https://github.com/orochibraru/homerun/commit/12fc78fda5bbdcd3c8da28f597aed60ebb599e23))
+* service overview summary, mount editing with volume duplication, update trial stepper and update scope (#171) ([1e4c810](https://github.com/orochibraru/homerun/commit/1e4c810607096e8fdd6f08dceb66d5ea59538ab8))
+* **services:** suggest registry tags in the image Tag field (#170) ([d3a0896](https://github.com/orochibraru/homerun/commit/d3a089623e0b6cddd4c3881bdaf37eadd4346918))
+* deploy stepper with clone/scan/health phases, and a smarter new-service wizard (#168) ([b799bac](https://github.com/orochibraru/homerun/commit/b799bac9f1241814f78f819e8838e49f399c6b17))
+
+### Bug Fixes
+
+* explain git provider auth failures, searchable volume picker, cleaner command palette and service tree cards (#173) ([a53f584](https://github.com/orochibraru/homerun/commit/a53f58406c91c16285cb4f5c8ab794f648f29389))
+* run update trials on the swarm network for swarm services and recreate a missing stack network (#172) ([619f025](https://github.com/orochibraru/homerun/commit/619f0251d489ea6335897a64a5d79369ee7edd01))
+
 ## [1.0.74](https://github.com/orochibraru/homerun/compare/v1.0.73...v1.0.74) (2026-10-28)
 
 ### Features
