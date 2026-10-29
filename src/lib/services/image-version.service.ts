@@ -30,6 +30,7 @@ import {
 } from "./docker/healthcheck.ts";
 import { stackNetworkName } from "./docker/networks.ts";
 import { listeningHealthcheck } from "./docker/readiness.ts";
+import { swarmNetworkName } from "./docker/swarm.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { updateAvailableMessage } from "./notification-messages.ts";
 
@@ -552,6 +553,7 @@ class ImageVersionServiceClass {
 			.delete(`v1/containers/${name}`, { force: "1" })
 			.catch(() => undefined);
 		const healthcheck = this.#trialHealthcheck(svc);
+		const networks = await this.#trialNetworks(svc);
 		const created = await DockerService.worker.post<{ id: string }>(
 			"v1/containers",
 			{
@@ -562,7 +564,7 @@ class ImageVersionServiceClass {
 						([key, value]) => `${key}=${value}`,
 					),
 					HostConfig: {
-						NetworkMode: config.docker.networkName,
+						NetworkMode: networks[0],
 						RestartPolicy: { Name: "no" },
 					},
 					Healthcheck: healthcheck,
@@ -570,7 +572,7 @@ class ImageVersionServiceClass {
 					Labels: { [TRIAL_LABEL]: svc.id },
 					NetworkingConfig: {
 						EndpointsConfig: Object.fromEntries(
-							this.#trialNetworks(svc).map((network) => [network, {}]),
+							networks.map((network) => [network, {}]),
 						),
 					},
 				},
@@ -605,11 +607,24 @@ class ImageVersionServiceClass {
 		}
 	}
 
-	/** The networks a trial container joins: Homerun's shared one and the service's stack network, so it resolves the services it talks to. */
-	#trialNetworks(svc: ServiceDTO): string[] {
-		return svc.stackId
-			? [config.docker.networkName, stackNetworkName(svc.stackId)]
-			: [config.docker.networkName];
+	/**
+	 * The networks a trial container joins, so it resolves the services it
+	 * talks to the way the live one does: a swarm service's attachable
+	 * overlay, where its stack's services answer to their slugs, otherwise
+	 * Homerun's shared network and the service's stack network. The stack
+	 * network is created first when missing, since only a standalone deploy
+	 * creates it and Docker Cleanup prunes it once empty.
+	 */
+	async #trialNetworks(svc: ServiceDTO): Promise<string[]> {
+		if (svc.swarmServiceId) {
+			return [swarmNetworkName(), config.docker.networkName];
+		}
+		await DockerService.ensureSharedNetwork();
+		if (!svc.stackId) {
+			return [config.docker.networkName];
+		}
+		await DockerService.ensureStackNetwork(svc.stackId);
+		return [config.docker.networkName, stackNetworkName(svc.stackId)];
 	}
 
 	/** The readiness check a real deploy would gate traffic on: the service's own healthcheck command, else a wait for its port to listen, none when healthchecks are off. */
