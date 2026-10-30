@@ -2,13 +2,13 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { KeyRound, Server, TerminalSquare } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 	import { onMount } from "svelte";
 
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { title } from "#lib/store/title.js";
 	import { saveToast } from "#lib/toast.js";
 

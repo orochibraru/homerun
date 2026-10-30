@@ -6,15 +6,15 @@
 		ShieldOff,
 		Smartphone,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { toast } from "svelte-sonner";
 	import { renderSVG } from "uqr";
 
 	import { authClient } from "#lib/auth-client.js";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import PasswordField from "#lib/components/password-field.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { totpSecretFromUri } from "#lib/security-policy.js";
 	import { toastError } from "#lib/toast.js";
 

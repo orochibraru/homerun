@@ -2,6 +2,7 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { LockKeyhole, ShieldX } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -9,7 +10,6 @@
 	import BrandLogo from "#lib/components/brand-logo.svelte";
 	import BrandMark from "#lib/components/brand-mark.svelte";
 	import PoweredBy from "#lib/components/powered-by.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { brandAccentStyle } from "#lib/error-pages.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";

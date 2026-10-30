@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import { untrack } from "svelte";
-
-	import CheckBox from "#lib/components/check-box.svelte";
-	import PanelHeader from "#lib/components/panel-header.svelte";
-	import SaveButton from "#lib/components/save-button.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Label } from "#lib/components/ui/label/index.js";
+	import { Input } from "@orochibraru/ui/input";
+	import { Label } from "@orochibraru/ui/label";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+	import { untrack } from "svelte";
+
+	import CheckBox from "#lib/components/check-box.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { settings } from "#lib/settings.js";
 	import { saveToast } from "#lib/toast.js";
 

@@ -13,15 +13,15 @@
 		Trash2,
 		Webhook,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Switch } from "@orochibraru/ui/switch";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Switch } from "#lib/components/ui/switch/index.js";
 	import { NOTIFICATION_EVENTS } from "#lib/notification-events.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

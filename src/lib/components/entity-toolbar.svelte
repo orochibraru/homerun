@@ -20,21 +20,21 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { ArrowDownUp, Check, ListFilter, Search, X } from "@lucide/svelte";
-	import type { Snippet } from "svelte";
-
-	import { Button } from "#lib/components/ui/button/index.js";
+	import { Button } from "@orochibraru/ui/button";
 	import {
 		Drawer,
 		DrawerContent,
 		DrawerHeader,
 		DrawerTitle,
-	} from "#lib/components/ui/drawer/index.js";
+	} from "@orochibraru/ui/drawer";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+	import type { Snippet } from "svelte";
+
 	import type { SortOption } from "#lib/list-sorts.js";
 
 	interface Props {

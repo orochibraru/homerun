@@ -2,20 +2,20 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Settings } from "@lucide/svelte";
-	import { tick } from "svelte";
-
-	import { labelClass as label } from "#lib/components/form-styles.js";
-	import ScheduleField from "#lib/components/schedule-field.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Dialog from "#lib/components/ui/dialog/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
+	import { Button } from "@orochibraru/ui/button";
+	import * as Dialog from "@orochibraru/ui/dialog";
+	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
-	import { Switch } from "#lib/components/ui/switch/index.js";
+	} from "@orochibraru/ui/select";
+	import { Switch } from "@orochibraru/ui/switch";
+	import { tick } from "svelte";
+
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ScheduleField from "#lib/components/schedule-field.svelte";
 	import { describeSchedule, scheduleFromCron } from "#lib/schedule.js";
 	import { enhanceToast } from "#lib/toast.js";
 

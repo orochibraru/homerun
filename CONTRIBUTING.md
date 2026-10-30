@@ -204,7 +204,7 @@ new files up on its next build and seeds them at boot.
   identical everywhere it appears in that template: use it for a password the
   env and the command have to agree on, as the cache templates do.
 
-`bun --config=bunfig.unit.toml test tests/unit/app/builtin-templates.test.ts`
+`bun --conditions=svelte --config=bunfig.unit.toml test tests/unit/app/builtin-templates.test.ts`
 validates every file, resolves every link and checks every icon exists; it runs
 as part of `bun run test`.
 

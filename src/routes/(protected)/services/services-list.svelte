@@ -11,6 +11,7 @@
 		Plus,
 		Server,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import type { Snippet } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -29,7 +30,6 @@
 	import ServiceTree from "#lib/components/service-tree.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "#lib/constants.js";
 	import { ListSelection } from "#lib/list-selection.svelte.js";

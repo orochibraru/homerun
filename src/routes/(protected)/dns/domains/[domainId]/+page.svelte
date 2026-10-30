@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Globe, Pencil, Plus, Server, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { untrack } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	import DomainLinkFields from "../../domain-link-fields.svelte";

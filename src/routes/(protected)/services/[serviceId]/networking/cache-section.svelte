@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Zap } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	interface Props {

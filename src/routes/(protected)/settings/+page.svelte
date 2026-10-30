@@ -2,6 +2,13 @@
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { page } from "$app/state";
 	import { TriangleAlert } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -9,13 +16,6 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import UiModePicker from "#lib/components/ui-mode-picker.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import { getReleaseStatus } from "#lib/remote/self-update.remote.js";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import { RESOURCE_KINDS, RESOURCE_LABELS } from "#lib/resource-thresholds.js";

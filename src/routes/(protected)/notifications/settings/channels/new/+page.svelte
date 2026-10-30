@@ -2,12 +2,12 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
 	import { onMount } from "svelte";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import type { NotificationChannelKind } from "#lib/types.js";

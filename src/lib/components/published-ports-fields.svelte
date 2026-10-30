@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { Plus, X } from "@lucide/svelte";
-
-	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+
+	import { labelClass as label } from "#lib/components/form-styles.js";
 	import type { PublishedPort } from "#lib/published-ports.js";
 
 	interface Props {

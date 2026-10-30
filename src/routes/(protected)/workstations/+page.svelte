@@ -2,6 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { LaptopMinimal, Layers, Play, Plus, Square } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
@@ -10,7 +11,6 @@
 		type FilterGroup,
 	} from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { BASE_SORTS } from "#lib/list-sorts.js";
 	import { getWorkstationUsage } from "#lib/remote/stats.remote.js";

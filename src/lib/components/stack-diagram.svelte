@@ -8,11 +8,11 @@
 		RotateCcw,
 		Server,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { type Snippet, tick } from "svelte";
 
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { type Box, edgePaths } from "#lib/diagram-edges.js";
 	import {
 		dependencyLayers,

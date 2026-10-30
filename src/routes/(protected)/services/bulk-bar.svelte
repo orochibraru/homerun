@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { SubmitFunction } from "$app/forms";
 	import { Play, RotateCw, Square, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { ListSelection } from "#lib/list-selection.svelte.js";
 	import {
 		plural,

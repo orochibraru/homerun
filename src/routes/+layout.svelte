@@ -3,12 +3,12 @@
 	import { browser } from "$app/env";
 	import { onNavigate } from "$app/navigation";
 	import { page } from "$app/state";
+	import { Toaster } from "@orochibraru/ui/sonner";
 	import { ModeWatcher } from "mode-watcher";
 	import { onMount } from "svelte";
 
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import TopLoadingBar from "#lib/components/top-loading-bar.svelte";
-	import { Toaster } from "#lib/components/ui/sonner/index.js";
 	import { title } from "#lib/store/title.js";
 
 	const { children } = $props();

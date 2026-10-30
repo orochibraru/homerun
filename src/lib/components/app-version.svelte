@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { ArrowUpCircle, CircleCheck, RefreshCw } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as Dialog from "@orochibraru/ui/dialog";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onDestroy } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -7,9 +10,6 @@
 	import AsyncBlock from "#lib/components/async-block.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Dialog from "#lib/components/ui/dialog/index.js";
-	import { Spinner } from "#lib/components/ui/spinner/index.js";
 	import UpdateBlockers from "#lib/components/update-blockers.svelte";
 	import {
 		checkForUpdates,

@@ -3,6 +3,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, History, RotateCcw, ScrollText } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import CheckBox from "#lib/components/check-box.svelte";
@@ -11,7 +12,6 @@
 	import EnvironmentBadge from "#lib/components/environment-badge.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { historyTriggerLabel } from "#lib/deploy-trigger.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";

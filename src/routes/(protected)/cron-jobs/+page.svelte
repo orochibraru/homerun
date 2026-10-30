@@ -9,6 +9,7 @@
 		Terminal,
 		Trash2,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -20,7 +21,6 @@
 	import Pagination from "#lib/components/pagination.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { describeCronJobTarget } from "#lib/cron-job-script.js";
 	import { timeAgo } from "#lib/formatting.js";

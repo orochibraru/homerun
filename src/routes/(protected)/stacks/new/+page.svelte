@@ -2,13 +2,13 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Check } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { stackScopedSlug } from "#lib/slug.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

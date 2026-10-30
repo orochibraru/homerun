@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown, X } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import * as Command from "@orochibraru/ui/command";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Popover from "@orochibraru/ui/popover";
+	import * as Select from "@orochibraru/ui/select";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import * as Command from "#lib/components/ui/command/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Popover from "#lib/components/ui/popover/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import type {
 		StatusPagePick,
 		StatusPageServiceOption,

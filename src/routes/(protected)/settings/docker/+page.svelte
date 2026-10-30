@@ -2,6 +2,13 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
 	import { onMount, untrack } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
@@ -9,13 +16,6 @@
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import { BLOCK_SEVERITY_OPTIONS } from "#lib/image-scan.js";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import {

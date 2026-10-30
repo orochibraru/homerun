@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Check } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import WorkstationFields from "#lib/components/workstation-fields.svelte";
 	import WorkstationPresetHead from "#lib/components/workstation-preset-head.svelte";
 	import { title } from "#lib/store/title.js";

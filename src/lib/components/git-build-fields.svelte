@@ -1,5 +1,12 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
 
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
 	import {
@@ -8,13 +15,6 @@
 		DEFAULT_BAKE_TARGET,
 	} from "#lib/build-methods.js";
 	import BuildMethodField from "#lib/components/build-method-field.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 
 	interface Props {
 		buildCacheRegistryId?: string;

@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { ChevronRight, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { modeStorageKey, setMode } from "mode-watcher";
 	import { type Component, onMount, tick } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
@@ -17,7 +18,6 @@
 	import MobileTabBar from "#lib/components/mobile-tab-bar.svelte";
 	import NotificationBell from "#lib/components/notification-bell.svelte";
 	import ProfileMenu from "#lib/components/profile-menu.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { appearanceCss } from "#lib/palettes.js";
 	import { can, mayVisit } from "#lib/permissions.js";
 	import { provideSubNav } from "#lib/sub-nav.svelte.js";

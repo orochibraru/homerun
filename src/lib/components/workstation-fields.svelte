@@ -1,11 +1,11 @@
 <script lang="ts">
+	import * as Select from "@orochibraru/ui/select";
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 
 	import DevcontainerDetection from "#lib/components/devcontainer-detection.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import LoginWallSection from "#lib/components/login-wall-section.svelte";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import WorkstationContainerFields from "#lib/components/workstation-container-fields.svelte";
 	import WorkstationEditorFields from "#lib/components/workstation-editor-fields.svelte";
 	import WorkstationGitFields from "#lib/components/workstation-git-fields.svelte";

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Ban, MailWarning, Radar, Undo2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatDate, timeAgo } from "#lib/formatting.js";
 	import { intelSummary } from "#lib/ip-intel.js";
 	import { enhanceToast } from "#lib/toast.js";

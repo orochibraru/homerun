@@ -9,12 +9,12 @@
 		Server,
 		TriangleAlert,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import BrandMark from "#lib/components/brand-mark.svelte";
 	import Stepper, { type StepperStep } from "#lib/components/stepper.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { ONBOARDING_FIELD_STEP } from "#lib/onboarding-fields.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

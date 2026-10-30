@@ -156,7 +156,7 @@ repos:
 
       - id: test-unit
         name: Unit Tests
-        entry: bash -c 'bunx svelte-kit sync && bun --config=bunfig.unit.toml test tests/unit --timeout 120000'
+        entry: bash -c 'bunx svelte-kit sync && bun --conditions=svelte --config=bunfig.unit.toml test tests/unit --timeout 120000'
         language: system
         pass_filenames: false
         stages: [pre-push]

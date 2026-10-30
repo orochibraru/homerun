@@ -1,7 +1,6 @@
 <script lang="ts" module>
+	import type { ButtonVariant } from "@orochibraru/ui/button";
 	import type { HTMLFormAttributes } from "svelte/elements";
-
-	import type { ButtonVariant } from "#lib/components/ui/button/index.js";
 
 	export type DialogSize = "sm" | "md" | "lg" | "fullscreen";
 
@@ -42,13 +41,13 @@
 
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import { Button, buttonVariants } from "@orochibraru/ui/button";
+	import * as Dialog from "@orochibraru/ui/dialog";
+	import * as Drawer from "@orochibraru/ui/drawer";
+	import { Spinner } from "@orochibraru/ui/spinner";
+	import { cn } from "@orochibraru/ui/utils";
 	import type { Snippet } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
-
-	import { Button, buttonVariants } from "#lib/components/ui/button/index.js";
-	import * as Dialog from "#lib/components/ui/dialog/index.js";
-	import * as Drawer from "#lib/components/ui/drawer/index.js";
-	import { cn } from "#lib/utils.js";
 
 	let {
 		open = $bindable(false),
@@ -79,13 +78,17 @@
 		{@render footer()}
 	{:else if form || onsubmit}
 		<Button
-			disabled={submitDisabled}
-			{loading}
+			disabled={submitDisabled || loading}
 			onclick={!form && onsubmit ? onsubmit : undefined}
 			type={form ? "submit" : "button"}
 			variant={submitVariant}
 		>
-			{loading ? loadingLabel : submitLabel}
+			{#if loading}
+				<Spinner />
+				{loadingLabel}
+			{:else}
+				{submitLabel}
+			{/if}
 		</Button>
 	{/if}
 	{#if isDesktop.current}

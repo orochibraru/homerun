@@ -3,15 +3,15 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { FolderOpen, HardDrive, Plus, X } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as Dialog from "@orochibraru/ui/dialog";
+	import { Input } from "@orochibraru/ui/input";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import NewVolumeFields from "#lib/components/new-volume-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Dialog from "#lib/components/ui/dialog/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import VolumeSizeLabel from "#lib/components/volume-size-label.svelte";
 	import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
 	import { getUnknownHostVolumes } from "#lib/remote/docker-infra.remote.js";

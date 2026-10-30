@@ -2,13 +2,13 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ExternalLink, FileText, Palette } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
+	import { Textarea } from "@orochibraru/ui/textarea";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { ERROR_PAGE_KINDS } from "#lib/error-pages.js";
 	import { enhanceToast } from "#lib/toast.js";
 

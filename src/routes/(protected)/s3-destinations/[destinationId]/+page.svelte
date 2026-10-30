@@ -2,6 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Gauge, PlugZap, RefreshCw } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import {
@@ -14,7 +15,6 @@
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

@@ -3,6 +3,13 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { GitBranch, Link2, Plus, RefreshCw, Unlink } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
 	import { onMount, tick } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -13,13 +20,6 @@
 		inputClass as input,
 		labelClass as label,
 	} from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import { disconnectGitProvider } from "#lib/remote/git-repos.remote.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast, toastError } from "#lib/toast.js";

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { FileText, SlidersHorizontal } from "@lucide/svelte";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount } from "svelte";
 
 	import EnvVarsEditor from "#lib/components/env-vars-editor.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 

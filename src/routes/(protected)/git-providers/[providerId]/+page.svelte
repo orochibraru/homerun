@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { refreshAll } from "$app/navigation";
 	import { Link2, RefreshCw, Unlink, Webhook } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { disconnectGitProvider } from "#lib/remote/git-repos.remote.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";

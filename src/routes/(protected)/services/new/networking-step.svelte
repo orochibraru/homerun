@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { Network } from "@lucide/svelte";
-	import { untrack } from "svelte";
-
-	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
-	import CheckBox from "#lib/components/check-box.svelte";
-	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
+	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+	import { untrack } from "svelte";
+
+	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
+	import CheckBox from "#lib/components/check-box.svelte";
+	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { type DetectedConfig, primaryPort } from "#lib/image-config.js";
 	import { isDatabaseImage } from "#lib/service-link.js";
 	import { visibleIn } from "#lib/ui-mode.js";

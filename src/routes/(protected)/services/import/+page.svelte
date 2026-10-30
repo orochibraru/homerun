@@ -2,20 +2,20 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { AlertTriangle, FileUp, HardDrive, Rocket } from "@lucide/svelte";
-	import { onMount, untrack } from "svelte";
-
-	import Alert from "#lib/components/alert.svelte";
-	import { inputClass, labelClass } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	} from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
+	import { onMount, untrack } from "svelte";
+
+	import Alert from "#lib/components/alert.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 

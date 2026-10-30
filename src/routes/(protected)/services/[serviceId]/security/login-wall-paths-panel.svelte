@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Route } from "@lucide/svelte";
+	import * as Select from "@orochibraru/ui/select";
+	import { Textarea } from "@orochibraru/ui/textarea";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import type { AuthPathsMode } from "#lib/path-patterns.js";
 	import { enhanceToast } from "#lib/toast.js";
 

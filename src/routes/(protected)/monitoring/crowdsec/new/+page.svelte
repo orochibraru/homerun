@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Check } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Spinner } from "@orochibraru/ui/spinner";
 
 	import Alert from "#lib/components/alert.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { form } = $props();

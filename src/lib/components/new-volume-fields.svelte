@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { Input } from "@orochibraru/ui/input";
+	import { Textarea } from "@orochibraru/ui/textarea";
+
 	import { slugify } from "#lib/slug.js";
 
 	let {

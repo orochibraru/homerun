@@ -8,6 +8,9 @@
 		Mail,
 		TriangleAlert,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -20,9 +23,6 @@
 	import Alert from "#lib/components/alert.svelte";
 	import AuthShell from "#lib/components/auth-shell.svelte";
 	import PasswordField from "#lib/components/password-field.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { rememberOauthAttempt } from "#lib/oauth-attempt.js";
 	import { lookupSignIn } from "#lib/remote/sign-in.remote.js";
 	import type { SignInProvider } from "#lib/services/account-setup.service.js";

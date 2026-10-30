@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, ArrowRight, Plus, Rocket, X } from "@lucide/svelte";
-
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 
 	interface Props {
 		currentStep: number;

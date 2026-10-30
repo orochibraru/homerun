@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Eye, EyeOff } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { SECRET_MASK } from "#lib/formatting.js";
 
 	interface Props {

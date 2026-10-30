@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ArrowRight, MailX } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import { authClient } from "#lib/auth-client.js";
 	import AuthShell from "#lib/components/auth-shell.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
 

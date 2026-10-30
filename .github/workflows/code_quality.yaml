@@ -208,7 +208,7 @@ jobs:
       - name: Tests (Unit)
         timeout-minutes: 20
         run:
-          bunx svelte-kit sync && bun --config=bunfig.unit.toml test tests/unit
+          bunx svelte-kit sync && bun --conditions=svelte --config=bunfig.unit.toml test tests/unit
           --timeout 120000 --coverage-reporter=lcov --coverage-dir=coverage/unit
 
       - name: Tests (Integration)

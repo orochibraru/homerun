@@ -10,6 +10,8 @@
 		Settings as SettingsIcon,
 		Users,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as ContextMenu from "@orochibraru/ui/context-menu";
 	import { onMount, type Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -23,8 +25,6 @@
 	import { labelClass } from "#lib/components/form-styles.js";
 	import OauthAppCredentials from "#lib/components/oauth-app-credentials.svelte";
 	import OauthAppToggle from "#lib/components/oauth-app-toggle.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";

@@ -10,6 +10,8 @@
 		Rocket,
 		Server,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -21,8 +23,6 @@
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import { can } from "#lib/permissions.js";
 	import {

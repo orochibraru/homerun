@@ -2,11 +2,11 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Ghost, Loader2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { workloadId } from "#lib/service-state.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

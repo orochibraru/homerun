@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { Button } from "@orochibraru/ui/button";
+
 	import CheckBox from "#lib/components/check-box.svelte";
 	import {
 		errorClass,
 		inputClass as input,
 		labelClass as label,
 	} from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
 
 	import StepPanel from "./step-panel.svelte";
 	import type { OnboardingWizard } from "./wizard-state.svelte";

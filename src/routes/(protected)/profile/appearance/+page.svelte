@@ -1,5 +1,11 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
 	import { setMode } from "mode-watcher";
 	import { onMount, untrack } from "svelte";
 
@@ -7,12 +13,6 @@
 	import SaveButton from "#lib/components/save-button.svelte";
 	import SurfacePreview from "#lib/components/surface-preview.svelte";
 	import UiModePicker from "#lib/components/ui-mode-picker.svelte";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
 	import { PALETTES } from "#lib/palettes.js";
 	import { title } from "#lib/store/title.js";

@@ -2,6 +2,15 @@
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { Pin, PinOff, RefreshCw } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { tick } from "svelte";
 
 	import AnsiLine from "#lib/components/ansi-line.svelte";
@@ -11,14 +20,6 @@
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import { isPhaseLine, TRIAL_PHASES } from "#lib/deploy-phases.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import {
@@ -131,8 +132,12 @@
 							: "No update found.",
 				})}
 			>
-				<Button loading={checking} size="sm" type="submit" variant="outline">
-					<RefreshCw class="size-4" />
+				<Button disabled={checking} size="sm" type="submit" variant="outline">
+					{#if checking}
+						<Spinner />
+					{:else}
+						<RefreshCw class="size-4" />
+					{/if}
 					Check for updates
 				</Button>
 			</form>
@@ -171,8 +176,12 @@
 						success: "Looked up.",
 					})}
 				>
-					<Button loading={pinning} size="sm" type="submit">
-						<Pin class="size-4" />
+					<Button disabled={pinning} size="sm" type="submit">
+						{#if pinning}
+							<Spinner />
+						{:else}
+							<Pin class="size-4" />
+						{/if}
 						Pin version
 					</Button>
 				</form>

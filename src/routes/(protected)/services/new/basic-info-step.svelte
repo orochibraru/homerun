@@ -16,6 +16,7 @@
 
 <script lang="ts">
 	import { GitBranch, Server } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
 	import { untrack } from "svelte";
 
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
@@ -27,7 +28,6 @@
 	import ImageTagField from "#lib/components/image-tag-field.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RegistryFields from "#lib/components/registry-fields.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import type { DetectedConfig } from "#lib/image-config.js";
 	import { defaultHostname } from "#lib/service-domains.js";
 	import { stackScopedSlug } from "#lib/slug.js";

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { KeyRound, Laptop, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { untrack } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -9,7 +10,6 @@
 		type OauthEnvironmentFieldValues,
 	} from "#lib/components/oauth-environment-fields.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { OauthClientSecretSummary } from "#lib/dto/oauth-client-secret-dto.js";
 	import { formatDate, SECRET_MASK, timeAgo } from "#lib/formatting.js";
 	import type { OauthClientEnvironment } from "#lib/server/db/schema.js";

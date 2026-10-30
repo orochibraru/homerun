@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 	import { toast } from "svelte-sonner";
 
 	import Alert from "#lib/components/alert.svelte";
@@ -7,8 +9,6 @@
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import SelfTestChecks from "#lib/components/self-test-checks.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { formatBytes } from "#lib/formatting.js";
 	import { queuedJobToast } from "#lib/job-toast.js";
 	import type { RegistryCheck } from "#lib/registry-self-test.js";

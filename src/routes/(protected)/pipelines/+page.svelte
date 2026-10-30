@@ -2,14 +2,14 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Plus, RefreshCw, Workflow } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PipelineRepositoryTable from "#lib/components/pipelines/pipeline-repository-table.svelte";
 	import PipelineRunList from "#lib/components/pipelines/pipeline-run-list.svelte";
 	import PipelineStats from "#lib/components/pipelines/pipeline-stats.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { queuedJobToast } from "#lib/job-toast.js";
 	import { title } from "#lib/store/title.js";
 

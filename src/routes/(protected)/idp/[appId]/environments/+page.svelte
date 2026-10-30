@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import OauthEnvironmentCard from "#lib/components/oauth-environment-card.svelte";
 	import OauthEnvironmentFields, {
 		type OauthEnvironmentFieldValues,
 	} from "#lib/components/oauth-environment-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { data, form } = $props();

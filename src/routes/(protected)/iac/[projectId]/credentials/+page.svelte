@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { KeyRound, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import ApiKeyList from "#lib/components/api-key-list.svelte";
 	import BucketAccessKeys from "#lib/components/bucket-access-keys.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { usesHttpBackend } from "#lib/iac/tools.js";
 
 	const { data, form } = $props();

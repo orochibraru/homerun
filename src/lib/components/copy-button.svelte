@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { Check, Copy } from "@lucide/svelte";
+	import { cn } from "@orochibraru/ui/utils";
 	import { toast } from "svelte-sonner";
-
-	import { cn } from "#lib/utils.js";
 
 	const {
 		value,

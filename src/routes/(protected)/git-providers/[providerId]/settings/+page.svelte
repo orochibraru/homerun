@@ -7,13 +7,13 @@
 		Trash2,
 		TriangleAlert,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 

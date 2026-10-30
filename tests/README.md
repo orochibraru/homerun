@@ -27,10 +27,10 @@ half â€” no wrapper script, `bunfig.toml`'s `[test].preload` handles the rest â€
 but `bun run test` also runs
 `go test ./cmd/... ./internal/... ./tests/unit/go/...` first, covering
 `cmd/worker/`, `cmd/cli/` and `cmd/installer/`, then
-`bun --config=bunfig.unit.toml test tests/unit` for the app; unit only, no
-Postgres/Docker needed). See `tests/integration/README.md` for the separate
-`tests/integration/` suite, and `tests/e2e/README.md` for the real-browser
-Playwright suite (its own runner, `bun run test:e2e`, not part of
+`bun --conditions=svelte --config=bunfig.unit.toml test tests/unit` for the app;
+unit only, no Postgres/Docker needed). See `tests/integration/README.md` for the
+separate `tests/integration/` suite, and `tests/e2e/README.md` for the
+real-browser Playwright suite (its own runner, `bun run test:e2e`, not part of
 `bun run test`'s `bun test` invocation).
 
 ## Mocks are process-global

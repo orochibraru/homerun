@@ -3,6 +3,10 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { AlertTriangle, Layers, Stethoscope, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Input } from "@orochibraru/ui/input";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -14,10 +18,6 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import SelfTestChecks from "#lib/components/self-test-checks.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import WorkstationContainerFields from "#lib/components/workstation-container-fields.svelte";
 	import WorkstationEditorFields from "#lib/components/workstation-editor-fields.svelte";
 	import WorkstationGitFields from "#lib/components/workstation-git-fields.svelte";

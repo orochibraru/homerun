@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "#lib/utils.js";
+	import { cn } from "@orochibraru/ui/utils";
 
 	const { class: className = "" }: { class?: string } = $props();
 </script>

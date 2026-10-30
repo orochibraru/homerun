@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { untrack } from "svelte";
-
-	import { inputClass, labelClass } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import { Button } from "@orochibraru/ui/button";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+	import { untrack } from "svelte";
+
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import { DNS_RECORD_TYPES } from "#lib/services/dns-providers/types.js";
 	import { enhanceToast } from "#lib/toast.js";
 

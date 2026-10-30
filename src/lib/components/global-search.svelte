@@ -2,11 +2,11 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { CornerDownLeft, FileText, Search } from "@lucide/svelte";
+	import * as Command from "@orochibraru/ui/command";
 	import type { Component } from "svelte";
 
 	import { headerControlClass } from "#lib/components/header-styles.js";
 	import { SEARCH_KIND_ICONS as KIND_ICONS } from "#lib/components/search-kind-icons.js";
-	import * as Command from "#lib/components/ui/command/index.js";
 	import type { Permissions } from "#lib/permissions.js";
 	import { searchContent } from "#lib/remote/search.remote.js";
 	import {

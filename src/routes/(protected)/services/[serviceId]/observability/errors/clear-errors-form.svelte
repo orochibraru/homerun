@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Eraser } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	let clearing = $state(false);

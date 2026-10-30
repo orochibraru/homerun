@@ -2,21 +2,21 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { CloudUpload } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount, untrack } from "svelte";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import ScheduleField from "#lib/components/schedule-field.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

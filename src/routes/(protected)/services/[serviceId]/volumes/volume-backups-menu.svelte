@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { ArchiveRestore, ChevronDown, RotateCcw } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as Popover from "@orochibraru/ui/popover";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Popover from "#lib/components/ui/popover/index.js";
 	import { formatBytes } from "#lib/formatting.js";
 	import { getVolumeBackups } from "#lib/remote/backups.remote.js";
 	import { RESTORE_MODES, type RestoreMode } from "#lib/restore-modes.js";

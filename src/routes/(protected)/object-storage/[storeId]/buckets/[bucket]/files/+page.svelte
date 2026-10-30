@@ -10,12 +10,12 @@
 		Trash2,
 		Upload,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import { inputClass } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatBytes, timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

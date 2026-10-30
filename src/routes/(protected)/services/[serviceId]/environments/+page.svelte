@@ -2,6 +2,9 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ExternalLink, Layers, Pencil, Plus, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount } from "svelte";
 
 	import CheckBox from "#lib/components/check-box.svelte";
@@ -11,9 +14,6 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { deployEnvironment } from "#lib/release-channels.js";
 	import { primaryHostname } from "#lib/service-domains.js";
 	import { title } from "#lib/store/title.js";

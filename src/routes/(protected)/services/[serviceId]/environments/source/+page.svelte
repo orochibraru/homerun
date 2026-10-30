@@ -3,6 +3,13 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Container, GitBranch } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
 	import { onMount } from "svelte";
 
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
@@ -18,13 +25,6 @@
 	import RegistryFields from "#lib/components/registry-fields.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import StatusCheckPicker from "#lib/components/status-check-picker.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import { isDeployed } from "#lib/service-state.js";
 	import { settings } from "#lib/settings.js";
 	import { title } from "#lib/store/title.js";

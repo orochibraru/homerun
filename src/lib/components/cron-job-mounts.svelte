@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { HardDrive, Plus, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import * as Dialog from "@orochibraru/ui/dialog";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import { labelClass } from "#lib/components/form-styles.js";
 	import NewVolumeFields from "#lib/components/new-volume-fields.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import * as Dialog from "#lib/components/ui/dialog/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import type { CronJobMount } from "#lib/cron-job-script.js";
 	import { createStorageVolume } from "#lib/remote/volumes.remote.js";
 	import { toastError } from "#lib/toast.js";

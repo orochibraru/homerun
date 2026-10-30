@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Input } from "@orochibraru/ui/input";
 	import { untrack } from "svelte";
 
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	let {

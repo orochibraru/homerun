@@ -3,6 +3,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { CalendarClock, Eraser, Globe, Plug, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount, tick } from "svelte";
 
 	import BucketAccessKeys from "#lib/components/bucket-access-keys.svelte";
@@ -14,7 +15,6 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatBytes } from "#lib/formatting.js";
 	import { objectCountLabel } from "#lib/object-storage.js";
 	import { title } from "#lib/store/title.js";

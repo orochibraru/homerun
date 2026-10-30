@@ -9,6 +9,7 @@
 		Plus,
 		Trash2,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";
@@ -20,7 +21,6 @@
 	} from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
 	import SelectAllRow from "#lib/components/select-all-row.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import VolumeSizeLabel from "#lib/components/volume-size-label.svelte";
 	import { ListSelection } from "#lib/list-selection.svelte.js";

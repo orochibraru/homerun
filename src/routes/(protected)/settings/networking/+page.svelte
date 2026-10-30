@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { page } from "$app/state";
+	import { Input } from "@orochibraru/ui/input";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { getSetupStatus } from "#lib/remote/setup.remote.js";
 	import { enhanceToast } from "#lib/toast.js";
 

@@ -2,11 +2,11 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import StatusPageFields from "#lib/components/status-page-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { StatusPagePick } from "#lib/status-page-members.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

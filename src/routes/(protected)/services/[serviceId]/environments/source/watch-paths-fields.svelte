@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
+	import { Textarea } from "@orochibraru/ui/textarea";
 
 	interface Props {
 		errorClass: string;

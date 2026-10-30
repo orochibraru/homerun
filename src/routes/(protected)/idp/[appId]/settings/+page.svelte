@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { AlertTriangle, SlidersHorizontal, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { untrack } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -9,7 +10,6 @@
 	} from "#lib/components/oauth-app-fields.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { data, form } = $props();

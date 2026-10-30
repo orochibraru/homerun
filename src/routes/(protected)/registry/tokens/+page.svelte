@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Ticket, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 
 	import Alert from "#lib/components/alert.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { enhanceToast } from "#lib/toast.js";
 

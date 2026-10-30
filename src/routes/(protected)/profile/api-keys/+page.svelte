@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { KeyRound, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import ApiKeyList from "#lib/components/api-key-list.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 
 	const { data } = $props();

@@ -9,11 +9,11 @@
 		Plus,
 		Send,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityList from "#lib/components/entity-list.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { ViewMode } from "#lib/view-mode.svelte.js";
 

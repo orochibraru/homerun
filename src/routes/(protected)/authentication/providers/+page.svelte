@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ExternalLink, KeyRound, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 
 	const { data } = $props();
 </script>

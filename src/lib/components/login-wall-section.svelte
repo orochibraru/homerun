@@ -2,6 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { LockKeyhole } from "@lucide/svelte";
+	import { Textarea } from "@orochibraru/ui/textarea";
 
 	import {
 		EMAIL_OTP_METHOD,
@@ -12,7 +13,6 @@
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { roleLabel } from "#lib/permissions.js";
 	import { enhanceToast } from "#lib/toast.js";
 	import { isServiceAccount } from "#lib/user-types.js";

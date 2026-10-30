@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import { Button } from "@orochibraru/ui/button";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { saveToast } from "#lib/toast.js";
 
 	const { data } = $props();

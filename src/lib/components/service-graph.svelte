@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ArrowRight, Server, Unlink } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
-	import { Button } from "#lib/components/ui/button/index.js";
 	import UnlinkDialog, {
 		type UnlinkTarget,
 	} from "#lib/components/unlink-dialog.svelte";

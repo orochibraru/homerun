@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ChevronRight, History, ScrollText } from "@lucide/svelte";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import DeployLogPanel from "#lib/components/deploy-log-panel.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		cronJobRunTriggerLabel,
 		latestCronJobRun,

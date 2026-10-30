@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { ClipboardCheck, Pencil } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import { BUILD_METHOD_LABELS, isBuildMethod } from "#lib/build-methods.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
 	import { PULL_POLICIES } from "#lib/pull-policy.js";
 	import { defaultHostname } from "#lib/service-domains.js";

@@ -2,6 +2,8 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { LayoutGrid, Plus, Rocket, SettingsIcon, Tags } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import EntityList from "#lib/components/entity-list.svelte";
@@ -10,8 +12,6 @@
 	} from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { templateCategoryIcon } from "#lib/constants.js";
 	import { BASE_SORTS } from "#lib/list-sorts.js";

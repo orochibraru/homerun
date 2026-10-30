@@ -2,13 +2,13 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Layers } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
 	import { onMount } from "svelte";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 

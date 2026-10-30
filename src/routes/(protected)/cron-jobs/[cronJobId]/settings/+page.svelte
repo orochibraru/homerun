@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import Alert from "#lib/components/alert.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CronJobSettingsFields from "#lib/components/cron-job-settings-fields.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { data, form } = $props();

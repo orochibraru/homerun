@@ -2,10 +2,10 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { FileUp, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { Streamed } from "#lib/streamed.svelte.js";
 

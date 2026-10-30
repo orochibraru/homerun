@@ -1,5 +1,13 @@
 <script lang="ts">
 	import { Link2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
 	import { toast } from "svelte-sonner";
 
 	import { labelClass } from "#lib/components/form-styles.js";
@@ -7,14 +15,6 @@
 	import ServicePicker, {
 		type PickableService,
 	} from "#lib/components/service-picker.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import type { ParsedEnvVar } from "#lib/env-parse.js";
 	import {
 		buildLinkEnv,

@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { Play, RotateCw, Square, Trash2 } from "@lucide/svelte";
-
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 
 	interface Props {
 		deleteVolumes: boolean;

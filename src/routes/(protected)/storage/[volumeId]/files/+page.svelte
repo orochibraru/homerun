@@ -12,6 +12,9 @@
 		Link2,
 		Trash2,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as ContextMenu from "@orochibraru/ui/context-menu";
+	import * as Dialog from "@orochibraru/ui/dialog";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
@@ -19,9 +22,6 @@
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
-	import * as Dialog from "#lib/components/ui/dialog/index.js";
 	import { formatBytes, timeAgo } from "#lib/formatting.js";
 	import { languageFor } from "#lib/highlight.js";
 	import { title } from "#lib/store/title.js";

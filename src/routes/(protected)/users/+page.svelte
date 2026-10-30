@@ -2,6 +2,7 @@
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Plus, TriangleAlert, X } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -9,7 +10,6 @@
 		type FilterGroup,
 	} from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { BASE_SORTS } from "#lib/list-sorts.js";
 	import { ROLE_OPTIONS, roleLabel } from "#lib/permissions.js";
 	import { title } from "#lib/store/title.js";

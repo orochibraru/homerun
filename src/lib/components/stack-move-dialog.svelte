@@ -2,16 +2,16 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Check } from "@lucide/svelte";
-
-	import { labelClass as label } from "#lib/components/form-styles.js";
-	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import { Button } from "@orochibraru/ui/button";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
 	import { descendantIds, type StackNode, stackPath } from "#lib/stack-tree.js";
 	import { enhanceToast } from "#lib/toast.js";
 

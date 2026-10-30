@@ -1086,10 +1086,10 @@ category filter (pills built from whatever categories are actually present
 rather than a hardcoded list, `TemplateDTO.listCategories`), plus a list/card
 `ViewModeToggle` (`new ViewMode("templates", "card")`, card is the default here,
 unlike every other list page). This replaced the page's own earlier bespoke
-search-input-plus-`Drawer` implementation (`src/lib/components/ui/drawer`,
-vaul-svelte's `direction` prop), now generalized into `entity-toolbar.svelte`
-and shared with every other list page instead of being templates-only. The
-built-in and custom sections paginate **independently**, 24 per page each,
+search-input-plus-`Drawer` implementation (the `drawer` primitive, vaul-svelte's
+`direction` prop), now generalized into `entity-toolbar.svelte` and shared with
+every other list page instead of being templates-only. The built-in and custom
+sections paginate **independently**, 24 per page each,
 `TemplateDTO.listPaged("builtin" | "custom", query)` called twice with two
 separate `ListQuery`s (`pageParam: "bpage"` / `"cpage"`, see Server-side list
 pagination above), one shared search/category toolbar filtering both, two

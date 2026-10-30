@@ -2,6 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import { OAUTH_PRESETS, type OauthPreset } from "#lib/auth-providers.js";
@@ -9,7 +10,6 @@
 	import OauthProviderFields, {
 		type ProviderFieldValues,
 	} from "#lib/components/oauth-provider-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 

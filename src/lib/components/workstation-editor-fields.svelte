@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { RefreshCw } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 	import { toast } from "svelte-sonner";
@@ -8,7 +9,6 @@
 	import ExtensionPicker from "#lib/components/extension-picker.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { importSettingsSync } from "#lib/remote/workstations.remote.js";
 	import { toastError } from "#lib/toast.js";
 

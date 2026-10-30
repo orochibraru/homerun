@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Download, FileCode2, FolderTree, Package } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import CodeBlock from "#lib/components/code-block.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import IacScopePicker from "#lib/components/iac-scope-picker.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { PROVIDER_SOURCE } from "#lib/iac/generate.js";
 	import { IAC_TOOL_INFO, usesHttpBackend } from "#lib/iac/tools.js";
 

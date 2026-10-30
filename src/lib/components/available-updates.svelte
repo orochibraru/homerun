@@ -3,9 +3,10 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { ArrowRight, PackageCheck } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import type { UpdateTrialStatus } from "#lib/image-versions.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -95,11 +96,14 @@
 						>
 							<Button
 								disabled={applying !== null || update.trialStatus === "running"}
-								loading={applying === update.serviceId}
 								size="sm"
 								type="submit"
 							>
-								Update now
+								{#if applying === update.serviceId}
+									<Spinner />
+								{:else}
+									Update now
+								{/if}
 							</Button>
 						</form>
 					{/if}

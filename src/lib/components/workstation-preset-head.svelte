@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { Input } from "@orochibraru/ui/input";
+
 	import { labelClass } from "#lib/components/form-styles.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 
 	interface Props {
 		description: string | null;
