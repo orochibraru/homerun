@@ -192,7 +192,6 @@
 <ResponsiveDialog
 	description="A new deployment of this service under its own name."
 	loading={creating}
-	loadingLabel="Creating…"
 	onsubmit={() => createForm?.requestSubmit()}
 	size="sm"
 	submitLabel="Create"
@@ -299,7 +298,6 @@
 <ResponsiveDialog
 	description="Saving doesn't redeploy it: deploy it from its own page when you're ready."
 	loading={saving}
-	loadingLabel="Saving…"
 	onsubmit={() => editForm?.requestSubmit()}
 	size="sm"
 	submitLabel="Save"

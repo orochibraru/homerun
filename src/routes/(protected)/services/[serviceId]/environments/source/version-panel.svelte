@@ -10,7 +10,6 @@
 		SelectItem,
 		SelectTrigger,
 	} from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
 	import { tick } from "svelte";
 
 	import AnsiLine from "#lib/components/ansi-line.svelte";
@@ -132,12 +131,8 @@
 							: "No update found.",
 				})}
 			>
-				<Button disabled={checking} size="sm" type="submit" variant="outline">
-					{#if checking}
-						<Spinner />
-					{:else}
-						<RefreshCw class="size-4" />
-					{/if}
+				<Button loading={checking} size="sm" type="submit" variant="outline">
+					<RefreshCw class="size-4" />
 					Check for updates
 				</Button>
 			</form>
@@ -176,12 +171,8 @@
 						success: "Looked up.",
 					})}
 				>
-					<Button disabled={pinning} size="sm" type="submit">
-						{#if pinning}
-							<Spinner />
-						{:else}
-							<Pin class="size-4" />
-						{/if}
+					<Button loading={pinning} size="sm" type="submit">
+						<Pin class="size-4" />
 						Pin version
 					</Button>
 				</form>

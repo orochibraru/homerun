@@ -4,7 +4,6 @@
 	import { resolve } from "$app/paths";
 	import { ArrowRight, PackageCheck } from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
-	import { Spinner } from "@orochibraru/ui/spinner";
 
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
 	import { timeAgo } from "#lib/formatting.js";
@@ -96,14 +95,11 @@
 						>
 							<Button
 								disabled={applying !== null || update.trialStatus === "running"}
+								loading={applying === update.serviceId}
 								size="sm"
 								type="submit"
 							>
-								{#if applying === update.serviceId}
-									<Spinner />
-								{:else}
-									Update now
-								{/if}
+								Update now
 							</Button>
 						</form>
 					{/if}

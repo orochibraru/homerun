@@ -7,9 +7,6 @@ When done delete the entry, no bloat.
 
 ## Small
 
-- [ ] `@orochibraru/ui`'s Button has no `loading` prop, so the buttons that had
-      one (version panel, available updates, `ResponsiveDialog`) inline a
-      `Spinner`: add `loading` upstream in `orochibraru/ui` and drop them.
 - [ ] An update trial only runs once per update: add a "Run the trial again"
       button on the Version panel for a failed or stale trial.
 - [ ] Duplicating a volume on a mount edit copies it during the next deploy,

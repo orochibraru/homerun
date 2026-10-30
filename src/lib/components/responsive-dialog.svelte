@@ -15,8 +15,6 @@
 			onsubmit?: (e: SubmitEvent) => void;
 		};
 		loading?: boolean;
-		/** Label shown on submit button while loading */
-		loadingLabel?: string;
 		/** Callback fired when the submit button is clicked (non-form mode) */
 		onsubmit?: () => void;
 		open: boolean;
@@ -44,7 +42,6 @@
 	import { Button, buttonVariants } from "@orochibraru/ui/button";
 	import * as Dialog from "@orochibraru/ui/dialog";
 	import * as Drawer from "@orochibraru/ui/drawer";
-	import { Spinner } from "@orochibraru/ui/spinner";
 	import { cn } from "@orochibraru/ui/utils";
 	import type { Snippet } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
@@ -57,7 +54,6 @@
 		size = "md",
 		contentClass,
 		submitLabel = "Submit",
-		loadingLabel = "Loading...",
 		submitVariant = "default",
 		submitDisabled = false,
 		onsubmit,
@@ -78,17 +74,13 @@
 		{@render footer()}
 	{:else if form || onsubmit}
 		<Button
-			disabled={submitDisabled || loading}
+			disabled={submitDisabled}
+			{loading}
 			onclick={!form && onsubmit ? onsubmit : undefined}
 			type={form ? "submit" : "button"}
 			variant={submitVariant}
 		>
-			{#if loading}
-				<Spinner />
-				{loadingLabel}
-			{:else}
-				{submitLabel}
-			{/if}
+			{submitLabel}
 		</Button>
 	{/if}
 	{#if isDesktop.current}
