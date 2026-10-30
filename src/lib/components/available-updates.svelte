@@ -2,12 +2,15 @@
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { ArrowRight, PackageCheck } from "@lucide/svelte";
+	import { ArrowRight, PackageCheck, RotateCcw } from "@lucide/svelte";
 
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { timeAgo } from "#lib/formatting.js";
-	import type { UpdateTrialStatus } from "#lib/image-versions.js";
+	import {
+		trialAttempts,
+		type UpdateTrialStatus,
+	} from "#lib/image-versions.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	interface Props {
@@ -19,6 +22,7 @@
 			serviceId: string;
 			serviceName: string;
 			tag: string;
+			trialAttempts: number | null;
 			trialMessage: string | null;
 			trialStatus: UpdateTrialStatus | null;
 		}[];
@@ -27,6 +31,7 @@
 	const { canWrite, updates }: Props = $props();
 
 	let applying = $state<string | null>(null);
+	let retrying = $state<string | null>(null);
 </script>
 
 <section class="panel mb-4 rounded-xl">
@@ -76,7 +81,41 @@
 					<span class="text-text-subtle ml-auto">
 						{timeAgo(update.foundAt)}
 					</span>
-					{#if canWrite}
+					{#if update.trialStatus === "failed"}
+						<span class="text-xs text-red-500">
+							Health check fails ({trialAttempts(update.trialAttempts)}), not
+							offered
+						</span>
+					{/if}
+					{#if canWrite && update.trialStatus === "failed"}
+						<form
+							action="{href}?/retryTrial"
+							method="POST"
+							use:enhance={enhanceToast({
+								error: `Couldn't retry the trial of ${update.serviceName}.`,
+								loading: `Starting the trial of ${update.serviceName} again`,
+								onComplete: () => refreshAll(),
+								onSettled: () => {
+									retrying = null;
+								},
+								onStart: () => {
+									retrying = update.serviceId;
+								},
+								success: `Trying :${update.tag} on ${update.serviceName} again.`,
+							})}
+						>
+							<Button
+								disabled={retrying !== null}
+								loading={retrying === update.serviceId}
+								size="sm"
+								type="submit"
+								variant="outline"
+							>
+								<RotateCcw class="size-4" />
+								Retry trial
+							</Button>
+						</form>
+					{:else if canWrite}
 						<form
 							action="{href}?/applyUpdate"
 							method="POST"

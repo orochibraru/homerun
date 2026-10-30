@@ -357,4 +357,21 @@ export const actions = {
 		}
 		return { tag: svc.tag };
 	},
+	retryTrial: async ({ params, locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		try {
+			await ImageVersionService.retryTrial(svc);
+		} catch (err) {
+			return fail(409, {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+		return { tag: svc.toJSON().updateCheck?.available?.tag ?? null };
+	},
 };

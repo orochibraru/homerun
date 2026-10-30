@@ -15,6 +15,7 @@ import {
 	type RegistryTag,
 	suggestLocalTag,
 	tagsMatchingDigest,
+	trialAttempts,
 	updateKey,
 	type UpdateScope,
 } from "#lib/image-versions.js";
@@ -47,6 +48,8 @@ const TRIAL_POLL_MS = 2000;
 const TRIAL_LOG_LINES = 20;
 const MAX_TRIAL_MESSAGE = 4000;
 const MAX_TRIAL_LOG_LINES = 300;
+const MAX_TRIAL_RETRIES = 3;
+const TRIAL_RETRY_DELAY_MS = 30_000;
 
 /** A service's version pinning and update-check state, flat, as the REST API, the CLI and the Terraform data source read it. */
 export interface ServiceVersionState {
@@ -73,6 +76,13 @@ export interface ServiceVersionState {
 interface RunningImage {
 	digest: string | null;
 	imageId: string | null;
+}
+
+interface TrialRun {
+	progress: (...lines: string[]) => Promise<void>;
+	running: ImageUpdateTrial;
+	svc: ServiceDTO;
+	update: ImageUpdateAvailable;
 }
 
 interface TrialInspect {
@@ -451,13 +461,47 @@ class ImageVersionServiceClass {
 		return state;
 	}
 
-	/** Runs the trial an update still needs, then notifies it once. */
-	async #tryAndNotify(svc: ServiceDTO, state: ImageUpdateState): Promise<void> {
+	/**
+	 * Runs the available update's trial again in the background, retries
+	 * included, and notifies its outcome again once it settles.
+	 * @throws when there's no update to try, or a check or trial is already
+	 *   running for the service.
+	 */
+	async retryTrial(svc: ServiceDTO): Promise<void> {
+		const check = svc.toJSON().updateCheck;
+		if (!check?.available) {
+			throw new Error("There's no update to try.");
+		}
+		if (this.#inFlight.has(svc.id)) {
+			throw new Error("A check or trial is already running for this service.");
+		}
+		this.#inFlight.add(svc.id);
+		const state: ImageUpdateState = {
+			...check,
+			notifiedKey: null,
+			trial: null,
+		};
+		await svc.update({ updateCheck: { ...state } });
+		void this.#tryAndNotify(svc, state, { force: true })
+			.catch((err: unknown) => {
+				logger.warn(`Update trial failed: service=${svc.id}`, err);
+			})
+			.finally(() => {
+				this.#inFlight.delete(svc.id);
+			});
+	}
+
+	/** Runs the trial an update still needs (whatever the service's setting with `force`), then notifies it once. */
+	async #tryAndNotify(
+		svc: ServiceDTO,
+		state: ImageUpdateState,
+		options: { force?: boolean } = {},
+	): Promise<void> {
 		const available = state.available;
 		if (state.error || !available) {
 			return;
 		}
-		if (svc.toJSON().updateTrialEnabled && !state.trial) {
+		if ((options.force || svc.toJSON().updateTrialEnabled) && !state.trial) {
 			state.trial = await this.#trial(svc, available, state);
 		}
 		if (state.notifiedKey === updateKey(available)) {
@@ -468,7 +512,7 @@ class ImageVersionServiceClass {
 		await svc.update({ updateCheck: { ...state } });
 	}
 
-	/** Records a trial as running, runs it while recording its progress, then records and returns its outcome. */
+	/** Records a trial as running, runs it (retrying a failure up to `MAX_TRIAL_RETRIES` times) while recording its progress, then records and returns its outcome. */
 	async #trial(
 		svc: ServiceDTO,
 		update: ImageUpdateAvailable,
@@ -489,24 +533,52 @@ class ImageVersionServiceClass {
 			);
 			await svc.update({ updateCheck: { ...state } });
 		};
-		let trial: ImageUpdateTrial;
-		try {
-			const message = await this.#runTrial(svc, update, progress);
-			trial = { ...running, message, status: "passed" };
-		} catch (err) {
-			trial = {
-				...running,
-				message: messageOf(err).slice(0, MAX_TRIAL_MESSAGE),
-				status: "failed",
-			};
-		}
+		const outcome = await this.#attempt({ progress, running, svc, update }, 1);
+		const trial: ImageUpdateTrial = { ...running, ...outcome };
 		trial.at = new Date().toISOString();
 		state.trial = trial;
 		await svc.update({ updateCheck: { ...state } });
 		logger.info(
-			`Update trial ${trial.status}: service=${svc.id} tag=${update.tag}`,
+			`Update trial ${trial.status}: service=${svc.id} tag=${update.tag} attempts=${trial.attempts}`,
 		);
 		return trial;
+	}
+
+	/**
+	 * Runs one trial attempt, and on a failure with retries left waits
+	 * `TRIAL_RETRY_DELAY_MS` and starts the next one on a fresh log that
+	 * opens with why the last one failed.
+	 */
+	async #attempt(
+		run: TrialRun,
+		attempt: number,
+	): Promise<Pick<ImageUpdateTrial, "attempts" | "message" | "status">> {
+		const { progress, running, svc, update } = run;
+		running.attempts = attempt;
+		try {
+			const message = await this.#runTrial(svc, update, progress);
+			return { attempts: attempt, message, status: "passed" };
+		} catch (err) {
+			const message = messageOf(err);
+			if (attempt > MAX_TRIAL_RETRIES) {
+				const summary =
+					attempt > 1 ? `Failed all ${attempt} attempts. ${message}` : message;
+				return {
+					attempts: attempt,
+					message: summary.slice(0, MAX_TRIAL_MESSAGE),
+					status: "failed",
+				};
+			}
+			await progress(
+				`Attempt ${attempt} failed, retrying in ${TRIAL_RETRY_DELAY_MS / 1000}s`,
+			);
+			await sleep(TRIAL_RETRY_DELAY_MS);
+			running.log = [
+				`Attempt ${attempt} failed: ${message.split("\n")[0]}`,
+				`Retry ${attempt} of ${MAX_TRIAL_RETRIES}`,
+			];
+			return this.#attempt(run, attempt + 1);
+		}
 	}
 
 	/**
@@ -692,7 +764,7 @@ class ImageVersionServiceClass {
 		const outcome = trial
 			? trial.status === "passed"
 				? " Its trial run started cleanly."
-				: " Its trial run failed."
+				: ` Its trial run never got healthy (${trialAttempts(trial.attempts)}), so it isn't offered: retry the trial from the service's Version panel once it's fixed.`
 			: "";
 		NotificationDTO.notify({
 			detail: trial?.status === "failed" ? trial.message : null,

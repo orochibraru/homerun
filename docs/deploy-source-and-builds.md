@@ -77,8 +77,16 @@ database, an app that migrates its schema on startup migrates the live one
 during the trial: turn trials off for those. An app that can't start without its
 own data still fails it.
 
+A failed trial is retried automatically, up to 3 more times 30 seconds apart. If
+every attempt fails the update isn't offered: there's no **Update now** button,
+and the notification says the update exists but its health check fails. **Retry
+trial**, on the Version panel or the dashboard, runs it again (retries included)
+and notifies the new outcome; a passed trial can be rerun the same way with
+**Run the trial again**.
+
 Every service with an update waiting is listed under **Available updates** on
-the dashboard, with its trial's outcome and an **Update now** button.
+the dashboard, with its trial's outcome and an **Update now** button, or **Retry
+trial** when its trial failed.
 
 The same pin, watch and update are on the [REST API and the CLI](api-and-cli.md)
 (`/api/v1/services/:id/version`, `homerun services version`), the

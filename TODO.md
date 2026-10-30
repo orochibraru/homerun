@@ -7,8 +7,6 @@ When done delete the entry, no bloat.
 
 ## Small
 
-- [ ] An update trial only runs once per update: add a "Run the trial again"
-      button on the Version panel for a failed or stale trial.
 - [ ] Duplicating a volume on a mount edit copies it during the next deploy,
       while the old container still runs: stop the service around the copy so a
       database's copy is consistent without the user stopping it by hand.
