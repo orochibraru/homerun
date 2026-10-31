@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.76](https://github.com/orochibraru/homerun/compare/v1.0.75...v1.0.76) (2026-10-31)
+
+### Features
+
+* **updates:** retry failed update trials and stop offering updates whose health check fails (#180) ([bde91e8](https://github.com/orochibraru/homerun/commit/bde91e825db386711524eaa9136084b9a7d0e351))
+* **mcp:** expose traces and service app errors through MCP and the REST API (#177) ([7fa971b](https://github.com/orochibraru/homerun/commit/7fa971ba6d7984e4e8148d5aa3450e6872ba1f5b))
+
+### Documentation
+
+* **networking:** runner network for swarm services is the shared overlay (#176) ([9c58f34](https://github.com/orochibraru/homerun/commit/9c58f34914933992e4d256d45a51e3b8f3ef138e))
+
+### Code Refactoring
+
+* **ui:** use the shared @orochibraru/ui primitives instead of vendored shadcn-svelte copies (#179) ([6ed02a4](https://github.com/orochibraru/homerun/commit/6ed02a498909bbc6810baf7da42df25fa625b80c))
+
 ## [1.0.75](https://github.com/orochibraru/homerun/compare/v1.0.74...v1.0.75) (2026-10-29)
 
 ### Features
