@@ -400,7 +400,7 @@ export const shots: ShotModule = {
 			prepare: async (page) => {
 				await page.getByRole("button", { name: "Connect a provider" }).click();
 				await page
-					.getByRole("button", { exact: true, name: "Provider" })
+					.getByRole("combobox", { exact: true, name: "Provider" })
 					.click();
 				await page
 					.getByRole("option", { exact: true, name: "Cloudflare" })
