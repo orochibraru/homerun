@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.77](https://github.com/orochibraru/homerun/compare/v1.0.76...v1.0.77) (2026-10-31)
+
+### Features
+
+* **ui:** Lanes style with 24h service lanes, calmer overview, services diagram and vertical stepper (#181) ([d51822b](https://github.com/orochibraru/homerun/commit/d51822b1a0d5601c78349a9c573f6061e2e51d4e))
+
 ## [1.0.76](https://github.com/orochibraru/homerun/compare/v1.0.75...v1.0.76) (2026-10-31)
 
 ### Features
