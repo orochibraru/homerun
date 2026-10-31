@@ -44,6 +44,7 @@ export const UPDATE_SCOPE_LABELS: Record<UpdateScope, string> = {
 
 export interface ImageUpdateTrial {
 	at: string;
+	attempts?: number;
 	log?: string[];
 	message: string | null;
 	status: UpdateTrialStatus;
@@ -56,6 +57,11 @@ export interface ImageUpdateState {
 	error: string | null;
 	notifiedKey: string | null;
 	trial: ImageUpdateTrial | null;
+}
+
+/** How many attempts a trial run took, as words ("1 attempt", "4 attempts"). */
+export function trialAttempts(attempts: number | null | undefined): string {
+	return !attempts || attempts === 1 ? "1 attempt" : `${attempts} attempts`;
 }
 
 /** Parses a tag shaped like a version (`1.24.3`, `v2.1-rootless`, `1.25-nightly`), or null for a floating tag like `latest` or `nightly`. */

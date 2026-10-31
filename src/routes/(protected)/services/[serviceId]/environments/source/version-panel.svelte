@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
-	import { Pin, PinOff, RefreshCw } from "@lucide/svelte";
+	import { Pin, PinOff, RefreshCw, RotateCcw } from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
 	import { Input } from "@orochibraru/ui/input";
 	import {
@@ -26,6 +26,7 @@
 		parseUpdateScope,
 		parseVersionTag,
 		type PinCandidates,
+		trialAttempts,
 		UPDATE_SCOPE_LABELS,
 		UPDATE_SCOPES,
 		type UpdateTrialStatus,
@@ -68,6 +69,7 @@
 	let pinForm = $state<HTMLFormElement | null>(null);
 	let watchSaving = $state(false);
 	let checking = $state(false);
+	let retrying = $state(false);
 	let updateCheckEnabled = $derived(service.updateCheckEnabled);
 	let updateTrialEnabled = $derived(service.updateTrialEnabled);
 	let updateScope = $derived<string>(service.updateScope);
@@ -271,7 +273,36 @@
 							Checked {timeAgo(check.checkedAt)}
 						</div>
 					</div>
-					{#if check.available}
+					{#if check.available && trial && trial.status !== "running"}
+						<form
+							action="?/retryTrial"
+							method="POST"
+							use:enhance={enhanceToast({
+								loading: "Starting the trial again",
+								onComplete: () => refreshAll(),
+								onSettled: () => {
+									retrying = false;
+								},
+								onStart: () => {
+									retrying = true;
+								},
+								success: (data) => `Trying :${String(data?.tag ?? "")} again.`,
+							})}
+						>
+							<Button
+								loading={retrying}
+								size="sm"
+								type="submit"
+								variant="outline"
+							>
+								<RotateCcw class="size-4" />
+								{trial.status === "failed"
+									? "Retry trial"
+									: "Run the trial again"}
+							</Button>
+						</form>
+					{/if}
+					{#if check.available && trial?.status !== "failed"}
 						<form
 							action="?/applyUpdate"
 							method="POST"
@@ -292,6 +323,13 @@
 				</div>
 				{#if check.error}
 					<p class="text-xs text-red-500">{check.error}</p>
+				{/if}
+				{#if check.available && trial?.status === "failed"}
+					<p class="text-xs text-red-500">
+						The trial run of :{trial.tag} never got healthy ({trialAttempts(
+							trial.attempts,
+						)}), so it isn't offered. Fix what's below and retry the trial.
+					</p>
 				{/if}
 				{#if check.available && trial}
 					{#if trial.log}

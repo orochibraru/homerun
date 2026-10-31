@@ -146,6 +146,7 @@ async function availableUpdates(pending: Promise<ServiceDTO[]>) {
 					serviceId: svc.id,
 					serviceName: svc.name,
 					tag: check.available.tag,
+					trialAttempts: check.trial?.attempts ?? null,
 					trialMessage: check.trial?.message ?? null,
 					trialStatus: check.trial?.status ?? null,
 				},

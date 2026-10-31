@@ -793,14 +793,20 @@ describe("ImageVersionService update trials", () => {
 		logOutput = "\u001b[31mpanic: no database\u001b[0m\n";
 		const state = await ImageVersionService.check(svc);
 		const message =
-			"The new version failed its healthcheck.\n\npanic: no database";
-		expect(state?.trial).toMatchObject({ message, status: "failed" });
+			"Failed all 4 attempts. The new version failed its healthcheck.\n\npanic: no database";
+		expect(state?.trial).toMatchObject({
+			attempts: 4,
+			message,
+			status: "failed",
+		});
+		expect(pulls).toHaveLength(4);
 		expect(containerCreate()?.body.Healthcheck).toEqual(
 			dockerHealthcheck("curl -f localhost", NO_TIMING),
 		);
 		expect(notifications[0]).toMatchObject({
 			detail: message,
-			message: '"Gitea" can update to 1.24.4. Its trial run failed.',
+			message:
+				"\"Gitea\" can update to 1.24.4. Its trial run never got healthy (4 attempts), so it isn't offered: retry the trial from the service's Version panel once it's fixed.",
 		});
 		expect(workerCalls.at(-1)).toEqual([
 			"delete",
@@ -814,20 +820,20 @@ describe("ImageVersionService update trials", () => {
 		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
 		inspects = [{ ExitCode: 3, Running: false }];
 		expect((await ImageVersionService.check(exited.svc))?.trial).toMatchObject({
-			message: "The new version exited with code 3.",
+			message: "Failed all 4 attempts. The new version exited with code 3.",
 			status: "failed",
 		});
 		inspects = [null];
 		const vanished = fakeService({ updateTrialEnabled: true });
 		expect(
 			(await ImageVersionService.check(vanished.svc))?.trial?.message,
-		).toBe("The new version exited with code unknown.");
+		).toBe("Failed all 4 attempts. The new version exited with code unknown.");
 		pullError = new Error("manifest unknown");
 		const unpulled = fakeService({ updateTrialEnabled: true });
 		expect(
 			(await ImageVersionService.check(unpulled.svc))?.trial,
 		).toMatchObject({
-			message: "manifest unknown",
+			message: "Failed all 4 attempts. manifest unknown",
 			status: "failed",
 		});
 	});
@@ -855,13 +861,81 @@ describe("ImageVersionService update trials", () => {
 		inspects = [{ Health: { Status: "starting" }, Running: true }];
 		const state = await ImageVersionService.check(svc);
 		expect(state?.trial).toMatchObject({
-			message: "The new version never reported healthy.",
+			message: "Failed all 4 attempts. The new version never reported healthy.",
 			status: "failed",
 		});
-		expect(pulls).toEqual([
-			{ auth: AUTH, image: "gitea/gitea", tag: "1.24.4" },
-		]);
+		expect(pulls).toEqual(
+			Array.from({ length: 4 }, () => ({
+				auth: AUTH,
+				image: "gitea/gitea",
+				tag: "1.24.4",
+			})),
+		);
 		expect(containerCreate()?.body.Image).toBe("gitea/gitea:1.24.4");
+	});
+
+	test("a failed attempt is retried on a fresh log and a later pass counts", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		inspects = [
+			{ ExitCode: 1, Running: false },
+			{ Health: { Status: "healthy" }, Running: true },
+		];
+		const started = now;
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial).toMatchObject({
+			attempts: 2,
+			message: "Reported healthy.",
+			status: "passed",
+		});
+		expect(state?.trial?.log?.slice(0, 2)).toEqual([
+			"Attempt 1 failed: The new version exited with code 1.",
+			"Retry 1 of 3",
+		]);
+		expect(pulls).toHaveLength(2);
+		expect(now - started).toBeGreaterThanOrEqual(30_000);
+		expect(notifications[0].message).toBe(
+			'"Gitea" can update to 1.24.4. Its trial run started cleanly.',
+		);
+	});
+
+	test("retrying a failed trial runs it again and notifies its outcome again", async () => {
+		const available = { digest: "sha256:new", foundAt: "t1", tag: "1.24.4" };
+		const { svc } = fakeService({
+			updateCheck: {
+				available,
+				checkedAt: "t0",
+				error: null,
+				notifiedKey: "1.24.4@sha256:new",
+				trial: { at: "t2", message: "boom", status: "failed", tag: "1.24.4" },
+			},
+			updateTrialEnabled: false,
+		});
+		await ImageVersionService.retryTrial(svc);
+		await settle(() => notifications.length > 0);
+		expect(svc.toJSON().updateCheck?.trial).toMatchObject({
+			attempts: 1,
+			status: "passed",
+		});
+		expect(notifications).toHaveLength(1);
+		expect(pulls).toHaveLength(1);
+	});
+
+	test("retrying a trial needs an update and no trial already running", async () => {
+		const bare = fakeService();
+		await expect(ImageVersionService.retryTrial(bare.svc)).rejects.toThrow(
+			"There's no update to try.",
+		);
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		const gate = deferred();
+		pullGate = gate.promise;
+		await ImageVersionService.check(svc, { background: true });
+		await expect(ImageVersionService.retryTrial(svc)).rejects.toThrow(
+			"A check or trial is already running for this service.",
+		);
+		gate.release();
+		await settle(() => notifications.length > 0);
 	});
 
 	test("an update already tried isn't tried again, one left running is", async () => {

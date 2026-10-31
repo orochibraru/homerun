@@ -8,9 +8,10 @@ import {
 	type ImageScanFinding,
 	type SeverityCounts,
 } from "#lib/image-scan.js";
-import type {
-	ImageUpdateAvailable,
-	ImageUpdateTrial,
+import {
+	type ImageUpdateAvailable,
+	type ImageUpdateTrial,
+	trialAttempts,
 } from "#lib/image-versions.js";
 import { intelSummary, type IpIntel } from "#lib/ip-intel.js";
 import {
@@ -665,11 +666,15 @@ export function updateAvailableMessage(
 	if (trial) {
 		fields.push({
 			name: "Trial run",
-			value: trial.status === "passed" ? "Started cleanly" : "Failed",
+			value:
+				trial.status === "passed"
+					? "Started cleanly"
+					: `Never got healthy (${trialAttempts(trial.attempts)}), not offered`,
 		});
 	}
+	const failed = trial?.status === "failed";
 	return {
-		detail: trial?.status === "failed" ? trial.message : null,
+		detail: failed ? trial.message : null,
 		event: "update.available",
 		fields,
 		link: dashboardLink(
@@ -679,8 +684,10 @@ export function updateAvailableMessage(
 		serviceId: service.id,
 		serviceName: service.name,
 		timestamp,
-		title: sameTag
-			? `${service.name} has a newer ${update.tag} image`
-			: `${service.name} can update to ${update.tag}`,
+		title: failed
+			? `${service.name} has an update to ${update.tag}, but its health check fails`
+			: sameTag
+				? `${service.name} has a newer ${update.tag} image`
+				: `${service.name} can update to ${update.tag}`,
 	};
 }
