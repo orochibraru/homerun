@@ -70,7 +70,7 @@ test.describe.serial("service creation wizard", () => {
 
 		await expect(page.getByText("Couldn't create the service:")).toBeVisible();
 
-		await page.getByRole("button", { name: "Close toast" }).first().click();
+		await page.getByRole("button", { name: "Dismiss" }).first().click();
 		await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
 
 		// onFailure sends you back to step 1, where the submit buttons aren't
