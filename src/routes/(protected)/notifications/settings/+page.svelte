@@ -3,6 +3,8 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { BellRing, Monitor, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
 	import { onMount } from "svelte";
 
 	import { currentPushSubscription } from "#lib/browser-push.js";
@@ -10,8 +12,6 @@
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
 	import { pushEndpointDigest } from "#lib/notification-channel-target.js";
 	import { NOTIFICATION_EVENTS } from "#lib/notification-events.js";
 	import { title } from "#lib/store/title.js";

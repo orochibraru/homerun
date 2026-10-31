@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { BellOff, BellRing } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -10,7 +11,6 @@
 		enableBrowserPush,
 		tabNotificationsEnabled,
 	} from "#lib/browser-push.js";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { browserNotificationPermission } from "#lib/notification-feed.js";
 	import { toastError } from "#lib/toast.js";
 

@@ -2,11 +2,11 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { ChevronRight, FileText, Search, X } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
 	import { onMount } from "svelte";
 
 	import { SEARCH_KIND_ICONS } from "#lib/components/search-kind-icons.js";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { searchContent } from "#lib/remote/search.remote.js";
 	import {
 		filterPages,

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, CircleCheck, CircleX } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 
 	const { data } = $props();

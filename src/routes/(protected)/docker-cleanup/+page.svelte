@@ -10,6 +10,7 @@
 		ShieldCheck,
 		TriangleAlert,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import AsyncBlock from "#lib/components/async-block.svelte";
@@ -17,7 +18,6 @@
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { queuedJobToast } from "#lib/job-toast.js";
 	import {
 		getCleanupPreview,

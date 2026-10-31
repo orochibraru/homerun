@@ -46,7 +46,7 @@ suggestion.
    scope it with
    `go test ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`
    (swap `cli` for `installer` or `worker`/`agent`) or
-   `bun --config=bunfig.unit.toml test tests/unit/app`.
+   `bun --conditions=svelte --config=bunfig.unit.toml test tests/unit/app`.
 
 ## What to scan the diff for (this repo's own hard rules)
 

@@ -2,6 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Activity, ExternalLink, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount, untrack } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
@@ -11,7 +12,6 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import StatusPageFields from "#lib/components/status-page-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { StatusPagePick } from "#lib/status-page-members.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

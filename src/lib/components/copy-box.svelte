@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { cn } from "@orochibraru/ui/utils";
+
 	import CopyButton from "#lib/components/copy-button.svelte";
-	import { cn } from "#lib/utils.js";
 
 	const {
 		value,

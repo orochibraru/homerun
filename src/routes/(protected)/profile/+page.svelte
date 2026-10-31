@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { ShieldCheck, UserCircle } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import { authClient } from "#lib/auth-client.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
 

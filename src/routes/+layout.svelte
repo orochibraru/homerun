@@ -3,12 +3,13 @@
 	import { browser } from "$app/env";
 	import { onNavigate } from "$app/navigation";
 	import { page } from "$app/state";
+	import { Toaster } from "@orochibraru/ui/sonner";
+	import * as Tooltip from "@orochibraru/ui/tooltip";
 	import { ModeWatcher } from "mode-watcher";
 	import { onMount } from "svelte";
 
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import TopLoadingBar from "#lib/components/top-loading-bar.svelte";
-	import { Toaster } from "#lib/components/ui/sonner/index.js";
 	import { title } from "#lib/store/title.js";
 
 	const { children } = $props();
@@ -50,8 +51,10 @@
 <svelte:element
 	this={page.route.id?.startsWith("/(protected)") ? "div" : "main"}
 >
-	<ErrorBoundary class="p-5 md:p-6">
-		{@render children()}
-	</ErrorBoundary>
+	<Tooltip.Provider delayDuration={300}>
+		<ErrorBoundary class="p-5 md:p-6">
+			{@render children()}
+		</ErrorBoundary>
+	</Tooltip.Provider>
 </svelte:element>
 <Toaster closeButton position="bottom-right" />

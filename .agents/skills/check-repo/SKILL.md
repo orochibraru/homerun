@@ -54,7 +54,8 @@ actually reading the failing file first.
 
 4. **Run the unit tests that cover what changed**: `bun run test` for everything
    (a few seconds, unit only, no Postgres/Docker needed), or scope it —
-   `bun --config=bunfig.unit.toml test tests/unit/app` for the SvelteKit side,
+   `bun --conditions=svelte --config=bunfig.unit.toml test tests/unit/app` for
+   the SvelteKit side,
    `go test ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`
    (swap `cli` for `installer` or `worker`/`agent`) for one Go sub-project.
 

@@ -12,6 +12,8 @@
 		Settings as SettingsIcon,
 		Trash2,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as ContextMenu from "@orochibraru/ui/context-menu";
 	import { onMount, type Snippet, tick } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -23,8 +25,6 @@
 	import Pagination from "#lib/components/pagination.svelte";
 	import StackMoveDialog from "#lib/components/stack-move-dialog.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { STACK_SORTS } from "#lib/list-sorts.js";
 	import { title } from "#lib/store/title.js";

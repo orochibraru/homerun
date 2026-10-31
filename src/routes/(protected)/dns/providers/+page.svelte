@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { ExternalLink, KeyRound, Plug, Plus, Trash2 } from "@lucide/svelte";
-
-	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
-	import EmptyState from "#lib/components/empty-state.svelte";
-	import { inputClass, labelClass } from "#lib/components/form-styles.js";
-	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import { Button } from "@orochibraru/ui/button";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+
+	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import EmptyState from "#lib/components/empty-state.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { data } = $props();

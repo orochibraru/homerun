@@ -10,10 +10,10 @@
 		Server,
 		Settings,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 
 	const { data, children } = $props();
 	const stack = $derived(data.stack);

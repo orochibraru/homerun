@@ -11,9 +11,8 @@
 		Unlink,
 		Wrench,
 	} from "@lucide/svelte";
+	import * as ContextMenu from "@orochibraru/ui/context-menu";
 	import type { Snippet } from "svelte";
-
-	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
 
 	interface Service {
 		containerId: string | null;

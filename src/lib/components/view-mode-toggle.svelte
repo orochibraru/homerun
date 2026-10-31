@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { LayoutGrid, List } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { ViewMode } from "#lib/view-mode.svelte.js";
 
 	const { view }: { view: ViewMode } = $props();

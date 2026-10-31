@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Label } from "@orochibraru/ui/label";
+	import { Textarea } from "@orochibraru/ui/textarea";
 
 	import Alert from "#lib/components/alert.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import { Label } from "#lib/components/ui/label/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { data, form } = $props();

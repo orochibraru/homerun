@@ -3,9 +3,9 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { ArrowRight, PackageCheck, RotateCcw } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import {
 		trialAttempts,

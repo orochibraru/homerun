@@ -7,6 +7,8 @@
 		ShieldCheck,
 		Smartphone,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -16,8 +18,6 @@
 	import PasswordField from "#lib/components/password-field.svelte";
 	import SetPasswordPanel from "#lib/components/set-password-panel.svelte";
 	import TwoFactorPanel from "#lib/components/two-factor-panel.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		getPasswordStrength,
 		getPasswordStrengthMeta,

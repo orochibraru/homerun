@@ -7,10 +7,10 @@
 		Sparkles,
 		UserCircle,
 	} from "@lucide/svelte";
+	import * as DropdownMenu from "@orochibraru/ui/dropdown-menu";
 
 	import { handleSignOut, handleSwitchMode } from "#lib/account-actions.js";
 	import { headerControlClass } from "#lib/components/header-styles.js";
-	import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
 	import { UI_MODE_LABELS, type UiMode } from "#lib/ui-mode.js";
 
 	interface ProfileUser {

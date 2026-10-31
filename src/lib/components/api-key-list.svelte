@@ -2,10 +2,10 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { KeyRound, Pencil, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { SECRET_MASK } from "#lib/formatting.js";
 	import {
 		areaLabel,

@@ -1,4 +1,12 @@
 <script lang="ts">
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { untrack } from "svelte";
 
 	import {
@@ -10,14 +18,6 @@
 		type DestinationType,
 	} from "#lib/backup-destinations.js";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 
 	const CUSTOM = "custom";
 

@@ -9,13 +9,13 @@
 		Trash2,
 		Wrench,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { getInfraStatus } from "#lib/remote/docker-infra.remote.js";
 	import { title } from "#lib/store/title.js";

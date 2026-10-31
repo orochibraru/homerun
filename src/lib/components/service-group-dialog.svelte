@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Check, ChevronsUpDown, FolderKanban, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as Command from "@orochibraru/ui/command";
+	import * as Popover from "@orochibraru/ui/popover";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Command from "#lib/components/ui/command/index.js";
-	import * as Popover from "#lib/components/ui/popover/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	interface Props {

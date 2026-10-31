@@ -3,14 +3,14 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { ChevronDown } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { testAgentConnection } from "#lib/remote/remote-hosts.remote.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast, toastError } from "#lib/toast.js";

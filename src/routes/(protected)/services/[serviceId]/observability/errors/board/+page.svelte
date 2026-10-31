@@ -2,12 +2,12 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Bug, CircleCheck, EyeOff, RotateCcw } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount, tick } from "svelte";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
 	import ErrorLevelBadge from "#lib/components/error-level-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { IssueStatus } from "#lib/error-tracking/event.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";

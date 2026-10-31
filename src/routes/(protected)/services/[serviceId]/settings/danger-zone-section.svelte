@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { AlertTriangle, Trash2Icon, TriangleAlertIcon } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { tick } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import type { ActiveJob } from "#lib/services/service-lifecycle.service.js";
 	import { enhanceToast } from "#lib/toast.js";
 

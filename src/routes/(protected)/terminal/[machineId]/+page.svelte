@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, TerminalSquare } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
-	import { Button } from "#lib/components/ui/button/index.js";
 	import WebTerminal from "#lib/components/web-terminal.svelte";
 	import { title } from "#lib/store/title.js";
 

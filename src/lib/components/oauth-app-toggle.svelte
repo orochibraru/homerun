@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import { Switch } from "@orochibraru/ui/switch";
 
-	import { Switch } from "#lib/components/ui/switch/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	interface Props {

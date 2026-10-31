@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { KeyRound } from "@lucide/svelte";
+	import * as Select from "@orochibraru/ui/select";
 
 	import Alert from "#lib/components/alert.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import { IAC_TOOL_INFO, type IacTool } from "#lib/iac/tools.js";
 	import {
 		API_KEY_EXPIRY_OPTIONS,

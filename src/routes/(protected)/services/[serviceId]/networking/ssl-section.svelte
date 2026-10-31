@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { ShieldCheck } from "@lucide/svelte";
+	import { Textarea } from "@orochibraru/ui/textarea";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { domainHosts, isUnderDomain } from "#lib/service-domains.js";
 	import { enhanceToast } from "#lib/toast.js";
 

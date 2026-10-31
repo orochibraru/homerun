@@ -2,6 +2,9 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { ArrowRight, ShieldCheck } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -9,9 +12,6 @@
 	import AuthShell from "#lib/components/auth-shell.svelte";
 	import PasswordField from "#lib/components/password-field.svelte";
 	import PasswordStrength from "#lib/components/password-strength.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";
 

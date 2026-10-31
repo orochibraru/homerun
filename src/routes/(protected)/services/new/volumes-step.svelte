@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { HardDrive, Plus, Trash2 } from "@lucide/svelte";
-	import { untrack } from "svelte";
-
-	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+	import { untrack } from "svelte";
+
+	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
 	import type { DetectedConfig } from "#lib/image-config.js";
 	import { getUnknownHostVolumes } from "#lib/remote/docker-infra.remote.js";

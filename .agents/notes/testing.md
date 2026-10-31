@@ -52,11 +52,12 @@ exercised.
 Run everything: `bun run test` —
 `go test ./cmd/... ./internal/... ./tests/unit/go/...` first, covering
 `cmd/worker/` (including its agent mode), `cmd/cli/` and `cmd/installer/`, then
-`bun --config=bunfig.unit.toml test tests/unit` afterward for the app half. That
-config's own `[test].preload` (not `bunfig.toml`'s) is what keeps this
-unit-only: it doesn't preload `tests/integration/support/setup.ts` at all, so
-the real-Postgres-container integration bootstrap never runs for it, unlike a
-bare `bun test` (which reads `bunfig.toml`, does preload it, and gates it with
+`bun --conditions=svelte --config=bunfig.unit.toml test tests/unit` afterward
+for the app half. That config's own `[test].preload` (not `bunfig.toml`'s) is
+what keeps this unit-only: it doesn't preload
+`tests/integration/support/setup.ts` at all, so the real-Postgres-container
+integration bootstrap never runs for it, unlike a bare `bun test` (which reads
+`bunfig.toml`, does preload it, and gates it with
 `HOMERUN_SKIP_INTEGRATION_SETUP` instead). Scope the Go half to one sub-project
 the same way as above; there's no dedicated script per sub-project any more.
 `tests/integration/` is a separate suite with its own `beforeAll`/`afterAll`

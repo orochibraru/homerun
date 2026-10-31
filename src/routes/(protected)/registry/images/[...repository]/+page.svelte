@@ -3,12 +3,12 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import CopyButton from "#lib/components/copy-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 

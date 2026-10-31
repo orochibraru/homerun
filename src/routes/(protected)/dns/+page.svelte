@@ -2,12 +2,12 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ChevronRight, Globe, Plus, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	import DomainLinkFields from "./domain-link-fields.svelte";

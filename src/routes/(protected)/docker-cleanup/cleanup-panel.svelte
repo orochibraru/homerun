@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { Loader2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import type { Component, Snippet } from "svelte";
 
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { CleanupItem } from "#lib/services/docker.service.js";
 
 	import CleanupItemList from "./cleanup-item-list.svelte";

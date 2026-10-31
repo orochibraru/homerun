@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 
 	import { labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import { GIT_PROVIDER_KIND_LABELS } from "#lib/git-provider-kinds.js";
 	import type { ConnectedGitProvider } from "#lib/server/git-connections.js";
 

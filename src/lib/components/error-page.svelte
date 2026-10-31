@@ -2,11 +2,11 @@
 	import { dev } from "$app/env";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import { Button } from "@orochibraru/ui/button";
+	import { cn } from "@orochibraru/ui/utils";
 	import { onMount } from "svelte";
 
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
-	import { cn } from "#lib/utils.js";
 
 	interface Props {
 		normalHeight: boolean;

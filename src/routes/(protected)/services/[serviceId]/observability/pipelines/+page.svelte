@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ArrowRight, Workflow } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PipelineRunList from "#lib/components/pipelines/pipeline-run-list.svelte";
 	import PipelineStats from "#lib/components/pipelines/pipeline-stats.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
 

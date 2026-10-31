@@ -3,14 +3,14 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { KeyRound } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import { authClient, signIn, signOut } from "#lib/auth-client.js";
 	import AuthShell from "#lib/components/auth-shell.svelte";
 	import PasswordField from "#lib/components/password-field.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { clearOauthAttempt, lastOauthAttempt } from "#lib/oauth-attempt.js";
 	import { title } from "#lib/store/title.js";
 	import { toastError } from "#lib/toast.js";

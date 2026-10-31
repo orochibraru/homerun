@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Palette, Server } from "@lucide/svelte";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import IconPicker from "#lib/components/icon-picker.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 	import {
 		TEMPLATE_CATEGORIES,
 		templateCategoryLabel,

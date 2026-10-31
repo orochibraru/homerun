@@ -16,10 +16,10 @@
 		X,
 		XCircle,
 	} from "@lucide/svelte";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import type { Component } from "svelte";
 	import { untrack } from "svelte";
 
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		type DeployPhase,
 		type DeployPhaseId,

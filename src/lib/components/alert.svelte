@@ -4,9 +4,8 @@
 
 <script lang="ts">
 	import { AlertTriangle, CheckCircle2, Info, OctagonX } from "@lucide/svelte";
+	import { cn } from "@orochibraru/ui/utils";
 	import type { Snippet } from "svelte";
-
-	import { cn } from "#lib/utils.js";
 
 	const {
 		variant = "error",

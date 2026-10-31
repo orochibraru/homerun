@@ -9,6 +9,8 @@
 		Settings,
 		Trash2,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import BackupCancelButton from "#lib/components/backup-cancel-button.svelte";
@@ -19,8 +21,6 @@
 	} from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { formatDuration } from "#lib/resource-incidents.js";
 	import { describeSchedule, scheduleFromCron } from "#lib/schedule.js";
 	import { title } from "#lib/store/title.js";

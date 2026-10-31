@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { KeyRound, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { GarageBucketKey } from "#lib/services/s3/garage-admin.js";
 	import { enhanceToast } from "#lib/toast.js";
 

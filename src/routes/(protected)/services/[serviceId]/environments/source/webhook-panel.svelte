@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import { Button } from "@orochibraru/ui/button";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { PushWebhookDetails } from "#lib/services/git-webhook.service.js";
 
 	interface Props {

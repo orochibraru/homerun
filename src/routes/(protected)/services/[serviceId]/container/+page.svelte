@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Cpu } from "@lucide/svelte";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Input } from "@orochibraru/ui/input";
+	import { Switch } from "@orochibraru/ui/switch";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount } from "svelte";
 
 	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Switch } from "#lib/components/ui/switch/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { scaleToZeroLabel } from "#lib/scale-to-zero.js";
 	import { title } from "#lib/store/title.js";
@@ -233,7 +233,7 @@
 						</label>
 						<Textarea
 							class="font-mono"
-							content={values.placementConstraints}
+							value={values.placementConstraints}
 							id="placementConstraints"
 							name="placementConstraints"
 							placeholder={"env==staging\ndisk!=hdd"}
@@ -253,7 +253,7 @@
 						</label>
 						<Textarea
 							class="font-mono"
-							content={values.placementPreferences}
+							value={values.placementPreferences}
 							id="placementPreferences"
 							name="placementPreferences"
 							placeholder="zone"

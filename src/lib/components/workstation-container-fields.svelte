@@ -1,10 +1,10 @@
 <script lang="ts">
+	import { Input } from "@orochibraru/ui/input";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import type { Snippet } from "svelte";
 
 	import { labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import {
 		DEFAULT_WORKSTATION_HOME,
 		DEFAULT_WORKSTATION_IMAGE,
@@ -110,7 +110,7 @@
 			>
 			<Textarea
 				class="font-mono text-xs"
-				content={envText}
+				value={envText}
 				id="env"
 				name="env"
 				placeholder={"KEY=value\nOTHER=value"}

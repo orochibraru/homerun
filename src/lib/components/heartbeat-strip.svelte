@@ -7,8 +7,9 @@
 </script>
 
 <script lang="ts">
+	import { cn } from "@orochibraru/ui/utils";
+
 	import { timeAgo } from "#lib/formatting.js";
-	import { cn } from "#lib/utils.js";
 
 	const {
 		beats,

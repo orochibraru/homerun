@@ -15,12 +15,12 @@
 		ShieldCheck,
 		Terminal,
 	} from "@lucide/svelte";
+	import * as Select from "@orochibraru/ui/select";
 
 	import CopyButton from "#lib/components/copy-button.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
 	import { primaryHostname } from "#lib/service-domains.js";

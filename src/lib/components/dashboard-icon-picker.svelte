@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { mode } from "mode-watcher";
-
-	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
+	} from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
+	import { mode } from "mode-watcher";
+
+	import { labelClass as label } from "#lib/components/form-styles.js";
 	import { getDashboardIcons } from "#lib/remote/dashboard-icons.remote.js";
 	import { DASHBOARD_ICON_PREFIX, iconSrc } from "#lib/service-icon.js";
 

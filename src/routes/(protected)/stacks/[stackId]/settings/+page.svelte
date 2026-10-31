@@ -2,6 +2,16 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { AlertTriangle, FolderKanban, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount, tick } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
@@ -10,16 +20,6 @@
 	import IconPicker from "#lib/components/icon-picker.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 
@@ -94,7 +94,7 @@
 				<label class={label} for="description">Description</label>
 				<Textarea
 					class="resize-none"
-					content={stack.description ?? ""}
+					value={stack.description ?? ""}
 					id="description"
 					name="description"
 					rows={2}

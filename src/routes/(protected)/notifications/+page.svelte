@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Bell, CheckCheck, Settings2, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as Tooltip from "@orochibraru/ui/tooltip";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import NotificationRow from "#lib/components/notification-row.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Tooltip from "#lib/components/ui/tooltip/index.js";
 	import {
 		deleteAllNotifications,
 		deleteNotification,

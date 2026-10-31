@@ -8,16 +8,16 @@
 		RotateCw,
 		Square,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount, untrack } from "svelte";
 
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { workstationStatus } from "#lib/remote/workstations.remote.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

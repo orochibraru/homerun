@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ChevronRight, FileCode2, Lock, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityList from "#lib/components/entity-list.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import { IAC_TOOL_INFO, usesHttpBackend } from "#lib/iac/tools.js";

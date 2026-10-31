@@ -2,13 +2,13 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, KeyRound } from "@lucide/svelte";
+	import { Input } from "@orochibraru/ui/input";
 	import { onMount } from "svelte";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import PermissionPicker from "#lib/components/permission-picker.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { SECRET_MASK } from "#lib/formatting.js";
 	import type { Permissions } from "#lib/permissions.js";
 	import { title } from "#lib/store/title.js";

@@ -1,16 +1,17 @@
 <script lang="ts">
 	import {
+		Select as SelectRoot,
+		SelectContent,
+		SelectItem,
+		SelectTrigger,
+	} from "@orochibraru/ui/select";
+
+	import {
 		BUILD_METHOD_DESCRIPTIONS,
 		BUILD_METHOD_LABELS,
 		BUILD_METHODS,
 		type BuildMethod,
 	} from "#lib/build-methods.js";
-	import {
-		Select as SelectRoot,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
 
 	let {
 		labelClass,

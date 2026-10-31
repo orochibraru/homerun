@@ -11,12 +11,12 @@
 		Star,
 		Tag,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import { runtimeOptionsSummary } from "#lib/service-runtime.js";
 	import { title } from "#lib/store/title.js";

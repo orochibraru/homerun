@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
+
 	import CheckBox from "#lib/components/check-box.svelte";
 	import GitRepoPicker from "#lib/components/git-repo-picker.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { isCommitSha } from "#lib/git-ref.js";
 	import { listRepoBranches } from "#lib/remote/git-repos.remote.js";
 	import type { GitProviderKind } from "#lib/server/db/schema.js";

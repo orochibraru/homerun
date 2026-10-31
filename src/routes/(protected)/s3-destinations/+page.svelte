@@ -2,6 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { CloudUpload, Pencil, Plus, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import { describeDestination } from "#lib/backup-destinations.js";
@@ -11,7 +12,6 @@
 	import EntityList from "#lib/components/entity-list.svelte";
 	import EntityToolbar from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { BASE_SORTS } from "#lib/list-sorts.js";
 	import { title } from "#lib/store/title.js";

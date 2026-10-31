@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { untrack } from "svelte";
-
-	import { labelClass } from "#lib/components/form-styles.js";
-	import { Input } from "#lib/components/ui/input/index.js";
+	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+	import { untrack } from "svelte";
+
+	import { labelClass } from "#lib/components/form-styles.js";
 	import {
 		describeSchedule,
 		scheduleFromCron,

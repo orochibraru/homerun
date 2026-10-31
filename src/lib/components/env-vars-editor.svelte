@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Hammer, Lock, LockOpen, Plus, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 	import { untrack } from "svelte";
 
 	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import {
 		type EnvEditorRow,
 		envEditorRows,

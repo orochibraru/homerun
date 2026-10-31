@@ -1,12 +1,13 @@
 <script lang="ts">
-	import CheckBox from "#lib/components/check-box.svelte";
-	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import type { DnsConnectionSummary } from "#lib/dto/dns-connection-dto.js";
 	import { getConnectionZones } from "#lib/remote/dns.remote.js";
 

@@ -2,12 +2,12 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { AlertTriangle, Check, Plus, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import WorkstationFields from "#lib/components/workstation-fields.svelte";
 	import WorkstationPresetHead from "#lib/components/workstation-preset-head.svelte";
 	import { title } from "#lib/store/title.js";

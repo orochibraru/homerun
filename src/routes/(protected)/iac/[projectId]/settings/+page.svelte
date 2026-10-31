@@ -3,6 +3,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Settings, Trash2, TriangleAlert } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
@@ -10,7 +11,6 @@
 	import IacToolPicker from "#lib/components/iac-tool-picker.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { data } = $props();

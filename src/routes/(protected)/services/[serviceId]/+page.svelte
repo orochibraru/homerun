@@ -13,6 +13,8 @@
 		Undo2,
 		Zap,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onDestroy, onMount, tick } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
@@ -24,8 +26,6 @@
 	import ReplicaStats from "#lib/components/replica-stats.svelte";
 	import ServiceGraph from "#lib/components/service-graph.svelte";
 	import ServiceSummary from "#lib/components/service-summary.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { DeployProgress } from "#lib/deploy-progress.svelte.js";
 	import { isDeployed, workloadId } from "#lib/service-state.js";
 	import { title } from "#lib/store/title.js";

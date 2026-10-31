@@ -2,12 +2,12 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Plus, ShieldBan } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Textarea } from "@orochibraru/ui/textarea";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import {
 		parsePathPatterns,
 		PATH_PATTERN_PRESETS,

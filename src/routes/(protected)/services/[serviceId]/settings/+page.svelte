@@ -3,17 +3,17 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Settings } from "@lucide/svelte";
-	import { onMount } from "svelte";
-
-	import PanelHeader from "#lib/components/panel-header.svelte";
-	import SaveButton from "#lib/components/save-button.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
+	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+	import { onMount } from "svelte";
+
+	import PanelHeader from "#lib/components/panel-header.svelte";
+	import SaveButton from "#lib/components/save-button.svelte";
 	import { PULL_POLICIES } from "#lib/pull-policy.js";
 	import { defaultHostname } from "#lib/service-domains.js";
 	import { isDeployed } from "#lib/service-state.js";

@@ -2,13 +2,13 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as Dialog from "@orochibraru/ui/dialog";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { toast } from "svelte-sonner";
 
 	import { authClient } from "#lib/auth-client.js";
 	import PasswordField from "#lib/components/password-field.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Dialog from "#lib/components/ui/dialog/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { toastError } from "#lib/toast.js";
 
 	let open = $state(false);

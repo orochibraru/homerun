@@ -2,12 +2,12 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Database, FileCode2, History, Lock } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import BucketConnection from "#lib/components/bucket-connection.svelte";
 	import CodeBlock from "#lib/components/code-block.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatBytes, timeAgo } from "#lib/formatting.js";
 	import { IAC_TOOL_INFO } from "#lib/iac/tools.js";
 	import { enhanceToast } from "#lib/toast.js";

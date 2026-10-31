@@ -8,6 +8,10 @@
 		Plus,
 		Server,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as ContextMenu from "@orochibraru/ui/context-menu";
+	import { Input } from "@orochibraru/ui/input";
+	import { Switch } from "@orochibraru/ui/switch";
 	import { onMount, type Snippet } from "svelte";
 
 	import EntityList from "#lib/components/entity-list.svelte";
@@ -19,10 +23,6 @@
 	import StackMoveDialog from "#lib/components/stack-move-dialog.svelte";
 	import StatusDot from "#lib/components/status-dot.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as ContextMenu from "#lib/components/ui/context-menu/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Switch } from "#lib/components/ui/switch/index.js";
 	import UnlinkDialog, {
 		type UnlinkTarget,
 	} from "#lib/components/unlink-dialog.svelte";

@@ -2,15 +2,15 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ChevronDown, ChevronLeft, Server, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import { Label } from "@orochibraru/ui/label";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import { Label } from "#lib/components/ui/label/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { settings } from "#lib/settings.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

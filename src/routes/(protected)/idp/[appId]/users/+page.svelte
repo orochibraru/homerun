@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { UserRound, Users, UserX } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { tick } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { formatDate, timeAgo } from "#lib/formatting.js";
 	import { enhanceToast } from "#lib/toast.js";
 

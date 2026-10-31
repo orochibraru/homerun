@@ -1,7 +1,6 @@
 <script lang="ts" module>
+	import type { ButtonVariant } from "@orochibraru/ui/button";
 	import type { HTMLFormAttributes } from "svelte/elements";
-
-	import type { ButtonVariant } from "#lib/components/ui/button/index.js";
 
 	export type DialogSize = "sm" | "md" | "lg" | "fullscreen";
 
@@ -16,8 +15,6 @@
 			onsubmit?: (e: SubmitEvent) => void;
 		};
 		loading?: boolean;
-		/** Label shown on submit button while loading */
-		loadingLabel?: string;
 		/** Callback fired when the submit button is clicked (non-form mode) */
 		onsubmit?: () => void;
 		open: boolean;
@@ -42,13 +39,12 @@
 
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import { Button, buttonVariants } from "@orochibraru/ui/button";
+	import * as Dialog from "@orochibraru/ui/dialog";
+	import * as Drawer from "@orochibraru/ui/drawer";
+	import { cn } from "@orochibraru/ui/utils";
 	import type { Snippet } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
-
-	import { Button, buttonVariants } from "#lib/components/ui/button/index.js";
-	import * as Dialog from "#lib/components/ui/dialog/index.js";
-	import * as Drawer from "#lib/components/ui/drawer/index.js";
-	import { cn } from "#lib/utils.js";
 
 	let {
 		open = $bindable(false),
@@ -58,7 +54,6 @@
 		size = "md",
 		contentClass,
 		submitLabel = "Submit",
-		loadingLabel = "Loading...",
 		submitVariant = "default",
 		submitDisabled = false,
 		onsubmit,
@@ -85,7 +80,7 @@
 			type={form ? "submit" : "button"}
 			variant={submitVariant}
 		>
-			{loading ? loadingLabel : submitLabel}
+			{submitLabel}
 		</Button>
 	{/if}
 	{#if isDesktop.current}

@@ -1,13 +1,13 @@
 <script lang="ts">
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 
 	import { labelClass } from "#lib/components/form-styles.js";
 	import GitRepoPicker from "#lib/components/git-repo-picker.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { listRepoBranches } from "#lib/remote/git-repos.remote.js";
 	import type { ConnectedGitProvider } from "#lib/server/git-connections.js";
 

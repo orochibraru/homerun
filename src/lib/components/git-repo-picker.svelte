@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown, GitBranch } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import * as Command from "@orochibraru/ui/command";
+	import * as Popover from "@orochibraru/ui/popover";
+	import * as Select from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { untrack } from "svelte";
 
-	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Command from "#lib/components/ui/command/index.js";
-	import * as Popover from "#lib/components/ui/popover/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { GIT_PROVIDER_KIND_LABELS } from "#lib/git-provider-kinds.js";
 	import {
 		hasDockerfile,

@@ -109,7 +109,7 @@ one go, no plans, no severity tiers, out-of-scope findings go in `TODO.md`.
 - List every `.svelte` file over 400 lines, longest first:
 
   ```bash
-  find src -name '*.svelte' -not -path '*/components/ui/*' \
+  find src -name '*.svelte' \
     | xargs wc -l | sort -rn | awk '$1 > 400'
   ```
 

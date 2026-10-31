@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Database, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import Alert from "#lib/components/alert.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 
 	import BucketTable from "./bucket-table.svelte";
 

@@ -10,18 +10,18 @@
 		TerminalSquare,
 		Trash2,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount, untrack } from "svelte";
 
 	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
 	import PublishedPortsFields from "#lib/components/published-ports-fields.svelte";
 	import RuntimeFields from "#lib/components/runtime-fields.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { mergeEnvRows, type ParsedEnvVar } from "#lib/env-parse.js";
 	import { title } from "#lib/store/title.js";
 	import { TEMPLATE_CATEGORIES } from "#lib/template-categories.js";
@@ -141,7 +141,7 @@
 					<label class={label} for="description">Description</label>
 					<Textarea
 						class="resize-none"
-						content={values?.description ?? ""}
+						value={values?.description ?? ""}
 						id="description"
 						name="description"
 						placeholder="Optional"

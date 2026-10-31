@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { CircleCheck, KeyRound } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import {
@@ -8,7 +9,6 @@
 		inputClass,
 		labelClass,
 	} from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 
 	const { data, form } = $props();

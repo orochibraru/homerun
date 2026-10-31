@@ -2,11 +2,11 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { KeyRound } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { toast } from "svelte-sonner";
 
 	import { authClient } from "#lib/auth-client.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { toastError } from "#lib/toast.js";
 
 	interface Provider {

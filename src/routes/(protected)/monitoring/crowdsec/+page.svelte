@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Plus, ShieldCheck } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import Pagination from "#lib/components/pagination.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 
 	import DecisionsTable from "./decisions-table.svelte";
 

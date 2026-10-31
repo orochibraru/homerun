@@ -2,14 +2,14 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, Container, Database, Layers } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Input } from "@orochibraru/ui/input";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import type { Component } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import type {
 		MigrationEntryKind,
 		MigrationFormState,

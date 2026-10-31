@@ -11,11 +11,11 @@
 		EyeOff,
 		RotateCcw,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import EnvironmentBadge from "#lib/components/environment-badge.svelte";
 	import ErrorLevelBadge from "#lib/components/error-level-badge.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import type { StoredFrame } from "#lib/error-tracking/event.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";

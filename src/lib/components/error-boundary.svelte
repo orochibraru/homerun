@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { RotateCw, TriangleAlert } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import type { Snippet } from "svelte";
 
 	import Alert from "./alert.svelte";
-	import { Button } from "./ui/button/index.js";
 
 	const {
 		title = "This page hit an error while rendering.",

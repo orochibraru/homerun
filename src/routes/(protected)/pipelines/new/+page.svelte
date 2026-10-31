@@ -2,13 +2,13 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { GitBranch } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import RepositoryChecklist from "#lib/components/pipelines/repository-checklist.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 

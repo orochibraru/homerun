@@ -12,15 +12,15 @@
 		Package,
 		Settings2,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import Stepper, { type StepperStep } from "#lib/components/stepper.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import WorkstationFields from "#lib/components/workstation-fields.svelte";
 	import { workstationDomainOwner } from "#lib/remote/workstations.remote.js";
 	import { slugify } from "#lib/slug.js";

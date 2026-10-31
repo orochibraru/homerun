@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Link2 } from "@lucide/svelte";
-
-	import CheckBox from "#lib/components/check-box.svelte";
-	import { labelClass as label } from "#lib/components/form-styles.js";
-	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
-	import ServicePicker from "#lib/components/service-picker.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
+	import { Button } from "@orochibraru/ui/button";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "#lib/components/ui/select/index.js";
+	} from "@orochibraru/ui/select";
+
+	import CheckBox from "#lib/components/check-box.svelte";
+	import { labelClass as label } from "#lib/components/form-styles.js";
+	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";
+	import ServicePicker from "#lib/components/service-picker.svelte";
 	import {
 		detectLinkEngine,
 		type LinkFormat,

@@ -8,12 +8,12 @@
 		ShieldCheck,
 		XCircle,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 
 	import Alert from "#lib/components/alert.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import {
 		BLOCK_SEVERITY_OPTIONS,

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { Pencil, ShieldCheck, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
 	import { tick } from "svelte";
 
 	import PermissionPicker from "#lib/components/permission-picker.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import {
 		parsePermissions,

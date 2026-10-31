@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
 	import { untrack } from "svelte";
 
 	import CheckBox from "#lib/components/check-box.svelte";
@@ -8,9 +11,6 @@
 	import EnvVarsEditor from "#lib/components/env-vars-editor.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import {
 		type CronJobFile,
 		type CronJobKind,

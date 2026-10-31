@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Plus, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 	import { untrack } from "svelte";
 
 	import CodeEditor from "#lib/components/code-editor.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import type { CronJobFile } from "#lib/cron-job-script.js";
 	import { languageFor } from "#lib/highlight.js";
 

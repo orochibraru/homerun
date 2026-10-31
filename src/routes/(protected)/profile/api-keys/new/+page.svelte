@@ -2,16 +2,16 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, KeyRound, Plus } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";
 	import PermissionPicker from "#lib/components/permission-picker.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import {
 		API_KEY_EXPIRY_OPTIONS,
 		type ApiKeyExpiry,

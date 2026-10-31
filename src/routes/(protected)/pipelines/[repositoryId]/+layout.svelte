@@ -8,11 +8,11 @@
 		RefreshCw,
 		Settings,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Spinner } from "@orochibraru/ui/spinner";
 
 	import Alert from "#lib/components/alert.svelte";
 	import TabNav from "#lib/components/tab-nav.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import { GIT_PROVIDER_KIND_LABELS } from "#lib/git-provider-kinds.js";
 	import { queuedJobToast } from "#lib/job-toast.js";

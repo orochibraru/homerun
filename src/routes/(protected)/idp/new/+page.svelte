@@ -2,6 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ArrowRight } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
@@ -12,7 +13,6 @@
 	import OauthEnvironmentFields, {
 		type OauthEnvironmentFieldValues,
 	} from "#lib/components/oauth-environment-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { CLAUDE_MCP_CALLBACK } from "#lib/oidc-provider.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

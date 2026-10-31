@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
 
 	import AsyncBlock from "#lib/components/async-block.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
@@ -7,8 +9,6 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
 	import { getNewtContainer } from "#lib/remote/setup.remote.js";
 	import { enhanceToast } from "#lib/toast.js";
 

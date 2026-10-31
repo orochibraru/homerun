@@ -8,6 +8,9 @@
 		Search,
 		SearchX,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
@@ -16,9 +19,6 @@
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Input } from "#lib/components/ui/input/index.js";
-	import * as Select from "#lib/components/ui/select/index.js";
 	import { formatDate } from "#lib/formatting.js";
 	import { LOG_RANGE_LABELS } from "#lib/logs/history.js";
 	import { title } from "#lib/store/title.js";

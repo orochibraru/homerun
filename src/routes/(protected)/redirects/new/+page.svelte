@@ -2,10 +2,10 @@
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import RedirectFields from "#lib/components/redirect-fields.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Activity, ArrowLeft, ScrollText } from "@lucide/svelte";
+	import { Spinner } from "@orochibraru/ui/spinner";
 	import { onMount } from "svelte";
 
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";
-	import Spinner from "#lib/components/ui/spinner/spinner.svelte";
 	import { cronJobRunTriggerLabel } from "#lib/cron-job-script.js";
 	import { getCronJobRun } from "#lib/remote/cron-runs.remote.js";
 	import { formatDuration } from "#lib/resource-incidents.js";

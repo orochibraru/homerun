@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Eraser, Loader2, Power } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
-	import { Button } from "#lib/components/ui/button/index.js";
 	import UptimePanel from "#lib/components/uptime-panel.svelte";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";

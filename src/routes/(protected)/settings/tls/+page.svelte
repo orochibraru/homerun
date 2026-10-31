@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { RefreshCw, ShieldCheck, Trash2 } from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
+	import { Textarea } from "@orochibraru/ui/textarea";
 
 	import Alert from "#lib/components/alert.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { Textarea } from "#lib/components/ui/textarea/index.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { data } = $props();

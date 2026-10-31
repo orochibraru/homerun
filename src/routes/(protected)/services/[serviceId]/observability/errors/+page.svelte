@@ -10,6 +10,7 @@
 		Power,
 		RotateCcw,
 	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
 	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";
@@ -27,7 +28,6 @@
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import SelectAllRow from "#lib/components/select-all-row.svelte";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { sdkSnippets } from "#lib/error-tracking/snippets.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { ListSelection } from "#lib/list-selection.svelte.js";

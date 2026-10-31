@@ -92,11 +92,13 @@ builds below.
 
 Stack: SvelteKit 3 (Svelte 5 runes, `@sveltejs/adapter-bun`) + Bun runtime,
 better-auth, Drizzle ORM over Postgres (via Bun's built-in `SQL` client,
-`drizzle-orm/bun-sql`, no `pg` dependency needed), Tailwind v4 + shadcn-svelte
-("vega" style). The app holds no Docker socket itself: every Docker call goes
-over HTTP to the Go worker (`cmd/worker`), which is the only process that opens
-one, see `.agents/notes/docker.md` and `.agents/notes/worker.md`. `dockerode` is
-a devDependency now, used only by an integration-test fixture, not by the app.
+`drizzle-orm/bun-sql`, no `pg` dependency needed), Tailwind v4 +
+`@orochibraru/ui` (the shadcn-svelte "vega" primitives shared across orochibraru
+apps, imported as `@orochibraru/ui/<name>`, not vendored here). The app holds no
+Docker socket itself: every Docker call goes over HTTP to the Go worker
+(`cmd/worker`), which is the only process that opens one, see
+`.agents/notes/docker.md` and `.agents/notes/worker.md`. `dockerode` is a
+devDependency now, used only by an integration-test fixture, not by the app.
 
 ## Commands
 
@@ -129,7 +131,7 @@ pre-commit hook from `.pre-commit-config.yaml`: formatters and gitleaks only)
 run on `bun install`.
 
 ```bash
-bun run test              # svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/..., go -C terraform/provider test ./..., then bun --config=bunfig.unit.toml test tests/unit; unit only, no Postgres/Docker needed
+bun run test              # svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/..., go -C terraform/provider test ./..., then bun --conditions=svelte --config=bunfig.unit.toml test tests/unit; unit only, no Postgres/Docker needed
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/worker, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build first, see .agents/notes/testing.md
 bun run screenshots       # regenerate docs/images/ through playwright.screenshots.config.ts, same prerequisites as test:e2e plus a Docker daemon (it really deploys); CI reruns it and commits the result after every stable release
@@ -148,15 +150,17 @@ e.g. `go test ./internal/cli/...`, for one slice of it);
 `lint:fix`; `format`/`format:*` → `bun fmt`; `test:unit`/`test:unit:app`/
 `test:unit:agent`/`test:unit:cli`/`test:unit:installer`/`test:go` →
 `bun run test` (scope with `go test ./internal/cli/...` or
-`bun --config=bunfig.unit.toml test tests/unit/app` etc.); `test:e2e:cli` →
+`bun --conditions=svelte --config=bunfig.unit.toml test tests/unit/app` etc.);
+`test:e2e:cli` →
 `bun run test:e2e tests/e2e/bootstrap.spec.ts tests/e2e/onboarding.spec.ts tests/e2e/ui-cli.spec.ts`;
 `e2e:multipass`/`e2e:multipass:release` → `bun scripts/e2e-multipass.ts` /
 `bun scripts/e2e-multipass-release.ts`; `dev:app`/`dev:worker` →
 `bun run dev --only=app`/`--only=worker`; `dev:agent` → gone, there's no
 standalone agent to run any more, `go run ./cmd/worker` with no `DATABASE_URL`
 is agent mode (see `.agents/notes/packages-and-release.md`); `component:add` →
-`bunx shadcn-svelte add`; `auth:db:generate` → `bunx auth generate`; `preview` →
-gone, use `bun run build && bun run start`.
+gone, primitives come from `@orochibraru/ui` and new ones are added there;
+`auth:db:generate` → `bunx auth generate`; `preview` → gone, use
+`bun run build && bun run start`.
 
 `cmd/cli/` and `cmd/installer/` are standalone Go programs (a single Go module
 at the repo root, `go.mod`, no `tsconfig.json`/`package.json` of their own), not
@@ -203,11 +207,12 @@ hand:
   `new-api-route` (a route under `src/routes/api/v1/`, its zod body schema, the
   OpenAPI registry and `bun run gen`), `new-tab-route` (one route per tab under
   a shared `TabNav` layout), `new-remote-function` (a query/command under
-  `src/lib/remote/`), `shadcn-svelte` (adding or composing a UI primitive). A
-  skill or agent whose frontmatter isn't valid YAML silently loses its
-  description (and an agent disappears entirely): write `description: >-` with
-  the text indented below it, since a plain multi-line value breaks on the first
-  `:` inside it.
+  `src/lib/remote/`). UI primitives aren't a skill here: they live in
+  `orochibraru/ui`, whose MCP server (`npx -y @orochibraru/ui`) lists them with
+  their usage, and a new or changed primitive goes into that repo. A skill or
+  agent whose frontmatter isn't valid YAML silently loses its description (and
+  an agent disappears entirely): write `description: >-` with the text indented
+  below it, since a plain multi-line value breaks on the first `:` inside it.
 - Subagents (`.claude/agents/*.md`): `repo-gate` (final review gate before
   calling a change done, scans for this file's own hard rules),
   `scaffold-feature` (adds a new table+DTO+route end to end), `subproject-sync`
@@ -238,19 +243,19 @@ hand:
   `docs-audit` owns exhaustive code-to-docs coverage).
 
 Skill content lives under `.agents/skills/<name>/SKILL.md` with a symlink from
-`.claude/skills/`, matching the existing `shadcn-svelte` skill's layout, keep
-that pattern for any new skill.
+`.claude/skills/`, matching the existing `check-repo` skill's layout, keep that
+pattern for any new skill.
 
 ## Conventions (strict, apply to every change)
 
 - **SvelteKit 3 idioms, not the 2.x ones.** There is no `$lib` alias: imports
   are `#lib/...` Node subpath imports (`package.json` `imports`) written _with_
   the file extension, `.ts` module → `#lib/foo.js`, `.svelte.ts` →
-  `#lib/foo.svelte.js`, component → `#lib/components/x.svelte`, directory index
-  → `#lib/components/ui/button/index.js`; tests' `mock.module(...)` specifiers
-  use the same form. `$app/environment` is `$app/env`. `resolve()` takes
-  pathnames with no leading slash (`resolve("services")`, home is
-  `resolve("")`); only route ids start with `/`
+  `#lib/foo.svelte.js`, component → `#lib/components/x.svelte`, a directory
+  index → `#lib/<dir>/index.js`, a UI primitive → `@orochibraru/ui/button`;
+  tests' `mock.module(...)` specifiers use the same form. `$app/environment` is
+  `$app/env`. `resolve()` takes pathnames with no leading slash
+  (`resolve("services")`, home is `resolve("")`); only route ids start with `/`
   (`resolve("/(protected)/services/[serviceId]", { serviceId })`).
   `invalidateAll()` is `refreshAll()`, and `goto`'s `keepFocus`/`noScroll` are
   `reset: false`, `replaceState` is `replace`, `invalidateAll: true` is
