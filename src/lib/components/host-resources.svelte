@@ -73,7 +73,7 @@
 	</div>
 {/snippet}
 
-<div class="panel overflow-hidden rounded-xl">
+<div class="panel overflow-hidden rounded-xl" data-slot="host-resources">
 	{#if stats.error}
 		<p class="text-text-muted px-4 py-3 text-xs">
 			Host resource stats are unavailable right now.

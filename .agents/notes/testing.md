@@ -281,8 +281,8 @@ Covered today: blank-instance bootstrap sign-up landing on `/onboarding`, the
 sign-up→sign-in redirect once an account exists, clicking the whole onboarding
 wizard through to completion, sign-in/sign-out, the service-creation wizard's
 own submit path, (`remote-functions.spec.ts`) the remote-query/command surfaces,
-that the dashboard's lanes, the notification feed and the job-queue panel each
-resolve past their skeleton against real data, and that a mark-read/delete
+that Monitoring's host resources, the notification feed and the job-queue panel
+each resolve past their skeleton against real data, and that a mark-read/delete
 command updates the feed with no page reload, and (`ui-login-wall.spec.ts`) the
 Authentication page's presets and the service Access section's
 reveal-and-validate behaviour, and (`ui-form-state.spec.ts`) that a saved
