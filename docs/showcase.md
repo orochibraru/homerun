@@ -156,7 +156,7 @@ ready to try from the browser.
 ## Appearance
 
 Light or dark, a colour palette or your own accent, a style for panels and
-buttons (Sleek, the default, Glass, Neumorphism, Boxy, Claymorphism,
+buttons (Lanes, the default, Glass, Sleek, Neumorphism, Boxy, Claymorphism,
 Skeuomorphism, Material You), or a whole preset from Windows 95 to a
 green-phosphor terminal.
 

@@ -56,6 +56,7 @@
 			page={data.page}
 			perPage={data.perPage}
 			serviceDomain={data.serviceDomain}
+			view={data.view}
 		/>
 	{:else if listing.failed}
 		<div

@@ -131,7 +131,7 @@ test.describe.serial("presets", () => {
 		await signIn(page);
 		await savePreset(page, "None");
 		await page.goto("/");
-		await expect(page.locator("html")).toHaveAttribute("data-surface", "glass");
+		await expect(page.locator("html")).toHaveAttribute("data-surface", "lanes");
 	});
 });
 
@@ -146,7 +146,7 @@ test.describe.serial("styles", () => {
 	test.afterAll(async ({ browser }) => {
 		const page = await browser.newPage();
 		await signIn(page);
-		await saveStyle(page, "Glass (default)");
+		await saveStyle(page, "Lanes (default)");
 		await page.close();
 	});
 

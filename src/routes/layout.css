@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn-svelte/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource-variable/open-sans";
@@ -161,6 +163,10 @@
 }
 
 [data-surface] {
+	--lane-0: var(--chart-1);
+	--lane-1: var(--chart-2);
+	--lane-2: var(--chart-3);
+	--lane-3: var(--chart-5);
 	--radius-sm: calc(var(--radius) * 0.5);
 	--radius-md: calc(var(--radius) * 0.75);
 	--radius-lg: var(--radius);
@@ -692,6 +698,108 @@
 
 [data-surface="sleek"] thead {
 	background-color: var(--color-surface-2);
+}
+
+[data-surface="lanes"] {
+	--font-sans: "Geist Variable", -apple-system, system-ui, sans-serif;
+	--font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
+	--radius: 0.5rem;
+	--color-bg: oklch(from var(--color-accent) 0.975 0.006 h);
+	--color-surface: oklch(0.995 0 0);
+	--color-surface-2: oklch(0.2 0.005 270 / 0.04);
+	--color-surface-3: oklch(0.2 0.005 270 / 0.08);
+	--color-border: oklch(0.2 0.005 270 / 0.1);
+	--color-border-light: oklch(0.2 0.005 270 / 0.17);
+	--color-text: oklch(0.19 0.005 270);
+	--color-text-muted: oklch(0.47 0.008 270);
+	--color-text-subtle: oklch(0.6 0.006 270);
+	--border: var(--color-border);
+	--input: oklch(0.2 0.005 270 / 0.14);
+	--panel-bg: var(--color-surface);
+	--panel-bg-image: none;
+	--panel-backdrop: none;
+	--panel-border-width: 1px;
+	--panel-shadow: none;
+	--panel-shadow-lg:
+		0 0 0 1px oklch(0 0 0 / 0.05), 0 16px 40px -16px oklch(0 0 0 / 0.22);
+	--panel-rule: var(--color-border);
+	--button-shadow: none;
+	--background: var(--color-surface);
+	--card: var(--color-surface);
+	--popover: var(--color-surface);
+	--page-bg-image: none;
+	--aurora-opacity: 0;
+	--aurora-display: none;
+	--grain-opacity: 0;
+	--grain-display: none;
+}
+
+.dark[data-surface="lanes"],
+.dark [data-surface="lanes"] {
+	--color-bg: oklch(from var(--color-accent) 0.13 0.008 h);
+	--color-surface: oklch(0.16 0.003 270);
+	--color-surface-2: oklch(1 0 0 / 0.045);
+	--color-surface-3: oklch(1 0 0 / 0.09);
+	--color-border: oklch(1 0 0 / 0.085);
+	--color-border-light: oklch(1 0 0 / 0.15);
+	--color-text: oklch(0.95 0.003 270);
+	--color-text-muted: oklch(0.7 0.008 270);
+	--color-text-subtle: oklch(0.56 0.006 270);
+	--input: oklch(1 0 0 / 0.12);
+	--panel-shadow-lg:
+		0 0 0 1px oklch(1 0 0 / 0.06), 0 16px 40px -12px oklch(0 0 0 / 0.7);
+}
+
+[data-surface="lanes"] [data-slot="app-sidebar"] {
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+}
+
+[data-surface="lanes"] [data-slot="app-sidebar"] nav svg.text-accent {
+	color: var(--color-text-subtle);
+}
+
+[data-surface="lanes"] [data-slot="app-sidebar"] nav [aria-current="page"] {
+	border-color: transparent;
+	background-color: oklch(from var(--color-accent) l c h / 0.1);
+	color: var(--color-text);
+	font-weight: 500;
+}
+
+[data-surface="lanes"]
+	[data-slot="app-sidebar"]
+	nav
+	[aria-current="page"]
+	svg.text-accent {
+	color: var(--color-accent);
+}
+
+[data-surface="lanes"] [data-slot="button"][data-variant="outline"] {
+	background-color: var(--color-surface);
+	border-color: var(--input);
+	backdrop-filter: none;
+}
+
+[data-surface="lanes"]
+	:is(
+		input:not(
+			[type="checkbox"],
+			[type="radio"],
+			[type="color"],
+			[type="range"]
+		),
+		textarea,
+		[data-slot="select-trigger"]
+	) {
+	background-color: var(--color-surface);
+	border-color: var(--input);
+	box-shadow: none;
+}
+
+[data-surface="lanes"] .metric {
+	font-family: var(--font-mono);
+	letter-spacing: -0.02em;
 }
 
 [data-surface="material"] {

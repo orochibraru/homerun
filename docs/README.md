@@ -143,8 +143,8 @@ sync by hand.
 
 ## Operations and maintenance
 
-- **[The dashboard](dashboard.md)**: service counts, host resources and history,
-  `⌘K` search, and setup diagnostics.
+- **[The dashboard](dashboard.md)**: today's numbers, what needs you, the
+  busiest services' last 24 hours, `⌘K` search, and setup diagnostics.
 - **[System Logs](system-logs.md)**: live logs of your instance's stack and
   Traefik, and restarting or updating Traefik.
 - **[Docker Cleanup](docker-cleanup.md)**: previewing and pruning what Docker

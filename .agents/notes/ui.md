@@ -191,13 +191,13 @@ refactor unrelated pages.
 
 **Self-loading components**, the ones that fetch their own data through a remote
 query rather than taking it as a prop off a route's `load` (see Remote functions
-below), so a page that wants one just renders it: `host-resources.svelte` (the
-dashboard's Host Resources panel, own 5s poll), `job-queue-panel.svelte`
-(Scheduling's job queue, own 3s poll), `notification-bell.svelte` (the header's
-feed, plus its own mutations), `git-repo-picker.svelte` (the "Browse repos"
-picker, shared by `services/new` and the service's Source section, calls back
-with the picked repo), and `image-check-warning.svelte` (the debounced "this
-image wasn't found in its registry" warning, shared by the same two pages).
+below), so a page that wants one just renders it: `host-resources.svelte` (host
+CPU, memory and disk, own 5s poll), `job-queue-panel.svelte` (Scheduling's job
+queue, own 3s poll), `notification-bell.svelte` (the header's feed, plus its own
+mutations), `git-repo-picker.svelte` (the "Browse repos" picker, shared by
+`services/new` and the service's Source section, calls back with the picked
+repo), and `image-check-warning.svelte` (the debounced "this image wasn't found
+in its registry" warning, shared by the same two pages).
 
 **The list-page toolkit**, used by every entity list page (services, stacks,
 templates, storage, remote-hosts, s3-destinations, build-cache-registries,
@@ -416,6 +416,23 @@ per-user instead of a singleton row.
   which is how the Appearance page's preview tiles work. A new style is one
   entry in `SURFACE_STYLES` and one token block, nothing reads the style name
   elsewhere.
+- **Lanes** (`lanes`, the default since migration 0151, which also moved every
+  account without a preset onto it) is the Vercel/Linear-flavoured one: Geist
+  and Geist Mono (`@fontsource-variable/geist`, `geist-mono`), greyscale
+  neutrals with no aurora, grain or page wash, one solid content panel on
+  hairlines, and the sidebar's icons in `text-subtle` with only the current
+  page's in the accent. Colour is kept for status and for stacks: every style
+  defines `--lane-0`..`--lane-3` (the palette's chart colours 1, 2, 3 and 5) on
+  `[data-surface]`, and `stackHues` (`src/lib/lanes.ts`) gives each top-level
+  stack one of them, a substack sharing its root's.
+- **The lane** (`lane-strip.svelte`) is the 24-hour strip drawn for a service on
+  the Overview's Busiest today, in the Services Dependencies view and on the
+  Diagram's cards: 48 half-hour buckets whose opacity follows the square root of
+  the bucket's share of the busiest one, red where a quarter or more of the
+  bucket's requests errored, and a diamond per deployment (filled for the
+  latest, red for a failed one). Its data is `getLanes` (`lanes.remote.ts`), one
+  query for many ids, scoped to the caller's services, built by `buildLane` from
+  `TrafficSampleDTO.seriesByService` and `DeploymentDTO.listSinceForServices`.
 - **Glass** is Apple liquid glass, and every colour in it derives from
   `--color-accent` through CSS relative colours
   (`oklch(from var(--color-accent) L C h)`): the page tint, the

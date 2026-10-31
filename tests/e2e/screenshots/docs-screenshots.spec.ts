@@ -77,7 +77,7 @@ const SHOTS: Shot[] = [
 		name: "hero",
 		path: () => "/",
 		prepare: async (page) => {
-			await expect(page.getByText("Monitoring · today")).toBeVisible();
+			await expect(page.getByText("Busiest today")).toBeVisible();
 		},
 	},
 	{

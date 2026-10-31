@@ -3,8 +3,10 @@
 	import { Bird, GitPullRequest, Layers, Server } from "@lucide/svelte";
 	import type { Snippet } from "svelte";
 
+	import LaneStrip from "#lib/components/lane-strip.svelte";
 	import StatusDot from "#lib/components/status-dot.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import type { Lane } from "#lib/lanes.js";
 	import type {
 		DependencyNode,
 		GraphServiceInfo,
@@ -15,6 +17,10 @@
 	interface Props {
 		/** Indents every row, for a substack drawn under its parent. */
 		depth?: number;
+		/** Each stack's lane hue by stack id, for the lane column. */
+		hues?: Map<string, string>;
+		/** Each service's last 24 hours by id: set, a lane column is drawn. */
+		lanes?: Record<string, Lane> | null;
 		/** Stacks shown on this page: a dependency in any other one is drawn as a reference to it. Unset, nothing is. */
 		localStackIds?: Set<string>;
 		nodes: DependencyNode[];
@@ -30,6 +36,8 @@
 
 	const {
 		depth = 0,
+		hues,
+		lanes,
 		localStackIds,
 		nodes,
 		previews,
@@ -144,6 +152,14 @@
 							>{svc.slug}</span
 						>
 						<span class="flex-1"></span>
+						{#if lanes !== undefined}
+							<LaneStrip
+								class="hidden w-36 shrink-0 lg:block xl:w-48"
+								hue={svc.stackId ? hues?.get(svc.stackId) : undefined}
+								lane={lanes?.[svc.id]}
+								stopped={svc.currentStatus === "stopped"}
+							/>
+						{/if}
 						{#if dependents.length > 1}
 							<span
 								class="text-text-subtle hidden shrink-0 text-[0.6875rem] lg:inline"

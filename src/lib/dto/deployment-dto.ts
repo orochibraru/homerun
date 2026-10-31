@@ -302,6 +302,32 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return row?.total ?? 0;
 	}
 
+	/** Every deployment of these services created since `since`, oldest first: the deploy markers on a service's lane. */
+	static async listSinceForServices(
+		serviceIds: string[],
+		since: Date,
+	): Promise<
+		{ createdAt: Date; serviceId: string; status: ContainerStatus }[]
+	> {
+		if (serviceIds.length === 0) {
+			return [];
+		}
+		return await db
+			.select({
+				createdAt: deployment.createdAt,
+				serviceId: deployment.serviceId,
+				status: deployment.status,
+			})
+			.from(deployment)
+			.where(
+				and(
+					inArray(deployment.serviceId, serviceIds),
+					gt(deployment.createdAt, since),
+				),
+			)
+			.orderBy(deployment.createdAt);
+	}
+
 	/** Recent deployments across a set of services, for a stack's own summary. */
 	static async listRecentForServices(
 		serviceIds: string[],

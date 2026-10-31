@@ -389,11 +389,11 @@ pattern for any new skill.
   clipboard copy), and a background _load_ that already renders its own inline
   spinner or skeleton rather than blocking on user intent, which today means
   every remote query (see `.agents/notes/services-and-templates.md`): the repo
-  picker, the image-exists check, the dashboard's Host Resources panel, the job
-  queue and the notification feed all report failure inline. A long-lived stream
-  is a third: the Terminal tab reports failures through its own `errored`
-  banner, since a promise that only settles when the connection ends can't drive
-  a toast. Anything that mutates state on the server gets a promise toast.
+  picker, the image-exists check, the dashboard's lanes, the job queue and the
+  notification feed all report failure inline. A long-lived stream is a third:
+  the Terminal tab reports failures through its own `errored` banner, since a
+  promise that only settles when the connection ends can't drive a toast.
+  Anything that mutates state on the server gets a promise toast.
 - **A list page lists; creating happens on its own page.** A page that lists
   things (API keys, state backends, credentials…) shows the list with a "New …"
   button in its header that links to a dedicated `<list>/new` route holding the

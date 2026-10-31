@@ -281,17 +281,17 @@ Covered today: blank-instance bootstrap sign-up landing on `/onboarding`, the
 sign-up→sign-in redirect once an account exists, clicking the whole onboarding
 wizard through to completion, sign-in/sign-out, the service-creation wizard's
 own submit path, (`remote-functions.spec.ts`) the remote-query/command surfaces,
-that the dashboard's Host Resources panel, the notification feed and the
-job-queue panel each resolve past their skeleton against real data, and that a
-mark-read/delete command updates the feed with no page reload, and
-(`ui-login-wall.spec.ts`) the Authentication page's presets and the service
-Access section's reveal-and-validate behaviour, and (`ui-form-state.spec.ts`)
-that a saved settings section keeps its field values and that the compose-import
-page's Import step accepts the file its own Parse step previewed, the two halves
-of the `reset` bug under Conventions above, and (`ui-cli.spec.ts`) the `homerun`
-CLI, a Go program compiled from source in `beforeAll`, run against the same
-instance, logged in through its real device-code flow approved in the browser,
-then every list/get command, the flag/env overrides, 401/404 exits and logout
+that Monitoring's host resources, the notification feed and the job-queue panel
+each resolve past their skeleton against real data, and that a mark-read/delete
+command updates the feed with no page reload, and (`ui-login-wall.spec.ts`) the
+Authentication page's presets and the service Access section's
+reveal-and-validate behaviour, and (`ui-form-state.spec.ts`) that a saved
+settings section keeps its field values and that the compose-import page's
+Import step accepts the file its own Parse step previewed, the two halves of the
+`reset` bug under Conventions above, and (`ui-cli.spec.ts`) the `homerun` CLI, a
+Go program compiled from source in `beforeAll`, run against the same instance,
+logged in through its real device-code flow approved in the browser, then every
+list/get command, the flag/env overrides, 401/404 exits and logout
 (`bun run test:e2e tests/e2e/bootstrap.spec.ts tests/e2e/onboarding.spec.ts tests/e2e/ui-cli.spec.ts`
 runs it with only the bootstrap and onboarding specs ahead of it; see
 `tests/e2e/README.md` for why it strips `FORCE_COLOR` from the CLI's env). Not

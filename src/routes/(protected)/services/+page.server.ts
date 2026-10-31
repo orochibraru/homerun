@@ -195,7 +195,14 @@ export const load = async ({ parent, url }) => {
 		{ filterKeys: ["status", "stack"], sortKeys: sortKeysOf(BASE_SORTS) },
 		preferences.perPage,
 	);
-	const treeView = url.searchParams.get("view") === "tree";
+	const requested = url.searchParams.get("view");
+	const view: "diagram" | "list" | "tree" =
+		requested === "list" || requested === "tree" || requested === "diagram"
+			? requested
+			: query.active
+				? "list"
+				: "tree";
+	const treeView = view !== "list";
 	return {
 		baseDomain: config.baseDomain,
 		facets: ServiceDTO.listFilterFacets(),
@@ -205,6 +212,7 @@ export const load = async ({ parent, url }) => {
 		perPage: query.perPage,
 		serviceDomain: serviceDomain(),
 		treeView,
+		view,
 	};
 };
 

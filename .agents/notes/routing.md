@@ -329,11 +329,15 @@ own list marks each row with its `substackCount` (`descendantIds(id).length`)
 and shows only top-level stacks unless a search is on
 (`StackDTO.listWithServiceCountsPaged`'s `topLevelOnly`).
 
-`/services` (the global, paged list) reuses the same pieces two ways: its normal
-grouped-by-stack view now orders groups as a stack tree (`flattenStackTree` over
-every stack with a shown group, a substack's group indented under its parent's,
-via `depth`), and a **Dependencies** button (`?view=tree`) swaps the page for
-`ServiceTree` over every service unpaged — `+page.server.ts` only runs
-`ServiceDTO.list()` and builds `dependencyMap` when that query param is set,
-since a dependency tree needs the whole unpaged set to draw correctly, unlike
-the page's own server-side search/filter/sort.
+`/services` has three views, picked by `?view=` and switched from the segmented
+List / Dependencies / Diagram control: `list` is the paged, grouped-by-stack
+list (groups ordered as a stack tree via `flattenStackTree`, a substack's group
+indented under its parent's); `tree` (the default when no search or filter is
+on, so a filtered link lands on the list) is `ServiceTree` over every service
+unpaged, each service with what it needs indented underneath; `diagram` is
+`StackDiagram` with `rootStackId={null}`, every top-level stack as its own frame
+and the services in no stack in a "No stack" one. `+page.server.ts` only runs
+`ServiceDTO.list()` and builds `dependencyMap` for `tree` and `diagram`, since a
+dependency tree needs the whole unpaged set to draw correctly, unlike the page's
+own server-side search/filter/sort. Both draw each service's lane (`getLanes`,
+see `ui.md`), tinted by its top-level stack (`stackHues`).

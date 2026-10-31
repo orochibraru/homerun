@@ -10,14 +10,15 @@ async function signIn(page: import("@playwright/test").Page) {
 }
 
 test.describe.serial("remote functions", () => {
-	test("the dashboard's host resources resolve client-side, past the skeleton", async ({
+	test("the monitoring page's host resources resolve client-side, past the skeleton", async ({
 		page,
 	}) => {
 		await signIn(page);
+		await page.goto("/monitoring");
 
 		// The strip renders nothing but skeletons until the query resolves,
 		// so any of its real text proves it got past them.
-		const main = page.locator("main");
+		const main = page.locator('[data-slot="host-resources"]');
 		for (const label of ["CPU", "RAM", "Disk"]) {
 			await expect(
 				main.locator("span.eyebrow").filter({ hasText: label }),

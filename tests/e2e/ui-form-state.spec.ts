@@ -76,6 +76,7 @@ test.describe.serial("form state survives a submit", () => {
 		await page.getByRole("button", { name: /Import 2 services/ }).click();
 
 		await expect(page).toHaveURL(/\/services$/);
+		await page.goto("/services?view=list");
 		await expect(page.getByText("nginx:alpine").first()).toBeVisible();
 	});
 });

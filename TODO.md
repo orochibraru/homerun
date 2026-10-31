@@ -59,6 +59,11 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Lanes on a service's own pages: the Overview tab's 24h lane with its
+      revisions marked on it plus an activity feed and a property sidebar, and
+      the Logs tab's volume strip with errors in red; only the Overview, the
+      Services views and the new-service stepper got the redesign
+
 - [ ] Log history only follows services: workstations and Homerun's own
       containers (Traefik, the app, the worker) still lose their output on
       recreate; give them the same shipper
