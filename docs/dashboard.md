@@ -1,19 +1,32 @@
 # The dashboard
 
-![The Overview page: service counts, host resources, today's monitoring, per-service usage, recent deployments and recent errors](images/hero.webp)
+![The Overview page: today's numbers, what needs you, the busiest services with their last 24 hours, and today's timeline](images/hero.webp)
 
-`/` (Overview) is the landing page after sign-in:
+`/` (Overview) is the landing page after sign-in, kept short on purpose:
 
+- **Today's numbers** under the greeting: how many services are running out of
+  how many, and today's requests, average response time and error rate, each
+  with how it moved against yesterday.
+- **Needs you**, only when something does: a red banner when the server is past
+  a hard resource limit, a card per failing uptime probe, and the services with
+  an [update](deploy-source-and-builds.md#version-pinning-and-update-checks)
+  waiting, with how its trial run went. The setup-issues banner (see below) sits
+  right above it.
 - **Deploy an app**, in [simple mode](ui-modes.md) only: popular templates with
-  a **Quick Deploy** button each, above everything else.
+  a **Quick Deploy** button each.
+- **Busiest today**, the five services that served the most requests, each with
+  its **lane**: the last 24 hours in half-hour blocks, darker the busier, red
+  where a quarter or more of the requests failed, and a diamond for each
+  deployment (filled for the latest, red for a failed one). **All services**
+  opens the list.
+- **Today**, a timeline of the latest deployments and warn/error-level log
+  lines, newest first, each linking to its service (or to System Logs). An admin
+  sees the instance's errors, a developer only the ones that mention one of
+  their services. **Clear errors** empties it.
 
-- **Service counts**, how many services the instance has and how many are
-  running.
-- **Host resources**, live CPU, memory, disk and (if an NVIDIA card with
-  `nvidia-smi` is present) GPU usage for the machine Homerun runs on, refreshed
-  every five seconds. It loads behind a placeholder rather than blocking the
-  page, so a slow `df` never holds the dashboard up. No card, or no
-  `nvidia-smi`, just means the GPU block doesn't render, it isn't an error.
+Live host CPU, memory, disk and GPU, and their history, are on
+[Monitoring](observability.md#stacks-and-the-whole-instance).
+
 - **Resource limits**: each of CPU, memory, disk and GPU has a soft and a hard
   threshold (Settings → General → Resource limits, 85% and 95% by default),
   checked against the host once a minute. A resource only alerts once it has
@@ -30,21 +43,6 @@
   Settings, and one still open when Homerun restarts stays open: no second
   alert, and you still get its recovery. If the host's stats can't be read,
   nothing is refused.
-- **Resource usage history**, the same host CPU and memory as a chart, live or
-  over the last hour, day, week, month, year or all of it, from a sample taken
-  every minute and kept for a year, next to a **per-service usage** table of the
-  five services using the most (sort it by CPU, memory or traffic). A stack's
-  own page has the same table for its members, and a service's Overview tab has
-  its own chart.
-- **Recent deployments** across every service, each linking to the service it
-  belongs to; **View all** opens the full
-  [deployment history](revisions-and-rollback.md).
-- **Recent errors**, the latest warn/error-level log lines, each linking to the
-  service it mentions (or to System Logs when it mentions none). An admin sees
-  the instance's most recent errors, including ones that mention no service; a
-  developer only sees ones that mention a service.
-- **Quick actions**, shortcuts to deploy a service and to the services list.
-- **A setup-issues banner**, when applicable, see below.
 
 ![Settings → General → Resource limits, with each resource's soft and hard threshold and the alert timing](images/dashboard-resource-limits.webp)
 

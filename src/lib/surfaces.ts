@@ -1,6 +1,12 @@
 export const SURFACE_STYLES = [
 	{
 		description:
+			"Crisp lists on hairlines, Geist type, colour kept for status and your stacks.",
+		id: "lanes",
+		name: "Lanes",
+	},
+	{
+		description:
 			"Liquid glass: clear, lit-edged panels floating over your colour.",
 		id: "glass",
 		name: "Glass",
@@ -80,7 +86,7 @@ export type Preset = (typeof PRESETS)[number]["id"];
 
 export type SurfaceId = SurfaceStyle | Preset;
 
-export const DEFAULT_SURFACE: SurfaceStyle = "glass";
+export const DEFAULT_SURFACE: SurfaceStyle = "lanes";
 
 /** Whether `value` is one of the surface styles, for a stored or submitted value that might not be. */
 export function isSurfaceStyle(value: unknown): value is SurfaceStyle {

@@ -30,7 +30,7 @@ describe("effectiveSurface", () => {
 			"clay",
 		);
 		expect(effectiveSurface({ preset: null, surfaceStyle: "gone" })).toBe(
-			"glass",
+			"lanes",
 		);
 	});
 

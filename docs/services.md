@@ -106,13 +106,22 @@ canary, isn't deleted either: the Settings tab's delete dialog lists those jobs
 and its button becomes **Force delete**, which cancels them first. Deleting a
 preview or an environment on its own cancels its jobs without asking.
 
-The list groups services by stack, ordered as a tree (a substack's group is
-indented under its parent's), with services outside any stack last. A
-**Dependencies** button next to the toolbar swaps the whole list for the same
-dependency tree a [stack page](stacks.md#the-services-tabs-dependency-graph)
-shows, but across every service on the instance rather than one stack, since a
-dependency tree needs the whole unpaged set to draw correctly and can't be
-combined with the list's own paging.
+The Services page has three views, switched with **List**, **Dependencies** and
+**Diagram** next to the toolbar:
+
+- **Dependencies**, the default, shows every service with what it needs indented
+  underneath (the same tree a
+  [stack page](stacks.md#the-services-tabs-dependency-graph) shows, across the
+  whole instance), and each service's **lane**: its last 24 hours of traffic in
+  half-hour blocks with a diamond per deployment, tinted by its stack.
+- **List** is the paged list, grouped by stack and ordered as a tree (a
+  substack's group indented under its parent's, services outside any stack
+  last). Searching or filtering always lands here, since a dependency tree needs
+  the whole unpaged set and can't be combined with paging.
+- **Diagram** draws every stack as a frame with its services as cards, arrows
+  from each service to what it needs, and the services in no stack in a frame of
+  their own. Drag cards and frames around, zoom, or **Fit** it to the screen;
+  the layout is kept in your browser.
 
 ## Settings
 

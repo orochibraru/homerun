@@ -11,9 +11,11 @@
 	import { Button } from "@orochibraru/ui/button";
 	import { type Snippet, tick } from "svelte";
 
+	import LaneStrip from "#lib/components/lane-strip.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
 	import { type Box, edgePaths } from "#lib/diagram-edges.js";
+	import type { Lane } from "#lib/lanes.js";
 	import {
 		dependencyLayers,
 		type GraphServiceInfo,
@@ -23,7 +25,12 @@
 
 	interface Props {
 		deps: Record<string, string[]>;
-		rootStackId: string;
+		/** Each stack's lane hue by stack id, tinting its frame and its cards' lanes. */
+		hues?: Map<string, string>;
+		/** Each service's last 24 hours by id: set, every card shows its lane. */
+		lanes?: Record<string, Lane> | null;
+		/** The stack drawn, with its substacks; null draws every stack, and the services in none. */
+		rootStackId: string | null;
 		services: GraphServiceInfo[];
 		/** Every stack's name, for a dependency outside this tree. */
 		stackNames: Map<string, string>;
@@ -32,8 +39,27 @@
 		wrapper?: Snippet<[GraphServiceInfo, Snippet]>;
 	}
 
-	const { deps, rootStackId, services, stackNames, stacks, wrapper }: Props =
-		$props();
+	const {
+		deps,
+		hues,
+		lanes,
+		rootStackId,
+		services,
+		stackNames,
+		stacks,
+		wrapper,
+	}: Props = $props();
+
+	const roots = $derived(
+		rootStackId
+			? stacks.filter((s) => s.id === rootStackId)
+			: stacks
+					.filter((s) => !s.parentId)
+					.sort((a, b) => a.name.localeCompare(b.name)),
+	);
+	const outsideLabel = $derived(
+		rootStackId ? "Outside this stack" : "No stack",
+	);
 
 	const localIds = $derived(new Set(stacks.map((s) => s.id)));
 	const depMap = $derived(new Map(Object.entries(deps)));
@@ -63,7 +89,7 @@
 	const MIN_ZOOM = 0.2;
 	const MAX_ZOOM = 2;
 	const FIT_PADDING = 32;
-	const storageKey = $derived(`homerun:stack-diagram:${rootStackId}`);
+	const storageKey = $derived(`homerun:stack-diagram:${rootStackId ?? "all"}`);
 	let offsets = $state<Offsets>({});
 	let view = $state({ x: 0, y: 0, zoom: 1 });
 	let drag: {
@@ -364,6 +390,14 @@
 				<span class="text-text-subtle block truncate font-mono text-[0.6875rem]"
 					>{svc.slug}</span
 				>
+				{#if lanes !== undefined}
+					<LaneStrip
+						class="mt-1.5 h-2.5"
+						hue={svc.stackId ? hues?.get(svc.stackId) : undefined}
+						lane={lanes?.[svc.id]}
+						stopped={svc.currentStatus === "stopped"}
+					/>
+				{/if}
 			</span>
 
 			<StatusBadge status={svc.currentStatus as ContainerStatus} />
@@ -396,6 +430,9 @@
 		class="border-border rounded-xl border p-4 {depth === 0
 			? 'bg-transparent'
 			: 'bg-surface-2/40 cursor-grab'}"
+		style:border-color={hues?.get(stack.id)
+			? `color-mix(in oklch, ${hues.get(stack.id)} 45%, transparent)`
+			: undefined}
 		aria-label={stack.name}
 		data-group={stack.id}
 		onpointerdown={depth > 0
@@ -531,19 +568,27 @@
 			{/each}
 		</svg>
 		<div class="relative space-y-8 p-1">
-			{#each stacks.filter((s) => s.id === rootStackId) as root (root.id)}
-				{@render group(root, 0)}
-			{/each}
+			{#if rootStackId}
+				{#each roots as root (root.id)}
+					{@render group(root, 0)}
+				{/each}
+			{:else}
+				<div class="flex flex-wrap items-start gap-8">
+					{#each roots as root (root.id)}
+						{@render group(root, 1)}
+					{/each}
+				</div>
+			{/if}
 			{#if outside.length > 0}
 				<section
 					class="border-border cursor-grab rounded-xl border border-dashed p-4"
-					aria-label="Outside this stack"
+					aria-label={outsideLabel}
 					data-group="outside"
 					onpointerdown={(event) => beginDrag(event, "outside")}
 					role="group"
 					style:transform={offsetOf("outside")}
 				>
-					<p class="eyebrow text-text-muted mb-3">Outside this stack</p>
+					<p class="eyebrow text-text-muted mb-3">{outsideLabel}</p>
 					<div class="flex flex-wrap justify-center gap-4">
 						{#each outside as svc (svc.id)}
 							<div class="flex flex-col items-center gap-1">

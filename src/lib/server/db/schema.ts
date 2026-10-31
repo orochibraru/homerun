@@ -2153,7 +2153,7 @@ export const userPreferences = pgTable("user_preferences", {
 	preset: text("preset").$type<Preset>(),
 	surfaceStyle: text("surface_style")
 		.$type<SurfaceStyle>()
-		.default("glass")
+		.default("lanes")
 		.notNull(),
 	tabLayout: text("tab_layout")
 		.$type<TabLayout>()

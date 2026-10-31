@@ -193,6 +193,48 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 		});
 	}
 
+	/**
+	 * Requests and errors per bucket for each service separately, keyed by
+	 * service id, each point's `bucket` being its start in epoch seconds
+	 * divided by `bucketSeconds`. Services with no traffic are absent.
+	 */
+	static async seriesByService(
+		serviceIds: string[],
+		since: Date,
+		bucketSeconds: number,
+	): Promise<
+		Map<string, { bucket: number; errors: number; requests: number }[]>
+	> {
+		if (serviceIds.length === 0) {
+			return new Map();
+		}
+		const bucket = sql<number>`floor(extract(epoch from ${trafficSample.createdAt}) / ${sql.raw(String(Math.trunc(bucketSeconds)))})`;
+		const rows = await db
+			.select({
+				bucket,
+				errors: sql<number>`sum(${trafficSample.status4xx} + ${trafficSample.status5xx})`,
+				requests: sql<number>`sum(${trafficSample.requests})`,
+				serviceId: trafficSample.serviceId,
+			})
+			.from(trafficSample)
+			.where(scope(serviceIds, since))
+			.groupBy(trafficSample.serviceId, bucket);
+		const out = new Map<
+			string,
+			{ bucket: number; errors: number; requests: number }[]
+		>();
+		for (const row of rows) {
+			const list = out.get(row.serviceId) ?? [];
+			list.push({
+				bucket: Number(row.bucket),
+				errors: Number(row.errors ?? 0),
+				requests: Number(row.requests ?? 0),
+			});
+			out.set(row.serviceId, list);
+		}
+		return out;
+	}
+
 	/** When the first traffic row of any of the services was written, null when there's none. */
 	static async firstAt(serviceIds: string[]): Promise<Date | null> {
 		if (serviceIds.length === 0) {

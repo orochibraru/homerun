@@ -7,6 +7,7 @@
 		Layers,
 		LayoutGridIcon,
 		List,
+		ListTree,
 		Network,
 		Plus,
 		Server,
@@ -28,12 +29,15 @@
 	import ServiceContextMenu from "#lib/components/service-context-menu.svelte";
 	import ServiceMenuHost from "#lib/components/service-menu-host.svelte";
 	import ServiceTree from "#lib/components/service-tree.svelte";
+	import StackDiagram from "#lib/components/stack-diagram.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
 	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "#lib/constants.js";
+	import { stackHues } from "#lib/lanes.js";
 	import { ListSelection } from "#lib/list-selection.svelte.js";
 	import { BASE_SORTS } from "#lib/list-sorts.js";
+	import { getLanes } from "#lib/remote/lanes.remote.js";
 	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
 	import type {
 		ServiceFacets,
@@ -64,6 +68,7 @@
 		page: number;
 		perPage: number;
 		serviceDomain: string;
+		view: "diagram" | "list" | "tree";
 	}
 
 	const {
@@ -73,11 +78,18 @@
 		page,
 		perPage,
 		serviceDomain,
+		view: mode,
 	}: Props = $props();
+
+	const VIEWS = [
+		{ icon: List, id: "list", label: "List" },
+		{ icon: ListTree, id: "tree", label: "Dependencies" },
+		{ icon: Network, id: "diagram", label: "Diagram" },
+	] as const;
 
 	type Svc = (typeof data.services)[number];
 
-	const view = new ViewMode("services");
+	const cardView = new ViewMode("services");
 
 	const selection = new ListSelection(() => data.services.map((svc) => svc.id));
 
@@ -194,6 +206,12 @@
 
 	let menuHost = $state<ReturnType<typeof ServiceMenuHost>>();
 
+	const hues = $derived(stackHues(data.stacks));
+	const stackNames = $derived(new Map(data.stacks.map((s) => [s.id, s.name])));
+	const lanes = $derived(
+		data.tree ? getLanes(data.tree.services.map((svc) => svc.id)) : null,
+	);
+
 	const tree = $derived(
 		data.tree && {
 			forest: dependencyForest(
@@ -233,31 +251,38 @@
 				</Button>
 			</div>
 		</div>
-	{:else if tree}
+	{:else if tree && data.tree}
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<p class="text-text-subtle text-xs">
-				Every service, with what it connects to underneath. Connections are read
-				from env vars pointing at another service's slug.
+				Every service, with what it needs underneath and its last 24 hours.
+				Connections are read from env vars pointing at another service's slug.
 			</p>
-			<Button
-				class="ml-auto"
-				href={resolve("services")}
-				size="sm"
-				variant="outline"
-			>
-				<List class="size-4" />
-				Back to the list
-			</Button>
+			<span class="ml-auto">{@render viewSwitch()}</span>
 		</div>
-		<div class="panel overflow-hidden rounded-xl">
-			<ServiceTree
-				nodes={tree.forest}
-				previews={tree.previews}
-				services={tree.services}
-				stackNames={new Map()}
+		{#if mode === "diagram"}
+			<StackDiagram
+				deps={data.tree.deps}
+				{hues}
+				lanes={lanes?.current ?? null}
+				rootStackId={null}
+				services={data.tree.services}
+				{stackNames}
+				stacks={data.stacks}
 				wrapper={treeWrapper}
 			/>
-		</div>
+		{:else}
+			<div class="panel overflow-hidden rounded-xl">
+				<ServiceTree
+					{hues}
+					lanes={lanes?.current ?? null}
+					nodes={tree.forest}
+					previews={tree.previews}
+					services={tree.services}
+					{stackNames}
+					wrapper={treeWrapper}
+				/>
+			</div>
+		{/if}
 	{:else}
 		<EntityToolbar
 			sorts={BASE_SORTS}
@@ -265,13 +290,8 @@
 			placeholder="Search services by name, image or domain…"
 		>
 			{#snippet trailing()}
-				<Button
-					href="{resolve('services')}?view=tree"
-					size="sm"
-					variant="outline"><Network class="size-4" />Dependencies</Button
-				>
-
-				<ViewModeToggle {view} />
+				{@render viewSwitch()}
+				<ViewModeToggle view={cardView} />
 			{/snippet}
 		</EntityToolbar>
 
@@ -381,7 +401,7 @@
 								{badge}
 								{media}
 								selectedIds={selection.ids}
-								{view}
+								view={cardView}
 							/>
 						{/if}
 					</div>
@@ -392,6 +412,28 @@
 		{/if}
 	{/if}
 </div>
+
+{#snippet viewSwitch()}
+	<nav
+		class="border-border inline-flex rounded-lg border p-0.5"
+		aria-label="Services view"
+	>
+		{#each VIEWS as option (option.id)}
+			{@const Icon = option.icon}
+			<a
+				class="inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors {mode ===
+				option.id
+					? 'bg-accent-light text-accent'
+					: 'text-text-muted hover:text-text'}"
+				aria-current={mode === option.id ? "page" : undefined}
+				href="{resolve('services')}?view={option.id}"
+			>
+				<Icon class="size-3.5" />
+				{option.label}
+			</a>
+		{/each}
+	</nav>
+{/snippet}
 
 {#snippet treeWrapper(svc: GraphServiceInfo, body: Snippet)}
 	<ServiceContextMenu
