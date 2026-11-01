@@ -2,10 +2,9 @@
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { ArrowRight, PackageCheck, RotateCcw } from "@lucide/svelte";
+	import { ArrowRight, RotateCcw } from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
 
-	import RunStatusBadge from "#lib/components/run-status-badge.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import {
 		trialAttempts,
@@ -34,118 +33,108 @@
 	let retrying = $state<string | null>(null);
 </script>
 
-<section class="panel mb-4 rounded-xl">
-	<div class="panel-head">
-		<h2 class="eyebrow flex items-center gap-1.5">
-			<PackageCheck class="size-3.5" />
-			Available updates
-		</h2>
-		<span class="text-text-subtle ml-auto text-xs">{updates.length}</span>
+{#each updates as update (update.serviceId)}
+	{@const href = resolve(
+		"/(protected)/services/[serviceId]/environments/source",
+		{ serviceId: update.serviceId },
+	)}
+	{@const failed = update.trialStatus === "failed"}
+	<div
+		class="border-border relative flex flex-col gap-1.5 rounded-lg border p-4 before:absolute before:inset-y-3 before:-left-px before:w-0.75 before:rounded-full {failed
+			? 'before:bg-red-500'
+			: 'before:bg-(--lane-1)'}"
+	>
+		<p class="text-text flex items-center gap-2 text-sm font-semibold">
+			<span
+				class="size-2 shrink-0 rounded-full {failed
+					? 'bg-red-500'
+					: 'bg-(--lane-1)'}"
+			></span>
+			<a class="truncate hover:underline" {href}>
+				{update.serviceName}
+				{update.tag === update.currentTag
+					? `has a newer :${update.tag}`
+					: `:${update.tag}`}
+				{failed ? "trial failed" : "is available"}
+			</a>
+		</p>
+		<p class="text-text-muted text-sm">
+			{#if failed}
+				Health check failed ({trialAttempts(update.trialAttempts)}), :{update.currentTag}
+				is still serving.
+			{:else if update.trialStatus === "running"}
+				Trying it now, :{update.currentTag} is still serving.
+			{:else if update.trialStatus === "passed"}
+				Its trial passed, ready to roll out.
+			{:else}
+				Found {timeAgo(update.foundAt)}, currently on :{update.currentTag}.
+			{/if}
+		</p>
+		<p
+			class="text-text-subtle inline-flex items-center gap-1 truncate font-mono text-xs"
+		>
+			{update.image}:{update.currentTag}
+			<ArrowRight class="size-3 shrink-0" />
+			:{update.tag} · {timeAgo(update.foundAt)}
+		</p>
+		{#if canWrite}
+			<div class="mt-1.5 flex flex-wrap gap-2">
+				{#if failed}
+					<form
+						action="{href}?/retryTrial"
+						method="POST"
+						use:enhance={enhanceToast({
+							error: `Couldn't retry the trial of ${update.serviceName}.`,
+							loading: `Starting the trial of ${update.serviceName} again`,
+							onComplete: () => refreshAll(),
+							onSettled: () => {
+								retrying = null;
+							},
+							onStart: () => {
+								retrying = update.serviceId;
+							},
+							success: `Trying :${update.tag} on ${update.serviceName} again.`,
+						})}
+					>
+						<Button
+							disabled={retrying !== null}
+							loading={retrying === update.serviceId}
+							size="sm"
+							type="submit"
+						>
+							<RotateCcw class="size-4" />
+							Retry trial
+						</Button>
+					</form>
+				{:else}
+					<form
+						action="{href}?/applyUpdate"
+						method="POST"
+						use:enhance={enhanceToast({
+							error: `Couldn't update ${update.serviceName}.`,
+							loading: `Queuing the update of ${update.serviceName}`,
+							onComplete: () => refreshAll(),
+							onSettled: () => {
+								applying = null;
+							},
+							onStart: () => {
+								applying = update.serviceId;
+							},
+							success: `Deploying ${update.serviceName} on :${update.tag}.`,
+						})}
+					>
+						<Button
+							disabled={applying !== null || update.trialStatus === "running"}
+							loading={applying === update.serviceId}
+							size="sm"
+							type="submit"
+						>
+							Update now
+						</Button>
+					</form>
+				{/if}
+				<Button {href} size="sm" variant="outline">Source</Button>
+			</div>
+		{/if}
 	</div>
-	{#if updates.length > 0}
-		<div class="divide-border divide-y">
-			{#each updates as update (update.serviceId)}
-				{@const href = resolve(
-					"/(protected)/services/[serviceId]/environments/source",
-					{ serviceId: update.serviceId },
-				)}
-				<div class="flex flex-wrap items-center gap-3 px-4 py-2.5 text-xs">
-					<a
-						class="text-text truncate text-sm font-medium hover:underline"
-						{href}
-					>
-						{update.serviceName}
-					</a>
-					<span
-						class="text-text-muted inline-flex items-center gap-1 font-mono"
-					>
-						{update.image}:{update.currentTag}
-						<ArrowRight class="size-3" />
-						<span class="text-text">
-							{update.tag === update.currentTag
-								? `newer :${update.tag}`
-								: `:${update.tag}`}
-						</span>
-					</span>
-					{#if update.trialStatus}
-						<span class="inline-flex items-center gap-1.5">
-							<span class="text-text-subtle">Trial</span>
-							<RunStatusBadge
-								error={update.trialMessage}
-								success={update.trialStatus === "running"
-									? null
-									: update.trialStatus === "passed"}
-							/>
-						</span>
-					{/if}
-					<span class="text-text-subtle ml-auto">
-						{timeAgo(update.foundAt)}
-					</span>
-					{#if update.trialStatus === "failed"}
-						<span class="text-xs text-red-500">
-							Health check fails ({trialAttempts(update.trialAttempts)}), not
-							offered
-						</span>
-					{/if}
-					{#if canWrite && update.trialStatus === "failed"}
-						<form
-							action="{href}?/retryTrial"
-							method="POST"
-							use:enhance={enhanceToast({
-								error: `Couldn't retry the trial of ${update.serviceName}.`,
-								loading: `Starting the trial of ${update.serviceName} again`,
-								onComplete: () => refreshAll(),
-								onSettled: () => {
-									retrying = null;
-								},
-								onStart: () => {
-									retrying = update.serviceId;
-								},
-								success: `Trying :${update.tag} on ${update.serviceName} again.`,
-							})}
-						>
-							<Button
-								disabled={retrying !== null}
-								loading={retrying === update.serviceId}
-								size="sm"
-								type="submit"
-								variant="outline"
-							>
-								<RotateCcw class="size-4" />
-								Retry trial
-							</Button>
-						</form>
-					{:else if canWrite}
-						<form
-							action="{href}?/applyUpdate"
-							method="POST"
-							use:enhance={enhanceToast({
-								error: `Couldn't update ${update.serviceName}.`,
-								loading: `Queuing the update of ${update.serviceName}`,
-								onComplete: () => refreshAll(),
-								onSettled: () => {
-									applying = null;
-								},
-								onStart: () => {
-									applying = update.serviceId;
-								},
-								success: `Deploying ${update.serviceName} on :${update.tag}.`,
-							})}
-						>
-							<Button
-								disabled={applying !== null || update.trialStatus === "running"}
-								loading={applying === update.serviceId}
-								size="sm"
-								type="submit"
-							>
-								Update now
-							</Button>
-						</form>
-					{/if}
-				</div>
-			{/each}
-		</div>
-	{:else}
-		<p class="text-text-muted px-4 py-3 text-xs">No updates available.</p>
-	{/if}
-</section>
+{/each}

@@ -21,16 +21,21 @@
 	}: Props = $props();
 
 	const indexes = Array.from({ length: LANE_BUCKETS }, (_, i) => i);
-	const peak = $derived(Math.max(1, ...(lane?.requests ?? [0])));
+	const busy = $derived((lane?.requests ?? []).filter((n) => n > 0));
+	const high = $derived(Math.max(1, ...busy));
+	const low = $derived(busy.length ? Math.min(...busy) : 0);
 	const total = $derived(lane?.requests.reduce((sum, n) => sum + n, 0) ?? 0);
 	const lastDeploy = $derived(lane?.deploys.at(-1));
 
 	function opacity(index: number): number {
 		const requests = lane?.requests[index] ?? 0;
 		if (!requests) {
-			return 0.07;
+			return 0.06;
 		}
-		return 0.16 + 0.76 * Math.sqrt(requests / peak);
+		if (high === low) {
+			return 0.5;
+		}
+		return 0.14 + 0.78 * ((requests - low) / (high - low)) ** 0.8;
 	}
 
 	function failing(index: number): boolean {

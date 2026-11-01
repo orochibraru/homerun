@@ -54,7 +54,7 @@ async function todaysMonitoring(services: ServiceDTO[], zone: string) {
 			rangeStart("today", new Date(), zone),
 		),
 	]);
-	const names = new Map(services.map((svc) => [svc.id, svc.name]));
+	const byId = new Map(services.map((svc) => [svc.id, svc]));
 	return {
 		busiest: breakdown
 			.filter((row) => row.requests > 0)
@@ -64,7 +64,10 @@ async function todaysMonitoring(services: ServiceDTO[], zone: string) {
 				href: resolve("/(protected)/services/[serviceId]/observability", {
 					serviceId: row.serviceId,
 				}),
-				name: names.get(row.serviceId) ?? row.serviceId,
+				name: byId.get(row.serviceId)?.name ?? row.serviceId,
+				slug: byId.get(row.serviceId)?.slug ?? "",
+				status: byId.get(row.serviceId)?.currentStatus ?? "pending",
+				stackId: byId.get(row.serviceId)?.stackId ?? null,
 			})),
 		monitoring,
 	};
