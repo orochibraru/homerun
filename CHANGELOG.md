@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.78](https://github.com/orochibraru/homerun/compare/v1.0.77...v1.0.78) (2026-11-01)
+
+### Features
+
+* **ui:** Lanes on the service page and a fuller overview (#184) ([0ddf400](https://github.com/orochibraru/homerun/commit/0ddf400bc574adf1856644c6728bb1469bebfaea))
+
 ## [1.0.77](https://github.com/orochibraru/homerun/compare/v1.0.76...v1.0.77) (2026-10-31)
 
 ### Features
