@@ -15,10 +15,14 @@ server-sent events (the server pushes each new line and status change; if that
 stream can't be held open, the panel falls back to polling), and it resumes
 correctly if you reload the page mid-deploy, or if the deploy was started
 somewhere else entirely (a template quick-deploy, cron). Below the buttons sit
-the service's live logs and, beside them, a **Summary** (source, last deploy,
-replicas, limits, port, health check, volumes, age), a **Connections** panel
-listing the services it references through env vars or depends on through a
-[service link](env-vars.md), and the ones that reference or depend on it (same
+the service's **Last 24 hours** (requests, average response time, error rate and
+deploys, over its lane: half-hour blocks of traffic, darker the busier, red
+where a quarter or more of the requests failed, a diamond per deployment), an
+**Activity** feed of its latest deploys, failures and rollbacks (each opening
+its revision), and its live logs; beside them sit a **Summary** (source, last
+deploy, replicas, limits, port, health check, volumes, age), a **Connections**
+panel listing the services it references through env vars or depends on through
+a [service link](env-vars.md), and the ones that reference or depend on it (same
 detection as a stack's dependency graph, see [Stacks](stacks.md)), each with an
 **Unlink** button (see [Env vars](env-vars.md#unlinking)). Deployment history,
 every attempt with its status, image and full log, is under

@@ -6,8 +6,9 @@ export const LANE_BUCKETS = 48;
 /** How far back a lane reaches. */
 export const LANE_SPAN_MS = 24 * 3_600_000;
 
-/** One service's last 24 hours: requests and errors per bucket, and where it was deployed. */
+/** One service's last 24 hours: requests and errors per bucket, its average response time, and where it was deployed. */
 export interface Lane {
+	avgResponseMs: number | null;
 	deploys: { failed: boolean; index: number }[];
 	errors: number[];
 	requests: number[];
@@ -29,7 +30,12 @@ export function laneStart(now: Date): Date {
  * outside the 24 hours that end at `now`.
  */
 export function buildLane(
-	points: { bucket: number; errors: number; requests: number }[],
+	points: {
+		bucket: number;
+		durationMs?: number;
+		errors: number;
+		requests: number;
+	}[],
 	deploys: { createdAt: Date; status: ContainerStatus }[],
 	now: Date,
 ): Lane {
@@ -38,14 +44,19 @@ export function buildLane(
 	);
 	const requests = Array.from({ length: LANE_BUCKETS }, () => 0);
 	const errors = Array.from({ length: LANE_BUCKETS }, () => 0);
+	let durationMs = 0;
+	let total = 0;
 	for (const point of points) {
 		const index = point.bucket - first;
 		if (index >= 0 && index < LANE_BUCKETS) {
 			requests[index] += point.requests;
 			errors[index] += point.errors;
+			durationMs += point.durationMs ?? 0;
+			total += point.requests;
 		}
 	}
 	return {
+		avgResponseMs: total ? durationMs / total : null,
 		deploys: deploys.flatMap((dep) => {
 			const index =
 				Math.floor(dep.createdAt.getTime() / 1000 / LANE_BUCKET_SECONDS) -
