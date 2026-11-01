@@ -10,6 +10,7 @@
 	import ChangeBadge from "#lib/components/monitoring/change-badge.svelte";
 	import QuickDeployTemplates from "#lib/components/overview/quick-deploy-templates.svelte";
 	import SetupIssues from "#lib/components/overview/setup-issues.svelte";
+	import TrafficAndHost from "#lib/components/overview/traffic-and-host.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import {
@@ -236,6 +237,8 @@
 	{#if frontPageTemplates?.length}
 		<QuickDeployTemplates templates={frontPageTemplates} />
 	{/if}
+
+	<TrafficAndHost failed={monitoringData.failed} {monitoring} />
 
 	<div
 		class="grid grid-cols-1 gap-x-12 gap-y-8 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
