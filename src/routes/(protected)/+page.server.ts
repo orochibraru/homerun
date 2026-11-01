@@ -40,7 +40,7 @@ async function frontPageTemplates() {
 	});
 }
 
-/** Today's traffic, uptime and host use, and the five busiest services, for the dashboard's summary. */
+/** Today's traffic, uptime and host use, and the eight busiest services, for the dashboard's summary. */
 async function todaysMonitoring(services: ServiceDTO[], zone: string) {
 	const serviceIds = services.map((svc) => svc.id);
 	const [monitoring, breakdown] = await Promise.all([
@@ -58,7 +58,7 @@ async function todaysMonitoring(services: ServiceDTO[], zone: string) {
 	return {
 		busiest: breakdown
 			.filter((row) => row.requests > 0)
-			.slice(0, 5)
+			.slice(0, 8)
 			.map((row) => ({
 				...row,
 				href: resolve("/(protected)/services/[serviceId]/observability", {

@@ -24,6 +24,8 @@
 	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
 	import ReplicaStats from "#lib/components/replica-stats.svelte";
+	import ServiceActivity from "#lib/components/service-activity.svelte";
+	import ServiceDay from "#lib/components/service-day.svelte";
 	import ServiceGraph from "#lib/components/service-graph.svelte";
 	import ServiceSummary from "#lib/components/service-summary.svelte";
 	import { DeployProgress } from "#lib/deploy-progress.svelte.js";
@@ -134,7 +136,7 @@
 {/if}
 
 <!-- ═══ Actions ═══ -->
-<div class="mb-4 flex flex-wrap gap-2">
+<div class="mb-6 flex flex-wrap gap-2">
 	<form action="?/deploy" method="POST" use:enhance={progress.deployEnhance()}>
 		<Button
 			disabled={progress.pendingAction !== null}
@@ -327,34 +329,48 @@
 {/if}
 
 <div
-	class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+	class="grid items-start gap-x-8 gap-y-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]"
 >
-	{#if isDeployed(svc)}
-		<div>
-			<LiveLogViewer
-				heightClass="h-[32rem]"
-				serviceId={svc.id}
-				workloadId={workloadId(svc)}
-			/>
-			<a
-				class="text-accent mt-2 inline-block text-xs underline"
-				href={resolve("/(protected)/services/[serviceId]/observability/logs", {
-					serviceId: svc.id,
-				})}
+	<div class="min-w-0 space-y-8">
+		{#if isDeployed(svc)}
+			<ErrorBoundary title="The last 24 hours didn't load.">
+				<ServiceDay
+					serviceId={svc.id}
+					stopped={svc.desiredState !== "running"}
+				/>
+			</ErrorBoundary>
+		{/if}
+		<ServiceActivity deployments={data.deployments} serviceId={svc.id} />
+		{#if isDeployed(svc)}
+			<section class="space-y-2">
+				<LiveLogViewer
+					heightClass="h-80"
+					serviceId={svc.id}
+					workloadId={workloadId(svc)}
+				/>
+				<a
+					class="text-accent inline-block text-xs underline"
+					href={resolve(
+						"/(protected)/services/[serviceId]/observability/logs",
+						{
+							serviceId: svc.id,
+						},
+					)}
+				>
+					View full logs
+				</a>
+			</section>
+		{:else if progress.pendingAction !== "deploy"}
+			<div
+				class="border-border bg-surface-2 text-text-muted rounded-md border p-4 text-sm"
 			>
-				View full logs
-			</a>
-		</div>
-	{:else if progress.pendingAction !== "deploy"}
-		<div
-			class="border-border bg-surface-2 text-text-muted rounded-md border p-4 text-sm"
-		>
-			This service hasn't been deployed yet : click <strong>Deploy</strong> to
-			pull
-			<span class="text-text">{svc.image}:{svc.tag}</span>
-			and start it.
-		</div>
-	{/if}
+				This service hasn't been deployed yet : click <strong>Deploy</strong>
+				to pull
+				<span class="text-text">{svc.image}:{svc.tag}</span>
+				and start it.
+			</div>
+		{/if}
+	</div>
 	<div class="space-y-4">
 		<ServiceSummary
 			lastDeployment={data.lastDeployment}

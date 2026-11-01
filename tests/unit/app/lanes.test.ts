@@ -22,8 +22,13 @@ describe("buildLane", () => {
 	test("places traffic in its bucket and drops what's outside the day", () => {
 		const lane = buildLane(
 			[
-				{ bucket: first, errors: 1, requests: 10 },
-				{ bucket: first + LANE_BUCKETS - 1, errors: 0, requests: 5 },
+				{ bucket: first, durationMs: 100, errors: 1, requests: 10 },
+				{
+					bucket: first + LANE_BUCKETS - 1,
+					durationMs: 50,
+					errors: 0,
+					requests: 5,
+				},
 				{ bucket: first - 1, errors: 0, requests: 99 },
 				{ bucket: first + LANE_BUCKETS, errors: 0, requests: 99 },
 			],
@@ -35,6 +40,7 @@ describe("buildLane", () => {
 		expect(lane.errors[0]).toBe(1);
 		expect(lane.requests[LANE_BUCKETS - 1]).toBe(5);
 		expect(lane.requests.reduce((a, b) => a + b, 0)).toBe(15);
+		expect(lane.avgResponseMs).toBe(10);
 	});
 
 	test("marks deploys by bucket and flags failed ones", () => {
@@ -47,6 +53,7 @@ describe("buildLane", () => {
 			],
 			now,
 		);
+		expect(lane.avgResponseMs).toBeNull();
 		expect(lane.deploys).toEqual([
 			{ failed: false, index: LANE_BUCKETS - 1 },
 			{ failed: true, index: 34 },

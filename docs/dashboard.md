@@ -1,6 +1,6 @@
 # The dashboard
 
-![The Overview page: today's numbers, what needs you, the busiest services with their last 24 hours, and today's timeline](images/hero.webp)
+![The Overview page: today's numbers, what needs you, today's traffic and the host, the busiest services with their last 24 hours, and today's timeline](images/hero.webp)
 
 `/` (Overview) is the landing page after sign-in, kept short on purpose:
 
@@ -14,7 +14,10 @@
   right above it.
 - **Deploy an app**, in [simple mode](ui-modes.md) only: popular templates with
   a **Quick Deploy** button each.
-- **Busiest today**, the five services that served the most requests, each with
+- **Traffic today**, the instance's requests as a chart, and **Host**, live CPU,
+  memory, disk and (with an NVIDIA card and `nvidia-smi`) GPU for the machine
+  Homerun runs on, refreshed every five seconds.
+- **Busiest today**, the eight services that served the most requests, each with
   its **lane**: the last 24 hours in half-hour blocks, darker the busier, red
   where a quarter or more of the requests failed, and a diamond for each
   deployment (filled for the latest, red for a failed one). **All services**
@@ -24,7 +27,7 @@
   sees the instance's errors, a developer only the ones that mention one of
   their services. **Clear errors** empties it.
 
-Live host CPU, memory, disk and GPU, and their history, are on
+Their history, over a day to all time, is on
 [Monitoring](observability.md#stacks-and-the-whole-instance).
 
 - **Resource limits**: each of CPU, memory, disk and GPU has a soft and a hard

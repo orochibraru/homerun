@@ -51,6 +51,7 @@
 
 <nav
 	aria-label={label}
+	data-slot="section-nav"
 	class="border-border bg-surface-2 mb-5 inline-flex max-w-full overflow-x-auto rounded-lg border p-0.5 {hubbed
 		? 'max-md:hidden'
 		: ''}"
