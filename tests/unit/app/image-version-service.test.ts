@@ -12,6 +12,8 @@ const { Logger } = await import("../../../src/lib/logger");
 const { DeploymentDTO } = await import("../../../src/lib/dto/deployment-dto");
 const { NotificationDTO } =
 	await import("../../../src/lib/dto/notification-dto");
+const { ServiceVolumeDTO } =
+	await import("../../../src/lib/dto/service-volume-dto");
 const { WorkerClient, WorkerRequestError } =
 	await import("../../../src/lib/server/worker-client");
 const { ApiService } = await import("../../../src/lib/services/api.service");
@@ -60,6 +62,10 @@ let pullGate: Promise<void> | null = null;
 let pullError: unknown = null;
 let inspects: (Inspect | null)[] = [];
 let logOutput: string | null = null;
+let mounts: Record<string, unknown>[] = [];
+let copyExitCode = 0;
+const oneOffs: Record<string, unknown>[] = [];
+const removedVolumes: string[] = [];
 const listTagsCalls: { digestsWanted: string[] | null }[] = [];
 const resolveCalls: string[] = [];
 const workerCalls: unknown[][] = [];
@@ -157,7 +163,11 @@ beforeEach(() => {
 	pullError = null;
 	inspects = [{ Health: { Status: "healthy" }, Running: true }];
 	logOutput = null;
+	mounts = [];
+	copyExitCode = 0;
 	for (const list of [
+		oneOffs,
+		removedVolumes,
 		listTagsCalls,
 		resolveCalls,
 		workerCalls,
@@ -203,6 +213,19 @@ beforeEach(() => {
 		deployments.map(deployment),
 	);
 	stub(DockerService, "buildAuthConfig", () => AUTH);
+	stub(ServiceVolumeDTO, "listForService", async () => mounts);
+	stub(DockerService, "runOneOff", async (params: Record<string, unknown>) => {
+		oneOffs.push(params);
+		return {
+			exitCode: copyExitCode,
+			stderr: Buffer.from(copyExitCode ? "cp: disk full" : ""),
+			stdout: Buffer.alloc(0),
+			timedOut: false,
+		};
+	});
+	stub(DockerService, "removeVolume", async (name: string) => {
+		removedVolumes.push(name);
+	});
 	stub(DockerService, "pullImage", async (params: unknown) => {
 		pulls.push(params);
 		await pullGate;
@@ -696,7 +719,7 @@ describe("ImageVersionService.check", () => {
 });
 
 describe("ImageVersionService update trials", () => {
-	test("runs the update on the service's networks, off every volume, and passes once healthy", async () => {
+	test("runs the update on the service's networks and passes once healthy", async () => {
 		const { svc, updates } = fakeService({
 			stackId: "st1",
 			updateTrialEnabled: true,
@@ -759,6 +782,62 @@ describe("ImageVersionService update trials", () => {
 		expect(notifications[0].message).toBe(
 			'"Gitea" can update to 1.24.4. Its trial run started cleanly.',
 		);
+	});
+
+	test("copies each writable volume for the trial, shares read-only ones, and removes the copies", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		mounts = [
+			{
+				mount: {
+					toJSON: () => ({ containerPath: "/config", readOnly: false }),
+				},
+				volumeName: "config",
+				volumeSource: "gitea-config",
+			},
+			{
+				mount: { toJSON: () => ({ containerPath: "/certs", readOnly: true }) },
+				volumeName: "certs",
+				volumeSource: "/srv/certs",
+			},
+		];
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial?.status).toBe("passed");
+		expect(oneOffs).toEqual([
+			{
+				binds: ["gitea-config:/from:ro", "homerun-trial-gitea-0:/to"],
+				cmd: ["cp", "-a", "/from/.", "/to/"],
+				image: "alpine",
+				labels: { "homerun.update-trial": "s1" },
+				tag: "3",
+			},
+		]);
+		expect(containerCreate()?.body.HostConfig).toMatchObject({
+			Binds: ["homerun-trial-gitea-0:/config", "/srv/certs:/certs:ro"],
+		});
+		expect(removedVolumes).toEqual([
+			"homerun-trial-gitea-0",
+			"homerun-trial-gitea-0",
+		]);
+	});
+
+	test("a failed volume copy fails the trial before any container starts", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		mounts = [
+			{
+				mount: { toJSON: () => ({ containerPath: "/data", readOnly: false }) },
+				volumeName: "data",
+				volumeSource: "gitea-data",
+			},
+		];
+		copyExitCode = 1;
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial?.status).toBe("failed");
+		expect(state?.trial?.message).toContain(
+			"Couldn't copy data: cp: disk full",
+		);
+		expect(containerCreate()).toBeUndefined();
 	});
 
 	test("a swarm service's trial joins the swarm overlay its stack talks on", async () => {

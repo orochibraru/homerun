@@ -1,6 +1,4 @@
-import { stripAnsi } from "#lib/ansi.js";
 import { config } from "#lib/config.js";
-import { phaseLine } from "#lib/deploy-phases.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
@@ -25,15 +23,13 @@ import { isNotFound } from "#lib/server/worker-client.js";
 import { ApiService } from "./api.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { DockerService } from "./docker.service.ts";
-import {
-	dockerHealthcheck,
-	healthcheckTimingOf,
-} from "./docker/healthcheck.ts";
-import { stackNetworkName } from "./docker/networks.ts";
-import { listeningHealthcheck } from "./docker/readiness.ts";
-import { swarmNetworkName } from "./docker/swarm.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { updateAvailableMessage } from "./notification-messages.ts";
+import {
+	messageOf,
+	sleep,
+	UpdateTrialService,
+} from "./update-trial.service.ts";
 
 const logger = new Logger("Updates");
 
@@ -41,11 +37,6 @@ const VERSION_LABELS = [
 	"org.opencontainers.image.version",
 	"org.label-schema.version",
 ];
-const TRIAL_LABEL = "homerun.update-trial";
-const TRIAL_SETTLE_MS = 20_000;
-const TRIAL_HEALTH_TIMEOUT_MS = 180_000;
-const TRIAL_POLL_MS = 2000;
-const TRIAL_LOG_LINES = 20;
 const MAX_TRIAL_MESSAGE = 4000;
 const MAX_TRIAL_LOG_LINES = 300;
 const MAX_TRIAL_RETRIES = 3;
@@ -85,16 +76,6 @@ interface TrialRun {
 	update: ImageUpdateAvailable;
 }
 
-interface TrialInspect {
-	State?: {
-		ExitCode?: number;
-		Health?: { Status?: string };
-		Restarting?: boolean;
-		Running?: boolean;
-		Status?: string;
-	};
-}
-
 /** The available update's fields of a `ServiceVersionState`. */
 function availableState(available: ImageUpdateAvailable | null) {
 	return {
@@ -114,22 +95,12 @@ function trialState(trial: ImageUpdateTrial | null) {
 	};
 }
 
-/** Waits `ms` milliseconds. */
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** The error message of whatever was thrown. */
-function messageOf(err: unknown): string {
-	return err instanceof Error ? err.message : String(err);
-}
-
 /**
  * Version pinning and update checks for image-sourced services: finding the
  * registry tag the running image was published under, pinning to it (or to a
  * tag made on this host when none matches), watching the registry for a newer
- * release, trying that release in a throwaway container with no volumes or
- * routing, and telling the user about it.
+ * release, trying that release in a throwaway container with copies of its
+ * volumes and no routing, and telling the user about it.
  */
 class ImageVersionServiceClass {
 	readonly #inFlight = new Set<string>();
@@ -556,7 +527,7 @@ class ImageVersionServiceClass {
 		const { progress, running, svc, update } = run;
 		running.attempts = attempt;
 		try {
-			const message = await this.#runTrial(svc, update, progress);
+			const message = await UpdateTrialService.run(svc, update, progress);
 			return { attempts: attempt, message, status: "passed" };
 		} catch (err) {
 			const message = messageOf(err);
@@ -578,178 +549,6 @@ class ImageVersionServiceClass {
 				`Retry ${attempt} of ${MAX_TRIAL_RETRIES}`,
 			];
 			return this.#attempt(run, attempt + 1);
-		}
-	}
-
-	/**
-	 * Pulls the update and starts it in a container of its own, with the
-	 * service's env, command and entrypoint on its networks (Homerun's and its
-	 * stack's, without the service's alias, so it reaches its database but
-	 * never gets its traffic), and no volumes, published ports or Traefik
-	 * labels, so it can't touch the live service's files or domains. Passes
-	 * once the container reports healthy on the readiness check a real deploy
-	 * would use, or is still running after `TRIAL_SETTLE_MS` when the service
-	 * has healthchecks off. Each step, and the container's own output, goes
-	 * to `progress` with the deploy log's phase markers. The container is
-	 * always removed; the pulled image stays, ready for the real deploy.
-	 * @returns A one-line summary of how it passed.
-	 * @throws describing how it failed, with the container's last log lines.
-	 */
-	async #runTrial(
-		svc: ServiceDTO,
-		update: ImageUpdateAvailable,
-		progress: (...lines: string[]) => Promise<void>,
-	): Promise<string> {
-		const auth = DockerService.buildAuthConfig(svc.toJSON());
-		const ref = update.digest
-			? `${svc.image}@${update.digest}`
-			: `${svc.image}:${update.tag}`;
-		await progress(phaseLine("image"), `Pulling ${svc.image}:${update.tag}`);
-		try {
-			await DockerService.pullImage({
-				auth,
-				image: svc.image,
-				tag: update.digest ? `${update.tag}@${update.digest}` : update.tag,
-			});
-		} catch (err) {
-			await progress(`Pull failed: ${messageOf(err)}`);
-			throw err;
-		}
-		await progress(
-			`Pulled ${ref}`,
-			phaseLine("container"),
-			"Starting a throwaway container on the service's networks, with no volumes, ports or domains",
-		);
-		const name = `homerun-trial-${svc.slug}`;
-		await DockerService.worker
-			.delete(`v1/containers/${name}`, { force: "1" })
-			.catch(() => undefined);
-		const healthcheck = this.#trialHealthcheck(svc);
-		const networks = await this.#trialNetworks(svc);
-		const created = await DockerService.worker.post<{ id: string }>(
-			"v1/containers",
-			{
-				body: {
-					Cmd: svc.command ?? undefined,
-					Entrypoint: svc.toJSON().entrypoint ?? undefined,
-					Env: Object.entries(svc.envVars).map(
-						([key, value]) => `${key}=${value}`,
-					),
-					HostConfig: {
-						NetworkMode: networks[0],
-						RestartPolicy: { Name: "no" },
-					},
-					Healthcheck: healthcheck,
-					Image: ref,
-					Labels: { [TRIAL_LABEL]: svc.id },
-					NetworkingConfig: {
-						EndpointsConfig: Object.fromEntries(
-							networks.map((network) => [network, {}]),
-						),
-					},
-				},
-				name,
-			},
-		);
-		try {
-			await DockerService.worker.post(`v1/containers/${created.id}/start`);
-			await progress(
-				`Started ${name}`,
-				phaseLine("health"),
-				healthcheck
-					? "Waiting for it to report healthy"
-					: `Healthchecks are off, waiting ${TRIAL_SETTLE_MS / 1000}s to see it stays up`,
-			);
-			const message = await this.#watchTrial(created.id);
-			const logs = await this.#trialLogs(created.id);
-			await progress(
-				...(logs ? logs.split("\n") : []),
-				phaseLine("ready"),
-				message,
-			);
-			return message;
-		} catch (err) {
-			const logs = await this.#trialLogs(created.id);
-			await progress(...(logs ? logs.split("\n") : []), messageOf(err));
-			throw new Error(logs ? `${messageOf(err)}\n\n${logs}` : messageOf(err));
-		} finally {
-			await DockerService.worker
-				.delete(`v1/containers/${created.id}`, { force: "1" })
-				.catch(() => undefined);
-		}
-	}
-
-	/**
-	 * The networks a trial container joins, so it resolves the services it
-	 * talks to the way the live one does: a swarm service's attachable
-	 * overlay, where its stack's services answer to their slugs, otherwise
-	 * Homerun's shared network and the service's stack network. The stack
-	 * network is created first when missing, since only a standalone deploy
-	 * creates it and Docker Cleanup prunes it once empty.
-	 */
-	async #trialNetworks(svc: ServiceDTO): Promise<string[]> {
-		if (svc.swarmServiceId) {
-			return [swarmNetworkName(), config.docker.networkName];
-		}
-		await DockerService.ensureSharedNetwork();
-		if (!svc.stackId) {
-			return [config.docker.networkName];
-		}
-		await DockerService.ensureStackNetwork(svc.stackId);
-		return [config.docker.networkName, stackNetworkName(svc.stackId)];
-	}
-
-	/** The readiness check a real deploy would gate traffic on: the service's own healthcheck command, else a wait for its port to listen, none when healthchecks are off. */
-	#trialHealthcheck(svc: ServiceDTO): object | undefined {
-		const row = svc.toJSON();
-		if (row.healthcheckDisabled) {
-			return;
-		}
-		const timing = healthcheckTimingOf(row);
-		return (
-			dockerHealthcheck(row.healthcheckCommand, timing) ??
-			listeningHealthcheck(row.containerPort, timing)
-		);
-	}
-
-	/** Polls a trial container until it's healthy, settled or dead, giving up `TRIAL_HEALTH_TIMEOUT_MS` after `started`. */
-	async #watchTrial(id: string, started = Date.now()): Promise<string> {
-		if (Date.now() - started >= TRIAL_HEALTH_TIMEOUT_MS) {
-			throw new Error("The new version never reported healthy.");
-		}
-		await sleep(TRIAL_POLL_MS);
-		const inspected = await DockerService.worker.get<TrialInspect>(
-			`v1/containers/${id}/inspect`,
-		);
-		const state = inspected.State ?? {};
-		if (state.Restarting || !state.Running) {
-			throw new Error(
-				`The new version exited with code ${state.ExitCode ?? "unknown"}.`,
-			);
-		}
-		const health = state.Health?.Status;
-		if (health === "healthy") {
-			return "Reported healthy.";
-		}
-		if (health === "unhealthy") {
-			throw new Error("The new version failed its healthcheck.");
-		}
-		if (!health && Date.now() - started >= TRIAL_SETTLE_MS) {
-			return `Still running after ${TRIAL_SETTLE_MS / 1000}s.`;
-		}
-		return this.#watchTrial(id, started);
-	}
-
-	/** The last lines a trial container logged, or "" when they can't be read. */
-	async #trialLogs(id: string): Promise<string> {
-		try {
-			const stream = await DockerService.streamLogs(id, {
-				follow: false,
-				tail: TRIAL_LOG_LINES,
-			});
-			return stripAnsi(await new Response(stream).text()).trim();
-		} catch {
-			return "";
 		}
 	}
 
