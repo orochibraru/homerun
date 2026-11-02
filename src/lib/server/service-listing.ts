@@ -1,8 +1,10 @@
+import { serviceDomain } from "#lib/config.js";
 import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import type { ListQuery } from "#lib/server/list-query.js";
+import { primaryHostname } from "#lib/service-domains.js";
 import {
 	dependencyMap,
 	mergeDependencies,
@@ -65,7 +67,17 @@ export async function loadServiceListing(query: ListQuery, treeView: boolean) {
 			previews: everything
 				.filter((svc) => svc.toJSON().previewParentId)
 				.map((svc) => toPreviewRow(svc.toJSON())),
-			services: roots.map((svc) => toGraphService(svc.toJSON())),
+			services: roots.map((svc) => {
+				const row = svc.toJSON();
+				return {
+					...toGraphService(row),
+					domain: primaryHostname(
+						row,
+						stacks.find((stack) => stack.id === row.stackId)?.slug,
+						serviceDomain(),
+					),
+				};
+			}),
 		},
 	};
 }

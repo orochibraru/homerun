@@ -164,7 +164,9 @@
 		</p>
 	</section>
 
-	<SetupIssues permissions={data.permissions} />
+	<div class="mb-6 empty:hidden">
+		<SetupIssues permissions={data.permissions} />
+	</div>
 
 	{#if needsYou > 0}
 		<section class="mb-8">

@@ -72,7 +72,7 @@
 	</div>
 {/snippet}
 
-<section class="panel rounded-xl">
+<section class="panel @container rounded-xl">
 	<div class="border-border flex flex-col items-start border-b px-4 py-3">
 		<h2 class="eyebrow">Connections</h2>
 		<span class="text-text-subtle text-[0.6875rem]">
@@ -86,7 +86,7 @@
 		</p>
 	{:else}
 		<div
-			class="grid items-center gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
+			class="grid items-center gap-3 p-4 @2xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
 		>
 			<div class="space-y-2">
 				{#if dependsOn.length > 0}
@@ -100,7 +100,7 @@
 			<ArrowRight
 				class="text-text-subtle mx-auto size-4 {dependsOn.length === 0
 					? 'invisible'
-					: ''} hidden md:block"
+					: ''} hidden @2xl:block"
 			/>
 
 			<div
@@ -113,7 +113,7 @@
 			<ArrowRight
 				class="text-text-subtle mx-auto size-4 {usedBy.length === 0
 					? 'invisible'
-					: ''} hidden md:block"
+					: ''} hidden @2xl:block"
 			/>
 
 			<div class="space-y-2">
