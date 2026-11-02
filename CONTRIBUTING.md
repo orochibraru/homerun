@@ -91,6 +91,25 @@ the previous worker running. `bun run dev --only=app` is vite alone,
 worker in Docker instead: `docker compose --profile worker up -d --build worker`
 (rebuild it after a Go change).
 
+### Design mode
+
+`mise run design` (or `bun scripts/design/index.ts`) runs the dashboard with no
+Docker, no Postgres and no Go, for working on the UI:
+
+- Postgres is PGlite, in memory, migrated and seeded on every start, so nothing
+  is kept between runs.
+- The worker is a mock (`scripts/design/mock-worker.ts`): every Docker call
+  answers with made-up data, containers report running, logs stream canned
+  lines, and nothing is ever deployed.
+- The seed (`scripts/design/seed.ts`) adds three stacks of services wired
+  together through env vars, two days of traffic and resource samples, a deploy
+  history with a failure, a failed update trial and a few logged errors.
+
+Open `http://localhost:5174` and sign in as `design@homerun.local` /
+`design-mode-password`. `DESIGN_PORT`, `DESIGN_DB_PORT` and `DESIGN_WORKER_PORT`
+move it off 5174, 54329 and 54330. Jobs never run, since there's no worker to
+claim them.
+
 `bun run build && bun run start` runs the built app instead of the Vite dev
 server, closer to how the production Docker image runs it, still directly on the
 host, still against the same `compose.yaml` Postgres/Traefik.
