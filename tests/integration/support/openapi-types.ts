@@ -19813,7 +19813,7 @@ export interface operations {
 					 * @enum {string}
 					 */
 					updateScope?: "major" | "minor" | "patch";
-					/** @description Try each update in a throwaway container on its networks, with no volumes or routing, before notifying it. */
+					/** @description Try each update in a throwaway container on its networks, with copies of its volumes and no routing, before notifying it. */
 					updateTrialEnabled?: boolean;
 				};
 			};
