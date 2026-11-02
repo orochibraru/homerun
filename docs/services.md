@@ -114,8 +114,8 @@ The Services page has three views, switched with **List**, **Dependencies** and
   [stack page](stacks.md#the-services-tabs-dependency-graph) shows, across the
   whole instance), and each service's **lane**: its last 24 hours of traffic in
   half-hour blocks with a diamond per deployment, tinted by its stack. Its
-  search box narrows the tree to the services whose name, slug or image matches,
-  keeping the services that need them above them.
+  search box narrows the tree to the services whose name, slug, image or main
+  domain matches, keeping the services that need them above them.
 - **List** is the paged list, grouped by stack and ordered as a tree (a
   substack's group indented under its parent's, services outside any stack
   last), with the sort, the status and stack filters and a search that runs on

@@ -468,7 +468,7 @@
 			class="panel text-text placeholder:text-text-subtle focus:border-accent w-full rounded-lg py-2 pr-3 pl-9 text-sm focus:ring-3 focus:ring-ring/50 focus:outline-none"
 			aria-label="Search services"
 			bind:value={treeQuery}
-			placeholder="Search services by name, slug or image…"
+			placeholder="Search services by name, slug, image or domain…"
 			type="search"
 		/>
 	</div>

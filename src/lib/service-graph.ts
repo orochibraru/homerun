@@ -11,6 +11,8 @@ export interface GraphServiceInfo {
 	containerId: string | null;
 	currentStatus: string;
 	desiredState: string;
+	/** The service's main public hostname, when the caller knows it, for searching by domain. */
+	domain?: string | null;
 	icon: string | null;
 	id: string;
 	image: string;
@@ -118,15 +120,15 @@ export function filterForest(
 	});
 }
 
-/** Whether a service's name, slug or image contains `query`, ignoring case; an empty query matches everything. */
+/** Whether a service's name, slug, image or main domain contains `query`, ignoring case; an empty query matches everything. */
 export function matchesServiceQuery(
-	svc: Pick<GraphServiceInfo, "image" | "name" | "slug">,
+	svc: Pick<GraphServiceInfo, "domain" | "image" | "name" | "slug">,
 	query: string,
 ): boolean {
 	const needle = query.trim().toLowerCase();
 	return (
 		!needle ||
-		[svc.name, svc.slug, svc.image].some((field) =>
+		[svc.name, svc.slug, svc.image, svc.domain ?? ""].some((field) =>
 			field.toLowerCase().includes(needle),
 		)
 	);

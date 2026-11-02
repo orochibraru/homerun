@@ -488,12 +488,21 @@ describe("filterForest", () => {
 });
 
 describe("matchesServiceQuery", () => {
-	const svc = { image: "ghcr.io/acme/drive", name: "Drive", slug: "drive-app" };
+	const svc = {
+		domain: "files.example.com",
+		image: "ghcr.io/acme/drive",
+		name: "Drive",
+		slug: "drive-app",
+	};
 
-	test("matches name, slug or image, ignoring case and spaces", () => {
+	test("matches name, slug, image or domain, ignoring case and spaces", () => {
 		expect(matchesServiceQuery(svc, " DRIVE ")).toBe(true);
 		expect(matchesServiceQuery(svc, "app")).toBe(true);
 		expect(matchesServiceQuery(svc, "acme")).toBe(true);
+		expect(matchesServiceQuery(svc, "files.example")).toBe(true);
+		expect(matchesServiceQuery({ ...svc, domain: null }, "files.example")).toBe(
+			false,
+		);
 		expect(matchesServiceQuery(svc, "redis")).toBe(false);
 	});
 
