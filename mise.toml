@@ -17,4 +17,4 @@ description = "Run the dashboard without Docker or Postgres for design work: in-
 run = "bun scripts/design/index.ts"
 
 [hooks]
-postinstall = "mise run docker || true"
+postinstall = "bun install && mise run docker || true"
