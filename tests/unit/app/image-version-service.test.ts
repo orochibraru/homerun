@@ -57,6 +57,9 @@ const remoteDigests = new Map<string, string | null>();
 let deployments: Record<string, unknown>[] = [];
 let localImage: { digest?: string | null; id: string | null } | null = null;
 let imageLabels: Record<string, string> | null = null;
+let imageHealthcheck: { Test: string[] } | null = null;
+let imageHasShell = true;
+const shellProbes: Record<string, unknown>[] = [];
 let tagError: unknown = null;
 let pullGate: Promise<void> | null = null;
 let pullError: unknown = null;
@@ -80,6 +83,7 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		buildSource: "image",
 		command: ["serve"],
 		containerPort: 3000,
+		dnsResolvable: true,
 		entrypoint: null,
 		envVars: { A: "1" },
 		healthcheckCommand: null,
@@ -158,6 +162,8 @@ beforeEach(() => {
 	deployments = [];
 	localImage = null;
 	imageLabels = null;
+	imageHealthcheck = null;
+	imageHasShell = true;
 	tagError = null;
 	pullGate = null;
 	pullError = null;
@@ -167,6 +173,7 @@ beforeEach(() => {
 	copyExitCode = 0;
 	for (const list of [
 		oneOffs,
+		shellProbes,
 		removedVolumes,
 		listTagsCalls,
 		resolveCalls,
@@ -215,6 +222,15 @@ beforeEach(() => {
 	stub(DockerService, "buildAuthConfig", () => AUTH);
 	stub(ServiceVolumeDTO, "listForService", async () => mounts);
 	stub(DockerService, "runOneOff", async (params: Record<string, unknown>) => {
+		if (params.networkName === "none") {
+			shellProbes.push(params);
+			return {
+				exitCode: imageHasShell ? 0 : 127,
+				stderr: Buffer.alloc(0),
+				stdout: Buffer.alloc(0),
+				timedOut: false,
+			};
+		}
 		oneOffs.push(params);
 		return {
 			exitCode: copyExitCode,
@@ -252,10 +268,9 @@ beforeEach(() => {
 				return localImage;
 			}
 			if (path === "v1/images/inspect") {
-				if (!imageLabels) {
-					throw new WorkerRequestError("gone", 404);
-				}
-				return { Config: { Labels: imageLabels } };
+				return {
+					Config: { Healthcheck: imageHealthcheck, Labels: imageLabels },
+				};
 			}
 			const state = inspects.length > 1 ? inspects.shift() : inspects[0];
 			return state ? { State: state } : {};
@@ -931,7 +946,53 @@ describe("ImageVersionService update trials", () => {
 			status: "passed",
 		});
 		expect(now - started).toBe(20_000);
+		expect(containerCreate()?.body.Healthcheck).toEqual({ Test: ["NONE"] });
+	});
+
+	test("a service nothing routes to passes once still running, without a port check", async () => {
+		const { svc } = fakeService({
+			dnsResolvable: false,
+			updateTrialEnabled: true,
+		});
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		inspects = [{ Running: true }];
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial).toMatchObject({
+			message: "Still running after 20s.",
+			status: "passed",
+		});
 		expect(containerCreate()?.body.Healthcheck).toBeUndefined();
+		expect(state?.trial?.log).toContain(
+			"Nothing routes to it, waiting 20s to see it stays up",
+		);
+		expect(shellProbes).toEqual([]);
+	});
+
+	test("an image with its own HEALTHCHECK keeps it instead of the port check", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		imageHealthcheck = { Test: ["CMD", "healthcheck"] };
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial?.status).toBe("passed");
+		expect(containerCreate()?.body.Healthcheck).toBeUndefined();
+		expect(shellProbes).toEqual([]);
+	});
+
+	test("an image without a shell isn't given the port check", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		imageHasShell = false;
+		inspects = [{ Running: true }];
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial?.message).toBe("Still running after 20s.");
+		expect(containerCreate()?.body.Healthcheck).toBeUndefined();
+		expect(shellProbes).toMatchObject([
+			{
+				entrypoint: ["/bin/sh", "-c", "exit 0"],
+				image: "gitea/gitea",
+				tag: "1.24.4@sha256:new",
+			},
+		]);
 	});
 
 	test("gives up on a version that never reports healthy, pulling it by tag without a digest", async () => {

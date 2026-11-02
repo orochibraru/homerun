@@ -32,6 +32,24 @@ interface TrialMount {
 	copy: string | null;
 }
 
+/** How a trial container proves it's ready: the `Healthcheck` to create it with (none keeps the image's own), whether to wait for health, and why not. */
+interface TrialReadiness {
+	healthcheck?: object;
+	reason?: string;
+	waits: boolean;
+}
+
+/** What a trial container is started from: the pulled image, the volume copies and the readiness check. */
+interface TrialSpec {
+	mounts: TrialMount[];
+	readiness: TrialReadiness;
+	ref: string;
+}
+
+interface TrialImageInspect {
+	Config?: { Healthcheck?: { Test?: string[] | null } | null };
+}
+
 interface TrialInspect {
 	State?: {
 		ExitCode?: number;
@@ -98,6 +116,10 @@ class UpdateTrialServiceClass {
 			throw err;
 		}
 		await progress(`Pulled ${ref}`, phaseLine("container"));
+		const readiness = await this.#trialReadiness(svc, {
+			image: svc.image,
+			tag: update.digest ? `${update.tag}@${update.digest}` : update.tag,
+		});
 		await DockerService.worker
 			.delete(`v1/containers/${trialName(svc)}`, { force: "1" })
 			.catch(() => undefined);
@@ -106,7 +128,7 @@ class UpdateTrialServiceClass {
 			await progress(
 				"Starting a throwaway container on the service's networks, with copies of its volumes and no ports or domains",
 			);
-			return await this.#startTrial(svc, ref, mounts, progress);
+			return await this.#startTrial(svc, { mounts, readiness, ref }, progress);
 		} finally {
 			await this.#removeTrialVolumes(mounts);
 		}
@@ -115,14 +137,12 @@ class UpdateTrialServiceClass {
 	/** Creates and starts the trial container from `ref`, then watches it until it passes or fails, always removing it. */
 	async #startTrial(
 		svc: ServiceDTO,
-		ref: string,
-		mounts: TrialMount[],
+		{ mounts, readiness, ref }: TrialSpec,
 		progress: (...lines: string[]) => Promise<void>,
 	): Promise<string> {
 		const name = trialName(svc);
 		const row = svc.toJSON();
 		const runtime = runtimeOptionsFrom(row);
-		const healthcheck = this.#trialHealthcheck(svc);
 		const networks = await this.#trialNetworks(svc);
 		const created = await DockerService.worker.post<{ id: string }>(
 			"v1/containers",
@@ -145,7 +165,7 @@ class UpdateTrialServiceClass {
 						NetworkMode: networks[0],
 						RestartPolicy: { Name: "no" },
 					},
-					Healthcheck: healthcheck,
+					Healthcheck: readiness.healthcheck,
 					Image: ref,
 					Labels: { [TRIAL_LABEL]: svc.id },
 					NetworkingConfig: {
@@ -163,9 +183,9 @@ class UpdateTrialServiceClass {
 			await progress(
 				`Started ${name}`,
 				phaseLine("health"),
-				healthcheck
+				readiness.waits
 					? "Waiting for it to report healthy"
-					: `Healthchecks are off, waiting ${TRIAL_SETTLE_MS / 1000}s to see it stays up`,
+					: `${readiness.reason}, waiting ${TRIAL_SETTLE_MS / 1000}s to see it stays up`,
 			);
 			const message = await this.#watchTrial(created.id);
 			const logs = await this.#trialLogs(created.id);
@@ -268,17 +288,69 @@ class UpdateTrialServiceClass {
 		return [config.docker.networkName, stackNetworkName(svc.stackId)];
 	}
 
-	/** The readiness check a real deploy would gate traffic on: the service's own healthcheck command, else a wait for its port to listen, none when healthchecks are off. */
-	#trialHealthcheck(svc: ServiceDTO): object | undefined {
+	/**
+	 * The readiness check a real deploy would gate traffic on, picked the way
+	 * the worker's `ReadinessCheck` picks it: none when healthchecks are off,
+	 * the service's own command, the image's own HEALTHCHECK when nothing
+	 * routes to the service (a runner, a queue consumer) or the image declares
+	 * one, else a wait for its port to listen, as long as that port is TCP and
+	 * the image ships `/bin/sh` to run it, which a throwaway helper checks.
+	 */
+	async #trialReadiness(
+		svc: ServiceDTO,
+		image: { image: string; tag: string },
+	): Promise<TrialReadiness> {
 		const row = svc.toJSON();
 		if (row.healthcheckDisabled) {
-			return;
+			return {
+				healthcheck: { Test: ["NONE"] },
+				reason: "Healthchecks are off",
+				waits: false,
+			};
 		}
 		const timing = healthcheckTimingOf(row);
-		return (
-			dockerHealthcheck(row.healthcheckCommand, timing) ??
-			listeningHealthcheck(row.containerPort, timing)
-		);
+		const command = dockerHealthcheck(row.healthcheckCommand, timing);
+		if (command) {
+			return { healthcheck: command, waits: true };
+		}
+		const inspected = await DockerService.worker
+			.get<TrialImageInspect>("v1/images/inspect", {
+				ref: `${image.image}:${image.tag}`,
+			})
+			.catch(() => null);
+		const test = inspected?.Config?.Healthcheck?.Test ?? [];
+		if (test.length > 0 && test[0] !== "NONE") {
+			return { waits: true };
+		}
+		if (!row.dnsResolvable || row.networkMode === "host") {
+			return { reason: "Nothing routes to it", waits: false };
+		}
+		if (row.portProtocol === "udp") {
+			return { reason: "A UDP-only port can't be checked", waits: false };
+		}
+		if (!inspected || !(await this.#hasShell(image))) {
+			return {
+				reason: "The image has no healthcheck and no shell to run one in",
+				waits: false,
+			};
+		}
+		return {
+			healthcheck: listeningHealthcheck(row.containerPort, timing),
+			waits: true,
+		};
+	}
+
+	/** Whether `image` ships `/bin/sh`, by running `exit 0` in it with no network. */
+	async #hasShell(image: { image: string; tag: string }): Promise<boolean> {
+		const result = await DockerService.runOneOff({
+			cmd: [],
+			entrypoint: ["/bin/sh", "-c", "exit 0"],
+			image: image.image,
+			networkName: "none",
+			tag: image.tag,
+			timeoutMs: 120_000,
+		}).catch(() => null);
+		return !!result && !result.timedOut && result.exitCode === 0;
 	}
 
 	/** Polls a trial container until it's healthy, settled or dead, giving up `TRIAL_HEALTH_TIMEOUT_MS` after `started`. */
