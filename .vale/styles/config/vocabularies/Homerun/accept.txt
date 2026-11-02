@@ -183,3 +183,4 @@ gitleaks
 hadolint
 zizmor
 Astro
+PGlite
