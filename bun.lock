@@ -12,8 +12,6 @@
         "@better-auth/passkey": "1.7.7",
         "@fontsource-variable/geist": "5.2.8",
         "@fontsource-variable/geist-mono": "5.2.7",
-        "@fontsource-variable/roboto-flex": "5.3.0",
-        "@fontsource-variable/space-grotesk": "5.3.0",
         "@jridgewell/trace-mapping": "0.3.31",
         "@modelcontextprotocol/server": "2.3.1",
         "better-auth": "1.7.7",
@@ -30,7 +28,6 @@
       "devDependencies": {
         "@electric-sql/pglite": "0.3.7",
         "@electric-sql/pglite-socket": "0.0.12",
-        "@fontsource-variable/inter": "5.3.0",
         "@fontsource-variable/jetbrains-mono": "5.3.0",
         "@fontsource-variable/open-sans": "5.3.0",
         "@fontsource-variable/pixelify-sans": "5.3.0",
@@ -291,17 +288,11 @@
 
     "@fontsource-variable/geist-mono": ["@fontsource-variable/geist-mono@5.2.7", "", {}, "sha512-ZKlZ5sjtalb2TwXKs400mAGDlt/+2ENLNySPx0wTz3bP3mWARCsUW+rpxzZc7e05d2qGch70pItt3K4qttbIYA=="],
 
-    "@fontsource-variable/inter": ["@fontsource-variable/inter@5.3.0", "", {}, "sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA=="],
-
     "@fontsource-variable/jetbrains-mono": ["@fontsource-variable/jetbrains-mono@5.3.0", "", {}, "sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw=="],
 
     "@fontsource-variable/open-sans": ["@fontsource-variable/open-sans@5.3.0", "", {}, "sha512-VOfhZfLIOBVa6K/dTEu7scqQXYdGa4jBX8quFpQ0S6574B+W2EOBJf9PkqyVtMEI7WWIWNEbpvPc3vY1mN2mmQ=="],
 
     "@fontsource-variable/pixelify-sans": ["@fontsource-variable/pixelify-sans@5.3.0", "", {}, "sha512-rOF07QCyHg9xb4UZF3lpXOM4UO+zo3y8tXvO7T+vy40GVt/GU8HL+/YWE029CMsbhOwk4plRDY9G8BU5cWs1ig=="],
-
-    "@fontsource-variable/roboto-flex": ["@fontsource-variable/roboto-flex@5.3.0", "", {}, "sha512-bOxckUy0qXNRjhV6e4pcHGSvptix4ZRD1uaj5Za8h+p3qrb2GL4U4TQdpVmPSy0SmqwldfD+JJqEKdF68EyiAw=="],
-
-    "@fontsource-variable/space-grotesk": ["@fontsource-variable/space-grotesk@5.3.0", "", {}, "sha512-2IxmvfB08i9vnGB3Ym/AXvhRE+8XOjWMXIyDum03c+tPwH0FUoMNQfGpU8NXPxjbws0Vvss3AH0Zqt4oJBBAdw=="],
 
     "@fontsource/dejavu-sans": ["@fontsource/dejavu-sans@5.3.0", "", {}, "sha512-F/tV+7S31Mo8jtGUhj857XfUzcDCl9JJC8bzMtZ0wcTuOm89dG4FPjAOHOesMfmoChYVQ3eg5fHafdhxFrQIxQ=="],
 

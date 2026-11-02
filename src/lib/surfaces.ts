@@ -1,54 +1,3 @@
-export const SURFACE_STYLES = [
-	{
-		description:
-			"Crisp lists on hairlines, Geist type, colour kept for status and your stacks.",
-		id: "lanes",
-		name: "Lanes",
-	},
-	{
-		description:
-			"Liquid glass: clear, lit-edged panels floating over your colour.",
-		id: "glass",
-		name: "Glass",
-	},
-	{
-		description:
-			"Flat and crisp: one solid content panel, hairline borders, a faint wash of your colour.",
-		id: "sleek",
-		name: "Sleek",
-	},
-	{
-		description:
-			"One flat tone, panels pushed out of it by soft light and shade.",
-		id: "neumorphism",
-		name: "Neumorphism",
-	},
-	{
-		description: "Square corners, solid panels, hard edges and offset shadows.",
-		id: "boxy",
-		name: "Boxy",
-	},
-	{
-		description:
-			"Puffy, very round panels with inner highlights, like moulded clay.",
-		id: "clay",
-		name: "Claymorphism",
-	},
-	{
-		description: "Textured, bevelled panels and buttons with a lit top edge.",
-		id: "skeuomorphism",
-		name: "Skeuomorphism",
-	},
-	{
-		description:
-			"Google's Material You: tonal surfaces from your colour, pill buttons, filled fields.",
-		id: "material",
-		name: "Material You",
-	},
-] as const;
-
-export type SurfaceStyle = (typeof SURFACE_STYLES)[number]["id"];
-
 export const PRESETS = [
 	{
 		description: "Bevelled grey windows on a teal desktop, navy title bars.",
@@ -84,14 +33,10 @@ export const PRESETS = [
 
 export type Preset = (typeof PRESETS)[number]["id"];
 
-export type SurfaceId = SurfaceStyle | Preset;
+/** The one look the dashboard is drawn in when no preset overrides it. */
+export const DEFAULT_SURFACE = "lanes";
 
-export const DEFAULT_SURFACE: SurfaceStyle = "lanes";
-
-/** Whether `value` is one of the surface styles, for a stored or submitted value that might not be. */
-export function isSurfaceStyle(value: unknown): value is SurfaceStyle {
-	return SURFACE_STYLES.some((style) => style.id === value);
-}
+export type SurfaceId = typeof DEFAULT_SURFACE | Preset;
 
 /** Whether `value` is one of the presets. */
 export function isPreset(value: unknown): value is Preset {
@@ -100,17 +45,10 @@ export function isPreset(value: unknown): value is Preset {
 
 /**
  * The look the page is drawn in: the preset when one is picked, since it
- * brings its own theme, style and colors, otherwise the chosen style, falling
- * back to glass for anything unknown.
+ * brings its own theme, style and colors, otherwise Lanes.
  */
 export function effectiveSurface(preferences: {
 	preset: string | null;
-	surfaceStyle: string;
 }): SurfaceId {
-	if (isPreset(preferences.preset)) {
-		return preferences.preset;
-	}
-	return isSurfaceStyle(preferences.surfaceStyle)
-		? preferences.surfaceStyle
-		: DEFAULT_SURFACE;
+	return isPreset(preferences.preset) ? preferences.preset : DEFAULT_SURFACE;
 }

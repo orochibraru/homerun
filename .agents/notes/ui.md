@@ -396,33 +396,33 @@ per-user instead of a singleton row.
   block), so no component needs to know about the override. Scoped to
   `(protected)/` only, not pre-login pages, since this is a dashboard
   preference, not a site-wide brand color.
-- **Style** (`surfaceStyle`: glass, sleek, neumorphism, boxy, clay,
-  skeuomorphism, material, `src/lib/surfaces.ts`): a `data-surface` attribute on
-  `<html>`, and every style is a block of token overrides in `layout.css`
-  (`[data-surface="…"]`, plus a
-  `.dark[data-surface="…"], .dark [data-surface="…"]` block for what differs in
-  dark). `panel` reads `--panel-bg`/`--panel-bg-image`/`--panel-backdrop`/
+- **The look** is one style, Lanes (`DEFAULT_SURFACE` in `src/lib/surfaces.ts`):
+  a `data-surface` attribute on `<html>`, `lanes` unless a preset overrides it,
+  with its token overrides in `layout.css` (`[data-surface="lanes"]`, plus a
+  `.dark[data-surface="lanes"], .dark [data-surface="lanes"]` block for what
+  differs in dark). There used to be eight styles to pick from (Glass, Sleek,
+  Neumorphism, Boxy, Claymorphism, Skeuomorphism, Material You and Lanes);
+  migration 0152 dropped `user_preferences.surface_style` with the picker and
+  their CSS. `panel` reads `--panel-bg`/`--panel-bg-image`/`--panel-backdrop`/
   `--panel-border-width`/`--panel-shadow`, buttons (`[data-slot="button"]`)
   `--button-shadow`/`--button-bg-image`, and `--radius-*` are re-derived under
-  `[data-surface]` so a style's `--radius` takes. It's an attribute on `<html>`,
-  not a class on the layout wrapper, for the same portal reason as the accent
-  CSS above. It's rendered server-side: `app.html` has
+  `[data-surface]` so the look's `--radius` takes. It's an attribute on
+  `<html>`, not a class on the layout wrapper, for the same portal reason as the
+  accent CSS above. It's rendered server-side: `app.html` has
   `data-surface="%homerun.surface%"`, the protected layout's `load` sets
   `locals.surface` and `hooks.server.ts`'s `transformPageChunk` fills it in, so
-  there's no flash of the default style on load; the protected layout's
-  `$effect` keeps it in sync on client navigation and resets it when leaving,
-  and the Appearance page sets it directly to preview. Because the selectors
-  aren't `:root`-only, a `data-surface` on any element restyles its subtree,
-  which is how the Appearance page's preview tiles work. A new style is one
-  entry in `SURFACE_STYLES` and one token block, nothing reads the style name
-  elsewhere.
-- **Lanes** (`lanes`, the default since migration 0151, which also moved every
-  account without a preset onto it) is the Vercel/Linear-flavoured one: Geist
-  and Geist Mono (`@fontsource-variable/geist`, `geist-mono`), greyscale
-  neutrals with no aurora, grain or page wash, one solid content panel on
-  hairlines, and the sidebar's icons in `text-subtle` with only the current
-  page's in the accent. Colour is kept for status and for stacks: every style
-  defines `--lane-0`..`--lane-3` (the palette's chart colours 1, 2, 3 and 5) on
+  there's no flash on load; the protected layout's `$effect` keeps it in sync on
+  client navigation, and the Appearance page sets it directly to preview a
+  preset. Because the selectors aren't `:root`-only, a `data-surface` on any
+  element restyles its subtree, which is how the Appearance page's preset
+  preview tiles work.
+- **Lanes** (`lanes`, the default since migration 0151 and the only style
+  since 0152) is Vercel/Linear-flavoured: Geist and Geist Mono
+  (`@fontsource-variable/geist`, `geist-mono`), greyscale neutrals with no
+  aurora, grain or page wash, one solid content panel on hairlines, and the
+  sidebar's icons in `text-subtle` with only the current page's in the accent.
+  Colour is kept for status and for stacks: every style defines
+  `--lane-0`..`--lane-3` (the palette's chart colours 1, 2, 3 and 5) on
   `[data-surface]`, and `stackHues` (`src/lib/lanes.ts`) gives each top-level
   stack one of them, a substack sharing its root's.
 - **The lane** (`lane-strip.svelte`) is the 24-hour strip drawn for a service on
@@ -433,44 +433,13 @@ per-user instead of a singleton row.
   latest, red for a failed one). Its data is `getLanes` (`lanes.remote.ts`), one
   query for many ids, scoped to the caller's services, built by `buildLane` from
   `TrafficSampleDTO.seriesByService` and `DeploymentDTO.listSinceForServices`.
-- **Glass** is Apple liquid glass, and every colour in it derives from
-  `--color-accent` through CSS relative colours
-  (`oklch(from var(--color-accent) L C h)`): the page tint, the
-  `--page-bg-image` wallpaper and the hairlines. It used to mix in the default
-  `--brand-2`/`--brand-3` (pink and a hue-225 blue) and hue-290 greys, which a
-  custom accent never overrides, so the default bordeaux read blue. Panels are
-  `--glass-fill` plus a diagonal `--glass-sheen` at `blur(26px) saturate(190%)`,
-  bordered by the bright `--glass-edge` through `--panel-border-color` (a token
-  the `panel` utility reads, falling back to `--color-border`), with inset top
-  and bottom highlights. `--color-border` itself is a dark translucent hairline:
-  it used to be translucent white, which left every `border-border` control
-  (outline buttons, segmented toggles, inputs) with no visible edge on a white
-  panel. Buttons follow the theme radius (`--radius-lg`, they used to be pills);
-  outline, secondary and destructive ones are glass capsules (`--glass-control`
-  and `--glass-control-shadow`: a 0.5px dark ring, a white top highlight and a
-  drop shadow). Space Grotesk is its font, as it is the app's default
-  (`@theme`'s `--font-sans`). Popovers, menus, dialogs and drawers are 82%
-  opaque with a blur behind (55% left the filters drawer unreadable), and a
-  checkbox gets its own solid fill and accent hairline, since `--input` is white
-  on white there.
-- **Sleek** (`sleek`, the default from migration 0092 until 0111 made Glass the
-  default again for new accounts; 0092 also moved every stored `glass` to it,
-  since a deliberate Glass pick and the old default look the same) is flat: the
-  sidebar sits straight on the page with no panel of its own, the content is one
-  solid panel with an accent-derived hairline and no shadow, outline buttons and
-  fields are solid with the same hairline, table headers get a faint tint, and
-  the page behind carries two faint accent washes.
-- **Material You** (`material`) derives tonal surfaces, text and outline colours
-  from the accent the same way, with no borders or shadows on panels, pill
-  buttons (secondary is the tonal `--m3-tonal`), filled text fields with an
-  underline, and Roboto Flex (`@fontsource-variable/roboto-flex`).
 - **Presets** (`preset`, nullable: win95, win98, winxp, win7, msn, retro,
   `PRESETS` in `src/lib/surfaces.ts`) ride the same `data-surface` attribute:
-  `effectiveSurface()` puts the preset there instead of the style when one is
-  set, so nothing of the style leaks in, and the protected layout drops the
-  palette's accent CSS. A preset block forces a whole palette (text, surfaces,
-  borders, accent, `color-scheme`, `--font-sans`, `--page-bg-image` for the
-  desktop behind the page) regardless of light/dark, plus the title-bar strip
+  `effectiveSurface()` puts the preset there instead of `lanes` when one is set,
+  so nothing of Lanes leaks in, and the protected layout drops the palette's
+  accent CSS. A preset block forces a whole palette (text, surfaces, borders,
+  accent, `color-scheme`, `--font-sans`, `--page-bg-image` for the desktop
+  behind the page) regardless of light/dark, plus the title-bar strip
   (`[data-slot="panel-header"]`/`.panel-head`, `--panel-head-bg`/`-fg`), fields
   (`--field-*`) and buttons: only `data-variant` default, outline and secondary
   get the preset's button look (the button component sets `data-variant`), ghost
@@ -488,9 +457,7 @@ per-user instead of a singleton row.
   it and `body::after` (the grain, `mix-blend-mode: soft-light`, which forces
   the whole page to be re-blended every frame) are `display: none` through
   `--aurora-display`/`--grain-display` wherever their opacity is 0, since an
-  invisible layer still costs its compositing. Glass keeps the grain off. A
-  `panel` inside a `panel` has no `backdrop-filter` in glass: its parent is
-  already frosted, and every backdrop blur re-samples on scroll.
+  invisible layer still costs its compositing.
 - **Tabs** (`tabLayout`: `horizontal` | `vertical`, `src/lib/tab-layout.ts`):
   `TabNav` draws pill tabs above the page, or, beside it, hands its tabs to the
   protected layout through the `SubNav` context (`src/lib/sub-nav.svelte.ts`),

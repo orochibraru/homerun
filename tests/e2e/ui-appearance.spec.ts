@@ -135,51 +135,15 @@ test.describe.serial("presets", () => {
 	});
 });
 
-async function saveStyle(page: Page, name: string): Promise<void> {
-	await page.goto("/profile/appearance");
-	const form = page.locator("form[action='?/updateSurface']");
-	await form.getByRole("button", { name }).click();
-	await saveIfChanged(page, "appearance-style", "Style saved.");
-}
-
-test.describe.serial("styles", () => {
-	test.afterAll(async ({ browser }) => {
-		const page = await browser.newPage();
-		await signIn(page);
-		await saveStyle(page, "Lanes (default)");
-		await page.close();
-	});
-
-	test("glass tints the page with the accent, bordeaux stays warm", async ({
+test.describe.serial("style", () => {
+	test("Lanes is the only style, rendered server-side, with no picker", async ({
 		page,
 	}, testInfo) => {
 		await signIn(page);
-		await saveStyle(page, "Glass");
-		await page.goto("/remote-hosts");
-		await expect(page.locator("html")).toHaveAttribute("data-surface", "glass");
-		const [red, , blue] = await page.locator("html").evaluate((el) => {
-			const canvas = document.createElement("canvas").getContext("2d");
-			if (!canvas) {
-				return [0, 0, 0];
-			}
-			canvas.fillStyle = getComputedStyle(el).backgroundColor;
-			canvas.fillRect(0, 0, 1, 1);
-			return [...canvas.getImageData(0, 0, 1, 1).data];
-		});
-		expect(red).toBeGreaterThan(blue);
-		await page.screenshot({ path: testInfo.outputPath("glass.png") });
+		const response = await page.goto("/remote-hosts");
+		expect(await response?.text()).toContain('data-surface="lanes"');
+		await page.goto("/profile/appearance");
+		await expect(page.locator("form[action='?/updateSurface']")).toHaveCount(0);
+		await page.screenshot({ path: testInfo.outputPath("lanes.png") });
 	});
-
-	for (const [id, name] of [
-		["material", "Material You"],
-		["sleek", "Sleek"],
-	]) {
-		test(`${name} is rendered server-side`, async ({ page }, testInfo) => {
-			await signIn(page);
-			await saveStyle(page, name);
-			const response = await page.goto("/remote-hosts");
-			expect(await response?.text()).toContain(`data-surface="${id}"`);
-			await page.screenshot({ path: testInfo.outputPath(`${id}.png`) });
-		});
-	}
 });

@@ -155,23 +155,14 @@ ready to try from the browser.
 
 ## Appearance
 
-Light or dark, a colour palette or your own accent, a style for panels and
-buttons (Lanes, the default, Glass, Sleek, Neumorphism, Boxy, Claymorphism,
-Skeuomorphism, Material You), or a whole preset from Windows 95 to a
-green-phosphor terminal.
+Light or dark, a colour palette or your own accent, or a whole preset from
+Windows 95 to a green-phosphor terminal.
 
 ![Appearance settings](images/appearance.webp)
 ![Appearance settings, dark](images/appearance-dark.webp)
 
-Picking a style or a preset previews it on the whole dashboard before you save
-it. Here are Glass, Material You and the Windows XP and Retro presets, picked
-from that same page:
-
-![Glass](images/appearance-glass.webp)
-![Glass, dark](images/appearance-glass-dark.webp)
-
-![Material You](images/appearance-material.webp)
-![Material You, dark](images/appearance-material-dark.webp)
+Picking a preset previews it on the whole dashboard before you save it. Here are
+the Windows XP and Retro presets, picked from that same page:
 
 ![The Windows XP preset](images/appearance-winxp.webp)
 ![The Windows XP preset, dark](images/appearance-winxp-dark.webp)

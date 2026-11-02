@@ -89,27 +89,17 @@ A per-account "Appearance" tab on your profile page controls:
 - **Interface**: **Simple**, **Advanced** or **Follow the instance default**
   (the default), see [Simple and advanced modes](ui-modes.md). The profile menu
   switches between simple and advanced in one click too.
-- **Presets**: a complete look from another era, with its own theme, style and
-  colors: **Windows 95**, **Windows 98**, **Windows XP**, **Windows 7**, **MSN**
-  or **Retro** (a green phosphor terminal), each with its own fonts: a pixel
-  sans for Windows 95/98, Tahoma for XP, Segoe UI for Windows 7 and MSN (with
-  bundled substitutes where they aren't installed) and VT323 for Retro. While
-  one is on it overrides the theme, style and colors below, which stay saved for
-  when you pick **None** again. Each has a preview, and picking one previews it
-  on the page until you save.
+- **Presets**: a complete look from another era, with its own theme and colors:
+  **Windows 95**, **Windows 98**, **Windows XP**, **Windows 7**, **MSN** or
+  **Retro** (a green phosphor terminal), each with its own fonts: a pixel sans
+  for Windows 95/98, Tahoma for XP, Segoe UI for Windows 7 and MSN (with bundled
+  substitutes where they aren't installed) and VT323 for Retro. While one is on
+  it overrides the theme and colors below, which stay saved for when you pick
+  **None** again. Each has a preview, and picking one previews it on the page
+  until you save.
 - **Theme**: light, dark, or match system (the default). Changes apply instantly
   and are saved to your account, so the choice follows you to a new browser or
   device, not just the one you set it on.
-- **Style**: how panels, cards and buttons are drawn: **Glass** (the default,
-  Apple-style liquid glass: blurred panels with a lit edge, all tinted by your
-  accent), **Sleek** (flat and crisp: one solid content panel, hairline borders,
-  a faint wash of your accent), **Neumorphism** (one flat tone, panels raised by
-  soft light and shade), **Boxy** (square corners, solid panels, hard offset
-  shadows), **Claymorphism** (puffy, round panels), **Skeuomorphism** (textured,
-  bevelled panels and buttons) or **Material You** (Google's style: tonal
-  surfaces derived from your accent, pill buttons, filled fields, Roboto Flex).
-  Each choice shows a small preview and previews on the page itself when picked;
-  **Save** keeps it. Works with either theme and any palette.
 - **Colors**: a palette (Bordeaux, the default, Ocean, Forest, Sunset, Grape,
   Rose or Graphite) sets the accent for buttons, links and tab icons plus the
   hues charts, category tiles and the background use, all chosen to go together.

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
 import { PALETTES } from "#lib/palettes.js";
-import { PRESETS, SURFACE_STYLES } from "#lib/surfaces.js";
+import { PRESETS } from "#lib/surfaces.js";
 import { TAB_LAYOUTS } from "#lib/tab-layout.js";
 import { UI_MODES } from "#lib/ui-mode.js";
 
@@ -18,10 +18,6 @@ export const themeSchema = z.object({
 /** The preset choice: a preset id, or "" for none. */
 export const presetSchema = z.object({
 	preset: z.enum(["", ...PRESETS.map((p) => p.id)]),
-});
-
-export const surfaceSchema = z.object({
-	surfaceStyle: z.enum(SURFACE_STYLES.map((s) => s.id)),
 });
 
 /** The appearance page's colour choice: `palette` is a palette id, "custom" (then `accentColor` is used) or "" for the default. */

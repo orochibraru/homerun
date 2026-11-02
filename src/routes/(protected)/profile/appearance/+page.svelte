@@ -16,7 +16,7 @@
 	import { PER_PAGE_OPTIONS } from "#lib/list-sorts.js";
 	import { PALETTES } from "#lib/palettes.js";
 	import { title } from "#lib/store/title.js";
-	import { DEFAULT_SURFACE, PRESETS, SURFACE_STYLES } from "#lib/surfaces.js";
+	import { DEFAULT_SURFACE, PRESETS } from "#lib/surfaces.js";
 	import { TAB_LAYOUT_LABELS, TAB_LAYOUTS } from "#lib/tab-layout.js";
 	import { saveToast } from "#lib/toast.js";
 	import { UI_MODE_LABELS } from "#lib/ui-mode.js";
@@ -45,14 +45,13 @@
 	let perPage = $state(untrack(() => String(data.preferences.perPage)));
 	let tabLayout = $state(untrack(() => data.preferences.tabLayout));
 	let uiMode = $derived<string>(data.preferences.uiMode ?? "");
-	let surfaceStyle = $state(untrack(() => data.preferences.surfaceStyle));
 	let preset = $state<string>(untrack(() => data.preferences.preset ?? ""));
 
 	const presetName = $derived(PRESETS.find((p) => p.id === preset)?.name);
 
-	/** Shows the picked preset, or the picked style when there's none, on this page before it's saved. */
+	/** Shows the picked preset, or Lanes when there's none, on this page before it's saved. */
 	function preview() {
-		document.documentElement.dataset.surface = preset || surfaceStyle;
+		document.documentElement.dataset.surface = preset || DEFAULT_SURFACE;
 	}
 	let accentColor = $state(
 		untrack(() => data.preferences.accentColor ?? DEFAULT_ACCENT),
@@ -119,9 +118,9 @@
 	<section class="panel rounded-md">
 		<PanelHeader title="Presets">
 			{#snippet description()}
-				A complete look from another era: its own theme, style and colors,
-				overriding the ones below while it's on. Picking one previews it on this
-				page; save to keep it.
+				A complete look from another era: its own theme and colors, overriding
+				the ones below while it's on. Picking one previews it on this page; save
+				to keep it.
 			{/snippet}
 			{#snippet trailing()}
 				<SaveButton form="appearance-preset" />
@@ -136,7 +135,7 @@
 		>
 			<input name="preset" type="hidden" value={preset} />
 			<div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
-				{#each [{ description: "Your own theme, style and colors below.", id: "", name: "None" }, ...PRESETS] as option (option.id)}
+				{#each [{ description: "Your own theme and colors below.", id: "", name: "None" }, ...PRESETS] as option (option.id)}
 					<button
 						aria-pressed={preset === option.id}
 						class="flex flex-col gap-3 rounded-md border p-3 text-left transition-colors {preset ===
@@ -149,7 +148,7 @@
 						}}
 						type="button"
 					>
-						<SurfacePreview surface={option.id || surfaceStyle} />
+						<SurfacePreview surface={option.id || DEFAULT_SURFACE} />
 						<span>
 							<span class="text-text block text-sm font-medium">
 								{option.name}
@@ -198,54 +197,6 @@
 					<SelectItem label="Dark" value="dark" />
 				</SelectContent>
 			</SelectRoot>
-		</form>
-	</section>
-
-	<section class="panel rounded-md">
-		<PanelHeader title="Style">
-			{#snippet description()}
-				How panels, cards and buttons are drawn. Picking one previews it on this
-				page; save to keep it.
-				{@render overridden()}
-			{/snippet}
-			{#snippet trailing()}
-				<SaveButton form="appearance-style" />
-			{/snippet}
-		</PanelHeader>
-		<form
-			id="appearance-style"
-			action="?/updateSurface"
-			class="space-y-4 p-5"
-			method="POST"
-			use:enhance={saveToast("Style")}
-		>
-			<input name="surfaceStyle" type="hidden" value={surfaceStyle} />
-			<div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3">
-				{#each SURFACE_STYLES as style (style.id)}
-					<button
-						aria-pressed={surfaceStyle === style.id}
-						class="flex flex-col gap-3 rounded-md border p-3 text-left transition-colors {surfaceStyle ===
-						style.id
-							? 'border-accent bg-accent-light'
-							: 'border-border hover:bg-surface-2'}"
-						onclick={() => {
-							surfaceStyle = style.id;
-							preview();
-						}}
-						type="button"
-					>
-						<SurfacePreview surface={style.id} />
-						<span>
-							<span class="text-text block text-sm font-medium">
-								{style.name}{style.id === DEFAULT_SURFACE ? " (default)" : ""}
-							</span>
-							<span class="text-text-muted block text-xs">
-								{style.description}
-							</span>
-						</span>
-					</button>
-				{/each}
-			</div>
 		</form>
 	</section>
 
