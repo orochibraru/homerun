@@ -12,6 +12,7 @@
 	import SetupIssues from "#lib/components/overview/setup-issues.svelte";
 	import TrafficAndHost from "#lib/components/overview/traffic-and-host.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
+	import StatusDot from "#lib/components/status-dot.svelte";
 	import { timeAgo } from "#lib/formatting.js";
 	import {
 		formatCount as count,
@@ -106,7 +107,7 @@
 	const needsYou = $derived(
 		(uptimeDown?.length ?? 0) +
 			(overCapacity?.length ? 1 : 0) +
-			(updates?.length ? 1 : 0),
+			(updates?.length ?? 0),
 	);
 
 	let clearingErrors = $state(false);
@@ -176,6 +177,12 @@
 				>
 			</h2>
 			<div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+				{#if updates?.length}
+					<AvailableUpdates
+						canWrite={can(data.permissions, "services", "write")}
+						{updates}
+					/>
+				{/if}
 				{#if overCapacity?.length}
 					<div
 						class="border-border relative rounded-lg border p-4 before:absolute before:inset-y-3 before:-left-px before:w-0.75 before:rounded-full before:bg-red-500"
@@ -223,14 +230,6 @@
 					</div>
 				{/each}
 			</div>
-			{#if updates?.length}
-				<div class="mt-3">
-					<AvailableUpdates
-						canWrite={can(data.permissions, "services", "write")}
-						{updates}
-					/>
-				</div>
-			{/if}
 		</section>
 	{/if}
 
@@ -275,12 +274,21 @@
 				<ul>
 					{#each busiest as row (row.serviceId)}
 						<li
-							class="border-border grid h-11 grid-cols-[10rem_minmax(0,1fr)_4.5rem] items-center gap-4 border-b sm:grid-cols-[12rem_minmax(0,1fr)_5rem]"
+							class="border-border grid h-11 grid-cols-[11rem_minmax(0,1fr)_4.5rem] items-center gap-4 border-b sm:grid-cols-[15rem_minmax(0,1fr)_5rem]"
 						>
 							<a
-								class="text-text truncate text-sm font-medium hover:underline"
-								href={row.href}>{row.name}</a
+								class="flex min-w-0 items-center gap-2.5 hover:underline"
+								href={row.href}
 							>
+								<StatusDot status={row.status} />
+								<span class="text-text truncate text-sm font-medium"
+									>{row.name}</span
+								>
+								<span
+									class="text-text-subtle hidden truncate font-mono text-[0.6875rem] sm:inline"
+									>{row.slug}</span
+								>
+							</a>
 							<LaneStrip lane={lanes.current?.[row.serviceId]} />
 							<span
 								class="text-text-muted text-right font-mono text-xs tabular-nums"
