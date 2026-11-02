@@ -59,6 +59,8 @@ let localImage: { digest?: string | null; id: string | null } | null = null;
 let imageLabels: Record<string, string> | null = null;
 let imageHealthcheck: { Test: string[] } | null = null;
 let imageHasShell = true;
+let imageInspectFails = false;
+let shellProbeFails = false;
 const shellProbes: Record<string, unknown>[] = [];
 let tagError: unknown = null;
 let pullGate: Promise<void> | null = null;
@@ -164,6 +166,8 @@ beforeEach(() => {
 	imageLabels = null;
 	imageHealthcheck = null;
 	imageHasShell = true;
+	imageInspectFails = false;
+	shellProbeFails = false;
 	tagError = null;
 	pullGate = null;
 	pullError = null;
@@ -224,6 +228,9 @@ beforeEach(() => {
 	stub(DockerService, "runOneOff", async (params: Record<string, unknown>) => {
 		if (params.networkName === "none") {
 			shellProbes.push(params);
+			if (shellProbeFails) {
+				throw new Error("daemon gone");
+			}
 			return {
 				exitCode: imageHasShell ? 0 : 127,
 				stderr: Buffer.alloc(0),
@@ -268,6 +275,9 @@ beforeEach(() => {
 				return localImage;
 			}
 			if (path === "v1/images/inspect") {
+				if (imageInspectFails) {
+					throw new WorkerRequestError("gone", 404);
+				}
 				return {
 					Config: { Healthcheck: imageHealthcheck, Labels: imageLabels },
 				};
@@ -976,6 +986,44 @@ describe("ImageVersionService update trials", () => {
 		expect(state?.trial?.status).toBe("passed");
 		expect(containerCreate()?.body.Healthcheck).toBeUndefined();
 		expect(shellProbes).toEqual([]);
+	});
+
+	test("no port check when the image can't be inspected, the probe fails or the port is UDP", async () => {
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		inspects = [{ Running: true }];
+		const cases = [
+			{
+				reason: "The image has no healthcheck and no shell to run one in",
+				setup: () => {
+					imageInspectFails = true;
+				},
+			},
+			{
+				reason: "The image has no healthcheck and no shell to run one in",
+				setup: () => {
+					imageInspectFails = false;
+					shellProbeFails = true;
+				},
+			},
+			{
+				overrides: { portProtocol: "udp" },
+				reason: "A UDP-only port can't be checked",
+				setup: () => {
+					shellProbeFails = false;
+				},
+			},
+		];
+		for (const { overrides, reason, setup } of cases) {
+			setup();
+			const { svc } = fakeService({ ...overrides, updateTrialEnabled: true });
+			// oxlint-disable-next-line no-await-in-loop -- each case reads the shared mocks in turn
+			const state = await ImageVersionService.check(svc);
+			expect(state?.trial?.message).toBe("Still running after 20s.");
+			expect(containerCreate()?.body.Healthcheck).toBeUndefined();
+			expect(state?.trial?.log).toContain(
+				`${reason}, waiting 20s to see it stays up`,
+			);
+		}
 	});
 
 	test("an image without a shell isn't given the port check", async () => {
