@@ -30,12 +30,12 @@
 	function opacity(index: number): number {
 		const requests = lane?.requests[index] ?? 0;
 		if (!requests) {
-			return 0.06;
+			return 0.1;
 		}
 		if (high === low) {
 			return 0.5;
 		}
-		return 0.14 + 0.78 * ((requests - low) / (high - low)) ** 0.8;
+		return 0.22 + 0.72 * ((requests - low) / (high - low)) ** 0.8;
 	}
 
 	function failing(index: number): boolean {

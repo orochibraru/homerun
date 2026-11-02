@@ -10,6 +10,7 @@
 		ListTree,
 		Network,
 		Plus,
+		Search,
 		Server,
 	} from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
@@ -50,7 +51,10 @@
 	import { primaryHostname } from "#lib/service-domains.js";
 	import {
 		dependencyForest,
+		type DependencyNode,
+		filterForest,
 		type GraphServiceInfo,
+		matchesServiceQuery,
 		previewsByParent,
 	} from "#lib/service-graph.js";
 	import { ancestorIds, flattenStackTree } from "#lib/stack-tree.js";
@@ -206,6 +210,8 @@
 
 	let menuHost = $state<ReturnType<typeof ServiceMenuHost>>();
 
+	let treeQuery = $state("");
+
 	const hues = $derived(stackHues(data.stacks));
 	const stackNames = $derived(new Map(data.stacks.map((s) => [s.id, s.name])));
 	const lanes = $derived(
@@ -222,6 +228,37 @@
 			services: new Map(data.tree.services.map((svc) => [svc.id, svc])),
 		},
 	);
+
+	const shownForest = $derived.by(() => {
+		if (!tree) {
+			return [];
+		}
+		const services = tree.services;
+		return filterForest(tree.forest, (id) => {
+			const svc = services.get(id);
+			return svc ? matchesServiceQuery(svc, treeQuery) : false;
+		});
+	});
+
+	/** Every service id in a forest, at any depth. */
+	function forestIds(nodes: DependencyNode[], into = new Set<string>()) {
+		for (const node of nodes) {
+			into.add(node.id);
+			forestIds(node.children, into);
+		}
+		return into;
+	}
+
+	const shownServices = $derived.by(() => {
+		if (!data.tree) {
+			return [];
+		}
+		if (!treeQuery.trim()) {
+			return data.tree.services;
+		}
+		const ids = forestIds(shownForest);
+		return data.tree.services.filter((svc) => ids.has(svc.id));
+	});
 </script>
 
 <div class={selection.count > 0 ? "pb-28" : ""}>
@@ -252,20 +289,29 @@
 			</div>
 		</div>
 	{:else if tree && data.tree}
-		<div class="mb-3 flex flex-wrap items-center gap-2">
-			<p class="text-text-subtle text-xs">
-				Every service, with what it needs underneath and its last 24 hours.
-				Connections are read from env vars pointing at another service's slug.
-			</p>
-			<span class="ml-auto">{@render viewSwitch()}</span>
+		<div class="mb-3 flex flex-wrap items-center gap-3">
+			{@render treeSearch()}
+			{@render viewSwitch()}
 		</div>
-		{#if mode === "diagram"}
+		<p class="text-text-subtle mb-3 text-xs">
+			Every service, with what it needs underneath and its last 24 hours.
+			Connections are read from env vars pointing at another service's slug.
+		</p>
+		{#if treeQuery.trim() && shownForest.length === 0}
+			<div
+				class="border-border/70 rounded-md border border-dashed py-16 text-center"
+			>
+				<p class="text-text-muted text-sm">
+					No service matches "{treeQuery.trim()}".
+				</p>
+			</div>
+		{:else if mode === "diagram"}
 			<StackDiagram
 				deps={data.tree.deps}
 				{hues}
 				lanes={lanes?.current ?? null}
 				rootStackId={null}
-				services={data.tree.services}
+				services={shownServices}
 				{stackNames}
 				stacks={data.stacks}
 				wrapper={treeWrapper}
@@ -275,7 +321,7 @@
 				<ServiceTree
 					{hues}
 					lanes={lanes?.current ?? null}
-					nodes={tree.forest}
+					nodes={shownForest}
 					previews={tree.previews}
 					services={tree.services}
 					{stackNames}
@@ -412,6 +458,21 @@
 		{/if}
 	{/if}
 </div>
+
+{#snippet treeSearch()}
+	<div class="relative min-w-52 flex-1">
+		<Search
+			class="text-text-subtle absolute top-1/2 left-3 size-4 -translate-y-1/2"
+		/>
+		<input
+			class="panel text-text placeholder:text-text-subtle focus:border-accent w-full rounded-lg py-2 pr-3 pl-9 text-sm focus:ring-3 focus:ring-ring/50 focus:outline-none"
+			aria-label="Search services"
+			bind:value={treeQuery}
+			placeholder="Search services by name, slug, image or domain…"
+			type="search"
+		/>
+	</div>
+{/snippet}
 
 {#snippet viewSwitch()}
 	<nav

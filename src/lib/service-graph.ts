@@ -11,6 +11,8 @@ export interface GraphServiceInfo {
 	containerId: string | null;
 	currentStatus: string;
 	desiredState: string;
+	/** The service's main public hostname, when the caller knows it, for searching by domain. */
+	domain?: string | null;
 	icon: string | null;
 	id: string;
 	image: string;
@@ -102,6 +104,34 @@ export function previewsByParent(
 		]);
 	}
 	return byParent;
+}
+
+/**
+ * The forest pruned to the nodes `keep` accepts, plus every ancestor of one,
+ * so a match deep in the tree still shows the services that need it.
+ */
+export function filterForest(
+	nodes: DependencyNode[],
+	keep: (id: string) => boolean,
+): DependencyNode[] {
+	return nodes.flatMap((node) => {
+		const children = filterForest(node.children, keep);
+		return keep(node.id) || children.length > 0 ? [{ ...node, children }] : [];
+	});
+}
+
+/** Whether a service's name, slug, image or main domain contains `query`, ignoring case; an empty query matches everything. */
+export function matchesServiceQuery(
+	svc: Pick<GraphServiceInfo, "domain" | "image" | "name" | "slug">,
+	query: string,
+): boolean {
+	const needle = query.trim().toLowerCase();
+	return (
+		!needle ||
+		[svc.name, svc.slug, svc.image, svc.domain ?? ""].some((field) =>
+			field.toLowerCase().includes(needle),
+		)
+	);
 }
 
 export interface DependencyNode {
