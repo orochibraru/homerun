@@ -3,7 +3,7 @@
 	"name": "Docker Registry",
 	"description": "The Docker registry itself : somewhere to push your own images, including as a build cache for git-based services.",
 	"image": "registry",
-	"tag": "2",
+	"tag": "3",
 	"containerPort": 5000,
 	"icon": "di:docker",
 	"tags": ["registry", "docker", "images", "cache"],
