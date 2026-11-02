@@ -49,7 +49,7 @@ import type {
 import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
-import type { Preset, SurfaceStyle } from "#lib/surfaces.js";
+import type { Preset } from "#lib/surfaces.js";
 import type { SwarmPlacement } from "#lib/swarm-placement.js";
 import type { TabLayout } from "#lib/tab-layout.js";
 import type {
@@ -2151,10 +2151,6 @@ export const userPreferences = pgTable("user_preferences", {
 	palette: text("palette"),
 	perPage: integer("per_page").default(50).notNull(),
 	preset: text("preset").$type<Preset>(),
-	surfaceStyle: text("surface_style")
-		.$type<SurfaceStyle>()
-		.default("lanes")
-		.notNull(),
 	tabLayout: text("tab_layout")
 		.$type<TabLayout>()
 		.default("horizontal")

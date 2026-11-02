@@ -6,11 +6,7 @@ import {
 	type UserPreferences,
 	userPreferences,
 } from "#lib/server/db/schema.js";
-import {
-	DEFAULT_SURFACE,
-	type Preset,
-	type SurfaceStyle,
-} from "#lib/surfaces.js";
+import type { Preset } from "#lib/surfaces.js";
 import type { TabLayout } from "#lib/tab-layout.js";
 import type { UiMode } from "#lib/ui-mode.js";
 
@@ -44,7 +40,6 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 			palette: null,
 			perPage: DEFAULT_PER_PAGE,
 			preset: null,
-			surfaceStyle: DEFAULT_SURFACE,
 			tabLayout: "horizontal",
 			theme: "system",
 			uiMode: null,
@@ -63,11 +58,6 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 	/** Persists the preset (Windows 95, MSN, Retro…) that overrides theme, style and colors, or none. */
 	async updatePreset(preset: Preset | null): Promise<void> {
 		await this.persist({ preset });
-	}
-
-	/** Persists the look of panels and buttons: glass, sleek, neumorphism, boxy, clay, skeuomorphism or Material You. */
-	async updateSurfaceStyle(surfaceStyle: SurfaceStyle): Promise<void> {
-		await this.persist({ surfaceStyle });
 	}
 
 	/** Persists the account's UI mode, or null to follow the instance default. */

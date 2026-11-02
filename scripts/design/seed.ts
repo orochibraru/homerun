@@ -12,7 +12,6 @@ import {
 	statSample,
 	trafficSample,
 	user,
-	userPreferences,
 } from "../../src/lib/server/db/schema";
 
 /** The account design mode signs in with. */
@@ -214,18 +213,6 @@ export async function seedDesignData(pglite: PGlite): Promise<void> {
 		.onConflictDoUpdate({
 			set: { onboardingCompletedAt: new Date(now - 30 * 24 * HOUR) },
 			target: instanceSettings.id,
-		});
-	await db
-		.insert(userPreferences)
-		.values({
-			createdAt: new Date(now),
-			surfaceStyle: "lanes",
-			updatedAt: new Date(now),
-			userId,
-		})
-		.onConflictDoUpdate({
-			set: { surfaceStyle: "lanes" },
-			target: userPreferences.userId,
 		});
 
 	const stackIds = new Map<string, string>();
