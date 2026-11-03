@@ -8,6 +8,7 @@
 	import AvailableUpdates from "#lib/components/available-updates.svelte";
 	import LaneStrip from "#lib/components/lane-strip.svelte";
 	import ChangeBadge from "#lib/components/monitoring/change-badge.svelte";
+	import ActivityLanes from "#lib/components/overview/activity-lanes.svelte";
 	import QuickDeployTemplates from "#lib/components/overview/quick-deploy-templates.svelte";
 	import SetupIssues from "#lib/components/overview/setup-issues.svelte";
 	import TrafficAndHost from "#lib/components/overview/traffic-and-host.svelte";
@@ -237,6 +238,10 @@
 
 	{#if frontPageTemplates?.length}
 		<QuickDeployTemplates templates={frontPageTemplates} />
+	{/if}
+
+	{#if data.readsServices}
+		<ActivityLanes />
 	{/if}
 
 	<TrafficAndHost failed={monitoringData.failed} {monitoring} />

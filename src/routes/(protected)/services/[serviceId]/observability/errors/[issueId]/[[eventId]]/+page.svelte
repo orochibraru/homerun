@@ -16,6 +16,13 @@
 
 	import EnvironmentBadge from "#lib/components/environment-badge.svelte";
 	import ErrorLevelBadge from "#lib/components/error-level-badge.svelte";
+	import {
+		breadcrumbText,
+		cleanCulprit,
+		framePath,
+		linkify,
+		shortRelease,
+	} from "#lib/error-tracking/display.js";
 	import type { StoredFrame } from "#lib/error-tracking/event.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
@@ -62,14 +69,6 @@
 		return groups;
 	}
 
-	function location(frame: StoredFrame): string {
-		const file = frame.filename ?? frame.absPath ?? frame.module ?? "?";
-		const line = frame.lineno
-			? `:${frame.lineno}${frame.colno ? `:${frame.colno}` : ""}`
-			: "";
-		return `${file}${line}`;
-	}
-
 	const STATUS_ACTIONS = [
 		{ icon: CircleCheck, label: "Resolve", status: "resolved" },
 		{ icon: EyeOff, label: "Ignore", status: "ignored" },
@@ -77,26 +76,53 @@
 	] as const;
 
 	const facts = $derived([
-		["Events", String(issue.count)],
-		["Users", String(data.usersAffected)],
-		["First seen", timeAgo(issue.firstSeen)],
-		["Last seen", timeAgo(issue.lastSeen)],
-		["First release", issue.firstRelease ?? "-"],
-		["Last release", issue.lastRelease ?? "-"],
+		{ full: null, name: "events", value: String(issue.count) },
+		{ full: null, name: "users", value: String(data.usersAffected) },
+		{
+			full: new Date(issue.firstSeen).toLocaleString(),
+			name: "first seen",
+			value: timeAgo(issue.firstSeen),
+		},
+		{
+			full: new Date(issue.lastSeen).toLocaleString(),
+			name: "last seen",
+			value: timeAgo(issue.lastSeen),
+		},
+		{
+			full: issue.firstRelease,
+			name: "first release",
+			value: shortRelease(issue.firstRelease),
+		},
+		{
+			full: issue.lastRelease,
+			name: "last release",
+			value: shortRelease(issue.lastRelease),
+		},
 	]);
+
+	const allInApp = $derived(
+		payload?.exceptions.every((exception) =>
+			exception.frames.every((frame) => frame.inApp),
+		) ?? false,
+	);
 </script>
 
 {#snippet frameRow(exceptionIndex: number, frame: StoredFrame, index: number)}
 	{@const link = data.links[`${exceptionIndex}:${index}`]}
-	<li class="px-3 py-2">
-		<div
-			class="flex flex-wrap items-baseline gap-x-2 gap-y-1 font-mono text-xs"
-		>
-			<span class="text-text font-medium break-all"
+	{@const path = framePath(frame)}
+	<li class="px-4 py-2.5">
+		<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+			<span class="text-text font-mono text-sm font-semibold break-all"
 				>{frame.function ?? "<anonymous>"}</span
 			>
-			<span class="text-text-muted break-all">{location(frame)}</span>
-			{#if frame.inApp}
+			<span
+				class="min-w-0 font-mono text-[0.8125rem] break-all"
+				title={path.full}
+				><span class="text-text-subtle">{path.dir}</span><span class="text-text"
+					>{path.base}</span
+				><span class="text-text-muted">{path.line}</span></span
+			>
+			{#if frame.inApp && !allInApp}
 				<span
 					class="text-accent text-[0.625rem] font-semibold tracking-[0.08em] uppercase"
 					>in app</span
@@ -104,7 +130,7 @@
 			{/if}
 			{#if link}
 				<a
-					class="text-accent inline-flex items-center gap-1 font-sans hover:underline"
+					class="text-accent ml-auto inline-flex items-center gap-1 text-xs hover:underline"
 					href={link}
 					rel="noopener noreferrer"
 					target="_blank"
@@ -116,7 +142,7 @@
 		</div>
 		{#if frame.contextLine !== null && (frame.inApp || !data.payload?.exceptions.some( (exception) => exception.frames.some((candidate) => candidate.inApp) ))}
 			<pre
-				class="bg-surface-2 mt-2 overflow-x-auto rounded-md py-2 font-mono text-xs">{#each frame.preContext as line, offset (offset)}<span
+				class="bg-surface-2 mt-2 overflow-x-auto rounded-md py-2 font-mono text-[0.8125rem] leading-relaxed">{#each frame.preContext as line, offset (offset)}<span
 					class="text-text-subtle block px-3"
 					><span class="inline-block w-10 select-none"
 						>{frame.lineno
@@ -150,19 +176,35 @@
 			<div class="min-w-0 space-y-1">
 				<div class="flex flex-wrap items-center gap-2">
 					<ErrorLevelBadge level={issue.level} />
-					<span class="text-text-subtle text-xs uppercase">{issue.status}</span>
+					<span
+						class="rounded-sm border px-1.5 py-px text-[0.625rem] font-semibold tracking-[0.08em] uppercase {issue.status ===
+						'unresolved'
+							? 'border-red-500/40 text-red-600 dark:text-red-400'
+							: 'border-border text-text-muted'}">{issue.status}</span
+					>
 					{#if issue.regressedAt && issue.status === "unresolved"}
 						<span class="text-xs text-amber-600"
 							>regressed {timeAgo(issue.regressedAt)}</span
 						>
 					{/if}
 				</div>
-				<h2 class="text-text text-base font-semibold break-words">
-					{issue.title}
+				<h2 class="text-text text-xl font-semibold break-words">
+					{#each linkify(issue.title) as part, partIndex (partIndex)}
+						{#if part.href}
+							<a
+								class="text-accent underline-offset-2 hover:underline"
+								href={part.href}
+								rel="noopener noreferrer"
+								target="_blank">{part.text}</a
+							>
+						{:else}{part.text}{/if}
+					{/each}
 				</h2>
 				{#if issue.culprit}
-					<p class="text-text-muted font-mono text-xs break-all">
-						{issue.culprit}
+					<p class="text-text-muted text-sm break-all">
+						in <span class="text-text font-mono"
+							>{cleanCulprit(issue.culprit)}</span
+						>
 					</p>
 				{/if}
 			</div>
@@ -194,15 +236,13 @@
 		</div>
 	</div>
 
-	<dl
-		class="panel grid grid-cols-2 gap-4 rounded-md p-4 sm:grid-cols-3 lg:grid-cols-6"
-	>
-		{#each facts as [name, value] (name)}
-			<div class="min-w-0">
-				<dt class="text-text-subtle text-xs">{name}</dt>
-				<dd class="text-text truncate font-mono text-sm" title={value}>
-					{value}
+	<dl class="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+		{#each facts as fact (fact.name)}
+			<div class="flex items-baseline gap-1.5" title={fact.full ?? undefined}>
+				<dd class="text-text text-lg font-semibold tabular-nums">
+					{fact.value}
 				</dd>
+				<dt class="text-text-muted text-sm">{fact.name}</dt>
 			</div>
 		{/each}
 	</dl>
@@ -232,10 +272,9 @@
 						<EnvironmentBadge environment={payload.environment} />
 					{/if}
 					{#if payload.release}
-						<span class="text-text-muted font-mono text-xs" title="Release"
-							>{payload.release.length > 16
-								? payload.release.slice(0, 12)
-								: payload.release}</span
+						<span
+							class="text-text-muted font-mono text-xs"
+							title={payload.release}>{shortRelease(payload.release)}</span
 						>
 					{/if}
 				</div>
@@ -273,7 +312,7 @@
 			<div class="space-y-5 p-4">
 				{#if payload.exceptions.length === 0 && payload.message}
 					<pre
-						class="bg-surface-2 text-text overflow-x-auto rounded-md p-3 font-mono text-xs whitespace-pre-wrap">{payload.message}</pre>
+						class="bg-surface-2 text-text overflow-x-auto rounded-md p-3 font-mono text-sm whitespace-pre-wrap">{payload.message}</pre>
 				{/if}
 
 				{#each payload.exceptions
@@ -281,14 +320,23 @@
 					.toReversed() as { exception, index } (index)}
 					<div class="space-y-2">
 						<div>
-							<p class="text-text font-mono text-sm font-semibold break-all">
+							<p class="text-text font-mono text-base font-semibold break-all">
 								{exception.type ?? "Error"}
 							</p>
 							{#if exception.value}
 								<p
-									class="text-text-muted text-sm break-words whitespace-pre-wrap"
+									class="text-text mt-0.5 text-[0.9375rem] break-words whitespace-pre-wrap"
 								>
-									{exception.value}
+									{#each linkify(exception.value) as part, partIndex (partIndex)}
+										{#if part.href}
+											<a
+												class="text-accent underline-offset-2 hover:underline"
+												href={part.href}
+												rel="noopener noreferrer"
+												target="_blank">{part.text}</a
+											>
+										{:else}{part.text}{/if}
+									{/each}
 								</p>
 							{/if}
 							{#if exception.mechanism}
@@ -310,7 +358,7 @@
 										<li>
 											<details>
 												<summary
-													class="text-text-subtle hover:bg-surface-2 cursor-pointer px-3 py-2 text-xs"
+													class="text-text-muted hover:bg-surface-2 cursor-pointer px-4 py-2 text-sm"
 												>
 													{group.frames.length} library {group.frames.length ===
 													1
@@ -338,7 +386,7 @@
 				{/each}
 
 				{#if data.source}
-					<p class="text-text-subtle text-xs">
+					<p class="text-text-muted text-sm">
 						Source links point at commit
 						<span class="font-mono">{data.source.commit.slice(0, 7)}</span>
 						of {data.source.repoUrl}.
@@ -353,7 +401,7 @@
 					{#if payload.request}
 						<div>
 							<h3 class="eyebrow mb-1">Request</h3>
-							<p class="text-text font-mono text-xs break-all">
+							<p class="text-text font-mono text-sm break-all">
 								{payload.request.method ?? ""}
 								{payload.request.url ?? ""}
 							</p>
@@ -362,7 +410,7 @@
 					{#if payload.user}
 						<div>
 							<h3 class="eyebrow mb-1">User</h3>
-							<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+							<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
 								{#each Object.entries(payload.user).filter(([, value]) => value) as [key, value] (key)}
 									<dt class="text-text-subtle">{key}</dt>
 									<dd class="text-text font-mono break-all">{value}</dd>
@@ -379,7 +427,7 @@
 					<div class="flex flex-wrap gap-1.5">
 						{#each [...payload.tags, ...(payload.serverName ? [["server_name", payload.serverName]] : []), ...(payload.sdk ? [["sdk", payload.sdk]] : [])] as [key, value], tagIndex (tagIndex)}
 							<span
-								class="border-border bg-surface-2 inline-flex max-w-full rounded-sm border px-1.5 py-0.5 font-mono text-[0.6875rem]"
+								class="border-border bg-surface-2 inline-flex max-w-full rounded-sm border px-2 py-0.5 font-mono text-xs"
 							>
 								<span class="text-text-subtle shrink-0">{key}:</span>
 								<span class="text-text ml-1 truncate">{value}</span>
@@ -395,8 +443,10 @@
 				<h3 class="eyebrow border-border border-b px-4 py-3">Breadcrumbs</h3>
 				<ol class="divide-border divide-y">
 					{#each payload.breadcrumbs.toReversed() as crumb, crumbIndex (crumbIndex)}
-						<li class="flex flex-wrap gap-x-3 gap-y-0.5 px-4 py-2 text-xs">
-							<span class="text-text-subtle w-16 shrink-0 font-mono">
+						<li class="flex flex-wrap gap-x-4 gap-y-0.5 px-4 py-2 text-sm">
+							<span
+								class="text-text-subtle w-20 shrink-0 font-mono text-xs leading-5"
+							>
 								{crumb.timestamp
 									? new Date(crumb.timestamp).toLocaleTimeString()
 									: ""}
@@ -404,8 +454,11 @@
 							<span class="text-text-muted w-24 shrink-0 truncate"
 								>{crumb.category ?? crumb.type ?? ""}</span
 							>
-							<span class="text-text min-w-0 flex-1 font-mono break-all"
-								>{crumb.message ?? ""}</span
+							<span
+								class="min-w-0 flex-1 font-mono text-[0.8125rem] break-all {crumb.level ===
+								'error'
+									? 'text-red-600 dark:text-red-400'
+									: 'text-text'}">{breadcrumbText(crumb)}</span
 							>
 						</li>
 					{/each}
@@ -419,8 +472,8 @@
 				<div class="grid gap-3 md:grid-cols-2">
 					{#each Object.entries(payload.contexts) as [name, context] (name)}
 						<div class="min-w-0">
-							<p class="text-text-subtle mb-1 text-xs">{name}</p>
-							<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+							<p class="text-text-muted mb-1 text-sm font-medium">{name}</p>
+							<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
 								{#each Object.entries(context) as [key, value] (key)}
 									<dt class="text-text-subtle">{key}</dt>
 									<dd class="text-text font-mono break-all">

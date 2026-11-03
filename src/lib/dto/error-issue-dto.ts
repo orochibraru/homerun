@@ -5,6 +5,7 @@ import {
 	desc,
 	eq,
 	getTableColumns,
+	gt,
 	inArray,
 	lt,
 	type SQL,
@@ -48,6 +49,24 @@ function usersAffectedOf(issueId: SQL | typeof errorIssue.id) {
 export class ErrorIssueDTO extends BaseDTO<ErrorIssue> {
 	get id(): string {
 		return this.row.id;
+	}
+
+	/** Unresolved issues of any service seen after `since`, most recently seen first: the dashboard's Alerts lane. */
+	static async listOpenSeenSince(
+		since: Date,
+		limit: number,
+	): Promise<ErrorIssue[]> {
+		return await db
+			.select()
+			.from(errorIssue)
+			.where(
+				and(
+					eq(errorIssue.status, "unresolved"),
+					gt(errorIssue.lastSeen, since),
+				),
+			)
+			.orderBy(desc(errorIssue.lastSeen))
+			.limit(limit);
 	}
 
 	/** One issue of a service, or null when it isn't that service's. */

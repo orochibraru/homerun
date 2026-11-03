@@ -180,6 +180,7 @@ export const load = async ({ cookies, locals, parent, url }) => {
 		overCapacity: CapacityService.hardBreaches().then((breaches) =>
 			breaches.map(describeReading),
 		),
+		readsServices,
 		readsSettings: can(locals.permissions, "settings"),
 		readsSystem,
 		recentDeployments: readsServices

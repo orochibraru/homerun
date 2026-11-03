@@ -6,6 +6,8 @@ import {
 	account,
 	appLog,
 	deployment,
+	errorEvent,
+	errorIssue,
 	instanceSettings,
 	service,
 	stack,
@@ -292,6 +294,22 @@ export async function seedDesignData(pglite: PGlite): Promise<void> {
 				userId,
 			});
 		}
+		if (entry.slug === "web") {
+			await seedErrorIssue(db, id, now);
+		}
+		if (entry.slug === "blog") {
+			await db.insert(deployment).values({
+				createdAt: new Date(now - 40_000),
+				id: crypto.randomUUID(),
+				imageRef: `${entry.image}:${entry.tag}`,
+				log: `Pulling ${entry.image}:${entry.tag}\nDownloading layer 3/5`,
+				serviceId: id,
+				startedAt: new Date(now - 38_000),
+				status: "pulling",
+				trigger: "push",
+				userId,
+			});
+		}
 
 		const traffic = [];
 		const stats = [];
@@ -365,4 +383,137 @@ export async function seedDesignData(pglite: PGlite): Promise<void> {
 			scope: "Deploy",
 		},
 	]);
+}
+
+/** One unresolved error issue with a full event (frames, request, tags, breadcrumbs), so the error pages and the Alerts lane have something real to render. */
+async function seedErrorIssue(
+	db: ReturnType<typeof drizzle>,
+	serviceId: string,
+	now: number,
+): Promise<void> {
+	const release = "1aca1c1657a3d79b9a2d5778ade0bb08c16e33e5";
+	const title =
+		"Error: https://svelte.dev/e/kit/redirect_external_not_in_allowlist";
+	const culprit =
+		"redirect_external_not_in_allowlist (../.svelte-kit/output/server/chunks/exports.js)";
+	const frame = (fn: string, filename: string, lineno: number) => ({
+		absPath: null,
+		colno: 12,
+		contextLine: null,
+		filename,
+		function: fn,
+		inApp: true,
+		lineno,
+		module: null,
+		postContext: [],
+		preContext: [],
+	});
+	const issueId = crypto.randomUUID();
+	await db.insert(errorIssue).values({
+		count: 3,
+		culprit,
+		fingerprint: "design-redirect",
+		firstRelease: release,
+		firstSeen: new Date(now - 3 * HOUR),
+		id: issueId,
+		lastEnvironment: "production",
+		lastRelease: release,
+		lastSeen: new Date(now - 4 * 60_000),
+		level: "error",
+		platform: "javascript",
+		serviceId,
+		status: "unresolved",
+		title,
+		type: "Error",
+		value: "https://svelte.dev/e/kit/redirect_external_not_in_allowlist",
+	});
+	const eventId = crypto.randomUUID().replaceAll("-", "");
+	await db.insert(errorEvent).values({
+		environment: "production",
+		eventId,
+		id: crypto.randomUUID(),
+		issueId,
+		level: "error",
+		message: title,
+		payload: {
+			breadcrumbs: [
+				{
+					category: "console",
+					level: "info",
+					message: "Listening on http://localhost:3000/",
+					timestamp: new Date(now - 5 * 60_000).toISOString(),
+					type: null,
+				},
+				{
+					category: "http",
+					level: "info",
+					message:
+						'{"status_code":200,"url":"http://otel:4318/v1/traces","http.request.method":"POST"}',
+					timestamp: new Date(now - 4 * 60_000).toISOString(),
+					type: "http",
+				},
+			],
+			contexts: {},
+			culprit,
+			environment: "production",
+			eventId,
+			exceptions: [
+				{
+					frames: [
+						frame(
+							"resolve",
+							"../.svelte-kit/output/server/chunks/instance.js",
+							3322,
+						),
+						frame(
+							"render_endpoint",
+							"../.svelte-kit/output/server/chunks/instance.js",
+							31,
+						),
+						frame(
+							"<anonymous>",
+							"../.svelte-kit/output/server/entries/endpoints/admin/integrations/connect/_server.ts.js",
+							11,
+						),
+						frame(
+							"redirect",
+							"../.svelte-kit/output/server/chunks/exports.js",
+							740,
+						),
+						frame(
+							"redirect_external_not_in_allowlist",
+							"../.svelte-kit/output/server/chunks/exports.js",
+							366,
+						),
+					],
+					handled: true,
+					mechanism: "generic",
+					module: null,
+					type: "Error",
+					value: "https://svelte.dev/e/kit/redirect_external_not_in_allowlist",
+				},
+			],
+			fingerprint: null,
+			level: "error",
+			message: null,
+			platform: "javascript",
+			release,
+			request: {
+				method: "GET",
+				url: "https://web.example.test/admin/integrations/connect",
+			},
+			sdk: "sentry.javascript.bun@11.4.0",
+			serverName: "a8441e4e23a1",
+			tags: [],
+			timestamp: new Date(now - 4 * 60_000).toISOString(),
+			title,
+			transaction: null,
+			user: { email: null, id: null, ipAddress: "203.0.113.7", username: null },
+		},
+		receivedAt: new Date(now - 4 * 60_000),
+		release,
+		serviceId,
+		timestamp: new Date(now - 4 * 60_000),
+		userKey: "203.0.113.7",
+	});
 }
