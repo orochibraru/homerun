@@ -86,13 +86,15 @@ feature pages under `docs/`.
 - `release-channels-tab.webp` —
   `/services/:id/environments/channels (Enable release channels ticked)`
 - `release-channels-environment.webp` — `/services/:id/settings (Environment)`
-- `revisions-auto-rollback.webp` — `/services/:id/settings (Auto-rollback)`
+- `revisions-auto-rollback.webp` —
+  `/services/:id/settings/automation (Auto-rollback)`
 - `revisions-detail.webp` — `/services/:id/environments/revisions/:revisionId`
 - `revisions-retained-images.webp` — `/settings/docker (Retained images)`
 - `status-checks-picker.webp` —
   `/services/:id/environments/source (status checks)`
 - `image-scanning-security.webp` — `/services/:id/security (Image scan)`
-- `image-scanning-service.webp` — `/services/:id/settings (Image scanning)`
+- `image-scanning-service.webp` —
+  `/services/:id/settings/automation (Image scanning)`
 - `image-scanning-settings.webp` —
   `/settings/docker (Image scanning, High and above picked)`
 - `dashboard-resource-limits.webp` — `/settings (Resource limits)`
@@ -106,7 +108,7 @@ feature pages under `docs/`.
 - `backups-history.webp` — `/backups`
 - `backups-restore.webp` — `/storage/:id (Restore)`
 - `scheduling-cron-redeploy.webp` —
-  `/services/:id/settings (Auto-redeploy schedule)`
+  `/services/:id/settings/automation (Auto-redeploy schedule)`
 - `scheduling-cron-job.webp` — `/cron-jobs/:id`
 - `scheduling-job-queue.webp` — `/scheduling (Job queue)`
 - `scheduling-overview.webp` —
