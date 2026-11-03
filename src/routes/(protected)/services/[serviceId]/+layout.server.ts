@@ -12,6 +12,8 @@ import { StackDTO } from "#lib/dto/stack-dto.js";
 import { TrafficSampleDTO } from "#lib/dto/traffic-sample-dto.js";
 import { serviceHostname } from "#lib/services/dns.service.js";
 import { certResolverFor } from "#lib/services/docker/cert-resolver.js";
+import { RevisionService } from "#lib/services/revision.service.js";
+import { UserService } from "#lib/services/user.service.js";
 import { ancestorIds } from "#lib/stack-tree.js";
 
 /**
@@ -42,8 +44,31 @@ function crumbRoot(
 	];
 }
 
+/**
+ * Whether the header offers a one-click rollback: only in the simple UI, where
+ * the Revisions list that does it otherwise is hidden, and only when there's a
+ * previous revision to go back to.
+ */
+async function canRollBack(svc: ServiceDTO, uiMode: string): Promise<boolean> {
+	if (uiMode !== "simple") {
+		return false;
+	}
+	const revisions = await RevisionService.list(svc.toJSON());
+	return revisions.some((revision) => revision.previous);
+}
+
+/** Who deployed `deployment` by hand, null for one a push, a schedule or a promote started. */
+async function deployerName(
+	deployment: DeploymentDTO | undefined,
+): Promise<string | null> {
+	if (deployment?.toJSON().trigger !== "manual") {
+		return null;
+	}
+	return (await UserService.getUser(deployment.toJSON().userId))?.name ?? null;
+}
+
 export const load = async ({ params, parent }) => {
-	await parent();
+	const { uiMode } = await parent();
 
 	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
@@ -61,6 +86,7 @@ export const load = async ({ params, parent }) => {
 		traffic,
 		mounts,
 		latestScan,
+		rollBack,
 	] = await Promise.all([
 		svc.stackId ? StackDTO.get(svc.stackId) : null,
 		DeploymentDTO.listRevisions(svc.id, 1),
@@ -71,7 +97,9 @@ export const load = async ({ params, parent }) => {
 		TrafficSampleDTO.totals([svc.id], new Date(Date.now() - 86_400_000)),
 		ServiceVolumeDTO.listForService(svc.id),
 		ImageScanDTO.latestForService(svc.id),
+		canRollBack(svc, uiMode),
 	]);
+	const deployedBy = await deployerName(lastDeploy);
 	const scan = latestScan?.toJSON();
 	const root = previewParentId
 		? svc.toJSON().previewPrNumber === null
@@ -103,6 +131,8 @@ export const load = async ({ params, parent }) => {
 			config.pangolinEnabled,
 			config.traefik.instanceCertNames,
 		),
+		canRollBack: rollBack,
+		deployedBy,
 		lastDeployedAt: lastDeploy
 			? (lastDeploy.toJSON().finishedAt ?? lastDeploy.toJSON().createdAt)
 			: null,
@@ -122,6 +152,7 @@ export const load = async ({ params, parent }) => {
 		lastDeployment: lastAttempt
 			? {
 					at: lastAttempt.toJSON().finishedAt ?? lastAttempt.toJSON().createdAt,
+					id: lastAttempt.id,
 					status: lastAttempt.toJSON().status,
 				}
 			: null,

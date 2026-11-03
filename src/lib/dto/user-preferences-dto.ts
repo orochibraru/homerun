@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { DEFAULT_PER_PAGE } from "#lib/list-sorts.js";
 import { db } from "#lib/server/db/lib.js";
@@ -9,6 +9,7 @@ import {
 import type { Preset } from "#lib/surfaces.js";
 import type { TabLayout } from "#lib/tab-layout.js";
 import type { UiMode } from "#lib/ui-mode.js";
+import type { EntityViewMode } from "#lib/view-modes.js";
 
 import { BaseDTO } from "./base-dto";
 
@@ -45,6 +46,7 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 			uiMode: null,
 			updatedAt: now,
 			userId,
+			viewModes: {},
 		};
 		await db.insert(userPreferences).values(row).onConflictDoNothing();
 		return new UserPreferencesDTO(row);
@@ -68,6 +70,21 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 	/** Persists whether page tabs sit above the page or in a column beside it. */
 	async updateTabLayout(tabLayout: TabLayout): Promise<void> {
 		await this.persist({ tabLayout });
+	}
+
+	/**
+	 * Persists one list page's list/card choice, merged into the stored map in
+	 * the database itself so two pages saved at once don't overwrite each
+	 * other.
+	 */
+	async updateViewMode(key: string, mode: EntityViewMode): Promise<void> {
+		await db
+			.update(userPreferences)
+			.set({
+				viewModes: sql`${userPreferences.viewModes} || ${JSON.stringify({ [key]: mode })}::jsonb`,
+			})
+			.where(eq(userPreferences.userId, this.row.userId));
+		this.row.viewModes = { ...this.row.viewModes, [key]: mode };
 	}
 
 	/** Persists the account's default page size for every paginated list. */

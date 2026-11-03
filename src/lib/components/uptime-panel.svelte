@@ -46,7 +46,7 @@
 		],
 		internal: [
 			"The container is running but its port isn't answering : check the app's own logs below.",
-			"Confirm the container port on the Networking tab matches what the app listens on.",
+			"Confirm the container port under Networking → Network matches what the app listens on.",
 			"An app bound to 127.0.0.1 inside its container is unreachable from the network : bind 0.0.0.0.",
 		],
 	};

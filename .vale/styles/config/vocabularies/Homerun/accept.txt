@@ -29,7 +29,7 @@ bcrypt
 buildx
 CIs?
 CNAMEs
-configs?
+[Cc]onfigs?
 Coolify
 Dashy
 dev

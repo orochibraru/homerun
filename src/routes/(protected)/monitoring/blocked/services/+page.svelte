@@ -2,12 +2,17 @@
 	import { resolve } from "$app/paths";
 	import { Trophy } from "@lucide/svelte";
 
+	import ChartHoverTarget from "#lib/components/chart-hover-target.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import { formatPercent } from "#lib/metrics-format.js";
 
 	const { data } = $props();
 
 	const most = $derived(Math.max(1, ...data.perService.map((row) => row.bans)));
+	const total = $derived(
+		data.perService.reduce((sum, row) => sum + row.bans, 0),
+	);
 </script>
 
 <section class="panel rounded-md">
@@ -45,12 +50,29 @@
 						>
 							{row.serviceName}
 						</a>
-						<div class="bg-surface-2 mt-1.5 h-1.5 overflow-hidden rounded-full">
-							<div
-								class="bg-accent h-full rounded-full"
-								style="width: {(row.bans / most) * 100}%"
-							></div>
-						</div>
+						<ChartHoverTarget
+							class="mt-0.5 rounded-full py-1"
+							label="{row.serviceName}: {row.bans} banned addresses"
+						>
+							{#snippet tip()}
+								<p class="opacity-75">{row.serviceName}</p>
+								<p>
+									<b class="text-sm font-bold">{row.bans.toLocaleString()}</b>
+									banned {row.bans === 1 ? "address" : "addresses"}
+								</p>
+								<p class="opacity-75">
+									{formatPercent(row.bans, total, 0)} of all bans · #{index + 1}
+								</p>
+							{/snippet}
+							<span
+								class="bg-surface-2 block h-1.5 overflow-hidden rounded-full"
+							>
+								<span
+									class="bg-accent block h-full rounded-full"
+									style="width: {(row.bans / most) * 100}%"
+								></span>
+							</span>
+						</ChartHoverTarget>
 					</div>
 					<span class="text-text shrink-0 text-sm font-semibold tabular-nums">
 						{row.bans.toLocaleString()}

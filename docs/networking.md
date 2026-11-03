@@ -1,11 +1,18 @@
 # Networking
 
-Everything on this tab is written onto the container as Traefik labels at
-**create** time, so saving a change here doesn't affect the container that's
-already running. Once a service has been deployed, the tab shows a **Redeploy**
-button for exactly that reason, use it after changing a domain or
-DNS-resolvability. The per-app login wall lives on the
-[Security tab](login-wall.md).
+A service's Networking tab has four sections:
+
+- **Domains** (the tab's default): the automatic hostname, extra domains, the
+  main domain and the [SSL](#domains--ssl) certificate for domains outside the
+  base domain.
+- **Network**: container port, protocol, network mode and DNS-resolvability.
+- **Ports**: [published](#published-ports) and [exposed](#exposed-ports) ports.
+- **Cache**: the [response cache](#response-cache).
+
+Everything here is written onto the container as Traefik labels at **create**
+time, so saving a change doesn't affect the container that's already running:
+use the header's **Deploy** button after changing a domain or DNS-resolvability.
+The per-app login wall lives on the [Security tab](login-wall.md).
 
 - **Container port, protocol, network mode**, `bridge` (default, joins the
   shared `homerun` plus the service's stack network if any) or `host` (shares
@@ -53,7 +60,7 @@ DNS-resolvability. The per-app login wall lives on the
   own session. Pick one as the main domain: it's the link shown under the
   service's name and the one used for deploy notifications, the uptime probe and
   search. At least one hostname has to stay routed, otherwise turn public
-  routing off in the Network section below instead.
+  routing off in the Network section instead.
 
 ![A service's Networking tab, with its automatic hostname and domains](images/networking.webp)
 
@@ -68,7 +75,7 @@ server needs internet access then). Recreating Traefik from the compose file
 (`docker compose up --force-recreate`, a self-update) drops the plugin again;
 Homerun loads it back as soon as its worker is up, and until then a cached
 service answers 404; the dashboard's setup banner says so, with a **Re-apply**
-button. Each service then opts in on its Networking tab with **Cache for
+button. Each service then opts in under Networking → Cache with **Cache for
 (seconds)**, applied on its next deploy.
 
 ![Settings → Networking, with the HTTP cache switch](images/networking-http-cache.webp)
@@ -154,16 +161,16 @@ next self-update.
 
 A domain that isn't under your instance's own base domain can't use Traefik's
 automatic ACME resolver (and none of them can while the instance sits behind
-Pangolin, which serves certificates itself), so for those domains the Networking
-tab's SSL section lets you paste your own cert/key PEM (encrypted at rest, same
-scheme as registry credentials). It works out of the box: `compose.prod.yaml`
-and the installer's stack share a `traefik-dynamic` volume between Homerun and
-Traefik, turn on Traefik's file provider over it, and set
-`TRAEFIK_DYNAMIC_CONFIG_DIR` (see [Configuration](configuration.md)) so Homerun
-knows where to write. Saving a cert writes a dynamic-config file holding it into
-that directory, and Traefik's file provider picks it up on its own (no restart
-per certificate). An instance started from an older compose file without that
-volume and those flags has to add them once; until then, saving a cert does
+Pangolin, which serves certificates itself), so for those domains the SSL
+section under Networking → Domains lets you paste your own cert/key PEM
+(encrypted at rest, same scheme as registry credentials). It works out of the
+box: `compose.prod.yaml` and the installer's stack share a `traefik-dynamic`
+volume between Homerun and Traefik, turn on Traefik's file provider over it, and
+set `TRAEFIK_DYNAMIC_CONFIG_DIR` (see [Configuration](configuration.md)) so
+Homerun knows where to write. Saving a cert writes a dynamic-config file holding
+it into that directory, and Traefik's file provider picks it up on its own (no
+restart per certificate). An instance started from an older compose file without
+that volume and those flags has to add them once; until then, saving a cert does
 nothing.
 
 ![The SSL section of a service on a domain outside the base domain, taking a certificate and key](images/networking-custom-ssl.webp)

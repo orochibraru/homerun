@@ -1,5 +1,4 @@
-import { resolve } from "$app/paths";
-import { fail, redirect } from "@sveltejs/kit";
+import { fail } from "@sveltejs/kit";
 
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
@@ -11,11 +10,6 @@ import { listIconLibrary } from "#lib/server/icon-library.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { updateGeneralSchema } from "#lib/server/validation/service.js";
 import { runtimeOptionsFrom } from "#lib/service-runtime.js";
-import { WorkloadDetachError } from "#lib/services/docker/workload-removal.js";
-import {
-	ServiceBusyError,
-	ServiceLifecycleService,
-} from "#lib/services/service-lifecycle.service.js";
 import {
 	ServiceSettingsError,
 	ServiceSettingsService,
@@ -23,137 +17,15 @@ import {
 
 const logger = new Logger("Services");
 
-export const load = async ({ params, parent }) => {
-	await parent();
-	const svc = await ServiceDTO.get(params.serviceId);
-	const [stacks, icons, activeJobs] = await Promise.all([
+export const load = async () => {
+	const [stacks, icons] = await Promise.all([
 		StackDTO.list(),
 		listIconLibrary(),
-		svc ? ServiceLifecycleService.activeJobs(svc) : [],
 	]);
-
-	return { activeJobs, icons, stacks: stacks.map((p) => p.toJSON()) };
+	return { icons, stacks: stacks.map((p) => p.toJSON()) };
 };
 
 export const actions = {
-	delete: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-
-		const form = await request.formData();
-		const force = form.get("force") === "true";
-		const deleteVolumes = form.get("deleteVolumes") === "true";
-		try {
-			await ServiceLifecycleService.deleteService(svc, {
-				deleteVolumes,
-				force,
-			});
-		} catch (error) {
-			if (
-				error instanceof WorkloadDetachError ||
-				error instanceof ServiceBusyError
-			) {
-				return fail(409, { detachFailed: true, error: error.message });
-			}
-			throw error;
-		}
-
-		logger.info(
-			`Service deleted: service=${svc.id} force=${force} deleteVolumes=${deleteVolumes} user=${locals.user.id}`,
-		);
-
-		throw redirect(303, resolve("services"));
-	},
-	updateIdentity: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-
-		const formData = await request.formData();
-		const category = String(formData.get("category") ?? "");
-		const icon = String(formData.get("icon") ?? "");
-		const saved = await ServiceSettingsService.save(
-			svc,
-			{ category: category || null, icon: icon || null },
-			{
-				hostAccess: can(locals.permissions, "system", "write"),
-				userId: locals.user.id,
-			},
-		);
-		if (saved instanceof ServiceSettingsError) {
-			return fail(saved.status, { error: saved.message });
-		}
-		logger.info(
-			`Service identity updated: service=${svc.id} category=${category || "none"} icon=${icon.startsWith("data:") ? "upload" : icon || "none"} user=${locals.user.id}`,
-		);
-		return { identitySaved: true };
-	},
-	moveStack: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-
-		const stackId =
-			((await request.formData()).get("stackId") as string | null) || null;
-		const saved = await ServiceSettingsService.save(
-			svc,
-			{ stackId },
-			{
-				hostAccess: can(locals.permissions, "system", "write"),
-				userId: locals.user.id,
-			},
-		);
-		if (saved instanceof ServiceSettingsError) {
-			return fail(saved.status, { error: saved.message });
-		}
-		logger.info(
-			`Service moved: service=${svc.id} stack=${stackId ?? "none"} user=${locals.user.id}`,
-		);
-		return { moved: true };
-	},
-	saveAsTemplate: async ({ params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-
-		await TemplateDTO.create({
-			...runtimeOptionsFrom(svc.toJSON()),
-			containerPort: svc.containerPort,
-			cpuLimit: svc.cpuLimit,
-			description: `Saved from ${svc.name}`,
-			envVars: svc.envVars,
-			healthcheckCommand: svc.healthcheckCommand,
-			image: svc.image,
-			memoryLimitMb: svc.memoryLimitMb,
-			name: svc.name,
-			ownerId: locals.user.id,
-			publishedPorts: svc.publishedPorts,
-			restartPolicy: svc.restartPolicy,
-			tag: svc.tag,
-		});
-
-		logger.info(
-			`Template saved from service: service=${svc.id} user=${locals.user.id}`,
-		);
-		return { templateSaved: true };
-	},
 	update: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			redirectToSignIn();
@@ -196,39 +68,8 @@ export const actions = {
 		);
 		return { success: true };
 	},
-	updateAutoRollback: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-		const formData = await request.formData();
-		const autoRollback = formData.get("autoRollback") === "on";
-		await svc.update({ autoRollback });
-		logger.info(
-			`Auto-rollback updated: service=${svc.id} enabled=${autoRollback} user=${locals.user.id}`,
-		);
-		return { autoRollbackSaved: true };
-	},
-	updateImageScan: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-		const formData = await request.formData();
-		const imageScanEnabled = formData.get("imageScanEnabled") === "on";
-		await svc.update({ imageScanEnabled });
-		logger.info(
-			`Image scanning updated: service=${svc.id} enabled=${imageScanEnabled} user=${locals.user.id}`,
-		);
-		return { imageScanSaved: true };
-	},
-	updateCron: async ({ request, params, locals }) => {
+
+	updateIdentity: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			redirectToSignIn();
 		}
@@ -238,25 +79,81 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const cronEnabled = formData.get("cronEnabled") === "on";
-		const cronSchedule =
-			(formData.get("cronSchedule") as string | null)?.trim() ?? "";
-
+		const category = String(formData.get("category") ?? "");
+		const icon = String(formData.get("icon") ?? "");
 		const saved = await ServiceSettingsService.save(
 			svc,
-			{ cronEnabled, cronSchedule: cronSchedule || null },
+			{ category: category || null, icon: icon || null },
 			{
 				hostAccess: can(locals.permissions, "system", "write"),
 				userId: locals.user.id,
 			},
 		);
 		if (saved instanceof ServiceSettingsError) {
-			return fail(saved.status, { cronError: saved.message });
+			return fail(saved.status, { error: saved.message });
 		}
 		logger.info(
-			`Cron schedule updated: service=${svc.id} enabled=${cronEnabled} schedule="${cronSchedule}" user=${locals.user.id}`,
+			`Service identity updated: service=${svc.id} category=${category || "none"} icon=${icon.startsWith("data:") ? "upload" : icon || "none"} user=${locals.user.id}`,
 		);
+		return { identitySaved: true };
+	},
 
-		return { cronSaved: true };
+	moveStack: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		const stackId =
+			((await request.formData()).get("stackId") as string | null) || null;
+		const saved = await ServiceSettingsService.save(
+			svc,
+			{ stackId },
+			{
+				hostAccess: can(locals.permissions, "system", "write"),
+				userId: locals.user.id,
+			},
+		);
+		if (saved instanceof ServiceSettingsError) {
+			return fail(saved.status, { error: saved.message });
+		}
+		logger.info(
+			`Service moved: service=${svc.id} stack=${stackId ?? "none"} user=${locals.user.id}`,
+		);
+		return { moved: true };
+	},
+
+	saveAsTemplate: async ({ params, locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		await TemplateDTO.create({
+			...runtimeOptionsFrom(svc.toJSON()),
+			containerPort: svc.containerPort,
+			cpuLimit: svc.cpuLimit,
+			description: `Saved from ${svc.name}`,
+			envVars: svc.envVars,
+			healthcheckCommand: svc.healthcheckCommand,
+			image: svc.image,
+			memoryLimitMb: svc.memoryLimitMb,
+			name: svc.name,
+			ownerId: locals.user.id,
+			publishedPorts: svc.publishedPorts,
+			restartPolicy: svc.restartPolicy,
+			tag: svc.tag,
+		});
+
+		logger.info(
+			`Template saved from service: service=${svc.id} user=${locals.user.id}`,
+		);
+		return { templateSaved: true };
 	},
 };

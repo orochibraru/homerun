@@ -37,6 +37,7 @@ import {
 	systemStatsResponse,
 	templateResponse,
 } from "./schemas";
+import { serviceEventRoutes } from "./service-events";
 import { serviceRoutes } from "./services";
 import { traceRoutes } from "./traces";
 
@@ -583,6 +584,7 @@ export const routes: RouteDef[] = [
 	...previewRoutes,
 	...channelRoutes,
 	...dependencyRoutes,
+	...serviceEventRoutes,
 	...errorRoutes,
 	...traceRoutes,
 	...backupRoutes,

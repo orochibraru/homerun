@@ -73,16 +73,18 @@ const SEEDS: Seed[] = [
 const SHOTS: Shot[] = [
 	{
 		doc: "/",
-		expect: /Welcome back/i,
+		expect: /Good (morning|afternoon|evening)/,
 		name: "hero",
 		path: () => "/",
 		prepare: async (page) => {
-			await expect(page.getByText("Busiest today")).toBeVisible();
+			await expect(
+				page.getByRole("heading", { name: "Traffic" }),
+			).toBeVisible();
 		},
 	},
 	{
 		doc: "/ (Ctrl+K)",
-		expect: /Welcome back/i,
+		expect: /Good (morning|afternoon|evening)/,
 		name: "search",
 		path: () => "/",
 		prepare: async (page) => {

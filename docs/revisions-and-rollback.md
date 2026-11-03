@@ -2,8 +2,8 @@
 
 Advanced mode: [simple mode](ui-modes.md) hides the Revisions section and the
 Deployments sidebar entry, and puts a **Roll back to the previous version**
-button on the service's Overview instead. Everything here keeps working either
-way, and a hidden page still opens from a link.
+entry in the service header's **⋯** menu instead. Everything here keeps working
+either way, and a hidden page still opens from a link.
 
 ![A service's Environments & Revisions → Revisions, with the current revision marked](images/revisions.webp)
 
@@ -77,7 +77,7 @@ listed but may need their image pulled or rebuilt.
 
 ![Settings → Docker → Retained images](images/revisions-retained-images.webp)
 
-![The Auto-rollback section of a service's Settings tab](images/revisions-auto-rollback.webp)
+![The Auto-rollback section of a service's Settings → Automation](images/revisions-auto-rollback.webp)
 
 **Auto-rollback.** After each deploy the new workload is watched for 90 seconds,
 longer while its healthcheck is still starting (up to 5 minutes). It's unhealthy
@@ -93,8 +93,8 @@ so is a service that isn't DNS resolvable, uses host networking or has
 healthchecks [turned off](services.md#health). An unhealthy revision is always
 marked in the Revisions section and reported (**Revision unhealthy**), and the
 reason is kept on the revision, so `homerun services revisions <id>` shows it
-too. With **Auto-rollback when a new revision is unhealthy** turned on in the
-service's Settings tab (off by default), Homerun instead redeploys the previous
-healthy revision with a different image, marks the new one as rolled back and
-sends **Rolled back**. A rollback that is itself unhealthy isn't rolled back
-again; a promoted preview is a new revision, not a rollback, so it is.
+too. With **Auto-rollback when a new revision is unhealthy** turned on under the
+service's Settings → Automation (off by default), Homerun instead redeploys the
+previous healthy revision with a different image, marks the new one as rolled
+back and sends **Rolled back**. A rollback that is itself unhealthy isn't rolled
+back again; a promoted preview is a new revision, not a rollback, so it is.

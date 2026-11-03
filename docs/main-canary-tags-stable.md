@@ -107,7 +107,7 @@ homerun services rollback app
 That redeploys the previous image without rebuilding. The service's git ref
 stays on the newest tag, so a later manual stable deploy would rebuild the bad
 version: fix forward by tagging `v1.4.1`, which deploys stable as usual.
-Auto-rollback on the Settings tab works on stable and canary alike.
+Auto-rollback under Settings → Automation works on stable and canary alike.
 
 ## 5. With pull request previews
 

@@ -54,13 +54,15 @@ Every tab stays. Inside them, simple mode hides:
   **Previews** and **Channels**. The tab opens on **Source**, and **Environment
   Variables** stays. On a git service, the build method, build cache and build
   server sit behind a collapsed **Advanced** section on **Source**.
-- **Overview**: gains a **Roll back to the previous version** button once the
-  service has an earlier revision to go back to, in place of the Revisions list.
+- **Overview**: the header's **⋯** menu gains **Roll back to the previous
+  version** once the service has an earlier revision to go back to, in place of
+  the Revisions list.
 - **Observability**: **Traces** and **Pipelines**. **Monitoring**, **Logs**,
   **Uptime**, **Errors** and **Health** stay, and Health only shows the current
   healthcheck, not the override settings.
-- **Networking**: the network mode sits behind a collapsed **Advanced** section,
-  and **Response cache**, **Published ports** and **Exposed ports** are hidden.
+- **Networking**: the **Ports** and **Cache** sections, and on **Network** the
+  network mode sits behind a collapsed **Advanced** section. **Domains** and
+  **Network** stay.
 - **Container**: **Runtime** (entrypoint, command, labels, capabilities,
   devices…). On a swarm instance, **Replicas** and placement sit behind a
   collapsed **Advanced** section on **Compute**.

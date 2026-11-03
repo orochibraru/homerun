@@ -50,7 +50,7 @@ function accentVars(hex: string): string {
 	const r = Number.parseInt(hex.slice(1, 3), 16);
 	const g = Number.parseInt(hex.slice(3, 5), 16);
 	const b = Number.parseInt(hex.slice(5, 7), 16);
-	return `--color-accent:${hex};--color-ink:${hex};--primary:${hex};--color-accent-light:rgba(${r},${g},${b},0.12);--color-accent-glow:rgba(${r},${g},${b},0.35);--ring:rgba(${r},${g},${b},0.55);`;
+	return `--color-accent:${hex};--color-ink:${hex};--primary:${hex};--accent-foreground:#fff;--color-accent-light:rgba(${r},${g},${b},0.12);--color-accent-glow:rgba(${r},${g},${b},0.35);--ring:rgba(${r},${g},${b},0.55);`;
 }
 
 /**

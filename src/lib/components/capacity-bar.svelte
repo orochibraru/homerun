@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { type Capacity, usedPercent } from "#lib/backup-capacity.js";
+	import ChartHoverTarget from "#lib/components/chart-hover-target.svelte";
 	import { formatBytes, timeAgo } from "#lib/formatting.js";
 
 	interface Props {
@@ -23,16 +24,30 @@
 
 <div class="min-w-0 space-y-1.5">
 	{#if capacity}
-		<div
-			class="bg-surface-2 h-2 w-full overflow-hidden rounded-full"
-			aria-label="{Math.round(percent)}% used"
-			aria-valuemax={100}
-			aria-valuemin={0}
-			aria-valuenow={Math.round(percent)}
-			role="meter"
+		<ChartHoverTarget
+			class="rounded-full py-1"
+			label="{formatBytes(capacity.usedBytes)} of {formatBytes(
+				capacity.totalBytes,
+			)} used, {Math.round(percent)}%"
 		>
-			<div class="h-full rounded-full {tone}" style="width: {percent}%"></div>
-		</div>
+			{#snippet tip()}
+				<p>
+					<b class="text-sm font-bold">{formatBytes(capacity.usedBytes)}</b>
+					of {formatBytes(capacity.totalBytes)} used
+				</p>
+				<p class="opacity-75">
+					{Math.round(percent)}% · {formatBytes(capacity.freeBytes)} free · alert
+					at {thresholdPercent}%
+				</p>
+			{/snippet}
+			<span
+				class="bg-surface-2 block h-2 w-full overflow-hidden rounded-full"
+				aria-hidden="true"
+			>
+				<span class="block h-full rounded-full {tone}" style="width: {percent}%"
+				></span>
+			</span>
+		</ChartHoverTarget>
 		<p class="text-text-muted text-xs tabular-nums">
 			{formatBytes(capacity.freeBytes)} free of {formatBytes(
 				capacity.totalBytes,

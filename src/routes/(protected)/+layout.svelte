@@ -186,7 +186,7 @@
 	{@const NavIcon = item.icon}
 	<a
 		class="
-      group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
+      group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-3 py-2 text-[0.8125rem] transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
       {drawerRow}
       {active
 			? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold in-data-[slot=mobile-drawer]:border-accent/40'
@@ -223,7 +223,7 @@
 				{@const ParentIcon = entry.icon}
 				<button
 					class="
-            mb-0.5 flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-left text-[0.8125rem] font-medium transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
+            mb-0.5 flex w-full items-center gap-2.5 rounded-lg border border-transparent px-3 py-2 text-left text-[0.8125rem] font-medium transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50
             {drawerRow}
             in-data-[slot=mobile-drawer]:border-border in-data-[slot=mobile-drawer]:bg-surface
             {hasActive(entry.items)
@@ -283,7 +283,7 @@
 </svelte:head>
 
 <!-- Fills the full viewport : there's no global navbar above this. -->
-<div class="flex h-dvh overflow-hidden md:gap-2 md:p-2">
+<div class="flex h-dvh overflow-hidden md:gap-2 md:p-2" data-slot="app-shell">
 	<a
 		class="bg-ink text-ink-foreground fixed top-4 left-4 z-60 rounded-md px-3 py-2 text-sm font-medium not-focus:sr-only"
 		href="#main-content"
@@ -299,7 +299,7 @@
 		class="hidden w-64 shrink-0 flex-col md:order-1 md:flex"
 		data-slot="app-sidebar"
 	>
-		<BrandMark class="px-3 py-2.5" />
+		<BrandMark class="px-4 pt-4 pb-3" size="lg" />
 
 		{#if can(data.permissions, "services", "write")}
 			<div class="px-2 pb-2">
@@ -344,7 +344,7 @@
 		<!-- Sticky header, every page, both breakpoints : page title on the
          left, notifications + account menu on the right. -->
 		<header
-			class="border-border sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b px-4 max-md:bg-bg/86 max-md:backdrop-blur-lg sm:px-3 md:h-12 md:px-5"
+			class="border-border sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b px-4 max-md:bg-bg/86 max-md:backdrop-blur-lg sm:px-3 md:h-16 md:px-6"
 			data-slot="app-header"
 		>
 			<Breadcrumbs roots={allNavItems} />
@@ -409,7 +409,7 @@
 							aria-current={active ? "page" : undefined}
 							href={tab.href}
 						>
-							{#if TabIcon}<TabIcon class="text-accent size-4 shrink-0" />{/if}
+							<TabIcon class="text-accent size-4 shrink-0" />
 							<span class="truncate">{tab.label}</span>
 							{#if tab.hasWarning}<span
 									class="ml-auto size-1.5 shrink-0 rounded-full bg-amber-400"
@@ -422,7 +422,7 @@
 							onclick={() => sectionTabs.onSelect?.(tab.id)}
 							type="button"
 						>
-							{#if TabIcon}<TabIcon class="text-accent size-4 shrink-0" />{/if}
+							<TabIcon class="text-accent size-4 shrink-0" />
 							<span class="truncate">{tab.label}</span>
 							{#if tab.hasWarning}<span
 									class="ml-auto size-1.5 shrink-0 rounded-full bg-amber-400"

@@ -4,6 +4,7 @@ import {
 	buildLane,
 	LANE_BUCKET_SECONDS,
 	LANE_BUCKETS,
+	laneBucketRange,
 	laneHue,
 	laneStart,
 	stackHues,
@@ -55,9 +56,29 @@ describe("buildLane", () => {
 		);
 		expect(lane.avgResponseMs).toBeNull();
 		expect(lane.deploys).toEqual([
-			{ failed: false, index: LANE_BUCKETS - 1 },
-			{ failed: true, index: 34 },
+			{
+				at: new Date("2026-10-31T15:40:00Z").getTime(),
+				failed: false,
+				index: LANE_BUCKETS - 1,
+			},
+			{
+				at: new Date("2026-10-31T09:10:00Z").getTime(),
+				failed: true,
+				index: 34,
+			},
 		]);
+		expect(lane.start).toBe(laneStart(now).getTime());
+	});
+});
+
+describe("laneBucketRange", () => {
+	test("spans one half-hour bucket from the lane's start", () => {
+		const start = laneStart(now).getTime();
+		const range = laneBucketRange(start, 2);
+		expect(range.from.getTime()).toBe(start + 2 * LANE_BUCKET_SECONDS * 1000);
+		expect(range.to.getTime() - range.from.getTime()).toBe(
+			LANE_BUCKET_SECONDS * 1000,
+		);
 	});
 });
 

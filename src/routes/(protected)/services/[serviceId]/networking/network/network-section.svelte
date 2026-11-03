@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Network } from "@lucide/svelte";
+	import { Network, Server } from "@lucide/svelte";
 	import { Input } from "@orochibraru/ui/input";
 	import {
 		Select as SelectRoot,
@@ -138,6 +138,7 @@
 						}}
 						type="button"
 					>
+						<Network class="size-3.5 shrink-0" />
 						Bridge (default)
 					</button>
 					<button
@@ -152,6 +153,7 @@
 						}}
 						type="button"
 					>
+						<Server class="size-3.5 shrink-0" />
 						Host
 					</button>
 				</div>

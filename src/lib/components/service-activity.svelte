@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { CircleX, HeartPulse, Rocket, Undo2 } from "@lucide/svelte";
+	import {
+		CircleCheck,
+		CircleX,
+		HeartPulse,
+		History,
+		Loader2,
+		Undo2,
+	} from "@lucide/svelte";
 	import type { Component } from "svelte";
 
 	import {
@@ -13,7 +20,6 @@
 
 	interface Deployment {
 		createdAt: Date | string;
-		errorMessage: string | null;
 		finishedAt: Date | string | null;
 		gitCommit: string | null;
 		health: RevisionHealth | null;
@@ -27,139 +33,179 @@
 
 	interface Props {
 		deployments: Deployment[];
+		running: boolean;
 		serviceId: string;
 	}
 
-	const { deployments, serviceId }: Props = $props();
+	const { deployments, running, serviceId }: Props = $props();
 
-	interface Entry {
-		detail: string | null;
-		icon: Component;
-		id: string;
-		text: string;
-		tone: string;
-		when: Date | string;
+	interface Pill {
+		class: string;
+		icon: Component<{ class?: string }>;
+		label: string;
+		spin?: boolean;
 	}
 
-	function seconds(dep: Deployment): number | null {
-		return dep.startedAt && dep.finishedAt
-			? Math.max(
-					1,
-					Math.round(
-						(new Date(dep.finishedAt).getTime() -
-							new Date(dep.startedAt).getTime()) /
-							1000,
-					),
-				)
-			: null;
-	}
+	const PILLS = {
+		deploying: {
+			class: "text-blue-600 dark:text-blue-400",
+			icon: Loader2,
+			label: "Deploying",
+			spin: true,
+		},
+		failed: {
+			class: "text-red-600 dark:text-red-400",
+			icon: CircleX,
+			label: "Failed",
+		},
+		live: {
+			class: "text-emerald-600 dark:text-emerald-400",
+			icon: CircleCheck,
+			label: "Live",
+		},
+		replaced: { class: "text-text-muted", icon: History, label: "Replaced" },
+		rolledBack: {
+			class: "text-amber-600 dark:text-amber-400",
+			icon: Undo2,
+			label: "Rolled back",
+		},
+		stopped: {
+			class: "text-orange-600 dark:text-orange-400",
+			icon: CircleX,
+			label: "Stopped",
+		},
+		unhealthy: {
+			class: "text-amber-600 dark:text-amber-400",
+			icon: HeartPulse,
+			label: "Unhealthy",
+		},
+	} satisfies Record<string, Pill>;
 
-	function entryOf(dep: Deployment): Entry {
-		const took = seconds(dep);
-		const what = dep.gitCommit
-			? dep.gitCommit.slice(0, 7)
-			: (dep.imageRef?.split("/").pop() ?? null);
-		const how = dep.trigger ? deployTriggerLabel(dep.trigger) : null;
-		const detail =
-			[how, what, took ? `${took}s` : null].filter(Boolean).join(" · ") || null;
-		if (dep.status === "failed") {
-			return {
-				detail: dep.errorMessage ?? detail,
-				icon: CircleX,
-				id: dep.id,
-				text: "Deploy failed",
-				tone: "text-red-500",
-				when: dep.createdAt,
-			};
+	function version(dep: Deployment): string {
+		if (dep.gitCommit) {
+			return dep.gitCommit.slice(0, 7);
 		}
-		if (dep.health === "rolled_back" || dep.health === "unhealthy") {
-			return {
-				detail,
-				icon: HeartPulse,
-				id: dep.id,
-				text:
-					dep.health === "rolled_back"
-						? "Unhealthy, rolled back"
-						: "Deployed, unhealthy",
-				tone: "text-amber-500",
-				when: dep.createdAt,
-			};
+		const ref = dep.imageRef;
+		if (!ref) {
+			return "—";
+		}
+		const colon = ref.lastIndexOf(":");
+		return colon > ref.lastIndexOf("/") ? ref.slice(colon + 1) : "latest";
+	}
+
+	function title(dep: Deployment): string {
+		if (dep.status === "failed") {
+			return "Deploy failed";
 		}
 		if (isRollback(dep.rollbackOfDeploymentId, dep.trigger)) {
-			return {
-				detail,
-				icon: Undo2,
-				id: dep.id,
-				text: "Rolled back",
-				tone: "text-(--lane-1)",
-				when: dep.createdAt,
-			};
+			return "Rollback";
 		}
-		return {
-			detail,
-			icon: Rocket,
-			id: dep.id,
-			text:
-				dep.status === "running" || dep.status === "stopped"
-					? "Deployed"
-					: "Deploying",
-			tone: "text-accent",
-			when: dep.createdAt,
-		};
+		return dep.trigger ? `${deployTriggerLabel(dep.trigger)} deploy` : "Deploy";
 	}
 
-	const entries = $derived(deployments.slice(0, 8).map(entryOf));
+	function duration(dep: Deployment): string | null {
+		if (!(dep.startedAt && dep.finishedAt)) {
+			return null;
+		}
+		const seconds = Math.max(
+			1,
+			Math.round(
+				(new Date(dep.finishedAt).getTime() -
+					new Date(dep.startedAt).getTime()) /
+					1000,
+			),
+		);
+		return seconds >= 60
+			? `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+			: `${seconds}s`;
+	}
+
+	const rows = $derived.by(() => {
+		let currentSeen = false;
+		return deployments.slice(0, 3).map((dep) => {
+			let pill: Pill = PILLS.replaced;
+			if (dep.status === "failed") {
+				pill = PILLS.failed;
+			} else if (
+				dep.status === "pending" ||
+				dep.status === "pulling" ||
+				dep.status === "starting"
+			) {
+				pill = PILLS.deploying;
+			} else if (dep.health === "rolled_back") {
+				pill = PILLS.rolledBack;
+			} else if (dep.health === "unhealthy") {
+				pill = PILLS.unhealthy;
+			} else if (!currentSeen) {
+				currentSeen = true;
+				pill = running ? PILLS.live : PILLS.stopped;
+			}
+			return {
+				duration: duration(dep),
+				id: dep.id,
+				pill,
+				title: title(dep),
+				version: version(dep),
+				when: dep.createdAt,
+			};
+		});
+	});
 </script>
 
-<section class="space-y-2">
-	<header class="flex items-baseline gap-2">
-		<h2 class="text-text text-sm font-semibold">Activity</h2>
+<section class="panel flex flex-col rounded-[1.125rem] px-5 pt-4.5 pb-2">
+	<div class="mb-1.5 flex items-center">
+		<h2 class="text-text text-[1.0625rem] font-[650] tracking-tight">
+			Revisions
+		</h2>
 		<a
-			class="text-accent ml-auto text-xs font-medium hover:underline"
+			class="text-text-subtle hover:text-text ml-auto text-[0.78rem] font-semibold"
 			href={resolve(
 				"/(protected)/services/[serviceId]/environments/revisions",
-				{
-					serviceId,
-				},
-			)}>All revisions</a
+				{ serviceId },
+			)}
 		>
-	</header>
-	{#if entries.length === 0}
-		<p class="text-text-muted py-4 text-sm">Nothing deployed yet.</p>
+			See all
+		</a>
+	</div>
+	{#if rows.length === 0}
+		<p class="text-text-muted grid flex-1 place-items-center py-8 text-sm">
+			Nothing deployed yet.
+		</p>
 	{:else}
-		<ol class="relative">
-			<span
-				class="bg-border absolute top-3 bottom-3 left-2.5 w-px"
-				aria-hidden="true"
-			></span>
-			{#each entries as entry (entry.id)}
-				{@const Icon = entry.icon}
-				<li>
+		<ol>
+			{#each rows as row, i (row.id)}
+				<li class={i > 0 ? "border-border border-t" : ""}>
 					<a
-						class="hover:bg-surface-2 relative -mx-2 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-start gap-3 rounded-md px-2 py-2"
+						class="group flex h-13 items-center gap-3"
 						href={resolve(
 							"/(protected)/services/[serviceId]/environments/revisions/[revisionId]",
-							{ revisionId: entry.id, serviceId },
+							{ revisionId: row.id, serviceId },
 						)}
 					>
 						<span
-							class="bg-surface border-border grid size-5 place-items-center rounded-full border {entry.tone}"
+							class="bg-surface-2 text-text max-w-24 shrink-0 truncate rounded-full px-2 py-0.75 font-mono text-xs font-semibold"
+							title={row.version}
 						>
-							<Icon class="size-3" />
+							{row.version}
 						</span>
-						<span class="min-w-0">
-							<span class="text-text block text-sm font-medium"
-								>{entry.text}</span
+						<span class="min-w-0 leading-tight">
+							<span
+								class="text-text block truncate text-[0.8125rem] font-[650] group-hover:underline"
+								>{row.title}</span
 							>
-							{#if entry.detail}
-								<span class="text-text-muted block truncate font-mono text-xs"
-									>{entry.detail}</span
-								>
-							{/if}
+							<span class="text-text-subtle block truncate text-[0.6875rem]">
+								{timeAgo(row.when)}{row.duration ? ` · ${row.duration}` : ""}
+							</span>
 						</span>
-						<span class="text-text-subtle pt-0.5 font-mono text-[0.6875rem]"
-							>{timeAgo(entry.when)}</span
+						<span
+							class="border-border-light bg-surface ml-auto inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border pr-3 pl-2.5 text-xs font-bold {row
+								.pill.class}"
 						>
+							<row.pill.icon
+								class="size-3.5 {row.pill.spin ? 'animate-spin' : ''}"
+							/>
+							{row.pill.label}
+						</span>
 					</a>
 				</li>
 			{/each}

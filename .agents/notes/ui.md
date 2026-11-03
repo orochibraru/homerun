@@ -13,43 +13,69 @@ fonts, and the four custom Tailwind v4 `@utility` definitions every surface is
 built from. Nothing under `src/routes`/`src/lib` should hardcode a hex value or
 a blur/shadow stack, route it through a token here instead.
 
-- **Two typefaces, and mono is now rare.** `--font-sans` is Inter Variable
-  (`@fontsource-variable/inter`), and the root font size is the browser default
-  100% (it was 110%, which rendered the whole rem-based UI too large);
-  `--font-mono` is JetBrains Mono, and it is reserved for **code, logs and
-  terminal output** : `live-log-viewer.svelte`, `ansi-line.svelte`, the Terminal
-  tab, System Logs, Observability → Events and Errors and the env paste box.
-  Everything else — nav, labels, status badges, metrics, image refs, hostnames —
-  is sans. An earlier pass made mono the UI's voice across the board and it read
-  as a terminal emulator rather than an app. `tech` survives as _tabular figures
-  only_ (`font-variant-numeric`), so live-updating numbers still don't reflow.
-- **The design is ported from Penombre** (`orochibraru/penombre`'s
-  `src/app.css`), deliberately, because that app's look is the target. Four
-  things carry it:
-  - **The aurora.** `body::before` paints two oversized, heavily blurred radial
-    colour fields on opposite corners (`--brand-2` pink top-right, `--brand-3`
-    cyan bottom-left), `filter: blur(72px) saturate(140%)`, fixed so they stay
-    put while content scrolls. `html` holds the solid ground (`--color-bg`) and
-    `body` is transparent, so panels above can be translucent without stacking
-    washes.
-  - **Film grain.** `body::after` is an inline SVG `feTurbulence` at 3.5%
-    opacity, `mix-blend-mode: soft-light`. It exists so the aurora's gradient
-    doesn't band; keep it subtle enough that type stays crisp.
-  - **Frosted panels.** `panel` is a translucent `--color-surface` +
-    `backdrop-filter: blur(10px)` + hairline border. The blur is deliberately
-    light : heavier turns the gradient behind a card into a visible rectangle.
-    `panel-strong` is the near-opaque, heavily blurred variant for chrome that
-    overlaps scrolling content (the sticky header, the mobile drawer).
-  - **A violet brand.** `--color-accent` (and `--color-ink`, the fill primary
-    buttons paint with) is `oklch(0.54 0.25 293)` in light, brighter in dark.
-    `--radius` is `0.75rem` : soft corners, not the tightened technical ones a
-    previous pass used.
-- **The shell is a rail plus a floating pane.** `(protected)/+layout.svelte` is
-  `flex h-screen p-2 md:gap-2`: a transparent 14rem sidebar sitting directly on
-  the aurora (no panel of its own), and the page itself a `panel rounded-xl`
-  pane with the sticky header inside it. The sidebar carries the one primary
-  action (`Deploy a service`, full width, brand-filled) above the nav, the way
-  Penombre's "New" button does.
+- **Two typefaces, and mono is rare.** `--font-sans` is Nunito
+  (`@fontsource-variable/nunito`) and `--font-mono` is Geist Mono, reserved for
+  **code, logs, terminal output, slugs and image refs**. Everything else (nav,
+  labels, status pills, metrics, hostnames) is sans. Lanes runs heavy on
+  purpose: body text is 550 and Tailwind's weight scale is shifted up one step
+  (`--font-weight-medium` 600, `semibold` 700, `bold` 800), so `font-medium`
+  across the app reads bolder without touching every file. `tech` is _tabular
+  figures only_ (`font-variant-numeric`), so live-updating numbers don't reflow.
+- **The default accent is bordeaux** (`oklch(0.4 0.12 20)` in light, a lighter
+  `0.74` text accent and a `0.46` fill in dark), set on `:root`/`.dark` and
+  replaced wholesale by a palette (`src/lib/palettes.ts`). Low-opacity tints of
+  it read as pink, so `--color-accent-light` and `--accent` (selected rows,
+  hover fills) are a desaturated version of it rather than the accent at a few
+  percent. Primary buttons are filled with the accent, never black.
+- **The shell is a sidebar plus a pane.** `(protected)/+layout.svelte` is
+  `data-slot="app-shell"`; under Lanes it has no padding or gap, the sidebar
+  sits on `--color-bg` with a hairline on its right, and the page
+  (`data-slot="app-frame"`) is full-bleed on `--color-pane`, with a borderless
+  header. In light both are plain white (a grey ground read as grim); in dark
+  the pane is a step lighter than the sidebar. Presets keep the padded,
+  floating-window shell because those overrides are scoped to Lanes. Cards
+  (`panel`) carry a hairline (`--panel-border-color`) and a faint shadow, since
+  white on white needs the edge. The sidebar carries the one primary action
+  (`Deploy a service`) above the nav; its items are pills, the current one
+  tinted with `--color-surface-2` and its icon in the accent.
+- **Every tab carries an icon.** `NavTab.icon` (`TabNav`) and `SectionLink.icon`
+  (`SectionNav`) are required, so a tab without one fails the type check, and
+  every segmented control or pill switch (the services status filter, the
+  Overview's metric switch, the resource chart's metric and range switches,
+  Monitoring's range picker, permission levels, network mode, the list/card
+  toggle) puts a lucide icon at `size-3.5` before its label. Dropdowns
+  (`Select`) don't.
+- **Pills, not boxes.** Under Lanes, buttons, `TabNav` (a segmented control
+  whose active tab is filled with the accent), `SectionNav` items, the header's
+  search and controls, and status badges (`status-badge.svelte`: outlined, an
+  icon and coloured bold text on the card colour) are fully rounded. Inputs keep
+  a `0.75rem` radius. A page's `h1.text-lg` title is enlarged to 24px by one
+  Lanes rule instead of per page.
+- **Dashboard building blocks.** `kpi-tile.svelte` (an icon in a round chip, a
+  label, a big value with its unit, an optional delta pill; the `hero` tone is
+  the accent gradient, `sand`/`mauve`/`sky` are soft tints from `--tile-b/c/d`)
+  and `ring-gauge.svelte` (a progress ring in the accent with optional centre
+  content) are shared by the Overview and service pages. Bar charts use
+  `--bar-fill`/`--bar-stripe` for the muted hatched bars and the accent for the
+  highlighted one.
+- **Every chart answers a hover.** The tooltip is always `chart-tooltip.svelte`
+  (an inverted pill, `x`/`y` in px from the nearest `relative` box, `above` or
+  `below`), never a hand-rolled one or a `title`. A chart with many entries
+  (bars, lines, strips) keeps its highlight in a `ChartHover`
+  (`src/lib/chart-hover.svelte.ts`): `track` on pointer move and down, `leave`
+  (a mouse clears it, a touch keeps it), `key` for the arrows, Home and End,
+  `clear` on blur, `bind:clientWidth={hover.width}` and `hover.x` for the
+  tooltip's clamped x. The plot is a focusable `role="slider"` with an
+  `aria-valuetext` naming the entry; the hovered bar stays and the others dim, a
+  line gets a crosshair and a dot. A strip that sits inside a link
+  (`lane-strip.svelte` in the services tree and diagram) is pointer-only, since
+  a focusable control can't nest in an `<a>`. A single value (a ring, a meter, a
+  capacity bar) goes in `chart-hover-target.svelte`, a button that shows its
+  `tip` snippet on hover, focus or tap. The pure lookups (`bucketAt`,
+  `nearestPoint`, `stepIndex`, `entryX`, `clampX`) live in
+  `src/lib/chart-hover.ts`. Show only what the component already has: `Lane`
+  carries its `start` and each deploy's `at` for exactly that. Inside an
+  `overflow-hidden` panel, the first row opens its tooltip `below`.
 - **Navigation up is the header's breadcrumb trail, not per-page back links.**
   `breadcrumbs.svelte` builds it from the URL: top-level segments take their
   sidebar label, an id segment takes the `name`/`label`/`title` of whichever
@@ -230,21 +256,30 @@ users, backups):
   templates gallery's built-in/custom sections) can render two of these against
   two different params.
 - `view-mode.svelte.ts`'s `ViewMode` class + `view-mode-toggle.svelte`: one
-  page's list/card preference, persisted in `localStorage` under
-  `homerun:view:<key>` (`new ViewMode("services")`, optional 2nd arg is the
-  fallback mode, e.g. `new ViewMode("templates", "card")`). Deliberately its own
-  module rather than living inside `entity-list.svelte`, specifically so one
-  page can render several `EntityList`s sharing a single toggle (services groups
-  its rows by stack, one `EntityList` per group); before this, each group
-  toggled independently, a real pre-existing bug this fixes, not just a
-  refactor.
+  page's list/card preference, stored per account in
+  `user_preferences.view_modes` (a key to mode map, keys matching
+  `VIEW_MODE_KEY` in `src/lib/view-modes.ts`), which the protected layout's
+  `load` already returns as `data.preferences`, so the constructor reads it off
+  `page.data` and the server renders the stored mode from the first byte (no
+  `localStorage` read after mount, no flip on reload).
+  `new ViewMode("services")`, optional 2nd arg is the fallback mode, e.g.
+  `new ViewMode("templates", "card")`; construct it during component init.
+  Switching updates at once and saves through the `setViewMode` remote command
+  (`view-mode.remote.ts`, merged into the JSON in SQL by
+  `UserPreferencesDTO.updateViewMode`) under a promise toast, switching back if
+  the save fails, and mirrors the choice onto the cached layout data so coming
+  back to the page in the same session keeps it. Deliberately its own module
+  rather than living inside `entity-list.svelte`, specifically so one page can
+  render several `EntityList`s sharing a single toggle (services groups its rows
+  by stack, one `EntityList` per group); before this, each group toggled
+  independently, a real pre-existing bug this fixes, not just a refactor.
 - `entity-list.svelte` takes `view: ViewMode` plus an optional `cardGridClass`
   (defaults to a 3-column grid; templates passes a 4-column one). Its old
   `viewKey` string prop and its module-block `EntityViewMode` export are gone,
-  that type now lives on `src/lib/view-mode.svelte.ts`. Every list page now
-  renders straight from `data` (already one page, already filtered/searched)
-  rather than deriving a client-side `filtered` array, and tells a true empty
-  state apart from a no-match one via `data.total === 0 && !data.filtered`.
+  that type now lives in `src/lib/view-modes.ts`. Every list page now renders
+  straight from `data` (already one page, already filtered/searched) rather than
+  deriving a client-side `filtered` array, and tells a true empty state apart
+  from a no-match one via `data.total === 0 && !data.filtered`.
 - Multi-select (services, storage): `list-selection.svelte.ts`'s `ListSelection`
   class holds the selected ids and, constructed during component init with a
   `() => visibleIds` getter, drops any id that leaves the visible page
@@ -416,22 +451,21 @@ per-user instead of a singleton row.
   preset. Because the selectors aren't `:root`-only, a `data-surface` on any
   element restyles its subtree, which is how the Appearance page's preset
   preview tiles work.
-- **Lanes** (`lanes`, the default since migration 0151 and the only style
-  since 0152) is Vercel/Linear-flavoured: Geist and Geist Mono
-  (`@fontsource-variable/geist`, `geist-mono`), greyscale neutrals with no
-  aurora, grain or page wash, one solid content panel on hairlines, and the
-  sidebar's icons in `text-subtle` with only the current page's in the accent.
-  Colour is kept for status and for stacks: every style defines
-  `--lane-0`..`--lane-3` (the palette's chart colours 1, 2, 3 and 5) on
-  `[data-surface]`, and `stackHues` (`src/lib/lanes.ts`) gives each top-level
-  stack one of them, a substack sharing its root's.
+- **Lanes** (`lanes`, the default since migration 0151 and the only style since
+  0152): Nunito and Geist Mono, cool grey neutrals with no aurora, grain or page
+  wash, hairline cards on a white pane, pill controls, and the sidebar's icons
+  in `text-subtle` with only the current page's in the accent (see the bullets
+  at the top of this note). Colour is kept for status and for stacks: every
+  style defines `--lane-0`..`--lane-3` (the palette's chart colours 1, 2, 3
+  and 5) on `[data-surface]`, and `stackHues` (`src/lib/lanes.ts`) gives each
+  top-level stack one of them, a substack sharing its root's.
 - **The lane** (`lane-strip.svelte`) is the 24-hour strip drawn for a service on
-  the Overview's Busiest today, in the Services Dependencies view and on the
-  Diagram's cards: 48 half-hour buckets whose opacity follows the square root of
-  the bucket's share of the busiest one, red where a quarter or more of the
-  bucket's requests errored, and a diamond per deployment (filled for the
-  latest, red for a failed one). Its data is `getLanes` (`lanes.remote.ts`), one
-  query for many ids, scoped to the caller's services, built by `buildLane` from
+  the Services Dependencies view and on the Diagram's cards: 48 half-hour
+  buckets whose opacity follows the square root of the bucket's share of the
+  busiest one, red where a quarter or more of the bucket's requests errored, and
+  a diamond per deployment (filled for the latest, red for a failed one). Its
+  data is `getLanes` (`lanes.remote.ts`), one query for many ids, scoped to the
+  caller's services, built by `buildLane` from
   `TrafficSampleDTO.seriesByService` and `DeploymentDTO.listSinceForServices`.
 - **Presets** (`preset`, nullable: win95, win98, winxp, win7, msn, retro,
   `PRESETS` in `src/lib/surfaces.ts`) ride the same `data-surface` attribute:

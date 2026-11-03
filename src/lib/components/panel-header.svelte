@@ -24,7 +24,7 @@
 >
 	{#if Icon}
 		<div
-			class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg"
+			class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-full"
 		>
 			<Icon class="size-4" />
 		</div>

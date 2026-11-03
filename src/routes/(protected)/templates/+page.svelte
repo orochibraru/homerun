@@ -94,6 +94,7 @@
 			disabled={quickDeploying !== null}
 			size="sm"
 			type="submit"
+			variant="outline"
 		>
 			{#if quickDeploying === tmpl.id}
 				<Spinner />
@@ -104,7 +105,7 @@
 			{/if}
 		</Button>
 	</form>
-	<Button href={configureHref(tmpl)} size="sm" variant="outline">
+	<Button href={configureHref(tmpl)} size="sm" variant="ghost">
 		<SettingsIcon class="size-3.5" />
 		Configure
 	</Button>
@@ -125,7 +126,7 @@
 		</span>
 	{/if}
 	{#if tmpl?.tags && tmpl.tags.length > 0}
-		<span class="text-text-subtle truncate font-mono text-[0.65rem]">
+		<span class="text-text-subtle truncate text-xs">
 			{tmpl.tags.join(" · ")}
 		</span>
 	{/if}

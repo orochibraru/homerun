@@ -20,11 +20,7 @@
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 
-	import AutoRedeploySection from "./auto-redeploy-section.svelte";
-	import AutoRollbackSection from "./auto-rollback-section.svelte";
-	import DangerZoneSection from "./danger-zone-section.svelte";
 	import IdentitySection from "./identity-section.svelte";
-	import ImageScanSection from "./image-scan-section.svelte";
 	import SaveAsTemplateSection from "./save-as-template-section.svelte";
 	import StackSection from "./stack-section.svelte";
 
@@ -165,11 +161,14 @@
 				Container port, network mode, and DNS-resolvability moved to the
 				<a
 					class="text-accent underline"
-					href={resolve("/(protected)/services/[serviceId]/networking", {
-						serviceId: svc.id,
-					})}>Networking</a
+					href={resolve(
+						"/(protected)/services/[serviceId]/networking/network",
+						{
+							serviceId: svc.id,
+						},
+					)}>Networking → Network</a
 				>
-				tab.
+				section.
 			</p>
 
 			<div>
@@ -245,8 +244,4 @@
 	<IdentitySection icons={data.icons} {svc} />
 	<StackSection stackId={svc.stackId} stacks={data.stacks} />
 	<SaveAsTemplateSection />
-	<AutoRollbackSection {svc} />
-	<ImageScanSection {svc} />
-	<AutoRedeploySection cronError={form?.cronError} {svc} />
-	<DangerZoneSection activeJobs={data.activeJobs} name={svc.name} />
 </div>

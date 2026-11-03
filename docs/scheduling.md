@@ -9,13 +9,13 @@ jobs, the Scheduling page that lists them, and the job queue behind all of it.
 
 ## Scheduled redeploy
 
-Off by default, per service, the Settings tab's `cronEnabled` checkbox + a
+Off by default, per service, Settings → Automation's `cronEnabled` checkbox + a
 standard 5-field cron schedule. Useful for an image tracking `:latest`, or a
 git-mode service you want rebuilt on a schedule rather than manually. A due
 schedule queues a deploy like any other trigger, so a redeploy that's still
 waiting its turn is never queued twice.
 
-![A service's auto-redeploy schedule on its Settings tab](images/scheduling-cron-redeploy.webp)
+![A service's auto-redeploy schedule under its Settings → Automation](images/scheduling-cron-redeploy.webp)
 
 ## Cron jobs
 
@@ -150,7 +150,7 @@ the background:
   is active.
 
 It's a read-only overview: edit a schedule on the thing that owns it (the
-service's Settings tab, the cron job's own page, the volume's page).
+service's Settings → Automation, the cron job's own page, the volume's page).
 
 ![The Scheduling page's cron redeploys, cron jobs and scheduled backups](images/scheduling-overview.webp)
 

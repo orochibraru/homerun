@@ -43,6 +43,18 @@ mock.module("$app/paths", () => ({
 	resolve: (path: string) => (path.startsWith("/") ? path : `/${path}`),
 }));
 
+function outsideRequest(): never {
+	throw new Error("Not inside a request.");
+}
+
+mock.module("$app/server", () => ({
+	command: outsideRequest,
+	form: outsideRequest,
+	getRequestEvent: outsideRequest,
+	prerender: outsideRequest,
+	query: outsideRequest,
+}));
+
 beforeEach(async () => {
 	GlobalRegistrator.register();
 });
@@ -91,7 +103,11 @@ plugin({
 		// loader has no idea those are runes rather than plain identifiers.
 		builder.onLoad({ filter: /\.svelte\.(js|ts)(\?[^.]+)?$/ }, ({ path }) => {
 			try {
-				const source = readFileSync(bareFilePath(path), "utf-8");
+				const file = bareFilePath(path);
+				const raw = readFileSync(file, "utf-8");
+				const source = file.endsWith(".ts")
+					? new Bun.Transpiler({ loader: "ts" }).transformSync(raw)
+					: raw;
 				const result = compileModule(source, { filename: path });
 				return { contents: result.js.code, loader: "js" };
 			} catch (err) {

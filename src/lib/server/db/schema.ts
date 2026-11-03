@@ -49,6 +49,7 @@ import type {
 import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
+import type { ServiceEventLane } from "#lib/service-events.js";
 import type { Preset } from "#lib/surfaces.js";
 import type { SwarmPlacement } from "#lib/swarm-placement.js";
 import type { TabLayout } from "#lib/tab-layout.js";
@@ -66,6 +67,7 @@ import type {
 } from "#lib/types.js";
 import type { UiMode } from "#lib/ui-mode.js";
 import type { UserType } from "#lib/user-types.js";
+import type { EntityViewMode } from "#lib/view-modes.js";
 
 export const user = pgTable("user", {
 	banExpires: timestamp("ban_expires", { mode: "date" }),
@@ -1715,6 +1717,31 @@ export const serviceDependency = pgTable(
 	],
 );
 
+export const serviceEvent = pgTable(
+	"service_event",
+	{
+		actorId: text("actor_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		actorName: text("actor_name"),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		detail: jsonb("detail").$type<string[]>().default([]).notNull(),
+		id: text("id").primaryKey(),
+		kind: text("kind").notNull(),
+		lane: text("lane").$type<ServiceEventLane>().notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		summary: text("summary").notNull(),
+	},
+	(table) => [
+		index("serviceEvent_serviceId_createdAt_idx").on(
+			table.serviceId,
+			table.createdAt,
+		),
+	],
+);
+
 // One row per backup attempt (scheduled or manual "Run now"), the run log
 // backing the dedicated Backups page : `storage_volume.backupLastRunAt`
 // alone only ever remembered the *last* timestamp, not whether it succeeded
@@ -2171,6 +2198,10 @@ export const userPreferences = pgTable("user_preferences", {
 	userId: text("user_id")
 		.primaryKey()
 		.references(() => user.id, { onDelete: "cascade" }),
+	viewModes: jsonb("view_modes")
+		.$type<Record<string, EntityViewMode>>()
+		.default({})
+		.notNull(),
 });
 
 // ─── Relations ─────────────────────────────────────────────────────────────
@@ -2716,6 +2747,7 @@ export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type S3Destination = typeof s3Destination.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
+export type ServiceEvent = typeof serviceEvent.$inferSelect;
 export type ServiceDependency = typeof serviceDependency.$inferSelect;
 export type BackupRun = typeof backupRun.$inferSelect;
 export type CronJob = typeof cronJob.$inferSelect;

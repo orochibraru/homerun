@@ -15,7 +15,7 @@ test.describe.serial("authentication page and login wall UI", () => {
 	}) => {
 		await signIn(page);
 		await page
-			.getByRole("button", { exact: true, name: "Identity" })
+			.getByRole("button", { exact: true, name: "IAM" })
 			.first()
 			.click();
 		await page

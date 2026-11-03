@@ -7,7 +7,10 @@ import { StackDTO } from "#lib/dto/stack-dto.js";
 import { BASE_SORTS, sortKeysOf } from "#lib/list-sorts.js";
 import { Logger } from "#lib/logger.js";
 import { parseListQuery } from "#lib/server/list-query.js";
-import { loadServiceListing } from "#lib/server/service-listing.js";
+import {
+	loadServiceFacets,
+	loadServiceListing,
+} from "#lib/server/service-listing.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { dependencyLayers } from "#lib/service-graph.js";
 import {
@@ -197,15 +200,11 @@ export const load = async ({ parent, url }) => {
 	);
 	const requested = url.searchParams.get("view");
 	const view: "diagram" | "list" | "tree" =
-		requested === "list" || requested === "tree" || requested === "diagram"
-			? requested
-			: query.active
-				? "list"
-				: "tree";
+		requested === "list" || requested === "diagram" ? requested : "tree";
 	const treeView = view !== "list";
 	return {
 		baseDomain: config.baseDomain,
-		facets: ServiceDTO.listFilterFacets(),
+		facets: loadServiceFacets(),
 		filtered: query.active,
 		listing: loadServiceListing(query, treeView),
 		page: query.page,

@@ -1071,6 +1071,20 @@
       "when": 1793628634796,
       "tag": "0152_slow_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 153,
+      "version": "7",
+      "when": 1793723275097,
+      "tag": "0153_nasty_ghost_rider",
+      "breakpoints": true
+    },
+    {
+      "idx": 154,
+      "version": "7",
+      "when": 1793725951256,
+      "tag": "0154_aspiring_ronan",
+      "breakpoints": true
     }
   ],
   "version": "7"

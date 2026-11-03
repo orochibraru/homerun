@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { refreshAll } from "$app/navigation";
 	import { page } from "$app/state";
+	import {
+		Calendar,
+		CalendarDays,
+		CalendarRange,
+		Infinity as AllTime,
+		Sun,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 
 	import { formatBytes } from "#lib/formatting.js";
@@ -11,7 +18,10 @@
 		formatPercent as percent,
 	} from "#lib/metrics-format.js";
 	import { monitoringChanges } from "#lib/monitoring-changes.js";
-	import { MONITORING_RANGES } from "#lib/monitoring-ranges.js";
+	import {
+		MONITORING_RANGES,
+		type MonitoringRange,
+	} from "#lib/monitoring-ranges.js";
 	import type { MonitoringSummary } from "#lib/services/monitoring.service.js";
 
 	import ChangeBadge from "./change-badge.svelte";
@@ -121,6 +131,14 @@
 			value: mb(resources.avgMemUsedMb),
 		},
 	]);
+
+	const RANGE_ICONS: Record<MonitoringRange, typeof Sun> = {
+		all: AllTime,
+		month: Calendar,
+		today: Sun,
+		week: CalendarDays,
+		year: CalendarRange,
+	};
 </script>
 
 <div class="space-y-5">
@@ -145,15 +163,17 @@
 			class="border-border inline-flex flex-wrap rounded-lg border p-0.5"
 		>
 			{#each MONITORING_RANGES as range (range.id)}
+				{@const RangeIcon = RANGE_ICONS[range.id]}
 				<a
 					aria-current={monitoring.range === range.id ? "page" : undefined}
-					class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors {monitoring.range ===
+					class="flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {monitoring.range ===
 					range.id
 						? 'bg-accent-light text-accent'
 						: 'text-text-muted hover:text-text'}"
 					data-sveltekit-noscroll
 					href={rangeHref(range.id)}
 				>
+					<RangeIcon class="size-3.5 shrink-0" />
 					{range.label}
 				</a>
 			{/each}

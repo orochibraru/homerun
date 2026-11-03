@@ -1,5 +1,6 @@
 import { goto, refreshAll } from "$app/navigation";
 import { resolve } from "$app/paths";
+import { getContext, setContext } from "svelte";
 import { toast } from "svelte-sonner";
 
 import { randomId } from "#lib/random-id.js";
@@ -232,4 +233,18 @@ export class DeployProgress {
 			success: `${name} is queued for deploy.`,
 		});
 	}
+}
+
+const KEY = Symbol("deploy-progress");
+
+/** Shares a service's deploy progress with the pages below its layout, so the header's actions and the Overview tab watch the same deploy. */
+export function provideDeployProgress(
+	progress: DeployProgress,
+): DeployProgress {
+	return setContext(KEY, progress);
+}
+
+/** The deploy progress the enclosing service layout provides. */
+export function useDeployProgress(): DeployProgress {
+	return getContext<DeployProgress>(KEY);
 }
