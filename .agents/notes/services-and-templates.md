@@ -227,17 +227,19 @@ provider (a DNS connection or Pangolin) now points here. Each probe retries for
 by `TraefikError`: Homerun's error pages carry `X-Homerun-Error-Page`
 (`ERROR_PAGE_HEADER`), so the catch-all's 404 is unambiguous, and Traefik's
 plain `404 page not found` only counts without published error pages (with them,
-a missing router lands on the catch-all, so a plain 404 is the app's). A 502/504
-is settled by asking the container directly (`GatewayVerdict`): the same status
-is the app's own, a connection with no HTTP answer is a non-HTTP service
-(warning), nothing to ask (swarm, unreachable) is a warning. Publicly, a trusted
-certificate for another name is the edge's default certificate (fail);
-`TRAEFIK DEFAULT CERT` or an untrusted chain is a certificate still being issued
-(warning). A failure comes back as `Result.Failure = "route-failed"`:
-`finalizeWorkerDeploy` points the service at the new workload ids first (the old
-one is already gone), then records the failure as `RouteCheckFailedError`, which
-keeps the service's live status. Database images and UDP-only ports get no route
-spec, since they never answer HTTP.
+a missing router lands on the catch-all, so a plain 404 is the app's). A
+502/504, or that plain 404 (Go's stock `http.NotFound` body is the same bytes,
+and Go MCP servers send it on `/`), is settled by asking the container directly
+(`GatewayVerdict`): the same status is the app's own, a connection with no HTTP
+answer is a non-HTTP service (warning), nothing to ask (swarm, unreachable) is a
+warning. Publicly, a trusted certificate for another name is the edge's default
+certificate (fail); `TRAEFIK DEFAULT CERT` or an untrusted chain is a
+certificate still being issued (warning). A failure comes back as
+`Result.Failure = "route-failed"`: `finalizeWorkerDeploy` points the service at
+the new workload ids first (the old one is already gone), then records the
+failure as `RouteCheckFailedError`, which keeps the service's live status.
+Database images and UDP-only ports get no route spec, since they never answer
+HTTP.
 
 ## Required status checks (`src/lib/status-checks.ts`, `StatusCheckService`, `deploy/status-check-step.ts`)
 
