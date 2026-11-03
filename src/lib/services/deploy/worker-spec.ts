@@ -424,6 +424,17 @@ export async function deployWorkerSpec(
 		},
 		image: await imageSpec(ctx, plan.image),
 		network: config.docker.networkName,
+		placements: mounts.flatMap((m) =>
+			m.volumeDisk && m.volumeKind === "volume"
+				? [
+						{
+							disk: m.volumeDisk,
+							image: `${VOLUME_HELPER_IMAGE}:${VOLUME_HELPER_TAG}`,
+							source: m.volumeSource,
+						},
+					]
+				: [],
+		),
 		readiness: {
 			containerPort: svc.containerPort,
 			disabled: svc.healthcheckDisabled,

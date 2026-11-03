@@ -254,6 +254,7 @@ export const actions = {
 			const vol = await VolumeSettingsService.create(
 				{
 					description: formData.get("description") as string | null,
+					disk: formData.get("disk") as string | null,
 					kind: formData.get("kind") as string | null,
 					name: (formData.get("name") as string | null) ?? "",
 					source: (formData.get("source") as string | null) ?? "",
@@ -332,6 +333,7 @@ export const actions = {
 		}
 		try {
 			const copy = await VolumeSettingsService.duplicate({
+				disk: target.volumeDisk,
 				from: target.volumeSource,
 				name: copyName,
 				serviceSlug: svc.slug,

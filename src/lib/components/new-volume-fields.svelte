@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { Input } from "@orochibraru/ui/input";
+	import * as Select from "@orochibraru/ui/select";
 	import { Textarea } from "@orochibraru/ui/textarea";
 
+	import { formatBytes } from "#lib/formatting.js";
+	import { getHostDisks } from "#lib/remote/volumes.remote.js";
 	import { slugify } from "#lib/slug.js";
 
 	let {
@@ -16,14 +19,33 @@
 	let name = $state("");
 	let source = $state("");
 	let sourceEdited = $state(false);
+	let disk = $state("");
+
+	const DOCKER_DEFAULT = "docker";
+	const hostDisks = getHostDisks();
+	const disks = $derived(hostDisks.current ?? []);
+	const chosenDisk = $derived(disks.find((d) => d.mountPoint === disk));
+	const bindRoot = $derived(
+		chosenDisk && chosenDisk.mountPoint !== "/"
+			? chosenDisk.mountPoint
+			: "/mnt/data",
+	);
 
 	const suggested = $derived(
 		slugify(name)
 			? kind === "bind"
-				? `/mnt/data/${slugify(name)}`
+				? `${bindRoot}/${slugify(name)}`
 				: `homerun-${slugify(name)}`
 			: "",
 	);
+
+	function diskLabel(mountPoint: string): string {
+		const found = disks.find((d) => d.mountPoint === mountPoint);
+		if (!found) {
+			return "Docker's default location";
+		}
+		return `${found.mountPoint} · ${formatBytes(found.freeBytes)} free of ${formatBytes(found.totalBytes)}`;
+	}
 
 	$effect(() => {
 		if (!sourceEdited) {
@@ -94,6 +116,45 @@
 		</label>
 	</div>
 </div>
+
+{#if disks.length > 1}
+	<div>
+		<p class={label}>Disk</p>
+		<Select.Root
+			type="single"
+			bind:value={
+				() => disk || DOCKER_DEFAULT,
+				(value) => {
+					disk = value === DOCKER_DEFAULT ? "" : value;
+				}
+			}
+		>
+			<Select.Trigger class="w-full">{diskLabel(disk)}</Select.Trigger>
+			<Select.Content>
+				<Select.Item label="Docker's default location" value={DOCKER_DEFAULT} />
+				{#each disks as option (option.mountPoint)}
+					<Select.Item
+						label={diskLabel(option.mountPoint)}
+						value={option.mountPoint}
+					/>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+		{#if kind === "volume"}
+			<input name="disk" type="hidden" value={disk} />
+		{/if}
+		<p class="text-text-subtle mt-1 text-xs">
+			{#if kind === "bind"}
+				Where the suggested host path goes. A host path can sit on any disk.
+			{:else if disk}
+				Kept in {disk}/homerun-volumes/&lt;volume name&gt; on this host. The
+				disk can't be changed once the volume exists.
+			{:else}
+				Kept under Docker's data root, usually /var/lib/docker.
+			{/if}
+		</p>
+	</div>
+{/if}
 
 <div>
 	<label class={label} for="{idPrefix}source">

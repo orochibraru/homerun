@@ -44306,6 +44306,10 @@
 											"description": {
 												"type": ["string", "null"]
 											},
+											"disk": {
+												"description": "The host mount point a Docker volume is kept on, null for Docker's default location",
+												"type": ["string", "null"]
+											},
 											"id": {
 												"type": "string"
 											},
@@ -44342,6 +44346,7 @@
 											"backupStopServices",
 											"createdAt",
 											"description",
+											"disk",
 											"id",
 											"kind",
 											"name",
@@ -44438,6 +44443,10 @@
 									"description": {
 										"type": ["string", "null"]
 									},
+									"disk": {
+										"description": "For a Docker volume, the host mount point to keep it on (a disk), instead of Docker's default location.",
+										"type": ["string", "null"]
+									},
 									"kind": {
 										"enum": ["bind", "volume"],
 										"type": "string"
@@ -44519,6 +44528,10 @@
 										"description": {
 											"type": ["string", "null"]
 										},
+										"disk": {
+											"description": "The host mount point a Docker volume is kept on, null for Docker's default location",
+											"type": ["string", "null"]
+										},
 										"id": {
 											"type": "string"
 										},
@@ -44555,6 +44568,7 @@
 										"backupStopServices",
 										"createdAt",
 										"description",
+										"disk",
 										"id",
 										"kind",
 										"name",
@@ -44788,6 +44802,10 @@
 										"description": {
 											"type": ["string", "null"]
 										},
+										"disk": {
+											"description": "The host mount point a Docker volume is kept on, null for Docker's default location",
+											"type": ["string", "null"]
+										},
 										"id": {
 											"type": "string"
 										},
@@ -44824,6 +44842,7 @@
 										"backupStopServices",
 										"createdAt",
 										"description",
+										"disk",
 										"id",
 										"kind",
 										"name",
@@ -45018,6 +45037,10 @@
 										"description": {
 											"type": ["string", "null"]
 										},
+										"disk": {
+											"description": "The host mount point a Docker volume is kept on, null for Docker's default location",
+											"type": ["string", "null"]
+										},
 										"id": {
 											"type": "string"
 										},
@@ -45054,6 +45077,7 @@
 										"backupStopServices",
 										"createdAt",
 										"description",
+										"disk",
 										"id",
 										"kind",
 										"name",

@@ -1,0 +1,1 @@
+ALTER TABLE "storage_volume" ADD COLUMN "disk" text;

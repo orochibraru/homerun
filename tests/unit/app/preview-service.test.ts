@@ -578,6 +578,7 @@ describe("preview environment and volumes", () => {
 				mount: {
 					toJSON: () => ({ containerPath: "/data", readOnly: false }),
 				},
+				volumeDisk: null,
 				volumeKind: "volume",
 				volumeName: "App Data",
 				volumeSeedFrom: null,

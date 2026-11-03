@@ -7,6 +7,16 @@ When done delete the entry, no bloat.
 
 ## Small
 
+- [ ] Volume disks: the deploy wizard's Volumes step and template/compose
+      volumes can't pick a disk yet, and the REST API, MCP and CLI have no way
+      to list the host's disks; only Storage → New volume and the service and
+      cron job dialogs show the picker.
+
+- [ ] Volume disks: Docker Cleanup can prune an unmounted disk-placed volume
+      (its data stays on the disk); a deploy puts it back, a cron job run
+      doesn't and lets Docker create it under its data root. Place it before a
+      cron run too.
+
 - [ ] Duplicating a volume on a mount edit copies it during the next deploy,
       while the old container still runs: stop the service around the copy so a
       database's copy is consistent without the user stopping it by hand.

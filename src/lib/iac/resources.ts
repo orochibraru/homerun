@@ -309,6 +309,11 @@ export const IAC_RESOURCES: IacResource[] = [
 				description: "The host path, or the Docker volume's name.",
 			}),
 			attr("description", "string"),
+			attr("disk", "string", {
+				description:
+					"For a Docker volume, the host mount point it's kept on, instead of Docker's default location.",
+				forceNew: true,
+			}),
 			attr("backupEnabled", "bool", off),
 			attr("backupSchedule", "string"),
 			attr("backupPrefix", "string"),

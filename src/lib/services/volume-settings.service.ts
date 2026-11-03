@@ -6,6 +6,8 @@ import {
 } from "#lib/server/volume-backup-form.js";
 import { storageVolumeProblem } from "#lib/storage-volume-input.js";
 
+import { HostDiskService } from "./host-disk.service.ts";
+
 const logger = new Logger("Storage");
 
 /** A volume change refused for the caller's input; nothing was saved. */
@@ -30,13 +32,16 @@ export interface VolumeSettingsInput {
 class VolumeSettingsServiceClass {
 	/**
 	 * Registers a volume (a host path or a Docker volume) and applies any
-	 * backup settings given with it.
+	 * backup settings given with it. A Docker volume given a `disk` (a host
+	 * mount point) is created on that disk right away, so nothing mounting it
+	 * first can create it under Docker's own data root.
 	 *
 	 * @throws {VolumeSettingsError} When a field is invalid; nothing is
 	 *   created then.
 	 */
 	async create(
 		input: VolumeSettingsInput & {
+			disk?: string | null;
 			kind: string | null;
 			name: string;
 			source: string;
@@ -47,9 +52,11 @@ class VolumeSettingsServiceClass {
 		if (problem) {
 			throw new VolumeSettingsError(problem);
 		}
-		const { kind, name, source, description, ...settings } = input;
+		const { kind, name, source, description, disk, ...settings } = input;
+		const placedOn = kind === "volume" ? disk?.trim() || null : null;
 		const volume = await StorageVolumeDTO.create({
 			description: description?.trim() || null,
+			disk: placedOn,
 			kind: kind === "bind" ? "bind" : "volume",
 			name: name.trim(),
 			source: source.trim(),
@@ -57,12 +64,21 @@ class VolumeSettingsServiceClass {
 		});
 		try {
 			await this.apply(volume, settings);
+			if (placedOn) {
+				await HostDiskService.place(source.trim(), placedOn).catch(
+					(err: unknown) => {
+						throw new VolumeSettingsError(
+							`Couldn't create the volume on ${placedOn}: ${err instanceof Error ? err.message : String(err)}`,
+						);
+					},
+				);
+			}
 		} catch (err) {
 			await volume.delete();
 			throw err;
 		}
 		logger.info(
-			`Storage volume created: volume=${volume.id} kind=${kind} user=${userId}`,
+			`Storage volume created: volume=${volume.id} kind=${kind} disk=${placedOn ?? "default"} user=${userId}`,
 		);
 		return volume;
 	}
@@ -70,11 +86,13 @@ class VolumeSettingsServiceClass {
 	/**
 	 * Registers a new Docker volume that starts as a copy of `from` (a volume
 	 * name or host path). Only the row is written: the worker fills it from
-	 * `from` on the first deploy that mounts it, leaving `from` untouched.
+	 * `from` on the first deploy that mounts it, leaving `from` untouched. A
+	 * `disk` places the copy on that host disk, like the volume it copies.
 	 *
 	 * @throws {VolumeSettingsError} When the name is blank.
 	 */
 	async duplicate(input: {
+		disk?: string | null;
 		from: string;
 		name: string;
 		serviceSlug: string;
@@ -88,6 +106,7 @@ class VolumeSettingsServiceClass {
 		const suffix = crypto.randomUUID().slice(0, 8);
 		const volume = await StorageVolumeDTO.create({
 			description: `Copy of ${input.from}`,
+			disk: input.disk ?? null,
 			kind: "volume",
 			name,
 			seedFrom: input.from,

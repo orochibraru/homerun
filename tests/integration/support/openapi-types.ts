@@ -22839,6 +22839,8 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						/** @description The host mount point a Docker volume is kept on, null for Docker's default location */
+						disk: string | null;
 						id: string;
 						/** @enum {string} */
 						kind: "bind" | "volume";
@@ -22898,6 +22900,8 @@ export interface operations {
 					/** @description Stop the services using the volume during a backup. */
 					backupStopServices?: boolean;
 					description?: string | null;
+					/** @description For a Docker volume, the host mount point to keep it on (a disk), instead of Docker's default location. */
+					disk?: string | null;
 					/** @enum {string} */
 					kind: "bind" | "volume";
 					name: string;
@@ -22928,6 +22932,8 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						/** @description The host mount point a Docker volume is kept on, null for Docker's default location */
+						disk: string | null;
 						id: string;
 						/** @enum {string} */
 						kind: "bind" | "volume";
@@ -23011,6 +23017,8 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						/** @description The host mount point a Docker volume is kept on, null for Docker's default location */
+						disk: string | null;
 						id: string;
 						/** @enum {string} */
 						kind: "bind" | "volume";
@@ -23168,6 +23176,8 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						/** @description The host mount point a Docker volume is kept on, null for Docker's default location */
+						disk: string | null;
 						id: string;
 						/** @enum {string} */
 						kind: "bind" | "volume";
