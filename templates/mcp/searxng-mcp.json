@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "SearXNG MCP",
+	"description": "Web search through a SearXNG instance from an MCP client. Set SEARXNG_URL, and turn on SearXNG's JSON output format. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "icewreck/searxng-mcp-server",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:searxng",
+	"tags": ["mcp", "searxng", "search"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/icewreck/searxng-mcp-server",
+	"envVars": {
+		"SEARXNG_URL": "http://searxng:8080",
+		"MCP_PORT": "8080"
+	}
+}

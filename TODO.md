@@ -57,6 +57,15 @@ When done delete the entry, no bloat.
       threshold trips on `backup-queue.ts`, `domain-takeover.ts` and
       `service-settings.service.ts`; cover them or exclude them
 
+- [ ] MCP templates left out because they exit at boot when their app isn't
+      reachable, so a headless Templates E2E deploy can't pass: Navidrome
+      (Blakeem), AdGuard Home (Samik081), Miniflux (tssujt), Forgejo
+      (agentic-forges), Pocket ID (vplme) and Google's MCP Toolbox for
+      Databases. Portainer's official one pins a Portainer minor
+      (`portainer-mcp:2.45`) against a template on `latest`. Revisit if they
+      gain a lazy connect, or if the suite learns to deploy a template next to
+      its app.
+
 ## Medium
 
 - [ ] Service Logs tab: a log-volume strip over the lines (errors in red), like

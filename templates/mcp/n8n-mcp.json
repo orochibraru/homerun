@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "n8n-MCP",
+	"description": "Helps an assistant build n8n workflows: docs and schemas for every n8n node, plus creating and editing workflows once N8N_API_URL and N8N_API_KEY are set. n8n's own instance-level MCP server, under Settings, runs workflows rather than building them. MCP endpoint at /mcp; clients send the generated AUTH_TOKEN as a Bearer token.",
+	"image": "ghcr.io/czlonkowski/n8n-mcp",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:n8n",
+	"tags": ["mcp", "n8n", "workflows", "automation"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/czlonkowski/n8n-mcp",
+	"envVars": {
+		"MCP_MODE": "http",
+		"PORT": "3000",
+		"AUTH_TOKEN": "{{secret}}",
+		"N8N_API_URL": "http://n8n:5678",
+		"N8N_API_KEY": ""
+	}
+}

@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "PhotoPrism",
-	"description": "AI-powered photo management. Ships with an embedded SQLite database for small libraries.",
+	"description": "AI-powered photo management. Ships with an embedded SQLite database for small libraries. Has a built-in, read-only MCP server at /api/v1/mcp, reached with an access token that has the mcp scope.",
 	"image": "photoprism/photoprism",
 	"tag": "latest",
 	"containerPort": 2342,

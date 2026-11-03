@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "Umami MCP",
+	"description": "Read Umami websites, stats and page views from an MCP client. Set UMAMI_URL and a login. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/macawls/umami-mcp-server",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:umami",
+	"tags": ["mcp", "umami", "analytics"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/Macawls/umami-mcp-server",
+	"envVars": {
+		"PORT": "8080",
+		"UMAMI_URL": "http://umami:3000",
+		"UMAMI_USERNAME": "admin",
+		"UMAMI_PASSWORD": "change-me"
+	}
+}

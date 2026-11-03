@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Nextcloud MCP",
+	"description": "Notes, files, calendars, contacts, Deck and more on Nextcloud from an MCP client. Set NEXTCLOUD_HOST, a user and an app password. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/cbcoutinho/nextcloud-mcp-server",
+	"tag": "latest",
+	"containerPort": 8000,
+	"icon": "di:nextcloud",
+	"tags": ["mcp", "nextcloud", "files", "calendar"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/cbcoutinho/nextcloud-mcp-server",
+	"envVars": {
+		"NEXTCLOUD_HOST": "http://nextcloud",
+		"NEXTCLOUD_USERNAME": "admin",
+		"NEXTCLOUD_PASSWORD": "change-me"
+	}
+}

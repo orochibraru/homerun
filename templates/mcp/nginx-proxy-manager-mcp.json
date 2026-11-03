@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "Nginx Proxy Manager MCP",
+	"description": "Read proxy hosts, redirections and certificates on Nginx Proxy Manager from an MCP client. Writes stay off unless NPM_MCP_ENABLE_DESTRUCTIVE_TOOLS is true. Set NPM_API_URL and a login. MCP endpoint at /mcp; clients send the generated NPM_MCP_AUTH_TOKEN as a Bearer token.",
+	"image": "ghcr.io/b3nw/nginx-proxy-manager-mcp",
+	"tag": "latest",
+	"containerPort": 8000,
+	"icon": "di:nginx-proxy-manager",
+	"tags": ["mcp", "nginx", "proxy", "certificates"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/b3nw/nginx-proxy-manager-mcp",
+	"envVars": {
+		"NPM_MCP_TRANSPORT": "http",
+		"NPM_API_URL": "http://nginx-proxy-manager:81/api",
+		"NPM_IDENTITY": "admin@example.com",
+		"NPM_SECRET": "change-me",
+		"NPM_MCP_AUTH_TOKEN": "{{secret}}"
+	}
+}

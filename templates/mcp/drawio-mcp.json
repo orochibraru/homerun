@@ -1,0 +1,15 @@
+{
+	"$schema": "../schema.json",
+	"name": "draw.io MCP",
+	"description": "draw.io's official MCP server: an assistant draws diagrams and the client renders them inline. Standalone, it doesn't drive a draw.io instance. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "jgraph/drawio-mcp",
+	"tag": "latest",
+	"containerPort": 3001,
+	"icon": "di:draw-io",
+	"tags": ["mcp", "diagrams", "drawio"],
+	"websiteUrl": "https://www.drawio.com",
+	"sourceUrl": "https://github.com/jgraph/drawio-mcp",
+	"envVars": {
+		"PORT": "3001"
+	}
+}

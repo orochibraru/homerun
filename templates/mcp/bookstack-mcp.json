@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "BookStack MCP",
+	"description": "Search and read BookStack shelves, books and pages from an MCP client; writes need BOOKSTACK_ENABLE_WRITE set to true. Set BOOKSTACK_BASE_URL and an API token's id and secret. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/ttpears/bookstack-mcp",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:bookstack",
+	"tags": ["mcp", "bookstack", "wiki", "docs"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/ttpears/bookstack-mcp",
+	"envVars": {
+		"BOOKSTACK_BASE_URL": "http://bookstack",
+		"BOOKSTACK_TOKEN_ID": "change-me",
+		"BOOKSTACK_TOKEN_SECRET": "change-me"
+	}
+}

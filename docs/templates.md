@@ -6,18 +6,19 @@ command, labels, run-as user, env files, added capabilities, devices and
 privileged mode) you can deploy from repeatedly without re-entering everything.
 Two kinds:
 
-- **Built-in**, a catalog of ~110 common self-hosted apps, media (Immich,
+- **Built-in**, a catalog of ~150 common self-hosted apps, media (Immich,
   Jellyfin, Plex, Navidrome, the *arr stack, qBittorrent), databases and caches
   (PostgreSQL, MySQL, MongoDB, Redis), networking (Pi-hole, AdGuard Home, Nginx
   Proxy Manager), monitoring (Uptime Kuma, Grafana, Prometheus, Gatus,
   Healthchecks), dashboards (Homepage, Dashy, Homarr, Portainer), productivity
   (Vaultwarden, Trilium, Wiki.js, BookStack, Vikunja, NocoDB, Excalidraw,
   PrivateBin), tools (CyberChef, PairDrop, LibreSpeed, RSS-Bridge), identity
-  (Keycloak, Pocket ID), git forges (Gitea, Forgejo), and more. Seeded on every
-  boot (idempotent), immutable, available to every account. Each carries its
-  real app logo, most of them from [Dashboard Icons](#icons) and a few bundled
-  with Homerun; an app with no official logo falls back to a colored icon for
-  its category.
+  (Keycloak, Pocket ID), git forges (Gitea, Forgejo),
+  [MCP servers](#mcp-servers) for many of those, and more. Seeded on every boot
+  (idempotent), immutable, available to every account. Each carries its real app
+  logo, most of them from [Dashboard Icons](#icons) and a few bundled with
+  Homerun; an app with no official logo falls back to a colored icon for its
+  category.
 - **Custom**, save any service's current config as a template from its Settings
   tab, or build one from scratch under `Templates → New Template`, whose
   **Runtime** section takes the same fields as a service's **Container →
@@ -26,6 +27,35 @@ Two kinds:
   [Users and roles](users-and-roles.md).
 
 ![New Template, for building a custom template from scratch](images/templates-new.webp)
+
+## MCP servers
+
+The **MCP** category holds
+[Model Context Protocol](https://modelcontextprotocol.io) servers, which let an
+AI assistant (Claude, Open WebUI, an IDE agent) use an app through tools:
+Immich, Jellyfin, Plex, the \*arr stack, Gitea, GitHub, Grafana, Prometheus,
+Uptime Kuma, Pi-hole, Paperless-ngx, Nextcloud, MongoDB, Redis, Notion, Jira and
+Confluence, and more. Each one is a single container speaking Streamable HTTP (a
+few, legacy SSE), and its description gives the endpoint path, `/mcp` on most.
+Point it at the app with the URL and API key env vars the template lists; the
+defaults assume the app runs on the same network under its template's slug.
+
+Auth differs by server, and each description says which kind it has:
+
+- **A generated token.** The template fills an env var like `MCP_AUTH_TOKEN`
+  with [`{{secret}}`](#linked-containers), and clients send it as
+  `Authorization: Bearer <token>`.
+- **Passthrough.** Each client sends its own token for the app (GitHub, Gitea,
+  Semaphore, Keycloak) and the server holds no credential.
+- **None.** Anyone who reaches the URL gets the tools, with the API key the
+  server was given. Untick **DNS-resolvable** when deploying one of these, so
+  only containers on the same network (an Open WebUI, an agent) can reach it, or
+  put it behind a VPN.
+
+Some apps serve MCP themselves and need no extra container: Home Assistant, n8n,
+Metabase, Gladys Assistant, Homarr, Memos, NocoDB, Stirling-PDF, Trilium and
+PhotoPrism, plus WordPress, Mattermost and Nextcloud through their official
+plugins. Their templates' descriptions say where it lives.
 
 ## Keeping built-ins current
 

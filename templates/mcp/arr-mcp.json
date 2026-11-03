@@ -1,0 +1,21 @@
+{
+	"$schema": "../schema.json",
+	"name": "*arr MCP",
+	"description": "One MCP server for Sonarr, Radarr, Lidarr and Prowlarr: search, add and check queues. Fill in the URL and API key of each app you run, and drop the rest. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/aplaceforallmystuff/mcp-arr",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:sonarr",
+	"tags": ["mcp", "sonarr", "radarr", "lidarr", "prowlarr"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/aplaceforallmystuff/mcp-arr",
+	"envVars": {
+		"MCP_TRANSPORT": "http",
+		"HOST": "0.0.0.0",
+		"PORT": "3000",
+		"SONARR_URL": "http://sonarr:8989",
+		"SONARR_API_KEY": "change-me",
+		"RADARR_URL": "http://radarr:7878",
+		"RADARR_API_KEY": "change-me"
+	}
+}

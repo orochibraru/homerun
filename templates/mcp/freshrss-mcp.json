@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "FreshRSS MCP",
+	"description": "Read and manage FreshRSS feeds and articles from an MCP client, through FreshRSS's Google Reader API. Set FRESHRSS_URL, the user and its API password. MCP endpoint at /mcp; clients send the generated MCP_TOKEN as a Bearer token.",
+	"image": "ghcr.io/robertdwhite/freshrss-mcp",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:freshrss",
+	"tags": ["mcp", "freshrss", "rss", "feeds"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/RobertDWhite/freshrss-mcp",
+	"envVars": {
+		"FRESHRSS_URL": "http://freshrss",
+		"FRESHRSS_USER": "admin",
+		"FRESHRSS_API_PASSWORD": "change-me",
+		"MCP_TOKEN": "{{secret}}"
+	}
+}

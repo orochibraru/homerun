@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Redis MCP",
+	"description": "Redis's official MCP server, wrapped for Streamable HTTP: read and write keys, hashes, streams and search indexes. Works with Valkey, Dragonfly, KeyDB and Garnet too. Set REDIS_URL, with the password from the cache's REDIS_PASSWORD. MCP endpoint at /mcp; clients send the generated API_KEY as a Bearer token.",
+	"image": "mekayelanik/redis-mcp-server",
+	"tag": "latest",
+	"containerPort": 8030,
+	"icon": "di:redis",
+	"tags": ["mcp", "redis", "valkey", "cache"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/MekayelAnik/redis-mcp-server-docker",
+	"envVars": {
+		"PORT": "8030",
+		"REDIS_URL": "redis://:change-me@redis:6379/0",
+		"API_KEY": "{{secret}}"
+	}
+}

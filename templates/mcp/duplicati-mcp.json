@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "Duplicati MCP",
+	"description": "Check Duplicati backup jobs and their runs from an MCP client; read-only unless DUPLICATI_READONLY is false. Set DUPLICATI_URL and the UI password. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "kcofoni/duplicati-mcp",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:duplicati",
+	"tags": ["mcp", "duplicati", "backups"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/kcofoni/duplicati-mcp",
+	"envVars": {
+		"MCP_TRANSPORT": "streamable-http",
+		"MCP_PORT": "3000",
+		"DUPLICATI_URL": "http://duplicati:8200",
+		"DUPLICATI_PASSWORD": "change-me",
+		"DUPLICATI_READONLY": "true"
+	}
+}

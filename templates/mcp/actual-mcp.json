@@ -1,0 +1,21 @@
+{
+	"$schema": "../schema.json",
+	"name": "Actual MCP",
+	"description": "Read accounts, transactions, budgets and spending in Actual Budget from an MCP client; add --enable-write to the command for edits. Set ACTUAL_SERVER_URL, the server password and the budget's sync id. MCP endpoint at /mcp; clients send the generated BEARER_TOKEN as a Bearer token.",
+	"image": "sstefanov/actual-mcp",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:actual-budget",
+	"tags": ["mcp", "actual", "budget", "finance"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/s-stefanov/actual-mcp",
+	"envVars": {
+		"ACTUAL_SERVER_URL": "http://actual-budget:5006",
+		"ACTUAL_PASSWORD": "change-me",
+		"ACTUAL_BUDGET_SYNC_ID": "change-me",
+		"ACTUAL_DATA_DIR": "/data",
+		"BEARER_TOKEN": "{{secret}}"
+	},
+	"command": ["--sse", "--port", "3000", "--enable-bearer"],
+	"volumes": ["/data"]
+}

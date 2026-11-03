@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Immich MCP",
+	"description": "Search, browse and organise an Immich library from an MCP client. Set IMMICH_BASE_URL and an Immich API key. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/barryw/immichmcp",
+	"tag": "latest",
+	"containerPort": 5000,
+	"icon": "di:immich",
+	"tags": ["mcp", "immich", "photos"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/barryw/ImmichMCP",
+	"envVars": {
+		"IMMICH_BASE_URL": "http://immich:2283",
+		"IMMICH_API_KEY": "change-me",
+		"IMMICH_TOOL_MODE": "gateway"
+	}
+}

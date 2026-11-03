@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Notion MCP",
+	"description": "Notion's official MCP server: search, read and edit pages and databases. Set NOTION_TOKEN to an internal integration token, and share pages with that integration. MCP endpoint at /mcp; clients send the generated AUTH_TOKEN as a Bearer token.",
+	"image": "mcp/notion",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:notion",
+	"tags": ["mcp", "notion", "notes", "docs"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/makenotion/notion-mcp-server",
+	"envVars": {
+		"NOTION_TOKEN": "change-me",
+		"AUTH_TOKEN": "{{secret}}"
+	},
+	"command": ["--transport", "http", "--port", "3000", "--host", "0.0.0.0"]
+}

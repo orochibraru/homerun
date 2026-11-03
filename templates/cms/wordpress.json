@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "WordPress",
-	"description": "World's most-used blogging and CMS engine. Needs a linked MySQL database.",
+	"description": "World's most-used blogging and CMS engine. Needs a linked MySQL database. Gets an MCP server from the official MCP Adapter plugin.",
 	"image": "wordpress",
 	"tag": "latest",
 	"containerPort": 80,

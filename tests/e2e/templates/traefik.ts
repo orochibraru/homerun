@@ -1,6 +1,7 @@
 import {
 	docker,
 	dockerQuiet,
+	TRAEFIK_API_PORT,
 	TRAEFIK_CONTAINER,
 	TRAEFIK_PORT,
 } from "./support";
@@ -27,6 +28,8 @@ export async function startTraefikWith(
 			"homerun",
 			"-p",
 			`${TRAEFIK_PORT}:443`,
+			"-p",
+			`127.0.0.1:${TRAEFIK_API_PORT}:8080`,
 			"-v",
 			"/var/run/docker.sock:/var/run/docker.sock:ro",
 			"traefik:v3",
@@ -35,6 +38,7 @@ export async function startTraefikWith(
 			"--providers.docker.network=homerun",
 			"--entrypoints.web.address=:80",
 			"--entrypoints.websecure.address=:443",
+			"--api.insecure=true",
 			...extraFlags,
 		],
 		300_000,

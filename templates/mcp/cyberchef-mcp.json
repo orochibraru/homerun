@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "CyberChef MCP",
+	"description": "CyberChef's operations as MCP tools: encode, decode, hash, decrypt and analyse, with no CyberChef instance needed. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/doublegate/cyberchef-mcp_v4",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:cyberchef",
+	"tags": ["mcp", "cyberchef", "encoding", "crypto"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/doublegate/CyberChef-MCP",
+	"envVars": {
+		"CYBERCHEF_TRANSPORT": "http",
+		"CYBERCHEF_HTTP_HOST": "0.0.0.0",
+		"CYBERCHEF_HTTP_PORT": "3000",
+		"CYBERCHEF_ALLOWED_HOSTS": "*"
+	}
+}
