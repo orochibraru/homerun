@@ -9,7 +9,7 @@
 	export interface NavTab {
 		/** Rendered as a real link when set (route tabs); otherwise a button firing onSelect (in-page section tabs). */
 		href?: string;
-		icon?: Component;
+		icon: Component;
 		id: string;
 		label: string;
 		/** Small amber dot next to the label : a field on this tab needs attention (e.g. Settings' setup-issue highlight) even while it's not the active tab. */
@@ -100,13 +100,11 @@
 
 {#snippet content(tab: NavTab, isActive: boolean)}
 	{@const TabIcon = tab.icon}
-	{#if TabIcon}
-		<TabIcon
-			class="size-3.5 shrink-0 transition-colors {isActive
-				? 'text-accent'
-				: 'text-text-subtle group-hover:text-accent'}"
-		/>
-	{/if}
+	<TabIcon
+		class="size-3.5 shrink-0 transition-colors {isActive
+			? 'text-accent'
+			: 'text-text-subtle group-hover:text-accent'}"
+	/>
 	{tab.label}
 	{#if tab.hasWarning}
 		<span
@@ -164,9 +162,7 @@
 				<span
 					class="bg-accent-light text-accent flex size-10 shrink-0 items-center justify-center self-start rounded-xl"
 				>
-					{#if TabIcon}<TabIcon class="size-4.5" />{:else}<ChevronRight
-							class="size-4.5"
-						/>{/if}
+					<TabIcon class="size-4.5" />
 				</span>
 				<span class="flex min-w-0 flex-1 flex-col gap-0.5">
 					<span

@@ -81,11 +81,11 @@
 			Deploys skip the scan. Turn it back on in the
 			<a
 				class="text-accent underline"
-				href={resolve("/(protected)/services/[serviceId]/settings", {
+				href={resolve("/(protected)/services/[serviceId]/settings/automation", {
 					serviceId: svc.id,
-				})}>Settings</a
+				})}>Settings → Automation</a
 			>
-			tab.
+			section.
 		</Alert>
 	{/if}
 

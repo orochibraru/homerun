@@ -91,10 +91,14 @@ async function seedDatabase(page: Page, seeded: Seeded): Promise<void> {
 	});
 	expect(res.ok(), `creating acme-db: ${await res.text()}`).toBeTruthy();
 	ids.database = (await res.json()).id;
-	await postAction(page, `/services/${ids.database}/settings?/updateCron`, {
-		cronEnabled: "on",
-		cronSchedule: "0 4 1 * *",
-	});
+	await postAction(
+		page,
+		`/services/${ids.database}/settings/automation?/updateCron`,
+		{
+			cronEnabled: "on",
+			cronSchedule: "0 4 1 * *",
+		},
+	);
 }
 
 /** An S3 destination, a bind-mounted volume of config files, and monthly backups of the database's volume. */
@@ -448,10 +452,10 @@ export const shots: ShotModule = {
 			prepare: (page) => scrollToTop(heading(page, "Restore")),
 		},
 		{
-			doc: "/services/:id/settings (Auto-redeploy schedule)",
+			doc: "/services/:id/settings/automation (Auto-redeploy schedule)",
 			expect: /Auto-redeploy schedule/,
 			name: "scheduling-cron-redeploy",
-			path: () => `/services/${ids.database}/settings`,
+			path: () => `/services/${ids.database}/settings/automation`,
 			prepare: (page) => scrollToTop(heading(page, "Auto-redeploy schedule")),
 		},
 		{

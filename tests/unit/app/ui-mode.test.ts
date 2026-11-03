@@ -77,6 +77,8 @@ describe("visibleIn", () => {
 			"service/environments/channels",
 			"service/observability/traces",
 			"service/container/runtime",
+			"service/networking/ports",
+			"service/networking/cache",
 			"service/networking#published-ports",
 			"service/networking#exposed-ports",
 			"service/security#blocked-paths",

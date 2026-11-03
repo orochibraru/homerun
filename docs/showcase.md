@@ -72,9 +72,10 @@ overview page.
 
 ## Networking
 
-The public hostname, extra domains, the container port and protocol, bridge or
-host networking. Most of these are Traefik labels, so the tab tells you plainly
-that changing them needs a redeploy.
+Split into Domains (the public hostname, extra domains, SSL), Network (the
+container port and protocol, bridge or host networking), Ports and Cache. Most
+of these are Traefik labels, so each save tells you plainly that it needs a
+redeploy.
 
 ![The networking tab](images/networking.webp)
 ![The networking tab, dark](images/networking-dark.webp)

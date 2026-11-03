@@ -16,6 +16,7 @@ import {
 
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
+import { ServiceEventDTO } from "./service-event-dto";
 
 export interface DependencyRef {
 	id: string;
@@ -113,7 +114,34 @@ export class ServiceDependencyDTO extends BaseDTO<ServiceDependency> {
 			serviceId,
 		};
 		await db.insert(serviceDependency).values(row).onConflictDoNothing();
+		await ServiceDependencyDTO.#record(serviceId, [dependsOnId], []);
 		return new ServiceDependencyDTO(row);
+	}
+
+	/** Puts dependencies added and dropped on the service's Config activity lane, by the other services' names. */
+	static async #record(
+		serviceId: string,
+		added: string[],
+		removed: string[],
+	): Promise<void> {
+		if (added.length + removed.length === 0) {
+			return;
+		}
+		const names = new Map(
+			(await ServiceDTO.list()).map((svc) => [svc.id, svc.name]),
+		);
+		const detail = [
+			...added.map((id) => `Depends on ${names.get(id) ?? id}`),
+			...removed.map((id) => `No longer depends on ${names.get(id) ?? id}`),
+		];
+		await ServiceEventDTO.record(serviceId, [
+			{
+				detail,
+				kind: "dependencies",
+				lane: "config",
+				summary: detail.length === 1 ? detail[0] : "Changed dependencies",
+			},
+		]);
 	}
 
 	/** Deletes the dependency of `serviceId` on `dependsOnId`, returning whether there was one. */
@@ -130,6 +158,9 @@ export class ServiceDependencyDTO extends BaseDTO<ServiceDependency> {
 				),
 			)
 			.returning({ id: serviceDependency.id });
+		if (deleted.length > 0) {
+			await ServiceDependencyDTO.#record(serviceId, [], [dependsOnId]);
+		}
 		return deleted.length > 0;
 	}
 
@@ -178,11 +209,8 @@ export class ServiceDependencyDTO extends BaseDTO<ServiceDependency> {
 				`No service with id ${unknown.join(", ")}.`,
 			);
 		}
-		const loop = replacementCycle(
-			serviceId,
-			wanted,
-			await ServiceDependencyDTO.map(),
-		);
+		const deps = await ServiceDependencyDTO.map();
+		const loop = replacementCycle(serviceId, wanted, deps);
 		if (loop) {
 			throw new ServiceDependencyError(
 				loop === serviceId
@@ -190,6 +218,7 @@ export class ServiceDependencyDTO extends BaseDTO<ServiceDependency> {
 					: `${loop} already depends on this service, so depending on it would make a loop.`,
 			);
 		}
+		const current = deps.get(serviceId) ?? [];
 		await db.transaction(async (tx) => {
 			await tx
 				.delete(serviceDependency)
@@ -205,13 +234,23 @@ export class ServiceDependencyDTO extends BaseDTO<ServiceDependency> {
 				);
 			}
 		});
+		await ServiceDependencyDTO.#record(
+			serviceId,
+			wanted.filter((id) => !current.includes(id)),
+			current.filter((id) => !wanted.includes(id)),
+		);
 	}
 
-	/** Deletes this dependency. */
+	/** Deletes this dependency, recorded on the service's activity. */
 	async delete(): Promise<void> {
 		await db
 			.delete(serviceDependency)
 			.where(eq(serviceDependency.id, this.row.id));
+		await ServiceDependencyDTO.#record(
+			this.row.serviceId,
+			[],
+			[this.row.dependsOnId],
+		);
 	}
 
 	/**

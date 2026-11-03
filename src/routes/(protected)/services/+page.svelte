@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import { FileUp, Plus } from "@lucide/svelte";
+	import { Plus, Upload } from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
 	import { onMount } from "svelte";
 
@@ -26,24 +26,30 @@
 </script>
 
 <div class="p-5 md:p-6">
-	<div
-		class="border-border mb-5 flex flex-wrap items-end justify-between gap-3 border-b pb-4"
-	>
-		<div>
+	<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+		<div class="flex min-w-0 items-baseline gap-2.5">
 			<h1 class="text-text text-lg font-semibold tracking-tight max-md:hidden">
 				Services
 			</h1>
-			<p class="text-text-muted mt-0.5 text-xs">
-				Containers deployed to this server.
-			</p>
+			{#if facets.current}
+				<p class="text-text-subtle text-sm">
+					{[
+						`${facets.current.total} ${facets.current.total === 1 ? "service" : "services"}`,
+						facets.current.stackCount > 0 &&
+							`in ${facets.current.stackCount} ${facets.current.stackCount === 1 ? "stack" : "stacks"}`,
+					]
+						.filter(Boolean)
+						.join(" ")}
+				</p>
+			{/if}
 		</div>
 		<div class="flex items-center gap-2">
-			<Button href={resolve("services/import")} size="sm" variant="outline"
-				><FileUp class="size-4" />Import compose</Button
+			<Button href={resolve("services/import")} variant="outline"
+				><Upload class="size-4" />Import compose</Button
 			>
 
-			<Button href={resolve("services/new")} size="sm"
-				><Plus class="size-4" />Deploy a Service</Button
+			<Button href={resolve("services/new")}
+				><Plus class="size-4" />Deploy</Button
 			>
 		</div>
 	</div>

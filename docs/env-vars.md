@@ -56,7 +56,8 @@ whatever your app expects before adding it. The host in every generated value is
 the linked service's slug, which is how services already reach each other on the
 shared network, so this works across stacks and needs no extra networking. The
 same full URL, password included, is what a service's header and its Networking
-tab show as its internal address (masked on screen, copied in full).
+→ Network section show as its internal address (masked on screen, copied in
+full).
 
 ## Unlinking
 

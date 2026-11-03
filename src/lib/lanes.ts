@@ -6,12 +6,13 @@ export const LANE_BUCKETS = 48;
 /** How far back a lane reaches. */
 export const LANE_SPAN_MS = 24 * 3_600_000;
 
-/** One service's last 24 hours: requests and errors per bucket, its average response time, and where it was deployed. */
+/** One service's last 24 hours: requests and errors per bucket, its average response time, where it was deployed (`at` in epoch ms) and when its first bucket starts (`start`, epoch ms). */
 export interface Lane {
 	avgResponseMs: number | null;
-	deploys: { failed: boolean; index: number }[];
+	deploys: { at: number; failed: boolean; index: number }[];
 	errors: number[];
 	requests: number[];
+	start: number;
 }
 
 /** The bucket width, in seconds, a lane's buckets are counted in. */
@@ -39,9 +40,8 @@ export function buildLane(
 	deploys: { createdAt: Date; status: ContainerStatus }[],
 	now: Date,
 ): Lane {
-	const first = Math.floor(
-		laneStart(now).getTime() / 1000 / LANE_BUCKET_SECONDS,
-	);
+	const start = laneStart(now).getTime();
+	const first = Math.floor(start / 1000 / LANE_BUCKET_SECONDS);
 	const requests = Array.from({ length: LANE_BUCKETS }, () => 0);
 	const errors = Array.from({ length: LANE_BUCKETS }, () => 0);
 	let durationMs = 0;
@@ -62,11 +62,30 @@ export function buildLane(
 				Math.floor(dep.createdAt.getTime() / 1000 / LANE_BUCKET_SECONDS) -
 				first;
 			return index >= 0 && index < LANE_BUCKETS
-				? [{ failed: dep.status === "failed", index }]
+				? [
+						{
+							at: dep.createdAt.getTime(),
+							failed: dep.status === "failed",
+							index,
+						},
+					]
 				: [];
 		}),
 		errors,
 		requests,
+		start,
+	};
+}
+
+/** When bucket `index` of a lane starting at `start` (epoch ms) begins and ends. */
+export function laneBucketRange(
+	start: number,
+	index: number,
+): { from: Date; to: Date } {
+	const width = LANE_BUCKET_SECONDS * 1000;
+	return {
+		from: new Date(start + index * width),
+		to: new Date(start + (index + 1) * width),
 	};
 }
 

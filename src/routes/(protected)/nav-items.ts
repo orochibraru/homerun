@@ -56,7 +56,7 @@ export const NAV_PARENT_ICONS: Record<string, Component> = {
 	"Backup & Restore": ArchiveRestore,
 	Builds: Hammer,
 	Developer: FileCode2,
-	Identity: Fingerprint,
+	IAM: Fingerprint,
 	Observability: Activity,
 	Registries: Warehouse,
 	Scheduling: CalendarClock,
@@ -67,7 +67,7 @@ export const NAV_PARENT_DESCRIPTIONS: Record<string, string> = {
 	"Backup & Restore": "Backups and where they go",
 	Builds: "Git, build cache and build machines",
 	Developer: "API docs and infrastructure as code",
-	Identity: "Sign-in providers and OIDC apps",
+	IAM: "Users, service accounts, sign-in and OIDC apps",
 	Observability: "Monitoring, pipelines and status pages",
 	Registries: "Container image registries",
 	Scheduling: "Cron jobs and timed work",
@@ -288,6 +288,7 @@ export const allNavItems: NavItem[] = [
 		href: resolve("users"),
 		icon: Users,
 		label: "Users",
+		parent: "IAM",
 	},
 	{
 		category: "Administration",
@@ -296,6 +297,7 @@ export const allNavItems: NavItem[] = [
 		href: resolve("service-accounts"),
 		icon: Bot,
 		label: "Service accounts",
+		parent: "IAM",
 	},
 	{
 		category: "Administration",
@@ -304,7 +306,7 @@ export const allNavItems: NavItem[] = [
 		href: resolve("authentication"),
 		icon: KeyRound,
 		label: "Authentication",
-		parent: "Identity",
+		parent: "IAM",
 	},
 	{
 		category: "Administration",
@@ -313,7 +315,7 @@ export const allNavItems: NavItem[] = [
 		href: resolve("idp"),
 		icon: Fingerprint,
 		label: "IDP",
-		parent: "Identity",
+		parent: "IAM",
 	},
 	{
 		category: "Administration",

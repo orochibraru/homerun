@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { clampX, entryX } from "#lib/chart-hover.js";
+	import { ChartHover } from "#lib/chart-hover.svelte.js";
+	import ChartTooltip from "#lib/components/chart-tooltip.svelte";
+
 	interface Point {
 		at: Date;
 		value: number | null;
@@ -25,7 +29,8 @@
 		plain = false,
 	}: Props = $props();
 
-	let hovered = $state<number | null>(null);
+	const hover = new ChartHover(() => points.length);
+	const hovered = $derived(hover.index);
 
 	const values = $derived(points.map((point) => point.value ?? 0));
 	const peak = $derived(Math.max(...values, 0) || 1);
@@ -86,63 +91,94 @@
 			{empty}
 		</p>
 	{:else}
-		<svg
-			aria-label={title}
-			class="text-accent h-28 w-full overflow-visible"
-			onmouseleave={() => (hovered = null)}
-			preserveAspectRatio="none"
-			role="img"
-			viewBox="0 0 100 40"
+		<div
+			class="relative rounded-md outline-none focus-visible:ring-2 focus-visible:ring-(--ring)"
+			aria-label="{title}: use the arrow keys to read each point"
+			aria-valuemax={points.length - 1}
+			aria-valuemin={0}
+			aria-valuenow={hovered ?? points.length - 1}
+			aria-valuetext={shown
+				? `${when(shown.at)}: ${shown.value === null ? "no data" : format(shown.value)}`
+				: undefined}
+			onblur={hover.clear}
+			onkeydown={hover.key}
+			onpointerdown={hover.track}
+			onpointerleave={hover.leave}
+			onpointermove={hover.track}
+			role="slider"
+			tabindex="0"
+			bind:clientWidth={hover.width}
 		>
-			{#if kind === "bar"}
-				{#each points as point, index (point.at)}
-					{@const width = Math.max(100 / points.length - 0.6, 0.4)}
-					<rect
-						class="transition-opacity"
-						fill="currentColor"
-						height={40 - y(point.value ?? 0)}
-						onmouseenter={() => (hovered = index)}
-						opacity={hovered === null || hovered === index ? 0.85 : 0.35}
-						role="presentation"
-						rx="0.4"
-						{width}
-						x={(index / points.length) * 100 + 0.3}
-						y={y(point.value ?? 0)}
-					/>
-				{/each}
-			{:else}
-				<polyline
-					fill="none"
-					points={line}
-					stroke="currentColor"
-					stroke-linejoin="round"
-					stroke-width="1.5"
-					vector-effect="non-scaling-stroke"
-				/>
-				{#each points as point, index (point.at)}
-					<rect
-						fill="transparent"
-						height="40"
-						onmouseenter={() => (hovered = index)}
-						role="presentation"
-						width={100 / points.length}
-						x={(index / points.length) * 100}
-						y="0"
-					/>
-				{/each}
-				{#if shown && shown.value !== null && hovered !== null}
-					<line
+			<svg
+				class="text-accent h-28 w-full overflow-visible"
+				aria-hidden="true"
+				preserveAspectRatio="none"
+				viewBox="0 0 100 40"
+			>
+				{#if kind === "bar"}
+					{#each points as point, index (point.at)}
+						{@const width = Math.max(100 / points.length - 0.6, 0.4)}
+						<rect
+							class="transition-opacity"
+							fill="currentColor"
+							height={40 - y(point.value ?? 0)}
+							opacity={hovered === null || hovered === index ? 0.85 : 0.35}
+							rx="0.4"
+							{width}
+							x={(index / points.length) * 100 + 0.3}
+							y={y(point.value ?? 0)}
+						/>
+					{/each}
+				{:else}
+					<polyline
+						fill="none"
+						points={line}
 						stroke="currentColor"
-						stroke-opacity="0.3"
+						stroke-linejoin="round"
+						stroke-width="1.5"
 						vector-effect="non-scaling-stroke"
-						x1={x(hovered)}
-						x2={x(hovered)}
-						y1="0"
-						y2="40"
 					/>
+					{#if shown && shown.value !== null && hovered !== null}
+						<line
+							stroke="currentColor"
+							stroke-opacity="0.3"
+							vector-effect="non-scaling-stroke"
+							x1={x(hovered)}
+							x2={x(hovered)}
+							y1="0"
+							y2="40"
+						/>
+					{/if}
 				{/if}
+			</svg>
+			{#if shown && hovered !== null}
+				{#if kind === "line" && shown.value !== null}
+					<span
+						class="bg-surface pointer-events-none absolute -mt-1 -ml-1 size-2 rounded-full shadow-[0_0_0_2px_currentColor] text-accent"
+						style="left: {x(hovered)}%; top: {(y(shown.value) / 40) * 100}%"
+					></span>
+				{/if}
+				<ChartTooltip
+					x={clampX(
+						entryX(hovered, points.length, hover.width, kind === "line"),
+						hover.width,
+					)}
+					y={0}
+				>
+					<p class="opacity-75">{when(shown.at)}</p>
+					<p>
+						<b class="text-sm font-bold"
+							>{shown.value === null ? "No data" : format(shown.value)}</b
+						>
+					</p>
+					{#if shown.value !== null}
+						<p class="opacity-75">
+							{Math.round((shown.value / peak) * 100)}% of the peak
+						</p>
+					{/if}
+				</ChartTooltip>
 			{/if}
-		</svg>
+		</div>
 		<div class="text-text-subtle mt-1 flex justify-between text-[0.6875rem]">
 			<span>{when(points[0]?.at ?? new Date())}</span>
 			<span>{when(points.at(-1)?.at ?? new Date())}</span>

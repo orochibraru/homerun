@@ -132,11 +132,11 @@
 			router to gate. Turn on DNS resolvability on the
 			<a
 				class="text-accent underline"
-				href={resolve("/(protected)/services/[serviceId]/networking", {
+				href={resolve("/(protected)/services/[serviceId]/networking/network", {
 					serviceId: svc.id,
-				})}>Networking</a
+				})}>Networking → Network</a
 			>
-			tab first.
+			first.
 		</p>
 	{:else if embedded}
 		<div class="space-y-4 p-5">

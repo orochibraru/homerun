@@ -1,43 +1,39 @@
 # The dashboard
 
-![The Overview page: today's numbers, what needs you, today's traffic and the host, the busiest services with their last 24 hours, and today's timeline](images/hero.webp)
+![The Overview page: today's numbers, today's traffic, what needs you, the latest deployments and the host](images/hero.webp)
 
 `/` (Overview) is the landing page after sign-in, kept short on purpose:
 
-- **Today's numbers** under the greeting: how many services are running out of
-  how many, and today's requests, average response time and error rate, each
-  with how it moved against yesterday.
-- **Needs you**, only when something does: a red banner when the server is past
-  a hard resource limit, a card per failing uptime probe, and the services with
-  an [update](deploy-source-and-builds.md#version-pinning-and-update-checks)
-  waiting, with how its trial run went. The setup-issues banner (see below) sits
-  right above it.
+- **Today's numbers** under the greeting, as four tiles: how many services are
+  running out of how many, and today's requests, average response time and error
+  rate, each with how it moved against yesterday.
+- **Traffic**, today's requests in two-hour bars, the busiest one highlighted
+  with a dashed line at its height. **Today** opens
+  [Monitoring](observability.md#stacks-and-the-whole-instance).
+- **Needs you**, everything waiting on you, the first four shown (**See all**
+  for the rest): [setup issues](#setup-diagnostics) (Traefik's configuration
+  re-applied in one click when that's the fix), the server past a hard resource
+  limit, failed update trials (retry in one click), services whose uptime probe
+  fails, the unresolved [error issues](error-tracking.md) and error-level log
+  lines of the last 24 hours, and the services with an
+  [update](deploy-source-and-builds.md#version-pinning-and-update-checks)
+  waiting (applied in one click). It updates live, and says so when nothing
+  needs you.
+- **Deployments**, the in-flight and latest deploys, pushed from the server as
+  they move: the service, what it shipped (commit or image tag), when it
+  started, how long it took and its status. Needs read access to Services.
+- **Host**, live CPU, memory, disk and (with an NVIDIA card and `nvidia-smi`)
+  GPU for the machine Homerun runs on, refreshed every five seconds.
 - **Deploy an app**, in [simple mode](ui-modes.md) only: popular templates with
   a **Quick Deploy** button each.
-- **Activity**, four live lanes pushed from the server as things move (no
-  reload, a green **live** dot while the stream is up): **Deploying now**, each
-  in-flight deploy with its step, last progress line and a running clock;
-  **Alerts**, the unresolved [error issues](error-tracking.md) and error-level
-  log lines of any service from the last 24 hours, each linking to the issue;
-  **Jobs**, the queued and running background work (backups, scans, cleanups,
-  cron runs) with a link to the queue; and **Recently deployed**, the last eight
-  finished deploys with how they were started, how long they took and whether
-  they failed. Needs read access to Services.
-- **Traffic today**, the instance's requests as a chart, and **Host**, live CPU,
-  memory, disk and (with an NVIDIA card and `nvidia-smi`) GPU for the machine
-  Homerun runs on, refreshed every five seconds.
-- **Busiest today**, the eight services that served the most requests, each with
-  its **lane**: the last 24 hours in half-hour blocks, darker the busier, red
-  where a quarter or more of the requests failed, and a diamond for each
-  deployment (filled for the latest, red for a failed one). **All services**
-  opens the list.
-- **Today**, a timeline of the latest deployments and warn/error-level log
-  lines, newest first, each linking to its service (or to System Logs). An admin
-  sees the instance's errors, a developer only the ones that mention one of
-  their services. **Clear errors** empties it.
 
 Their history, over a day to all time, is on
 [Monitoring](observability.md#stacks-and-the-whole-instance).
+
+Every chart reads out what's under the pointer: a bar's time range, requests and
+error share, a line's value at that moment with its unit, a ring's or meter's
+used and total, an uptime beat's time, state and latency. Tap a chart on a
+phone, or focus it and use the arrow keys, for the same reading.
 
 - **Resource limits**: each of CPU, memory, disk and GPU has a soft and a hard
   threshold (Settings → General → Resource limits, 85% and 95% by default),
@@ -92,9 +88,9 @@ not stuck on a helper container (see
 and SMTP fully configured if you turned it on. The worker and Docker checks are
 reported separately on purpose: a worker that's down and a worker that's up but
 can't reach Docker are different problems with different fixes. Any that aren't
-OK show up as a banner at the top of the dashboard.
+OK show up under **Needs you** on the dashboard.
 
-The banner links straight into `/settings`, on whichever tab the offending field
+Each one links straight into `/settings`, on whichever tab the offending field
 lives, and rings the relevant fields so you can see what it's complaining about
 rather than hunting for it. Two checks have nothing to deep-link to: the auth
 secret is env-only (`AUTH_SECRET`, change it and restart), and the Traefik
@@ -104,5 +100,5 @@ file, an admin gets a **Re-apply** button that puts them back (Traefik restarts,
 so routes drop for a few seconds). Homerun also re-applies them on its own every
 time its worker starts.
 
-There's no separate `/setup` page, the banner plus `/settings` is the whole
+There's no separate `/setup` page, **Needs you** plus `/settings` is the whole
 flow.

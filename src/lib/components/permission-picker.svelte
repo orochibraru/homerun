@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { Ban, Eye, PencilLine } from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
+	import type { Component } from "svelte";
 
 	import {
 		allPermissions,
@@ -25,10 +27,14 @@
 		value = $bindable(),
 	}: Props = $props();
 
-	const LEVELS: { label: string; level: PermissionLevel | "none" }[] = [
-		{ label: "None", level: "none" },
-		{ label: "Read", level: "read" },
-		{ label: "Write", level: "write" },
+	const LEVELS: {
+		icon: Component;
+		label: string;
+		level: PermissionLevel | "none";
+	}[] = [
+		{ icon: Ban, label: "None", level: "none" },
+		{ icon: Eye, label: "Read", level: "read" },
+		{ icon: PencilLine, label: "Write", level: "write" },
 	];
 
 	const areas = $derived(
@@ -125,6 +131,7 @@
 									? "secondary"
 									: "default"}
 						>
+							<option.icon class="size-3.5 shrink-0" />
 							{option.label}
 						</Button>
 					{/each}

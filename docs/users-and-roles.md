@@ -147,11 +147,11 @@ refused with a `403` until the ban is lifted or its expiry passes.
 ## Service accounts
 
 A **service account** is a non-human account for CI and scripts, managed under
-Administration → **Service accounts** (needs the Users & authentication area),
-not on `/users`, which doesn't list them. It has no sign-in method at all, so it
-can't open a dashboard session; its API keys, minted on its own page and shown
-once, are its only credential. It holds no permissions by default: its keys then
-only get through the login walls that list it (see
+Administration → IAM → **Service accounts** (needs the Users & authentication
+area), not on `/users`, which doesn't list them. It has no sign-in method at
+all, so it can't open a dashboard session; its API keys, minted on its own page
+and shown once, are its only credential. It holds no permissions by default: its
+keys then only get through the login walls that list it (see
 [Letting CI through](login-wall.md)). Pick permission areas on its Settings tab
 to let it call the REST API too, never more than you hold yourself. Disabling it
 refuses its keys without deleting it, deleting it revokes them and hands

@@ -19,10 +19,15 @@ const TABS = [
 	"/observability/health",
 	"/volumes",
 	"/networking",
+	"/networking/network",
+	"/networking/ports",
+	"/networking/cache",
 	"/container",
 	"/security",
 	"/terminal",
 	"/settings",
+	"/settings/automation",
+	"/settings/danger",
 ];
 
 async function signIn(page: Page) {

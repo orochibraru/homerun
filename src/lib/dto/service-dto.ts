@@ -29,12 +29,14 @@ import {
 	searchCondition,
 	sortOrder,
 } from "#lib/server/list-query.js";
+import { serviceChanges } from "#lib/service-events.js";
 import { isDatabaseImage } from "#lib/service-link.js";
 import { runtimeOptionsFrom } from "#lib/service-runtime.js";
 import type { ContainerStatus, PullPolicy } from "#lib/types.js";
 
 import { BaseDTO } from "./base-dto";
 import { RemoteHostDTO } from "./remote-host-dto";
+import { ServiceEventDTO } from "./service-event-dto";
 import type { NewServiceInput, ServiceUpdateInput } from "./service-input";
 import {
 	NEW_SERVICE_PIPELINE_COLUMNS,
@@ -428,8 +430,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 
 	/**
 	 * Inserts a new service row as pending and stopped, with cron, auto-rollback
-	 * and status checks off and uptime checks and image scanning on. Nothing is
-	 * deployed.
+	 * and status checks off and uptime checks and image scanning on, and
+	 * records its creation on its activity. Nothing is deployed.
 	 */
 	static async create(input: NewServiceInput): Promise<ServiceDTO> {
 		const now = new Date();
@@ -469,13 +471,22 @@ export class ServiceDTO extends BaseDTO<Service> {
 			userId: input.userId,
 		};
 		await db.insert(service).values(row);
+		await ServiceEventDTO.record(row.id, [
+			{ detail: [], kind: "created", lane: "config", summary: "Created" },
+		]);
 		return new ServiceDTO(row);
 	}
 
-	/** Writes the given fields to the row and mirrors them onto this instance. */
+	/**
+	 * Writes the given fields to the row and mirrors them onto this instance,
+	 * recording each changed setting on the service's activity (see
+	 * `serviceChanges`).
+	 */
 	async update(input: ServiceUpdateInput): Promise<void> {
+		const events = serviceChanges(this.row, input);
 		await db.update(service).set(input).where(eq(service.id, this.row.id));
 		Object.assign(this.row, input);
+		await ServiceEventDTO.record(this.row.id, events);
 	}
 
 	/**

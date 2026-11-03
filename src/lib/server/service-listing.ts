@@ -71,6 +71,7 @@ export async function loadServiceListing(query: ListQuery, treeView: boolean) {
 				const row = svc.toJSON();
 				return {
 					...toGraphService(row),
+					swarmServiceId: row.swarmServiceId,
 					domain: primaryHostname(
 						row,
 						stacks.find((stack) => stack.id === row.stackId)?.slug,
@@ -84,6 +85,26 @@ export async function loadServiceListing(query: ListQuery, treeView: boolean) {
 
 export type ServiceListing = Awaited<ReturnType<typeof loadServiceListing>>;
 
-export type ServiceFacets = Awaited<
-	ReturnType<typeof ServiceDTO.listFilterFacets>
->;
+/** The services page's filter options plus its headline counts: top-level services by status, their total, and how many stacks hold one. */
+export async function loadServiceFacets() {
+	const [facets, services] = await Promise.all([
+		ServiceDTO.listFilterFacets(),
+		ServiceDTO.list(),
+	]);
+	const roots = services
+		.map((svc) => svc.toJSON())
+		.filter((row) => !row.previewParentId);
+	const statusCounts: Record<string, number> = {};
+	for (const row of roots) {
+		statusCounts[row.currentStatus] =
+			(statusCounts[row.currentStatus] ?? 0) + 1;
+	}
+	return {
+		...facets,
+		stackCount: new Set(roots.flatMap((row) => row.stackId ?? [])).size,
+		statusCounts,
+		total: roots.length,
+	};
+}
+
+export type ServiceFacets = Awaited<ReturnType<typeof loadServiceFacets>>;

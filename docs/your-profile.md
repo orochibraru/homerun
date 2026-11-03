@@ -112,6 +112,10 @@ A per-account "Appearance" tab on your profile page controls:
   deployments, backups and the rest) shows per page: 25, 50 (the default), 100
   or 200. A `?perPage=` in the page's URL still wins for that one view.
 
+Each list page's list/card toggle is remembered on your account too, per page,
+so it opens in the view you last picked on any browser, with no flicker while
+the page loads.
+
 These are personal preferences, not instance-wide settings, each account picks
 its own independently of `/settings`.
 

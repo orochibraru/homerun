@@ -38,6 +38,19 @@ import {
 import type { ContainerStatus, RevisionHealth } from "#lib/types.js";
 
 import { BaseDTO } from "./base-dto";
+
+/** One deployment as a service's Activity card reads it. */
+export interface DeploymentActivityRow {
+	actorName: string | null;
+	createdAt: Date;
+	errorMessage: string | null;
+	gitCommit: string | null;
+	id: string;
+	imageRef: string | null;
+	rollbackOfDeploymentId: string | null;
+	status: ContainerStatus;
+	trigger: DeployTrigger | null;
+}
 import { InstanceSettingsDTO } from "./instance-settings-dto";
 
 export interface NewDeploymentInput {
@@ -349,6 +362,42 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 				),
 			)
 			.orderBy(deployment.createdAt);
+	}
+
+	/**
+	 * A service's deployments from `since` on (all of them when null), oldest
+	 * first and the latest 500 at most, with who started each one, for its
+	 * Activity card's Deploys lane.
+	 */
+	static async listServiceActivity(
+		serviceId: string,
+		since: Date | null,
+	): Promise<DeploymentActivityRow[]> {
+		const rows = await db
+			.select({
+				actorName: user.name,
+				createdAt: deployment.createdAt,
+				errorMessage: deployment.errorMessage,
+				gitCommit: deployment.gitCommit,
+				id: deployment.id,
+				imageRef: deployment.imageRef,
+				rollbackOfDeploymentId: deployment.rollbackOfDeploymentId,
+				status: deployment.status,
+				trigger: deployment.trigger,
+			})
+			.from(deployment)
+			.leftJoin(user, eq(user.id, deployment.userId))
+			.where(
+				since
+					? and(
+							eq(deployment.serviceId, serviceId),
+							gt(deployment.createdAt, since),
+						)
+					: eq(deployment.serviceId, serviceId),
+			)
+			.orderBy(desc(deployment.createdAt))
+			.limit(500);
+		return rows.reverse();
 	}
 
 	/** Recent deployments across a set of services, for a stack's own summary. */

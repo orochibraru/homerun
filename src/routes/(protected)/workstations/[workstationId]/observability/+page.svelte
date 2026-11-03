@@ -2,6 +2,7 @@
 	import { Cpu, HardDrive, MemoryStick, Network } from "@lucide/svelte";
 	import { onMount } from "svelte";
 
+	import ChartHoverTarget from "#lib/components/chart-hover-target.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import Skeleton from "#lib/components/skeleton.svelte";
 	import UsageChart from "#lib/components/usage-chart.svelte";
@@ -75,19 +76,33 @@
 							</div>
 							<p class="tech text-text text-xl font-semibold">{metric.text}</p>
 							{#if metric.cap}
-								<div
-									class="bg-surface-2 h-1.5 w-full overflow-hidden rounded-full"
+								<ChartHoverTarget
+									class="rounded-full py-1"
+									label="{metric.label}: {metric.text} {metric.detail}"
 								>
-									<div
-										class="h-full rounded-full {share(
-											metric.value,
-											metric.cap,
-										) >= 90
-											? 'bg-red-500'
-											: 'bg-accent'}"
-										style:width="{share(metric.value, metric.cap)}%"
-									></div>
-								</div>
+									{#snippet tip()}
+										<p>
+											<b class="text-sm font-bold">{metric.text}</b>
+											{metric.detail}
+										</p>
+										<p class="opacity-75">
+											{share(metric.value, metric.cap).toFixed(0)}% of the limit
+										</p>
+									{/snippet}
+									<span
+										class="bg-surface-2 block h-1.5 w-full overflow-hidden rounded-full"
+									>
+										<span
+											class="block h-full rounded-full {share(
+												metric.value,
+												metric.cap,
+											) >= 90
+												? 'bg-destructive'
+												: 'bg-accent'}"
+											style:width="{share(metric.value, metric.cap)}%"
+										></span>
+									</span>
+								</ChartHoverTarget>
 							{/if}
 							<p class="text-text-subtle text-xs">{metric.detail}</p>
 						</div>

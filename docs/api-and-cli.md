@@ -35,7 +35,7 @@ Infrastructure as code (and read for `GET`).
   redirect (see [Domains](networking.md)); delete answers `409` while a job is
   queued or running for the service, and takes `?force=true` to cancel those
   jobs and drop Homerun's record even when the container or swarm service
-  couldn't be removed, the API equivalent of the Settings tab's
+  couldn't be removed, the API equivalent of Settings → Danger zone's
   [**Force delete**](services.md#the-services-list) and **Delete anyway**
 - `POST /api/v1/services/:id/{deploy,start,stop,restart}`: `deploy` awaits the
   full pull-or-build → create → start pipeline and returns once it's done (no
@@ -81,6 +81,10 @@ Infrastructure as code (and read for `GET`).
   [Release channels](release-channels.md#environments-in-the-history)), and each
   deploy attempt its `trigger` (`manual`, `cron`, `push`, `promote`, `rollback`,
   or null for a deploy from before triggers were recorded)
+- `GET /api/v1/services/:id/events?limit=50`: what was changed on the service,
+  newest first (up to 100), each with its `lane`, `summary`, `detail` lines and
+  who made it (`actorName`, null for Homerun itself); the service Overview's
+  [Activity](deploying.md) card draws the same events
 - `GET/PATCH /api/v1/services/:id/version`: an image service's
   [version pin and update checks](deploy-source-and-builds.md#version-pinning-and-update-checks),
   flat: `tag`, `pinnedFromTag`, `pinnedLocally`, the watch settings

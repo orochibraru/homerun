@@ -33,7 +33,7 @@ sync by hand.
 ## Services
 
 - **[Services](services.md)**: creating a service, the services list, bulk
-  actions, and the Settings tab (pull policy, healthcheck, save as template).
+  actions, and the Settings tab (General, Automation and Danger zone).
 - **[Deploy source and build methods](deploy-source-and-builds.md)**: image or
   git repo, the six build methods, build servers and the build cache registry.
 - **[Homerun Manifest](manifest.md)**: a service's configuration as

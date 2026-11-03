@@ -163,7 +163,7 @@ feature pages under `docs/`.
 - `env-vars-env-files.webp` — `/services/:id/environments/variables (Env files)`
 - `networking-http-cache.webp` — `/settings/networking (HTTP cache)`
 - `networking-published-ports.webp` —
-  `/services/:id/networking (Published ports)`
+  `/services/:id/networking/ports (Published ports)`
 - `networking-custom-ssl.webp` — `/services/:id/networking (SSL)`
 - `networking-instance-certificate.webp` — `/settings/tls`
 - `redirects-list.webp` — `/redirects`

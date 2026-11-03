@@ -10,6 +10,7 @@ import {
 } from "#lib/server/db/schema.js";
 
 import { BaseDTO } from "./base-dto";
+import { ServiceEventDTO } from "./service-event-dto";
 
 export interface VolumeUser {
 	serviceId: string;
@@ -122,9 +123,31 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 		return rows.map((row) => row.source);
 	}
 
+	/** A storage volume's name, or its id when it's gone, for an activity line. */
+	static async #volumeName(volumeId: string): Promise<string> {
+		const [row] = await db
+			.select({ name: storageVolume.name })
+			.from(storageVolume)
+			.where(eq(storageVolume.id, volumeId))
+			.limit(1);
+		return row?.name ?? volumeId;
+	}
+
+	/** Puts a mount change on the service's Storage activity lane. */
+	static #record(
+		serviceId: string,
+		kind: string,
+		summary: string,
+		detail: string[] = [],
+	): Promise<void> {
+		return ServiceEventDTO.record(serviceId, [
+			{ detail, kind, lane: "storage", summary },
+		]);
+	}
+
 	/**
-	 * Mounts a storage volume into a service at `containerPath`; takes effect on
-	 * the service's next deploy.
+	 * Mounts a storage volume into a service at `containerPath`, recorded on
+	 * the service's activity; takes effect on the service's next deploy.
 	 */
 	static async attach(input: NewServiceVolumeInput): Promise<ServiceVolumeDTO> {
 		const row: ServiceVolume = {
@@ -136,6 +159,12 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 			volumeId: input.volumeId,
 		};
 		await db.insert(serviceVolume).values(row);
+		await ServiceVolumeDTO.#record(
+			input.serviceId,
+			"mount",
+			`Mounted ${await ServiceVolumeDTO.#volumeName(input.volumeId)} at ${input.containerPath}`,
+			input.readOnly ? ["Read-only"] : [],
+		);
 		return new ServiceVolumeDTO(row);
 	}
 
@@ -160,6 +189,17 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 				),
 			)
 			.returning({ id: serviceVolume.id });
+		if (moved.length > 0) {
+			const [before, after] = await Promise.all([
+				ServiceVolumeDTO.#volumeName(from),
+				ServiceVolumeDTO.#volumeName(to),
+			]);
+			await ServiceVolumeDTO.#record(
+				serviceId,
+				"swap",
+				`Swapped ${before} for ${after}`,
+			);
+		}
 		return moved.length;
 	}
 
@@ -186,6 +226,15 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 				);
 			}
 		});
+		await ServiceVolumeDTO.#record(
+			serviceId,
+			"restore",
+			"Restored the mounts of a revision",
+			mounts.map(
+				(mount) =>
+					`${mount.containerPath}${mount.readOnly ? " (read-only)" : ""}`,
+			),
+		);
 	}
 
 	/** The mount as a revision records it: volume, path and mode. */
@@ -197,25 +246,50 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 		};
 	}
 
-	/** Moves the mount, switches it read-only or points it at another volume; applied on the next deploy. */
+	/** Moves the mount, switches it read-only or points it at another volume, recorded on the service's activity; applied on the next deploy. */
 	async update(
 		input: Partial<
 			Pick<ServiceVolume, "containerPath" | "readOnly" | "volumeId">
 		>,
 	): Promise<void> {
+		const before = { ...this.row };
 		await db
 			.update(serviceVolume)
 			.set(input)
 			.where(eq(serviceVolume.id, this.row.id));
 		Object.assign(this.row, input);
+		const detail = [
+			before.containerPath === this.row.containerPath
+				? null
+				: `Path: ${before.containerPath} → ${this.row.containerPath}`,
+			before.readOnly === this.row.readOnly
+				? null
+				: `Read-only: ${before.readOnly ? "on" : "off"} → ${this.row.readOnly ? "on" : "off"}`,
+			before.volumeId === this.row.volumeId
+				? null
+				: `Volume: ${await ServiceVolumeDTO.#volumeName(before.volumeId)} → ${await ServiceVolumeDTO.#volumeName(this.row.volumeId)}`,
+		].filter((line): line is string => line !== null);
+		if (detail.length > 0) {
+			await ServiceVolumeDTO.#record(
+				this.row.serviceId,
+				"mount",
+				`Changed the mount at ${this.row.containerPath}`,
+				detail,
+			);
+		}
 	}
 
 	/**
-	 * Deletes this mount row; the running container keeps it until the next
-	 * deploy.
+	 * Deletes this mount row, recorded on the service's activity; the running
+	 * container keeps it until the next deploy.
 	 */
 	async detach(): Promise<void> {
 		await db.delete(serviceVolume).where(eq(serviceVolume.id, this.row.id));
+		await ServiceVolumeDTO.#record(
+			this.row.serviceId,
+			"unmount",
+			`Unmounted ${await ServiceVolumeDTO.#volumeName(this.row.volumeId)} from ${this.row.containerPath}`,
+		);
 	}
 
 	/** The mount's id. */

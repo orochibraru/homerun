@@ -1,15 +1,21 @@
 import { fail } from "@sveltejs/kit";
 
+import { type ActivityEvent, deploymentEvent } from "#lib/activity-lanes.js";
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { JobDTO } from "#lib/dto/job-dto.js";
 import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceEventDTO } from "#lib/dto/service-event-dto.js";
+import { StatSampleDTO } from "#lib/dto/stat-sample-dto.js";
 import { Logger } from "#lib/logger.js";
+import { isMonitoringRange, rangeStart } from "#lib/monitoring-ranges.js";
+import { monitoringRequest } from "#lib/server/monitoring-request.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { linkKeys } from "#lib/service-graph.js";
 import { DeploymentService } from "#lib/services/deploy.service.js";
 import { DockerService } from "#lib/services/docker.service.js";
+import { MonitoringService } from "#lib/services/monitoring.service.js";
 import { RevisionService } from "#lib/services/revision.service.js";
 import { ServiceLifecycleService } from "#lib/services/service-lifecycle.service.js";
 
@@ -23,14 +29,23 @@ function lifecycleFailure(verb: string, error: unknown) {
 	});
 }
 
-export const load = async ({ params, parent }) => {
-	const { service: svc, uiMode } = await parent();
-	const [deployments, siblings, recorded, revisions] = await Promise.all([
-		DeploymentDTO.listForService(params.serviceId),
-		ServiceDTO.list(),
-		ServiceDependencyDTO.map(),
-		uiMode === "simple" ? RevisionService.list(svc) : [],
-	]);
+export const load = async ({ cookies, params, parent, url }) => {
+	const { service: svc } = await parent();
+	const { zone } = monitoringRequest(url, cookies);
+	const requested = url.searchParams.get("range");
+	const range = isMonitoringRange(requested) ? requested : "today";
+	const now = new Date();
+	const since = rangeStart(range, now, zone);
+	const [deployments, siblings, recorded, monitoring, live, events, deploys] =
+		await Promise.all([
+			DeploymentDTO.listForService(params.serviceId),
+			ServiceDTO.list(),
+			ServiceDependencyDTO.map(),
+			MonitoringService.forService(params.serviceId, range, zone),
+			StatSampleDTO.history("live", params.serviceId),
+			ServiceEventDTO.listForService(params.serviceId, since),
+			DeploymentDTO.listServiceActivity(params.serviceId, since),
+		]);
 
 	const others = siblings.filter((other) => other.id !== params.serviceId);
 	const dependsOn = others
@@ -39,6 +54,7 @@ export const load = async ({ params, parent }) => {
 			keys: linkKeys(svc.envVars, other.slug),
 			name: other.name,
 			slug: other.slug,
+			status: other.currentStatus,
 		}))
 		.filter(
 			(other) =>
@@ -51,6 +67,7 @@ export const load = async ({ params, parent }) => {
 			keys: linkKeys(other.envVars, svc.slug),
 			name: other.name,
 			slug: other.slug,
+			status: other.currentStatus,
 		}))
 		.filter(
 			(other) =>
@@ -58,11 +75,37 @@ export const load = async ({ params, parent }) => {
 				(recorded.get(other.id) ?? []).includes(params.serviceId),
 		);
 
+	const sample = live.at(-1);
+	const activity: ActivityEvent[] = [
+		...deploys.map(deploymentEvent),
+		...events.map((event) => {
+			const row = event.toJSON();
+			return {
+				actor: row.actorName,
+				at: row.createdAt.getTime(),
+				detail: row.detail,
+				failed: false,
+				lane: row.lane,
+				summary: row.summary,
+			};
+		}),
+	];
+	const from =
+		since?.getTime() ??
+		Math.min(
+			now.getTime() - monitoring.spanSeconds * 1000,
+			...activity.map((event) => event.at),
+		);
 	return {
-		canRollBack: revisions.some((revision) => revision.previous),
+		activity: { events: activity, window: { from, to: now.getTime() } },
 		dependsOn,
 		deployments: deployments.map((d) => d.toJSON()),
+		monitoring,
+		usage: sample
+			? { cpuPercent: sample.cpuPercent, memUsedMb: sample.memUsedMb }
+			: null,
 		usedBy,
+		zone,
 	};
 };
 

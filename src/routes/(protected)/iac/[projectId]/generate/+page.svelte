@@ -81,7 +81,7 @@
 						{#each data.files as file (file.path)}
 							<li>
 								<button
-									class="hover:bg-surface-2 w-full rounded-md px-2.5 py-1.5 text-left font-mono text-xs {file.path ===
+									class="hover:bg-surface-2 flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left font-mono text-xs {file.path ===
 									current.path
 										? 'bg-surface-2 text-text font-bold'
 										: 'text-text-muted'}"
@@ -91,6 +91,7 @@
 									}}
 									type="button"
 								>
+									<FileCode2 class="size-3.5 shrink-0" />
 									{file.path}
 								</button>
 							</li>

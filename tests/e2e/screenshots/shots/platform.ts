@@ -212,7 +212,7 @@ async function seedGit(page: Page) {
 	).toBeTruthy();
 	await postAction(
 		page,
-		`/services/${ids.git}/networking?/updatePublishedPorts`,
+		`/services/${ids.git}/networking/ports?/updatePublishedPorts`,
 		{
 			publishedPorts: JSON.stringify([
 				{ containerPort: 22, hostPort: 2222, protocol: "tcp" },
@@ -361,10 +361,10 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/networking (Published ports)",
+			doc: "/services/:id/networking/ports (Published ports)",
 			expect: /Published ports/,
 			name: "networking-published-ports",
-			path: () => `/services/${ids.git}/networking`,
+			path: () => `/services/${ids.git}/networking/ports`,
 			prepare: (page) => scrollToSection(page, "Published ports"),
 		},
 		{

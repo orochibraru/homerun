@@ -280,7 +280,7 @@ export const shots: ShotModule = {
 		},
 		{
 			doc: "/ (update status dialog)",
-			expect: /Welcome back/i,
+			expect: /Good (morning|afternoon|evening)/,
 			name: "upgrading-dialog",
 			path: () => "/",
 			prepare: async (page) => {
