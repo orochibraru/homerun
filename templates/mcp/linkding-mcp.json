@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "linkding MCP",
-	"description": "Search, add and tag linkding bookmarks from an MCP client, at the root path. Set LINKDING_URL and an API token. MCP endpoint at /. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"description": "Search, add and tag linkding bookmarks from an MCP client, at the root path. Set LINKDING_URL and an API token. MCP endpoint at /. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
 	"image": "ghcr.io/chickenzord/linkding-mcp",
 	"tag": "latest",
 	"containerPort": 8080,

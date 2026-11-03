@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Semgrep MCP",
-	"description": "Semgrep's MCP server: scan code an assistant sends it for security issues and bugs, with no source mounted. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"description": "Semgrep's MCP server: scan code an assistant sends it for security issues and bugs, with no source mounted. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
 	"image": "ghcr.io/semgrep/mcp",
 	"tag": "latest",
 	"containerPort": 8000,

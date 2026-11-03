@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Nextcloud MCP",
-	"description": "Notes, files, calendars, contacts, Deck and more on Nextcloud from an MCP client. Set NEXTCLOUD_HOST, a user and an app password. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"description": "Notes, files, calendars, contacts, Deck and more on Nextcloud from an MCP client. Set NEXTCLOUD_HOST, a user and an app password. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
 	"image": "ghcr.io/cbcoutinho/nextcloud-mcp-server",
 	"tag": "latest",
 	"containerPort": 8000,

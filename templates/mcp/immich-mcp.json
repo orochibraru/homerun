@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Immich MCP",
-	"description": "Search, browse and organise an Immich library from an MCP client. Set IMMICH_BASE_URL and an Immich API key. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"description": "Search, browse and organise an Immich library from an MCP client. Set IMMICH_BASE_URL and an Immich API key. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
 	"image": "ghcr.io/barryw/immichmcp",
 	"tag": "latest",
 	"containerPort": 5000,

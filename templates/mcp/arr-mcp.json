@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "*arr MCP",
-	"description": "One MCP server for Sonarr, Radarr, Lidarr and Prowlarr: search, add and check queues. Fill in the URL and API key of each app you run, and drop the rest. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"description": "One MCP server for Sonarr, Radarr, Lidarr and Prowlarr: search, add and check queues. Fill in the URL and API key of each app you run, and drop the rest. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
 	"image": "ghcr.io/aplaceforallmystuff/mcp-arr",
 	"tag": "latest",
 	"containerPort": 3000,

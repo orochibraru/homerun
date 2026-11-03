@@ -45,10 +45,10 @@ Auth differs by server, and each description says which kind it has:
 - **A generated token.** The template fills an env var like `MCP_AUTH_TOKEN`
   with [`{{secret}}`](#linked-containers), and clients send it as
   `Authorization: Bearer <token>`.
-- **Passthrough.** Each client sends its own token for the app (GitHub, Gitea,
+- **Pass-through.** Each client sends its own token for the app (GitHub, Gitea,
   Semaphore, Keycloak) and the server holds no credential.
 - **None.** Anyone who reaches the URL gets the tools, with the API key the
-  server was given. Untick **DNS-resolvable** when deploying one of these, so
+  server was given. Turn off **DNS-resolvable** when deploying one of these, so
   only containers on the same network (an Open WebUI, an agent) can reach it, or
   put it behind a VPN.
 

@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Supergateway",
-	"description": "Serves a stdio-only MCP server over Streamable HTTP at /mcp. Runs the reference memory server as deployed: replace the --stdio command with any npx server. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so untick DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"description": "Serves a stdio-only MCP server over Streamable HTTP at /mcp. Runs the reference memory server as deployed: replace the --stdio command with any npx server. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
 	"image": "supercorp/supergateway",
 	"tag": "latest",
 	"containerPort": 8000,
