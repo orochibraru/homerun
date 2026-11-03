@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Mattermost",
-	"description": "Team chat, Slack-alike, with channels, threads, calls and integrations. Comes with a linked Postgres; the first account you create is the admin.",
+	"description": "Team chat, Slack-alike, with channels, threads, calls and integrations. Comes with a linked Postgres; the first account you create is the admin. Gets an MCP server from the official Agents plugin.",
 	"image": "mattermost/mattermost-team-edition",
 	"tag": "latest",
 	"containerPort": 8065,

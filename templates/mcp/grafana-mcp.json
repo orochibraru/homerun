@@ -1,0 +1,25 @@
+{
+	"$schema": "../schema.json",
+	"name": "Grafana MCP",
+	"description": "Grafana's official MCP server: search dashboards, query Prometheus and Loki, read alerts and incidents. Set GRAFANA_URL and a service account token. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "mcp/grafana",
+	"tag": "latest",
+	"containerPort": 8000,
+	"icon": "di:grafana",
+	"tags": ["mcp", "grafana", "dashboards", "observability"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/grafana/mcp-grafana",
+	"envVars": {
+		"GRAFANA_URL": "http://grafana:3000",
+		"GRAFANA_SERVICE_ACCOUNT_TOKEN": "change-me"
+	},
+	"entrypoint": [
+		"/app/mcp-grafana",
+		"--transport",
+		"streamable-http",
+		"--address",
+		"0.0.0.0:8000",
+		"--allowed-hosts",
+		"*"
+	]
+}

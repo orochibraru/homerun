@@ -1,0 +1,24 @@
+{
+	"$schema": "../schema.json",
+	"name": "mcpo",
+	"description": "Open WebUI's proxy that serves a stdio MCP server as an OpenAPI tool server, with docs at /docs. Wraps the time server as deployed: replace the command after -- with the server you want. Clients send the API key from its command as a Bearer token.",
+	"image": "ghcr.io/open-webui/mcpo",
+	"tag": "main",
+	"containerPort": 8000,
+	"icon": "di:open-webui",
+	"tags": ["mcp", "openapi", "open-webui", "proxy"],
+	"websiteUrl": "https://docs.openwebui.com/features/extensibility/plugin/tools/openapi-servers/mcp",
+	"sourceUrl": "https://github.com/open-webui/mcpo",
+	"envVars": {},
+	"command": [
+		"--host",
+		"0.0.0.0",
+		"--port",
+		"8000",
+		"--api-key",
+		"{{secret}}",
+		"--",
+		"uvx",
+		"mcp-server-time"
+	]
+}

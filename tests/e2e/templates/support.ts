@@ -7,6 +7,9 @@ import { promisify } from "node:util";
 
 export const TRAEFIK_CONTAINER = "homerun-e2e-traefik";
 export const TRAEFIK_PORT = Number(process.env.E2E_TRAEFIK_PORT ?? 4443);
+export const TRAEFIK_API_PORT = Number(
+	process.env.E2E_TRAEFIK_API_PORT ?? 4480,
+);
 export const AUTH_STATE = "test-results/templates-auth.json";
 export const ADMIN = {
 	email: "templates@example.com",
@@ -72,6 +75,31 @@ export function loadTemplates(): TemplateFile[] {
 				})),
 		)
 		.sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+/**
+ * Whether the e2e Traefik has an enabled HTTP router whose rule matches
+ * `hostname`, read from its API, so an app's own `404 page not found` (Go's
+ * stock body, the same bytes Traefik sends when no router matches) isn't
+ * mistaken for a missing route.
+ */
+export async function traefikRoutes(hostname: string): Promise<boolean> {
+	const response = await fetch(
+		`http://127.0.0.1:${TRAEFIK_API_PORT}/api/http/routers?per_page=1000`,
+		{ signal: AbortSignal.timeout(10_000) },
+	);
+	if (!response.ok) {
+		return false;
+	}
+	const routers = (await response.json()) as {
+		rule?: string;
+		status?: string;
+	}[];
+	return routers.some(
+		(router) =>
+			router.status === "enabled" &&
+			Boolean(router.rule?.includes(`Host(\`${hostname}\`)`)),
+	);
 }
 
 /**

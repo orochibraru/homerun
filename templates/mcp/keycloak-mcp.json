@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Keycloak MCP",
+	"description": "Manage Keycloak users, realms, clients and roles from an MCP client, over SSE at /mcp/sse. Set KC_URL and KC_REALM; each client signs in with its own Keycloak access token as a Bearer token. MCP endpoint at /mcp/sse.",
+	"image": "quay.io/sshaaf/keycloak-mcp-server",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:keycloak",
+	"tags": ["mcp", "keycloak", "identity", "sso"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/sshaaf/keycloak-mcp-server",
+	"envVars": {
+		"KC_URL": "http://keycloak:8080",
+		"KC_REALM": "master",
+		"OIDC_CLIENT_ID": "mcp-server"
+	}
+}

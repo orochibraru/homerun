@@ -50,6 +50,7 @@ Homarr
 hotlinked
 htpasswd
 Jellyfin
+Jira
 Kanidm
 Keycloak
 Kuma
@@ -58,7 +59,9 @@ Logto
 lookups
 loopback
 markdownlint
+Mattermost
 MCP
+Metabase
 middleware
 Miniflux
 mise

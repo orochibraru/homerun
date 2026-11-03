@@ -114,12 +114,13 @@ this server. Such a deploy keeps the new copy running, so you can read its logs,
 and its Overview still shows it running; only the deployment is marked failed.
 Whatever the app itself answers, a 401, a 404 or a 500, counts as an answer: a
 502 or 504 is checked against the container directly, and one the app returns
-itself passes. The one look-alike is a bare `404 page not found`, Traefik's
-exact text: without published error pages it's taken for Traefik's. A
-certificate still being issued, a public URL that doesn't resolve yet (DNS still
-propagating), a service that doesn't speak HTTP, or a Traefik this server can't
-reach only add a warning to the deploy log. Database images and UDP-only ports
-aren't checked.
+itself passes. A bare `404 page not found`, Traefik's exact text and also the
+stock 404 of any app written in Go, is checked against the container the same
+way when error pages aren't published: it passes when the container answers 404
+itself. A certificate still being issued, a public URL that doesn't resolve yet
+(DNS still propagating), a service that doesn't speak HTTP, or a Traefik this
+server can't reach only add a warning to the deploy log. Database images and
+UDP-only ports aren't checked.
 
 **Requests racing a removed copy are retried.** Every published service's router
 carries a retry middleware: a request that reaches a container or swarm task

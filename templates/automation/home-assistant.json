@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Home Assistant",
-	"description": "Home automation hub. Device discovery on the local network needs host networking, which this deploy doesn't use : integrations reached over IP still work.",
+	"description": "Home automation hub. Device discovery on the local network needs host networking, which this deploy doesn't use : integrations reached over IP still work. Has a built-in MCP server: add the Model Context Protocol Server integration, then point clients at /api/mcp.",
 	"image": "ghcr.io/home-assistant/home-assistant",
 	"tag": "stable",
 	"containerPort": 8123,

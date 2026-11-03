@@ -11,6 +11,7 @@ import {
 	loadTemplates,
 	probeThroughTraefik,
 	type TemplateFile,
+	traefikRoutes,
 } from "./support";
 
 const SKIP: Record<string, string> = {};
@@ -291,9 +292,9 @@ async function routedHostnames(container: string): Promise<string[]> {
 }
 
 /**
- * Checks each routed service answers through Traefik: anything but a 5xx or
- * Traefik's own "no router" 404 counts, since a fresh app may answer with a
- * redirect to its setup page or a login.
+ * Checks each routed service answers through Traefik: once Traefik's API shows
+ * an enabled router for its hostname, anything but a 5xx counts, since a fresh
+ * app may answer with a redirect to its setup page, a login, or a 404 on `/`.
  *
  * @returns One `hostname -> status` line per routed service.
  */
@@ -309,11 +310,13 @@ async function checkRoutes(deployed: Deployed): Promise<string[]> {
 		// oxlint-disable-next-line no-await-in-loop -- one route at a time
 		const answered = await poll(ROUTE_TIMEOUT_MS, async () => {
 			try {
+				if (!(await traefikRoutes(hostname))) {
+					last = "Traefik has no enabled router for it";
+					return null;
+				}
 				const { body, status } = await probeThroughTraefik(hostname);
 				last = `${status} ${body.slice(0, 80).trim()}`;
-				const traefikMiss =
-					status === 404 && body.trim() === "404 page not found";
-				return status < 500 && !traefikMiss ? status : null;
+				return status < 500 ? status : null;
 			} catch (error) {
 				last = String(error);
 				return null;

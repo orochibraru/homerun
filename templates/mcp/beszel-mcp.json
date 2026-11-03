@@ -1,0 +1,18 @@
+{
+	"$schema": "../schema.json",
+	"name": "Beszel MCP",
+	"description": "Read-only access to Beszel's systems, stats and alerts from an MCP client. Set BESZEL_URL and a login. MCP endpoint at /mcp; clients send the generated MCP_AUTH_TOKEN as a Bearer token.",
+	"image": "ghcr.io/maxbth/beszel-mcp",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:beszel",
+	"tags": ["mcp", "beszel", "monitoring"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/maxbth/beszel-mcp",
+	"envVars": {
+		"BESZEL_URL": "http://beszel:8090",
+		"BESZEL_EMAIL": "admin@example.com",
+		"BESZEL_PASSWORD": "change-me",
+		"MCP_AUTH_TOKEN": "{{secret}}"
+	}
+}

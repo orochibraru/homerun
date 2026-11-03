@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "Trilium MCP",
+	"description": "Search, read and edit Trilium Notes from an MCP client. Set TRILIUM_URL (ending in /etapi) and an ETAPI token. TriliumNext 0.103 and later also has a built-in MCP server under Options. MCP endpoint at /mcp; clients send the generated TRILIUM_GATEWAY_TOKENS as a Bearer token.",
+	"image": "ghcr.io/perfectra1n/triliumnext-mcp",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:trilium",
+	"tags": ["mcp", "trilium", "notes"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/perfectra1n/triliumnext-mcp",
+	"envVars": {
+		"TRILIUM_URL": "http://trilium:8080/etapi",
+		"TRILIUM_TOKEN": "change-me",
+		"TRILIUM_GATEWAY_AUTH": "bearer",
+		"TRILIUM_GATEWAY_TOKENS": "{{secret}}"
+	},
+	"command": ["--transport", "http"]
+}

@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Homarr",
-	"description": "Customizable start page with app/service widgets.",
+	"description": "Customizable start page with app/service widgets. Has a built-in MCP server at /api/mcp, reached with a Homarr API key.",
 	"image": "ghcr.io/homarr-labs/homarr",
 	"tag": "latest",
 	"containerPort": 7575,

@@ -461,7 +461,11 @@ TEMPLATES_E2E_ONLY=redis,umami bunx playwright test --config playwright.template
   `healthy` from the app's own health watch (`GET /revisions`), and every
   container with Traefik router labels must answer `https://<host>/` through the
   e2e Traefik (SNI + Host header, self-signed cert accepted) with anything but a
-  5xx or Traefik's own "404 page not found".
+  5xx, once Traefik's API (`--api.insecure`, published on loopback
+  `E2E_TRAEFIK_API_PORT`, 4480) shows an enabled router for its host. The API,
+  not the body, decides whether the route exists: Go's stock 404 is the same
+  `404 page not found` Traefik answers with no router, and the Go MCP servers
+  send it on `/`.
 - **Cleanup in `afterEach`** (with 10 more minutes on the clock, so a timed-out
   test still cleans up): deletes the stack (`?/delete` form action with `force`)
   or the lone service (`DELETE ?force=true`), `docker rm -f`s any container

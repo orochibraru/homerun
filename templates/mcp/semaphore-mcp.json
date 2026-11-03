@@ -1,0 +1,15 @@
+{
+	"$schema": "../schema.json",
+	"name": "Semaphore MCP",
+	"description": "Run and inspect Ansible tasks, templates and inventories on Semaphore UI from an MCP client. Set SEMAPHORE_URL; each client sends its own Semaphore API token as a Bearer token. Setting SEMAPHORE_API_TOKEN here instead opens the server to anyone who reaches it. MCP endpoint at /mcp.",
+	"image": "ghcr.io/cloin/semaphore-mcp",
+	"tag": "latest",
+	"containerPort": 8000,
+	"icon": "di:semaphore",
+	"tags": ["mcp", "semaphore", "ansible"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/cloin/semaphore-mcp",
+	"envVars": {
+		"SEMAPHORE_URL": "http://semaphore:3000"
+	}
+}

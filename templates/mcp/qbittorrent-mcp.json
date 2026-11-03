@@ -1,0 +1,20 @@
+{
+	"$schema": "../schema.json",
+	"name": "qBittorrent MCP",
+	"description": "Add, list and manage torrents on qBittorrent from an MCP client, over the legacy SSE transport at /sse. Set the WebUI host, port and login. MCP endpoint at /sse; clients send the generated QBITTORRENT_HTTP_AUTH_TOKEN as a Bearer token.",
+	"image": "ghcr.io/nicholaswilde/qbittorrent-mcp-rs",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:qbittorrent",
+	"tags": ["mcp", "qbittorrent", "torrents"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/nicholaswilde/qbittorrent-mcp-rs",
+	"envVars": {
+		"QBITTORRENT_SERVER_MODE": "http",
+		"QBITTORRENT_HOST": "qbittorrent",
+		"QBITTORRENT_PORT": "8080",
+		"QBITTORRENT_USERNAME": "admin",
+		"QBITTORRENT_PASSWORD": "change-me",
+		"QBITTORRENT_HTTP_AUTH_TOKEN": "{{secret}}"
+	}
+}

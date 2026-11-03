@@ -1,0 +1,19 @@
+{
+	"$schema": "../schema.json",
+	"name": "Pi-hole MCP",
+	"description": "Query logs, stats, lists and DNS records on Pi-hole v6 from an MCP client. Set PIHOLE_URL and the admin password. MCP endpoint at /mcp; clients send the generated PIHOLE_HTTP_AUTH_TOKEN as a Bearer token.",
+	"image": "ghcr.io/hexamatic/pihole-mcp",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:pi-hole",
+	"tags": ["mcp", "pihole", "dns", "adblock"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/hexamatic/pihole-mcp",
+	"envVars": {
+		"PIHOLE_URL": "http://pihole",
+		"PIHOLE_PASSWORD": "change-me",
+		"PIHOLE_HTTP_AUTH_TOKEN": "{{secret}}",
+		"PIHOLE_ALLOWED_ORIGINS": "*"
+	},
+	"command": ["-transport", "http", "-address", "0.0.0.0:8080"]
+}

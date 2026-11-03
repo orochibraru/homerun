@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Jellyfin MCP",
+	"description": "Browse, search and control a Jellyfin server from an MCP client. Set JELLYFIN_URL and a Jellyfin API key. MCP endpoint at /mcp; clients send the generated HTTP_TOKEN as a Bearer token.",
+	"image": "ghcr.io/jaredtrent/jellyfin-mcp",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:jellyfin",
+	"tags": ["mcp", "jellyfin", "media"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/jaredtrent/jellyfin-mcp",
+	"envVars": {
+		"JELLYFIN_URL": "http://jellyfin:8096",
+		"JELLYFIN_API_KEY": "change-me",
+		"HTTP_TOKEN": "{{secret}}"
+	}
+}

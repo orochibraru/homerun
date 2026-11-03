@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "Prometheus MCP",
+	"description": "Run PromQL queries and browse metrics and targets on Prometheus from an MCP client. Set PROMETHEUS_URL. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/pab1it0/prometheus-mcp-server",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:prometheus",
+	"tags": ["mcp", "prometheus", "metrics", "promql"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/pab1it0/prometheus-mcp-server",
+	"envVars": {
+		"PROMETHEUS_URL": "http://prometheus:9090",
+		"PROMETHEUS_MCP_SERVER_TRANSPORT": "http"
+	}
+}

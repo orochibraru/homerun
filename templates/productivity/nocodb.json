@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "NocoDB",
-	"description": "Airtable alternative: spreadsheets over a real database, with forms, kanban, galleries and a REST API.",
+	"description": "Airtable alternative: spreadsheets over a real database, with forms, kanban, galleries and a REST API. Has a built-in MCP server per base, set up from the base's MCP settings.",
 	"image": "nocodb/nocodb",
 	"tag": "latest",
 	"containerPort": 8080,

@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Metabase",
-	"description": "BI/dashboards over your own data sources. Runs standalone with an embedded database.",
+	"description": "BI/dashboards over your own data sources. Runs standalone with an embedded database. Has a built-in MCP server at /api/metabase-mcp, turned on under Admin, AI, MCP.",
 	"image": "metabase/metabase",
 	"tag": "latest",
 	"containerPort": 3000,

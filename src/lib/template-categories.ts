@@ -9,6 +9,7 @@ export const TEMPLATE_CATEGORIES = [
 	{ label: "Database", value: "database" },
 	{ label: "Development", value: "development" },
 	{ label: "Finance", value: "finance" },
+	{ label: "MCP", value: "mcp" },
 	{ label: "Media", value: "media" },
 	{ label: "Monitoring", value: "monitoring" },
 	{ label: "Network", value: "network" },

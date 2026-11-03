@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Firefly III MCP",
+	"description": "Read accounts, transactions and budgets in Firefly III from an MCP client. Set FIREFLY_URL and a personal access token. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/fabianonetto/mcp-server-firefly-iii",
+	"tag": "main",
+	"containerPort": 3001,
+	"icon": "di:firefly-iii",
+	"tags": ["mcp", "firefly", "finance", "budget"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/fabianonetto/mcp-server-firefly-iii",
+	"envVars": {
+		"PORT": "3001",
+		"FIREFLY_URL": "http://firefly-iii:8080",
+		"FIREFLY_TOKEN": "change-me"
+	}
+}
