@@ -9,6 +9,7 @@ import {
 	isNull,
 	lte,
 	ne,
+	not,
 	or,
 	type SQL,
 	sql,
@@ -83,6 +84,28 @@ const DEPLOYMENT_STATUSES: readonly ContainerStatus[] = [
 	"stopped",
 	"failed",
 ];
+
+const IN_FLIGHT_STATUSES: ContainerStatus[] = [
+	"pending",
+	"pulling",
+	"starting",
+];
+
+export interface ActivityDeploymentRow {
+	createdAt: Date;
+	environment: string;
+	errorMessage: string | null;
+	finishedAt: Date | null;
+	gitCommit: string | null;
+	id: string;
+	imageRef: string | null;
+	serviceId: string;
+	serviceName: string;
+	serviceSlug: string;
+	startedAt: Date | null;
+	status: ContainerStatus;
+	trigger: DeployTrigger | null;
+}
 
 export interface DeploymentHistoryRow {
 	deployment: DeploymentDTO;
@@ -383,6 +406,59 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			serviceName: r.serviceName,
 			serviceSlug: r.serviceSlug,
 		}));
+	}
+
+	/**
+	 * The dashboard's activity lanes: deployments still pending, pulling or
+	 * starting that were created in the last `inFlightWindowMs` (older ones are
+	 * stranded rows, not live work) with their progress log, and the newest
+	 * finished ones, each with its service's name and slug.
+	 */
+	static async listActivity(
+		finishedLimit: number,
+		inFlightWindowMs: number,
+	): Promise<{
+		finished: ActivityDeploymentRow[];
+		inFlight: (ActivityDeploymentRow & { log: string | null })[];
+	}> {
+		const columns = {
+			createdAt: deployment.createdAt,
+			environment: deployment.environment,
+			errorMessage: deployment.errorMessage,
+			finishedAt: deployment.finishedAt,
+			gitCommit: deployment.gitCommit,
+			id: deployment.id,
+			imageRef: deployment.imageRef,
+			serviceId: deployment.serviceId,
+			serviceName: service.name,
+			serviceSlug: service.slug,
+			startedAt: deployment.startedAt,
+			status: deployment.status,
+			trigger: deployment.trigger,
+		};
+		const live = inArray(deployment.status, IN_FLIGHT_STATUSES);
+		const [inFlight, finished] = await Promise.all([
+			db
+				.select({ ...columns, log: deployment.log })
+				.from(deployment)
+				.innerJoin(service, eq(deployment.serviceId, service.id))
+				.where(
+					and(
+						live,
+						gt(deployment.createdAt, new Date(Date.now() - inFlightWindowMs)),
+					),
+				)
+				.orderBy(desc(deployment.createdAt))
+				.limit(20),
+			db
+				.select(columns)
+				.from(deployment)
+				.innerJoin(service, eq(deployment.serviceId, service.id))
+				.where(not(live))
+				.orderBy(desc(deployment.createdAt))
+				.limit(finishedLimit),
+		]);
+		return { finished, inFlight };
 	}
 
 	/** Every environment name recorded on at least one deployment, for the deployment history page's filter. */

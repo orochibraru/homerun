@@ -14,6 +14,15 @@
   right above it.
 - **Deploy an app**, in [simple mode](ui-modes.md) only: popular templates with
   a **Quick Deploy** button each.
+- **Activity**, four live lanes pushed from the server as things move (no
+  reload, a green **live** dot while the stream is up): **Deploying now**, each
+  in-flight deploy with its step, last progress line and a running clock;
+  **Alerts**, the unresolved [error issues](error-tracking.md) and error-level
+  log lines of any service from the last 24 hours, each linking to the issue;
+  **Jobs**, the queued and running background work (backups, scans, cleanups,
+  cron runs) with a link to the queue; and **Recently deployed**, the last eight
+  finished deploys with how they were started, how long they took and whether
+  they failed. Needs read access to Services.
 - **Traffic today**, the instance's requests as a chart, and **Host**, live CPU,
   memory, disk and (with an NVIDIA card and `nvidia-smi`) GPU for the machine
   Homerun runs on, refreshed every five seconds.

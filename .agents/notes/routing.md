@@ -90,12 +90,15 @@ item with a `parent` sits under a collapsible entry of that name inside its
 category (icon from `NAV_PARENT_ICONS`, `navLabel` when the item's own label
 would repeat the parent's):
 
-- **Workspace**: **Overview** (dashboard stats + recent deployments),
-  **Services**, **Stacks**, **Templates**, **Deployments** (`/deployments`,
-  every deploy/rollback across all services, paged by `DeploymentDTO.listPaged`
-  with `status`/`trigger` filters; the trigger comes from the deploy job's
-  payload via a correlated subquery, since the `deployment` row doesn't store
-  one, so it's lost once `JobDTO.prune` drops the job; the dashboard's Recent
+- **Workspace**: **Overview** (dashboard stats + recent deployments, and the
+  live Activity lanes: `/activity` is an SSE `+server.ts` fed by one shared
+  2-second poller in `src/lib/server/activity-feed.ts`, which runs only while a
+  stream is open and pushes a snapshot only when it changed), **Services**,
+  **Stacks**, **Templates**, **Deployments** (`/deployments`, every
+  deploy/rollback across all services, paged by `DeploymentDTO.listPaged` with
+  `status`/`trigger` filters; the trigger comes from the deploy job's payload
+  via a correlated subquery, since the `deployment` row doesn't store one, so
+  it's lost once `JobDTO.prune` drops the job; the dashboard's Recent
   Deployments "View all" links here), **Workstations** (`/workstations`, the
   signed-in user's own dev workstations, `[workstationId]` split into Overview
   and Settings tabs, see Dev workstations in `docker.md`).
