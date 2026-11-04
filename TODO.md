@@ -7,6 +7,9 @@ When done delete the entry, no bloat.
 
 ## Small
 
+- [ ] Live log viewer keeps every streamed line (and every line held while
+      paused) in memory for as long as the page is open; cap it to the last few
+      thousand lines so a fast-logging service can't bloat the tab.
 - [ ] Volume disks: the deploy wizard's Volumes step and template/compose
       volumes can't pick a disk yet, and the REST API, MCP and CLI have no way
       to list the host's disks; only Storage → New volume and the service and

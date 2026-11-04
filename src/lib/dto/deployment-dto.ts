@@ -223,6 +223,45 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	}
 
 	/**
+	 * The health of each service's current revision (its newest running or
+	 * stopped deployment) and why it was judged unhealthy, keyed by service
+	 * id. A service whose current revision carries no health state is left out.
+	 */
+	static async currentHealth(
+		serviceIds: string[],
+	): Promise<Map<string, { health: RevisionHealth; reason: string | null }>> {
+		if (serviceIds.length === 0) {
+			return new Map();
+		}
+		const rows = await db
+			.selectDistinctOn([deployment.serviceId], {
+				health: deployment.health,
+				reason: deployment.healthReason,
+				serviceId: deployment.serviceId,
+			})
+			.from(deployment)
+			.where(
+				and(
+					inArray(deployment.serviceId, serviceIds),
+					inArray(deployment.status, ["running", "stopped"]),
+				),
+			)
+			.orderBy(deployment.serviceId, desc(deployment.createdAt));
+		return new Map(
+			rows.flatMap((row) =>
+				row.health
+					? [
+							[
+								row.serviceId,
+								{ health: row.health, reason: row.reason },
+							] as const,
+						]
+					: [],
+			),
+		);
+	}
+
+	/**
 	 * Every deployment whose health is still being watched after rollout, for the
 	 * auto-rollback checker.
 	 */

@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { GraphServiceInfo } from "#lib/service-graph.js";
+	import type { RevisionHealth } from "#lib/types.js";
 
 	export type TableService = GraphServiceInfo & {
 		domain: string | null;
@@ -11,6 +12,11 @@
 		level: number;
 		rails: boolean[];
 		service: TableService;
+	}
+
+	export interface ServiceHealth {
+		health: RevisionHealth | null;
+		reason: string | null;
 	}
 
 	export interface TableGroup {
@@ -46,6 +52,7 @@
 	interface Props {
 		actions: Snippet<[TableService]>;
 		groups: TableGroup[];
+		health: (svc: TableService) => ServiceHealth;
 		lanes: Record<string, Lane> | null;
 		previews: Map<string, PreviewRow[]>;
 		selection: ListSelection;
@@ -58,6 +65,7 @@
 	const {
 		actions,
 		groups,
+		health,
 		lanes,
 		previews,
 		selection,
@@ -102,6 +110,34 @@
 		const requests = lane.requests.reduce((sum, n) => sum + n, 0);
 		const errors = lane.errors.reduce((sum, n) => sum + n, 0);
 		return requests > 0 && errors / requests >= 0.25;
+	}
+
+	const STATUS_DETAIL: Record<ContainerStatus, string> = {
+		failed: "The container exited or keeps crashing. Its logs say why.",
+		missing:
+			"The container is gone from the host, likely removed outside Homerun.",
+		pending: "Not deployed yet.",
+		pulling: "Pulling the image for a deploy.",
+		running: "Up. No health check result for this revision.",
+		starting: "The container is starting.",
+		stopped: "Stopped. Start it to bring it back.",
+	};
+
+	const HEALTH_DETAIL: Record<RevisionHealth, string> = {
+		healthy: "Up and passing its health check.",
+		rolled_back: "This revision failed its health check and was rolled back.",
+		unhealthy: "Up, but failing its health check.",
+		watching: "Up. The health check is still watching this revision.",
+	};
+
+	/** What the status badge's tooltip says about a service's state. */
+	function statusDetail(
+		current: ContainerStatus,
+		check: ServiceHealth,
+	): string {
+		return current === "running" && check.health
+			? HEALTH_DETAIL[check.health]
+			: STATUS_DETAIL[current];
 	}
 
 	function runningIn(group: TableGroup): number {
@@ -152,6 +188,7 @@
 			{@const lane = lanes?.[svc.id]}
 			{@const sample = usage.get(svc.id)}
 			{@const current = status(svc)}
+			{@const check = health(svc)}
 			{@const kids = previews.get(svc.id) ?? []}
 			{#snippet body()}
 				<div
@@ -303,7 +340,23 @@
 					</span>
 
 					<span>
-						<StatusBadge status={current} />
+						<ChartHoverTarget
+							class="relative z-10 w-auto rounded-full"
+							label={statusDetail(current, check)}
+							placement={g === 0 && i === 0 ? "below" : "above"}
+						>
+							{#snippet tip()}
+								<p class="w-64 whitespace-normal">
+									{statusDetail(current, check)}
+								</p>
+								{#if current === "running" && check.reason}
+									<p class="mt-1 w-64 whitespace-normal opacity-75">
+										{check.reason}
+									</p>
+								{/if}
+							{/snippet}
+							<StatusBadge health={check.health} status={current} />
+						</ChartHoverTarget>
 					</span>
 
 					{@render actions(svc)}

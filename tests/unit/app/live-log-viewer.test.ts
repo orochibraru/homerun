@@ -207,3 +207,70 @@ describe("LiveLogViewer failures", () => {
 		unmount();
 	});
 });
+
+function controlledStream() {
+	const encoder = new TextEncoder();
+	let push: (text: string) => void = () => undefined;
+	const body = new ReadableStream<Uint8Array>({
+		start(controller) {
+			push = (text) => controller.enqueue(encoder.encode(text));
+		},
+	});
+	return { body, push: (text: string) => push(text) };
+}
+
+describe("LiveLogViewer pause and follow", () => {
+	test("Pause holds new lines back and Resume appends them", async () => {
+		const stream = controlledStream();
+		stubFetch(() => new Response(stream.body));
+		const { container, getByRole, getByText, queryByText, unmount } = render(
+			await viewer(),
+			{ serviceId: "svc-1", workloadId: "c1" },
+		);
+		stream.push("one\n");
+		await waitFor(() => expect(getByText("one")).not.toBeNull());
+
+		await fireEvent.click(getByRole("button", { name: /Pause/ }));
+		stream.push("two\nthree\n");
+		await waitFor(() => expect(getByText("paused · 2 new")).not.toBeNull());
+		expect(queryByText("two")).toBeNull();
+
+		await fireEvent.click(getByRole("button", { name: /Resume/ }));
+		await waitFor(() => expect(getByText("live")).not.toBeNull());
+		const lines = [...container.querySelectorAll(".log-output > div")].map(
+			(el) => el.textContent,
+		);
+		expect(lines).toEqual(["one", "two", "three"]);
+		unmount();
+	});
+
+	test("scrolling up stops following until Jump to latest", async () => {
+		const stream = controlledStream();
+		stubFetch(() => new Response(stream.body));
+		const { container, getByRole, getByText, queryByRole, unmount } = render(
+			await viewer(),
+			{ serviceId: "svc-1", workloadId: "c1" },
+		);
+		stream.push("one\n");
+		await waitFor(() => expect(getByText("one")).not.toBeNull());
+
+		const log = container.querySelector(".log-output") as HTMLElement;
+		Object.defineProperty(log, "scrollHeight", { value: 1000 });
+		Object.defineProperty(log, "clientHeight", { value: 100 });
+		log.scrollTop = 0;
+		await fireEvent.scroll(log);
+		await waitFor(() =>
+			expect(getByRole("button", { name: /Jump to latest/ })).not.toBeNull(),
+		);
+
+		stream.push("two\n");
+		await waitFor(() => expect(getByText("two")).not.toBeNull());
+		expect(log.scrollTop).toBe(0);
+
+		await fireEvent.click(getByRole("button", { name: /Jump to latest/ }));
+		await waitFor(() =>
+			expect(queryByRole("button", { name: /Jump to latest/ })).toBeNull(),
+		);
+		unmount();
+	});
+});

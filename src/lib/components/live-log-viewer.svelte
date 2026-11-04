@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { Loader2, RefreshCw, Terminal } from "@lucide/svelte";
+	import {
+		ArrowDown,
+		Loader2,
+		Pause,
+		Play,
+		RefreshCw,
+		Terminal,
+	} from "@lucide/svelte";
 	import { onDestroy, tick } from "svelte";
 
 	import AnsiLine from "#lib/components/ansi-line.svelte";
@@ -28,6 +35,9 @@
 	let errored = $state(false);
 	let errorMessage = $state("");
 	let logEl = $state<HTMLElement | undefined>();
+	let paused = $state(false);
+	let following = $state(true);
+	let held = $state<string[]>([]);
 	let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 	let cancelled = false;
 
@@ -41,6 +51,9 @@
 			return;
 		}
 		lines = [];
+		held = [];
+		paused = false;
+		following = true;
 		connected = false;
 		errored = false;
 		errorMessage = "";
@@ -70,11 +83,15 @@
 				buffer += decoder.decode(value, { stream: true });
 				const parts = buffer.split("\n");
 				buffer = parts.pop() ?? "";
-				if (parts.length > 0) {
+				if (parts.length > 0 && paused) {
+					held.push(...parts);
+				} else if (parts.length > 0) {
 					lines.push(...parts);
-					// oxlint-disable-next-line no-await-in-loop -- each chunk renders before the next is read
-					await tick();
-					logEl?.scrollTo({ top: logEl.scrollHeight });
+					if (following) {
+						// oxlint-disable-next-line no-await-in-loop -- each chunk renders before the next is read
+						await tick();
+						logEl?.scrollTo({ top: logEl.scrollHeight });
+					}
 				}
 			}
 		} catch {
@@ -116,6 +133,33 @@
 		cancelled = false;
 		void connect();
 	}
+
+	/** Scrolls to the newest line and keeps following the stream from there. */
+	async function jumpToLatest() {
+		following = true;
+		await tick();
+		logEl?.scrollTo({ top: logEl.scrollHeight });
+	}
+
+	/** Freezes the panel on what's shown, or appends every line that arrived meanwhile and follows again. */
+	function togglePause() {
+		if (!paused) {
+			paused = true;
+			return;
+		}
+		lines.push(...held);
+		held = [];
+		paused = false;
+		void jumpToLatest();
+	}
+
+	/** Follows new output only while the panel is scrolled to the bottom, so scrolling up holds its place. */
+	function trackScroll() {
+		if (!logEl) {
+			return;
+		}
+		following = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 24;
+	}
 </script>
 
 <section class="panel rounded-md">
@@ -125,42 +169,80 @@
 		<div class="flex items-center gap-2">
 			<Terminal class="text-text-muted size-4" />
 			<h2 class="eyebrow">Logs</h2>
-			{#if connected}
+			{#if connected && paused}
+				<span class="flex items-center gap-1 text-xs text-amber-600">
+					<span class="size-1.5 rounded-full bg-amber-500"></span>
+					paused{held.length > 0 ? ` · ${held.length} new` : ""}
+				</span>
+			{:else if connected}
 				<span class="flex items-center gap-1 text-xs text-green-600">
 					<span class="size-1.5 rounded-full bg-green-500"></span>
 					live
 				</span>
 			{/if}
 		</div>
-		<button
-			class="text-text-muted hover:bg-surface-2 hover:text-text flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
-			disabled={!workloadId}
-			onclick={reconnect}
-			type="button"
-		>
-			<RefreshCw class="size-3.5" />
-			Reconnect
-		</button>
+		<div class="flex items-center gap-1">
+			<button
+				class="text-text-muted hover:bg-surface-2 hover:text-text flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
+				aria-pressed={paused}
+				disabled={!(connected || paused)}
+				onclick={togglePause}
+				type="button"
+			>
+				{#if paused}
+					<Play class="size-3.5" />
+					Resume
+				{:else}
+					<Pause class="size-3.5" />
+					Pause
+				{/if}
+			</button>
+			<button
+				class="text-text-muted hover:bg-surface-2 hover:text-text flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
+				disabled={!workloadId}
+				onclick={reconnect}
+				type="button"
+			>
+				<RefreshCw class="size-3.5" />
+				Reconnect
+			</button>
+		</div>
 	</div>
 
-	<div class="{heightClass} overflow-y-auto log-output" bind:this={logEl}>
-		{#if !workloadId}
-			<p class="text-zinc-500">This service hasn't been deployed yet.</p>
-		{:else if errored}
-			<p class="text-red-400">
-				Couldn't connect to the log stream{errorMessage
-					? `: ${errorMessage}`
-					: ". Try Reconnect."}
-			</p>
-		{:else if lines.length === 0}
-			<p class="flex items-center gap-2 text-zinc-500">
-				<Loader2 class="size-3.5 animate-spin" />
-				Waiting for output…
-			</p>
-		{:else}
-			{#each lines as line, i (i)}
-				<AnsiLine {line} />
-			{/each}
+	<div class="relative">
+		<div
+			class="{heightClass} overflow-y-auto log-output"
+			onscroll={trackScroll}
+			bind:this={logEl}
+		>
+			{#if !workloadId}
+				<p class="text-zinc-500">This service hasn't been deployed yet.</p>
+			{:else if errored}
+				<p class="text-red-400">
+					Couldn't connect to the log stream{errorMessage
+						? `: ${errorMessage}`
+						: ". Try Reconnect."}
+				</p>
+			{:else if lines.length === 0}
+				<p class="flex items-center gap-2 text-zinc-500">
+					<Loader2 class="size-3.5 animate-spin" />
+					Waiting for output…
+				</p>
+			{:else}
+				{#each lines as line, i (i)}
+					<AnsiLine {line} />
+				{/each}
+			{/if}
+		</div>
+		{#if !following && lines.length > 0}
+			<button
+				class="bg-surface text-text border-border-light hover:bg-surface-2 absolute right-4 bottom-4 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-lg transition-colors"
+				onclick={jumpToLatest}
+				type="button"
+			>
+				<ArrowDown class="size-3.5" />
+				Jump to latest
+			</button>
 		{/if}
 	</div>
 </section>

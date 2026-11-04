@@ -295,21 +295,21 @@
 	--color-surface: oklch(1 0 0);
 	--color-surface-2: oklch(0.25 0.02 290 / 0.045);
 	--color-surface-3: oklch(0.25 0.02 290 / 0.085);
-	--color-border: oklch(0.25 0.02 290 / 0.09);
-	--color-border-light: oklch(0.25 0.02 290 / 0.15);
+	--color-border: oklch(0.25 0.02 290 / 0.14);
+	--color-border-light: oklch(0.25 0.02 290 / 0.22);
 	--color-text: oklch(0.2 0.012 290);
 	--color-text-muted: oklch(0.45 0.012 290);
 	--color-text-subtle: oklch(0.58 0.01 290);
 	--border: var(--color-border);
-	--input: oklch(0.25 0.02 290 / 0.16);
+	--input: oklch(0.25 0.02 290 / 0.22);
 	--panel-bg: var(--color-surface);
 	--panel-bg-image: none;
 	--panel-backdrop: none;
 	--panel-border-width: 1px;
-	--panel-border-color: oklch(0.25 0.02 290 / 0.085);
+	--panel-border-color: oklch(0.25 0.02 290 / 0.14);
 	--panel-shadow: 0 1px 3px oklch(0.3 0.03 290 / 0.04);
 	--panel-shadow-lg:
-		0 0 0 1px oklch(0.25 0.02 290 / 0.06),
+		0 0 0 1px oklch(0.25 0.02 290 / 0.1),
 		0 16px 40px -16px oklch(0.25 0.03 290 / 0.22);
 	--panel-rule: var(--color-border);
 	--button-shadow: none;
@@ -354,16 +354,16 @@
 	--color-surface: oklch(0.18 0.005 290);
 	--color-surface-2: oklch(1 0 0 / 0.045);
 	--color-surface-3: oklch(1 0 0 / 0.085);
-	--color-border: oklch(1 0 0 / 0.08);
-	--color-border-light: oklch(1 0 0 / 0.14);
+	--color-border: oklch(1 0 0 / 0.13);
+	--color-border-light: oklch(1 0 0 / 0.2);
 	--color-text: oklch(0.96 0.004 290);
 	--color-text-muted: oklch(0.74 0.008 290);
 	--color-text-subtle: oklch(0.58 0.008 290);
-	--input: oklch(1 0 0 / 0.13);
-	--panel-border-color: oklch(1 0 0 / 0.065);
+	--input: oklch(1 0 0 / 0.18);
+	--panel-border-color: oklch(1 0 0 / 0.11);
 	--panel-shadow: none;
 	--panel-shadow-lg:
-		0 0 0 1px oklch(1 0 0 / 0.08), 0 16px 40px -12px oklch(0 0 0 / 0.7);
+		0 0 0 1px oklch(1 0 0 / 0.12), 0 16px 40px -12px oklch(0 0 0 / 0.7);
 	--tile-b: linear-gradient(120deg, oklch(0.28 0.04 70), oklch(0.21 0.01 90));
 	--tile-c: linear-gradient(
 		120deg,

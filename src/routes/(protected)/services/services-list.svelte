@@ -53,6 +53,7 @@
 	import BulkBar from "./bulk-bar.svelte";
 	import ServiceRowMenu from "./service-row-menu.svelte";
 	import ServicesTable, {
+		type ServiceHealth,
 		type TableGroup,
 		type TableRow,
 		type TableService,
@@ -301,8 +302,21 @@
 		new Map((synced.current ?? []).map((row) => [row.id, row.status])),
 	);
 
+	const liveHealth = $derived(
+		new Map(
+			(synced.current ?? []).map((row) => [
+				row.id,
+				{ health: row.health, reason: row.healthReason },
+			]),
+		),
+	);
+
 	function statusOf(svc: TableService): ContainerStatus {
 		return liveStatus.get(svc.id) ?? (svc.currentStatus as ContainerStatus);
+	}
+
+	function healthOf(svc: TableService): ServiceHealth {
+		return liveHealth.get(svc.id) ?? { health: null, reason: null };
 	}
 
 	const lanes = $derived(
@@ -384,6 +398,7 @@
 				{previews}
 				{selection}
 				showGroups={mode === "tree"}
+				health={healthOf}
 				status={statusOf}
 				{usage}
 				{wrapper}
