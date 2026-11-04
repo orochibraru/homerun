@@ -1645,6 +1645,7 @@ export const storageVolume = pgTable(
 			.notNull(),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
+		disk: text("disk"),
 		id: text("id").primaryKey(),
 		// Docker Binds source: either a bind-mount host path ("/mnt/data/foo")
 		// or a Docker-managed named volume ("homerun-vol-xyz") : same field,

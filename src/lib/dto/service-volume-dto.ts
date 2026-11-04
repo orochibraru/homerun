@@ -31,6 +31,7 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 	static async listForService(serviceId: string): Promise<
 		Array<{
 			mount: ServiceVolumeDTO;
+			volumeDisk: string | null;
 			volumeKind: string;
 			volumeName: string;
 			volumeSeedFrom: string | null;
@@ -40,6 +41,7 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 		const rows = await db
 			.select({
 				row: serviceVolume,
+				volumeDisk: storageVolume.disk,
 				volumeKind: storageVolume.kind,
 				volumeName: storageVolume.name,
 				volumeSeedFrom: storageVolume.seedFrom,
@@ -50,6 +52,7 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 			.where(eq(serviceVolume.serviceId, serviceId));
 		return rows.map((r) => ({
 			mount: new ServiceVolumeDTO(r.row),
+			volumeDisk: r.volumeDisk,
 			volumeKind: r.volumeKind,
 			volumeName: r.volumeName,
 			volumeSeedFrom: r.volumeSeedFrom,

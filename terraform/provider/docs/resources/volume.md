@@ -39,6 +39,8 @@ resource "homerun_volume" "example" {
 - `backup_schedule` (String)
 - `backup_stop_services` (Boolean) Defaults to `false`.
 - `description` (String)
+- `disk` (String) For a Docker volume, the host mount point it's kept on,
+  instead of Docker's default location. Changing it replaces the resource.
 - `s3_destination_id` (String)
 
 ### Read-only

@@ -75,6 +75,7 @@ export async function restoreVolumeBackup(
 	const names = restoredVolumeNames(volume.name, new Date());
 	const restored = await StorageVolumeDTO.create({
 		description: `Restored from ${key}`,
+		disk: row.disk,
 		kind: "volume",
 		name: names.name,
 		source: names.source,

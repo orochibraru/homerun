@@ -988,6 +988,13 @@
 					"tf": "description"
 				},
 				{
+					"kind": "string",
+					"name": "disk",
+					"tf": "disk",
+					"description": "For a Docker volume, the host mount point it's kept on, instead of Docker's default location.",
+					"forceNew": true
+				},
+				{
 					"kind": "bool",
 					"name": "backupEnabled",
 					"tf": "backup_enabled",

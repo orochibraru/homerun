@@ -622,6 +622,7 @@ class PreviewServiceClass {
 		for (const mount of await ServiceVolumeDTO.listForService(parent.id)) {
 			// oxlint-disable-next-line no-await-in-loop -- one volume row then its mount, in order
 			const copy = await StorageVolumeDTO.create({
+				disk: mount.volumeDisk,
 				kind: "volume",
 				name: `${mount.volumeName} (PR #${preview.toJSON().previewPrNumber})`,
 				previewServiceId: preview.id,

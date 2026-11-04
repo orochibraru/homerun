@@ -18,6 +18,7 @@ export const actions = {
 			await VolumeSettingsService.create(
 				{
 					description: formData.get("description") as string | null,
+					disk: formData.get("disk") as string | null,
 					kind: formData.get("kind") as string | null,
 					name: (formData.get("name") as string | null) ?? "",
 					source: (formData.get("source") as string | null) ?? "",
