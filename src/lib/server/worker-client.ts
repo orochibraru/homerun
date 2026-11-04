@@ -64,7 +64,7 @@ class WorkerClientClass {
 		body?: unknown,
 		query?: Record<string, string | undefined>,
 	): Promise<T> {
-		return this.#json<T>("POST", this.#path(path, query), body);
+		return this.#json<T>("POST", this.#path(path, query), { body });
 	}
 
 	/**
@@ -72,11 +72,13 @@ class WorkerClientClass {
 	 * @throws `WorkerRequestError` on a non-2xx answer.
 	 */
 	put<T>(path: string, body: unknown): Promise<T> {
-		return this.#json<T>("PUT", this.#path(path), body);
+		return this.#json<T>("PUT", this.#path(path), { body });
 	}
 
 	/**
-	 * Any JSON call, with extra request headers.
+	 * Any JSON call, with extra request headers and, for a call that
+	 * legitimately runs long (a one-off container run to completion), its own
+	 * deadline in place of the default 60 seconds.
 	 * @throws `WorkerRequestError` on a non-2xx answer.
 	 */
 	request<T>(
@@ -86,14 +88,10 @@ class WorkerClientClass {
 			body?: unknown;
 			headers?: Record<string, string>;
 			query?: Record<string, string | undefined>;
+			timeoutMs?: number;
 		},
 	): Promise<T> {
-		return this.#json<T>(
-			method,
-			this.#path(path, options?.query),
-			options?.body,
-			options?.headers,
-		);
+		return this.#json<T>(method, this.#path(path, options?.query), options);
 	}
 
 	/**
@@ -184,11 +182,15 @@ class WorkerClientClass {
 		return url.toString();
 	}
 
-	/** Sends one authenticated request with the shared timeout. */
+	/** Sends one authenticated request, abandoned after `timeoutMs` (60 seconds by default). */
 	#fetch(
 		method: string,
 		url: string,
-		init?: { body?: BodyInit; headers?: Record<string, string> },
+		init?: {
+			body?: BodyInit;
+			headers?: Record<string, string>;
+			timeoutMs?: number;
+		},
 	): Promise<Response> {
 		return fetch(url, {
 			body: init?.body,
@@ -197,7 +199,7 @@ class WorkerClientClass {
 				...init?.headers,
 			},
 			method,
-			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+			signal: AbortSignal.timeout(init?.timeoutMs ?? REQUEST_TIMEOUT_MS),
 		}).catch((error: unknown) => {
 			throw this.#unreachable(error);
 		});
@@ -207,13 +209,18 @@ class WorkerClientClass {
 	async #json<T>(
 		method: string,
 		url: string,
-		body?: unknown,
-		headers?: Record<string, string>,
+		options?: {
+			body?: unknown;
+			headers?: Record<string, string>;
+			timeoutMs?: number;
+		},
 	): Promise<T> {
+		const body = options?.body;
 		const response = await this.#fetch(method, url, {
+			timeoutMs: options?.timeoutMs,
 			body: body === undefined ? undefined : JSON.stringify(body),
 			headers: {
-				...headers,
+				...options?.headers,
 				...(body === undefined ? {} : { "content-type": "application/json" }),
 			},
 		});
