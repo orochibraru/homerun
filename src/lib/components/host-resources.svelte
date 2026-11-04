@@ -9,11 +9,16 @@
 	import { onMount } from "svelte";
 
 	import ChartHoverTarget from "#lib/components/chart-hover-target.svelte";
+	import ResourceInsightsDialog from "#lib/components/resource-insights-dialog.svelte";
 	import { getSystemStats } from "#lib/remote/system-stats.remote.js";
+	import type { InsightResource } from "#lib/services/resource-insights.service.js";
 
 	const POLL_MS = 5000;
 
 	const stats = getSystemStats();
+
+	let insightOpen = $state(false);
+	let insightResource = $state<InsightResource>("cpu");
 
 	$effect(() => {
 		if (stats.ready) {
@@ -51,6 +56,7 @@
 	Icon: typeof Cpu,
 	value: string,
 	percent: number,
+	resource: InsightResource,
 )}
 	<div class="min-w-0 flex-1 px-4 py-3">
 		<div class="flex items-baseline justify-between gap-2">
@@ -66,12 +72,17 @@
 		</div>
 		<ChartHoverTarget
 			class="mt-1 py-1"
-			label="{label}: {percent.toFixed(0)}%, {value}"
+			label="{label}: {percent.toFixed(0)}%, {value}, open to see what uses it"
+			onselect={() => {
+				insightResource = resource;
+				insightOpen = true;
+			}}
 		>
 			{#snippet tip()}
 				<p class="opacity-75">{label}</p>
 				<p><b class="text-sm font-bold">{percent.toFixed(1)}%</b> used</p>
 				<p class="opacity-75">{value}</p>
+				<p class="opacity-75">Click to see what uses it</p>
 			{/snippet}
 			<span class="bg-surface-2 block h-0.75 overflow-hidden">
 				<span
@@ -99,6 +110,7 @@
 				Cpu,
 				`${(s?.cpuPercent ?? 0).toFixed(0)}%`,
 				s?.cpuPercent ?? 0,
+				"cpu",
 			)}
 			{@render meter(
 				"RAM",
@@ -107,6 +119,7 @@
 					? `${(s.memUsedMb / 1024).toFixed(1)} / ${(s.memTotalMb / 1024).toFixed(1)} GB`
 					: "– / – GB",
 				s ? pct(s.memUsedMb, s.memTotalMb) : 0,
+				"memory",
 			)}
 			{@render meter(
 				"Disk",
@@ -117,6 +130,7 @@
 						? `${s.diskUsedGb.toFixed(0)} / ${s.diskTotalGb.toFixed(0)} GB`
 						: "unavailable",
 				s ? pct(s.diskUsedGb ?? 0, s.diskTotalGb ?? 0) : 0,
+				"disk",
 			)}
 		</div>
 
@@ -160,3 +174,5 @@
 		{/if}
 	{/if}
 </div>
+
+<ResourceInsightsDialog resource={insightResource} bind:open={insightOpen} />

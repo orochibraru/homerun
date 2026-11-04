@@ -198,10 +198,15 @@ section change that:
 
   A build server doesn't need the same CPU architecture as this host. The image
   is always built for this host's platform: an `arm64` build server building for
-  an `amd64` host installs QEMU on itself on first use (one privileged
-  `tonistiigi/binfmt` container, so its Docker daemon has to allow those, which
-  a rootless one doesn't) and builds emulated. That works with every build
-  method but is several times slower than a native build, so prefer a build
-  server with this host's architecture when there's a choice. An agent older
-  than this feature still builds for its own CPU, and the deploy then fails once
-  the image arrives, naming both architectures: update the agent.
+  an `amd64` host builds emulated through QEMU. A build server set up by the
+  installer registers QEMU on itself at boot (the `homerun-binfmt` system unit);
+  one with a rootful Docker daemon and no such unit installs it on first use
+  (one privileged `tonistiigi/binfmt` container). A rootless daemon can't
+  register QEMU itself, so a build server without the unit fails the build
+  saying so: re-run the installer on it, or
+  `systemctl enable --now homerun-binfmt` if the unit is there, then restart its
+  rootless daemon. That works with every build method but is several times
+  slower than a native build, so prefer a build server with this host's
+  architecture when there's a choice. An agent older than this feature still
+  builds for its own CPU, and the deploy then fails once the image arrives,
+  naming both architectures: update the agent.

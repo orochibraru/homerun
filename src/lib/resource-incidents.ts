@@ -10,7 +10,20 @@ export const DEFAULT_REMINDER_MINUTES = 30;
 
 export type IncidentLevel = "hard" | "soft";
 
+/** One of the biggest consumers of a resource when its alert fired: `web`, `62%, 2.5 cores`. */
+export interface ResourceCause {
+	amount: string;
+	label: string;
+}
+
+/** A short line naming the causes: `web 62%, 2.5 cores · postgres 12%, 0.5 cores`. */
+export function describeCauses(causes: ResourceCause[]): string {
+	return causes.map((cause) => `${cause.label} ${cause.amount}`).join(" · ");
+}
+
 export interface ResourceIncidentState {
+	/** The biggest consumers at its last alert, empty when they couldn't be read. */
+	causes: ResourceCause[];
 	id: string | null;
 	kind: ResourceKind;
 	lastNotifiedAt: number;
@@ -94,6 +107,7 @@ export class ResourceIncidentTracker {
 			if (reading.kind === "disk" || now - since >= timing.sustainMs) {
 				this.#breachSince.delete(reading.kind);
 				const incident: ResourceIncidentState = {
+					causes: [],
 					id: null,
 					kind: reading.kind,
 					lastNotifiedAt: now,

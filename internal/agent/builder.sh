@@ -53,12 +53,24 @@ use_cache_builder() {
     docker buildx inspect --bootstrap homerun-cache >/dev/null
   fi
 }
+emulates() {
+  docker run --rm --platform "$BUILD_PLATFORM" "$BINFMT_IMAGE" --version >/dev/null 2>&1
+}
 platform=""
 if [ -n "${BUILD_PLATFORM:-}" ] && [ "${BUILD_PLATFORM#*/}" != "$native" ]; then
   echo "This build server runs $native: building for $BUILD_PLATFORM through QEMU emulation, slower than a native build."
-  if ! docker run --rm --privileged "$BINFMT_IMAGE" --install "${BUILD_PLATFORM#*/}" >/dev/null; then
-    echo "Couldn't install QEMU on this build server to build for $BUILD_PLATFORM, its Docker daemon has to allow privileged containers." >&2
-    exit 1
+  if ! emulates; then
+    case "$(docker info --format '{{join .SecurityOptions " "}}')" in
+      *rootless*)
+        echo "This build server can't run $BUILD_PLATFORM programs: its Docker daemon is rootless, so QEMU has to be registered on the host as root. Run \`systemctl enable --now homerun-binfmt\` (re-run the installer if that unit doesn't exist), then restart the rootless daemon." >&2
+        exit 1
+        ;;
+    esac
+    docker run --rm --privileged "$BINFMT_IMAGE" --install "${BUILD_PLATFORM#*/}" >/dev/null || true
+    if ! emulates; then
+      echo "Couldn't install QEMU on this build server to build for $BUILD_PLATFORM, its Docker daemon has to allow privileged containers." >&2
+      exit 1
+    fi
   fi
   platform=$BUILD_PLATFORM
 fi

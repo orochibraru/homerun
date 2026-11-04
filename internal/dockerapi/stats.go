@@ -13,6 +13,7 @@ import (
 // the dashboard renders: a CPU percentage across every core, memory in MB and
 // the interface totals summed over every network the container is on.
 type ContainerSample struct {
+	Cores      int     `json:"cores"`
 	CPUPercent float64 `json:"cpuPercent"`
 	MemLimitMb float64 `json:"memLimitMb"`
 	MemUsedMb  float64 `json:"memUsedMb"`
@@ -46,7 +47,9 @@ func (c *Client) ContainerStats(ctx context.Context, id string) (*ContainerSampl
 // sampleFromStats reduces a stats answer to a ContainerSample, the direct port
 // of the TypeScript sampleContainerStats: the CPU delta is scaled by the
 // system-wide delta and the core count, and a non-positive delta reports 0
-// rather than a negative or infinite percentage.
+// rather than a negative or infinite percentage. Memory leaves out the
+// reclaimable page cache (inactive_file), the way `docker stats` does, so a
+// container that only read a lot of files doesn't look like it holds it.
 func sampleFromStats(stats container.StatsResponse) ContainerSample {
 	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage) - float64(stats.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(stats.CPUStats.SystemUsage) - float64(stats.PreCPUStats.SystemUsage)
@@ -61,10 +64,19 @@ func sampleFromStats(stats container.StatsResponse) ContainerSample {
 	if systemDelta > 0 && cpuDelta > 0 {
 		cpuPercent = (cpuDelta / systemDelta) * float64(cores) * 100
 	}
+	used := stats.MemoryStats.Usage
+	cache := stats.MemoryStats.Stats["inactive_file"]
+	if cache == 0 {
+		cache = stats.MemoryStats.Stats["total_inactive_file"]
+	}
+	if cache < used {
+		used -= cache
+	}
 	sample := ContainerSample{
+		Cores:      cores,
 		CPUPercent: cpuPercent,
 		MemLimitMb: float64(stats.MemoryStats.Limit) / 1024 / 1024,
-		MemUsedMb:  float64(stats.MemoryStats.Usage) / 1024 / 1024,
+		MemUsedMb:  float64(used) / 1024 / 1024,
 	}
 	for _, network := range stats.Networks {
 		sample.NetRxBytes += float64(network.RxBytes)

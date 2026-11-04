@@ -127,14 +127,29 @@ Every route requires `Authorization: Bearer <token>` except `/v1/health` and
   from and written to that registry (`<registry>/<image>:buildcache`) and the
   image is pushed there afterward. A `commit` pins the build to that commit even
   when the branch has moved on. With `platform` (an os/arch pair, `linux/amd64`)
-  naming another CPU architecture than this host's, the build installs QEMU
-  (`tonistiigi/binfmt`, pinned in `builder-tools.json`, one privileged
-  container) and runs emulated, so the image runs where it's deployed. Returns
-  `{success, commit?, error?}`, where a failed build's `error` carries its most
-  telling output line.
+  naming another CPU architecture than this host's, the build runs emulated
+  through QEMU, so the image runs where it's deployed. QEMU comes from the
+  installer's `homerun-binfmt` system unit; a rootful daemon without it gets
+  QEMU installed on first use (`tonistiigi/binfmt`, pinned in
+  `builder-tools.json`, one privileged container), a rootless one fails the
+  build naming the unit. Returns `{success, commit?, error?}`, where a failed
+  build's `error` carries its most telling output line.
 - `GET /v1/images/save?ref=<image:tag>`, streams a local image as a
   `docker save` tarball (`application/x-tar`, 404 when the image isn't there).
   The main app `docker load`s it when a build server has no cache registry.
+- `GET /v1/logs`, `{lines: [{time, line}]}`: the last 2000 lines the worker
+  logged since it started, kept in memory, for the host's Logs tab.
+- `GET /v1/events`,
+  `{events: [{time, type, action, id, name?, image?, exitCode?}]}`: the daemon's
+  events of the last day, oldest first, `time` in Unix milliseconds, for the
+  host's Events tab.
+- `POST /v1/update`, body `{version}` (a release like `1.2.3`): downloads that
+  release's `homerun-worker-<arch>`, renames it over the running binary and
+  answers `202 {from, version}`, then shuts down as gracefully as on SIGTERM and
+  `exec`s the new binary in the same process. `409` when the worker's user can't
+  replace its own binary (it sits in a directory that user can't write, as
+  `/usr/local/bin` on an install older than self-update: re-run the installer),
+  `502` when the download fails.
 - `PUT /v1/workstations/{id}`, body is a workstation `Spec` (see
   `internal/workstation`): pulls the image (falling back to the local copy when
   the pull fails), ensures the `homerun-workstation-<id>` home volume, recreates

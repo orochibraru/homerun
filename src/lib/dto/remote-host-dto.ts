@@ -38,6 +38,7 @@ export type RemoteHostUpdateInput = Partial<
 		| "agentTokenEnc"
 		| "agentUrl"
 		| "dockerHost"
+		| "enabled"
 		| "kind"
 		| "maxConcurrentBuilds"
 		| "name"
@@ -129,9 +130,9 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		};
 	}
 
-	/** Every registered host, all of which are build servers : `kind: "docker"` (the worker builds straight against that daemon) and `kind: "agent"` (its own `POST /v1/build`) alike. */
-	static listBuildServers(): Promise<RemoteHostDTO[]> {
-		return RemoteHostDTO.list();
+	/** Every enabled host, all of which are build servers : `kind: "docker"` (the worker builds straight against that daemon) and `kind: "agent"` (its own `POST /v1/build`) alike. A disabled host takes no new build. */
+	static async listBuildServers(): Promise<RemoteHostDTO[]> {
+		return (await RemoteHostDTO.list()).filter((host) => host.enabled);
 	}
 
 	/**
@@ -194,6 +195,7 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 			agentUrl: input.agentUrl ?? null,
 			createdAt: now,
 			dockerHost: input.dockerHost ?? null,
+			enabled: true,
 			id: crypto.randomUUID(),
 			kind,
 			maxConcurrentBuilds: input.maxConcurrentBuilds ?? null,
@@ -303,6 +305,10 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 	get dockerHost(): string | null {
 		return this.row.dockerHost;
 	}
+	/** Whether new builds and workstations may land on this host. */
+	get enabled(): boolean {
+		return this.row.enabled;
+	}
 	/** This host's own concurrent-build limit, null to follow the instance default. */
 	get maxConcurrentBuilds(): number | null {
 		return this.row.maxConcurrentBuilds;
@@ -320,8 +326,8 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 	 * Resolves a build server id into the connection its build should run
 	 * through; a missing id means this host.
 	 *
-	 * @throws When the host doesn't exist, or is an agent without a
-	 * usable URL and token.
+	 * @throws When the host doesn't exist, is disabled, or is an agent without
+	 * a usable URL and token.
 	 */
 	static async resolveBuildTarget(
 		hostId: string | null | undefined,
@@ -332,6 +338,11 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		const host = await RemoteHostDTO.get(hostId);
 		if (!host) {
 			throw new Error(`Build server ${hostId} not found.`);
+		}
+		if (!host.enabled) {
+			throw new Error(
+				`Build server ${host.name} is disabled: enable it on its Remote Hosts page, or pick another build server.`,
+			);
 		}
 		if (host.kind === "agent") {
 			const connection = host.toAgentConnection();

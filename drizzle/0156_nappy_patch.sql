@@ -1,0 +1,1 @@
+ALTER TABLE "remote_host" ADD COLUMN "enabled" boolean DEFAULT true NOT NULL;

@@ -12429,6 +12429,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						dockerHost: string | null;
+						enabled: boolean;
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
@@ -12515,6 +12516,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						dockerHost: string | null;
+						enabled: boolean;
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
@@ -12591,6 +12593,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						dockerHost: string | null;
+						enabled: boolean;
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
@@ -12719,6 +12722,8 @@ export interface operations {
 					agentUrl?: string;
 					/** @description The Docker daemon (kind docker): tcp://host:2376 or ssh://user@host. */
 					dockerHost?: string;
+					/** @description Whether new builds and workstations may land on it. A disabled host keeps what already runs there. */
+					enabled?: boolean;
 					/** @description How many builds run on it at once, 0 for no limit. Null follows the instance's buildConcurrency. */
 					maxConcurrentBuilds?: number | null;
 					name?: string;
@@ -12744,6 +12749,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						dockerHost: string | null;
+						enabled: boolean;
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";

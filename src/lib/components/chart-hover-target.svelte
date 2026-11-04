@@ -9,6 +9,8 @@
 		class?: string;
 		/** What a screen reader announces: the values the tooltip shows. */
 		label: string;
+		/** Runs on a click, for a target that opens more about what it shows. */
+		onselect?: () => void;
 		placement?: "above" | "below";
 		tip: Snippet;
 	}
@@ -17,6 +19,7 @@
 		children,
 		class: className = "",
 		label,
+		onselect,
 		placement = "above",
 		tip,
 	}: Props = $props();
@@ -31,7 +34,10 @@
 	)}
 	aria-label={label}
 	onblur={() => (open = false)}
-	onclick={() => (open = true)}
+	onclick={() => {
+		open = true;
+		onselect?.();
+	}}
 	onfocus={() => (open = true)}
 	onpointerenter={() => (open = true)}
 	onpointerleave={(event) => {

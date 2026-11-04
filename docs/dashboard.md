@@ -23,7 +23,9 @@
   they move: the service, what it shipped (commit or image tag), when it
   started, how long it took and its status. Needs read access to Services.
 - **Host**, live CPU, memory, disk and (with an NVIDIA card and `nvidia-smi`)
-  GPU for the machine Homerun runs on, refreshed every five seconds.
+  GPU for the machine Homerun runs on, refreshed every five seconds. Click CPU,
+  memory or disk (here or on Monitoring) for what's using it right now, see
+  [What's using it](#whats-using-it).
 - **Deploy an app**, in [simple mode](ui-modes.md) only: popular templates with
   a **Quick Deploy** button each.
 
@@ -50,9 +52,32 @@ phone, or focus it and use the arrow keys, for the same reading.
   lasted and its peak. The last incidents are listed under the limits in
   Settings, and one still open when Homerun restarts stays open: no second
   alert, and you still get its recovery. If the host's stats can't be read,
-  nothing is refused.
+  nothing is refused. Every warning, critical and reminder names the resource's
+  biggest users at that moment (`web 62%, 2.5 cores · Outside containers 12%`),
+  read the same way as [What's using it](#whats-using-it): in the alert itself,
+  in the bell, and on the incident under the limits.
 
 ![Settings → General → Resource limits, with each resource's soft and hard threshold and the alert timing](images/dashboard-resource-limits.webp)
+
+## What's using it
+
+Clicking the CPU, memory or disk ring opens a live breakdown, biggest first,
+with a Refresh button. It needs read access to Services.
+
+- **CPU** and **memory** sample every running container at once and name each
+  one after what it runs for: a service (linking to it), a cron job, a
+  workstation (by name for its owner only, "A workstation" for anyone else), a
+  build or other helper container, or the container's own name. CPU is each
+  container's share of every core together, the same scale as the ring, with the
+  cores it keeps busy. Memory leaves out the page cache the kernel can take
+  back, the way `docker stats` counts it. **Outside containers** is what the
+  host uses that no container accounts for: the system, and anything run outside
+  Docker.
+- **Disk** lists Docker's volumes one by one, its images (layers they share
+  counted once), the build cache no other cache shares, each container's own
+  writable layer, and **Everything else** on the disk: the system, logs, files
+  outside Docker. When Docker keeps its data on another disk than the one
+  measured, its entries don't add up to the ring.
 
 ## List pages
 

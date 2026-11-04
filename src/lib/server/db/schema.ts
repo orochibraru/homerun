@@ -47,6 +47,7 @@ import type {
 	PipelineStatus,
 } from "#lib/pipelines/types.js";
 import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
+import type { ResourceCause } from "#lib/resource-incidents.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
 import type { ServiceEventLane } from "#lib/service-events.js";
@@ -528,6 +529,7 @@ export const remoteHost = pgTable(
 		// for deploys, not a row in this table. Only
 		// set when kind = "docker".
 		dockerHost: text("docker_host"),
+		enabled: boolean("enabled").default(true).notNull(),
 		id: text("id").primaryKey(),
 		// "docker" (the original/default, a raw tcp://ssh:// Docker Engine
 		// connection) or "agent" (a registered Homerun Agent, see agent/README.md
@@ -2465,6 +2467,7 @@ export const dnsManagedRecord = pgTable(
 export const resourceIncident = pgTable(
 	"resource_incident",
 	{
+		causes: jsonb("causes").$type<ResourceCause[]>().default([]).notNull(),
 		id: text("id").primaryKey(),
 		kind: text("kind").$type<ResourceKind>().notNull(),
 		lastNotifiedAt: timestamp("last_notified_at", { mode: "date" }).notNull(),

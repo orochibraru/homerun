@@ -39,6 +39,7 @@ export const remoteHostResponse = z.object({
 	agentUrl: z.string().nullable(),
 	createdAt: timestamp,
 	dockerHost: z.string().nullable(),
+	enabled: z.boolean(),
 	id: z.string(),
 	kind: z.enum(["docker", "agent"]),
 	maxConcurrentBuilds: z.number().int().nullable(),

@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -45,8 +48,24 @@ func runAgent(config Config) error {
 		return fmt.Errorf("docker isn't reachable at %s: %w", config.DockerSocketPath, err)
 	}
 
+	executable, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("couldn't find the worker's own binary: %w", err)
+	}
+	logs := agent.NewLogBuffer(agentLogLines)
+	log.SetOutput(io.MultiWriter(os.Stderr, logs))
+	restart := make(chan struct{})
+	var restartOnce sync.Once
+	admin := &agent.Admin{
+		Docker:     docker,
+		Download:   agent.ReleaseDownload(executable),
+		Executable: executable,
+		Logs:       logs,
+		Restart:    func() { restartOnce.Do(func() { close(restart) }) },
+	}
+
 	server := agent.NewServer(token, docker, agent.NewBuilder(docker, config.DockerSocketPath), hoststats.NewStatsSampler(),
-		workstation.NewManager(docker).Mount)
+		workstation.NewManager(docker).Mount, admin.Mount)
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
 	if err != nil {
 		return err
@@ -54,18 +73,31 @@ func runAgent(config Config) error {
 	httpServer := &http.Server{Handler: server.Handler(), ReadHeaderTimeout: 30 * time.Second}
 
 	PrintAgentBanner(config, token, source)
-	return serveUntilSignalled(httpServer, listener, agentShutdownGrace)
+	err = serveUntilSignalled(httpServer, listener, agentShutdownGrace, restart)
+	if !errors.Is(err, errRestart) {
+		return err
+	}
+	logging.Infof(scope, "restarting into the updated binary")
+	return syscall.Exec(executable, os.Args, os.Environ())
 }
+
+// agentLogLines is how many of its own log lines agent mode keeps for GET /v1/logs.
+const agentLogLines = 2000
+
+// errRestart is serveUntilSignalled's answer when it stopped for a restart
+// into an updated binary rather than for a signal.
+var errRestart = errors.New("restart requested")
 
 // agentShutdownGrace is how long a stop waits for in-flight requests in agent
 // mode. Generous on purpose: a request there can be a whole build (a clone plus
 // a docker build), and cutting one off leaves it truncated.
 const agentShutdownGrace = 120 * time.Second
 
-// serveUntilSignalled serves until SIGINT or SIGTERM, then shuts down
-// gracefully, bounded by timeout. A second signal while waiting forces an
-// immediate exit, the usual "one more Ctrl+C to really stop" escape hatch.
-func serveUntilSignalled(httpServer *http.Server, listener net.Listener, timeout time.Duration) error {
+// serveUntilSignalled serves until SIGINT or SIGTERM, or until restart is
+// closed, then shuts down gracefully, bounded by timeout. A second signal while
+// waiting forces an immediate exit, the usual "one more Ctrl+C to really stop"
+// escape hatch. A clean shutdown for a restart returns errRestart.
+func serveUntilSignalled(httpServer *http.Server, listener net.Listener, timeout time.Duration, restart <-chan struct{}) error {
 	signals := make(chan os.Signal, 2)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(signals)
@@ -73,11 +105,15 @@ func serveUntilSignalled(httpServer *http.Server, listener net.Listener, timeout
 	served := make(chan error, 1)
 	go func() { served <- httpServer.Serve(listener) }()
 
+	restarting := false
 	select {
 	case err := <-served:
 		return err
 	case received := <-signals:
 		logging.Infof(scope, "received %s, shutting down (waiting up to %s for any in-flight build)", received, timeout)
+	case <-restart:
+		restarting = true
+		logging.Infof(scope, "restarting for an update (waiting up to %s for any in-flight build)", timeout)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -89,9 +125,16 @@ func serveUntilSignalled(httpServer *http.Server, listener net.Listener, timeout
 	case err := <-shutdown:
 		if errors.Is(err, context.DeadlineExceeded) {
 			logging.Warnf(scope, "graceful shutdown exceeded %s, forcing", timeout)
-			return httpServer.Close()
+			closeErr := httpServer.Close()
+			if restarting {
+				return errRestart
+			}
+			return closeErr
 		}
 		logging.Infof(scope, "shut down cleanly")
+		if err == nil && restarting {
+			return errRestart
+		}
 		return err
 	case received := <-signals:
 		logging.Warnf(scope, "received %s again, forcing immediate shutdown", received)

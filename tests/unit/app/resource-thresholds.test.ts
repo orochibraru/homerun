@@ -32,6 +32,8 @@ const { NotificationDTO } =
 const { SystemStatsService } =
 	await import("../../../src/lib/services/system-stats.service");
 const { WorkerClient } = await import("../../../src/lib/server/worker-client");
+const { ResourceInsightsService } =
+	await import("../../../src/lib/services/resource-insights.service");
 
 const host = {
 	cpuPercent: 40.4,
@@ -106,6 +108,7 @@ describe("resource thresholds", () => {
 describe("resourceAlertMessage", () => {
 	test("a server-wide message has no service line, and says how long it lasted", () => {
 		const incident = {
+			causes: [],
 			id: "i1",
 			kind: "memory" as const,
 			lastNotifiedAt: 0,
@@ -133,11 +136,39 @@ describe("resourceAlertMessage", () => {
 		]);
 	});
 
+	test("an alert names the resource's biggest users when it recorded them", () => {
+		const incident = {
+			causes: [
+				{ amount: "62%, 2.5 cores", label: "web" },
+				{ amount: "12%", label: "Outside containers" },
+			],
+			id: "i1",
+			kind: "cpu" as const,
+			lastNotifiedAt: 0,
+			level: "hard" as const,
+			peak: 97,
+			startedAt: Date.parse("2026-09-25T09:58:00.000Z"),
+		};
+		const [alert] = groupIncidentEvents([
+			{ incident, reading: reading("cpu", 97), type: "open" },
+		]);
+		const message = resourceAlertMessage(
+			alert as never,
+			null,
+			"2026-09-25T10:00:00.000Z",
+		);
+		expect(message.fields[1]).toEqual({
+			name: "CPU: biggest users",
+			value: "web 62%, 2.5 cores · Outside containers 12%",
+		});
+	});
+
 	test("groups a check's events into critical, warning, reminders, then recoveries", () => {
 		const incident = (
 			kind: "cpu" | "disk" | "memory",
 			level: "hard" | "soft",
 		) => ({
+			causes: [],
 			id: null,
 			kind,
 			lastNotifiedAt: 0,
@@ -225,13 +256,20 @@ describe("CapacityService", () => {
 			channels.push(message.event);
 		});
 
+		const asked: string[] = [];
+		stub(ResourceInsightsService, "causes", async (resource: string) => {
+			asked.push(resource);
+			return resource === "disk" ? [{ amount: "60 GB", label: "pgdata" }] : [];
+		});
+
 		const start = Date.now();
 		stub(Date, "now", () => start);
 		await CapacityService.evaluate(host);
 		expect(channels).toEqual(["resource.critical"]);
 		expect(inApp[0]).toBe(
-			"Server past a hard resource limit: Disk at 97% (hard limit 95%)",
+			"Server past a hard resource limit: Disk at 97% (hard limit 95%) (biggest users: pgdata 60 GB)",
 		);
+		expect(asked).toEqual(["disk"]);
 
 		stub(Date, "now", () => start + 30_000);
 		await CapacityService.evaluate(host);
@@ -251,6 +289,7 @@ describe("CapacityService", () => {
 		stub(Date, "now", () => start + 120_000);
 		await CapacityService.evaluate({ ...host, diskUsedGb: 10, memUsedMb: 100 });
 		expect(channels.at(-1)).toBe("resource.recovered");
+		expect(asked).toEqual(["disk", "memory"]);
 		expect(inApp.at(-1)).toContain("Disk back to");
 		expect(incidents.updates.filter((update) => update.resolved)).toHaveLength(
 			2,

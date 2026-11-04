@@ -115,6 +115,7 @@ func (s *Server) mountSystem(r chi.Router) {
 	r.Get("/v1/info", httpapi.H(s.systemInfo))
 	r.Get("/v1/df", httpapi.H(s.diskUsage))
 	r.Get("/v1/host/stats", httpapi.H(s.hostStats))
+	r.Get("/v1/host/usage", httpapi.H(s.hostUsage))
 	r.Post("/v1/prune/{kind}", httpapi.H(s.prune))
 	r.Post("/v1/one-off", httpapi.H(s.runOneOff))
 }
@@ -255,4 +256,14 @@ func (s *Server) runOneOff(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpapi.Answer(w, http.StatusOK, result)
+}
+
+// hostUsage answers with every running container's CPU and memory right now,
+// for telling what is using the host.
+func (s *Server) hostUsage(w http.ResponseWriter, r *http.Request) error {
+	usage, err := s.docker.ContainersUsage(r.Context())
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, usage)
 }

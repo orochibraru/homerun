@@ -75,6 +75,7 @@ describe("ResourceIncidentTracker", () => {
 		const tracker = new ResourceIncidentTracker();
 		tracker.restore([
 			{
+				causes: [],
 				id: "i1",
 				kind: "cpu",
 				lastNotifiedAt: 0,

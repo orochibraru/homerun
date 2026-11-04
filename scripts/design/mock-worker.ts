@@ -80,6 +80,24 @@ function route(request: Request): Response {
 			memUsedMb: (drift(34, 4, 300) / 100) * 15.5 * 1024,
 		});
 	}
+	if (path === "/v1/host/usage") {
+		return json(
+			[
+				["web", "nginx", 7, 420],
+				["postgres", "postgres:18-alpine", 4, 1900],
+				["traefik", "traefik:v3", 1, 80],
+				["homerun-worker", "homerun", 2, 160],
+			].map(([name, image, cpu, mem]) => ({
+				cpuPercent: Number(cpu) * 8,
+				hostCpuPercent: Number(cpu),
+				id: `design-${name}`,
+				image,
+				labels: {},
+				memUsedMb: Number(mem),
+				name,
+			})),
+		);
+	}
 	if (path === "/v1/info") {
 		return json({
 			MemTotal: 15.5 * 1024 ** 3,
@@ -91,11 +109,11 @@ function route(request: Request): Response {
 	}
 	if (path === "/v1/df") {
 		return json({
-			BuildCache: [],
+			BuildCache: [{ Shared: false, Size: 12 * 1024 ** 3 }],
 			Containers: [],
 			Images: [],
-			LayersSize: 0,
-			Volumes: [],
+			LayersSize: 38 * 1024 ** 3,
+			Volumes: [{ Name: "postgres-data", UsageData: { Size: 64 * 1024 ** 3 } }],
 		});
 	}
 	if (

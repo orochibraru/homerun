@@ -247,7 +247,10 @@ func InstallStack(opts Options, run Runner, docker DockerFlavour, dockerSocket, 
 
 	fmt.Println("\n== 5/5 Install ==")
 	if opts.Mode == ModeAgent {
-		if _, err := InstallWorkerBinary(run, opts.Version, arch); err != nil {
+		if err := InstallQemuUnit(run); err != nil {
+			return err
+		}
+		if _, err := InstallWorkerBinary(run, opts.RootlessUser, opts.Version, arch); err != nil {
 			return err
 		}
 		return InstallWorkerSystemdUnit(run, opts.RootlessUser, dockerSocket, opts.AgentPort)

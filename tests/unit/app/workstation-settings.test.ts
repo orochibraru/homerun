@@ -40,7 +40,14 @@ type Workstation = NonNullable<Awaited<ReturnType<typeof WorkstationDTO.get>>>;
 const originalBaseDomain = config.baseDomain;
 const originalOrigin = config.auth.origin;
 const spies: { mockRestore: () => void }[] = [];
-const hosts = new Map<string, { dockerHost: string | null; kind: string }>();
+const hosts = new Map<
+	string,
+	{
+		dockerHost: string | null;
+		enabled: boolean;
+		kind: string;
+	}
+>();
 const takenSlugs = new Set<string>();
 const owners = new Map<string, string>();
 const createdRows: Record<string, unknown>[] = [];
@@ -189,8 +196,8 @@ describe("WorkstationSettingsService.create", () => {
 	});
 
 	test("refuses a host that can't run a workstation, accepts an agent", async () => {
-		hosts.set("no-daemon", { dockerHost: null, kind: "docker" });
-		hosts.set("agent-host", { dockerHost: null, kind: "agent" });
+		hosts.set("no-daemon", { enabled: true, dockerHost: null, kind: "docker" });
+		hosts.set("agent-host", { enabled: true, dockerHost: null, kind: "agent" });
 		await expect(
 			WorkstationSettingsService.create("u1", {
 				name: "box",
@@ -327,7 +334,11 @@ describe("WorkstationSettingsService presets", () => {
 			},
 		} as unknown as Preset;
 		await WorkstationSettingsService.updatePreset(preset, {});
-		hosts.set("tcp-host", { dockerHost: "tcp://h:2376", kind: "docker" });
+		hosts.set("tcp-host", {
+			enabled: true,
+			dockerHost: "tcp://h:2376",
+			kind: "docker",
+		});
 		await WorkstationSettingsService.updatePreset(preset, {
 			remoteHostId: "tcp-host",
 		});
