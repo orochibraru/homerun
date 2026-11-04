@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.79](https://github.com/orochibraru/homerun/compare/v1.0.78...v1.0.79) (2026-11-04)
+
+### Features
+
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/orochibraru/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/orochibraru/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/orochibraru/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+
 ## [1.0.78](https://github.com/orochibraru/homerun/compare/v1.0.77...v1.0.78) (2026-11-03)
 
 ### Features
