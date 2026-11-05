@@ -21,6 +21,7 @@ type Sample struct {
 	ExitCode     *int
 	Health       string
 	HealthOutput string
+	OOMKilled    bool
 	RestartCount int
 	State        string
 }
@@ -51,7 +52,7 @@ func SampleFromInspect(info *dockerapi.ContainerInspect) Sample {
 		}
 	}
 	exitCode := info.State.ExitCode
-	return Sample{ExitCode: &exitCode, Health: health, HealthOutput: output, RestartCount: info.RestartCount, State: status}
+	return Sample{ExitCode: &exitCode, Health: health, HealthOutput: output, OOMKilled: info.State.OOMKilled, RestartCount: info.RestartCount, State: status}
 }
 
 // Verdict is a rollout judgement: State is "pending", "ready", "completed" or
@@ -70,11 +71,13 @@ func ReadinessVerdict(s Sample, elapsed, settle, maxWait time.Duration) Verdict 
 	case s.State == "missing":
 		return Verdict{State: "failed", Reason: "The new container disappeared."}
 	case s.State == "exited":
-		code := "unknown"
-		if s.ExitCode != nil {
-			code = fmt.Sprint(*s.ExitCode)
+		if s.ExitCode == nil {
+			return Verdict{State: "failed", Reason: "The new container exited with an unknown code."}
 		}
-		return Verdict{State: "failed", Reason: fmt.Sprintf("The new container exited with code %s.", code)}
+		if hint := ExitCodeHint(*s.ExitCode, s.OOMKilled); hint != "" {
+			return Verdict{State: "failed", Reason: fmt.Sprintf("The new container exited with code %d: %s.", *s.ExitCode, hint)}
+		}
+		return Verdict{State: "failed", Reason: fmt.Sprintf("The new container exited with code %d.", *s.ExitCode)}
 	case s.State == "restarting" || s.RestartCount > 0:
 		return Verdict{State: "failed", Reason: "The new container keeps restarting."}
 	case s.Health == "unhealthy":
@@ -156,19 +159,11 @@ func SwarmFailureAction(current []dockerapi.SwarmTask) string {
 // LastTaskError is the error the most recently updated task that has one
 // reported (a crash, a failed healthcheck), or "" when none did.
 func LastTaskError(tasks []dockerapi.SwarmTask) string {
-	var latest time.Time
-	message := ""
-	for _, task := range tasks {
-		if task.Status.Err == "" {
-			continue
-		}
-		at, _ := time.Parse(time.RFC3339Nano, task.Status.Timestamp)
-		if message == "" || !at.Before(latest) {
-			latest = at
-			message = task.Status.Err
-		}
+	task, ok := LatestFailedTask(tasks)
+	if !ok {
+		return ""
 	}
-	return message
+	return task.Status.Err
 }
 
 // SwarmUpdateOutcome reads a swarm service's update status: State is

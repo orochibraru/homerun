@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"maps"
-	"strings"
 	"sync"
 	"time"
 
@@ -264,12 +263,8 @@ func (r *run) awaitReadyOrDiscard(ctx context.Context, id string, check Readines
 		r.progress.line(ReadyLine(check, int(time.Since(started).Round(time.Second).Seconds())))
 		return nil
 	}
-	if output, err := r.docker.ContainerLogsTail(ctx, id, 20); err == nil {
-		for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
-			if line != "" {
-				r.progress.line("  " + line)
-			}
-		}
+	if output, err := r.docker.ContainerLogsTail(ctx, id, failedOutputTail); err == nil {
+		r.reportOutput("The new container's last output:", output)
 	}
 	r.removeQuietly(ctx, id)
 	return &kindError{kind: FailureRolloutFailed, err: errors.New(current.Reason + " The previous container keeps serving.")}

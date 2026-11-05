@@ -69,7 +69,7 @@ func TestReadinessVerdict(t *testing.T) {
 		t.Error("a starting healthcheck stays pending until the max wait")
 	}
 	one := 1
-	if got := deploy.ReadinessVerdict(deploy.Sample{ExitCode: &one, Health: "none", State: "exited"}, 0, settle, maxWait); got.Reason != "The new container exited with code 1." {
+	if got := deploy.ReadinessVerdict(deploy.Sample{ExitCode: &one, Health: "none", State: "exited"}, 0, settle, maxWait); got.Reason != "The new container exited with code 1: the app reported an error and quit." {
 		t.Errorf("exit: %+v", got)
 	}
 	if deploy.ReadinessVerdict(deploy.Sample{Health: "none", RestartCount: 1, State: "running"}, 0, settle, maxWait).State != "failed" ||
@@ -288,5 +288,55 @@ func TestPublishesThroughIngress(t *testing.T) {
 		if got := deploy.PublishesThroughIngress(c.spec); got != c.want {
 			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
 		}
+	}
+}
+
+func TestExitCodeHint(t *testing.T) {
+	if got := deploy.ExitCodeHint(137, true); got != "killed for using more memory than its limit allows" {
+		t.Errorf("an OOM kill wins over the code, got %q", got)
+	}
+	if got := deploy.ExitCodeHint(137, false); !strings.Contains(got, "SIGKILL") {
+		t.Errorf("137 is SIGKILL, got %q", got)
+	}
+	if got := deploy.ExitCodeHint(134, false); got != "killed by signal 6" {
+		t.Errorf("signals past 128 are named by number, got %q", got)
+	}
+	if deploy.ExitCodeHint(42, false) != "" {
+		t.Error("an app-specific code has no hint")
+	}
+	oom := deploy.Sample{ExitCode: new(137), Health: "none", OOMKilled: true, State: "exited"}
+	if got := deploy.ReadinessVerdict(oom, 0, time.Second, time.Minute); got.Reason != "The new container exited with code 137: killed for using more memory than its limit allows." {
+		t.Errorf("oom verdict: %+v", got)
+	}
+}
+
+func TestLogHints(t *testing.T) {
+	got := deploy.LogHints("Starting...\nError: connect ECONNREFUSED 10.0.0.5:5432\nFATAL: DATABASE_URL is not set")
+	if len(got) != 2 || !strings.Contains(got[0], "dependency") || !strings.Contains(got[1], "environment variables") {
+		t.Errorf("hints: %q", got)
+	}
+	if hints := deploy.LogHints("exec /app: exec format error"); len(hints) != 1 || !strings.Contains(hints[0], "architecture") {
+		t.Errorf("arch: %q", hints)
+	}
+	if deploy.LogHints("listening on :8080") != nil {
+		t.Error("a clean log has no hint")
+	}
+}
+
+func TestTaskFailure(t *testing.T) {
+	rejected := swarmTask("shutdown", "rejected", "No such image: app:1", "2026-09-25T11:00:00Z")
+	if deploy.TaskFailure(rejected) != "No such image: app:1" {
+		t.Error("a task with no container keeps its bare error")
+	}
+	crashed := swarmTask("shutdown", "failed", "task: non-zero exit (127)", "2026-09-25T11:00:00Z")
+	crashed.Status.ContainerStatus = &struct {
+		ContainerID string `json:"ContainerID"`
+		ExitCode    int    `json:"ExitCode"`
+	}{ContainerID: "abc", ExitCode: 127}
+	if got := deploy.TaskFailure(crashed); got != "task: non-zero exit (127); its command wasn't found in the image" {
+		t.Errorf("crashed: %q", got)
+	}
+	if task, ok := deploy.LatestFailedTask([]dockerapi.SwarmTask{rejected, crashed}); !ok || task.Status.Err != crashed.Status.Err {
+		t.Error("the newest failure wins a tie")
 	}
 }
