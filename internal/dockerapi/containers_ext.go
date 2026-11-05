@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
@@ -22,8 +23,9 @@ type ContainerInspect struct {
 			} `json:"Log"`
 			Status string `json:"Status"`
 		} `json:"Health"`
-		Running bool   `json:"Running"`
-		Status  string `json:"Status"`
+		OOMKilled bool   `json:"OOMKilled"`
+		Running   bool   `json:"Running"`
+		Status    string `json:"Status"`
 	} `json:"State"`
 }
 
@@ -68,6 +70,7 @@ func (c *Client) InspectContainer(ctx context.Context, id string) (*ContainerIns
 	inspected := &ContainerInspect{ID: full.ID, RestartCount: full.RestartCount}
 	if state := full.State; state != nil {
 		inspected.State.ExitCode = state.ExitCode
+		inspected.State.OOMKilled = state.OOMKilled
 		inspected.State.Running = state.Running
 		inspected.State.Status = string(state.Status)
 		if health := state.Health; health != nil {
@@ -121,8 +124,8 @@ func (c *Client) listContainers(ctx context.Context, all bool, label string) ([]
 	return listed.Items, err
 }
 
-// ContainerLogsTail is the last tail lines of a TTY container's output, which
-// the daemon returns unframed.
+// ContainerLogsTail is the last tail lines of a container's output, with the
+// stream framing dropped when the container isn't a TTY one.
 func (c *Client) ContainerLogsTail(ctx context.Context, id string, tail int) (string, error) {
 	return control(ctx, ControlTimeout, "logs "+shortID(id), id, func(ctx context.Context) (string, error) {
 		logs, err := c.api.ContainerLogs(ctx, id, client.ContainerLogsOptions{
@@ -134,8 +137,9 @@ func (c *Client) ContainerLogsTail(ctx context.Context, id string, tail int) (st
 			return "", err
 		}
 		defer func() { _ = logs.Close() }()
-		raw, err := io.ReadAll(logs)
-		return string(raw), err
+		var out strings.Builder
+		err = DemuxAuto(logs, &out)
+		return out.String(), err
 	})
 }
 

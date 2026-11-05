@@ -229,8 +229,9 @@ func (r *run) awaitSwarmUpdate(ctx context.Context, id, previousStartedAt string
 		case "failed":
 			reason := outcome.Reason
 			if tasks, err := r.docker.ListSwarmTasks(ctx, id, false); err == nil {
-				if taskErr := LastTaskError(tasks); taskErr != "" {
-					reason += " Last task error: " + taskErr
+				if task, ok := LatestFailedTask(tasks); ok {
+					r.reportTaskOutput(ctx, task)
+					reason = strings.TrimSuffix(reason, ".") + ". Last task error: " + TaskFailure(task)
 				}
 			}
 			return &kindError{kind: FailureRolloutFailed, err: errors.New(reason)}

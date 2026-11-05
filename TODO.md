@@ -7,6 +7,9 @@ When done delete the entry, no bloat.
 
 ## Small
 
+- [ ] Revision health (`src/lib/revisions.ts`) and update trials
+      (`update-trial.service.ts`) still report a bare "exited with code N": give
+      them the deploy's exit-code meaning and last output too.
 - [ ] Live log viewer keeps every streamed line (and every line held while
       paused) in memory for as long as the page is open; cap it to the last few
       thousand lines so a fast-logging service can't bloat the tab.

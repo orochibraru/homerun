@@ -173,10 +173,14 @@ they now fail for different reasons with different fixes, see
     alongside, `awaitReadyOrDiscard` polls `ReadinessVerdict` every 2s (healthy
     healthcheck, or running 5s with none; failed on exit, any restart,
     disappearance, `unhealthy`, or not ready in 5 minutes), then
-    `removePrevious`. On failure it logs the new container's last 20 lines,
-    removes it and reports a `rollout-failed` outcome, which
-    `deploy.service.ts`'s `workerFailure` turns back into a `RolloutFailedError`
-    (`docker/rollout.ts`, which now only keeps the shared
+    `removePrevious`. On failure it logs the new container's last 40 lines
+    (`reportOutput`, `internal/jobs/deploy/diagnose.go`, which also prints a
+    "Likely cause" per well-known pattern `LogHints` finds and puts what the
+    exit code means, OOM kill included, in the reason via `ExitCodeHint`; a
+    failed swarm update does the same for the newest failed task through
+    `SwarmTaskLogsTail`), removes it and reports a `rollout-failed` outcome,
+    which `deploy.service.ts`'s `workerFailure` turns back into a
+    `RolloutFailedError` (`docker/rollout.ts`, which now only keeps the shared
     `ContainerHealthSample`/`containerSampleFromInspect` type and this error
     class — still used by `DockerRevisionMixin.containerHealthSample` and the
     post-deploy health watch) that `#recordFailure` treats like a scan block

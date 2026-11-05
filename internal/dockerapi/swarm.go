@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/moby/moby/api/types/swarm"
@@ -421,6 +422,26 @@ func (c *Client) SwarmTaskLogs(ctx context.Context, id string, tail int, follow 
 			Tail:       logsTail(tail),
 			Timestamps: true,
 		})
+	})
+}
+
+// SwarmTaskLogsTail is the last tail lines one swarm task wrote, read through
+// the manager so it works for a task on any node, with the stream framing
+// dropped.
+func (c *Client) SwarmTaskLogsTail(ctx context.Context, id string, tail int) (string, error) {
+	return control(ctx, ControlTimeout, "logs of swarm task "+id, "", func(ctx context.Context) (string, error) {
+		logs, err := c.api.TaskLogs(ctx, id, client.TaskLogsOptions{
+			ShowStderr: true,
+			ShowStdout: true,
+			Tail:       logsTail(tail),
+		})
+		if err != nil {
+			return "", err
+		}
+		defer func() { _ = logs.Close() }()
+		var out strings.Builder
+		err = DemuxAuto(logs, &out)
+		return out.String(), err
 	})
 }
 
