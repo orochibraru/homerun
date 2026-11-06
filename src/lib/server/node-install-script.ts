@@ -24,6 +24,8 @@ export function agentSetupCommands(version: string): {
 const SWARM_PREFLIGHT = `if [ "$SWARM_NODE" = "yes" ]; then
 	MANAGER="$(field "$BODY" managerAddress)"
 	MANAGER_HOST="\${MANAGER%:*}"
+	MANAGER_HOST="\${MANAGER_HOST#\[}"
+	MANAGER_HOST="\${MANAGER_HOST%\]}"
 	MANAGER_PORT="\${MANAGER##*:}"
 	echo "==> Checking this server reaches the swarm manager at $MANAGER"
 	if ! timeout 5 bash -c "exec 3<>/dev/tcp/$MANAGER_HOST/$MANAGER_PORT" 2>/dev/null; then
