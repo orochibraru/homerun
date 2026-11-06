@@ -13,7 +13,7 @@ export const load = async ({ params, parent, url }) => {
 	const { showDismissed, since } = errorsSince(svc, url);
 	const [appLogs, dismissal] = await Promise.all([
 		AppLogDTO.listForService(params.serviceId, 50, since),
-		errorDismissal(svc, showDismissed, since, (upTo) =>
+		errorDismissal(svc, showDismissed, (upTo) =>
 			AppLogDTO.countForServiceUpTo(params.serviceId, upTo),
 		),
 	]);

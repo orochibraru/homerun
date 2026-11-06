@@ -32,6 +32,8 @@ export function errorsSince(
  * The "N earlier errors are hidden" banner's data for one error tab:
  * `countUpTo` counts that tab's own errors up to the dismissal, and the
  * revision that dismissed them, if a deploy did, is looked up for its label.
+ * The count is kept while the dismissed errors are shown, so the banner and
+ * its "Hide them" link stay.
  */
 export async function errorDismissal(
 	svc: {
@@ -39,11 +41,10 @@ export async function errorDismissal(
 		errorsDismissedByDeploymentId: string | null;
 	},
 	showDismissed: boolean,
-	since: Date | null,
 	countUpTo: (since: Date) => Promise<number>,
 ): Promise<ErrorDismissal> {
 	const [dismissedCount, deployment] = await Promise.all([
-		since ? countUpTo(since) : 0,
+		svc.errorsDismissedAt ? countUpTo(svc.errorsDismissedAt) : 0,
 		svc.errorsDismissedByDeploymentId
 			? DeploymentDTO.get(svc.errorsDismissedByDeploymentId)
 			: null,

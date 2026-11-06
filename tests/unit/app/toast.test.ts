@@ -111,6 +111,32 @@ describe("enhanceToast", () => {
 		expect(await tracked).toBeUndefined();
 	});
 
+	test("settles only after update has refreshed the page", async () => {
+		const { settle, tracked, update } = run({
+			loading: "Clearing",
+			success: "Cleared.",
+		});
+		let refreshed = false;
+		update.mockImplementation(async () => {
+			await Promise.resolve();
+			refreshed = true;
+		});
+		const done = tracked.then(() => refreshed);
+		await settle({ type: "success", data: {} });
+		expect(await done).toBe(true);
+	});
+
+	test("rejects when the refresh after a successful action throws", async () => {
+		const { settle, tracked, update } = run({
+			error: "Couldn't clear.",
+			loading: "Clearing",
+			success: "Cleared.",
+		});
+		update.mockImplementation(() => Promise.reject(new Error("load failed")));
+		await settle({ type: "success", data: {} });
+		await expect(tracked).rejects.toThrow("load failed");
+	});
+
 	test("runs the lifecycle hooks in order, with the action's data", async () => {
 		const calls: string[] = [];
 		let seen: unknown;
