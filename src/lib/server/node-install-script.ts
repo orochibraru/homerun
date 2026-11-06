@@ -20,6 +20,45 @@ export function agentSetupCommands(version: string): {
 	};
 }
 
+/** Stops before the token is used when this server can't reach the swarm manager it would join. */
+const SWARM_PREFLIGHT = `if [ "$SWARM_NODE" = "yes" ]; then
+	MANAGER="$(field "$BODY" managerAddress)"
+	MANAGER_HOST="\${MANAGER%:*}"
+	MANAGER_PORT="\${MANAGER##*:}"
+	echo "==> Checking this server reaches the swarm manager at $MANAGER"
+	if ! timeout 5 bash -c "exec 3<>/dev/tcp/$MANAGER_HOST/$MANAGER_PORT" 2>/dev/null; then
+		echo "error: can't reach the swarm manager at $MANAGER from here, nothing was changed and the token is still valid." >&2
+		echo "  The manager advertises that address to joining nodes. Swarm needs every node to reach every other one directly" >&2
+		echo "  on 2377/tcp, 7946/tcp+udp and 4789/udp, which a private address behind another router never is." >&2
+		echo "  Put both machines on one network (a WireGuard or Tailscale VPN), make the manager advertise its VPN address" >&2
+		echo "  (docker swarm init --advertise-addr), then rerun this with --address=<this server's VPN address>." >&2
+		echo "  Only want builds or workstations here? Enroll it as a build server, that only needs Homerun to reach port 7420." >&2
+		exit 1
+	fi
+fi
+`;
+
+/** Joins the swarm, clearing a join that never completed first. */
+const SWARM_JOIN = `if [ "$SWARM_NODE" = "yes" ]; then
+	JOIN_TOKEN="$(field "$BODY" token)"
+	MANAGER="$(field "$BODY" managerAddress)"
+	echo "==> Joining the swarm at $MANAGER"
+	case "$(docker info --format '{{.Swarm.LocalNodeState}}')" in
+		active)
+			echo "Already part of a swarm, skipping. Run 'docker swarm leave' first to join this one."
+			;;
+		pending | error)
+			echo "A previous join never completed, leaving it first."
+			docker swarm leave --force
+			docker swarm join --token "$JOIN_TOKEN" --advertise-addr "$ADDRESS" "$MANAGER"
+			;;
+		*)
+			docker swarm join --token "$JOIN_TOKEN" --advertise-addr "$ADDRESS" "$MANAGER"
+			;;
+	esac
+fi
+`;
+
 /**
  * The command an admin runs on a fresh server to enroll it,
  * piping the install script into bash with the one-time token.
@@ -54,7 +93,8 @@ while [ $# -gt 0 ]; do
 		--help | -h)
 			echo "Enrolls this server into Homerun at $HOMERUN_URL."
 			echo "  --token=<token>     One-time enrollment token from Remote Hosts (required)"
-			echo "  --address=<ip>      Address Homerun and other nodes reach this server at (default: the default route's source address)"
+			echo "  --address=<ip>      Address Homerun and other nodes reach this server at (default: the default route's source address)."
+			echo "                      Swarm nodes must reach each other directly: on another network, use a VPN (WireGuard, Tailscale) address."
 			echo "  --user=<name>       Rootless user the agent runs as (default: homerun)"
 			exit 0
 			;;
@@ -102,6 +142,7 @@ BUILD_SERVER="$(printf '%s' "$BODY" | grep -q '"buildServer":true' && echo yes |
 SWARM_NODE="$(printf '%s' "$BODY" | grep -q '"swarmNode":true' && echo yes || echo no)"
 echo "==> Enrolling $HOSTNAME_VALUE ($ADDRESS): build server=$BUILD_SERVER, swarm node=$SWARM_NODE"
 
+${SWARM_PREFLIGHT}
 echo "==> Installing Docker Engine (skipped if already present)"
 if ! command -v docker >/dev/null 2>&1; then
 	curl -fsSL https://get.docker.com | sh
@@ -133,17 +174,7 @@ fi
 echo "==> Registering with Homerun"
 post "{\\"token\\":\\"$TOKEN\\",\\"hostname\\":\\"$HOSTNAME_VALUE\\"$AGENT_JSON}"
 
-if [ "$SWARM_NODE" = "yes" ]; then
-	JOIN_TOKEN="$(field "$BODY" token)"
-	MANAGER="$(field "$BODY" managerAddress)"
-	echo "==> Joining the swarm at $MANAGER"
-	if [ "$(docker info --format '{{.Swarm.LocalNodeState}}')" = "active" ]; then
-		echo "Already part of a swarm, skipping. Run 'docker swarm leave' first to join this one."
-	else
-		docker swarm join --token "$JOIN_TOKEN" --advertise-addr "$ADDRESS" "$MANAGER"
-	fi
-fi
-
+${SWARM_JOIN}
 echo ""
 echo "==> Done. $HOSTNAME_VALUE shows up under Remote Hosts in Homerun."
 `;
