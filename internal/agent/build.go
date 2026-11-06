@@ -392,7 +392,9 @@ func (b *Builder) runBuilder(ctx context.Context, input BuilderInput, volume str
 		}
 		return err
 	}
-	<-streamed
+	if streamErr := <-streamed; streamErr != nil {
+		progress("The build log stream ended early: " + streamErr.Error())
+	}
 	if code != 0 {
 		return errors.New(BuildFailureMessage(input.Method, code, recent))
 	}
