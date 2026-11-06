@@ -34,7 +34,8 @@ const SWARM_PREFLIGHT = `if [ "$SWARM_NODE" = "yes" ]; then
 		echo "  on 2377/tcp, 7946/tcp+udp and 4789/udp, which a private address behind another router never is." >&2
 		echo "  Put both machines on one network (a WireGuard or Tailscale VPN), make the manager advertise its VPN address" >&2
 		echo "  (docker swarm init --advertise-addr), then rerun this with --address=<this server's VPN address>." >&2
-		echo "  Only want builds or workstations here? Enroll it as a build server, that only needs Homerun to reach port 7420." >&2
+		echo "  Only want builds or workstations here? Enroll it as a build server, that only needs Homerun to reach its agent:" >&2
+		echo "  port 7420, or a tunnel to it passed as --agent-url=https://... (Pangolin, Cloudflare Tunnel)." >&2
 		exit 1
 	fi
 fi
@@ -84,6 +85,7 @@ HOMERUN_URL="${origin}"
 VERSION="${releaseTagFor(version)}"
 TOKEN=""
 ADDRESS=""
+AGENT_URL=""
 AGENT_USER="homerun"
 AGENT_PORT="7420"
 
@@ -91,12 +93,15 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 		--token=*) TOKEN="\${1#--token=}" ;;
 		--address=*) ADDRESS="\${1#--address=}" ;;
+		--agent-url=*) AGENT_URL="\${1#--agent-url=}" ;;
 		--user=*) AGENT_USER="\${1#--user=}" ;;
 		--help | -h)
 			echo "Enrolls this server into Homerun at $HOMERUN_URL."
 			echo "  --token=<token>     One-time enrollment token from Remote Hosts (required)"
 			echo "  --address=<ip>      Address Homerun and other nodes reach this server at (default: the default route's source address)."
 			echo "                      Swarm nodes must reach each other directly: on another network, use a VPN (WireGuard, Tailscale) address."
+			echo "  --agent-url=<url>   URL Homerun reaches a build server's agent at, for one behind a tunnel or reverse proxy"
+			echo "                      (Pangolin, Cloudflare Tunnel): https://agent.example.com (default: http://<address>:7420)"
 			echo "  --user=<name>       Rootless user the agent runs as (default: homerun)"
 			exit 0
 			;;
@@ -119,9 +124,14 @@ case "$(uname -m)" in
 esac
 
 if [ -z "$ADDRESS" ]; then
-	ADDRESS="$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($i == "src") { print $(i + 1); exit }}')"
+	ADDRESS="$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($i == "src") { print $(i + 1); exit }}' || true)"
 fi
 [ -n "$ADDRESS" ] || { echo "error: couldn't work out this server's address, pass --address=<ip>." >&2; exit 1; }
+case "$ADDRESS" in
+	*://*) echo "error: --address takes an IP, pass a URL as --agent-url=$ADDRESS." >&2; exit 1 ;;
+esac
+AGENT_URL="\${AGENT_URL:-http://$ADDRESS:$AGENT_PORT}"
+AGENT_URL="\${AGENT_URL%/}"
 
 field() {
 	printf '%s' "$1" | sed -n "s/.*\\"$2\\":\\"\\([^\\"]*\\)\\".*/\\1/p"
@@ -170,7 +180,7 @@ if [ "$BUILD_SERVER" = "yes" ]; then
 		sleep 1
 	done
 	[ -s "$TOKEN_FILE" ] || { echo "error: the agent never wrote its token to $TOKEN_FILE." >&2; exit 1; }
-	AGENT_JSON=",\\"agentUrl\\":\\"http://$ADDRESS:$AGENT_PORT\\",\\"agentToken\\":\\"$(tr -d '[:space:]' < "$TOKEN_FILE")\\""
+	AGENT_JSON=",\\"agentUrl\\":\\"$AGENT_URL\\",\\"agentToken\\":\\"$(tr -d '[:space:]' < "$TOKEN_FILE")\\""
 fi
 
 echo "==> Registering with Homerun"

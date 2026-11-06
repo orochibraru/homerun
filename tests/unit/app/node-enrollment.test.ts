@@ -195,6 +195,39 @@ describe("node install script", () => {
 		expect(check.stderr.toString()).toBe("");
 		expect(check.exitCode).toBe(0);
 	});
+
+	test("registers the agent at --agent-url, and refuses a URL passed as --address", () => {
+		const script = nodeInstallScript("https://h.example.com", "1.0.49");
+		const parse = script.slice(
+			script.indexOf("while [ $# -gt 0 ]"),
+			script.indexOf('case "$(uname -m)"'),
+		);
+		const address = script.slice(
+			script.indexOf('if [ -z "$ADDRESS" ]'),
+			script.indexOf('AGENT_URL="${AGENT_URL%/}"') +
+				'AGENT_URL="${AGENT_URL%/}"'.length,
+		);
+		const path = join(mkdtempSync(join(tmpdir(), "enroll-")), "args.sh");
+		writeFileSync(
+			path,
+			`set -euo pipefail\nAGENT_PORT=7420\nADDRESS=""\nAGENT_URL=""\n${parse.replace(/\n\[ -n "\$TOKEN" \][^\n]*\n[^\n]*\n[^\n]*\n/, "\n")}\n${address}\necho "$AGENT_URL"\n`,
+		);
+		const run = (...args: string[]) => {
+			const result = Bun.spawnSync(["bash", path, "--token=t", ...args]);
+			return {
+				code: result.exitCode,
+				err: result.stderr.toString(),
+				out: result.stdout.toString().trim(),
+			};
+		};
+		expect(run("--address=10.0.0.5").out).toBe("http://10.0.0.5:7420");
+		expect(
+			run("--address=10.0.0.5", "--agent-url=https://agent.example.com/").out,
+		).toBe("https://agent.example.com");
+		const refused = run("--address=https://agent.example.com");
+		expect(refused.code).toBe(1);
+		expect(refused.err).toContain("--agent-url=https://agent.example.com");
+	});
 });
 
 describe("toSwarmNodeInfo", () => {
