@@ -1,0 +1,15 @@
+{
+	"$schema": "../schema.json",
+	"name": "Gatus MCP",
+	"description": "Read Gatus endpoint statuses, uptime and response times from an MCP client. Set GATUS_URL. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/adambenhassen/gatus-mcp",
+	"tag": "latest",
+	"containerPort": 3000,
+	"icon": "di:gatus",
+	"tags": ["mcp", "gatus", "uptime", "status"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/adambenhassen/gatus-mcp",
+	"envVars": {
+		"GATUS_URL": "http://gatus:8080"
+	}
+}

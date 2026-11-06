@@ -17,6 +17,7 @@
 
 	interface Props {
 		baseDomain: string;
+		networkHref: string;
 		serviceDomain: string;
 		stackSlug: string | null;
 		submitting: boolean;
@@ -31,6 +32,7 @@
 
 	let {
 		baseDomain,
+		networkHref,
 		serviceDomain,
 		stackSlug,
 		submitting = $bindable(),
@@ -107,11 +109,12 @@
 					and {routedCount - 1} more
 				{/if}.
 			{:else if svc.networkMode === "host"}
-				Not publicly routed : this service is on the host network (see Network
-				below), which Traefik can't route to.
+				Not publicly routed : this service is on the host network (see
+				<a class="text-accent underline" href={networkHref}>Network</a>), which
+				Traefik can't route to.
 			{:else}
-				Not publicly routed : subnet-only. Change this in the Network section
-				below.
+				Not publicly routed : subnet-only. Change this under
+				<a class="text-accent underline" href={networkHref}>Network</a>.
 			{/if}
 		{/snippet}
 		{#snippet trailing()}

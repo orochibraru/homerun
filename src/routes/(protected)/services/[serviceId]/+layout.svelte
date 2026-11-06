@@ -6,31 +6,69 @@
 		Cpu,
 		ExternalLink,
 		FileText,
+		Globe,
 		HardDrive,
 		Layers,
 		LayoutGrid,
 		Network,
-		Server,
 		Settings,
 		ShieldCheck,
 		Terminal,
 	} from "@lucide/svelte";
 	import * as Select from "@orochibraru/ui/select";
+	import { onDestroy, onMount } from "svelte";
 
 	import CopyButton from "#lib/components/copy-button.svelte";
 	import StatusBadge from "#lib/components/status-badge.svelte";
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";
+	import {
+		DeployProgress,
+		provideDeployProgress,
+	} from "#lib/deploy-progress.svelte.js";
 	import { timeAgo } from "#lib/formatting.js";
 	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
 	import { primaryHostname } from "#lib/service-domains.js";
+	import { hasIconImage } from "#lib/service-icon.js";
 	import { internalUrl, maskUrlPassword } from "#lib/service-link.js";
 	import type { ContainerStatus } from "#lib/types.js";
 	import { currentHref, visibleIn } from "#lib/ui-mode.js";
 
+	import ServiceActions from "./service-actions.svelte";
+
 	const { data, children } = $props();
 
 	const svc = $derived(data.service);
+
+	const progress = provideDeployProgress(
+		new DeployProgress({
+			id: () => svc.id,
+			name: () => svc.name,
+		}),
+	);
+
+	onMount(() =>
+		progress.resume(data.lastDeployment ?? undefined, svc.currentStatus),
+	);
+
+	onDestroy(() => progress.close());
+
+	const overviewPath = $derived(
+		resolve("/(protected)/services/[serviceId]", { serviceId: svc.id }),
+	);
+
+	const source = $derived(
+		svc.image
+			? { name: svc.image, version: svc.tag }
+			: {
+					name:
+						svc.gitRepo ??
+						(svc.gitUrl ?? "")
+							.replace(/^https?:\/\//, "")
+							.replace(/\.git$/, ""),
+					version: svc.gitRef ?? "main",
+				},
+	);
 	const synced = $derived(
 		syncServiceStatuses(svc.containerId || svc.swarmServiceId ? [svc.id] : []),
 	);
@@ -241,109 +279,140 @@
 </script>
 
 <div class="p-5 md:p-6">
-	<!-- ── Hero ─────────────────────────────────────────────── -->
-	<div class="mb-6 flex flex-wrap items-center gap-3">
-		<TemplateIcon
-			category={svc.category}
-			class="size-9 rounded-lg"
-			fallback={Server}
-			icon={svc.icon}
-		/>
-		<h1 class="text-text text-lg font-semibold tracking-tight">{svc.name}</h1>
-		<StatusBadge status={liveStatus} />
-		{#if data.environments.length > 0}
-			<Select.Root
-				onValueChange={(id) =>
-					void goto(
-						page.url.pathname.replace(`/services/${svc.id}`, `/services/${id}`),
-					)}
-				type="single"
-				value={svc.id}
-			>
-				<Select.Trigger
-					class="h-6! rounded-full py-0 pr-1.5 pl-2 text-xs font-medium capitalize"
-					aria-label="Environment"
-				>
-					<span class="inline-flex items-center gap-1">
-						<Layers class="text-accent size-3" />
-						{data.environments.find((env) => env.id === svc.id)?.name ??
-							"production"}
-					</span>
-				</Select.Trigger>
-				<Select.Content>
-					{#each data.environments as env (env.id)}
-						<Select.Item class="capitalize" label={env.name} value={env.id} />
-					{/each}
-				</Select.Content>
-			</Select.Root>
-		{/if}
-	</div>
-	<p
-		class="text-text-muted -mt-4 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
-	>
-		<span>
-			{svc.image
-				? `${svc.image}:${svc.tag}`
-				: `${svc.gitRepo ?? (svc.gitUrl ?? "").replace(/^https?:\/\//, "").replace(/\.git$/, "")}@${svc.gitRef ?? "main"}`}
+	<div class="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+		<span
+			class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-[1.125rem] text-[1.375rem] font-extrabold text-white shadow-[0_8px_20px_-10px_var(--primary)]"
+			style="background: var(--tile-a)"
+		>
+			{#if hasIconImage(svc.icon)}
+				<TemplateIcon
+					category={svc.category}
+					class="size-10 rounded-xl bg-white/90"
+					icon={svc.icon}
+				/>
+			{:else}
+				{svc.name.charAt(0).toUpperCase()}
+			{/if}
 		</span>
-		{#if publicDomains.length > 0}
-			{#each publicDomains as domain (domain)}
-				<span aria-hidden="true">·</span>
-				<a
-					class="text-accent inline-flex items-center gap-1 hover:underline"
-					href="{data.publicScheme}://{domain}"
-					rel="noopener noreferrer"
-					target="_blank"
+		<div class="min-w-48 flex-1">
+			<div class="flex flex-wrap items-center gap-2.5">
+				<h1
+					class="text-text text-[1.75rem] leading-[1.1] font-semibold tracking-[-0.035em]"
 				>
-					{domain}
-					<ExternalLink class="size-3" />
-				</a>
-			{/each}
-		{:else}
-			<span aria-hidden="true">·</span>
-			<span class="text-text-subtle">not publicly routed</span>
-		{/if}
-		{#if svc.containerId || svc.swarmServiceId}
-			{@const internal = internalUrl({
-				command: svc.command,
-				containerPort: svc.containerPort,
-				envVars: svc.envVars ?? {},
-				image: svc.image,
-				name: svc.name,
-				slug: svc.slug,
-			})}
-			<span aria-hidden="true">·</span>
-			<span class="text-text-subtle inline-flex items-center gap-0.5">
-				internal: {maskUrlPassword(internal)}
-				<CopyButton class="p-0.5" label="internal URL" value={internal} />
-			</span>
-		{/if}
-		{#if data.openErrors > 0}
-			<span aria-hidden="true">·</span>
-			<a
-				class="text-red-600 hover:underline dark:text-red-400"
-				href={resolve(
-					"/(protected)/services/[serviceId]/observability/errors",
-					{
-						serviceId: svc.id,
-					},
-				)}
+					{svc.name}
+				</h1>
+				<StatusBadge status={liveStatus} />
+				{#if data.environments.length > 0}
+					<Select.Root
+						onValueChange={(id) =>
+							void goto(
+								page.url.pathname.replace(
+									`/services/${svc.id}`,
+									`/services/${id}`,
+								),
+							)}
+						type="single"
+						value={svc.id}
+					>
+						<Select.Trigger
+							class="text-text-muted h-7.5! rounded-full! py-0 pr-2.5 pl-3 text-[0.78rem] font-semibold capitalize"
+							aria-label="Environment"
+						>
+							<span class="inline-flex items-center gap-1.5">
+								<Layers class="size-3.5" />
+								{data.environments.find((env) => env.id === svc.id)?.name ??
+									"production"}
+							</span>
+						</Select.Trigger>
+						<Select.Content>
+							{#each data.environments as env (env.id)}
+								<Select.Item
+									class="capitalize"
+									label={env.name}
+									value={env.id}
+								/>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				{/if}
+			</div>
+			<p
+				class="text-text-muted mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[0.78rem]"
 			>
-				{data.openErrors} open {data.openErrors === 1 ? "error" : "errors"}
-			</a>
-		{/if}
-		{#if data.lastDeployedAt}
-			<span aria-hidden="true">·</span>
-			<span
-				class="text-text-subtle"
-				title={new Date(data.lastDeployedAt).toLocaleString()}
-			>
-				deployed {timeAgo(data.lastDeployedAt)}
-			</span>
-		{/if}
-	</p>
+				<span
+					class="inline-flex min-w-0 items-center gap-1.5 font-mono break-all"
+				>
+					<span>{source.name}</span>
+					{#if source.version}
+						<span
+							class="bg-surface-2 text-text rounded-full px-1.75 py-0.5 font-semibold"
+							>{source.version}</span
+						>
+					{/if}
+				</span>
+				{#each publicDomains as domain (domain)}
+					<a
+						class="text-accent inline-flex items-center gap-1.25 font-semibold hover:underline"
+						href="{data.publicScheme}://{domain}"
+						rel="noopener noreferrer"
+						target="_blank"
+					>
+						<Globe class="size-3.25" />
+						{domain}
+						<ExternalLink class="size-3" />
+					</a>
+				{:else}
+					<span class="text-text-subtle">not publicly routed</span>
+				{/each}
+				{#if svc.containerId || svc.swarmServiceId}
+					{@const internal = internalUrl({
+						command: svc.command,
+						containerPort: svc.containerPort,
+						envVars: svc.envVars ?? {},
+						image: svc.image,
+						name: svc.name,
+						slug: svc.slug,
+					})}
+					<span
+						class="inline-flex items-center gap-0.5"
+						title="Internal address, reachable from the service's networks"
+					>
+						<span class="font-mono"
+							>{maskUrlPassword(internal).replace(/^http:\/\//, "")}</span
+						>
+						<CopyButton class="p-0.5" label="internal URL" value={internal} />
+					</span>
+				{/if}
+				{#if data.openErrors > 0}
+					<a
+						class="font-semibold text-red-600 hover:underline dark:text-red-400"
+						href={resolve(
+							"/(protected)/services/[serviceId]/observability/errors",
+							{
+								serviceId: svc.id,
+							},
+						)}
+					>
+						{data.openErrors} open {data.openErrors === 1 ? "error" : "errors"}
+					</a>
+				{/if}
+				{#if data.lastDeployedAt}
+					<span title={new Date(data.lastDeployedAt).toLocaleString()}>
+						Deployed {timeAgo(data.lastDeployedAt)}{data.deployedBy
+							? ` by ${data.deployedBy}`
+							: ""}
+					</span>
+				{/if}
+			</p>
+		</div>
+		<ServiceActions
+			actionPath={overviewPath}
+			canRollBack={data.canRollBack}
+			{progress}
+			service={svc}
+		/>
+	</div>
 
-	<!-- ── Tabs ─────────────────────────────────────────────── -->
 	<TabNav active={activeTabId} tabs={shownTabs}>
 		{@render children()}
 	</TabNav>

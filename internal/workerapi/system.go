@@ -18,6 +18,48 @@ func (s *Server) mountNetworks(r chi.Router) {
 	r.Get("/v1/volumes", httpapi.H(s.listVolumes))
 	r.Delete("/v1/volumes/{name}", httpapi.H(s.removeVolume))
 	r.Post("/v1/volumes/sizes", httpapi.H(s.volumeSizes))
+	r.Get("/v1/disks", httpapi.H(s.listDisks))
+	r.Post("/v1/volumes/on-disk", httpapi.H(s.volumeOnDisk))
+}
+
+// listDisks answers with the host's disk filesystems, measured by the helper
+// image the query names.
+func (s *Server) listDisks(w http.ResponseWriter, r *http.Request) error {
+	image := r.URL.Query().Get("image")
+	if image == "" {
+		return httpapi.Invalid(w, "Invalid request",
+			[]httpapi.ValidationIssue{{Message: "image is required", Path: []string{"image"}}})
+	}
+	disks, err := s.docker.ListHostDisks(r.Context(), image)
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, disks)
+}
+
+// volumeOnDiskBody names a volume to create on a host disk and the helper
+// image that creates its directory.
+type volumeOnDiskBody struct {
+	Disk  string `json:"disk"`
+	Image string `json:"image"`
+	Name  string `json:"name"`
+}
+
+// volumeOnDisk creates a named volume on a host disk, leaving one that already
+// exists as it is.
+func (s *Server) volumeOnDisk(w http.ResponseWriter, r *http.Request) error {
+	var input volumeOnDiskBody
+	if !httpapi.DecodeJSON(w, r, &input) {
+		return nil
+	}
+	if input.Image == "" || input.Name == "" || input.Disk == "" {
+		return httpapi.Invalid(w, "Invalid request body",
+			[]httpapi.ValidationIssue{{Message: "disk, image and name are required", Path: []string{"disk"}}})
+	}
+	if err := s.docker.EnsureVolumeOnDisk(r.Context(), input.Name, input.Disk, input.Image); err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 // volumeSizesBody lists the volumes or host paths to measure and the helper
@@ -73,6 +115,7 @@ func (s *Server) mountSystem(r chi.Router) {
 	r.Get("/v1/info", httpapi.H(s.systemInfo))
 	r.Get("/v1/df", httpapi.H(s.diskUsage))
 	r.Get("/v1/host/stats", httpapi.H(s.hostStats))
+	r.Get("/v1/host/usage", httpapi.H(s.hostUsage))
 	r.Post("/v1/prune/{kind}", httpapi.H(s.prune))
 	r.Post("/v1/one-off", httpapi.H(s.runOneOff))
 }
@@ -213,4 +256,14 @@ func (s *Server) runOneOff(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpapi.Answer(w, http.StatusOK, result)
+}
+
+// hostUsage answers with every running container's CPU and memory right now,
+// for telling what is using the host.
+func (s *Server) hostUsage(w http.ResponseWriter, r *http.Request) error {
+	usage, err := s.docker.ContainersUsage(r.Context())
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, usage)
 }

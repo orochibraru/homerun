@@ -8,11 +8,17 @@
 	import { Cpu, HardDrive, MemoryStick } from "@lucide/svelte";
 	import { onMount } from "svelte";
 
+	import ChartHoverTarget from "#lib/components/chart-hover-target.svelte";
+	import ResourceInsightsDialog from "#lib/components/resource-insights-dialog.svelte";
 	import { getSystemStats } from "#lib/remote/system-stats.remote.js";
+	import type { InsightResource } from "#lib/services/resource-insights.service.js";
 
 	const POLL_MS = 5000;
 
 	const stats = getSystemStats();
+
+	let insightOpen = $state(false);
+	let insightResource = $state<InsightResource>("cpu");
 
 	$effect(() => {
 		if (stats.ready) {
@@ -50,6 +56,7 @@
 	Icon: typeof Cpu,
 	value: string,
 	percent: number,
+	resource: InsightResource,
 )}
 	<div class="min-w-0 flex-1 px-4 py-3">
 		<div class="flex items-baseline justify-between gap-2">
@@ -63,17 +70,32 @@
 				></span
 			>
 		</div>
-		<div class="bg-surface-2 mt-2 h-0.75 overflow-hidden">
-			<div
-				class="h-full transition-all duration-500 {barColor(percent)}"
-				style="width: {percent}%"
-			></div>
-		</div>
+		<ChartHoverTarget
+			class="mt-1 py-1"
+			label="{label}: {percent.toFixed(0)}%, {value}, open to see what uses it"
+			onselect={() => {
+				insightResource = resource;
+				insightOpen = true;
+			}}
+		>
+			{#snippet tip()}
+				<p class="opacity-75">{label}</p>
+				<p><b class="text-sm font-bold">{percent.toFixed(1)}%</b> used</p>
+				<p class="opacity-75">{value}</p>
+				<p class="opacity-75">Click to see what uses it</p>
+			{/snippet}
+			<span class="bg-surface-2 block h-0.75 overflow-hidden">
+				<span
+					class="block h-full transition-all duration-500 {barColor(percent)}"
+					style="width: {percent}%"
+				></span>
+			</span>
+		</ChartHoverTarget>
 		<p class="tabular-nums text-text-subtle mt-1.5 text-[0.6875rem]">{value}</p>
 	</div>
 {/snippet}
 
-<div class="panel overflow-hidden rounded-xl" data-slot="host-resources">
+<div class="panel rounded-xl" data-slot="host-resources">
 	{#if stats.error}
 		<p class="text-text-muted px-4 py-3 text-xs">
 			Host resource stats are unavailable right now.
@@ -88,6 +110,7 @@
 				Cpu,
 				`${(s?.cpuPercent ?? 0).toFixed(0)}%`,
 				s?.cpuPercent ?? 0,
+				"cpu",
 			)}
 			{@render meter(
 				"RAM",
@@ -96,6 +119,7 @@
 					? `${(s.memUsedMb / 1024).toFixed(1)} / ${(s.memTotalMb / 1024).toFixed(1)} GB`
 					: "– / – GB",
 				s ? pct(s.memUsedMb, s.memTotalMb) : 0,
+				"memory",
 			)}
 			{@render meter(
 				"Disk",
@@ -106,6 +130,7 @@
 						? `${s.diskUsedGb.toFixed(0)} / ${s.diskTotalGb.toFixed(0)} GB`
 						: "unavailable",
 				s ? pct(s.diskUsedGb ?? 0, s.diskTotalGb ?? 0) : 0,
+				"disk",
 			)}
 		</div>
 
@@ -121,15 +146,33 @@
 						GB
 					</span>
 				</div>
-				<div class="bg-surface-2 mt-2 h-0.75 overflow-hidden">
-					<div
-						class="h-full transition-all duration-500 {barColor(
-							s.gpu.utilizationPercent,
-						)}"
-						style="width: {s.gpu.utilizationPercent}%"
-					></div>
-				</div>
+				<ChartHoverTarget
+					class="mt-1 py-1"
+					label="GPU: {s.gpu.utilizationPercent}% busy"
+				>
+					{#snippet tip()}
+						<p class="opacity-75">{s.gpu?.name}</p>
+						<p>
+							<b class="text-sm font-bold">{s.gpu?.utilizationPercent}%</b> busy
+						</p>
+						<p class="opacity-75">
+							{((s.gpu?.memUsedMb ?? 0) / 1024).toFixed(1)} of {(
+								(s.gpu?.memTotalMb ?? 0) / 1024
+							).toFixed(1)} GB memory
+						</p>
+					{/snippet}
+					<span class="bg-surface-2 block h-0.75 overflow-hidden">
+						<span
+							class="block h-full transition-all duration-500 {barColor(
+								s.gpu.utilizationPercent,
+							)}"
+							style="width: {s.gpu.utilizationPercent}%"
+						></span>
+					</span>
+				</ChartHoverTarget>
 			</div>
 		{/if}
 	{/if}
 </div>
+
+<ResourceInsightsDialog resource={insightResource} bind:open={insightOpen} />

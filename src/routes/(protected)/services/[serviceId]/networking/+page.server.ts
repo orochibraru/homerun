@@ -1,15 +1,9 @@
 import { fail } from "@sveltejs/kit";
 
-import { config } from "#lib/config.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
 import { can } from "#lib/permissions.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
-import {
-	parseExposedPortsField,
-	parsePublishedPortsField,
-	updatePortsSchema,
-} from "#lib/server/validation/service.js";
 import { normalizeDomain } from "#lib/service-domains.js";
 import {
 	DomainConflictError,
@@ -19,36 +13,7 @@ import {
 
 const logger = new Logger("Services");
 
-export const load = async ({ parent }) => {
-	await parent();
-	return { httpCacheAvailable: config.traefik.httpCache };
-};
-
 export const actions = {
-	updateCache: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-		const raw = String(
-			(await request.formData()).get("httpCacheTtl") ?? "",
-		).trim();
-		const ttl = raw === "" ? null : Number(raw);
-		if (ttl !== null && !(Number.isInteger(ttl) && ttl >= 1 && ttl <= 86_400)) {
-			return fail(400, {
-				error: "Cache time must be a whole number of seconds, 1 to 86400.",
-			});
-		}
-		await svc.update({ httpCacheTtl: ttl });
-		logger.info(
-			`Response cache updated: service=${svc.id} ttl=${ttl ?? "off"} user=${locals.user.id}`,
-		);
-		return { success: true };
-	},
-
 	updateDomains: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			redirectToSignIn();
@@ -142,107 +107,6 @@ export const actions = {
 
 		logger.info(
 			`Custom certificate ${clearSsl ? "removed" : "updated"}: service=${svc.id} user=${locals.user.id}`,
-		);
-		return { success: true };
-	},
-
-	// Container port, protocol, network mode, and DNS-resolvability : moved
-	// here from the old Settings tab (see validation/service.ts's
-	// updatePortsSchema docstring).
-	updatePorts: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-
-		const formData = await request.formData();
-		const result = updatePortsSchema.safeParse(Object.fromEntries(formData));
-		if (!result.success) {
-			return fail(400, {
-				errors: result.error.flatten().fieldErrors,
-				portsValues: Object.fromEntries(formData),
-			});
-		}
-		const input = result.data;
-		const saved = await ServiceSettingsService.save(svc, input, {
-			hostAccess: can(locals.permissions, "system", "write"),
-			userId: locals.user.id,
-		});
-		if (saved instanceof ServiceSettingsError) {
-			return fail(saved.status, { error: saved.message });
-		}
-
-		logger.info(
-			`Ports updated: service=${svc.id} port=${input.containerPort}/${input.portProtocol} networkMode=${input.networkMode} user=${locals.user.id}`,
-		);
-		return { portsSuccess: true };
-	},
-
-	updatePublishedPorts: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-
-		const parsed = parsePublishedPortsField(
-			(await request.formData()).get("publishedPorts"),
-		);
-		if ("error" in parsed) {
-			return fail(400, { error: parsed.error });
-		}
-		const { ports } = parsed;
-		const saved = await ServiceSettingsService.save(
-			svc,
-			{ publishedPorts: ports },
-			{
-				hostAccess: can(locals.permissions, "system", "write"),
-				userId: locals.user.id,
-			},
-		);
-		if (saved instanceof ServiceSettingsError) {
-			return fail(saved.status, { error: saved.message });
-		}
-		logger.info(
-			`Published ports updated: service=${svc.id} ports=${ports.map((p) => `${p.hostPort}:${p.containerPort}/${p.protocol}`).join(",") || "none"} user=${locals.user.id}`,
-		);
-		return { success: true };
-	},
-
-	updateExposedPorts: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const svc = await ServiceDTO.get(params.serviceId);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-
-		const parsed = parseExposedPortsField(
-			(await request.formData()).get("exposedPorts"),
-		);
-		if ("error" in parsed) {
-			return fail(400, { error: parsed.error });
-		}
-		const { ports } = parsed;
-		const saved = await ServiceSettingsService.save(
-			svc,
-			{ exposedPorts: ports },
-			{
-				hostAccess: can(locals.permissions, "system", "write"),
-				userId: locals.user.id,
-			},
-		);
-		if (saved instanceof ServiceSettingsError) {
-			return fail(saved.status, { error: saved.message });
-		}
-		logger.info(
-			`Exposed ports updated: service=${svc.id} ports=${ports.map((p) => `${p.port}/${p.protocol}`).join(",") || "none"} user=${locals.user.id}`,
 		);
 		return { success: true };
 	},

@@ -26,6 +26,7 @@ import { BaseDTO } from "./base-dto";
 
 export interface NewStorageVolumeInput {
 	description?: string | null;
+	disk?: string | null;
 	kind: "bind" | "volume";
 	name: string;
 	previewServiceId?: string | null;
@@ -212,6 +213,7 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 			backupStopServices: false,
 			createdAt: now,
 			description: input.description ?? null,
+			disk: input.kind === "volume" ? (input.disk ?? null) : null,
 			id: crypto.randomUUID(),
 			kind: input.kind,
 			name: input.name,

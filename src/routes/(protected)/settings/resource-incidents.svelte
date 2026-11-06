@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDuration } from "#lib/resource-incidents.js";
+	import { describeCauses, formatDuration } from "#lib/resource-incidents.js";
 	import { RESOURCE_LABELS } from "#lib/resource-thresholds.js";
 	import type { ResourceIncident } from "#lib/server/db/schema.js";
 
@@ -42,6 +42,11 @@
 						· {incident.notifications}
 						{incident.notifications === 1 ? "alert" : "alerts"}
 					</span>
+					{#if incident.causes.length > 0}
+						<p class="text-text-muted w-full text-xs">
+							Biggest users: {describeCauses(incident.causes)}
+						</p>
+					{/if}
 				</li>
 			{/each}
 		</ul>

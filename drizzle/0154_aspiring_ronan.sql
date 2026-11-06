@@ -1,0 +1,1 @@
+ALTER TABLE "user_preferences" ADD COLUMN "view_modes" jsonb DEFAULT '{}'::jsonb NOT NULL;

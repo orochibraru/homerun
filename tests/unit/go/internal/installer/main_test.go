@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/orochibraru/homerun/internal/agent"
 	"github.com/orochibraru/homerun/internal/installer"
 )
 
@@ -92,6 +93,13 @@ func TestInstallStackAgent(t *testing.T) {
 	}
 	if !run.ran("homerun-worker-arm64.gz") {
 		t.Error("an agent install should fetch the worker binary")
+	}
+	unit := run.writes["/etc/systemd/system/homerun-binfmt.service"]
+	if !strings.Contains(unit, "--privileged "+installer.BinfmtImage+" --install all") {
+		t.Errorf("an agent install should register QEMU on the host at boot, got unit %q", unit)
+	}
+	if !run.ran("systemctl restart homerun-binfmt") {
+		t.Error("an agent install should start the QEMU unit")
 	}
 	if run.ran("network create --driver overlay") {
 		t.Error("a rootless install has no swarm overlay")
@@ -322,5 +330,32 @@ func TestStepRunnerThreadsEnvThroughSudo(t *testing.T) {
 
 	if got := strings.Join(installer.FullCommand([]string{"id"}, installer.Opts{}), " "); got != "id" {
 		t.Errorf("a plain command should be left alone, got %q", got)
+	}
+}
+
+func TestInstallStackAgentSurvivesAFailedQemuUnit(t *testing.T) {
+	withHomeRoot(t, "homerun")
+	run := newFakeRunner().fails("systemctl restart homerun-binfmt")
+
+	out := captureStdout(t, func() {
+		err := installer.InstallStack(
+			installer.Options{AgentPort: 7420, Mode: installer.ModeAgent, RootlessUser: "homerun", Version: "latest"},
+			run, installer.FlavourRootless, "/run/user/1000/docker.sock", "", "arm64",
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	if !strings.Contains(out, "systemctl start homerun-binfmt") {
+		t.Errorf("a failed QEMU unit should say how to retry it, got %q", out)
+	}
+	if !run.ran("systemctl --user restart homerun-worker") {
+		t.Error("a failed QEMU unit must not stop the worker install")
+	}
+}
+
+func TestQemuUnitUsesTheBuildersBinfmtPin(t *testing.T) {
+	if installer.BinfmtImage != agent.Tools.BinfmtImage {
+		t.Errorf("installer pins %q, builder-tools.json pins %q", installer.BinfmtImage, agent.Tools.BinfmtImage)
 	}
 }

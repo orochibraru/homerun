@@ -7,6 +7,22 @@ When done delete the entry, no bloat.
 
 ## Small
 
+- [ ] Revision health (`src/lib/revisions.ts`) and update trials
+      (`update-trial.service.ts`) still report a bare "exited with code N": give
+      them the deploy's exit-code meaning and last output too.
+- [ ] Live log viewer keeps every streamed line (and every line held while
+      paused) in memory for as long as the page is open; cap it to the last few
+      thousand lines so a fast-logging service can't bloat the tab.
+- [ ] Volume disks: the deploy wizard's Volumes step and template/compose
+      volumes can't pick a disk yet, and the REST API, MCP and CLI have no way
+      to list the host's disks; only Storage → New volume and the service and
+      cron job dialogs show the picker.
+
+- [ ] Volume disks: Docker Cleanup can prune an unmounted disk-placed volume
+      (its data stays on the disk); a deploy puts it back, a cron job run
+      doesn't and lets Docker create it under its data root. Place it before a
+      cron run too.
+
 - [ ] Duplicating a volume on a mount edit copies it during the next deploy,
       while the old container still runs: stop the service around the copy so a
       database's copy is consistent without the user stopping it by hand.
@@ -57,12 +73,19 @@ When done delete the entry, no bloat.
       threshold trips on `backup-queue.ts`, `domain-takeover.ts` and
       `service-settings.service.ts`; cover them or exclude them
 
+- [ ] MCP templates left out because they exit at boot when their app isn't
+      reachable, so a headless Templates E2E deploy can't pass: Navidrome
+      (Blakeem), AdGuard Home (Samik081), Miniflux (tssujt), Forgejo
+      (agentic-forges), Pocket ID (vplme) and Google's MCP Toolbox for
+      Databases. Portainer's official one pins a Portainer minor
+      (`portainer-mcp:2.45`) against a template on `latest`. Revisit if they
+      gain a lazy connect, or if the suite learns to deploy a template next to
+      its app.
+
 ## Medium
 
-- [ ] Lanes on a service's own pages: the Overview tab's 24h lane with its
-      revisions marked on it plus an activity feed and a property sidebar, and
-      the Logs tab's volume strip with errors in red; only the Overview, the
-      Services views and the new-service stepper got the redesign
+- [ ] Service Logs tab: a log-volume strip over the lines (errors in red), like
+      the lanes on the Overview tab
 
 - [ ] Log history only follows services: workstations and Homerun's own
       containers (Traefik, the app, the worker) still lose their output on

@@ -29,7 +29,7 @@ bcrypt
 buildx
 CIs?
 CNAMEs
-configs?
+[Cc]onfigs?
 Coolify
 Dashy
 dev
@@ -50,6 +50,7 @@ Homarr
 hotlinked
 htpasswd
 Jellyfin
+Jira
 Kanidm
 Keycloak
 Kuma
@@ -58,7 +59,9 @@ Logto
 lookups
 loopback
 markdownlint
+Mattermost
 MCP
+Metabase
 middleware
 Miniflux
 mise
@@ -183,3 +186,4 @@ gitleaks
 hadolint
 zizmor
 Astro
+PGlite

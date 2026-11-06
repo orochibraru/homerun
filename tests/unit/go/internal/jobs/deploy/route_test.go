@@ -222,3 +222,13 @@ func TestGatewayVerdict(t *testing.T) {
 		})
 	}
 }
+
+func TestGatewayVerdictPlainNotFound(t *testing.T) {
+	missing := deploy.RouteResult{Detail: "no Traefik router answers for it (404)", Outcome: deploy.RouteBroken, Status: 404}
+	if got := deploy.GatewayVerdict(missing, deploy.ContainerAnswer{Asked: true, Connected: true, Status: 404}); got.Outcome != deploy.RouteOK {
+		t.Fatalf("a Go app's own stock 404 = %+v, want ok", got)
+	}
+	if got := deploy.GatewayVerdict(missing, deploy.ContainerAnswer{Asked: true, Connected: true, Status: 200}); got.Outcome != deploy.RouteBroken {
+		t.Fatalf("a 404 from Traefik while the container answers 200 = %+v, want broken", got)
+	}
+}

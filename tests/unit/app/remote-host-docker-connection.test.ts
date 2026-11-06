@@ -30,6 +30,7 @@ function host(row: Record<string, unknown>) {
 		RemoteHostDTO as unknown as new (row: Record<string, unknown>) => Host
 	)({
 		dockerHost: null,
+		enabled: true,
 		id: "h1",
 		kind: "docker",
 		sshHostKey: null,
@@ -131,5 +132,17 @@ describe("RemoteHostDTO.toDockerConnection", () => {
 			hostId: "h1",
 			kind: "docker",
 		});
+	});
+
+	test("a disabled build server takes no build", async () => {
+		const { instance } = host({
+			dockerHost: "tcp://10.0.0.7:2376",
+			enabled: false,
+			name: "Builder",
+		});
+		restorers.push(spyOn(RemoteHostDTO, "get").mockResolvedValue(instance));
+		await expect(RemoteHostDTO.resolveBuildTarget("h1")).rejects.toThrow(
+			"Build server Builder is disabled",
+		);
 	});
 });

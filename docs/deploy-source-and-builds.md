@@ -62,20 +62,24 @@ registry right away, whether or not the watch is on.
 
 With **Try new versions before notifying** on (the default), the new version is
 started first in a throwaway container with the service's env vars, command,
-entrypoint and networks (Homerun's shared network and its stack's, or the swarm
-network for a service running in [swarm mode](swarm-mode.md), so it resolves its
-database and the other services it talks to), but no volumes, no published
-ports, no Traefik route and not under the service's own name, so it never gets
-the live service's files or traffic. The panel follows it with the same stepper
-as a deploy (pull, start, health check, passed) and its output underneath. It
-passes once it's ready by the same check a deploy gates traffic on (the
-service's healthcheck command, else its port listening), or is still running
-after 20 seconds when healthchecks are off; the outcome, with the last log lines
-of a failure, rides along in the notification. The container is removed either
-way; the pulled image stays for the real deploy. Since it reaches the real
-database, an app that migrates its schema on startup migrates the live one
-during the trial: turn trials off for those. An app that can't start without its
-own data still fails it.
+entrypoint, user, capabilities, devices, resource limits and networks (Homerun's
+shared network and its stack's, or the swarm network for a service running in
+[swarm mode](swarm-mode.md), so it resolves its database and the other services
+it talks to). Each writable volume is copied into a fresh volume mounted at the
+same path, so the new version finds its config and data without writing to the
+live files; a read-only mount is shared as is. No published ports, no Traefik
+route and not under the service's own name, so it never gets the live service's
+traffic. Copying takes as long as the volumes are big, and the copies are
+removed when the trial ends. The panel follows it with the same stepper as a
+deploy (pull, start, health check, passed) and its output underneath. It passes
+once it's ready by the same check a deploy gates traffic on (the service's
+healthcheck command, else its port listening), or is still running after 20
+seconds when healthchecks are off; the outcome, with the last log lines of a
+failure, rides along in the notification. The container is removed either way;
+the pulled image stays for the real deploy. Since it reaches the real database,
+an app that migrates its schema on startup migrates the live one during the
+trial: turn trials off for those. An app that can't start without its own data
+still fails it.
 
 A failed trial is retried automatically, up to 3 more times 30 seconds apart. If
 every attempt fails the update isn't offered: there's no **Update now** button,
@@ -194,10 +198,15 @@ section change that:
 
   A build server doesn't need the same CPU architecture as this host. The image
   is always built for this host's platform: an `arm64` build server building for
-  an `amd64` host installs QEMU on itself on first use (one privileged
-  `tonistiigi/binfmt` container, so its Docker daemon has to allow those, which
-  a rootless one doesn't) and builds emulated. That works with every build
-  method but is several times slower than a native build, so prefer a build
-  server with this host's architecture when there's a choice. An agent older
-  than this feature still builds for its own CPU, and the deploy then fails once
-  the image arrives, naming both architectures: update the agent.
+  an `amd64` host builds emulated through QEMU. A build server set up by the
+  installer registers QEMU on itself at boot (the `homerun-binfmt` system unit);
+  one with a rootful Docker daemon and no such unit installs it on first use
+  (one privileged `tonistiigi/binfmt` container). A rootless daemon can't
+  register QEMU itself, so a build server without the unit fails the build
+  saying so: re-run the installer on it, or
+  `systemctl enable --now homerun-binfmt` if the unit is there, then restart its
+  rootless daemon. That works with every build method but is several times
+  slower than a native build, so prefer a build server with this host's
+  architecture when there's a choice. An agent older than this feature still
+  builds for its own CPU, and the deploy then fails once the image arrives,
+  naming both architectures: update the agent.

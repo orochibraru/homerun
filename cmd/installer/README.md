@@ -93,9 +93,15 @@ socket, the worker included, is root on the host.
    session, and starts it as a `systemd --user` service. Every container runs
    under this account's rootless permissions, never as root.
 4. Creates the `homerun` Docker network on that rootless daemon.
-5. `--mode=agent` (the default mode): downloads the prebuilt
-   `homerun-worker-<arch>` release binary straight to
-   `/usr/local/bin/homerun-worker` and runs it as the `homerun-worker`
+5. `--mode=agent` (the default mode): writes and starts the root
+   `homerun-binfmt` system unit, which registers QEMU on the host through the
+   system Docker daemon at every boot so this build server can build for another
+   CPU architecture (a rootless daemon can't register it itself; a failure there
+   is reported and doesn't stop the install). Then downloads the prebuilt
+   `homerun-worker-<arch>` release binary straight to the rootless user's
+   `~/bin/homerun-worker`, owned by that user so the Remote Hosts page can
+   update it in place (a root-owned `/usr/local/bin/homerun-worker` from an
+   older install is removed), and runs it as the `homerun-worker`
    `systemd --user` unit under the rootless account, pointed at the rootless
    socket, with no `DATABASE_URL` so it starts in agent mode (port
    `WORKER_PORT`, token persisted to `~/.homerun-worker/token`). A leftover

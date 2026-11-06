@@ -31,7 +31,17 @@ function respondTo(url: URL, init: RequestInit): Response {
 				port: url.searchParams.get("port"),
 			});
 		case "/v1/logs":
-			return new Response(`tail=${url.searchParams.get("tail")}\n`);
+			return url.searchParams.has("tail")
+				? new Response(`tail=${url.searchParams.get("tail")}\n`)
+				: json({
+						lines: [{ line: "[info] ready", time: "2026-11-04T10:00:00Z" }],
+					});
+		case "/v1/events":
+			return json({
+				events: [{ action: "start", id: "abc", time: 1, type: "container" }],
+			});
+		case "/v1/update":
+			return json({ from: "1.0.0", ...JSON.parse(String(init.body)) }, 202);
 		case "/v1/empty":
 			return new Response(null, { status: 200 });
 		case "/v1/conflict":
@@ -178,5 +188,19 @@ describe("AgentClientService checks", () => {
 		await expect(
 			AgentClientService.verifyToken("http://127.0.0.1:1", "good"),
 		).rejects.toThrow("Couldn't reach the agent");
+	});
+
+	test("logs, events and update read and drive the agent's upkeep routes", async () => {
+		const connection = { agentUrl, token: "good" };
+		expect(await AgentClientService.logs(connection)).toEqual([
+			{ line: "[info] ready", time: "2026-11-04T10:00:00Z" },
+		]);
+		expect(await AgentClientService.events(connection)).toEqual([
+			{ action: "start", id: "abc", time: 1, type: "container" },
+		]);
+		expect(await AgentClientService.update(connection, "1.2.3")).toEqual({
+			from: "1.0.0",
+			version: "1.2.3",
+		});
 	});
 });

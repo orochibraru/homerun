@@ -73,16 +73,18 @@ const SEEDS: Seed[] = [
 const SHOTS: Shot[] = [
 	{
 		doc: "/",
-		expect: /Welcome back/i,
+		expect: /Good (morning|afternoon|evening)/,
 		name: "hero",
 		path: () => "/",
 		prepare: async (page) => {
-			await expect(page.getByText("Busiest today")).toBeVisible();
+			await expect(
+				page.getByRole("heading", { name: "Traffic" }),
+			).toBeVisible();
 		},
 	},
 	{
 		doc: "/ (Ctrl+K)",
-		expect: /Welcome back/i,
+		expect: /Good (morning|afternoon|evening)/,
 		name: "search",
 		path: () => "/",
 		prepare: async (page) => {
@@ -187,34 +189,20 @@ const SHOTS: Shot[] = [
 	},
 	{
 		doc: "/profile/appearance",
-		expect: /Material You/i,
+		expect: /Windows XP/i,
 		name: "appearance",
 		path: () => "/profile/appearance",
 	},
 	{
-		doc: "/profile/appearance (Glass picked)",
-		expect: /Material You/i,
-		name: "appearance-glass",
-		path: () => "/profile/appearance",
-		prepare: pick("updateSurface", "Glass"),
-	},
-	{
-		doc: "/profile/appearance (Material You picked)",
-		expect: /Material You/i,
-		name: "appearance-material",
-		path: () => "/profile/appearance",
-		prepare: pick("updateSurface", "Material You"),
-	},
-	{
 		doc: "/profile/appearance (Windows XP picked)",
-		expect: /Material You/i,
+		expect: /Windows XP/i,
 		name: "appearance-winxp",
 		path: () => "/profile/appearance",
 		prepare: pick("updatePreset", "Windows XP"),
 	},
 	{
 		doc: "/profile/appearance (Retro picked)",
-		expect: /Material You/i,
+		expect: /Windows XP/i,
 		name: "appearance-retro",
 		path: () => "/profile/appearance",
 		prepare: pick("updatePreset", "Retro"),

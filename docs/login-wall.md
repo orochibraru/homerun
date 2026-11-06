@@ -107,7 +107,7 @@ empty lets **any** signed-in account through, app-access accounts included.
 **Letting CI through: service accounts.** A CI job running end-to-end tests
 against an app or a pull request preview behind the wall shouldn't borrow a
 person's API key, whose permissions cover the whole instance. Create a **service
-account** under Administration → **Service accounts** instead (or
+account** under Administration → IAM → **Service accounts** instead (or
 `homerun service-accounts create`, the REST API, or the Terraform
 `homerun_service_account` resource), mint it an API key on its **API keys** tab
 (`homerun service-accounts keys create <id>`, shown once), and tick it under

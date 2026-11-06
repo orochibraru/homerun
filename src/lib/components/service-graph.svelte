@@ -1,18 +1,20 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { ArrowRight, Server, Unlink } from "@lucide/svelte";
+	import { Unlink } from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
 
+	import StatusBadge from "#lib/components/status-badge.svelte";
 	import UnlinkDialog, {
 		type UnlinkTarget,
 	} from "#lib/components/unlink-dialog.svelte";
+	import type { ContainerStatus } from "#lib/types.js";
 
 	interface Node {
 		id: string;
-		/** The env vars carrying the link: in this service for a dependency, in the other one for a consumer. */
 		keys: string[];
 		name: string;
 		slug: string;
+		status: ContainerStatus;
 	}
 
 	interface Props {
@@ -36,95 +38,82 @@
 				: { from: other, keys: item.keys, to: self };
 		unlinkOpen = true;
 	}
+
+	const groups = $derived(
+		[
+			{ direction: "dependsOn" as const, items: dependsOn, label: "Needs" },
+			{ direction: "usedBy" as const, items: usedBy, label: "Used by" },
+		].filter((group) => group.items.length > 0),
+	);
 </script>
 
-{#snippet node(item: Node, direction: "dependsOn" | "usedBy")}
-	<div
-		class="border-border bg-surface-2 hover:border-accent/50 flex items-center gap-1 rounded-lg border pr-1 transition-colors"
+<section class="panel rounded-[1.125rem] px-5 pt-4.5 pb-4">
+	<h2
+		class="text-text mb-3 text-[1.0625rem] font-[650] tracking-tight"
+		title="Derived from environment variables pointing at another service's slug"
 	>
-		<a
-			class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2"
-			href="{resolve('services')}/{item.id}"
-			title={item.keys.length > 0
-				? `Through ${item.keys.join(", ")}`
-				: "Dependency only, no env vars"}
-		>
-			<Server class="text-text-subtle size-3.5 shrink-0" />
-			<span class="min-w-0">
-				<span class="text-text block truncate text-xs font-medium"
-					>{item.name}</span
-				>
-				<span class="text-text-subtle block truncate text-[0.6875rem]"
-					>{item.slug}</span
-				>
-			</span>
-		</a>
-		<Button
-			aria-label="Unlink {item.name}"
-			class="text-text-subtle hover:text-red-500 shrink-0"
-			onclick={() => askUnlink(item, direction)}
-			size="icon-sm"
-			title="Unlink"
-			variant="ghost"
-		>
-			<Unlink class="size-3.5" />
-		</Button>
-	</div>
-{/snippet}
+		Connections
+	</h2>
 
-<section class="panel rounded-xl">
-	<div class="border-border flex flex-col items-start border-b px-4 py-3">
-		<h2 class="eyebrow">Connections</h2>
-		<span class="text-text-subtle text-[0.6875rem]">
-			Derived from environment variables pointing at another service's slug
-		</span>
-	</div>
-
-	{#if dependsOn.length === 0 && usedBy.length === 0}
-		<p class="text-text-muted px-4 py-6 text-center text-xs">
+	{#if groups.length === 0}
+		<p class="text-text-muted py-6 text-center text-sm">
 			Nothing links to this service, and it references nothing else.
 		</p>
 	{:else}
-		<div
-			class="grid items-center gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
-		>
-			<div class="space-y-2">
-				{#if dependsOn.length > 0}
-					<p class="text-text-subtle text-[0.6875rem] font-medium">Needs</p>
-					{#each dependsOn as item (item.id)}
-						{@render node(item, "dependsOn")}
-					{/each}
-				{/if}
-			</div>
-
-			<ArrowRight
-				class="text-text-subtle mx-auto size-4 {dependsOn.length === 0
-					? 'invisible'
-					: ''} hidden md:block"
-			/>
-
-			<div
-				class="border-accent/50 bg-accent-light rounded-lg border px-3 py-2.5"
+		{#each groups as group, g (group.direction)}
+			<p
+				class="text-text-subtle mb-1.5 text-xs font-semibold {g > 0
+					? 'mt-3'
+					: ''}"
 			>
-				<p class="text-text truncate text-xs font-semibold">{name}</p>
-				<p class="text-accent text-[0.6875rem]">this service</p>
+				{group.label}
+			</p>
+			<div class="space-y-1.5">
+				{#each group.items as item (item.id)}
+					<div
+						class="bg-surface-2 group flex items-center gap-2.5 rounded-[0.875rem] px-2.5 py-2.25"
+					>
+						<a
+							class="flex min-w-0 flex-1 items-center gap-2.5"
+							href={resolve("/(protected)/services/[serviceId]", {
+								serviceId: item.id,
+							})}
+							title={item.keys.length > 0
+								? `Through ${item.keys.join(", ")}`
+								: "Dependency only, no env vars"}
+						>
+							<span
+								class="text-accent grid size-7 shrink-0 place-items-center rounded-lg bg-[color-mix(in_oklch,var(--primary)_14%,transparent)] text-xs font-bold"
+							>
+								{item.name.charAt(0).toUpperCase()}
+							</span>
+							<span class="min-w-0 leading-tight">
+								<span
+									class="text-text block truncate text-[0.8125rem] font-bold group-hover:underline"
+									>{item.name}</span
+								>
+								<span class="text-text-subtle block truncate text-[0.6875rem]"
+									>{item.keys.length > 0
+										? item.keys.join(", ")
+										: item.slug}</span
+								>
+							</span>
+						</a>
+						<StatusBadge status={item.status} />
+						<Button
+							aria-label="Unlink {item.name}"
+							class="text-text-subtle shrink-0 hover:text-red-500"
+							onclick={() => askUnlink(item, group.direction)}
+							size="icon-sm"
+							title="Unlink"
+							variant="ghost"
+						>
+							<Unlink class="size-3.5" />
+						</Button>
+					</div>
+				{/each}
 			</div>
-
-			<ArrowRight
-				class="text-text-subtle mx-auto size-4 {usedBy.length === 0
-					? 'invisible'
-					: ''} hidden md:block"
-			/>
-
-			<div class="space-y-2">
-				{#if usedBy.length > 0}
-					<p class="text-text-subtle text-[0.6875rem] font-medium">Used by</p>
-					{#each usedBy as item (item.id)}
-						{@render node(item, "usedBy")}
-					{/each}
-				{/if}
-			</div>
-		</div>
+		{/each}
 	{/if}
 </section>
 

@@ -35,7 +35,9 @@ test.describe.serial("sign-in / sign-out", () => {
 
 		await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
 		await expect(
-			page.getByRole("heading", { name: /Welcome back, Ada/ }),
+			page.getByRole("heading", {
+				name: /Good (morning|afternoon|evening), Ada/,
+			}),
 		).toBeVisible();
 	});
 

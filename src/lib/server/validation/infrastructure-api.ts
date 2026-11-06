@@ -50,6 +50,13 @@ export const remoteHostApiBody = z.object({
 
 export const updateRemoteHostApiBody = remoteHostApiBody
 	.omit({ kind: true })
+	.extend({
+		enabled: z
+			.boolean()
+			.describe(
+				"Whether new builds and workstations may land on it. A disabled host keeps what already runs there.",
+			),
+	})
 	.partial();
 
 export const domainApiBody = z.object({

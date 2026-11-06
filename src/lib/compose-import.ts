@@ -627,7 +627,7 @@ function portsFor(
 
 	if (mappings.length === 0) {
 		warnings.push(
-			`No published port found : defaulting to ${DEFAULT_CONTAINER_PORT}, change it on the Networking tab.`,
+			`No published port found : defaulting to ${DEFAULT_CONTAINER_PORT}, change it under Networking → Network.`,
 		);
 	}
 	return { exposed, mappings, published: portEntries.length > 0 };

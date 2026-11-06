@@ -351,6 +351,75 @@ func openAPIDocument(baseURL string) object {
 				"summary":  "Host resource stats",
 				"tags":     []string{"Meta"},
 			}},
+			"/v1/logs": object{"get": object{
+				"description": "The agent's last log lines, oldest first, kept in memory since it started.",
+				"responses": object{
+					"200": jsonResponse("The kept lines", object{
+						"properties": object{"lines": object{"items": object{
+							"properties": object{"line": object{"type": "string"}, "time": object{"format": "date-time", "type": "string"}},
+							"required":   []string{"line", "time"},
+							"type":       "object",
+						}, "type": "array"}},
+						"required": []string{"lines"},
+						"type":     "object",
+					}),
+					"401": jsonResponse("Unauthorized", errorSchema),
+				},
+				"security": bearer,
+				"summary":  "Agent log",
+				"tags":     []string{"Meta"},
+			}},
+			"/v1/events": object{"get": object{
+				"description": "The host Docker daemon's events of the last day, oldest first, as far back as the daemon still holds them.",
+				"responses": object{
+					"200": jsonResponse("The events", object{
+						"properties": object{"events": object{"items": object{
+							"properties": object{
+								"action":   object{"type": "string"},
+								"exitCode": object{"type": "string"},
+								"id":       object{"type": "string"},
+								"image":    object{"type": "string"},
+								"name":     object{"type": "string"},
+								"time":     object{"description": "Unix milliseconds", "type": "number"},
+								"type":     object{"type": "string"},
+							},
+							"required": []string{"action", "id", "time", "type"},
+							"type":     "object",
+						}, "type": "array"}},
+						"required": []string{"events"},
+						"type":     "object",
+					}),
+					"401": jsonResponse("Unauthorized", errorSchema),
+				},
+				"security": bearer,
+				"summary":  "Docker events",
+				"tags":     []string{"Meta"},
+			}},
+			"/v1/update": object{"post": object{
+				"description": "Downloads the given release's worker binary, replaces this one with it and restarts into it once in-flight requests finish.",
+				"requestBody": object{
+					"content": object{"application/json": object{"schema": object{
+						"properties": object{"version": object{"examples": []string{"1.2.3"}, "type": "string"}},
+						"required":   []string{"version"},
+						"type":       "object",
+					}}},
+					"required": true,
+				},
+				"responses": object{
+					"202": jsonResponse("Replaced, restarting", object{
+						"properties": object{"from": object{"type": "string"}, "version": object{"type": "string"}},
+						"required":   []string{"from", "version"},
+						"type":       "object",
+					}),
+					"400": jsonResponse("Not a release version", errorSchema),
+					"401": jsonResponse("Unauthorized", errorSchema),
+					"409": jsonResponse("The binary can't be replaced by this user", errorSchema),
+					"502": jsonResponse("The release couldn't be downloaded", errorSchema),
+				},
+				"security": bearer,
+				"summary":  "Update the agent",
+				"tags":     []string{"Meta"},
+			}},
 		},
 		"servers": []object{{"url": baseURL}},
 	}

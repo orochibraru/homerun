@@ -465,12 +465,18 @@ func TestInstallWorkerBinaryAndUnit(t *testing.T) {
 	home := withHomeRoot(t, "homerun")
 	run := newFakeRunner().answers("id -u", "1500\n")
 
-	path, err := installer.InstallWorkerBinary(run, "latest", "arm64")
+	path, err := installer.InstallWorkerBinary(run, "homerun", "latest", "arm64")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if path != "/usr/local/bin/homerun-worker" {
-		t.Errorf("got %q", path)
+	if path != home+"/bin/homerun-worker" {
+		t.Errorf("the worker must live where its user can replace it, got %q", path)
+	}
+	if !run.ran("chown homerun:homerun " + home + "/bin " + path) {
+		t.Errorf("the worker's user must own its binary to update it, ran %v", run.commands())
+	}
+	if !run.ran("rm -f /usr/local/bin/homerun-worker") {
+		t.Errorf("an older install's root-owned binary should go, ran %v", run.commands())
 	}
 	if !run.ran("homerun-worker-arm64.gz") {
 		t.Errorf("the arch's asset should be downloaded, ran %v", run.commands())
@@ -484,6 +490,9 @@ func TestInstallWorkerBinaryAndUnit(t *testing.T) {
 	unit, ok := run.writes[unitPath]
 	if !ok {
 		t.Fatalf("the unit should be written to %s, wrote %v", unitPath, run.writes)
+	}
+	if !strings.Contains(unit, "ExecStart="+home+"/bin/homerun-worker") {
+		t.Errorf("the unit should run the user-owned binary:\n%s", unit)
 	}
 	if !strings.Contains(unit, "DOCKER_SOCKET_PATH=/run/user/1500/docker.sock") {
 		t.Errorf("the unit should point at the rootless socket:\n%s", unit)

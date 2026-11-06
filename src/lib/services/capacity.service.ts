@@ -4,6 +4,7 @@ import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import { ResourceIncidentDTO } from "#lib/dto/resource-incident-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
+	describeCauses,
 	describeIncidentEvent,
 	type IncidentEvent,
 	ResourceIncidentTracker,
@@ -13,16 +14,29 @@ import {
 	type HostUsageInput,
 	readResources,
 	RESOURCE_LABELS,
+	type ResourceKind,
 	type ResourceReading,
 } from "#lib/resource-thresholds.js";
 
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import type { ChannelMessage } from "./notification-messages.ts";
+import {
+	type InsightResource,
+	ResourceInsightsService,
+} from "./resource-insights.service.ts";
 import { SystemStatsService } from "./system-stats.service.ts";
 
 const logger = new Logger("Capacity");
 
 const FRESH_MS = 3 * 60 * 1000;
+
+/** Which live reading explains each resource, null for one with none. */
+const INSIGHT_KINDS: Record<ResourceKind, InsightResource | null> = {
+	cpu: "cpu",
+	disk: "disk",
+	gpu: null,
+	memory: "memory",
+};
 
 /** Thrown when a new service is refused because the server is past a hard threshold. */
 export class CapacityError extends Error {}
@@ -88,10 +102,21 @@ export function resourceAlertMessage(
 				? "New services are refused until usage drops back under the hard limit."
 				: null,
 		event: alert.event,
-		fields: alert.events.map((event) => ({
-			name: RESOURCE_LABELS[event.reading.kind],
-			value: describeIncidentEvent(event, now),
-		})),
+		fields: alert.events.flatMap((event) => {
+			const field = {
+				name: RESOURCE_LABELS[event.reading.kind],
+				value: describeIncidentEvent(event, now),
+			};
+			return event.type === "recover" || event.incident.causes.length === 0
+				? [field]
+				: [
+						field,
+						{
+							name: `${RESOURCE_LABELS[event.reading.kind]}: biggest users`,
+							value: describeCauses(event.incident.causes),
+						},
+					];
+		}),
 		link: origin ? `${origin.replace(/\/+$/, "")}/` : null,
 		serviceId: null,
 		serviceName: null,
@@ -131,6 +156,7 @@ class CapacityServiceClass {
 			reminderMs: settings.resourceAlertReminderMinutes * 60_000,
 			sustainMs: settings.resourceAlertSustainSeconds * 1000,
 		});
+		await this.#explain(events);
 		await this.#record(events, now);
 		for (const alert of groupIncidentEvents(events)) {
 			const message = resourceAlertMessage(
@@ -143,14 +169,44 @@ class CapacityServiceClass {
 				`${message.title}: ${message.fields.map((f) => f.value).join(", ")}`,
 			);
 			NotificationDTO.notify({
-				message: `${message.title}: ${message.fields.map((f) => f.value).join(", ")}`,
+				message: `${message.title}: ${alert.events
+					.map((event) =>
+						event.type === "recover" || event.incident.causes.length === 0
+							? describeIncidentEvent(event, now)
+							: `${describeIncidentEvent(event, now)} (biggest users: ${describeCauses(event.incident.causes)})`,
+					)
+					.join(", ")}`,
 				type: "resource_alert",
 			});
 			NotificationChannelService.notify(message);
 		}
 	}
 
-	/** Writes each event onto its incident's row: a new row when it opens, its alert count, level and peak after, its end when it recovers. */
+	/**
+	 * Records why each alerting event fired: the resource's biggest consumers
+	 * right now, read once per resource, onto its incident. A recovery keeps
+	 * the causes of the last alert; a GPU has no per-container reading to name.
+	 */
+	async #explain(events: IncidentEvent[]): Promise<void> {
+		const alerting = events.filter((event) => event.type !== "recover");
+		const resources = [
+			...new Set(alerting.map((event) => INSIGHT_KINDS[event.reading.kind])),
+		].filter((resource): resource is InsightResource => resource !== null);
+		const causes = new Map(
+			await Promise.all(
+				resources.map(
+					async (resource) =>
+						[resource, await ResourceInsightsService.causes(resource)] as const,
+				),
+			),
+		);
+		for (const event of alerting) {
+			const resource = INSIGHT_KINDS[event.reading.kind];
+			event.incident.causes = (resource && causes.get(resource)) || [];
+		}
+	}
+
+	/** Writes each event onto its incident's row: a new row when it opens, its alert count, level, peak and causes after, its end when it recovers. */
 	async #record(events: IncidentEvent[], now: number): Promise<void> {
 		for (const event of events) {
 			const { incident } = event;

@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Trilium Notes",
-	"description": "Hierarchical note-taking app with encryption support.",
+	"description": "Hierarchical note-taking app with encryption support. Has a built-in MCP server, turned on under Options, AI/LLM, and reached with an ETAPI token.",
 	"image": "triliumnext/trilium",
 	"tag": "latest",
 	"containerPort": 8080,

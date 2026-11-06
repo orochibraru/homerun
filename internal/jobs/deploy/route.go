@@ -344,11 +344,13 @@ type ContainerAnswer struct {
 	Status    int
 }
 
-// GatewayVerdict settles a 502 or 504 through Traefik with what the container
-// answered directly: the same status is the app's own; another HTTP answer,
-// or a refused connection, is a route Traefik can't hand over; a connection
-// with no HTTP answer is a service that doesn't speak HTTP; and no way to ask
-// leaves a warning rather than a failure.
+// GatewayVerdict settles a 502 or 504, or a plain 404 that reads like
+// Traefik's missing router, through Traefik with what the container answered
+// directly: the same status is the app's own (Go's stock 404 is byte for byte
+// Traefik's); another HTTP answer, or a refused connection, is a route
+// Traefik can't hand over; a connection with no HTTP answer is a service that
+// doesn't speak HTTP; and no way to ask leaves a warning rather than a
+// failure.
 func GatewayVerdict(gateway RouteResult, answer ContainerAnswer) RouteResult {
 	switch {
 	case answer.Status == gateway.Status:
@@ -418,16 +420,16 @@ func (r *run) askContainer(ctx context.Context, host RouteHost) ContainerAnswer 
 
 // checkHost probes one hostname through the local Traefik (when addr is set)
 // and publicly (when it's Public), returning the deploy log lines and the
-// reason the route is broken, "" when it isn't. A gateway error locally is
-// settled by asking the container directly (GatewayVerdict); a plain 404
-// publicly is the app's own when the local Traefik got one too.
+// reason the route is broken, "" when it isn't. A gateway error or a plain
+// 404 locally is settled by asking the container directly (GatewayVerdict);
+// a plain 404 publicly is the app's own when the local Traefik got one too.
 func (r *run) checkHost(ctx context.Context, addr string, host RouteHost, timing RouteTiming) ([]string, string) {
 	label := host.Host + host.Path
 	var lines []string
 	local := RouteResult{}
 	if addr != "" {
 		local = WaitForRoute(ctx, RouteProbe{Addr: addr, ErrorPages: r.spec.Route.ErrorPages, Target: host}, timing)
-		if local.Outcome == RouteBroken && local.Status != http.StatusNotFound {
+		if local.Outcome == RouteBroken && (local.Status != http.StatusNotFound || !local.ErrorPage) {
 			local = GatewayVerdict(local, r.askContainer(ctx, host))
 		}
 		switch local.Outcome {

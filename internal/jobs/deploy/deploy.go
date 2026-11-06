@@ -30,6 +30,7 @@ type Spec struct {
 	Healthchecks Healthchecks   `json:"healthchecks"`
 	Image        ImageSpec      `json:"image"`
 	Network      string         `json:"network"`
+	Placements   []VolumeDisk   `json:"placements"`
 	Readiness    ReadinessInput `json:"readiness"`
 	ReleaseEnv   string         `json:"releaseEnv"`
 	Route        *RouteSpec     `json:"route"`
@@ -55,6 +56,14 @@ type VolumeSeed struct {
 	Image  string `json:"image"`
 	Source string `json:"source"`
 	Name   string `json:"name"`
+}
+
+// VolumeDisk is a named volume that lives on a chosen host disk rather than
+// under Docker's data root, created there before anything mounts it.
+type VolumeDisk struct {
+	Disk   string `json:"disk"`
+	Image  string `json:"image"`
+	Source string `json:"source"`
 }
 
 // Volume is a mounted volume, as far as the rollout strategy cares.
@@ -257,6 +266,11 @@ func (r *run) deploy(ctx context.Context) error {
 	}
 	r.result.Image, r.result.Tag, r.result.Digest = resolved.image, resolved.tag, resolved.digest
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String("homerun.deploy.image", resolved.ref()))
+	if len(r.spec.Placements) > 0 {
+		if err := tracing.Stage(ctx, "place volumes", r.placeVolumes); err != nil {
+			return err
+		}
+	}
 	if len(r.spec.Seeds) > 0 {
 		if err := tracing.Stage(ctx, "seed volumes", r.seedVolumes); err != nil {
 			return err
@@ -311,6 +325,17 @@ func (r *run) startWorkload(resolved resolvedImage) func(context.Context) error 
 		r.result.ContainerID = id
 		return nil
 	}
+}
+
+// placeVolumes creates each volume placed on a host disk that doesn't exist
+// yet, so Docker doesn't create it under its own data root on first mount.
+func (r *run) placeVolumes(ctx context.Context) error {
+	for _, placement := range r.spec.Placements {
+		if err := r.docker.EnsureVolumeOnDisk(ctx, placement.Source, placement.Disk, placement.Image); err != nil {
+			return fmt.Errorf("couldn't create %s on %s: %w", placement.Source, placement.Disk, err)
+		}
+	}
+	return nil
 }
 
 // seedVolumes fills each seeded volume that doesn't exist yet with a copy of

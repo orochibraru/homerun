@@ -30,6 +30,7 @@
 	const rows = $derived(
 		data.hosts.map((host) => ({
 			href: resolve("/(protected)/remote-hosts/[hostId]", { hostId: host.id }),
+			enabled: host.enabled,
 			id: host.id,
 			kind: host.kind,
 			name: host.name,
@@ -73,6 +74,13 @@
 {/snippet}
 
 {#snippet badge(host: HostRow)}
+	{#if !host.enabled}
+		<span
+			class="bg-surface-2 text-text-muted shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold"
+		>
+			Disabled
+		</span>
+	{/if}
 	{#if host.kind === "agent"}
 		<span
 			class="bg-accent-light text-accent shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold"

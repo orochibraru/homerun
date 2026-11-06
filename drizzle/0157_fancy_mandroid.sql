@@ -1,0 +1,1 @@
+ALTER TABLE "resource_incident" ADD COLUMN "causes" jsonb DEFAULT '[]'::jsonb NOT NULL;

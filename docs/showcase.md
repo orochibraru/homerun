@@ -72,9 +72,10 @@ overview page.
 
 ## Networking
 
-The public hostname, extra domains, the container port and protocol, bridge or
-host networking. Most of these are Traefik labels, so the tab tells you plainly
-that changing them needs a redeploy.
+Split into Domains (the public hostname, extra domains, SSL), Network (the
+container port and protocol, bridge or host networking), Ports and Cache. Most
+of these are Traefik labels, so each save tells you plainly that it needs a
+redeploy.
 
 ![The networking tab](images/networking.webp)
 ![The networking tab, dark](images/networking-dark.webp)
@@ -155,23 +156,14 @@ ready to try from the browser.
 
 ## Appearance
 
-Light or dark, a colour palette or your own accent, a style for panels and
-buttons (Lanes, the default, Glass, Sleek, Neumorphism, Boxy, Claymorphism,
-Skeuomorphism, Material You), or a whole preset from Windows 95 to a
-green-phosphor terminal.
+Light or dark, a colour palette or your own accent, or a whole preset from
+Windows 95 to a green-phosphor terminal.
 
 ![Appearance settings](images/appearance.webp)
 ![Appearance settings, dark](images/appearance-dark.webp)
 
-Picking a style or a preset previews it on the whole dashboard before you save
-it. Here are Glass, Material You and the Windows XP and Retro presets, picked
-from that same page:
-
-![Glass](images/appearance-glass.webp)
-![Glass, dark](images/appearance-glass-dark.webp)
-
-![Material You](images/appearance-material.webp)
-![Material You, dark](images/appearance-material-dark.webp)
+Picking a preset previews it on the whole dashboard before you save it. Here are
+the Windows XP and Retro presets, picked from that same page:
 
 ![The Windows XP preset](images/appearance-winxp.webp)
 ![The Windows XP preset, dark](images/appearance-winxp-dark.webp)

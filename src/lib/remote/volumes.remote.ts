@@ -1,8 +1,12 @@
-import { command } from "$app/server";
+import { command, query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
 
 import { requirePermission } from "#lib/server/remote-auth.js";
+import {
+	type HostDisk,
+	HostDiskService,
+} from "#lib/services/host-disk.service.js";
 import {
 	VolumeSettingsError,
 	VolumeSettingsService,
@@ -19,6 +23,7 @@ import {
 export const createStorageVolume = command(
 	z.object({
 		description: z.string().max(2000).nullable(),
+		disk: z.string().max(4096).nullable().optional(),
 		kind: z.enum(["bind", "volume"]),
 		name: z.string().max(200),
 		source: z.string().max(4096),
@@ -36,3 +41,12 @@ export const createStorageVolume = command(
 		}
 	},
 );
+
+/**
+ * The host's disks a new Docker volume can be placed on, root first. Empty
+ * when the worker can't read them, so the picker just stays hidden.
+ */
+export const getHostDisks = query(async (): Promise<HostDisk[]> => {
+	requirePermission("storage", "read");
+	return await HostDiskService.list().catch(() => []);
+});

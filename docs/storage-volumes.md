@@ -33,6 +33,27 @@ schedule and a backup destination set on their backup settings page; the rest
 are skipped and counted in the result. Bulk delete asks for confirmation first,
 and services mounting a deleted volume need a redeploy.
 
+## Choosing a disk
+
+When the host has more than one disk, the new volume form (**Storage → New
+volume**, the **New volume** dialog on a service's Storage tab and on a cron
+job's mounts) shows a **Disk** picker listing each mounted filesystem with its
+free space. Homerun reads them from a throwaway container that mounts the host's
+root read-only, skipping system mounts (`/boot`, `/var/lib/docker`, `/run`…).
+
+- A **Docker volume** placed on a disk keeps its data in
+  `<mount point>/homerun-volumes/<volume name>`: Homerun creates that directory
+  and the volume (the `local` driver bound onto it) as soon as you create it,
+  and again on deploy if it's gone. **Docker's default location** keeps it under
+  Docker's data root, as before. The disk can't be changed once the volume
+  exists.
+- A **host path** can already sit anywhere; picking a disk just changes the
+  suggested path.
+
+Duplicates, pull request preview copies and restored revisions land on the same
+disk as the volume they copy. In swarm mode only the manager gets the volume on
+that disk: a replica on another node still gets its own Docker volume.
+
 ## A database's data volume
 
 A new database or cache service gets a Docker volume named `<slug>-data` mounted

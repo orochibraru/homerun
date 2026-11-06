@@ -7,7 +7,9 @@ import {
 	dependencyForest,
 	dependencyLayers,
 	dependencyMap,
+	filterForest,
 	linkKeys,
+	matchesServiceQuery,
 	mergeDependencies,
 	previewsByParent,
 	referencesHost,
@@ -439,5 +441,72 @@ describe("a service's dependency edges", () => {
 		expect(
 			replacementCycle("api", ["db"], new Map([["api", ["web"]]])),
 		).toBeUndefined();
+	});
+});
+
+describe("filterForest", () => {
+	const forest = [
+		{
+			children: [
+				{
+					children: [{ children: [], id: "redis", repeat: false }],
+					id: "worker",
+					repeat: false,
+				},
+			],
+			id: "server",
+			repeat: false,
+		},
+		{ children: [], id: "drive", repeat: false },
+	];
+
+	test("keeps a match and the services above it, drops the rest", () => {
+		expect(filterForest(forest, (id) => id === "redis")).toEqual([
+			{
+				children: [
+					{
+						children: [{ children: [], id: "redis", repeat: false }],
+						id: "worker",
+						repeat: false,
+					},
+				],
+				id: "server",
+				repeat: false,
+			},
+		]);
+	});
+
+	test("a matching parent keeps only its matching children", () => {
+		expect(filterForest(forest, (id) => id === "server")).toEqual([
+			{ children: [], id: "server", repeat: false },
+		]);
+	});
+
+	test("nothing matches, nothing is left", () => {
+		expect(filterForest(forest, () => false)).toEqual([]);
+	});
+});
+
+describe("matchesServiceQuery", () => {
+	const svc = {
+		domain: "files.example.com",
+		image: "ghcr.io/acme/drive",
+		name: "Drive",
+		slug: "drive-app",
+	};
+
+	test("matches name, slug, image or domain, ignoring case and spaces", () => {
+		expect(matchesServiceQuery(svc, " DRIVE ")).toBe(true);
+		expect(matchesServiceQuery(svc, "app")).toBe(true);
+		expect(matchesServiceQuery(svc, "acme")).toBe(true);
+		expect(matchesServiceQuery(svc, "files.example")).toBe(true);
+		expect(matchesServiceQuery({ ...svc, domain: null }, "files.example")).toBe(
+			false,
+		);
+		expect(matchesServiceQuery(svc, "redis")).toBe(false);
+	});
+
+	test("an empty query matches everything", () => {
+		expect(matchesServiceQuery(svc, "  ")).toBe(true);
 	});
 });

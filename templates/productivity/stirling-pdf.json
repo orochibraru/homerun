@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Stirling PDF",
-	"description": "Self-hosted PDF manipulation toolkit.",
+	"description": "Self-hosted PDF manipulation toolkit. Has a built-in MCP server at /mcp: set MCP_ENABLED to true to turn it on.",
 	"image": "stirlingtools/stirling-pdf",
 	"tag": "latest",
 	"containerPort": 8080,

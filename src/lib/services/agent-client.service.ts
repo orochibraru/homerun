@@ -4,6 +4,23 @@ export interface AgentConnection {
 	token: string;
 }
 
+/** One line an agent logged, with when it logged it (ISO 8601). */
+export interface AgentLogLine {
+	line: string;
+	time: string;
+}
+
+/** One Docker daemon event on an agent's host, `time` in Unix milliseconds. */
+export interface AgentEvent {
+	action: string;
+	exitCode?: string;
+	id: string;
+	image?: string;
+	name?: string;
+	time: number;
+	type: string;
+}
+
 /** A non-2xx answer from an agent, carrying its status and its own message. */
 export class AgentRequestError extends Error {
 	status: number;
@@ -117,6 +134,53 @@ class AgentClientServiceClass {
 			throw new AgentRequestError(message, response.status);
 		}
 		return response.body ?? new ReadableStream({ start: (c) => c.close() });
+	}
+
+	/**
+	 * The agent's last log lines, oldest first, kept in its memory since it
+	 * last started.
+	 *
+	 * @throws Like `request`; a 404 means the agent predates the route.
+	 */
+	async logs(connection: AgentConnection): Promise<AgentLogLine[]> {
+		const { lines } = await this.request<{ lines: AgentLogLine[] }>(
+			connection,
+			"GET",
+			"/v1/logs",
+		);
+		return lines;
+	}
+
+	/**
+	 * The agent host's Docker events of the last day, oldest first, as far
+	 * back as its daemon still holds them.
+	 *
+	 * @throws Like `request`; a 404 means the agent predates the route.
+	 */
+	async events(connection: AgentConnection): Promise<AgentEvent[]> {
+		const { events } = await this.request<{ events: AgentEvent[] }>(
+			connection,
+			"GET",
+			"/v1/events",
+		);
+		return events;
+	}
+
+	/**
+	 * Asks the agent to replace its binary with release `version` and restart
+	 * into it once its in-flight builds finish.
+	 *
+	 * @throws Like `request`: a 409 when the agent's user can't replace its
+	 *   own binary (an install older than self-update), a 502 when the
+	 *   release couldn't be downloaded.
+	 */
+	update(
+		connection: AgentConnection,
+		version: string,
+	): Promise<{ from: string; version: string }> {
+		return this.request(connection, "POST", "/v1/update", {
+			body: { version },
+		});
 	}
 
 	/** GET /v1/health, unauthenticated. Throws with a human-readable message on any failure. */

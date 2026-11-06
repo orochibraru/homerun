@@ -1,0 +1,25 @@
+{
+	"$schema": "../schema.json",
+	"name": "Atlassian MCP",
+	"description": "Jira and Confluence from an MCP client, Cloud or Server/Data Center. Set JIRA_URL, a user and an API token, plus the CONFLUENCE_ ones for Confluence. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/sooperset/mcp-atlassian",
+	"tag": "latest",
+	"containerPort": 9000,
+	"icon": "di:jira",
+	"tags": ["mcp", "jira", "confluence", "atlassian"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/sooperset/mcp-atlassian",
+	"envVars": {
+		"JIRA_URL": "https://your-company.atlassian.net",
+		"JIRA_USERNAME": "you@example.com",
+		"JIRA_API_TOKEN": "change-me"
+	},
+	"command": [
+		"--transport",
+		"streamable-http",
+		"--port",
+		"9000",
+		"--host",
+		"0.0.0.0"
+	]
+}

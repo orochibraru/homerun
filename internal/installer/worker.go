@@ -2,8 +2,16 @@ package installer
 
 import "fmt"
 
-// workerBinaryPath is where the worker binary is installed system-wide.
-const workerBinaryPath = "/usr/local/bin/homerun-worker"
+// legacyWorkerBinaryPath is where agent installs put the worker before it
+// could update itself, root-owned and so not replaceable by it.
+const legacyWorkerBinaryPath = "/usr/local/bin/homerun-worker"
+
+// WorkerBinaryPath is where the worker binary lives for the rootless user:
+// in a directory that user owns, so the worker can rename an updated release
+// over itself from the Remote Hosts page.
+func WorkerBinaryPath(username string) string {
+	return HomeOf(username) + "/bin/homerun-worker"
+}
 
 // legacyAgentBinaryPath and legacyAgentUnit are what the retired homerun-agent
 // binary left behind on a host installed before it was merged into the worker.
@@ -13,13 +21,25 @@ const (
 )
 
 // InstallWorkerBinary downloads the prebuilt homerun-worker-<arch> release
-// binary and installs it system-wide. No source, no runtime on the target host,
-// see release.go.
-func InstallWorkerBinary(run Runner, version, arch string) (string, error) {
-	if err := DownloadReleaseBinary(run, version, "homerun-worker-"+arch, workerBinaryPath); err != nil {
+// binary into WorkerBinaryPath, owned by username, and removes the root-owned
+// copy an older install left in /usr/local/bin. No source, no runtime on the
+// target host, see release.go.
+func InstallWorkerBinary(run Runner, username, version, arch string) (string, error) {
+	path := WorkerBinaryPath(username)
+	dir := HomeOf(username) + "/bin"
+	if _, err := run.Run([]string{"mkdir", "-p", dir}, Opts{}); err != nil {
 		return "", err
 	}
-	return workerBinaryPath, nil
+	if err := DownloadReleaseBinary(run, version, "homerun-worker-"+arch, path); err != nil {
+		return "", err
+	}
+	if _, err := run.Run([]string{"chown", username + ":" + username, dir, path}, Opts{}); err != nil {
+		return "", err
+	}
+	if _, err := run.Run([]string{"rm", "-f", legacyWorkerBinaryPath}, Opts{}); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // WorkerUnitParams is what the agent-mode worker's systemd unit needs to know.
@@ -63,7 +83,7 @@ func InstallWorkerSystemdUnit(run Runner, username, dockerSocket string, port in
 	home := HomeOf(username)
 	unitDir := home + "/.config/systemd/user"
 	unit := WorkerSystemdUnit(WorkerUnitParams{
-		BinaryPath:   workerBinaryPath,
+		BinaryPath:   WorkerBinaryPath(username),
 		DockerSocket: dockerSocket,
 		Port:         port,
 		TokenFile:    home + "/.homerun-worker/token",

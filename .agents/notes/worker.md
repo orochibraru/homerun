@@ -42,6 +42,19 @@ through the worker's own HTTP API : the control API exists for the _app_, which
 has no other way to reach Docker, not for code that's already running inside the
 worker process.
 
+**Agent mode's upkeep routes** (`internal/agent/admin.go`, mounted beside the
+workstation routes) are what the host's Overview/Logs/Events tabs read. Logs are
+an in-memory ring (`LogBuffer`, the last 2000 lines) teed off `log.SetOutput`,
+not journald: the agent runs under `systemd --user` as an unprivileged user, and
+the app can't reach that host's journal anyway. Self-update (`POST /v1/update`)
+downloads the release next to `os.Executable()` and renames it over the running
+binary, so the binary must sit in a directory the worker's user can write: the
+installer puts it in `~<user>/bin`, an older `/usr/local/bin` install
+answers 409. It then restarts by `syscall.Exec` after the same graceful shutdown
+as SIGTERM, not by exiting: the unit is `Restart=on-failure`, so a clean exit
+would leave the agent dead, and a forced shutdown during a restart still returns
+`errRestart` for the same reason.
+
 ## Why Postgres, not HTTP
 
 Jobs travel through the existing `job` table, not a request to the worker. Every

@@ -135,6 +135,41 @@ describe("storageVolumeProblem", () => {
 			storageVolumeProblem({ kind: "bind", name: "a", source: "/srv" }),
 		).toBeNull();
 	});
+
+	test("a Docker volume's disk is an absolute mount point and its name a plain one", () => {
+		expect(
+			storageVolumeProblem({
+				disk: "mnt/hdd",
+				kind: "volume",
+				name: "a",
+				source: "x",
+			}),
+		).toBe("Disk must be a mount point on this host (start with /).");
+		expect(
+			storageVolumeProblem({
+				disk: "/mnt/hdd",
+				kind: "volume",
+				name: "a",
+				source: "a/b",
+			}),
+		).toBe("A volume placed on a disk needs a plain name, without /.");
+		expect(
+			storageVolumeProblem({
+				disk: "/mnt/hdd",
+				kind: "volume",
+				name: "a",
+				source: "homerun-a",
+			}),
+		).toBeNull();
+		expect(
+			storageVolumeProblem({
+				disk: "hdd",
+				kind: "bind",
+				name: "a",
+				source: "/srv",
+			}),
+		).toBeNull();
+	});
 });
 
 describe("cronScheduleProblem", () => {

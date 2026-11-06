@@ -19504,6 +19504,9 @@
 											"dockerHost": {
 												"type": ["string", "null"]
 											},
+											"enabled": {
+												"type": "boolean"
+											},
 											"id": {
 												"type": "string"
 											},
@@ -19548,6 +19551,7 @@
 											"agentUrl",
 											"createdAt",
 											"dockerHost",
+											"enabled",
 											"id",
 											"kind",
 											"maxConcurrentBuilds",
@@ -19698,6 +19702,9 @@
 										"dockerHost": {
 											"type": ["string", "null"]
 										},
+										"enabled": {
+											"type": "boolean"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -19742,6 +19749,7 @@
 										"agentUrl",
 										"createdAt",
 										"dockerHost",
+										"enabled",
 										"id",
 										"kind",
 										"maxConcurrentBuilds",
@@ -19941,6 +19949,9 @@
 										"dockerHost": {
 											"type": ["string", "null"]
 										},
+										"enabled": {
+											"type": "boolean"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -19985,6 +19996,7 @@
 										"agentUrl",
 										"createdAt",
 										"dockerHost",
+										"enabled",
 										"id",
 										"kind",
 										"maxConcurrentBuilds",
@@ -20098,6 +20110,10 @@
 										"description": "The Docker daemon (kind docker): tcp://host:2376 or ssh://user@host.",
 										"type": "string"
 									},
+									"enabled": {
+										"description": "Whether new builds and workstations may land on it. A disabled host keeps what already runs there.",
+										"type": "boolean"
+									},
 									"maxConcurrentBuilds": {
 										"anyOf": [
 											{
@@ -20155,6 +20171,9 @@
 										"dockerHost": {
 											"type": ["string", "null"]
 										},
+										"enabled": {
+											"type": "boolean"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -20199,6 +20218,7 @@
 										"agentUrl",
 										"createdAt",
 										"dockerHost",
+										"enabled",
 										"id",
 										"kind",
 										"maxConcurrentBuilds",
@@ -32267,6 +32287,177 @@
 				"tags": ["Errors"]
 			}
 		},
+		"/services/{serviceId}/events": {
+			"get": {
+				"description": "What was changed on the service, newest first: settings, environment variables (by name only), domains and ports, volume mounts, dependencies, and starts, stops, restarts and scaling, each with who did it. Deploys aren't listed here, see /deployments.",
+				"operationId": "get_services__serviceId__events",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "How many events to return, 1 to 100 (default 50)",
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"actorName": {
+												"description": "Who made the change, null for Homerun itself (a schedule, scale to zero, a backfill)",
+												"type": ["string", "null"]
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"detail": {
+												"description": "One line per changed setting, old → new for plain values; secrets and env values only by name",
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"id": {
+												"type": "string"
+											},
+											"kind": {
+												"description": "What happened: created, settings, env, dependencies, scale, start, stop, restart, kill, mount, unmount, swap or restore",
+												"type": "string"
+											},
+											"lane": {
+												"description": "The Activity lane it sits on on the service's Overview",
+												"enum": [
+													"deploys",
+													"config",
+													"networking",
+													"storage",
+													"lifecycle"
+												],
+												"type": "string"
+											},
+											"summary": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"actorName",
+											"createdAt",
+											"detail",
+											"id",
+											"kind",
+											"lane",
+											"summary"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The service's events"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "An invalid limit"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's activity",
+				"tags": ["Services"]
+			}
+		},
 		"/services/{serviceId}/logs": {
 			"get": {
 				"description": "The service's combined stdout/stderr as plain text, from its container or every task of its swarm service. Returns the last tail lines and closes, unless follow=true, which keeps the response open and streams new lines as they're written.",
@@ -37978,7 +38169,7 @@
 										"type": "string"
 									},
 									"updateTrialEnabled": {
-										"description": "Try each update in a throwaway container on its networks, with no volumes or routing, before notifying it.",
+										"description": "Try each update in a throwaway container on its networks, with copies of its volumes and no routing, before notifying it.",
 										"type": "boolean"
 									}
 								},
@@ -44135,6 +44326,10 @@
 											"description": {
 												"type": ["string", "null"]
 											},
+											"disk": {
+												"description": "The host mount point a Docker volume is kept on, null for Docker's default location",
+												"type": ["string", "null"]
+											},
 											"id": {
 												"type": "string"
 											},
@@ -44171,6 +44366,7 @@
 											"backupStopServices",
 											"createdAt",
 											"description",
+											"disk",
 											"id",
 											"kind",
 											"name",
@@ -44267,6 +44463,10 @@
 									"description": {
 										"type": ["string", "null"]
 									},
+									"disk": {
+										"description": "For a Docker volume, the host mount point to keep it on (a disk), instead of Docker's default location.",
+										"type": ["string", "null"]
+									},
 									"kind": {
 										"enum": ["bind", "volume"],
 										"type": "string"
@@ -44348,6 +44548,10 @@
 										"description": {
 											"type": ["string", "null"]
 										},
+										"disk": {
+											"description": "The host mount point a Docker volume is kept on, null for Docker's default location",
+											"type": ["string", "null"]
+										},
 										"id": {
 											"type": "string"
 										},
@@ -44384,6 +44588,7 @@
 										"backupStopServices",
 										"createdAt",
 										"description",
+										"disk",
 										"id",
 										"kind",
 										"name",
@@ -44617,6 +44822,10 @@
 										"description": {
 											"type": ["string", "null"]
 										},
+										"disk": {
+											"description": "The host mount point a Docker volume is kept on, null for Docker's default location",
+											"type": ["string", "null"]
+										},
 										"id": {
 											"type": "string"
 										},
@@ -44653,6 +44862,7 @@
 										"backupStopServices",
 										"createdAt",
 										"description",
+										"disk",
 										"id",
 										"kind",
 										"name",
@@ -44847,6 +45057,10 @@
 										"description": {
 											"type": ["string", "null"]
 										},
+										"disk": {
+											"description": "The host mount point a Docker volume is kept on, null for Docker's default location",
+											"type": ["string", "null"]
+										},
 										"id": {
 											"type": "string"
 										},
@@ -44883,6 +45097,7 @@
 										"backupStopServices",
 										"createdAt",
 										"description",
+										"disk",
 										"id",
 										"kind",
 										"name",

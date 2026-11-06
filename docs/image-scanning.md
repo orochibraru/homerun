@@ -61,11 +61,11 @@ Scanning is controlled in two places:
 
 - **Settings → Docker → Image scanning**, needs the Settings permission: turn it
   off for every service, and set the deploy block policy (see below).
-- **Scan this service's image** on a service's Settings tab, to opt one service
-  out. An opted-out service pulls straight from its registry, and the block
-  policy doesn't apply to it.
+- **Scan this service's image** under a service's Settings → Automation, to opt
+  one service out. An opted-out service pulls straight from its registry, and
+  the block policy doesn't apply to it.
 
-![The Image scanning section of a service's Settings tab](images/image-scanning-service.webp)
+![The Image scanning section of a service's Settings → Automation](images/image-scanning-service.webp)
 
 ## Blocking deploys on findings
 

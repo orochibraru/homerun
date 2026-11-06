@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "n8n",
-	"description": "Workflow automation tool.",
+	"description": "Workflow automation tool. Has a built-in MCP server under Settings, for running workflows from an MCP client.",
 	"image": "n8nio/n8n",
 	"tag": "latest",
 	"containerPort": 5678,

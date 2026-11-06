@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "ntfy MCP",
+	"description": "Send push notifications through ntfy from an MCP client. Set NTFY_API_BASE_URL and a default topic. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/cyanheads/ntfy-mcp-server",
+	"tag": "latest",
+	"containerPort": 3010,
+	"icon": "di:ntfy",
+	"tags": ["mcp", "ntfy", "notifications"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/cyanheads/ntfy-mcp-server",
+	"envVars": {
+		"NTFY_API_BASE_URL": "http://ntfy",
+		"NTFY_DEFAULT_TOPIC": "homerun"
+	}
+}

@@ -114,6 +114,7 @@ bump it with
 
 ```bash
 bun run dev              # scripts/dev.ts: vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change; `--only=app`/`--only=worker` runs one half alone
+mise run design          # scripts/design/: the dashboard with no Docker/Postgres/Go, in-memory PGlite, a mock worker and seeded demo data, for UI work, see CONTRIBUTING.md
 bun run build            # bun run gen && vite build
 bun run start            # ./build/server (the standalone binary adapter-bun compiles, serve the built app)
 bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts, homerun.schema.json, the Terraform provider's spec.json and its registry docs from source, CI fails if the result isn't committed

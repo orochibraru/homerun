@@ -131,10 +131,11 @@ roles, previews, IaC and the API are all just features, not a paid tier.
   network so they reach each other by slug (`http://api:8080`), with prefixed
   subdomains, nested substacks, a dependency tree/diagram of a stack's services,
   and one-step delete of the whole stack
-- **[~110 built-in templates](docs/templates.md)**: Immich, Jellyfin, Plex, the
+- **[~150 built-in templates](docs/templates.md)**: Immich, Jellyfin, Plex, the
   \*arr stack, Pi-hole, Vaultwarden, Grafana, Uptime Kuma, PostgreSQL, Redis,
-  n8n and more, with real app logos, one-click **Quick Deploy**, and a details
-  page that pulls in the project's GitHub README, stars and latest release
+  n8n, MCP servers for most of them, and more, with real app logos, one-click
+  **Quick Deploy**, and a details page that pulls in the project's GitHub
+  README, stars and latest release
 - **[Linked containers](docs/templates.md#linked-containers)**: companions
   deploy with the primary (WordPress brings MySQL), and env vars like
   `{{db.POSTGRES_PASSWORD}}` wire them together without retyping

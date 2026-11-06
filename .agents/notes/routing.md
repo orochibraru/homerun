@@ -18,15 +18,21 @@ Environment Variables (`environments/variables`); Revisions; and, for a git
 service only, Previews and Channels), **Observability** (`observability/`:
 Monitoring, Logs, Uptime, Errors with its own `SectionNav` of Issues, Board,
 Failed deployments and Application errors, Traces, Pipelines, Blocked IPs,
-Health), **Storage** (`volumes/`), **Networking**, **Container** (`container/`:
-Compute is the bare page, Runtime is `container/runtime`), **Security**,
-**Terminal**, **Settings**. In simple mode (see `ui.md`) every tab stays but
-several sections don't: each section layout filters its sections through
-`visibleItems` from `src/lib/ui-mode.ts`. Revisions is the deployment history
-that used to sit at the bottom of Overview, now with the `image:tag` that ran,
-its digest, how long it took and, for a git build, the commit linked to the
-provider. `logs/` still exists as a **route without a page**: its `+server.ts`
-is the SSE stream `live-log-viewer.svelte` fetches.
+Health), **Storage** (`volumes/`), **Networking** (`networking/`: Domains, with
+SSL, is the bare page; Network, Ports (published and exposed) and Cache are
+`networking/network`, `networking/ports`, `networking/cache`), **Container**
+(`container/`: Compute is the bare page, Runtime is `container/runtime`),
+**Security**, **Terminal**, **Settings** (`settings/`: General is the bare page,
+with the main form, type and icon, stack and save-as-template; Automation is
+`settings/automation`, auto-rollback, image scanning and the auto-redeploy
+schedule; Danger zone is `settings/danger`, the delete, which alone loads the
+service's active jobs). In simple mode (see `ui.md`) every tab stays but several
+sections don't: each section layout filters its sections through `visibleItems`
+from `src/lib/ui-mode.ts`. Revisions is the deployment history that used to sit
+at the bottom of Overview, now with the `image:tag` that ran, its digest, how
+long it took and, for a git build, the commit linked to the provider. `logs/`
+still exists as a **route without a page**: its `+server.ts` is the SSE stream
+`live-log-viewer.svelte` fetches.
 
 **The entity a page shows is a path segment, never a query parameter.** A
 revision is `environments/revisions/[revisionId]` (the list only links to it),
@@ -45,15 +51,28 @@ parameters stay for list state only: sort, search, filters, the monitoring
 `range`, `view=tree`, `dismissed=1`, and the new-service `stackId`/`templateId`
 prefill.
 
-Overview now leads with the service's own resource chart and a **Connections**
-panel (what it needs, what needs it, derived from env vars naming another
-service's slug as a host: `src/lib/service-graph.ts`'s `hostsIn` reads a URL's
-host, a `host:port`, or a bare name only under a host-ish key (`*_HOST`,
-`*_URL`, `*_DSN`, `*_BROKER(S)`…), so `POSTGRES_DB=stremthru` no longer counts
-as a link to a service slugged `stremthru` — see Stacks' Services tab below,
-which reads the same graph), an **Unlink** button per row (the `unlink` form
-action, dropping every env var `linkKeys` found for that connection plus its
-`secretEnvKeys` marks), plus the connection URLs for a datastore image.
+The service's lifecycle buttons (Restart, Deploy, and the ⋯ menu's pull/fresh
+build, start/stop, rollback, kill) live in the shared header in
+`[serviceId]/+layout.svelte` (`service-actions.svelte`), so every tab has them.
+Layouts can't own form actions, so their forms post to the Overview route's
+actions by path (`<overview>?/restart`), and `enhanceToast`'s `navigate: false`
+keeps the viewer on the tab they're on. The layout owns the `DeployProgress` and
+hands it to the Overview tab through `provideDeployProgress`/
+`useDeployProgress`, so a deploy queued from any tab is the one the Overview's
+progress panel streams. Overview leads with four figures and a chart from
+`MonitoringService.forService` (`?range=`, today by default, the same ranges as
+Observability's Monitoring), then Details, an **Activity** card (one lane per
+category over the same period, from `service_event` and `deployment`, see
+`data-and-config.md`; `service-activity-lanes.svelte`), the latest revisions, a
+five-line live log preview and a **Connections** panel (what it needs, what
+needs it, derived from env vars naming another service's slug as a host:
+`src/lib/service-graph.ts`'s `hostsIn` reads a URL's host, a `host:port`, or a
+bare name only under a host-ish key (`*_HOST`, `*_URL`, `*_DSN`,
+`*_BROKER(S)`…), so `POSTGRES_DB=stremthru` no longer counts as a link to a
+service slugged `stremthru` — see Stacks' Services tab below, which reads the
+same graph), an **Unlink** button per row (the `unlink` form action, dropping
+every env var `linkKeys` found for that connection plus its `secretEnvKeys`
+marks), plus the connection URLs for a datastore image.
 
 ## Routing: dashboard-first, with exactly one public page
 
@@ -90,15 +109,19 @@ item with a `parent` sits under a collapsible entry of that name inside its
 category (icon from `NAV_PARENT_ICONS`, `navLabel` when the item's own label
 would repeat the parent's):
 
-- **Workspace**: **Overview** (dashboard stats + recent deployments),
-  **Services**, **Stacks**, **Templates**, **Deployments** (`/deployments`,
-  every deploy/rollback across all services, paged by `DeploymentDTO.listPaged`
-  with `status`/`trigger` filters; the trigger comes from the deploy job's
-  payload via a correlated subquery, since the `deployment` row doesn't store
-  one, so it's lost once `JobDTO.prune` drops the job; the dashboard's Recent
-  Deployments "View all" links here), **Workstations** (`/workstations`, the
-  signed-in user's own dev workstations, `[workstationId]` split into Overview
-  and Settings tabs, see Dev workstations in `docker.md`).
+- **Workspace**: **Overview** (KPI tiles, today's traffic, Needs you and the
+  live Deployments table, whose deploys and alerts come from `/activity`, an SSE
+  `+server.ts` fed by one shared 2-second poller in
+  `src/lib/server/activity-feed.ts`, which runs only while a stream is open and
+  pushes a snapshot only when it changed), **Services**, **Stacks**,
+  **Templates**, **Deployments** (`/deployments`, every deploy/rollback across
+  all services, paged by `DeploymentDTO.listPaged` with `status`/`trigger`
+  filters; the trigger comes from the deploy job's payload via a correlated
+  subquery, since the `deployment` row doesn't store one, so it's lost once
+  `JobDTO.prune` drops the job; the dashboard's Recent Deployments "View all"
+  links here), **Workstations** (`/workstations`, the signed-in user's own dev
+  workstations, `[workstationId]` split into Overview and Settings tabs, see Dev
+  workstations in `docker.md`).
 - **Operations**: Observability (**Monitoring**, **Status Page**, see Status
   pages in `services-and-templates.md`), Scheduling (**Overview**, the
   instance-wide view of every cron redeploy, enabled cron job and backup
@@ -212,29 +235,30 @@ deep-linking into `/settings`.
   StorageVolumes, including a "New volume" modal,
   `src/lib/components/new-volume-fields.svelte` shared with `/storage/new`, so a
   volume can be created and mounted without leaving the service), **Networking**
-  (a **Domains** card: the default `<slug>.<baseDomain>` hostname with a
-  "Routed" toggle, a list of extra domains and a radio picking the main one,
-  `updateDomains` action, pure helpers in `src/lib/service-domains.ts`; an
-  **Access** section holds the per-app login wall, its allowed sign-in methods
-  and its user/email/group allowlists, `updateAppAuth`, see Per-app login wall
-  below; a **Network** section holds container port, protocol (tcp/udp/both),
-  network mode (bridge/host, see below), and DNS-resolvability,
-  `updatePortsSchema`, its own `updatePorts` action, moved off Settings; an
-  **SSL** section, its own `updateSsl` action, shown only for domains outside
-  the instance's base domain and never behind Pangolin (which serves
-  certificates itself), host ports are still never _published_/mapped by design
-  even though host network mode now exists, see below; **every one of those
-  settings is a Traefik label written when the container is created**, so saving
-  one changes nothing about the container that's already running, which is why
-  an already-deployed service shows an amber notice and a `?/redeploy` button at
-  the top of this tab rather than leaving the user to work out why their domain
-  404s), **Container** (its **Compute** section: cpu/memory limits,
+  (its own `SectionNav`, each section its own route with only its own actions:
+  **Domains**, the bare page, holds the default `<slug>.<baseDomain>` hostname
+  with a "Routed" toggle, a list of extra domains and a radio picking the main
+  one, `updateDomains`, pure helpers in `src/lib/service-domains.ts`, plus the
+  **SSL** card, `updateSsl`, shown only for domains outside the instance's base
+  domain and never behind Pangolin, which serves certificates itself;
+  **Network** (`networking/network`) holds container port, protocol
+  (tcp/udp/both), network mode (bridge/host, see below) and DNS-resolvability,
+  `updatePortsSchema`, `updatePorts`; **Ports** (`networking/ports`) holds
+  published and exposed ports, `updatePublishedPorts`/`updateExposedPorts`;
+  **Cache** (`networking/cache`) holds the response cache TTL, `updateCache`,
+  and loads whether the instance's HTTP cache is on. In simple mode Ports and
+  Cache are hidden unless the service already uses them. The per-app login wall
+  lives on Security. **Every one of those settings is a Traefik label written
+  when the container is created**, so saving one changes nothing about the
+  container that's already running, which is why every save toast says to
+  redeploy), **Container** (its **Compute** section: cpu/memory limits,
   `updateComputeSchema`, its own `updateCompute` action, moved off Settings; its
   **Runtime** section), **Terminal** (interactive shell into the live container,
-  see below), **Settings** (name/slug/restart-policy, move between stacks,
-  save-as-template, auto-redeploy cron schedule, danger-zone delete,
-  image/git/registry, port/network and cpu/memory fields all moved to their own
-  tabs, see Environments & Deployments/Networking/Container above). When
+  see below), **Settings** (General: name/slug/restart-policy, move between
+  stacks, save-as-template; Automation: auto-redeploy cron schedule,
+  auto-rollback, image scanning; Danger zone: the delete, image/git/registry,
+  port/network and cpu/memory fields all moved to their own tabs, see
+  Environments & Deployments/Networking/Container above). When
   `currentStatus === "missing"`, Observability → Events shows a distinct banner
   with a "Resolve" button, `?/resolveOrphan`, calling
   `ServiceDTO.resolveOrphan()` to clear the stale `containerId`/`swarmServiceId`

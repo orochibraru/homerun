@@ -1,0 +1,14 @@
+{
+	"$schema": "../schema.json",
+	"name": "arr-mcp",
+	"description": "One MCP server for the whole media stack: the *arr apps, Seerr, Jellyfin, Plex, qBittorrent, Transmission and more. Apps are added in its web UI, and the first visitor claims the admin account, so open it right after deploying. Clients use per-client tokens minted in that UI. MCP endpoint at /mcp.",
+	"image": "ghcr.io/bardesss/arr-mcp",
+	"tag": "latest",
+	"containerPort": 6060,
+	"icon": "di:radarr",
+	"tags": ["mcp", "sonarr", "radarr", "jellyfin", "plex", "qbittorrent"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/bardesss/arr-mcp",
+	"envVars": {},
+	"volumes": ["/config"]
+}

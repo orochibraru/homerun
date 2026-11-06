@@ -56,6 +56,10 @@ export const volumeResponse = z.object({
 	backupStopServices: z.boolean(),
 	createdAt: timestamp,
 	description: z.string().nullable(),
+	disk: z.string().nullable().meta({
+		description:
+			"The host mount point a Docker volume is kept on, null for Docker's default location",
+	}),
 	id: z.string(),
 	kind: z.enum(["bind", "volume"]),
 	name: z.string(),

@@ -83,28 +83,28 @@ service's tabs after it's created.
 `Services` has a search box (matches name, image, and domain) plus Status/ Stack
 filters, a sort (newest, oldest, name either way, recently updated; it's in the
 URL, so a sorted view can be bookmarked), and a list/card view toggle that
-remembers your choice per browser; both the search and filters are applied on
-the server, so they reach every service on the instance, not just whichever page
-happens to be on screen. Once you have more than a page's worth, a pager at the
-bottom shows "26–50 of 60" and lets you step through the rest. Check one or more
-services (a "select all" scopes to whatever's on the **current page**,
+remembers your choice on your account; both the search and filters are applied
+on the server, so they reach every service on the instance, not just whichever
+page happens to be on screen. Once you have more than a page's worth, a pager at
+the bottom shows "26–50 of 60" and lets you step through the rest. Check one or
+more services (a "select all" scopes to whatever's on the **current page**,
 paginating or changing the search/filters clears your selection) to bring up a
 bottom bar with bulk Start/Stop/Restart/Delete: bulk actions run against every
 selected service and report back which ones succeeded, so one service with no
 container yet doesn't block the rest. Bulk delete, and the single-row delete on
-this page and the danger-zone delete on a service's own Settings tab, all
+this page and the delete under a service's own Settings → Danger zone, all
 require typing a confirmation phrase (the service's name for a single delete,
 `delete N services` for a bulk one) before the button unlocks, an irreversible
 action gets a real "are you sure" rather than a single click. A delete removes
 the container or swarm service first: one that's already gone is fine, but if
 Docker fails to remove it, the service is kept and the error says why. The
-Settings tab's delete then offers **Delete anyway**, which removes only
-Homerun's record (the REST API's equivalent is
-`DELETE /api/v1/services/:id?force=true`). A service with a deploy (or any other
-job) still queued or running, for itself or one of its previews, environments or
-canary, isn't deleted either: the Settings tab's delete dialog lists those jobs
-and its button becomes **Force delete**, which cancels them first. Deleting a
-preview or an environment on its own cancels its jobs without asking.
+Danger zone's delete then offers **Delete anyway**, which removes only Homerun's
+record (the REST API's equivalent is `DELETE /api/v1/services/:id?force=true`).
+A service with a deploy (or any other job) still queued or running, for itself
+or one of its previews, environments or canary, isn't deleted either: the Danger
+zone's delete dialog lists those jobs and its button becomes **Force delete**,
+which cancels them first. Deleting a preview or an environment on its own
+cancels its jobs without asking.
 
 The Services page has three views, switched with **List**, **Dependencies** and
 **Diagram** next to the toolbar:
@@ -113,25 +113,31 @@ The Services page has three views, switched with **List**, **Dependencies** and
   underneath (the same tree a
   [stack page](stacks.md#the-services-tabs-dependency-graph) shows, across the
   whole instance), and each service's **lane**: its last 24 hours of traffic in
-  half-hour blocks with a diamond per deployment, tinted by its stack.
+  half-hour blocks with a diamond per deployment, tinted by its stack. Its
+  search box narrows the tree to the services whose name, slug, image or main
+  domain matches, keeping the services that need them above them.
 - **List** is the paged list, grouped by stack and ordered as a tree (a
   substack's group indented under its parent's, services outside any stack
-  last). Searching or filtering always lands here, since a dependency tree needs
-  the whole unpaged set and can't be combined with paging.
+  last), with the sort, the status and stack filters and a search that runs on
+  the server. A link with a search or a filter in it lands here.
 - **Diagram** draws every stack as a frame with its services as cards, arrows
   from each service to what it needs, and the services in no stack in a frame of
-  their own. Drag cards and frames around, zoom, or **Fit** it to the screen;
-  the layout is kept in your browser.
+  their own, with the same search box as Dependencies. Drag cards and frames
+  around, zoom, or **Fit** it to the screen; the layout is kept in your browser.
 
 ## Settings
 
 ![A service's Settings tab with its name, slug, pull policy, restart policy and environment](images/services-settings.webp)
 
-Name, slug, restart policy, which stack the service belongs to, the
-[scheduled redeploy](scheduling.md#scheduled-redeploy), the pull policy, whether
-its image is [scanned](image-scanning.md),
-[auto-rollback](revisions-and-rollback.md), and a danger-zone delete
-(typed-confirm, see [The services list](#the-services-list)).
+Three sections:
+
+- **General**: name, slug, pull policy, restart policy, environment name, type
+  and icon, which stack the service belongs to, and **Save as template**.
+- **Automation**: [auto-rollback](revisions-and-rollback.md), whether its image
+  is [scanned](image-scanning.md) and the
+  [scheduled redeploy](scheduling.md#scheduled-redeploy).
+- **Danger zone**: the typed-confirm delete (see
+  [The services list](#the-services-list)).
 
 **Pull policy** decides whether a deploy pulls the image: **Always** (the
 default, and the only way a moving tag like `:latest` picks up a new build),
@@ -139,7 +145,7 @@ default, and the only way a moving tag like `:latest` picks up a new build),
 a moving tag goes stale), or **Never** (for an image built or loaded onto the
 host by hand, the deploy fails if it isn't there).
 
-**Save as template** is here too: it snapshots this service's current image,
+**Save as template** (under General) snapshots this service's current image,
 tag, port, env vars, resource limits, healthcheck and
 [runtime options](runtime-and-compute.md#runtime) into a reusable template of
 your own, which then behaves exactly like a built-in one, including being

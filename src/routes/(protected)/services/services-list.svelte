@@ -1,65 +1,63 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { page as appPage } from "$app/state";
 	import {
 		Activity,
-		CornerDownRight,
-		FileUp,
+		Boxes,
+		ChevronDown,
+		CircleAlert,
+		CirclePlay,
+		CircleStop,
 		Layers,
 		LayoutGridIcon,
 		List,
-		ListTree,
 		Network,
 		Plus,
 		Server,
 	} from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
+	import * as DropdownMenu from "@orochibraru/ui/dropdown-menu";
 	import type { Snippet } from "svelte";
 
-	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
-	import DeleteVolumesOption from "#lib/components/delete-volumes-option.svelte";
-	import EntityList, {
-		type EntityRow,
-	} from "#lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "#lib/components/entity-toolbar.svelte";
 	import Pagination from "#lib/components/pagination.svelte";
-	import PreviewRows from "#lib/components/preview-rows.svelte";
-	import SelectAllRow from "#lib/components/select-all-row.svelte";
 	import ServiceContextMenu from "#lib/components/service-context-menu.svelte";
 	import ServiceMenuHost from "#lib/components/service-menu-host.svelte";
-	import ServiceTree from "#lib/components/service-tree.svelte";
 	import StackDiagram from "#lib/components/stack-diagram.svelte";
-	import StatusBadge from "#lib/components/status-badge.svelte";
-	import TemplateIcon from "#lib/components/template-icon.svelte";
-	import ViewModeToggle from "#lib/components/view-mode-toggle.svelte";
 	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "#lib/constants.js";
 	import { stackHues } from "#lib/lanes.js";
 	import { ListSelection } from "#lib/list-selection.svelte.js";
 	import { BASE_SORTS } from "#lib/list-sorts.js";
 	import { getLanes } from "#lib/remote/lanes.remote.js";
 	import { syncServiceStatuses } from "#lib/remote/service-status.remote.js";
+	import { getServiceUsage } from "#lib/remote/stats.remote.js";
 	import type {
 		ServiceFacets,
 		ServiceListing,
 	} from "#lib/server/service-listing.js";
-	import {
-		SERVICE_ACTION_LABELS,
-		type ServiceAction,
-	} from "#lib/service-actions.js";
 	import { primaryHostname } from "#lib/service-domains.js";
 	import {
 		dependencyForest,
+		type DependencyNode,
 		type GraphServiceInfo,
+		matchesServiceQuery,
+		type PreviewRow,
 		previewsByParent,
 	} from "#lib/service-graph.js";
 	import { ancestorIds, flattenStackTree } from "#lib/stack-tree.js";
-	import { enhanceToast } from "#lib/toast.js";
 	import type { ContainerStatus } from "#lib/types.js";
-	import { ViewMode } from "#lib/view-mode.svelte.js";
 
 	import BulkBar from "./bulk-bar.svelte";
-	import ServiceRowActions from "./service-row-actions.svelte";
+	import ServiceRowMenu from "./service-row-menu.svelte";
+	import ServicesTable, {
+		type ServiceHealth,
+		type TableGroup,
+		type TableRow,
+		type TableService,
+	} from "./services-table.svelte";
 
 	interface Props {
 		facets: ServiceFacets | undefined;
@@ -82,16 +80,21 @@
 	}: Props = $props();
 
 	const VIEWS = [
-		{ icon: List, id: "list", label: "List" },
-		{ icon: ListTree, id: "tree", label: "Dependencies" },
+		{ icon: Layers, id: "tree", label: "Group by stack" },
+		{ icon: List, id: "list", label: "Flat list" },
 		{ icon: Network, id: "diagram", label: "Diagram" },
 	] as const;
 
-	type Svc = (typeof data.services)[number];
+	const STATUS_TABS = [
+		{ icon: Boxes, label: "All", statuses: [] },
+		{ icon: CirclePlay, label: "Running", statuses: ["running"] },
+		{ icon: CircleStop, label: "Stopped", statuses: ["stopped"] },
+		{ icon: CircleAlert, label: "Failing", statuses: ["failed", "missing"] },
+	] as const;
 
-	const cardView = new ViewMode("services");
-
-	const selection = new ListSelection(() => data.services.map((svc) => svc.id));
+	const currentView = $derived(
+		VIEWS.find((option) => option.id === mode) ?? VIEWS[0],
+	);
 
 	const filters = $derived<FilterGroup[]>([
 		{
@@ -99,6 +102,7 @@
 			key: "status",
 			label: "Status",
 			options: (facets?.statuses ?? []).map((status) => ({
+				count: facets?.statusCounts[status],
 				label: SERVICE_STATUS_CONFIG[status as ContainerStatus].label,
 				value: status,
 			})),
@@ -115,119 +119,223 @@
 		},
 	]);
 
-	const groups = $derived.by(() => {
-		const byStack = new Map<string | null, Svc[]>();
-		for (const svc of data.services) {
+	/** The URL's comma-separated values for one filter key. */
+	function urlValues(key: string): string[] {
+		return (appPage.url.searchParams.get(key) ?? "")
+			.split(",")
+			.map((value) => value.trim())
+			.filter(Boolean);
+	}
+
+	/** This page's URL with `key` set to `value` (or removed when empty), back on page 1. */
+	function hrefWith(key: string, value: string): string {
+		const params = new URLSearchParams(appPage.url.search);
+		if (value) {
+			params.set(key, value);
+		} else {
+			params.delete(key);
+		}
+		params.delete("page");
+		const query = params.toString();
+		return `${resolve("services")}${query ? `?${query}` : ""}`;
+	}
+
+	const activeStatuses = $derived(urlValues("status").toSorted().join(","));
+
+	function tabCount(statuses: readonly string[]): number | undefined {
+		if (!facets) {
+			return undefined;
+		}
+		return statuses.length === 0
+			? facets.total
+			: statuses.reduce(
+					(total, status) => total + (facets.statusCounts[status] ?? 0),
+					0,
+				);
+	}
+
+	const stackNames = $derived(new Map(data.stacks.map((s) => [s.id, s.name])));
+	const stackSlugs = $derived(new Map(data.stacks.map((s) => [s.id, s.slug])));
+
+	/** Whether a dependency-tree service passes the URL's search, status and stack filters, as the server applies them to the flat list. */
+	function passesFilters(svc: TableService): boolean {
+		const statuses = urlValues("status");
+		const stacks = urlValues("stack");
+		return (
+			matchesServiceQuery(svc, appPage.url.searchParams.get("q") ?? "") &&
+			(statuses.length === 0 || statuses.includes(svc.currentStatus)) &&
+			(stacks.length === 0 ||
+				stacks.includes(stackNames.get(svc.stackId ?? "") ?? UNGROUPED_LABEL))
+		);
+	}
+
+	const shown = $derived<TableService[]>(
+		data.tree
+			? data.tree.services.filter(passesFilters)
+			: data.services.map((svc) => ({
+					category: svc.category,
+					containerId: svc.containerId,
+					currentStatus: svc.currentStatus,
+					desiredState: svc.desiredState,
+					domain: primaryHostname(
+						svc,
+						stackSlugs.get(svc.stackId ?? ""),
+						serviceDomain,
+					),
+					icon: svc.icon,
+					id: svc.id,
+					image: `${svc.image}:${svc.tag}`,
+					name: svc.name,
+					slug: svc.slug,
+					stackId: svc.stackId,
+					swarmServiceId: svc.swarmServiceId,
+				})),
+	);
+
+	const previews = $derived<Map<string, PreviewRow[]>>(
+		data.tree
+			? previewsByParent(data.tree.previews)
+			: new Map(data.services.map((svc) => [svc.id, svc.previews])),
+	);
+
+	/** Flattens a dependency forest into table rows, each with the guide rails drawn left of it; a service already shown higher up isn't repeated. */
+	function flatten(
+		forest: DependencyNode[],
+		byId: Map<string, TableService>,
+	): TableRow[] {
+		const rows: TableRow[] = [];
+		const walk = (nodes: DependencyNode[], level: number, rails: boolean[]) => {
+			const visible = nodes.filter((node) => !node.repeat && byId.has(node.id));
+			visible.forEach((node, i) => {
+				const service = byId.get(node.id);
+				if (!service) {
+					return;
+				}
+				const last = i === visible.length - 1;
+				rows.push({ last, level, rails, service });
+				walk(node.children, level + 1, level === 0 ? [] : [...rails, !last]);
+			});
+		};
+		walk(forest, 0, []);
+		return rows;
+	}
+
+	/** One stack's services as rows, each drawn under the service in the same stack that depends on it. */
+	function treeRows(services: TableService[]): TableRow[] {
+		const byId = new Map(services.map((svc) => [svc.id, svc]));
+		const deps = new Map(
+			services.map((svc) => [
+				svc.id,
+				(data.tree?.deps[svc.id] ?? []).filter((id) => byId.has(id)),
+			]),
+		);
+		return flatten(
+			dependencyForest(
+				services.map((svc) => svc.id),
+				deps,
+			),
+			byId,
+		);
+	}
+
+	const groups = $derived.by<TableGroup[]>(() => {
+		if (mode === "list") {
+			return [
+				{
+					depth: 0,
+					key: "all",
+					label: "",
+					rows: shown.map((service) => ({
+						last: true,
+						level: 0,
+						rails: [],
+						service,
+					})),
+				},
+			];
+		}
+		const byStack = new Map<string | null, TableService[]>();
+		for (const svc of shown) {
 			const key = svc.stackId ?? null;
 			byStack.set(key, [...(byStack.get(key) ?? []), svc]);
 		}
 		const parents = new Map(data.stacks.map((s) => [s.id, s.parentId]));
-		const shown = new Set(
+		const used = new Set(
 			[...byStack.keys()]
 				.filter((id): id is string => id !== null)
 				.flatMap((id) => [id, ...ancestorIds(id, parents)]),
 		);
-		const rows = flattenStackTree(
-			data.stacks.filter((s) => shown.has(s.id)),
+		const stacked = flattenStackTree(
+			data.stacks.filter((s) => used.has(s.id)),
 		).map(({ depth, stack }) => ({
 			depth,
 			key: stack.id,
 			label: stack.name,
-			services: byStack.get(stack.id) ?? [],
+			rows: treeRows(byStack.get(stack.id) ?? []),
 		}));
 		const ungrouped = byStack.get(null);
 		return ungrouped
 			? [
-					...rows,
+					...stacked,
 					{
 						depth: 0,
 						key: "ungrouped",
 						label: UNGROUPED_LABEL,
-						services: ungrouped,
+						rows: treeRows(ungrouped),
 					},
 				]
-			: rows;
+			: stacked;
 	});
 
-	const deployedIds = $derived(
-		data.services
-			.filter((svc) => svc.containerId || svc.swarmServiceId)
-			.map((svc) => svc.id),
+	const selection = new ListSelection(() =>
+		mode === "diagram" ? [] : shown.map((svc) => svc.id),
 	);
-	const synced = $derived(syncServiceStatuses(deployedIds));
+
+	const synced = $derived(
+		syncServiceStatuses(
+			shown
+				.filter((svc) => svc.containerId || svc.swarmServiceId)
+				.map((svc) => svc.id),
+		),
+	);
 	const liveStatus = $derived(
 		new Map((synced.current ?? []).map((row) => [row.id, row.status])),
 	);
 
-	function statusOf(svc: Svc): ContainerStatus {
-		return liveStatus.get(svc.id) ?? svc.currentStatus;
+	const liveHealth = $derived(
+		new Map(
+			(synced.current ?? []).map((row) => [
+				row.id,
+				{ health: row.health, reason: row.healthReason },
+			]),
+		),
+	);
+
+	function statusOf(svc: TableService): ContainerStatus {
+		return liveStatus.get(svc.id) ?? (svc.currentStatus as ContainerStatus);
 	}
 
-	function byId(id: string): Svc | undefined {
-		return data.services.find((svc) => svc.id === id);
+	function healthOf(svc: TableService): ServiceHealth {
+		return liveHealth.get(svc.id) ?? { health: null, reason: null };
 	}
 
-	// Tracks which service's action is in flight, keyed by serviceId, so
-	// only that row's buttons show a spinner/disable.
-	let pending = $state<Record<string, boolean>>({});
-
-	function serviceName(serviceId: string): string {
-		return (
-			data.services.find((svc) => svc.id === serviceId)?.name ?? "the service"
-		);
-	}
-
-	function withPending(serviceId: string, action: ServiceAction) {
-		const label = SERVICE_ACTION_LABELS[action];
-		return enhanceToast({
-			error: `Couldn't ${label.verb} ${serviceName(serviceId)}.`,
-			loading: `${label.progressive} ${serviceName(serviceId)}`,
-			onSettled: () => {
-				pending[serviceId] = false;
-			},
-			onStart: () => {
-				pending[serviceId] = true;
-			},
-			success: `${serviceName(serviceId)} ${label.done}.`,
-		});
-	}
-
-	let deleteDialogOpen = $state(false);
-	let pendingDeleteName = $state("");
-	let pendingDeleteForm: HTMLFormElement | null = null;
-	let deleteVolumes = $state(false);
-
-	function requestDelete(e: MouseEvent, name: string) {
-		pendingDeleteForm = (e.currentTarget as HTMLElement).closest("form");
-		pendingDeleteName = name;
-		deleteVolumes = false;
-		deleteDialogOpen = true;
-	}
-
-	let menuHost = $state<ReturnType<typeof ServiceMenuHost>>();
+	const lanes = $derived(
+		getLanes((data.tree?.services ?? data.services).map((svc) => svc.id)),
+	);
+	const usageQuery = getServiceUsage();
+	const usage = $derived(
+		new Map((usageQuery.current ?? []).map((row) => [row.id, row])),
+	);
 
 	const hues = $derived(stackHues(data.stacks));
-	const stackNames = $derived(new Map(data.stacks.map((s) => [s.id, s.name])));
-	const lanes = $derived(
-		data.tree ? getLanes(data.tree.services.map((svc) => svc.id)) : null,
-	);
 
-	const tree = $derived(
-		data.tree && {
-			forest: dependencyForest(
-				data.tree.services.map((svc) => svc.id),
-				new Map(Object.entries(data.tree.deps)),
-			),
-			previews: previewsByParent(data.tree.previews),
-			services: new Map(data.tree.services.map((svc) => [svc.id, svc])),
-		},
-	);
+	let menuHost = $state<ReturnType<typeof ServiceMenuHost>>();
 </script>
 
 <div class={selection.count > 0 ? "pb-28" : ""}>
 	{#if data.total === 0 && !filtered}
 		<div
-			class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-20 text-center"
+			class="border-border flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center"
 		>
 			<Server class="text-text-muted mb-3 size-10 opacity-40" />
 			<p class="text-text-muted text-sm font-medium">No services yet</p>
@@ -251,191 +359,114 @@
 				</Button>
 			</div>
 		</div>
-	{:else if tree && data.tree}
-		<div class="mb-3 flex flex-wrap items-center gap-2">
-			<p class="text-text-subtle text-xs">
-				Every service, with what it needs underneath and its last 24 hours.
-				Connections are read from env vars pointing at another service's slug.
-			</p>
-			<span class="ml-auto">{@render viewSwitch()}</span>
-		</div>
-		{#if mode === "diagram"}
-			<StackDiagram
-				deps={data.tree.deps}
-				{hues}
-				lanes={lanes?.current ?? null}
-				rootStackId={null}
-				services={data.tree.services}
-				{stackNames}
-				stacks={data.stacks}
-				wrapper={treeWrapper}
-			/>
-		{:else}
-			<div class="panel overflow-hidden rounded-xl">
-				<ServiceTree
-					{hues}
-					lanes={lanes?.current ?? null}
-					nodes={tree.forest}
-					previews={tree.previews}
-					services={tree.services}
-					{stackNames}
-					wrapper={treeWrapper}
-				/>
-			</div>
-		{/if}
 	{:else}
-		<EntityToolbar
-			sorts={BASE_SORTS}
-			{filters}
-			placeholder="Search services by name, image or domain…"
-		>
-			{#snippet trailing()}
-				{@render viewSwitch()}
-				<ViewModeToggle view={cardView} />
-			{/snippet}
-		</EntityToolbar>
+		<div class="-mb-2.5">
+			<EntityToolbar
+				sorts={mode === "list" ? BASE_SORTS : []}
+				{filters}
+				placeholder="Search services…"
+			>
+				{#snippet trailing()}
+					{@render statusTabs()}
+					{@render viewPicker()}
+				{/snippet}
+			</EntityToolbar>
+		</div>
 
-		{#if data.services.length === 0}
+		{#if shown.length === 0}
 			<div
-				class="border-border/70 rounded-md border border-dashed py-16 text-center"
+				class="border-border/70 rounded-2xl border border-dashed py-16 text-center"
 			>
 				<p class="text-text-muted text-sm">No services match your filters.</p>
 			</div>
+		{:else if mode === "diagram" && data.tree}
+			<StackDiagram
+				deps={data.tree.deps}
+				{hues}
+				lanes={lanes.current ?? null}
+				rootStackId={null}
+				services={shown}
+				{stackNames}
+				stacks={data.stacks}
+				{wrapper}
+			/>
 		{:else}
-			<SelectAllRow
-				noun="services"
+			<ServicesTable
+				{actions}
+				{groups}
+				lanes={lanes.current ?? null}
+				{previews}
 				{selection}
-				visibleCount={data.services.length}
+				showGroups={mode === "tree"}
+				health={healthOf}
+				status={statusOf}
+				{usage}
+				{wrapper}
 			/>
 
-			{#snippet wrapper(item: EntityRow, body: import("svelte").Snippet)}
-				{@const svc = byId(item.id)}
-				{#if svc}
-					<ServiceContextMenu
-						onaction={(op, id) => menuHost?.run(op, id)}
-						ongroup={(s) => menuHost?.group(s)}
-						onlink={(s) => menuHost?.link(s)}
-						onungroup={(s) => menuHost?.ungroup(s)}
-						service={svc}
-					>
-						{@render body()}
-					</ServiceContextMenu>
-				{:else}
-					{@render body()}
-				{/if}
-			{/snippet}
-
-			{#snippet media(item: { id: string })}
-				{@const svc = byId(item.id)}
-				<TemplateIcon
-					category={svc?.category ?? null}
-					class="size-8 rounded-lg"
-					fallback={Server}
-					icon={svc?.icon ?? null}
-				/>
-				{#if svc}
-					<span class="sr-only">{svc.name}</span>
-				{/if}
-			{/snippet}
-
-			{#snippet badge(item: { id: string })}
-				{@const svc = byId(item.id)}
-				{#if svc}
-					<StatusBadge status={statusOf(svc)} />
-				{/if}
-			{/snippet}
-
-			{#snippet details(item: { id: string })}
-				<PreviewRows
-					class="ml-4 sm:ml-11"
-					previews={byId(item.id)?.previews ?? []}
-				/>
-			{/snippet}
-
-			{#snippet actions(item: { id: string })}
-				{@const svc = byId(item.id)}
-				{#if svc}
-					<ServiceRowActions
-						{deleteVolumes}
-						ondelete={(e) => requestDelete(e, svc.name)}
-						pending={pending[svc.id] ?? false}
-						service={svc}
-						submit={(action) => withPending(svc.id, action)}
-					/>
-				{/if}
-			{/snippet}
-
-			<div class="space-y-6">
-				{#each groups as { depth, key, label, services } (key)}
-					<div
-						class={depth > 0 ? "border-border border-l pl-4" : ""}
-						style:margin-left="{depth * 1.25}rem"
-					>
-						{#if groups.length > 1}
-							<h2 class="eyebrow mb-2 flex items-center gap-1.5">
-								{#if depth > 0}
-									<CornerDownRight class="text-text-subtle size-3.5" />
-								{/if}
-								{label}
-							</h2>
-						{/if}
-						{#if services.length > 0}
-							<EntityList
-								{actions}
-								{details}
-								{wrapper}
-								items={services.map((svc) => ({
-									description: `${svc.image}:${svc.tag}`,
-									href: `${resolve("services")}/${svc.id}`,
-									id: svc.id,
-									subtitle:
-										primaryHostname(
-											svc,
-											data.stacks.find((stack) => stack.id === svc.stackId)
-												?.slug,
-											serviceDomain,
-										) ?? svc.slug,
-									title: svc.name,
-								}))}
-								onToggleSelect={(id) => selection.toggle(id)}
-								{badge}
-								{media}
-								selectedIds={selection.ids}
-								view={cardView}
-							/>
-						{/if}
-					</div>
-				{/each}
-			</div>
-
-			<Pagination label="services" {page} {perPage} total={data.total} />
+			{#if mode === "list"}
+				<Pagination label="services" {page} {perPage} total={data.total} />
+			{/if}
 		{/if}
 	{/if}
 </div>
 
-{#snippet viewSwitch()}
+{#snippet statusTabs()}
 	<nav
-		class="border-border inline-flex rounded-lg border p-0.5"
-		aria-label="Services view"
+		class="bg-surface ring-border-light order-first inline-flex h-10 shrink-0 items-center rounded-full p-0.75 ring-1"
+		aria-label="Filter by status"
 	>
-		{#each VIEWS as option (option.id)}
-			{@const Icon = option.icon}
+		{#each STATUS_TABS as tab (tab.label)}
+			{@const active = activeStatuses === tab.statuses.join(",")}
+			{@const count = tabCount(tab.statuses)}
+			{@const TabIcon = tab.icon}
 			<a
-				class="inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors {mode ===
-				option.id
-					? 'bg-accent-light text-accent'
+				class="flex h-full items-center gap-1.5 rounded-full px-3.5 text-[0.78rem] font-bold transition-colors {active
+					? 'bg-primary text-primary-foreground'
 					: 'text-text-muted hover:text-text'}"
-				aria-current={mode === option.id ? "page" : undefined}
-				href="{resolve('services')}?view={option.id}"
+				aria-current={active ? "page" : undefined}
+				href={hrefWith("status", tab.statuses.join(","))}
 			>
-				<Icon class="size-3.5" />
-				{option.label}
+				<TabIcon class="size-3.5 shrink-0" />
+				{tab.label}
+				{#if count !== undefined}
+					<small class="font-semibold opacity-60">{count}</small>
+				{/if}
 			</a>
 		{/each}
 	</nav>
 {/snippet}
 
-{#snippet treeWrapper(svc: GraphServiceInfo, body: Snippet)}
+{#snippet viewPicker()}
+	<DropdownMenu.Root>
+		<DropdownMenu.Trigger>
+			{#snippet child({ props })}
+				<button
+					{...props}
+					class="bg-surface ring-border-light text-text-muted hover:text-text order-first inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[0.78rem] font-semibold ring-1 transition-colors"
+					type="button"
+				>
+					<currentView.icon class="size-3.5" />
+					{currentView.label}
+					<ChevronDown class="size-3.5" />
+				</button>
+			{/snippet}
+		</DropdownMenu.Trigger>
+		<DropdownMenu.Content align="start" class="w-48">
+			{#each VIEWS as option (option.id)}
+				<DropdownMenu.Item
+					onSelect={() =>
+						goto(hrefWith("view", option.id === "tree" ? "" : option.id))}
+				>
+					<option.icon class="size-4" />
+					{option.label}
+				</DropdownMenu.Item>
+			{/each}
+		</DropdownMenu.Content>
+	</DropdownMenu.Root>
+{/snippet}
+
+{#snippet wrapper(svc: GraphServiceInfo, body: Snippet)}
 	<ServiceContextMenu
 		onaction={(op, id) => menuHost?.run(op, id)}
 		ongroup={(s) => menuHost?.group(s)}
@@ -447,21 +478,20 @@
 	</ServiceContextMenu>
 {/snippet}
 
-<BulkBar {selection} />
+{#snippet actions(svc: TableService)}
+	<ServiceRowMenu
+		onaction={(op, id) => menuHost?.run(op, id)}
+		ongroup={(s) => menuHost?.group(s)}
+		onlink={(s) => menuHost?.link(s)}
+		onungroup={(s) => menuHost?.ungroup(s)}
+		service={svc}
+	/>
+{/snippet}
 
-<ConfirmDialog
-	bind:open={deleteDialogOpen}
-	confirmLabel="Delete"
-	confirmPhrase={pendingDeleteName}
-	description={`Delete "${pendingDeleteName}"? This removes its container and can't be undone.`}
-	onConfirm={() => pendingDeleteForm?.requestSubmit()}
-	title="Delete service"
->
-	<DeleteVolumesOption bind:checked={deleteVolumes} />
-</ConfirmDialog>
+<BulkBar {selection} />
 
 <ServiceMenuHost
 	bind:this={menuHost}
-	services={data.services}
+	services={data.tree?.services ?? data.services}
 	stacks={data.stacks}
 />

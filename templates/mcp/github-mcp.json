@@ -1,0 +1,14 @@
+{
+	"$schema": "../schema.json",
+	"name": "GitHub MCP",
+	"description": "GitHub's official MCP server: repos, issues, pull requests, Actions and code search. Each client sends its own GitHub token as a Bearer token, the server holds none. MCP endpoint at /.",
+	"image": "ghcr.io/github/github-mcp-server",
+	"tag": "latest",
+	"containerPort": 8082,
+	"icon": "di:github",
+	"tags": ["mcp", "github", "git"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/github/github-mcp-server",
+	"envVars": {},
+	"command": ["http", "--port", "8082"]
+}

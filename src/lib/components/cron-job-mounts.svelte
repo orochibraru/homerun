@@ -51,6 +51,7 @@
 			const data = new FormData(form);
 			const volume = await createStorageVolume({
 				description: (data.get("description") as string | null) || null,
+				disk: (data.get("disk") as string | null) || null,
 				kind: data.get("kind") === "bind" ? "bind" : "volume",
 				name: (data.get("name") as string | null) ?? "",
 				source: (data.get("source") as string | null) ?? "",

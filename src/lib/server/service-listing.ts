@@ -1,8 +1,10 @@
+import { serviceDomain } from "#lib/config.js";
 import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import type { ListQuery } from "#lib/server/list-query.js";
+import { primaryHostname } from "#lib/service-domains.js";
 import {
 	dependencyMap,
 	mergeDependencies,
@@ -65,13 +67,44 @@ export async function loadServiceListing(query: ListQuery, treeView: boolean) {
 			previews: everything
 				.filter((svc) => svc.toJSON().previewParentId)
 				.map((svc) => toPreviewRow(svc.toJSON())),
-			services: roots.map((svc) => toGraphService(svc.toJSON())),
+			services: roots.map((svc) => {
+				const row = svc.toJSON();
+				return {
+					...toGraphService(row),
+					swarmServiceId: row.swarmServiceId,
+					domain: primaryHostname(
+						row,
+						stacks.find((stack) => stack.id === row.stackId)?.slug,
+						serviceDomain(),
+					),
+				};
+			}),
 		},
 	};
 }
 
 export type ServiceListing = Awaited<ReturnType<typeof loadServiceListing>>;
 
-export type ServiceFacets = Awaited<
-	ReturnType<typeof ServiceDTO.listFilterFacets>
->;
+/** The services page's filter options plus its headline counts: top-level services by status, their total, and how many stacks hold one. */
+export async function loadServiceFacets() {
+	const [facets, services] = await Promise.all([
+		ServiceDTO.listFilterFacets(),
+		ServiceDTO.list(),
+	]);
+	const roots = services
+		.map((svc) => svc.toJSON())
+		.filter((row) => !row.previewParentId);
+	const statusCounts: Record<string, number> = {};
+	for (const row of roots) {
+		statusCounts[row.currentStatus] =
+			(statusCounts[row.currentStatus] ?? 0) + 1;
+	}
+	return {
+		...facets,
+		stackCount: new Set(roots.flatMap((row) => row.stackId ?? [])).size,
+		statusCounts,
+		total: roots.length,
+	};
+}
+
+export type ServiceFacets = Awaited<ReturnType<typeof loadServiceFacets>>;

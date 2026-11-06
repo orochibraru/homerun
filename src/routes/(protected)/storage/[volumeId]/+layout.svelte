@@ -33,7 +33,9 @@
 <div class="p-5 md:p-6">
 	<div class="mb-6">
 		<h1 class="text-text text-lg font-semibold tracking-tight">{vol.name}</h1>
-		<p class="text-text-muted mt-1 text-sm">{vol.kind} · {vol.source}</p>
+		<p class="text-text-muted mt-1 text-sm">
+			{vol.kind} · {vol.source}{vol.disk ? ` · on ${vol.disk}` : ""}
+		</p>
 	</div>
 
 	<TabNav active={activeTabId} {tabs}>

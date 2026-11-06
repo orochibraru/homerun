@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Komga MCP",
+	"description": "Read-only access to Komga libraries, series and books from an MCP client. Set KOMGA_URL and a Komga API key. MCP endpoint at /mcp; clients send the generated MCP_BEARER_TOKEN as a Bearer token.",
+	"image": "ghcr.io/pierrec18/komga-mcp",
+	"tag": "0.1.0",
+	"containerPort": 8000,
+	"icon": "di:komga",
+	"tags": ["mcp", "komga", "comics", "books"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/pierrec18/Komga-MCP",
+	"envVars": {
+		"KOMGA_URL": "http://komga:25600",
+		"KOMGA_API_KEY": "change-me",
+		"MCP_BEARER_TOKEN": "{{secret}}"
+	}
+}

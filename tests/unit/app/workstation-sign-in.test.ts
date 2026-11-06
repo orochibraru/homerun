@@ -244,34 +244,59 @@ describe("workstationHostProblem", () => {
 		expect(await workstationHostProblem(null)).toBeNull();
 		restorers.push(
 			spyOn(RemoteHostDTO, "get")
-				.mockResolvedValueOnce({ kind: "agent" } as unknown as Host)
+				.mockResolvedValueOnce({
+					enabled: true,
+					kind: "agent",
+				} as unknown as Host)
 				.mockResolvedValueOnce({
 					dockerHost: "tcp://10.0.0.6:2376",
+					enabled: true,
 					kind: "docker",
 				} as unknown as Host)
 				.mockResolvedValueOnce({
 					dockerHost: "ssh://root@10.0.0.6",
+					enabled: true,
 					kind: "docker",
 				} as unknown as Host)
 				.mockResolvedValueOnce({
 					dockerHost: null,
+					enabled: true,
 					kind: "docker",
 				} as unknown as Host)
-				.mockResolvedValueOnce(null),
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({
+					enabled: false,
+					kind: "agent",
+					name: "Off",
+				} as unknown as Host),
 		);
 		expect(await workstationHostProblem("a")).toBeNull();
 		expect(await workstationHostProblem("b")).toBeNull();
 		expect(await workstationHostProblem("c")).toBeNull();
 		expect(await workstationHostProblem("d")).toContain("a Docker host");
 		expect(await workstationHostProblem("e")).toContain("agent host");
+		expect(await workstationHostProblem("f")).toContain("Off is disabled");
 	});
 
 	test("Runs on offers agent hosts and every Docker host, ssh:// included", async () => {
 		restorers.push(
 			spyOn(RemoteHostDTO, "list").mockResolvedValue([
-				{ id: "a", kind: "agent", name: "Agent" },
-				{ dockerHost: "ssh://root@h", id: "s", kind: "docker", name: "SSH" },
-				{ dockerHost: null, id: "n", kind: "docker", name: "None" },
+				{ enabled: true, id: "a", kind: "agent", name: "Agent" },
+				{
+					dockerHost: "ssh://root@h",
+					enabled: true,
+					id: "s",
+					kind: "docker",
+					name: "SSH",
+				},
+				{
+					dockerHost: null,
+					enabled: true,
+					id: "n",
+					kind: "docker",
+					name: "None",
+				},
+				{ enabled: false, id: "x", kind: "agent", name: "Off" },
 			] as unknown as Awaited<ReturnType<typeof RemoteHostDTO.list>>),
 		);
 		expect(await workstationHosts()).toEqual([

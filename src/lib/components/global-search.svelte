@@ -103,7 +103,7 @@
 </a>
 
 <button
-	class="{headerControlClass} px-2.5 max-md:hidden"
+	class="{headerControlClass} justify-start px-3.5 max-md:hidden md:h-9 md:w-64"
 	aria-label="Search"
 	onclick={() => {
 		open = true;
@@ -113,7 +113,7 @@
 	<Search class="size-3.5" />
 	<span class="hidden sm:inline">Search…</span>
 	<kbd
-		class="text-text-subtle hidden font-sans text-[0.6875rem] tracking-widest sm:inline"
+		class="text-text-subtle ml-auto hidden font-sans text-[0.6875rem] tracking-widest sm:inline"
 		>⌘K</kbd
 	>
 </button>

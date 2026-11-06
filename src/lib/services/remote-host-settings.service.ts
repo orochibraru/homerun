@@ -17,6 +17,7 @@ export interface RemoteHostSettings {
 	agentToken?: string | null;
 	agentUrl?: string | null;
 	dockerHost?: string | null;
+	enabled?: boolean;
 	kind?: RemoteHost["kind"];
 	maxConcurrentBuilds?: number | null;
 	name?: string | null;
@@ -172,7 +173,10 @@ class RemoteHostSettingsServiceClass {
 		if (!name) {
 			throw new RemoteHostSettingsError("Name is required.");
 		}
-		const limits = buildLimitColumns(input);
+		const limits = {
+			...buildLimitColumns(input),
+			...(input.enabled === undefined ? {} : { enabled: input.enabled }),
+		};
 		if (host.kind === "agent") {
 			const agentUrl = checkedAgentUrl(
 				input.agentUrl === undefined

@@ -1,292 +1,143 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import { ChevronDown, ChevronLeft, Server, Trash2 } from "@lucide/svelte";
+	import { ArrowUpCircle, Power, PowerOff } from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import { Label } from "@orochibraru/ui/label";
-	import { Textarea } from "@orochibraru/ui/textarea";
 	import { onMount } from "svelte";
 
-	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
-	import SaveButton from "#lib/components/save-button.svelte";
-	import { settings } from "#lib/settings.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 
-	const { data, form } = $props();
+	const { data } = $props();
+	const host = $derived(data.host);
 
-	onMount(() => title.set(data.host.name));
+	onMount(() => title.set(host.name));
 
-	let showTls = $state(false);
-	let submitting = $state(false);
-	let savingBuilds = $state(false);
-	let deleteDialogOpen = $state(false);
-	let deleteForm: HTMLFormElement | undefined = $state();
+	let toggling = $state(false);
+	let updating = $state(false);
 </script>
 
-<div class="p-5 md:p-6">
-	<a
-		class="mb-4 inline-flex items-center gap-1 text-sm text-text-muted hover:text-text"
-		href={resolve("remote-hosts")}><ChevronLeft class="size-4" />Remote Hosts</a
-	>
-
-	<div class="mb-6 flex items-center gap-3">
-		<div
-			class="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent"
-		>
-			<Server class="size-5" />
-		</div>
-		<div class="min-w-0">
-			<h1 class="truncate text-text text-lg font-semibold tracking-tight">
-				{data.host.name}
-			</h1>
-			<p class="text-sm text-text-muted">
-				{data.host.kind === "agent"
-					? "Homerun Agent"
-					: "Direct Docker connection"}
-			</p>
-		</div>
-	</div>
-
-	{#if data.host.kind === "agent"}
-		<div class="mb-6 flex items-center gap-2 rounded-md panel p-4 text-sm">
-			{#if data.agentStatus?.reachable}
-				<span class="inline-block size-2 rounded-full bg-green-500"></span>
-				<span class="text-text">Online</span>
-				<span class="text-text-subtle">· agent v{data.agentStatus.version}</span
-				>
-			{:else}
-				<span class="inline-block size-2 rounded-full bg-red-500"></span>
-				<span class="text-red-600 dark:text-red-400">
-					Unreachable{data.agentStatus?.error
-						? ` : ${data.agentStatus.error}`
-						: ""}
-				</span>
-			{/if}
-		</div>
-	{/if}
-
-	<section class="panel mb-6 rounded-md">
-		<PanelHeader title="Connection">
-			{#snippet trailing()}
-				<SaveButton form="remote-host-settings" pending={submitting} />
-			{/snippet}
-		</PanelHeader>
-		<form
-			id="remote-host-settings"
-			class="space-y-4 p-5"
-			action="?/update"
-			method="POST"
-			use:enhance={enhanceToast({
-				error: "Check the form for errors.",
-				loading: "Saving the host",
-				onSettled: () => {
-					submitting = false;
-				},
-				onStart: () => {
-					submitting = true;
-				},
-				success: "Remote host updated.",
-			})}
-		>
-			{#if form?.error}
-				<p class="text-sm text-red-500">{form.error}</p>
-			{/if}
-			<div>
-				<Label class="mb-1.5" for="name">Name</Label>
-				<Input
-					id="name"
-					name="name"
-					required
-					type="text"
-					value={data.host.name}
-				/>
-			</div>
-
-			{#if data.host.kind === "agent"}
-				<div>
-					<Label class="mb-1.5" for="agentUrl">Agent URL</Label>
-					<Input
-						class=""
-						id="agentUrl"
-						name="agentUrl"
-						placeholder="http://192.168.1.50:7420"
-						required
-						type="text"
-						value={data.host.agentUrl}
-					/>
-					<p class="mt-1.5 text-xs text-text-subtle">
-						The worker's reachable base URL, port 7420 unless WORKER_PORT says
-						otherwise.
+<div class="grid gap-6 lg:grid-cols-2">
+	<section class="panel rounded-md">
+		<PanelHeader title="Status" />
+		<div class="space-y-2 p-5 text-sm">
+			{#if host.kind === "agent"}
+				{#if data.agentStatus?.reachable}
+					<p class="flex items-center gap-2">
+						<span class="inline-block size-2 rounded-full bg-green-500"></span>
+						<span class="text-text">Online</span>
+						<span class="text-text-subtle"
+							>· agent v{data.agentStatus.version}</span
+						>
 					</p>
-				</div>
-				<div>
-					<Label class="mb-1.5" for="agentToken">Agent token</Label>
-					<Input
-						class=""
-						id="agentToken"
-						name="agentToken"
-						placeholder="Leave blank to keep current"
-						type="password"
-					/>
-					<p class="mt-1.5 text-xs text-text-subtle">
-						Only needed if the agent's token changed, or the URL above did :
-						both get re-verified whenever either one moves.
+				{:else}
+					<p class="flex items-center gap-2">
+						<span class="inline-block size-2 rounded-full bg-red-500"></span>
+						<span class="text-red-600 dark:text-red-400">
+							Unreachable{data.agentStatus?.error
+								? ` : ${data.agentStatus.error}`
+								: ""}
+						</span>
 					</p>
-				</div>
-			{:else}
-				<div>
-					<Label class="mb-1.5" for="dockerHost">Docker host</Label>
-					<Input
-						class=""
-						id="dockerHost"
-						name="dockerHost"
-						placeholder="tcp://192.168.1.50:2376"
-						required
-						type="text"
-						value={data.host.dockerHost}
-					/>
-					<p class="mt-1.5 text-xs text-text-subtle">
-						<code>tcp://host:port</code>
-						(add TLS certs below for a TLS-secured daemon) or
-						<code>ssh://user@host</code>
-						(uses the system's own SSH agent : no key field here).
-					</p>
-				</div>
-
-				<Button
-					class="h-auto p-0"
-					onclick={() => {
-						showTls = !showTls;
-					}}
-					variant="link"
-				>
-					<ChevronDown
-						class="size-3.5 transition-transform {showTls ? 'rotate-180' : ''}"
-					/>
-					TLS client certificate (optional, tcp:// only)
-				</Button>
-				{#if showTls}
-					<div class="space-y-3">
-						<div>
-							<Label class="mb-1.5" for="tlsCa">CA certificate</Label>
-							<Textarea
-								class="resize-none"
-								id="tlsCa"
-								name="tlsCa"
-								placeholder="Leave blank to keep current"
-								rows={3}
-							/>
-						</div>
-						<div>
-							<Label class="mb-1.5" for="tlsCert">Client certificate</Label>
-							<Textarea
-								class="resize-none"
-								id="tlsCert"
-								name="tlsCert"
-								placeholder="Leave blank to keep current"
-								rows={3}
-							/>
-						</div>
-						<div>
-							<Label class="mb-1.5" for="tlsKey">Client key</Label>
-							<Textarea
-								class="resize-none"
-								id="tlsKey"
-								name="tlsKey"
-								placeholder="Leave blank to keep current"
-								rows={3}
-							/>
-						</div>
-					</div>
 				{/if}
+				<p class="text-text-muted">{host.agentUrl}</p>
+			{:else}
+				<p class="text-text">{host.dockerHost}</p>
 			{/if}
-		</form>
+		</div>
 	</section>
 
-	<section class="panel mb-6 rounded-md">
-		<PanelHeader title="Builds">
-			{#snippet trailing()}
-				<SaveButton form="remote-host-builds" pending={savingBuilds} />
-			{/snippet}
-		</PanelHeader>
+	<section class="panel rounded-md">
+		<PanelHeader title="Availability" />
 		<form
-			id="remote-host-builds"
-			class="space-y-4 p-5"
-			action="?/updateBuilds"
+			class="flex flex-wrap items-center justify-between gap-4 p-5"
+			action="?/setEnabled"
 			method="POST"
 			use:enhance={enhanceToast({
-				error: "Couldn't save the build limit.",
-				loading: "Saving the build limit",
+				error: "Couldn't change the host.",
+				loading: host.enabled ? "Disabling the host" : "Enabling the host",
 				onSettled: () => {
-					savingBuilds = false;
+					toggling = false;
 				},
 				onStart: () => {
-					savingBuilds = true;
+					toggling = true;
 				},
-				success: "Build limit saved.",
+				success: (result) =>
+					result?.enabled ? "Host enabled." : "Host disabled.",
 			})}
 		>
-			<div>
-				<Label class="mb-1.5" for="maxConcurrentBuilds">Concurrent builds</Label
-				>
-				<Input
-					id="maxConcurrentBuilds"
-					max={settings.docker.maxBuildConcurrency}
-					min={0}
-					name="maxConcurrentBuilds"
-					placeholder={`${data.buildConcurrency || "No limit"} (instance default)`}
-					type="number"
-					value={data.host.maxConcurrentBuilds ?? ""}
-				/>
-				<p class="mt-1.5 text-xs text-text-subtle">
-					How many git builds run on this server at once, 0 for no limit. Leave
-					blank to follow the default on
-					<a class="underline" href={resolve("settings/docker")}
-						>Settings → Docker</a
-					>.
-				</p>
-			</div>
-		</form>
-	</section>
-
-	<div class="rounded-md border border-red-500/30 bg-red-500/5 p-5">
-		<h2 class="eyebrow">Danger zone</h2>
-		<p class="mt-1 text-xs text-text-muted">
-			Services deployed to this host keep running there : they just won't be
-			manageable from here anymore.
-		</p>
-		<form
-			class="mt-3"
-			action="?/delete"
-			method="POST"
-			bind:this={deleteForm}
-			use:enhance={enhanceToast({
-				error: "Couldn't delete the host.",
-				loading: "Deleting the host",
-				success: "Remote host deleted.",
-			})}
-		>
+			<input name="enabled" type="hidden" value={String(!host.enabled)} />
+			<p class="text-text-muted text-sm">
+				{#if host.enabled}
+					Takes new builds and workstations.
+				{:else}
+					Disabled: no new build or workstation lands here. What already runs on
+					it keeps running, and a service pinned to it fails its build until
+					it's enabled again.
+				{/if}
+			</p>
 			<Button
-				onclick={() => {
-					deleteDialogOpen = true;
-				}}
-				type="button"
-				variant="destructive"
+				disabled={toggling}
+				type="submit"
+				variant={host.enabled ? "outline" : "default"}
 			>
-				<Trash2 class="size-4" />
-				Delete this host
+				{#if host.enabled}
+					<PowerOff class="size-4" />Disable
+				{:else}
+					<Power class="size-4" />Enable
+				{/if}
 			</Button>
 		</form>
-	</div>
-</div>
+	</section>
 
-<ConfirmDialog
-	bind:open={deleteDialogOpen}
-	confirmLabel="Delete"
-	description={`Delete "${data.host.name}"? Services deployed to it keep running there : they just won't be manageable from here anymore.`}
-	onConfirm={() => deleteForm?.requestSubmit()}
-	title="Delete remote host"
-/>
+	{#if host.kind === "agent"}
+		<section class="panel rounded-md lg:col-span-2">
+			<PanelHeader title="Version" />
+			<form
+				class="flex flex-wrap items-center justify-between gap-4 p-5"
+				action="?/upgrade"
+				method="POST"
+				use:enhance={enhanceToast({
+					error: "Couldn't update the agent.",
+					loading: `Updating the agent to v${data.instanceVersion}`,
+					onSettled: () => {
+						updating = false;
+					},
+					onStart: () => {
+						updating = true;
+					},
+					success: (result) =>
+						`The agent is restarting on v${result?.version ?? data.instanceVersion}, once any build it runs finishes.`,
+				})}
+			>
+				<p class="text-text-muted text-sm">
+					{#if !data.agentStatus?.reachable}
+						The agent's version shows once it answers.
+					{:else if data.updateAvailable}
+						Runs v{data.agentStatus.version}, this instance runs v{data.instanceVersion}.
+						Updating downloads that release on the host and restarts the agent
+						into it.
+					{:else}
+						Runs v{data.agentStatus.version}, the same as this instance.
+					{/if}
+				</p>
+				{#if data.updateAvailable}
+					<Button disabled={updating} type="submit">
+						<ArrowUpCircle class="size-4" />Update to v{data.instanceVersion}
+					</Button>
+				{/if}
+			</form>
+			<p class="text-text-subtle px-5 pb-5 text-xs">
+				An agent installed before self-update can't replace its own binary:
+				re-run the installer on that host once. Its log is on the
+				<a
+					class="underline"
+					href={resolve("/(protected)/remote-hosts/[hostId]/logs", {
+						hostId: host.id,
+					})}>Logs</a
+				> tab.
+			</p>
+		</section>
+	{/if}
+</div>

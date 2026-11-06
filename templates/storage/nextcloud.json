@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Nextcloud",
-	"description": "Files, calendars and contacts, with an app store on top. Runs on SQLite as deployed here; link a Postgres for anything beyond a personal instance.",
+	"description": "Files, calendars and contacts, with an app store on top. Runs on SQLite as deployed here; link a Postgres for anything beyond a personal instance. Gets an MCP server from the official Context Agent app.",
 	"image": "nextcloud",
 	"tag": "stable",
 	"containerPort": 80,

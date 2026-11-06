@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { render } from "@testing-library/svelte";
 
 import StatusBadge from "../../../src/lib/components/status-badge.svelte";
-import type { ContainerStatus } from "../../../src/lib/types";
+import type { ContainerStatus, RevisionHealth } from "../../../src/lib/types";
 
 /**
  * First real component test wired onto tests/unit/app/'s scaffolded
@@ -47,5 +47,35 @@ describe("StatusBadge", () => {
 		);
 		expect(running.querySelector(".animate-spin")).toBeNull();
 		unmountRunning();
+	});
+
+	test("refines a running badge with the revision's health", () => {
+		const cases: Array<[RevisionHealth | null, string]> = [
+			["healthy", "Healthy"],
+			["watching", "Checking"],
+			["unhealthy", "Unhealthy"],
+			["rolled_back", "Unhealthy"],
+			[null, "Running"],
+		];
+
+		for (const [health, label] of cases) {
+			const { container, unmount } = render(StatusBadge, {
+				health,
+				status: "running",
+			});
+			expect(container.querySelector("span")?.textContent?.trim()).toBe(label);
+			unmount();
+		}
+	});
+
+	test("ignores health once the service isn't running", () => {
+		const { container, unmount } = render(StatusBadge, {
+			health: "healthy",
+			status: "stopped",
+		});
+		expect(container.querySelector("span")?.textContent?.trim()).toBe(
+			"Stopped",
+		);
+		unmount();
 	});
 });

@@ -194,7 +194,7 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 	}
 
 	/**
-	 * Requests and errors per bucket for each service separately, keyed by
+	 * Requests, errors and summed response time per bucket for each service separately, keyed by
 	 * service id, each point's `bucket` being its start in epoch seconds
 	 * divided by `bucketSeconds`. Services with no traffic are absent.
 	 */
@@ -203,7 +203,10 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 		since: Date,
 		bucketSeconds: number,
 	): Promise<
-		Map<string, { bucket: number; errors: number; requests: number }[]>
+		Map<
+			string,
+			{ bucket: number; durationMs: number; errors: number; requests: number }[]
+		>
 	> {
 		if (serviceIds.length === 0) {
 			return new Map();
@@ -212,6 +215,7 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 		const rows = await db
 			.select({
 				bucket,
+				durationMs: sql<number>`sum(${trafficSample.durationMs})`,
 				errors: sql<number>`sum(${trafficSample.status4xx} + ${trafficSample.status5xx})`,
 				requests: sql<number>`sum(${trafficSample.requests})`,
 				serviceId: trafficSample.serviceId,
@@ -221,12 +225,13 @@ export class TrafficSampleDTO extends BaseDTO<TrafficSample> {
 			.groupBy(trafficSample.serviceId, bucket);
 		const out = new Map<
 			string,
-			{ bucket: number; errors: number; requests: number }[]
+			{ bucket: number; durationMs: number; errors: number; requests: number }[]
 		>();
 		for (const row of rows) {
 			const list = out.get(row.serviceId) ?? [];
 			list.push({
 				bucket: Number(row.bucket),
+				durationMs: Number(row.durationMs ?? 0),
 				errors: Number(row.errors ?? 0),
 				requests: Number(row.requests ?? 0),
 			});

@@ -12,6 +12,8 @@ const { Logger } = await import("../../../src/lib/logger");
 const { DeploymentDTO } = await import("../../../src/lib/dto/deployment-dto");
 const { NotificationDTO } =
 	await import("../../../src/lib/dto/notification-dto");
+const { ServiceVolumeDTO } =
+	await import("../../../src/lib/dto/service-volume-dto");
 const { WorkerClient, WorkerRequestError } =
 	await import("../../../src/lib/server/worker-client");
 const { ApiService } = await import("../../../src/lib/services/api.service");
@@ -55,11 +57,20 @@ const remoteDigests = new Map<string, string | null>();
 let deployments: Record<string, unknown>[] = [];
 let localImage: { digest?: string | null; id: string | null } | null = null;
 let imageLabels: Record<string, string> | null = null;
+let imageHealthcheck: { Test: string[] } | null = null;
+let imageHasShell = true;
+let imageInspectFails = false;
+let shellProbeFails = false;
+const shellProbes: Record<string, unknown>[] = [];
 let tagError: unknown = null;
 let pullGate: Promise<void> | null = null;
 let pullError: unknown = null;
 let inspects: (Inspect | null)[] = [];
 let logOutput: string | null = null;
+let mounts: Record<string, unknown>[] = [];
+let copyExitCode = 0;
+const oneOffs: Record<string, unknown>[] = [];
+const removedVolumes: string[] = [];
 const listTagsCalls: { digestsWanted: string[] | null }[] = [];
 const resolveCalls: string[] = [];
 const workerCalls: unknown[][] = [];
@@ -74,6 +85,7 @@ function fakeService(overrides: Record<string, unknown> = {}) {
 		buildSource: "image",
 		command: ["serve"],
 		containerPort: 3000,
+		dnsResolvable: true,
 		entrypoint: null,
 		envVars: { A: "1" },
 		healthcheckCommand: null,
@@ -152,12 +164,21 @@ beforeEach(() => {
 	deployments = [];
 	localImage = null;
 	imageLabels = null;
+	imageHealthcheck = null;
+	imageHasShell = true;
+	imageInspectFails = false;
+	shellProbeFails = false;
 	tagError = null;
 	pullGate = null;
 	pullError = null;
 	inspects = [{ Health: { Status: "healthy" }, Running: true }];
 	logOutput = null;
+	mounts = [];
+	copyExitCode = 0;
 	for (const list of [
+		oneOffs,
+		shellProbes,
+		removedVolumes,
 		listTagsCalls,
 		resolveCalls,
 		workerCalls,
@@ -203,6 +224,31 @@ beforeEach(() => {
 		deployments.map(deployment),
 	);
 	stub(DockerService, "buildAuthConfig", () => AUTH);
+	stub(ServiceVolumeDTO, "listForService", async () => mounts);
+	stub(DockerService, "runOneOff", async (params: Record<string, unknown>) => {
+		if (params.networkName === "none") {
+			shellProbes.push(params);
+			if (shellProbeFails) {
+				throw new Error("daemon gone");
+			}
+			return {
+				exitCode: imageHasShell ? 0 : 127,
+				stderr: Buffer.alloc(0),
+				stdout: Buffer.alloc(0),
+				timedOut: false,
+			};
+		}
+		oneOffs.push(params);
+		return {
+			exitCode: copyExitCode,
+			stderr: Buffer.from(copyExitCode ? "cp: disk full" : ""),
+			stdout: Buffer.alloc(0),
+			timedOut: false,
+		};
+	});
+	stub(DockerService, "removeVolume", async (name: string) => {
+		removedVolumes.push(name);
+	});
 	stub(DockerService, "pullImage", async (params: unknown) => {
 		pulls.push(params);
 		await pullGate;
@@ -229,10 +275,12 @@ beforeEach(() => {
 				return localImage;
 			}
 			if (path === "v1/images/inspect") {
-				if (!imageLabels) {
+				if (imageInspectFails) {
 					throw new WorkerRequestError("gone", 404);
 				}
-				return { Config: { Labels: imageLabels } };
+				return {
+					Config: { Healthcheck: imageHealthcheck, Labels: imageLabels },
+				};
 			}
 			const state = inspects.length > 1 ? inspects.shift() : inspects[0];
 			return state ? { State: state } : {};
@@ -696,7 +744,7 @@ describe("ImageVersionService.check", () => {
 });
 
 describe("ImageVersionService update trials", () => {
-	test("runs the update on the service's networks, off every volume, and passes once healthy", async () => {
+	test("runs the update on the service's networks and passes once healthy", async () => {
 		const { svc, updates } = fakeService({
 			stackId: "st1",
 			updateTrialEnabled: true,
@@ -759,6 +807,62 @@ describe("ImageVersionService update trials", () => {
 		expect(notifications[0].message).toBe(
 			'"Gitea" can update to 1.24.4. Its trial run started cleanly.',
 		);
+	});
+
+	test("copies each writable volume for the trial, shares read-only ones, and removes the copies", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		mounts = [
+			{
+				mount: {
+					toJSON: () => ({ containerPath: "/config", readOnly: false }),
+				},
+				volumeName: "config",
+				volumeSource: "gitea-config",
+			},
+			{
+				mount: { toJSON: () => ({ containerPath: "/certs", readOnly: true }) },
+				volumeName: "certs",
+				volumeSource: "/srv/certs",
+			},
+		];
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial?.status).toBe("passed");
+		expect(oneOffs).toEqual([
+			{
+				binds: ["gitea-config:/from:ro", "homerun-trial-gitea-0:/to"],
+				cmd: ["cp", "-a", "/from/.", "/to/"],
+				image: "alpine",
+				labels: { "homerun.update-trial": "s1" },
+				tag: "3",
+			},
+		]);
+		expect(containerCreate()?.body.HostConfig).toMatchObject({
+			Binds: ["homerun-trial-gitea-0:/config", "/srv/certs:/certs:ro"],
+		});
+		expect(removedVolumes).toEqual([
+			"homerun-trial-gitea-0",
+			"homerun-trial-gitea-0",
+		]);
+	});
+
+	test("a failed volume copy fails the trial before any container starts", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		mounts = [
+			{
+				mount: { toJSON: () => ({ containerPath: "/data", readOnly: false }) },
+				volumeName: "data",
+				volumeSource: "gitea-data",
+			},
+		];
+		copyExitCode = 1;
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial?.status).toBe("failed");
+		expect(state?.trial?.message).toContain(
+			"Couldn't copy data: cp: disk full",
+		);
+		expect(containerCreate()).toBeUndefined();
 	});
 
 	test("a swarm service's trial joins the swarm overlay its stack talks on", async () => {
@@ -852,7 +956,91 @@ describe("ImageVersionService update trials", () => {
 			status: "passed",
 		});
 		expect(now - started).toBe(20_000);
+		expect(containerCreate()?.body.Healthcheck).toEqual({ Test: ["NONE"] });
+	});
+
+	test("a service nothing routes to passes once still running, without a port check", async () => {
+		const { svc } = fakeService({
+			dnsResolvable: false,
+			updateTrialEnabled: true,
+		});
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		inspects = [{ Running: true }];
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial).toMatchObject({
+			message: "Still running after 20s.",
+			status: "passed",
+		});
 		expect(containerCreate()?.body.Healthcheck).toBeUndefined();
+		expect(state?.trial?.log).toContain(
+			"Nothing routes to it, waiting 20s to see it stays up",
+		);
+		expect(shellProbes).toEqual([]);
+	});
+
+	test("an image with its own HEALTHCHECK keeps it instead of the port check", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		imageHealthcheck = { Test: ["CMD", "healthcheck"] };
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial?.status).toBe("passed");
+		expect(containerCreate()?.body.Healthcheck).toBeUndefined();
+		expect(shellProbes).toEqual([]);
+	});
+
+	test("no port check when the image can't be inspected, the probe fails or the port is UDP", async () => {
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		inspects = [{ Running: true }];
+		const cases = [
+			{
+				reason: "The image has no healthcheck and no shell to run one in",
+				setup: () => {
+					imageInspectFails = true;
+				},
+			},
+			{
+				reason: "The image has no healthcheck and no shell to run one in",
+				setup: () => {
+					imageInspectFails = false;
+					shellProbeFails = true;
+				},
+			},
+			{
+				overrides: { portProtocol: "udp" },
+				reason: "A UDP-only port can't be checked",
+				setup: () => {
+					shellProbeFails = false;
+				},
+			},
+		];
+		for (const { overrides, reason, setup } of cases) {
+			setup();
+			const { svc } = fakeService({ ...overrides, updateTrialEnabled: true });
+			// oxlint-disable-next-line no-await-in-loop -- each case reads the shared mocks in turn
+			const state = await ImageVersionService.check(svc);
+			expect(state?.trial?.message).toBe("Still running after 20s.");
+			expect(containerCreate()?.body.Healthcheck).toBeUndefined();
+			expect(state?.trial?.log).toContain(
+				`${reason}, waiting 20s to see it stays up`,
+			);
+		}
+	});
+
+	test("an image without a shell isn't given the port check", async () => {
+		const { svc } = fakeService({ updateTrialEnabled: true });
+		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
+		imageHasShell = false;
+		inspects = [{ Running: true }];
+		const state = await ImageVersionService.check(svc);
+		expect(state?.trial?.message).toBe("Still running after 20s.");
+		expect(containerCreate()?.body.Healthcheck).toBeUndefined();
+		expect(shellProbes).toMatchObject([
+			{
+				entrypoint: ["/bin/sh", "-c", "exit 0"],
+				image: "gitea/gitea",
+				tag: "1.24.4@sha256:new",
+			},
+		]);
 	});
 
 	test("gives up on a version that never reports healthy, pulling it by tag without a digest", async () => {

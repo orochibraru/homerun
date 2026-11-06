@@ -24,6 +24,7 @@ export class ResourceIncidentDTO extends BaseDTO<ResourceIncident> {
 			.from(resourceIncident)
 			.where(isNull(resourceIncident.resolvedAt));
 		return rows.map((row) => ({
+			causes: row.causes,
 			id: row.id,
 			kind: row.kind,
 			lastNotifiedAt: row.lastNotifiedAt.getTime(),
@@ -51,6 +52,7 @@ export class ResourceIncidentDTO extends BaseDTO<ResourceIncident> {
 	static async open(incident: ResourceIncidentState): Promise<string> {
 		const id = crypto.randomUUID();
 		await db.insert(resourceIncident).values({
+			causes: incident.causes,
 			id,
 			kind: incident.kind,
 			lastNotifiedAt: new Date(incident.lastNotifiedAt),
@@ -62,7 +64,7 @@ export class ResourceIncidentDTO extends BaseDTO<ResourceIncident> {
 		return id;
 	}
 
-	/** Records an alert an open incident sent (an escalation or a reminder), or its recovery when `resolvedAt` is given. */
+	/** Records an alert an open incident sent (an escalation or a reminder) with the causes it named, or its recovery when `resolvedAt` is given. */
 	static async notified(
 		incident: ResourceIncidentState,
 		notifications: number,
@@ -74,6 +76,7 @@ export class ResourceIncidentDTO extends BaseDTO<ResourceIncident> {
 		await db
 			.update(resourceIncident)
 			.set({
+				causes: incident.causes,
 				lastNotifiedAt: new Date(incident.lastNotifiedAt),
 				level: incident.level,
 				notifications,

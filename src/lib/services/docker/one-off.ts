@@ -4,6 +4,7 @@ import { MANAGED_LABEL } from "./labels.ts";
 
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 const NS_PER_MS = 1_000_000;
+const PULL_ALLOWANCE_MS = 10 * 60 * 1000;
 
 export interface OneOffRunParams {
 	auth?: RegistryAuth;
@@ -83,10 +84,12 @@ export function DockerOneOffMixin<TBase extends Constructor<BaseDockerService>>(
 		 * container if it hasn't finished within `timeoutMs`, 30 minutes by
 		 * default (`timedOut: true` in the result rather than throwing). The
 		 * worker owns the whole run and always removes the container, whatever
-		 * the outcome.
+		 * the outcome. The request itself waits that long plus ten minutes for
+		 * the pull, since the worker only answers once the container exits.
 		 */
 		async runOneOff(params: OneOffRunParams): Promise<OneOffRunResult> {
-			const result = await this.worker.post<WorkerOneOffResult>("/v1/one-off", {
+			const timeoutMs = params.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+			const body = {
 				Auth: params.auth,
 				Binds: params.binds,
 				Cmd: params.cmd,
@@ -100,9 +103,14 @@ export function DockerOneOffMixin<TBase extends Constructor<BaseDockerService>>(
 				NetworkMode: params.networkName ?? undefined,
 				PidMode: params.pidMode ?? undefined,
 				Privileged: params.privileged ?? false,
-				Timeout: (params.timeoutMs ?? DEFAULT_TIMEOUT_MS) * NS_PER_MS,
+				Timeout: timeoutMs * NS_PER_MS,
 				WorkingDir: params.workingDir ?? undefined,
-			});
+			};
+			const result = await this.worker.request<WorkerOneOffResult>(
+				"POST",
+				"/v1/one-off",
+				{ body, timeoutMs: timeoutMs + PULL_ALLOWANCE_MS },
+			);
 			return {
 				exitCode: result.ExitCode,
 				stderr: decodeOutput(result.Stderr),

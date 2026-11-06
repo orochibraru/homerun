@@ -9,6 +9,7 @@ export const PERMISSION_AREAS = [
 		key: "services",
 		label: "Services",
 		routes: [
+			"/activity",
 			"/services",
 			"/deployments",
 			"/monitoring",

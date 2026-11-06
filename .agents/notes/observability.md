@@ -83,6 +83,26 @@ after the **worker** starts (not the app) always reads 0%. Polled by the
 dashboard's `/system-stats` endpoint every 5s, which now round-trips through the
 worker on every poll rather than reading in-process.
 
+**What's using it** (`ResourceInsightsService`, `resource-insights.service.ts`)
+answers the rings' click-through and a resource alert's causes from the same
+live reads: the worker's `GET /v1/host/usage` (every running container's stats
+sampled at once, 16 in flight, since each non-streaming stats answer waits out
+the daemon's own second reading) and `GET /v1/df`. Two choices are load-bearing.
+A container's CPU is reported per core by Docker (`cpuPercent`, up to 100 ×
+cores), so the sweep also returns `hostCpuPercent`, the same share of every core
+together, which is the only scale the host's own CPU% and the "Outside
+containers" remainder (host minus the containers' sum) make sense on. And
+container memory leaves out `inactive_file` (`total_inactive_file` on cgroup v1)
+the way `docker stats` does, in `sampleFromStats` itself, so every per-container
+memory figure in the app changed with it: raw cgroup usage counts page cache,
+which made a container that only read a lot of files look like it held the RAM.
+A workstation is named only for its owner, alerts (no viewer) never name one.
+`CapacityService` asks for causes only on an alerting event (open, escalate,
+remind), once per resource per check, and `causes()` swallows a failed read: an
+alert never waits on, or fails over, its explanation. The causes land on
+`resource_incident.causes` (the last alert's) and in the message as a "CPU:
+biggest users" (or Memory, Disk) field.
+
 ## Recorded resource history (`stat_sample`, `StatSampleDTO`, `src/lib/remote/stats.remote.ts`)
 
 The live poll above keeps nothing, so the graphs read a recorded history

@@ -33,7 +33,7 @@ test.describe.serial("revisions and status checks", () => {
 		await signIn(page);
 		const id = await createService(page, "rev-auto-rollback");
 
-		await page.goto(`/services/${id}/settings`);
+		await page.goto(`/services/${id}/settings/automation`);
 		const toggle = page.getByRole("checkbox", {
 			name: /Auto-rollback when a new revision is unhealthy/,
 		});

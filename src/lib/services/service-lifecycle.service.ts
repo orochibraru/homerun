@@ -2,6 +2,7 @@ import { serviceDomain } from "#lib/config.js";
 import { JobDTO } from "#lib/dto/job-dto.js";
 import { ServiceDependencyDTO } from "#lib/dto/service-dependency-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceEventDTO } from "#lib/dto/service-event-dto.js";
 import { ServiceGitDTO } from "#lib/dto/service-git-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
@@ -138,6 +139,18 @@ class ServiceLifecycleServiceClass {
 			sleepingSince: null,
 			wokenAt: new Date(),
 		});
+		await this.#recordLifecycle(svc, "start", "Started");
+	}
+
+	/** Puts a start, stop, restart or kill on the service's Lifecycle activity lane. */
+	#recordLifecycle(
+		svc: ServiceDTO,
+		kind: string,
+		summary: string,
+	): Promise<void> {
+		return ServiceEventDTO.record(svc.id, [
+			{ detail: [], kind, lane: "lifecycle", summary },
+		]);
 	}
 
 	/**
@@ -158,6 +171,7 @@ class ServiceLifecycleServiceClass {
 		} else {
 			await this.stop(this.#requireContainer(svc));
 		}
+		await this.#recordLifecycle(svc, "stop", "Stopped");
 	}
 
 	/**
@@ -168,9 +182,10 @@ class ServiceLifecycleServiceClass {
 	async restartService(svc: ServiceDTO): Promise<void> {
 		if (svc.swarmServiceId) {
 			await DockerService.restartSwarmService(svc.swarmServiceId);
-			return;
+		} else {
+			await this.restart(this.#requireContainer(svc));
 		}
-		await this.restart(this.#requireContainer(svc));
+		await this.#recordLifecycle(svc, "restart", "Restarted");
 	}
 
 	/**
@@ -186,6 +201,7 @@ class ServiceLifecycleServiceClass {
 		const containerId = this.#requireContainer(svc);
 		await svc.update({ desiredState: "stopped" });
 		await DockerService.killContainer(containerId);
+		await this.#recordLifecycle(svc, "kill", "Killed");
 	}
 
 	/**

@@ -33,7 +33,7 @@ sync by hand.
 ## Services
 
 - **[Services](services.md)**: creating a service, the services list, bulk
-  actions, and the Settings tab (pull policy, healthcheck, save as template).
+  actions, and the Settings tab (General, Automation and Danger zone).
 - **[Deploy source and build methods](deploy-source-and-builds.md)**: image or
   git repo, the six build methods, build servers and the build cache registry.
 - **[Homerun Manifest](manifest.md)**: a service's configuration as
@@ -143,8 +143,9 @@ sync by hand.
 
 ## Operations and maintenance
 
-- **[The dashboard](dashboard.md)**: today's numbers, what needs you, the
-  busiest services' last 24 hours, `⌘K` search, and setup diagnostics.
+- **[The dashboard](dashboard.md)**: today's numbers, what needs you, traffic
+  and host resources, the busiest services' last 24 hours, `⌘K` search, and
+  setup diagnostics.
 - **[System Logs](system-logs.md)**: live logs of your instance's stack and
   Traefik, and restarting or updating Traefik.
 - **[Docker Cleanup](docker-cleanup.md)**: previewing and pruning what Docker

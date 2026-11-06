@@ -9,6 +9,7 @@ import {
 	isNull,
 	lte,
 	ne,
+	not,
 	or,
 	type SQL,
 	sql,
@@ -37,6 +38,19 @@ import {
 import type { ContainerStatus, RevisionHealth } from "#lib/types.js";
 
 import { BaseDTO } from "./base-dto";
+
+/** One deployment as a service's Activity card reads it. */
+export interface DeploymentActivityRow {
+	actorName: string | null;
+	createdAt: Date;
+	errorMessage: string | null;
+	gitCommit: string | null;
+	id: string;
+	imageRef: string | null;
+	rollbackOfDeploymentId: string | null;
+	status: ContainerStatus;
+	trigger: DeployTrigger | null;
+}
 import { InstanceSettingsDTO } from "./instance-settings-dto";
 
 export interface NewDeploymentInput {
@@ -83,6 +97,28 @@ const DEPLOYMENT_STATUSES: readonly ContainerStatus[] = [
 	"stopped",
 	"failed",
 ];
+
+const IN_FLIGHT_STATUSES: ContainerStatus[] = [
+	"pending",
+	"pulling",
+	"starting",
+];
+
+export interface ActivityDeploymentRow {
+	createdAt: Date;
+	environment: string;
+	errorMessage: string | null;
+	finishedAt: Date | null;
+	gitCommit: string | null;
+	id: string;
+	imageRef: string | null;
+	serviceId: string;
+	serviceName: string;
+	serviceSlug: string;
+	startedAt: Date | null;
+	status: ContainerStatus;
+	trigger: DeployTrigger | null;
+}
 
 export interface DeploymentHistoryRow {
 	deployment: DeploymentDTO;
@@ -184,6 +220,45 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 					inArray(deployment.health, CLEARED_ON_SUPERSEDE),
 				),
 			);
+	}
+
+	/**
+	 * The health of each service's current revision (its newest running or
+	 * stopped deployment) and why it was judged unhealthy, keyed by service
+	 * id. A service whose current revision carries no health state is left out.
+	 */
+	static async currentHealth(
+		serviceIds: string[],
+	): Promise<Map<string, { health: RevisionHealth; reason: string | null }>> {
+		if (serviceIds.length === 0) {
+			return new Map();
+		}
+		const rows = await db
+			.selectDistinctOn([deployment.serviceId], {
+				health: deployment.health,
+				reason: deployment.healthReason,
+				serviceId: deployment.serviceId,
+			})
+			.from(deployment)
+			.where(
+				and(
+					inArray(deployment.serviceId, serviceIds),
+					inArray(deployment.status, ["running", "stopped"]),
+				),
+			)
+			.orderBy(deployment.serviceId, desc(deployment.createdAt));
+		return new Map(
+			rows.flatMap((row) =>
+				row.health
+					? [
+							[
+								row.serviceId,
+								{ health: row.health, reason: row.reason },
+							] as const,
+						]
+					: [],
+			),
+		);
 	}
 
 	/**
@@ -328,6 +403,42 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			.orderBy(deployment.createdAt);
 	}
 
+	/**
+	 * A service's deployments from `since` on (all of them when null), oldest
+	 * first and the latest 500 at most, with who started each one, for its
+	 * Activity card's Deploys lane.
+	 */
+	static async listServiceActivity(
+		serviceId: string,
+		since: Date | null,
+	): Promise<DeploymentActivityRow[]> {
+		const rows = await db
+			.select({
+				actorName: user.name,
+				createdAt: deployment.createdAt,
+				errorMessage: deployment.errorMessage,
+				gitCommit: deployment.gitCommit,
+				id: deployment.id,
+				imageRef: deployment.imageRef,
+				rollbackOfDeploymentId: deployment.rollbackOfDeploymentId,
+				status: deployment.status,
+				trigger: deployment.trigger,
+			})
+			.from(deployment)
+			.leftJoin(user, eq(user.id, deployment.userId))
+			.where(
+				since
+					? and(
+							eq(deployment.serviceId, serviceId),
+							gt(deployment.createdAt, since),
+						)
+					: eq(deployment.serviceId, serviceId),
+			)
+			.orderBy(desc(deployment.createdAt))
+			.limit(500);
+		return rows.reverse();
+	}
+
 	/** Recent deployments across a set of services, for a stack's own summary. */
 	static async listRecentForServices(
 		serviceIds: string[],
@@ -383,6 +494,59 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			serviceName: r.serviceName,
 			serviceSlug: r.serviceSlug,
 		}));
+	}
+
+	/**
+	 * The dashboard's activity lanes: deployments still pending, pulling or
+	 * starting that were created in the last `inFlightWindowMs` (older ones are
+	 * stranded rows, not live work) with their progress log, and the newest
+	 * finished ones, each with its service's name and slug.
+	 */
+	static async listActivity(
+		finishedLimit: number,
+		inFlightWindowMs: number,
+	): Promise<{
+		finished: ActivityDeploymentRow[];
+		inFlight: (ActivityDeploymentRow & { log: string | null })[];
+	}> {
+		const columns = {
+			createdAt: deployment.createdAt,
+			environment: deployment.environment,
+			errorMessage: deployment.errorMessage,
+			finishedAt: deployment.finishedAt,
+			gitCommit: deployment.gitCommit,
+			id: deployment.id,
+			imageRef: deployment.imageRef,
+			serviceId: deployment.serviceId,
+			serviceName: service.name,
+			serviceSlug: service.slug,
+			startedAt: deployment.startedAt,
+			status: deployment.status,
+			trigger: deployment.trigger,
+		};
+		const live = inArray(deployment.status, IN_FLIGHT_STATUSES);
+		const [inFlight, finished] = await Promise.all([
+			db
+				.select({ ...columns, log: deployment.log })
+				.from(deployment)
+				.innerJoin(service, eq(deployment.serviceId, service.id))
+				.where(
+					and(
+						live,
+						gt(deployment.createdAt, new Date(Date.now() - inFlightWindowMs)),
+					),
+				)
+				.orderBy(desc(deployment.createdAt))
+				.limit(20),
+			db
+				.select(columns)
+				.from(deployment)
+				.innerJoin(service, eq(deployment.serviceId, service.id))
+				.where(not(live))
+				.orderBy(desc(deployment.createdAt))
+				.limit(finishedLimit),
+		]);
+		return { finished, inFlight };
 	}
 
 	/** Every environment name recorded on at least one deployment, for the deployment history page's filter. */

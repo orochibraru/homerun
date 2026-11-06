@@ -22,7 +22,11 @@ function createClient(): SQL {
 		return globalForDb.__db_client;
 	}
 
-	const client = new SQL(config.databaseUrl);
+	const max = Number(Bun.env.DATABASE_POOL_MAX);
+	const client = new SQL({
+		max: Number.isInteger(max) && max > 0 ? max : undefined,
+		url: config.databaseUrl,
+	});
 
 	globalForDb.__db_client = client;
 	return client;

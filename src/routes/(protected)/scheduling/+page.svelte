@@ -47,7 +47,7 @@
 			{#if data.cronServices.length === 0}
 				<EmptyState
 					icon={RefreshCw}
-					subtitle="Turn on scheduled redeploys from a service's Settings tab."
+					subtitle="Turn on scheduled redeploys under a service's Settings → Automation."
 					title="No services have cron redeploy enabled"
 				/>
 			{:else}
@@ -55,7 +55,12 @@
 					{#each data.cronServices as { stackName, service } (service.id)}
 						<a
 							class="panel hover:border-accent/40 flex flex-col gap-1 rounded-md p-4 transition-colors sm:flex-row sm:items-center sm:gap-4"
-							href="{resolve('services')}/{service.id}/settings"
+							href={resolve(
+								"/(protected)/services/[serviceId]/settings/automation",
+								{
+									serviceId: service.id,
+								},
+							)}
 						>
 							<div class="min-w-0 flex-1">
 								<p class="text-text truncate text-sm font-semibold">

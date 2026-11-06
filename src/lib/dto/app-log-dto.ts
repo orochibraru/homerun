@@ -1,4 +1,14 @@
-import { and, count, desc, eq, gt, inArray, lt, lte } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNotNull,
+	lt,
+	lte,
+} from "drizzle-orm";
 
 import { db } from "#lib/server/db/lib.js";
 import { type AppLog, appLog } from "#lib/server/db/schema.js";
@@ -75,6 +85,26 @@ export class AppLogDTO extends BaseDTO<AppLog> {
 			.select()
 			.from(appLog)
 			.where(inArray(appLog.serviceId, serviceIds))
+			.orderBy(desc(appLog.createdAt))
+			.limit(limit);
+		return rows.map((row) => new AppLogDTO(row));
+	}
+
+	/** The newest error-level lines that name a service, logged after `since`: the dashboard's Alerts lane. */
+	static async listServiceErrorsSince(
+		since: Date,
+		limit: number,
+	): Promise<AppLogDTO[]> {
+		const rows = await db
+			.select()
+			.from(appLog)
+			.where(
+				and(
+					eq(appLog.level, "error"),
+					isNotNull(appLog.serviceId),
+					gt(appLog.createdAt, since),
+				),
+			)
 			.orderBy(desc(appLog.createdAt))
 			.limit(limit);
 		return rows.map((row) => new AppLogDTO(row));

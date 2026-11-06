@@ -194,6 +194,34 @@ that service's builds through this agent's HTTP API instead of a raw Docker
 connection. An agent host can also run [dev workstations](workstations.md): pick
 it under **Runs on** when creating one, the same as a Docker host.
 
+## Managing a host
+
+A host's `/remote-hosts` page has an **Overview**, a **Settings** tab (the
+connection, its concurrent-build limit, deleting it) and, for an agent, **Logs**
+and **Events**:
+
+- **Disable** (Overview → Availability) takes a host out of rotation without
+  deleting it: no new build lands on it, **Any free build server** skips it, and
+  it drops out of the workstations' **Runs on** picker. What already runs there
+  keeps running, and a service or cron job pinned to it fails its build, naming
+  the host, until it's enabled again. The list marks it **Disabled**. `enabled`
+  on `PATCH /api/v1/remote-hosts/{hostId}` does the same.
+- **Update** (Overview → Version) shows when the agent runs another version than
+  this instance. It asks the agent to download this instance's release of
+  `homerun-worker` for its CPU, replace its own binary and restart into it once
+  any build it's running finishes. An agent installed before this needs the
+  installer re-run once on that host: its binary sat in `/usr/local/bin`, which
+  its user can't write, and the update says so.
+- **Logs** is what the agent logged since it last started (its last 2000 lines):
+  requests, builds with their output, workstations.
+- **Events** is the host Docker daemon's events of the last day, newest first:
+  containers created, started, dying with their exit code, images pulled. The
+  daemon keeps only its most recent events, so a busy host's list starts later
+  than a day ago.
+
+Logs and Events read the agent live, so an unreachable agent shows its error
+there instead.
+
 ## Installer
 
 `cmd/installer/` automates standing up a fresh Linux box with either the full

@@ -1,28 +1,51 @@
 # Deploying
 
-![A service's Overview tab with its deploy controls, live logs and summary](images/service.webp)
+![A service's Overview tab with its header actions, figures, chart and details](images/service.webp)
 
-The Overview tab has Deploy (Rebuild for a git service), Start/Stop, Restart
-and, depending on the service, **Fresh build** (a git rebuild that ignores every
-cached layer), **Pull image** (pulls the configured image and tag without
-redeploying, and tells you whether it changed) and **Kill** (SIGKILLs a
-standalone container with no grace period; swarm services only get Stop). While
-a deploy runs, a live progress panel sits at the top of the tab. The panel shows
-six phases, resolving configuration, preparing volumes, fetching image,
-provisioning container, routing traffic, ready, ticking off as they complete,
-with the raw build/pull output streaming underneath. Progress arrives over
-server-sent events (the server pushes each new line and status change; if that
-stream can't be held open, the panel falls back to polling), and it resumes
+Every tab of a service shares one header: its name, status and environment, the
+image and tag (or repo and ref) it runs, its public address, its internal
+address with a copy button, and when it was last deployed (and by whom, for a
+manual deploy). On the right sit **Restart**, **Deploy** (**Redeploy** once it
+has run, **Rebuild** for a git service) and a **⋯** menu with the rest: **Fresh
+build** (a git rebuild that ignores every cached layer) or **Pull image** (pulls
+the configured image and tag without redeploying, and tells you whether it
+changed), Start/Stop, and **Kill** (SIGKILLs a standalone container with no
+grace period; swarm services only get Stop). While a deploy runs, a **Cancel**
+button joins them and a live progress panel sits at the top of the Overview tab.
+The panel shows six phases, resolving configuration, preparing volumes, fetching
+image, provisioning container, routing traffic, ready, ticking off as they
+complete, with the raw build/pull output streaming underneath. Progress arrives
+over server-sent events (the server pushes each new line and status change; if
+that stream can't be held open, the panel falls back to polling), and it resumes
 correctly if you reload the page mid-deploy, or if the deploy was started
-somewhere else entirely (a template quick-deploy, cron). Below the buttons sit
-the service's live logs and, beside them, a **Summary** (source, last deploy,
-replicas, limits, port, health check, volumes, age), a **Connections** panel
-listing the services it references through env vars or depends on through a
+somewhere else entirely (a template quick-deploy, cron). The Overview tab itself
+opens on four figures for the period picked on its chart (today by default, up
+to all time): requests, average response time, error rate, and uptime (public
+checks first, network checks otherwise; average CPU when the service has no
+uptime checks), each with its change against the period before. Below them sit a
+chart of requests, latency, CPU or memory over that period, a **Details** card
+(replicas, current CPU and memory, limits, port, health check, volumes, age), an
+**Activity** card, its latest **Revisions** (each opening its revision), the
+last few lines of its live logs, and a **Connections** card listing the services
+it references through env vars or depends on through a
 [service link](env-vars.md), and the ones that reference or depend on it (same
 detection as a stack's dependency graph, see [Stacks](stacks.md)), each with an
 **Unlink** button (see [Env vars](env-vars.md#unlinking)). Deployment history,
 every attempt with its status, image and full log, is under
 [Environments & Revisions → Revisions](revisions-and-rollback.md).
+
+**Activity** draws what happened to the service over the same period as one lane
+each: **Deploys** (queued, succeeded, failed, rolled back), **Config**
+(settings, env vars, dependencies), **Networking** (domains, ports, routing, the
+login wall), **Storage** (volume mounts) and **Lifecycle** (starts, stops,
+restarts, kills and scaling). Hover, tap or tab to a marker for what changed,
+who did it and when; changes close together share one marker with a count. Every
+change counts, whether it came from the dashboard, the
+[REST API](api-and-cli.md), the CLI, the MCP server or Terraform. Env vars are
+named but their values never recorded, and secrets (registry passwords,
+certificates) only show as set, replaced or removed. A change Homerun made on
+its own (scale to zero, a scheduled redeploy) reads as by Homerun. The same
+events are listed by `GET /api/v1/services/{serviceId}/events`.
 
 **Redeploys are health-gated.** When the service already has a running
 container, the new one starts next to it and the old one keeps serving until the
@@ -91,12 +114,13 @@ this server. Such a deploy keeps the new copy running, so you can read its logs,
 and its Overview still shows it running; only the deployment is marked failed.
 Whatever the app itself answers, a 401, a 404 or a 500, counts as an answer: a
 502 or 504 is checked against the container directly, and one the app returns
-itself passes. The one look-alike is a bare `404 page not found`, Traefik's
-exact text: without published error pages it's taken for Traefik's. A
-certificate still being issued, a public URL that doesn't resolve yet (DNS still
-propagating), a service that doesn't speak HTTP, or a Traefik this server can't
-reach only add a warning to the deploy log. Database images and UDP-only ports
-aren't checked.
+itself passes. A bare `404 page not found`, Traefik's exact text and also the
+stock 404 of any app written in Go, is checked against the container the same
+way when error pages aren't published: it passes when the container answers 404
+itself. A certificate still being issued, a public URL that doesn't resolve yet
+(DNS still propagating), a service that doesn't speak HTTP, or a Traefik this
+server can't reach only add a warning to the deploy log. Database images and
+UDP-only ports aren't checked.
 
 **Requests racing a removed copy are retried.** Every published service's router
 carries a retry middleware: a request that reaches a container or swarm task

@@ -1,5 +1,61 @@
 # Changelog
 
+## [1.0.79](https://github.com/orochibraru/homerun/compare/v1.0.78...v1.0.79) (2026-11-05)
+
+### Features
+
+* **deploy:** show the failed container's last output and explain its exit code (#201) ([df779b9](https://github.com/orochibraru/homerun/commit/df779b93e573650b14ca1a64ac94dbaf7527e30c))
+* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/orochibraru/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/orochibraru/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/orochibraru/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/orochibraru/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+
+### Bug Fixes
+
+* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/orochibraru/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
+
+## [1.0.79](https://github.com/orochibraru/homerun/compare/v1.0.78...v1.0.79) (2026-11-04)
+
+### Features
+
+* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/orochibraru/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/orochibraru/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/orochibraru/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/orochibraru/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+
+### Bug Fixes
+
+* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/orochibraru/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
+
+## [1.0.79](https://github.com/orochibraru/homerun/compare/v1.0.78...v1.0.79) (2026-11-04)
+
+### Features
+
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/orochibraru/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/orochibraru/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/orochibraru/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+
+## [1.0.78](https://github.com/orochibraru/homerun/compare/v1.0.77...v1.0.78) (2026-11-03)
+
+### Features
+
+* **ui:** redesign with Nunito and a bordeaux accent, plus networking and settings subtabs, chart tooltips, service activity lanes, tab icons and stored view modes ([4fc4633](https://github.com/orochibraru/homerun/commit/4fc463393bb7e77d873c4765204c451cf6c810dc))
+* **dashboard:** live activity lanes and error alerts, readable error issue page (#193) ([c8c4651](https://github.com/orochibraru/homerun/commit/c8c4651deda0ff2c2f1adce0617af5f29f2f46a4))
+* design mode without Docker, search on the services tree and diagram, more contrast (#190) ([e6330b3](https://github.com/orochibraru/homerun/commit/e6330b344bbddb6893b17b6c24fbbddf4176b531))
+* **ui:** Lanes on the service page and a fuller overview (#184) ([0ddf400](https://github.com/orochibraru/homerun/commit/0ddf400bc574adf1856644c6728bb1469bebfaea))
+
+### Bug Fixes
+
+* **docs:** accept capitalised Config in the Vale vocabulary ([dcf1ab3](https://github.com/orochibraru/homerun/commit/dcf1ab3180885c080e97a9c76ec6ca82a39cb20f))
+* **updates:** pick the trial run's readiness check the way a real deploy does (#192) ([1f860dd](https://github.com/orochibraru/homerun/commit/1f860dd046e091cbcf059156df0cbe3a3dd20d88))
+* design mode ([70bd65f](https://github.com/orochibraru/homerun/commit/70bd65fd9e8a2771e27c2e51879a0d727e4ee145))
+* run update trials on copies of the service's volumes and with its full runtime config (#189) ([2a3a301](https://github.com/orochibraru/homerun/commit/2a3a301068e7d995557af11d1c9ca08399f34fcc))
+* **ui:** overview needs-you update cards, contrast-scaled lanes and status dots on busiest (#186) ([0fe8fc7](https://github.com/orochibraru/homerun/commit/0fe8fc785ef05eb4bda9dfaec30c9f94ffbc88ec))
+
+### Code Refactoring
+
+* **ui:** Lanes is the only style, drop the style picker and the seven other styles (#191) ([927f846](https://github.com/orochibraru/homerun/commit/927f846e103c49e0e83bcada477163c70954df83))
+
 ## [1.0.77](https://github.com/orochibraru/homerun/compare/v1.0.76...v1.0.77) (2026-10-31)
 
 ### Features

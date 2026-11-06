@@ -83,7 +83,7 @@ export const TRIAL_PHASES: DeployPhase[] = [
 		marker: "Fetching image",
 	},
 	{
-		hint: "Starts the new version in a throwaway container with no volumes, ports or domains.",
+		hint: "Starts the new version in a throwaway container with copies of its volumes and no ports or domains.",
 		id: "container",
 		label: "Start",
 		marker: "Provisioning container",

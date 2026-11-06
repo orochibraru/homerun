@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Gladys Assistant",
-	"description": "Privacy-first home automation, with scenes, a dashboard and integrations for Zigbee, MQTT, Philips Hue and more. USB dongles and the integrations Gladys runs as their own containers need the host's /dev and Docker socket, which this deploy doesn't give it : integrations reached over the network work.",
+	"description": "Privacy-first home automation, with scenes, a dashboard and integrations for Zigbee, MQTT, Philips Hue and more. USB dongles and the integrations Gladys runs as their own containers need the host's /dev and Docker socket, which this deploy doesn't give it : integrations reached over the network work. Has a built-in MCP server at /api/v1/service/mcp/proxy, with a key generated under Integrations, MCP.",
 	"image": "gladysassistant/gladys",
 	"tag": "v5",
 	"containerPort": 80,

@@ -237,7 +237,7 @@
 					</p>
 				</div>
 				<CheckBox
-					helperText="Starts the new version in a throwaway container first, with this service's environment and networks (so it reaches its database) but no volumes, ports or domains, and reports whether it came up. An app that migrates its database on startup will migrate the live one during the trial, turn it off for those."
+					helperText="Starts the new version in a throwaway container first, with this service's environment, networks (so it reaches its database) and a copy of each of its volumes, but no ports or domains, and reports whether it came up. An app that migrates its database on startup will migrate the live one during the trial, turn it off for those."
 					id="updateTrialEnabled"
 					label="Try new versions before notifying"
 					name="updateTrialEnabled"

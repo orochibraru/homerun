@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "Seerr MCP",
+	"description": "Search titles and manage media requests on Overseerr or Jellyseerr from an MCP client. Set SEERR_URL and a Seerr API key. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/jhomen368/overseerr-mcp",
+	"tag": "latest",
+	"containerPort": 8085,
+	"icon": "di:jellyseerr",
+	"tags": ["mcp", "overseerr", "jellyseerr", "requests"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/jhomen368/overseerr-mcp",
+	"envVars": {
+		"SEERR_URL": "http://jellyseerr:5055",
+		"SEERR_API_KEY": "replace-with-your-seerr-api-key"
+	}
+}

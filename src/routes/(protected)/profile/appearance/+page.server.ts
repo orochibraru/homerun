@@ -7,7 +7,6 @@ import {
 	colorsSchema,
 	perPageSchema,
 	presetSchema,
-	surfaceSchema,
 	tabLayoutSchema,
 	themeSchema,
 	uiModeSchema,
@@ -66,23 +65,6 @@ export const actions = {
 		const prefs = await UserPreferencesDTO.get(locals.user.id);
 		await prefs.updatePreset(parsed.data.preset || null);
 		logger.info("Preset updated", { userId: locals.user.id });
-		return { success: true };
-	},
-
-	/** Saves the surface style panels and buttons are drawn in. */
-	updateSurface: async ({ request, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const parsed = surfaceSchema.safeParse(
-			Object.fromEntries(await request.formData()),
-		);
-		if (!parsed.success) {
-			return fail(400, { error: "Pick one of the listed styles." });
-		}
-		const prefs = await UserPreferencesDTO.get(locals.user.id);
-		await prefs.updateSurfaceStyle(parsed.data.surfaceStyle);
-		logger.info("Surface style updated", { userId: locals.user.id });
 		return { success: true };
 	},
 

@@ -1843,6 +1843,26 @@ export interface paths {
 		patch: operations["patch_services__serviceId__errors__issueId_"];
 		trace?: never;
 	};
+	"/services/{serviceId}/events": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's activity
+		 * @description What was changed on the service, newest first: settings, environment variables (by name only), domains and ports, volume mounts, dependencies, and starts, stops, restarts and scaling, each with who did it. Deploys aren't listed here, see /deployments.
+		 */
+		get: operations["get_services__serviceId__events"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/logs": {
 		parameters: {
 			query?: never;
@@ -12409,6 +12429,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						dockerHost: string | null;
+						enabled: boolean;
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
@@ -12495,6 +12516,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						dockerHost: string | null;
+						enabled: boolean;
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
@@ -12571,6 +12593,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						dockerHost: string | null;
+						enabled: boolean;
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
@@ -12699,6 +12722,8 @@ export interface operations {
 					agentUrl?: string;
 					/** @description The Docker daemon (kind docker): tcp://host:2376 or ssh://user@host. */
 					dockerHost?: string;
+					/** @description Whether new builds and workstations may land on it. A disabled host keeps what already runs there. */
+					enabled?: boolean;
 					/** @description How many builds run on it at once, 0 for no limit. Null follows the instance's buildConcurrency. */
 					maxConcurrentBuilds?: number | null;
 					name?: string;
@@ -12724,6 +12749,7 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						dockerHost: string | null;
+						enabled: boolean;
 						id: string;
 						/** @enum {string} */
 						kind: "docker" | "agent";
@@ -17225,6 +17251,99 @@ export interface operations {
 			};
 		};
 	};
+	get_services__serviceId__events: {
+		parameters: {
+			query?: {
+				/** @description How many events to return, 1 to 100 (default 50) */
+				limit?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's events */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Who made the change, null for Homerun itself (a schedule, scale to zero, a backfill) */
+						actorName: string | null;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						/** @description One line per changed setting, old → new for plain values; secrets and env values only by name */
+						detail: string[];
+						id: string;
+						/** @description What happened: created, settings, env, dependencies, scale, start, stop, restart, kill, mount, unmount, swap or restore */
+						kind: string;
+						/**
+						 * @description The Activity lane it sits on on the service's Overview
+						 * @enum {string}
+						 */
+						lane: "deploys" | "config" | "networking" | "storage" | "lifecycle";
+						summary: string;
+					}[];
+				};
+			};
+			/** @description An invalid limit */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	get_services__serviceId__logs: {
 		parameters: {
 			query?: {
@@ -19813,7 +19932,7 @@ export interface operations {
 					 * @enum {string}
 					 */
 					updateScope?: "major" | "minor" | "patch";
-					/** @description Try each update in a throwaway container on its networks, with no volumes or routing, before notifying it. */
+					/** @description Try each update in a throwaway container on its networks, with copies of its volumes and no routing, before notifying it. */
 					updateTrialEnabled?: boolean;
 				};
 			};
@@ -22726,6 +22845,8 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						/** @description The host mount point a Docker volume is kept on, null for Docker's default location */
+						disk: string | null;
 						id: string;
 						/** @enum {string} */
 						kind: "bind" | "volume";
@@ -22785,6 +22906,8 @@ export interface operations {
 					/** @description Stop the services using the volume during a backup. */
 					backupStopServices?: boolean;
 					description?: string | null;
+					/** @description For a Docker volume, the host mount point to keep it on (a disk), instead of Docker's default location. */
+					disk?: string | null;
 					/** @enum {string} */
 					kind: "bind" | "volume";
 					name: string;
@@ -22815,6 +22938,8 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						/** @description The host mount point a Docker volume is kept on, null for Docker's default location */
+						disk: string | null;
 						id: string;
 						/** @enum {string} */
 						kind: "bind" | "volume";
@@ -22898,6 +23023,8 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						/** @description The host mount point a Docker volume is kept on, null for Docker's default location */
+						disk: string | null;
 						id: string;
 						/** @enum {string} */
 						kind: "bind" | "volume";
@@ -23055,6 +23182,8 @@ export interface operations {
 						/** @description ISO 8601 timestamp */
 						createdAt: string;
 						description: string | null;
+						/** @description The host mount point a Docker volume is kept on, null for Docker's default location */
+						disk: string | null;
 						id: string;
 						/** @enum {string} */
 						kind: "bind" | "volume";

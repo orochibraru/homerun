@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Paperless-ngx MCP",
+	"description": "Search, read and tag Paperless-ngx documents from an MCP client. Set PAPERLESS_MCP_PAPERLESS_URL and a Paperless API token. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/pvliesdonk/paperless-mcp",
+	"tag": "latest",
+	"containerPort": 8000,
+	"icon": "di:paperless-ngx",
+	"tags": ["mcp", "paperless", "documents"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/pvliesdonk/paperless-mcp",
+	"envVars": {
+		"PAPERLESS_MCP_PAPERLESS_URL": "http://paperless-ngx:8000",
+		"PAPERLESS_MCP_API_TOKEN": "change-me"
+	},
+	"volumes": ["/data"]
+}

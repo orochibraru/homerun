@@ -12,5 +12,9 @@ docker network inspect homerun >/dev/null 2>&1 || docker network create homerun 
 echo "Docker $(docker info 2>/dev/null | awk '/Server Version/ {print $3}') ok, homerun network ready"
 '''
 
+[tasks.design]
+description = "Run the dashboard without Docker or Postgres for design work: in-memory PGlite, a mock worker, seeded demo data"
+run = "bun scripts/design/index.ts"
+
 [hooks]
-postinstall = "mise run docker || true"
+postinstall = "bun install && mise run docker || true"

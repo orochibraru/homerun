@@ -18,6 +18,9 @@ export async function workstationHostProblem(
 		return null;
 	}
 	const host = await RemoteHostDTO.get(remoteHostId);
+	if (host && !host.enabled) {
+		return `${host.name} is disabled: enable it on its Remote Hosts page first.`;
+	}
 	return host && canRunWorkstation(host)
 		? null
 		: "Workstations run on this server, an agent host or a Docker host.";
@@ -29,7 +32,7 @@ export async function workstationHosts(): Promise<
 > {
 	const hosts = await RemoteHostDTO.list();
 	return hosts
-		.filter(canRunWorkstation)
+		.filter((host) => host.enabled && canRunWorkstation(host))
 		.map((host) => ({ id: host.id, name: host.name }));
 }
 

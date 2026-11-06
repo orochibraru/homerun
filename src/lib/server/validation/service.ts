@@ -101,7 +101,7 @@ const baseServiceSchema = z.object({
 	// "bridge" (default, Traefik-routed on the shared network) | "host"
 	// (shares the host's network namespace directly : mDNS/SSDP-dependent
 	// apps like Home Assistant; forces dnsResolvable off server-side, see
-	// networking/+page.server.ts's `updatePorts` action).
+	// networking/network/+page.server.ts's `updatePorts` action).
 	networkMode: z.enum(["bridge", "host"]).default("bridge"),
 	// Which protocol(s) containerPort is exposed under : see schema.ts's
 	// `service.portProtocol` docstring for what this does and doesn't mean.

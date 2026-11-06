@@ -1,0 +1,16 @@
+{
+	"$schema": "../schema.json",
+	"name": "Gitea MCP",
+	"description": "Gitea's official MCP server: repos, issues, pull requests, releases and Actions. Set GITEA_HOST; each client sends its own Gitea access token as a Bearer token, the server holds none. MCP endpoint at /mcp.",
+	"image": "docker.gitea.com/gitea-mcp-server",
+	"tag": "latest",
+	"containerPort": 8080,
+	"icon": "di:gitea",
+	"tags": ["mcp", "gitea", "git"],
+	"websiteUrl": null,
+	"sourceUrl": "https://gitea.com/gitea/gitea-mcp",
+	"envVars": {
+		"GITEA_HOST": "http://gitea:3000"
+	},
+	"command": ["/app/gitea-mcp", "-t", "http", "--port", "8080"]
+}

@@ -100,7 +100,9 @@
 				{#each data.usedBy as svc (svc.id)}
 					<a
 						class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3"
-						href="{resolve('services')}/{svc.id}/networking"
+						href={resolve("/(protected)/services/[serviceId]/security", {
+							serviceId: svc.id,
+						})}
 					>
 						<span class="text-text flex-1 truncate text-sm">{svc.name}</span>
 						<ExternalLink class="text-text-subtle size-3.5" />

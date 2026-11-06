@@ -274,10 +274,11 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/settings (Auto-rollback)",
-			expect: /Service settings/,
+			doc: "/services/:id/settings/automation (Auto-rollback)",
+			expect: /Auto-rollback/,
 			name: "revisions-auto-rollback",
-			path: (seeded) => `/services/${seeded.serviceIds.web}/settings`,
+			path: (seeded) =>
+				`/services/${seeded.serviceIds.web}/settings/automation`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("section.panel:has(#auto-rollback)"));
 			},
@@ -346,10 +347,11 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/services/:id/settings (Image scanning)",
-			expect: /Service settings/,
+			doc: "/services/:id/settings/automation (Image scanning)",
+			expect: /Image scanning/,
 			name: "image-scanning-service",
-			path: (seeded) => `/services/${seeded.serviceIds.web}/settings`,
+			path: (seeded) =>
+				`/services/${seeded.serviceIds.web}/settings/automation`,
 			prepare: async (page) => {
 				await scrollToTop(page.locator("section.panel:has(#image-scan)"));
 			},

@@ -47,9 +47,11 @@ import type {
 	PipelineStatus,
 } from "#lib/pipelines/types.js";
 import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
+import type { ResourceCause } from "#lib/resource-incidents.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
-import type { Preset, SurfaceStyle } from "#lib/surfaces.js";
+import type { ServiceEventLane } from "#lib/service-events.js";
+import type { Preset } from "#lib/surfaces.js";
 import type { SwarmPlacement } from "#lib/swarm-placement.js";
 import type { TabLayout } from "#lib/tab-layout.js";
 import type {
@@ -66,6 +68,7 @@ import type {
 } from "#lib/types.js";
 import type { UiMode } from "#lib/ui-mode.js";
 import type { UserType } from "#lib/user-types.js";
+import type { EntityViewMode } from "#lib/view-modes.js";
 
 export const user = pgTable("user", {
 	banExpires: timestamp("ban_expires", { mode: "date" }),
@@ -526,6 +529,7 @@ export const remoteHost = pgTable(
 		// for deploys, not a row in this table. Only
 		// set when kind = "docker".
 		dockerHost: text("docker_host"),
+		enabled: boolean("enabled").default(true).notNull(),
 		id: text("id").primaryKey(),
 		// "docker" (the original/default, a raw tcp://ssh:// Docker Engine
 		// connection) or "agent" (a registered Homerun Agent, see agent/README.md
@@ -1643,6 +1647,7 @@ export const storageVolume = pgTable(
 			.notNull(),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
+		disk: text("disk"),
 		id: text("id").primaryKey(),
 		// Docker Binds source: either a bind-mount host path ("/mnt/data/foo")
 		// or a Docker-managed named volume ("homerun-vol-xyz") : same field,
@@ -1712,6 +1717,31 @@ export const serviceDependency = pgTable(
 			table.dependsOnId,
 		),
 		index("serviceDependency_dependsOnId_idx").on(table.dependsOnId),
+	],
+);
+
+export const serviceEvent = pgTable(
+	"service_event",
+	{
+		actorId: text("actor_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		actorName: text("actor_name"),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		detail: jsonb("detail").$type<string[]>().default([]).notNull(),
+		id: text("id").primaryKey(),
+		kind: text("kind").notNull(),
+		lane: text("lane").$type<ServiceEventLane>().notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		summary: text("summary").notNull(),
+	},
+	(table) => [
+		index("serviceEvent_serviceId_createdAt_idx").on(
+			table.serviceId,
+			table.createdAt,
+		),
 	],
 );
 
@@ -2151,10 +2181,6 @@ export const userPreferences = pgTable("user_preferences", {
 	palette: text("palette"),
 	perPage: integer("per_page").default(50).notNull(),
 	preset: text("preset").$type<Preset>(),
-	surfaceStyle: text("surface_style")
-		.$type<SurfaceStyle>()
-		.default("lanes")
-		.notNull(),
 	tabLayout: text("tab_layout")
 		.$type<TabLayout>()
 		.default("horizontal")
@@ -2175,6 +2201,10 @@ export const userPreferences = pgTable("user_preferences", {
 	userId: text("user_id")
 		.primaryKey()
 		.references(() => user.id, { onDelete: "cascade" }),
+	viewModes: jsonb("view_modes")
+		.$type<Record<string, EntityViewMode>>()
+		.default({})
+		.notNull(),
 });
 
 // ─── Relations ─────────────────────────────────────────────────────────────
@@ -2437,6 +2467,7 @@ export const dnsManagedRecord = pgTable(
 export const resourceIncident = pgTable(
 	"resource_incident",
 	{
+		causes: jsonb("causes").$type<ResourceCause[]>().default([]).notNull(),
 		id: text("id").primaryKey(),
 		kind: text("kind").$type<ResourceKind>().notNull(),
 		lastNotifiedAt: timestamp("last_notified_at", { mode: "date" }).notNull(),
@@ -2720,6 +2751,7 @@ export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type S3Destination = typeof s3Destination.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
+export type ServiceEvent = typeof serviceEvent.$inferSelect;
 export type ServiceDependency = typeof serviceDependency.$inferSelect;
 export type BackupRun = typeof backupRun.$inferSelect;
 export type CronJob = typeof cronJob.$inferSelect;

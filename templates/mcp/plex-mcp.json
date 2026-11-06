@@ -1,0 +1,17 @@
+{
+	"$schema": "../schema.json",
+	"name": "Plex MCP",
+	"description": "Search libraries, manage playlists and control playback on a Plex server from an MCP client. Set PLEX_URL and a Plex token. MCP endpoint at /mcp. No auth of its own: anyone who reaches it gets the tools, so turn off DNS-resolvable to keep it on the internal network, or put it behind a VPN.",
+	"image": "ghcr.io/vladimir-tutin/plex-mcp-server",
+	"tag": "latest",
+	"containerPort": 3001,
+	"icon": "di:plex",
+	"tags": ["mcp", "plex", "media"],
+	"websiteUrl": null,
+	"sourceUrl": "https://github.com/vladimir-tutin/plex-mcp-server",
+	"envVars": {
+		"PLEX_URL": "http://plex:32400",
+		"PLEX_TOKEN": "change-me",
+		"MCP_SERVER_URL": "{{url}}"
+	}
+}

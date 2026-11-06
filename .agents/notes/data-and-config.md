@@ -358,6 +358,29 @@ OIDC provider in `auth.md`) plus:
   depending on another (`serviceId` → `dependsOnId`, both cascade, unique per
   pair), written by every service link and by compose import's `depends_on`.
   Drives start order; see Linking in `services-and-templates.md`.
+- `service_event` (`ServiceEventDTO`), what was changed on a service, drawn as
+  the service Overview's Activity lanes: `lane` (`config`, `networking`,
+  `storage`, `lifecycle`; `deploys` is read off `deployment` instead, never
+  stored here), `kind`, a short `summary`, `detail` lines, `actorId` (set null
+  when the user goes) and `actorName`, cascading with the service. It is not
+  `audit_log` (that one only records API key use). Recording happens at the
+  mutation layer, one place per concern, so every caller (dashboard, REST API,
+  MCP, CLI, Terraform) is covered without touching routes: `ServiceDTO.update`
+  diffs the row against the patch through `serviceChanges`
+  (`src/lib/service-events.ts`, a field to lane and label map; status, ids and
+  timestamps aren't in it, so a status sync records nothing),
+  `ServiceDTO.create` records Created, `ServiceLifecycleService`
+  start/stop/restart/kill, `ServiceVolumeDTO` attach/update/detach/swap/restore
+  and `ServiceDependencyDTO` add/remove/replace/delete. Env vars are recorded by
+  key name only, encrypted columns only as set/replaced/removed, opaque JSON as
+  "changed". The actor comes from `requestActor()`
+  (`src/lib/server/request-actor.ts`, SvelteKit's `getRequestEvent()`), so
+  nobody threads a user id through; outside a request (schedulers, scale to
+  zero) it's null and reads as Homerun. `ServiceEventDTO.record` never throws, a
+  failed insert is logged so it can't undo the change it describes. A new
+  service column that's a setting goes in `serviceChanges`' map or it won't show
+  up. The lanes and clustering are `src/lib/activity-lanes.ts`; the unit tests
+  mock `$app/server` in `tests/unit/app/svelte-loader.ts`.
 - `registry_token` (`RegistryTokenDTO`), a push/pull credential for the built-in
   registry (`homerun-mirror`, see Registry in `docker.md`): `username` (unique)
   plus a bcrypt `secretHash` (`Bun.password.hash`), the only hash registry:2's
