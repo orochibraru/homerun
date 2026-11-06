@@ -126,15 +126,35 @@ describe("enhanceToast", () => {
 		expect(await done).toBe(true);
 	});
 
-	test("rejects when the refresh after a successful action throws", async () => {
+	test("rejects and still completes when the refresh after a successful action throws", async () => {
+		let completed = false;
 		const { settle, tracked, update } = run({
 			error: "Couldn't clear.",
 			loading: "Clearing",
+			onComplete: () => {
+				completed = true;
+			},
 			success: "Cleared.",
 		});
 		update.mockImplementation(() => Promise.reject(new Error("load failed")));
 		await settle({ type: "success", data: {} });
 		await expect(tracked).rejects.toThrow("load failed");
+		expect(completed).toBe(true);
+	});
+
+	test("rejects an action failure without waiting for the refresh", async () => {
+		const { settle, tracked, update } = run({
+			loading: "Clearing",
+			success: "Cleared.",
+		});
+		let refreshed = false;
+		update.mockImplementation(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			refreshed = true;
+		});
+		const outcome = tracked.catch(() => refreshed);
+		await settle({ type: "failure", data: { error: "nope" } });
+		expect(await outcome).toBe(false);
 	});
 
 	test("runs the lifecycle hooks in order, with the action's data", async () => {
