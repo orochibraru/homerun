@@ -36,7 +36,11 @@ The token works once and expires after an hour; pending ones are listed under
 **Waiting to enroll**, where you can revoke them. The server has to reach your
 instance, and for a build server your instance has to reach port 7420 on the
 server. Homerun and the other nodes reach the server at its default route's
-address; pass `--address=<ip>` when that's the wrong interface.
+address; pass `--address=<ip>` when that's the wrong interface. A build server
+behind a home router or NAT doesn't need a port forward: point a tunnel (a
+Pangolin resource, a Cloudflare Tunnel) at its port 7420, turn the tunnel's own
+login off for it (the agent checks its token on every request), and pass the
+tunnel's URL as `--agent-url=https://agent.example.com`.
 
 A swarm node joins the address your manager advertises, its own
 `docker swarm init --advertise-addr`, and every node has to reach every other
