@@ -136,6 +136,7 @@ describe("NodeEnrollmentService", () => {
 		});
 		expect(await NodeEnrollmentService.plan("t")).toEqual({
 			buildServer: false,
+			managerAddress: "10.0.0.1:2377",
 			swarmNode: true,
 		});
 	});

@@ -26,7 +26,7 @@
 			{dismissal.dismissedCount === 1
 				? "earlier error is"
 				: "earlier errors are"}
-			hidden
+			{dismissal.showDismissed ? "shown" : "hidden"}
 			{#if dismissal.dismissedBy}
 				— cleared by revision
 				<a

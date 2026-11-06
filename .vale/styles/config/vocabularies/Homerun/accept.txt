@@ -104,6 +104,7 @@ subtabs?
 subuid
 sysctl
 systemd
+Tailscale
 Traefik
 Trilium
 Trivy

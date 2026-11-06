@@ -20,6 +20,11 @@ export interface EnrollRequest {
 	token: string;
 }
 
+/** What an enrollment will make a server, and the manager a swarm node joins. */
+export interface EnrollPlan extends EnrollmentRoles {
+	managerAddress: string | null;
+}
+
 /** What the enrolling server gets back. */
 export interface EnrollResponse {
 	remoteHostId: string | null;
@@ -46,17 +51,19 @@ export class EnrollError extends Error {
 class NodeEnrollmentServiceClass {
 	/**
 	 * What an enrollment will make the server, without using it up, so the
-	 * install script knows what to install before it registers.
+	 * install script knows what to install before it registers, and can check
+	 * it reaches the swarm manager before using the token up.
 	 *
 	 * @throws EnrollError when the token is unusable, or it asks for a swarm
 	 * node while this instance isn't in swarm mode.
 	 */
-	async plan(token: string): Promise<EnrollmentRoles> {
+	async plan(token: string): Promise<EnrollPlan> {
 		const enrollment = await this.#usable(token);
-		if (enrollment.roles.swarmNode) {
-			await this.#swarmJoin();
-		}
-		return enrollment.roles;
+		const swarm = enrollment.roles.swarmNode ? await this.#swarmJoin() : null;
+		return {
+			...enrollment.roles,
+			managerAddress: swarm?.managerAddress ?? null,
+		};
 	}
 
 	/**

@@ -66,7 +66,10 @@ function resultError(
  *
  * @returns A SubmitFunction that calls `update()` with `reset: false` unless
  * `options.reset` says otherwise, and `navigate: false` so a form posting to
- * another route's action stays on the current page.
+ * another route's action stays on the current page. A success settles the
+ * toast only once `update()` has refreshed the page, so "done" never shows
+ * over stale data, and a refresh that throws turns it into an error.
+ * `onComplete` runs either way.
  */
 export function enhanceToast(options: EnhanceToastOptions): SubmitFunction {
 	const fallback = options.error ?? DEFAULT_ERROR;
@@ -91,20 +94,30 @@ export function enhanceToast(options: EnhanceToastOptions): SubmitFunction {
 
 		return async ({ result, update }) => {
 			options.onSettled?.();
-			if (result.type === "failure" || result.type === "error") {
-				options.onFailure?.(
-					result.type === "failure" ? (result.data as ActionData) : undefined,
-				);
-				fail(resultError(result, fallback));
+			const failure =
+				result.type === "failure" || result.type === "error"
+					? resultError(result, fallback)
+					: null;
+			const data =
+				result.type === "success" || result.type === "failure"
+					? (result.data as ActionData)
+					: undefined;
+			if (failure) {
+				options.onFailure?.(data);
+				fail(failure);
 			} else {
-				const data =
-					result.type === "success" ? (result.data as ActionData) : undefined;
-
 				await options.onSuccess?.(data);
-				settle(data);
 			}
-			await update({ navigate: false, reset: options.reset ?? false });
-			await options.onComplete?.();
+			try {
+				await update({ navigate: false, reset: options.reset ?? false });
+				if (!failure) {
+					settle(data);
+				}
+			} catch (error) {
+				fail(error instanceof Error ? error : new Error(fallback));
+			} finally {
+				await options.onComplete?.();
+			}
 		};
 	};
 }

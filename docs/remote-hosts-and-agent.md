@@ -38,6 +38,16 @@ instance, and for a build server your instance has to reach port 7420 on the
 server. Homerun and the other nodes reach the server at its default route's
 address; pass `--address=<ip>` when that's the wrong interface.
 
+A swarm node joins the address your manager advertises, its own
+`docker swarm init --advertise-addr`, and every node has to reach every other
+one directly on 2377/tcp, 7946/tcp+udp and 4789/udp. A server on another network
+(behind another router) can't: put the machines on one VPN (WireGuard,
+Tailscale), have the manager advertise its VPN address and pass the server's VPN
+address as `--address=`. The script checks it reaches the manager before using
+the token, and stops with the token still valid when it can't. A server you only
+want for builds or workstations doesn't need any of that: enroll it as a build
+server.
+
 In swarm mode, the **Swarm nodes** table lists every node with its state,
 address, resources and labels. The pencil on a row edits that node's labels
 (`key=value` per line), which a service's placement constraints and spread

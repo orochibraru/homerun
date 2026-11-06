@@ -13,7 +13,7 @@ export const load = async ({ params, parent, url }) => {
 	const { showDismissed, since } = errorsSince(svc, url);
 	const [failedDeployments, dismissal] = await Promise.all([
 		DeploymentDTO.listFailedForService(params.serviceId, 50, since),
-		errorDismissal(svc, showDismissed, since, (upTo) =>
+		errorDismissal(svc, showDismissed, (upTo) =>
 			DeploymentDTO.countFailedForServiceUpTo(params.serviceId, upTo),
 		),
 	]);
