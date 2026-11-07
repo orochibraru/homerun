@@ -44,6 +44,10 @@ export const coreServiceJobPayload = z.discriminatedUnion("action", [
 	z.object({ action: z.literal("publishBuiltinStore"), host: z.string() }),
 	z.object({ action: z.literal("setRegistryAuth"), enabled: z.boolean() }),
 	z.object({ action: z.literal("publishRegistry"), host: z.string() }),
+	z.object({
+		action: z.literal("syncMail"),
+		purge: z.array(z.string()).default([]),
+	}),
 ]);
 
 export type CoreServiceJob = z.infer<typeof coreServiceJobPayload>;

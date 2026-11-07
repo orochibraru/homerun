@@ -115,6 +115,8 @@ sync by hand.
   restoring.
 - **[Object storage](object-storage.md)**: the built-in S3 store, connecting
   S3-compatible providers, buckets, lifecycle and access keys.
+- **[Mail server](mail.md)**: mailboxes, aliases and DKIM for your own domains,
+  on a docker-mailserver container Homerun runs.
 - **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
   images on a second machine, the standalone agent and installer.
 - **[Workstations](workstations.md)**: dev boxes in the browser: an IDE with a

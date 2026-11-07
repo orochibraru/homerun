@@ -79,6 +79,7 @@
 				{ "slug": "env-vars", "icon": "variable" },
 				{ "slug": "networking", "icon": "network" },
 				{ "slug": "redirects", "icon": "signpost" },
+				{ "slug": "mail", "title": "Mail server", "icon": "mail" },
 				{ "slug": "error-pages", "icon": "triangle-alert" },
 				{ "slug": "dns-automation", "icon": "globe" },
 				{ "slug": "runtime-and-compute", "icon": "cpu" },

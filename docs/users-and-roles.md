@@ -14,13 +14,13 @@ are per area of the dashboard, not per resource.
 
 ## Permissions
 
-Homerun has 18 permission areas: **Services**, **Stacks**, **Templates**, **Cron
-jobs**, **Redirects**, **Status pages**, **Volumes & backups**, **Object
-storage**, **Docker Registry**, **Build cache**, **Git providers**,
-**Notification channels**, **DNS**, **Remote hosts**, **System**,
-**Infrastructure as code**, **Users & authentication** and **Settings**. An
-account holds each one at **Read** or **Write** (write includes read), or not at
-all.
+Homerun has 20 permission areas: **Services**, **Workstations**, **Stacks**,
+**Templates**, **Cron jobs**, **Redirects**, **Status pages**, **Volumes &
+backups**, **Object storage**, **Mail**, **Docker Registry**, **Build cache**,
+**Git providers**, **Notification channels**, **DNS**, **Remote hosts**,
+**System**, **Infrastructure as code**, **Users & authentication** and
+**Settings**. An account holds each one at **Read** or **Write** (write includes
+read), or not at all.
 
 Every dashboard page and every REST API route belongs to one area. Reading it
 needs read access, changing anything needs write access, and an account without

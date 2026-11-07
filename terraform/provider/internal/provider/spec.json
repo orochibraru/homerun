@@ -1738,7 +1738,7 @@
 					"name": "permissions",
 					"tf": "permissions",
 					"default": {},
-					"description": "The areas the account may use, each set to read or write. Areas: services, workstations, stacks, templates, cron-jobs, redirects, status-pages, storage, object-storage, registry, build-cache, git-providers, notifications, dns, remote-hosts, system, iac, users, settings. The API cuts them down to what the provider's own API key holds."
+					"description": "The areas the account may use, each set to read or write. Areas: services, workstations, stacks, templates, cron-jobs, redirects, status-pages, storage, object-storage, mail, registry, build-cache, git-providers, notifications, dns, remote-hosts, system, iac, users, settings. The API cuts them down to what the provider's own API key holds."
 				}
 			],
 			"collectionPath": "/service-accounts",
@@ -2789,7 +2789,7 @@
 					"kind": "stringMap",
 					"name": "permissions",
 					"tf": "permissions",
-					"description": "Only with role custom: the areas the user may use, each set to read or write. Areas: services, workstations, stacks, templates, cron-jobs, redirects, status-pages, storage, object-storage, registry, build-cache, git-providers, notifications, dns, remote-hosts, system, iac, users, settings. Switching to custom without it starts from the previous role's permissions."
+					"description": "Only with role custom: the areas the user may use, each set to read or write. Areas: services, workstations, stacks, templates, cron-jobs, redirects, status-pages, storage, object-storage, mail, registry, build-cache, git-providers, notifications, dns, remote-hosts, system, iac, users, settings. Switching to custom without it starts from the previous role's permissions."
 				},
 				{
 					"kind": "bool",

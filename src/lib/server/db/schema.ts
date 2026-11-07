@@ -741,6 +741,67 @@ export const redirect = pgTable(
 	],
 );
 
+export const mailDomain = pgTable(
+	"mail_domain",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		dkimPrivateKeyEnc: text("dkim_private_key_enc").notNull(),
+		dkimPublicKey: text("dkim_public_key").notNull(),
+		dkimSelector: text("dkim_selector").notNull().default("mail"),
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+	},
+	(table) => [uniqueIndex("mail_domain_name_idx").on(table.name)],
+);
+
+export const mailMailbox = pgTable(
+	"mail_mailbox",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		displayName: text("display_name"),
+		domainId: text("domain_id")
+			.notNull()
+			.references(() => mailDomain.id, { onDelete: "cascade" }),
+		enabled: boolean("enabled").notNull().default(true),
+		id: text("id").primaryKey(),
+		localPart: text("local_part").notNull(),
+		passwordHash: text("password_hash").notNull(),
+		quotaMb: integer("quota_mb"),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("mail_mailbox_address_idx").on(table.domainId, table.localPart),
+	],
+);
+
+export const mailAlias = pgTable(
+	"mail_alias",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		destinations: jsonb("destinations").$type<string[]>().notNull(),
+		domainId: text("domain_id")
+			.notNull()
+			.references(() => mailDomain.id, { onDelete: "cascade" }),
+		enabled: boolean("enabled").notNull().default(true),
+		id: text("id").primaryKey(),
+		localPart: text("local_part").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("mail_alias_address_idx").on(table.domainId, table.localPart),
+	],
+);
+
 // A named Docker registry used as a *build cache* for git-based builds (see
 // internal/agent/build.go), not a deploy target : the build pulls
 // `<registryUrl>/<cacheRepository>:cache-<slug>` as a `--cache-from` source
@@ -836,6 +897,8 @@ export const instanceSettings = pgTable("instance_settings", {
 	garageEnabled: boolean("garage_enabled"),
 	garagePublicHost: text("garage_public_host"),
 	garageRpcSecretEnc: text("garage_rpc_secret_enc"),
+	mailEnabled: boolean("mail_enabled"),
+	mailHostname: text("mail_hostname"),
 	// {id, kind, name, baseUrl, clientId, clientSecretEnc, enabled}[] : OAuth
 	// App registrations for git-hosting providers (see the Git Providers
 	// page and $lib/services/git-provider.service.ts), separate from
@@ -2748,6 +2811,17 @@ export type TemplateLink = typeof templateLink.$inferSelect;
 export type Service = typeof service.$inferSelect;
 export type Deployment = typeof deployment.$inferSelect;
 export type InstanceSettings = typeof instanceSettings.$inferSelect;
+export type CoreServiceSettings = Partial<
+	Pick<
+		InstanceSettings,
+		| "garageAdminTokenEnc"
+		| "garageEnabled"
+		| "garagePublicHost"
+		| "garageRpcSecretEnc"
+		| "mailEnabled"
+		| "mailHostname"
+	>
+>;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type S3Destination = typeof s3Destination.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
@@ -2760,6 +2834,9 @@ export type RemoteHost = typeof remoteHost.$inferSelect;
 export type Workstation = typeof workstation.$inferSelect;
 export type WorkstationPreset = typeof workstationPreset.$inferSelect;
 export type Redirect = typeof redirect.$inferSelect;
+export type MailDomain = typeof mailDomain.$inferSelect;
+export type MailMailbox = typeof mailMailbox.$inferSelect;
+export type MailAlias = typeof mailAlias.$inferSelect;
 export type IpBan = typeof ipBan.$inferSelect;
 export type BlockedHit = typeof blockedHit.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
