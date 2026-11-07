@@ -43,7 +43,7 @@ resource "homerun_user" "example" {
 
 - `permissions` (Map of String) Only with role custom: the areas the user may
   use, each set to read or write. Areas: services, workstations, stacks,
-  templates, cron-jobs, redirects, status-pages, storage, object-storage,
+  templates, cron-jobs, redirects, status-pages, storage, object-storage, mail,
   registry, build-cache, git-providers, notifications, dns, remote-hosts,
   system, iac, users, settings. Switching to custom without it starts from the
   previous role's permissions.

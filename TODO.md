@@ -84,6 +84,16 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Mail server: no REST API, MCP tools or CLI commands for mail domains,
+      mailboxes and aliases yet; add them like the registry's
+- [ ] Mail server: verify the whole path against a live docker-mailserver
+      (bcrypt `{BLF-CRYPT}` sign-in, rspamd DKIM signing with the path template,
+      `acme.json` extraction when Traefik issued a wildcard)
+- [ ] Mail server: webmail (Roundcube or Snappymail as a core container on the
+      mail hostname) and a way for a mailbox owner to change their own password
+- [ ] Mail server: offer the `homerun-mail-data` volume to Backups like a
+      service volume
+
 - [ ] Service Logs tab: a log-volume strip over the lines (errors in red), like
       the lanes on the Overview tab
 

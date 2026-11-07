@@ -32,6 +32,8 @@ export function blankInstanceSettings(id: string, now: Date): InstanceSettings {
 		garageEnabled: null,
 		garagePublicHost: null,
 		garageRpcSecretEnc: null,
+		mailEnabled: null,
+		mailHostname: null,
 		gitProviders: [],
 		id,
 		imageScanBlockFixableOnly: null,

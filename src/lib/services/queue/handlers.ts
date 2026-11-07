@@ -4,6 +4,7 @@ import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import type { JobType } from "#lib/types.js";
 
+import { MailService } from "../mail.service.ts";
 import { NotificationChannelService } from "../notification-channel.service.ts";
 import { ObjectStorageService } from "../object-storage.service.ts";
 import { PipelineService } from "../pipeline.service.ts";
@@ -63,6 +64,10 @@ const coreServiceSteps: Record<
 		done: "Docker registry auth updated.",
 		start: "Rewriting the registry's credentials and recreating its container.",
 	},
+	syncMail: {
+		done: "Mail server configuration applied.",
+		start: "Applying the mail server's domains, mailboxes and aliases.",
+	},
 };
 
 /** Runs one core service change (the built-in object store, the Docker registry), logging its start and end to the job. */
@@ -85,6 +90,11 @@ async function runCoreService(entry: JobDTO): Promise<JobResult> {
 			break;
 		case "publishRegistry":
 			await RegistryService.setPublicHost(payload.host);
+			break;
+		case "syncMail":
+			await MailService.sync(payload.purge, (line) =>
+				JobDTO.appendLog(entry.id, line),
+			);
 			break;
 	}
 	await JobDTO.appendLog(entry.id, steps.done);

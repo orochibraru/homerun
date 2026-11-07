@@ -83,6 +83,12 @@ export const PERMISSION_AREAS = [
 		routes: ["/object-storage", "/api/v1/object-stores"],
 	},
 	{
+		description: "The mail server, its domains, mailboxes and aliases.",
+		key: "mail",
+		label: "Mail",
+		routes: ["/mail"],
+	},
+	{
 		description: "The built-in image registry, its images and tokens.",
 		key: "registry",
 		label: "Docker Registry",

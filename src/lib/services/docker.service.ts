@@ -29,6 +29,8 @@ export type {
 	VolumeMountParams,
 } from "./docker/containers.ts";
 export type { MirrorCopyResult, ScanImageParams } from "./docker/image-scan.ts";
+export type { MailExecResult } from "./docker/mail.ts";
+export type { MailConfigFile } from "./docker/mail-container.ts";
 export type { OneOffRunParams, OneOffRunResult } from "./docker/one-off.ts";
 export type { SwarmNodeInfo } from "./docker/swarm.ts";
 export type { SwarmReplica } from "./docker/swarm-replicas.ts";
@@ -40,6 +42,7 @@ import { DockerCoreServicesMixin } from "./docker/core-services.ts";
 import { DockerCustomSslMixin } from "./docker/custom-ssl.ts";
 import { DockerGarageMixin } from "./docker/garage.ts";
 import { DockerImageScanMixin } from "./docker/image-scan.ts";
+import { DockerMailMixin } from "./docker/mail.ts";
 import { DockerNetworkMixin } from "./docker/networks.ts";
 import { DockerNewtMixin } from "./docker/newt-tunnel.ts";
 import { DockerOneOffMixin } from "./docker/one-off.ts";
@@ -54,21 +57,23 @@ import { DockerTerminalMixin } from "./docker/terminal.ts";
 // `this` : containers before one-off (runOneOff calls this.pullImage), core
 // services before the Newt tunnel (it calls this.applyTraefikFlags). The
 // rest have no cross-concern dependency, so their position is arbitrary.
-class DockerServiceClass extends DockerOtelMixin(
-	DockerGarageMixin(
-		DockerRevisionMixin(
-			DockerImageScanMixin(
-				DockerCleanupMixin(
-					DockerOneOffMixin(
-						DockerTerminalMixin(
-							DockerNewtMixin(
-								DockerCoreServicesMixin(
-									DockerCustomSslMixin(
-										DockerReconcileMixin(
-											DockerSwarmReplicasMixin(
-												DockerSwarmMixin(
-													DockerContainerMixin(
-														DockerNetworkMixin(BaseDockerService),
+class DockerServiceClass extends DockerMailMixin(
+	DockerOtelMixin(
+		DockerGarageMixin(
+			DockerRevisionMixin(
+				DockerImageScanMixin(
+					DockerCleanupMixin(
+						DockerOneOffMixin(
+							DockerTerminalMixin(
+								DockerNewtMixin(
+									DockerCoreServicesMixin(
+										DockerCustomSslMixin(
+											DockerReconcileMixin(
+												DockerSwarmReplicasMixin(
+													DockerSwarmMixin(
+														DockerContainerMixin(
+															DockerNetworkMixin(BaseDockerService),
+														),
 													),
 												),
 											),

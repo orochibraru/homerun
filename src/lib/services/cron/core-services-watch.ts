@@ -15,6 +15,7 @@ import { DockerService } from "../docker.service.ts";
 import type { TraefikExpectation } from "../docker/core-services.ts";
 import { syncErrorPages } from "../docker/error-pages.ts";
 import { type WedgedContainer, WedgedReporter } from "../docker/wedged.ts";
+import { MailService } from "../mail.service.ts";
 import { ObjectStorageService } from "../object-storage.service.ts";
 import { AUTH_CHECK_ALIAS } from "../self-update/compose-target.ts";
 import { StatusPageSettingsService } from "../status-page-settings.service.ts";
@@ -139,6 +140,9 @@ export class CoreServicesWatch extends BaseScheduler {
 		}
 		await ObjectStorageService.reassertBuiltin().catch((err) => {
 			this.logger.warn("Couldn't re-assert the built-in object store", err);
+		});
+		await MailService.reassert().catch((err) => {
+			this.logger.warn("Couldn't re-assert the mail server", err);
 		});
 		await TracingService.reassertCollector().catch((err) => {
 			this.logger.warn("Couldn't re-assert the OpenTelemetry collector", err);

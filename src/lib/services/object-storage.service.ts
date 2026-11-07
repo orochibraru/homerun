@@ -126,7 +126,7 @@ class ObjectStorageServiceClass {
 		if (!(rpcSecret && adminToken)) {
 			rpcSecret = randomBytes(32).toString("hex");
 			adminToken = randomBytes(32).toString("base64url");
-			await settings.persistGarage({
+			await settings.persistCoreServices({
 				garageAdminTokenEnc: encryptSecret(adminToken),
 				garageRpcSecretEnc: encryptSecret(rpcSecret),
 			});
@@ -160,7 +160,7 @@ class ObjectStorageServiceClass {
 	 */
 	async enableBuiltin(userId: string): Promise<void> {
 		const settings = await InstanceSettingsDTO.get();
-		await settings.persistGarage({ garageEnabled: true });
+		await settings.persistCoreServices({ garageEnabled: true });
 		await DockerService.reconcileGarage(await this.#desiredState());
 		const admin = await this.#waitForAdmin();
 		await admin.ensureLayout();
@@ -199,7 +199,7 @@ class ObjectStorageServiceClass {
 	/** Turns the built-in store off: removes the container, keeps its volumes and the store row. */
 	async disableBuiltin(): Promise<void> {
 		const settings = await InstanceSettingsDTO.get();
-		await settings.persistGarage({ garageEnabled: false });
+		await settings.persistCoreServices({ garageEnabled: false });
 		await DockerService.reconcileGarage(null);
 		await this.syncPublicRoutes();
 	}
@@ -232,7 +232,7 @@ class ObjectStorageServiceClass {
 		if (row.garageEnabled !== true) {
 			throw new Error("Turn the built-in object store on first.");
 		}
-		await settings.persistGarage({ garagePublicHost: trimmed || null });
+		await settings.persistCoreServices({ garagePublicHost: trimmed || null });
 		await DockerService.reconcileGarage(await this.#desiredState());
 		await this.syncPublicRoutes();
 		void syncCoreHostDns(
