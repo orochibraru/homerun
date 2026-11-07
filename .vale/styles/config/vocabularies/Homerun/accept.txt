@@ -188,3 +188,5 @@ hadolint
 zizmor
 Astro
 PGlite
+rspamd
+webmail
