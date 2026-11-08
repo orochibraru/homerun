@@ -5,6 +5,9 @@ mock.module("$app/env", () => ({
 	building: false,
 	dev: false,
 }));
+mock.module("#lib/services/template-links.js", () => ({
+	createServiceFromTemplate: () => Promise.resolve({ refusal: "unused" }),
+}));
 
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { DeploymentService } =
