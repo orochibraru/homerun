@@ -105,9 +105,11 @@ exit code and a link to the logs.
 service from the built-in template, already set to this mail server's IMAP (993)
 and SMTP (465) at the mail hostname, and deploys it. It's an ordinary service:
 give it a domain of its own on its Networking tab, see its logs, back its volume
-up. The tab lists every Roundcube service with a link to open it. The mail
-container answers to the mail hostname on Homerun's network, so Roundcube
-reaches it there with a matching certificate.
+up. The tab lists every Roundcube service with a link to open it. Changing the
+mail hostname updates and redeploys every Roundcube service still pointed at the
+old one; one you pointed elsewhere by hand is left alone. The mail container
+answers to the mail hostname on Homerun's network, so Roundcube reaches it there
+with a matching certificate.
 
 ## Mailboxes and aliases
 

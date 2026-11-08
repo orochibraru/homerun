@@ -39,6 +39,51 @@ class WebmailServiceClass {
 	}
 
 	/**
+	 * Points every Roundcube service still using `previous` as its IMAP or
+	 * SMTP host at `next` instead, and redeploys it. A host someone set by
+	 * hand to anything else is left alone.
+	 *
+	 * @returns How many services were updated.
+	 */
+	async retarget(
+		previous: string | null,
+		next: string | null,
+		userId: string,
+	): Promise<number> {
+		if (!(previous && next) || previous === next) {
+			return 0;
+		}
+		const keys = ["ROUNDCUBEMAIL_DEFAULT_HOST", "ROUNDCUBEMAIL_SMTP_SERVER"];
+		const old = `ssl://${previous}`;
+		let updated = 0;
+		for (const svc of await ServiceDTO.list()) {
+			const env = svc.envVars;
+			if (
+				svc.toJSON().image !== WEBMAIL_IMAGE ||
+				!keys.some((key) => env[key] === old)
+			) {
+				continue;
+			}
+			const patch = Object.fromEntries(
+				keys
+					.filter((key) => env[key] === old)
+					.map((key) => [key, `ssl://${next}`]),
+			);
+			// oxlint-disable-next-line no-await-in-loop -- one service at a time, each queues its own deploy
+			await svc.update({ envVars: { ...env, ...patch } });
+			// oxlint-disable-next-line no-await-in-loop -- one service at a time, each queues its own deploy
+			await DeploymentService.enqueueStackDeploy(svc, [], userId);
+			updated += 1;
+		}
+		if (updated > 0) {
+			logger.info(
+				`Webmail retargeted from ${previous} to ${next}: ${updated} services`,
+			);
+		}
+		return updated;
+	}
+
+	/**
 	 * Creates a Roundcube service set up for this mail server and queues its
 	 * first deploy.
 	 *

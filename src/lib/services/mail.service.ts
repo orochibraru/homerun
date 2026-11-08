@@ -333,14 +333,14 @@ class MailServiceClass {
 		}
 	}
 
-	/** The DNS page's domains that aren't mail domains yet, with whether a provider manages their records. */
+	/** The DNS page's domains that aren't mail domains yet and can be one (no wildcard), with whether a provider manages their records. */
 	async availableDomains(): Promise<
 		{ id: string; linked: boolean; name: string }[]
 	> {
 		const taken = new Set((await MailDomainDTO.list()).map((d) => d.name));
 		return (await DomainDTO.list())
 			.map((domain) => domain.toJSON())
-			.filter((row) => !taken.has(row.name))
+			.filter((row) => !taken.has(row.name) && DOMAIN_RE.test(row.name))
 			.map((row) => ({
 				id: row.id,
 				linked: Boolean(row.connectionId && row.zoneId),
@@ -363,6 +363,9 @@ class MailServiceClass {
 			throw new Error("Pick one of the domains on the DNS page.");
 		}
 		const domain = dnsDomain.toJSON().name;
+		if (!DOMAIN_RE.test(domain)) {
+			throw new Error(`${domain} can't be a mail domain, pick a plain domain.`);
+		}
 		if (await MailDomainDTO.getByName(domain)) {
 			throw new Error(`${domain} is already a mail domain.`);
 		}
