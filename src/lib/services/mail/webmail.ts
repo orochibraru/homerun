@@ -41,9 +41,11 @@ class WebmailServiceClass {
 	/**
 	 * Points every Roundcube service still using `previous` as its IMAP or
 	 * SMTP host at `next` instead, and redeploys it. A host someone set by
-	 * hand to anything else is left alone.
+	 * hand to anything else is left alone. A service whose redeploy can't be
+	 * queued gets its old hosts back, so calling this again retries it.
 	 *
 	 * @returns How many services were updated.
+	 * @throws When a redeploy can't be queued, after restoring that service.
 	 */
 	async retarget(
 		previous: string | null,
@@ -70,9 +72,7 @@ class WebmailServiceClass {
 					.map((key) => [key, `ssl://${next}`]),
 			);
 			// oxlint-disable-next-line no-await-in-loop -- one service at a time, each queues its own deploy
-			await svc.update({ envVars: { ...env, ...patch } });
-			// oxlint-disable-next-line no-await-in-loop -- one service at a time, each queues its own deploy
-			await DeploymentService.enqueueStackDeploy(svc, [], userId);
+			await this.#retargetOne(svc, { ...env, ...patch }, userId);
 			updated += 1;
 		}
 		if (updated > 0) {
@@ -81,6 +81,27 @@ class WebmailServiceClass {
 			);
 		}
 		return updated;
+	}
+
+	/**
+	 * Saves `envVars` on one Roundcube service and queues its redeploy,
+	 * putting its previous environment back when the queueing fails.
+	 *
+	 * @throws When the redeploy can't be queued.
+	 */
+	async #retargetOne(
+		svc: ServiceDTO,
+		envVars: Record<string, string>,
+		userId: string,
+	): Promise<void> {
+		const previous = { ...svc.envVars };
+		await svc.update({ envVars });
+		try {
+			await DeploymentService.enqueueStackDeploy(svc, [], userId);
+		} catch (err) {
+			await svc.update({ envVars: previous });
+			throw err;
+		}
 	}
 
 	/**

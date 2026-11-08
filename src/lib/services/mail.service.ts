@@ -118,10 +118,16 @@ class MailServiceClass {
 	/** The hostname the mail server answers as: the saved one, else `mail.` the base domain. */
 	async hostname(): Promise<string | null> {
 		const row = (await InstanceSettingsDTO.get()).toJSON();
-		return (
-			row.mailHostname ??
-			(config.baseDomain ? `mail.${config.baseDomain}` : null)
-		);
+		return this.hostnameFor(row.mailHostname ?? "");
+	}
+
+	/** The hostname the server answers to once `host` is saved: `host` normalized, or `mail.<base domain>` when it's blank. */
+	hostnameFor(host: string): string | null {
+		const normalized = host.trim().toLowerCase();
+		if (normalized) {
+			return normalized;
+		}
+		return config.baseDomain ? `mail.${config.baseDomain}` : null;
 	}
 
 	/** The toggle, hostname, counts and whether the container runs, with why it doesn't when it should. */

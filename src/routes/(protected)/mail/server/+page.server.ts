@@ -56,15 +56,14 @@ export const actions = {
 		if (problem) {
 			return fail(400, { error: problem });
 		}
-		const previous = await MailService.hostname();
+		const webmail = await WebmailService.retarget(
+			await MailService.hostname(),
+			MailService.hostnameFor(host),
+			locals.user.id,
+		);
 		await MailService.setHostname(host);
 		const job = await enqueueCoreServiceJob(
 			{ action: "syncMail", purge: [] },
-			locals.user.id,
-		);
-		const webmail = await WebmailService.retarget(
-			previous,
-			await MailService.hostname(),
 			locals.user.id,
 		);
 		return { jobId: job.id, success: true, webmail };
