@@ -252,16 +252,21 @@ export function DockerMailMixin<
 		 * Brings the mail container in line with `state`: creates it, or
 		 * recreates it when its environment, binds or Traefik labels changed.
 		 * Null stops and removes it. The volumes are never touched, so every
-		 * mailbox survives both.
+		 * mailbox survives both. A running server is then attached to the
+		 * swarm overlay under its hostname.
+		 *
+		 * @returns A warning when the overlay refused the attach, else null.
 		 */
-		async reconcileMail(state: MailDesiredState | null): Promise<void> {
+		async reconcileMail(
+			state: MailDesiredState | null,
+		): Promise<string | null> {
 			const info = await this.#inspectMail();
 			if (!state) {
 				if (info) {
 					await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
 					logger.info("Mail server removed, its volumes keep the mail.");
 				}
-				return;
+				return null;
 			}
 			await this.ensureSharedNetwork();
 			if (!info) {
@@ -281,7 +286,7 @@ export function DockerMailMixin<
 				await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
 				await this.#createMail(state);
 			}
-			await this.#attachMailToSwarm(state.hostname);
+			return await this.#attachMailToSwarm(state.hostname);
 		}
 
 		/**
@@ -289,12 +294,15 @@ export function DockerMailMixin<
 		 * so a swarm service such as Roundcube reaches it there with a
 		 * matching certificate, as services on the shared network do. A no-op
 		 * when it's already attached or swarm mode never created the overlay.
+		 *
+		 * @returns Why the attach was refused (an overlay that isn't
+		 *   attachable), or null when it's attached or there's nothing to do.
 		 */
-		async #attachMailToSwarm(hostname: string): Promise<void> {
+		async #attachMailToSwarm(hostname: string): Promise<string | null> {
 			const info = await this.#inspectMail();
 			const network = swarmNetworkName();
 			if (!info || info.NetworkSettings?.Networks?.[network]) {
-				return;
+				return null;
 			}
 			try {
 				await this.worker.post(`/v1/containers/${info.Id}/connect`, {
@@ -302,11 +310,18 @@ export function DockerMailMixin<
 					network,
 				});
 				logger.info(`Mail server attached to ${network} as ${hostname}`);
+				return null;
 			} catch (err) {
 				const status = err instanceof WorkerRequestError ? err.status : 0;
-				if (![403, 404, 409].includes(status)) {
-					throw err;
+				if (status === 404 || status === 409) {
+					return null;
 				}
+				if (status === 403) {
+					const warning = `Docker refused to attach the mail server to ${network} (${err instanceof Error ? err.message : "403"}): swarm services can't reach it at ${hostname}. Recreate ${network} as an attachable overlay.`;
+					logger.warn(warning);
+					return warning;
+				}
+				throw err;
 			}
 		}
 

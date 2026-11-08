@@ -310,11 +310,14 @@ class MailServiceClass {
 			);
 		}
 		await log?.("Starting or updating the mail server's container.");
-		await DockerService.reconcileMail({
+		const warning = await DockerService.reconcileMail({
 			certSource,
 			hostname,
 			postmaster: postmasterFor(hostname),
 		});
+		if (warning) {
+			await log?.(warning);
+		}
 	}
 
 	/** Brings the mail server back after a worker restart. */
