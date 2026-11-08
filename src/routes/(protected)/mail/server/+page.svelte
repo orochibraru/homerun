@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import {
 		ExternalLink,
@@ -7,6 +8,7 @@
 		Mail,
 		MonitorSmartphone,
 		Rocket,
+		RotateCw,
 		Server,
 		Stethoscope,
 	} from "@lucide/svelte";
@@ -30,15 +32,10 @@
 
 	const status = $derived(data.mailStatus);
 
-	let enabled = $state(false);
-	$effect(() => {
-		enabled = status.enabled;
-	});
-	let hostname = $state("");
-	$effect(() => {
-		hostname = status.hostname ?? "";
-	});
+	let enabled = $derived(status.enabled);
+	let hostname = $derived(status.hostname ?? "");
 	let toggling = $state(false);
+	let restarting = $state(false);
 	let savingHost = $state(false);
 
 	const host = $derived(status.hostname ?? "mail.example.com");
@@ -112,11 +109,41 @@
 		title="Mail server"
 	>
 		{#snippet trailing()}
-			<SaveButton
-				disabled={enabled === status.enabled}
-				form="mail-enabled"
-				pending={toggling}
-			/>
+			<div class="flex items-center gap-2">
+				{#if status.health?.exists}
+					<form
+						action="?/restart"
+						method="POST"
+						use:enhance={enhanceToast({
+							error: "Couldn't restart the mail server.",
+							loading: "Restarting the mail server",
+							onComplete: () => refreshAll(),
+							onSettled: () => {
+								restarting = false;
+							},
+							onStart: () => {
+								restarting = true;
+							},
+							success: "Mail server restarted.",
+						})}
+					>
+						<Button
+							disabled={restarting}
+							size="sm"
+							type="submit"
+							variant="outline"
+						>
+							<RotateCw class="size-4" />
+							Restart
+						</Button>
+					</form>
+				{/if}
+				<SaveButton
+					disabled={enabled === status.enabled}
+					form="mail-enabled"
+					pending={toggling}
+				/>
+			</div>
 		{/snippet}
 	</PanelHeader>
 	<div class="space-y-4 px-5 py-4">

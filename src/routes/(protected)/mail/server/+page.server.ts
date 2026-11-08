@@ -27,6 +27,20 @@ export const actions = {
 		redirect(303, resolve("/(protected)/services/[serviceId]", { serviceId }));
 	},
 
+	restart: async ({ locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		try {
+			await MailService.restart();
+		} catch (err) {
+			return fail(400, {
+				error: err instanceof Error ? err.message : "Couldn't restart it.",
+			});
+		}
+		return { success: true };
+	},
+
 	selfTest: async ({ locals }) => {
 		if (!locals.user) {
 			redirectToSignIn();

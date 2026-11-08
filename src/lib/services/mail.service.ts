@@ -290,6 +290,17 @@ class MailServiceClass {
 	): Promise<void> {
 		const row = (await InstanceSettingsDTO.get()).toJSON();
 		const hostname = await this.hostname();
+		const mailboxes = (await MailMailboxDTO.list()).filter(
+			(box) => box.toJSON().enabled,
+		).length;
+		const reason = this.#stoppedReason(hostname, mailboxes);
+		const off = row.mailEnabled !== true || !hostname || reason !== null;
+		if (off) {
+			if (reason && row.mailEnabled === true) {
+				await log?.(reason);
+			}
+			await DockerService.reconcileMail(null);
+		}
 		const files = await this.#configFiles();
 		await log?.("Writing the mail server's config files.");
 		await DockerService.writeMailConfig(files);
@@ -298,25 +309,40 @@ class MailServiceClass {
 			await log?.(`Wiping ${purgeable.join(", ")}.`);
 			await DockerService.purgeMailDirs(purgeable);
 		}
-		const mailboxes = (await MailMailboxDTO.list()).filter(
-			(box) => box.toJSON().enabled,
-		).length;
-		const reason = this.#stoppedReason(hostname, mailboxes);
-		if (row.mailEnabled !== true || !hostname || reason) {
-			if (reason && row.mailEnabled === true) {
-				await log?.(reason);
-			}
-			await DockerService.reconcileMail(null);
-			return;
+		if (!off && hostname) {
+			await this.#start(hostname, log);
 		}
+	}
+
+	/**
+	 * Creates or updates the mail container for `hostname`, with TLS only
+	 * when Traefik's `acme.json` really holds a certificate for it:
+	 * docker-mailserver told to use a missing one exits and restarts forever.
+	 *
+	 * @throws When the container won't start.
+	 */
+	async #start(
+		hostname: string,
+		log?: (line: string) => Promise<void>,
+	): Promise<void> {
 		const certSource = await DockerService.mailCertSource().catch(() => null);
+		const certDomain = certSource
+			? await DockerService.mailCertDomain(certSource, hostname).catch(
+					() => null,
+				)
+			: null;
 		if (!certSource) {
 			await log?.(
 				"Traefik's acme.json wasn't found: the mail server runs without TLS, and mail clients won't sign in.",
 			);
+		} else if (!certDomain) {
+			await log?.(
+				`Traefik holds no certificate for ${hostname} yet: the mail server runs without TLS until it does, and turns it on by itself within a few minutes of it appearing.`,
+			);
 		}
 		await log?.("Starting or updating the mail server's container.");
 		const warning = await DockerService.reconcileMail({
+			certDomain,
 			certSource,
 			hostname,
 			postmaster: postmasterFor(hostname),
@@ -324,6 +350,39 @@ class MailServiceClass {
 		if (warning) {
 			await log?.(warning);
 		}
+	}
+
+	/**
+	 * Brings a mail server that should run in line with its settings without
+	 * rewriting its config: recreated when it's missing, or when Traefik's
+	 * certificate for it appeared since it started without TLS.
+	 */
+	async reconcile(): Promise<void> {
+		const row = (await InstanceSettingsDTO.get()).toJSON();
+		const hostname = await this.hostname();
+		const mailboxes = (await MailMailboxDTO.list()).filter(
+			(box) => box.toJSON().enabled,
+		).length;
+		if (
+			row.mailEnabled !== true ||
+			!hostname ||
+			this.#stoppedReason(hostname, mailboxes)
+		) {
+			return;
+		}
+		await this.#start(hostname);
+	}
+
+	/**
+	 * Restarts the mail container.
+	 *
+	 * @throws When it doesn't exist or Docker refuses.
+	 */
+	async restart(): Promise<void> {
+		if (!(await DockerService.mailHealth()).exists) {
+			throw new Error("The mail server isn't running: turn it on first.");
+		}
+		await DockerService.restartMail();
 	}
 
 	/** Brings the mail server back after a worker restart. */

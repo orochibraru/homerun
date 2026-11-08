@@ -54,6 +54,11 @@ class MailWatchServiceClass {
 			this.#lastHealth = null;
 			return;
 		}
+		await MailService.reconcile().catch((err: unknown) => {
+			logger.warn(
+				`Mail server reconcile failed: ${err instanceof Error ? err.message : String(err)}`,
+			);
+		});
 		await this.#checkHealth();
 		await this.#checkDeliveries();
 	}

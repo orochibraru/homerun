@@ -43,14 +43,19 @@ the top of the page says which is missing.
 
 - **Run the mail server** starts or removes the `homerun-mail` container. Mail,
   queues and settings live in the `homerun-mail-*` Docker volumes, so turning it
-  off keeps every message for when it's back on.
+  off keeps every message for when it's back on. **Restart** restarts the
+  container in place. It's also listed under System logs → This instance's
+  stack, with its output.
 - **Hostname** is the name the server greets other servers with and every
   domain's MX points at. It defaults to `mail.<base domain>`. Traefik issues its
   certificate like any routed hostname, and the mail server reads it from
   Traefik's `acme.json`; its address record is created by the DNS automation
   like the dashboard's. When Traefik's certificate store isn't an `acme.json` at
   the root of a volume, the tab says so and the server runs without TLS, which
-  mail apps refuse to sign in over.
+  mail apps refuse to sign in over. The same goes while `acme.json` holds no
+  certificate covering the hostname (exactly or through a wildcard): the server
+  starts without TLS rather than failing, and Homerun switches TLS on by itself
+  within five minutes of the certificate appearing.
 - **Client settings**: IMAP on port 993 (SSL/TLS) and SMTP on port 465 (SSL/TLS)
   or 587 (STARTTLS), both at the mail hostname. The username is always the full
   address.

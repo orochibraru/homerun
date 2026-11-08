@@ -11,14 +11,8 @@
 
 	const { data } = $props();
 
-	let publicHost = $state("");
-	$effect(() => {
-		publicHost = data.status.publicHost ?? "";
-	});
-	let enabled = $state(false);
-	$effect(() => {
-		enabled = data.status.enabled;
-	});
+	let publicHost = $derived(data.status.publicHost ?? "");
+	let enabled = $derived(data.status.enabled);
 	let toggling = $state(false);
 	let publishing = $state(false);
 </script>

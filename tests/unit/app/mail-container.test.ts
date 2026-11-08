@@ -12,11 +12,13 @@ const {
 	mailBinds,
 	mailConfigScript,
 	mailEnv,
+	acmeCertDomain,
 	mailLabels,
 	mailMatches,
 } = await import("../../../src/lib/services/docker/mail-container");
 
 const state = {
+	certDomain: "mail.example.com",
 	certSource: "homerun_traefik_certs",
 	hostname: "mail.example.com",
 	postmaster: "postmaster@example.com",
@@ -113,5 +115,52 @@ describe("config writes and purges", () => {
 		expect(isPurgeablePath("example.com/..")).toBe(false);
 		expect(isPurgeablePath("example.com/jane/x")).toBe(false);
 		expect(isPurgeablePath("")).toBe(false);
+	});
+});
+
+describe("acmeCertDomain", () => {
+	const acme = (domains: { main: string; sans?: string[] }[]) =>
+		JSON.stringify({
+			letsencrypt: {
+				Certificates: domains.map((domain) => ({ domain })),
+			},
+		});
+
+	test("finds the certificate issued for the hostname", () => {
+		expect(
+			acmeCertDomain(
+				acme([{ main: "app.example.com" }, { main: "mail.example.com" }]),
+				"mail.example.com",
+			),
+		).toBe("mail.example.com");
+	});
+
+	test("a wildcard or SAN covering it gives that certificate's main name", () => {
+		expect(
+			acmeCertDomain(
+				acme([{ main: "example.com", sans: ["*.example.com"] }]),
+				"mail.example.com",
+			),
+		).toBe("example.com");
+		expect(
+			acmeCertDomain(acme([{ main: "*.example.com" }]), "mail.example.com"),
+		).toBe("*.example.com");
+	});
+
+	test("none when nothing covers it or the file isn't JSON", () => {
+		expect(
+			acmeCertDomain(acme([{ main: "*.other.com" }]), "mail.example.com"),
+		).toBeNull();
+		expect(
+			acmeCertDomain(acme([{ main: "*.example.com" }]), "a.mail.example.com"),
+		).toBeNull();
+		expect(acmeCertDomain("{}", "mail.example.com")).toBeNull();
+		expect(acmeCertDomain("not json", "mail.example.com")).toBeNull();
+	});
+
+	test("without a certificate the mail server runs without TLS", () => {
+		const env = mailEnv({ ...state, certDomain: null });
+		expect(env).toContain("SSL_TYPE=");
+		expect(mailBinds({ ...state, certDomain: null })).toHaveLength(4);
 	});
 });

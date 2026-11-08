@@ -149,7 +149,7 @@ function oidcProviderPlugins(origin: string | undefined) {
 	return [
 		jwt({
 			jwks: { keyPairConfig: { alg: "RS256", modulusLength: 2048 } },
-			jwt: { issuer: oidcIssuer(origin) },
+			jwt: { audience: origin, issuer: oidcIssuer(origin) },
 		}),
 		...(mcpAllowed(origin)
 			? [

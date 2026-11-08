@@ -180,6 +180,31 @@ describe("infraContainersFrom", () => {
 	test("with no known project, any compose container counts", () => {
 		expect(infraContainersFrom(listed as never, null)).toHaveLength(5);
 	});
+
+	test("a swarm service's dead tasks hide behind its running one", () => {
+		const task = (name: string, state: string, service: string) => ({
+			...container(name, {
+				"com.docker.compose.project": "homerun",
+				"com.docker.swarm.service.name": service,
+			}),
+			State: state,
+		});
+		const names = (list: unknown[]) =>
+			infraContainersFrom(list as never, "homerun").map((c) => c.name);
+		expect(
+			names([
+				task("homerun-newt.1.a", "exited", "homerun_newt"),
+				task("homerun-newt.1.b", "running", "homerun_newt"),
+				task("homerun-newt.1.c", "exited", "homerun_newt"),
+			]),
+		).toEqual(["homerun-newt.1.b"]);
+		expect(
+			names([
+				task("homerun-newt.1.a", "exited", "homerun_newt"),
+				task("homerun-newt.1.c", "exited", "homerun_newt"),
+			]),
+		).toEqual(["homerun-newt.1.a"]);
+	});
 });
 
 describe("applyFlags on a Traefik that already has them", () => {

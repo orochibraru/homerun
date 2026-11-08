@@ -189,6 +189,8 @@ export function missingTraefikFlags(
 		.map(([group]) => group);
 }
 
+const SWARM_SERVICE_LABEL = "com.docker.swarm.service.name";
+
 /**
  * The containers that belong to this instance's own stack: every container of
  * its compose project (`ownProject`, off its own container's labels) plus the
@@ -196,12 +198,32 @@ export function missingTraefikFlags(
  * deployed. Another compose stack on the same host (a leftover tunnel, an app
  * from another tool) isn't Homerun's and doesn't belong in its system logs.
  * With no known project (dev, no compose) any compose container counts.
+ * Swarm keeps a service's last few dead tasks around: only the running one
+ * is listed, or a single dead one when none runs.
  */
 export function infraContainersFrom(
 	containers: ListedContainer[],
 	ownProject: string | null,
 ): InfraContainer[] {
+	const liveTasks = new Set(
+		containers
+			.filter((container) => container.State === "running")
+			.map((container) => container.Labels?.[SWARM_SERVICE_LABEL])
+			.filter(Boolean),
+	);
+	const seenDeadTasks = new Set<string>();
 	return containers
+		.filter((container) => {
+			const swarmService = container.Labels?.[SWARM_SERVICE_LABEL];
+			if (!swarmService || container.State === "running") {
+				return true;
+			}
+			if (liveTasks.has(swarmService) || seenDeadTasks.has(swarmService)) {
+				return false;
+			}
+			seenDeadTasks.add(swarmService);
+			return true;
+		})
 		.filter((container) => {
 			const labels = container.Labels ?? {};
 			if (labels[MANAGED_LABEL]) {

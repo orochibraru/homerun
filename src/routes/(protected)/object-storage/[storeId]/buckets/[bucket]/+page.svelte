@@ -24,18 +24,13 @@
 
 	onMount(() => title.set(`Object Storage · ${data.bucket}`));
 
-	let days = $state("");
-	$effect(() => {
-		days =
-			data.detail.expirationDays === null
-				? ""
-				: String(data.detail.expirationDays);
-	});
+	let days = $derived(
+		data.detail.expirationDays === null
+			? ""
+			: String(data.detail.expirationDays),
+	);
 	let savingLifecycle = $state(false);
-	let isPublic = $state(false);
-	$effect(() => {
-		isPublic = data.isPublic;
-	});
+	let isPublic = $derived(data.isPublic);
 	let savingPublic = $state(false);
 	let confirmOpen = $state(false);
 	let purgeOpen = $state(false);

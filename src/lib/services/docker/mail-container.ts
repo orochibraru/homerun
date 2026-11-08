@@ -3,6 +3,7 @@ import { MAIL_PORTS } from "#lib/mail.js";
 
 import { certResolverFor } from "./cert-resolver.ts";
 import { MIRROR_LABEL } from "./image-scan-refs.ts";
+import { CORE_LABEL } from "./newt.ts";
 
 export const MAIL_CONTAINER_NAME = "homerun-mail";
 export const MAIL_IMAGE = "ghcr.io/docker-mailserver/docker-mailserver";
@@ -30,6 +31,7 @@ export interface MailConfigFile {
 
 /** How the mail server container should currently be configured. */
 export interface MailDesiredState {
+	certDomain: string | null;
 	certSource: string | null;
 	hostname: string;
 	postmaster: string;
@@ -69,6 +71,57 @@ export function acmeSourceFrom(
 	return null;
 }
 
+interface AcmeStore {
+	Certificates?: { domain?: { main?: string; sans?: string[] } }[] | null;
+}
+
+function certCovers(name: string, hostname: string): boolean {
+	const lower = name.toLowerCase();
+	if (lower === hostname) {
+		return true;
+	}
+	if (!lower.startsWith("*.")) {
+		return false;
+	}
+	const rest = hostname.slice(hostname.indexOf(".") + 1);
+	return hostname.includes(".") && lower.slice(2) === rest;
+}
+
+/**
+ * The `main` name of the certificate in Traefik's `acme.json` that covers
+ * `hostname`, exactly or through a wildcard, which is the name
+ * docker-mailserver looks the certificate up by. Null when there's none, or
+ * the file isn't JSON: docker-mailserver panics and restarts forever when
+ * told to use a certificate that isn't there.
+ */
+export function acmeCertDomain(
+	acmeJson: string,
+	hostname: string,
+): string | null {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(acmeJson);
+	} catch {
+		return null;
+	}
+	if (!parsed || typeof parsed !== "object") {
+		return null;
+	}
+	const host = hostname.toLowerCase();
+	for (const store of Object.values(parsed as Record<string, AcmeStore>)) {
+		for (const cert of store?.Certificates ?? []) {
+			const main = cert.domain?.main;
+			const names = [main, ...(cert.domain?.sans ?? [])].filter(
+				(name): name is string => typeof name === "string",
+			);
+			if (main && names.some((name) => certCovers(name, host))) {
+				return main;
+			}
+		}
+	}
+	return null;
+}
+
 /**
  * docker-mailserver's environment: rspamd for spam filtering and DKIM
  * signing (OpenDKIM, OpenDMARC, SpamAssassin and Amavis off, ClamAV off to
@@ -95,8 +148,8 @@ export function mailEnv(state: MailDesiredState): string[] {
 		"MOVE_SPAM_TO_JUNK=1",
 		"SPOOF_PROTECTION=1",
 		"PERMIT_DOCKER=none",
-		`SSL_TYPE=${state.certSource ? "letsencrypt" : ""}`,
-		`SSL_DOMAIN=${state.hostname}`,
+		`SSL_TYPE=${state.certSource && state.certDomain ? "letsencrypt" : ""}`,
+		`SSL_DOMAIN=${state.certDomain ?? state.hostname}`,
 	];
 }
 
@@ -114,6 +167,7 @@ export function mailLabels(state: MailDesiredState): Record<string, string> {
 		config.traefik.instanceCertNames,
 	);
 	const labels: Record<string, string> = {
+		[CORE_LABEL]: "mail",
 		[MAIL_ALIAS_LABEL]: state.hostname,
 		[MIRROR_LABEL]: "mail",
 		"traefik.enable": "true",
@@ -137,7 +191,7 @@ export function mailBinds(state: MailDesiredState): string[] {
 		`${MAIL_LOG_VOLUME}:${MAIL_LOG_DIR}`,
 		`${MAIL_CONFIG_VOLUME}:${MAIL_CONFIG_DIR}`,
 	];
-	if (state.certSource) {
+	if (state.certSource && state.certDomain) {
 		binds.push(`${state.certSource}:${MAIL_CERT_DIR}:ro`);
 	}
 	return binds;

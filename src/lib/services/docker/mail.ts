@@ -6,6 +6,7 @@ import type { BaseDockerService, Constructor } from "./base.ts";
 import type { PullImageParams } from "./containers.ts";
 import type { TraefikInfo } from "./core-services.ts";
 import {
+	acmeCertDomain,
 	acmeSourceFrom,
 	type InspectedMount,
 	MAIL_CONFIG_MOUNT,
@@ -156,6 +157,38 @@ export function DockerMailMixin<
 				info.Mounts ?? [],
 				config.traefik.certResolver,
 			);
+		}
+
+		/**
+		 * The name of the certificate in `source`'s `acme.json` covering
+		 * `hostname`, read through a one-off container. Null when Traefik
+		 * holds none for it yet, or the file can't be read.
+		 */
+		async mailCertDomain(
+			source: string,
+			hostname: string,
+		): Promise<string | null> {
+			const result = await this.runOneOff({
+				binds: [`${source}:/acme:ro`],
+				cmd: ["cat", "/acme/acme.json"],
+				image: "alpine",
+				tag: "3",
+				timeoutMs: 60_000,
+			});
+			if (result.exitCode !== 0) {
+				return null;
+			}
+			return acmeCertDomain(result.stdout.toString(), hostname);
+		}
+
+		/**
+		 * Restarts the mail container.
+		 *
+		 * @throws When it doesn't exist or the worker refuses.
+		 */
+		async restartMail(): Promise<void> {
+			await this.worker.post(`/v1/containers/${MAIL_CONTAINER_NAME}/restart`);
+			logger.info("Mail server restarted.");
 		}
 
 		/**
