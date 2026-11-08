@@ -56,11 +56,11 @@ export const actions = {
 		}
 		const mailbox = await MailMailboxDTO.get(params.mailboxId);
 		if (!mailbox) {
-			return fail(404, { error: "Mailbox not found." });
+			return fail(404, { action: "update", error: "Mailbox not found." });
 		}
 		const parsed = parseMailboxFields(await request.formData());
 		if ("error" in parsed) {
-			return fail(400, { error: parsed.error });
+			return fail(400, { action: "update", error: parsed.error });
 		}
 		await mailbox.update(parsed.fields);
 		const job = await enqueueCoreServiceJob(

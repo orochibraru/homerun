@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Roundcube",
-	"description": "Webmail for an IMAP and SMTP server, such as Homerun's own mail server.",
+	"description": "Webmail for an IMAP and SMTP server, such as Homerun's own mail server. Deployed from Mail → Server it's set up for you; from here, set the ROUNDCUBEMAIL_DEFAULT_HOST and ROUNDCUBEMAIL_SMTP_SERVER variables to your mail host under Configure first.",
 	"image": "roundcube/roundcubemail",
 	"tag": "1.6.11-apache",
 	"containerPort": 80,

@@ -58,12 +58,15 @@ class MailSelfTestServiceClass {
 	/** Every check, in the order the Server tab shows them. */
 	async run(): Promise<MailCheck[]> {
 		const hostname = await MailService.hostname();
-		const running = await DockerService.mailRunning().catch(() => false);
+		const health = await DockerService.mailHealth().catch(() => null);
+		const running = health?.running === true;
 		const checks: MailCheck[] = [
 			{
 				detail: running
 					? "The container runs."
-					: "The container isn't running: turn the server on and add a mailbox.",
+					: health?.restarting
+						? `The container keeps restarting (${health.restartCount} restarts${health.exitCode === null ? "" : `, last exit code ${health.exitCode}`}): see the Logs tab.`
+						: "The container isn't running: turn the server on and add a mailbox.",
 				id: "container",
 				label: "Mail server container",
 				state: running ? "ok" : "fail",
@@ -80,12 +83,23 @@ class MailSelfTestServiceClass {
 				},
 			];
 		}
+		const address = await this.#publicAddress(hostname);
 		const probes = await Promise.all([
-			this.#certificate(hostname),
-			this.#smtp(hostname, 25, "Incoming mail (port 25)", false),
-			this.#smtp(hostname, 465, "Submission over TLS (port 465)", true),
-			this.#smtp(hostname, 587, "Submission with STARTTLS (port 587)", false),
-			this.#reverseDns(hostname),
+			this.#certificate(hostname, address),
+			this.#smtp({ address, hostname }, 25, "Incoming mail (port 25)", false),
+			this.#smtp(
+				{ address, hostname },
+				465,
+				"Submission over TLS (port 465)",
+				true,
+			),
+			this.#smtp(
+				{ address, hostname },
+				587,
+				"Submission with STARTTLS (port 587)",
+				false,
+			),
+			this.#reverseDns(hostname, address),
 			...(running
 				? [this.#outbound(), this.#queue(), this.#recentDeliveries()]
 				: []),
@@ -94,15 +108,44 @@ class MailSelfTestServiceClass {
 		return [...checks, ...probes];
 	}
 
+	/**
+	 * The hostname's address as public resolvers give it. The probes connect
+	 * there rather than to the name, which Homerun's own network resolves to
+	 * the mail container directly and would make them pass without the
+	 * internet ever being involved.
+	 */
+	async #publicAddress(hostname: string): Promise<string | null> {
+		const resolver = new Resolver({ timeout: 3000, tries: 2 });
+		resolver.setServers(PUBLIC_RESOLVERS);
+		const [address] = await resolver.resolve4(hostname).catch(() => []);
+		return address ?? null;
+	}
+
+	/** The check every probe returns when the hostname has no public address to probe. */
+	#noAddress(hostname: string, id: string, label: string): MailCheck {
+		return {
+			detail: `${hostname} has no A record in public DNS, so there's nothing to probe.`,
+			id,
+			label,
+			state: "fail",
+		};
+	}
+
 	/** The certificate IMAP serves on 993: valid for the hostname, and how long until it expires. */
-	async #certificate(hostname: string): Promise<MailCheck> {
+	async #certificate(
+		hostname: string,
+		address: string | null,
+	): Promise<MailCheck> {
 		const base = {
 			id: "certificate",
 			label: "TLS certificate (IMAP, port 993)",
 		};
+		if (!address) {
+			return this.#noAddress(hostname, base.id, base.label);
+		}
 		try {
 			const socket = connectTls({
-				host: hostname,
+				host: address,
 				port: 993,
 				servername: hostname,
 			});
@@ -136,23 +179,27 @@ class MailSelfTestServiceClass {
 
 	/** Whether `port` on the hostname answers with an SMTP greeting, as a client out there would reach it. */
 	async #smtp(
-		hostname: string,
+		target: { address: string | null; hostname: string },
 		port: number,
 		label: string,
 		tls: boolean,
 	): Promise<MailCheck> {
+		const { address, hostname } = target;
 		const id = `smtp-${port}`;
+		if (!address) {
+			return this.#noAddress(hostname, id, label);
+		}
 		try {
 			const socket = tls
-				? connectTls({ host: hostname, port, servername: hostname })
-				: connectTcp({ host: hostname, port });
+				? connectTls({ host: address, port, servername: hostname })
+				: connectTcp({ host: address, port });
 			const line = await firstLine(socket);
 			return isSmtpGreeting(line)
 				? { detail: line, id, label, state: "ok" }
 				: { detail: `Unexpected greeting: ${line}`, id, label, state: "warn" };
 		} catch (err) {
 			return {
-				detail: `${hostname}:${port} didn't answer: ${message(err)}. Check the firewall, or your router's port forwarding.`,
+				detail: `${hostname} (${address}):${port} didn't answer: ${message(err)}. Check the firewall, or your router's port forwarding.`,
 				id,
 				label,
 				state: "fail",
@@ -161,11 +208,13 @@ class MailSelfTestServiceClass {
 	}
 
 	/** Whether the server's address has a PTR record naming the hostname, which most receivers want. */
-	async #reverseDns(hostname: string): Promise<MailCheck> {
+	async #reverseDns(
+		hostname: string,
+		address: string | null,
+	): Promise<MailCheck> {
 		const base = { id: "ptr", label: "Reverse DNS (PTR)" };
 		const resolver = new Resolver({ timeout: 3000, tries: 2 });
 		resolver.setServers(PUBLIC_RESOLVERS);
-		const [address] = await resolver.resolve4(hostname).catch(() => []);
 		if (!address) {
 			return {
 				...base,
@@ -212,7 +261,7 @@ class MailSelfTestServiceClass {
 	async #queue(): Promise<MailCheck> {
 		const base = { id: "queue", label: "Outgoing queue" };
 		const result = await DockerService.execInMail(["mailq"]).catch(() => null);
-		if (!result) {
+		if (!result || result.exitCode !== 0) {
 			return { ...base, detail: "Couldn't read the queue.", state: "warn" };
 		}
 		const count = queuedMessages(result.stdout);
@@ -228,7 +277,13 @@ class MailSelfTestServiceClass {
 	/** Whether the recent log shows bounced or deferred messages, and to whom. */
 	async #recentDeliveries(): Promise<MailCheck> {
 		const base = { id: "deliveries", label: "Recent deliveries" };
-		const lines = parseMailLog(await DockerService.mailLogs(RECENT_LOG_TAIL));
+		const logs = await DockerService.mailLogs(RECENT_LOG_TAIL).catch(
+			() => null,
+		);
+		if (logs === null) {
+			return { ...base, detail: "Couldn't read the mail log.", state: "warn" };
+		}
+		const lines = parseMailLog(logs);
 		const summary = summarizeMailLog(lines);
 		if (summary.bounced === 0 && summary.deferred === 0) {
 			return {

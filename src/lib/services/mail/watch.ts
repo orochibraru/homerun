@@ -10,6 +10,7 @@ import {
 } from "#lib/mail-log.js";
 
 import { DockerService } from "../docker.service.ts";
+import { MailService } from "../mail.service.ts";
 
 const logger = new Logger("Mail");
 
@@ -46,7 +47,8 @@ class MailWatchServiceClass {
 		const mailboxes = (await MailMailboxDTO.list()).filter(
 			(box) => box.toJSON().enabled,
 		);
-		if (row.mailEnabled !== true || mailboxes.length === 0) {
+		const hostname = await MailService.hostname();
+		if (row.mailEnabled !== true || mailboxes.length === 0 || !hostname) {
 			this.#lastHealth = null;
 			return;
 		}

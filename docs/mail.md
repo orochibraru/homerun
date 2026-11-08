@@ -73,9 +73,12 @@ container under a gigabyte of memory.
 - that the outgoing queue is empty;
 - that every domain has its MX, SPF, DKIM and DMARC records.
 
-The ports are probed from the server itself against its public hostname. A home
-router without hairpin NAT can fail those checks while the internet gets through
-fine: try a mail app from outside to be sure.
+The ports are probed from the server itself, at the hostname's address in public
+DNS rather than through Homerun's own network, so they go out and come back in
+the way a client's would. That still isn't proof the whole internet gets
+through: a home router without hairpin NAT can fail them while outside clients
+connect fine, and a firewall that only lets your own IP in can pass them. Try a
+mail app from another network to be sure.
 
 ## Logs and failures
 

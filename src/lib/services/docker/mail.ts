@@ -100,13 +100,14 @@ export function DockerMailMixin<
 		async mailHealth(): Promise<MailHealth> {
 			const info = await this.#inspectMail();
 			const state = info?.State;
+			const running = state?.Running === true && state.Restarting !== true;
 			return {
 				error: state?.Error || null,
 				exists: info !== null,
-				exitCode: state?.Running ? null : (state?.ExitCode ?? null),
+				exitCode: running ? null : (state?.ExitCode ?? null),
 				restartCount: info?.RestartCount ?? 0,
 				restarting: state?.Restarting === true,
-				running: state?.Running === true && state.Restarting !== true,
+				running,
 				startedAt: state?.StartedAt ?? null,
 			};
 		}

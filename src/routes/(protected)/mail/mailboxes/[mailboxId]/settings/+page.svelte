@@ -47,7 +47,7 @@
 			success: "Mailbox saved.",
 		})}
 	>
-		{#if form?.error}
+		{#if form?.action === "update" && form.error}
 			<p class="text-sm text-red-500">{form.error}</p>
 		{/if}
 		<MailMailboxFields values={data.mailbox} />

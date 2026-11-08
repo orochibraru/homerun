@@ -98,9 +98,9 @@
 	{:else}
 		<p class="text-text-muted px-5 py-4 text-sm">
 			Run it after setting up a domain, and whenever mail stops arriving or
-			leaving. Ports are probed from this server against the public hostname, so
-			a router without hairpin NAT can fail them even when the internet gets
-			through.
+			leaving. Ports are probed from this server at the hostname's public
+			address, which isn't proof the whole internet gets through: a router
+			without hairpin NAT can fail them while outside clients connect fine.
 		</p>
 	{/if}
 </section>
