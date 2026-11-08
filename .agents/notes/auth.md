@@ -22,7 +22,7 @@ above).
 
 ## Permissions, roles and API keys (`src/lib/permissions.ts`, `src/lib/server/access-gate.ts`)
 
-Access is a `Permissions` map: 18 areas (`PERMISSION_AREAS`, each with its
+Access is a `Permissions` map: 20 areas (`PERMISSION_AREAS`, each with its
 label, description and the dashboard/API route prefixes it owns), each `read` or
 `write` (write includes read, `can()`). Roles (`USER_ROLES`: `admin`,
 `developer`, `viewer` labelled "Read-only", `app-user`, `custom`, see

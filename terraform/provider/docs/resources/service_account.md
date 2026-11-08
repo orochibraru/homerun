@@ -37,7 +37,7 @@ resource "homerun_service_account" "example" {
   Defaults to `false`.
 - `permissions` (Map of String) The areas the account may use, each set to read
   or write. Areas: services, workstations, stacks, templates, cron-jobs,
-  redirects, status-pages, storage, object-storage, registry, build-cache,
+  redirects, status-pages, storage, object-storage, mail, registry, build-cache,
   git-providers, notifications, dns, remote-hosts, system, iac, users, settings.
   The API cuts them down to what the provider's own API key holds. Defaults to
   `{}`.

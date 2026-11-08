@@ -25,6 +25,7 @@ import {
 	LaptopMinimal,
 	LayoutDashboard,
 	LayoutGrid,
+	Mail,
 	Network,
 	ScrollText,
 	Server,
@@ -272,6 +273,14 @@ export const allNavItems: NavItem[] = [
 		href: resolve("redirects"),
 		icon: ArrowRightLeft,
 		label: "Redirects",
+	},
+	{
+		category: "Networking",
+		description: "Mailboxes and aliases for your domains",
+		exact: false,
+		href: resolve("mail"),
+		icon: Mail,
+		label: "Mail",
 	},
 	{
 		category: "Networking",

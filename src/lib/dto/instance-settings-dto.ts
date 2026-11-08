@@ -19,6 +19,7 @@ import { RETAINED_REVISIONS } from "#lib/revisions.js";
 import type { SecurityPolicy } from "#lib/security-policy.js";
 import { db } from "#lib/server/db/lib.js";
 import {
+	type CoreServiceSettings,
 	type GitProviderConfig,
 	type GitProviderKind,
 	type InstanceOauthProvider,
@@ -371,18 +372,8 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		await this.persist(input);
 	}
 
-	/** Persists the built-in object store's toggle, public host and secrets. */
-	async persistGarage(
-		input: Partial<
-			Pick<
-				InstanceSettings,
-				| "garageAdminTokenEnc"
-				| "garageEnabled"
-				| "garagePublicHost"
-				| "garageRpcSecretEnc"
-			>
-		>,
-	): Promise<void> {
+	/** Persists the built-in object store's toggle, public host and secrets, and the mail server's toggle and hostname. */
+	async persistCoreServices(input: CoreServiceSettings): Promise<void> {
 		await this.persist(input);
 	}
 

@@ -9,6 +9,7 @@ const titles: Record<CoreServiceJob["action"], string> = {
 	publishBuiltinStore: "Publish the built-in object store",
 	publishRegistry: "Publish the Docker registry",
 	setRegistryAuth: "Change the Docker registry's auth",
+	syncMail: "Apply the mail server's configuration",
 };
 
 /**
@@ -23,7 +24,9 @@ export async function enqueueCoreServiceJob(
 ): Promise<JobDTO> {
 	const target = payload.action.includes("Registry")
 		? "registry"
-		: "object-storage";
+		: payload.action.includes("Mail")
+			? "mail"
+			: "object-storage";
 	return await QueueService.enqueue({
 		lockKey: `core_service:${target}`,
 		maxAttempts: 1,

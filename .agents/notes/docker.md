@@ -1051,6 +1051,62 @@ Garage: init, apply, a contended lock reported by Terraform with the holder's
 info, force-unlock, rollback seen by the next `plan`. See the routes in
 `api-and-cli.md`.
 
+## Mail server (`/mail`, `MailService`, `docker/mail.ts`)
+
+docker-mailserver (`ghcr.io/docker-mailserver/docker-mailserver`, pinned in
+`docker/mail-container.ts`) run like Garage: `DockerMailMixin` (merged
+outermost, it needs `runOneOff`/`pullImage`/`findTraefikContainer`) creates
+`homerun-mail` on the shared network with `homerun-mail-config`/`-data`/
+`-state`/`-logs` volumes and ports 25, 465, 587 and 993 on every host address,
+labelled `homerun.infra=mail`. Mailu and mailcow were passed over: both ship
+their own admin UI and a dozen containers, docker-mailserver is one container
+driven entirely by files, which is what lets Homerun's UI own it.
+
+The database is the source of truth (`mail_domain`, `mail_mailbox`,
+`mail_alias`, `MailDomainDTO`/`MailMailboxDTO`/`MailAliasDTO`, plus
+`instance_settings.mailEnabled`/`mailHostname`). `MailService.sync()` renders
+`postfix-accounts.cf` (`{BLF-CRYPT}` bcrypt from `Bun.password`, `$2b$`
+respelled `$2y$`, so passwords cap at 72 bytes rather than letting Bun pre-hash
+them), `postfix-virtual.cf`, `dovecot-quotas.cf`, rspamd's
+`override.d/dkim_signing.conf` and one
+`rspamd/dkim/rsa-2048-<selector>-<domain> .private.txt` per domain (the conf's
+`path` template resolves the key by selector and domain, so a new domain needs
+no rspamd change), writes them all into the config volume through a one-off
+`alpine` (temp file then `mv`, the DKIM directory cleared first), then
+reconciles the container. docker-mailserver's change detector reloads accounts,
+aliases and quotas on its own within seconds; only an env, bind or label change
+recreates the container. A catch-all (`@domain`) would swallow real mailboxes in
+Postfix's virtual map, so `sync` adds an identity alias for each mailbox of a
+domain that has one. Deleting a mailbox or domain passes its maildir to the job
+as `purge`, wiped by a one-off `alpine` on the data volume, container or not,
+after `isPurgeablePath` (`src/lib/mail.ts`) refuses anything that isn't `domain`
+or `domain/local`.
+
+The container only runs when the server is on, has a hostname and at least one
+enabled mailbox: docker-mailserver refuses to boot with no account. Every
+dashboard change persists to the database in the action and queues one
+`core_service` job, `syncMail` (`lockKey core_service:mail`), so changes apply
+in order. The core-services watch calls `MailService.reassert()` on a worker
+restart.
+
+TLS: the container carries a Traefik router for the mail hostname whose service
+is `noop@internal`, only so Traefik issues its certificate, and mounts the
+volume holding Traefik's `acme.json` (`acmeSourceFrom` reads the resolver's
+`storage` flag and Traefik's mounts) read-only at `/etc/letsencrypt` with
+`SSL_TYPE=letsencrypt`; docker-mailserver extracts the cert from `acme.json` and
+watches it for renewals. Until the certificate exists the container restarts on
+its own. With no `acme.json` to mount it runs with `SSL_TYPE=` empty, which the
+Server tab reports.
+
+DNS: `requiredMailRecords` (MX to the hostname, `v=spf1 mx ~all`, DKIM, DMARC)
+is checked against Cloudflare's and Google's resolvers on each domain page load
+(`MailService.checkRecords`, `mailRecordState`); `publishRecords` writes them
+through `DomainDnsService` when a managed domain covers the mail domain,
+updating a same-kind record (another SPF, an old DKIM) instead of adding a
+second. These are the admin's records, not tracked in `dns_managed_record`. The
+hostname's own address record goes through `syncCoreHostDns`. None of this is
+verified against a live docker-mailserver yet.
+
 ## OpenTelemetry collector (`docker/otel.ts`, `TracingService`)
 
 The third core container on the Garage pattern: `DockerOtelMixin` (merged
