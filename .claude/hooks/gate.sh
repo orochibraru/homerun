@@ -39,7 +39,11 @@ gate() {
 }
 
 gate "Type check" bun run type-check
-gate "prek" prek run
+if command -v prek >/dev/null 2>&1; then
+  gate "prek" prek run
+else
+  gate "prek" bun node_modules/@j178/prek/bin/prek.js run
+fi
 gate "Unit tests (coverage threshold included)" bun run test
 
 fingerprint >"$stamp"
