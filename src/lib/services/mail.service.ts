@@ -40,8 +40,10 @@ import {
 import {
 	MAIL_CONFIG_DIR,
 	MAIL_CONTAINER_NAME,
+	mailCertResolver,
 } from "./docker/mail-container.ts";
 import { DomainDnsService } from "./domain-dns.service.ts";
+import { PangolinMailPorts } from "./pangolin/mail-ports.ts";
 
 const logger = new Logger("Mail");
 
@@ -300,6 +302,7 @@ class MailServiceClass {
 				await log?.(reason);
 			}
 			await DockerService.reconcileMail(null);
+			await PangolinMailPorts.remove();
 		}
 		const files = await this.#configFiles();
 		await log?.("Writing the mail server's config files.");
@@ -311,6 +314,26 @@ class MailServiceClass {
 		}
 		if (!off && hostname) {
 			await this.#start(hostname, log);
+			await this.#publishThroughPangolin(log);
+		}
+	}
+
+	/** Publishes the mail ports through Pangolin when it routes this instance, logging each port's outcome. */
+	async #publishThroughPangolin(
+		log?: (line: string) => Promise<void>,
+	): Promise<void> {
+		const results = await PangolinMailPorts.sync().catch((err: unknown) => [
+			{
+				detail: err instanceof Error ? err.message : String(err),
+				ok: false,
+				port: 0,
+			},
+		]);
+		for (const result of results ?? []) {
+			// oxlint-disable-next-line no-await-in-loop -- log lines keep their order
+			await log?.(
+				`Pangolin${result.port ? ` (${result.port})` : ""}: ${result.ok ? "" : "failed, "}${result.detail}`,
+			);
 		}
 	}
 
@@ -334,6 +357,14 @@ class MailServiceClass {
 		if (!certSource) {
 			await log?.(
 				"Traefik's acme.json wasn't found: the mail server runs without TLS, and mail clients won't sign in.",
+			);
+		} else if (
+			!certDomain &&
+			config.pangolinEnabled &&
+			!mailCertResolver(hostname)
+		) {
+			await log?.(
+				`Behind Pangolin, Traefik can only get ${hostname}'s certificate over DNS-01: tick Issue certificates through DNS (DNS-01) on its domain under DNS. Until then the mail server runs without TLS.`,
 			);
 		} else if (!certDomain) {
 			await log?.(

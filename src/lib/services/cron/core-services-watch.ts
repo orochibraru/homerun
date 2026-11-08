@@ -56,7 +56,7 @@ export function traefikExpectation(swarm: boolean): TraefikExpectation {
 		acmeEmail: config.traefik.acmeEmail ?? null,
 		certResolver: config.traefik.certResolver,
 		dnsChallenge:
-			config.traefik.dnsChallengeDomains.length > 0 && !config.pangolinEnabled
+			config.traefik.dnsChallengeDomains.length > 0
 				? dnsChallengeSetup(config.authCheckUrl, config.auth.secret)
 				: null,
 		httpCache: config.traefik.httpCache,

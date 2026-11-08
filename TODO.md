@@ -84,6 +84,10 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Mail server: an outbound relay (smarthost) setting, docker-mailserver's
+      `RELAY_HOST`/`RELAY_PORT`/`RELAY_USER`/`RELAY_PASSWORD`, for hosts whose
+      outbound port 25 is blocked or whose IP has no matching reverse DNS (a
+      home server behind Pangolin sends from its own IP)
 - [ ] Mail server: no REST API, MCP tools or CLI commands for mail domains,
       mailboxes and aliases yet; add them like the registry's
 - [ ] Mail server: verify the whole path against a live docker-mailserver

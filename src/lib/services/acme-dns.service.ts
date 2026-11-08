@@ -104,7 +104,7 @@ class AcmeDnsServiceClass {
 		const domains = await this.load();
 		await this.syncRouters();
 		await DockerService.applyDnsChallenge(
-			domains.length > 0 && !config.pangolinEnabled
+			domains.length > 0
 				? dnsChallengeSetup(config.authCheckUrl, config.auth.secret)
 				: null,
 		).catch((err) => {

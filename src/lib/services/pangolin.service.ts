@@ -131,7 +131,7 @@ class PangolinServiceClass {
 	}
 
 	/** Lists every resource in the org, following pagination. */
-	private listResources(
+	listResources(
 		baseUrl: string,
 		token: string,
 		orgId: string,
@@ -147,7 +147,7 @@ class PangolinServiceClass {
 	}
 
 	/** Lists every site in the org, following pagination. */
-	private listSites(
+	listSites(
 		baseUrl: string,
 		token: string,
 		orgId: string,
@@ -248,13 +248,14 @@ class PangolinServiceClass {
 	 * container name always pairs with Traefik's in-container port 443, since
 	 * the configured port is a host port.
 	 */
-	private async settingsOrNull(): Promise<{
+	async settingsOrNull(): Promise<{
 		baseUrl: string;
 		mainSiteName: string;
 		orgId: string;
 		ownsAuth: boolean;
 		port: number;
 		targetHost: string;
+		targetHostExplicit: boolean;
 		token: string;
 	} | null> {
 		const settings = await InstanceSettingsDTO.get();
@@ -279,12 +280,13 @@ class PangolinServiceClass {
 			ownsAuth: settings.pangolinOwnsAuth,
 			port: inNetwork ? 443 : settings.pangolinTargetPort,
 			targetHost,
+			targetHostExplicit: Boolean(settings.pangolinTargetHost),
 			token,
 		};
 	}
 
 	/** Lists every Target currently attached to a resource, following pagination. */
-	private listTargets(
+	listTargets(
 		baseUrl: string,
 		token: string,
 		resourceId: number | string,

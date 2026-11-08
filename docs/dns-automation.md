@@ -98,6 +98,9 @@ a connection and:
   pages switch right away. Until the wildcard is issued (a minute or two, longer
   on providers slow to publish records), those names get Traefik's self-signed
   default.
+- **Behind Pangolin**, which holds the public certificates, only the mail
+  server's hostname uses it: see
+  [Mail → Behind Pangolin](mail.md#behind-pangolin).
 
 Behind Pangolin nothing changes: Pangolin terminates TLS and no route asks for a
 certificate.

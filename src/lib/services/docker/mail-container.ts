@@ -1,3 +1,4 @@
+import { challengeDomainFor, DNS_CHALLENGE_RESOLVER } from "#lib/acme-dns.js";
 import { config } from "#lib/config.js";
 import { MAIL_PORTS } from "#lib/mail.js";
 
@@ -154,18 +155,33 @@ export function mailEnv(state: MailDesiredState): string[] {
 }
 
 /**
+ * The resolver the mail hostname's certificate comes from. Behind Pangolin
+ * HTTP-01 can't reach this host, so only DNS-01 works, and only when a
+ * domain covering the hostname has DNS challenge on; wildcard routers aren't
+ * written there, so the mail router asks for its own name.
+ */
+export function mailCertResolver(hostname: string): string | null {
+	if (!config.pangolinEnabled) {
+		return certResolverFor(
+			hostname,
+			config.traefik.certResolver,
+			false,
+			config.traefik.instanceCertNames,
+		);
+	}
+	return challengeDomainFor(hostname, config.traefik.dnsChallengeDomains)
+		? DNS_CHALLENGE_RESOLVER
+		: null;
+}
+
+/**
  * The container's labels: its infra marker and a Traefik router for the
  * mail hostname. Nothing is served over HTTP there, the router only exists
  * so Traefik issues the certificate the mail server then reads from
  * `acme.json`.
  */
 export function mailLabels(state: MailDesiredState): Record<string, string> {
-	const resolver = certResolverFor(
-		state.hostname,
-		config.traefik.certResolver,
-		config.pangolinEnabled,
-		config.traefik.instanceCertNames,
-	);
+	const resolver = mailCertResolver(state.hostname);
 	const labels: Record<string, string> = {
 		[CORE_LABEL]: "mail",
 		[MAIL_ALIAS_LABEL]: state.hostname,

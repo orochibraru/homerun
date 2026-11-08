@@ -17,8 +17,9 @@ it:
   to lift it, or mail you send never leaves.
 - The server's IP needs a **reverse DNS (PTR)** record pointing at the mail
   hostname. Only your hosting provider can set it.
-- Pangolin and other tunnels don't carry SMTP: the server needs a public IP of
-  its own.
+- Behind [Pangolin](#behind-pangolin), Pangolin's server takes the inbound ports
+  instead. Cloudflare Tunnel can't: it only publishes HTTP(S) to the internet,
+  and SMTP and IMAP aren't HTTP.
 
 ## Setting it up
 
@@ -135,6 +136,35 @@ it. Deleting a domain deletes its mailboxes, their mail and its aliases.
 Every change is applied in the background through the
 [job queue](scheduling.md#the-job-queue): Homerun rewrites docker-mailserver's
 config files and the server picks them up within seconds, without a restart.
+
+## Behind Pangolin
+
+When Pangolin routes this instance, the mail hostname's address record points at
+the Pangolin server, so mail servers and mail apps connect there. Homerun
+publishes the mail ports through it:
+
+- Every time the mail server's configuration is applied, Homerun creates (or
+  repairs) a **raw TCP resource** named `Homerun mail <port>` for 25, 465, 587
+  and 993, each with a target on the main site pointing at the mail container.
+  Turning the mail server off deletes them. The job's log says what Pangolin
+  answered for each port.
+- Pangolin only accepts raw resources when its server allows them. On the
+  Pangolin server, set `flags.allow_raw_resources: true` in `config.yml`, add an
+  entrypoint per port to its Traefik (`tcp-25` on `:25/tcp`, and so on), and
+  publish the four ports on the `gerbil` container. Homerun can't change the
+  Pangolin server itself.
+- **Certificates:** Pangolin passes the mail ports through untouched, so the
+  mail server needs its own certificate, and Traefik's HTTP challenge can't
+  reach this host behind Pangolin. Tick **Issue certificates through DNS
+  (DNS-01)** on the mail hostname's domain under
+  [DNS](dns-automation.md#certificates-over-dns-dns-01): Traefik then gets the
+  certificate over DNS-01 and the mail server switches TLS on within five
+  minutes.
+- The self-test adds a **Forwarded through Pangolin** check. The port checks
+  then probe the Pangolin server, which is what the internet sees.
+- Reverse DNS (PTR) is set on the Pangolin server's IP, by whoever hosts it.
+  Outgoing mail still leaves from this host's own IP, so port 25 has to be open
+  outbound here.
 
 ## Not built yet
 

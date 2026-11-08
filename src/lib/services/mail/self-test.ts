@@ -16,6 +16,7 @@ import {
 
 import { DockerService } from "../docker.service.ts";
 import { MailService } from "../mail.service.ts";
+import { PangolinMailPorts } from "../pangolin/mail-ports.ts";
 
 const PROBE_TIMEOUT_MS = 8000;
 const DAY_MS = 86_400_000;
@@ -113,7 +114,40 @@ class MailSelfTestServiceClass {
 				: []),
 			this.#domains(),
 		]);
-		return [...checks, ...probes];
+		const pangolin = await this.#pangolin();
+		return [...checks, ...(pangolin ? [pangolin] : []), ...probes];
+	}
+
+	/** Whether Pangolin forwards every mail port, when Pangolin routes this instance; null otherwise. */
+	async #pangolin(): Promise<MailCheck | null> {
+		const label = "Forwarded through Pangolin";
+		try {
+			const missing = await PangolinMailPorts.missing();
+			if (missing === null) {
+				return null;
+			}
+			return missing.length === 0
+				? {
+						detail:
+							"Pangolin has a raw TCP resource for 25, 465, 587 and 993. The port checks below go through it.",
+						id: "pangolin",
+						label,
+						state: "ok",
+					}
+				: {
+						detail: `No raw TCP resource for ${missing.join(", ")}: turn the mail server off and on, or save its hostname, to create them, and read the job's log for what Pangolin answered.`,
+						id: "pangolin",
+						label,
+						state: "fail",
+					};
+		} catch (err) {
+			return {
+				detail: `Couldn't list Pangolin's resources: ${err instanceof Error ? err.message : String(err)}`,
+				id: "pangolin",
+				label,
+				state: "warn",
+			};
+		}
 	}
 
 	/**

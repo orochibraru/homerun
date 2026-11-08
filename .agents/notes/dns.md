@@ -144,7 +144,14 @@ points at is detected, see below. For the same reason, no router asks for an
 ACME certificate at all while Pangolin is configured: `certResolverFor`
 (`docker/cert-resolver.ts`, used by `buildContainerLabels` and the dashboard
 router) drops the certresolver when `config.pangolinEnabled` is set, and for IP,
-`localhost` and dotless hosts, which Traefik otherwise retried forever.
+`localhost` and dotless hosts, which Traefik otherwise retried forever. The one
+exception is the mail server's router (`mailCertResolver` in
+`docker/mail-container.ts`): its ports pass through Pangolin as raw TCP
+resources (`src/lib/services/pangolin/mail-ports.ts`), so it needs a real
+certificate, and gets the DNS-01 resolver when a DNS-challenge domain covers its
+hostname. That's why `AcmeDnsService.sync` and `traefikExpectation` now load the
+DNS-01 resolver onto Traefik behind Pangolin too; the wildcard routers stay off
+there.
 
 **Every resource Homerun creates has Pangolin's own SSO gate turned off, and
 that is what fixed "the route exists, the tunnel is up, and the service is still
