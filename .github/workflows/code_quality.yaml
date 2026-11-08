@@ -67,7 +67,12 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Download the agnix binary
-        run: node node_modules/agnix/install.js
+        run: |
+          for delay in 5 15 45 0; do
+            node node_modules/agnix/install.js && exit 0
+            [ "$delay" -gt 0 ] && sleep "$delay"
+          done
+          exit 1
 
       # $lib resolves through .svelte-kit/tsconfig.json's paths, which is
       # generated and gitignored. The test/check scripts sync it themselves;
