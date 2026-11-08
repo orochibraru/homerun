@@ -17,6 +17,7 @@ export const MAIL_DATA_VOLUME = "homerun-mail-data";
 export const MAIL_STATE_VOLUME = "homerun-mail-state";
 export const MAIL_LOG_VOLUME = "homerun-mail-logs";
 export const MAIL_ROUTER = "homerun-mail";
+export const MAIL_ALIAS_LABEL = "homerun.mail.alias";
 export const MAIL_CONFIG_MOUNT = "/cfg";
 
 const ACME_FILE = "acme.json";
@@ -113,6 +114,7 @@ export function mailLabels(state: MailDesiredState): Record<string, string> {
 		config.traefik.instanceCertNames,
 	);
 	const labels: Record<string, string> = {
+		[MAIL_ALIAS_LABEL]: state.hostname,
 		[MIRROR_LABEL]: "mail",
 		"traefik.enable": "true",
 		[`traefik.http.routers.${MAIL_ROUTER}.entrypoints`]:
@@ -171,8 +173,8 @@ export function mailMatches(
 	}
 	const wanted = mailLabels(state);
 	const traefikKeys = new Set(
-		[...Object.keys(labels), ...Object.keys(wanted)].filter((key) =>
-			key.startsWith("traefik."),
+		[...Object.keys(labels), ...Object.keys(wanted)].filter(
+			(key) => key.startsWith("traefik.") || key === MAIL_ALIAS_LABEL,
 		),
 	);
 	return [...traefikKeys].every((key) => labels[key] === wanted[key]);

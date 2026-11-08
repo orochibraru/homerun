@@ -29,7 +29,7 @@ export type {
 	VolumeMountParams,
 } from "./docker/containers.ts";
 export type { MirrorCopyResult, ScanImageParams } from "./docker/image-scan.ts";
-export type { MailExecResult } from "./docker/mail.ts";
+export type { MailExecResult, MailHealth } from "./docker/mail.ts";
 export type { MailConfigFile } from "./docker/mail-container.ts";
 export type { OneOffRunParams, OneOffRunResult } from "./docker/one-off.ts";
 export type { SwarmNodeInfo } from "./docker/swarm.ts";

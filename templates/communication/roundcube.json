@@ -1,0 +1,22 @@
+{
+	"$schema": "../schema.json",
+	"name": "Roundcube",
+	"description": "Webmail for an IMAP and SMTP server, such as Homerun's own mail server.",
+	"image": "roundcube/roundcubemail",
+	"tag": "1.6.11-apache",
+	"containerPort": 80,
+	"icon": "di:roundcube",
+	"tags": ["mail", "webmail", "email"],
+	"websiteUrl": "https://roundcube.net",
+	"sourceUrl": "https://github.com/roundcube/roundcubemail-docker",
+	"envVars": {
+		"ROUNDCUBEMAIL_DEFAULT_HOST": "ssl://mail.example.com",
+		"ROUNDCUBEMAIL_DEFAULT_PORT": "993",
+		"ROUNDCUBEMAIL_SMTP_SERVER": "ssl://mail.example.com",
+		"ROUNDCUBEMAIL_SMTP_PORT": "465",
+		"ROUNDCUBEMAIL_DB_TYPE": "sqlite",
+		"ROUNDCUBEMAIL_SKIN": "elastic",
+		"ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE": "25M"
+	},
+	"volumes": ["/var/roundcube/db"]
+}

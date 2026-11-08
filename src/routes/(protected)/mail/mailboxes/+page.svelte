@@ -30,6 +30,12 @@
 			}),
 			id: box.id,
 			name: box.address,
+			settingsHref: resolve(
+				"/(protected)/mail/mailboxes/[mailboxId]/settings",
+				{
+					mailboxId: box.id,
+				},
+			),
 			subtitle: [
 				box.displayName,
 				usageLine(box.usage) ??
@@ -84,7 +90,7 @@
 				)?.requestSubmit()}
 		/>
 	</form>
-	<Button href={item.href} size="icon-sm" title="Edit" variant="ghost">
+	<Button href={item.settingsHref} size="icon-sm" title="Edit" variant="ghost">
 		<Pencil class="size-4" />
 	</Button>
 {/snippet}

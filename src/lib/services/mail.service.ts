@@ -32,7 +32,11 @@ import { DOMAIN_RE } from "#lib/service-domains.js";
 import { normalizeName } from "./dns-providers/http.ts";
 import type { DnsRecordInput } from "./dns-providers/types.ts";
 import { syncCoreHostDns } from "./dns.service.ts";
-import { DockerService, type MailConfigFile } from "./docker.service.ts";
+import {
+	DockerService,
+	type MailConfigFile,
+	type MailHealth,
+} from "./docker.service.ts";
 import {
 	MAIL_CONFIG_DIR,
 	MAIL_CONTAINER_NAME,
@@ -53,6 +57,7 @@ export interface MailStatus {
 	domainCount: number;
 	enabled: boolean;
 	hostname: string | null;
+	health: MailHealth | null;
 	mailboxCount: number;
 	running: boolean;
 	stoppedReason: string | null;
@@ -122,11 +127,11 @@ class MailServiceClass {
 	/** The toggle, hostname, counts and whether the container runs, with why it doesn't when it should. */
 	async status(): Promise<MailStatus> {
 		const row = (await InstanceSettingsDTO.get()).toJSON();
-		const [domains, mailboxes, running, certSource, hostname] =
+		const [domains, mailboxes, health, certSource, hostname] =
 			await Promise.all([
 				MailDomainDTO.list(),
 				MailMailboxDTO.list(),
-				DockerService.mailRunning().catch(() => false),
+				DockerService.mailHealth().catch(() => null),
 				DockerService.mailCertSource().catch(() => null),
 				this.hostname(),
 			]);
@@ -137,8 +142,9 @@ class MailServiceClass {
 			domainCount: domains.length,
 			enabled,
 			hostname,
+			health,
 			mailboxCount: mailboxes.length,
-			running,
+			running: health?.running === true,
 			stoppedReason: enabled
 				? this.#stoppedReason(
 						hostname,
@@ -324,16 +330,36 @@ class MailServiceClass {
 		}
 	}
 
+	/** The DNS page's domains that aren't mail domains yet, with whether a provider manages their records. */
+	async availableDomains(): Promise<
+		{ id: string; linked: boolean; name: string }[]
+	> {
+		const taken = new Set((await MailDomainDTO.list()).map((d) => d.name));
+		return (await DomainDTO.list())
+			.map((domain) => domain.toJSON())
+			.filter((row) => !taken.has(row.name))
+			.map((row) => ({
+				id: row.id,
+				linked: Boolean(row.connectionId && row.zoneId),
+				name: row.name,
+			}));
+	}
+
 	/**
-	 * Adds a domain with a fresh 2048-bit DKIM key pair.
+	 * Adds one of the DNS page's domains as a mail domain, with a fresh
+	 * 2048-bit DKIM key pair.
 	 *
-	 * @throws When the name isn't a domain or is already added.
+	 * @throws When the domain isn't on the DNS page or is already added.
 	 */
-	async createDomain(name: string, userId: string): Promise<MailDomainDTO> {
-		const domain = name.trim().toLowerCase();
-		if (!DOMAIN_RE.test(domain)) {
-			throw new Error("That isn't a domain, e.g. example.com.");
+	async createDomain(
+		dnsDomainId: string,
+		userId: string,
+	): Promise<MailDomainDTO> {
+		const dnsDomain = await DomainDTO.get(dnsDomainId);
+		if (!dnsDomain) {
+			throw new Error("Pick one of the domains on the DNS page.");
 		}
+		const domain = dnsDomain.toJSON().name;
 		if (await MailDomainDTO.getByName(domain)) {
 			throw new Error(`${domain} is already a mail domain.`);
 		}

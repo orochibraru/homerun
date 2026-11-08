@@ -1,25 +1,22 @@
-import { resolve } from "$app/paths";
-import { error, fail, redirect } from "@sveltejs/kit";
+import { fail } from "@sveltejs/kit";
 
 import { MailMailboxDTO } from "#lib/dto/mail-mailbox-dto.js";
-import { parseMailboxFields } from "#lib/server/mail-form.js";
+import { isMailAddress } from "#lib/mail.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
-import { enqueueCoreServiceJob } from "#lib/services/core-service-queue.js";
 import { MailService } from "#lib/services/mail.service.js";
+import { MailInboxService } from "#lib/services/mail/inbox.js";
 
-export const load = async ({ params }) => {
+export const load = async ({ params, parent }) => {
+	await parent();
 	const mailbox = await MailMailboxDTO.get(params.mailboxId);
-	if (!mailbox) {
-		error(404, "Mailbox not found.");
-	}
 	return {
-		mailbox: mailbox.summary(),
-		usage: (await MailService.usage())[mailbox.address] ?? null,
+		contents: mailbox ? await MailInboxService.contents(mailbox) : null,
+		hostname: await MailService.hostname(),
 	};
 };
 
 export const actions = {
-	delete: async ({ params, locals }) => {
+	emptyFolder: async ({ params, request, locals }) => {
 		if (!locals.user) {
 			redirectToSignIn();
 		}
@@ -27,41 +24,18 @@ export const actions = {
 		if (!mailbox) {
 			return fail(404, { error: "Mailbox not found." });
 		}
-		await mailbox.delete();
-		await enqueueCoreServiceJob(
-			{
-				action: "syncMail",
-				purge: [`${mailbox.domain}/${mailbox.toJSON().localPart}`],
-			},
-			locals.user.id,
-		);
-		redirect(303, resolve("mail/mailboxes"));
-	},
-
-	password: async ({ params, request, locals }) => {
-		if (!locals.user) {
-			redirectToSignIn();
-		}
-		const mailbox = await MailMailboxDTO.get(params.mailboxId);
-		if (!mailbox) {
-			return fail(404, { error: "Mailbox not found." });
-		}
-		const password = String((await request.formData()).get("password") ?? "");
+		const folder = String((await request.formData()).get("folder") ?? "");
 		try {
-			await MailService.setMailboxPassword(mailbox, password);
+			await MailInboxService.emptyFolder(mailbox, folder);
 		} catch (err) {
 			return fail(400, {
 				error: err instanceof Error ? err.message : String(err),
 			});
 		}
-		const job = await enqueueCoreServiceJob(
-			{ action: "syncMail", purge: [] },
-			locals.user.id,
-		);
-		return { jobId: job.id, success: true };
+		return { folder, success: true };
 	},
 
-	update: async ({ params, request, locals }) => {
+	sendTest: async ({ params, request, locals }) => {
 		if (!locals.user) {
 			redirectToSignIn();
 		}
@@ -69,15 +43,19 @@ export const actions = {
 		if (!mailbox) {
 			return fail(404, { error: "Mailbox not found." });
 		}
-		const parsed = parseMailboxFields(await request.formData());
-		if ("error" in parsed) {
-			return fail(400, { error: parsed.error });
+		const recipient = String((await request.formData()).get("recipient") ?? "")
+			.trim()
+			.toLowerCase();
+		if (!isMailAddress(recipient)) {
+			return fail(400, { error: "That isn't an email address." });
 		}
-		await mailbox.update(parsed.fields);
-		const job = await enqueueCoreServiceJob(
-			{ action: "syncMail", purge: [] },
-			locals.user.id,
-		);
-		return { jobId: job.id, success: true };
+		try {
+			await MailInboxService.sendTest(mailbox, recipient);
+		} catch (err) {
+			return fail(400, {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+		return { recipient, success: true };
 	},
 };

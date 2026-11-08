@@ -26,6 +26,7 @@ import { ErrorRetentionScheduler } from "./cron/error-retention-scheduler.ts";
 import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
 import { IpBanScheduler } from "./cron/ip-ban-scheduler.ts";
 import { LogRetentionScheduler } from "./cron/log-retention-scheduler.ts";
+import { MailWatchScheduler } from "./cron/mail-watch-scheduler.ts";
 import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { PipelineSyncScheduler } from "./cron/pipeline-sync-scheduler.ts";
 import { SwarmDnsWatch } from "./cron/swarm-dns-watch.ts";
@@ -91,6 +92,8 @@ class CronServiceClass {
 
 	private readonly ipBanScheduler = new IpBanScheduler();
 	private readonly backupCapacityScheduler = new BackupCapacityScheduler();
+
+	private readonly mailWatchScheduler = new MailWatchScheduler();
 
 	private readonly traceRetentionScheduler = new TraceRetentionScheduler();
 
@@ -169,6 +172,11 @@ class CronServiceClass {
 	/** Starts the per-minute pass that lifts expired IP bans. */
 	startIpBanScheduler(): void {
 		this.ipBanScheduler.start();
+	}
+
+	/** Starts the five-minute watch over the mail server's container and deliveries. */
+	startMailWatch(): void {
+		this.mailWatchScheduler.start();
 	}
 
 	/** Starts the hourly check of how full the SFTP, SMB and WebDAV backup destinations are. */

@@ -44,7 +44,26 @@ interface MailInspect {
 	Config?: { Env?: string[]; Labels?: Record<string, string> };
 	HostConfig?: { Binds?: string[] | null };
 	Id: string;
-	State?: { Running?: boolean };
+	RestartCount?: number;
+	State?: {
+		Error?: string;
+		ExitCode?: number;
+		FinishedAt?: string;
+		Restarting?: boolean;
+		Running?: boolean;
+		StartedAt?: string;
+		Status?: string;
+	};
+}
+
+export interface MailHealth {
+	error: string | null;
+	exists: boolean;
+	exitCode: number | null;
+	restartCount: number;
+	restarting: boolean;
+	running: boolean;
+	startedAt: string | null;
 }
 
 interface TraefikInspect {
@@ -75,6 +94,39 @@ export function DockerMailMixin<
 					}
 					throw err;
 				});
+		}
+
+		/** The mail container's state: running, crash-looping or stopped, with its restart count and last exit. */
+		async mailHealth(): Promise<MailHealth> {
+			const info = await this.#inspectMail();
+			const state = info?.State;
+			return {
+				error: state?.Error || null,
+				exists: info !== null,
+				exitCode: state?.Running ? null : (state?.ExitCode ?? null),
+				restartCount: info?.RestartCount ?? 0,
+				restarting: state?.Restarting === true,
+				running: state?.Running === true && state.Restarting !== true,
+				startedAt: state?.StartedAt ?? null,
+			};
+		}
+
+		/**
+		 * The mail container's last `tail` lines of output, Postfix, Dovecot
+		 * and rspamd all logging there. Empty when the container doesn't exist.
+		 */
+		async mailLogs(tail: number): Promise<string> {
+			const stream = await this.worker
+				.stream(`v1/containers/${MAIL_CONTAINER_NAME}/logs`, {
+					query: { follow: "0", tail: String(tail) },
+				})
+				.catch((err: unknown) => {
+					if (isNotFound(err)) {
+						return null;
+					}
+					throw err;
+				});
+			return stream ? await new Response(stream).text() : "";
 		}
 
 		/** Whether the mail container exists and is running. */
@@ -180,6 +232,11 @@ export function DockerMailMixin<
 					Hostname: state.hostname,
 					Image: image,
 					Labels: mailLabels(state),
+					NetworkingConfig: {
+						EndpointsConfig: {
+							[config.docker.networkName]: { Aliases: [state.hostname] },
+						},
+					},
 					StopTimeout: 60,
 				},
 				name: MAIL_CONTAINER_NAME,

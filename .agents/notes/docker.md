@@ -1107,6 +1107,35 @@ second. These are the admin's records, not tracked in `dns_managed_record`. The
 hostname's own address record goes through `syncCoreHostDns`. None of this is
 verified against a live docker-mailserver yet.
 
+Mail domains are picked from the DNS page's `domain` rows
+(`MailService.availableDomains`, `createDomain` takes a `DomainDTO` id), never
+typed.
+
+Around it, under `src/lib/services/mail/`: `MailSelfTestService.run()` (the
+Server tab's self-test: container, SMTP greetings on 25/465/587 and the IMAP
+certificate on 993 probed from the app against the public hostname, outbound 25
+with a bash `/dev/tcp` probe inside the container, PTR, `mailq`, every domain's
+records); `MailInboxService` (a mailbox's folders and quota through
+`doveadm -f tab mailbox status`/`quota get`, parsed in
+`src/lib/mail-doveadm.ts`, emptying a folder with `doveadm expunge`, and a test
+message through `sendmail` with the body passed as a positional argument, never
+interpolated); `WebmailService` (one click deploys the built-in `roundcube`
+template as a normal service with its IMAP/SMTP env set to the mail hostname).
+The mail container gets the hostname as a network alias on the shared network,
+so Roundcube and any other service reach it there with a matching certificate;
+the `homerun.mail.alias` label makes `mailMatches` recreate a container created
+before the alias existed. In swarm mode the overlay doesn't see that alias.
+
+Logs and failures: `DockerService.mailLogs(tail)` reads the container's output
+(`follow=0`), `src/lib/mail-log.ts` parses it (level, deliveries, bounces and
+deferrals with the remote reason, failed sign-ins) for `/mail/logs`.
+`MailWatchService` (`src/lib/services/mail/watch.ts`, ticked every five minutes
+by `MailWatchScheduler`) raises a `mail_failure` notification, linking to the
+logs, when `mailHealth()` turns from running to restarting, stopped or missing
+(and back), and for bounces and deferrals logged since its previous pass; its
+first pass only sets the watermark, so a restart of the app doesn't replay old
+failures. A failed `syncMail` job notifies too, from the queue handler.
+
 ## OpenTelemetry collector (`docker/otel.ts`, `TracingService`)
 
 The third core container on the Garage pattern: `DockerOtelMixin` (merged

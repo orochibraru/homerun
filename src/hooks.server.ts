@@ -329,6 +329,7 @@ export const init = async () => {
 	CronService.startLogRetention();
 	CronService.startIpBanScheduler();
 	CronService.startBackupCapacityScheduler();
+	CronService.startMailWatch();
 	CronService.startCoreServicesWatch();
 	CronService.startSwarmDnsWatch();
 	CronService.startWorkstationAutoStop();

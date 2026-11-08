@@ -1,15 +1,32 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Globe, MonitorSmartphone, Server } from "@lucide/svelte";
+	import { resolve } from "$app/paths";
+	import {
+		ExternalLink,
+		Globe,
+		Mail,
+		MonitorSmartphone,
+		Rocket,
+		Server,
+		Stethoscope,
+	} from "@lucide/svelte";
+	import { Button } from "@orochibraru/ui/button";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import MailCheckList from "#lib/components/mail-check-list.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import { queuedJobToast } from "#lib/job-toast.js";
+	import { type MailCheck, overallState } from "#lib/mail-doveadm.js";
 	import { MAIL_PORTS } from "#lib/mail.js";
+	import { enhanceToast } from "#lib/toast.js";
 
-	const { data } = $props();
+	const { data, form } = $props();
+
+	let checks = $state<MailCheck[] | null>(null);
+	let testing = $state(false);
+	let deploying = $state(false);
 
 	const status = $derived(data.mailStatus);
 
@@ -25,7 +42,68 @@
 	let savingHost = $state(false);
 
 	const host = $derived(status.hostname ?? "mail.example.com");
+	const overall = $derived(checks ? overallState(checks) : null);
 </script>
+
+<section class="panel mb-6 rounded-md">
+	<PanelHeader
+		description="Checks the container, every port as the internet reaches it, the certificate, sending out on port 25, reverse DNS, the queue and each domain's records. It changes nothing."
+		icon={Stethoscope}
+		title="Self-test"
+	>
+		{#snippet trailing()}
+			<form
+				action="?/selfTest"
+				method="POST"
+				use:enhance={enhanceToast({
+					error: "Couldn't run the self-test.",
+					loading: "Testing the mail server",
+					onSettled: () => {
+						testing = false;
+					},
+					onStart: () => {
+						testing = true;
+					},
+					onSuccess: (result) => {
+						checks = Array.isArray(result?.checks)
+							? (result.checks as MailCheck[])
+							: null;
+					},
+					success: "Self-test finished.",
+				})}
+			>
+				<Button disabled={testing} size="sm" type="submit" variant="outline"
+					><Stethoscope class="size-4" />{testing
+						? "Testing…"
+						: "Run self-test"}</Button
+				>
+			</form>
+		{/snippet}
+	</PanelHeader>
+	{#if checks}
+		<p
+			class="border-border border-b px-5 py-3 text-sm {overall === 'ok'
+				? 'text-emerald-600 dark:text-emerald-400'
+				: overall === 'warn'
+					? 'text-amber-600 dark:text-amber-400'
+					: 'text-red-600 dark:text-red-400'}"
+		>
+			{overall === "ok"
+				? "Everything passed."
+				: overall === "warn"
+					? "Works, with warnings worth fixing."
+					: "Something's broken: see the red lines."}
+		</p>
+		<MailCheckList {checks} />
+	{:else}
+		<p class="text-text-muted px-5 py-4 text-sm">
+			Run it after setting up a domain, and whenever mail stops arriving or
+			leaving. Ports are probed from this server against the public hostname, so
+			a router without hairpin NAT can fail them even when the internet gets
+			through.
+		</p>
+	{/if}
+</section>
 
 <section class="panel mb-6 rounded-md">
 	<PanelHeader
@@ -46,7 +124,11 @@
 			<div>
 				<dt class="text-text-muted text-xs">Container</dt>
 				<dd class="text-text mt-0.5">
-					{status.running ? "Running" : "Not running"}
+					{status.running
+						? "Running"
+						: status.health?.restarting
+							? `Restarting (${status.health.restartCount} restarts)`
+							: "Not running"}
 				</dd>
 			</div>
 			<div>
@@ -161,4 +243,62 @@
 			</ul>
 		</div>
 	</div>
+</section>
+
+<section class="panel mt-6 rounded-md">
+	<PanelHeader
+		description="Roundcube, deployed as an ordinary service from the built-in template and already pointed at this mail server. Give it a domain of its own from its Networking tab."
+		icon={Mail}
+		title="Mail client"
+	>
+		{#snippet trailing()}
+			<form
+				action="?/deployWebmail"
+				method="POST"
+				use:enhance={enhanceToast({
+					error: "Couldn't deploy Roundcube.",
+					loading: "Creating the Roundcube service",
+					onSettled: () => {
+						deploying = false;
+					},
+					onStart: () => {
+						deploying = true;
+					},
+					success: "Roundcube is deploying.",
+				})}
+			>
+				<Button disabled={deploying || !status.hostname} size="sm" type="submit"
+					><Rocket class="size-4" />Deploy Roundcube</Button
+				>
+			</form>
+		{/snippet}
+	</PanelHeader>
+	{#if form?.error}
+		<p class="px-5 pt-4 text-sm text-red-500">{form.error}</p>
+	{/if}
+	{#if data.webmail.length === 0}
+		<p class="text-text-muted px-5 py-4 text-sm">
+			No mail client deployed yet.
+		</p>
+	{:else}
+		<ul class="divide-border divide-y">
+			{#each data.webmail as client (client.id)}
+				<li class="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+					<a
+						class="text-text text-sm font-medium hover:underline"
+						href={resolve("/(protected)/services/[serviceId]", {
+							serviceId: client.id,
+						})}>{client.name}</a
+					>
+					<Button
+						href={client.url}
+						rel="noopener noreferrer"
+						size="sm"
+						target="_blank"
+						variant="ghost"><ExternalLink class="size-4" />Open</Button
+					>
+				</li>
+			{/each}
+		</ul>
+	{/if}
 </section>
