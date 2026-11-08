@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import { AtSign, Forward, Globe, Server } from "@lucide/svelte";
+	import { AtSign, Forward, Globe, ScrollText, Server } from "@lucide/svelte";
 	import { onMount } from "svelte";
 
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
@@ -42,6 +42,13 @@
 			label: "Aliases",
 		},
 		{
+			description: "What the mail server logged, and what failed",
+			href: resolve("/(protected)/mail/logs"),
+			icon: ScrollText,
+			id: "logs",
+			label: "Logs",
+		},
+		{
 			description: "The container, its hostname and client settings",
 			href: resolve("/(protected)/mail/server"),
 			icon: Server,
@@ -70,7 +77,23 @@
 		</p>
 	</header>
 
-	{#if data.mailStatus.enabled && data.mailStatus.stoppedReason}
+	{#if data.mailStatus.enabled && !data.mailStatus.stoppedReason && data.mailStatus.health && !data.mailStatus.health.running}
+		<p
+			class="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+		>
+			{data.mailStatus.health.restarting
+				? `The mail server keeps restarting (${data.mailStatus.health.restartCount} restarts).`
+				: data.mailStatus.health.exists
+					? "The mail server's container stopped."
+					: "The mail server's container doesn't exist yet: its background job may still be running."}
+			{#if data.mailStatus.health.exitCode !== null}
+				Last exit code {data.mailStatus.health.exitCode}.
+			{/if}
+			<a class="underline" href={resolve("/(protected)/mail/logs")}
+				>See what it logged</a
+			>.
+		</p>
+	{:else if data.mailStatus.enabled && data.mailStatus.stoppedReason}
 		<p
 			class="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300"
 		>

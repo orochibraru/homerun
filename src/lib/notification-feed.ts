@@ -11,6 +11,7 @@ const FAILURE_TYPES = new Set<Notification["type"]>([
 	"docker_wedged",
 	"error_issue",
 	"image_scan_critical",
+	"mail_failure",
 	"resource_alert",
 	"scheduled_failure",
 	"update_failed",
@@ -21,7 +22,7 @@ export function isFailureNotification(type: Notification["type"]): boolean {
 	return FAILURE_TYPES.has(type);
 }
 
-/** Where a notification leads: its service, the Scheduling page for a scheduled tasks summary, or nowhere. */
+/** Where a notification leads: its service, the Scheduling page for a scheduled tasks summary, the mail server's logs for a mail failure, or nowhere. */
 export function notificationHref(item: {
 	serviceId: string | null;
 	type: Notification["type"];
@@ -33,6 +34,9 @@ export function notificationHref(item: {
 	}
 	if (item.type === "scheduled_summary" || item.type === "scheduled_failure") {
 		return resolve("scheduling");
+	}
+	if (item.type === "mail_failure") {
+		return resolve("mail/logs");
 	}
 	return null;
 }

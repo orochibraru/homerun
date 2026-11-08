@@ -24,6 +24,7 @@ coveragePathIgnorePatterns = [
 	"src/lib/services/registry.service.ts",
 	"src/lib/services/object-storage.service.ts",
 	"src/lib/services/mail.service.ts",
+	"src/lib/services/mail/**",
 	"src/lib/services/s3-backup.service.ts",
 	"src/lib/services/backup/**",
 	"src/lib/services/system-stats.service.ts",

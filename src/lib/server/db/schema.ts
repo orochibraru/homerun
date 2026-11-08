@@ -1998,6 +1998,7 @@ export const notification = pgTable(
 				| "error_issue"
 				| "scheduled_summary"
 				| "scheduled_failure"
+				| "mail_failure"
 			>()
 			.notNull(),
 		userId: text("user_id")

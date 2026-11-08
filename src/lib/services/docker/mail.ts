@@ -1,6 +1,6 @@
 import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
-import { isNotFound } from "#lib/server/worker-client.js";
+import { isNotFound, WorkerRequestError } from "#lib/server/worker-client.js";
 
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { PullImageParams } from "./containers.ts";
@@ -24,6 +24,7 @@ import {
 	mailPortBindings,
 } from "./mail-container.ts";
 import type { OneOffRunParams, OneOffRunResult } from "./one-off.ts";
+import { swarmNetworkName } from "./swarm.ts";
 
 const logger = new Logger("Mail");
 
@@ -44,7 +45,27 @@ interface MailInspect {
 	Config?: { Env?: string[]; Labels?: Record<string, string> };
 	HostConfig?: { Binds?: string[] | null };
 	Id: string;
-	State?: { Running?: boolean };
+	NetworkSettings?: { Networks?: Record<string, unknown> };
+	RestartCount?: number;
+	State?: {
+		Error?: string;
+		ExitCode?: number;
+		FinishedAt?: string;
+		Restarting?: boolean;
+		Running?: boolean;
+		StartedAt?: string;
+		Status?: string;
+	};
+}
+
+export interface MailHealth {
+	error: string | null;
+	exists: boolean;
+	exitCode: number | null;
+	restartCount: number;
+	restarting: boolean;
+	running: boolean;
+	startedAt: string | null;
 }
 
 interface TraefikInspect {
@@ -75,6 +96,40 @@ export function DockerMailMixin<
 					}
 					throw err;
 				});
+		}
+
+		/** The mail container's state: running, crash-looping or stopped, with its restart count and last exit. */
+		async mailHealth(): Promise<MailHealth> {
+			const info = await this.#inspectMail();
+			const state = info?.State;
+			const running = state?.Running === true && state.Restarting !== true;
+			return {
+				error: state?.Error || null,
+				exists: info !== null,
+				exitCode: running ? null : (state?.ExitCode ?? null),
+				restartCount: info?.RestartCount ?? 0,
+				restarting: state?.Restarting === true,
+				running,
+				startedAt: state?.StartedAt ?? null,
+			};
+		}
+
+		/**
+		 * The mail container's last `tail` lines of output, Postfix, Dovecot
+		 * and rspamd all logging there. Empty when the container doesn't exist.
+		 */
+		async mailLogs(tail: number): Promise<string> {
+			const stream = await this.worker
+				.stream(`v1/containers/${MAIL_CONTAINER_NAME}/logs`, {
+					query: { follow: "0", tail: String(tail) },
+				})
+				.catch((err: unknown) => {
+					if (isNotFound(err)) {
+						return null;
+					}
+					throw err;
+				});
+			return stream ? await new Response(stream).text() : "";
 		}
 
 		/** Whether the mail container exists and is running. */
@@ -180,6 +235,11 @@ export function DockerMailMixin<
 					Hostname: state.hostname,
 					Image: image,
 					Labels: mailLabels(state),
+					NetworkingConfig: {
+						EndpointsConfig: {
+							[config.docker.networkName]: { Aliases: [state.hostname] },
+						},
+					},
 					StopTimeout: 60,
 				},
 				name: MAIL_CONTAINER_NAME,
@@ -192,23 +252,26 @@ export function DockerMailMixin<
 		 * Brings the mail container in line with `state`: creates it, or
 		 * recreates it when its environment, binds or Traefik labels changed.
 		 * Null stops and removes it. The volumes are never touched, so every
-		 * mailbox survives both.
+		 * mailbox survives both. A running server is then attached to the
+		 * swarm overlay under its hostname.
+		 *
+		 * @returns A warning when the overlay refused the attach, else null.
 		 */
-		async reconcileMail(state: MailDesiredState | null): Promise<void> {
+		async reconcileMail(
+			state: MailDesiredState | null,
+		): Promise<string | null> {
 			const info = await this.#inspectMail();
 			if (!state) {
 				if (info) {
 					await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
 					logger.info("Mail server removed, its volumes keep the mail.");
 				}
-				return;
+				return null;
 			}
 			await this.ensureSharedNetwork();
 			if (!info) {
 				await this.#createMail(state);
-				return;
-			}
-			if (
+			} else if (
 				mailMatches(
 					info.Config?.Env ?? [],
 					info.Config?.Labels ?? {},
@@ -219,10 +282,47 @@ export function DockerMailMixin<
 				if (!info.State?.Running) {
 					await this.worker.post(`/v1/containers/${info.Id}/start`);
 				}
-				return;
+			} else {
+				await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
+				await this.#createMail(state);
 			}
-			await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
-			await this.#createMail(state);
+			return await this.#attachMailToSwarm(state.hostname);
+		}
+
+		/**
+		 * Attaches the mail container to the swarm overlay under its hostname,
+		 * so a swarm service such as Roundcube reaches it there with a
+		 * matching certificate, as services on the shared network do. A no-op
+		 * when it's already attached or swarm mode never created the overlay.
+		 *
+		 * @returns Why the attach was refused (an overlay that isn't
+		 *   attachable), or null when it's attached or there's nothing to do.
+		 */
+		async #attachMailToSwarm(hostname: string): Promise<string | null> {
+			const info = await this.#inspectMail();
+			const network = swarmNetworkName();
+			if (!info || info.NetworkSettings?.Networks?.[network]) {
+				return null;
+			}
+			try {
+				await this.worker.post(`/v1/containers/${info.Id}/connect`, {
+					aliases: [hostname],
+					network,
+				});
+				logger.info(`Mail server attached to ${network} as ${hostname}`);
+				return null;
+			} catch (err) {
+				const status = err instanceof WorkerRequestError ? err.status : 0;
+				if (status === 404 || status === 409) {
+					return null;
+				}
+				if (status === 403) {
+					const warning = `Docker refused to attach the mail server to ${network} (${err instanceof Error ? err.message : "403"}): swarm services can't reach it at ${hostname}. Recreate ${network} as an attachable overlay.`;
+					logger.warn(warning);
+					return warning;
+				}
+				throw err;
+			}
 		}
 
 		/**

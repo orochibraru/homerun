@@ -5,6 +5,7 @@ import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import type { JobType } from "#lib/types.js";
 
 import { MailService } from "../mail.service.ts";
+import { MailWatchService } from "../mail/watch.ts";
 import { NotificationChannelService } from "../notification-channel.service.ts";
 import { ObjectStorageService } from "../object-storage.service.ts";
 import { PipelineService } from "../pipeline.service.ts";
@@ -94,7 +95,10 @@ async function runCoreService(entry: JobDTO): Promise<JobResult> {
 		case "syncMail":
 			await MailService.sync(payload.purge, (line) =>
 				JobDTO.appendLog(entry.id, line),
-			);
+			).catch((err: unknown) => {
+				MailWatchService.syncFailed(err);
+				throw err;
+			});
 			break;
 	}
 	await JobDTO.appendLog(entry.id, steps.done);
