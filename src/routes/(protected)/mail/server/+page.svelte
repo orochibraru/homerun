@@ -47,7 +47,7 @@
 
 <section class="panel mb-6 rounded-md">
 	<PanelHeader
-		description="Checks the container, every port as the internet reaches it, the certificate, sending out on port 25, reverse DNS, the queue and each domain's records. It changes nothing."
+		description="Checks the container, each port at the hostname's public address (probed from this server, so not proof the whole internet gets through), the certificate, sending out on port 25, reverse DNS, the queue and each domain's records. It changes nothing."
 		icon={Stethoscope}
 		title="Self-test"
 	>

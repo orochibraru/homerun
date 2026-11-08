@@ -24,6 +24,13 @@ const OUTBOUND_PROBE_HOST = "gmail-smtp-in.l.google.com";
 const PUBLIC_RESOLVERS = ["1.1.1.1", "8.8.8.8"];
 const RECENT_LOG_TAIL = 2000;
 
+/** A resolver asking the public resolvers, not whatever this host or Homerun's network would answer. */
+function publicResolver(): Resolver {
+	const resolver = new Resolver({ timeout: 3000, tries: 2 });
+	resolver.setServers(PUBLIC_RESOLVERS);
+	return resolver;
+}
+
 function message(err: unknown): string {
 	return err instanceof Error ? err.message : String(err);
 }
@@ -49,10 +56,11 @@ function firstLine(socket: Socket | TLSSocket): Promise<string> {
 }
 
 /**
- * Runs the mail server's self-test: whether its container runs, whether the
- * internet reaches each port with a valid certificate, whether it can send
- * on port 25, its reverse DNS, the queue, and every domain's records.
- * Nothing it does changes anything.
+ * Runs the mail server's self-test: whether its container runs, whether each
+ * port answers at the hostname's public address with a valid certificate
+ * (probed from this server, so not proof the whole internet gets through),
+ * whether it can send on port 25, its reverse DNS, the queue, and every
+ * domain's records. Nothing it does changes anything.
  */
 class MailSelfTestServiceClass {
 	/** Every check, in the order the Server tab shows them. */
@@ -115,8 +123,7 @@ class MailSelfTestServiceClass {
 	 * internet ever being involved.
 	 */
 	async #publicAddress(hostname: string): Promise<string | null> {
-		const resolver = new Resolver({ timeout: 3000, tries: 2 });
-		resolver.setServers(PUBLIC_RESOLVERS);
+		const resolver = publicResolver();
 		const [address] = await resolver.resolve4(hostname).catch(() => []);
 		return address ?? null;
 	}
@@ -150,12 +157,18 @@ class MailSelfTestServiceClass {
 				servername: hostname,
 			});
 			const ready = new Promise<TLSSocket>((resolvePromise, reject) => {
-				socket.once("secureConnect", () => resolvePromise(socket));
-				socket.once("error", reject);
-				setTimeout(
+				const timer = setTimeout(
 					() => reject(new Error("no TLS handshake within 8s")),
 					PROBE_TIMEOUT_MS,
 				);
+				socket.once("secureConnect", () => {
+					clearTimeout(timer);
+					resolvePromise(socket);
+				});
+				socket.once("error", (err) => {
+					clearTimeout(timer);
+					reject(err);
+				});
 			});
 			const peer = (await ready).getPeerCertificate();
 			socket.destroy();
@@ -213,8 +226,7 @@ class MailSelfTestServiceClass {
 		address: string | null,
 	): Promise<MailCheck> {
 		const base = { id: "ptr", label: "Reverse DNS (PTR)" };
-		const resolver = new Resolver({ timeout: 3000, tries: 2 });
-		resolver.setServers(PUBLIC_RESOLVERS);
+		const resolver = publicResolver();
 		if (!address) {
 			return {
 				...base,
