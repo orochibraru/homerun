@@ -1,6 +1,6 @@
 import { config } from "#lib/config.js";
 import { Logger } from "#lib/logger.js";
-import { isNotFound } from "#lib/server/worker-client.js";
+import { isNotFound, WorkerRequestError } from "#lib/server/worker-client.js";
 
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { PullImageParams } from "./containers.ts";
@@ -24,6 +24,7 @@ import {
 	mailPortBindings,
 } from "./mail-container.ts";
 import type { OneOffRunParams, OneOffRunResult } from "./one-off.ts";
+import { swarmNetworkName } from "./swarm.ts";
 
 const logger = new Logger("Mail");
 
@@ -44,6 +45,7 @@ interface MailInspect {
 	Config?: { Env?: string[]; Labels?: Record<string, string> };
 	HostConfig?: { Binds?: string[] | null };
 	Id: string;
+	NetworkSettings?: { Networks?: Record<string, unknown> };
 	RestartCount?: number;
 	State?: {
 		Error?: string;
@@ -264,9 +266,7 @@ export function DockerMailMixin<
 			await this.ensureSharedNetwork();
 			if (!info) {
 				await this.#createMail(state);
-				return;
-			}
-			if (
+			} else if (
 				mailMatches(
 					info.Config?.Env ?? [],
 					info.Config?.Labels ?? {},
@@ -277,10 +277,37 @@ export function DockerMailMixin<
 				if (!info.State?.Running) {
 					await this.worker.post(`/v1/containers/${info.Id}/start`);
 				}
+			} else {
+				await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
+				await this.#createMail(state);
+			}
+			await this.#attachMailToSwarm(state.hostname);
+		}
+
+		/**
+		 * Attaches the mail container to the swarm overlay under its hostname,
+		 * so a swarm service such as Roundcube reaches it there with a
+		 * matching certificate, as services on the shared network do. A no-op
+		 * when it's already attached or swarm mode never created the overlay.
+		 */
+		async #attachMailToSwarm(hostname: string): Promise<void> {
+			const info = await this.#inspectMail();
+			const network = swarmNetworkName();
+			if (!info || info.NetworkSettings?.Networks?.[network]) {
 				return;
 			}
-			await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
-			await this.#createMail(state);
+			try {
+				await this.worker.post(`/v1/containers/${info.Id}/connect`, {
+					aliases: [hostname],
+					network,
+				});
+				logger.info(`Mail server attached to ${network} as ${hostname}`);
+			} catch (err) {
+				const status = err instanceof WorkerRequestError ? err.status : 0;
+				if (![403, 404, 409].includes(status)) {
+					throw err;
+				}
+			}
 		}
 
 		/**

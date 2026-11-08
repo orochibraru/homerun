@@ -35,7 +35,7 @@ class MailInboxServiceClass {
 				"status",
 				"-u",
 				mailbox.address,
-				"messages unseen vsize",
+				"messages unseen vsize guid",
 				"*",
 			]).catch(() => null),
 			DockerService.execInMail([
@@ -61,14 +61,18 @@ class MailInboxServiceClass {
 	}
 
 	/**
-	 * Deletes every message in one of the mailbox's folders, then has Dovecot
-	 * recount the quota.
+	 * Deletes every message in one of the mailbox's folders, addressed by its
+	 * GUID so a name with `*` or `%` can't match other folders, then has
+	 * Dovecot recount the quota.
 	 *
 	 * @throws When the folder isn't one of the mailbox's, or Dovecot refuses.
 	 */
 	async emptyFolder(mailbox: MailMailboxDTO, folder: string): Promise<void> {
 		const contents = await this.contents(mailbox);
-		if (!contents?.folders.some((candidate) => candidate.name === folder)) {
+		const target = contents?.folders.find(
+			(candidate) => candidate.name === folder,
+		);
+		if (!target?.guid) {
 			throw new Error(`${mailbox.address} has no folder called ${folder}.`);
 		}
 		const result = await DockerService.execInMail([
@@ -76,8 +80,8 @@ class MailInboxServiceClass {
 			"expunge",
 			"-u",
 			mailbox.address,
-			"mailbox",
-			folder,
+			"mailbox-guid",
+			target.guid,
 			"all",
 		]);
 		if (result.exitCode !== 0) {

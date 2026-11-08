@@ -84,16 +84,36 @@ export function summarizeMailLog(lines: MailLogLine[]): MailLogSummary {
 	};
 }
 
-/** The failures in `failures` logged after `since` (an ISO time), all of them when `since` is null. */
+/** What tells one logged failure from another for de-duplication: its time, recipient, status and reason. */
+export function failureKey(failure: DeliveryFailure): string {
+	return [failure.time, failure.recipient, failure.status, failure.reason].join(
+		"\u0000",
+	);
+}
+
+/**
+ * The failures in `failures` not yet reported: those logged after `since`
+ * (an ISO time), plus those logged at exactly `since` whose key isn't in
+ * `reportedAtSince`, so a line written after a pass but stamped with its last
+ * timestamp isn't lost. All of them when `since` is null.
+ */
 export function failuresSince(
 	failures: DeliveryFailure[],
 	since: string | null,
+	reportedAtSince: ReadonlySet<string> = new Set(),
 ): DeliveryFailure[] {
 	if (!since) {
 		return failures;
 	}
 	const cutoff = Date.parse(since);
-	return failures.filter(
-		(failure) => failure.time !== null && Date.parse(failure.time) > cutoff,
-	);
+	return failures.filter((failure) => {
+		if (failure.time === null) {
+			return false;
+		}
+		const at = Date.parse(failure.time);
+		return (
+			at > cutoff ||
+			(at === cutoff && !reportedAtSince.has(failureKey(failure)))
+		);
+	});
 }

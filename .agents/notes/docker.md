@@ -1124,7 +1124,11 @@ template as a normal service with its IMAP/SMTP env set to the mail hostname).
 The mail container gets the hostname as a network alias on the shared network,
 so Roundcube and any other service reach it there with a matching certificate;
 the `homerun.mail.alias` label makes `mailMatches` recreate a container created
-before the alias existed. In swarm mode the overlay doesn't see that alias.
+before the alias existed. Every reconcile also connects the container to the
+swarm overlay under the same alias when the overlay exists, like the
+OpenTelemetry collector, so swarm services reach it too; folders are emptied by
+`mailbox-guid`, never by name, since a name with `*` or `%` is a pattern to
+doveadm.
 
 Logs and failures: `DockerService.mailLogs(tail)` reads the container's output
 (`follow=0`), `src/lib/mail-log.ts` parses it (level, deliveries, bounces and

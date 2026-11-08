@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 const {
 	deliveryFailures,
+	failureKey,
 	failuresSince,
 	mailLogLevel,
 	parseMailLog,
@@ -68,6 +69,16 @@ describe("parseMailLog", () => {
 		expect(
 			failuresSince(failures, "2026-11-08T10:01:30.000000+00:00"),
 		).toHaveLength(1);
+	});
+
+	test("a failure stamped at the watermark is new unless it was already reported", () => {
+		const failures = deliveryFailures(lines);
+		const at = "2026-11-08T10:02:00.000000+00:00";
+		const deferred = failures.filter((failure) => failure.time === at);
+		expect(failuresSince(failures, at)).toEqual(deferred);
+		expect(
+			failuresSince(failures, at, new Set(deferred.map(failureKey))),
+		).toEqual([]);
 	});
 
 	test("a delivered message isn't a problem", () => {

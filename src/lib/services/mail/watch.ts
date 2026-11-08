@@ -5,6 +5,7 @@ import { Logger } from "#lib/logger.js";
 import {
 	type DeliveryFailure,
 	deliveryFailures,
+	failureKey,
 	failuresSince,
 	parseMailLog,
 } from "#lib/mail-log.js";
@@ -40,6 +41,7 @@ function describeFailures(failures: DeliveryFailure[]): string {
 class MailWatchServiceClass {
 	#lastHealth: string | null = null;
 	#since: string | null = null;
+	#reportedAtSince = new Set<string>();
 
 	/** One pass: checks the container, then the log since the previous pass. */
 	async check(): Promise<void> {
@@ -101,12 +103,29 @@ class MailWatchServiceClass {
 		const lines = parseMailLog(await DockerService.mailLogs(WATCH_LOG_TAIL));
 		const failures = deliveryFailures(lines);
 		const latest = lines.findLast((line) => line.time)?.time ?? null;
+		const atLatest = (since: string | null) =>
+			new Set(
+				failures
+					.filter(
+						(failure) =>
+							since !== null &&
+							failure.time !== null &&
+							Date.parse(failure.time) === Date.parse(since),
+					)
+					.map(failureKey),
+			);
 		if (this.#since === null) {
 			this.#since = latest ?? new Date().toISOString();
+			this.#reportedAtSince = atLatest(this.#since);
 			return;
 		}
-		const fresh = failuresSince(failures, this.#since);
+		const fresh = failuresSince(failures, this.#since, this.#reportedAtSince);
+		const previous = this.#since;
 		this.#since = latest ?? this.#since;
+		this.#reportedAtSince =
+			this.#since === previous
+				? new Set([...this.#reportedAtSince, ...atLatest(this.#since)])
+				: atLatest(this.#since);
 		if (fresh.length === 0) {
 			return;
 		}

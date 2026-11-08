@@ -1,4 +1,5 @@
 export interface MailFolder {
+	guid: string;
 	messages: number;
 	name: string;
 	sizeBytes: number;
@@ -32,8 +33,9 @@ function toNumber(value: string | undefined): number {
 }
 
 /**
- * The folders in `doveadm -f tab mailbox status -u <user> "messages unseen vsize" "*"`,
- * INBOX first, then alphabetically.
+ * The folders in `doveadm -f tab mailbox status -u <user> "messages unseen vsize guid" "*"`,
+ * INBOX first, then alphabetically. The GUID is what a folder is addressed by
+ * afterwards, since a name with `*` or `%` in it reads as a pattern.
  */
 export function parseMailboxStatus(output: string): MailFolder[] {
 	const [header, ...lines] = output.trim().split("\n");
@@ -43,6 +45,7 @@ export function parseMailboxStatus(output: string): MailFolder[] {
 		.map((line) => line.split(TAB_RE))
 		.filter((cells) => cells[index("mailbox")])
 		.map((cells) => ({
+			guid: cells[index("guid")] ?? "",
 			messages: toNumber(cells[index("messages")]),
 			name: cells[index("mailbox")] ?? "",
 			sizeBytes: toNumber(cells[index("vsize")]),
