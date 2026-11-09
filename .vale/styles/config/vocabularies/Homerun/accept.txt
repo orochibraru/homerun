@@ -191,3 +191,11 @@ PGlite
 rspamd
 webmail
 Roundcube
+(?i)noreply
+(?i)webhook's
+Verdaccio
+pypiserver
+Reposilite
+(?i)kellnr
+smarthost
+Mailgun

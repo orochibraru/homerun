@@ -141,4 +141,4 @@ the Pipelines pages.
 Watched repositories, their runs and their totals are in the
 [REST API](api-and-cli.md#pipelines) under `/api/v1/pipelines`, in the
 [MCP server](mcp.md) (`list_repositories`, `list_pipeline_runs`,
-`get_pipeline_run`...) and in the CLI as `homerun pipelines`.
+`get_pipeline_run`…) and in the CLI as `homerun pipelines`.

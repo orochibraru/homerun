@@ -413,8 +413,9 @@ type stoppable struct {
 	stop  func(context.Context) error
 }
 
-// runningWorkloads is the service's running containers and its swarm
-// services with replicas, whichever mode it ran in before this deploy.
+// runningWorkloads is the service's running containers and, on a swarm
+// deploy, its swarm services with replicas: a daemon outside swarm mode has
+// no services and refuses to list them.
 func (r *run) runningWorkloads(ctx context.Context) ([]stoppable, error) {
 	label := serviceIDLabel + "=" + r.spec.ServiceID
 	containers, err := r.docker.ListContainersByLabel(ctx, label)
@@ -432,6 +433,9 @@ func (r *run) runningWorkloads(ctx context.Context) ([]stoppable, error) {
 			start: func(ctx context.Context) error { return r.docker.EnsureContainerStarted(ctx, id) },
 			stop:  func(ctx context.Context) error { return r.docker.StopContainer(ctx, id) },
 		})
+	}
+	if r.spec.Workload.Kind != "swarm" {
+		return running, nil
 	}
 	services, err := r.docker.SwarmServicesByLabel(ctx, label)
 	if err != nil {

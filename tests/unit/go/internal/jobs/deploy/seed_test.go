@@ -31,10 +31,11 @@ func (d *seedDaemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == http.MethodGet && path == "/containers/json":
 		record("GET /containers/json")
-		_, _ = io.WriteString(w, `[{"Id":"old-container","State":"running"}]`)
+		_, _ = io.WriteString(w, `[{"Id":"0123456789abcdef","State":"running"}]`)
 	case r.Method == http.MethodGet && path == "/services":
 		record("GET /services")
-		_, _ = io.WriteString(w, `[]`)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = io.WriteString(w, `{"message":"This node is not a swarm manager."}`)
 	case r.Method == http.MethodGet && path == "/volumes/homerun-copy":
 		record("GET /volumes/homerun-copy")
 		w.WriteHeader(http.StatusNotFound)
@@ -90,15 +91,15 @@ func TestRunStopsTheServiceAroundASeedCopy(t *testing.T) {
 	if _, err := deploy.Run(context.Background(), job); err != nil {
 		t.Fatalf("Run: %s (log %v)", err, lines())
 	}
-	stop := slices.Index(daemon.calls, "POST /containers/old-container/stop")
+	stop := slices.Index(daemon.calls, "POST /containers/0123456789abcdef/stop")
 	copied := slices.Index(daemon.calls, "create copy helper")
-	start := slices.Index(daemon.calls, "POST /containers/old-container/start")
+	start := slices.Index(daemon.calls, "POST /containers/0123456789abcdef/start")
 	created := slices.Index(daemon.calls, "create container")
 	if stop < 0 || copied < stop || start < copied || created < start {
 		t.Errorf("want stop, copy, start, then the new container, calls %v", daemon.calls)
 	}
 	log := strings.Join(lines(), "\n")
-	if !strings.Contains(log, "Stopped the container old-containe while its volume is copied") || !strings.Contains(log, "Copying db copy into homerun-copy") {
+	if !strings.Contains(log, "Stopped the container 0123456789ab while its volume is copied") || !strings.Contains(log, "Copying db copy into homerun-copy") {
 		t.Errorf("log\n%s", log)
 	}
 }

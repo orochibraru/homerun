@@ -76,7 +76,7 @@ func TestPipelinesRunsWithoutARepositoryListsEveryRun(t *testing.T) {
 	}
 }
 
-func TestPipelinesSyncPostsToTheRepositorysSyncRoute(t *testing.T) {
+func TestPipelinesSyncPostsToTheRepositorySyncRoute(t *testing.T) {
 	client, seen := pipelineAPI(t)
 	out, failed := runCLI(t, func() {
 		cli.Execute(cli.Env{Client: func() *cli.Client { return client }}, []string{"pipelines", "sync", pipelineRepositoryUUID})
