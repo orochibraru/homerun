@@ -133,7 +133,9 @@ would repeat the parent's):
   admin-only, see Object storage in `docker.md`).
 - **Delivery**: Builds (**Git Providers**, **Build Cache**, registry credentials
   for cross-build cache reuse, and **Remote Hosts**, the build servers),
-  Registries (**Docker Registry**, admin-only, see Registry in `docker.md`),
+  Registries (**Docker Registry**, admin-only, see Registry in `docker.md`;
+  **npm Registry** and **PyPI Registry**, one `package-registries/[kind]` route
+  with Overview/Tokens/Settings tabs, see Package registries in `docker.md`),
   Developer (**Infrastructure as Code**, **API Docs**).
 - **Networking**: **Redirects**, **DNS**.
 - **Administration**: **Users** (admin-only), Identity (**Authentication**,

@@ -1,7 +1,10 @@
 import { Logger } from "#lib/logger.js";
 import { MAIL_PORTS } from "#lib/mail.js";
 
-import { MAIL_CONTAINER_NAME } from "../docker/mail-container.ts";
+import {
+	MAIL_CONTAINER_NAME,
+	MAIL_PROXY_PORTS,
+} from "../docker/mail-container.ts";
 import { PangolinService } from "../pangolin.service.ts";
 import {
 	PangolinApiError,
@@ -141,18 +144,33 @@ class PangolinMailPortsClass {
 		if (!resource?.resourceId) {
 			return { detail: "Pangolin created no resource id", ok: false, port };
 		}
+		const host = mailTargetHost(
+			connection.targetHost,
+			connection.targetHostExplicit,
+		);
+		const wanted = host === MAIL_CONTAINER_NAME;
+		const refused = await this.#setProxyProtocol(
+			connection,
+			resource.resourceId,
+			wanted,
+		);
+		const proxied = wanted && refused === null;
 		try {
-			const target = await this.#ensureTarget(
-				connection,
-				resource.resourceId,
+			const target = await this.#ensureTarget(connection, resource.resourceId, {
+				host,
+				port: proxied ? (MAIL_PROXY_PORTS[port] ?? port) : port,
 				siteId,
-				port,
-			);
+			});
 			if (created) {
 				logger.info(`Pangolin raw resource created for mail port ${port}`);
 			}
+			const proxyNote = proxied
+				? ", PROXY protocol on"
+				: wanted
+					? `, without PROXY protocol (Pangolin refused it: ${refused}), so the mail server sees the tunnel's address`
+					: "";
 			return {
-				detail: `${created ? "created" : "kept"} tcp:${port} -> ${target}`,
+				detail: `${created ? "created" : "kept"} tcp:${port} -> ${target}${proxyNote}`,
 				ok: true,
 				port,
 			};
@@ -166,8 +184,42 @@ class PangolinMailPortsClass {
 	}
 
 	/**
-	 * Points the resource's target at the mail server: an enabled one at the
-	 * right address is kept, another one is moved, and none gets one added.
+	 * Turns PROXY protocol (version 2) on or off for a raw resource, so the
+	 * mail server sees each client's real address rather than the tunnel's.
+	 * It's only turned on when the target is the mail container, whose PROXY
+	 * listeners sit on Homerun's network and aren't published on the host.
+	 *
+	 * @returns Null when Pangolin took it, else what it answered: a Pangolin
+	 *   too old for PROXY protocol on raw resources refuses the field.
+	 */
+	async #setProxyProtocol(
+		connection: Connection,
+		resourceId: number | string,
+		enabled: boolean,
+	): Promise<string | null> {
+		try {
+			await pangolinRequest(
+				connection.baseUrl,
+				connection.token,
+				`/resource/${resourceId}`,
+				{
+					body: JSON.stringify(
+						enabled
+							? { proxyProtocol: true, proxyProtocolVersion: 2 }
+							: { proxyProtocol: false },
+					),
+					method: "POST",
+				},
+			);
+			return null;
+		} catch (err) {
+			return err instanceof Error ? err.message : String(err);
+		}
+	}
+
+	/**
+	 * Points the resource's target at `host:port` on the site: an enabled one
+	 * at that address is kept, another one is moved, and none gets one added.
 	 *
 	 * @returns The target's address.
 	 * @throws When Pangolin refuses the change.
@@ -175,14 +227,10 @@ class PangolinMailPortsClass {
 	async #ensureTarget(
 		connection: Connection,
 		resourceId: number | string,
-		siteId: number | string,
-		port: number,
+		destination: { host: string; port: number; siteId: number | string },
 	): Promise<string> {
 		const { baseUrl, token } = connection;
-		const host = mailTargetHost(
-			connection.targetHost,
-			connection.targetHostExplicit,
-		);
+		const { host, port, siteId } = destination;
 		const wanted = `${host}:${port}`;
 		const targets = await PangolinService.listTargets(
 			baseUrl,

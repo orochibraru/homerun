@@ -386,6 +386,11 @@ OIDC provider in `auth.md`) plus:
   plus a bcrypt `secretHash` (`Bun.password.hash`), the only hash registry:2's
   htpasswd auth accepts. The plaintext secret is returned once from
   `RegistryService.createToken()` and never stored.
+- `package_registry` (`PackageRegistryDTO`, primary key `kind`, `npm` or `pypi`)
+  and `package_registry_token` (`PackageRegistryTokenDTO`, `username` unique per
+  `kind`, bcrypt `secretHash`): the language package registries' on/off switch,
+  public hostname and tokens, one row per kind rather than columns on
+  `instance_settings`, see Package registries in `docker.md`.
 - `instance_settings.onboardingCompletedAt`, nullable timestamp, non-null once
   the onboarding wizard (see Onboarding below) has run. Not part of the
   config-override merge in `config.ts`, it's onboarding-flow state, not an

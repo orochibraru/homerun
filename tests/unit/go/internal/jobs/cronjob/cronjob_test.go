@@ -31,6 +31,7 @@ type fakeDaemon struct {
 	image   string
 	hang    bool
 	release chan struct{}
+	volumes []string
 }
 
 // ServeHTTP answers the fake daemon's canned responses for a cron job run.
@@ -76,6 +77,11 @@ func (d *fakeDaemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		d.mu.Unlock()
 		close(d.release)
 		w.WriteHeader(http.StatusNoContent)
+	case strings.HasPrefix(path, "/volumes/") && r.Method == http.MethodGet:
+		d.mu.Lock()
+		d.volumes = append(d.volumes, strings.TrimPrefix(path, "/volumes/"))
+		d.mu.Unlock()
+		_, _ = w.Write([]byte(`{"Name":"media","Driver":"local"}`))
 	case path == "/containers/c1" && r.Method == http.MethodDelete:
 		d.mu.Lock()
 		d.removed = true
@@ -181,6 +187,20 @@ func TestRunMountsVolumesAndTheSocketAsAUser(t *testing.T) {
 	}
 	if groups, ok := host["GroupAdd"].([]any); !ok || len(groups) != 1 {
 		t.Errorf("GroupAdd = %v", host["GroupAdd"])
+	}
+}
+
+func TestRunChecksDiskPlacedVolumesBeforeRunning(t *testing.T) {
+	d := &fakeDaemon{}
+	result := run(t, d, cronjob.Spec{
+		Binds:          []string{"media:/data"},
+		Image:          "alpine:3",
+		Placements:     []cronjob.VolumeDisk{{Disk: "/mnt/data", Image: "alpine:3", Source: "media"}},
+		RunID:          "r1",
+		TimeoutSeconds: 60,
+	})
+	if result["exitCode"] != 0 || len(d.volumes) != 1 || d.volumes[0] != "media" {
+		t.Errorf("result = %v, volumes inspected = %v", result, d.volumes)
 	}
 }
 

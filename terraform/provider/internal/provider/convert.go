@@ -27,6 +27,8 @@ func ToAPI(attribute Attribute, value tftypes.Value) (any, error) {
 		return mapToAPI(Attribute{Kind: "int"}, value)
 	case "objects":
 		return objectsToAPI(attribute, value)
+	case "object":
+		return objectToAPI(attribute, value)
 	default:
 		var out string
 		err := value.As(&out)
@@ -82,25 +84,33 @@ func objectsToAPI(attribute Attribute, value tftypes.Value) ([]any, error) {
 	}
 	out := make([]any, 0, len(items))
 	for _, item := range items {
-		var fields map[string]tftypes.Value
-		if err := item.As(&fields); err != nil {
+		object, err := objectToAPI(attribute, item)
+		if err != nil {
 			return nil, err
-		}
-		object := map[string]any{}
-		for _, field := range attribute.Fields {
-			fieldValue, ok := fields[field.TF]
-			if !ok || fieldValue.IsNull() || !fieldValue.IsKnown() {
-				continue
-			}
-			converted, err := ToAPI(field, fieldValue)
-			if err != nil {
-				return nil, err
-			}
-			object[field.Name] = converted
 		}
 		out = append(out, object)
 	}
 	return out, nil
+}
+
+func objectToAPI(attribute Attribute, value tftypes.Value) (map[string]any, error) {
+	var fields map[string]tftypes.Value
+	if err := value.As(&fields); err != nil {
+		return nil, err
+	}
+	object := map[string]any{}
+	for _, field := range attribute.Fields {
+		fieldValue, ok := fields[field.TF]
+		if !ok || fieldValue.IsNull() || !fieldValue.IsKnown() {
+			continue
+		}
+		converted, err := ToAPI(field, fieldValue)
+		if err != nil {
+			return nil, err
+		}
+		object[field.Name] = converted
+	}
+	return object, nil
 }
 
 // FromAPI turns the JSON value the REST API returned for an attribute into
@@ -126,6 +136,8 @@ func FromAPI(attribute Attribute, typ tftypes.Type, raw any) (tftypes.Value, err
 		return listFromAPI(attribute, typ, raw)
 	case "stringMap", "intMap":
 		return mapFromAPI(attribute, typ, raw)
+	case "object":
+		return objectFromAPI(attribute, typ, raw)
 	default:
 		if text, ok := raw.(string); ok {
 			return tftypes.NewValue(typ, text), nil

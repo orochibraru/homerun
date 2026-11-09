@@ -254,6 +254,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/disks": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List the host's disks
+		 * @description The host's disks a Docker volume can be kept on, root first: each mounted filesystem with its size and free space, system mounts (/boot, /var/lib/docker, /run...) left out. Pass a disk's mountPoint as a new volume's disk. Read from a throwaway container and cached for a minute.
+		 */
+		get: operations["get_disks"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/dns-connections": {
 		parameters: {
 			query?: never;
@@ -754,6 +774,143 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/mail/aliases": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** List mail aliases */
+		get: operations["get_mail_aliases"];
+		put?: never;
+		/**
+		 * Create a mail alias
+		 * @description Adds an address forwarding to others; an empty localPart makes it the domain's catch-all. The mail server picks the change up from a background job queued here.
+		 */
+		post: operations["post_mail_aliases"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/mail/aliases/{aliasId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a mail alias */
+		get: operations["get_mail_aliases__aliasId_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a mail alias
+		 * @description The mail server picks the change up from a background job queued here.
+		 */
+		delete: operations["delete_mail_aliases__aliasId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a mail alias
+		 * @description Changes its destinations or whether it's on, keeping what's left out. The mail server picks the change up from a background job queued here.
+		 */
+		patch: operations["patch_mail_aliases__aliasId_"];
+		trace?: never;
+	};
+	"/mail/domains": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** List mail domains */
+		get: operations["get_mail_domains"];
+		put?: never;
+		/**
+		 * Create a mail domain
+		 * @description Adds one of the DNS page's domains as a mail domain, with a fresh DKIM key and a postmaster@ alias forwarding to the caller's email. The mail server picks the change up from a background job queued here.
+		 */
+		post: operations["post_mail_domains"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/mail/domains/{domainId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a mail domain
+		 * @description The domain with each DNS record it needs (MX, SPF, DKIM, DMARC and the mail host's address) as public resolvers see it now.
+		 */
+		get: operations["get_mail_domains__domainId_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a mail domain
+		 * @description Deletes the domain with its mailboxes and aliases, and wipes their mail. The mail server picks the change up from a background job queued here.
+		 */
+		delete: operations["delete_mail_domains__domainId_"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/mail/mailboxes": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** List mailboxes */
+		get: operations["get_mail_mailboxes"];
+		put?: never;
+		/**
+		 * Create a mailbox
+		 * @description Adds a mailbox, or with kind noreply a send-only address for apps. The mail server picks the change up from a background job queued here.
+		 */
+		post: operations["post_mail_mailboxes"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/mail/mailboxes/{mailboxId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a mailbox */
+		get: operations["get_mail_mailboxes__mailboxId_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Delete a mailbox
+		 * @description Deletes the mailbox and wipes its mail. The mail server picks the change up from a background job queued here.
+		 */
+		delete: operations["delete_mail_mailboxes__mailboxId_"];
+		options?: never;
+		head?: never;
+		/**
+		 * Update a mailbox
+		 * @description Changes the fields sent, keeping the rest; password sets a new one. Its kind can't change. The mail server picks the change up from a background job queued here.
+		 */
+		patch: operations["patch_mail_mailboxes__mailboxId_"];
+		trace?: never;
+	};
 	"/manifest.schema.json": {
 		parameters: {
 			query?: never;
@@ -1210,6 +1367,151 @@ export interface paths {
 		 * @description Revokes the secret: it stops working at once.
 		 */
 		delete: operations["delete_oidc_apps__appId__secrets__secretId_"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/pipelines": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * CI pipeline stats
+		 * @description Totals over every watched repository's runs, over the last 30 days and all time.
+		 */
+		get: operations["get_pipelines"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/pipelines/repositories": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List watched repositories
+		 * @description Watched repositories by name, each with its linked services and 30-day totals. Paginated like every list; q matches the path.
+		 */
+		get: operations["get_pipelines_repositories"];
+		put?: never;
+		/**
+		 * Watch a repository
+		 * @description Starts watching a repository on a provider the caller is connected to (GitHub, GitLab or Gitea), read with the caller's connection: links the services building from it, registers its CI webhook and queues its first sync. A repository already watched comes back as is, with 200.
+		 */
+		post: operations["post_pipelines_repositories"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/pipelines/repositories/{repositoryId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a watched repository
+		 * @description The repository with its totals over the last 30 days and all time, per workflow, and the rates in force.
+		 */
+		get: operations["get_pipelines_repositories__repositoryId_"];
+		put?: never;
+		post?: never;
+		/**
+		 * Stop watching a repository
+		 * @description Removes its CI webhook from the provider and deletes it with its stored runs; its services are unlinked. Traces already exported stay until they expire.
+		 */
+		delete: operations["delete_pipelines_repositories__repositoryId_"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/pipelines/repositories/{repositoryId}/runs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a repository's CI runs
+		 * @description Newest first. Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest. Each run comes without its jobs, which the run's own route returns. q matches the workflow, branch, commit title or SHA and the repository.
+		 */
+		get: operations["get_pipelines_repositories__repositoryId__runs"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/pipelines/repositories/{repositoryId}/runs/{runId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a CI run */
+		get: operations["get_pipelines_repositories__repositoryId__runs__runId_"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/pipelines/repositories/{repositoryId}/sync": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Sync a repository's CI runs now
+		 * @description Queues a sync of its latest runs as a background job, reusing one already queued. Poll /jobs/{jobId} for its progress.
+		 */
+		post: operations["post_pipelines_repositories__repositoryId__sync"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/pipelines/runs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List CI runs of every watched repository
+		 * @description Newest first. Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest. Each run comes without its jobs, which the run's own route returns. q matches the workflow, branch, commit title or SHA and the repository.
+		 */
+		get: operations["get_pipelines_runs"];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2722,6 +3024,26 @@ export interface paths {
 		 * @description Queues a backup of the volume, like its Run now button. A backup already queued for it is returned instead of a second one. Follow it with GET /jobs/{jobId} or GET /backups?volume={volumeId}.
 		 */
 		post: operations["post_volumes__volumeId__backup"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/webhooks/pipelines/{repositoryId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Receive a CI webhook delivery
+		 * @description Where a provider delivers a watched repository's CI events: GitHub and Gitea workflow_run and workflow_job, GitLab pipeline and job events. Signed like a push webhook (X-Hub-Signature-256, X-Gitea-Signature, X-Gitlab-Token) with the secret on the repository's Settings tab; a verified CI event queues a sync. No API key: the signature is the authentication.
+		 */
+		post: operations["post_webhooks_pipelines__repositoryId_"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4683,6 +5005,71 @@ export interface operations {
 			};
 			/** @description Not found */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_disks: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The host's disks */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The block device, e.g. /dev/sdb1 */
+						device: string;
+						/** @description e.g. ext4, xfs, btrfs */
+						filesystem: string;
+						freeBytes: number;
+						/** @description Where it's mounted on the host: the disk a Docker volume's `disk` names */
+						mountPoint: string;
+						totalBytes: number;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description The worker couldn't read them */
+			502: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -8190,6 +8577,1036 @@ export interface operations {
 			};
 		};
 	};
+	get_mail_aliases: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Every alias, by domain then address */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description @domain for a catch-all */
+						address: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						destinations: string[];
+						domain: string;
+						domainId: string;
+						enabled: boolean;
+						id: string;
+						localPart: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	post_mail_aliases: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The addresses mail to it is forwarded to */
+					destinations: string[];
+					/** @description The mail domain's id */
+					domainId: string;
+					/** @description Defaults to true. */
+					enabled?: boolean;
+					/** @description The part before the @. Empty makes it the domain's catch-all. */
+					localPart: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description @domain for a catch-all */
+						address: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						destinations: string[];
+						domain: string;
+						domainId: string;
+						enabled: boolean;
+						id: string;
+						localPart: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+					};
+				};
+			};
+			/** @description Invalid body, or the server refused it */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_mail_aliases__aliasId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Alias id */
+				aliasId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The alias */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description @domain for a catch-all */
+						address: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						destinations: string[];
+						domain: string;
+						domainId: string;
+						enabled: boolean;
+						id: string;
+						localPart: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_mail_aliases__aliasId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Alias id */
+				aliasId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted, the mail server is being updated */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_mail_aliases__aliasId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Alias id */
+				aliasId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					destinations?: string[];
+					enabled?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description @domain for a catch-all */
+						address: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						destinations: string[];
+						domain: string;
+						domainId: string;
+						enabled: boolean;
+						id: string;
+						localPart: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+					};
+				};
+			};
+			/** @description Invalid body, or the server refused it */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_mail_domains: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Every mail domain, alphabetically */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						/** @description The DKIM public key, base64 SPKI. The private key is never returned. */
+						dkimPublicKey: string;
+						dkimSelector: string;
+						id: string;
+						name: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string | null;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	post_mail_domains: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The id of one of the DNS page's domains (GET /domains) to receive and sign mail for. */
+					dnsDomainId: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						/** @description The DKIM public key, base64 SPKI. The private key is never returned. */
+						dkimPublicKey: string;
+						dkimSelector: string;
+						id: string;
+						name: string;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string | null;
+					};
+				};
+			};
+			/** @description Invalid body, or the server refused it */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_mail_domains__domainId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Mail domain id */
+				domainId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The mail domain */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						/** @description The DKIM public key, base64 SPKI. The private key is never returned. */
+						dkimPublicKey: string;
+						dkimSelector: string;
+						id: string;
+						name: string;
+						records: {
+							/** @description What public resolvers answer for the record's name and type */
+							found: string[];
+							record: {
+								content: string;
+								name: string;
+								priority: number | null;
+								purpose: string;
+								/** @enum {string} */
+								type: "A" | "MX" | "TXT";
+							};
+							/** @enum {string} */
+							state: "ok" | "different" | "missing";
+						}[];
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						userId: string | null;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_mail_domains__domainId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Mail domain id */
+				domainId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted, the mail server is being updated */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_mail_mailboxes: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Every mailbox and noreply address, by domain then address */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						address: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						displayName: string | null;
+						domain: string;
+						domainId: string;
+						enabled: boolean;
+						id: string;
+						/**
+						 * @description mailbox: an inbox people read. noreply: send only, incoming mail is refused.
+						 * @enum {string}
+						 */
+						kind: "mailbox" | "noreply";
+						localPart: string;
+						ownerId: string | null;
+						quotaMb: number | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	post_mail_mailboxes: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The name shown beside the address. Null or empty clears it. */
+					displayName?: string | null;
+					/** @description The mail domain's id */
+					domainId: string;
+					/** @description Whether it can sign in and receive mail. Defaults to true. */
+					enabled?: boolean;
+					/**
+					 * @description mailbox: an inbox people read. noreply: send only, for apps sending transactional mail, incoming mail is refused. Defaults to mailbox.
+					 * @enum {string}
+					 */
+					kind?: "mailbox" | "noreply";
+					/** @description The part before the @ */
+					localPart: string;
+					/** @description The Homerun account that owns it and can change its password from their own account settings. Null for nobody. */
+					ownerId?: string | null;
+					/** @description Its sign-in password, 10 characters to 72 bytes. Write-only, never returned. */
+					password: string;
+					/** @description Storage limit in MB, null for none. Ignored for a noreply address. */
+					quotaMb?: number | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						address: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						displayName: string | null;
+						domain: string;
+						domainId: string;
+						enabled: boolean;
+						id: string;
+						/**
+						 * @description mailbox: an inbox people read. noreply: send only, incoming mail is refused.
+						 * @enum {string}
+						 */
+						kind: "mailbox" | "noreply";
+						localPart: string;
+						ownerId: string | null;
+						quotaMb: number | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+					};
+				};
+			};
+			/** @description Invalid body, or the server refused it */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_mail_mailboxes__mailboxId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Mailbox id */
+				mailboxId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The mailbox */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						address: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						displayName: string | null;
+						domain: string;
+						domainId: string;
+						enabled: boolean;
+						id: string;
+						/**
+						 * @description mailbox: an inbox people read. noreply: send only, incoming mail is refused.
+						 * @enum {string}
+						 */
+						kind: "mailbox" | "noreply";
+						localPart: string;
+						ownerId: string | null;
+						quotaMb: number | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_mail_mailboxes__mailboxId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Mailbox id */
+				mailboxId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deleted, the mail server is being updated */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_mail_mailboxes__mailboxId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Mailbox id */
+				mailboxId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The name shown beside the address. Null or empty clears it. */
+					displayName?: string | null;
+					enabled?: boolean;
+					/** @description The Homerun account that owns it and can change its password from their own account settings. Null for nobody. */
+					ownerId?: string | null;
+					/** @description Its sign-in password, 10 characters to 72 bytes. Write-only, never returned. */
+					password?: string;
+					/** @description Storage limit in MB, null for none. Ignored for a noreply address. */
+					quotaMb?: number | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						address: string;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						displayName: string | null;
+						domain: string;
+						domainId: string;
+						enabled: boolean;
+						id: string;
+						/**
+						 * @description mailbox: an inbox people read. noreply: send only, incoming mail is refused.
+						 * @enum {string}
+						 */
+						kind: "mailbox" | "noreply";
+						localPart: string;
+						ownerId: string | null;
+						quotaMb: number | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+					};
+				};
+			};
+			/** @description Invalid body, or the server refused it */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	"get_manifest.schema.json": {
 		parameters: {
 			query?: never;
@@ -11438,6 +12855,976 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_pipelines: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description CI totals */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						allTimeStats: {
+							/** @description Mean time runs waited before starting */
+							avgQueueMs: number | null;
+							/** @description Every job's minutes, each rounded up, every attempt */
+							billableMinutes: number;
+							/** @description At the repository's rates */
+							costUsd: number;
+							failed: number;
+							/** @description The workflow (or repository) these totals are for, null for a total */
+							name: string | null;
+							/** @description Median run duration */
+							p50Ms: number | null;
+							p95Ms: number | null;
+							repositoryId: string | null;
+							runs: number;
+							succeeded: number;
+						};
+						/** @description How many repositories are watched */
+						repositories: number;
+						stats: {
+							/** @description Mean time runs waited before starting */
+							avgQueueMs: number | null;
+							/** @description Every job's minutes, each rounded up, every attempt */
+							billableMinutes: number;
+							/** @description At the repository's rates */
+							costUsd: number;
+							failed: number;
+							/** @description The workflow (or repository) these totals are for, null for a total */
+							name: string | null;
+							/** @description Median run duration */
+							p50Ms: number | null;
+							p95Ms: number | null;
+							repositoryId: string | null;
+							runs: number;
+							succeeded: number;
+						};
+						windowDays: number;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_pipelines_repositories: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of repositories */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						defaultBranch: string | null;
+						/** @description The path on the provider, "owner/repo" */
+						fullName: string;
+						id: string;
+						/** @description Services showing its runs on their Pipelines tab and filing its CI traces */
+						linkedServices: {
+							id: string;
+							name: string;
+						}[];
+						/** @description Its own runner rates, null for the provider's defaults */
+						pipelineRates:
+							| {
+									/** @description Matches a job whose runner label starts with it */
+									label: string;
+									/** @description Dollars per minute */
+									rate: number;
+							  }[]
+							| null;
+						/** @description Whether its runs are synced */
+						pipelinesEnabled: boolean;
+						/** @description Why the last sync failed */
+						pipelinesError: string | null;
+						pipelinesSyncedAt: string | null;
+						providerId: string;
+						/** @enum {string} */
+						providerKind: "github" | "gitlab" | "gitea" | "bitbucket";
+						/** @description Totals over the last 30 days, null before its first run */
+						stats: {
+							/** @description Mean time runs waited before starting */
+							avgQueueMs: number | null;
+							/** @description Every job's minutes, each rounded up, every attempt */
+							billableMinutes: number;
+							/** @description At the repository's rates */
+							costUsd: number;
+							failed: number;
+							/** @description The workflow (or repository) these totals are for, null for a total */
+							name: string | null;
+							/** @description Median run duration */
+							p50Ms: number | null;
+							p95Ms: number | null;
+							repositoryId: string | null;
+							runs: number;
+							succeeded: number;
+						} | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						/** @description Whose connection to the provider reads it */
+						userId: string;
+						webUrl: string;
+						/** @description Why Homerun couldn't register its CI webhook */
+						webhookError: string | null;
+						/** @description The provider's id for its CI webhook, null while it's polled instead */
+						webhookId: string | null;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	post_pipelines_repositories: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description The branch the repository's default runs are on */
+					defaultBranch?: string | null;
+					/** @description The path on the provider: "owner/repo", or a GitLab "group/subgroup/repo" */
+					fullName: string;
+					/** @description The git provider it lives on, from /git-providers; the caller must be connected to it */
+					providerId: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Already watched */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						defaultBranch: string | null;
+						/** @description The path on the provider, "owner/repo" */
+						fullName: string;
+						id: string;
+						/** @description Services showing its runs on their Pipelines tab and filing its CI traces */
+						linkedServices: {
+							id: string;
+							name: string;
+						}[];
+						/** @description Its own runner rates, null for the provider's defaults */
+						pipelineRates:
+							| {
+									/** @description Matches a job whose runner label starts with it */
+									label: string;
+									/** @description Dollars per minute */
+									rate: number;
+							  }[]
+							| null;
+						/** @description Whether its runs are synced */
+						pipelinesEnabled: boolean;
+						/** @description Why the last sync failed */
+						pipelinesError: string | null;
+						pipelinesSyncedAt: string | null;
+						providerId: string;
+						/** @enum {string} */
+						providerKind: "github" | "gitlab" | "gitea" | "bitbucket";
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						/** @description Whose connection to the provider reads it */
+						userId: string;
+						webUrl: string;
+						/** @description Why Homerun couldn't register its CI webhook */
+						webhookError: string | null;
+						/** @description The provider's id for its CI webhook, null while it's polled instead */
+						webhookId: string | null;
+					};
+				};
+			};
+			/** @description Watched */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						defaultBranch: string | null;
+						/** @description The path on the provider, "owner/repo" */
+						fullName: string;
+						id: string;
+						/** @description Services showing its runs on their Pipelines tab and filing its CI traces */
+						linkedServices: {
+							id: string;
+							name: string;
+						}[];
+						/** @description Its own runner rates, null for the provider's defaults */
+						pipelineRates:
+							| {
+									/** @description Matches a job whose runner label starts with it */
+									label: string;
+									/** @description Dollars per minute */
+									rate: number;
+							  }[]
+							| null;
+						/** @description Whether its runs are synced */
+						pipelinesEnabled: boolean;
+						/** @description Why the last sync failed */
+						pipelinesError: string | null;
+						pipelinesSyncedAt: string | null;
+						providerId: string;
+						/** @enum {string} */
+						providerKind: "github" | "gitlab" | "gitea" | "bitbucket";
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						/** @description Whose connection to the provider reads it */
+						userId: string;
+						webUrl: string;
+						/** @description Why Homerun couldn't register its CI webhook */
+						webhookError: string | null;
+						/** @description The provider's id for its CI webhook, null while it's polled instead */
+						webhookId: string | null;
+					};
+				};
+			};
+			/** @description Invalid body, a provider that's gone or without CI, or one the caller isn't connected to */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_pipelines_repositories__repositoryId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Watched repository id */
+				repositoryId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The repository */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						allTimeStats: {
+							/** @description Mean time runs waited before starting */
+							avgQueueMs: number | null;
+							/** @description Every job's minutes, each rounded up, every attempt */
+							billableMinutes: number;
+							/** @description At the repository's rates */
+							costUsd: number;
+							failed: number;
+							/** @description The workflow (or repository) these totals are for, null for a total */
+							name: string | null;
+							/** @description Median run duration */
+							p50Ms: number | null;
+							p95Ms: number | null;
+							repositoryId: string | null;
+							runs: number;
+							succeeded: number;
+						};
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						defaultBranch: string | null;
+						/** @description The path on the provider, "owner/repo" */
+						fullName: string;
+						id: string;
+						/** @description Services showing its runs on their Pipelines tab and filing its CI traces */
+						linkedServices: {
+							id: string;
+							name: string;
+						}[];
+						/** @description Its own runner rates, null for the provider's defaults */
+						pipelineRates:
+							| {
+									/** @description Matches a job whose runner label starts with it */
+									label: string;
+									/** @description Dollars per minute */
+									rate: number;
+							  }[]
+							| null;
+						/** @description Whether its runs are synced */
+						pipelinesEnabled: boolean;
+						/** @description Why the last sync failed */
+						pipelinesError: string | null;
+						pipelinesSyncedAt: string | null;
+						providerId: string;
+						/** @enum {string} */
+						providerKind: "github" | "gitlab" | "gitea" | "bitbucket";
+						/** @description The rates in force */
+						rates: {
+							/** @description Matches a job whose runner label starts with it */
+							label: string;
+							/** @description Dollars per minute */
+							rate: number;
+						}[];
+						/** @description Whether those are its own rather than the defaults */
+						ratesCustom: boolean;
+						/** @description Totals over the last 30 days */
+						stats: {
+							/** @description Mean time runs waited before starting */
+							avgQueueMs: number | null;
+							/** @description Every job's minutes, each rounded up, every attempt */
+							billableMinutes: number;
+							/** @description At the repository's rates */
+							costUsd: number;
+							failed: number;
+							/** @description The workflow (or repository) these totals are for, null for a total */
+							name: string | null;
+							/** @description Median run duration */
+							p50Ms: number | null;
+							p95Ms: number | null;
+							repositoryId: string | null;
+							runs: number;
+							succeeded: number;
+						};
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						/** @description Whose connection to the provider reads it */
+						userId: string;
+						webUrl: string;
+						/** @description Why Homerun couldn't register its CI webhook */
+						webhookError: string | null;
+						/** @description The provider's id for its CI webhook, null while it's polled instead */
+						webhookId: string | null;
+						/** @description The same 30-day totals per workflow, busiest first */
+						workflows: {
+							/** @description Mean time runs waited before starting */
+							avgQueueMs: number | null;
+							/** @description Every job's minutes, each rounded up, every attempt */
+							billableMinutes: number;
+							/** @description At the repository's rates */
+							costUsd: number;
+							failed: number;
+							/** @description The workflow (or repository) these totals are for, null for a total */
+							name: string | null;
+							/** @description Median run duration */
+							p50Ms: number | null;
+							p95Ms: number | null;
+							repositoryId: string | null;
+							runs: number;
+							succeeded: number;
+						}[];
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	delete_pipelines_repositories__repositoryId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Watched repository id */
+				repositoryId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Stopped watching */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						success: boolean;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_pipelines_repositories__repositoryId__runs: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+				/** @description Comma-separated statuses to keep: queued, running, success, failure, cancelled, skipped */
+				status?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Watched repository id */
+				repositoryId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of runs */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						actor: string | null;
+						attempt: number;
+						billableMinutes: number;
+						branch: string | null;
+						commitSha: string | null;
+						costUsd: number;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						durationMs: number | null;
+						/** @description What triggered it: push, pull_request, schedule... */
+						event: string | null;
+						/** @description The provider's run id */
+						externalId: string;
+						finishedAt: string | null;
+						id: string;
+						/** @description The workflow's name */
+						name: string;
+						number: number | null;
+						/** @enum {string} */
+						provider: "github" | "gitlab" | "gitea";
+						queueMs: number | null;
+						repositoryId: string;
+						repositoryName: string;
+						startedAt: string | null;
+						/** @enum {string} */
+						status:
+							| "queued"
+							| "running"
+							| "success"
+							| "failure"
+							| "cancelled"
+							| "skipped";
+						/** @description The commit title */
+						title: string | null;
+						traceExported: boolean;
+						/** @description Its trace, once finished and exported */
+						traceId: string | null;
+						/** @description The service its trace is filed under, null for Homerun's own */
+						traceServiceId: string | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						url: string | null;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_pipelines_repositories__repositoryId__runs__runId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Watched repository id */
+				repositoryId: string;
+				/** @description Run id, from the runs list */
+				runId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The run with its jobs */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						actor: string | null;
+						attempt: number;
+						billableMinutes: number;
+						branch: string | null;
+						commitSha: string | null;
+						costUsd: number;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						durationMs: number | null;
+						/** @description What triggered it: push, pull_request, schedule... */
+						event: string | null;
+						/** @description The provider's run id */
+						externalId: string;
+						finishedAt: string | null;
+						id: string;
+						/** @description Every job of every attempt; cost sums them all, timings use the latest attempt */
+						jobs: {
+							attempt: number;
+							billableMinutes: number;
+							costUsd: number;
+							durationMs: number | null;
+							finishedAt: string | null;
+							/** @description Its runner labels */
+							labels: string[];
+							name: string;
+							runner: string | null;
+							/** @description GitLab's stage */
+							stage: string | null;
+							startedAt: string | null;
+							/** @enum {string} */
+							status:
+								| "queued"
+								| "running"
+								| "success"
+								| "failure"
+								| "cancelled"
+								| "skipped";
+							/** @description Empty on GitLab */
+							steps: {
+								finishedAt: string | null;
+								name: string;
+								startedAt: string | null;
+								/** @enum {string} */
+								status:
+									| "queued"
+									| "running"
+									| "success"
+									| "failure"
+									| "cancelled"
+									| "skipped";
+							}[];
+							url: string | null;
+						}[];
+						/** @description The workflow's name */
+						name: string;
+						number: number | null;
+						/** @enum {string} */
+						provider: "github" | "gitlab" | "gitea";
+						queueMs: number | null;
+						repositoryId: string;
+						startedAt: string | null;
+						/** @enum {string} */
+						status:
+							| "queued"
+							| "running"
+							| "success"
+							| "failure"
+							| "cancelled"
+							| "skipped";
+						/** @description The commit title */
+						title: string | null;
+						traceExported: boolean;
+						/** @description Its trace, once finished and exported */
+						traceId: string | null;
+						/** @description The service its trace is filed under, null for Homerun's own */
+						traceServiceId: string | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						url: string | null;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_pipelines_repositories__repositoryId__sync: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Watched repository id */
+				repositoryId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Queued */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						jobId: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_pipelines_runs: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 200) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+				/** @description Comma-separated statuses to keep: queued, running, success, failure, cancelled, skipped */
+				status?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description One page of runs */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						actor: string | null;
+						attempt: number;
+						billableMinutes: number;
+						branch: string | null;
+						commitSha: string | null;
+						costUsd: number;
+						/** @description ISO 8601 timestamp */
+						createdAt: string;
+						durationMs: number | null;
+						/** @description What triggered it: push, pull_request, schedule... */
+						event: string | null;
+						/** @description The provider's run id */
+						externalId: string;
+						finishedAt: string | null;
+						id: string;
+						/** @description The workflow's name */
+						name: string;
+						number: number | null;
+						/** @enum {string} */
+						provider: "github" | "gitlab" | "gitea";
+						queueMs: number | null;
+						repositoryId: string;
+						repositoryName: string;
+						startedAt: string | null;
+						/** @enum {string} */
+						status:
+							| "queued"
+							| "running"
+							| "success"
+							| "failure"
+							| "cancelled"
+							| "skipped";
+						/** @description The commit title */
+						title: string | null;
+						traceExported: boolean;
+						/** @description Its trace, once finished and exported */
+						traceId: string | null;
+						/** @description The service its trace is filed under, null for Homerun's own */
+						traceServiceId: string | null;
+						/** @description ISO 8601 timestamp */
+						updatedAt: string;
+						url: string | null;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
 					};
 				};
 			};
@@ -22906,7 +25293,7 @@ export interface operations {
 					/** @description Stop the services using the volume during a backup. */
 					backupStopServices?: boolean;
 					description?: string | null;
-					/** @description For a Docker volume, the host mount point to keep it on (a disk), instead of Docker's default location. */
+					/** @description For a Docker volume, the host mount point to keep it on (a disk's mountPoint from GET /disks, list_disks over MCP), instead of Docker's default location. */
 					disk?: string | null;
 					/** @enum {string} */
 					kind: "bind" | "volume";
@@ -23283,6 +25670,69 @@ export interface operations {
 				};
 			};
 			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example You don't have permission to change Services. */
+						error: string;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_webhooks_pipelines__repositoryId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Watched repository id */
+				repositoryId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description A sync was queued, or the delivery was ignored */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Why nothing was queued: not a CI event, or syncing is off */
+						ignored?: string;
+						jobId?: string;
+					};
+				};
+			};
+			/** @description Bad signature */
 			401: {
 				headers: {
 					[name: string]: unknown;

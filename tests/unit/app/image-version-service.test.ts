@@ -67,6 +67,7 @@ let pullGate: Promise<void> | null = null;
 let pullError: unknown = null;
 let inspects: (Inspect | null)[] = [];
 let logOutput: string | null = null;
+let diagnosis: Record<string, unknown> | null = null;
 let mounts: Record<string, unknown>[] = [];
 let copyExitCode = 0;
 const oneOffs: Record<string, unknown>[] = [];
@@ -173,6 +174,7 @@ beforeEach(() => {
 	pullError = null;
 	inspects = [{ Health: { Status: "healthy" }, Running: true }];
 	logOutput = null;
+	diagnosis = null;
 	mounts = [];
 	copyExitCode = 0;
 	for (const list of [
@@ -281,6 +283,12 @@ beforeEach(() => {
 				return {
 					Config: { Healthcheck: imageHealthcheck, Labels: imageLabels },
 				};
+			}
+			if (path.endsWith("/diagnosis")) {
+				if (!diagnosis) {
+					throw new WorkerRequestError("gone", 404);
+				}
+				return diagnosis;
 			}
 			const state = inspects.length > 1 ? inspects.shift() : inspects[0];
 			return state ? { State: state } : {};
@@ -894,10 +902,16 @@ describe("ImageVersionService update trials", () => {
 		});
 		registryTags = [{ digest: "sha256:new", name: "1.24.4" }];
 		inspects = [{ Health: { Status: "unhealthy" }, Running: true }];
-		logOutput = "\u001b[31mpanic: no database\u001b[0m\n";
+		diagnosis = {
+			causes: [],
+			exitCode: 0,
+			meaning: "",
+			oomKilled: false,
+			output: "\u001b[31mpanic: no database\u001b[0m",
+		};
 		const state = await ImageVersionService.check(svc);
 		const message =
-			"Failed all 4 attempts. The new version failed its healthcheck.\n\npanic: no database";
+			"Failed all 4 attempts. The new version failed its healthcheck.\n\nIts last output:\n  panic: no database";
 		expect(state?.trial).toMatchObject({
 			attempts: 4,
 			message,
@@ -927,6 +941,21 @@ describe("ImageVersionService update trials", () => {
 			message: "Failed all 4 attempts. The new version exited with code 3.",
 			status: "failed",
 		});
+		diagnosis = {
+			causes: [
+				"The container's command isn't in the image: check the command and entrypoint overrides.",
+			],
+			exitCode: 127,
+			meaning: "its command wasn't found in the image",
+			oomKilled: false,
+			output: "/bin/sh: gitea: not found",
+		};
+		inspects = [{ ExitCode: 127, Running: false }];
+		const missing = fakeService({ updateTrialEnabled: true });
+		expect((await ImageVersionService.check(missing.svc))?.trial?.message).toBe(
+			"Failed all 4 attempts. The new version exited with code 127: its command wasn't found in the image.\n\nIts last output:\n  /bin/sh: gitea: not found\nLikely cause: The container's command isn't in the image: check the command and entrypoint overrides.",
+		);
+		diagnosis = null;
 		inspects = [null];
 		const vanished = fakeService({ updateTrialEnabled: true });
 		expect(

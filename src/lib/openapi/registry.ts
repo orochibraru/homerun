@@ -13,6 +13,8 @@ import { dependencyRoutes } from "./dependencies";
 import { errorRoutes } from "./errors";
 import { iacRoutes } from "./iac";
 import { logHistoryRoutes } from "./log-history";
+import { mailRoutes } from "./mail";
+import { pipelineRoutes } from "./pipelines";
 import { previewRoutes } from "./previews";
 import { redirectRoutes } from "./redirects";
 import { resourceRoutes } from "./resources";
@@ -587,8 +589,10 @@ export const routes: RouteDef[] = [
 	...serviceEventRoutes,
 	...errorRoutes,
 	...traceRoutes,
+	...pipelineRoutes,
 	...backupRoutes,
 	...redirectRoutes,
+	...mailRoutes,
 	...iacRoutes,
 	...resourceRoutes,
 ];

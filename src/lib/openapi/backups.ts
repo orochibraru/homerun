@@ -71,6 +71,17 @@ export const volumeResponse = z.object({
 	userId: z.string(),
 });
 
+export const hostDiskResponse = z.object({
+	device: z.string().meta({ description: "The block device, e.g. /dev/sdb1" }),
+	filesystem: z.string().meta({ description: "e.g. ext4, xfs, btrfs" }),
+	freeBytes: z.number().int(),
+	mountPoint: z.string().meta({
+		description:
+			"Where it's mounted on the host: the disk a Docker volume's `disk` names",
+	}),
+	totalBytes: z.number().int(),
+});
+
 export const backupRoutes: RouteDef[] = [
 	{
 		description:
@@ -119,6 +130,26 @@ export const backupRoutes: RouteDef[] = [
 			401: { description: "Unauthorized", schema: errorResponse },
 		},
 		summary: "List storage volumes",
+		tags: ["Backups"],
+	},
+	{
+		description:
+			"The host's disks a Docker volume can be kept on, root first: each mounted filesystem with its size and free space, system mounts (/boot, /var/lib/docker, /run...) left out. Pass a disk's mountPoint as a new volume's disk. Read from a throwaway container and cached for a minute.",
+		method: "get",
+		path: "/disks",
+		responses: {
+			200: {
+				description: "The host's disks",
+				isArray: true,
+				schema: hostDiskResponse,
+			},
+			401: { description: "Unauthorized", schema: errorResponse },
+			502: {
+				description: "The worker couldn't read them",
+				schema: errorResponse,
+			},
+		},
+		summary: "List the host's disks",
 		tags: ["Backups"],
 	},
 	{

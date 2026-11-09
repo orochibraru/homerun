@@ -35,7 +35,7 @@ func (f *follower) run(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		logging.Warnf(scope, "couldn't read where %s's logs stopped: %s", f.workload.ServiceID, err)
+		logging.Warnf(scope, "couldn't read where %s's logs stopped: %s", f.workload.Owner, err)
 	}
 	for ctx.Err() == nil {
 		shipped, err := f.ship(ctx)
@@ -72,7 +72,7 @@ func (f *follower) resume(ctx context.Context) error {
 	if !f.workload.Swarm {
 		instance = ShortID(instance)
 	}
-	last, lastErr := s.Store.LastTime(ctx, f.workload.ServiceID, instance, f.workload.Swarm)
+	last, lastErr := s.Store.LastTime(ctx, f.workload.Owner, instance, f.workload.Swarm)
 	f.last = floor
 	if lastErr == nil && last.After(floor) {
 		f.last = last
@@ -127,7 +127,7 @@ func (f *follower) ship(ctx context.Context) (int, error) {
 		err := s.Store.Insert(insertCtx, batch)
 		cancel()
 		if err != nil {
-			logging.Warnf(scope, "dropped %d log lines of %s: %s", len(batch), f.workload.ServiceID, err)
+			logging.Warnf(scope, "dropped %d log lines of %s: %s", len(batch), f.workload.Owner, err)
 		} else {
 			shipped += len(batch)
 		}
@@ -166,7 +166,7 @@ func (f *follower) line(ctx context.Context, stream, raw string) (Line, bool) {
 	return Line{
 		DeploymentID: DeploymentAt(f.revisions(ctx), parsed.Time),
 		Instance:     instance,
-		ServiceID:    f.workload.ServiceID,
+		Owner:        f.workload.Owner,
 		Stream:       stream,
 		Text:         Clean(parsed.Text),
 		Time:         parsed.Time,
@@ -174,17 +174,21 @@ func (f *follower) line(ctx context.Context, stream, raw string) (Line, bool) {
 }
 
 // revisions is the workload's deployments, re-read at most every 30 seconds
-// so a swarm service update's new revision is picked up.
+// so a swarm service update's new revision is picked up. Only a service has
+// any.
 func (f *follower) revisions(ctx context.Context) []Deployment {
 	s := f.shipper
+	if f.workload.Owner.ServiceID == "" {
+		return nil
+	}
 	if !f.deploymentsAt.IsZero() && s.now().Sub(f.deploymentsAt) < deploymentsMaxAge {
 		return f.deployments
 	}
 	f.deploymentsAt = s.now()
-	deployments, err := s.Store.Deployments(ctx, f.workload.ServiceID, f.workload.ID)
+	deployments, err := s.Store.Deployments(ctx, f.workload.Owner.ServiceID, f.workload.ID)
 	if err != nil {
 		if ctx.Err() == nil {
-			logging.Warnf(scope, "couldn't read %s's deployments: %s", f.workload.ServiceID, err)
+			logging.Warnf(scope, "couldn't read %s's deployments: %s", f.workload.Owner, err)
 		}
 		return f.deployments
 	}

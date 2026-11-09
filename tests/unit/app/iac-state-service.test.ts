@@ -401,3 +401,160 @@ describe("updateProject", () => {
 		).rejects.toThrow("Pulumi");
 	});
 });
+
+describe("IacStateService.summary", () => {
+	test("carries the latest serial, its time and whether the state is locked", async () => {
+		const latest = Object.assign(version(4), {
+			toJSON: () => ({ createdAt: new Date("2026-01-02T00:00:00Z") }),
+		});
+		restorers.push(
+			spyOn(IacStateVersionDTO, "latest").mockResolvedValue(latest),
+		);
+		const locked = Object.assign(project(lockRow("l1")), {
+			toJSON: () => ({
+				bucket: "tfstate",
+				createdAt: new Date("2026-01-01T00:00:00Z"),
+				id: "p1",
+				name: "Lab",
+				prefix: "tf",
+				scope: "all",
+				slug: "lab",
+				storeId: "s1",
+				tool: "pulumi",
+			}),
+		});
+		const summary = await IacStateService.summary(locked);
+		expect(summary).toMatchObject({
+			locked: true,
+			serial: 4,
+			tool: "pulumi",
+			updatedAt: new Date("2026-01-02T00:00:00Z"),
+		});
+	});
+});
+
+describe("IacStateService Pulumi backend", () => {
+	function listing(
+		pages: Record<
+			string,
+			{
+				folders: string[];
+				objects: { key: string; lastModified: string | null }[];
+				nextToken: string | null;
+			}[]
+		>,
+	) {
+		const listObjects = mock(
+			async (_bucket: string, prefix: string, token: string | null) => {
+				const forPrefix = pages[prefix] ?? [];
+				return (
+					forPrefix[token ? Number(token) : 0] ?? {
+						folders: [],
+						nextToken: null,
+						objects: [],
+					}
+				);
+			},
+		);
+		restorers.push(
+			spyOn(ObjectStoreDTO, "get").mockResolvedValue({} as Store),
+			spyOn(ObjectStorageService, "client").mockResolvedValue({
+				listObjects,
+			} as unknown as Awaited<ReturnType<typeof ObjectStorageService.client>>),
+		);
+		return listObjects;
+	}
+
+	test("the login command points at the project's folder, null once its store is gone", async () => {
+		restorers.push(
+			spyOn(ObjectStoreDTO, "get").mockResolvedValue({
+				region: "garage",
+			} as Store),
+			spyOn(ObjectStorageService, "publicEndpoint").mockResolvedValue(
+				"http://s3.example.test",
+			),
+		);
+		expect(await IacStateService.pulumiLogin(project())).toBe(
+			"pulumi login 's3://tfstate/tf/lab?endpoint=s3.example.test&s3ForcePathStyle=true&region=garage&disableSSL=true'",
+		);
+		restorers.push(spyOn(ObjectStoreDTO, "get").mockResolvedValue(null));
+		expect(await IacStateService.pulumiLogin(project())).toBeNull();
+	});
+
+	test("lists every stack checkpoint across pages and project folders, newest first", async () => {
+		const stacks = "tf/lab/.pulumi/stacks/";
+		listing({
+			[stacks]: [
+				{
+					folders: [`${stacks}web/`],
+					nextToken: "1",
+					objects: [
+						{ key: `${stacks}legacy.json`, lastModified: "2026-01-01" },
+					],
+				},
+				{
+					folders: [],
+					nextToken: null,
+					objects: [
+						{ key: `${stacks}legacy.json.bak`, lastModified: "2026-01-05" },
+					],
+				},
+			],
+			[`${stacks}web/`]: [
+				{
+					folders: [],
+					nextToken: null,
+					objects: [
+						{ key: `${stacks}web/prod.json.gz`, lastModified: "2026-01-03" },
+					],
+				},
+			],
+		});
+		expect(await IacStateService.pulumiStacks(project())).toEqual([
+			{
+				key: `${stacks}web/prod.json.gz`,
+				lastModified: "2026-01-03",
+				name: "web/prod",
+			},
+			{
+				key: `${stacks}legacy.json`,
+				lastModified: "2026-01-01",
+				name: "legacy",
+			},
+		]);
+	});
+
+	test("reads a checkpoint, gunzipping a compressed one, and refuses an unreadable one", async () => {
+		const checkpoint = JSON.stringify({ version: 3 });
+		const objectResponse = mock(async (_bucket: string, key: string) => {
+			if (key.endsWith("missing.json")) {
+				return new Response(null, { status: 404 });
+			}
+			return new Response(
+				key.endsWith(".gz") ? Bun.gzipSync(checkpoint) : checkpoint,
+			);
+		});
+		restorers.push(
+			spyOn(ObjectStoreDTO, "get").mockResolvedValue({} as Store),
+			spyOn(ObjectStorageService, "client").mockResolvedValue({
+				objectResponse,
+			} as unknown as Awaited<ReturnType<typeof ObjectStorageService.client>>),
+		);
+		expect(
+			await IacStateService.pulumiCheckpoint(project(), "a/dev.json"),
+		).toBe(checkpoint);
+		expect(
+			await IacStateService.pulumiCheckpoint(project(), "a/dev.json.gz"),
+		).toBe(checkpoint);
+		await expect(
+			IacStateService.pulumiCheckpoint(project(), "a/missing.json"),
+		).rejects.toThrow("can't be read from tfstate (404)");
+	});
+
+	test("refuses to read once the project's store is gone", async () => {
+		restorers.push(spyOn(ObjectStoreDTO, "get").mockResolvedValue(null));
+		await expect(IacStateService.pulumiStacks(project())).rejects.toThrow(
+			"no longer exists",
+		);
+	});
+});

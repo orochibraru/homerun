@@ -250,6 +250,9 @@ func plural(noun string) string {
 	if before, found := strings.CutSuffix(noun, "y"); found {
 		return before + "ies"
 	}
+	if strings.HasSuffix(noun, "s") || strings.HasSuffix(noun, "x") {
+		return noun + "es"
+	}
 	return noun + "s"
 }
 

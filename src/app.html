@@ -12,6 +12,23 @@
 			rel="icon"
 			type="image/svg+xml"
 		/>
+		<link href="%sveltekit.assets%/manifest.webmanifest" rel="manifest" />
+		<link
+			href="%sveltekit.assets%/icons/apple-touch-icon.png"
+			rel="apple-touch-icon"
+		/>
+		<meta
+			content="#ffffff"
+			media="(prefers-color-scheme: light)"
+			name="theme-color"
+		/>
+		<meta
+			content="#0a0a0c"
+			media="(prefers-color-scheme: dark)"
+			name="theme-color"
+		/>
+		<meta content="yes" name="mobile-web-app-capable" />
+		<meta content="Homerun" name="apple-mobile-web-app-title" />
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

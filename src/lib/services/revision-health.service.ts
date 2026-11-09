@@ -5,12 +5,15 @@ import { NotificationDTO } from "#lib/dto/notification-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
+	diagnosisLines,
+	type ExitDiagnosis,
 	HEALTH_WINDOW,
 	type HealthVerdict,
 	healthVerdict,
 	previousRevision,
 	type ReadinessSample,
 	revisionRoot,
+	withExitMeaning,
 	withReadiness,
 	type WorkloadHealthSample,
 } from "#lib/revisions.js";
@@ -125,6 +128,17 @@ class RevisionHealthServiceClass {
 		);
 	}
 
+	/** Why the workload stopped, as a failed deploy reports it (its swarm service's latest failed task in swarm mode), or null when that can't be read. */
+	async #diagnose(workload: Workload): Promise<ExitDiagnosis | null> {
+		if (workload.swarmServiceId) {
+			return await DockerService.swarmDiagnosis(workload.swarmServiceId);
+		}
+		if (!workload.containerId) {
+			return null;
+		}
+		return await DockerService.containerDiagnosis(workload.containerId);
+	}
+
 	/**
 	 * The service's own HTTP answer on its container port, the uptime probe's
 	 * internal check, or null when that check isn't HTTP (a database's TCP
@@ -232,7 +246,14 @@ class RevisionHealthServiceClass {
 			);
 			return;
 		}
-		await this.#unhealthy({ current, dep, input, reason: verdict.reason });
+		const diagnosis = await this.#diagnose(workload);
+		await this.#unhealthy({
+			current,
+			dep,
+			diagnosis,
+			input,
+			reason: withExitMeaning(verdict.reason, diagnosis),
+		});
 	}
 
 	/**
@@ -278,13 +299,14 @@ class RevisionHealthServiceClass {
 	 * Handles a revision that failed its health check: resolves the
 	 * auto-rollback target, marks the row `rolled_back` or `unhealthy` (and
 	 * stops there, doing nothing else, when a newer deploy already superseded
-	 * it), logs it, enqueues the rollback when eligible (else records why
+	 * it), logs it with the workload's last output, enqueues the rollback when eligible (else records why
 	 * not), records an in-app notification, and dispatches it through
 	 * notification channels.
 	 */
 	async #unhealthy(context: {
 		current: ServiceDTO;
 		dep: DeploymentDTO;
+		diagnosis: ExitDiagnosis | null;
 		input: RevisionWatch;
 		reason: string;
 	}): Promise<void> {
@@ -299,6 +321,11 @@ class RevisionHealthServiceClass {
 			return;
 		}
 		await dep.appendLog(`Revision unhealthy: ${context.reason}`);
+		if (context.diagnosis) {
+			await dep.appendLog(
+				diagnosisLines("Its last output:", context.diagnosis).join("\n"),
+			);
+		}
 		logger.warn(
 			`Revision unhealthy: service=${svc.id} deployment=${dep.id} : ${context.reason}`,
 		);

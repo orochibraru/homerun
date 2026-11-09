@@ -9,6 +9,7 @@ mock.module("$app/env", () => ({
 const {
 	cancelBackupRun,
 	enqueueBackupPrune,
+	enqueueBackupPurge,
 	enqueueVolumeBackup,
 	enqueueVolumeRestore,
 } = await import("../../../src/lib/services/backup-queue");
@@ -120,6 +121,33 @@ describe("enqueueBackupPrune", () => {
 			lockKey: "backup_prune",
 			maxAttempts: 1,
 			payload: { userId: "u1" },
+			type: "backup_prune",
+			userId: "u1",
+		});
+	});
+});
+
+describe("enqueueBackupPurge", () => {
+	test("shares the cleanup's lock and dedupes per repository set", async () => {
+		const enqueue = spyOn(QueueService, "enqueue").mockResolvedValue(
+			{} as never,
+		);
+		restorers.push(enqueue);
+		await enqueueBackupPurge(
+			{ id: "d1" } as never,
+			["vol-a", "vol-b"],
+			"Delete a volume's backups",
+			"u1",
+		);
+		expect(enqueue.mock.calls[0]?.[0]).toMatchObject({
+			dedupeKey: "backup_purge:d1:vol-a,vol-b",
+			lockKey: "backup_prune",
+			maxAttempts: 1,
+			payload: {
+				purge: { destinationId: "d1", repositories: ["vol-a", "vol-b"] },
+				userId: "u1",
+			},
+			title: "Delete a volume's backups",
 			type: "backup_prune",
 			userId: "u1",
 		});

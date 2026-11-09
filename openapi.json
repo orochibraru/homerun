@@ -4088,6 +4088,123 @@
 				"tags": ["Cron jobs"]
 			}
 		},
+		"/disks": {
+			"get": {
+				"description": "The host's disks a Docker volume can be kept on, root first: each mounted filesystem with its size and free space, system mounts (/boot, /var/lib/docker, /run...) left out. Pass a disk's mountPoint as a new volume's disk. Read from a throwaway container and cached for a minute.",
+				"operationId": "get_disks",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"device": {
+												"description": "The block device, e.g. /dev/sdb1",
+												"type": "string"
+											},
+											"filesystem": {
+												"description": "e.g. ext4, xfs, btrfs",
+												"type": "string"
+											},
+											"freeBytes": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"mountPoint": {
+												"description": "Where it's mounted on the host: the disk a Docker volume's `disk` names",
+												"type": "string"
+											},
+											"totalBytes": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											}
+										},
+										"required": [
+											"device",
+											"filesystem",
+											"freeBytes",
+											"mountPoint",
+											"totalBytes"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The host's disks"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"502": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The worker couldn't read them"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List the host's disks",
+				"tags": ["Backups"]
+			}
+		},
 		"/dns-connections": {
 			"get": {
 				"description": "Every DNS connection, in one response.",
@@ -11126,6 +11243,1981 @@
 				"tags": ["Jobs"]
 			}
 		},
+		"/mail/aliases": {
+			"get": {
+				"operationId": "get_mail_aliases",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"address": {
+												"description": "@domain for a catch-all",
+												"type": "string"
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"destinations": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"domain": {
+												"type": "string"
+											},
+											"domainId": {
+												"type": "string"
+											},
+											"enabled": {
+												"type": "boolean"
+											},
+											"id": {
+												"type": "string"
+											},
+											"localPart": {
+												"type": "string"
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											}
+										},
+										"required": [
+											"address",
+											"createdAt",
+											"destinations",
+											"domain",
+											"domainId",
+											"enabled",
+											"id",
+											"localPart",
+											"updatedAt"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "Every alias, by domain then address"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List mail aliases",
+				"tags": ["Mail"]
+			},
+			"post": {
+				"description": "Adds an address forwarding to others; an empty localPart makes it the domain's catch-all. The mail server picks the change up from a background job queued here.",
+				"operationId": "post_mail_aliases",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"destinations": {
+										"description": "The addresses mail to it is forwarded to",
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"minItems": 1,
+										"type": "array"
+									},
+									"domainId": {
+										"description": "The mail domain's id",
+										"minLength": 1,
+										"type": "string"
+									},
+									"enabled": {
+										"description": "Defaults to true.",
+										"type": "boolean"
+									},
+									"localPart": {
+										"description": "The part before the @. Empty makes it the domain's catch-all.",
+										"type": "string"
+									}
+								},
+								"required": ["destinations", "domainId", "localPart"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"address": {
+											"description": "@domain for a catch-all",
+											"type": "string"
+										},
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"destinations": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"domain": {
+											"type": "string"
+										},
+										"domainId": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"localPart": {
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										}
+									},
+									"required": [
+										"address",
+										"createdAt",
+										"destinations",
+										"domain",
+										"domainId",
+										"enabled",
+										"id",
+										"localPart",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Created"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, or the server refused it"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Create a mail alias",
+				"tags": ["Mail"]
+			}
+		},
+		"/mail/aliases/{aliasId}": {
+			"delete": {
+				"description": "The mail server picks the change up from a background job queued here.",
+				"operationId": "delete_mail_aliases__aliasId_",
+				"parameters": [
+					{
+						"description": "Alias id",
+						"in": "path",
+						"name": "aliasId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Deleted, the mail server is being updated"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Delete a mail alias",
+				"tags": ["Mail"]
+			},
+			"get": {
+				"operationId": "get_mail_aliases__aliasId_",
+				"parameters": [
+					{
+						"description": "Alias id",
+						"in": "path",
+						"name": "aliasId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"address": {
+											"description": "@domain for a catch-all",
+											"type": "string"
+										},
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"destinations": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"domain": {
+											"type": "string"
+										},
+										"domainId": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"localPart": {
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										}
+									},
+									"required": [
+										"address",
+										"createdAt",
+										"destinations",
+										"domain",
+										"domainId",
+										"enabled",
+										"id",
+										"localPart",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The alias"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a mail alias",
+				"tags": ["Mail"]
+			},
+			"patch": {
+				"description": "Changes its destinations or whether it's on, keeping what's left out. The mail server picks the change up from a background job queued here.",
+				"operationId": "patch_mail_aliases__aliasId_",
+				"parameters": [
+					{
+						"description": "Alias id",
+						"in": "path",
+						"name": "aliasId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"destinations": {
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"minItems": 1,
+										"type": "array"
+									},
+									"enabled": {
+										"type": "boolean"
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"address": {
+											"description": "@domain for a catch-all",
+											"type": "string"
+										},
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"destinations": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"domain": {
+											"type": "string"
+										},
+										"domainId": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"localPart": {
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										}
+									},
+									"required": [
+										"address",
+										"createdAt",
+										"destinations",
+										"domain",
+										"domainId",
+										"enabled",
+										"id",
+										"localPart",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Updated"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, or the server refused it"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Update a mail alias",
+				"tags": ["Mail"]
+			}
+		},
+		"/mail/domains": {
+			"get": {
+				"operationId": "get_mail_domains",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"dkimPublicKey": {
+												"description": "The DKIM public key, base64 SPKI. The private key is never returned.",
+												"type": "string"
+											},
+											"dkimSelector": {
+												"type": "string"
+											},
+											"id": {
+												"type": "string"
+											},
+											"name": {
+												"type": "string"
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"userId": {
+												"type": ["string", "null"]
+											}
+										},
+										"required": [
+											"createdAt",
+											"dkimPublicKey",
+											"dkimSelector",
+											"id",
+											"name",
+											"updatedAt",
+											"userId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "Every mail domain, alphabetically"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List mail domains",
+				"tags": ["Mail"]
+			},
+			"post": {
+				"description": "Adds one of the DNS page's domains as a mail domain, with a fresh DKIM key and a postmaster@ alias forwarding to the caller's email. The mail server picks the change up from a background job queued here.",
+				"operationId": "post_mail_domains",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"dnsDomainId": {
+										"description": "The id of one of the DNS page's domains (GET /domains) to receive and sign mail for.",
+										"minLength": 1,
+										"type": "string"
+									}
+								},
+								"required": ["dnsDomainId"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"dkimPublicKey": {
+											"description": "The DKIM public key, base64 SPKI. The private key is never returned.",
+											"type": "string"
+										},
+										"dkimSelector": {
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"userId": {
+											"type": ["string", "null"]
+										}
+									},
+									"required": [
+										"createdAt",
+										"dkimPublicKey",
+										"dkimSelector",
+										"id",
+										"name",
+										"updatedAt",
+										"userId"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Created"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, or the server refused it"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Create a mail domain",
+				"tags": ["Mail"]
+			}
+		},
+		"/mail/domains/{domainId}": {
+			"delete": {
+				"description": "Deletes the domain with its mailboxes and aliases, and wipes their mail. The mail server picks the change up from a background job queued here.",
+				"operationId": "delete_mail_domains__domainId_",
+				"parameters": [
+					{
+						"description": "Mail domain id",
+						"in": "path",
+						"name": "domainId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Deleted, the mail server is being updated"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Delete a mail domain",
+				"tags": ["Mail"]
+			},
+			"get": {
+				"description": "The domain with each DNS record it needs (MX, SPF, DKIM, DMARC and the mail host's address) as public resolvers see it now.",
+				"operationId": "get_mail_domains__domainId_",
+				"parameters": [
+					{
+						"description": "Mail domain id",
+						"in": "path",
+						"name": "domainId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"dkimPublicKey": {
+											"description": "The DKIM public key, base64 SPKI. The private key is never returned.",
+											"type": "string"
+										},
+										"dkimSelector": {
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"records": {
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"found": {
+														"description": "What public resolvers answer for the record's name and type",
+														"items": {
+															"type": "string"
+														},
+														"type": "array"
+													},
+													"record": {
+														"additionalProperties": false,
+														"properties": {
+															"content": {
+																"type": "string"
+															},
+															"name": {
+																"type": "string"
+															},
+															"priority": {
+																"anyOf": [
+																	{
+																		"maximum": 9007199254740991,
+																		"minimum": -9007199254740991,
+																		"type": "integer"
+																	},
+																	{
+																		"type": "null"
+																	}
+																]
+															},
+															"purpose": {
+																"type": "string"
+															},
+															"type": {
+																"enum": ["A", "MX", "TXT"],
+																"type": "string"
+															}
+														},
+														"required": [
+															"content",
+															"name",
+															"priority",
+															"purpose",
+															"type"
+														],
+														"type": "object"
+													},
+													"state": {
+														"enum": ["ok", "different", "missing"],
+														"type": "string"
+													}
+												},
+												"required": ["found", "record", "state"],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"userId": {
+											"type": ["string", "null"]
+										}
+									},
+									"required": [
+										"createdAt",
+										"dkimPublicKey",
+										"dkimSelector",
+										"id",
+										"name",
+										"updatedAt",
+										"userId",
+										"records"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The mail domain"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a mail domain",
+				"tags": ["Mail"]
+			}
+		},
+		"/mail/mailboxes": {
+			"get": {
+				"operationId": "get_mail_mailboxes",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"address": {
+												"type": "string"
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"displayName": {
+												"type": ["string", "null"]
+											},
+											"domain": {
+												"type": "string"
+											},
+											"domainId": {
+												"type": "string"
+											},
+											"enabled": {
+												"type": "boolean"
+											},
+											"id": {
+												"type": "string"
+											},
+											"kind": {
+												"description": "mailbox: an inbox people read. noreply: send only, incoming mail is refused.",
+												"enum": ["mailbox", "noreply"],
+												"type": "string"
+											},
+											"localPart": {
+												"type": "string"
+											},
+											"ownerId": {
+												"type": ["string", "null"]
+											},
+											"quotaMb": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											}
+										},
+										"required": [
+											"address",
+											"createdAt",
+											"displayName",
+											"domain",
+											"domainId",
+											"enabled",
+											"id",
+											"kind",
+											"localPart",
+											"ownerId",
+											"quotaMb",
+											"updatedAt"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "Every mailbox and noreply address, by domain then address"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List mailboxes",
+				"tags": ["Mail"]
+			},
+			"post": {
+				"description": "Adds a mailbox, or with kind noreply a send-only address for apps. The mail server picks the change up from a background job queued here.",
+				"operationId": "post_mail_mailboxes",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"displayName": {
+										"description": "The name shown beside the address. Null or empty clears it.",
+										"type": ["string", "null"]
+									},
+									"domainId": {
+										"description": "The mail domain's id",
+										"minLength": 1,
+										"type": "string"
+									},
+									"enabled": {
+										"description": "Whether it can sign in and receive mail. Defaults to true.",
+										"type": "boolean"
+									},
+									"kind": {
+										"description": "mailbox: an inbox people read. noreply: send only, for apps sending transactional mail, incoming mail is refused. Defaults to mailbox.",
+										"enum": ["mailbox", "noreply"],
+										"type": "string"
+									},
+									"localPart": {
+										"description": "The part before the @",
+										"minLength": 1,
+										"type": "string"
+									},
+									"ownerId": {
+										"description": "The Homerun account that owns it and can change its password from their own account settings. Null for nobody.",
+										"type": ["string", "null"]
+									},
+									"password": {
+										"description": "Its sign-in password, 10 characters to 72 bytes. Write-only, never returned.",
+										"type": "string"
+									},
+									"quotaMb": {
+										"anyOf": [
+											{
+												"exclusiveMinimum": 0,
+												"maximum": 9007199254740991,
+												"type": "integer"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "Storage limit in MB, null for none. Ignored for a noreply address."
+									}
+								},
+								"required": ["domainId", "localPart", "password"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"address": {
+											"type": "string"
+										},
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"displayName": {
+											"type": ["string", "null"]
+										},
+										"domain": {
+											"type": "string"
+										},
+										"domainId": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"kind": {
+											"description": "mailbox: an inbox people read. noreply: send only, incoming mail is refused.",
+											"enum": ["mailbox", "noreply"],
+											"type": "string"
+										},
+										"localPart": {
+											"type": "string"
+										},
+										"ownerId": {
+											"type": ["string", "null"]
+										},
+										"quotaMb": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										}
+									},
+									"required": [
+										"address",
+										"createdAt",
+										"displayName",
+										"domain",
+										"domainId",
+										"enabled",
+										"id",
+										"kind",
+										"localPart",
+										"ownerId",
+										"quotaMb",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Created"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, or the server refused it"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Create a mailbox",
+				"tags": ["Mail"]
+			}
+		},
+		"/mail/mailboxes/{mailboxId}": {
+			"delete": {
+				"description": "Deletes the mailbox and wipes its mail. The mail server picks the change up from a background job queued here.",
+				"operationId": "delete_mail_mailboxes__mailboxId_",
+				"parameters": [
+					{
+						"description": "Mailbox id",
+						"in": "path",
+						"name": "mailboxId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Deleted, the mail server is being updated"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Delete a mailbox",
+				"tags": ["Mail"]
+			},
+			"get": {
+				"operationId": "get_mail_mailboxes__mailboxId_",
+				"parameters": [
+					{
+						"description": "Mailbox id",
+						"in": "path",
+						"name": "mailboxId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"address": {
+											"type": "string"
+										},
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"displayName": {
+											"type": ["string", "null"]
+										},
+										"domain": {
+											"type": "string"
+										},
+										"domainId": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"kind": {
+											"description": "mailbox: an inbox people read. noreply: send only, incoming mail is refused.",
+											"enum": ["mailbox", "noreply"],
+											"type": "string"
+										},
+										"localPart": {
+											"type": "string"
+										},
+										"ownerId": {
+											"type": ["string", "null"]
+										},
+										"quotaMb": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										}
+									},
+									"required": [
+										"address",
+										"createdAt",
+										"displayName",
+										"domain",
+										"domainId",
+										"enabled",
+										"id",
+										"kind",
+										"localPart",
+										"ownerId",
+										"quotaMb",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The mailbox"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a mailbox",
+				"tags": ["Mail"]
+			},
+			"patch": {
+				"description": "Changes the fields sent, keeping the rest; password sets a new one. Its kind can't change. The mail server picks the change up from a background job queued here.",
+				"operationId": "patch_mail_mailboxes__mailboxId_",
+				"parameters": [
+					{
+						"description": "Mailbox id",
+						"in": "path",
+						"name": "mailboxId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"displayName": {
+										"description": "The name shown beside the address. Null or empty clears it.",
+										"type": ["string", "null"]
+									},
+									"enabled": {
+										"type": "boolean"
+									},
+									"ownerId": {
+										"description": "The Homerun account that owns it and can change its password from their own account settings. Null for nobody.",
+										"type": ["string", "null"]
+									},
+									"password": {
+										"description": "Its sign-in password, 10 characters to 72 bytes. Write-only, never returned.",
+										"type": "string"
+									},
+									"quotaMb": {
+										"anyOf": [
+											{
+												"exclusiveMinimum": 0,
+												"maximum": 9007199254740991,
+												"type": "integer"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "Storage limit in MB, null for none. Ignored for a noreply address."
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"address": {
+											"type": "string"
+										},
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"displayName": {
+											"type": ["string", "null"]
+										},
+										"domain": {
+											"type": "string"
+										},
+										"domainId": {
+											"type": "string"
+										},
+										"enabled": {
+											"type": "boolean"
+										},
+										"id": {
+											"type": "string"
+										},
+										"kind": {
+											"description": "mailbox: an inbox people read. noreply: send only, incoming mail is refused.",
+											"enum": ["mailbox", "noreply"],
+											"type": "string"
+										},
+										"localPart": {
+											"type": "string"
+										},
+										"ownerId": {
+											"type": ["string", "null"]
+										},
+										"quotaMb": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										}
+									},
+									"required": [
+										"address",
+										"createdAt",
+										"displayName",
+										"domain",
+										"domainId",
+										"enabled",
+										"id",
+										"kind",
+										"localPart",
+										"ownerId",
+										"quotaMb",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Updated"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, or the server refused it"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Update a mailbox",
+				"tags": ["Mail"]
+			}
+		},
 		"/manifest.schema.json": {
 			"get": {
 				"description": "The Homerun Manifest's JSON schema for this instance's version, public. The same schema is published as manifest.schema.json at the root of Homerun's repository.",
@@ -17742,6 +19834,2442 @@
 				],
 				"summary": "Get an OIDC app secret",
 				"tags": ["Authentication"]
+			}
+		},
+		"/pipelines": {
+			"get": {
+				"description": "Totals over every watched repository's runs, over the last 30 days and all time.",
+				"operationId": "get_pipelines",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"allTimeStats": {
+											"additionalProperties": false,
+											"properties": {
+												"avgQueueMs": {
+													"description": "Mean time runs waited before starting",
+													"type": ["number", "null"]
+												},
+												"billableMinutes": {
+													"description": "Every job's minutes, each rounded up, every attempt",
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"costUsd": {
+													"description": "At the repository's rates",
+													"type": "number"
+												},
+												"failed": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"name": {
+													"description": "The workflow (or repository) these totals are for, null for a total",
+													"type": ["string", "null"]
+												},
+												"p50Ms": {
+													"description": "Median run duration",
+													"type": ["number", "null"]
+												},
+												"p95Ms": {
+													"type": ["number", "null"]
+												},
+												"repositoryId": {
+													"type": ["string", "null"]
+												},
+												"runs": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"succeeded": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												}
+											},
+											"required": [
+												"avgQueueMs",
+												"billableMinutes",
+												"costUsd",
+												"failed",
+												"name",
+												"p50Ms",
+												"p95Ms",
+												"repositoryId",
+												"runs",
+												"succeeded"
+											],
+											"type": "object"
+										},
+										"repositories": {
+											"description": "How many repositories are watched",
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"stats": {
+											"additionalProperties": false,
+											"properties": {
+												"avgQueueMs": {
+													"description": "Mean time runs waited before starting",
+													"type": ["number", "null"]
+												},
+												"billableMinutes": {
+													"description": "Every job's minutes, each rounded up, every attempt",
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"costUsd": {
+													"description": "At the repository's rates",
+													"type": "number"
+												},
+												"failed": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"name": {
+													"description": "The workflow (or repository) these totals are for, null for a total",
+													"type": ["string", "null"]
+												},
+												"p50Ms": {
+													"description": "Median run duration",
+													"type": ["number", "null"]
+												},
+												"p95Ms": {
+													"type": ["number", "null"]
+												},
+												"repositoryId": {
+													"type": ["string", "null"]
+												},
+												"runs": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"succeeded": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												}
+											},
+											"required": [
+												"avgQueueMs",
+												"billableMinutes",
+												"costUsd",
+												"failed",
+												"name",
+												"p50Ms",
+												"p95Ms",
+												"repositoryId",
+												"runs",
+												"succeeded"
+											],
+											"type": "object"
+										},
+										"windowDays": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										}
+									},
+									"required": [
+										"allTimeStats",
+										"repositories",
+										"stats",
+										"windowDays"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "CI totals"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "CI pipeline stats",
+				"tags": ["Pipelines"]
+			}
+		},
+		"/pipelines/repositories": {
+			"get": {
+				"description": "Watched repositories by name, each with its linked services and 30-day totals. Paginated like every list; q matches the path.",
+				"operationId": "get_pipelines_repositories",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"defaultBranch": {
+												"type": ["string", "null"]
+											},
+											"fullName": {
+												"description": "The path on the provider, \"owner/repo\"",
+												"type": "string"
+											},
+											"id": {
+												"type": "string"
+											},
+											"linkedServices": {
+												"description": "Services showing its runs on their Pipelines tab and filing its CI traces",
+												"items": {
+													"additionalProperties": false,
+													"properties": {
+														"id": {
+															"type": "string"
+														},
+														"name": {
+															"type": "string"
+														}
+													},
+													"required": ["id", "name"],
+													"type": "object"
+												},
+												"type": "array"
+											},
+											"pipelineRates": {
+												"anyOf": [
+													{
+														"items": {
+															"additionalProperties": false,
+															"properties": {
+																"label": {
+																	"description": "Matches a job whose runner label starts with it",
+																	"type": "string"
+																},
+																"rate": {
+																	"description": "Dollars per minute",
+																	"type": "number"
+																}
+															},
+															"required": ["label", "rate"],
+															"type": "object"
+														},
+														"type": "array"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Its own runner rates, null for the provider's defaults"
+											},
+											"pipelinesEnabled": {
+												"description": "Whether its runs are synced",
+												"type": "boolean"
+											},
+											"pipelinesError": {
+												"description": "Why the last sync failed",
+												"type": ["string", "null"]
+											},
+											"pipelinesSyncedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"providerId": {
+												"type": "string"
+											},
+											"providerKind": {
+												"enum": ["github", "gitlab", "gitea", "bitbucket"],
+												"type": "string"
+											},
+											"stats": {
+												"anyOf": [
+													{
+														"additionalProperties": false,
+														"properties": {
+															"avgQueueMs": {
+																"description": "Mean time runs waited before starting",
+																"type": ["number", "null"]
+															},
+															"billableMinutes": {
+																"description": "Every job's minutes, each rounded up, every attempt",
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"costUsd": {
+																"description": "At the repository's rates",
+																"type": "number"
+															},
+															"failed": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"name": {
+																"description": "The workflow (or repository) these totals are for, null for a total",
+																"type": ["string", "null"]
+															},
+															"p50Ms": {
+																"description": "Median run duration",
+																"type": ["number", "null"]
+															},
+															"p95Ms": {
+																"type": ["number", "null"]
+															},
+															"repositoryId": {
+																"type": ["string", "null"]
+															},
+															"runs": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"succeeded": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															}
+														},
+														"required": [
+															"avgQueueMs",
+															"billableMinutes",
+															"costUsd",
+															"failed",
+															"name",
+															"p50Ms",
+															"p95Ms",
+															"repositoryId",
+															"runs",
+															"succeeded"
+														],
+														"type": "object"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Totals over the last 30 days, null before its first run"
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"userId": {
+												"description": "Whose connection to the provider reads it",
+												"type": "string"
+											},
+											"webUrl": {
+												"type": "string"
+											},
+											"webhookError": {
+												"description": "Why Homerun couldn't register its CI webhook",
+												"type": ["string", "null"]
+											},
+											"webhookId": {
+												"description": "The provider's id for its CI webhook, null while it's polled instead",
+												"type": ["string", "null"]
+											}
+										},
+										"required": [
+											"createdAt",
+											"defaultBranch",
+											"fullName",
+											"id",
+											"linkedServices",
+											"pipelineRates",
+											"pipelinesEnabled",
+											"pipelinesError",
+											"pipelinesSyncedAt",
+											"providerId",
+											"providerKind",
+											"updatedAt",
+											"userId",
+											"webhookError",
+											"webhookId",
+											"webUrl",
+											"stats"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of repositories"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List watched repositories",
+				"tags": ["Pipelines"]
+			},
+			"post": {
+				"description": "Starts watching a repository on a provider the caller is connected to (GitHub, GitLab or Gitea), read with the caller's connection: links the services building from it, registers its CI webhook and queues its first sync. A repository already watched comes back as is, with 200.",
+				"operationId": "post_pipelines_repositories",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"defaultBranch": {
+										"anyOf": [
+											{
+												"minLength": 1,
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "The branch the repository's default runs are on"
+									},
+									"fullName": {
+										"description": "The path on the provider: \"owner/repo\", or a GitLab \"group/subgroup/repo\"",
+										"minLength": 1,
+										"type": "string"
+									},
+									"providerId": {
+										"description": "The git provider it lives on, from /git-providers; the caller must be connected to it",
+										"minLength": 1,
+										"type": "string"
+									}
+								},
+								"required": ["fullName", "providerId"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"defaultBranch": {
+											"type": ["string", "null"]
+										},
+										"fullName": {
+											"description": "The path on the provider, \"owner/repo\"",
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"linkedServices": {
+											"description": "Services showing its runs on their Pipelines tab and filing its CI traces",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													}
+												},
+												"required": ["id", "name"],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"pipelineRates": {
+											"anyOf": [
+												{
+													"items": {
+														"additionalProperties": false,
+														"properties": {
+															"label": {
+																"description": "Matches a job whose runner label starts with it",
+																"type": "string"
+															},
+															"rate": {
+																"description": "Dollars per minute",
+																"type": "number"
+															}
+														},
+														"required": ["label", "rate"],
+														"type": "object"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Its own runner rates, null for the provider's defaults"
+										},
+										"pipelinesEnabled": {
+											"description": "Whether its runs are synced",
+											"type": "boolean"
+										},
+										"pipelinesError": {
+											"description": "Why the last sync failed",
+											"type": ["string", "null"]
+										},
+										"pipelinesSyncedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"providerId": {
+											"type": "string"
+										},
+										"providerKind": {
+											"enum": ["github", "gitlab", "gitea", "bitbucket"],
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"userId": {
+											"description": "Whose connection to the provider reads it",
+											"type": "string"
+										},
+										"webUrl": {
+											"type": "string"
+										},
+										"webhookError": {
+											"description": "Why Homerun couldn't register its CI webhook",
+											"type": ["string", "null"]
+										},
+										"webhookId": {
+											"description": "The provider's id for its CI webhook, null while it's polled instead",
+											"type": ["string", "null"]
+										}
+									},
+									"required": [
+										"createdAt",
+										"defaultBranch",
+										"fullName",
+										"id",
+										"linkedServices",
+										"pipelineRates",
+										"pipelinesEnabled",
+										"pipelinesError",
+										"pipelinesSyncedAt",
+										"providerId",
+										"providerKind",
+										"updatedAt",
+										"userId",
+										"webhookError",
+										"webhookId",
+										"webUrl"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Already watched"
+					},
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"defaultBranch": {
+											"type": ["string", "null"]
+										},
+										"fullName": {
+											"description": "The path on the provider, \"owner/repo\"",
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"linkedServices": {
+											"description": "Services showing its runs on their Pipelines tab and filing its CI traces",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													}
+												},
+												"required": ["id", "name"],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"pipelineRates": {
+											"anyOf": [
+												{
+													"items": {
+														"additionalProperties": false,
+														"properties": {
+															"label": {
+																"description": "Matches a job whose runner label starts with it",
+																"type": "string"
+															},
+															"rate": {
+																"description": "Dollars per minute",
+																"type": "number"
+															}
+														},
+														"required": ["label", "rate"],
+														"type": "object"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Its own runner rates, null for the provider's defaults"
+										},
+										"pipelinesEnabled": {
+											"description": "Whether its runs are synced",
+											"type": "boolean"
+										},
+										"pipelinesError": {
+											"description": "Why the last sync failed",
+											"type": ["string", "null"]
+										},
+										"pipelinesSyncedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"providerId": {
+											"type": "string"
+										},
+										"providerKind": {
+											"enum": ["github", "gitlab", "gitea", "bitbucket"],
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"userId": {
+											"description": "Whose connection to the provider reads it",
+											"type": "string"
+										},
+										"webUrl": {
+											"type": "string"
+										},
+										"webhookError": {
+											"description": "Why Homerun couldn't register its CI webhook",
+											"type": ["string", "null"]
+										},
+										"webhookId": {
+											"description": "The provider's id for its CI webhook, null while it's polled instead",
+											"type": ["string", "null"]
+										}
+									},
+									"required": [
+										"createdAt",
+										"defaultBranch",
+										"fullName",
+										"id",
+										"linkedServices",
+										"pipelineRates",
+										"pipelinesEnabled",
+										"pipelinesError",
+										"pipelinesSyncedAt",
+										"providerId",
+										"providerKind",
+										"updatedAt",
+										"userId",
+										"webhookError",
+										"webhookId",
+										"webUrl"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Watched"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid body, a provider that's gone or without CI, or one the caller isn't connected to"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Watch a repository",
+				"tags": ["Pipelines"]
+			}
+		},
+		"/pipelines/repositories/{repositoryId}": {
+			"delete": {
+				"description": "Removes its CI webhook from the provider and deletes it with its stored runs; its services are unlinked. Traces already exported stay until they expire.",
+				"operationId": "delete_pipelines_repositories__repositoryId_",
+				"parameters": [
+					{
+						"description": "Watched repository id",
+						"in": "path",
+						"name": "repositoryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Stopped watching"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Stop watching a repository",
+				"tags": ["Pipelines"]
+			},
+			"get": {
+				"description": "The repository with its totals over the last 30 days and all time, per workflow, and the rates in force.",
+				"operationId": "get_pipelines_repositories__repositoryId_",
+				"parameters": [
+					{
+						"description": "Watched repository id",
+						"in": "path",
+						"name": "repositoryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"allTimeStats": {
+											"additionalProperties": false,
+											"properties": {
+												"avgQueueMs": {
+													"description": "Mean time runs waited before starting",
+													"type": ["number", "null"]
+												},
+												"billableMinutes": {
+													"description": "Every job's minutes, each rounded up, every attempt",
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"costUsd": {
+													"description": "At the repository's rates",
+													"type": "number"
+												},
+												"failed": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"name": {
+													"description": "The workflow (or repository) these totals are for, null for a total",
+													"type": ["string", "null"]
+												},
+												"p50Ms": {
+													"description": "Median run duration",
+													"type": ["number", "null"]
+												},
+												"p95Ms": {
+													"type": ["number", "null"]
+												},
+												"repositoryId": {
+													"type": ["string", "null"]
+												},
+												"runs": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"succeeded": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												}
+											},
+											"required": [
+												"avgQueueMs",
+												"billableMinutes",
+												"costUsd",
+												"failed",
+												"name",
+												"p50Ms",
+												"p95Ms",
+												"repositoryId",
+												"runs",
+												"succeeded"
+											],
+											"type": "object"
+										},
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"defaultBranch": {
+											"type": ["string", "null"]
+										},
+										"fullName": {
+											"description": "The path on the provider, \"owner/repo\"",
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										},
+										"linkedServices": {
+											"description": "Services showing its runs on their Pipelines tab and filing its CI traces",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"id": {
+														"type": "string"
+													},
+													"name": {
+														"type": "string"
+													}
+												},
+												"required": ["id", "name"],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"pipelineRates": {
+											"anyOf": [
+												{
+													"items": {
+														"additionalProperties": false,
+														"properties": {
+															"label": {
+																"description": "Matches a job whose runner label starts with it",
+																"type": "string"
+															},
+															"rate": {
+																"description": "Dollars per minute",
+																"type": "number"
+															}
+														},
+														"required": ["label", "rate"],
+														"type": "object"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Its own runner rates, null for the provider's defaults"
+										},
+										"pipelinesEnabled": {
+											"description": "Whether its runs are synced",
+											"type": "boolean"
+										},
+										"pipelinesError": {
+											"description": "Why the last sync failed",
+											"type": ["string", "null"]
+										},
+										"pipelinesSyncedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"providerId": {
+											"type": "string"
+										},
+										"providerKind": {
+											"enum": ["github", "gitlab", "gitea", "bitbucket"],
+											"type": "string"
+										},
+										"rates": {
+											"description": "The rates in force",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"label": {
+														"description": "Matches a job whose runner label starts with it",
+														"type": "string"
+													},
+													"rate": {
+														"description": "Dollars per minute",
+														"type": "number"
+													}
+												},
+												"required": ["label", "rate"],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"ratesCustom": {
+											"description": "Whether those are its own rather than the defaults",
+											"type": "boolean"
+										},
+										"stats": {
+											"additionalProperties": false,
+											"description": "Totals over the last 30 days",
+											"properties": {
+												"avgQueueMs": {
+													"description": "Mean time runs waited before starting",
+													"type": ["number", "null"]
+												},
+												"billableMinutes": {
+													"description": "Every job's minutes, each rounded up, every attempt",
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"costUsd": {
+													"description": "At the repository's rates",
+													"type": "number"
+												},
+												"failed": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"name": {
+													"description": "The workflow (or repository) these totals are for, null for a total",
+													"type": ["string", "null"]
+												},
+												"p50Ms": {
+													"description": "Median run duration",
+													"type": ["number", "null"]
+												},
+												"p95Ms": {
+													"type": ["number", "null"]
+												},
+												"repositoryId": {
+													"type": ["string", "null"]
+												},
+												"runs": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"succeeded": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												}
+											},
+											"required": [
+												"avgQueueMs",
+												"billableMinutes",
+												"costUsd",
+												"failed",
+												"name",
+												"p50Ms",
+												"p95Ms",
+												"repositoryId",
+												"runs",
+												"succeeded"
+											],
+											"type": "object"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"userId": {
+											"description": "Whose connection to the provider reads it",
+											"type": "string"
+										},
+										"webUrl": {
+											"type": "string"
+										},
+										"webhookError": {
+											"description": "Why Homerun couldn't register its CI webhook",
+											"type": ["string", "null"]
+										},
+										"webhookId": {
+											"description": "The provider's id for its CI webhook, null while it's polled instead",
+											"type": ["string", "null"]
+										},
+										"workflows": {
+											"description": "The same 30-day totals per workflow, busiest first",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"avgQueueMs": {
+														"description": "Mean time runs waited before starting",
+														"type": ["number", "null"]
+													},
+													"billableMinutes": {
+														"description": "Every job's minutes, each rounded up, every attempt",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"costUsd": {
+														"description": "At the repository's rates",
+														"type": "number"
+													},
+													"failed": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"name": {
+														"description": "The workflow (or repository) these totals are for, null for a total",
+														"type": ["string", "null"]
+													},
+													"p50Ms": {
+														"description": "Median run duration",
+														"type": ["number", "null"]
+													},
+													"p95Ms": {
+														"type": ["number", "null"]
+													},
+													"repositoryId": {
+														"type": ["string", "null"]
+													},
+													"runs": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"succeeded": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													}
+												},
+												"required": [
+													"avgQueueMs",
+													"billableMinutes",
+													"costUsd",
+													"failed",
+													"name",
+													"p50Ms",
+													"p95Ms",
+													"repositoryId",
+													"runs",
+													"succeeded"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										}
+									},
+									"required": [
+										"createdAt",
+										"defaultBranch",
+										"fullName",
+										"id",
+										"linkedServices",
+										"pipelineRates",
+										"pipelinesEnabled",
+										"pipelinesError",
+										"pipelinesSyncedAt",
+										"providerId",
+										"providerKind",
+										"updatedAt",
+										"userId",
+										"webhookError",
+										"webhookId",
+										"webUrl",
+										"allTimeStats",
+										"rates",
+										"ratesCustom",
+										"stats",
+										"workflows"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The repository"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a watched repository",
+				"tags": ["Pipelines"]
+			}
+		},
+		"/pipelines/repositories/{repositoryId}/runs": {
+			"get": {
+				"description": "Newest first. Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest. Each run comes without its jobs, which the run's own route returns. q matches the workflow, branch, commit title or SHA and the repository.",
+				"operationId": "get_pipelines_repositories__repositoryId__runs",
+				"parameters": [
+					{
+						"description": "Watched repository id",
+						"in": "path",
+						"name": "repositoryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Comma-separated statuses to keep: queued, running, success, failure, cancelled, skipped",
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"actor": {
+												"type": ["string", "null"]
+											},
+											"attempt": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"billableMinutes": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"branch": {
+												"type": ["string", "null"]
+											},
+											"commitSha": {
+												"type": ["string", "null"]
+											},
+											"costUsd": {
+												"type": "number"
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"durationMs": {
+												"type": ["number", "null"]
+											},
+											"event": {
+												"description": "What triggered it: push, pull_request, schedule...",
+												"type": ["string", "null"]
+											},
+											"externalId": {
+												"description": "The provider's run id",
+												"type": "string"
+											},
+											"finishedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"id": {
+												"type": "string"
+											},
+											"name": {
+												"description": "The workflow's name",
+												"type": "string"
+											},
+											"number": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"provider": {
+												"enum": ["github", "gitlab", "gitea"],
+												"type": "string"
+											},
+											"queueMs": {
+												"type": ["number", "null"]
+											},
+											"repositoryId": {
+												"type": "string"
+											},
+											"repositoryName": {
+												"type": "string"
+											},
+											"startedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"status": {
+												"enum": [
+													"queued",
+													"running",
+													"success",
+													"failure",
+													"cancelled",
+													"skipped"
+												],
+												"type": "string"
+											},
+											"title": {
+												"description": "The commit title",
+												"type": ["string", "null"]
+											},
+											"traceExported": {
+												"type": "boolean"
+											},
+											"traceId": {
+												"description": "Its trace, once finished and exported",
+												"type": ["string", "null"]
+											},
+											"traceServiceId": {
+												"description": "The service its trace is filed under, null for Homerun's own",
+												"type": ["string", "null"]
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"url": {
+												"type": ["string", "null"]
+											}
+										},
+										"required": [
+											"actor",
+											"attempt",
+											"billableMinutes",
+											"branch",
+											"commitSha",
+											"costUsd",
+											"createdAt",
+											"durationMs",
+											"event",
+											"externalId",
+											"finishedAt",
+											"id",
+											"name",
+											"number",
+											"provider",
+											"queueMs",
+											"repositoryId",
+											"startedAt",
+											"status",
+											"title",
+											"traceExported",
+											"traceId",
+											"traceServiceId",
+											"updatedAt",
+											"url",
+											"repositoryName"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of runs"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a repository's CI runs",
+				"tags": ["Pipelines"]
+			}
+		},
+		"/pipelines/repositories/{repositoryId}/runs/{runId}": {
+			"get": {
+				"operationId": "get_pipelines_repositories__repositoryId__runs__runId_",
+				"parameters": [
+					{
+						"description": "Watched repository id",
+						"in": "path",
+						"name": "repositoryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Run id, from the runs list",
+						"in": "path",
+						"name": "runId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"actor": {
+											"type": ["string", "null"]
+										},
+										"attempt": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"billableMinutes": {
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										},
+										"branch": {
+											"type": ["string", "null"]
+										},
+										"commitSha": {
+											"type": ["string", "null"]
+										},
+										"costUsd": {
+											"type": "number"
+										},
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"durationMs": {
+											"type": ["number", "null"]
+										},
+										"event": {
+											"description": "What triggered it: push, pull_request, schedule...",
+											"type": ["string", "null"]
+										},
+										"externalId": {
+											"description": "The provider's run id",
+											"type": "string"
+										},
+										"finishedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"id": {
+											"type": "string"
+										},
+										"jobs": {
+											"description": "Every job of every attempt; cost sums them all, timings use the latest attempt",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"attempt": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"billableMinutes": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"costUsd": {
+														"type": "number"
+													},
+													"durationMs": {
+														"type": ["number", "null"]
+													},
+													"finishedAt": {
+														"anyOf": [
+															{
+																"description": "ISO 8601 timestamp",
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"labels": {
+														"description": "Its runner labels",
+														"items": {
+															"type": "string"
+														},
+														"type": "array"
+													},
+													"name": {
+														"type": "string"
+													},
+													"runner": {
+														"type": ["string", "null"]
+													},
+													"stage": {
+														"description": "GitLab's stage",
+														"type": ["string", "null"]
+													},
+													"startedAt": {
+														"anyOf": [
+															{
+																"description": "ISO 8601 timestamp",
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"status": {
+														"enum": [
+															"queued",
+															"running",
+															"success",
+															"failure",
+															"cancelled",
+															"skipped"
+														],
+														"type": "string"
+													},
+													"steps": {
+														"description": "Empty on GitLab",
+														"items": {
+															"additionalProperties": false,
+															"properties": {
+																"finishedAt": {
+																	"anyOf": [
+																		{
+																			"description": "ISO 8601 timestamp",
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"name": {
+																	"type": "string"
+																},
+																"startedAt": {
+																	"anyOf": [
+																		{
+																			"description": "ISO 8601 timestamp",
+																			"type": "string"
+																		},
+																		{
+																			"type": "null"
+																		}
+																	]
+																},
+																"status": {
+																	"enum": [
+																		"queued",
+																		"running",
+																		"success",
+																		"failure",
+																		"cancelled",
+																		"skipped"
+																	],
+																	"type": "string"
+																}
+															},
+															"required": [
+																"finishedAt",
+																"name",
+																"startedAt",
+																"status"
+															],
+															"type": "object"
+														},
+														"type": "array"
+													},
+													"url": {
+														"type": ["string", "null"]
+													}
+												},
+												"required": [
+													"attempt",
+													"billableMinutes",
+													"costUsd",
+													"durationMs",
+													"finishedAt",
+													"labels",
+													"name",
+													"runner",
+													"stage",
+													"startedAt",
+													"status",
+													"steps",
+													"url"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"name": {
+											"description": "The workflow's name",
+											"type": "string"
+										},
+										"number": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"provider": {
+											"enum": ["github", "gitlab", "gitea"],
+											"type": "string"
+										},
+										"queueMs": {
+											"type": ["number", "null"]
+										},
+										"repositoryId": {
+											"type": "string"
+										},
+										"startedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"status": {
+											"enum": [
+												"queued",
+												"running",
+												"success",
+												"failure",
+												"cancelled",
+												"skipped"
+											],
+											"type": "string"
+										},
+										"title": {
+											"description": "The commit title",
+											"type": ["string", "null"]
+										},
+										"traceExported": {
+											"type": "boolean"
+										},
+										"traceId": {
+											"description": "Its trace, once finished and exported",
+											"type": ["string", "null"]
+										},
+										"traceServiceId": {
+											"description": "The service its trace is filed under, null for Homerun's own",
+											"type": ["string", "null"]
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"type": "string"
+										},
+										"url": {
+											"type": ["string", "null"]
+										}
+									},
+									"required": [
+										"actor",
+										"attempt",
+										"billableMinutes",
+										"branch",
+										"commitSha",
+										"costUsd",
+										"createdAt",
+										"durationMs",
+										"event",
+										"externalId",
+										"finishedAt",
+										"id",
+										"name",
+										"number",
+										"provider",
+										"queueMs",
+										"repositoryId",
+										"startedAt",
+										"status",
+										"title",
+										"traceExported",
+										"traceId",
+										"traceServiceId",
+										"updatedAt",
+										"url",
+										"jobs"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The run with its jobs"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a CI run",
+				"tags": ["Pipelines"]
+			}
+		},
+		"/pipelines/repositories/{repositoryId}/sync": {
+			"post": {
+				"description": "Queues a sync of its latest runs as a background job, reusing one already queued. Poll /jobs/{jobId} for its progress.",
+				"operationId": "post_pipelines_repositories__repositoryId__sync",
+				"parameters": [
+					{
+						"description": "Watched repository id",
+						"in": "path",
+						"name": "repositoryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"jobId": {
+											"type": "string"
+										}
+									},
+									"required": ["jobId"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Queued"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Sync a repository's CI runs now",
+				"tags": ["Pipelines"]
+			}
+		},
+		"/pipelines/runs": {
+			"get": {
+				"description": "Newest first. Paginated: the body is the page, x-total-count, x-page and x-per-page carry the rest. Each run comes without its jobs, which the run's own route returns. q matches the workflow, branch, commit title or SHA and the repository.",
+				"operationId": "get_pipelines_runs",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 200)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Comma-separated statuses to keep: queued, running, success, failure, cancelled, skipped",
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"actor": {
+												"type": ["string", "null"]
+											},
+											"attempt": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"billableMinutes": {
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"branch": {
+												"type": ["string", "null"]
+											},
+											"commitSha": {
+												"type": ["string", "null"]
+											},
+											"costUsd": {
+												"type": "number"
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"durationMs": {
+												"type": ["number", "null"]
+											},
+											"event": {
+												"description": "What triggered it: push, pull_request, schedule...",
+												"type": ["string", "null"]
+											},
+											"externalId": {
+												"description": "The provider's run id",
+												"type": "string"
+											},
+											"finishedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"id": {
+												"type": "string"
+											},
+											"name": {
+												"description": "The workflow's name",
+												"type": "string"
+											},
+											"number": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"provider": {
+												"enum": ["github", "gitlab", "gitea"],
+												"type": "string"
+											},
+											"queueMs": {
+												"type": ["number", "null"]
+											},
+											"repositoryId": {
+												"type": "string"
+											},
+											"repositoryName": {
+												"type": "string"
+											},
+											"startedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"status": {
+												"enum": [
+													"queued",
+													"running",
+													"success",
+													"failure",
+													"cancelled",
+													"skipped"
+												],
+												"type": "string"
+											},
+											"title": {
+												"description": "The commit title",
+												"type": ["string", "null"]
+											},
+											"traceExported": {
+												"type": "boolean"
+											},
+											"traceId": {
+												"description": "Its trace, once finished and exported",
+												"type": ["string", "null"]
+											},
+											"traceServiceId": {
+												"description": "The service its trace is filed under, null for Homerun's own",
+												"type": ["string", "null"]
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"type": "string"
+											},
+											"url": {
+												"type": ["string", "null"]
+											}
+										},
+										"required": [
+											"actor",
+											"attempt",
+											"billableMinutes",
+											"branch",
+											"commitSha",
+											"costUsd",
+											"createdAt",
+											"durationMs",
+											"event",
+											"externalId",
+											"finishedAt",
+											"id",
+											"name",
+											"number",
+											"provider",
+											"queueMs",
+											"repositoryId",
+											"startedAt",
+											"status",
+											"title",
+											"traceExported",
+											"traceId",
+											"traceServiceId",
+											"updatedAt",
+											"url",
+											"repositoryName"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "One page of runs"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List CI runs of every watched repository",
+				"tags": ["Pipelines"]
 			}
 		},
 		"/ready": {
@@ -44476,7 +49004,7 @@
 										"type": ["string", "null"]
 									},
 									"disk": {
-										"description": "For a Docker volume, the host mount point to keep it on (a disk), instead of Docker's default location.",
+										"description": "For a Docker volume, the host mount point to keep it on (a disk's mountPoint from GET /disks, list_disks over MCP), instead of Docker's default location.",
 										"type": ["string", "null"]
 									},
 									"kind": {
@@ -45323,6 +49851,108 @@
 				],
 				"summary": "Back up a volume now",
 				"tags": ["Backups"]
+			}
+		},
+		"/webhooks/pipelines/{repositoryId}": {
+			"post": {
+				"description": "Where a provider delivers a watched repository's CI events: GitHub and Gitea workflow_run and workflow_job, GitLab pipeline and job events. Signed like a push webhook (X-Hub-Signature-256, X-Gitea-Signature, X-Gitlab-Token) with the secret on the repository's Settings tab; a verified CI event queues a sync. No API key: the signature is the authentication.",
+				"operationId": "post_webhooks_pipelines__repositoryId_",
+				"parameters": [
+					{
+						"description": "Watched repository id",
+						"in": "path",
+						"name": "repositoryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"ignored": {
+											"description": "Why nothing was queued: not a CI event, or syncing is off",
+											"type": "string"
+										},
+										"jobId": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "A sync was queued, or the delivery was ignored"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Bad signature"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "You don't have permission to change Services.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The caller's permissions, narrowed by the API key's when one is used, don't cover this area: reads need read access, writes need write access."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Receive a CI webhook delivery",
+				"tags": ["Pipelines"]
 			}
 		},
 		"/workstation-presets": {

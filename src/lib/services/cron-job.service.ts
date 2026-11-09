@@ -12,6 +12,10 @@ import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { Logger } from "#lib/logger.js";
 
+import {
+	VOLUME_HELPER_IMAGE,
+	VOLUME_HELPER_TAG,
+} from "./backup/volume-services.ts";
 import { type RegistryAuth } from "./docker.service.ts";
 import {
 	HOST_COMMAND_IMAGE,
@@ -36,6 +40,7 @@ export interface CronJobRunSpec extends Record<string, unknown> {
 	image: string;
 	labels: Record<string, string>;
 	pidMode: string | null;
+	placements: { disk: string; image: string; source: string }[];
 	privileged: boolean;
 	remote: {
 		dockerHost: string;
@@ -103,12 +108,15 @@ function envList(envVars: Record<string, string>): string[] {
 
 /**
  * Docker `Binds` entries for `job`'s volumes, each storage volume's source at
- * its container path.
+ * its container path, and the Docker volumes among them placed on a host
+ * disk, which the worker creates there first when Docker Cleanup pruned them.
  *
  * @throws When a mounted volume no longer exists.
  */
-async function bindsFor(job: CronJobDTO): Promise<string[]> {
-	return await Promise.all(
+async function mountsFor(
+	job: CronJobDTO,
+): Promise<Pick<CronJobRunSpec, "binds" | "placements">> {
+	const volumes = await Promise.all(
 		job.mounts.map(async (mount) => {
 			const volume = await StorageVolumeDTO.get(mount.volumeId);
 			if (!volume) {
@@ -116,9 +124,27 @@ async function bindsFor(job: CronJobDTO): Promise<string[]> {
 					`The volume mounted at ${mount.containerPath} no longer exists.`,
 				);
 			}
-			return `${volume.source}:${mount.containerPath}${mount.readOnly ? ":ro" : ""}`;
+			return { mount, volume };
 		}),
 	);
+	return {
+		binds: volumes.map(
+			({ mount, volume }) =>
+				`${volume.source}:${mount.containerPath}${mount.readOnly ? ":ro" : ""}`,
+		),
+		placements: volumes.flatMap(({ volume }) => {
+			const row = volume.toJSON();
+			return row.disk && row.kind === "volume"
+				? [
+						{
+							disk: row.disk,
+							image: `${VOLUME_HELPER_IMAGE}:${VOLUME_HELPER_TAG}`,
+							source: row.source,
+						},
+					]
+				: [];
+		}),
+	};
 }
 
 class CronJobServiceClass {
@@ -147,6 +173,7 @@ class CronJobServiceClass {
 				image: `${HOST_COMMAND_IMAGE}:${HOST_COMMAND_TAG}`,
 				labels,
 				pidMode: "host",
+				placements: [],
 				privileged: true,
 				remote: null,
 				runId,
@@ -169,7 +196,7 @@ class CronJobServiceClass {
 		}
 		return {
 			...container,
-			binds: await bindsFor(job),
+			...(await mountsFor(job)),
 			dockerSocket: job.dockerSocket,
 			env,
 			labels,

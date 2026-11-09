@@ -23,6 +23,7 @@ import {
 	scopeToService,
 	scopeToStack,
 } from "#lib/iac/generate.js";
+import { generatePulumiProgram } from "#lib/iac/pulumi.js";
 import { Logger } from "#lib/logger.js";
 import {
 	backupDestinationApiJson,
@@ -233,16 +234,27 @@ class IacInventoryServiceClass {
 	}
 
 	/**
-	 * The Terraform project for one stack (its substacks included) or one
-	 * service, found by id or slug, as files, with the slug to name the
-	 * folder and the archive after. Null when the stack or service doesn't
-	 * exist.
+	 * The Terraform project, or with `pulumiLogin` set the Pulumi program,
+	 * for one stack (its substacks included) or one service, found by id or
+	 * slug, as files, with the slug to name the folder and the archive after.
+	 * Null when the stack or service doesn't exist.
 	 */
 	async structure(
 		userId: string,
 		scope: GenerateScope,
-		options: { backendAddress: string | null; cli?: string; endpoint: string },
-	): Promise<{ files: GeneratedFile[]; name: string; slug: string } | null> {
+		options: {
+			backendAddress: string | null;
+			cli?: string;
+			endpoint: string;
+			/** Generate a Pulumi program whose README logs in with this command (null when the store is gone) instead of Terraform files. */
+			pulumiLogin?: string | null;
+		},
+	): Promise<{
+		files: GeneratedFile[];
+		folder: string;
+		name: string;
+		slug: string;
+	} | null> {
 		const inventory = await this.inventory(userId);
 		const type = scope.kind === "stack" ? "homerun_stack" : "homerun_service";
 		const root = (inventory[type] ?? []).find(
@@ -256,23 +268,34 @@ class IacInventoryServiceClass {
 			scope.kind === "stack"
 				? scopeToStack(inventory, String(root.id))
 				: scopeToService(inventory, String(root.id));
+		const slug = String(root.slug ?? scope.id);
+		const pulumi = options.pulumiLogin !== undefined;
 		return {
-			files: generateStructure(scoped, {
-				...options,
-				generatedAt: new Date(),
-				name,
-			}),
+			files: pulumi
+				? generatePulumiProgram(scoped, {
+						endpoint: options.endpoint,
+						generatedAt: new Date(),
+						login: options.pulumiLogin ?? null,
+						name,
+						project: slug,
+					})
+				: generateStructure(scoped, {
+						...options,
+						generatedAt: new Date(),
+						name,
+					}),
+			folder: `${slug}-${pulumi ? "pulumi" : "terraform"}`,
 			name,
-			slug: String(root.slug ?? scope.id),
+			slug,
 		};
 	}
 
-	/** A generated project as a zip, its files in a `<slug>-terraform/` folder, with the archive's file name. */
-	archive(generated: { files: GeneratedFile[]; slug: string }): {
+	/** A generated project as a zip, its files in its folder (`<slug>-terraform/`, `<slug>-pulumi/`), with the archive's file name. */
+	archive(generated: { files: GeneratedFile[]; folder: string }): {
 		body: Uint8Array<ArrayBuffer>;
 		filename: string;
 	} {
-		const folder = `${generated.slug}-terraform`;
+		const folder = generated.folder;
 		return {
 			body: zipFiles(
 				generated.files.map((file) => ({

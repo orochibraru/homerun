@@ -1,9 +1,10 @@
 import { config } from "#lib/config.js";
 import { IacProjectDTO } from "#lib/dto/iac-project-dto.js";
 import { parseScope } from "#lib/iac/generate.js";
-import { IAC_TOOL_INFO } from "#lib/iac/tools.js";
+import { IAC_TOOL_INFO, usesHttpBackend } from "#lib/iac/tools.js";
 import { can, permissionDeniedMessage } from "#lib/permissions.js";
 import { IacInventoryService } from "#lib/services/iac-inventory.service.js";
+import { IacStateService } from "#lib/services/iac-state.service.js";
 
 export const GET = async ({ locals, params, url }) => {
 	if (!locals.user) {
@@ -34,6 +35,9 @@ export const GET = async ({ locals, params, url }) => {
 		backendAddress: `${origin}/api/v1/iac/projects/${project.id}`,
 		cli: IAC_TOOL_INFO[project.tool].cli,
 		endpoint: origin,
+		pulumiLogin: usesHttpBackend(project.tool)
+			? undefined
+			: await IacStateService.pulumiLogin(project),
 	});
 	if (!generated) {
 		return Response.json(

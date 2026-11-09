@@ -28,8 +28,8 @@ export const actions = {
 		if (!mailbox) {
 			return fail(404, { error: "Mailbox not found." });
 		}
-		const { displayName, enabled, quotaMb } = mailbox.toJSON();
-		await mailbox.update({ displayName, enabled: !enabled, quotaMb });
+		const { displayName, enabled, ownerId, quotaMb } = mailbox.toJSON();
+		await mailbox.update({ displayName, enabled: !enabled, ownerId, quotaMb });
 		const job = await enqueueCoreServiceJob(
 			{ action: "syncMail", purge: [] },
 			locals.user.id,

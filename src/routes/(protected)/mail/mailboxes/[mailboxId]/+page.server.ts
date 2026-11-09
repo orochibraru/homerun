@@ -10,7 +10,10 @@ export const load = async ({ params, parent }) => {
 	await parent();
 	const mailbox = await MailMailboxDTO.get(params.mailboxId);
 	return {
-		contents: mailbox ? await MailInboxService.contents(mailbox) : null,
+		contents:
+			mailbox && mailbox.kind === "mailbox"
+				? await MailInboxService.contents(mailbox)
+				: null,
 		hostname: await MailService.hostname(),
 	};
 };

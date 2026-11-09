@@ -309,3 +309,44 @@ func JobGet(client *Client, jobID string, asJSON bool) {
 		}
 	}
 }
+
+var diskColumns = []string{"mountPoint", "device", "filesystem", "free", "total"}
+
+// HostDisk is one host disk as GET /disks lists it.
+type HostDisk struct {
+	Device     string `json:"device"`
+	Filesystem string `json:"filesystem"`
+	FreeBytes  int64  `json:"freeBytes"`
+	MountPoint string `json:"mountPoint"`
+	TotalBytes int64  `json:"totalBytes"`
+}
+
+// DiskRows renders host disks as table rows, sizes in GiB.
+func DiskRows(disks []HostDisk) []map[string]string {
+	rows := make([]map[string]string, 0, len(disks))
+	for _, disk := range disks {
+		rows = append(rows, map[string]string{
+			"device":     disk.Device,
+			"filesystem": disk.Filesystem,
+			"free":       fmt.Sprintf("%.1f GiB", float64(disk.FreeBytes)/(1<<30)),
+			"mountPoint": disk.MountPoint,
+			"total":      fmt.Sprintf("%.1f GiB", float64(disk.TotalBytes)/(1<<30)),
+		})
+	}
+	return rows
+}
+
+// DisksList prints the host's disks a Docker volume can be kept on, as a
+// table or raw JSON.
+func DisksList(client *Client, asJSON bool) {
+	body, _ := client.do("GET", "/disks", nil)
+	if asJSON {
+		PrintJSON(body)
+		return
+	}
+	var disks []HostDisk
+	if err := json.Unmarshal(body, &disks); err != nil {
+		Fail(err.Error())
+	}
+	PrintTable(DiskRows(disks), diskColumns)
+}

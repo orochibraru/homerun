@@ -157,6 +157,8 @@ data "homerun_service" "example" {
 - `stack_id` (String)
 - `strip_path_domains` (List of String) Domains with a path whose prefix is
   stripped before the request reaches the container (/api/v2 arrives as /v2).
+- `swarm_placement` (Object) Swarm mode only: which nodes run the replicas. See
+  the nested schema for `swarm_placement` below.
 - `tag` (String)
 - `traces_enabled` (Boolean)
 - `update_check_enabled` (Boolean) Image services: watch the registry for a
@@ -168,6 +170,17 @@ data "homerun_service" "example" {
 - `update_trial_enabled` (Boolean) Image services: try each update in a
   throwaway container before notifying it.
 - `uptime_enabled` (Boolean)
+
+### Nested schema for `swarm_placement`
+
+Optional:
+
+- `constraints` (List of String) Node label constraints, key==value or
+  key!=value, all of which a node has to match. Defaults to `[]`.
+- `preferences` (List of String) Node label keys the replicas are spread evenly
+  over. Defaults to `[]`.
+- `roles` (List of String) Node roles allowed to run them: manager, worker or
+  both. Defaults to `["manager","worker"]`.
 
 ### Nested schema for `exposed_ports`
 

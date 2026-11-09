@@ -5,13 +5,16 @@ const {
 	dkimSigningConf,
 	dovecotQuotas,
 	isMailAddress,
+	isMailboxKind,
 	joinTxtStrings,
 	localPartProblem,
 	mailAddress,
 	mailPasswordProblem,
 	mailRecordState,
+	mailRelayProblem,
 	parseDestinations,
 	postfixAccounts,
+	postfixReceiveAccess,
 	postfixVirtual,
 	requiredMailRecords,
 } = await import("../../../src/lib/mail");
@@ -77,6 +80,15 @@ describe("docker-mailserver config files", () => {
 		).toBe("hi@example.com a@x.org,b@y.org\n");
 	});
 
+	test("noreply addresses refuse incoming mail", () => {
+		expect(postfixReceiveAccess(["noreply@example.com"])).toBe(
+			"noreply@example.com REJECT This address doesn't receive mail\n",
+		);
+		expect(postfixReceiveAccess([])).toBe("");
+		expect(isMailboxKind("noreply")).toBe(true);
+		expect(isMailboxKind("other")).toBe(false);
+	});
+
 	test("rspamd finds each domain's key by selector and domain", () => {
 		expect(dkimKeyPath("example.com", "mail")).toBe(
 			"rspamd/dkim/rsa-2048-mail-example.com.private.txt",
@@ -84,6 +96,25 @@ describe("docker-mailserver config files", () => {
 		expect(dkimSigningConf("/tmp/docker-mailserver")).toContain(
 			'path = "/tmp/docker-mailserver/rspamd/dkim/rsa-2048-$selector-$domain.private.txt";',
 		);
+	});
+});
+
+describe("mailRelayProblem", () => {
+	const relay = {
+		host: "smtp.relay.test",
+		password: "secret",
+		port: 587,
+		user: "apikey",
+	};
+
+	test("a hostname, a port and both credentials or neither", () => {
+		expect(mailRelayProblem(relay)).toBeNull();
+		expect(
+			mailRelayProblem({ ...relay, password: null, user: null }),
+		).toBeNull();
+		expect(mailRelayProblem({ ...relay, host: "not a host" })).not.toBeNull();
+		expect(mailRelayProblem({ ...relay, port: 70_000 })).not.toBeNull();
+		expect(mailRelayProblem({ ...relay, password: null })).not.toBeNull();
 	});
 });
 

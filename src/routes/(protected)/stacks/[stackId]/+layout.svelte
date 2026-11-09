@@ -18,14 +18,24 @@
 	const { data, children } = $props();
 	const stack = $derived(data.stack);
 
+	const running = $derived(
+		data.services.filter((svc) => svc.currentStatus === "running").length,
+	);
+
 	const tabs = $derived<(NavTab & { href: string })[]>([
 		{
+			description: "Its services and substacks, and how they connect",
 			href: resolve("/(protected)/stacks/[stackId]", { stackId: stack.id }),
 			icon: Server,
 			id: "services",
 			label: `Services (${data.serviceCount})`,
+			summary:
+				data.services.length > 0
+					? `${running} of ${data.services.length} running`
+					: undefined,
 		},
 		{
+			description: "Traffic, uptime and resource usage across the stack",
 			href: resolve("/(protected)/stacks/[stackId]/monitoring", {
 				stackId: stack.id,
 			}),
@@ -37,6 +47,7 @@
 			href: resolve("/(protected)/stacks/[stackId]/settings", {
 				stackId: stack.id,
 			}),
+			description: "Name, icon, parent stack and danger zone",
 			icon: Settings,
 			id: "settings",
 			label: "Settings",

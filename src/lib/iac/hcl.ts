@@ -27,7 +27,8 @@ export function expression(source: string): HclExpression {
 	return { expression: source };
 }
 
-function isExpression(value: HclValue): value is HclExpression {
+/** Whether a value is a raw expression rather than a literal. */
+export function isExpression(value: HclValue): value is HclExpression {
 	return (
 		typeof value === "object" &&
 		value !== null &&

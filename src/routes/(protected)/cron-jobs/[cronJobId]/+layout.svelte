@@ -30,19 +30,33 @@
 	);
 
 	const tabs = $derived([
-		{ href: runsHref, icon: SquareTerminal, id: "runs", label: "Runs" },
+		{
+			description: "Every run with its output, and running it now",
+			href: runsHref,
+			icon: SquareTerminal,
+			id: "runs",
+			label: "Runs",
+			summary: job.lastRunAt
+				? `Last run ${timeAgo(job.lastRunAt)}`
+				: "Never run yet",
+		},
 		{
 			href: resolve("/(protected)/cron-jobs/[cronJobId]/configuration", {
 				cronJobId: job.id,
 			}),
+			description: "Schedule, what it runs, its environment and mounts",
 			icon: SlidersHorizontal,
 			id: "configuration",
 			label: "Configuration",
+			summary: job.enabled
+				? `${job.schedule} · ${describeCronJobTarget(job)}`
+				: "Paused",
 		},
 		{
 			href: resolve("/(protected)/cron-jobs/[cronJobId]/settings", {
 				cronJobId: job.id,
 			}),
+			description: "Danger zone",
 			icon: Settings,
 			id: "settings",
 			label: "Settings",

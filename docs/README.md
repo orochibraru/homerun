@@ -154,6 +154,8 @@ sync by hand.
   can reclaim, and the image mirror cleanup.
 - **[Docker Registry](registry.md)**: turning the image mirror into a real
   private registry, push/pull tokens, and publishing it at a hostname.
+- **[Package registries](package-registries.md)**: private npm (Verdaccio) and
+  PyPI (pypiserver) registries, their tokens, and publishing them at a hostname.
 - **[Notifications](notifications.md)**: the bell, and sending events to
   Discord, Slack, Telegram, a webhook, email or a browser through push, even
   with Homerun closed.

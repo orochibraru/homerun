@@ -9,10 +9,14 @@
 
 	interface Props {
 		class?: string;
+		/** The share of a bucket's entries that have to be errors for it to turn red; 0 turns it red on any error. */
+		errorShare?: number;
 		/** CSS colour the traffic is drawn in, a stack's lane hue. */
 		hue?: string;
 		/** Unset while the lane is loading: draws an empty track. */
 		lane?: Lane | null;
+		/** What a bucket counts, singular: requests for traffic, lines for logs. */
+		noun?: string;
 		/** Where the hover tooltip opens. */
 		placement?: "above" | "below";
 		/** Draws a flat dashed line instead of traffic, for a stopped service. */
@@ -21,8 +25,10 @@
 
 	const {
 		class: className = "",
+		errorShare = 0.25,
 		hue = "var(--lane-0)",
 		lane = null,
+		noun = "request",
 		placement = "above",
 		stopped = false,
 	}: Props = $props();
@@ -72,7 +78,7 @@
 	function failing(index: number): boolean {
 		const requests = lane?.requests[index] ?? 0;
 		const errors = lane?.errors[index] ?? 0;
-		return requests > 0 && errors / requests >= 0.25;
+		return requests > 0 && errors > 0 && errors / requests >= errorShare;
 	}
 </script>
 
@@ -99,7 +105,7 @@
 {:else}
 	<div
 		class={cn("relative h-3.5 w-full", className)}
-		aria-label="{total} requests in the last 24 hours, {lane.deploys
+		aria-label="{total} {noun}s in the last 24 hours, {lane.deploys
 			.length} deploys"
 		onpointerdown={hover.track}
 		onpointerleave={hover.clear}
@@ -137,7 +143,7 @@
 				</p>
 				<p>
 					<b class="text-sm font-bold">{formatCount(hovered.requests)}</b>
-					{hovered.requests === 1 ? "request" : "requests"}
+					{hovered.requests === 1 ? noun : `${noun}s`}
 				</p>
 				{#if hovered.requests > 0}
 					<p class="opacity-75">

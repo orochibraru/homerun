@@ -11,7 +11,7 @@ var instanceChannels = []string{"stable", "canary", "nightly"}
 var deployEnvironments = []string{"canary", "stable"}
 
 // Commands is every command the CLI has, in the order the top-level usage lists them.
-var Commands = slices.Concat(baseCommands, versionCommands, ResourceCommands(resources), resourceExtras, ResourceCommands(workstationResources), workstationCommands, redirectCommands, registryCommands, serviceAccountCommands, gateCommands, manifestCommands, iacCommands, adminCommands)
+var Commands = slices.Concat(baseCommands, versionCommands, ResourceCommands(resources), resourceExtras, ResourceCommands(workstationResources), workstationCommands, redirectCommands, ResourceCommands(mailResources), pipelineCommands, registryCommands, serviceAccountCommands, gateCommands, manifestCommands, iacCommands, adminCommands)
 
 var baseCommands = []Command{
 	{
@@ -473,6 +473,14 @@ var resourceExtras = []Command{
 		Name:    "volumes backup",
 		Summary: "back up a volume now (same as backups run)",
 		Setup:   backupRunSetup,
+	},
+	{
+		Name:    "volumes disks",
+		Summary: "list the host's disks a Docker volume can be kept on (pass a mount point as volumes create --set disk=<mountPoint>)",
+		Setup: func(set *flag.FlagSet) Runner {
+			asJSON := set.Bool("json", false, "print raw JSON instead of a table")
+			return func(env Env, _ []string) { DisksList(env.Client(), *asJSON) }
+		},
 	},
 	{
 		Name:    "system stats",

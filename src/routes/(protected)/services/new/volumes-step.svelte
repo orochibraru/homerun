@@ -12,9 +12,11 @@
 	import { untrack } from "svelte";
 
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import VolumeDiskSelect from "#lib/components/volume-disk-select.svelte";
 	import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
 	import type { DetectedConfig } from "#lib/image-config.js";
 	import { getUnknownHostVolumes } from "#lib/remote/docker-infra.remote.js";
+	import { getHostDisks } from "#lib/remote/volumes.remote.js";
 	import { dataPathFor } from "#lib/service-link.js";
 
 	import { errorClass, label } from "./field-classes";
@@ -46,6 +48,7 @@
 
 	interface VolumeRow {
 		containerPath: string;
+		disk: string;
 		newName: string;
 		readOnly: boolean;
 		volumeId: string;
@@ -55,6 +58,7 @@
 		untrack(() =>
 			templateVolumes.map((containerPath) => ({
 				containerPath,
+				disk: "",
 				newName: "",
 				readOnly: false,
 				volumeId: NEW_VOLUME,
@@ -80,6 +84,7 @@
 			} else if (path && volumeRows.length === 0) {
 				volumeRows.push({
 					containerPath: path,
+					disk: "",
 					newName: "",
 					readOnly: false,
 					volumeId: NEW_VOLUME,
@@ -112,6 +117,7 @@
 				}
 				volumeRows.push({
 					containerPath: path,
+					disk: "",
 					newName: "",
 					readOnly: false,
 					volumeId: NEW_VOLUME,
@@ -128,10 +134,13 @@
 		getUnknownHostVolumes(knownVolumeSources),
 	);
 	const hostVolumes = $derived(unknownHostVolumes.current ?? []);
+	const hostDisks = getHostDisks();
+	const disks = $derived(hostDisks.current ?? []);
 
 	function addVolumeRow() {
 		volumeRows.push({
 			containerPath: "",
+			disk: "",
 			newName: "",
 			readOnly: false,
 			volumeId: NEW_VOLUME,
@@ -161,6 +170,11 @@
 			<div class="flex flex-wrap items-end gap-3">
 				<input name="volumeId" type="hidden" value={row.volumeId} />
 				<input name="volumeNewName" type="hidden" value={row.newName} />
+				<input
+					name="volumeDisk"
+					type="hidden"
+					value={row.volumeId === NEW_VOLUME ? row.disk : ""}
+				/>
 				<input
 					name="volumeReadOnly"
 					type="hidden"
@@ -205,6 +219,16 @@
 							bind:value={row.newName}
 						/>
 					</div>
+					{#if disks.length > 1}
+						<div class="min-w-48 flex-1">
+							<label class={label} for="volumeDisk-{i}">Disk</label>
+							<VolumeDiskSelect
+								id="volumeDisk-{i}"
+								{disks}
+								bind:value={row.disk}
+							/>
+						</div>
+					{/if}
 				{/if}
 				<div class="min-w-48 flex-1">
 					<label class={label} for="volumeContainerPath-{i}">Mount path</label>
@@ -238,6 +262,12 @@
 		{#if volumeRows.length === 0}
 			<p class="text-xs text-text-subtle">
 				No volumes : fine for stateless apps.
+			</p>
+		{:else if disks.length > 1}
+			<p class="text-xs text-text-subtle">
+				A new volume on a disk keeps its data in
+				&lt;disk&gt;/homerun-volumes/&lt;volume name&gt;, and can't move to
+				another disk once it exists.
 			</p>
 		{/if}
 

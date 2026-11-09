@@ -22,9 +22,11 @@
 
 <section class="panel mb-6 rounded-md">
 	<PanelHeader
-		description="Its display name, quota and whether it can sign in."
+		description={data.mailbox.kind === "noreply"
+			? "Its display name, owner and whether apps can sign in to send from it."
+			: "Its display name, owner, quota and whether it can sign in."}
 		icon={AtSign}
-		title="Mailbox"
+		title={data.mailbox.kind === "noreply" ? "Noreply address" : "Mailbox"}
 	>
 		{#snippet trailing()}
 			<SaveButton form="mailbox-settings" pending={saving} />
@@ -50,13 +52,19 @@
 		{#if form?.action === "update" && form.error}
 			<p class="text-sm text-red-500">{form.error}</p>
 		{/if}
-		<MailMailboxFields values={data.mailbox} />
+		<MailMailboxFields
+			kind={data.mailbox.kind}
+			owners={data.owners}
+			values={data.mailbox}
+		/>
 	</form>
 </section>
 
 <section class="panel mb-6 rounded-md">
 	<PanelHeader
-		description="Mail clients signed in with the old one have to sign in again."
+		description={data.mailbox.kind === "noreply"
+			? "Apps sending from it need the new one in their SMTP settings."
+			: "Mail clients signed in with the old one have to sign in again."}
 		icon={KeyRound}
 		title="Change the password"
 	>

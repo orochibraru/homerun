@@ -193,6 +193,9 @@ func TestResourceVerbsDispatch(t *testing.T) {
 		{"delete with --yes", []string{"dns-connections", "delete", "dns-1", "--yes"}, "", "DELETE", "/api/v1/dns-connections/dns-1", "", "", `"deleted": true`},
 		{"delete confirmed", []string{"volume-mounts", "delete", "m-1"}, "y\n", "DELETE", "/api/v1/volume-mounts/m-1", "", "", `"deleted": true`},
 		{"stack delete --force", []string{"stacks", "delete", stackUUID, "--yes", "--force"}, "", "DELETE", "/api/v1/stacks/" + stackUUID, "force=true", "", `"deleted": true`},
+		{"noreply mailbox create", []string{"mail", "mailboxes", "create", "--set", "domainId=d-1", "--set", "localPart=noreply", "--set", "kind=noreply", "--set", "password=long enough"}, "", "POST", "/api/v1/mail/mailboxes", "", `{"domainId":"d-1","kind":"noreply","localPart":"noreply","password":"long enough"}`, "value"},
+		{"mailbox password", []string{"mail", "mailboxes", "update", "mb-1", "--set", "password=a new password"}, "", "PATCH", "/api/v1/mail/mailboxes/mb-1", "", `{"password":"a new password"}`, "value"},
+		{"mail alias delete", []string{"mail", "aliases", "delete", "al-1", "--yes"}, "", "DELETE", "/api/v1/mail/aliases/al-1", "", "", `"deleted": true`},
 		{"iac project create", []string{"iac", "projects", "create", "--set", "name=infra", "--set", "storeId=s-1", "--set", "bucket=tf"}, "", "POST", "/api/v1/iac/projects", "", `{"bucket":"tf","name":"infra","storeId":"s-1"}`, "value"},
 	}
 	for _, test := range tests {

@@ -38,6 +38,7 @@ import type { ImageUpdateState } from "#lib/image-versions.js";
 import type { IpBanSettings } from "#lib/ip-bans.js";
 import type { IpIntel } from "#lib/ip-intel.js";
 import type { ObjectStoreKind } from "#lib/object-storage.js";
+import type { PackageRegistryKind } from "#lib/package-registries.js";
 import type { AuthPathsMode } from "#lib/path-patterns.js";
 import type { Permissions, Role } from "#lib/permissions.js";
 import type {
@@ -770,7 +771,14 @@ export const mailMailbox = pgTable(
 			.references(() => mailDomain.id, { onDelete: "cascade" }),
 		enabled: boolean("enabled").notNull().default(true),
 		id: text("id").primaryKey(),
+		kind: text("kind")
+			.$type<"mailbox" | "noreply">()
+			.notNull()
+			.default("mailbox"),
 		localPart: text("local_part").notNull(),
+		ownerId: text("owner_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
 		passwordHash: text("password_hash").notNull(),
 		quotaMb: integer("quota_mb"),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -859,6 +867,40 @@ export const registryToken = pgTable(
 	(table) => [index("registryToken_userId_idx").on(table.userId)],
 );
 
+export const packageRegistry = pgTable("package_registry", {
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	enabled: boolean("enabled").default(false).notNull(),
+	kind: text("kind").$type<PackageRegistryKind>().primaryKey(),
+	publicHost: text("public_host").unique(),
+	updatedAt: timestamp("updated_at", { mode: "date" })
+		.$onUpdate(() => new Date())
+		.notNull(),
+});
+
+export const packageRegistryToken = pgTable(
+	"package_registry_token",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		kind: text("kind").$type<PackageRegistryKind>().notNull(),
+		secretHash: text("secret_hash").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		username: text("username").notNull(),
+	},
+	(table) => [
+		index("packageRegistryToken_userId_idx").on(table.userId),
+		uniqueIndex("packageRegistryToken_kind_username_uidx").on(
+			table.kind,
+			table.username,
+		),
+	],
+);
+
 // Singleton row (id is always "default") holding DB overrides for
 // instance-level config that otherwise defaults from env vars (see
 // $lib/config.ts's envDefaults + applyInstanceSettings()). Every column is
@@ -899,6 +941,10 @@ export const instanceSettings = pgTable("instance_settings", {
 	garageRpcSecretEnc: text("garage_rpc_secret_enc"),
 	mailEnabled: boolean("mail_enabled"),
 	mailHostname: text("mail_hostname"),
+	mailRelayHost: text("mail_relay_host"),
+	mailRelayPasswordEnc: text("mail_relay_password_enc"),
+	mailRelayPort: integer("mail_relay_port"),
+	mailRelayUser: text("mail_relay_user"),
 	// {id, kind, name, baseUrl, clientId, clientSecretEnc, enabled}[] : OAuth
 	// App registrations for git-hosting providers (see the Git Providers
 	// page and $lib/services/git-provider.service.ts), separate from
@@ -2626,6 +2672,8 @@ export const repository = pgTable(
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 		webUrl: text("web_url").notNull(),
+		webhookError: text("webhook_error"),
+		webhookId: text("webhook_id"),
 	},
 	(table) => [
 		uniqueIndex("repository_providerId_fullName_idx").on(
@@ -2747,14 +2795,23 @@ export const serviceLog = pgTable(
 			.generatedAlwaysAsIdentity(),
 		instance: text("instance").notNull(),
 		line: text("line").notNull(),
-		serviceId: text("service_id")
-			.notNull()
-			.references(() => service.id, { onDelete: "cascade" }),
+		serviceId: text("service_id").references(() => service.id, {
+			onDelete: "cascade",
+		}),
 		stream: text("stream").$type<"stdout" | "stderr">().notNull(),
+		system: text("system"),
 		time: timestamp("time", { mode: "date", precision: 6 }).notNull(),
+		workstationId: text("workstation_id").references(() => workstation.id, {
+			onDelete: "cascade",
+		}),
 	},
 	(table) => [
 		index("serviceLog_serviceId_time_idx").on(table.serviceId, table.time),
+		index("serviceLog_workstationId_time_idx").on(
+			table.workstationId,
+			table.time,
+		),
+		index("serviceLog_system_time_idx").on(table.system, table.time),
 		index("serviceLog_deploymentId_idx").on(table.deploymentId),
 		index("serviceLog_time_idx").on(table.time),
 		index("serviceLog_line_trgm_idx").using(
@@ -2821,6 +2878,10 @@ export type CoreServiceSettings = Partial<
 		| "garageRpcSecretEnc"
 		| "mailEnabled"
 		| "mailHostname"
+		| "mailRelayHost"
+		| "mailRelayPasswordEnc"
+		| "mailRelayPort"
+		| "mailRelayUser"
 	>
 >;
 export type StorageVolume = typeof storageVolume.$inferSelect;
@@ -2842,6 +2903,8 @@ export type IpBan = typeof ipBan.$inferSelect;
 export type BlockedHit = typeof blockedHit.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type RegistryToken = typeof registryToken.$inferSelect;
+export type PackageRegistry = typeof packageRegistry.$inferSelect;
+export type PackageRegistryToken = typeof packageRegistryToken.$inferSelect;
 export type ObjectStore = typeof objectStore.$inferSelect;
 export type TraceSpan = typeof traceSpan.$inferSelect;
 export type PublicBucket = typeof publicBucket.$inferSelect;

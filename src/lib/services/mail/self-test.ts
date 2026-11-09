@@ -18,6 +18,7 @@ import {
 import { DockerService } from "../docker.service.ts";
 import { MailService } from "../mail.service.ts";
 import { PangolinMailPorts } from "../pangolin/mail-ports.ts";
+import { MailRelayService } from "./relay.ts";
 
 const PROBE_TIMEOUT_MS = 8000;
 const DAY_MS = 86_400_000;
@@ -96,10 +97,14 @@ class MailSelfTestServiceClass {
 				},
 			];
 		}
-		const address = await this.#publicAddress(hostname);
+		const [address, relay, blocked] = await Promise.all([
+			this.#publicAddress(hostname),
+			MailRelayService.relay().catch(() => null),
+			this.#outboundBlockedHere(),
+		]);
 		const probes = await Promise.all([
 			this.#certificate(hostname, address),
-			this.#smtp({ address, hostname }, 25, "Incoming mail (port 25)", false),
+			this.#incoming({ address, hostname }, blocked),
 			this.#smtp(
 				{ address, hostname },
 				465,
@@ -114,7 +119,13 @@ class MailSelfTestServiceClass {
 			),
 			this.#reverseDns(hostname, address),
 			...(running
-				? [this.#outbound(), this.#queue(), this.#recentDeliveries()]
+				? [
+						relay
+							? this.#outbound(relay.host, relay.port, true)
+							: this.#outbound(OUTBOUND_PROBE_HOST, 25, false),
+						this.#queue(),
+						this.#recentDeliveries(),
+					]
 				: []),
 			this.#domains(),
 		]);
@@ -258,6 +269,52 @@ class MailSelfTestServiceClass {
 		}
 	}
 
+	/**
+	 * Whether this server can open any connection out on port 25. When it
+	 * can't, its ISP blocks outbound 25 and a probe of the server's own port
+	 * 25 never leaves, so it says nothing about whether the internet gets in.
+	 */
+	async #outboundBlockedHere(): Promise<boolean> {
+		const socket = connectTcp({ host: OUTBOUND_PROBE_HOST, port: 25 });
+		return await new Promise<boolean>((resolvePromise) => {
+			const timer = setTimeout(() => {
+				socket.destroy();
+				resolvePromise(true);
+			}, PROBE_TIMEOUT_MS);
+			socket.once("connect", () => {
+				clearTimeout(timer);
+				socket.destroy();
+				resolvePromise(false);
+			});
+			socket.once("error", () => {
+				clearTimeout(timer);
+				socket.destroy();
+				resolvePromise(true);
+			});
+		});
+	}
+
+	/** The incoming port 25 check, which can't tell anything when this server's own outbound 25 is blocked. */
+	async #incoming(
+		target: { address: string | null; hostname: string },
+		outboundBlocked: boolean,
+	): Promise<MailCheck> {
+		const check = await this.#smtp(
+			target,
+			25,
+			"Incoming mail (port 25)",
+			false,
+		);
+		if (check.state !== "fail" || !target.address || !outboundBlocked) {
+			return check;
+		}
+		return {
+			...check,
+			detail: `Can't tell from here: this server can't open any connection out on port 25, so your ISP most likely blocks outbound 25 and the probe never left. Other servers may still reach ${target.hostname} fine: check from outside, with an online SMTP test against it.`,
+			state: "warn",
+		};
+	}
+
 	/** Whether the server's address has a PTR record naming the hostname, which most receivers want. */
 	async #reverseDns(
 		hostname: string,
@@ -285,26 +342,45 @@ class MailSelfTestServiceClass {
 		};
 	}
 
-	/** Whether the server can open a connection to another mail server on port 25, which many providers block. */
-	async #outbound(): Promise<MailCheck> {
-		const base = { id: "outbound", label: "Sending out (port 25)" };
+	/**
+	 * Whether the container can open a connection to where its mail leaves:
+	 * the outbound relay when one is set, else another mail server on port
+	 * 25, which many providers block.
+	 */
+	async #outbound(
+		host: string,
+		port: number,
+		relay: boolean,
+	): Promise<MailCheck> {
+		const base = {
+			id: "outbound",
+			label: relay
+				? `Sending out (relay, port ${port})`
+				: "Sending out (port 25)",
+		};
 		const result = await DockerService.execInMail([
 			"bash",
 			"-c",
-			`timeout 8 bash -c '</dev/tcp/${OUTBOUND_PROBE_HOST}/25'`,
+			'timeout 8 bash -c "</dev/tcp/$0/$1"',
+			host,
+			String(port),
 		]).catch(() => null);
-		return result?.exitCode === 0
-			? {
-					...base,
-					detail: `Reached ${OUTBOUND_PROBE_HOST} on port 25.`,
-					state: "ok",
-				}
-			: {
-					...base,
-					detail:
-						"Couldn't reach another mail server on port 25: your provider most likely blocks it, ask them to lift it.",
-					state: "fail",
-				};
+		if (result?.exitCode === 0) {
+			return {
+				...base,
+				detail: relay
+					? `Reached the relay ${host} on port ${port}. Outgoing mail goes through it.`
+					: `Reached ${host} on port 25.`,
+				state: "ok",
+			};
+		}
+		return {
+			...base,
+			detail: relay
+				? `Couldn't reach the relay ${host} on port ${port}: check its host and port on this tab.`
+				: "Couldn't reach another mail server on port 25: your provider most likely blocks it. Ask them to lift it, or set an outbound relay on this tab.",
+			state: "fail",
+		};
 	}
 
 	/** Which of Postfix and Dovecot aren't running inside the container, which stays up when docker-mailserver's setup fails. */

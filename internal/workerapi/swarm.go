@@ -11,6 +11,7 @@ import (
 
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/httpapi"
+	"github.com/orochibraru/homerun/internal/jobs/deploy"
 )
 
 // mountSwarm wires the swarm routes.
@@ -27,6 +28,7 @@ func (s *Server) mountSwarm(r chi.Router) {
 	r.Get("/v1/swarm/services/{id}/replicas", httpapi.H(s.swarmServiceReplicas))
 	r.Get("/v1/swarm/services/{id}/running-tasks/count", httpapi.H(s.countRunningSwarmTasks))
 	r.Get("/v1/swarm/services/{id}/tasks", httpapi.H(s.swarmServiceTasks))
+	r.Get("/v1/swarm/services/{id}/diagnosis", httpapi.H(s.swarmServiceDiagnosis))
 	r.Get("/v1/swarm/services/{id}/logs", httpapi.H(s.swarmServiceLogs))
 	r.Post("/v1/swarm/services/{id}/scale", httpapi.H(s.scaleSwarmService))
 	r.Post("/v1/swarm/services/{id}/restart", httpapi.H(s.restartSwarmService))
@@ -196,6 +198,29 @@ func (s *Server) swarmServiceTasks(w http.ResponseWriter, r *http.Request) error
 		tasks = []dockerapi.SwarmTask{}
 	}
 	return httpapi.Answer(w, http.StatusOK, tasks)
+}
+
+// swarmServiceDiagnosis answers with the diagnosis of a swarm service's most
+// recently failed task (see containerDiagnosis), 404 when no task failed. A
+// task rejected before its container started has no exit code and no output.
+func (s *Server) swarmServiceDiagnosis(w http.ResponseWriter, r *http.Request) error {
+	tasks, err := s.docker.ListSwarmTasks(r.Context(), chi.URLParam(r, "id"), false)
+	if err != nil {
+		return err
+	}
+	task, ok := deploy.LatestFailedTask(tasks)
+	if !ok {
+		return httpapi.Error(w, http.StatusNotFound, "No task of this service failed.")
+	}
+	status := task.Status.ContainerStatus
+	if status == nil || status.ContainerID == "" {
+		return httpapi.Answer(w, http.StatusOK, deploy.NewDiagnosis(false, 0, false, ""))
+	}
+	output, err := s.docker.SwarmTaskLogsTail(r.Context(), task.ID, deploy.FailedOutputTail)
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, deploy.NewDiagnosis(true, status.ExitCode, false, output))
 }
 
 // swarmServiceLogs streams the logs of a swarm service's current tasks only,

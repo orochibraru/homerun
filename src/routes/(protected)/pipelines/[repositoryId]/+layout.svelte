@@ -30,14 +30,25 @@
 	);
 
 	const tabs = $derived([
-		{ href: overviewHref, icon: LayoutGrid, id: "overview", label: "Overview" },
+		{
+			description: "CI runs, durations and success rates",
+			href: overviewHref,
+			icon: LayoutGrid,
+			id: "overview",
+			label: "Overview",
+			summary: repo.pipelinesSyncedAt
+				? `Synced ${timeAgo(repo.pipelinesSyncedAt)}`
+				: "Not synced yet",
+		},
 		{
 			href: resolve("/(protected)/pipelines/[repositoryId]/settings", {
 				repositoryId: repo.id,
 			}),
+			description: "Linked services, the CI webhook and danger zone",
 			icon: Settings,
 			id: "settings",
 			label: "Settings",
+			summary: `${data.linkedServices.length} linked ${data.linkedServices.length === 1 ? "service" : "services"}`,
 		},
 	]);
 

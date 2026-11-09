@@ -119,7 +119,7 @@ describe("PangolinMailPorts", () => {
 									{
 										enabled: true,
 										ip: "homerun-mail",
-										port: 25,
+										port: 12_525,
 										siteId: 7,
 										targetId: 11,
 									},
@@ -138,7 +138,14 @@ describe("PangolinMailPorts", () => {
 			true,
 			true,
 		]);
-		expect(results?.[0]?.detail).toBe("kept tcp:25 -> homerun-mail:25");
+		expect(results?.[0]?.detail).toBe(
+			"kept tcp:25 -> homerun-mail:12525, PROXY protocol on",
+		);
+		expect(
+			calls
+				.filter((call) => call.url.endsWith("/resource/1"))
+				.map((call) => call.body),
+		).toEqual([{ proxyProtocol: true, proxyProtocolVersion: 2 }]);
 		const creates = calls.filter((call) =>
 			call.url.endsWith("/org/org/resource"),
 		);
@@ -148,8 +155,59 @@ describe("PangolinMailPorts", () => {
 			{ mode: "tcp", name: "Homerun mail 993", proxyPort: 993 },
 		]);
 		expect(
-			calls.filter((call) => call.url.endsWith("/resource/9/target")).length,
-		).toBe(3);
+			calls
+				.filter((call) => call.url.endsWith("/resource/9/target"))
+				.map((call) => (call.body as { port: number }).port),
+		).toEqual([12_465, 12_587, 12_993]);
+	});
+
+	test("targets the plain ports when Pangolin refuses PROXY protocol, or the target is the host", async () => {
+		restorers.push(
+			spyOn(PangolinService, "settingsOrNull").mockResolvedValue(connection),
+			spyOn(PangolinService, "listSites").mockResolvedValue([
+				{ name: "home", siteId: 7 },
+			]),
+			spyOn(PangolinService, "listResources").mockResolvedValue(
+				[25, 465, 587, 993].map((port) => ({
+					fullDomain: null,
+					mode: "tcp",
+					name: mailResourceName(port),
+					proxyPort: port,
+					resourceId: port,
+				})) as never,
+			),
+			spyOn(PangolinService, "listTargets").mockResolvedValue([]),
+		);
+		const refusing = recordFetch((url, method) => ({
+			body: {},
+			status: method === "POST" && !url.includes("target") ? 400 : 200,
+		}));
+		const refused = await PangolinMailPorts.sync();
+		expect(refused?.[0]?.detail).toContain("without PROXY protocol");
+		expect(
+			refusing
+				.filter((call) => call.url.endsWith("/target"))
+				.map((call) => (call.body as { port: number }).port),
+		).toEqual([25, 465, 587, 993]);
+
+		restorers.push(
+			spyOn(PangolinService, "settingsOrNull").mockResolvedValue({
+				...connection,
+				targetHost: "localhost",
+			}),
+		);
+		const host = recordFetch(() => ({ body: {} }));
+		await PangolinMailPorts.sync();
+		expect(
+			host
+				.filter((call) => call.url.endsWith("/resource/25"))
+				.map((call) => call.body),
+		).toEqual([{ proxyProtocol: false }]);
+		expect(
+			host
+				.filter((call) => call.url.endsWith("/target"))
+				.map((call) => (call.body as { ip: string; port: number }).port),
+		).toEqual([25, 465, 587, 993]);
 	});
 
 	test("explains a refused raw resource and an unknown site", async () => {

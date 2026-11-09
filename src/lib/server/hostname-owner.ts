@@ -1,10 +1,12 @@
 import { config, serviceDomain } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
+import { PackageRegistryDTO } from "#lib/dto/package-registry-dto.js";
 import { RedirectDTO } from "#lib/dto/redirect-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { StackDTO } from "#lib/dto/stack-dto.js";
 import { StatusPageDTO } from "#lib/dto/status-page-dto.js";
 import { WorkstationDTO } from "#lib/dto/workstation-dto.js";
+import { PACKAGE_REGISTRY_INFO } from "#lib/package-registries.js";
 import { splitSource } from "#lib/redirects.js";
 import {
 	domainHosts,
@@ -54,9 +56,10 @@ function hostOfUrl(url: string | null | undefined): string | null {
  * cleanup may delete one.
  */
 export async function coreHosts(): Promise<Map<string, string>> {
-	const [settings, pages] = await Promise.all([
+	const [settings, pages, packageRegistries] = await Promise.all([
 		InstanceSettingsDTO.get(),
 		StatusPageDTO.list(),
+		PackageRegistryDTO.list(),
 	]);
 	const row = settings.toJSON();
 	const hosts = new Map<string, string>();
@@ -70,6 +73,14 @@ export async function coreHosts(): Promise<Map<string, string>> {
 	}
 	if (row.registryPublicHost) {
 		hosts.set(row.registryPublicHost.toLowerCase(), "the Docker registry");
+	}
+	for (const registry of packageRegistries) {
+		if (registry.publicHost) {
+			hosts.set(
+				registry.publicHost.toLowerCase(),
+				`the ${PACKAGE_REGISTRY_INFO[registry.kind].title}`,
+			);
+		}
 	}
 	const dashboard = hostOfUrl(config.auth.origin);
 	if (dashboard) {

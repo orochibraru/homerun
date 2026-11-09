@@ -8,6 +8,33 @@ export const MAIL_PORTS = [
 	{ label: "IMAP, implicit TLS", port: 993 },
 ] as const;
 
+export const MAIL_MAILBOX_KINDS = [
+	{
+		description: "An inbox people sign in to and read, over IMAP and SMTP.",
+		label: "Mailbox",
+		value: "mailbox",
+	},
+	{
+		description:
+			"Send only, for apps sending transactional mail: SMTP credentials and no inbox, mail sent to it is refused.",
+		label: "Noreply",
+		value: "noreply",
+	},
+] as const;
+
+export type MailMailboxKindValue = (typeof MAIL_MAILBOX_KINDS)[number]["value"];
+
+export interface MailRelay {
+	host: string;
+	password: string | null;
+	port: number;
+	user: string | null;
+}
+
+const RELAY_HOST_RE =
+	/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+const MAX_PORT = 65_535;
+
 const MAIL_DOMAIN_RE =
 	/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const LOCAL_PART_RE = /^[a-z0-9](?:[a-z0-9._+-]{0,62}[a-z0-9])?$/;
@@ -97,6 +124,36 @@ export function postfixVirtual(aliases: AliasEntry[]): string {
 		.filter((alias) => alias.destinations.length > 0)
 		.map((alias) => `${alias.source} ${alias.destinations.join(",")}\n`)
 		.join("");
+}
+
+/** Whether `value` is one of the mailbox kinds. */
+export function isMailboxKind(value: unknown): value is MailMailboxKindValue {
+	return MAIL_MAILBOX_KINDS.some((kind) => kind.value === value);
+}
+
+/** docker-mailserver's `postfix-receive-access.cf`: a `REJECT` line per send-only address, so Postfix refuses mail sent to it while it can still sign in and send. */
+export function postfixReceiveAccess(addresses: string[]): string {
+	return addresses
+		.map((address) => `${address} REJECT This address doesn't receive mail\n`)
+		.join("");
+}
+
+/** Why `relay` can't be the outbound relay, or null. A user needs a password and the other way round. */
+export function mailRelayProblem(relay: MailRelay): string | null {
+	if (!RELAY_HOST_RE.test(relay.host)) {
+		return "The relay host is a hostname, e.g. smtp.example.com.";
+	}
+	if (!(
+		Number.isInteger(relay.port) &&
+		relay.port > 0 &&
+		relay.port <= MAX_PORT
+	)) {
+		return "The relay port is a number between 1 and 65535.";
+	}
+	if (Boolean(relay.user) !== Boolean(relay.password)) {
+		return "Give the relay both a username and a password, or neither.";
+	}
+	return null;
 }
 
 /** docker-mailserver's `dovecot-quotas.cf`: `address:<n>M` for each mailbox with a quota. */

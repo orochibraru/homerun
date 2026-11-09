@@ -7,7 +7,7 @@
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import { title } from "#lib/store/title.js";
 
-	const { children } = $props();
+	const { children, data } = $props();
 
 	onMount(() => {
 		title.set("Object Storage");
@@ -17,26 +17,31 @@
 		href: string;
 	}
 
-	const tabs: RouteTab[] = [
+	const tabs = $derived<RouteTab[]>([
 		{
 			href: resolve("/(protected)/object-storage"),
 			icon: Database,
+			description: "Every bucket on every store, with expiry and public access",
 			id: "buckets",
 			label: "Buckets",
 		},
 		{
 			href: resolve("/(protected)/object-storage/stores"),
 			icon: Plug,
+			description: "S3-compatible providers connected to this instance",
 			id: "stores",
 			label: "Stores",
+			summary: `${data.stores.length} ${data.stores.length === 1 ? "store" : "stores"}`,
 		},
 		{
 			href: resolve("/(protected)/object-storage/built-in"),
 			icon: HardDrive,
+			description: "Homerun's own S3 store, run on this server",
 			id: "built-in",
 			label: "Built-in",
+			summary: data.builtinEnabled ? "On" : "Off",
 		},
-	];
+	]);
 
 	const activeTabId = $derived(
 		tabs.find((tab) =>

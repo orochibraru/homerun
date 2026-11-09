@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "#lib/server/db/lib.js";
 import {
@@ -14,9 +14,12 @@ export type MailMailboxSummary = Omit<MailMailbox, "passwordHash"> & {
 	domain: string;
 };
 
+export type MailMailboxKind = MailMailbox["kind"];
+
 export interface MailMailboxFields {
 	displayName: string | null;
 	enabled: boolean;
+	ownerId: string | null;
 	quotaMb: number | null;
 }
 
@@ -50,11 +53,37 @@ export class MailMailboxDTO extends BaseDTO<MailMailbox> {
 		return rows.map((found) => new MailMailboxDTO(found.row, found.domain));
 	}
 
+	/** The mailboxes `ownerId` owns, by domain then address. */
+	static async listForOwner(ownerId: string): Promise<MailMailboxDTO[]> {
+		const rows = await db
+			.select({ domain: mailDomain.name, row: mailMailbox })
+			.from(mailMailbox)
+			.innerJoin(mailDomain, eq(mailMailbox.domainId, mailDomain.id))
+			.where(eq(mailMailbox.ownerId, ownerId))
+			.orderBy(asc(mailDomain.name), asc(mailMailbox.localPart));
+		return rows.map((found) => new MailMailboxDTO(found.row, found.domain));
+	}
+
+	/** Loads one mailbox by id when `ownerId` owns it; null otherwise. */
+	static async getOwned(
+		id: string,
+		ownerId: string,
+	): Promise<MailMailboxDTO | null> {
+		const [found] = await db
+			.select({ domain: mailDomain.name, row: mailMailbox })
+			.from(mailMailbox)
+			.innerJoin(mailDomain, eq(mailMailbox.domainId, mailDomain.id))
+			.where(and(eq(mailMailbox.id, id), eq(mailMailbox.ownerId, ownerId)))
+			.limit(1);
+		return found ? new MailMailboxDTO(found.row, found.domain) : null;
+	}
+
 	/** Inserts a mailbox under a domain. */
 	static async create(
 		input: MailMailboxFields & {
 			domain: string;
 			domainId: string;
+			kind: MailMailboxKind;
 			localPart: string;
 			passwordHash: string;
 		},
@@ -66,7 +95,9 @@ export class MailMailboxDTO extends BaseDTO<MailMailbox> {
 			domainId: input.domainId,
 			enabled: input.enabled,
 			id: crypto.randomUUID(),
+			kind: input.kind,
 			localPart: input.localPart,
+			ownerId: input.ownerId,
 			passwordHash: input.passwordHash,
 			quotaMb: input.quotaMb,
 			updatedAt: now,
@@ -78,6 +109,11 @@ export class MailMailboxDTO extends BaseDTO<MailMailbox> {
 	/** The mailbox's full address. */
 	get address(): string {
 		return `${this.row.localPart}@${this.domain}`;
+	}
+
+	/** Whether it's a mailbox people read, or a send-only noreply address. */
+	get kind(): MailMailboxKind {
+		return this.row.kind;
 	}
 
 	/** The stored bcrypt hash docker-mailserver's accounts file gets. */

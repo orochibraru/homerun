@@ -3,6 +3,7 @@
 	import { page } from "$app/state";
 	import {
 		AppWindow,
+		AtSign,
 		KeyRound,
 		Lock,
 		LogOut,
@@ -22,22 +23,27 @@
 		href: string;
 	}
 
-	const tabs: RouteTab[] = [
+	const tabs = $derived<RouteTab[]>([
 		{
+			description: "Your name, email and avatar",
 			exact: true,
 			href: resolve("profile"),
 			icon: UserCircle,
 			id: "personal-information",
 			label: "Personal Information",
+			summary: data.user?.email,
 		},
 		{
+			description: "Password, two-factor, passkeys and deleting your account",
 			exact: false,
 			href: resolve("profile/security"),
 			icon: Lock,
 			id: "security",
 			label: "Security",
+			summary: data.user?.twoFactorEnabled ? "Two-factor on" : "Two-factor off",
 		},
 		{
+			description: "Where you're signed in, and signing other devices out",
 			exact: false,
 			href: resolve("profile/sessions"),
 			icon: ShieldCheck,
@@ -45,6 +51,7 @@
 			label: "Sessions",
 		},
 		{
+			description: "Keys for the CLI, scripts and Terraform",
 			exact: false,
 			href: resolve("profile/api-keys"),
 			icon: KeyRound,
@@ -52,6 +59,7 @@
 			label: "API Keys",
 		},
 		{
+			description: "Apps you sign in to with your Homerun account",
 			exact: false,
 			href: resolve("profile/clients"),
 			icon: AppWindow,
@@ -59,13 +67,23 @@
 			label: "Authorized Clients",
 		},
 		{
+			description: "Passwords of the mailboxes you own on this server",
+			exact: false,
+			href: resolve("profile/mail"),
+			icon: AtSign,
+			id: "mail",
+			label: "Mailboxes",
+		},
+		{
+			description: "Theme, colours, tabs, list size and interface mode",
 			exact: false,
 			href: resolve("profile/appearance"),
 			icon: Palette,
 			id: "appearance",
 			label: "Appearance",
+			summary: `${data.uiMode === "simple" ? "Simple" : "Advanced"} mode · ${data.preferences.theme ?? "system"} theme`,
 		},
-	];
+	]);
 
 	function isActive(href: string, exact: boolean): boolean {
 		if (exact) {

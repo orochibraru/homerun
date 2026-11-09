@@ -37,16 +37,21 @@ and services mounting a deleted volume need a redeploy.
 
 When the host has more than one disk, the new volume form (**Storage → New
 volume**, the **New volume** dialog on a service's Storage tab and on a cron
-job's mounts) shows a **Disk** picker listing each mounted filesystem with its
-free space. Homerun reads them from a throwaway container that mounts the host's
-root read-only, skipping system mounts (`/boot`, `/var/lib/docker`, `/run`…).
+job's mounts), the deploy wizard's **Volumes** step and a compose import's named
+volumes show a **Disk** picker listing each mounted filesystem with its free
+space. Homerun reads them from a throwaway container that mounts the host's root
+read-only, skipping system mounts (`/boot`, `/var/lib/docker`, `/run`…). The
+same list is `GET /api/v1/disks`, the MCP server's `list_disks` and
+`homerun volumes disks`; a disk's mount point is what a new volume's `disk`
+takes.
 
 - A **Docker volume** placed on a disk keeps its data in
   `<mount point>/homerun-volumes/<volume name>`: Homerun creates that directory
   and the volume (the `local` driver bound onto it) as soon as you create it,
-  and again on deploy if it's gone. **Docker's default location** keeps it under
-  Docker's data root, as before. The disk can't be changed once the volume
-  exists.
+  and again on a deploy or a cron job run if it's gone (Docker Cleanup prunes an
+  unmounted one, its data stays on the disk). **Docker's default location**
+  keeps it under Docker's data root, as before. The disk can't be changed once
+  the volume exists.
 - A **host path** can already sit anywhere; picking a disk just changes the
   suggested path.
 

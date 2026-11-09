@@ -1,4 +1,5 @@
 import {
+	type ExitDiagnosis,
 	swarmSampleFromTasks,
 	type SwarmTaskLike,
 	type WorkloadHealthSample,
@@ -52,6 +53,32 @@ export function DockerRevisionMixin<
 				}
 				return containerSampleFromInspect(null);
 			}
+		}
+
+		/**
+		 * Why a container stopped, as a failed deploy reports it: its last
+		 * exit code and what it means, its last output and the likely causes
+		 * found in it. Null when the container is gone or can't be read, since
+		 * a diagnosis only ever adds detail to a failure already decided.
+		 */
+		async containerDiagnosis(
+			containerId: string,
+		): Promise<ExitDiagnosis | null> {
+			return await this.worker
+				.get<ExitDiagnosis>(`v1/containers/${containerId}/diagnosis`)
+				.catch(() => null);
+		}
+
+		/**
+		 * The diagnosis of a swarm service's most recently failed task (see
+		 * `containerDiagnosis`), null when none failed or it can't be read.
+		 */
+		async swarmDiagnosis(
+			swarmServiceId: string,
+		): Promise<ExitDiagnosis | null> {
+			return await this.worker
+				.get<ExitDiagnosis>(`v1/swarm/services/${swarmServiceId}/diagnosis`)
+				.catch(() => null);
 		}
 
 		/**

@@ -12,7 +12,11 @@ export const GET = async ({ params, locals, url }) => {
 	}
 	let lines;
 	try {
-		lines = await LogHistoryService.collect(svc.id, url.searchParams, "24h");
+		lines = await LogHistoryService.collect(
+			{ serviceId: svc.id },
+			url.searchParams,
+			"24h",
+		);
 	} catch (error) {
 		return new Response(
 			error instanceof Error ? error.message : String(error),

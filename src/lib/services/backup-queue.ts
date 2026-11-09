@@ -1,5 +1,6 @@
 import type { BackupRunDTO } from "#lib/dto/backup-run-dto.js";
 import { JobDTO } from "#lib/dto/job-dto.js";
+import type { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import type { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 
 import { QueueService } from "./queue.service.ts";
@@ -80,6 +81,32 @@ export function enqueueBackupPrune(userId: string): Promise<JobDTO> {
 		maxAttempts: 1,
 		payload: { userId },
 		title: "Clean up old backups",
+		type: "backup_prune",
+		userId,
+	});
+}
+
+/**
+ * Enqueues the deletion of restic `repositories` (paths under `destination`'s
+ * own) and everything in them, as a backup cleanup job sharing the cleanup's
+ * lock so the two never hit a storage box at once, deduped per repository
+ * set and never retried.
+ */
+export function enqueueBackupPurge(
+	destination: S3DestinationDTO,
+	repositories: string[],
+	title: string,
+	userId: string,
+): Promise<JobDTO> {
+	return QueueService.enqueue({
+		dedupeKey: `backup_purge:${destination.id}:${repositories.join(",")}`,
+		lockKey: "backup_prune",
+		maxAttempts: 1,
+		payload: {
+			purge: { destinationId: destination.id, repositories },
+			userId,
+		},
+		title,
 		type: "backup_prune",
 		userId,
 	});

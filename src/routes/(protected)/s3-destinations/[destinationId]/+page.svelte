@@ -19,6 +19,8 @@
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 
+	import OrphanBackupsPanel from "./orphan-backups-panel.svelte";
+
 	const { data, form } = $props();
 
 	const destination = $derived(data.destination);
@@ -212,8 +214,18 @@
 					/>
 				</form>
 			</div>
+			{#if destination.type === "sftp" || destination.type === "webdav"}
+				<p class="text-text-subtle px-5 pb-5 text-xs">
+					On a box that takes automatic snapshots, used counts live files only:
+					the space snapshots hold doesn't show, so the size here is used plus
+					free. A deleted backup frees its space once the snapshots holding it
+					are gone too.
+				</p>
+			{/if}
 		</section>
 	{/if}
+
+	<OrphanBackupsPanel destinationId={destination.id} />
 
 	<section class="panel mb-6 rounded-md">
 		<PanelHeader title="Repository password" />

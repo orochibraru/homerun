@@ -178,14 +178,19 @@ they now fail for different reasons with different fixes, see
     "Likely cause" per well-known pattern `LogHints` finds and puts what the
     exit code means, OOM kill included, in the reason via `ExitCodeHint`; a
     failed swarm update does the same for the newest failed task through
-    `SwarmTaskLogsTail`), removes it and reports a `rollout-failed` outcome,
-    which `deploy.service.ts`'s `workerFailure` turns back into a
-    `RolloutFailedError` (`docker/rollout.ts`, which now only keeps the shared
-    `ContainerHealthSample`/`containerSampleFromInspect` type and this error
-    class — still used by `DockerRevisionMixin.containerHealthSample` and the
-    post-deploy health watch) that `#recordFailure` treats like a scan block
-    (service not marked failed). What keeps traffic off the new container until
-    it's ready is its Docker healthcheck, picked by `planReadiness`
+    `SwarmTaskLogsTail`; the same diagnosis, as `deploy.NewDiagnosis`, is served
+    at `GET /v1/containers/{id}/diagnosis` and
+    `/v1/swarm/services/{id}/diagnosis` for the TS revision health watch and
+    update trials, which word it with `withExitMeaning`/`diagnosisLines` in
+    `revisions.ts` rather than keep a copy of the hints), removes it and reports
+    a `rollout-failed` outcome, which `deploy.service.ts`'s `workerFailure`
+    turns back into a `RolloutFailedError` (`docker/rollout.ts`, which now only
+    keeps the shared `ContainerHealthSample`/`containerSampleFromInspect` type
+    and this error class — still used by
+    `DockerRevisionMixin.containerHealthSample` and the post-deploy health
+    watch) that `#recordFailure` treats like a scan block (service not marked
+    failed). What keeps traffic off the new container until it's ready is its
+    Docker healthcheck, picked by `planReadiness`
     (`internal/jobs/deploy/readiness.go` now, see "Readiness gate" below). The
     container is aliased as its slug on the shared network so other services can
     reach it at `http://<slug>:<containerPort>` regardless of the randomized
@@ -986,6 +991,31 @@ plain HTTP) with the internal credentials for a local build, and nothing for a
 build server (its cache registry doubles as the image transfer, which would
 hairpin through the public hostname). `PlanGC` (`internal/registryapi`) always
 keeps a `buildcache` tag, which no keep set lists.
+
+## Package registries (`/package-registries/[kind]`, `PackageRegistryService`)
+
+npm (`verdaccio/verdaccio`) and PyPI (`pypiserver/pypiserver`), pinned in
+`docker/package-registry-container.ts`'s `PACKAGE_REGISTRY_SPECS`, one spec per
+kind so the rest of the code has no per-kind branch:
+`DockerPackageRegistryMixin` (`docker/package-registry.ts`, merged outermost)
+runs `homerun-<kind>` on the shared network with a `-data` and a `-config`
+volume, no published port, and a Traefik router at the public host. Auth is
+always htpasswd (no anonymous mode, so a published registry is never open): a
+one-off `alpine` writes the config files and the htpasswd from
+`package_registry_token` into the config volume on every reconcile and `chown`s
+them to the image's user. Both images reread htpasswd when it changes, so a
+token change rewrites the file and leaves the container alone; a recreate only
+happens when the image, the config digest env or the Traefik labels differ
+(`packageRegistryMatches`). Verdaccio needs `VERDACCIO_PUBLIC_URL` to build
+tarball URLs behind Traefik. `configure` runs as the `configurePackageRegistry`
+core-service job (lock key per kind), the core-services watch calls
+`reassert()`, public hosts are reserved in `coreHosts` and get DNS through
+`syncCoreHostDns`. Maven and Cargo aren't built: Reposilite and Kellnr keep
+their own user database, no htpasswd. **Not verified live**: no container was
+started while building this, the image behaviour (Basic auth on Verdaccio,
+passlib bcrypt on pypiserver, htpasswd reload) is from their source. Tests:
+`tests/unit/app/package-registry-container.test.ts`,
+`tests/unit/app/package-registries.test.ts`.
 
 ## Object storage (`/object-storage`, `ObjectStorageService`, `docker/garage.ts`)
 

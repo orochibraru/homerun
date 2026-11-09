@@ -158,8 +158,19 @@ homerun redirects create <source> <destination> [--enabled=false] [--keep-path=f
 homerun redirects update <id> [--source <host[/path]>] [--destination <url>] [--enabled=<bool>] [--keep-path=<bool>] [--permanent=<bool>]
 homerun redirects enable|disable <id>
 homerun redirects delete <id>
+homerun mail domains list|get|create|delete
+homerun mail mailboxes list|get|create|update|delete
+homerun mail aliases list|get|create|update|delete
 homerun registry repositories [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun registry tags <repository> [--json]
+homerun pipelines stats [--json]
+homerun pipelines repositories [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun pipelines repository <id|owner/repo>
+homerun pipelines runs [<id|owner/repo>] [--status <statuses>] [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun pipelines run <id|owner/repo> <runId>
+homerun pipelines sync <id|owner/repo>
+homerun pipelines watch <providerId> <owner/repo> [--default-branch <branch>]
+homerun pipelines unwatch <id|owner/repo> [--yes]
 homerun service-accounts list [--json]
 homerun service-accounts create <name> [--permissions <area>=<level>,...]
 homerun service-accounts update <id> [--name <name>] [--permissions <area>=<level>,...]
@@ -228,9 +239,12 @@ one onto the REST collection of the same name (`/api/v1/<resource>`, `buckets`
 onto `/object-stores/{storeId}/buckets`, which is why it takes the store as its
 first argument and the bucket's name as its id). `service-dependencies` has no
 `update`, since the API has none. `stacks get|create|update|delete`,
-`services create|update`, `templates get` and
-`iac projects list|get|create|delete` are the same commands over their
-collections.
+`services create|update`, `templates get`, `iac projects list|get|create|delete`
+and the mail server's `mail domains list|get|create|delete`, `mail mailboxes`
+and `mail aliases` are the same commands over their collections
+(`/mail/domains`, `/mail/mailboxes`, `/mail/aliases`). A mailbox's `kind` is
+`mailbox` or `noreply` (send only), set at creation;
+`mail mailboxes update <id> --set password=...` changes its password.
 
 - `list` prints a table of the fields that identify a row, `--json` the raw
   list. `--page`/`--per-page`/`--search` exist where the endpoint is paginated

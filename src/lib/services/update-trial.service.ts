@@ -4,6 +4,7 @@ import { phaseLine } from "#lib/deploy-phases.js";
 import type { ServiceDTO } from "#lib/dto/service-dto.js";
 import { ServiceVolumeDTO } from "#lib/dto/service-volume-dto.js";
 import type { ImageUpdateAvailable } from "#lib/image-versions.js";
+import { diagnosisLines, withExitMeaning } from "#lib/revisions.js";
 import { runtimeOptionsFrom } from "#lib/service-runtime.js";
 
 import {
@@ -196,9 +197,15 @@ class UpdateTrialServiceClass {
 			);
 			return message;
 		} catch (err) {
-			const logs = await this.#trialLogs(created.id);
-			await progress(...(logs ? logs.split("\n") : []), messageOf(err));
-			throw new Error(logs ? `${messageOf(err)}\n\n${logs}` : messageOf(err));
+			const diagnosis = await DockerService.containerDiagnosis(created.id);
+			const message = withExitMeaning(messageOf(err), diagnosis);
+			const output = diagnosis
+				? diagnosisLines("Its last output:", diagnosis).map(stripAnsi)
+				: [];
+			await progress(...output, message);
+			throw new Error(
+				output.length > 0 ? `${message}\n\n${output.join("\n")}` : message,
+			);
 		} finally {
 			await DockerService.worker
 				.delete(`v1/containers/${created.id}`, { force: "1" })

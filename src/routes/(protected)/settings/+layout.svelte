@@ -58,31 +58,48 @@
 		href: string;
 	}
 
+	const effective = $derived({
+		baseDomain: data.settings.baseDomain ?? data.envDefaults.baseDomain,
+		dockerNetworkName:
+			data.settings.dockerNetworkName ?? data.envDefaults.dockerNetworkName,
+		smtpEnabled: data.settings.smtpEnabled ?? data.envDefaults.smtpEnabled,
+		smtpHost: data.settings.smtpHost ?? data.envDefaults.smtpHost,
+		traefikEntrypoint:
+			data.settings.traefikEntrypoint ?? data.envDefaults.traefikEntrypoint,
+	});
+
 	const tabs = $derived<RouteTab[]>(
 		[
 			{
+				description: "Base domain, interface mode, resource limits and updates",
 				exact: true,
 				href: resolve("settings"),
 				icon: Globe,
 				id: "general",
 				label: "General",
+				summary: effective.baseDomain || "No base domain set",
 			},
 			{
 				exact: false,
+				description: "Daemon, network, orchestration and image scanning",
 				href: resolve("settings/docker"),
 				icon: Container,
 				id: "docker",
 				label: "Docker",
+				summary: `${data.settings.orchestrationMode === "swarm" ? "Swarm" : "Standalone"} · ${effective.dockerNetworkName}`,
 			},
 			{
 				exact: false,
+				description: "Traefik's entrypoint, cert resolver and ACME email",
 				href: resolve("settings/networking"),
 				icon: Network,
 				id: "networking",
 				label: "Networking",
+				summary: `Entrypoint ${effective.traefikEntrypoint}`,
 			},
 			{
 				exact: false,
+				description: "A certificate of your own for the whole instance",
 				href: resolve("settings/tls"),
 				icon: Lock,
 				id: "tls",
@@ -90,6 +107,7 @@
 			},
 			{
 				exact: false,
+				description: "What visitors see when a service is down or missing",
 				href: resolve("settings/error-pages"),
 				icon: TriangleAlert,
 				id: "error-pages",
@@ -97,6 +115,7 @@
 			},
 			{
 				exact: false,
+				description: "Banning abusive clients, and CrowdSec",
 				href: resolve("settings/ip-bans"),
 				icon: Ban,
 				id: "ip-bans",
@@ -104,13 +123,19 @@
 			},
 			{
 				exact: false,
+				description: "The SMTP server Homerun sends its email through",
 				href: resolve("settings/email"),
 				icon: Mail,
 				id: "email",
 				label: "Email",
+				summary:
+					effective.smtpEnabled && effective.smtpHost
+						? effective.smtpHost
+						: "Not sending email",
 			},
 			{
 				exact: false,
+				description: "Bring projects over from another PaaS",
 				href: resolve("settings/migrate"),
 				icon: MoveRight,
 				id: "migrate",

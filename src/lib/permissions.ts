@@ -15,6 +15,7 @@ export const PERMISSION_AREAS = [
 			"/monitoring",
 			"/pipelines",
 			"/api/v1/monitoring",
+			"/api/v1/pipelines",
 			"/api/v1/services",
 			"/api/v1/service-environments",
 			"/api/v1/service-dependencies",
@@ -72,6 +73,7 @@ export const PERMISSION_AREAS = [
 			"/backups",
 			"/s3-destinations",
 			"/api/v1/volumes",
+			"/api/v1/disks",
 			"/api/v1/backups",
 			"/api/v1/backup-destinations",
 		],
@@ -86,13 +88,14 @@ export const PERMISSION_AREAS = [
 		description: "The mail server, its domains, mailboxes and aliases.",
 		key: "mail",
 		label: "Mail",
-		routes: ["/mail"],
+		routes: ["/mail", "/api/v1/mail"],
 	},
 	{
-		description: "The built-in image registry, its images and tokens.",
+		description:
+			"The built-in image registry and the npm and PyPI registries, their packages and tokens.",
 		key: "registry",
 		label: "Docker Registry",
-		routes: ["/registry", "/api/v1/registry"],
+		routes: ["/registry", "/package-registries", "/api/v1/registry"],
 	},
 	{
 		description: "Registries that cache image builds.",

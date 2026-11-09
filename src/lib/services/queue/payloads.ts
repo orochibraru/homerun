@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { DEPLOY_TRIGGERS } from "#lib/deploy-trigger.js";
 import { isNotificationEvent } from "#lib/notification-events.js";
+import { PACKAGE_REGISTRY_KINDS } from "#lib/package-registries.js";
 import type { NotificationEvent } from "#lib/types.js";
 
 export const deployJobPayload = z.object({
@@ -30,6 +31,16 @@ export const backupJobPayload = z.object({
 	volumeId: z.string(),
 });
 
+export const backupPruneJobPayload = z.object({
+	purge: z
+		.object({
+			destinationId: z.string(),
+			repositories: z.array(z.string()).min(1),
+		})
+		.optional(),
+	userId: z.string(),
+});
+
 export const backupRestoreJobPayload = z.object({
 	key: z.string().min(1),
 	stopServices: z.boolean().default(false),
@@ -44,6 +55,12 @@ export const coreServiceJobPayload = z.discriminatedUnion("action", [
 	z.object({ action: z.literal("publishBuiltinStore"), host: z.string() }),
 	z.object({ action: z.literal("setRegistryAuth"), enabled: z.boolean() }),
 	z.object({ action: z.literal("publishRegistry"), host: z.string() }),
+	z.object({
+		action: z.literal("configurePackageRegistry"),
+		enabled: z.boolean(),
+		host: z.string(),
+		kind: z.enum(PACKAGE_REGISTRY_KINDS),
+	}),
 	z.object({
 		action: z.literal("syncMail"),
 		purge: z.array(z.string()).default([]),

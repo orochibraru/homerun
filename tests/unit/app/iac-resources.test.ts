@@ -8,8 +8,8 @@ import {
 	iacSpec,
 	importIdOf,
 	toSnakeCase,
-	toStateValue,
 } from "../../../src/lib/iac/resources";
+import { toStateValue } from "../../../src/lib/iac/state-value";
 
 describe("the IaC spec", () => {
 	test("names every attribute in snake_case, unique per resource", () => {
@@ -82,5 +82,21 @@ describe("the IaC spec", () => {
 			"s1/tfstate",
 		);
 		expect(iacResource("homerun_nothing")).toBeUndefined();
+	});
+
+	test("converts an object attribute to state keys, missing fields as null", () => {
+		const placement = iacResource("homerun_service")?.attributes.find(
+			(attribute) => attribute.name === "swarmPlacement",
+		);
+		if (!placement) {
+			throw new Error("missing swarmPlacement");
+		}
+		expect(placement.kind).toBe("object");
+		expect(toStateValue(placement, { roles: ["worker"] })).toEqual({
+			constraints: null,
+			preferences: null,
+			roles: ["worker"],
+		});
+		expect(toStateValue(placement, null)).toBeNull();
 	});
 });

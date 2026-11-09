@@ -14,7 +14,7 @@ import {
 	volumeMountApiBody,
 } from "#lib/server/validation/api-resources.js";
 
-/** Registers the tools that change storage volumes and their backup settings, mount them into services, and list backup destinations. */
+/** Registers the tools that change storage volumes and their backup settings, mount them into services, and list the host's disks and the backup destinations. */
 export function registerVolumeTools(server: McpServer, api: ApiCall): void {
 	const volumeId = z.string().describe("The volume's id, from list_volumes");
 	const mountId = z
@@ -111,6 +111,21 @@ export function registerVolumeTools(server: McpServer, api: ApiCall): void {
 			inputSchema: z.object({ mountId }),
 		},
 		async ({ mountId: id }) => asResult(await api("DELETE", mountPath(id))),
+	);
+
+	registerVolumeLookupTools(server, api);
+}
+
+/** Registers the read-only lookups a volume needs: the host's disks and the backup destinations. */
+function registerVolumeLookupTools(server: McpServer, api: ApiCall): void {
+	server.registerTool(
+		"list_disks",
+		{
+			annotations: read,
+			description:
+				"List the host's disks a Docker volume can be kept on, root first: mount point, device, filesystem, size and free space. A disk's mountPoint is create_volume's disk.",
+		},
+		async () => asResult(await api("GET", "/disks")),
 	);
 
 	server.registerTool(

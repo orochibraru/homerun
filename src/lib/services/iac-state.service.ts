@@ -5,6 +5,9 @@ import { IacStateVersionDTO } from "#lib/dto/iac-state-version-dto.js";
 import { ObjectStoreDTO } from "#lib/dto/object-store-dto.js";
 import {
 	diffStates,
+	pulumiBackendPath,
+	pulumiLoginCommand,
+	pulumiStackName,
 	type StateDiff,
 	stateObjectKey,
 	summarizeState,
@@ -17,7 +20,10 @@ import type { IacStateLock } from "#lib/server/db/schema.js";
 import { slugify, uniqueSlug } from "#lib/slug.js";
 
 import { ObjectStorageService } from "./object-storage.service.ts";
-import type { ObjectStoreClient } from "./s3/object-store-client.ts";
+import type {
+	BucketObject,
+	ObjectStoreClient,
+} from "./s3/object-store-client.ts";
 
 export type WriteResult =
 	| { ok: true; version: IacStateVersionDTO }
@@ -39,6 +45,13 @@ export interface IacProjectSummary {
 	storeId: string;
 	tool: IacTool;
 	updatedAt: Date | null;
+}
+
+export interface PulumiStackFile {
+	key: string;
+	lastModified: string | null;
+	/** `project/stack`, or `stack` for a backend from before project-scoped stacks. */
+	name: string;
 }
 
 export interface VersionDiff {
@@ -311,6 +324,97 @@ class IacStateServiceClass {
 			previousSerial: previous?.serial ?? null,
 			serial: version.serial,
 		};
+	}
+
+	/**
+	 * The `pulumi login` command for a Pulumi project's folder in its bucket,
+	 * null when its store is gone.
+	 */
+	async pulumiLogin(project: IacProjectDTO): Promise<string | null> {
+		const store = await ObjectStoreDTO.get(project.storeId);
+		if (!store) {
+			return null;
+		}
+		return pulumiLoginCommand({
+			bucket: project.bucket,
+			endpoint: await ObjectStorageService.publicEndpoint(store),
+			prefix: project.prefix,
+			region: store.region,
+			slug: project.slug,
+		});
+	}
+
+	/**
+	 * Every stack checkpoint Pulumi keeps in a Pulumi project's folder of the
+	 * bucket (`.pulumi/stacks/`), most recently written first.
+	 *
+	 * @throws When the store is gone or the bucket can't be listed.
+	 */
+	async pulumiStacks(project: IacProjectDTO): Promise<PulumiStackFile[]> {
+		const client = await this.#client(project);
+		const folder = `${pulumiBackendPath(project)}/.pulumi/stacks/`;
+		const root = await this.#listAll(client, project.bucket, folder);
+		const projects = await Promise.all(
+			root.folders.map((prefix) =>
+				this.#listAll(client, project.bucket, prefix),
+			),
+		);
+		return [root, ...projects]
+			.flatMap((listing) => listing.objects)
+			.flatMap((object) => {
+				const name = pulumiStackName(folder, object.key);
+				return name
+					? [{ key: object.key, lastModified: object.lastModified, name }]
+					: [];
+			})
+			.sort((a, b) =>
+				(b.lastModified ?? "").localeCompare(a.lastModified ?? ""),
+			);
+	}
+
+	/**
+	 * Every folder and object directly under `prefix`, across every page of
+	 * the listing.
+	 *
+	 * @throws When the bucket can't be listed.
+	 */
+	async #listAll(
+		client: ObjectStoreClient,
+		bucket: string,
+		prefix: string,
+	): Promise<{ folders: string[]; objects: BucketObject[] }> {
+		const folders: string[] = [];
+		const objects: BucketObject[] = [];
+		let token: string | null = null;
+		do {
+			// oxlint-disable-next-line no-await-in-loop -- each page's token only comes with the page before it
+			const listing = await client.listObjects(bucket, prefix, token);
+			folders.push(...listing.folders);
+			objects.push(...listing.objects);
+			token = listing.nextToken;
+		} while (token);
+		return { folders, objects };
+	}
+
+	/**
+	 * A Pulumi stack checkpoint's body, gunzipped when Pulumi wrote it
+	 * compressed.
+	 *
+	 * @throws When the object is missing or the bucket refuses the read.
+	 */
+	async pulumiCheckpoint(project: IacProjectDTO, key: string): Promise<string> {
+		const response = await (
+			await this.#client(project)
+		).objectResponse(project.bucket, key, null);
+		if (!response.ok) {
+			throw new Error(
+				`${key} can't be read from ${project.bucket} (${response.status}).`,
+			);
+		}
+		const bytes = new Uint8Array(await response.arrayBuffer());
+		return new TextDecoder().decode(
+			key.endsWith(".gz") ? Bun.gunzipSync(bytes) : bytes,
+		);
 	}
 
 	/**

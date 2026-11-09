@@ -126,6 +126,49 @@ describe("detectDrift", () => {
 	});
 });
 
+describe("detectDrift on a swarm placement", () => {
+	test("compares the object field by field, whatever the key order", () => {
+		const placed = JSON.stringify({
+			resources: [
+				{
+					instances: [
+						{
+							attributes: {
+								id: "svc-1",
+								swarm_placement: {
+									constraints: [],
+									preferences: [],
+									roles: ["worker"],
+								},
+							},
+						},
+					],
+					mode: "managed",
+					name: "web",
+					type: "homerun_service",
+				},
+			],
+		});
+		const live = (roles: string[]) => ({
+			homerun_service: [
+				{
+					id: "svc-1",
+					swarmPlacement: { roles, preferences: [], constraints: [] },
+				},
+			],
+		});
+		expect(detectDrift(placed, live(["worker"])).inSync).toBe(1);
+		expect(detectDrift(placed, live(["manager"])).drifted[0]?.changes).toEqual([
+			{
+				attribute: "swarm_placement",
+				live: { constraints: [], preferences: [], roles: ["manager"] },
+				sensitive: false,
+				state: { constraints: [], preferences: [], roles: ["worker"] },
+			},
+		]);
+	});
+});
+
 describe("formatDriftValue", () => {
 	test("shows strings as is and the rest as JSON", () => {
 		expect(formatDriftValue(null)).toBe("null");

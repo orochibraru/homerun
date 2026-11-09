@@ -3,12 +3,14 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import {
+		Archive,
 		ExternalLink,
 		Globe,
 		Mail,
 		MonitorSmartphone,
 		Rocket,
 		RotateCw,
+		Send,
 		Server,
 		Stethoscope,
 	} from "@lucide/svelte";
@@ -18,6 +20,7 @@
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import MailCheckList from "#lib/components/mail-check-list.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
+	import PasswordField from "#lib/components/password-field.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import { queuedJobToast } from "#lib/job-toast.js";
 	import { type MailCheck, overallState } from "#lib/mail-doveadm.js";
@@ -37,6 +40,9 @@
 	let toggling = $state(false);
 	let restarting = $state(false);
 	let savingHost = $state(false);
+	let savingRelay = $state(false);
+	let addingVolume = $state(false);
+	let relayPassword = $state("");
 
 	const host = $derived(status.hostname ?? "mail.example.com");
 	const overall = $derived(checks ? overallState(checks) : null);
@@ -44,7 +50,7 @@
 
 <section class="panel mb-6 rounded-md">
 	<PanelHeader
-		description="Checks the container, each port at the hostname's public address (probed from this server, so not proof the whole internet gets through), the certificate, sending out on port 25, reverse DNS, the queue and each domain's records. It changes nothing."
+		description="Checks the container, each port at the hostname's public address (probed from this server, so not proof the whole internet gets through), the certificate, sending out (on port 25, or to the outbound relay), reverse DNS, the queue and each domain's records. It changes nothing."
 		icon={Stethoscope}
 		title="Self-test"
 	>
@@ -241,6 +247,134 @@
 			bind:value={hostname}
 		/>
 	</form>
+</section>
+
+<section class="panel mb-6 rounded-md">
+	<PanelHeader
+		description="A smarthost every outgoing message is handed to instead of being delivered on port 25: for a host whose provider blocks outbound 25, or whose address has no matching reverse DNS. Add the relay's servers to each domain's SPF record too. Leave the host empty to deliver directly."
+		icon={Send}
+		title="Outbound relay"
+	>
+		{#snippet trailing()}
+			<SaveButton form="mail-relay" pending={savingRelay} />
+		{/snippet}
+	</PanelHeader>
+	<form
+		id="mail-relay"
+		class="grid gap-4 px-5 py-4 sm:grid-cols-2 xl:grid-cols-4"
+		action="?/setRelay"
+		method="POST"
+		use:enhance={queuedJobToast({
+			error: "Couldn't save the relay.",
+			loading: "Saving the relay",
+			onSettled: () => {
+				savingRelay = false;
+			},
+			onStart: () => {
+				savingRelay = true;
+			},
+			onSuccess: () => {
+				relayPassword = "";
+			},
+			success: "Relay saved, the container is being updated.",
+		})}
+	>
+		<div>
+			<label class={labelClass} for="mailRelayHost">Host</label>
+			<input
+				id="mailRelayHost"
+				class={inputClass}
+				autocomplete="off"
+				name="relayHost"
+				placeholder="smtp.relay.example"
+				value={data.relay.host ?? ""}
+			/>
+		</div>
+		<div>
+			<label class={labelClass} for="mailRelayPort">Port</label>
+			<input
+				id="mailRelayPort"
+				class={inputClass}
+				max="65535"
+				min="1"
+				name="relayPort"
+				placeholder="587"
+				type="number"
+				value={data.relay.port ?? ""}
+			/>
+		</div>
+		<div>
+			<label class={labelClass} for="mailRelayUser">Username</label>
+			<input
+				id="mailRelayUser"
+				class={inputClass}
+				autocomplete="off"
+				name="relayUser"
+				placeholder="None"
+				value={data.relay.user ?? ""}
+			/>
+		</div>
+		<PasswordField
+			autocomplete="new-password"
+			id="mailRelayPassword"
+			label="Password"
+			name="relayPassword"
+			placeholder={data.relay.hasPassword
+				? "Saved, leave empty to keep it"
+				: "None"}
+			bind:value={relayPassword}
+		/>
+	</form>
+</section>
+
+<section class="panel mb-6 rounded-md">
+	<PanelHeader
+		description="Every mailbox's mail lives in the homerun-mail-data Docker volume. Add it to Storage to back it up like a service volume: a schedule and a destination on its page. Turn the mail server off before restoring into it."
+		icon={Archive}
+		title="Backups"
+	>
+		{#snippet trailing()}
+			{#if data.dataVolume}
+				<Button
+					href={resolve("/(protected)/storage/[volumeId]", {
+						volumeId: data.dataVolume.id,
+					})}
+					size="sm"
+					variant="outline">Open in Storage</Button
+				>
+			{:else}
+				<form
+					action="?/addDataVolume"
+					method="POST"
+					use:enhance={enhanceToast({
+						error: "Couldn't add the volume to Storage.",
+						loading: "Adding the mail volume to Storage",
+						onSettled: () => {
+							addingVolume = false;
+						},
+						onStart: () => {
+							addingVolume = true;
+						},
+						success: "Added. Set its schedule and destination here.",
+					})}
+				>
+					<Button
+						disabled={addingVolume}
+						size="sm"
+						type="submit"
+						variant="outline"><Archive class="size-4" />Add to Storage</Button
+					>
+				</form>
+			{/if}
+		{/snippet}
+	</PanelHeader>
+	<p class="text-text-muted px-5 py-4 text-sm">
+		{data.dataVolume
+			? data.dataVolume.backupEnabled
+				? "Backed up on its schedule, see Backups for each run."
+				: "In Storage, with backups off: turn them on from its page."
+			: "Not in Storage yet, so not backed up."}
+	</p>
 </section>
 
 <section class="panel rounded-md">

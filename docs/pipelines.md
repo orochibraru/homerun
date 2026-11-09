@@ -20,14 +20,33 @@ you want, then click **Watch**. Repositories already watched are marked and
 can't be ticked again; come back to this page any time to add more. Homerun
 reads their runs with your connection, so you need a GitHub, GitLab or Gitea
 provider connected first. Services already building from a repository are linked
-to it right away, and each repository's first sync is queued.
+to it right away, its CI webhook is registered (see below), and each
+repository's first sync is queued.
 
-From then on it's synced every five minutes. Each sync reads the latest 50 runs
-and fetches the jobs of every run that's new, still running, or was re-run since
-the last one, so a quiet repository costs one API call per sync. **Sync now** on
-a repository's page, or **Sync all now** on the Pipelines page, queues a sync as
-a background job on the [job queue](scheduling.md); the toast's **View task**
-opens its log.
+Each sync reads the latest 50 runs and fetches the jobs of every run that's new,
+still running, or was re-run since the last one, so a quiet repository costs one
+API call per sync. **Sync now** on a repository's page, or **Sync all now** on
+the Pipelines page, queues a sync as a background job on the
+[job queue](scheduling.md); the toast's **View task** opens its log.
+
+## Webhooks and polling
+
+Watching a repository registers a webhook on it, with your connection, that
+sends only CI events: `workflow_run` and `workflow_job` on GitHub and Gitea
+(Gitea sends them from 1.24 on), pipeline and job events on GitLab. Every
+delivery is checked against the repository's own secret, like a
+[push webhook](git-providers.md), and queues a sync, so a run shows up as it
+starts, moves on and finishes. A repository with a webhook is still read once an
+hour in case a delivery was lost; one without is read every five minutes.
+
+Registering needs the **Dashboard URL** under **Settings → General**, the
+address the provider delivers to, and a connection allowed to add webhooks
+(admin rights on the repository). When it can't be registered, the repository's
+**Settings** tab says why and shows the payload URL and secret to add the
+webhook by hand: send workflow run and workflow job events (GitLab: pipeline and
+job events) as JSON; GitLab calls the secret a "secret token". Saving the
+settings tries registering it again. Stopping watching a repository removes its
+webhook.
 
 When a sync fails (a revoked token, a repository the connection can't see, an
 older Gitea, a provider that was removed), the repository's page and the
@@ -64,13 +83,16 @@ and been synced, and goes once it's older than the trace retention.
 
 A repository's **Settings** tab:
 
-- **Sync CI runs** turns the five-minute sync on or off. **Sync now** works
-  either way, and turning it off keeps the stored runs.
+- **Sync CI runs** turns syncing on or off, polled and webhook alike. **Sync
+  now** works either way, and turning it off keeps the stored runs.
 - **Runner rates** set what its runs cost, see below.
 - **Linked services** ticks the services that use this repository. A service
   links to one repository at a time: ticking it here moves it from any other.
-- **Stop watching**, in the danger zone, deletes the stored runs and drops the
-  link to the services. Traces already exported stay until they expire.
+- **CI webhook** shows whether the webhook is registered, and if not why, with
+  its payload URL and secret.
+- **Stop watching**, in the danger zone, deletes the stored runs, removes the
+  webhook and drops the link to the services. Traces already exported stay until
+  they expire.
 
 ## Cost
 
@@ -113,3 +135,10 @@ linked to the repository, even when that service's own traces are turned off, or
 under **Monitoring → Traces** when no service is linked. They expire with the
 [trace retention](tracing.md#the-collector) while the runs themselves stay on
 the Pipelines pages.
+
+## API, MCP and CLI
+
+Watched repositories, their runs and their totals are in the
+[REST API](api-and-cli.md#pipelines) under `/api/v1/pipelines`, in the
+[MCP server](mcp.md) (`list_repositories`, `list_pipeline_runs`,
+`get_pipeline_run`...) and in the CLI as `homerun pipelines`.

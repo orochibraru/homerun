@@ -710,14 +710,36 @@ class GitProviderServiceClass {
 			url: string;
 		},
 	): Promise<string> {
-		const request = createWebhookRequest(provider.kind, hook.repo, hook);
+		return await this.registerWebhook(
+			provider,
+			connection,
+			createWebhookRequest(provider.kind, hook.repo, hook),
+			hook.url,
+		);
+	}
+
+	/**
+	 * Sends a create-webhook request built for this provider, taking over the
+	 * GitHub or Gitea hook that already delivers to `url` when the provider
+	 * refuses a duplicate.
+	 *
+	 * @returns The provider's id for the hook, used to delete it later.
+	 * @throws `GitProviderRefusedError` when the provider refuses, a plain
+	 * error when it can't be reached, answers otherwise or returns no id.
+	 */
+	async registerWebhook(
+		provider: GitProviderConfig,
+		connection: GitConnectionDTO,
+		request: WebhookRequest,
+		url: string,
+	): Promise<string> {
 		const res = await this.api(provider, connection, request.path, {
 			body: request.body,
 			method: request.method,
 		}).catch(async (err: unknown) => {
 			const adopted =
 				err instanceof Error && /already exists/i.test(err.message)
-					? await this.#adoptWebhook(provider, connection, request, hook.url)
+					? await this.#adoptWebhook(provider, connection, request, url)
 					: null;
 			if (!adopted) {
 				throw err;

@@ -7,11 +7,16 @@ import { stackPath } from "#lib/stack-tree.js";
 import {
 	deleteRemoteFile,
 	listRemoteBackups,
+	listRemoteRepositories,
+	parseRepositoryListing,
+	purgeRemotePath,
 	type RcloneRemote,
 	rcloneRemote,
+	type RemoteRepository,
 	testRemote,
 } from "./backup/rclone.ts";
 import {
+	destinationRemote,
 	listSnapshots,
 	parseResticKey,
 	RESTIC_KEY_PREFIX,
@@ -317,6 +322,68 @@ class S3BackupServiceClass {
 			throw new Error("The picked backup destination no longer exists.");
 		}
 		return row;
+	}
+
+	/**
+	 * The restic repositories on `row` whose volume no longer exists: backups
+	 * of a volume deleted without them, which no cleanup ever reaches, found
+	 * by listing the destination itself.
+	 *
+	 * @throws When the destination can't be reached or listed.
+	 */
+	async orphanRepositories(row: S3DestinationDTO): Promise<RemoteRepository[]> {
+		const [repositories, volumes] = await Promise.all([
+			listRemoteRepositories(destinationRemote(row)),
+			StorageVolumeDTO.list(),
+		]);
+		const known = new Set(volumes.map((volume) => volume.id));
+		return repositories.filter((repository) => !known.has(repository.volumeId));
+	}
+
+	/**
+	 * Whether `path` names a restic repository of a volume that no longer
+	 * exists: a `<prefix/>restic/<volume id>` path with no `.` or `..` segment,
+	 * the only kind of path `purgeRepositories` is handed for an orphan.
+	 */
+	async isOrphanPath(path: string): Promise<boolean> {
+		const [repository] = parseRepositoryListing(`${path}/`);
+		if (
+			!repository ||
+			path.split("/").some((segment) => segment === "." || segment === "..")
+		) {
+			return false;
+		}
+		return (await StorageVolumeDTO.get(repository.volumeId)) === null;
+	}
+
+	/**
+	 * Deletes each restic repository in `paths` (relative to `row`'s path) and
+	 * everything in it, one at a time, reporting each through `log`.
+	 *
+	 * @throws After every path was tried, when any of them couldn't be deleted.
+	 */
+	async purgeRepositories(
+		row: S3DestinationDTO,
+		paths: string[],
+		log: (line: string) => Promise<unknown>,
+	): Promise<void> {
+		const remote = destinationRemote(row);
+		const failed: string[] = [];
+		for (const path of paths) {
+			try {
+				// oxlint-disable-next-line no-await-in-loop -- one rclone container at a time: storage boxes cap concurrent connections
+				await purgeRemotePath(remote, path);
+				// oxlint-disable-next-line no-await-in-loop -- logged in order
+				await log(`Deleted ${path}`);
+			} catch (err) {
+				failed.push(path);
+				// oxlint-disable-next-line no-await-in-loop -- logged in order
+				await log(err instanceof Error ? err.message : String(err));
+			}
+		}
+		if (failed.length > 0) {
+			throw new Error(`Couldn't delete ${failed.join(", ")}: see the log.`);
+		}
 	}
 
 	/**

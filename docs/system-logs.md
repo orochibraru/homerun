@@ -13,12 +13,18 @@ per-service [logs panel](observability.md#logs) uses.
 **This instance's stack** lists every container Homerun's own compose file
 starts, Homerun itself, Postgres and Traefik included, plus the Newt tunnel if
 Homerun runs one, with its state. Containers from other compose projects on the
-same host aren't Homerun's and aren't listed. Click one to open its live log.
-Traefik's is where routing problems show up: a service that deployed fine but
-returns 404, a certificate that won't issue, a middleware that isn't attaching.
-The list only appears when Homerun runs as a Docker Compose service; run from
-source, the app's own output is whatever your terminal or process manager is
-already capturing.
+same host aren't Homerun's and aren't listed. Click one to open its live log,
+and **Log history** above it for everything it and its earlier containers wrote:
+the worker keeps these containers' output the same way it keeps a service's
+([Log history](observability.md#log-history)), filed under the container's
+compose service name (or its name), so an update or a `docker compose up -d`
+that recreates it doesn't lose what the previous one logged. Its page searches,
+pages and downloads like a service's and switches between every container with
+stored lines, removed ones included. Traefik's is where routing problems show
+up: a service that deployed fine but returns 404, a certificate that won't
+issue, a middleware that isn't attaching. The list only appears when Homerun
+runs as a Docker Compose service; run from source, the app's own output is
+whatever your terminal or process manager is already capturing.
 
 App-level warnings and errors that mention a specific service are also persisted
 and surfaced on that service's

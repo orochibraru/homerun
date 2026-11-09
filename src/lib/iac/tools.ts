@@ -7,6 +7,8 @@ export interface IacToolInfo {
 	description: string;
 	id: IacTool;
 	label: string;
+	/** The command that shows what applying would change. */
+	plan: string;
 }
 
 export const IAC_TOOL_INFO: Record<IacTool, IacToolInfo> = {
@@ -16,13 +18,15 @@ export const IAC_TOOL_INFO: Record<IacTool, IacToolInfo> = {
 			"Terraform's open-source fork. Same provider and state backend, the tofu command instead of terraform.",
 		id: "opentofu",
 		label: "OpenTofu",
+		plan: "tofu plan",
 	},
 	pulumi: {
 		cli: "pulumi",
 		description:
-			"Infrastructure in TypeScript, Python or Go through the Terraform provider. Pulumi keeps its own state in the bucket.",
+			"Infrastructure in TypeScript, Python or Go through the Terraform provider. Pulumi keeps its own state in the bucket, which the drift check reads.",
 		id: "pulumi",
 		label: "Pulumi",
+		plan: "pulumi preview",
 	},
 	terraform: {
 		cli: "terraform",
@@ -30,6 +34,7 @@ export const IAC_TOOL_INFO: Record<IacTool, IacToolInfo> = {
 			"HCL with the homerun provider. Homerun serves the state backend: every write versioned, locks included.",
 		id: "terraform",
 		label: "Terraform",
+		plan: "terraform plan",
 	},
 };
 

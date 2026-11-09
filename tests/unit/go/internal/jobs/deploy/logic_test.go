@@ -323,6 +323,20 @@ func TestLogHints(t *testing.T) {
 	}
 }
 
+func TestNewDiagnosis(t *testing.T) {
+	got := deploy.NewDiagnosis(true, 1, false, "\r\nError: connect ECONNREFUSED 10.0.0.5:5432\r\n")
+	if got.ExitCode != 1 || got.Meaning != "the app reported an error and quit" || got.Output != "Error: connect ECONNREFUSED 10.0.0.5:5432" {
+		t.Errorf("exited: %+v", got)
+	}
+	if len(got.Causes) != 1 || !strings.Contains(got.Causes[0], "dependency") {
+		t.Errorf("causes: %q", got.Causes)
+	}
+	running := deploy.NewDiagnosis(false, 0, false, "listening on :8080")
+	if running.Meaning != "" || running.Causes == nil || len(running.Causes) != 0 {
+		t.Errorf("a container on its first run has no exit to explain: %+v", running)
+	}
+}
+
 func TestTaskFailure(t *testing.T) {
 	rejected := swarmTask("shutdown", "rejected", "No such image: app:1", "2026-09-25T11:00:00Z")
 	if deploy.TaskFailure(rejected) != "No such image: app:1" {

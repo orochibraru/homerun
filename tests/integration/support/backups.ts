@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
 import { createCipheriv, randomBytes, scryptSync } from "node:crypto";
+import process from "node:process";
 
 import type { SQL } from "bun";
 
@@ -39,6 +40,69 @@ export function docker(...args: string[]): string {
 		throw new Error(`docker ${args.join(" ")}: ${run.stderr.toString()}`);
 	}
 	return run.stdout.toString().trim();
+}
+
+const RCLONE_IMAGE = "rclone/rclone:1.75.1";
+const RCLONE_DIRECTORY_NOT_FOUND = 3;
+const RCLONE_WRAPPER =
+	'export RCLONE_CONFIG_DEST_PASS="$(printf %s "$HOMERUN_PASS" | rclone obscure -)"; unset HOMERUN_PASS; exec rclone "$@"';
+
+/** The `RCLONE_CONFIG_DEST_*` environment reaching an SFTP, SMB or WebDAV destination, its password still plain under `HOMERUN_PASS`. */
+function rcloneEnv(destination: TestDestination): Record<string, string> {
+	const env: Record<string, string> = {
+		HOMERUN_PASS: destination.secret,
+		RCLONE_CONFIG_DEST_TYPE: destination.type,
+		RCLONE_CONFIG_DEST_USER: destination.accessKeyId,
+	};
+	if (destination.type === "webdav") {
+		env.RCLONE_CONFIG_DEST_URL = destination.endpoint;
+		env.RCLONE_CONFIG_DEST_VENDOR = "other";
+		return env;
+	}
+	const [host, port] = destination.endpoint.split(":");
+	env.RCLONE_CONFIG_DEST_HOST = host ?? destination.endpoint;
+	if (port) {
+		env.RCLONE_CONFIG_DEST_PORT = port;
+	}
+	if (destination.type === "sftp") {
+		env.RCLONE_CONFIG_DEST_SHELL_TYPE = "none";
+	}
+	return env;
+}
+
+/**
+ * Deletes `prefix` and everything under it in an SFTP, SMB or WebDAV
+ * destination's path through a throwaway rclone container. A prefix that's
+ * already gone is fine.
+ *
+ * @throws With rclone's error when it can't be deleted.
+ */
+export function purgeRemote(
+	destination: TestDestination,
+	prefix: string,
+): void {
+	const env = rcloneEnv(destination);
+	const path = [destination.bucket, prefix].filter(Boolean).join("/");
+	const run = Bun.spawnSync(
+		[
+			"docker",
+			"run",
+			"--rm",
+			...Object.keys(env).flatMap((name) => ["-e", name]),
+			"--entrypoint",
+			"sh",
+			RCLONE_IMAGE,
+			"-c",
+			RCLONE_WRAPPER,
+			"rclone",
+			"purge",
+			`dest:${path}`,
+		],
+		{ env: { ...process.env, ...env } },
+	);
+	if (run.exitCode !== 0 && run.exitCode !== RCLONE_DIRECTORY_NOT_FOUND) {
+		throw new Error(`rclone purge ${path}: ${run.stderr.toString()}`);
+	}
 }
 
 /** Inserts a destination row the way the form saves one and returns its id. */

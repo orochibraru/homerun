@@ -9,6 +9,7 @@
 	import Alert from "#lib/components/alert.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
+	import CopyBox from "#lib/components/copy-box.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";
 	import SaveButton from "#lib/components/save-button.svelte";
 	import { enhanceToast } from "#lib/toast.js";
@@ -46,7 +47,7 @@
 		<section class="panel space-y-4 rounded-md p-5">
 			<CheckBox
 				checked={repo.pipelinesEnabled}
-				helperText="Reads its runs every five minutes with the connection of whoever added it. Sync now works either way."
+				helperText="Reads its runs with the connection of whoever added it: on every CI event its webhook delivers, and every five minutes without one. Sync now works either way."
 				id="pipelinesEnabled"
 				label="Sync CI runs"
 				name="pipelinesEnabled"
@@ -114,6 +115,37 @@
 			<SaveButton form="repository-settings" pending={saving} />
 		</div>
 	</form>
+
+	<section class="panel space-y-3 rounded-md p-5">
+		<h2 class={labelClass}>CI webhook</h2>
+		{#if data.webhook.registered}
+			<p class="text-sm text-emerald-600">
+				Webhook registered: every workflow run and job syncs this repository
+				right away. It's still read once an hour in case a delivery is lost.
+			</p>
+		{:else}
+			{#if data.webhook.error}
+				<p class="text-xs text-amber-600">{data.webhook.error}</p>
+			{/if}
+			<p class="text-text-muted text-xs">
+				Until a webhook is in place, Homerun reads the runs every five minutes.
+				Saving the settings tries registering it again, or add it in the
+				repository's settings with this URL and secret, sending workflow run and
+				workflow job events (GitLab: pipeline and job events) as JSON. GitLab
+				calls the secret a "secret token".
+			</p>
+			{#if data.webhook.url}
+				<div>
+					<p class={labelClass}>Payload URL</p>
+					<CopyBox label="webhook URL" value={data.webhook.url} />
+				</div>
+			{/if}
+			<div>
+				<p class={labelClass}>Secret</p>
+				<CopyBox label="webhook secret" value={data.webhook.secret} />
+			</div>
+		{/if}
+	</section>
 
 	<section class="rounded-md border border-red-200 p-5 dark:border-red-900/40">
 		<h2 class="eyebrow text-red-500">Danger zone</h2>

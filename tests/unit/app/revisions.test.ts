@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import {
 	CLEARED_ON_SUPERSEDE,
+	diagnosisLines,
+	type ExitDiagnosis,
 	HEALTH_WINDOW,
 	healthVerdict,
 	previousRevision,
@@ -12,6 +14,7 @@ import {
 	revisionRoot,
 	supersededHealth,
 	swarmSampleFromTasks,
+	withExitMeaning,
 	withReadiness,
 	type WorkloadHealthSample,
 } from "../../../src/lib/revisions";
@@ -453,5 +456,71 @@ describe("withReadiness", () => {
 		expect(withReadiness({ verdict: "pending" }, failing, 1)).toEqual({
 			verdict: "pending",
 		});
+	});
+});
+
+describe("withExitMeaning", () => {
+	const diagnosis: ExitDiagnosis = {
+		causes: [],
+		exitCode: 1,
+		meaning: "the app reported an error and quit",
+		oomKilled: false,
+		output: "",
+	};
+
+	test("explains the code in place when the reason names it", () => {
+		expect(
+			withExitMeaning("The container exited with code 1.", diagnosis),
+		).toBe(
+			"The container exited with code 1: the app reported an error and quit.",
+		);
+	});
+
+	test("adds a sentence when the reason doesn't name the code", () => {
+		expect(
+			withExitMeaning(
+				"2 swarm tasks failed: task: non-zero exit (1)",
+				diagnosis,
+			),
+		).toBe(
+			"2 swarm tasks failed: task: non-zero exit (1). Its last exit code was 1: the app reported an error and quit.",
+		);
+	});
+
+	test("leaves the reason alone with nothing to add", () => {
+		const reason = "The healthcheck is failing.";
+		expect(withExitMeaning(reason, null)).toBe(reason);
+		expect(withExitMeaning(reason, { ...diagnosis, meaning: "" })).toBe(reason);
+	});
+});
+
+describe("diagnosisLines", () => {
+	test("indents the output and lists the likely causes", () => {
+		expect(
+			diagnosisLines("Its last output:", {
+				causes: ["It ran out of memory: raise its memory limit."],
+				exitCode: 137,
+				meaning: "",
+				oomKilled: true,
+				output: "start\n\nout of memory",
+			}),
+		).toEqual([
+			"Its last output:",
+			"  start",
+			"  out of memory",
+			"Likely cause: It ran out of memory: raise its memory limit.",
+		]);
+	});
+
+	test("says when there was no output", () => {
+		expect(
+			diagnosisLines("Its last output:", {
+				causes: [],
+				exitCode: 0,
+				meaning: "",
+				oomKilled: false,
+				output: "",
+			}),
+		).toEqual(["Its last output: (none)"]);
 	});
 });

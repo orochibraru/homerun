@@ -12,6 +12,7 @@ import (
 
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/httpapi"
+	"github.com/orochibraru/homerun/internal/jobs/deploy"
 )
 
 // defaultLogTail is how many lines a log stream starts from when the caller
@@ -39,6 +40,7 @@ func (s *Server) mountContainers(r chi.Router) {
 	r.Get("/v1/containers/{id}/inspect", httpapi.H(s.inspectContainer))
 	r.Get("/v1/containers/{id}/stats", httpapi.H(s.containerStats))
 	r.Get("/v1/containers/{id}/logs", httpapi.H(s.containerLogs))
+	r.Get("/v1/containers/{id}/diagnosis", httpapi.H(s.containerDiagnosis))
 	r.Put("/v1/volumes/archive", httpapi.H(s.extractIntoVolume))
 	r.Post("/v1/containers/{id}/connect", httpapi.H(s.connectContainer))
 	r.Post("/v1/exec", httpapi.H(s.runExec))
@@ -249,6 +251,26 @@ func (s *Server) containerLogs(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer func() { _ = logs.Close() }()
 	return streamOut(w, r, logs)
+}
+
+// containerDiagnosis answers with why a container stopped: its last exit
+// code, what that code usually means, its last output and the likely causes
+// found in it, the same diagnosis a failed deploy writes to its log.
+func (s *Server) containerDiagnosis(w http.ResponseWriter, r *http.Request) error {
+	id := chi.URLParam(r, "id")
+	info, err := s.docker.InspectContainer(r.Context(), id)
+	if errors.Is(err, dockerapi.ErrNotFound) {
+		return httpapi.Error(w, http.StatusNotFound, "No such container.")
+	}
+	if err != nil {
+		return err
+	}
+	output, err := s.docker.ContainerLogsTail(r.Context(), id, deploy.FailedOutputTail)
+	if err != nil {
+		return err
+	}
+	exited := !info.State.Running || info.State.Status == "restarting" || info.RestartCount > 0
+	return httpapi.Answer(w, http.StatusOK, deploy.NewDiagnosis(exited, info.State.ExitCode, info.State.OOMKilled, output))
 }
 
 // extractIntoVolume unpacks the request body, a tar, into a volume or host

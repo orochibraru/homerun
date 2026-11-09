@@ -465,6 +465,40 @@
 					"default": 1
 				},
 				{
+					"kind": "object",
+					"name": "swarmPlacement",
+					"tf": "swarm_placement",
+					"default": {
+						"constraints": [],
+						"preferences": [],
+						"roles": ["manager", "worker"]
+					},
+					"description": "Swarm mode only: which nodes run the replicas.",
+					"fields": [
+						{
+							"kind": "strings",
+							"name": "roles",
+							"tf": "roles",
+							"default": ["manager", "worker"],
+							"description": "Node roles allowed to run them: manager, worker or both."
+						},
+						{
+							"kind": "strings",
+							"name": "constraints",
+							"tf": "constraints",
+							"default": [],
+							"description": "Node label constraints, key==value or key!=value, all of which a node has to match."
+						},
+						{
+							"kind": "strings",
+							"name": "preferences",
+							"tf": "preferences",
+							"default": [],
+							"description": "Node label keys the replicas are spread evenly over."
+						}
+					]
+				},
+				{
 					"kind": "int",
 					"name": "scaleToZeroMinutes",
 					"tf": "scale_to_zero_minutes"

@@ -18,9 +18,18 @@
 	const tabs = $derived([
 		{
 			href: resolve("/(protected)/remote-hosts/[hostId]", { hostId: host.id }),
+			description: "Status, availability and version",
 			icon: LayoutGrid,
 			id: "overview",
 			label: "Overview",
+			hasWarning: data.agentStatus?.reachable === false,
+			summary: data.agentStatus
+				? data.agentStatus.reachable
+					? `Reachable${data.agentStatus.version ? ` · ${data.agentStatus.version}` : ""}`
+					: "Unreachable"
+				: host.enabled
+					? "Enabled"
+					: "Disabled",
 		},
 		...(host.kind === "agent"
 			? [
@@ -28,6 +37,7 @@
 						href: resolve("/(protected)/remote-hosts/[hostId]/logs", {
 							hostId: host.id,
 						}),
+						description: "What the agent logged lately",
 						icon: FileText,
 						id: "logs",
 						label: "Logs",
@@ -36,6 +46,7 @@
 						href: resolve("/(protected)/remote-hosts/[hostId]/events", {
 							hostId: host.id,
 						}),
+						description: "The host's Docker events over the last day",
 						icon: History,
 						id: "events",
 						label: "Events",
@@ -46,6 +57,7 @@
 			href: resolve("/(protected)/remote-hosts/[hostId]/settings", {
 				hostId: host.id,
 			}),
+			description: "Connection, builds and danger zone",
 			icon: Settings,
 			id: "settings",
 			label: "Settings",

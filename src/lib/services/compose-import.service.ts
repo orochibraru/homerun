@@ -31,6 +31,8 @@ const HELPER_TAG = "3";
 
 export interface ComposeImportInput {
 	allowHostAccess: boolean;
+	/** The host disk (a mount point) to put each new named volume on, by its source. */
+	disks?: Record<string, string>;
 	drafts: ComposeServiceDraft[];
 	stackId: string | null;
 	stackName: string | null;
@@ -67,14 +69,15 @@ class ComposeImportServiceClass {
 
 	/**
 	 * Maps each of `draft`'s volume mounts to a storage volume id, reusing an
-	 * existing volume with the same kind/source or creating a new one
-	 * (appended to `existing` so a later draft in the same import can reuse
-	 * it too).
+	 * existing volume with the same kind/source or creating a new one, a
+	 * named one on the disk `disks` picks for its source (appended to
+	 * `existing` so a later draft in the same import can reuse it too).
 	 */
 	async #resolveVolumes(
 		draft: ComposeServiceDraft,
 		userId: string,
 		existing: StorageVolumeDTO[],
+		disks: Record<string, string>,
 	): Promise<Map<string, string>> {
 		const byMount = new Map<string, string>();
 		for (const mount of draft.volumes) {
@@ -87,6 +90,7 @@ class ComposeImportServiceClass {
 			}
 			// oxlint-disable-next-line no-await-in-loop -- each volume is created before the next one's name collision can be checked
 			const created = await StorageVolumeDTO.create({
+				disk: mount.kind === "volume" ? disks[mount.source] || null : null,
 				kind: mount.kind,
 				name: mount.name,
 				source: mount.source,
@@ -180,10 +184,14 @@ class ComposeImportServiceClass {
 	 */
 	async #createService(
 		draft: ComposeServiceDraft,
-		stackId: string | null,
-		userId: string,
-		volumes: StorageVolumeDTO[],
+		target: {
+			disks: Record<string, string>;
+			stackId: string | null;
+			userId: string;
+			volumes: StorageVolumeDTO[];
+		},
 	): Promise<ServiceDTO> {
+		const { disks, stackId, userId, volumes } = target;
 		const domains = await this.#freeDomains(draft.domains);
 		const svc = await ServiceDTO.create({
 			...this.#registryColumns(draft),
@@ -225,7 +233,7 @@ class ComposeImportServiceClass {
 			userId,
 		});
 
-		const mounts = await this.#resolveVolumes(draft, userId, volumes);
+		const mounts = await this.#resolveVolumes(draft, userId, volumes, disks);
 		for (const mount of draft.volumes) {
 			const volumeId = mounts.get(mount.containerPath);
 			if (!volumeId) {
@@ -306,12 +314,12 @@ class ComposeImportServiceClass {
 		const services: ServiceDTO[] = [];
 		for (const draft of ordered) {
 			// oxlint-disable-next-line no-await-in-loop -- slug uniqueness is checked against rows the previous iteration just inserted
-			const created = await this.#createService(
-				draft,
+			const created = await this.#createService(draft, {
+				disks: input.disks ?? {},
 				stackId,
-				input.userId,
+				userId: input.userId,
 				volumes,
-			);
+			});
 			services.push(created);
 		}
 		await this.#recordDependencies(ordered, services);

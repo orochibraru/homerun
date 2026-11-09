@@ -48,6 +48,25 @@ function envFilesFrom(formData: FormData): Record<string, string> {
 	);
 }
 
+function volumeDisksFrom(
+	formData: FormData,
+): { disks: Record<string, string> } | { error: string } {
+	const sources = formData.getAll("volumeDiskSource").map(String);
+	const picked = formData.getAll("volumeDisk").map(String);
+	const disks: Record<string, string> = {};
+	for (const [index, source] of sources.entries()) {
+		const disk = (picked[index] ?? "").trim();
+		if (!disk) {
+			continue;
+		}
+		if (!disk.startsWith("/") || source.includes("/")) {
+			return { error: `${source} can't be placed on ${disk}.` };
+		}
+		disks[source] = disk;
+	}
+	return { disks };
+}
+
 function pickSelected(
 	drafts: ComposeServiceDraft[],
 	selected: string[],
@@ -114,12 +133,18 @@ export const actions = {
 			return fail(409, { compose, error: full, plan: parsed.plan });
 		}
 
+		const placed = volumeDisksFrom(formData);
+		if ("error" in placed) {
+			return fail(400, { compose, error: placed.error, plan: parsed.plan });
+		}
+
 		const stackId = (formData.get("stackId") as string | null) || null;
 		const stackName =
 			(formData.get("stackName") as string | null)?.trim() || null;
 
 		const result = await ComposeImportService.importPlan({
 			allowHostAccess: hostAccess,
+			disks: placed.disks,
 			drafts,
 			stackId,
 			stackName: stackId ? null : stackName,

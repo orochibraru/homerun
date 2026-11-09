@@ -17,12 +17,14 @@
 
 	const tabs = $derived([
 		{
+			description: "Traffic, uptime and host resources across every service",
 			href: resolve("/(protected)/monitoring"),
 			icon: BarChart3,
 			id: "monitoring",
 			label: "Overview",
 		},
 		{
+			description: "Timings of Homerun's own jobs: deploys, builds, backups",
 			href: resolve("/(protected)/monitoring/traces"),
 			icon: Activity,
 			id: "monitoring/traces",
@@ -31,18 +33,21 @@
 		...(can(data.permissions, "settings", "read")
 			? [
 					{
+						description: "Addresses banned for probing blocked paths",
 						href: resolve("/(protected)/monitoring/blocked"),
 						icon: ShieldBan,
 						id: "monitoring/blocked",
 						label: "Blocked IPs",
 					},
 					{
+						description: "CrowdSec's decisions, alerts and blocklists",
 						href: resolve("/(protected)/monitoring/crowdsec"),
 						icon: ShieldCheck,
 						id: "monitoring/crowdsec",
 						label: "CrowdSec",
 					},
 					{
+						description: "The OpenTelemetry collector and log retention",
 						href: resolve("/(protected)/monitoring/settings"),
 						icon: Settings2,
 						id: "monitoring/settings",

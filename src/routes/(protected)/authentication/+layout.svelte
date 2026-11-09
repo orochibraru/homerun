@@ -13,18 +13,21 @@
 		{
 			href: resolve("authentication"),
 			icon: UserRound,
+			description: "Email sign-in, preferred methods and sign-in requirements",
 			id: "sign-in",
 			label: "Sign-in",
 		},
 		{
 			href: resolve("authentication/providers"),
 			icon: KeyRound,
+			description: "OAuth and OIDC providers for single sign-on",
 			id: "providers",
 			label: "Providers",
 		},
 		{
 			href: resolve("authentication/protected"),
 			icon: LockKeyhole,
+			description: "Services behind the login wall, and who gets in",
 			id: "protected",
 			label: "Protected apps",
 		},

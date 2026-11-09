@@ -15,6 +15,8 @@ const { InstanceSettingsDTO } =
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
+const { PackageRegistryDTO } =
+	await import("../../../src/lib/dto/package-registry-dto");
 const { Logger } = await import("../../../src/lib/logger");
 const { DomainDnsService } =
 	await import("../../../src/lib/services/domain-dns.service");
@@ -60,6 +62,7 @@ beforeEach(() => {
 			registryPublicHost: "registry.example.com",
 		}),
 	}));
+	stub(PackageRegistryDTO, "list", async () => []);
 	stub(StatusPageDTO, "list", async () => [
 		{ domains: ["status.example.com"], name: "Status" },
 	]);

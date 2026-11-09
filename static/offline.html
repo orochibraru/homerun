@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			content="width=device-width, initial-scale=1, viewport-fit=cover"
+			name="viewport"
+		/>
+		<meta
+			content="#ffffff"
+			media="(prefers-color-scheme: light)"
+			name="theme-color"
+		/>
+		<meta
+			content="#0a0a0c"
+			media="(prefers-color-scheme: dark)"
+			name="theme-color"
+		/>
+		<link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+		<title>Offline · Homerun</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				--bg: #ffffff;
+				--text: #1a1a1f;
+				--muted: #6b6b76;
+				--border: #e6e6ea;
+				--accent: #8b1e3f;
+				--accent-text: #ffffff;
+			}
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--bg: #0a0a0c;
+					--text: #ededf0;
+					--muted: #9a9aa5;
+					--border: #26262c;
+					--accent: #a8324f;
+				}
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				min-height: 100dvh;
+				display: grid;
+				place-items: center;
+				padding: 1.5rem;
+				background: var(--bg);
+				color: var(--text);
+				font-family:
+					system-ui,
+					-apple-system,
+					"Segoe UI",
+					sans-serif;
+			}
+			main {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 1rem;
+				text-align: center;
+				max-width: 24rem;
+			}
+			img {
+				width: 64px;
+				height: 64px;
+				border-radius: 16px;
+			}
+			h1 {
+				margin: 0;
+				font-size: 1.25rem;
+			}
+			p {
+				margin: 0;
+				color: var(--muted);
+				font-size: 0.9375rem;
+				line-height: 1.5;
+			}
+			button {
+				margin-top: 0.5rem;
+				min-height: 2.75rem;
+				padding: 0 1.25rem;
+				border: 0;
+				border-radius: 999px;
+				background: var(--accent);
+				color: var(--accent-text);
+				font: inherit;
+				font-weight: 600;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<img alt="" src="/icons/icon-192.png" />
+			<h1>You're offline</h1>
+			<p>
+				Homerun can't be reached right now. Check your connection, then try
+				again.
+			</p>
+			<button onclick="location.reload()" type="button">Try again</button>
+		</main>
+	</body>
+</html>

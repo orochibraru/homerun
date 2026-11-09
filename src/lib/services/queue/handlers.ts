@@ -8,10 +8,12 @@ import { MailService } from "../mail.service.ts";
 import { MailWatchService } from "../mail/watch.ts";
 import { NotificationChannelService } from "../notification-channel.service.ts";
 import { ObjectStorageService } from "../object-storage.service.ts";
+import { PackageRegistryService } from "../package-registry.service.ts";
 import { PipelineService } from "../pipeline.service.ts";
 import { RegistryService } from "../registry.service.ts";
 import { S3BackupService } from "../s3-backup.service.ts";
 import {
+	backupPruneJobPayload,
 	type CoreServiceJob,
 	coreServiceJobPayload,
 	notificationDeliveryJobPayload,
@@ -45,6 +47,11 @@ const coreServiceSteps: Record<
 	CoreServiceJob["action"],
 	{ done: string; start: string }
 > = {
+	configurePackageRegistry: {
+		done: "Package registry reconfigured.",
+		start:
+			"Applying the package registry's settings and tokens to its container.",
+	},
 	disableBuiltinStore: {
 		done: "Built-in object store stopped. Its volumes are kept.",
 		start: "Stopping the built-in object store's container.",
@@ -92,6 +99,13 @@ async function runCoreService(entry: JobDTO): Promise<JobResult> {
 		case "publishRegistry":
 			await RegistryService.setPublicHost(payload.host);
 			break;
+		case "configurePackageRegistry":
+			await PackageRegistryService.configure(
+				payload.kind,
+				payload.enabled,
+				payload.host,
+			);
+			break;
 		case "syncMail":
 			await MailService.sync(payload.purge, (line) =>
 				JobDTO.appendLog(entry.id, line),
@@ -128,12 +142,41 @@ async function pruneVolume(
 }
 
 /**
+ * Deletes the restic repositories a deleted volume left on a destination,
+ * logging each to the job.
+ *
+ * @throws When the destination is gone or any repository couldn't be deleted.
+ */
+async function runBackupPurge(
+	entry: JobDTO,
+	purge: { destinationId: string; repositories: string[] },
+): Promise<JobResult> {
+	const row = await S3DestinationDTO.get(purge.destinationId);
+	if (!row) {
+		throw new Error("The backup destination no longer exists.");
+	}
+	await JobDTO.appendLog(
+		entry.id,
+		`Deleting ${purge.repositories.length} backup repositories on ${row.name}`,
+	);
+	await S3BackupService.purgeRepositories(row, purge.repositories, (line) =>
+		JobDTO.appendLog(entry.id, line),
+	);
+	return { deleted: purge.repositories.length };
+}
+
+/**
  * Deletes every volume's archives past its destination's `backupKeep`, one
- * volume at a time, logging each to the job.
+ * volume at a time, logging each to the job, or, for a job queued with a
+ * `purge`, the backup repositories it names.
  *
  * @throws After every volume was tried, when any of them couldn't be cleaned up.
  */
 async function runBackupPrune(entry: JobDTO): Promise<JobResult> {
+	const { purge } = backupPruneJobPayload.parse(entry.payload);
+	if (purge) {
+		return await runBackupPurge(entry, purge);
+	}
 	const keeps = new Map(
 		(await S3DestinationDTO.list()).map((d) => [d.id, d.backupKeep]),
 	);

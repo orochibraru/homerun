@@ -53,6 +53,7 @@ const NEW_VOLUME = "new";
 
 interface VolumeMountInput {
 	containerPath: string;
+	disk: string;
 	newName: string;
 	readOnly: boolean;
 	volumeId: string;
@@ -327,13 +328,15 @@ async function takenFieldFailure(
 /**
  * Reads the Volumes step's parallel `volume*` fields into one mount per row,
  * skipping rows left entirely blank. Returns an error message instead when a
- * row is half filled or its mount path isn't absolute.
+ * row is half filled, its mount path isn't absolute, or a new volume's disk
+ * isn't a mount point or its name has a `/` a disk can't hold.
  */
 function parseVolumeMounts(
 	formData: FormData,
 ): { mounts: VolumeMountInput[] } | { error: string } {
 	const ids = formData.getAll("volumeId").map(String);
 	const names = formData.getAll("volumeNewName").map(String);
+	const disks = formData.getAll("volumeDisk").map(String);
 	const paths = formData.getAll("volumeContainerPath").map(String);
 	const readOnly = formData.getAll("volumeReadOnly").map(String);
 	const mounts: VolumeMountInput[] = [];
@@ -350,9 +353,20 @@ function parseVolumeMounts(
 				error: `Mount path "${containerPath}" must be absolute (start with /).`,
 			};
 		}
+		const disk = (disks[i] ?? "").trim();
+		const newName = (names[i] ?? "").trim();
+		if (disk && !disk.startsWith("/")) {
+			return { error: `Disk "${disk}" must be a mount point (start with /).` };
+		}
+		if (disk && newName.includes("/")) {
+			return {
+				error: `Volume "${newName}" goes on a disk, so its name can't contain /.`,
+			};
+		}
 		mounts.push({
 			containerPath,
-			newName: (names[i] ?? "").trim(),
+			disk: volumeId === NEW_VOLUME ? disk : "",
+			newName,
 			readOnly: readOnly[i] === "on",
 			volumeId,
 		});
@@ -412,7 +426,7 @@ async function formEnvVars(
 	);
 }
 
-/** The StorageVolume a wizard row points at, created on the spot when the row asks for a new or host volume. */
+/** The StorageVolume a wizard row points at, created on the spot (on its picked disk) when the row asks for a new or host volume. */
 function resolveMountVolume(
 	mount: VolumeMountInput,
 	slug: string,
@@ -424,6 +438,7 @@ function resolveMountVolume(
 			mount.newName || (index === 0 ? `${slug}-data` : `${slug}-data-${index}`);
 		return StorageVolumeDTO.create({
 			description: `Created with ${slug}`,
+			disk: mount.disk || null,
 			kind: "volume",
 			name,
 			source: name,

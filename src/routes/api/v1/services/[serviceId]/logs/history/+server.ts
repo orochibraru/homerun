@@ -23,9 +23,12 @@ export const GET = async ({ params, locals, url }) => {
 		return Response.json({ error: "Not found" }, { status: 404 });
 	}
 	try {
-		return Response.json(await ServiceLogDTO.search(svc.id, query), {
-			headers: { "Cache-Control": "no-store" },
-		});
+		return Response.json(
+			await ServiceLogDTO.search({ serviceId: svc.id }, query),
+			{
+				headers: { "Cache-Control": "no-store" },
+			},
+		);
 	} catch (error) {
 		if (error instanceof InvalidLogPatternError) {
 			return Response.json({ error: error.message }, { status: 400 });

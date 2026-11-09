@@ -5,11 +5,13 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/logship"
 )
 
@@ -114,7 +116,9 @@ func (f *fakeStore) Workloads(context.Context) ([]logship.Workload, error) {
 
 func (f *fakeStore) RetentionDays(context.Context) (int, error) { return 7, nil }
 
-func (f *fakeStore) LastTime(context.Context, string, string, bool) (time.Time, error) {
+func (f *fakeStore) LocalWorkstations(context.Context) ([]string, error) { return nil, nil }
+
+func (f *fakeStore) LastTime(context.Context, logship.Owner, string, bool) (time.Time, error) {
 	return f.last, nil
 }
 
@@ -148,6 +152,10 @@ func (d *fakeDocker) ContainerLogsSince(_ context.Context, _ string, since time.
 	return io.NopCloser(strings.NewReader(d.output)), nil
 }
 
+func (d *fakeDocker) ListContainers(context.Context, bool, string) ([]dockerapi.ContainerListEntry, error) {
+	return nil, nil
+}
+
 func (d *fakeDocker) SwarmServiceLogsSince(ctx context.Context, id string, since time.Time) (io.ReadCloser, error) {
 	return d.ContainerLogsSince(ctx, id, since)
 }
@@ -156,11 +164,12 @@ func TestShipperStoresNewLinesOnceAcrossReopens(t *testing.T) {
 	now := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
 	store := &fakeStore{
 		last:      time.Date(2026, 10, 28, 11, 0, 0, 0, time.UTC),
-		workloads: []logship.Workload{{ID: "0123456789abcdef", ServiceID: "svc"}},
+		workloads: []logship.Workload{{ID: "0123456789abcdef", Owner: logship.Owner{ServiceID: "svc"}}},
 	}
 	docker := &fakeDocker{output: "2026-10-28T11:00:00Z already stored\n2026-10-28T11:00:01Z first\n2026-10-28T11:00:02Z second\n"}
 	shipper := &logship.Shipper{
 		Docker:        docker,
+		Hostname:      "worker",
 		FlushInterval: 5 * time.Millisecond,
 		Interval:      time.Hour,
 		MaxRetry:      10 * time.Millisecond,
@@ -204,8 +213,8 @@ func TestShipperStoresNewLinesOnceAcrossReopens(t *testing.T) {
 }
 
 func TestShipperStopsFollowingGoneWorkloads(t *testing.T) {
-	store := &fakeStore{workloads: []logship.Workload{{ID: "c1", ServiceID: "svc"}}}
-	shipper := &logship.Shipper{Docker: &fakeDocker{}, Retry: time.Hour, Store: store}
+	store := &fakeStore{workloads: []logship.Workload{{ID: "c1", Owner: logship.Owner{ServiceID: "svc"}}}}
+	shipper := &logship.Shipper{Docker: &fakeDocker{}, Hostname: "worker", Retry: time.Hour, Store: store}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	shipper.Sync(ctx)
@@ -218,5 +227,35 @@ func TestShipperStopsFollowingGoneWorkloads(t *testing.T) {
 	shipper.Sync(ctx)
 	if shipper.Following() != 0 {
 		t.Fatalf("following %d after the workload went", shipper.Following())
+	}
+}
+
+func TestContainerWorkloads(t *testing.T) {
+	entry := func(id, name string, labels map[string]string) dockerapi.ContainerListEntry {
+		return dockerapi.ContainerListEntry{ID: id, Labels: labels, Names: []string{"/" + name}}
+	}
+	containers := []dockerapi.ContainerListEntry{
+		entry("aaaaaaaaaaaa1111", "homerun-worker-1", map[string]string{"com.docker.compose.project": "homerun", "com.docker.compose.service": "worker"}),
+		entry("bbbbbbbbbbbb2222", "homerun-traefik-1", map[string]string{"com.docker.compose.project": "homerun", "com.docker.compose.service": "traefik"}),
+		entry("cccccccccccc3333", "homerun-otel", map[string]string{"homerun.core": "otel"}),
+		entry("dddddddddddd4444", "tunnel-1", map[string]string{"com.docker.compose.project": "tunnel", "com.docker.compose.service": "cloudflared"}),
+		entry("eeeeeeeeeeee5555", "api", map[string]string{"homerun.managed": "true", "com.docker.compose.project": "homerun"}),
+		entry("ffffffffffff6666", "ws-local", map[string]string{"homerun.managed": "true", "homerun.workstation.id": "ws1"}),
+		entry("999999999999aaaa", "ws-gone", map[string]string{"homerun.managed": "true", "homerun.workstation.id": "ws2"}),
+		entry("888888888888bbbb", "loose", nil),
+	}
+	got := logship.ContainerWorkloads(containers, []string{"ws1"}, "aaaaaaaaaaaa")
+	want := []logship.Workload{
+		{ID: "aaaaaaaaaaaa1111", Owner: logship.Owner{System: "worker"}},
+		{ID: "bbbbbbbbbbbb2222", Owner: logship.Owner{System: "traefik"}},
+		{ID: "cccccccccccc3333", Owner: logship.Owner{System: "otel"}},
+		{ID: "ffffffffffff6666", Owner: logship.Owner{WorkstationID: "ws1"}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("workloads = %+v", got)
+	}
+	outside := logship.ContainerWorkloads(containers, nil, "not-a-container")
+	if len(outside) != 4 || outside[3].Owner.System != "cloudflared" {
+		t.Fatalf("a worker outside compose keeps every compose project: %+v", outside)
 	}
 }

@@ -39,6 +39,7 @@ type Spec struct {
 	Image          string                `json:"image"`
 	Labels         map[string]string     `json:"labels"`
 	PidMode        string                `json:"pidMode"`
+	Placements     []VolumeDisk          `json:"placements"`
 	Privileged     bool                  `json:"privileged"`
 	Remote         *dockerapi.RemoteHost `json:"remote"`
 	RunID          string                `json:"runId"`
@@ -47,11 +48,21 @@ type Spec struct {
 	WorkingDir     string                `json:"workingDir"`
 }
 
-// Run executes one cron job run: it runs the spec's container on the local
-// daemon or its remote host, appending its output to the cron_job_run row at
-// most once a second so the page shows a long run's progress, and returns the
-// exit code, whether it timed out and its stdout then stderr (newest 64 KB).
-// A non-zero exit or a timeout is a result, not an error.
+// VolumeDisk is a mounted named volume that lives on a chosen host disk,
+// created there before the run mounts it.
+type VolumeDisk struct {
+	Disk   string `json:"disk"`
+	Image  string `json:"image"`
+	Source string `json:"source"`
+}
+
+// Run executes one cron job run: it creates each mounted volume placed on a
+// disk that doesn't exist (Docker Cleanup prunes unmounted ones), then runs
+// the spec's container on the local daemon or its remote host, appending its
+// output to the cron_job_run row at most once a second so the page shows a
+// long run's progress, and returns the exit code, whether it timed out and
+// its stdout then stderr (newest 64 KB). A non-zero exit or a timeout is a
+// result, not an error.
 func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 	var spec Spec
 	if err := job.DecodeSpec(&spec); err != nil {
@@ -69,6 +80,11 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 		client = remote
 	}
 
+	for _, placement := range spec.Placements {
+		if err := client.EnsureVolumeOnDisk(ctx, placement.Source, placement.Disk, placement.Image); err != nil {
+			return nil, fmt.Errorf("couldn't create %s on %s: %w", placement.Source, placement.Disk, err)
+		}
+	}
 	binds, groups := withSocket(spec, job.DockerSocket)
 	flusher := newFlusher(job, spec.RunID)
 	stop := flusher.start()

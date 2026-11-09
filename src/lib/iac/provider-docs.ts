@@ -236,6 +236,7 @@ const KIND_LABELS: Record<IacAttribute["kind"], string> = {
 	bool: "Boolean",
 	int: "Number",
 	intMap: "Map of Number",
+	object: "Object",
 	objects: "List of Object",
 	string: "String",
 	stringMap: "Map of String",
@@ -276,7 +277,7 @@ function attributeLine(attribute: IacAttribute): string {
 	].join(", ");
 	const notes = [
 		sentence(attribute.description),
-		attribute.kind === "objects"
+		attribute.fields
 			? `See the nested schema for \`${attribute.tf}\` below.`
 			: "",
 		attribute.forceNew ? "Changing it replaces the resource." : "",
@@ -308,10 +309,10 @@ function section(heading: string, attributes: IacAttribute[]): string[] {
 	];
 }
 
-/** The nested schema sections of every list-of-objects attribute. */
+/** The nested schema sections of every object and list-of-objects attribute. */
 function nestedSections(attributes: IacAttribute[]): string[] {
 	return attributes
-		.filter((attribute) => attribute.kind === "objects")
+		.filter((attribute) => attribute.fields)
 		.flatMap((attribute) => {
 			const fields = attribute.fields ?? [];
 			return [

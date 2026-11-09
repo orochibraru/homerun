@@ -24,26 +24,33 @@
 	const tabs = $derived<(NavTab & { href: string })[]>([
 		{
 			href: resolve("/(protected)/idp/[appId]", { appId: app.id }),
+			description: "Client credentials, endpoints and sign-in activity",
 			icon: LayoutDashboard,
 			id: "overview",
 			label: "Overview",
+			summary: data.activity.lastUsedAt
+				? `Last used ${timeAgo(data.activity.lastUsedAt)}`
+				: "Never used yet",
 		},
 		{
 			href: resolve("/(protected)/idp/[appId]/environments", {
 				appId: app.id,
 			}),
+			description: "Redirect URIs and allowed origins per environment",
 			icon: Layers,
 			id: "environments",
 			label: `Environments (${data.environmentCount})`,
 		},
 		{
 			href: resolve("/(protected)/idp/[appId]/users", { appId: app.id }),
+			description: "Who has signed in to the app, and revoking them",
 			icon: Users,
 			id: "users",
 			label: `Users (${data.activity.users})`,
 		},
 		{
 			href: resolve("/(protected)/idp/[appId]/settings", { appId: app.id }),
+			description: "Name, redirects, sign-in behaviour and danger zone",
 			icon: Settings,
 			id: "settings",
 			label: "Settings",

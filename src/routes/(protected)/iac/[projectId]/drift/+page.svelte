@@ -9,7 +9,7 @@
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import { formatDriftValue } from "#lib/iac/drift.js";
-	import { IAC_TOOL_INFO, usesHttpBackend } from "#lib/iac/tools.js";
+	import { IAC_TOOL_INFO } from "#lib/iac/tools.js";
 
 	const { data } = $props();
 
@@ -17,13 +17,23 @@
 </script>
 
 <div class="space-y-5">
-	{#if !usesHttpBackend(data.project.tool)}
-		<EmptyState
-			icon={GitCompareArrows}
-			subtitle="Drift reads the state Homerun's backend keeps. Pulumi keeps its own in the bucket: run pulumi refresh --preview-only to see what changed."
-			title="No drift check for Pulumi yet"
-		/>
-	{:else if data.problem}
+	{#if data.stacks.length > 1}
+		<nav class="flex flex-wrap items-center gap-1.5" aria-label="Pulumi stacks">
+			{#each data.stacks as stack (stack)}
+				<a
+					class="rounded-full px-2.5 py-1 font-mono text-xs {stack ===
+					data.stack
+						? 'bg-surface-2 text-text font-bold'
+						: 'text-text-muted hover:bg-surface-2'}"
+					aria-current={stack === data.stack ? "page" : undefined}
+					href={`?${new URLSearchParams({ stack })}`}
+				>
+					{stack}
+				</a>
+			{/each}
+		</nav>
+	{/if}
+	{#if data.problem}
 		<EmptyState
 			icon={GitCompareArrows}
 			subtitle={data.problem}
@@ -32,13 +42,16 @@
 	{:else if data.report}
 		{@const report = data.report}
 		<p class="text-text-muted text-sm">
+			{#if data.stack}
+				Stack <span class="font-mono">{data.stack}</span> ·
+			{/if}
 			{report.inSync} in sync · {report.drifted.length} drifted ·
 			{report.missing.length} missing · {report.unmanaged.length} unmanaged
 		</p>
 
 		<section class="panel rounded-md">
 			<PanelHeader
-				description={`Changed outside ${tool.label} since the last apply. ${tool.cli} plan puts them back unless the configuration changes too.`}
+				description={`Changed outside ${tool.label} since the last apply. ${tool.plan} shows them, and applying puts them back unless the configuration changes too.`}
 				icon={GitCompareArrows}
 				title="Drifted"
 			/>
@@ -95,7 +108,7 @@
 
 		<section class="panel rounded-md">
 			<PanelHeader
-				description={`In the state, but deleted on the instance. ${tool.cli} plan creates them again.`}
+				description="In the state, but deleted on the instance. Applying creates them again."
 				icon={SearchX}
 				title="Missing"
 			/>
@@ -122,7 +135,7 @@
 
 		<section class="panel rounded-md">
 			<PanelHeader
-				description="Running, but no resource in this state manages them. The Generate tab writes their import blocks."
+				description="Running, but no resource in this state manages them. The Generate tab writes the configuration that imports them."
 				icon={PackagePlus}
 				title="Unmanaged"
 			/>

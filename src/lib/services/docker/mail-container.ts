@@ -1,6 +1,6 @@
 import { challengeDomainFor, DNS_CHALLENGE_RESOLVER } from "#lib/acme-dns.js";
 import { config } from "#lib/config.js";
-import { MAIL_PORTS } from "#lib/mail.js";
+import { MAIL_PORTS, type MailRelay } from "#lib/mail.js";
 
 import { certResolverFor } from "./cert-resolver.ts";
 import { MIRROR_LABEL } from "./image-scan-refs.ts";
@@ -21,6 +21,14 @@ export const MAIL_LOG_VOLUME = "homerun-mail-logs";
 export const MAIL_ROUTER = "homerun-mail";
 export const MAIL_ALIAS_LABEL = "homerun.mail.alias";
 export const MAIL_CONFIG_MOUNT = "/cfg";
+export const MAIL_REVISION_LABEL = "homerun.mail.revision";
+export const MAIL_REVISION = "2";
+export const MAIL_PROXY_PORTS: Record<number, number> = {
+	25: 12_525,
+	465: 12_465,
+	587: 12_587,
+	993: 12_993,
+};
 
 const ACME_FILE = "acme.json";
 const TRAILING_SLASH_RE = /\/$/;
@@ -36,6 +44,7 @@ export interface MailDesiredState {
 	certSource: string | null;
 	hostname: string;
 	postmaster: string;
+	relay: MailRelay | null;
 }
 
 export interface InspectedMount {
@@ -150,7 +159,55 @@ export function mailEnv(state: MailDesiredState): string[] {
 		"PERMIT_DOCKER=none",
 		`SSL_TYPE=${state.certSource && state.certDomain ? "letsencrypt" : ""}`,
 		`SSL_DOMAIN=${state.certDomain ?? state.hostname}`,
+		`RELAY_HOST=${state.relay?.host ?? ""}`,
+		`RELAY_PORT=${state.relay ? String(state.relay.port) : ""}`,
+		`RELAY_USER=${state.relay?.user ?? ""}`,
+		`RELAY_PASSWORD=${state.relay?.password ?? ""}`,
 	];
+}
+
+/**
+ * docker-mailserver's `user-patches.sh`, run once at startup: a copy of the
+ * SMTP, submission and submissions services on the PROXY protocol ports, so
+ * Pangolin can hand over the real client address there while the usual ports
+ * keep serving direct and in-network connections.
+ */
+export function mailProxyUserPatches(): string {
+	return [
+		"#!/bin/bash",
+		"set -eu",
+		"clone() {",
+		'\tlocal port="$1" option="$2" name entry',
+		"\tshift 2",
+		'\tfor name in "$@"; do',
+		'\t\tentry="$(postconf -M "$name/inet" 2>/dev/null | sed "s/^[^ ]* //")"',
+		'\t\t[ -n "$entry" ] || continue',
+		'\t\tpostconf -M "$port/inet=$port $entry"',
+		'\t\tpostconf -P "$port/inet/$option=haproxy"',
+		'\t\tpostconf -P "$port/inet/syslog_name=postfix/$name-proxy"',
+		"\t\treturn",
+		"\tdone",
+		"}",
+		`clone ${MAIL_PROXY_PORTS[25]} postscreen_upstream_proxy_protocol smtp`,
+		`clone ${MAIL_PROXY_PORTS[587]} smtpd_upstream_proxy_protocol submission`,
+		`clone ${MAIL_PROXY_PORTS[465]} smtpd_upstream_proxy_protocol submissions smtps`,
+		"",
+	].join("\n");
+}
+
+/** docker-mailserver's `dovecot.cf`: an IMAPS listener on the PROXY protocol port, trusting the PROXY header from private networks only, where the tunnel connects from. */
+export function mailProxyDovecotConf(): string {
+	return [
+		"haproxy_trusted_networks = 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 fd00::/8",
+		"service imap-login {",
+		"  inet_listener imaps_proxy {",
+		"    haproxy = yes",
+		`    port = ${MAIL_PROXY_PORTS[993]}`,
+		"    ssl = yes",
+		"  }",
+		"}",
+		"",
+	].join("\n");
 }
 
 /**
@@ -184,6 +241,7 @@ export function mailLabels(state: MailDesiredState): Record<string, string> {
 	const labels: Record<string, string> = {
 		[CORE_LABEL]: "mail",
 		[MAIL_ALIAS_LABEL]: state.hostname,
+		[MAIL_REVISION_LABEL]: MAIL_REVISION,
 		[MIRROR_LABEL]: "mail",
 		"traefik.enable": "true",
 		[`traefik.http.routers.${MAIL_ROUTER}.entrypoints`]:
@@ -249,20 +307,26 @@ export function mailMatches(
 	const wanted = mailLabels(state);
 	const traefikKeys = new Set(
 		[...Object.keys(labels), ...Object.keys(wanted)].filter(
-			(key) => key.startsWith("traefik.") || key === MAIL_ALIAS_LABEL,
+			(key) =>
+				key.startsWith("traefik.") ||
+				key === MAIL_ALIAS_LABEL ||
+				key === MAIL_REVISION_LABEL,
 		),
 	);
 	return [...traefikKeys].every((key) => labels[key] === wanted[key]);
 }
 
-/** The shell script writing `files` under the config mount, each through a temp file and a rename so docker-mailserver's change detector never reads half of one. */
+/** The shell script writing `files` under the config mount, each through a temp file and a rename so docker-mailserver's change detector never reads half of one, scripts made executable. */
 export function mailConfigScript(files: MailConfigFile[]): string {
 	return [
 		"set -e",
 		`rm -rf ${MAIL_CONFIG_MOUNT}/rspamd/dkim`,
 		...files.map((file, index) => {
 			const target = `${MAIL_CONFIG_MOUNT}/${file.path}`;
-			return `mkdir -p "$(dirname '${target}')" && printf '%s' "$MAIL_FILE_${index}" > '${target}.tmp' && mv '${target}.tmp' '${target}'`;
+			const executable = file.path.endsWith(".sh")
+				? ` && chmod 755 '${target}'`
+				: "";
+			return `mkdir -p "$(dirname '${target}')" && printf '%s' "$MAIL_FILE_${index}" > '${target}.tmp' && mv '${target}.tmp' '${target}'${executable}`;
 		}),
 	].join("\n");
 }

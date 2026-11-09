@@ -6,6 +6,7 @@ import { ServiceDTO } from "#lib/dto/service-dto.js";
 import { Logger } from "#lib/logger.js";
 import { formatRates } from "#lib/pipelines/cost.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
+import { PipelineWebhookService } from "#lib/services/pipeline-webhook.service.js";
 import { PipelineService } from "#lib/services/pipeline.service.js";
 
 const logger = new Logger("Pipelines");
@@ -29,6 +30,7 @@ export const load = async ({ parent }) => {
 	return {
 		defaultRates: formatRates(PipelineService.rates(repo)),
 		services,
+		webhook: PipelineWebhookService.describe(repo),
 	};
 };
 
@@ -63,7 +65,7 @@ export const actions = {
 		if (!repo) {
 			return fail(404, { error: "Repository not found." });
 		}
-		await repo.delete();
+		await PipelineService.unwatch(repo);
 		logger.info(
 			`Stopped watching repository=${repo.id} ${repo.fullName} user=${locals.user.id}`,
 		);

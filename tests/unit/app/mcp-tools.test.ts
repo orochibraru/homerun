@@ -76,6 +76,7 @@ describe("MCP tools", () => {
 			"scan_service",
 			"mount_volume",
 			"list_backup_destinations",
+			"list_disks",
 			"update_error",
 			"list_traces",
 			"get_trace",
@@ -271,6 +272,126 @@ describe("MCP tools", () => {
 			"delete_redirect",
 			{ redirectId: "rd1" },
 			{ method: "DELETE", path: "/redirects/rd1" },
+		],
+		["get_pipeline_stats", {}, { method: "GET", path: "/pipelines" }],
+		[
+			"list_repositories",
+			{},
+			{ method: "GET", path: "/pipelines/repositories?perPage=100" },
+		],
+		[
+			"get_repository",
+			{ repositoryId: "rp1" },
+			{ method: "GET", path: "/pipelines/repositories/rp1" },
+		],
+		[
+			"list_pipeline_runs",
+			{},
+			{ method: "GET", path: "/pipelines/runs?perPage=50" },
+		],
+		[
+			"list_pipeline_runs",
+			{ query: "main", repositoryId: "rp1", status: ["failure", "running"] },
+			{
+				method: "GET",
+				path: "/pipelines/repositories/rp1/runs?perPage=50&q=main&status=failure%2Crunning",
+			},
+		],
+		[
+			"get_pipeline_run",
+			{ repositoryId: "rp1", runId: "run1" },
+			{ method: "GET", path: "/pipelines/repositories/rp1/runs/run1" },
+		],
+		[
+			"sync_repository",
+			{ repositoryId: "rp1" },
+			{ method: "POST", path: "/pipelines/repositories/rp1/sync" },
+		],
+		[
+			"watch_repository",
+			{ fullName: "acme/api", providerId: "gh" },
+			{
+				body: { fullName: "acme/api", providerId: "gh" },
+				method: "POST",
+				path: "/pipelines/repositories",
+			},
+		],
+		["list_mail_domains", {}, { method: "GET", path: "/mail/domains" }],
+		[
+			"get_mail_domain",
+			{ domainId: "md1" },
+			{ method: "GET", path: "/mail/domains/md1" },
+		],
+		[
+			"create_mailbox",
+			{
+				domainId: "md1",
+				kind: "noreply",
+				localPart: "noreply",
+				password: "long enough password",
+			},
+			{
+				body: {
+					domainId: "md1",
+					kind: "noreply",
+					localPart: "noreply",
+					password: "long enough password",
+				},
+				method: "POST",
+				path: "/mail/mailboxes",
+			},
+		],
+		[
+			"update_mailbox",
+			{ enabled: false, mailboxId: "mb1" },
+			{
+				body: { enabled: false },
+				method: "PATCH",
+				path: "/mail/mailboxes/mb1",
+			},
+		],
+		[
+			"create_mail_domain",
+			{ dnsDomainId: "dd1" },
+			{
+				body: { dnsDomainId: "dd1" },
+				method: "POST",
+				path: "/mail/domains",
+			},
+		],
+		["list_mailboxes", {}, { method: "GET", path: "/mail/mailboxes" }],
+		[
+			"get_mailbox",
+			{ mailboxId: "mb1" },
+			{ method: "GET", path: "/mail/mailboxes/mb1" },
+		],
+		["list_mail_aliases", {}, { method: "GET", path: "/mail/aliases" }],
+		[
+			"create_mail_alias",
+			{ destinations: ["me@example.test"], domainId: "md1", localPart: "" },
+			{
+				body: {
+					destinations: ["me@example.test"],
+					domainId: "md1",
+					localPart: "",
+				},
+				method: "POST",
+				path: "/mail/aliases",
+			},
+		],
+		[
+			"update_mail_alias",
+			{ aliasId: "al1", enabled: false },
+			{
+				body: { enabled: false },
+				method: "PATCH",
+				path: "/mail/aliases/al1",
+			},
+		],
+		[
+			"delete_mail_alias",
+			{ aliasId: "al1" },
+			{ method: "DELETE", path: "/mail/aliases/al1" },
 		],
 		["list_object_stores", {}, { method: "GET", path: "/object-stores" }],
 		[
@@ -529,6 +650,7 @@ describe("MCP tools", () => {
 			{},
 			{ method: "GET", path: "/backup-destinations?perPage=100" },
 		],
+		["list_disks", {}, { method: "GET", path: "/disks" }],
 		["list_status_pages", {}, { method: "GET", path: "/status-pages" }],
 		[
 			"create_status_page",

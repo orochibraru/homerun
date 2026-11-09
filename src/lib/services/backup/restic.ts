@@ -3,7 +3,13 @@ import type { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 
 import { DockerService } from "../docker.service.ts";
 import type { BackupObject } from "../s3-backup.service.ts";
-import { RCLONE_IMAGE, RCLONE_TAG, rcloneRemote } from "./rclone.ts";
+import {
+	RCLONE_ENTRYPOINT,
+	RCLONE_IMAGE,
+	RCLONE_TAG,
+	type RcloneRemote,
+	rcloneRemote,
+} from "./rclone.ts";
 
 export const RESTIC_IMAGE = "restic/restic";
 export const RESTIC_TAG = "0.18.1";
@@ -89,6 +95,33 @@ export function parseResticKey(
 }
 
 /**
+ * The rclone helper reaching any destination type through one remote named
+ * `dest` rooted at the destination's path: its own backend for SFTP, SMB and
+ * WebDAV, rclone's S3 backend for S3, as restic itself reaches it.
+ *
+ * @throws When the destination's secret can't be decrypted.
+ */
+export function destinationRemote(row: S3DestinationDTO): RcloneRemote {
+	const secret = row.decryptSecretAccessKey();
+	if (!secret) {
+		throw new Error("Couldn't decrypt the destination's stored secret.");
+	}
+	const { env, label, root } = rcloneEnv(row, secret);
+	return {
+		entrypoint: RCLONE_ENTRYPOINT,
+		env,
+		image: `${RCLONE_IMAGE}:${RCLONE_TAG}`,
+		label,
+		path: root,
+	};
+}
+
+/** `volume`'s restic repository's path under its destination's own: `<prefix>/restic/<volume id>`. */
+export function repositoryPath(volume: StorageVolumeDTO): string {
+	return [volume.backupPrefix, "restic", volume.id].filter(Boolean).join("/");
+}
+
+/**
  * Where `volume`'s restic repository lives on `row` and how to reach it:
  * `<path>/<prefix>/restic/<volume id>` (by id, so renaming the volume keeps
  * its history), encrypted with the destination's restic password and keeping
@@ -105,9 +138,7 @@ export async function resticRepository(
 		throw new Error("Couldn't decrypt the destination's stored secret.");
 	}
 	const { env, label, root } = rcloneEnv(row, secret);
-	const relative = [volume.backupPrefix, "restic", volume.id]
-		.filter(Boolean)
-		.join("/");
+	const relative = repositoryPath(volume);
 	const path = [root.replace(/\/+$/, ""), relative].filter(Boolean).join("/");
 	return {
 		env,

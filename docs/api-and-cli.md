@@ -190,6 +190,9 @@ ones marked secret, which the dashboard masks and the MCP server redacts.
 | OIDC app                | `/oidc-apps`, `/oidc-apps/:id` ("Sign in with Homerun" apps; created with no environment; a public app takes no token auth method and always requires PKCE; Users & authentication area)                                                                                              |
 | OIDC app environment    | `/oidc-apps/:appId/environments`, `/oidc-apps/:appId/environments/:id` (callback URLs and authorized origins, checked like the dashboard; the last one can be deleted here)                                                                                                           |
 | OIDC app secret         | `/oidc-apps/:appId/secrets`, `/oidc-apps/:appId/secrets/:id` (confidential apps; no update; the value is only in the create response)                                                                                                                                                 |
+| Mail domain             | `/mail/domains`, `/mail/domains/:id` (no update; `GET` one includes the state of each DNS record it needs; deleting one wipes its mail; Mail area)                                                                                                                                    |
+| Mailbox                 | `/mail/mailboxes`, `/mail/mailboxes/:id` (`kind` is `mailbox` or `noreply`, send only, set at creation; `password` is write-only; deleting one wipes its mail; Mail area)                                                                                                             |
+| Mail alias              | `/mail/aliases`, `/mail/aliases/:id` (an empty `localPart` is the domain's catch-all; Mail area)                                                                                                                                                                                      |
 | Registry settings       | `GET`/`PATCH` `/registry/settings`, waits for the registry's container to be recreated (Docker Registry area)                                                                                                                                                                         |
 | Registry images         | `GET` `/registry/repositories` (paged, `q` matches the name) and `GET` `/registry/repositories/:repository/tags`, read only: deleting a tag or a repository stays on the dashboard (Docker Registry area)                                                                             |
 
@@ -315,6 +318,28 @@ matches a span name or trace id, `status=error` keeps failed ones, `sort` by
 `GET /api/v1/monitoring/traces` and `GET /api/v1/monitoring/traces/:traceId` do
 the same for Homerun's own traces, its worker's jobs. The MCP server exposes
 them as `list_traces` and `get_trace` (no `serviceId` for Homerun's own).
+
+### Pipelines
+
+`GET /api/v1/pipelines` sums every watched repository's [CI runs](pipelines.md)
+over the last 30 days and all time. `GET /api/v1/pipelines/repositories` lists
+the watched repositories (`q` matches the path, the usual paging), each with its
+linked services, 30-day totals and its CI webhook's id or why it couldn't be
+registered; `POST` with `providerId` and `fullName` (and `defaultBranch`) starts
+watching one on a provider you're connected to.
+`GET /api/v1/pipelines/repositories/:id` adds all-time and per-workflow totals
+and the runner rates, `DELETE` stops watching it, and
+`POST /api/v1/pipelines/repositories/:id/sync` queues a sync, answering `202`
+with its `jobId`. `GET /api/v1/pipelines/runs` and
+`GET /api/v1/pipelines/repositories/:id/runs` list runs newest first (`q`
+matches the workflow, branch, commit title or SHA, `?status=failure,running`
+keeps those, the usual paging), without their jobs;
+`GET /api/v1/pipelines/repositories/:id/runs/:runId` returns one with every job
+of every attempt. The MCP server exposes them as `get_pipeline_stats`,
+`list_repositories`, `get_repository`, `list_pipeline_runs`, `get_pipeline_run`,
+`sync_repository` and `watch_repository`, the CLI as `homerun pipelines ...`.
+Providers deliver CI events to `POST /api/v1/webhooks/pipelines/:id`, see
+[Pipelines](pipelines.md#webhooks-and-polling).
 
 ### Backups and jobs
 
@@ -481,8 +506,19 @@ homerun iac projects list|get|create|delete
 homerun iac state pull <project>
 homerun iac unlock <project> --force [--yes]
 homerun system stats [--json]
+homerun mail domains list|get|create|delete
+homerun mail mailboxes list|get|create|update|delete
+homerun mail aliases list|get|create|update|delete
 homerun registry repositories [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun registry tags <repository> [--json]
+homerun pipelines stats [--json]
+homerun pipelines repositories [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun pipelines repository <id|owner/repo>
+homerun pipelines runs [<id|owner/repo>] [--status <statuses>] [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun pipelines run <id|owner/repo> <runId>
+homerun pipelines sync <id|owner/repo>
+homerun pipelines watch <providerId> <owner/repo> [--default-branch <branch>]
+homerun pipelines unwatch <id|owner/repo> [--yes]
 homerun service-accounts list [--json]
 homerun service-accounts create <name> [--permissions <area>=<level>,...]
 homerun service-accounts update <id> [--name <name>] [--permissions <area>=<level>,...]
@@ -637,6 +673,11 @@ host's CPU, memory, disk and GPU usage. `homerun registry repositories` lists
 the [built-in registry](registry.md)'s images with their tag count and the
 services using them, and `homerun registry tags <repository>` one repository's
 tags and digests (`team/app`, slashes included).
+`homerun pipelines repositories` lists the repositories whose
+[CI runs](pipelines.md) Homerun watches with their 30-day runs, failures, median
+duration and cost, and whether a webhook keeps them current or they're polled;
+`homerun pipelines runs` lists runs of one (by id or `owner/repo`) or of all of
+them, and `homerun pipelines run` prints one with its jobs.
 
 #### Everything else the API manages
 

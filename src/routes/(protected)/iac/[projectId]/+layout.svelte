@@ -35,14 +35,20 @@
 			href: resolve("/(protected)/iac/[projectId]", {
 				projectId: data.project.id,
 			}),
+			description: "The backend block, the lock and state versions",
 			icon: Database,
 			id: "state",
 			label: "State",
+			hasWarning: data.bucket.problem !== null,
+			summary:
+				data.bucket.problem ??
+				`${data.store?.name ?? "No store"} · ${data.project.bucket}`,
 		},
 		{
 			href: resolve("/(protected)/iac/[projectId]/generate", {
 				projectId: data.project.id,
 			}),
+			description: "Configuration for what this project manages",
 			icon: FileCode2,
 			id: "generate",
 			label: "Generate",
@@ -51,6 +57,7 @@
 			href: resolve("/(protected)/iac/[projectId]/drift", {
 				projectId: data.project.id,
 			}),
+			description: "What changed in Homerun since the state was written",
 			icon: GitCompareArrows,
 			id: "drift",
 			label: "Drift",
@@ -59,6 +66,7 @@
 			href: resolve("/(protected)/iac/[projectId]/credentials", {
 				projectId: data.project.id,
 			}),
+			description: "API keys for this project's runs",
 			icon: KeyRound,
 			id: "credentials",
 			label: "Credentials",
@@ -67,8 +75,10 @@
 			href: resolve("/(protected)/iac/[projectId]/settings", {
 				projectId: data.project.id,
 			}),
+			description: "Name, what it manages and danger zone",
 			icon: Settings,
 			id: "settings",
+			summary: scopeLabel ?? undefined,
 			label: "Settings",
 		},
 	]);

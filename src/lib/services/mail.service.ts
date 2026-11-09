@@ -6,7 +6,10 @@ import { DomainDTO } from "#lib/dto/domain-dto.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import { MailAliasDTO } from "#lib/dto/mail-alias-dto.js";
 import { MailDomainDTO } from "#lib/dto/mail-domain-dto.js";
-import { MailMailboxDTO } from "#lib/dto/mail-mailbox-dto.js";
+import {
+	MailMailboxDTO,
+	type MailMailboxKind,
+} from "#lib/dto/mail-mailbox-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
 	type AliasEntry,
@@ -25,6 +28,7 @@ import {
 	type MailRecordState,
 	mailRecordState,
 	postfixAccounts,
+	postfixReceiveAccess,
 	postfixVirtual,
 	requiredMailRecords,
 } from "#lib/mail.js";
@@ -42,8 +46,12 @@ import {
 	MAIL_CONFIG_DIR,
 	MAIL_CONTAINER_NAME,
 	mailCertResolver,
+	mailProxyDovecotConf,
+	mailProxyUserPatches,
 } from "./docker/mail-container.ts";
 import { DomainDnsService } from "./domain-dns.service.ts";
+import { MailOwnerService } from "./mail/owners.ts";
+import { MailRelayService } from "./mail/relay.ts";
 import { PangolinMailPorts } from "./pangolin/mail-ports.ts";
 
 const logger = new Logger("Mail");
@@ -76,6 +84,7 @@ export interface MailRecordCheck {
 export interface MailboxInput {
 	displayName: string | null;
 	enabled: boolean;
+	ownerId: string | null;
 	quotaMb: number | null;
 }
 
@@ -256,10 +265,19 @@ class MailServiceClass {
 				aliasEntries.push({ destinations: [box.address], source: box.address });
 			}
 		}
+		const sendOnly = active
+			.filter((box) => box.kind === "noreply")
+			.map((box) => box.address);
 		const files: MailConfigFile[] = [
 			{ content: postfixAccounts(entries), path: "postfix-accounts.cf" },
 			{ content: postfixVirtual(aliasEntries), path: "postfix-virtual.cf" },
+			{
+				content: postfixReceiveAccess(sendOnly),
+				path: "postfix-receive-access.cf",
+			},
 			{ content: dovecotQuotas(entries), path: "dovecot-quotas.cf" },
+			{ content: mailProxyUserPatches(), path: "user-patches.sh" },
+			{ content: mailProxyDovecotConf(), path: "dovecot.cf" },
 			{
 				content: dkimSigningConf(MAIL_CONFIG_DIR),
 				path: "rspamd/override.d/dkim_signing.conf",
@@ -378,6 +396,7 @@ class MailServiceClass {
 			certSource,
 			hostname,
 			postmaster: postmasterFor(hostname),
+			relay: await MailRelayService.relay(),
 		});
 		if (warning) {
 			await log?.(warning);
@@ -529,6 +548,7 @@ class MailServiceClass {
 	async createMailbox(
 		input: MailboxInput & {
 			domainId: string;
+			kind: MailMailboxKind;
 			localPart: string;
 			password: string;
 		},
@@ -547,14 +567,34 @@ class MailServiceClass {
 		if (await this.#addressTaken(address)) {
 			throw new Error(`${address} is already a mailbox or an alias.`);
 		}
+		await MailOwnerService.check(input.ownerId);
 		return await MailMailboxDTO.create({
 			displayName: input.displayName,
 			domain: domain.name,
 			domainId: domain.id,
 			enabled: input.enabled,
+			kind: input.kind,
 			localPart,
+			ownerId: input.ownerId,
 			passwordHash: await this.#hash(input.password),
-			quotaMb: input.quotaMb,
+			quotaMb: input.kind === "noreply" ? null : input.quotaMb,
+		});
+	}
+
+	/**
+	 * Saves a mailbox's display name, owner, quota and whether it's enabled.
+	 * A noreply address keeps no quota, it holds no mail.
+	 *
+	 * @throws When the owner isn't an account.
+	 */
+	async updateMailbox(
+		mailbox: MailMailboxDTO,
+		fields: MailboxInput,
+	): Promise<void> {
+		await MailOwnerService.check(fields.ownerId);
+		await mailbox.update({
+			...fields,
+			quotaMb: mailbox.kind === "noreply" ? null : fields.quotaMb,
 		});
 	}
 

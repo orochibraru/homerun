@@ -10,6 +10,7 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { Button } from "@orochibraru/ui/button";
+	import { Checkbox } from "@orochibraru/ui/checkbox";
 	import { onMount } from "svelte";
 
 	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";
@@ -126,11 +127,22 @@
 
 	let deleteDialogOpen = $state(false);
 	let pendingDeleteName = $state("");
+	let pendingDeleteBackedUp = $state(false);
 	let pendingDeleteForm: HTMLFormElement | null = null;
+	let deleteBackups = $state(false);
 
-	function requestDelete(e: MouseEvent, name: string) {
+	const selectionBackedUp = $derived(
+		data.volumes.some((vol) => vol.s3DestinationId && selection.has(vol.id)),
+	);
+
+	function requestDelete(
+		e: MouseEvent,
+		vol: { name: string; s3DestinationId: string | null },
+	) {
 		pendingDeleteForm = (e.currentTarget as HTMLElement).closest("form");
-		pendingDeleteName = name;
+		pendingDeleteName = vol.name;
+		pendingDeleteBackedUp = vol.s3DestinationId !== null;
+		deleteBackups = false;
 		deleteDialogOpen = true;
 	}
 </script>
@@ -191,13 +203,21 @@
 				use:enhance={enhanceToast({
 					error: "Couldn't delete the volume.",
 					loading: "Deleting the volume",
-					success: "Volume deleted.",
+					success: (result) =>
+						(result as { backupsQueued?: boolean } | undefined)?.backupsQueued
+							? "Volume deleted. Its backups are being deleted."
+							: "Volume deleted.",
 				})}
 			>
 				<input name="volumeId" type="hidden" value={vol.id} />
+				<input
+					name="deleteBackups"
+					type="hidden"
+					value={deleteBackups ? "on" : ""}
+				/>
 				<Button
 					class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-					onclick={(e) => requestDelete(e, vol.name)}
+					onclick={(e) => requestDelete(e, vol)}
 					size="icon-sm"
 					title="Delete"
 					type="button"
@@ -295,6 +315,7 @@
 	submit={bulkSubmit}
 	bind:form={bulkForm}
 >
+	<input name="deleteBackups" type="hidden" value={deleteBackups ? "on" : ""} />
 	<button
 		class="hidden"
 		name="op"
@@ -336,6 +357,7 @@
 		disabled={bulkPending}
 		onclick={() => {
 			bulkOp = "delete";
+			deleteBackups = false;
 			bulkDeleteDialogOpen = true;
 		}}
 		size="sm"
@@ -353,7 +375,11 @@
 	description={`Delete ${selection.count} selected ${plural(selection.count)}? Services using them will need a redeploy.`}
 	onConfirm={() => bulkForm?.requestSubmit(bulkDeleteSubmitter ?? undefined)}
 	title="Delete selected volumes"
-/>
+>
+	{#if selectionBackedUp}
+		{@render deleteBackupsOption("Also delete their backups")}
+	{/if}
+</ConfirmDialog>
 
 <ConfirmDialog
 	bind:open={deleteDialogOpen}
@@ -361,4 +387,22 @@
 	description={`Delete "${pendingDeleteName}"? Services using it will need a redeploy.`}
 	onConfirm={() => pendingDeleteForm?.requestSubmit()}
 	title="Delete volume"
-/>
+>
+	{#if pendingDeleteBackedUp}
+		{@render deleteBackupsOption("Also delete its backups")}
+	{/if}
+</ConfirmDialog>
+
+{#snippet deleteBackupsOption(label: string)}
+	<label class="flex items-start gap-2 text-sm">
+		<Checkbox class="mt-0.5" bind:checked={deleteBackups} />
+		<span>
+			{label}
+			<span class="text-text-muted block text-xs">
+				Deletes the restic repository on the backup destination, every snapshot
+				in it, in a background job. Kept, they show as orphans on the
+				destination's page.
+			</span>
+		</span>
+	</label>
+{/snippet}

@@ -98,7 +98,7 @@ export const shots: ShotModule = {
 			requiredStatusChecks: ["ci/build", "ci/test"],
 		});
 
-		await postAction(page, "/git-providers?/addProvider", {
+		await postAction(page, "/git-providers/new?/addProvider", {
 			clientId: "homerun-acme",
 			clientSecret: "not-a-real-secret",
 			kind: "gitlab",
@@ -157,16 +157,10 @@ export const shots: ShotModule = {
 			},
 		},
 		{
-			doc: "/git-providers (Add provider)",
+			doc: "/git-providers",
 			expect: /Acme GitLab/,
 			name: "git-providers",
 			path: () => "/git-providers",
-			prepare: async (page) => {
-				await page.getByRole("button", { name: "Add provider" }).click();
-				await expect(
-					page.getByRole("button", { name: "Create GitHub App" }),
-				).toBeVisible();
-			},
 		},
 		{
 			doc: "/services/:id/environments/previews",

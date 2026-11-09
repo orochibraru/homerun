@@ -263,7 +263,7 @@ func (r *run) awaitReadyOrDiscard(ctx context.Context, id string, check Readines
 		r.progress.line(ReadyLine(check, int(time.Since(started).Round(time.Second).Seconds())))
 		return nil
 	}
-	if output, err := r.docker.ContainerLogsTail(ctx, id, failedOutputTail); err == nil {
+	if output, err := r.docker.ContainerLogsTail(ctx, id, FailedOutputTail); err == nil {
 		r.reportOutput("The new container's last output:", output)
 	}
 	r.removeQuietly(ctx, id)

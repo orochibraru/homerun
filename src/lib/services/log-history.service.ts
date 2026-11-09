@@ -1,13 +1,16 @@
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
 import {
 	InvalidLogPatternError,
+	type LogOwner,
 	ServiceLogDTO,
 } from "#lib/dto/service-log-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
+	isLogRange,
 	type LogHistoryLine,
 	type LogHistoryPage,
 	type LogHistoryQuery,
+	type LogHistoryView,
 	type LogRange,
 	logRetentionDays,
 	MAX_LOG_PAGE,
@@ -31,7 +34,7 @@ export interface LogHistoryResult {
 	query: LogHistoryQuery;
 }
 
-/** Retention and pruning of the service logs the homerun worker ships into `service_log`. */
+/** Search, retention and pruning of the container logs the homerun worker ships into `service_log`. */
 class LogHistoryServiceClass {
 	/** How many days of service logs this instance keeps. */
 	async retentionDays(): Promise<number> {
@@ -59,12 +62,12 @@ class LogHistoryServiceClass {
 	}
 
 	/**
-	 * Searches a service's stored lines with the query URL parameters carry
+	 * Searches `owner`'s stored lines with the query URL parameters carry
 	 * (see `parseLogHistoryQuery`), reporting a malformed parameter or regex
 	 * as `error` with an empty page rather than throwing.
 	 */
 	async search(
-		serviceId: string,
+		owner: LogOwner,
 		params: URLSearchParams,
 		defaultRange: LogRange,
 	): Promise<LogHistoryResult> {
@@ -85,7 +88,7 @@ class LogHistoryServiceClass {
 		try {
 			return {
 				error: null,
-				page: await ServiceLogDTO.search(serviceId, query),
+				page: await ServiceLogDTO.search(owner, query),
 				query,
 			};
 		} catch (error) {
@@ -101,13 +104,47 @@ class LogHistoryServiceClass {
 	}
 
 	/**
-	 * Every stored line matching the query URL parameters carry, newest first,
-	 * up to 50,000, for a download.
+	 * What a log history page renders for `owner` from its URL: the search
+	 * over the last 24 hours by default (see `search`), the form's values to
+	 * fill back in, the instances with stored lines, the oldest line kept and
+	 * the retention.
+	 */
+	async view(owner: LogOwner, url: URL): Promise<LogHistoryView> {
+		const range = url.searchParams.get("range");
+		const [result, instances, oldest, retentionDays] = await Promise.all([
+			this.search(owner, url.searchParams, "24h"),
+			ServiceLogDTO.instances(owner),
+			ServiceLogDTO.oldest(owner),
+			this.retentionDays(),
+		]);
+		return {
+			error: result.error,
+			filters: {
+				deploymentId: result.query.deploymentId ?? "",
+				from: url.searchParams.get("from") ?? "",
+				instance: result.query.instance ?? "",
+				paged: result.query.before !== null,
+				q: result.query.q,
+				range: isLogRange(range) ? range : "24h",
+				regex: result.query.regex,
+				stream: result.query.stream ?? "",
+				to: url.searchParams.get("to") ?? "",
+			},
+			instances,
+			oldest,
+			page: result.page,
+			retentionDays,
+		};
+	}
+
+	/**
+	 * Every one of `owner`'s stored lines matching the query URL parameters
+	 * carry, newest first, up to 50,000, for a download.
 	 *
 	 * @throws When a parameter or the regex is malformed.
 	 */
 	async collect(
-		serviceId: string,
+		owner: LogOwner,
 		params: URLSearchParams,
 		defaultRange: LogRange,
 	): Promise<LogHistoryLine[]> {
@@ -118,7 +155,7 @@ class LogHistoryServiceClass {
 		const lines: LogHistoryLine[] = [];
 		for (;;) {
 			// oxlint-disable-next-line no-await-in-loop -- each page starts where the previous one stopped
-			const page = await ServiceLogDTO.search(serviceId, query);
+			const page = await ServiceLogDTO.search(owner, query);
 			lines.push(...page.lines);
 			const last = page.lines.at(-1);
 			if (!(page.nextCursor && last) || lines.length >= MAX_DOWNLOAD_LINES) {

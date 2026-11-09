@@ -42,12 +42,74 @@ async function openOrFocus(url: string): Promise<void> {
 	await sw.clients.openWindow(target.href);
 }
 
-sw.addEventListener("install", () => {
-	void sw.skipWaiting();
+const OFFLINE_CACHE = "homerun-offline-v1";
+const OFFLINE_PAGE = "/offline.html";
+const OFFLINE_ASSETS = [OFFLINE_PAGE, "/favicon.svg", "/icons/icon-192.png"];
+
+async function precacheOffline(): Promise<void> {
+	const cache = await caches.open(OFFLINE_CACHE);
+	await cache.addAll(OFFLINE_ASSETS);
+}
+
+async function dropOldCaches(): Promise<void> {
+	const keys = await caches.keys();
+	await Promise.all(
+		keys
+			.filter(
+				(key) => key.startsWith("homerun-offline-") && key !== OFFLINE_CACHE,
+			)
+			.map((key) => caches.delete(key)),
+	);
+}
+
+async function navigateOrFallback(request: Request): Promise<Response> {
+	try {
+		return await fetch(request);
+	} catch (error) {
+		const offline = await caches.match(OFFLINE_PAGE);
+		if (offline) {
+			return offline;
+		}
+		throw error;
+	}
+}
+
+async function cachedAsset(request: Request): Promise<Response> {
+	try {
+		return await fetch(request);
+	} catch (error) {
+		const cached = await caches.match(request);
+		if (cached) {
+			return cached;
+		}
+		throw error;
+	}
+}
+
+sw.addEventListener("install", (event) => {
+	event.waitUntil(precacheOffline().then(() => sw.skipWaiting()));
 });
 
 sw.addEventListener("activate", (event) => {
-	event.waitUntil(sw.clients.claim());
+	event.waitUntil(dropOldCaches().then(() => sw.clients.claim()));
+});
+
+sw.addEventListener("fetch", (event) => {
+	const { request } = event;
+	if (request.method !== "GET") {
+		return;
+	}
+	if (request.mode === "navigate") {
+		event.respondWith(navigateOrFallback(request));
+		return;
+	}
+	const url = new URL(request.url);
+	if (
+		url.origin === sw.location.origin &&
+		OFFLINE_ASSETS.includes(url.pathname)
+	) {
+		event.respondWith(cachedAsset(request));
+	}
 });
 
 sw.addEventListener("push", (event) => {

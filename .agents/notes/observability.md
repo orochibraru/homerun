@@ -583,35 +583,54 @@ Docker drops a container's output with the container, so the worker keeps a
 copy. `logship.Shipper` runs inside the worker next to the janitor (`run()` in
 `internal/worker/main.go`, and waits for it on shutdown so the last batch
 flushes): every 15s it lists services with a `container_id` or
-`swarm_service_id` and keeps one follower goroutine per workload, cancelling the
-ones whose workload went (a redeploy swaps the container id). A follower opens
-`ContainerLogsSince` / `SwarmServiceLogsSince` (`Timestamps: true`,
-`Follow: true`, swarm with `Details: true` for the task id) from the last line
-stored for that container (whole service for swarm, task ids change every
-update), floored at the retention so first sight of an old container doesn't
-copy history only to prune it. The daemon's `since` is inclusive, so lines at or
-before the last one seen are skipped. `ReadChunks` sniffs framed vs raw (every
-Homerun service is TTY, one raw stream, stored as stdout), `Splitter` assembles
-lines per stream, `ParseLine` peels the timestamp and swarm details, `Clean`
-drops NULs (Postgres text refuses them), fixes UTF-8 and cuts at 16 KiB. Batches
-of up to 500 go in through `CopyFrom` every second; a failed batch (service
-deleted mid-flight, FK) is logged and dropped, never retried. A stream that ends
-(stopped container) is reopened after 5s, doubling to a minute while nothing new
-arrives. Each line gets `deployment_id` from `DeploymentAt`: the latest
-deployment with that `container_id` (which is the swarm service id in swarm
-mode) that started at or before the line, re-read every 30s.
+`swarm_service_id`, plus, off the daemon's container list
+(`ContainerWorkloads`), the container of every workstation with no remote host
+(`homerun.workstation.id` label) and Homerun's own containers, and keeps one
+follower goroutine per workload, cancelling the ones whose workload went (a
+redeploy or recreate swaps the container id). "Own containers" is the set the
+System Logs page lists (`infraContainersFrom`), ported to Go: `homerun.core`, or
+the compose project of the container whose id or name is the worker's hostname
+(any compose project when the worker isn't in one), never `homerun.managed`.
+Each row has exactly one owner: `service_id`, `workstation_id` (cascades with
+the workstation) or `system`, the container's compose service, else its core
+label, else its name, which is what makes a system container's history survive a
+recreate; the TS side reads it as `service || name` off an `InfraContainer`. A
+remote host's workstation isn't followed: the shipper only sees the manager's
+daemon. A follower opens `ContainerLogsSince` / `SwarmServiceLogsSince`
+(`Timestamps: true`, `Follow: true`, swarm with `Details: true` for the task id)
+from the last line stored for that container (whole service for swarm, task ids
+change every update), floored at the retention so first sight of an old
+container doesn't copy history only to prune it. The daemon's `since` is
+inclusive, so lines at or before the last one seen are skipped. `ReadChunks`
+sniffs framed vs raw (every Homerun service is TTY, one raw stream, stored as
+stdout), `Splitter` assembles lines per stream, `ParseLine` peels the timestamp
+and swarm details, `Clean` drops NULs (Postgres text refuses them), fixes UTF-8
+and cuts at 16 KiB. Batches of up to 500 go in through `CopyFrom` every second;
+a failed batch (service deleted mid-flight, FK) is logged and dropped, never
+retried. A stream that ends (stopped container) is reopened after 5s, doubling
+to a minute while nothing new arrives. Each line gets `deployment_id` from
+`DeploymentAt`: the latest deployment with that `container_id` (which is the
+swarm service id in swarm mode) that started at or before the line, re-read
+every 30s.
 
 Search is Postgres, deliberately no search sidecar: a `pg_trgm` GIN index
 (`serviceLog_line_trgm_idx`, the migration creates the extension, trusted since
 PG 13) serves `ILIKE` substring search and `~*` regex; `(service_id, time)`
-serves the range scan. Meilisearch was considered and rejected: typo tolerance
-is wrong for logs (an exact error code is the whole point), it's weak at
-append-heavy ingest and range deletes, and it's one more container to keep in
-sync. `parseLogHistoryQuery` (`src/lib/logs/history.ts`) is the one parser for
-the page, the download, the REST route and (through REST) MCP/CLI; paging is
-keyset on `(time, id)` with the time as microsecond text in the cursor, since a
-JS `Date` would round it to milliseconds and skip or repeat lines.
-`LogRetentionScheduler` prunes hourly in batches of 5000 past
+serves the range scan, with `(workstation_id, time)` and `(system, time)` for
+the other owners. `ServiceLogDTO` and `LogHistoryService` take a `LogOwner`
+(`{ serviceId }`, `{ workstationId }` or `{ system }`), and
+`LogHistoryService.view` builds what every history page renders; the pages share
+`LogHistoryView` (`log-history-view.svelte`), the service one adding the
+revision filter: the service's Observability → Log history, a workstation's Logs
+→ Log history and System Logs → `system-logs/history/[system]`. Only the service
+history has a REST route, CLI command and MCP tool. Meilisearch was considered
+and rejected: typo tolerance is wrong for logs (an exact error code is the whole
+point), it's weak at append-heavy ingest and range deletes, and it's one more
+container to keep in sync. `parseLogHistoryQuery` (`src/lib/logs/history.ts`) is
+the one parser for the page, the download, the REST route and (through REST)
+MCP/CLI; paging is keyset on `(time, id)` with the time as microsecond text in
+the cursor, since a JS `Date` would round it to milliseconds and skip or repeat
+lines. `LogRetentionScheduler` prunes hourly in batches of 5000 past
 `instance_settings.log_retention_days` (null = 7, 1 to 90, Monitoring →
 Settings).
 
@@ -683,37 +702,52 @@ services), else its default branch (`branch: true`, which only changes Gitea's
 `/src/branch/` path). Manual syncs (`Sync now`, `Sync all now`) enqueue a
 `pipeline_sync` job (TS handler in `queue/handlers.ts`, `dedupeKey`/`lockKey`
 `pipeline_sync:<repo>`, logging each step to the job); the five-minute
-`PipelineSyncScheduler` still syncs inline. A sync reads the latest 50 runs
-(GitHub/Gitea `actions/runs`, Gitea takes `limit` and 404s before 1.24; GitLab
-`pipelines` + per-pipeline `jobs`, no steps, commit title only on jobs) and
-re-reads a run's jobs only when it's new, unfinished, or its attempt/status
-changed (`PipelineRunDTO.known`); `upsert` on `(repository_id, external_id)`
-resets `trace_exported`. Jobs are read with `filter=all` and tagged with their
-`attempt`: cost sums every attempt, while timings and the trace use the latest
-only, and a re-run's queue time starts at its own `run_started_at` (GitHub keeps
-the first attempt's `created_at`). Every status goes through `normalizeStatus`.
-Cost is `summarizeRun`: per job
-`ceil(minutes) × rateFor(rules, labels, runner)`, rules ordered `label = rate`
-lines in `repository.pipeline_rates`, null meaning `defaultRates(provider)`
-(GitHub hosted prices, nothing elsewhere); saving rates re-costs every stored
-run (`recostJobs`). Finished runs become OTLP/JSON (`buildPipelineTrace`; the
-trace id hashes repository, provider, run, attempt and `finishedAt`, so a
-re-export is a no-op and a GitLab retry, same pipeline id and attempt, gets a
-fresh trace) sent by `TracingService.exportSpans` to the collector's
-`http://homerun-otel:4318/v1/traces`, falling back to storing directly when the
-collector is off or unreachable (always the case from the dev server). They're
-filed under the repository's first linked service, or as Homerun's own (no
-`homerun.service.id`) when none is linked; `pipeline_run.trace_service_id`
-records which. A run's page (`/pipelines/[repositoryId]/runs/[runId]`) lists
-every job of every attempt and renders its trace with `TraceWaterfall` straight
-from `trace_span`. The resource carries `homerun.pipeline` =
-`pipelineSpanToken(AUTH_SECRET, serviceId)` (`""` for the instance), an HMAC
-since anything on the Docker network can post to the collector, which
-`spanOwner` accepts even when the service's traces are off and `#store` strips
-before saving. Stats are SQL aggregates (`percentile_cont` for p50/p95) over 30
-days and all time, per workflow and per repository. Table scroll wrappers on
-these pages are `relative`: `main` is positioned, so an `sr-only` header label
-inside an unpositioned scroller escapes its clipping and widens the page.
+`PipelineSyncScheduler` still syncs inline, skipping a repository whose CI
+webhook is registered and synced within the hour (`webhookKeepsCurrent`). The
+webhook (`PipelineWebhookService`, `src/lib/pipelines/webhooks.ts`) is
+registered by `watch` as the repository's user through
+`GitProviderService.registerWebhook` (the push hook's create-or-adopt path),
+retried by `saveSettings` while `repository.webhook_id` is null (the reason in
+`webhook_error`, shown on the Settings tab with the URL and secret to add by
+hand) and removed by `unwatch`. It subscribes to `workflow_run`/`workflow_job`
+(GitHub, Gitea 1.24+) or pipeline and job events (GitLab) and delivers to
+`/api/v1/webhooks/pipelines/<repositoryId>`; its secret isn't stored, it's
+`pipelineWebhookSecret(AUTH_SECRET, repositoryId)`, checked with
+`verifyGitWebhook`, and a verified CI event enqueues the same `pipeline_sync`
+job as the repository's user. The REST API (`/api/v1/pipelines/...`, Services
+permission area), the MCP tools (`mcp-pipeline-tools.ts`) and
+`homerun pipelines` (`internal/cli/pipelines.go`) read the same DTOs; run lists
+leave out `jobs`. A sync reads the latest 50 runs (GitHub/Gitea `actions/runs`,
+Gitea takes `limit` and 404s before 1.24; GitLab `pipelines` + per-pipeline
+`jobs`, no steps, commit title only on jobs) and re-reads a run's jobs only when
+it's new, unfinished, or its attempt/status changed (`PipelineRunDTO.known`);
+`upsert` on `(repository_id, external_id)` resets `trace_exported`. Jobs are
+read with `filter=all` and tagged with their `attempt`: cost sums every attempt,
+while timings and the trace use the latest only, and a re-run's queue time
+starts at its own `run_started_at` (GitHub keeps the first attempt's
+`created_at`). Every status goes through `normalizeStatus`. Cost is
+`summarizeRun`: per job `ceil(minutes) × rateFor(rules, labels, runner)`, rules
+ordered `label = rate` lines in `repository.pipeline_rates`, null meaning
+`defaultRates(provider)` (GitHub hosted prices, nothing elsewhere); saving rates
+re-costs every stored run (`recostJobs`). Finished runs become OTLP/JSON
+(`buildPipelineTrace`; the trace id hashes repository, provider, run, attempt
+and `finishedAt`, so a re-export is a no-op and a GitLab retry, same pipeline id
+and attempt, gets a fresh trace) sent by `TracingService.exportSpans` to the
+collector's `http://homerun-otel:4318/v1/traces`, falling back to storing
+directly when the collector is off or unreachable (always the case from the dev
+server). They're filed under the repository's first linked service, or as
+Homerun's own (no `homerun.service.id`) when none is linked;
+`pipeline_run.trace_service_id` records which. A run's page
+(`/pipelines/[repositoryId]/runs/[runId]`) lists every job of every attempt and
+renders its trace with `TraceWaterfall` straight from `trace_span`. The resource
+carries `homerun.pipeline` = `pipelineSpanToken(AUTH_SECRET, serviceId)` (`""`
+for the instance), an HMAC since anything on the Docker network can post to the
+collector, which `spanOwner` accepts even when the service's traces are off and
+`#store` strips before saving. Stats are SQL aggregates (`percentile_cont` for
+p50/p95) over 30 days and all time, per workflow and per repository. Table
+scroll wrappers on these pages are `relative`: `main` is positioned, so an
+`sr-only` header label inside an unpositioned scroller escapes its clipping and
+widens the page.
 
 **Job traces**: every worker job span carries `homerun.job.id`;
 `TraceSpanDTO.spansOfJob` finds its traces (one per attempt) through the partial

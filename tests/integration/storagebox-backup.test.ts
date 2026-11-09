@@ -6,6 +6,7 @@ import { SQL } from "bun";
 import {
 	backupRoundTrip,
 	insertDestination,
+	purgeRemote,
 	type TestDestination,
 	testDestination,
 } from "./support/backups";
@@ -28,6 +29,13 @@ const env = {
 const configured = Boolean(env.url && env.username && env.password);
 
 const TYPES = ["sftp", "smb", "webdav"] as const;
+
+const PURGE_TIMEOUT_MS = 10 * 60_000;
+
+/** Where a type's round trips keep their restic repositories, under the box's location. */
+function prefixOf(type: (typeof TYPES)[number]): string {
+	return `homerun-it/${type}`;
+}
 
 /** The box as a destination row of one type: WebDAV keeps the URL, SFTP and SMB take its host, SFTP on port 23 and SMB under the box's `backup` share. */
 function destination(type: (typeof TYPES)[number]): TestDestination {
@@ -69,8 +77,14 @@ describe.skipIf(!configured)("volume backups to a Hetzner Storage Box", () => {
 	});
 
 	afterAll(async () => {
-		await sql?.close();
-	});
+		try {
+			for (const type of TYPES) {
+				purgeRemote(destination(type), prefixOf(type));
+			}
+		} finally {
+			await sql?.close();
+		}
+	}, PURGE_TIMEOUT_MS);
 
 	for (const type of TYPES) {
 		test(`${type}: the destination test reaches the box and writes to it`, async () => {
@@ -86,7 +100,7 @@ describe.skipIf(!configured)("volume backups to a Hetzner Storage Box", () => {
 				await backupRoundTrip(
 					sql,
 					destination(type),
-					`homerun-it/${type}`,
+					prefixOf(type),
 					env.sizeMb,
 				);
 			},

@@ -4,6 +4,7 @@ import { QueueService } from "./queue.service.ts";
 import type { CoreServiceJob } from "./queue/payloads.ts";
 
 const titles: Record<CoreServiceJob["action"], string> = {
+	configurePackageRegistry: "Configure a package registry",
 	disableBuiltinStore: "Turn off the built-in object store",
 	enableBuiltinStore: "Turn on the built-in object store",
 	publishBuiltinStore: "Publish the built-in object store",
@@ -22,11 +23,14 @@ export async function enqueueCoreServiceJob(
 	payload: CoreServiceJob,
 	userId: string,
 ): Promise<JobDTO> {
-	const target = payload.action.includes("Registry")
-		? "registry"
-		: payload.action.includes("Mail")
-			? "mail"
-			: "object-storage";
+	const target =
+		payload.action === "configurePackageRegistry"
+			? `package-registry:${payload.kind}`
+			: payload.action.includes("Registry")
+				? "registry"
+				: payload.action.includes("Mail")
+					? "mail"
+					: "object-storage";
 	return await QueueService.enqueue({
 		lockKey: `core_service:${target}`,
 		maxAttempts: 1,

@@ -14,9 +14,11 @@ it:
 
 - Ports **25**, **465**, **587** and **993** must be open to the internet. Many
   cloud and residential providers block outgoing port 25 by default; ask yours
-  to lift it, or mail you send never leaves.
+  to lift it, or set an [outbound relay](#outbound-relay), or mail you send
+  never leaves.
 - The server's IP needs a **reverse DNS (PTR)** record pointing at the mail
-  hostname. Only your hosting provider can set it.
+  hostname. Only your hosting provider can set it; with an outbound relay,
+  receivers check the relay's instead.
 - Behind [Pangolin](#behind-pangolin), Pangolin's server takes the inbound ports
   instead. Cloudflare Tunnel can't: it only publishes HTTP(S) to the internet,
   and SMTP and IMAP aren't HTTP.
@@ -32,8 +34,10 @@ it:
    whether public resolvers (Cloudflare's and Google's) already see it; **Check
    again** re-reads them. When the domain is linked to a DNS provider,
    **Publish** creates or fixes them for you.
-4. **Mailboxes → New mailbox**: an address, a password (10 to 72 characters) and
-   an optional quota in MB.
+4. **Mailboxes → New address**: a **Mailbox** people read, or a **Noreply**
+   address for apps sending transactional mail (see
+   [Noreply addresses](#noreply-addresses)), with a password (10 to 72
+   characters), an optional owner and, for a mailbox, an optional quota in MB.
 5. **Server → Run the mail server**, then **Save**.
 6. **Server → Run self-test** to see that everything is reachable.
 
@@ -58,6 +62,8 @@ the top of the page says which is missing.
   certificate covering the hostname (exactly or through a wildcard): the server
   starts without TLS rather than failing, and Homerun switches TLS on by itself
   within five minutes of the certificate appearing.
+- **Outbound relay**: see [Outbound relay](#outbound-relay).
+- **Backups**: see [Backing up the mail](#backing-up-the-mail).
 - **Client settings**: IMAP on port 993 (SSL/TLS) and SMTP on port 465 (SSL/TLS)
   or 587 (STARTTLS), both at the mail hostname. The username is always the full
   address.
@@ -65,6 +71,33 @@ the top of the page says which is missing.
 Spam filtering and DKIM signing are rspamd's; mail rspamd flags lands in the
 mailbox's Junk folder. ClamAV, SpamAssassin and Fail2ban are off to keep the
 container under a gigabyte of memory.
+
+## Outbound relay
+
+**Server → Outbound relay** hands every outgoing message to a smarthost (your
+provider's SMTP server, or a sending service such as Mailgun, Postmark or Amazon
+SES) instead of delivering it on port 25. Use it when the host's provider blocks
+outbound port 25, or when its IP has no reverse DNS matching the mail hostname
+and receivers mark its mail as spam. Fill in the relay's **Host**, **Port** (587
+when left empty) and, when it asks for one, a **Username** and **Password**;
+**Save** recreates the container with them (docker-mailserver's `RELAY_HOST`,
+`RELAY_PORT`, `RELAY_USER` and `RELAY_PASSWORD`). The password is stored
+encrypted and never shown again: leave the field empty to keep it. Clear the
+host to deliver directly again.
+
+Receivers check SPF against the relay's servers, not this host: add the relay's
+`include:` to each domain's SPF record (`v=spf1 mx include:... ~all`), as the
+relay's own documentation says. The DKIM signature stays this server's.
+
+## Backing up the mail
+
+Every mailbox's mail lives in the `homerun-mail-data` Docker volume. **Server →
+Backups → Add to Storage** adds it to [Storage](storage-volumes.md) as an
+ordinary volume entry, then opens its page, where its schedule and destination
+are set like any service volume's and every run shows up on
+[Backups](backups.md). Only the entry is created: the volume stays the mail
+server's own, and deleting the entry leaves it and its mail alone. Turn the mail
+server off before restoring a backup into it.
 
 ## Self-test
 
@@ -75,7 +108,7 @@ container under a gigabyte of memory.
 - that IMAP on 993 serves a certificate valid for the hostname, and how long it
   has left (a warning under two weeks);
 - that the server can reach another mail server on port 25, which many providers
-  block;
+  block, or the outbound relay on its port when one is set;
 - that the server's address has a reverse DNS (PTR) record naming the hostname;
 - that the outgoing queue is empty;
 - that every domain has its MX, SPF, DKIM and DMARC records.
@@ -86,6 +119,12 @@ the way a client's would. That still isn't proof the whole internet gets
 through: a home router without hairpin NAT can fail them while outside clients
 connect fine, and a firewall that only lets your own IP in can pass them. Try a
 mail app from another network to be sure.
+
+On a home connection whose ISP blocks outbound port 25, the probe of incoming
+port 25 can't leave either, so it says nothing about whether other servers get
+in. When this server can't open any connection out on port 25, the port 25 check
+is a warning saying it can't tell from here, rather than a failure: test it from
+outside, with an online SMTP checker against the mail hostname.
 
 ## Logs and failures
 
@@ -129,6 +168,22 @@ display name, quota and whether it's enabled, change its password and delete it.
 A disabled mailbox can't sign in and its address stops receiving mail; what it
 holds is kept. Deleting a mailbox wipes its mail.
 
+A mailbox can have an **owner**, one of Homerun's accounts, picked on its
+Settings. The owner sees it under their own **Settings → Mailboxes** (the
+account menu) and changes its password there, without the Mail permission.
+
+### Noreply addresses
+
+The **Noreply** category is a send-only address for apps sending transactional
+mail (password resets, notifications). It has SMTP credentials and no inbox:
+Postfix refuses mail sent to it, so a reply bounces straight back to its sender.
+Its **Overview** shows the host, port, username and From address to paste into a
+service, with **Copy as env** for `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+`SMTP_PASSWORD` and `SMTP_FROM`. Services on Homerun reach the mail server at
+the mail hostname directly, on Homerun's network. A noreply address has no
+quota, and its category can't change once it's created. The Mailboxes list marks
+each address with its category.
+
 An alias forwards an address to one or more others, on this server or anywhere
 else. Leave its name empty and it becomes the domain's **catch-all**: anything
 sent to an address on the domain that isn't a mailbox or another alias goes to
@@ -167,10 +222,21 @@ publishes the mail ports through it:
   then probe the Pangolin server, which is what the internet sees.
 - Reverse DNS (PTR) is set on the Pangolin server's IP, by whoever hosts it.
   Outgoing mail still leaves from this host's own IP, so port 25 has to be open
-  outbound here.
+  outbound here, or an [outbound relay](#outbound-relay) set.
+- **Real client addresses:** Homerun turns on PROXY protocol (version 2) on each
+  raw resource and points its target at the mail container's PROXY listeners
+  (12525, 12465, 12587 and 12993, reachable only on Homerun's network), so
+  Postfix and Dovecot log and filter on the real client's address rather than
+  the tunnel's. The usual ports keep serving direct and in-network connections,
+  Roundcube's included. A Pangolin too old to take PROXY protocol on raw
+  resources refuses it: the targets then stay on the usual ports, the job's log
+  says so, and every connection looks like it comes from the tunnel. When the
+  tunnel reaches the host rather than Homerun's network, PROXY protocol stays
+  off for the same result.
 
-## Not built yet
+## API, MCP and CLI
 
-No REST API, MCP tools or CLI commands for mail, no per-user sign-in to change
-one's own password, and no backup of the mail volumes through
-[Backups](backups.md) beyond what you set up on them yourself.
+Domains, mailboxes and aliases are in the [REST API](api-and-cli.md) under
+`/api/v1/mail/`, the [MCP server](mcp.md) and the CLI's `homerun mail domains`,
+`mail mailboxes` and `mail aliases`, all behind the Mail permission. The
+outbound relay and the server itself stay on the dashboard.

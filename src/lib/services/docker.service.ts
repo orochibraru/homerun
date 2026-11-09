@@ -47,6 +47,7 @@ import { DockerNetworkMixin } from "./docker/networks.ts";
 import { DockerNewtMixin } from "./docker/newt-tunnel.ts";
 import { DockerOneOffMixin } from "./docker/one-off.ts";
 import { DockerOtelMixin } from "./docker/otel.ts";
+import { DockerPackageRegistryMixin } from "./docker/package-registry.ts";
 import { DockerReconcileMixin } from "./docker/reconcile.ts";
 import { DockerRevisionMixin } from "./docker/revisions.ts";
 import { DockerSwarmReplicasMixin } from "./docker/swarm-replicas.ts";
@@ -57,22 +58,24 @@ import { DockerTerminalMixin } from "./docker/terminal.ts";
 // `this` : containers before one-off (runOneOff calls this.pullImage), core
 // services before the Newt tunnel (it calls this.applyTraefikFlags). The
 // rest have no cross-concern dependency, so their position is arbitrary.
-class DockerServiceClass extends DockerMailMixin(
-	DockerOtelMixin(
-		DockerGarageMixin(
-			DockerRevisionMixin(
-				DockerImageScanMixin(
-					DockerCleanupMixin(
-						DockerOneOffMixin(
-							DockerTerminalMixin(
-								DockerNewtMixin(
-									DockerCoreServicesMixin(
-										DockerCustomSslMixin(
-											DockerReconcileMixin(
-												DockerSwarmReplicasMixin(
-													DockerSwarmMixin(
-														DockerContainerMixin(
-															DockerNetworkMixin(BaseDockerService),
+class DockerServiceClass extends DockerPackageRegistryMixin(
+	DockerMailMixin(
+		DockerOtelMixin(
+			DockerGarageMixin(
+				DockerRevisionMixin(
+					DockerImageScanMixin(
+						DockerCleanupMixin(
+							DockerOneOffMixin(
+								DockerTerminalMixin(
+									DockerNewtMixin(
+										DockerCoreServicesMixin(
+											DockerCustomSslMixin(
+												DockerReconcileMixin(
+													DockerSwarmReplicasMixin(
+														DockerSwarmMixin(
+															DockerContainerMixin(
+																DockerNetworkMixin(BaseDockerService),
+															),
 														),
 													),
 												),

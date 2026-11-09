@@ -158,7 +158,11 @@ CPU and memory.
 
 The **Logs** tab streams what the IDE container prints, its last 500 lines then
 live. A failed image pull or clone happens before the container runs; its error
-is on the Overview tab instead.
+is on the Overview tab instead. **Log history** on that tab keeps what earlier
+containers printed after a stop, a recreate or an image change, searchable the
+same way as a service's [Log history](observability.md#log-history) and kept as
+long. Only workstations on this server get it: a workstation on a remote host
+keeps its live log only.
 
 **Settings → Self-test** checks the workstation end to end: the container runs,
 a remote host's published port answers this server, the hostname resolves, and

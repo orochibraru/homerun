@@ -1,3 +1,5 @@
+import type { JobDTO } from "#lib/dto/job-dto.js";
+import { S3DestinationDTO } from "#lib/dto/s3-destination-dto.js";
 import { StorageVolumeDTO } from "#lib/dto/storage-volume-dto.js";
 import { Logger } from "#lib/logger.js";
 import {
@@ -6,6 +8,8 @@ import {
 } from "#lib/server/volume-backup-form.js";
 import { storageVolumeProblem } from "#lib/storage-volume-input.js";
 
+import { enqueueBackupPurge } from "./backup-queue.ts";
+import { repositoryPath } from "./backup/restic.ts";
 import { HostDiskService } from "./host-disk.service.ts";
 
 const logger = new Logger("Storage");
@@ -118,6 +122,38 @@ class VolumeSettingsServiceClass {
 			`Storage volume duplicated: volume=${volume.id} from=${input.from} user=${input.userId}`,
 		);
 		return volume;
+	}
+
+	/**
+	 * Deletes `volume`'s row (its mounts go with it, the Docker volume or host
+	 * path stays) and, with `deleteBackups`, queues the deletion of its restic
+	 * repository on its backup destination, which nothing else would ever
+	 * clean up once the volume is gone.
+	 *
+	 * @returns The queued deletion job, or null when nothing was queued.
+	 */
+	async delete(
+		volume: StorageVolumeDTO,
+		options: { deleteBackups: boolean; userId: string },
+	): Promise<JobDTO | null> {
+		const destination =
+			options.deleteBackups && volume.s3DestinationId
+				? await S3DestinationDTO.get(volume.s3DestinationId)
+				: null;
+		const repository = repositoryPath(volume);
+		await volume.delete();
+		logger.info(
+			`Storage volume deleted: volume=${volume.id} backups=${destination ? "deleted" : "kept"} user=${options.userId}`,
+		);
+		if (!destination) {
+			return null;
+		}
+		return await enqueueBackupPurge(
+			destination,
+			[repository],
+			`Delete the backups of ${volume.name}`,
+			options.userId,
+		);
 	}
 
 	/**

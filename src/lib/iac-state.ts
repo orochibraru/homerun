@@ -185,6 +185,29 @@ export function httpBackendBlock(apiBase: string): string {
 	].join("\n");
 }
 
+/** The folder of a state project's bucket Pulumi's own backend logs in to. */
+export function pulumiBackendPath(input: {
+	prefix: string;
+	slug: string;
+}): string {
+	return [input.prefix, input.slug].filter(Boolean).join("/");
+}
+
+/**
+ * The stack a key under a Pulumi backend's `.pulumi/stacks/` folder holds
+ * the checkpoint of (`project/stack`, or `stack` for a backend from before
+ * Pulumi's project-scoped stacks), or null for a backup or any other file.
+ */
+export function pulumiStackName(
+	stacksFolder: string,
+	key: string,
+): string | null {
+	const match = key
+		.slice(stacksFolder.length)
+		.match(/^((?:[^/]+\/)?[^/]+?)\.json(?:\.gz)?$/);
+	return key.startsWith(stacksFolder) && match ? match[1] : null;
+}
+
 /** The `pulumi login` command pointing Pulumi's own backend at a state project's folder. */
 export function pulumiLoginCommand(input: {
 	bucket: string;
@@ -194,7 +217,7 @@ export function pulumiLoginCommand(input: {
 	slug: string;
 }): string {
 	const endpoint = new URL(input.endpoint);
-	const path = [input.prefix, input.slug].filter(Boolean).join("/");
+	const path = pulumiBackendPath(input);
 	const insecure = endpoint.protocol === "http:" ? "&disableSSL=true" : "";
 	return `pulumi login 's3://${input.bucket}/${path}?endpoint=${endpoint.host}&s3ForcePathStyle=true&region=${input.region}${insecure}'`;
 }

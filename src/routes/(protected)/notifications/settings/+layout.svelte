@@ -13,6 +13,7 @@
 		{
 			href: resolve("/(protected)/notifications/settings"),
 			icon: SlidersHorizontal,
+			description: "This browser, and what each channel receives",
 			id: "notifications/settings",
 			label: "General",
 		},
@@ -21,6 +22,7 @@
 					{
 						href: resolve("/(protected)/notifications/settings/channels"),
 						icon: Send,
+						description: "Discord, Slack, Telegram, webhooks and email",
 						id: "notifications/settings/channels",
 						label: "Channels",
 					},

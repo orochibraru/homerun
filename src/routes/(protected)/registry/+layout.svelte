@@ -5,9 +5,10 @@
 	import { onMount } from "svelte";
 
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
+	import { formatBytes } from "#lib/formatting.js";
 	import { title } from "#lib/store/title.js";
 
-	const { children } = $props();
+	const { children, data } = $props();
 
 	onMount(() => {
 		title.set("Docker Registry");
@@ -18,25 +19,34 @@
 		href: string;
 	}
 
-	const tabs: RouteTab[] = [
+	const tabs = $derived<RouteTab[]>([
 		{
 			exact: true,
 			href: resolve("/(protected)/registry"),
 			icon: Boxes,
+			description: "Mirrored and pushed images, with their tags",
 			id: "images",
 			label: "Images",
+			summary: data.status.running
+				? data.status.sizeBytes === null
+					? "Running"
+					: `${formatBytes(data.status.sizeBytes)} stored`
+				: "Not running",
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/registry/tokens"),
 			icon: Ticket,
+			description: "Usernames and secrets to push and pull with",
 			id: "tokens",
 			label: "Tokens",
+			summary: `${data.status.tokenCount} ${data.status.tokenCount === 1 ? "token" : "tokens"}${data.status.authEnabled ? "" : ", auth off"}`,
 		},
 		{
 			exact: false,
 			href: resolve("/(protected)/registry/credentials"),
 			icon: KeyRound,
+			description: "Logins for other registries: build cache and private pulls",
 			id: "credentials",
 			label: "Credentials",
 		},
@@ -44,10 +54,12 @@
 			exact: false,
 			href: resolve("/(protected)/registry/settings"),
 			icon: Settings2,
+			description: "Authentication and publishing it on a domain",
 			id: "settings",
 			label: "Settings",
+			summary: data.status.publicHost ?? "Not published",
 		},
-	];
+	]);
 
 	function isActive(href: string, exact: boolean): boolean {
 		if (href === resolve("/(protected)/registry")) {

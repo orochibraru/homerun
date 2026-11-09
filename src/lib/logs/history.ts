@@ -68,6 +68,29 @@ export interface LogHistoryPage {
 const CURSOR_PATTERN =
 	/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z)~(\d{1,18})$/;
 
+/** The search form's values as the URL carried them, for a log history page to fill its form back in with. */
+export interface LogHistoryFilters {
+	deploymentId: string;
+	from: string;
+	instance: string;
+	paged: boolean;
+	q: string;
+	range: LogRange;
+	regex: boolean;
+	stream: string;
+	to: string;
+}
+
+/** Everything a log history page renders besides its owner: the page of lines, the form's values, the instances to filter by, the oldest line kept, the retention and what was wrong with the search. */
+export interface LogHistoryView {
+	error: string | null;
+	filters: LogHistoryFilters;
+	instances: string[];
+	oldest: Date | null;
+	page: LogHistoryPage;
+	retentionDays: number;
+}
+
 /** A cursor as the `before` parameter carries it. */
 export function encodeCursor(cursor: LogCursor): string {
 	return `${cursor.time}~${cursor.id}`;

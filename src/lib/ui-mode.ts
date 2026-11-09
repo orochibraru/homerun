@@ -42,6 +42,8 @@ const ADVANCED_ONLY: ReadonlySet<string> = new Set([
 	"/api-docs",
 	"/system-logs",
 	"/registry",
+	"/package-registries/npm",
+	"/package-registries/pypi",
 	"/docker-cleanup",
 	"monitoring/traces",
 	"monitoring/crowdsec",

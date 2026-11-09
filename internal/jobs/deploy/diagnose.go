@@ -9,7 +9,9 @@ import (
 	"github.com/orochibraru/homerun/internal/dockerapi"
 )
 
-const failedOutputTail = 40
+// FailedOutputTail is how many of a failed workload's last lines a diagnosis
+// reads.
+const FailedOutputTail = 40
 
 // ExitCodeHint says in plain words what a container's exit code usually
 // means, or "" for a code with no well-known meaning.
@@ -69,6 +71,37 @@ func LogHints(output string) []string {
 		}
 	}
 	return hints
+}
+
+// Diagnosis is why a workload stopped as far as Docker tells: its last exit
+// code, what that code usually means ("" while it never exited), its last
+// output and a hint per well-known cause found in that output. The app's
+// revision health watch and update trials report it the way a failed deploy
+// does.
+type Diagnosis struct {
+	Causes    []string `json:"causes"`
+	ExitCode  int      `json:"exitCode"`
+	Meaning   string   `json:"meaning"`
+	OOMKilled bool     `json:"oomKilled"`
+	Output    string   `json:"output"`
+}
+
+// NewDiagnosis builds a diagnosis from an exit and the output read with it.
+// exited is false for a workload still on its first run, whose exit code
+// means nothing yet.
+func NewDiagnosis(exited bool, exitCode int, oomKilled bool, output string) Diagnosis {
+	output = strings.TrimSpace(strings.ReplaceAll(output, "\r", ""))
+	causes := LogHints(output)
+	if causes == nil {
+		causes = []string{}
+	}
+	diagnosis := Diagnosis{Causes: causes, Output: output}
+	if exited {
+		diagnosis.ExitCode = exitCode
+		diagnosis.OOMKilled = oomKilled
+		diagnosis.Meaning = ExitCodeHint(exitCode, oomKilled)
+	}
+	return diagnosis
 }
 
 // LatestFailedTask is the most recently updated task that reported an error
@@ -131,7 +164,7 @@ func (r *run) reportTaskOutput(ctx context.Context, task dockerapi.SwarmTask) {
 	if task.Status.ContainerStatus == nil || task.Status.ContainerStatus.ContainerID == "" {
 		return
 	}
-	output, err := r.docker.SwarmTaskLogsTail(ctx, task.ID, failedOutputTail)
+	output, err := r.docker.SwarmTaskLogsTail(ctx, task.ID, FailedOutputTail)
 	if err != nil {
 		r.progress.line(fmt.Sprintf("Couldn't read the failed task's output: %s", err))
 		return

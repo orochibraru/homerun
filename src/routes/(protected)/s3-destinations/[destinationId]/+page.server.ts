@@ -6,6 +6,7 @@ import { Logger } from "#lib/logger.js";
 import { parseDestinationForm } from "#lib/server/backup-destination-form.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { BackupCapacityService } from "#lib/services/backup-capacity.service.js";
+import { enqueueBackupPurge } from "#lib/services/backup-queue.js";
 import { S3BackupService } from "#lib/services/s3-backup.service.js";
 
 const logger = new Logger("S3Destinations");
@@ -60,6 +61,40 @@ export const actions = {
 			return fail(400, { error: result.error });
 		}
 		return { success: true };
+	},
+
+	deleteOrphans: async ({ params, request, locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		const destination = await S3DestinationDTO.get(params.destinationId);
+		if (!destination) {
+			return fail(404, { error: "Destination not found." });
+		}
+		const paths = [
+			...new Set((await request.formData()).getAll("path").map(String)),
+		];
+		if (paths.length === 0) {
+			return fail(400, { error: "Pick the backups to delete." });
+		}
+		const orphans = await Promise.all(
+			paths.map((path) => S3BackupService.isOrphanPath(path)),
+		);
+		if (orphans.includes(false)) {
+			return fail(400, {
+				error: "Only backups of a volume that no longer exists can go here.",
+			});
+		}
+		const job = await enqueueBackupPurge(
+			destination,
+			paths,
+			`Delete orphaned backups on ${destination.name}`,
+			locals.user.id,
+		);
+		logger.info(
+			`Orphaned backups queued for deletion: destination=${destination.id} count=${paths.length} job=${job.id} user=${locals.user.id}`,
+		);
+		return { queued: paths };
 	},
 
 	setCapacityAlert: async ({ params, request, locals }) => {

@@ -29,6 +29,7 @@
 				mailboxId: box.id,
 			}),
 			id: box.id,
+			kind: box.kind,
 			name: box.address,
 			settingsHref: resolve(
 				"/(protected)/mail/mailboxes/[mailboxId]/settings",
@@ -38,8 +39,10 @@
 			),
 			subtitle: [
 				box.displayName,
-				usageLine(box.usage) ??
-					(box.quotaMb ? `${box.quotaMb} MB quota` : "No quota"),
+				box.kind === "noreply"
+					? "Send only, refuses incoming mail"
+					: (usageLine(box.usage) ??
+						(box.quotaMb ? `${box.quotaMb} MB quota` : "No quota")),
 			]
 				.filter(Boolean)
 				.join(" · "),
@@ -58,6 +61,14 @@
 {/snippet}
 
 {#snippet badge(item: MailboxRow)}
+	<span
+		class="shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold {item.kind ===
+		'noreply'
+			? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+			: 'bg-accent/10 text-accent'}"
+	>
+		{item.kind === "noreply" ? "Noreply" : "Mailbox"}
+	</span>
 	{#if !item.enabled}
 		<span
 			class="bg-surface-2 text-text-subtle shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold"
@@ -99,7 +110,7 @@
 	<Button
 		disabled={data.mailStatus.domainCount === 0}
 		href={resolve("mail/mailboxes/new")}
-		><Plus class="size-4" />New mailbox</Button
+		><Plus class="size-4" />New address</Button
 	>
 </div>
 

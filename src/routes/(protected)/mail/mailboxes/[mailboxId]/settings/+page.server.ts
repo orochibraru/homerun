@@ -6,6 +6,11 @@ import { parseMailboxFields } from "#lib/server/mail-form.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { enqueueCoreServiceJob } from "#lib/services/core-service-queue.js";
 import { MailService } from "#lib/services/mail.service.js";
+import { MailOwnerService } from "#lib/services/mail/owners.js";
+
+export const load = async () => ({
+	owners: await MailOwnerService.choices(),
+});
 
 export const actions = {
 	delete: async ({ params, locals }) => {
@@ -62,7 +67,14 @@ export const actions = {
 		if ("error" in parsed) {
 			return fail(400, { action: "update", error: parsed.error });
 		}
-		await mailbox.update(parsed.fields);
+		try {
+			await MailService.updateMailbox(mailbox, parsed.fields);
+		} catch (err) {
+			return fail(400, {
+				action: "update",
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
 		const job = await enqueueCoreServiceJob(
 			{ action: "syncMail", purge: [] },
 			locals.user.id,

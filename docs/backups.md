@@ -108,6 +108,19 @@ SFTP reports its size through the server's own extension when it has one, and
 through `df` in a shell otherwise; a server with neither, or a WebDAV server
 without quota support, shows "Size unknown" with rclone's reason.
 
+On a box that takes its own automatic snapshots (a Hetzner Storage Box, a NAS
+with scheduled snapshots), the size used counts live files only: the space the
+snapshots hold doesn't show, so the size shown is used plus free, not the box's
+real capacity. A deleted backup frees its space only once the box's snapshots
+holding it are gone.
+
+### Backups of deleted volumes
+
+Deleting a volume with backups asks whether to delete its backups on the
+destination too; kept, they stay there as a restore point. A destination's page
+lists the backups whose volume no longer exists as **orphans**, with a button to
+delete each of them.
+
 ## Backups
 
 Off by default, turned on per volume. The quickest way is the **switch** next to

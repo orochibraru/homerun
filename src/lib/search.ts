@@ -382,6 +382,18 @@ export const SEARCH_PAGES: SearchPage[] = [
 		section: "Delivery",
 	},
 	{
+		href: "/package-registries/npm",
+		keywords: ["npm", "verdaccio", "packages", "node", "publish"],
+		label: "npm Registry",
+		section: "Delivery",
+	},
+	{
+		href: "/package-registries/pypi",
+		keywords: ["pypi", "pip", "python", "packages", "twine"],
+		label: "PyPI Registry",
+		section: "Delivery",
+	},
+	{
 		href: "/docker-cleanup",
 		keywords: ["prune", "images", "disk"],
 		label: "Docker Cleanup",

@@ -16,6 +16,8 @@
 
 	import Alert from "#lib/components/alert.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
+	import VolumeDiskSelect from "#lib/components/volume-disk-select.svelte";
+	import { getHostDisks } from "#lib/remote/volumes.remote.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
 
@@ -32,12 +34,28 @@
 	let stackName = $state("");
 	let deploy = $state(false);
 	let selected = $state<Record<string, boolean>>({});
+	let volumeDisks = $state<Record<string, string>>({});
 
 	$effect(() => {
 		const services = plan?.services ?? [];
 		selected = Object.fromEntries(services.map((svc) => [svc.key, true]));
 		stackName = services.length > 1 ? "Imported stack" : "";
+		volumeDisks = {};
 	});
+
+	const hostDisks = getHostDisks();
+	const disks = $derived(hostDisks.current ?? []);
+	const namedVolumes = $derived([
+		...new Set(
+			(plan?.services ?? [])
+				.filter((svc) => selected[svc.key])
+				.flatMap((svc) =>
+					svc.volumes
+						.filter((vol) => vol.kind === "volume")
+						.map((vol) => vol.source),
+				),
+		),
+	]);
 
 	const stackLabel = $derived(
 		data.stacks.find((p) => p.id === stackId)?.name ?? "Create a new one",
@@ -213,6 +231,45 @@
 					{/each}
 				</div>
 			</section>
+
+			{#if disks.length > 1 && namedVolumes.length > 0}
+				<section class="panel space-y-4 rounded-md p-5">
+					<div>
+						<h2 class="eyebrow">Volume disks</h2>
+						<p class="text-text-muted mt-0.5 text-xs">
+							Where each new Docker volume keeps its data: a disk keeps it in
+							&lt;disk&gt;/homerun-volumes/&lt;volume name&gt;, and it can't
+							move once it exists. A volume Homerun already has stays where it
+							is.
+						</p>
+					</div>
+					<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+						{#each namedVolumes as source, index (source)}
+							<div>
+								<label class={labelClass} for="volumeDisk-{index}"
+									>{source}</label
+								>
+								<input name="volumeDiskSource" type="hidden" value={source} />
+								<input
+									name="volumeDisk"
+									type="hidden"
+									value={volumeDisks[source] ?? ""}
+								/>
+								<VolumeDiskSelect
+									id="volumeDisk-{index}"
+									{disks}
+									bind:value={
+										() => volumeDisks[source] ?? "",
+										(picked) => {
+											volumeDisks = { ...volumeDisks, [source]: picked };
+										}
+									}
+								/>
+							</div>
+						{/each}
+					</div>
+				</section>
+			{/if}
 
 			<section class="panel space-y-4 rounded-md p-5">
 				<div>

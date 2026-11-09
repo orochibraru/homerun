@@ -286,6 +286,56 @@ export function swarmSampleFromTasks(
 	};
 }
 
+/** Why a workload stopped, as the worker diagnoses it for a failed deploy (`internal/jobs/deploy/diagnose.go`): its last exit code, what that code usually means (empty while it never exited), its last output and the likely causes found in it. */
+export interface ExitDiagnosis {
+	causes: string[];
+	exitCode: number;
+	meaning: string;
+	oomKilled: boolean;
+	output: string;
+}
+
+/**
+ * Adds what the workload's last exit code means to an unhealthy reason: in
+ * place when the reason already names that code ("exited with code 1."),
+ * as a trailing sentence otherwise (a restart loop, failed swarm tasks).
+ * The reason is unchanged when there's no meaning to add.
+ */
+export function withExitMeaning(
+	reason: string,
+	diagnosis: ExitDiagnosis | null,
+): string {
+	if (!diagnosis?.meaning) {
+		return reason;
+	}
+	const named = `code ${diagnosis.exitCode}.`;
+	if (reason.endsWith(named)) {
+		return `${reason.slice(0, -1)}: ${diagnosis.meaning}.`;
+	}
+	const sentence = /[.!?]$/.test(reason) ? reason : `${reason}.`;
+	return `${sentence} Its last exit code was ${diagnosis.exitCode}: ${diagnosis.meaning}.`;
+}
+
+/**
+ * A diagnosis's output as a deploy log writes it: `header`, the output's
+ * lines indented, then one "Likely cause" line per cause found in it, or
+ * `header` followed by "(none)" when the workload printed nothing.
+ */
+export function diagnosisLines(
+	header: string,
+	diagnosis: ExitDiagnosis,
+): string[] {
+	const lines = diagnosis.output.split("\n").filter((line) => line !== "");
+	if (lines.length === 0) {
+		return [`${header} (none)`];
+	}
+	return [
+		header,
+		...lines.map((line) => `  ${line}`),
+		...diagnosis.causes.map((cause) => `Likely cause: ${cause}`),
+	];
+}
+
 export interface HealthWindow {
 	maxWaitMs: number;
 	windowMs: number;

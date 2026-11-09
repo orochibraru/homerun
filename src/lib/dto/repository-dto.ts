@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray, notInArray } from "drizzle-orm";
 
 import { db } from "#lib/server/db/lib.js";
 import {
@@ -7,6 +7,11 @@ import {
 	repository,
 	service,
 } from "#lib/server/db/schema.js";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "#lib/server/list-query.js";
 
 import { BaseDTO } from "./base-dto";
 
@@ -28,6 +33,8 @@ export type RepositoryUpdateInput = Partial<
 		| "pipelinesEnabled"
 		| "pipelinesError"
 		| "pipelinesSyncedAt"
+		| "webhookError"
+		| "webhookId"
 	>
 >;
 
@@ -56,6 +63,8 @@ export class RepositoryDTO extends BaseDTO<Repository> {
 			pipelinesError: null,
 			pipelinesSyncedAt: null,
 			updatedAt: now,
+			webhookError: null,
+			webhookId: null,
 		};
 		await db.insert(repository).values(row);
 		return new RepositoryDTO(row);
@@ -96,6 +105,29 @@ export class RepositoryDTO extends BaseDTO<Repository> {
 			.from(repository)
 			.orderBy(asc(repository.fullName));
 		return rows.map((row) => new RepositoryDTO(row));
+	}
+
+	/** One page of watched repositories by name, `q` matching the path on the provider. */
+	static async listPaged(
+		query: ListQuery,
+	): Promise<PagedResult<RepositoryDTO>> {
+		const where = searchCondition(query.q, [repository.fullName]);
+		const [rows, [{ total }]] = await Promise.all([
+			db
+				.select()
+				.from(repository)
+				.where(where)
+				.orderBy(asc(repository.fullName))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(repository).where(where),
+		]);
+		return {
+			items: rows.map((row) => new RepositoryDTO(row)),
+			page: query.page,
+			perPage: query.perPage,
+			total,
+		};
 	}
 
 	/** Every watched repository whose CI runs are synced. */

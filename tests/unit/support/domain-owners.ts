@@ -16,6 +16,7 @@ export interface DomainOwners {
 export async function stubDomainOwners(): Promise<DomainOwners> {
 	const [
 		{ InstanceSettingsDTO },
+		{ PackageRegistryDTO },
 		{ RedirectDTO },
 		{ ServiceDTO },
 		{ StackDTO },
@@ -23,6 +24,7 @@ export async function stubDomainOwners(): Promise<DomainOwners> {
 		{ WorkstationDTO },
 	] = await Promise.all([
 		import("../../../src/lib/dto/instance-settings-dto"),
+		import("../../../src/lib/dto/package-registry-dto"),
 		import("../../../src/lib/dto/redirect-dto"),
 		import("../../../src/lib/dto/service-dto"),
 		import("../../../src/lib/dto/stack-dto"),
@@ -36,6 +38,7 @@ export async function stubDomainOwners(): Promise<DomainOwners> {
 	};
 	stub(InstanceSettingsDTO, "get", async () => ({ toJSON: () => ({}) }));
 	stub(StatusPageDTO, "list", async () => []);
+	stub(PackageRegistryDTO, "list", async () => []);
 	stub(StackDTO, "list", async () => []);
 	stub(ServiceDTO, "list", async () =>
 		owners.services.map((svc) => ({

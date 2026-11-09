@@ -57,7 +57,7 @@ const volumeBackupFields = {
 export const volumeApiBody = z.object({
 	description: nullableText,
 	disk: nullableText.describe(
-		"For a Docker volume, the host mount point to keep it on (a disk), instead of Docker's default location.",
+		"For a Docker volume, the host mount point to keep it on (a disk's mountPoint from GET /disks, list_disks over MCP), instead of Docker's default location.",
 	),
 	kind: z.enum(["bind", "volume"]),
 	name: text.min(1).max(100),

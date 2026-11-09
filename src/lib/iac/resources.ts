@@ -4,12 +4,20 @@ import {
 	loginWallAttributes,
 } from "#lib/iac/resources-identity.js";
 import { infrastructureResources } from "#lib/iac/resources-infrastructure.js";
+import { swarmPlacementAttribute } from "#lib/iac/resources-placement.js";
 import { IAC_SETTINGS_RESOURCES } from "#lib/iac/resources-settings.js";
 import * as versions from "#lib/iac/resources-versions.js";
 import { PERMISSION_AREAS, PERMISSION_LEVELS } from "#lib/permissions.js";
 
 export type IacKind =
-	"bool" | "int" | "intMap" | "objects" | "string" | "stringMap" | "strings";
+	| "bool"
+	| "int"
+	| "intMap"
+	| "object"
+	| "objects"
+	| "string"
+	| "stringMap"
+	| "strings";
 
 export interface IacAttribute {
 	/** Sent on create only and never read back; changing it replaces the resource. */
@@ -147,6 +155,7 @@ const serviceAttributes: IacAttribute[] = [
 	attr("cpuLimit", "string"),
 	attr("memoryLimitMb", "int"),
 	attr("replicas", "int", { default: 1 }),
+	swarmPlacementAttribute(attr),
 	attr("scaleToZeroMinutes", "int"),
 	attr("restartPolicy", "string", { default: "unless-stopped" }),
 	attr("containerPort", "int", templated),
@@ -674,27 +683,6 @@ export function comparableAttributes(resource: IacResource): IacAttribute[] {
 	return resource.attributes.filter(
 		(attribute) => !(attribute.writeOnly || attribute.createOnly),
 	);
-}
-
-/**
- * An API value as Terraform state holds it: nested objects keyed by their
- * snake_case attribute names, absent values as null.
- */
-export function toStateValue(attribute: IacAttribute, value: unknown): unknown {
-	if (value === undefined || value === null) {
-		return null;
-	}
-	if (attribute.kind === "objects" && Array.isArray(value)) {
-		return value.map((entry: Record<string, unknown>) =>
-			Object.fromEntries(
-				(attribute.fields ?? []).map((field) => [
-					field.tf,
-					toStateValue(field, entry?.[field.name]),
-				]),
-			),
-		);
-	}
-	return value;
 }
 
 /** The import id of a live object: its id, or its composite id fields joined with "/". */

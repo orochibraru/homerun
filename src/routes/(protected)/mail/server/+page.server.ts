@@ -4,14 +4,66 @@ import { fail, redirect } from "@sveltejs/kit";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { enqueueCoreServiceJob } from "#lib/services/core-service-queue.js";
 import { MailService } from "#lib/services/mail.service.js";
+import { MailDataVolumeService } from "#lib/services/mail/data-volume.js";
+import { MailRelayService } from "#lib/services/mail/relay.js";
 import { MailSelfTestService } from "#lib/services/mail/self-test.js";
 import { WebmailService } from "#lib/services/mail/webmail.js";
 
-export const load = async () => ({
-	webmail: await WebmailService.list(),
-});
+export const load = async () => {
+	const [webmail, relay, dataVolume] = await Promise.all([
+		WebmailService.list(),
+		MailRelayService.settings(),
+		MailDataVolumeService.get(),
+	]);
+	return {
+		dataVolume: dataVolume
+			? {
+					backupEnabled: dataVolume.toJSON().backupEnabled,
+					id: dataVolume.id,
+				}
+			: null,
+		relay,
+		webmail,
+	};
+};
 
 export const actions = {
+	addDataVolume: async ({ locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		const volume = await MailDataVolumeService.add(locals.user.id);
+		redirect(
+			303,
+			resolve("/(protected)/storage/[volumeId]", { volumeId: volume.id }),
+		);
+	},
+
+	setRelay: async ({ request, locals }) => {
+		if (!locals.user) {
+			redirectToSignIn();
+		}
+		const form = await request.formData();
+		const portRaw = String(form.get("relayPort") ?? "").trim();
+		try {
+			await MailRelayService.save({
+				host: String(form.get("relayHost") ?? ""),
+				password: String(form.get("relayPassword") ?? "") || null,
+				port: portRaw ? Number(portRaw) : null,
+				user: String(form.get("relayUser") ?? ""),
+			});
+		} catch (err) {
+			return fail(400, {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+		const job = await enqueueCoreServiceJob(
+			{ action: "syncMail", purge: [] },
+			locals.user.id,
+		);
+		return { jobId: job.id, success: true };
+	},
+
 	deployWebmail: async ({ locals }) => {
 		if (!locals.user) {
 			redirectToSignIn();

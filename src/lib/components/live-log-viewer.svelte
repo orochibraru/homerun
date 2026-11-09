@@ -11,6 +11,7 @@
 	import { onDestroy, tick } from "svelte";
 
 	import AnsiLine from "#lib/components/ansi-line.svelte";
+	import { appendCapped } from "#lib/log-buffer.js";
 
 	// Extracted from the Logs tab (services/[serviceId]/logs/+page.svelte) so
 	// the same live-streamed, ANSI-colored log panel can also be embedded
@@ -30,14 +31,20 @@
 		logsUrl?: string;
 	} = $props();
 
-	let lines = $state<string[]>([]);
+	interface LogLine {
+		id: number;
+		text: string;
+	}
+
+	let lines = $state.raw<LogLine[]>([]);
 	let connected = $state(false);
 	let errored = $state(false);
 	let errorMessage = $state("");
 	let logEl = $state<HTMLElement | undefined>();
 	let paused = $state(false);
 	let following = $state(true);
-	let held = $state<string[]>([]);
+	let held = $state.raw<LogLine[]>([]);
+	let nextLineId = 0;
 	let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 	let cancelled = false;
 
@@ -83,10 +90,11 @@
 				buffer += decoder.decode(value, { stream: true });
 				const parts = buffer.split("\n");
 				buffer = parts.pop() ?? "";
-				if (parts.length > 0 && paused) {
-					held.push(...parts);
-				} else if (parts.length > 0) {
-					lines.push(...parts);
+				const arrived = parts.map((text) => ({ id: nextLineId++, text }));
+				if (arrived.length > 0 && paused) {
+					held = appendCapped(held, arrived);
+				} else if (arrived.length > 0) {
+					lines = appendCapped(lines, arrived);
 					if (following) {
 						// oxlint-disable-next-line no-await-in-loop -- each chunk renders before the next is read
 						await tick();
@@ -141,13 +149,13 @@
 		logEl?.scrollTo({ top: logEl.scrollHeight });
 	}
 
-	/** Freezes the panel on what's shown, or appends every line that arrived meanwhile and follows again. */
+	/** Freezes the panel on what's shown, or appends the lines held meanwhile (the newest few thousand) and follows again. */
 	function togglePause() {
 		if (!paused) {
 			paused = true;
 			return;
 		}
-		lines.push(...held);
+		lines = appendCapped(lines, held);
 		held = [];
 		paused = false;
 		void jumpToLatest();
@@ -229,8 +237,8 @@
 					Waiting for output…
 				</p>
 			{:else}
-				{#each lines as line, i (i)}
-					<AnsiLine {line} />
+				{#each lines as line (line.id)}
+					<AnsiLine line={line.text} />
 				{/each}
 			{/if}
 		</div>

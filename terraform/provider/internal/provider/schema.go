@@ -9,8 +9,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -100,6 +102,12 @@ func resourceAttribute(attribute Attribute) schema.Attribute {
 			NestedObject: schema.NestedAttributeObject{Attributes: nestedAttributes(attribute.Fields)},
 			Optional:     mode.optional, PlanModifiers: listModifiers(mode), Required: mode.required,
 		}
+	case "object":
+		return schema.SingleNestedAttribute{
+			Attributes: nestedAttributes(attribute.Fields), Computed: mode.computed,
+			Description: attribute.Description, Optional: mode.optional,
+			PlanModifiers: objectModifiers(mode), Required: mode.required,
+		}
 	default:
 		return stringAttribute(attribute, mode)
 	}
@@ -147,6 +155,12 @@ func nestedAttributes(fields []Attribute) map[string]schema.Attribute {
 			out[field.TF] = nested
 		case "int":
 			out[field.TF] = schema.Int64Attribute{Description: field.Description, Optional: !required, Required: required}
+		case "strings":
+			nested := schema.ListAttribute{Description: field.Description, ElementType: types.StringType, Optional: !required, Required: required}
+			if items, ok := field.Default.([]any); ok {
+				nested.Computed, nested.Default = true, listdefault.StaticValue(stringList(items))
+			}
+			out[field.TF] = nested
 		default:
 			nested := schema.StringAttribute{Description: field.Description, Optional: !required, Required: required}
 			if value, ok := field.Default.(string); ok {
@@ -156,6 +170,26 @@ func nestedAttributes(fields []Attribute) map[string]schema.Attribute {
 		}
 	}
 	return out
+}
+
+func stringList(items []any) types.List {
+	elements := make([]attr.Value, 0, len(items))
+	for _, item := range items {
+		text, _ := item.(string)
+		elements = append(elements, types.StringValue(text))
+	}
+	return types.ListValueMust(types.StringType, elements)
+}
+
+func objectModifiers(mode attributeMode) []planmodifier.Object {
+	modifiers := []planmodifier.Object{}
+	if mode.keepState {
+		modifiers = append(modifiers, objectplanmodifier.UseStateForUnknown())
+	}
+	if mode.replace {
+		modifiers = append(modifiers, objectplanmodifier.RequiresReplace())
+	}
+	return modifiers
 }
 
 func boolModifiers(mode attributeMode) []planmodifier.Bool {
@@ -244,6 +278,12 @@ func dataSourceAttribute(attribute Attribute, optional bool) dsschema.Attribute 
 			Computed: true, Description: attribute.Description,
 			NestedObject: dsschema.NestedAttributeObject{Attributes: nested},
 		}
+	case "object":
+		nested := map[string]dsschema.Attribute{}
+		for _, field := range attribute.Fields {
+			nested[field.TF] = dataSourceAttribute(field, false)
+		}
+		return dsschema.SingleNestedAttribute{Attributes: nested, Computed: true, Description: attribute.Description}
 	default:
 		return dsschema.StringAttribute{
 			Computed: true, Description: attribute.Description, Optional: optional, Sensitive: attribute.Sensitive,

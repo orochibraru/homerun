@@ -13,6 +13,8 @@ const { InstanceSettingsDTO } =
 	await import("../../../src/lib/dto/instance-settings-dto");
 const { RedirectDTO } = await import("../../../src/lib/dto/redirect-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
+const { PackageRegistryDTO } =
+	await import("../../../src/lib/dto/package-registry-dto");
 const { parseRedirectInput } =
 	await import("../../../src/lib/server/redirect-form");
 
@@ -23,6 +25,7 @@ beforeEach(() => {
 	stub(InstanceSettingsDTO, "get", async () => ({
 		toJSON: () => ({ garagePublicHost: "s3.example.com" }),
 	}));
+	stub(PackageRegistryDTO, "list", async () => []);
 	stub(StatusPageDTO, "list", async () => [
 		{ domains: ["status.example.com"], name: "Status" },
 	]);

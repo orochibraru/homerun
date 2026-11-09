@@ -17,6 +17,7 @@ import { syncErrorPages } from "../docker/error-pages.ts";
 import { type WedgedContainer, WedgedReporter } from "../docker/wedged.ts";
 import { MailService } from "../mail.service.ts";
 import { ObjectStorageService } from "../object-storage.service.ts";
+import { PackageRegistryService } from "../package-registry.service.ts";
 import { AUTH_CHECK_ALIAS } from "../self-update/compose-target.ts";
 import { StatusPageSettingsService } from "../status-page-settings.service.ts";
 import { TracingService } from "../tracing.service.ts";
@@ -80,7 +81,7 @@ export class CoreServicesWatch extends BaseScheduler {
 	 * last one seen (the first successful contact included), re-asserts the
 	 * core services onto it: the forward-auth URL detection, the dashboard's
 	 * Traefik router and DNS record, the Newt tunnel, the published
-	 * registry's Traefik labels, swarm mode when
+	 * registry's Traefik labels, the package registries, swarm mode when
 	 * that's the orchestration mode, and the Traefik flags Settings →
 	 * Networking adds (the HTTP cache plugin, the ACME email), which a
 	 * `docker compose up --force-recreate` or a self-update wipes by
@@ -140,6 +141,9 @@ export class CoreServicesWatch extends BaseScheduler {
 		}
 		await ObjectStorageService.reassertBuiltin().catch((err) => {
 			this.logger.warn("Couldn't re-assert the built-in object store", err);
+		});
+		await PackageRegistryService.reassert().catch((err) => {
+			this.logger.warn("Couldn't re-assert the package registries", err);
 		});
 		await MailService.reassert().catch((err) => {
 			this.logger.warn("Couldn't re-assert the mail server", err);

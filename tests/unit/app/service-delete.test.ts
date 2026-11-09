@@ -61,6 +61,8 @@ const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
 const { InstanceSettingsDTO } =
 	await import("../../../src/lib/dto/instance-settings-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
+const { PackageRegistryDTO } =
+	await import("../../../src/lib/dto/package-registry-dto");
 const { DomainDnsService } =
 	await import("../../../src/lib/services/domain-dns.service");
 const { PangolinService } =
@@ -147,6 +149,7 @@ beforeEach(() => {
 	});
 	stub(PangolinService, "deleteDnsRecord", async () => null);
 	stub(InstanceSettingsDTO, "get", async () => ({ toJSON: () => ({}) }));
+	stub(PackageRegistryDTO, "list", async () => []);
 	stub(StatusPageDTO, "list", async () => []);
 	otherServices = [];
 	stub(ServiceDTO, "list", async () => otherServices);

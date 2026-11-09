@@ -209,6 +209,45 @@ describe("generateStructure", () => {
 		expect(file("stacks.tf")).toContain('resource "homerun_status_page"');
 	});
 
+	test("writes a non-default swarm placement as an object, leaves the default out", () => {
+		const placed = (swarmPlacement: unknown) =>
+			generateStructure(
+				{
+					homerun_service: [
+						{
+							id: "s1",
+							image: "nginx",
+							name: "Api",
+							slug: "api",
+							swarmPlacement,
+						},
+					],
+				},
+				{
+					backendAddress: null,
+					endpoint: "http://x",
+					generatedAt: new Date(0),
+					name: "Api",
+				},
+			).find((entry) => entry.path === "service_api.tf")?.content;
+		expect(
+			placed({
+				constraints: ["env==prod"],
+				preferences: [],
+				roles: ["worker"],
+			}),
+		).toContain(
+			'swarm_placement = {\n    constraints = ["env==prod"]\n    preferences = []\n    roles       = ["worker"]\n  }',
+		);
+		expect(
+			placed({
+				constraints: [],
+				preferences: [],
+				roles: ["manager", "worker"],
+			}),
+		).not.toContain("swarm_placement");
+	});
+
 	test("references generated objects and leaves defaults out", () => {
 		expect(all).toContain("stack_id = homerun_stack.apps.id");
 		expect(all).toContain("stack_id       = homerun_stack.data.id");

@@ -72,45 +72,64 @@ provider "homerun" {
 `endpoint` and `api_key` fall back to the `HOMERUN_ENDPOINT` and
 `HOMERUN_API_KEY` environment variables.
 
+A service's swarm placement (the Compute tab's node roles, label constraints and
+spread preferences) is one object attribute, applied in swarm mode only:
+
+```hcl
+resource "homerun_service" "api" {
+  # ...
+  swarm_placement = {
+    roles       = ["worker"]
+    constraints = ["env==prod"]
+    preferences = ["zone"]
+  }
+}
+```
+
+A field left out takes its default (both roles, no constraint, no preference).
+Write constraints as `key==value` or `key!=value` and preferences as the bare
+label key: the API stores that form, so `node.labels.env == prod` would show a
+change on every plan.
+
 ### Resources
 
-| Resource                          | What it manages                                                                                                                                                                           |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `homerun_stack`                   | A stack, nested in another with `parent_id`.                                                                                                                                              |
-| `homerun_service`                 | A service with every setting: source and build, registry, env vars, compute, networking and domains, published ports, runtime, healthcheck, login wall, previews, release channels, cron. |
-| `homerun_service_environment`     | An environment of a service (staging, demo and so on).                                                                                                                                    |
-| `homerun_service_dependency`      | One service depending on another.                                                                                                                                                         |
-| `homerun_volume`                  | A storage volume and its backup settings.                                                                                                                                                 |
-| `homerun_volume_mount`            | A volume mounted into a service.                                                                                                                                                          |
-| `homerun_cron_job`                | A cron job.                                                                                                                                                                               |
-| `homerun_redirect`                | A redirect.                                                                                                                                                                               |
-| `homerun_notification_channel`    | A notification channel of the API key's account.                                                                                                                                          |
-| `homerun_backup_destination`      | A backup destination (S3, SFTP, SMB or WebDAV).                                                                                                                                           |
-| `homerun_status_page`             | A status page.                                                                                                                                                                            |
-| `homerun_dns_connection`          | A DNS provider account (`dns_provider` is its id, `credentials` its fields).                                                                                                              |
-| `homerun_git_provider`            | A GitLab, Gitea or Bitbucket OAuth app. A GitHub App is registered from the dashboard, then imported.                                                                                     |
-| `homerun_build_cache_registry`    | A build cache registry.                                                                                                                                                                   |
-| `homerun_object_store`            | An S3-compatible object store. The built-in store can be read but not changed.                                                                                                            |
-| `homerun_bucket`                  | A bucket on a store, with its object expiration.                                                                                                                                          |
-| `homerun_service_account`         | A service account and its permissions. Its id goes in a service's `auth_allowed_user_ids`; its API keys are minted outside Terraform, so no secret lands in the state.                    |
-| `homerun_user`                    | A person's account: email, name, role and a custom role's permissions. Created without a password, like Users → Add user.                                                                 |
-| `homerun_oauth_provider`          | An OAuth/OIDC sign-in provider (Authentication → Providers). `client_secret` is write-only; a login wall offers it as `oauth:<name>`.                                                     |
-| `homerun_oidc_app`                | A "Sign in with Homerun" app: name, confidential or public (changing it replaces the app), token auth method, PKCE, consent. `client_id` and `discovery_url` are read-only.               |
-| `homerun_oidc_app_environment`    | One environment of an OIDC app: its `redirect_uris`, `allowed_origins` and `allow_localhost`. Nobody signs in to an app until it has one.                                                 |
-| `homerun_oidc_app_secret`         | A client secret of a confidential OIDC app, for one environment. Its `secret` is generated on create and kept in the state; an imported one has none.                                     |
-| `homerun_registry_token`          | A push and pull token for the built-in registry. Its `secret` is generated on create and kept in the state; an imported token has none.                                                   |
-| `homerun_instance_settings`       | Settings → General, Docker and Networking: base domain, dashboard URL, release channel, default UI mode, resource alerts, image scanning, orchestration mode, Traefik.                    |
-| `homerun_smtp_settings`           | Settings → Email.                                                                                                                                                                         |
-| `homerun_tls_settings`            | Settings → TLS: the instance certificate.                                                                                                                                                 |
-| `homerun_error_pages`             | Settings → Error pages: branding and page texts.                                                                                                                                          |
-| `homerun_ip_ban_settings`         | Settings → IP bans: when an address gets banned, and the CrowdSec push.                                                                                                                   |
-| `homerun_authentication_settings` | The Authentication page's switches: emailed codes and links, featured sign-in methods, passkey and two-factor requirements.                                                               |
-| `homerun_registry_settings`       | Docker Registry → Settings: auth and public hostname.                                                                                                                                     |
-| `homerun_remote_host`             | A build server: a Docker daemon (`docker_host`, optional TLS) or a Homerun Agent (`agent_url`, `agent_token`, checked against the agent). An enrolled server can be imported.             |
-| `homerun_domain`                  | A domain Homerun manages, linked to a DNS connection's zone or not, with its record target and automation switch.                                                                         |
-| `homerun_dns_record`              | A record made by hand at a domain's DNS provider.                                                                                                                                         |
-| `homerun_workstation`             | One of the API key owner's dev workstations: image, resources, repository, extensions, git identity, auto-stop and whether it runs.                                                       |
-| `homerun_workstation_preset`      | One of the API key owner's workstation presets, login wall included.                                                                                                                      |
+| Resource                          | What it manages                                                                                                                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `homerun_stack`                   | A stack, nested in another with `parent_id`.                                                                                                                                                                  |
+| `homerun_service`                 | A service with every setting: source and build, registry, env vars, compute and swarm placement, networking and domains, published ports, runtime, healthcheck, login wall, previews, release channels, cron. |
+| `homerun_service_environment`     | An environment of a service (staging, demo and so on).                                                                                                                                                        |
+| `homerun_service_dependency`      | One service depending on another.                                                                                                                                                                             |
+| `homerun_volume`                  | A storage volume and its backup settings.                                                                                                                                                                     |
+| `homerun_volume_mount`            | A volume mounted into a service.                                                                                                                                                                              |
+| `homerun_cron_job`                | A cron job.                                                                                                                                                                                                   |
+| `homerun_redirect`                | A redirect.                                                                                                                                                                                                   |
+| `homerun_notification_channel`    | A notification channel of the API key's account.                                                                                                                                                              |
+| `homerun_backup_destination`      | A backup destination (S3, SFTP, SMB or WebDAV).                                                                                                                                                               |
+| `homerun_status_page`             | A status page.                                                                                                                                                                                                |
+| `homerun_dns_connection`          | A DNS provider account (`dns_provider` is its id, `credentials` its fields).                                                                                                                                  |
+| `homerun_git_provider`            | A GitLab, Gitea or Bitbucket OAuth app. A GitHub App is registered from the dashboard, then imported.                                                                                                         |
+| `homerun_build_cache_registry`    | A build cache registry.                                                                                                                                                                                       |
+| `homerun_object_store`            | An S3-compatible object store. The built-in store can be read but not changed.                                                                                                                                |
+| `homerun_bucket`                  | A bucket on a store, with its object expiration.                                                                                                                                                              |
+| `homerun_service_account`         | A service account and its permissions. Its id goes in a service's `auth_allowed_user_ids`; its API keys are minted outside Terraform, so no secret lands in the state.                                        |
+| `homerun_user`                    | A person's account: email, name, role and a custom role's permissions. Created without a password, like Users → Add user.                                                                                     |
+| `homerun_oauth_provider`          | An OAuth/OIDC sign-in provider (Authentication → Providers). `client_secret` is write-only; a login wall offers it as `oauth:<name>`.                                                                         |
+| `homerun_oidc_app`                | A "Sign in with Homerun" app: name, confidential or public (changing it replaces the app), token auth method, PKCE, consent. `client_id` and `discovery_url` are read-only.                                   |
+| `homerun_oidc_app_environment`    | One environment of an OIDC app: its `redirect_uris`, `allowed_origins` and `allow_localhost`. Nobody signs in to an app until it has one.                                                                     |
+| `homerun_oidc_app_secret`         | A client secret of a confidential OIDC app, for one environment. Its `secret` is generated on create and kept in the state; an imported one has none.                                                         |
+| `homerun_registry_token`          | A push and pull token for the built-in registry. Its `secret` is generated on create and kept in the state; an imported token has none.                                                                       |
+| `homerun_instance_settings`       | Settings → General, Docker and Networking: base domain, dashboard URL, release channel, default UI mode, resource alerts, image scanning, orchestration mode, Traefik.                                        |
+| `homerun_smtp_settings`           | Settings → Email.                                                                                                                                                                                             |
+| `homerun_tls_settings`            | Settings → TLS: the instance certificate.                                                                                                                                                                     |
+| `homerun_error_pages`             | Settings → Error pages: branding and page texts.                                                                                                                                                              |
+| `homerun_ip_ban_settings`         | Settings → IP bans: when an address gets banned, and the CrowdSec push.                                                                                                                                       |
+| `homerun_authentication_settings` | The Authentication page's switches: emailed codes and links, featured sign-in methods, passkey and two-factor requirements.                                                                                   |
+| `homerun_registry_settings`       | Docker Registry → Settings: auth and public hostname.                                                                                                                                                         |
+| `homerun_remote_host`             | A build server: a Docker daemon (`docker_host`, optional TLS) or a Homerun Agent (`agent_url`, `agent_token`, checked against the agent). An enrolled server can be imported.                                 |
+| `homerun_domain`                  | A domain Homerun manages, linked to a DNS connection's zone or not, with its record target and automation switch.                                                                                             |
+| `homerun_dns_record`              | A record made by hand at a domain's DNS provider.                                                                                                                                                             |
+| `homerun_workstation`             | One of the API key owner's dev workstations: image, resources, repository, extensions, git identity, auto-stop and whether it runs.                                                                           |
+| `homerun_workstation_preset`      | One of the API key owner's workstation presets, login wall included.                                                                                                                                          |
 
 The data sources `homerun_template`, `homerun_service` and `homerun_stack` read
 an object by `id`, a template also by `name`, a service or a stack also by
@@ -195,20 +214,22 @@ instance's URL filled in.
 
 ## Generating a configuration
 
-A Terraform or OpenTofu project's **Generate** tab writes the configuration for
-one stack or one service, never the whole instance at once: a project per stack
-or service keeps each plan small and each state independent. A stack covers
-itself, its substacks, their services with their environments, dependencies,
-mounts and volumes, and the status pages of those stacks. A service covers
-itself, its environments, the dependencies it declares, and its mounts with
-their volumes; its stack and the services it depends on stay outside, referenced
-by id. It starts on what the project manages; search for another stack or
-service by name to generate for it instead. The `http` backend block always
-points at the project's own [state](#terraform-state), and the commands in the
-README use `tofu` for an OpenTofu project.
+A project's **Generate** tab writes the configuration for one stack or one
+service (Terraform files for Terraform and OpenTofu, a
+[Pulumi program](#generating-a-pulumi-program) for Pulumi), never the whole
+instance at once: a project per stack or service keeps each plan small and each
+state independent. A stack covers itself, its substacks, their services with
+their environments, dependencies, mounts and volumes, and the status pages of
+those stacks. A service covers itself, its environments, the dependencies it
+declares, and its mounts with their volumes; its stack and the services it
+depends on stay outside, referenced by id. It starts on what the project
+manages; search for another stack or service by name to generate for it instead.
+The `http` backend block always points at the project's own
+[state](#terraform-state), and the commands in the README use `tofu` for an
+OpenTofu project.
 
-The project is a folder you download as a zip, and preview file by file on the
-page, highlighted:
+A Terraform project is a folder you download as a zip, and preview file by file
+on the page, highlighted:
 
 - `versions.tf`: the provider's source and the project's backend.
 - `providers.tf`: the provider, pointed at this instance.
@@ -311,22 +332,27 @@ bucket; the versions, diff and rollback above only cover Terraform and OpenTofu.
 
 ## Drift
 
-A Terraform or OpenTofu project's **Drift** tab reads the latest version of its
-state and compares every `homerun_*` resource in it with the live object,
-through the same mapping the provider uses:
+A project's **Drift** tab compares its state with the instance, through the same
+mapping the provider uses. For Terraform and OpenTofu it reads the latest
+version of the state; for Pulumi it reads the stack's checkpoint, the file
+Pulumi's backend keeps under `.pulumi/stacks/` in the project's folder of the
+bucket. When the folder holds more than one Pulumi stack, the tab lists them and
+starts on the one written last. Every Homerun resource in the state is compared
+with the live object:
 
-- **Drifted**: an attribute changed outside Terraform, with the value in the
+- **Drifted**: an attribute changed outside the tool, with the value in the
   state and the live one. A sensitive attribute (env vars) only says it changed.
-  `terraform plan` puts it back unless the configuration changes too.
-- **Missing**: in the state, deleted on the instance. `terraform plan` creates
-  it again.
+  `terraform plan` (or `pulumi preview`) shows it, and applying puts it back
+  unless the configuration changes too.
+- **Missing**: in the state, deleted on the instance. Applying creates it again.
 - **Unmanaged**: running, with no resource in this state. The Generate tab
-  writes its import block.
+  writes the configuration that imports it.
 
-Write-only attributes can't be compared and are left out. Instance settings are
-compared when the state manages them, and never listed as unmanaged. Pulumi
-projects have no drift check yet: `pulumi refresh --preview-only` shows the same
-thing.
+Write-only attributes can't be compared and are left out, and so are the values
+Pulumi encrypts in its checkpoint (secret outputs, env vars among them) and
+attributes the state doesn't carry (one the installed provider version doesn't
+know yet). Instance settings are compared when the state manages them, and never
+listed as unmanaged.
 
 ## Pulumi
 
@@ -369,5 +395,45 @@ new homerun.Service("api", {
 ```
 
 A Pulumi project's Generate tab shows these snippets with your instance's URL
-filled in. Homerun doesn't write a Pulumi program from what's running yet: start
-from the example and adopt existing objects with `pulumi import`.
+filled in. Lists take a plural name, the way the Terraform bridge names them
+(`cap_add` is `capAdds`, `command` is `commands`).
+
+### Generating a Pulumi program
+
+A Pulumi project's **Generate** tab writes a TypeScript program for one stack or
+one service, covering the same objects as the Terraform files above. Every
+object is a `new homerun.X(...)` with the `import` option set to its id, so the
+first `pulumi up` adopts what already runs instead of creating it again, and
+references between objects are their `.id` (`stackId: appsStack.id`). Values a
+setting leaves at its default are left out. Download it as a zip or preview it
+file by file:
+
+- `index.ts`: the program.
+- `Pulumi.yaml`, `package.json` and `tsconfig.json`: a Node.js project, the
+  shape `pulumi new typescript` writes.
+- `secrets.sh`, when there are secrets: one `pulumi config set --secret` line
+  per secret, which the program reads with `config.requireSecret`. Env vars
+  marked secret come filled in with what runs today; secrets Homerun never reads
+  back are commented-out lines to fill in. The page masks every value; the zip
+  has them, so keep it private.
+- A `README.md` with the steps, and a `.gitignore` that keeps `node_modules/`,
+  the generated SDK (`sdks/`) and `secrets.sh` out of git.
+
+Then, in the folder:
+
+```sh
+pulumi login '<the command from the State tab>'
+pulumi stack init prod
+npm install
+pulumi package add terraform-provider orochibraru/homerun
+export HOMERUN_ENDPOINT=https://homerun.example.com
+export HOMERUN_API_KEY=<an API key>
+sh secrets.sh
+pulumi preview
+```
+
+`pulumi package add` generates the `@pulumi/homerun` SDK from the provider on
+the registry and adds it to `package.json` and `Pulumi.yaml`. The preview only
+imports; `pulumi up` then adopts everything. Pulumi refuses an import whose
+inputs don't match what runs, so generate the program again rather than editing
+it before that first `pulumi up`.

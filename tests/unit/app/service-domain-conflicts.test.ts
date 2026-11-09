@@ -16,6 +16,8 @@ const { RedirectDTO } = await import("../../../src/lib/dto/redirect-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
+const { PackageRegistryDTO } =
+	await import("../../../src/lib/dto/package-registry-dto");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
 const { DeploymentService } =
 	await import("../../../src/lib/services/deploy.service");
@@ -139,6 +141,7 @@ beforeEach(() => {
 	stub(InstanceSettingsDTO, "get", async () => ({
 		toJSON: () => ({ registryPublicHost: "registry.example.com" }),
 	}));
+	stub(PackageRegistryDTO, "list", async () => []);
 	stub(StatusPageDTO, "list", async () => []);
 	stub(DeploymentService, "redeployForRouting", async (svc: { id: string }) => {
 		redeployed.push(svc.id);

@@ -74,12 +74,13 @@ removed when the trial ends. The panel follows it with the same stepper as a
 deploy (pull, start, health check, passed) and its output underneath. It passes
 once it's ready by the same check a deploy gates traffic on (the service's
 healthcheck command, else its port listening), or is still running after 20
-seconds when healthchecks are off; the outcome, with the last log lines of a
-failure, rides along in the notification. The container is removed either way;
-the pulled image stays for the real deploy. Since it reaches the real database,
-an app that migrates its schema on startup migrates the live one during the
-trial: turn trials off for those. An app that can't start without its own data
-still fails it.
+seconds when healthchecks are off; the outcome, with what a failed container's
+exit code means and its last 40 log lines (plus a likely cause for each
+well-known error in them, like a failed deploy), rides along in the
+notification. The container is removed either way; the pulled image stays for
+the real deploy. Since it reaches the real database, an app that migrates its
+schema on startup migrates the live one during the trial: turn trials off for
+those. An app that can't start without its own data still fails it.
 
 A failed trial is retried automatically, up to 3 more times 30 seconds apart. If
 every attempt fails the update isn't offered: there's no **Update now** button,

@@ -24,6 +24,8 @@ const { TracingService } =
 	await import("../../../src/lib/services/tracing.service");
 const { PipelineService } =
 	await import("../../../src/lib/services/pipeline.service");
+const { PipelineWebhookService } =
+	await import("../../../src/lib/services/pipeline-webhook.service");
 const { pipelineSpanToken } =
 	await import("../../../src/lib/tracing/ingest-token");
 const { formatRunDuration } = await import("../../../src/lib/pipelines/list");
@@ -79,6 +81,7 @@ let exported: { resourceSpans: { resource: { attributes: unknown[] } }[] }[] =
 let marked: [string, string | null][] = [];
 let enqueued: Record<string, unknown>[] = [];
 let stored: { jobs: unknown[]; recost: unknown[] }[] = [];
+let registered: string[] = [];
 
 function repository(rates: unknown = null, id = "repo-1"): Repo {
 	return {
@@ -110,6 +113,10 @@ beforeEach(() => {
 	marked = [];
 	enqueued = [];
 	stored = [];
+	registered = [];
+	stub(PipelineWebhookService, "register", async (repo: Repo) => {
+		registered.push(repo.id);
+	});
 	stub(InstanceSettingsDTO, "get", async () => ({
 		gitProviders: [
 			{ baseUrl: null, enabled: true, id: "gh", kind, name: "GitHub" },
@@ -288,6 +295,7 @@ describe("PipelineService.watch", () => {
 			},
 		]);
 		expect(linkedSets).toEqual([["svc-9"]]);
+		expect(registered).toEqual(["repo-1"]);
 		expect(enqueued).toEqual([
 			{
 				dedupeKey: "pipeline_sync:repo-1",
@@ -313,6 +321,20 @@ describe("PipelineService.watch", () => {
 			}),
 		).toBe(existing);
 		expect(enqueued).toEqual([]);
+	});
+
+	test("refuses a provider the user isn't connected to", async () => {
+		connected = false;
+		stub(RepositoryDTO, "getByPath", async () => null);
+		await expect(
+			PipelineService.watch({
+				defaultBranch: null,
+				fullName: "acme/api",
+				providerId: "gh",
+				userId: "user-1",
+			}),
+		).rejects.toThrow("Connect GitHub first.");
+		expect(registered).toEqual([]);
 	});
 
 	test("refuses a Bitbucket repository", async () => {
@@ -377,6 +399,7 @@ describe("PipelineService.saveSettings", () => {
 			pipelinesEnabled: true,
 		});
 		expect(linkedSets).toEqual([["svc-1", "svc-2"]]);
+		expect(registered).toEqual(["repo-1"]);
 		expect(stored[0]?.recost).toEqual([
 			{
 				cost: 1.5,

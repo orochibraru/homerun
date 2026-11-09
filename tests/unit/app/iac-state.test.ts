@@ -4,6 +4,7 @@ const {
 	basicAuthPassword,
 	httpBackendBlock,
 	pulumiLoginCommand,
+	pulumiStackName,
 	diffStates,
 	instanceAddress,
 	parseLockInfo,
@@ -195,5 +196,18 @@ describe("pulumiLoginCommand", () => {
 		).toContain(
 			"s3://b/lab?endpoint=homerun-garage:3900&s3ForcePathStyle=true&region=garage&disableSSL=true",
 		);
+	});
+});
+
+describe("pulumiStackName", () => {
+	test("names project-scoped and legacy checkpoints, skips backups and other files", () => {
+		const folder = "iac/lab/.pulumi/stacks/";
+		expect(pulumiStackName(folder, `${folder}apps/prod.json`)).toBe(
+			"apps/prod",
+		);
+		expect(pulumiStackName(folder, `${folder}dev.json.gz`)).toBe("dev");
+		expect(pulumiStackName(folder, `${folder}apps/prod.json.bak`)).toBeNull();
+		expect(pulumiStackName(folder, `${folder}apps/x/prod.json`)).toBeNull();
+		expect(pulumiStackName(folder, "iac/lab/.pulumi/meta.yaml")).toBeNull();
 	});
 });

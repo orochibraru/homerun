@@ -4,6 +4,7 @@
 	import {
 		AlertTriangle,
 		Boxes,
+		History,
 		Loader2,
 		RotateCw,
 		Trash2,
@@ -208,8 +209,18 @@
 					</button>
 					{#if selectedInfraId === container.id}
 						<div class="space-y-2 p-3">
-							{#if container.id === traefikId}
-								<div class="flex items-center justify-end gap-2">
+							<div class="flex items-center justify-end gap-2">
+								<Button
+									href={resolve("/(protected)/system-logs/history/[system]", {
+										system: container.service || container.name,
+									})}
+									size="sm"
+									variant="ghost"
+								>
+									<History class="size-3.5" />
+									Log history
+								</Button>
+								{#if container.id === traefikId}
 									<form
 										action="?/restartTraefik"
 										method="POST"
@@ -272,8 +283,8 @@
 											Update
 										</Button>
 									</form>
-								</div>
-							{/if}
+								{/if}
+							</div>
 							<LiveLogViewer
 								heightClass="h-96"
 								logsUrl="{resolve(

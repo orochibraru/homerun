@@ -460,12 +460,14 @@ per-user instead of a singleton row.
   and 5) on `[data-surface]`, and `stackHues` (`src/lib/lanes.ts`) gives each
   top-level stack one of them, a substack sharing its root's.
 - **The lane** (`lane-strip.svelte`) is the 24-hour strip drawn for a service on
-  the Services Dependencies view and on the Diagram's cards: 48 half-hour
-  buckets whose opacity follows the square root of the bucket's share of the
-  busiest one, red where a quarter or more of the bucket's requests errored, and
-  a diamond per deployment (filled for the latest, red for a failed one). Its
-  data is `getLanes` (`lanes.remote.ts`), one query for many ids, scoped to the
-  caller's services, built by `buildLane` from
+  the Services Dependencies view, on the Diagram's cards and, counting stored
+  log lines instead of requests (`noun="line"`, red on any error line with
+  `errorShare={0}`, from `getLogLane` over `ServiceLogDTO.volume`), above the
+  service Logs tab: 48 half-hour buckets whose opacity follows the square root
+  of the bucket's share of the busiest one, red where a quarter or more of the
+  bucket's requests errored, and a diamond per deployment (filled for the
+  latest, red for a failed one). Its data is `getLanes` (`lanes.remote.ts`), one
+  query for many ids, scoped to the caller's services, built by `buildLane` from
   `TrafficSampleDTO.seriesByService` and `DeploymentDTO.listSinceForServices`.
 - **Presets** (`preset`, nullable: win95, win98, winxp, win7, msn, retro,
   `PRESETS` in `src/lib/surfaces.ts`) ride the same `data-surface` attribute:
@@ -587,11 +589,14 @@ first tab's bare path (no query string) it shows one card per tab and hides the
 page under it, and every other tab gets a "‹ Sections" back row instead of the
 strip. The first tab shares the hub's path, so its card links to `?view=tab`;
 any query string (pagination too) means "show the page, not the hub".
-`NavTab.description` is the card's one-line summary, set only from data the
-layout already loads (the service layout does). Tabs driven by `onSelect` keep
-the strip. `SectionNav` does the same for subtabs when the layout passes the
-page as its children (`<SectionNav ...>{@render children()}</SectionNav>`), with
-`hubLabel` naming its back row ("‹ Observability"); without children (an in-page
-view switch like the issue views) it stays a strip. All of it is CSS-switched
+`NavTab.description` is the card's one-line "what this tab is for", and
+`NavTab.summary` its live state, taken only from data the layout already loads
+(a count, a last run, a status); every `TabNav` layout sets a description, and a
+summary where that data is at hand. A new tab gets both. Tabs driven by
+`onSelect` keep the strip. `SectionNav` does the same for subtabs when the
+layout passes the page as its children
+(`<SectionNav ...>{@render children()}</SectionNav>`), with `hubLabel` naming
+its back row ("‹ Observability"); without children (an in-page view switch like
+the issue views) it stays a strip. All of it is CSS-switched
 (`max-md:`/`md:hidden`), no `MediaQuery`, so SSR renders the right shape with no
 flash.

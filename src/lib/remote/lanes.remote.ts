@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { DeploymentDTO } from "#lib/dto/deployment-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
+import { ServiceLogDTO } from "#lib/dto/service-log-dto.js";
 import { TrafficSampleDTO } from "#lib/dto/traffic-sample-dto.js";
 import {
 	buildLane,
@@ -36,6 +37,32 @@ export const getLanes = query(
 					now,
 				),
 			]),
+		);
+	},
+);
+
+export const getLogLane = query(
+	z.string(),
+	async (serviceId): Promise<Lane | null> => {
+		requirePermission("services", "read");
+		const svc = await ServiceDTO.get(serviceId);
+		if (!svc) {
+			return null;
+		}
+		const now = new Date();
+		const since = laneStart(now);
+		const [volume, deploys] = await Promise.all([
+			ServiceLogDTO.volume(svc.id, since, LANE_BUCKET_SECONDS),
+			DeploymentDTO.listSinceForServices([svc.id], since),
+		]);
+		return buildLane(
+			volume.map((point) => ({
+				bucket: point.bucket,
+				errors: point.errors,
+				requests: point.lines,
+			})),
+			deploys,
+			now,
 		);
 	},
 );

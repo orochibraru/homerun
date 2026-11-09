@@ -709,3 +709,17 @@ export const createServiceAccountKeyApiBody = z.object({
 	}),
 	name: z.string().trim().min(1).max(100).optional(),
 });
+
+export const watchRepositoryApiBody = z.object({
+	defaultBranch: z.string().trim().min(1).nullable().optional().meta({
+		description: "The branch the repository's default runs are on",
+	}),
+	fullName: z.string().trim().min(1).meta({
+		description:
+			'The path on the provider: "owner/repo", or a GitLab "group/subgroup/repo"',
+	}),
+	providerId: z.string().trim().min(1).meta({
+		description:
+			"The git provider it lives on, from /git-providers; the caller must be connected to it",
+	}),
+});

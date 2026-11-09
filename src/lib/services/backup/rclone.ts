@@ -12,11 +12,17 @@ export const RCLONE_IMAGE = "rclone/rclone";
 export const RCLONE_TAG = "1.75.1";
 
 const COMMAND_TIMEOUT_MS = 2 * 60 * 1000;
+const PURGE_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 const DIRECTORY_NOT_FOUND = 3;
 const ERROR_TAIL_CHARS = 500;
+const REPOSITORY_SEARCH_DEPTH = 6;
+const REPOSITORY_DIRECTORY =
+	/^((?:[^/]+\/)*)restic\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/$/;
 
 const WRAPPER =
 	'if [ -n "$HOMERUN_PASS" ]; then export RCLONE_CONFIG_DEST_PASS="$(printf %s "$HOMERUN_PASS" | rclone obscure -)"; fi; exec rclone "$@"';
+
+export const RCLONE_ENTRYPOINT = ["sh", "-c", WRAPPER, "rclone"];
 
 export interface RcloneDestination {
 	host: string;
@@ -32,6 +38,12 @@ export interface RcloneRemote {
 	image: string;
 	label: string;
 	path: string;
+}
+
+/** A restic repository found on a destination: its path under the destination's own and the volume id it's named after. */
+export interface RemoteRepository {
+	path: string;
+	volumeId: string;
 }
 
 interface RcloneEntry {
@@ -94,7 +106,7 @@ export function rcloneRemote(destination: RcloneDestination): RcloneRemote {
 		env.HOMERUN_PASS = destination.secret;
 	}
 	return {
-		entrypoint: ["sh", "-c", WRAPPER, "rclone"],
+		entrypoint: RCLONE_ENTRYPOINT,
 		env,
 		image: `${RCLONE_IMAGE}:${RCLONE_TAG}`,
 		label: describeDestination({
@@ -108,14 +120,18 @@ export function rcloneRemote(destination: RcloneDestination): RcloneRemote {
 	};
 }
 
-function run(remote: RcloneRemote, cmd: string[]): Promise<OneOffRunResult> {
+function run(
+	remote: RcloneRemote,
+	cmd: string[],
+	timeoutMs = COMMAND_TIMEOUT_MS,
+): Promise<OneOffRunResult> {
 	return DockerService.runOneOff({
 		cmd,
 		entrypoint: remote.entrypoint,
 		envVars: remote.env,
 		image: RCLONE_IMAGE,
 		tag: RCLONE_TAG,
-		timeoutMs: COMMAND_TIMEOUT_MS,
+		timeoutMs,
 	});
 }
 
@@ -123,9 +139,12 @@ function failed(result: OneOffRunResult): boolean {
 	return result.timedOut || result.exitCode !== 0;
 }
 
-function detail(result: OneOffRunResult): string {
+function detail(
+	result: OneOffRunResult,
+	timeoutMs = COMMAND_TIMEOUT_MS,
+): string {
 	return result.timedOut
-		? "no answer within 2 minutes"
+		? `no answer within ${timeoutMs / 60_000} minutes`
 		: result.stderr.toString("utf8").trim().slice(-ERROR_TAIL_CHARS);
 }
 
@@ -206,6 +225,80 @@ export async function deleteRemoteFile(
 	if (failed(result)) {
 		throw new Error(
 			`Couldn't delete ${key} on ${remote.label}: ${detail(result)}`,
+		);
+	}
+}
+
+/**
+ * Every restic repository under `remote`'s path, found as a
+ * `<prefix/>restic/<volume id>` directory up to six levels down, without
+ * descending into the repositories themselves. A path that doesn't exist yet
+ * holds none.
+ *
+ * @throws When rclone can't reach or list the destination.
+ */
+export async function listRemoteRepositories(
+	remote: RcloneRemote,
+): Promise<RemoteRepository[]> {
+	const result = await run(remote, [
+		"lsf",
+		"-R",
+		"--dirs-only",
+		"--max-depth",
+		String(REPOSITORY_SEARCH_DEPTH),
+		"--exclude",
+		"restic/*/*/",
+		target(remote.path, ""),
+	]);
+	if (result.exitCode === DIRECTORY_NOT_FOUND) {
+		return [];
+	}
+	if (failed(result)) {
+		throw new Error(
+			`Couldn't list the repositories on ${remote.label}: ${detail(result)}`,
+		);
+	}
+	return parseRepositoryListing(result.stdout.toString("utf8"));
+}
+
+/**
+ * The restic repositories in an `rclone lsf -R --dirs-only` listing: each
+ * `<prefix/>restic/<volume id>/` line, as its path without the trailing
+ * slash and the volume id.
+ */
+export function parseRepositoryListing(listing: string): RemoteRepository[] {
+	return listing.split("\n").flatMap((line) => {
+		const match = line.trim().match(REPOSITORY_DIRECTORY);
+		return match
+			? [
+					{
+						path: `${match[1]}restic/${match[2]}`,
+						volumeId: match[2],
+					},
+				]
+			: [];
+	});
+}
+
+/**
+ * Deletes `path` under `remote` and everything in it, through a one-off
+ * rclone container allowed two hours: a large repository is thousands of
+ * files. A path that's already gone is fine.
+ *
+ * @throws With rclone's own error when it can't be deleted.
+ */
+export async function purgeRemotePath(
+	remote: RcloneRemote,
+	path: string,
+): Promise<void> {
+	const result = await run(
+		remote,
+		["purge", target(remote.path, path)],
+		PURGE_TIMEOUT_MS,
+	);
+	if (result.exitCode !== DIRECTORY_NOT_FOUND && failed(result)) {
+		throw new Error(
+			`Couldn't delete ${path} on ${remote.label}: ${detail(result, PURGE_TIMEOUT_MS)}`,
 		);
 	}
 }

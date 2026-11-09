@@ -15,6 +15,8 @@ const {
 	acmeCertDomain,
 	mailLabels,
 	mailMatches,
+	mailProxyDovecotConf,
+	mailProxyUserPatches,
 } = await import("../../../src/lib/services/docker/mail-container");
 
 const state = {
@@ -22,6 +24,7 @@ const state = {
 	certSource: "/var/lib/docker/volumes/homerun_traefik_certs/_data",
 	hostname: "mail.example.com",
 	postmaster: "postmaster@example.com",
+	relay: null,
 };
 
 describe("acmeSourceFrom", () => {
@@ -86,6 +89,44 @@ describe("mail container", () => {
 		);
 	});
 
+	test("an outbound relay is passed as docker-mailserver's RELAY_ variables, and removing it recreates", () => {
+		const relay = {
+			host: "smtp.relay.test",
+			password: "secret",
+			port: 587,
+			user: "apikey",
+		};
+		const env = mailEnv({ ...state, relay });
+		expect(env).toContain("RELAY_HOST=smtp.relay.test");
+		expect(env).toContain("RELAY_PORT=587");
+		expect(env).toContain("RELAY_USER=apikey");
+		expect(env).toContain("RELAY_PASSWORD=secret");
+		expect(mailEnv(state)).toContain("RELAY_HOST=");
+		expect(mailMatches(env, mailLabels(state), mailBinds(state), state)).toBe(
+			false,
+		);
+	});
+
+	test("PROXY protocol listeners sit beside the usual ports", () => {
+		const patches = mailProxyUserPatches();
+		expect(patches).toContain(
+			"clone 12525 postscreen_upstream_proxy_protocol smtp",
+		);
+		expect(patches).toContain(
+			"clone 12465 smtpd_upstream_proxy_protocol submissions smtps",
+		);
+		expect(mailProxyDovecotConf()).toContain("port = 12993");
+		expect(mailProxyDovecotConf()).toContain("haproxy = yes");
+	});
+
+	test("a container from before the current config revision is recreated", () => {
+		const labels = mailLabels(state);
+		const { "homerun.mail.revision": _revision, ...older } = labels;
+		expect(mailMatches(mailEnv(state), older, mailBinds(state), state)).toBe(
+			false,
+		);
+	});
+
 	test("a hostname change means a recreate", () => {
 		const env = mailEnv(state);
 		const labels = mailLabels(state);
@@ -107,6 +148,15 @@ describe("config writes and purges", () => {
 		expect(script).toContain(
 			"mv '/cfg/postfix-accounts.cf.tmp' '/cfg/postfix-accounts.cf'",
 		);
+	});
+
+	test("scripts are made executable", () => {
+		expect(
+			mailConfigScript([{ content: "x", path: "user-patches.sh" }]),
+		).toContain("chmod 755 '/cfg/user-patches.sh'");
+		expect(
+			mailConfigScript([{ content: "x", path: "dovecot.cf" }]),
+		).not.toContain("chmod");
 	});
 
 	test("purges never climb out of the mail directory", () => {

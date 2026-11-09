@@ -30,12 +30,22 @@ func (s PGStore) Workloads(ctx context.Context) ([]Workload, error) {
 			return nil, err
 		}
 		if swarmID != nil && *swarmID != "" {
-			workloads = append(workloads, Workload{ID: *swarmID, ServiceID: id, Swarm: true})
+			workloads = append(workloads, Workload{ID: *swarmID, Owner: Owner{ServiceID: id}, Swarm: true})
 		} else if containerID != nil && *containerID != "" {
-			workloads = append(workloads, Workload{ID: *containerID, ServiceID: id})
+			workloads = append(workloads, Workload{ID: *containerID, Owner: Owner{ServiceID: id}})
 		}
 	}
 	return workloads, rows.Err()
+}
+
+// LocalWorkstations is the id of every workstation that runs on this daemon
+// rather than on a remote host.
+func (s PGStore) LocalWorkstations(ctx context.Context) ([]string, error) {
+	rows, err := s.Pool.Query(ctx, `select id from workstation where remote_host_id is null`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
 // RetentionDays is how many days of logs the instance keeps, 0 when unset.
@@ -51,16 +61,21 @@ func (s PGStore) RetentionDays(ctx context.Context) (int, error) {
 	return *days, nil
 }
 
-// LastTime is the newest line stored for one container of a service, or for
+// LastTime is the newest line stored for one container of an owner, or for
 // the whole service when it runs in swarm mode (whose task ids change with
 // every update), the zero time when there's none.
-func (s PGStore) LastTime(ctx context.Context, serviceID, instance string, swarm bool) (time.Time, error) {
+func (s PGStore) LastTime(ctx context.Context, owner Owner, instance string, swarm bool) (time.Time, error) {
 	var last *time.Time
 	var err error
-	if swarm {
-		err = s.Pool.QueryRow(ctx, `select max(time) from service_log where service_id = $1`, serviceID).Scan(&last)
-	} else {
-		err = s.Pool.QueryRow(ctx, `select max(time) from service_log where service_id = $1 and instance = $2`, serviceID, instance).Scan(&last)
+	switch {
+	case owner.ServiceID != "" && swarm:
+		err = s.Pool.QueryRow(ctx, `select max(time) from service_log where service_id = $1`, owner.ServiceID).Scan(&last)
+	case owner.ServiceID != "":
+		err = s.Pool.QueryRow(ctx, `select max(time) from service_log where service_id = $1 and instance = $2`, owner.ServiceID, instance).Scan(&last)
+	case owner.WorkstationID != "":
+		err = s.Pool.QueryRow(ctx, `select max(time) from service_log where workstation_id = $1 and instance = $2`, owner.WorkstationID, instance).Scan(&last)
+	default:
+		err = s.Pool.QueryRow(ctx, `select max(time) from service_log where system = $1 and instance = $2`, owner.System, instance).Scan(&last)
 	}
 	if err != nil || last == nil {
 		return time.Time{}, err
@@ -98,14 +113,21 @@ func (s PGStore) Deployments(ctx context.Context, serviceID, workloadID string) 
 // Insert copies a batch of lines in.
 func (s PGStore) Insert(ctx context.Context, lines []Line) error {
 	_, err := s.Pool.CopyFrom(ctx, pgx.Identifier{"service_log"},
-		[]string{"service_id", "deployment_id", "instance", "stream", "time", "line"},
+		[]string{"service_id", "workstation_id", "system", "deployment_id", "instance", "stream", "time", "line"},
 		pgx.CopyFromSlice(len(lines), func(i int) ([]any, error) {
 			line := lines[i]
-			var deploymentID *string
-			if line.DeploymentID != "" {
-				deploymentID = &line.DeploymentID
-			}
-			return []any{line.ServiceID, deploymentID, line.Instance, line.Stream, line.Time.UTC(), line.Text}, nil
+			return []any{
+				nullable(line.Owner.ServiceID), nullable(line.Owner.WorkstationID), nullable(line.Owner.System),
+				nullable(line.DeploymentID), line.Instance, line.Stream, line.Time.UTC(), line.Text,
+			}, nil
 		}))
 	return err
+}
+
+// nullable is value, or SQL null when it's empty.
+func nullable(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }

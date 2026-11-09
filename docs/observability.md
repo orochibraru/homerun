@@ -111,9 +111,20 @@ the same switch as `uptimeEnabled` on `PATCH /api/v1/services/:id`.
 The log panel live-streams a running container's stdout/stderr straight from the
 browser: the server pushes each line as the container writes it over a long-
 lived HTTP response, no polling and no WebSocket (SvelteKit has no WebSocket
-route API; nothing here needs a client-to-server socket anyway). The Overview
-tab shows the last few lines of the same stream once a service has deployed at
-least once, so recent output is visible without switching tabs.
+route API; nothing here needs a client-to-server socket anyway). The panel keeps
+the newest 5,000 lines, shown or held while paused, so a service that logs fast
+can't grow the tab without bound; older output is in
+[Log history](#log-history). The Overview tab shows the last few lines of the
+same stream once a service has deployed at least once, so recent output is
+visible without switching tabs.
+
+Above the stream, **Log volume** draws the last 24 hours of stored output as a
+strip of half-hour buckets, like the lanes on the Services page: brighter where
+the service logged more, red where a bucket holds a line that reads as an error
+(the word error, fatal, panic, exception or critical), and a diamond per deploy.
+Hover or tap a bucket for its line and error counts. It reads what
+[Log history](#log-history) stored, so it's empty until the worker has shipped
+some output.
 
 ![The live log panel streaming a container's output](images/observability-logs.webp)
 
@@ -123,7 +134,10 @@ Docker only keeps a container's output while the container exists, so a redeploy
 used to take the previous revision's logs with it. Homerun's worker now copies
 every deployed service's output into Postgres as it's written (standalone
 containers and every task of a swarm service, on any node), and **Log history**
-searches it:
+searches it. It does the same for every workstation on this server
+([its Logs tab](workstations.md#logs-and-self-test)) and for Homerun's own
+containers ([System Logs](system-logs.md)), whose history pages work like this
+one without the Revision filter:
 
 - **Search**: text the line contains, case-insensitive, or a POSIX regular
   expression with **Regular expression** ticked.

@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
 	import { Textarea } from "@orochibraru/ui/textarea";
 
-	import { formatBytes } from "#lib/formatting.js";
+	import VolumeDiskSelect from "#lib/components/volume-disk-select.svelte";
 	import { getHostDisks } from "#lib/remote/volumes.remote.js";
 	import { slugify } from "#lib/slug.js";
 
@@ -21,7 +20,6 @@
 	let sourceEdited = $state(false);
 	let disk = $state("");
 
-	const DOCKER_DEFAULT = "docker";
 	const hostDisks = getHostDisks();
 	const disks = $derived(hostDisks.current ?? []);
 	const chosenDisk = $derived(disks.find((d) => d.mountPoint === disk));
@@ -38,14 +36,6 @@
 				: `homerun-${slugify(name)}`
 			: "",
 	);
-
-	function diskLabel(mountPoint: string): string {
-		const found = disks.find((d) => d.mountPoint === mountPoint);
-		if (!found) {
-			return "Docker's default location";
-		}
-		return `${found.mountPoint} · ${formatBytes(found.freeBytes)} free of ${formatBytes(found.totalBytes)}`;
-	}
 
 	$effect(() => {
 		if (!sourceEdited) {
@@ -120,26 +110,7 @@
 {#if disks.length > 1}
 	<div>
 		<p class={label}>Disk</p>
-		<Select.Root
-			type="single"
-			bind:value={
-				() => disk || DOCKER_DEFAULT,
-				(value) => {
-					disk = value === DOCKER_DEFAULT ? "" : value;
-				}
-			}
-		>
-			<Select.Trigger class="w-full">{diskLabel(disk)}</Select.Trigger>
-			<Select.Content>
-				<Select.Item label="Docker's default location" value={DOCKER_DEFAULT} />
-				{#each disks as option (option.mountPoint)}
-					<Select.Item
-						label={diskLabel(option.mountPoint)}
-						value={option.mountPoint}
-					/>
-				{/each}
-			</Select.Content>
-		</Select.Root>
+		<VolumeDiskSelect {disks} bind:value={disk} />
 		{#if kind === "volume"}
 			<input name="disk" type="hidden" value={disk} />
 		{/if}

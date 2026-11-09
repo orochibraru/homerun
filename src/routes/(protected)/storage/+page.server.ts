@@ -6,6 +6,7 @@ import { Logger } from "#lib/logger.js";
 import { parseListQuery } from "#lib/server/list-query.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
 import { CronService } from "#lib/services/cron.service.js";
+import { VolumeSettingsService } from "#lib/services/volume-settings.service.js";
 
 const logger = new Logger("Storage");
 
@@ -24,10 +25,10 @@ async function runOp(
 	op: BulkOp,
 	vol: StorageVolumeDTO,
 	userId: string,
+	deleteBackups: boolean,
 ): Promise<"done" | "skipped"> {
 	if (op === "delete") {
-		await vol.delete();
-		logger.info(`Storage volume deleted: volume=${vol.id} user=${userId}`);
+		await VolumeSettingsService.delete(vol, { deleteBackups, userId });
 		return "done";
 	}
 	const backupEnabled = op === "enableBackup";
@@ -57,7 +58,9 @@ async function runBulk(formData: FormData, userId: string) {
 		await Promise.all(ids.map((id) => StorageVolumeDTO.get(id)))
 	).filter((vol): vol is StorageVolumeDTO => vol !== null);
 	const settled = await Promise.allSettled(
-		found.map((vol) => runOp(op as BulkOp, vol, userId)),
+		found.map((vol) =>
+			runOp(op as BulkOp, vol, userId, formData.get("deleteBackups") === "on"),
+		),
 	);
 
 	const succeeded = settled.filter(
@@ -117,11 +120,11 @@ export const actions = {
 			return fail(404, { error: "Volume not found." });
 		}
 
-		await vol.delete();
-		logger.info(
-			`Storage volume deleted: volume=${volumeId} user=${locals.user.id}`,
-		);
-		return { success: true };
+		const purge = await VolumeSettingsService.delete(vol, {
+			deleteBackups: data.get("deleteBackups") === "on",
+			userId: locals.user.id,
+		});
+		return { backupsQueued: purge !== null, success: true };
 	},
 
 	bulk: async ({ request, locals }) => {

@@ -13,14 +13,19 @@
 			href: resolve("/(protected)/workstations/[workstationId]", {
 				workstationId: ws.id,
 			}),
+			description: "Status, auto-stop, sign-in and the IDE password",
 			icon: LayoutGrid,
 			id: "overview",
 			label: "Overview",
+			hasWarning: Boolean(ws.lastError),
+			summary:
+				ws.lastError ?? (ws.desiredState === "running" ? "Started" : "Stopped"),
 		},
 		{
 			href: resolve("/(protected)/workstations/[workstationId]/logs", {
 				workstationId: ws.id,
 			}),
+			description: "The container's live output",
 			icon: FileText,
 			id: "logs",
 			label: "Logs",
@@ -29,6 +34,7 @@
 			href: resolve("/(protected)/workstations/[workstationId]/observability", {
 				workstationId: ws.id,
 			}),
+			description: "CPU and memory, now and over time",
 			icon: Activity,
 			id: "observability",
 			label: "Observability",
@@ -37,6 +43,7 @@
 			href: resolve("/(protected)/workstations/[workstationId]/settings", {
 				workstationId: ws.id,
 			}),
+			description: "Image, resources, login wall, self-test and danger zone",
 			icon: Settings,
 			id: "settings",
 			label: "Settings",

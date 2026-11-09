@@ -6,7 +6,9 @@
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";
+	import ErrorBoundary from "#lib/components/error-boundary.svelte";
 	import LiveLogViewer from "#lib/components/live-log-viewer.svelte";
+	import LogVolumeStrip from "#lib/components/log-volume-strip.svelte";
 	import { workloadId } from "#lib/service-state.js";
 	import { title } from "#lib/store/title.js";
 	import { enhanceToast } from "#lib/toast.js";
@@ -17,6 +19,10 @@
 
 	let resolving = $state(false);
 </script>
+
+<ErrorBoundary title="The log volume didn't load.">
+	<LogVolumeStrip serviceId={data.service.id} />
+</ErrorBoundary>
 
 <div class="mb-4">
 	<LiveLogViewer

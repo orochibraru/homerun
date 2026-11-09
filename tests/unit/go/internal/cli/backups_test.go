@@ -24,3 +24,12 @@ func TestBackupRowsTimesARunningRunUpToNow(t *testing.T) {
 		t.Fatalf("failed row = %v", got)
 	}
 }
+
+func TestDiskRowsShowSizesInGiB(t *testing.T) {
+	rows := cli.DiskRows([]cli.HostDisk{
+		{Device: "/dev/sdb1", Filesystem: "ext4", FreeBytes: 3 << 30, MountPoint: "/mnt/data", TotalBytes: 10 << 30},
+	})
+	if got := rows[0]; got["mountPoint"] != "/mnt/data" || got["free"] != "3.0 GiB" || got["total"] != "10.0 GiB" || got["device"] != "/dev/sdb1" {
+		t.Fatalf("row = %v", got)
+	}
+}

@@ -29,6 +29,8 @@ const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
 const { InstanceSettingsDTO } =
 	await import("../../../src/lib/dto/instance-settings-dto");
 const { StatusPageDTO } = await import("../../../src/lib/dto/status-page-dto");
+const { PackageRegistryDTO } =
+	await import("../../../src/lib/dto/package-registry-dto");
 const helpers = await import("../../../src/lib/services/deploy/helpers");
 const { PangolinService } =
 	await import("../../../src/lib/services/pangolin.service");
@@ -65,6 +67,7 @@ beforeEach(() => {
 			toJSON: () => ({}),
 		} as unknown as Awaited<ReturnType<typeof InstanceSettingsDTO.get>>),
 		spyOn(StatusPageDTO, "list").mockResolvedValue([]),
+		spyOn(PackageRegistryDTO, "list").mockResolvedValue([]),
 	);
 });
 

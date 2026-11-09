@@ -6,6 +6,7 @@
 	import MailDomainSelect from "#lib/components/mail-domain-select.svelte";
 	import MailMailboxFields from "#lib/components/mail-mailbox-fields.svelte";
 	import PasswordField from "#lib/components/password-field.svelte";
+	import { MAIL_MAILBOX_KINDS } from "#lib/mail.js";
 	import { enhanceToast } from "#lib/toast.js";
 
 	const { data, form } = $props();
@@ -16,6 +17,7 @@
 	});
 	let password = $state("");
 	let submitting = $state(false);
+	let kind = $state<"mailbox" | "noreply">("mailbox");
 
 	const domainName = $derived(
 		data.domains.find((domain) => domain.id === domainId)?.name ?? "",
@@ -35,19 +37,41 @@
 		onStart: () => {
 			submitting = true;
 		},
-		success: "Mailbox added. The mail server picks it up in a moment.",
+		success: "Address added. The mail server picks it up in a moment.",
 	})}
 >
 	<div>
-		<h2 class="text-text text-sm font-semibold">Add a mailbox</h2>
+		<h2 class="text-text text-sm font-semibold">Add an address</h2>
 		<p class="text-text-muted mt-1 text-xs">
-			People sign in to it with the full address and this password, over IMAP
-			and SMTP.
+			{kind === "noreply"
+				? "Apps sign in to SMTP with the full address and this password to send from it. Mail sent to it is refused."
+				: "People sign in to it with the full address and this password, over IMAP and SMTP."}
 		</p>
 	</div>
 	{#if form?.error}
 		<p class="text-sm text-red-500">{form.error}</p>
 	{/if}
+	<fieldset class="grid gap-2 sm:grid-cols-2">
+		<legend class="sr-only">Category</legend>
+		{#each MAIL_MAILBOX_KINDS as option (option.value)}
+			<label
+				class="flex cursor-pointer flex-col gap-1 rounded-md border p-3 text-sm transition-all {kind ===
+				option.value
+					? 'border-accent bg-accent-light text-accent'
+					: 'border-border text-text-muted'}"
+			>
+				<input
+					class="sr-only"
+					name="kind"
+					type="radio"
+					value={option.value}
+					bind:group={kind}
+				/>
+				<span class="font-medium">{option.label}</span>
+				<span class="text-text-muted text-xs">{option.description}</span>
+			</label>
+		{/each}
+	</fieldset>
 	<div class="grid gap-4 sm:grid-cols-2">
 		<div>
 			<label class={labelClass} for="mailLocalPart">Address</label>
@@ -57,7 +81,7 @@
 					class={inputClass}
 					autocomplete="off"
 					name="localPart"
-					placeholder="jane"
+					placeholder={kind === "noreply" ? "noreply" : "jane"}
 					required
 				/>
 				<span class="text-text-muted shrink-0 text-sm">@{domainName}</span>
@@ -75,11 +99,13 @@
 		bind:value={password}
 	/>
 	<MailMailboxFields
-		values={{ displayName: null, enabled: true, quotaMb: null }}
+		{kind}
+		owners={data.owners}
+		values={{ displayName: null, enabled: true, ownerId: null, quotaMb: null }}
 	/>
 	<div class="flex justify-end">
 		<Button disabled={submitting} type="submit" variant="outline"
-			>Add mailbox</Button
+			>{kind === "noreply" ? "Add noreply address" : "Add mailbox"}</Button
 		>
 	</div>
 </form>

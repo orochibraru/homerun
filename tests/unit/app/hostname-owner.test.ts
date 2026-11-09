@@ -17,6 +17,8 @@ mock.module("$app/env", () => ({
 const { config } = await import("../../../src/lib/config");
 const { InstanceSettingsDTO } =
 	await import("../../../src/lib/dto/instance-settings-dto");
+const { PackageRegistryDTO } =
+	await import("../../../src/lib/dto/package-registry-dto");
 const { RedirectDTO } = await import("../../../src/lib/dto/redirect-dto");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
@@ -31,6 +33,9 @@ type Stack = Awaited<ReturnType<typeof StackDTO.list>>[number];
 type Redirect = Awaited<ReturnType<typeof RedirectDTO.list>>[number];
 type Ws = Awaited<ReturnType<typeof WorkstationDTO.listAll>>[number];
 type Page = Awaited<ReturnType<typeof StatusPageDTO.list>>[number];
+type PackageRegistry = Awaited<
+	ReturnType<typeof PackageRegistryDTO.list>
+>[number];
 
 const restorers: { mockRestore: () => void }[] = [];
 const originalOrigin = config.auth.origin;
@@ -89,6 +94,13 @@ beforeEach(() => {
 		spyOn(StatusPageDTO, "list").mockResolvedValue([
 			{ domains: ["status.example.com"], name: "Status" } as unknown as Page,
 		]),
+		spyOn(PackageRegistryDTO, "list").mockResolvedValue([
+			{
+				kind: "npm",
+				publicHost: "npm.example.com",
+			} as unknown as PackageRegistry,
+			{ kind: "pypi", publicHost: null } as unknown as PackageRegistry,
+		]),
 		spyOn(WorkstationDTO, "listAll").mockResolvedValue([
 			{
 				id: "w1",
@@ -112,9 +124,10 @@ afterEach(() => {
 });
 
 describe("coreHosts", () => {
-	test("names the dashboard, the core services' public hosts and every status page domain", async () => {
+	test("names the dashboard, the core services' and package registries' public hosts and every status page domain", async () => {
 		expect(Object.fromEntries(await coreHosts())).toEqual({
 			"homerun.example.com": "the Homerun dashboard",
+			"npm.example.com": "the npm Registry",
 			"registry.example.com": "the Docker registry",
 			"s3.example.com": "object storage",
 			"status.example.com": 'the status page "Status"',

@@ -144,6 +144,7 @@
 				{ "slug": "system-logs", "icon": "scroll-text" },
 				{ "slug": "docker-cleanup", "icon": "brush-cleaning" },
 				{ "slug": "registry", "icon": "warehouse" },
+				{ "slug": "package-registries", "icon": "package" },
 				{ "slug": "notifications", "icon": "bell" },
 				{ "slug": "status-pages", "icon": "heart-pulse" },
 				{ "slug": "upgrading", "icon": "circle-arrow-up" },

@@ -16,6 +16,7 @@ import (
 	"github.com/orochibraru/homerun/internal/agent"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/jobs"
+	"github.com/orochibraru/homerun/internal/jobs/backup"
 	"github.com/orochibraru/homerun/internal/jobs/imagescan"
 	"github.com/orochibraru/homerun/internal/tracing"
 	"go.opentelemetry.io/otel/attribute"
@@ -266,13 +267,19 @@ func (r *run) deploy(ctx context.Context) error {
 	}
 	r.result.Image, r.result.Tag, r.result.Digest = resolved.image, resolved.tag, resolved.digest
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String("homerun.deploy.image", resolved.ref()))
+	seeds, err := r.missingSeeds(ctx)
+	if err != nil {
+		return err
+	}
 	if len(r.spec.Placements) > 0 {
 		if err := tracing.Stage(ctx, "place volumes", r.placeVolumes); err != nil {
 			return err
 		}
 	}
-	if len(r.spec.Seeds) > 0 {
-		if err := tracing.Stage(ctx, "seed volumes", r.seedVolumes); err != nil {
+	if len(seeds) > 0 {
+		if err := tracing.Stage(ctx, "seed volumes", func(ctx context.Context) error {
+			return r.seedVolumes(ctx, seeds)
+		}); err != nil {
 			return err
 		}
 	}
@@ -338,28 +345,120 @@ func (r *run) placeVolumes(ctx context.Context) error {
 	return nil
 }
 
-// seedVolumes fills each seeded volume that doesn't exist yet with a copy of
-// its origin, so a preview's first deploy starts from its parent's data and
-// later deploys keep what the preview wrote. A failed copy removes the half
-// copied volume so the next deploy tries again.
-func (r *run) seedVolumes(ctx context.Context) error {
+// missingSeeds is the seeded volumes that don't exist yet, read before any
+// placement creates them on their disk, so a copy placed on a disk is still
+// filled.
+func (r *run) missingSeeds(ctx context.Context) ([]VolumeSeed, error) {
+	var missing []VolumeSeed
 	for _, seed := range r.spec.Seeds {
 		exists, err := r.docker.VolumeExists(ctx, seed.Source)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if exists {
+		if !exists {
+			missing = append(missing, seed)
+		}
+	}
+	return missing, nil
+}
+
+// seedVolumes fills each seed with a copy of its origin, so a preview's first
+// deploy starts from its parent's data and a mount moved onto a duplicate
+// starts from the original's. The service's running containers or swarm
+// tasks are stopped around the copies, so a database's copy is consistent,
+// and started again before the rollout. A failed copy removes the half
+// copied volume so the next deploy tries again.
+func (r *run) seedVolumes(ctx context.Context, seeds []VolumeSeed) error {
+	running, err := r.runningWorkloads(ctx)
+	if err != nil {
+		return err
+	}
+	return backup.StopAround(running,
+		func(workload stoppable) error {
+			if err := workload.stop(ctx); err != nil {
+				return fmt.Errorf("couldn't stop %s before copying its volume: %w", workload.name, err)
+			}
+			r.progress.line(fmt.Sprintf("Stopped %s while its volume is copied", workload.name))
+			return nil
+		},
+		func(workload stoppable) error {
+			if err := workload.start(context.WithoutCancel(ctx)); err != nil {
+				return err
+			}
+			r.progress.line(fmt.Sprintf("Started %s again", workload.name))
+			return nil
+		},
+		func(workload stoppable, err error) {
+			r.progress.line(fmt.Sprintf("Couldn't start %s again after the copy: %s", workload.name, err))
+		},
+		func() error {
+			for _, seed := range seeds {
+				r.progress.line(fmt.Sprintf("Copying %s into %s", seed.Name, seed.Source))
+				started := time.Now()
+				if err := r.docker.CopyVolume(ctx, seed.From, seed.Source, seed.Image); err != nil {
+					_ = r.docker.RemoveVolume(context.WithoutCancel(ctx), seed.Source)
+					return fmt.Errorf("couldn't copy %s into %s: %w", seed.Name, seed.Source, err)
+				}
+				r.progress.line(fmt.Sprintf("Copied %s in %s", seed.Name, time.Since(started).Round(time.Second)))
+			}
+			return nil
+		},
+	)
+}
+
+// stoppable is one of the service's running workloads, stopped around a copy.
+type stoppable struct {
+	name  string
+	start func(context.Context) error
+	stop  func(context.Context) error
+}
+
+// runningWorkloads is the service's running containers and its swarm
+// services with replicas, whichever mode it ran in before this deploy.
+func (r *run) runningWorkloads(ctx context.Context) ([]stoppable, error) {
+	label := serviceIDLabel + "=" + r.spec.ServiceID
+	containers, err := r.docker.ListContainersByLabel(ctx, label)
+	if err != nil {
+		return nil, err
+	}
+	var running []stoppable
+	for _, container := range containers {
+		if container.State != "running" {
 			continue
 		}
-		r.progress.line(fmt.Sprintf("Copying %s into %s", seed.Name, seed.Source))
-		started := time.Now()
-		if err := r.docker.CopyVolume(ctx, seed.From, seed.Source, seed.Image); err != nil {
-			_ = r.docker.RemoveVolume(context.WithoutCancel(ctx), seed.Source)
-			return fmt.Errorf("couldn't copy %s into %s: %w", seed.Name, seed.Source, err)
-		}
-		r.progress.line(fmt.Sprintf("Copied %s in %s", seed.Name, time.Since(started).Round(time.Second)))
+		id := container.ID
+		running = append(running, stoppable{
+			name:  "the container " + shortContainerID(id),
+			start: func(ctx context.Context) error { return r.docker.EnsureContainerStarted(ctx, id) },
+			stop:  func(ctx context.Context) error { return r.docker.StopContainer(ctx, id) },
+		})
 	}
-	return nil
+	services, err := r.docker.SwarmServicesByLabel(ctx, label)
+	if err != nil {
+		return nil, err
+	}
+	for _, service := range services {
+		id := service.ID
+		replicas, err := r.docker.SwarmServiceReplicas(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if replicas == 0 {
+			continue
+		}
+		running = append(running, stoppable{
+			name:  "the swarm service " + service.Spec.Name,
+			start: func(ctx context.Context) error { return r.docker.ScaleSwarmService(ctx, id, replicas) },
+			stop:  func(ctx context.Context) error { return r.docker.ScaleSwarmService(ctx, id, 0) },
+		})
+	}
+	return running, nil
+}
+
+// shortContainerID is the first 12 characters of a container id, as docker
+// ps shows it.
+func shortContainerID(id string) string {
+	return id[:min(len(id), 12)]
 }
 
 // asMap round-trips Result through JSON into a map, for the job's stored result.

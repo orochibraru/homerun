@@ -169,6 +169,9 @@ resource "homerun_service" "example" {
 - `stack_id` (String)
 - `strip_path_domains` (List of String) Domains with a path whose prefix is
   stripped before the request reaches the container (/api/v2 arrives as /v2).
+- `swarm_placement` (Object) Swarm mode only: which nodes run the replicas. See
+  the nested schema for `swarm_placement` below. Defaults to
+  `{"constraints":[],"preferences":[],"roles":["manager","worker"]}`.
 - `tag` (String) Defaults to `"latest"`.
 - `template_id` (String) Create the service from this template (its image,
   variables, volumes and linked services), then apply the other attributes.
@@ -194,6 +197,17 @@ resource "homerun_service" "example" {
   dashboard, the API or the CLI. Pinning here is setting tag.
 - `pinned_locally` (Boolean)
 - `registry_password_set` (Boolean)
+
+### Nested schema for `swarm_placement`
+
+Optional:
+
+- `constraints` (List of String) Node label constraints, key==value or
+  key!=value, all of which a node has to match. Defaults to `[]`.
+- `preferences` (List of String) Node label keys the replicas are spread evenly
+  over. Defaults to `[]`.
+- `roles` (List of String) Node roles allowed to run them: manager, worker or
+  both. Defaults to `["manager","worker"]`.
 
 ### Nested schema for `exposed_ports`
 

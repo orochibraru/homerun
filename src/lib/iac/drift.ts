@@ -5,8 +5,8 @@ import {
 	type IacResource,
 	iacResource,
 	importIdOf,
-	toStateValue,
 } from "#lib/iac/resources.js";
+import { toStateValue } from "#lib/iac/state-value.js";
 
 export interface StateInstance {
 	address: string;
@@ -163,8 +163,22 @@ function label(resource: IacResource, object: LiveObject): string {
  * state manages (unmanaged). Write-only attributes (secrets) can't be
  * compared and are left out, and a singleton (instance settings) is never
  * unmanaged: it always exists, whether a state manages it or not.
+ *
+ * @throws When the body isn't a JSON object.
  */
 export function detectDrift(body: string, inventory: Inventory): DriftReport {
+	return compareInstances(homerunInstances(body), inventory);
+}
+
+/**
+ * The drift report of state instances (whichever tool wrote them, their
+ * attributes keyed by Terraform name) against what's running. An attribute
+ * an instance doesn't carry is left out of the comparison.
+ */
+export function compareInstances(
+	instances: StateInstance[],
+	inventory: Inventory,
+): DriftReport {
 	const report: DriftReport = {
 		drifted: [],
 		inSync: 0,
@@ -172,7 +186,7 @@ export function detectDrift(body: string, inventory: Inventory): DriftReport {
 		unmanaged: [],
 	};
 	const managed = new Map<string, Set<string>>();
-	for (const instance of homerunInstances(body)) {
+	for (const instance of instances) {
 		const resource = iacResource(instance.type);
 		if (!resource) {
 			continue;

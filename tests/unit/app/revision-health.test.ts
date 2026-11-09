@@ -28,6 +28,9 @@ const { NotificationChannelService } =
 type Deployment = NonNullable<Awaited<ReturnType<typeof DeploymentDTO.get>>>;
 type Service = NonNullable<Awaited<ReturnType<typeof ServiceDTO.get>>>;
 type Sample = Awaited<ReturnType<typeof DockerService.containerHealthSample>>;
+type ExitDiagnosis = NonNullable<
+	Awaited<ReturnType<typeof DockerService.containerDiagnosis>>
+>;
 type Enqueue = Parameters<
 	typeof RevisionHealthService.watch
 >[0]["enqueueRollback"];
@@ -160,6 +163,7 @@ function revisionRow(
 
 interface Setup {
 	dep: FakeDep & Deployment;
+	diagnosis?: ExitDiagnosis;
 	latestId?: string;
 	revisions?: ReturnType<typeof revisionRow>[];
 	samples: Sample[];
@@ -194,6 +198,16 @@ function setup(options: Setup) {
 				(queue.length > 1 ? queue.shift() : queue[0]) as Awaited<
 					ReturnType<typeof DockerService.swarmHealthSample>
 				>,
+		),
+	);
+	track(
+		spyOn(DockerService, "containerDiagnosis").mockResolvedValue(
+			options.diagnosis ?? null,
+		),
+	);
+	track(
+		spyOn(DockerService, "swarmDiagnosis").mockResolvedValue(
+			options.diagnosis ?? null,
 		),
 	);
 	const notify = track(
@@ -294,13 +308,21 @@ describe("RevisionHealthService.watch", () => {
 				revisionRow("d-redeploy", "app:1", 1000, "d-orig"),
 				revisionRow("d-orig", "app:1", 5000),
 			],
+			diagnosis: {
+				causes: ["It ran out of memory: raise its memory limit."],
+				exitCode: 137,
+				meaning: "killed by SIGKILL, most often for running out of memory",
+				oomKilled: false,
+				output: "loading model\nout of memory",
+			},
 			samples: [running(), running(), exited(137)],
 			svc: fakeService(),
 		});
 
 		await watch(dep, s.enqueueRollback);
 
-		const reason = "The container exited with code 137.";
+		const reason =
+			"The container exited with code 137: killed by SIGKILL, most often for running out of memory.";
 		expect(dep.settleHealth).toHaveBeenCalledWith("rolled_back", reason);
 		expect(s.enqueueRollback).toHaveBeenCalledWith({
 			rollbackOfDeploymentId: "d-orig",
@@ -310,6 +332,7 @@ describe("RevisionHealthService.watch", () => {
 		const logs = dep.appendLog.mock.calls.map((call) => String(call[0]));
 		expect(logs).toEqual([
 			`Revision unhealthy: ${reason}`,
+			"Its last output:\n  loading model\n  out of memory\nLikely cause: It ran out of memory: raise its memory limit.",
 			"Auto-rollback: redeploying revision d-orig (app:1).",
 		]);
 		expect(s.notify).toHaveBeenCalledWith({

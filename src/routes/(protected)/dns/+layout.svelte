@@ -15,6 +15,7 @@
 		{
 			href: resolve("dns"),
 			icon: Globe,
+			description: "Your domains and their records",
 			id: "domains",
 			label: "Domains",
 		},
@@ -22,12 +23,14 @@
 		{
 			href: resolve("dns/providers"),
 			icon: KeyRound,
+			description: "Cloudflare, Route 53 and other DNS accounts",
 			id: "providers",
 			label: "Providers",
 		},
 		{
 			href: resolve("dns/pangolin"),
 			icon: Waypoints,
+			description: "Domains routed through a Pangolin server",
 			id: "pangolin",
 			label: "Pangolin",
 		},

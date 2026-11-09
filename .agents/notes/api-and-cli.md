@@ -433,24 +433,52 @@ unit: its `tool` (`terraform`, `opentofu`, `pulumi`, `src/lib/iac/tools.ts`),
 its bucket, and an optional `scope` (`stack:<id>` / `service:<id>`) the Generate
 tab starts on. Every tab lives under `iac/[projectId]/` and switches on
 `usesHttpBackend(tool)`: Terraform and OpenTofu get the http backend's versions,
-lock, generated HCL and drift; Pulumi gets the `pulumi login` command and the
-bucket's access keys, and no generation or drift (Pulumi keeps its own
-checkpoint in the bucket, which nothing here reads). OpenTofu differs from
-Terraform only in the CLI name the pages and the generated README print
-(`GenerateOptions.cli`).
+lock, generated HCL and drift against the latest tfstate; Pulumi gets the
+`pulumi login` command, the bucket's access keys, a generated TypeScript program
+and drift against its own checkpoint. OpenTofu differs from Terraform only in
+the CLI name the pages and the generated README print (`GenerateOptions.cli`).
+
+**Pulumi goes through the Terraform bridge, there's no Pulumi provider.**
+`pulumi package add terraform-provider orochibraru/homerun` generates the
+`@pulumi/homerun` SDK from the registry provider, so `src/lib/iac/pulumi.ts`
+derives every Pulumi name from the spec the way the bridge does: class
+`pulumiClass` (`homerun_service_environment` is `ServiceEnvironment`), token
+`pulumiType` (`homerun:index/serviceEnvironment:ServiceEnvironment`, what the
+checkpoint records), property `pulumiProperty`: camelCase of the Terraform name,
+**pluralized for a list** (`cap_add` is `capAdds`, `command` is `commands`).
+That last rule is a real finding, checked against the schema
+`pulumi package get-schema terraform-provider orochibraru/homerun` prints: every
+attribute the published provider had matched, a plain camelCase didn't.
+`generatePulumiProgram` reuses `configuredAttributes` from `generate.ts` (the
+same defaults, references and secret variables as the HCL, through the
+`RenderContext`'s `reference`/`secret` callbacks) and writes
+`new homerun.X(name, args, { import: id })` per object, stacks parents first so
+no `const` is read before it's declared; secrets become `config.requireSecret`
+set by a `secrets.sh`. A sample program type-checked clean against the real
+generated SDK. The drift check reads
+`<prefix>/<slug>/.pulumi/stacks/<project>/<stack>.json` (or a legacy
+`<stack>.json`, gzipped when it ends in `.gz`) through
+`IacStateService.pulumiStacks`/`pulumiCheckpoint`, maps the custom `homerun:*`
+resources' outputs back to Terraform names (`pulumiInstances`), and runs the
+same `compareInstances` as the tfstate path. Encrypted outputs (the
+`4dabf18193072939515e22adb298388d` secret signature) and outputs the state
+doesn't carry are skipped, never reported as drift.
 
 **The provider is generic.** `terraform/provider` is its own Go module (module
 path `github.com/orochibraru/homerun/terraform/provider`), kept out of the root
 `go.mod` like `tools/go`, since terraform-plugin-framework pulls grpc and
 friends into the shipped binaries' minimum-version selection otherwise. One
 `specResource` and one `specDataSource` serve every type: schema from the spec,
-values converted between `tftypes` and JSON (`convert.go`), create sends every
-known plan value, update only the changed ones (a cleared one as `null`), state
-after apply keeps the planned value where it's known (no "inconsistent result"
-from server normalisation) and takes the API's answer for the rest, read
-refreshes everything the API returns and keeps write-only/create-only ones.
-Optional attributes are Optional+Computed with `UseStateForUnknown`, so leaving
-one out never causes a perpetual diff (and never resets it either: documented).
+values converted between `tftypes` and JSON (`convert.go`; an `objects` kind is
+a list nested attribute, an `object` kind like `swarm_placement` a single nested
+one, whose nested `strings` fields with a default are Optional+Computed with
+that default so a field left out never diffs), create sends every known plan
+value, update only the changed ones (a cleared one as `null`), state after apply
+keeps the planned value where it's known (no "inconsistent result" from server
+normalisation) and takes the API's answer for the rest, read refreshes
+everything the API returns and keeps write-only/create-only ones. Optional
+attributes are Optional+Computed with `UseStateForUnknown`, so leaving one out
+never causes a perpetual diff (and never resets it either: documented).
 `template_id` replaces the resource only when it changes from a known value, so
 adding it to an imported service doesn't destroy it. `deploy_on_change` calls
 `POST /services/{id}/deploy` (an environment's id is a service id) and a failed

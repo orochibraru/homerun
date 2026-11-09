@@ -2,6 +2,7 @@ import { SECRET_MASK } from "#lib/formatting.js";
 import {
 	expression,
 	type HclBlock,
+	type HclExpression,
 	type HclValue,
 	quote,
 	renderHcl,
@@ -11,8 +12,8 @@ import {
 	type IacAttribute,
 	type IacResource,
 	importIdOf,
-	toStateValue,
 } from "#lib/iac/resources.js";
+import { toStateValue } from "#lib/iac/state-value.js";
 
 export type LiveObject = Record<string, unknown>;
 
@@ -198,7 +199,7 @@ function isEmpty(value: unknown): boolean {
 	);
 }
 
-interface SecretVariable {
+export interface SecretVariable {
 	description: string;
 	name: string;
 	type: "map(string)" | "string";
@@ -206,14 +207,19 @@ interface SecretVariable {
 	value: string | null;
 }
 
-interface RenderContext {
+/** What rendering an object's attributes needs: every object's local name, how to write a reference and a secret in the target language, and the secrets collected so far. */
+export interface RenderContext {
 	names: Map<string, Map<string, string>>;
+	/** The expression for the id of the object of `type` named `localName`. */
+	reference: (type: string, localName: string) => HclExpression;
+	/** The expression reading a secret variable. */
+	secret: (variable: SecretVariable) => HclExpression;
 	variables: SecretVariable[];
 }
 
 function variable(context: RenderContext, input: SecretVariable) {
 	context.variables.push(input);
-	return expression(`var.${input.name}`);
+	return context.secret(input);
 }
 
 /**
@@ -287,12 +293,13 @@ function attributeValue(
 	const value = object[attribute.name];
 	if (attribute.ref && typeof value === "string" && value) {
 		const target = context.names.get(attribute.ref)?.get(value);
-		return target ? expression(`${attribute.ref}.${target}.id`) : value;
+		return target ? context.reference(attribute.ref, target) : value;
 	}
 	if (
 		!attribute.required &&
 		(isEmpty(value) ||
-			JSON.stringify(value) === JSON.stringify(attribute.default))
+			JSON.stringify(toStateValue(attribute, value)) ===
+				JSON.stringify(toStateValue(attribute, attribute.default)))
 	) {
 		return;
 	}
@@ -302,20 +309,41 @@ function attributeValue(
 	return toStateValue(attribute, value) as HclValue;
 }
 
+/**
+ * The attributes a generated configuration sets on one object, in the
+ * spec's order: references to other generated objects as references,
+ * secrets as variables (collected in `context`), defaults and empty values
+ * left out, nested objects keyed by their Terraform names.
+ */
+export function configuredAttributes(
+	resource: IacResource,
+	object: LiveObject,
+	localName: string,
+	context: RenderContext,
+): [IacAttribute, HclValue][] {
+	const attributes: [IacAttribute, HclValue][] = [];
+	for (const attribute of resource.attributes) {
+		const value = attributeValue(attribute, object, localName, context);
+		if (value !== undefined) {
+			attributes.push([attribute, value]);
+		}
+	}
+	return attributes;
+}
+
 function resourceBlock(
 	resource: IacResource,
 	object: LiveObject,
 	localName: string,
 	context: RenderContext,
 ): HclBlock {
-	const attributes: [string, HclValue][] = [];
-	for (const attribute of resource.attributes) {
-		const value = attributeValue(attribute, object, localName, context);
-		if (value !== undefined) {
-			attributes.push([attribute.tf, value]);
-		}
-	}
-	return { attributes, labels: [resource.type, localName], type: "resource" };
+	return {
+		attributes: configuredAttributes(resource, object, localName, context).map(
+			([attribute, value]) => [attribute.tf, value],
+		),
+		labels: [resource.type, localName],
+		type: "resource",
+	};
 }
 
 function terraformBlock(options: GenerateOptions): HclBlock {
@@ -430,6 +458,8 @@ export function generateStructure(
 ): GeneratedFile[] {
 	const context: RenderContext = {
 		names: localNames(inventory),
+		reference: (type, localName) => expression(`${type}.${localName}.id`),
+		secret: (input) => expression(`var.${input.name}`),
 		variables: [],
 	};
 	const byFile = new Map<string, HclBlock[]>();

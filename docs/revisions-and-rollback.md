@@ -93,8 +93,12 @@ so is a service that isn't DNS resolvable, uses host networking or has
 healthchecks [turned off](services.md#health). An unhealthy revision is always
 marked in the Revisions section and reported (**Revision unhealthy**), and the
 reason is kept on the revision, so `homerun services revisions <id>` shows it
-too. With **Auto-rollback when a new revision is unhealthy** turned on under the
-service's Settings → Automation (off by default), Homerun instead redeploys the
-previous healthy revision with a different image, marks the new one as rolled
-back and sends **Rolled back**. A rollback that is itself unhealthy isn't rolled
-back again; a promoted preview is a new revision, not a rollback, so it is.
+too. Like a failed deploy's, the reason says what the container's exit code
+usually means (an out-of-memory kill, a missing command), and the revision's
+deploy log gets the workload's last 40 lines of output with a "Likely cause" for
+each well-known error found in them. With **Auto-rollback when a new revision is
+unhealthy** turned on under the service's Settings → Automation (off by
+default), Homerun instead redeploys the previous healthy revision with a
+different image, marks the new one as rolled back and sends **Rolled back**. A
+rollback that is itself unhealthy isn't rolled back again; a promoted preview is
+a new revision, not a rollback, so it is.

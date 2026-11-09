@@ -4,13 +4,14 @@
 repos", and it's how a private repo works without putting a token in the URL. It
 takes two steps, done by different people:
 
-1. **Someone with write access to Git providers registers the provider**, once.
-   For **GitHub**, give the app a name (and an organization, or leave it empty
-   for your personal account) and click **Create GitHub App**: GitHub asks you
-   to confirm the app, then to install it on the repositories Homerun should
-   see. Nothing to copy by hand. The app only asks for what Homerun uses: read
-   access to code, commit statuses and checks, and write access to repository
-   webhooks, pull requests and deployments (the last two for
+1. **Someone with write access to Git providers registers the provider**, once,
+   from **New provider**, which opens its own page. For **GitHub**, give the app
+   a name (and an organization, or leave it empty for your personal account) and
+   click **Create GitHub App**: GitHub asks you to confirm the app, then to
+   install it on the repositories Homerun should see. Nothing to copy by hand.
+   The app only asks for what Homerun uses: read access to code, commit statuses
+   and checks, and write access to repository webhooks, pull requests and
+   deployments (the last two for
    [pull request previews](pull-request-previews.md)). To give it more
    repositories later, change the installation on GitHub. **An app created
    before previews reported to GitHub** lacks the pull request and deployment
@@ -23,14 +24,15 @@ takes two steps, done by different people:
    Homerun takes it over and updates its secret and events instead of adding a
    second one, which GitHub and Gitea refuse. For GitLab, self-hosted Gitea
    (which also wants its base URL) or Bitbucket, register an OAuth application
-   on that provider's own site and paste the client id and secret in. The page
-   prints the exact callback URL to register on the provider's side.
+   on that provider's own site and paste the client id and secret in. Adding it
+   opens the provider's page, which prints the exact callback URL to register on
+   the provider's side.
 2. **Each person connects their own account** from the same page, one click
    through the provider's consent screen. Connections are per-account: your
    token is yours, and another user connecting to the same provider gets their
    own.
 
-![Git Providers, with the Add provider form open above a registered provider and its Connect button](images/git-providers.webp)
+![Git Providers, listing a registered provider with its Connect button](images/git-providers.webp)
 
 Once connected, a service's **Environments & Revisions → Source** section (and
 the new-service wizard) picks the repository and branch from that account

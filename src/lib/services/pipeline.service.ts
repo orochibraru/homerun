@@ -20,6 +20,7 @@ import {
 	type PipelineRateRule,
 } from "#lib/pipelines/types.js";
 import type { Repository } from "#lib/server/db/schema.js";
+import type { ListQuery, PagedResult } from "#lib/server/list-query.js";
 import { providerApiBase } from "#lib/status-checks.js";
 import { pipelineSpanToken } from "#lib/tracing/ingest-token.js";
 
@@ -27,6 +28,10 @@ import {
 	enabledGitProvider,
 	GitProviderService,
 } from "./git-provider.service.ts";
+import {
+	type PipelineDeliveryResult,
+	PipelineWebhookService,
+} from "./pipeline-webhook.service.ts";
 import { QueueService } from "./queue.service.ts";
 import { TracingService } from "./tracing.service.ts";
 
@@ -48,6 +53,15 @@ export interface RepositoryPipelines {
 	services: LinkedService[];
 	stats: PipelineStats | null;
 }
+
+export type RepositorySummary = Repository & {
+	linkedServices: LinkedService[];
+	stats: PipelineStats | null;
+};
+
+export type PipelineWebhookResult =
+	| Exclude<PipelineDeliveryResult, { status: "sync" }>
+	| { jobId: string; status: "queued" };
 
 export interface GlobalPipelineOverview {
 	allTime: PipelineStats;
@@ -139,10 +153,12 @@ class PipelineServiceClass {
 
 	/**
 	 * Starts watching a repository picked from a provider the user is
-	 * connected to, links the services already building from it, and queues
-	 * its first sync. Watching one that's already watched returns it as is.
+	 * connected to, links the services already building from it, registers
+	 * its CI webhook and queues its first sync. Watching one that's already
+	 * watched returns it as is.
 	 *
-	 * @throws When the provider is gone or isn't one Homerun reads CI from.
+	 * @throws When the provider is gone, isn't one Homerun reads CI from, or
+	 * the user isn't connected to it.
 	 */
 	async watch(input: {
 		defaultBranch: string | null;
@@ -166,6 +182,11 @@ class PipelineServiceClass {
 				"Homerun reads GitHub Actions, GitLab CI and Gitea Actions; Bitbucket Pipelines isn't supported.",
 			);
 		}
+		if (
+			!(await GitConnectionDTO.getForUserAndProvider(input.userId, provider.id))
+		) {
+			throw new Error(`Connect ${provider.name} first.`);
+		}
 		const repo = await RepositoryDTO.create({
 			defaultBranch: input.defaultBranch,
 			fullName: input.fullName,
@@ -180,11 +201,39 @@ class PipelineServiceClass {
 		await repo.setLinkedServices(
 			await RepositoryDTO.servicesBuildingFrom(provider.id, input.fullName),
 		);
+		await PipelineWebhookService.register(repo);
 		await this.enqueueSync(repo, input.userId);
 		logger.info(
 			`Watching repository=${repo.id} ${provider.kind}:${input.fullName} user=${input.userId}`,
 		);
 		return repo;
+	}
+
+	/** Stops watching a repository: removes its CI webhook from the provider, then deletes it with its stored runs. */
+	async unwatch(repo: RepositoryDTO): Promise<void> {
+		await PipelineWebhookService.remove(repo);
+		await repo.delete();
+	}
+
+	/**
+	 * Handles one delivery to a repository's CI webhook: once it's verified
+	 * as a CI event, queues a sync as the user who added the repository, so
+	 * a run shows up as soon as it starts and finishes rather than at the
+	 * next poll.
+	 */
+	async handleWebhook(
+		repo: RepositoryDTO | null,
+		headers: Headers,
+		rawBody: string,
+	): Promise<PipelineWebhookResult> {
+		const result = PipelineWebhookService.check(repo, headers, rawBody);
+		if (result.status !== "sync") {
+			return result;
+		}
+		return {
+			jobId: await this.enqueueSync(result.repo, result.repo.userId),
+			status: "queued",
+		};
 	}
 
 	/**
@@ -319,7 +368,8 @@ class PipelineServiceClass {
 	/**
 	 * Saves whether the repository's runs are synced, its runner rates and
 	 * the services linked to it, then re-costs every stored run at the new
-	 * rates. Blank rates go back to the provider's defaults.
+	 * rates. Blank rates go back to the provider's defaults. A CI webhook
+	 * that couldn't be registered before is tried again.
 	 *
 	 * @throws When a rate line doesn't parse.
 	 */
@@ -334,6 +384,9 @@ class PipelineServiceClass {
 			...(input.enabled ? {} : { pipelinesError: null }),
 		});
 		await repo.setLinkedServices(input.serviceIds);
+		if (!repo.toJSON().webhookId) {
+			await PipelineWebhookService.register(repo);
+		}
 		const effective = this.rates(repo);
 		for (const dto of await PipelineRunDTO.listForRepository(repo.id)) {
 			const { costUsd, jobs } = recostJobs(dto.toJSON().jobs, effective);
@@ -362,6 +415,27 @@ class PipelineServiceClass {
 			ratesCustom: repo.toJSON().pipelineRates !== null,
 			window,
 			workflows,
+		};
+	}
+
+	/** One page of watched repositories, each with its linked services and its totals over the last 30 days (null before any run). */
+	async repositoryPage(
+		query: ListQuery,
+		now = new Date(),
+	): Promise<PagedResult<RepositorySummary>> {
+		const since = new Date(now.getTime() - STATS_WINDOW_DAYS * DAY_MS);
+		const [paged, perRepository, linked] = await Promise.all([
+			RepositoryDTO.listPaged(query),
+			PipelineRunDTO.byRepository(since),
+			RepositoryDTO.linkedServicesByRepository(),
+		]);
+		return {
+			...paged,
+			items: paged.items.map((repo) => ({
+				...repo.toJSON(),
+				linkedServices: linked.get(repo.id) ?? [],
+				stats: perRepository.get(repo.id) ?? null,
+			})),
 		};
 	}
 
