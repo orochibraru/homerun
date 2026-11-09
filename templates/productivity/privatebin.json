@@ -3,7 +3,7 @@
 	"name": "PrivateBin",
 	"description": "Zero-knowledge pastebin: pastes are encrypted in the browser, the server never sees them.",
 	"image": "privatebin/nginx-fpm-alpine",
-	"tag": "2.1.0",
+	"tag": "2.1.1",
 	"containerPort": 8080,
 	"icon": "di:privatebin",
 	"tags": ["pastebin", "encryption", "sharing"],

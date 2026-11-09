@@ -3,7 +3,7 @@
 	"name": "Pocket ID",
 	"description": "Simple OIDC provider that signs users in with passkeys only. Set up the first admin at /setup.",
 	"image": "ghcr.io/pocket-id/pocket-id",
-	"tag": "v1",
+	"tag": "v2",
 	"containerPort": 1411,
 	"icon": "di:pocket-id",
 	"tags": ["oidc", "passkeys", "sso", "auth"],
