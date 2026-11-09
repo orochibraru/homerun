@@ -140,8 +140,8 @@ export function DockerMailMixin<
 		}
 
 		/**
-		 * Where Traefik keeps its `acme.json`, as a volume name or host path
-		 * the mail container can mount. Null when Traefik isn't found or its
+		 * The host directory where Traefik keeps its `acme.json`, which the
+		 * mail container mounts the file from. Null when Traefik isn't found or its
 		 * storage isn't an `acme.json` at the root of a mount.
 		 */
 		async mailCertSource(): Promise<string | null> {

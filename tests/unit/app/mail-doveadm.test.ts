@@ -6,6 +6,7 @@ const {
 	parseMailboxStatus,
 	parseQuota,
 	queuedMessages,
+	stoppedPrograms,
 } = await import("../../../src/lib/mail-doveadm");
 
 describe("parseMailboxStatus", () => {
@@ -62,6 +63,20 @@ describe("mail server probes", () => {
 		expect(queuedMessages("Mail queue is empty\n")).toBe(0);
 		expect(queuedMessages("-- 12 Kbytes in 3 Requests.\n")).toBe(3);
 		expect(queuedMessages("-- 1 Kbytes in 1 Request.\n")).toBe(1);
+	});
+
+	test("the supervisor programs that aren't running", () => {
+		const status = [
+			"dovecot                          RUNNING   pid 812, uptime 0:03:10",
+			"postfix                          STOPPED   Not started",
+			"",
+		].join("\n");
+		expect(stoppedPrograms(status)).toEqual(["postfix"]);
+		expect(
+			stoppedPrograms(
+				"dovecot   RUNNING   pid 1, uptime 1:00:00\npostfix   RUNNING   pid 2, uptime 1:00:00\n",
+			),
+		).toEqual([]);
 	});
 
 	test("an SMTP greeting starts with 220", () => {

@@ -96,6 +96,15 @@ export function queuedMessages(mailq: string): number {
 	return Number(QUEUE_SUMMARY_RE.exec(mailq)?.[1] ?? 0);
 }
 
+/** The programs in `supervisorctl status` output that aren't `RUNNING`. */
+export function stoppedPrograms(status: string): string[] {
+	return status
+		.split("\n")
+		.map((line) => line.trim().split(/\s+/))
+		.filter(([name, state]) => name && state !== "RUNNING")
+		.map(([name]) => name as string);
+}
+
 /** Whether an SMTP server's first line is a ready greeting. */
 export function isSmtpGreeting(line: string): boolean {
 	return line.startsWith("220");

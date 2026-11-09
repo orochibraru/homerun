@@ -19,7 +19,7 @@ const {
 
 const state = {
 	certDomain: "mail.example.com",
-	certSource: "homerun_traefik_certs",
+	certSource: "/var/lib/docker/volumes/homerun_traefik_certs/_data",
 	hostname: "mail.example.com",
 	postmaster: "postmaster@example.com",
 };
@@ -29,12 +29,13 @@ describe("acmeSourceFrom", () => {
 		{
 			Destination: "/letsencrypt",
 			Name: "homerun_traefik_certs",
+			Source: "/var/lib/docker/volumes/homerun_traefik_certs/_data",
 			Type: "volume",
 		},
 		{ Destination: "/etc/traefik/dynamic", Source: "/srv/dyn", Type: "bind" },
 	];
 
-	test("finds the volume holding the resolver's acme.json", () => {
+	test("finds the host directory holding the resolver's acme.json", () => {
 		expect(
 			acmeSourceFrom(
 				[
@@ -43,7 +44,7 @@ describe("acmeSourceFrom", () => {
 				mounts,
 				"letsencrypt",
 			),
-		).toBe("homerun_traefik_certs");
+		).toBe("/var/lib/docker/volumes/homerun_traefik_certs/_data");
 	});
 
 	test("null when the storage isn't an acme.json at a mount's root", () => {
@@ -68,9 +69,9 @@ describe("mail container", () => {
 		expect(mailEnv({ ...state, certSource: null })).toContain("SSL_TYPE=");
 	});
 
-	test("the certificate store is mounted read-only", () => {
+	test("only acme.json is mounted, read-only, so /etc/letsencrypt stays writable", () => {
 		expect(mailBinds(state)).toContain(
-			"homerun_traefik_certs:/etc/letsencrypt:ro",
+			"/var/lib/docker/volumes/homerun_traefik_certs/_data/acme.json:/etc/letsencrypt/acme.json:ro",
 		);
 		expect(mailBinds({ ...state, certSource: null })).toHaveLength(4);
 	});

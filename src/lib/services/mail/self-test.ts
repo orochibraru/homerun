@@ -7,6 +7,7 @@ import {
 	isSmtpGreeting,
 	type MailCheck,
 	queuedMessages,
+	stoppedPrograms,
 } from "#lib/mail-doveadm.js";
 import {
 	deliveryFailures,
@@ -68,14 +69,17 @@ class MailSelfTestServiceClass {
 	async run(): Promise<MailCheck[]> {
 		const hostname = await MailService.hostname();
 		const health = await DockerService.mailHealth().catch(() => null);
-		const running = health?.running === true;
+		const stopped = health?.running ? await this.#stoppedPrograms() : [];
+		const running = health?.running === true && stopped.length === 0;
 		const checks: MailCheck[] = [
 			{
 				detail: running
 					? "The container runs."
-					: health?.restarting
-						? `The container keeps restarting (${health.restartCount} restarts${health.exitCode === null ? "" : `, last exit code ${health.exitCode}`}): see the Logs tab.`
-						: "The container isn't running: turn the server on and add a mailbox.",
+					: stopped.length > 0
+						? `The container runs but ${stopped.join(" and ")} didn't start: see the Logs tab.`
+						: health?.restarting
+							? `The container keeps restarting (${health.restartCount} restarts${health.exitCode === null ? "" : `, last exit code ${health.exitCode}`}): see the Logs tab.`
+							: "The container isn't running: turn the server on and add a mailbox.",
 				id: "container",
 				label: "Mail server container",
 				state: running ? "ok" : "fail",
@@ -301,6 +305,17 @@ class MailSelfTestServiceClass {
 						"Couldn't reach another mail server on port 25: your provider most likely blocks it, ask them to lift it.",
 					state: "fail",
 				};
+	}
+
+	/** Which of Postfix and Dovecot aren't running inside the container, which stays up when docker-mailserver's setup fails. */
+	async #stoppedPrograms(): Promise<string[]> {
+		const result = await DockerService.execInMail([
+			"supervisorctl",
+			"status",
+			"postfix",
+			"dovecot",
+		]).catch(() => null);
+		return result ? stoppedPrograms(result.stdout) : [];
 	}
 
 	/** How many messages sit in Postfix's queue: a growing queue means mail isn't leaving. */

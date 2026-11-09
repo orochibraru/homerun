@@ -46,9 +46,10 @@ export interface InspectedMount {
 }
 
 /**
- * The volume (or host directory) holding Traefik's `acme.json` for
- * `resolver`, read off Traefik's command line and mounts, so the mail server
- * can mount it and reuse the certificate Traefik issues for its hostname.
+ * The host directory holding Traefik's `acme.json` for `resolver`, read off
+ * Traefik's command line and mounts, so the mail server can mount the file and
+ * reuse the certificate Traefik issues for its hostname. A volume's host path,
+ * not its name: a named volume can't be bound one file at a time.
  * Null when the storage file isn't called `acme.json` at the root of a mount,
  * which docker-mailserver can't read.
  */
@@ -64,9 +65,7 @@ export function acmeSourceFrom(
 	for (const mount of mounts) {
 		const destination = mount.Destination?.replace(TRAILING_SLASH_RE, "");
 		if (destination && storage === `${destination}/${ACME_FILE}`) {
-			return mount.Type === "volume"
-				? (mount.Name ?? null)
-				: (mount.Source ?? null);
+			return mount.Source ?? null;
 		}
 	}
 	return null;
@@ -199,7 +198,11 @@ export function mailLabels(state: MailDesiredState): Record<string, string> {
 	return labels;
 }
 
-/** The container's volume binds, Traefik's certificate store read-only when there is one. */
+/**
+ * The container's volume binds, plus Traefik's `acme.json` read-only when there
+ * is one. Only the file: docker-mailserver writes the extracted certificate
+ * next to it, so `/etc/letsencrypt` itself must stay writable.
+ */
 export function mailBinds(state: MailDesiredState): string[] {
 	const binds = [
 		`${MAIL_DATA_VOLUME}:${MAIL_DATA_DIR}`,
@@ -208,7 +211,9 @@ export function mailBinds(state: MailDesiredState): string[] {
 		`${MAIL_CONFIG_VOLUME}:${MAIL_CONFIG_DIR}`,
 	];
 	if (state.certSource && state.certDomain) {
-		binds.push(`${state.certSource}:${MAIL_CERT_DIR}:ro`);
+		binds.push(
+			`${state.certSource}/${ACME_FILE}:${MAIL_CERT_DIR}/${ACME_FILE}:ro`,
+		);
 	}
 	return binds;
 }

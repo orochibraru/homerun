@@ -1090,13 +1090,15 @@ in order. The core-services watch calls `MailService.reassert()` on a worker
 restart.
 
 TLS: the container carries a Traefik router for the mail hostname whose service
-is `noop@internal`, only so Traefik issues its certificate, and mounts the
-volume holding Traefik's `acme.json` (`acmeSourceFrom` reads the resolver's
-`storage` flag and Traefik's mounts) read-only at `/etc/letsencrypt` with
-`SSL_TYPE=letsencrypt`; docker-mailserver extracts the cert from `acme.json` and
-watches it for renewals. Until the certificate exists the container restarts on
-its own. With no `acme.json` to mount it runs with `SSL_TYPE=` empty, which the
-Server tab reports.
+is `noop@internal`, only so Traefik issues its certificate, and mounts Traefik's
+`acme.json` file (`acmeSourceFrom` reads the resolver's `storage` flag and the
+host path of Traefik's mount) read-only at `/etc/letsencrypt/acme.json` with
+`SSL_TYPE=letsencrypt`; docker-mailserver extracts the cert next to it, into
+`/etc/letsencrypt/live/`, and watches it for renewals. Mounting the whole
+directory read-only breaks that extraction. When docker-mailserver's setup
+fails, supervisord keeps the container up with Postfix and Dovecot stopped, so
+the self-test asks `supervisorctl` whether they run. With no `acme.json` to
+mount it runs with `SSL_TYPE=` empty, which the Server tab reports.
 
 DNS: `requiredMailRecords` (MX to the hostname, `v=spf1 mx ~all`, DKIM, DMARC)
 is checked against Cloudflare's and Google's resolvers on each domain page load

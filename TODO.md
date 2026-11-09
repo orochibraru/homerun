@@ -93,6 +93,12 @@ When done delete the entry, no bloat.
 - [ ] Mail server: verify the whole path against a live docker-mailserver
       (bcrypt `{BLF-CRYPT}` sign-in, rspamd DKIM signing with the path template,
       `acme.json` extraction when Traefik issued a wildcard)
+- [ ] Mail server: real client IPs behind Pangolin; the raw TCP resources don't
+      send PROXY protocol, so Postfix and rspamd see the tunnel's address and
+      IP-based checks (RBLs, SPF) don't work
+- [ ] Mail server: the self-test probes port 25 from the Homerun host, which
+      fails on home connections whose ISP blocks outbound 25 even when the
+      internet reaches it fine; say so instead of reporting it as broken
 - [ ] Mail server: a way for a mailbox owner to change their own password
 - [ ] Mail server: offer the `homerun-mail-data` volume to Backups like a
       service volume
