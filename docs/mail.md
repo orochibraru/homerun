@@ -25,7 +25,8 @@ it:
 
 1. Add the domain on the [DNS page](dns-automation.md) if it isn't there yet:
    mail domains are picked from that list, not typed in.
-2. **Domains → New domain**: pick it. Homerun generates a DKIM key for it.
+2. **Domains → New domain**: pick it. Homerun generates a DKIM key for it and a
+   `postmaster@` alias forwarding to your account's email.
 3. On the domain's page, add the records it lists at your DNS provider: an MX
    pointing at the mail hostname, SPF, the DKIM key and DMARC. Each one shows
    whether public resolvers (Cloudflare's and Google's) already see it; **Check
@@ -131,7 +132,9 @@ holds is kept. Deleting a mailbox wipes its mail.
 An alias forwards an address to one or more others, on this server or anywhere
 else. Leave its name empty and it becomes the domain's **catch-all**: anything
 sent to an address on the domain that isn't a mailbox or another alias goes to
-it. Deleting a domain deletes its mailboxes, their mail and its aliases.
+it. Every domain gets a `postmaster@` alias when it's added, since mail servers
+are required to accept mail there; point it at a mailbox or delete it like any
+other. Deleting a domain deletes its mailboxes, their mail and its aliases.
 
 Every change is applied in the background through the
 [job queue](scheduling.md#the-job-queue): Homerun rewrites docker-mailserver's

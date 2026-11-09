@@ -188,6 +188,27 @@ function normalizeValue(value: string): string {
 }
 
 /**
+ * A name's TXT records from `resolveTxt`, each one's strings joined. Bun's
+ * resolver returns every 255-character string of a long record (a DKIM key)
+ * as a record of its own, so a string that follows a full 255-character one is
+ * glued back onto it.
+ */
+export function joinTxtStrings(records: string[][]): string[] {
+	const joined: string[] = [];
+	let previous = "";
+	for (const record of records) {
+		const value = record.join("");
+		if (previous.length === 255 && joined.length > 0) {
+			joined[joined.length - 1] += value;
+		} else {
+			joined.push(value);
+		}
+		previous = record.at(-1) ?? "";
+	}
+	return joined;
+}
+
+/**
  * How `found` (the values the name resolves to for that record's type, TXT
  * strings already joined) compares with what the record wants: `ok` when one
  * matches, `different` when there's a value of the same kind (another SPF, an

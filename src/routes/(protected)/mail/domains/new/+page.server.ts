@@ -19,7 +19,7 @@ export const actions = {
 		);
 		let id: string;
 		try {
-			id = (await MailService.createDomain(dnsDomainId, locals.user.id)).id;
+			id = (await MailService.createDomain(dnsDomainId, locals.user)).id;
 		} catch (err) {
 			return fail(400, {
 				error: err instanceof Error ? err.message : String(err),

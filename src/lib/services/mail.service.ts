@@ -16,6 +16,7 @@ import {
 	dovecotQuotas,
 	isMailAddress,
 	isPurgeablePath,
+	joinTxtStrings,
 	localPartProblem,
 	mailAddress,
 	type MailboxEntry,
@@ -98,7 +99,7 @@ async function resolveValues(
 		if (type === "A") {
 			return await resolver.resolve4(name);
 		}
-		return (await resolver.resolveTxt(name)).map((parts) => parts.join(""));
+		return joinTxtStrings(await resolver.resolveTxt(name));
 	} catch {
 		return [];
 	}
@@ -446,13 +447,15 @@ class MailServiceClass {
 
 	/**
 	 * Adds one of the DNS page's domains as a mail domain, with a fresh
-	 * 2048-bit DKIM key pair.
+	 * 2048-bit DKIM key pair and a `postmaster@` alias forwarding to the
+	 * adding user's email, the address RFC 5321 requires every domain to
+	 * accept.
 	 *
 	 * @throws When the domain isn't on the DNS page or is already added.
 	 */
 	async createDomain(
 		dnsDomainId: string,
-		userId: string,
+		user: { email: string; id: string },
 	): Promise<MailDomainDTO> {
 		const dnsDomain = await DomainDTO.get(dnsDomainId);
 		if (!dnsDomain) {
@@ -470,13 +473,24 @@ class MailServiceClass {
 			privateKeyEncoding: { format: "pem", type: "pkcs8" },
 			publicKeyEncoding: { format: "der", type: "spki" },
 		});
-		return await MailDomainDTO.create({
+		const created = await MailDomainDTO.create({
 			dkimPrivateKey: privateKey,
 			dkimPublicKey: publicKey.toString("base64"),
 			dkimSelector: DKIM_SELECTOR,
 			name: domain,
-			userId,
+			userId: user.id,
 		});
+		const postmaster = mailAddress("postmaster", domain);
+		if (user.email.toLowerCase() !== postmaster) {
+			await MailAliasDTO.create({
+				destinations: [user.email],
+				domain,
+				domainId: created.id,
+				enabled: true,
+				localPart: "postmaster",
+			});
+		}
+		return created;
 	}
 
 	/**

@@ -5,6 +5,7 @@ const {
 	dkimSigningConf,
 	dovecotQuotas,
 	isMailAddress,
+	joinTxtStrings,
 	localPartProblem,
 	mailAddress,
 	mailPasswordProblem,
@@ -126,5 +127,22 @@ describe("mailRecordState", () => {
 		expect(mailRecordState(dkim, ["v=DKIM1; k=rsa; p=OTHER"])).toBe(
 			"different",
 		);
+	});
+});
+
+describe("joinTxtStrings", () => {
+	test("glues a long record Bun split at 255 characters back together", () => {
+		const head = "a".repeat(255);
+		expect(joinTxtStrings([[head], ["tail"], ["v=spf1 mx -all"]])).toEqual([
+			`${head}tail`,
+			"v=spf1 mx -all",
+		]);
+	});
+
+	test("keeps separate records and joins one record's strings", () => {
+		expect(joinTxtStrings([["v=spf1", " mx"], ["other"]])).toEqual([
+			"v=spf1 mx",
+			"other",
+		]);
 	});
 });
