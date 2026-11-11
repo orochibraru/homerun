@@ -1,6 +1,6 @@
 module github.com/orochibraru/homerun
 
-go 1.27.2
+go 1.27.4
 
 require (
 	github.com/containerd/errdefs v1.0.0
