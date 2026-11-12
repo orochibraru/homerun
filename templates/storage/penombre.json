@@ -2,7 +2,7 @@
 	"$schema": "../schema.json",
 	"name": "Penombre",
 	"description": "Self-hosted drive : a Nextcloud, ownCloud and Google Drive alternative. Set ORIGIN to the URL you'll reach it at, the rest works out of the box on SQLite.",
-	"image": "orochibraru/penombre",
+	"image": "zedensix/penombre",
 	"tag": "latest",
 	"containerPort": 3000,
 	"icon": "penombre.svg",
