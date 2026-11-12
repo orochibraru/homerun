@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.0.79](https://github.com/zedensix/homerun/compare/v1.0.78...v1.0.79) (2026-11-12)
+
+### Features
+
+* mail API and noreply addresses, disk picker everywhere, PWA, log history for workstations and system, pipelines API and webhooks, Pulumi projects, npm and PyPI registries ([16efa62](https://github.com/zedensix/homerun/commit/16efa6280d4627dfef143359a522d0cc38982a3a))
+* **mail:** publish mail ports through Pangolin raw TCP resources, DNS-01 certificate behind Pangolin ([0eca09c](https://github.com/zedensix/homerun/commit/0eca09c15c176a67f7ce7f48ed717f0c6b672bde))
+* **mail:** self-test, DNS domain picker, mailbox management, Roundcube deploy, logs and failure alerts (#209) ([16dadfe](https://github.com/zedensix/homerun/commit/16dadfe773afd1d6242013bd03fd75e46d9c5faa))
+* **mail:** mail server for your domains on docker-mailserver (#206) ([630477f](https://github.com/zedensix/homerun/commit/630477fb082518df2f0978f241a4a0eeb98e10b5))
+* **nodes:** --agent-url for build servers behind a tunnel, refuse a URL as --address (#205) ([8dc7d2a](https://github.com/zedensix/homerun/commit/8dc7d2aaac486817fd54df8885abd508f60f5775))
+* **deploy:** show the failed container's last output and explain its exit code (#201) ([df779b9](https://github.com/zedensix/homerun/commit/df779b93e573650b14ca1a64ac94dbaf7527e30c))
+* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/zedensix/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/zedensix/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/zedensix/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/zedensix/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+
+### Bug Fixes
+
+* **backups:** list orphaned backups on demand so the destination page doesn't wait on rclone ([47dbc5f](https://github.com/zedensix/homerun/commit/47dbc5f16d405131787a249cb6d242d0e9cbf072))
+* docs and refs (oro to zn6) ([6e790d1](https://github.com/zedensix/homerun/commit/6e790d1485cf397c49cdcf2510bf3814b61deab1))
+* **templates:** point bercail and penombre at zedensix images ([0bf2a70](https://github.com/zedensix/homerun/commit/0bf2a70572312bee2b51ab18364c0c2383f3d0db))
+* pin svelte-sonner 1.2.3 to match @zedensix/ui ([1cf7b81](https://github.com/zedensix/homerun/commit/1cf7b81ced28b01496550df987a15e43a05d97b9))
+* **deploy:** only stop swarm services around a seed copy on a swarm deploy; vale vocabulary and typos ([daa0f23](https://github.com/zedensix/homerun/commit/daa0f236afeea2db214e70740a1b2c665617cf49))
+* **mail:** rejoin long TXT records Bun's resolver splits into 255-character pieces before the DNS check ([5ae2962](https://github.com/zedensix/homerun/commit/5ae2962fc8c0c9259ab6af14deaccb41d2417356))
+* **mail:** mount only acme.json so docker-mailserver can extract its certificate, and fail the self-test when postfix or dovecot are down ([e5e304c](https://github.com/zedensix/homerun/commit/e5e304c608cd9d075583662bba6b9fc40e937630))
+* **hooks:** run prek from node_modules through bun when it isn't on PATH ([a240d72](https://github.com/zedensix/homerun/commit/a240d729ae098ad945d4c59c154d7dce96aaeaf2))
+* **mail:** turning the server off works, no crash loop without a certificate, restart button; hide dead swarm tasks; silence better-auth JWT warning ([9e33da8](https://github.com/zedensix/homerun/commit/9e33da8fadbb1ba03e427ec461ae1e24b698ca51))
+* check swarm manager reachability before enrolling, settle action toasts after the page refresh (#204) ([5ab88e6](https://github.com/zedensix/homerun/commit/5ab88e63e1a1b624a431a004b22aa5207b2cfd5c))
+* **deps:** update minor and patch updates (#188) ([8fbaac0](https://github.com/zedensix/homerun/commit/8fbaac07a18364afd1a684f0e8bf0cf1dbff428f))
+* **deps:** update better-auth to v1.7.18 (#187) ([d048ff8](https://github.com/zedensix/homerun/commit/d048ff8e6b26cf5955377e57655e827872aa3738))
+* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/zedensix/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
+
 ## [1.0.79](https://github.com/zedensix/homerun/compare/v1.0.78...v1.0.79) (2026-11-06)
 
 ### Features
