@@ -14,8 +14,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/orochibraru/homerun/internal/agent"
-	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/agent"
+	"github.com/zedensix/homerun/internal/dockerapi"
 )
 
 type fakeEvents struct {

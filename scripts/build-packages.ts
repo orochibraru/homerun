@@ -19,7 +19,7 @@ interface Target {
 	commands: string[];
 }
 
-const VERSION_FLAG = `-X github.com/orochibraru/homerun/internal/buildinfo.Version=${pkg.version}`;
+const VERSION_FLAG = `-X github.com/zedensix/homerun/internal/buildinfo.Version=${pkg.version}`;
 
 const PROVIDER = "terraform-provider";
 

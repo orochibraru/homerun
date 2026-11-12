@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/orochibraru/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/buildinfo"
 )
 
 // Client talks to one instance's REST API under /api/v1.

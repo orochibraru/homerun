@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/registryapi"
+	"github.com/zedensix/homerun/internal/registryapi"
 )
 
 // MirrorSpec is everything a homerun-mirror garbage collection needs: the

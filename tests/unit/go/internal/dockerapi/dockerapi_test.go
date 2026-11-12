@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +16,7 @@ import (
 	"testing"
 
 	"github.com/moby/moby/api/types/swarm"
-	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
 )
 
 type call struct {

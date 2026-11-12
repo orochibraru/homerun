@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The "single curl command" way to install the homerun CLI:
 #
-#   curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/cli/install.sh | bash
 #
 # Detects OS/arch, downloads the matching prebuilt homerun-cli-<arch> release
 # binary (Linux amd64/arm64 only, see below), and installs it as
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 GIT_HOST="github.com"
-GIT_REPO="orochibraru/homerun"
+GIT_REPO="zedensix/homerun"
 VERSION="latest"
 INSTALL_DIR="${HOMERUN_INSTALL_DIR:-/usr/local/bin}"
 

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/dockersocket"
-	"github.com/orochibraru/homerun/internal/workerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/dockersocket"
+	"github.com/zedensix/homerun/internal/workerapi"
 )
 
 // fakeShellDaemon plays a container with one TTY shell exec, whose output is

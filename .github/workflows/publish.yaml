@@ -320,7 +320,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Download binaries
-        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        uses: zedensix/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           path: dist
           pattern: binaries-*
@@ -473,7 +473,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Download binaries
-        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        uses: zedensix/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           path: dist
           pattern: binaries-*
@@ -501,7 +501,7 @@ jobs:
     needs: [stable, stable-release]
     runs-on: ubuntu-latest
     env:
-      MIRROR: orochibraru/terraform-provider-homerun
+      MIRROR: zedensix/terraform-provider-homerun
       VERSION: ${{ needs.stable.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -509,7 +509,7 @@ jobs:
           persist-credentials: false
 
       - name: Download binaries
-        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        uses: zedensix/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           path: dist
           pattern: binaries-*
@@ -544,7 +544,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if ! git diff --cached --quiet; then
-            git commit --quiet -m "chore(release): $VERSION" -m "From orochibraru/homerun@$SHA."
+            git commit --quiet -m "chore(release): $VERSION" -m "From zedensix/homerun@$SHA."
           fi
           git tag "v$VERSION"
           git push --quiet origin HEAD:refs/heads/main "refs/tags/v$VERSION"
@@ -562,7 +562,7 @@ jobs:
           else
             gh release create "$tag" --repo "$MIRROR" --verify-tag --latest \
               --title "$tag" \
-              --notes "Homerun Terraform provider $VERSION, built from orochibraru/homerun@$SHA. Issues and source: https://github.com/orochibraru/homerun." \
+              --notes "Homerun Terraform provider $VERSION, built from zedensix/homerun@$SHA. Issues and source: https://github.com/zedensix/homerun." \
               dist/terraform-provider/*
           fi
 

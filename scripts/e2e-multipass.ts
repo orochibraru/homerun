@@ -294,7 +294,7 @@ async function testCli(fullVm: Vm): Promise<void> {
 		CLI_CONTAINER,
 		"bash",
 		"-c",
-		"curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/install.sh | bash",
+		"curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/cli/install.sh | bash",
 	]);
 	await exec(["docker", "exec", CLI_CONTAINER, "homerun", "--version"]);
 
@@ -575,7 +575,7 @@ async function testMigration(vm: Vm): Promise<void> {
 	await vm.exec([
 		"bash",
 		"-c",
-		`curl -fsSL https://github.com/orochibraru/homerun/releases/download/${PREVIOUS_RELEASE}/homerun-installer-${arch} -o /tmp/previous-installer && chmod +x /tmp/previous-installer && sudo /tmp/previous-installer --mode=full --version=${PREVIOUS_RELEASE} --yes`,
+		`curl -fsSL https://github.com/zedensix/homerun/releases/download/${PREVIOUS_RELEASE}/homerun-installer-${arch} -o /tmp/previous-installer && chmod +x /tmp/previous-installer && sudo /tmp/previous-installer --mode=full --version=${PREVIOUS_RELEASE} --yes`,
 	]);
 	const ip = await vm.ip();
 	const client = new AppClient(`http://${ip}:${APP_PORT}`);

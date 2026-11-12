@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
 
-	"github.com/orochibraru/homerun/internal/agent"
+	"github.com/zedensix/homerun/internal/agent"
 )
 
 const headSHA = "0123456789abcdef0123456789abcdef01234567"

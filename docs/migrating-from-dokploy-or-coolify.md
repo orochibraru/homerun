@@ -68,7 +68,7 @@ Dokploy and Coolify already hold ports 80, 443 and 3000, so install Homerun next
 to them on other ports:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/bootstrap.sh \
   | sudo bash -s -- --mode=full --domain=homerun.example.com \
     --dashboard-port=4500 --http-port=8080 --https-port=8443
 ```

@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/orochibraru/homerun/terraform/provider/internal/client"
-	"github.com/orochibraru/homerun/terraform/provider/internal/provider"
+	"github.com/zedensix/homerun/terraform/provider/internal/client"
+	"github.com/zedensix/homerun/terraform/provider/internal/provider"
 )
 
 func smtpConfig(fake *fakeAPI, host string) string {

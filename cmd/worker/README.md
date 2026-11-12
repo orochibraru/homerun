@@ -34,7 +34,7 @@ too, then installs the worker as the `homerun-worker` `systemd --user` unit, see
 [`cmd/installer/README.md`](../installer/README.md):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/bootstrap.sh \
   | sudo bash -s -- --mode=agent
 ```
 
@@ -65,7 +65,7 @@ daemon instead of the system one.
 only, amd64/arm64, see `scripts/build-packages.ts`):
 
 ```bash
-curl -fsSL https://github.com/orochibraru/homerun/releases/latest/download/homerun-worker-amd64.gz | gunzip -c > homerun-worker
+curl -fsSL https://github.com/zedensix/homerun/releases/latest/download/homerun-worker-amd64.gz | gunzip -c > homerun-worker
 chmod +x homerun-worker
 ./homerun-worker
 ```

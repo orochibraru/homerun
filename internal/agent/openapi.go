@@ -1,6 +1,6 @@
 package agent
 
-import "github.com/orochibraru/homerun/internal/buildinfo"
+import "github.com/zedensix/homerun/internal/buildinfo"
 
 type object = map[string]any
 

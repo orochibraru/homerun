@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/agent"
-	"github.com/orochibraru/homerun/internal/installer"
+	"github.com/zedensix/homerun/internal/agent"
+	"github.com/zedensix/homerun/internal/installer"
 )
 
 func TestNormalizeHostStripsAPastedURL(t *testing.T) {

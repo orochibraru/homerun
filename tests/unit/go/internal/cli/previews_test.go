@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 const fullSHA = "0123456789abcdef0123456789abcdef01234567"

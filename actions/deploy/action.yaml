@@ -1,6 +1,6 @@
 name: Homerun Deploy
 description: Deploy a Homerun service and wait for it, optionally switching it to the image tag this workflow just pushed or deploying a release channel.
-author: orochibraru
+author: zedensix
 branding:
   icon: upload-cloud
   color: red

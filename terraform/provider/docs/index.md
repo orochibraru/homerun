@@ -16,7 +16,7 @@ DNS for `homerun_dns_connection`, and so on). The provider is released with
 every Homerun version, and the instance's **Infrastructure as Code** page
 generates a ready-to-plan project, with an import block for everything that
 already runs. See
-[the Homerun documentation](https://github.com/orochibraru/homerun/blob/main/docs/infrastructure-as-code.md)
+[the Homerun documentation](https://github.com/zedensix/homerun/blob/main/docs/infrastructure-as-code.md)
 for the full guide.
 
 ## Example usage
@@ -25,7 +25,7 @@ for the full guide.
 terraform {
   required_providers {
     homerun = {
-      source = "orochibraru/homerun"
+      source = "zedensix/homerun"
     }
   }
 }

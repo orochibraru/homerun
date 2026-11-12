@@ -8,7 +8,7 @@ and Terraform.
 
 This directory is plain Markdown, the source of truth: read it straight from the
 repo, or on your GitHub remote's file browser. The
-[website](https://homerun.orochibraru.com) renders these same files from its own
+[website](https://homerun.zedensix.com) renders these same files from its own
 separate repository; it's a companion renderer, not a second copy to keep in
 sync by hand.
 

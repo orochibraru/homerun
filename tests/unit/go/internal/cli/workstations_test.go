@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 const workstationUUID = "11111111-2222-3333-4444-555555555555"

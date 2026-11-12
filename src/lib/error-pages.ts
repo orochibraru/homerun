@@ -2,7 +2,7 @@ export const ERROR_PAGE_PATH = "/homerun-error";
 
 export const ERROR_PAGE_HEADER = "X-Homerun-Error-Page";
 
-export const HOMERUN_URL = "https://orochibraru.com/homerun";
+export const HOMERUN_URL = "https://zedensix.com/homerun";
 
 export type ErrorPageKind =
 	"blocked" | "notFound" | "notReady" | "unavailable" | "waking";

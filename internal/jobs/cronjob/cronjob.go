@@ -15,9 +15,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/tracing"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )

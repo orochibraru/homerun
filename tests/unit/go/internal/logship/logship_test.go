@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/logship"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/logship"
 )
 
 func frame(stream byte, data string) []byte {

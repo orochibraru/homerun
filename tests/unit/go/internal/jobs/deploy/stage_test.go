@@ -3,7 +3,7 @@ package deploy_test
 import (
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/jobs/deploy"
+	"github.com/zedensix/homerun/internal/jobs/deploy"
 )
 
 func TestImageStageNamesTheTraceStage(t *testing.T) {

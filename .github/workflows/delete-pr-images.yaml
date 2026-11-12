@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Delete the tag from Docker Hub
         env:
-          DOCKER_HUB_USERNAME: orochibraru
+          DOCKER_HUB_USERNAME: zedensix
           DOCKER_HUB_TOKEN: ${{ secrets.registry_password }}
           REPOSITORY: ${{ matrix.repository }}
           TAG: pr-${{ inputs.pr_number }}

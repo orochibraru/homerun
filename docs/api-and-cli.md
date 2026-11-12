@@ -392,7 +392,7 @@ drops it at `/usr/local/bin/homerun` (Linux or macOS, no Bun or build step
 needed):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/cli/install.sh | bash
 ```
 
 `homerun update` re-runs that from inside the binary, replacing itself with the

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/janitor"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/janitor"
 )
 
 var now = time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)

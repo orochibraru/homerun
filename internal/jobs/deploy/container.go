@@ -11,8 +11,8 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/tracing"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )

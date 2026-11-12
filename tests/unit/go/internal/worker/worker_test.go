@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/activity"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/secrets"
-	"github.com/orochibraru/homerun/internal/worker"
+	"github.com/zedensix/homerun/internal/activity"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/secrets"
+	"github.com/zedensix/homerun/internal/worker"
 )
 
 type outcome struct {

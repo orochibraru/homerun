@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/httpapi"
 )
 
 func TestResolveTokenExplicitWins(t *testing.T) {

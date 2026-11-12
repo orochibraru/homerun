@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/activity"
+	"github.com/zedensix/homerun/internal/activity"
 )
 
 // Client is one bucket on one S3-compatible endpoint.

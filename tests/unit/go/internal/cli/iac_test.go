@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 const generatedBody = `{"name":"Web","slug":"web","files":[

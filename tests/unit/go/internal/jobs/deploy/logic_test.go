@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/jobs/deploy"
-	"github.com/orochibraru/homerun/internal/jobs/imagescan"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/jobs/deploy"
+	"github.com/zedensix/homerun/internal/jobs/imagescan"
 )
 
 func TestReadinessCheck(t *testing.T) {

@@ -35,7 +35,7 @@ runs Docker Engine with the Compose plugin works, rootful included.
 ## Option A, the one-liner (fresh Linux server)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/bootstrap.sh \
   | sudo bash -s -- --mode=full
 ```
 
@@ -81,7 +81,7 @@ An instance installed rootless (the installer's default before swarm became the
 default) can be moved in place:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/bootstrap.sh \
   | sudo bash -s -- --migrate-to-rootful --yes
 ```
 
@@ -135,8 +135,8 @@ pulled from published images, no installer, no rootless setup, no source
 checkout:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/compose.prod.yaml
-curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/.env.example
+curl -fsSLO https://raw.githubusercontent.com/zedensix/homerun/main/compose.prod.yaml
+curl -fsSLO https://raw.githubusercontent.com/zedensix/homerun/main/.env.example
 mv .env.example .env && $EDITOR .env
 docker network create homerun
 docker compose -f compose.prod.yaml up -d

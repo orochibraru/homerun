@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 const dependenciesBody = `{"dependsOn":[{"id":"db-1","name":"Postgres","slug":"postgres","source":"both"}],"dependedOnBy":[{"id":"cron-1","name":"Cron","slug":"cron","source":"env"}]}`

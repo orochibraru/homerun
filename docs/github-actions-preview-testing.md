@@ -105,7 +105,7 @@ jobs:
           cache: npm
       - name: Wait for the preview of this commit
         id: preview
-        uses: orochibraru/homerun/actions/preview@v1.0.59
+        uses: zedensix/homerun/actions/preview@v1.0.59
         with:
           base-url: ${{ vars.HOMERUN_BASE_URL }}
           api-key: ${{ secrets.HOMERUN_API_KEY }}
@@ -146,7 +146,7 @@ step between waiting for the preview and running the suite:
 
 ```yaml
 - name: Sign the suite in through the login wall
-  uses: orochibraru/homerun/actions/gate-session@v1.0.59
+  uses: zedensix/homerun/actions/gate-session@v1.0.59
   with:
     base-url: ${{ vars.HOMERUN_BASE_URL }}
     api-key: ${{ secrets.HOMERUN_E2E_KEY }}
@@ -219,7 +219,7 @@ jobs:
           exit 1
       - name: Promote the tested preview
         id: promote
-        uses: orochibraru/homerun/actions/preview@v1.0.59
+        uses: zedensix/homerun/actions/preview@v1.0.59
         with:
           base-url: ${{ vars.HOMERUN_BASE_URL }}
           api-key: ${{ secrets.HOMERUN_API_KEY }}
@@ -229,7 +229,7 @@ jobs:
         run: gh pr merge "$PR" --squash --match-head-commit "$SHA"
       - name: Roll production back when the merge failed
         if: failure() && steps.promote.outcome == 'success'
-        uses: orochibraru/homerun/actions/rollback@v1.0.59
+        uses: zedensix/homerun/actions/rollback@v1.0.59
         with:
           base-url: ${{ vars.HOMERUN_BASE_URL }}
           api-key: ${{ secrets.HOMERUN_API_KEY }}
@@ -237,7 +237,7 @@ jobs:
       - name: Delete the preview, unless Homerun already did
         if: success()
         continue-on-error: true
-        uses: orochibraru/homerun/actions/preview@v1.0.59
+        uses: zedensix/homerun/actions/preview@v1.0.59
         with:
           base-url: ${{ vars.HOMERUN_BASE_URL }}
           api-key: ${{ secrets.HOMERUN_API_KEY }}
@@ -274,7 +274,7 @@ jobs:
       - name:
           Delete the preview, unless Homerun already did on the close webhook
         continue-on-error: true
-        uses: orochibraru/homerun/actions/preview@v1.0.59
+        uses: zedensix/homerun/actions/preview@v1.0.59
         with:
           base-url: ${{ vars.HOMERUN_BASE_URL }}
           api-key: ${{ secrets.HOMERUN_API_KEY }}

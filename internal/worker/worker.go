@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/activity"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/logging"
-	"github.com/orochibraru/homerun/internal/secrets"
-	"github.com/orochibraru/homerun/internal/tracing"
+	"github.com/zedensix/homerun/internal/activity"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/secrets"
+	"github.com/zedensix/homerun/internal/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )

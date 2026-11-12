@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 func writeFile(t *testing.T, path, content string) {

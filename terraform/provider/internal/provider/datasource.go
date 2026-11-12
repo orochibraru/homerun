@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
-	"github.com/orochibraru/homerun/terraform/provider/internal/client"
+	"github.com/zedensix/homerun/terraform/provider/internal/client"
 )
 
 var _ datasource.DataSourceWithConfigure = (*specDataSource)(nil)

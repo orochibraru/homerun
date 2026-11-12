@@ -323,8 +323,8 @@ loads names through `listStatusCheckNames`
 commits of the branch) as a one-shot `$state` promise and posts the selection as
 repeated `requiredStatusChecks` hidden inputs, read with `formData.getAll` since
 the route's zod parse goes through `Object.fromEntries`. **Verified live**,
-read-only: github.com/orochibraru/homerun unauthenticated (real check-run names,
-a HEAD commit with no checks yet) and a Forgejo instance answering 403 without a
+read-only: github.com/zedensix/homerun unauthenticated (real check-run names, a
+HEAD commit with no checks yet) and a Forgejo instance answering 403 without a
 token (a permanent error). **Not verified**: GitLab and Bitbucket against real
 instances, and a full deploy blocked by a real failing check.
 

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/release"
+	"github.com/zedensix/homerun/internal/release"
 
-	"github.com/orochibraru/homerun/internal/installer"
+	"github.com/zedensix/homerun/internal/installer"
 )
 
 func TestDetectPackageManager(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 )
 
 // pingDaemon answers /_ping and nothing else.

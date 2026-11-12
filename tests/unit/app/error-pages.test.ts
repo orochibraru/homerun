@@ -128,7 +128,7 @@ describe("renderErrorPage", () => {
 				"notFound",
 				404,
 			),
-		).toContain('Powered by <a href="https://orochibraru.com/homerun"');
+		).toContain('Powered by <a href="https://zedensix.com/homerun"');
 		expect(
 			renderErrorPage(
 				withErrorPageDefaults({ brandName: "Acme", showPoweredBy: false }),

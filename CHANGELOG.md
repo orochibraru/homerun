@@ -1,527 +1,527 @@
 # Changelog
 
-## [1.0.79](https://github.com/orochibraru/homerun/compare/v1.0.78...v1.0.79) (2026-11-06)
+## [1.0.79](https://github.com/zedensix/homerun/compare/v1.0.78...v1.0.79) (2026-11-06)
 
 ### Features
 
-* **nodes:** --agent-url for build servers behind a tunnel, refuse a URL as --address (#205) ([8dc7d2a](https://github.com/orochibraru/homerun/commit/8dc7d2aaac486817fd54df8885abd508f60f5775))
-* **deploy:** show the failed container's last output and explain its exit code (#201) ([df779b9](https://github.com/orochibraru/homerun/commit/df779b93e573650b14ca1a64ac94dbaf7527e30c))
-* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/orochibraru/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
-* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/orochibraru/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
-* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/orochibraru/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
-* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/orochibraru/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+* **nodes:** --agent-url for build servers behind a tunnel, refuse a URL as --address (#205) ([8dc7d2a](https://github.com/zedensix/homerun/commit/8dc7d2aaac486817fd54df8885abd508f60f5775))
+* **deploy:** show the failed container's last output and explain its exit code (#201) ([df779b9](https://github.com/zedensix/homerun/commit/df779b93e573650b14ca1a64ac94dbaf7527e30c))
+* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/zedensix/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/zedensix/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/zedensix/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/zedensix/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
 
 ### Bug Fixes
 
-* check swarm manager reachability before enrolling, settle action toasts after the page refresh (#204) ([5ab88e6](https://github.com/orochibraru/homerun/commit/5ab88e63e1a1b624a431a004b22aa5207b2cfd5c))
-* **deps:** update minor and patch updates (#188) ([8fbaac0](https://github.com/orochibraru/homerun/commit/8fbaac07a18364afd1a684f0e8bf0cf1dbff428f))
-* **deps:** update better-auth to v1.7.18 (#187) ([d048ff8](https://github.com/orochibraru/homerun/commit/d048ff8e6b26cf5955377e57655e827872aa3738))
-* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/orochibraru/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
+* check swarm manager reachability before enrolling, settle action toasts after the page refresh (#204) ([5ab88e6](https://github.com/zedensix/homerun/commit/5ab88e63e1a1b624a431a004b22aa5207b2cfd5c))
+* **deps:** update minor and patch updates (#188) ([8fbaac0](https://github.com/zedensix/homerun/commit/8fbaac07a18364afd1a684f0e8bf0cf1dbff428f))
+* **deps:** update better-auth to v1.7.18 (#187) ([d048ff8](https://github.com/zedensix/homerun/commit/d048ff8e6b26cf5955377e57655e827872aa3738))
+* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/zedensix/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
 
-## [1.0.79](https://github.com/orochibraru/homerun/compare/v1.0.78...v1.0.79) (2026-11-05)
+## [1.0.79](https://github.com/zedensix/homerun/compare/v1.0.78...v1.0.79) (2026-11-05)
 
 ### Features
 
-* **deploy:** show the failed container's last output and explain its exit code (#201) ([df779b9](https://github.com/orochibraru/homerun/commit/df779b93e573650b14ca1a64ac94dbaf7527e30c))
-* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/orochibraru/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
-* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/orochibraru/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
-* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/orochibraru/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
-* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/orochibraru/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+* **deploy:** show the failed container's last output and explain its exit code (#201) ([df779b9](https://github.com/zedensix/homerun/commit/df779b93e573650b14ca1a64ac94dbaf7527e30c))
+* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/zedensix/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/zedensix/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/zedensix/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/zedensix/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
 
 ### Bug Fixes
 
-* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/orochibraru/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
+* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/zedensix/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
 
-## [1.0.79](https://github.com/orochibraru/homerun/compare/v1.0.78...v1.0.79) (2026-11-04)
+## [1.0.79](https://github.com/zedensix/homerun/compare/v1.0.78...v1.0.79) (2026-11-04)
 
 ### Features
 
-* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/orochibraru/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
-* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/orochibraru/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
-* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/orochibraru/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
-* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/orochibraru/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+* show what's using the host's CPU, memory and disk, and record it on resource alerts; manage agents from the UI and fix cross-arch builds ([f76cf16](https://github.com/zedensix/homerun/commit/f76cf163f72410af63ec95dd3d98451108f815c7))
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/zedensix/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/zedensix/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/zedensix/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
 
 ### Bug Fixes
 
-* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/orochibraru/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
+* **worker-client:** stop one-off runs dying at the 60s request timeout (#199) ([8a3814a](https://github.com/zedensix/homerun/commit/8a3814a36a01d6b158460860160806e6a9cd0e27))
 
-## [1.0.79](https://github.com/orochibraru/homerun/compare/v1.0.78...v1.0.79) (2026-11-04)
-
-### Features
-
-* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/orochibraru/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
-* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/orochibraru/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
-* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/orochibraru/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
-
-## [1.0.78](https://github.com/orochibraru/homerun/compare/v1.0.77...v1.0.78) (2026-11-03)
+## [1.0.79](https://github.com/zedensix/homerun/compare/v1.0.78...v1.0.79) (2026-11-04)
 
 ### Features
 
-* **ui:** redesign with Nunito and a bordeaux accent, plus networking and settings subtabs, chart tooltips, service activity lanes, tab icons and stored view modes ([4fc4633](https://github.com/orochibraru/homerun/commit/4fc463393bb7e77d873c4765204c451cf6c810dc))
-* **dashboard:** live activity lanes and error alerts, readable error issue page (#193) ([c8c4651](https://github.com/orochibraru/homerun/commit/c8c4651deda0ff2c2f1adce0617af5f29f2f46a4))
-* design mode without Docker, search on the services tree and diagram, more contrast (#190) ([e6330b3](https://github.com/orochibraru/homerun/commit/e6330b344bbddb6893b17b6c24fbbddf4176b531))
-* **ui:** Lanes on the service page and a fuller overview (#184) ([0ddf400](https://github.com/orochibraru/homerun/commit/0ddf400bc574adf1856644c6728bb1469bebfaea))
+* **ui:** pause live logs, show service health with status tooltips, fix clipped chart tooltips and raise border contrast ([64c369d](https://github.com/zedensix/homerun/commit/64c369d8ec475d14e3ea4e234b2622d1d0f14da2))
+* **storage:** choose the host disk a new Docker volume lives on (#195) ([a09279b](https://github.com/zedensix/homerun/commit/a09279b287f7a4a7f8df51aaa434f8bbb3067c1a))
+* **templates:** add an MCP category with 41 MCP server templates (#194) ([def1985](https://github.com/zedensix/homerun/commit/def1985849225c091326a8b91addc7a4d9982a4e))
+
+## [1.0.78](https://github.com/zedensix/homerun/compare/v1.0.77...v1.0.78) (2026-11-03)
+
+### Features
+
+* **ui:** redesign with Nunito and a bordeaux accent, plus networking and settings subtabs, chart tooltips, service activity lanes, tab icons and stored view modes ([4fc4633](https://github.com/zedensix/homerun/commit/4fc463393bb7e77d873c4765204c451cf6c810dc))
+* **dashboard:** live activity lanes and error alerts, readable error issue page (#193) ([c8c4651](https://github.com/zedensix/homerun/commit/c8c4651deda0ff2c2f1adce0617af5f29f2f46a4))
+* design mode without Docker, search on the services tree and diagram, more contrast (#190) ([e6330b3](https://github.com/zedensix/homerun/commit/e6330b344bbddb6893b17b6c24fbbddf4176b531))
+* **ui:** Lanes on the service page and a fuller overview (#184) ([0ddf400](https://github.com/zedensix/homerun/commit/0ddf400bc574adf1856644c6728bb1469bebfaea))
 
 ### Bug Fixes
 
-* **docs:** accept capitalised Config in the Vale vocabulary ([dcf1ab3](https://github.com/orochibraru/homerun/commit/dcf1ab3180885c080e97a9c76ec6ca82a39cb20f))
-* **updates:** pick the trial run's readiness check the way a real deploy does (#192) ([1f860dd](https://github.com/orochibraru/homerun/commit/1f860dd046e091cbcf059156df0cbe3a3dd20d88))
-* design mode ([70bd65f](https://github.com/orochibraru/homerun/commit/70bd65fd9e8a2771e27c2e51879a0d727e4ee145))
-* run update trials on copies of the service's volumes and with its full runtime config (#189) ([2a3a301](https://github.com/orochibraru/homerun/commit/2a3a301068e7d995557af11d1c9ca08399f34fcc))
-* **ui:** overview needs-you update cards, contrast-scaled lanes and status dots on busiest (#186) ([0fe8fc7](https://github.com/orochibraru/homerun/commit/0fe8fc785ef05eb4bda9dfaec30c9f94ffbc88ec))
+* **docs:** accept capitalised Config in the Vale vocabulary ([dcf1ab3](https://github.com/zedensix/homerun/commit/dcf1ab3180885c080e97a9c76ec6ca82a39cb20f))
+* **updates:** pick the trial run's readiness check the way a real deploy does (#192) ([1f860dd](https://github.com/zedensix/homerun/commit/1f860dd046e091cbcf059156df0cbe3a3dd20d88))
+* design mode ([70bd65f](https://github.com/zedensix/homerun/commit/70bd65fd9e8a2771e27c2e51879a0d727e4ee145))
+* run update trials on copies of the service's volumes and with its full runtime config (#189) ([2a3a301](https://github.com/zedensix/homerun/commit/2a3a301068e7d995557af11d1c9ca08399f34fcc))
+* **ui:** overview needs-you update cards, contrast-scaled lanes and status dots on busiest (#186) ([0fe8fc7](https://github.com/zedensix/homerun/commit/0fe8fc785ef05eb4bda9dfaec30c9f94ffbc88ec))
 
 ### Code Refactoring
 
-* **ui:** Lanes is the only style, drop the style picker and the seven other styles (#191) ([927f846](https://github.com/orochibraru/homerun/commit/927f846e103c49e0e83bcada477163c70954df83))
+* **ui:** Lanes is the only style, drop the style picker and the seven other styles (#191) ([927f846](https://github.com/zedensix/homerun/commit/927f846e103c49e0e83bcada477163c70954df83))
 
-## [1.0.77](https://github.com/orochibraru/homerun/compare/v1.0.76...v1.0.77) (2026-10-31)
-
-### Features
-
-* **ui:** Lanes style with 24h service lanes, calmer overview, services diagram and vertical stepper (#181) ([d51822b](https://github.com/orochibraru/homerun/commit/d51822b1a0d5601c78349a9c573f6061e2e51d4e))
-
-## [1.0.76](https://github.com/orochibraru/homerun/compare/v1.0.75...v1.0.76) (2026-10-31)
+## [1.0.77](https://github.com/zedensix/homerun/compare/v1.0.76...v1.0.77) (2026-10-31)
 
 ### Features
 
-* **updates:** retry failed update trials and stop offering updates whose health check fails (#180) ([bde91e8](https://github.com/orochibraru/homerun/commit/bde91e825db386711524eaa9136084b9a7d0e351))
-* **mcp:** expose traces and service app errors through MCP and the REST API (#177) ([7fa971b](https://github.com/orochibraru/homerun/commit/7fa971ba6d7984e4e8148d5aa3450e6872ba1f5b))
+* **ui:** Lanes style with 24h service lanes, calmer overview, services diagram and vertical stepper (#181) ([d51822b](https://github.com/zedensix/homerun/commit/d51822b1a0d5601c78349a9c573f6061e2e51d4e))
+
+## [1.0.76](https://github.com/zedensix/homerun/compare/v1.0.75...v1.0.76) (2026-10-31)
+
+### Features
+
+* **updates:** retry failed update trials and stop offering updates whose health check fails (#180) ([bde91e8](https://github.com/zedensix/homerun/commit/bde91e825db386711524eaa9136084b9a7d0e351))
+* **mcp:** expose traces and service app errors through MCP and the REST API (#177) ([7fa971b](https://github.com/zedensix/homerun/commit/7fa971ba6d7984e4e8148d5aa3450e6872ba1f5b))
 
 ### Documentation
 
-* **networking:** runner network for swarm services is the shared overlay (#176) ([9c58f34](https://github.com/orochibraru/homerun/commit/9c58f34914933992e4d256d45a51e3b8f3ef138e))
+* **networking:** runner network for swarm services is the shared overlay (#176) ([9c58f34](https://github.com/zedensix/homerun/commit/9c58f34914933992e4d256d45a51e3b8f3ef138e))
 
 ### Code Refactoring
 
-* **ui:** use the shared @orochibraru/ui primitives instead of vendored shadcn-svelte copies (#179) ([6ed02a4](https://github.com/orochibraru/homerun/commit/6ed02a498909bbc6810baf7da42df25fa625b80c))
+* **ui:** use the shared @zedensix/ui primitives instead of vendored shadcn-svelte copies (#179) ([6ed02a4](https://github.com/zedensix/homerun/commit/6ed02a498909bbc6810baf7da42df25fa625b80c))
 
-## [1.0.75](https://github.com/orochibraru/homerun/compare/v1.0.74...v1.0.75) (2026-10-29)
+## [1.0.75](https://github.com/zedensix/homerun/compare/v1.0.74...v1.0.75) (2026-10-29)
 
 ### Features
 
-* **networking:** exposed ports, plus a LocalAssistant template (#175) ([d1b428b](https://github.com/orochibraru/homerun/commit/d1b428b168f1a979ce11e9445a489690e89a2957))
-* **stacks:** redesign stack services tree and fix code editor caret drift (#174) ([12fc78f](https://github.com/orochibraru/homerun/commit/12fc78fda5bbdcd3c8da28f597aed60ebb599e23))
-* service overview summary, mount editing with volume duplication, update trial stepper and update scope (#171) ([1e4c810](https://github.com/orochibraru/homerun/commit/1e4c810607096e8fdd6f08dceb66d5ea59538ab8))
-* **services:** suggest registry tags in the image Tag field (#170) ([d3a0896](https://github.com/orochibraru/homerun/commit/d3a089623e0b6cddd4c3881bdaf37eadd4346918))
-* deploy stepper with clone/scan/health phases, and a smarter new-service wizard (#168) ([b799bac](https://github.com/orochibraru/homerun/commit/b799bac9f1241814f78f819e8838e49f399c6b17))
+* **networking:** exposed ports, plus a LocalAssistant template (#175) ([d1b428b](https://github.com/zedensix/homerun/commit/d1b428b168f1a979ce11e9445a489690e89a2957))
+* **stacks:** redesign stack services tree and fix code editor caret drift (#174) ([12fc78f](https://github.com/zedensix/homerun/commit/12fc78fda5bbdcd3c8da28f597aed60ebb599e23))
+* service overview summary, mount editing with volume duplication, update trial stepper and update scope (#171) ([1e4c810](https://github.com/zedensix/homerun/commit/1e4c810607096e8fdd6f08dceb66d5ea59538ab8))
+* **services:** suggest registry tags in the image Tag field (#170) ([d3a0896](https://github.com/zedensix/homerun/commit/d3a089623e0b6cddd4c3881bdaf37eadd4346918))
+* deploy stepper with clone/scan/health phases, and a smarter new-service wizard (#168) ([b799bac](https://github.com/zedensix/homerun/commit/b799bac9f1241814f78f819e8838e49f399c6b17))
 
 ### Bug Fixes
 
-* explain git provider auth failures, searchable volume picker, cleaner command palette and service tree cards (#173) ([a53f584](https://github.com/orochibraru/homerun/commit/a53f58406c91c16285cb4f5c8ab794f648f29389))
-* run update trials on the swarm network for swarm services and recreate a missing stack network (#172) ([619f025](https://github.com/orochibraru/homerun/commit/619f0251d489ea6335897a64a5d79369ee7edd01))
+* explain git provider auth failures, searchable volume picker, cleaner command palette and service tree cards (#173) ([a53f584](https://github.com/zedensix/homerun/commit/a53f58406c91c16285cb4f5c8ab794f648f29389))
+* run update trials on the swarm network for swarm services and recreate a missing stack network (#172) ([619f025](https://github.com/zedensix/homerun/commit/619f0251d489ea6335897a64a5d79369ee7edd01))
 
-## [1.0.74](https://github.com/orochibraru/homerun/compare/v1.0.73...v1.0.74) (2026-10-28)
-
-### Features
-
-* **logs:** keep every service's logs across revisions, searchable (#166) ([ff7b03c](https://github.com/orochibraru/homerun/commit/ff7b03cea4b8efd35407458a1fee5e3790a9313f))
-
-## [1.0.73](https://github.com/orochibraru/homerun/compare/v1.0.72...v1.0.73) (2026-10-27)
+## [1.0.74](https://github.com/zedensix/homerun/compare/v1.0.73...v1.0.74) (2026-10-28)
 
 ### Features
 
-* **templates:** add OpenCount built-in template (#164) ([b254fb1](https://github.com/orochibraru/homerun/commit/b254fb158032ac65fd02a54e8a5a77937e49d573))
-* **services:** single-column mobile tab hub with per-tab descriptions and live summaries (#161) ([12978c2](https://github.com/orochibraru/homerun/commit/12978c241ab4e0dd1203f58e76b9ab1541cd6653))
+* **logs:** keep every service's logs across revisions, searchable (#166) ([ff7b03c](https://github.com/zedensix/homerun/commit/ff7b03cea4b8efd35407458a1fee5e3790a9313f))
+
+## [1.0.73](https://github.com/zedensix/homerun/compare/v1.0.72...v1.0.73) (2026-10-27)
+
+### Features
+
+* **templates:** add OpenCount built-in template (#164) ([b254fb1](https://github.com/zedensix/homerun/commit/b254fb158032ac65fd02a54e8a5a77937e49d573))
+* **services:** single-column mobile tab hub with per-tab descriptions and live summaries (#161) ([12978c2](https://github.com/zedensix/homerun/commit/12978c241ab4e0dd1203f58e76b9ab1541cd6653))
 
 ### Bug Fixes
 
-* **tracing:** attach the otel collector to the swarm overlay so swarm services can resolve it (#165) ([844817c](https://github.com/orochibraru/homerun/commit/844817ccae9c36f4481547e35562990089620219))
-* **deploy:** pull a git revision's image with its cache registry credentials on rollback and promote (#163) ([6b9829b](https://github.com/orochibraru/homerun/commit/6b9829bde2d996bcd3ddbdc1950e14dbc720b364))
+* **tracing:** attach the otel collector to the swarm overlay so swarm services can resolve it (#165) ([844817c](https://github.com/zedensix/homerun/commit/844817ccae9c36f4481547e35562990089620219))
+* **deploy:** pull a git revision's image with its cache registry credentials on rollback and promote (#163) ([6b9829b](https://github.com/zedensix/homerun/commit/6b9829bde2d996bcd3ddbdc1950e14dbc720b364))
 
-## [1.0.72](https://github.com/orochibraru/homerun/compare/v1.0.71...v1.0.72) (2026-10-26)
+## [1.0.72](https://github.com/zedensix/homerun/compare/v1.0.71...v1.0.72) (2026-10-26)
 
 ### Features
 
 - make the mobile dashboard feel like a native app and extend blocked IPs with
   rankings and abuse reports (#157)
-  ([9d31af0](https://github.com/orochibraru/homerun/commit/9d31af04c5f59168318e4b29c14fdfafe6fa5528))
+  ([9d31af0](https://github.com/zedensix/homerun/commit/9d31af04c5f59168318e4b29c14fdfafe6fa5528))
 - theme toasts, float the mobile tab bar and split Observability into Logs,
   Uptime and Errors views (#155)
-  ([6f470bd](https://github.com/orochibraru/homerun/commit/6f470bd716a1fc7f9be6680b47661a0d2fcf4484))
+  ([6f470bd](https://github.com/zedensix/homerun/commit/6f470bd716a1fc7f9be6680b47661a0d2fcf4484))
 
-## [1.0.71](https://github.com/orochibraru/homerun/compare/v1.0.70...v1.0.71) (2026-10-25)
+## [1.0.71](https://github.com/zedensix/homerun/compare/v1.0.70...v1.0.71) (2026-10-25)
 
 ### Bug Fixes
 
 - **swarm:** switch to correct endpoint for probing service status (#152)
-  ([60227c8](https://github.com/orochibraru/homerun/commit/60227c897872be1b68c1eca6e92ac2ffa89462f6))
+  ([60227c8](https://github.com/zedensix/homerun/commit/60227c897872be1b68c1eca6e92ac2ffa89462f6))
 
 ### Code Refactoring
 
 - **worker:** drive Docker through the typed moby SDK (#153)
-  ([2021be1](https://github.com/orochibraru/homerun/commit/2021be1bacd2d7d0e60c29bd4fd961bd56767c7c))
+  ([2021be1](https://github.com/zedensix/homerun/commit/2021be1bacd2d7d0e60c29bd4fd961bd56767c7c))
 
-## [1.0.70](https://github.com/orochibraru/homerun/compare/v1.0.69...v1.0.70) (2026-10-24)
+## [1.0.70](https://github.com/zedensix/homerun/compare/v1.0.69...v1.0.70) (2026-10-24)
 
 ### Features
 
 - **dns:** issue certificates through ACME DNS-01 for domains on a DNS
   connection (#151)
-  ([7024f05](https://github.com/orochibraru/homerun/commit/7024f0596a1fe09702fa1bf33c2d55d714101154))
+  ([7024f05](https://github.com/zedensix/homerun/commit/7024f0596a1fe09702fa1bf33c2d55d714101154))
 - add build server concurrency and host-based build selection (#149)
-  ([4e8cf53](https://github.com/orochibraru/homerun/commit/4e8cf5344d5d30116b9cf3b23a83b3ac09acc2f6))
+  ([4e8cf53](https://github.com/zedensix/homerun/commit/4e8cf5344d5d30116b9cf3b23a83b3ac09acc2f6))
 
 ### Performance Improvements
 
 - cache streamed page data and load each dashboard panel on its own (#147)
-  ([d6efebf](https://github.com/orochibraru/homerun/commit/d6efebf0b7d0c2ebad26bc76c295150c5160bfaf))
+  ([d6efebf](https://github.com/zedensix/homerun/commit/d6efebf0b7d0c2ebad26bc76c295150c5160bfaf))
 - stream dashboard and services list behind skeletons (#145)
-  ([7c12a1e](https://github.com/orochibraru/homerun/commit/7c12a1e47b38ae9bdd4e90631d525a671f774916))
+  ([7c12a1e](https://github.com/zedensix/homerun/commit/7c12a1e47b38ae9bdd4e90631d525a671f774916))
 
-## [1.0.69](https://github.com/orochibraru/homerun/compare/v1.0.68...v1.0.69) (2026-10-22)
+## [1.0.69](https://github.com/zedensix/homerun/compare/v1.0.68...v1.0.69) (2026-10-22)
 
 ### Features
 
 - permanent IP bans with network/abuse lookup, mobile shell polish (#144)
-  ([4fdc3f9](https://github.com/orochibraru/homerun/commit/4fdc3f9f255f8a877579ccd3adbc9d1ec425e24f))
+  ([4fdc3f9](https://github.com/zedensix/homerun/commit/4fdc3f9f255f8a877579ccd3adbc9d1ec425e24f))
 - mobile-first shell with bottom tab bar and drawer navigation (#142)
-  ([dfbc38b](https://github.com/orochibraru/homerun/commit/dfbc38b295039857f9529779ba9fc75d376ae9ef))
+  ([dfbc38b](https://github.com/zedensix/homerun/commit/dfbc38b295039857f9529779ba9fc75d376ae9ef))
 
-## [1.0.68](https://github.com/orochibraru/homerun/compare/v1.0.67...v1.0.68) (2026-10-21)
+## [1.0.68](https://github.com/zedensix/homerun/compare/v1.0.67...v1.0.68) (2026-10-21)
 
 ### Features
 
 - add git provider management and blocked request observability (#140)
-  ([19972a5](https://github.com/orochibraru/homerun/commit/19972a5d6d6a4e1802d3cbf04ffd930a0408089c))
+  ([19972a5](https://github.com/zedensix/homerun/commit/19972a5d6d6a4e1802d3cbf04ffd930a0408089c))
 
-## [1.0.67](https://github.com/orochibraru/homerun/compare/v1.0.66...v1.0.67) (2026-10-21)
+## [1.0.67](https://github.com/zedensix/homerun/compare/v1.0.66...v1.0.67) (2026-10-21)
 
 ### Features
 
 - **workstations:** import editor extensions and settings from VS Code Settings
   Sync (#138)
-  ([516e1e8](https://github.com/orochibraru/homerun/commit/516e1e8e541c14a9a4f2283e3cc609ef8e7d678d))
+  ([516e1e8](https://github.com/zedensix/homerun/commit/516e1e8e541c14a9a4f2283e3cc609ef8e7d678d))
 
 ### Bug Fixes
 
 - add false value check for boolean form values (#132)
-  ([2f11196](https://github.com/orochibraru/homerun/commit/2f11196327ba7cf207a0b0cf6d4b4a1bb0f724a6))
+  ([2f11196](https://github.com/zedensix/homerun/commit/2f11196327ba7cf207a0b0cf6d4b4a1bb0f724a6))
 - **test:** stop unit tests reading .env and pin the auth origin in workstation
   tests (#137)
-  ([7ecf332](https://github.com/orochibraru/homerun/commit/7ecf3320ce1cac30533502f15c24a1a045cd1097))
+  ([7ecf332](https://github.com/zedensix/homerun/commit/7ecf3320ce1cac30533502f15c24a1a045cd1097))
 - **theme:** make an unchecked switch visible on the glass surface (#134)
-  ([a72b135](https://github.com/orochibraru/homerun/commit/a72b1358185d3b165c0ee7d7e962d258400ea9d4))
+  ([a72b135](https://github.com/zedensix/homerun/commit/a72b1358185d3b165c0ee7d7e962d258400ea9d4))
 
-## [1.0.66](https://github.com/orochibraru/homerun/compare/v1.0.65...v1.0.66) (2026-10-20)
+## [1.0.66](https://github.com/zedensix/homerun/compare/v1.0.65...v1.0.66) (2026-10-20)
 
 ### Features
 
 - **errors:** kanban board view for issues (#129)
-  ([a89f604](https://github.com/orochibraru/homerun/commit/a89f604c68b856151ead8cde2813a6021f167c20))
+  ([a89f604](https://github.com/zedensix/homerun/commit/a89f604c68b856151ead8cde2813a6021f167c20))
 - **mcp:** let the Gemini app connect as a custom app (#128)
-  ([1d497c8](https://github.com/orochibraru/homerun/commit/1d497c814b3c67395c15a628d87410f83a4b236d))
+  ([1d497c8](https://github.com/zedensix/homerun/commit/1d497c814b3c67395c15a628d87410f83a4b236d))
 - **swarm:** service placement constraints and preferences, and editable swarm
   node labels (#125)
-  ([d823147](https://github.com/orochibraru/homerun/commit/d823147e39b37b84f2ef5cfb503ed839a9afc9dd))
+  ([d823147](https://github.com/zedensix/homerun/commit/d823147e39b37b84f2ef5cfb503ed839a9afc9dd))
 - **services:** let a repository's Homerun Manifest take precedence when
   detecting a new service's config (#126)
-  ([6d320bc](https://github.com/orochibraru/homerun/commit/6d320bc8a536fb4e82538df840d752943a7623fb))
+  ([6d320bc](https://github.com/zedensix/homerun/commit/6d320bc8a536fb4e82538df840d752943a7623fb))
 
 ### Bug Fixes
 
 - probe swarm services running only on other nodes via overlay alias (#124)
-  ([0cbb0bd](https://github.com/orochibraru/homerun/commit/0cbb0bdf8caf5feeffa5834c14617a3edfcecb8a))
+  ([0cbb0bd](https://github.com/zedensix/homerun/commit/0cbb0bdf8caf5feeffa5834c14617a3edfcecb8a))
 - **uptime:** skip services stopped or put to sleep mid-tick instead of
   recording an outage
-  ([885f06d](https://github.com/orochibraru/homerun/commit/885f06da6915b661ac55f85c08d48f98111efa4c))
+  ([885f06d](https://github.com/zedensix/homerun/commit/885f06da6915b661ac55f85c08d48f98111efa4c))
 
 ### Documentation
 
 - forbid Claude Code chat links in PR bodies and close mentioned issues
-  ([7fa5dba](https://github.com/orochibraru/homerun/commit/7fa5dba39005f6616ea7053b9d0feddbf95df425))
+  ([7fa5dba](https://github.com/zedensix/homerun/commit/7fa5dba39005f6616ea7053b9d0feddbf95df425))
 - commit and open PRs as Claude Code from cloud sessions so CODEOWNERS requests
   review
-  ([2b4d982](https://github.com/orochibraru/homerun/commit/2b4d98260ed8f8e9d5fe7fc3613cf6259d246aad))
+  ([2b4d982](https://github.com/zedensix/homerun/commit/2b4d98260ed8f8e9d5fe7fc3613cf6259d246aad))
 
-## [1.0.65](https://github.com/orochibraru/homerun/compare/v1.0.64...v1.0.65) (2026-10-19)
+## [1.0.65](https://github.com/zedensix/homerun/compare/v1.0.64...v1.0.65) (2026-10-19)
 
 ### Features
 
 - **services:** detect ports, volumes and env from the image or Dockerfile on
   service creation
-  ([c48c590](https://github.com/orochibraru/homerun/commit/c48c590132200603922262299a01698d8900538e))
+  ([c48c590](https://github.com/zedensix/homerun/commit/c48c590132200603922262299a01698d8900538e))
 - **pipelines:** watch several repositories at once and give each run its own
   page with its jobs and trace
-  ([4fb8ce1](https://github.com/orochibraru/homerun/commit/4fb8ce13a8dcd5e73e834bb6aafcc153db4cc74a))
+  ([4fb8ce1](https://github.com/zedensix/homerun/commit/4fb8ce13a8dcd5e73e834bb6aafcc153db4cc74a))
 - **backups:** incremental restic snapshots per volume with forget/prune
   retention, and stop logging 4xx responses as errors
-  ([ff112a2](https://github.com/orochibraru/homerun/commit/ff112a298ed2a56be46e2c7d648544438bb67052))
+  ([ff112a2](https://github.com/zedensix/homerun/commit/ff112a298ed2a56be46e2c7d648544438bb67052))
 - **pipelines:** watch repositories from a global Pipelines page, link them to
   any service and sync through the job queue
-  ([9549f99](https://github.com/orochibraru/homerun/commit/9549f993627ed9aa3d60f825da12f07508ddae1a))
+  ([9549f99](https://github.com/zedensix/homerun/commit/9549f993627ed9aa3d60f825da12f07508ddae1a))
 - **observability:** add a Pipelines tab syncing GitHub, GitLab and Gitea CI
   runs with stats, costs and traces (#119)
-  ([340d7b5](https://github.com/orochibraru/homerun/commit/340d7b5e835d1225683774d55fda237a0d56f88d))
+  ([340d7b5](https://github.com/zedensix/homerun/commit/340d7b5e835d1225683774d55fda237a0d56f88d))
 - **backups:** set backups to keep per destination, queue the cleanup as a job
   and link each scheduled backup to its settings
-  ([b2bb724](https://github.com/orochibraru/homerun/commit/b2bb7241bb35884ae4502f2c57d008252e332564))
+  ([b2bb724](https://github.com/zedensix/homerun/commit/b2bb7241bb35884ae4502f2c57d008252e332564))
 - **backups:** clean up old archives past each volume's limit from the Backups
   page
-  ([88612f1](https://github.com/orochibraru/homerun/commit/88612f196bfec9a582c7151029f527de82288492))
+  ([88612f1](https://github.com/zedensix/homerun/commit/88612f196bfec9a582c7151029f527de82288492))
 
 ### Performance Improvements
 
 - replace 275 inline sign-in redirects with redirectToSignIn() and type-check
   scripts with bun check
-  ([c2130c8](https://github.com/orochibraru/homerun/commit/c2130c823cc4d8e6a30136067f0a3ce7731f1017))
+  ([c2130c8](https://github.com/zedensix/homerun/commit/c2130c823cc4d8e6a30136067f0a3ce7731f1017))
 
-## [1.0.64](https://github.com/orochibraru/homerun/compare/v1.0.63...v1.0.64) (2026-10-16)
+## [1.0.64](https://github.com/zedensix/homerun/compare/v1.0.63...v1.0.64) (2026-10-16)
 
 ### Features
 
 - **backups:** keep only the newest N archives per volume, deleting older ones
   after each successful backup
-  ([8d0ff43](https://github.com/orochibraru/homerun/commit/8d0ff43b9f72acea824690e3427e9144f4c98d03))
+  ([8d0ff43](https://github.com/zedensix/homerun/commit/8d0ff43b9f72acea824690e3427e9144f4c98d03))
 
-## [1.0.63](https://github.com/orochibraru/homerun/compare/v1.0.62...v1.0.63) (2026-10-15)
+## [1.0.63](https://github.com/zedensix/homerun/compare/v1.0.62...v1.0.63) (2026-10-15)
 
 ### Features
 
 - **services:** scale to zero, stop idle services and wake them on the next
   request
-  ([64009dc](https://github.com/orochibraru/homerun/commit/64009dccf7258e266d98b0077ebf11d7a5d7239e))
+  ([64009dc](https://github.com/zedensix/homerun/commit/64009dccf7258e266d98b0077ebf11d7a5d7239e))
 
-## [1.0.62](https://github.com/orochibraru/homerun/compare/v1.0.61...v1.0.62) (2026-10-15)
+## [1.0.62](https://github.com/zedensix/homerun/compare/v1.0.61...v1.0.62) (2026-10-15)
 
 ### Features
 
 - **builds:** build-time env vars passed to git builds as build args or build
   env
-  ([c2cd0c2](https://github.com/orochibraru/homerun/commit/c2cd0c28b0c8fe71954fda47c5eab9562664eee3))
+  ([c2cd0c2](https://github.com/zedensix/homerun/commit/c2cd0c28b0c8fe71954fda47c5eab9562664eee3))
 
-## [1.0.61](https://github.com/orochibraru/homerun/compare/v1.0.60...v1.0.61) (2026-10-15)
+## [1.0.61](https://github.com/zedensix/homerun/compare/v1.0.60...v1.0.61) (2026-10-15)
 
 ### Features
 
 - **api:** workstation login wall fields, recreate route and remote host cleanup
-  ([d2bcf4a](https://github.com/orochibraru/homerun/commit/d2bcf4a893a7bfd54b6461d2c4155d10785cbb5e))
+  ([d2bcf4a](https://github.com/zedensix/homerun/commit/d2bcf4a893a7bfd54b6461d2c4155d10785cbb5e))
 - **api:** read-only routes for the built-in registry's repositories and tags
-  ([709c3b6](https://github.com/orochibraru/homerun/commit/709c3b691794b0a79292cdb0ea62f6bcd12de678))
+  ([709c3b6](https://github.com/zedensix/homerun/commit/709c3b691794b0a79292cdb0ea62f6bcd12de678))
 - **api:** OIDC apps, environments and secrets routes
-  ([120a5ec](https://github.com/orochibraru/homerun/commit/120a5ec5a4cde51dc44a451a15f732b801677440))
+  ([120a5ec](https://github.com/zedensix/homerun/commit/120a5ec5a4cde51dc44a451a15f732b801677440))
 - **api:** monitoring, system log, container and Docker cleanup routes
-  ([7248957](https://github.com/orochibraru/homerun/commit/724895764d42a1f50dd467c4fa986fff106edd2c))
+  ([7248957](https://github.com/zedensix/homerun/commit/724895764d42a1f50dd467c4fa986fff106edd2c))
 - **api:** version pinning and update check routes
-  ([fc78d2c](https://github.com/orochibraru/homerun/commit/fc78d2cd042ef3b4c85da63e232dcaf4fa3cfb5b))
+  ([fc78d2c](https://github.com/zedensix/homerun/commit/fc78d2cd042ef3b4c85da63e232dcaf4fa3cfb5b))
 - **api:** secret env keys on the cron job routes
-  ([9cd2be1](https://github.com/orochibraru/homerun/commit/9cd2be1c68136d5c6f97be454d473b2acf99ebea))
+  ([9cd2be1](https://github.com/zedensix/homerun/commit/9cd2be1c68136d5c6f97be454d473b2acf99ebea))
 - **api:** structured 409 for domain conflicts, takeover and force delete on the
   service routes
-  ([6f9a488](https://github.com/orochibraru/homerun/commit/6f9a48873fb9c6eba0b82c51d22a71ec134e8f2c))
+  ([6f9a488](https://github.com/zedensix/homerun/commit/6f9a48873fb9c6eba0b82c51d22a71ec134e8f2c))
 - **auth:** auth-check serves a workstation's login wall
-  ([987ced5](https://github.com/orochibraru/homerun/commit/987ced5909af81547a2e28ab8481286897e33d93))
+  ([987ced5](https://github.com/zedensix/homerun/commit/987ced5909af81547a2e28ab8481286897e33d93))
 - **api:** document the new routes in OpenAPI, add serviceDomain() and
   regenerate the API types, Manifest schema and Terraform provider
-  ([82c300a](https://github.com/orochibraru/homerun/commit/82c300adbffc7a3484a518cf251c2acb75549e51))
+  ([82c300a](https://github.com/zedensix/homerun/commit/82c300adbffc7a3484a518cf251c2acb75549e51))
 - **cli:** workstations, presets, version pinning, registry images, service
   account updates and a takeover hint
-  ([8d042ad](https://github.com/orochibraru/homerun/commit/8d042ad0f6fd5cfbed8d229cb8143bbd62f01e27))
+  ([8d042ad](https://github.com/zedensix/homerun/commit/8d042ad0f6fd5cfbed8d229cb8143bbd62f01e27))
 - **mcp:** version pinning, workstation, monitoring, system, DNS, registry and
   read-only admin tools
-  ([3cf3c23](https://github.com/orochibraru/homerun/commit/3cf3c238c9a8e179a29227e9641e85ccaff6d3d9))
+  ([3cf3c23](https://github.com/zedensix/homerun/commit/3cf3c238c9a8e179a29227e9641e85ccaff6d3d9))
 - **services:** version pinning and update checks behind a service layer shared
   by every surface
-  ([f1bf5ff](https://github.com/orochibraru/homerun/commit/f1bf5ff664ee7409847bc0c0c2aa6f89aef476db))
+  ([f1bf5ff](https://github.com/zedensix/homerun/commit/f1bf5ff664ee7409847bc0c0c2aa6f89aef476db))
 - **cron-jobs:** secret env vars like services, with one shared env editor
-  ([458eb9d](https://github.com/orochibraru/homerun/commit/458eb9d3db060ae05f952f41a7800be5efd38d44))
+  ([458eb9d](https://github.com/zedensix/homerun/commit/458eb9d3db060ae05f952f41a7800be5efd38d44))
 - **ui:** a fixed-length mask for every hidden value
-  ([f473e8b](https://github.com/orochibraru/homerun/commit/f473e8bb8402e77aa93feaf7863d7929f74c06d8))
+  ([f473e8b](https://github.com/zedensix/homerun/commit/f473e8bb8402e77aa93feaf7863d7929f74c06d8))
 - **api:** permission areas for the new system, monitoring, registry and OIDC
   app routes
-  ([f0e8e37](https://github.com/orochibraru/homerun/commit/f0e8e37b7873465cb833bab574e8e5538ef5ddfd))
+  ([f0e8e37](https://github.com/zedensix/homerun/commit/f0e8e37b7873465cb833bab574e8e5538ef5ddfd))
 - **iac:** OIDC apps, their environments and secrets in the Terraform provider
-  ([08f6657](https://github.com/orochibraru/homerun/commit/08f6657cb12f559855f2027d599b2df1647cd9fb))
+  ([08f6657](https://github.com/zedensix/homerun/commit/08f6657cb12f559855f2027d599b2df1647cd9fb))
 - **auth:** any admin edits Sign in with Homerun apps, without better-auth's
   owner-only endpoints
-  ([9c0b1ed](https://github.com/orochibraru/homerun/commit/9c0b1edb7ce1bec2d1fa4ebb0c273271e96fa368))
+  ([9c0b1ed](https://github.com/zedensix/homerun/commit/9c0b1edb7ce1bec2d1fa4ebb0c273271e96fa368))
 - **remote-hosts:** reach ssh:// Docker hosts over SSH for workstations, builds
   and cron jobs
-  ([8b0484a](https://github.com/orochibraru/homerun/commit/8b0484af9b4dbb2460bc1b5c19f13caac64a1d16))
+  ([8b0484a](https://github.com/zedensix/homerun/commit/8b0484af9b4dbb2460bc1b5c19f13caac64a1d16))
 - **workstations:** dev container Apply on Settings, openvscode-server, and the
   login wall on workstations and presets
-  ([3efec50](https://github.com/orochibraru/homerun/commit/3efec50d91b64ce993b6a910a247ee40b65f67b1))
+  ([3efec50](https://github.com/zedensix/homerun/commit/3efec50d91b64ce993b6a910a247ee40b65f67b1))
 - **workstations:** home volume disk use, re-pull on start, tcp:// Docker hosts
   and cleanup on host delete
-  ([9dddb5e](https://github.com/orochibraru/homerun/commit/9dddb5e063dcb1257ccff061a52c62195076f7e6))
+  ([9dddb5e](https://github.com/zedensix/homerun/commit/9dddb5e063dcb1257ccff061a52c62195076f7e6))
 - **auth:** split the login wall form helpers and share the section between
   services and workstations
-  ([195baa7](https://github.com/orochibraru/homerun/commit/195baa7d871de5ff561fd024670e2ebd6f5a5351))
+  ([195baa7](https://github.com/zedensix/homerun/commit/195baa7d871de5ff561fd024670e2ebd6f5a5351))
 - **auth:** one login wall gate for services and workstations
-  ([df55f1c](https://github.com/orochibraru/homerun/commit/df55f1c0e929f9a38dcd41aecc472fdc7064167e))
+  ([df55f1c](https://github.com/zedensix/homerun/commit/df55f1c0e929f9a38dcd41aecc472fdc7064167e))
 - **notifications:** create a channel on its own page
-  ([ce1ff1c](https://github.com/orochibraru/homerun/commit/ce1ff1c00b7deff4ac1a449fdb83d66482d2d1e3))
+  ([ce1ff1c](https://github.com/zedensix/homerun/commit/ce1ff1c00b7deff4ac1a449fdb83d66482d2d1e3))
 - **services:** refuse deleting a service mid-deploy unless forced
-  ([a572ae3](https://github.com/orochibraru/homerun/commit/a572ae35e1c579fb4f2f1db306a6147f5dd965c9))
+  ([a572ae3](https://github.com/zedensix/homerun/commit/a572ae35e1c579fb4f2f1db306a6147f5dd965c9))
 - **deploy:** check the route through Traefik after a deploy and fail on
   Traefik's own errors
-  ([40c28ce](https://github.com/orochibraru/homerun/commit/40c28ceb24f5f23023a7620318c98cbc89898831))
+  ([40c28ce](https://github.com/zedensix/homerun/commit/40c28ceb24f5f23023a7620318c98cbc89898831))
 - **services:** domain conflict checks for environments, release channel
   canaries and compose import
-  ([4811c7d](https://github.com/orochibraru/homerun/commit/4811c7d2eb19c94af0505b171ba92767c7851b88))
+  ([4811c7d](https://github.com/zedensix/homerun/commit/4811c7d2eb19c94af0505b171ba92767c7851b88))
 - **previews:** pull request previews get uptime probes only when the parent
   opts in
-  ([e00c3d2](https://github.com/orochibraru/homerun/commit/e00c3d28570c4e5f8bad0b2da9bdb963767b2382))
+  ([e00c3d2](https://github.com/zedensix/homerun/commit/e00c3d28570c4e5f8bad0b2da9bdb963767b2382))
 - **manifest:** a manifest apply reports domain conflicts and can take the
   domains over
-  ([fa7b3da](https://github.com/orochibraru/homerun/commit/fa7b3da29b1ce33bd56d939d2f18df90bf2e326b))
+  ([fa7b3da](https://github.com/zedensix/homerun/commit/fa7b3da29b1ce33bd56d939d2f18df90bf2e326b))
 - **services:** default hostnames under the services subdomain across the
   services pages and the new service wizard
-  ([886ac1f](https://github.com/orochibraru/homerun/commit/886ac1f76c272af1bca8b8df5c6e08d26c5b806f))
+  ([886ac1f](https://github.com/zedensix/homerun/commit/886ac1f76c272af1bca8b8df5c6e08d26c5b806f))
 - **services:** take a domain over from its owner when saving the Networking tab
-  ([36e39f7](https://github.com/orochibraru/homerun/commit/36e39f7122a2ae9d67c68e82a52992b5e6b8a82b))
+  ([36e39f7](https://github.com/zedensix/homerun/commit/36e39f7122a2ae9d67c68e82a52992b5e6b8a82b))
 - **settings:** a services subdomain for default hostnames
-  ([e150428](https://github.com/orochibraru/homerun/commit/e150428d4e5ec2964b874202766114c05af9a73a))
+  ([e150428](https://github.com/zedensix/homerun/commit/e150428d4e5ec2964b874202766114c05af9a73a))
 - **redirects:** refuse a redirect on the dashboard's or another core host
-  ([d15b8c9](https://github.com/orochibraru/homerun/commit/d15b8c99aed1998aa73a090b4b8af8a922b4fb68))
+  ([d15b8c9](https://github.com/zedensix/homerun/commit/d15b8c99aed1998aa73a090b4b8af8a922b4fb68))
 - **dns:** never delete a core host's records, and release a service's old
   hostnames after it redeploys
-  ([d2e4b45](https://github.com/orochibraru/homerun/commit/d2e4b45143ecc5f587e74de4093c597d0771e271))
+  ([d2e4b45](https://github.com/zedensix/homerun/commit/d2e4b45143ecc5f587e74de4093c597d0771e271))
 - **services:** domain entries, hostname ownership and conflict detection across
   services, workstations, redirects and core hosts
-  ([bc4c6c7](https://github.com/orochibraru/homerun/commit/bc4c6c791ed2791d001de8eb773bfd9c556651cf))
+  ([bc4c6c7](https://github.com/zedensix/homerun/commit/bc4c6c791ed2791d001de8eb773bfd9c556651cf))
 - **db:** columns for preview uptime, workstation and preset login walls,
   services subdomain, cron secrets and stale DNS hosts
-  ([6834cb7](https://github.com/orochibraru/homerun/commit/6834cb7458fcdc29a35e584fc21a4595deb247a0))
+  ([6834cb7](https://github.com/zedensix/homerun/commit/6834cb7458fcdc29a35e584fc21a4595deb247a0))
 
 ### Bug Fixes
 
 - **deploy:** pass registry auth to swarm service create and update so worker
   nodes can pull private images
-  ([62d2398](https://github.com/orochibraru/homerun/commit/62d2398065d3fc4963251144418dbade07425bb6))
+  ([62d2398](https://github.com/zedensix/homerun/commit/62d2398065d3fc4963251144418dbade07425bb6))
 - **mcp:** redact credential-shaped values, error event URLs and headers, and
   log secrets, and return uploaded icons as a label
-  ([160e00b](https://github.com/orochibraru/homerun/commit/160e00b08b785cb79b1826e91bd468d6e26b6bfc))
+  ([160e00b](https://github.com/zedensix/homerun/commit/160e00b08b785cb79b1826e91bd468d6e26b6bfc))
 - **auth:** refuse the API keys and MCP tokens of a banned user
-  ([b225674](https://github.com/orochibraru/homerun/commit/b22567486fde6c221c998dfe7a371dff7e66b798))
+  ([b225674](https://github.com/zedensix/homerun/commit/b22567486fde6c221c998dfe7a371dff7e66b798))
 - **uptime:** confirm a down probe over three checks and retry probes on a fresh
   connection
-  ([5bcd8c3](https://github.com/orochibraru/homerun/commit/5bcd8c31301b698f846bf8cd14ee5b347adf67c3))
+  ([5bcd8c3](https://github.com/zedensix/homerun/commit/5bcd8c31301b698f846bf8cd14ee5b347adf67c3))
 
 ### Documentation
 
 - README tagline, five roles, release channels on self-update, CI deploys,
   machine terminals and a License section
-  ([2f1003f](https://github.com/orochibraru/homerun/commit/2f1003f457694cae22373447f837717966eb02c4))
+  ([2f1003f](https://github.com/zedensix/homerun/commit/2f1003f457694cae22373447f837717966eb02c4))
 - rewrite the README for multi-node, multi-user Homerun and document cron jobs
   on remote tcp:// and ssh:// hosts
-  ([fe8e43d](https://github.com/orochibraru/homerun/commit/fe8e43d03be24aeaf30052d05c7d97f3ca99b619))
+  ([fe8e43d](https://github.com/zedensix/homerun/commit/fe8e43d03be24aeaf30052d05c7d97f3ca99b619))
 - REST API and CLI reference for the new routes and commands, and clear the
   finished TODO items
-  ([1e4c110](https://github.com/orochibraru/homerun/commit/1e4c11012449a576f2869e2346072f8df0284a75))
+  ([1e4c110](https://github.com/zedensix/homerun/commit/1e4c11012449a576f2869e2346072f8df0284a75))
 
-## [1.0.60](https://github.com/orochibraru/homerun/compare/v1.0.59...v1.0.60) (2026-10-14)
+## [1.0.60](https://github.com/zedensix/homerun/compare/v1.0.59...v1.0.60) (2026-10-14)
 
 ### Features
 
 - path-based service domains with prefix stripping and per-path login wall,
   Dokploy paths kept, MIT license
-  ([985dd0f](https://github.com/orochibraru/homerun/commit/985dd0f7c188230a7762fa214bd09828907a388f))
+  ([985dd0f](https://github.com/zedensix/homerun/commit/985dd0f7c188230a7762fa214bd09828907a388f))
 
-## [1.0.59](https://github.com/orochibraru/homerun/compare/v1.0.58...v1.0.59) (2026-10-14)
+## [1.0.59](https://github.com/zedensix/homerun/compare/v1.0.58...v1.0.59) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES
 
 - service accounts, Homerun Manifest, Terraform and REST API coverage for every
   setting, split GitHub Actions and richer worker traces
-  ([3ae8bf1](https://github.com/orochibraru/homerun/commit/3ae8bf18fe3c42dffcf7704275bbeccc1e095e3b))
+  ([3ae8bf1](https://github.com/zedensix/homerun/commit/3ae8bf18fe3c42dffcf7704275bbeccc1e095e3b))
 
 ### Features
 
 - service accounts, Homerun Manifest, Terraform and REST API coverage for every
   setting, split GitHub Actions and richer worker traces
-  ([3ae8bf1](https://github.com/orochibraru/homerun/commit/3ae8bf18fe3c42dffcf7704275bbeccc1e095e3b))
+  ([3ae8bf1](https://github.com/zedensix/homerun/commit/3ae8bf18fe3c42dffcf7704275bbeccc1e095e3b))
 
 ### Bug Fixes
 
 - stop Souin's broken 304 from resetting HTTP/2 streams and serve HTTP/3 by
   default
-  ([1818028](https://github.com/orochibraru/homerun/commit/1818028f9ec248eb2ec2c228e2af5ec471acb5b6))
+  ([1818028](https://github.com/zedensix/homerun/commit/1818028f9ec248eb2ec2c228e2af5ec471acb5b6))
 
 ### Documentation
 
 - log deleteDns wiping the dashboard's own Pangolin resource in TODO
-  ([0301d46](https://github.com/orochibraru/homerun/commit/0301d46e8f72d076b54afdfb27d68df5cb354c26))
+  ([0301d46](https://github.com/zedensix/homerun/commit/0301d46e8f72d076b54afdfb27d68df5cb354c26))
 
-## [1.0.58](https://github.com/orochibraru/homerun/compare/v1.0.57...v1.0.58) (2026-10-13)
+## [1.0.58](https://github.com/zedensix/homerun/compare/v1.0.57...v1.0.58) (2026-10-13)
 
 ### Features
 
 - **workstations:** presets, git sign-in, devcontainer detection and dev.
   domains (#104)
-  ([b95c7eb](https://github.com/orochibraru/homerun/commit/b95c7eb5220d91e8a7b1a6489b1dbfbc5c36f822))
+  ([b95c7eb](https://github.com/zedensix/homerun/commit/b95c7eb5220d91e8a7b1a6489b1dbfbc5c36f822))
 
 ### Bug Fixes
 
 - stop Souin's broken 304 from resetting HTTP/2 streams and serve … (#107)
-  ([975a228](https://github.com/orochibraru/homerun/commit/975a228b5b4654ec16015f37af131ef36d6e07ae))
+  ([975a228](https://github.com/zedensix/homerun/commit/975a228b5b4654ec16015f37af131ef36d6e07ae))
 
-## [1.0.57](https://github.com/orochibraru/homerun/compare/v1.0.56...v1.0.57) (2026-10-13)
+## [1.0.57](https://github.com/zedensix/homerun/compare/v1.0.56...v1.0.57) (2026-10-13)
 
 ### Features
 
 - **workstations:** editor and git setup, per-section settings and observability
   (#102)
-  ([6c70b9c](https://github.com/orochibraru/homerun/commit/6c70b9c19ada2039e46765ce6198bd9d0d63d467))
+  ([6c70b9c](https://github.com/zedensix/homerun/commit/6c70b9c19ada2039e46765ce6198bd9d0d63d467))
 - add image version pinning and update checks (#101)
-  ([526d49f](https://github.com/orochibraru/homerun/commit/526d49f7ae31d62e4fc3fa8520dd5b6c2ae843fa))
+  ([526d49f](https://github.com/zedensix/homerun/commit/526d49f7ae31d62e4fc3fa8520dd5b6c2ae843fa))
 - workstation auto-stop, live cron runs with a run detail page and inline volume
   creation, broad MCP tool coverage, drop the dashboard's unread notifications
-  ([50608f1](https://github.com/orochibraru/homerun/commit/50608f1b71749976a1237657c2d180a0a98c4029))
+  ([50608f1](https://github.com/zedensix/homerun/commit/50608f1b71749976a1237657c2d180a0a98c4029))
 - cron job volumes, user, socket and tabs; mean/disrespect bait for blocked
   paths; CIMD for MCP sign-in and a dedicated MCP docs page
-  ([172b25a](https://github.com/orochibraru/homerun/commit/172b25a5e7fd815ffd69603473b4a4b86e865129))
+  ([172b25a](https://github.com/zedensix/homerun/commit/172b25a5e7fd815ffd69603473b4a4b86e865129))
 - **workstations:** add git repo picker, logs viewer, and self-test (#96)
-  ([95d7ad5](https://github.com/orochibraru/homerun/commit/95d7ad5f8beda66f1fbc2019c4bdbaf8f141b306))
+  ([95d7ad5](https://github.com/zedensix/homerun/commit/95d7ad5f8beda66f1fbc2019c4bdbaf8f141b306))
 - CrowdSec sub-tabs for decisions, alerts and a searchable, paged community
   blocklist
-  ([93ba9d0](https://github.com/orochibraru/homerun/commit/93ba9d02ede283a6600d5b45226135efe45cd369))
+  ([93ba9d0](https://github.com/zedensix/homerun/commit/93ba9d02ede283a6600d5b45226135efe45cd369))
 - script cron jobs with file support and multiple runtimes (#93)
-  ([bf09c66](https://github.com/orochibraru/homerun/commit/bf09c669eff4495579ec15b184108aeb05411557))
+  ([bf09c66](https://github.com/zedensix/homerun/commit/bf09c669eff4495579ec15b184108aeb05411557))
 - add dev workstations with browser IDE support (#92)
-  ([5035ef1](https://github.com/orochibraru/homerun/commit/5035ef13984a1524c1e49e2306faa33bade3bd3f))
+  ([5035ef1](https://github.com/zedensix/homerun/commit/5035ef13984a1524c1e49e2306faa33bade3bd3f))
 - real visitor IP behind the Newt tunnel for IP bans, CrowdSec ban push and a
   CrowdSec page under Monitoring
-  ([b0c3b1a](https://github.com/orochibraru/homerun/commit/b0c3b1a83d007b00dcc93348131ce97a3917e890))
+  ([b0c3b1a](https://github.com/zedensix/homerun/commit/b0c3b1a83d007b00dcc93348131ce97a3917e890))
 - opt-in notification grouping per channel, notification settings under
   /notifications/settings, tab-only fallback for browsers without a push service
-  ([7227a90](https://github.com/orochibraru/homerun/commit/7227a908b82901d928889d2e51e29001737be826))
+  ([7227a90](https://github.com/zedensix/homerun/commit/7227a908b82901d928889d2e51e29001737be826))
 - web push browser notifications via service worker, browser channel kind and
   build/deploy started events (#53)
-  ([036c486](https://github.com/orochibraru/homerun/commit/036c4867244767aec97ef8e70e450b4e38d8b0bc))
+  ([036c486](https://github.com/zedensix/homerun/commit/036c4867244767aec97ef8e70e450b4e38d8b0bc))
 - notifications page, dashboard unread summary, in-app scheduled tasks summary,
   stacked grouped channel messages and browser notifications
-  ([72dc436](https://github.com/orochibraru/homerun/commit/72dc4361baea77adbde9a65ac028c9823198a3fa))
+  ([72dc436](https://github.com/zedensix/homerun/commit/72dc4361baea77adbde9a65ac028c9823198a3fa))
 - show job traces on the scheduling job page and run the OpenTelemetry collector
   by default
-  ([ab39631](https://github.com/orochibraru/homerun/commit/ab39631b3652daf02eba05c3313df036bc631404))
+  ([ab39631](https://github.com/zedensix/homerun/commit/ab39631b3652daf02eba05c3313df036bc631404))
 - permission presets and editable API key permissions
-  ([b94220b](https://github.com/orochibraru/homerun/commit/b94220b408dd673642e105f98d6fe48e8595adf1))
+  ([b94220b](https://github.com/zedensix/homerun/commit/b94220b408dd673642e105f98d6fe48e8595adf1))
 - IaC projects with per-project tabs and tool choice, and git watch/ignore paths
   for push deploys
-  ([3f9033e](https://github.com/orochibraru/homerun/commit/3f9033e39a3f55b8e14543b144d603f02560065f))
+  ([3f9033e](https://github.com/zedensix/homerun/commit/3f9033e39a3f55b8e14543b144d603f02560065f))
 
 ### Bug Fixes
 
 - update stale e2e tests and keep bake --print fixtures out of biome
-  ([0638025](https://github.com/orochibraru/homerun/commit/0638025cfc5d18e038f13ae67d079bb9edeecad5))
+  ([0638025](https://github.com/zedensix/homerun/commit/0638025cfc5d18e038f13ae67d079bb9edeecad5))
 - **builds:** ignore cacheonly bake context targets when resolving the bake
   target
-  ([f00aa07](https://github.com/orochibraru/homerun/commit/f00aa0742190605833aafa4bdd4b972160fb5d52))
+  ([f00aa07](https://github.com/zedensix/homerun/commit/f00aa0742190605833aafa4bdd4b972160fb5d52))
 - route workstations through Pangolin/DNS sync and stop calling a CrowdSec 502 a
   refused login
-  ([392202a](https://github.com/orochibraru/homerun/commit/392202adbac4e1d7147732171209f59443b15994))
+  ([392202a](https://github.com/zedensix/homerun/commit/392202adbac4e1d7147732171209f59443b15994))
 - stack delete refuses mid-deploy with force, typed-name confirm, volume choice
   and overview; give icon URLs an extension so CrowdSec stops banning
-  ([2f2cd36](https://github.com/orochibraru/homerun/commit/2f2cd36b04d84724a5f10116266c934f2291bccd))
+  ([2f2cd36](https://github.com/zedensix/homerun/commit/2f2cd36b04d84724a5f10116266c934f2291bccd))
 - serve public buckets on the S3 custom domain and add empty/empty-and-delete
   bucket actions (#90)
-  ([40e402e](https://github.com/orochibraru/homerun/commit/40e402e6c141d6be5af2f7e3eb71ef6d49805ce7))
+  ([40e402e](https://github.com/zedensix/homerun/commit/40e402e6c141d6be5af2f7e3eb71ef6d49805ce7))
 - **deps:** update drizzle (#68)
-  ([1c0c88a](https://github.com/orochibraru/homerun/commit/1c0c88a61919781ab57357dbfed5b2882b102fad))
+  ([1c0c88a](https://github.com/zedensix/homerun/commit/1c0c88a61919781ab57357dbfed5b2882b102fad))
 - **deps:** update dependency @modelcontextprotocol/server to v2.3.1 (#84)
-  ([8722397](https://github.com/orochibraru/homerun/commit/872239723db801bfd593e2da33beb94d147d4eb0))
+  ([8722397](https://github.com/zedensix/homerun/commit/872239723db801bfd593e2da33beb94d147d4eb0))
 
-## [1.0.56](https://github.com/orochibraru/homerun/compare/v1.0.55...v1.0.56) (2026-10-09)
+## [1.0.56](https://github.com/zedensix/homerun/compare/v1.0.55...v1.0.56) (2026-10-09)
 
 ### Features
 
@@ -530,1171 +530,1171 @@
   browser and MCP toolsfeat: rework IaC, API keys, sidebar, tabs and glass
   default, background jobs with job pages, error boundaries, environment
   switcher, public buckets, S3 file browser and MCP tools
-  ([6ad2d28](https://github.com/orochibraru/homerun/commit/6ad2d28cb8fd8c6788445767580929d37ed7a3bc))
+  ([6ad2d28](https://github.com/zedensix/homerun/commit/6ad2d28cb8fd8c6788445767580929d37ed7a3bc))
 - pull request previews for image-based services from CI, provider registry
   docs, and IaC backend matching with a stack/service combobox
-  ([adca9c5](https://github.com/orochibraru/homerun/commit/adca9c59d0882c31fe9dc386c2b68c64f2a46ad1))
+  ([adca9c5](https://github.com/zedensix/homerun/commit/adca9c59d0882c31fe9dc386c2b68c64f2a46ad1))
 
 ### Bug Fixes
 
 - **auth:** answer 429 instead of 401 for rate-limited API keys and raise the
   per-key limit
-  ([54fd9ec](https://github.com/orochibraru/homerun/commit/54fd9eca25e4916bb0cdde5b00ebe488516416d1))
+  ([54fd9ec](https://github.com/zedensix/homerun/commit/54fd9eca25e4916bb0cdde5b00ebe488516416d1))
 - **iac:** link state projects to their bucket's access keys for Pulumi
-  ([b74a62c](https://github.com/orochibraru/homerun/commit/b74a62c824ba5caf904f5e787329ce9f4984dd76))
+  ([b74a62c](https://github.com/zedensix/homerun/commit/b74a62c824ba5caf904f5e787329ce9f4984dd76))
 - **iac:** point the provider snippets at Authorized Clients
-  ([82628b0](https://github.com/orochibraru/homerun/commit/82628b066e05a0cf54641e74881bb2174a0bb625))
+  ([82628b0](https://github.com/zedensix/homerun/commit/82628b066e05a0cf54641e74881bb2174a0bb625))
 
-## [1.0.55](https://github.com/orochibraru/homerun/compare/v1.0.54...v1.0.55) (2026-10-07)
+## [1.0.55](https://github.com/zedensix/homerun/compare/v1.0.54...v1.0.55) (2026-10-07)
 
 ### Features
 
 - area-based permissions for users and scoped expiring API keys, publish the
   Terraform provider, mirror Docker Hub pulls in CI
-  ([44874af](https://github.com/orochibraru/homerun/commit/44874afd0125860dab7820c6f4cae6d533f2b131))
+  ([44874af](https://github.com/zedensix/homerun/commit/44874afd0125860dab7820c6f4cae6d533f2b131))
 
 ### Bug Fixes
 
 - **ci:** prettier-format the generated screenshot index so nightly prek passes
-  ([a76afb9](https://github.com/orochibraru/homerun/commit/a76afb90213a2dd7d809dad16a33acec1c7a8af2))
+  ([a76afb9](https://github.com/zedensix/homerun/commit/a76afb90213a2dd7d809dad16a33acec1c7a8af2))
 
-## [1.0.54](https://github.com/orochibraru/homerun/compare/v1.0.53...v1.0.54) (2026-10-07)
+## [1.0.54](https://github.com/zedensix/homerun/compare/v1.0.53...v1.0.54) (2026-10-07)
 
 ### Bug Fixes
 
 - **e2e:** name the required status checks in the docs screenshot setup
-  ([d84140a](https://github.com/orochibraru/homerun/commit/d84140afe83c0f05b87d091fae9b3595a1f28276))
+  ([d84140a](https://github.com/zedensix/homerun/commit/d84140afe83c0f05b87d091fae9b3595a1f28276))
 
-## [1.0.53](https://github.com/orochibraru/homerun/compare/v1.0.52...v1.0.53) (2026-10-07)
+## [1.0.53](https://github.com/zedensix/homerun/compare/v1.0.52...v1.0.53) (2026-10-07)
 
 ### ⚠ BREAKING CHANGES
 
 - sveltekit 3 (#45)
-  ([bb111f2](https://github.com/orochibraru/homerun/commit/bb111f2355190b56ee1267332ba59a1964f88262))
+  ([bb111f2](https://github.com/zedensix/homerun/commit/bb111f2355190b56ee1267332ba59a1964f88262))
 
 ### Features
 
 - full CLI coverage with iac generate, backup destination free-space alerts, and
   custom domains for status pages
-  ([ca4c5fd](https://github.com/orochibraru/homerun/commit/ca4c5fd49534ce0991ee1d5ecac9b5a9b1e3e18c))
+  ([ca4c5fd](https://github.com/zedensix/homerun/commit/ca4c5fd49534ce0991ee1d5ecac9b5a9b1e3e18c))
 - **iac:** generate a zipped Terraform project per stack or service,
   Shiki-highlightedfeat(iac): generate a zipped Terraform project per stack or
   service, Shiki-highlighted
-  ([0764bc4](https://github.com/orochibraru/homerun/commit/0764bc493f801f5d6edb3ad72f5551c5911f95ee))
+  ([0764bc4](https://github.com/zedensix/homerun/commit/0764bc493f801f5d6edb3ad72f5551c5911f95ee))
 - OpenTelemetry tracing, a Terraform provider with full API coverage and an IaC
   page, simple and advanced UI modes, and IP ban alerts
-  ([dcf3c8d](https://github.com/orochibraru/homerun/commit/dcf3c8dde16ad74224e3bf271b57a649308806fa))
+  ([dcf3c8d](https://github.com/zedensix/homerun/commit/dcf3c8dde16ad74224e3bf271b57a649308806fa))
 - **storage:** object storage with a built-in Garage store, S3 providers,
   buckets and Terraform state
-  ([f226ad4](https://github.com/orochibraru/homerun/commit/f226ad4dfdab6124d7dcb4ad1fbd034127a1a4b4))
+  ([f226ad4](https://github.com/zedensix/homerun/commit/f226ad4dfdab6124d7dcb4ad1fbd034127a1a4b4))
 - **login-wall:** dress a gated app's sign-in pages in the error pages' brand
-  ([36857f4](https://github.com/orochibraru/homerun/commit/36857f4e3f38e6e91d5123a1206aab48cc6e5d53))
+  ([36857f4](https://github.com/zedensix/homerun/commit/36857f4e3f38e6e91d5123a1206aab48cc6e5d53))
 - **registry:** list repositories as a table and give each its own page with its
   tags
-  ([df5fdf0](https://github.com/orochibraru/homerun/commit/df5fdf080bda77e34ab2b32a7cf8f335cf6616de))
+  ([df5fdf0](https://github.com/zedensix/homerun/commit/df5fdf080bda77e34ab2b32a7cf8f335cf6616de))
 - **security:** block path patterns per service, scope the login wall to paths,
   and ban IPs that keep hitting blocked paths
-  ([e99282e](https://github.com/orochibraru/homerun/commit/e99282ee958c700dd66442931c72418e6db3a814))
+  ([e99282e](https://github.com/zedensix/homerun/commit/e99282ee958c700dd66442931c72418e6db3a814))
 - **registry:** stream the images tab and page and search its repositories
-  ([bd31b7c](https://github.com/orochibraru/homerun/commit/bd31b7ce7435edea905128095711718905a9e892))
+  ([bd31b7c](https://github.com/zedensix/homerun/commit/bd31b7ce7435edea905128095711718905a9e892))
 - **deployments:** stream the deployments list and give each deployment its own
   page with its log
-  ([44a62d2](https://github.com/orochibraru/homerun/commit/44a62d22e2c95a1ef2d96a44f9c9cf61c6c61a8f))
+  ([44a62d2](https://github.com/zedensix/homerun/commit/44a62d22e2c95a1ef2d96a44f9c9cf61c6c61a8f))
 - **services:** default a new git service's build cache to the built-in registry
   when it's running
-  ([0af787b](https://github.com/orochibraru/homerun/commit/0af787b7a4a1392408cf3d11b010bf1ab3e1d370))
+  ([0af787b](https://github.com/zedensix/homerun/commit/0af787b7a4a1392408cf3d11b010bf1ab3e1d370))
 - **build-cache:** list the services using a build cache registry on its page
-  ([16cf8c1](https://github.com/orochibraru/homerun/commit/16cf8c1a977e795301e74f4669a224591f477e92))
+  ([16cf8c1](https://github.com/zedensix/homerun/commit/16cf8c1a977e795301e74f4669a224591f477e92))
 - **stacks:** move a focused diagram card or substack with Alt and the arrow
   keys
-  ([39059e2](https://github.com/orochibraru/homerun/commit/39059e254f93e5f14fc35f8967d0bfecf91f797e))
+  ([39059e2](https://github.com/zedensix/homerun/commit/39059e254f93e5f14fc35f8967d0bfecf91f797e))
 - **error-pages:** link Homerun in the Powered by line to the project page
-  ([7f19a7d](https://github.com/orochibraru/homerun/commit/7f19a7d57cee2805dc3d1eca850cb5f7f90470f5))
+  ([7f19a7d](https://github.com/zedensix/homerun/commit/7f19a7d57cee2805dc3d1eca850cb5f7f90470f5))
 - service environments with presets, regrouped service tabs with path-routed
   sub-pages, GitHub deployments for every environment, built-in build cache, and
   review fixes
-  ([abde2d3](https://github.com/orochibraru/homerun/commit/abde2d37c53e8cf5d5a5be96f6b023a83c1613bd))
+  ([abde2d3](https://github.com/zedensix/homerun/commit/abde2d37c53e8cf5d5a5be96f6b023a83c1613bd))
 - branded Traefik error pages, liquid glass rework, GitHub app permissions for
   previews, and screenshots across the docs
-  ([b1f070f](https://github.com/orochibraru/homerun/commit/b1f070ff9bd9eef3ca29b34419037a2a675d4353))
+  ([b1f070f](https://github.com/zedensix/homerun/commit/b1f070ff9bd9eef3ca29b34419037a2a675d4353))
 - **previews:** comment the preview URL on GitHub pull requests and track it as
   a deployment environment
-  ([4c5245a](https://github.com/orochibraru/homerun/commit/4c5245a05e10173f7378346c708a1e923c52ccfb))
+  ([4c5245a](https://github.com/zedensix/homerun/commit/4c5245a05e10173f7378346c708a1e923c52ccfb))
 - deploy already-open pull requests, section-header save buttons, keyboard
   navigation pass
-  ([d041924](https://github.com/orochibraru/homerun/commit/d041924941951712ae8988d504a400b0994d7d87))
+  ([d041924](https://github.com/zedensix/homerun/commit/d041924941951712ae8988d504a400b0994d7d87))
 - fork ci suite (#46)
-  ([c0bd9a8](https://github.com/orochibraru/homerun/commit/c0bd9a82af7dca4b9f0054a0c2c19f14513748f9))
+  ([c0bd9a8](https://github.com/zedensix/homerun/commit/c0bd9a82af7dca4b9f0054a0c2c19f14513748f9))
 - sveltekit 3 (#45)
-  ([bb111f2](https://github.com/orochibraru/homerun/commit/bb111f2355190b56ee1267332ba59a1964f88262))
+  ([bb111f2](https://github.com/zedensix/homerun/commit/bb111f2355190b56ee1267332ba59a1964f88262))
 - **notifications:** edit, enable and disable notification channels
-  ([48e33df](https://github.com/orochibraru/homerun/commit/48e33dfd18ae3da43ca89ef6b7fe30cec6673be2))
+  ([48e33df](https://github.com/zedensix/homerun/commit/48e33dfd18ae3da43ca89ef6b7fe30cec6673be2))
 
 ### Bug Fixes
 
 - **ci:** unbreak nightly cleanup on missing tags and two stale e2e assertions
-  ([4dcbdc5](https://github.com/orochibraru/homerun/commit/4dcbdc5d3a692f11cb481fd6549f645dbb4999e9))
+  ([4dcbdc5](https://github.com/zedensix/homerun/commit/4dcbdc5d3a692f11cb481fd6549f645dbb4999e9))
 - **iac:** keep code previews from overflowing the page on mobile, and put
   secret values in terraform.tfvars
-  ([dacbeee](https://github.com/orochibraru/homerun/commit/dacbeeee2221cccaf4ef018866d4c52b93fde680))
+  ([dacbeee](https://github.com/zedensix/homerun/commit/dacbeeee2221cccaf4ef018866d4c52b93fde680))
 - **api:** answer a rate-limited API key with 429 and Retry-After instead of
   401, and let the integration client wait it out
-  ([f74f7ac](https://github.com/orochibraru/homerun/commit/f74f7acc7bdbc1d145d30924f9ef6eab61d45da8))
+  ([f74f7ac](https://github.com/zedensix/homerun/commit/f74f7acc7bdbc1d145d30924f9ef6eab61d45da8))
 - **services:** show a git service's repo and branch in its header until it has
   an image
-  ([58c4ca7](https://github.com/orochibraru/homerun/commit/58c4ca73a9994b9ebee709da62d3d97ca0421ca3))
+  ([58c4ca7](https://github.com/zedensix/homerun/commit/58c4ca73a9994b9ebee709da62d3d97ca0421ca3))
 - **a11y:** set the html lang attribute to en, missed by the previous commit
-  ([3a9b7b1](https://github.com/orochibraru/homerun/commit/3a9b7b1d3d354ea2853116347df37aacd9efd16e))
+  ([3a9b7b1](https://github.com/zedensix/homerun/commit/3a9b7b1d3d354ea2853116347df37aacd9efd16e))
 - **a11y:** declare the dashboard's language as English
-  ([3be80c8](https://github.com/orochibraru/homerun/commit/3be80c8e3ec33ccdee15998615adff1504f93732))
+  ([3be80c8](https://github.com/zedensix/homerun/commit/3be80c8e3ec33ccdee15998615adff1504f93732))
 - **auth:** drop the dead sign-up link from the sign-in footer
-  ([e255598](https://github.com/orochibraru/homerun/commit/e255598a337c09b33dcbaae271e7873d7399eaae))
+  ([e255598](https://github.com/zedensix/homerun/commit/e255598a337c09b33dcbaae271e7873d7399eaae))
 
 ### Documentation
 
 - **agents:** point repo-gate, scaffold-feature and subproject-sync at SvelteKit
   3 and src/lib paths
-  ([7e849e6](https://github.com/orochibraru/homerun/commit/7e849e6d1e61dde3cf470a8237ce1d36fa434a53))
+  ([7e849e6](https://github.com/zedensix/homerun/commit/7e849e6d1e61dde3cf470a8237ce1d36fa434a53))
 
-## [1.0.52](https://github.com/orochibraru/homerun/compare/v1.0.51...v1.0.52) (2026-10-01)
+## [1.0.52](https://github.com/zedensix/homerun/compare/v1.0.51...v1.0.52) (2026-10-01)
 
 ### Bug Fixes
 
 - **docs:** list the six unlisted pages in docs/config.json and test that every
   page is listed
-  ([d2c8b0b](https://github.com/orochibraru/homerun/commit/d2c8b0bebe939d8d8b8ccf5ca24c8d8392ae64af))
+  ([d2c8b0b](https://github.com/zedensix/homerun/commit/d2c8b0bebe939d8d8b8ccf5ca24c8d8392ae64af))
 
-## [1.0.51](https://github.com/orochibraru/homerun/compare/v1.0.50...v1.0.51) (2026-09-30)
+## [1.0.51](https://github.com/zedensix/homerun/compare/v1.0.50...v1.0.51) (2026-09-30)
 
 ### Documentation
 
 - use the feature graphic as the README hero
-  ([939fe0b](https://github.com/orochibraru/homerun/commit/939fe0bd9470ad4736a29115b290513cf2e449eb))
+  ([939fe0b](https://github.com/zedensix/homerun/commit/939fe0bd9470ad4736a29115b290513cf2e449eb))
 
-## [1.0.50](https://github.com/orochibraru/homerun/compare/v1.0.49...v1.0.50) (2026-09-30)
+## [1.0.50](https://github.com/zedensix/homerun/compare/v1.0.49...v1.0.50) (2026-09-30)
 
 ### Features
 
 - build servers build for the deploy host's architecture through QEMU, backup
   durations in minutes/hours/days
-  ([6368848](https://github.com/orochibraru/homerun/commit/63688481f5006fe595288594ad2d4d1a1342106f))
+  ([6368848](https://github.com/zedensix/homerun/commit/63688481f5006fe595288594ad2d4d1a1342106f))
 - destination presets including Hetzner Storage Box, and an integration test
   against a real box over SFTP, SMB and WebDAV
-  ([fa44121](https://github.com/orochibraru/homerun/commit/fa4412153745e4f7b9851792424a4b63da9a0edd))
+  ([fa44121](https://github.com/zedensix/homerun/commit/fa4412153745e4f7b9851792424a4b63da9a0edd))
 - backup destination page to view details, edit and test a destination
-  ([2bad820](https://github.com/orochibraru/homerun/commit/2bad820094e0b2d6bd214101964bc12cf763efc2))
+  ([2bad820](https://github.com/zedensix/homerun/commit/2bad820094e0b2d6bd214101964bc12cf763efc2))
 - back volumes up to SFTP, SMB and WebDAV destinations through an rclone helper,
   lock every better-auth package to one version, fix a flaky S3 upload test
-  ([3535b56](https://github.com/orochibraru/homerun/commit/3535b56b3aee5b9a9c3bcd86bdabcf3630b83f2b))
+  ([3535b56](https://github.com/zedensix/homerun/commit/3535b56b3aee5b9a9c3bcd86bdabcf3630b83f2b))
 - redirects sync DNS/Pangolin with a list toggle and REST/MCP/CLI support,
   generated architecture diagram, slimmer CLI help, fix invisible code editor
   text on opaque themes
-  ([89e8fc9](https://github.com/orochibraru/homerun/commit/89e8fc9f452ef49283a17e30091327a4ccec4ec2))
+  ([89e8fc9](https://github.com/zedensix/homerun/commit/89e8fc9f452ef49283a17e30091327a4ccec4ec2))
 - registry self-test and boot-time registry reconcile; CI builds pull base
   images through mirror.gcr.io
-  ([06822ce](https://github.com/orochibraru/homerun/commit/06822ce451b39846230b7c48f08bb0d3fb08baaf))
+  ([06822ce](https://github.com/zedensix/homerun/commit/06822ce451b39846230b7c48f08bb0d3fb08baaf))
 - SSH machine terminals, 25 new templates incl. Immich, and templates E2E fails
   fast instead of hanging
-  ([5fa1326](https://github.com/orochibraru/homerun/commit/5fa1326bbd147bbf995ea10b8dfb2190a4a6efa6))
+  ([5fa1326](https://github.com/zedensix/homerun/commit/5fa1326bbd147bbf995ea10b8dfb2190a4a6efa6))
 - SSH machine terminals, 25 new templates incl. Immich, and templates E2E fails
   fast instead of hanging
-  ([7c7051e](https://github.com/orochibraru/homerun/commit/7c7051ea30351525c57ab2b947f2688b40528464))
+  ([7c7051e](https://github.com/zedensix/homerun/commit/7c7051ea30351525c57ab2b947f2688b40528464))
 - monitoring vs previous period, preview env overrides and volume copies,
   instance TLS certificate tab, per-template CI matrix, preview breadcrumbs,
   local setup docs
-  ([a5b475c](https://github.com/orochibraru/homerun/commit/a5b475c6dc4a1fff51e73adf8e5b56992ec2f668))
+  ([a5b475c](https://github.com/zedensix/homerun/commit/a5b475c6dc4a1fff51e73adf8e5b56992ec2f668))
 - stack (with substacks) and instance-wide monitoring with a per-service
   breakdown; rename analytics to monitoring
-  ([4f89c85](https://github.com/orochibraru/homerun/commit/4f89c85c0491635e720778cb0185a58520d3ba1e))
+  ([4f89c85](https://github.com/zedensix/homerun/commit/4f89c85c0491635e720778cb0185a58520d3ba1e))
 - service analytics (traffic from Traefik metrics, uptime, resources over today
   to all time), preview branch filters, refreshed showcase screenshots
-  ([f0dede6](https://github.com/orochibraru/homerun/commit/f0dede652e04f0100b273aa333ff1a46365d83e3))
+  ([f0dede6](https://github.com/zedensix/homerun/commit/f0dede652e04f0100b273aa333ff1a46365d83e3))
 - Sleek style, wider sidebar and search palette, warmer less-pink bordeaux
-  ([1b69a22](https://github.com/orochibraru/homerun/commit/1b69a226bc9cf02e2abe51907a5a2a6e23cda831))
+  ([1b69a22](https://github.com/zedensix/homerun/commit/1b69a226bc9cf02e2abe51907a5a2a6e23cda831))
 - Homerun branding and a close button in the mobile sidebar drawer
-  ([2a7b87d](https://github.com/orochibraru/homerun/commit/2a7b87d9c0bb4e5f293437f1fe32115ccd55f0f9))
+  ([2a7b87d](https://github.com/zedensix/homerun/commit/2a7b87d9c0bb4e5f293437f1fe32115ccd55f0f9))
 - one-command server enrollment as build server or swarm node, liquid glass
   tinted by the accent, Material You style
-  ([30035fd](https://github.com/orochibraru/homerun/commit/30035fd4dd3cbcc32a5315c6592bfb79580132a5))
+  ([30035fd](https://github.com/zedensix/homerun/commit/30035fd4dd3cbcc32a5315c6592bfb79580132a5))
 - domains and DNS providers (16 APIs incl. Cloudflare, Route 53, Hetzner,
   Namecheap) managed from Homerun, with tracked auto-records per service
   hostname
-  ([5401224](https://github.com/orochibraru/homerun/commit/540122461fa224b9c4a0cb477e5a89ed6c356104))
+  ([5401224](https://github.com/zedensix/homerun/commit/540122461fa224b9c4a0cb477e5a89ed6c356104))
 - restore a volume backup from a service's Storage tab (replace, back up first,
   or as a revision with rollback), macOS-style glass, baba-style resource
   incidents with a sustain window, reminders and per-resource recovery
-  ([19f8580](https://github.com/orochibraru/homerun/commit/19f8580ea4f4fed4bff0d18ce2a7527f595cccb9))
+  ([19f8580](https://github.com/zedensix/homerun/commit/19f8580ea4f4fed4bff0d18ce2a7527f595cccb9))
 - cancel running backups and restores, presets get a windowed sidebar, title-bar
   header and bundled era fonts
-  ([7c3cf3b](https://github.com/orochibraru/homerun/commit/7c3cf3bda56164bb19321a7e471983f94dff86bd))
+  ([7c3cf3b](https://github.com/zedensix/homerun/commit/7c3cf3bda56164bb19321a7e471983f94dff86bd))
 - appearance presets (Windows 95/98/XP/7, MSN, Retro) overriding theme, style
   and colors
-  ([d24fe18](https://github.com/orochibraru/homerun/commit/d24fe18b52ea9b4aa52f0828f9d21d575f1f3b42))
+  ([d24fe18](https://github.com/zedensix/homerun/commit/d24fe18b52ea9b4aa52f0828f9d21d575f1f3b42))
 - error tracking source maps (upload API, CLI and Errors tab, frames mapped back
   to source at ingest), header-authenticated API clients pass the form CSRF
   check
-  ([059fef9](https://github.com/orochibraru/homerun/commit/059fef928e2fb4d4cbc88f7f5138de2e2fd84ae8))
+  ([059fef9](https://github.com/zedensix/homerun/commit/059fef928e2fb4d4cbc88f7f5138de2e2fd84ae8))
 - group notifications and report scheduled runs once, backup and cron job
   events, S3 upload timeouts/retries/progress, backups and jobs in the
   API/CLI/MCP, and PR CI deploys only touched templates
-  ([e1fbd82](https://github.com/orochibraru/homerun/commit/e1fbd822aefd1230b9bd2ff0a398e0dcae218a3e))
+  ([e1fbd82](https://github.com/zedensix/homerun/commit/e1fbd822aefd1230b9bd2ff0a398e0dcae218a3e))
 
 ### Bug Fixes
 
 - retry a failed start-first rollout stop-first when a routed service's writable
   volume can't be shared
-  ([486a96f](https://github.com/orochibraru/homerun/commit/486a96fd82981858040a3fff735b68df8a3fd365))
+  ([486a96f](https://github.com/zedensix/homerun/commit/486a96fd82981858040a3fff735b68df8a3fd365))
 - swarm updates routed services start-first even with a writable volume, so
   redeploys stop 404ing
-  ([3fe30a7](https://github.com/orochibraru/homerun/commit/3fe30a73add6eb8848fd5cf646d6f818f600acb8))
+  ([3fe30a7](https://github.com/zedensix/homerun/commit/3fe30a73add6eb8848fd5cf646d6f818f600acb8))
 - build cache registries accept a namespace path so cross-host builds can push
   to Gitea/GHCR, logging in against the bare host
-  ([9a25de3](https://github.com/orochibraru/homerun/commit/9a25de3503bae7c4f7221350ec82f770f671f17a))
+  ([9a25de3](https://github.com/zedensix/homerun/commit/9a25de3503bae7c4f7221350ec82f770f671f17a))
 - tag every channel's images with their release tag so the agent setup command
   pins a real image; wider dialogs
-  ([440fc58](https://github.com/orochibraru/homerun/commit/440fc587d10d3dafcee083a3b51a5f3dbf4d1455))
+  ([440fc58](https://github.com/zedensix/homerun/commit/440fc587d10d3dafcee083a3b51a5f3dbf4d1455))
 - agent setup
-  ([ed96a60](https://github.com/orochibraru/homerun/commit/ed96a606abf11e8cfbc80f990f86e57868934895))
+  ([ed96a60](https://github.com/zedensix/homerun/commit/ed96a606abf11e8cfbc80f990f86e57868934895))
 - registry TLS, agent setup commands with a connection test, git provider type
   in the repo picker, templates E2E infra pulls via mirrors, and a checked
   nightly publish script
-  ([0c027c1](https://github.com/orochibraru/homerun/commit/0c027c187a09b5139311305c476747dcfca06c31))
+  ([0c027c1](https://github.com/zedensix/homerun/commit/0c027c187a09b5139311305c476747dcfca06c31))
 - templates E2E setup hook takes no args again; Sleek is the default style,
   showcase the style picker with several styles picked
-  ([b36e0bd](https://github.com/orochibraru/homerun/commit/b36e0bd70060cccf3f0183d7d820136b394042f2))
+  ([b36e0bd](https://github.com/zedensix/homerun/commit/b36e0bd70060cccf3f0183d7d820136b394042f2))
 - stop queue.test's JobDTO mock leaking into other test files and breaking CI
-  ([3edc1bd](https://github.com/orochibraru/homerun/commit/3edc1bd59ed87abd693ad0bd6d16296a7d2e2205))
+  ([3edc1bd](https://github.com/zedensix/homerun/commit/3edc1bd59ed87abd693ad0bd6d16296a7d2e2205))
 - **deps:** update module golang.org/x/crypto to v0.57.0 (#38)
-  ([95991b0](https://github.com/orochibraru/homerun/commit/95991b0f2c546ae2f7f15a57e3ebc6548c570431))
+  ([95991b0](https://github.com/zedensix/homerun/commit/95991b0f2c546ae2f7f15a57e3ebc6548c570431))
 - backups fail loudly instead of hanging (S3 request timeout and retries, real
   upload error, progress log, bigint size) and are listed and triggered from the
   API, CLI and MCP
-  ([28c66dc](https://github.com/orochibraru/homerun/commit/28c66dce92e405c0e276a95bd2072a278a6dac01))
+  ([28c66dc](https://github.com/zedensix/homerun/commit/28c66dce92e405c0e276a95bd2072a278a6dac01))
 
 ### Performance Improvements
 
 - upload backup parts four at a time with fast gzip; show volume sizes on disk;
   real-bucket S3 backup/restore integration test
-  ([51a22ea](https://github.com/orochibraru/homerun/commit/51a22eaee830cecd957646aa1523c4ddb690effe))
+  ([51a22ea](https://github.com/zedensix/homerun/commit/51a22eaee830cecd957646aa1523c4ddb690effe))
 
-## [1.0.49](https://github.com/orochibraru/homerun/compare/v1.0.48...v1.0.49) (2026-09-27)
+## [1.0.49](https://github.com/zedensix/homerun/compare/v1.0.48...v1.0.49) (2026-09-27)
 
 ### Features
 
 - IDP apps get a real list and tabbed pages (overview, users with revoke,
   settings), branded HTML emails, login wall lets manifests through and 401s
   background requests
-  ([cc06649](https://github.com/orochibraru/homerun/commit/cc066493fefad959d977b229487cde261eb14fbc))
+  ([cc06649](https://github.com/zedensix/homerun/commit/cc066493fefad959d977b229487cde261eb14fbc))
 - stack icons, pan/zoom architecture canvas with draggable substacks, OIDC apps
   moved to their own IDP page
-  ([0ccaa6f](https://github.com/orochibraru/homerun/commit/0ccaa6f97c06b6aa0ec7f2e0b33415690f43266f))
+  ([0ccaa6f](https://github.com/zedensix/homerun/commit/0ccaa6f97c06b6aa0ec7f2e0b33415690f43266f))
 - Sentry-compatible error tracking (per-service DSN and env injection, issues
   with source-linked stack traces, new/regression notifications, Errors tab,
   API/MCP/CLI)
-  ([f4990ee](https://github.com/orochibraru/homerun/commit/f4990ee87858716089472f5abcb30eaa96b0edf9))
+  ([f4990ee](https://github.com/zedensix/homerun/commit/f4990ee87858716089472f5abcb30eaa96b0edf9))
 - emailed sign-in codes and magic links with passwordless client invites,
   Dashboard Icons through a cached proxy
-  ([378d66d](https://github.com/orochibraru/homerun/commit/378d66d45a1792beb8a11ebd53993e1aabd18a0a))
+  ([378d66d](https://github.com/zedensix/homerun/commit/378d66d45a1792beb8a11ebd53993e1aabd18a0a))
 - mobile-responsive dashboard, per-account page size, previews API/CLI with
   promote and a GitHub Actions cookbook, opt-in release channels with deployment
   environments, app-access-only role with /my-apps
-  ([7ebfd59](https://github.com/orochibraru/homerun/commit/7ebfd597386e239af6f4d25199fb326041dbdb10))
+  ([7ebfd59](https://github.com/zedensix/homerun/commit/7ebfd597386e239af6f4d25199fb326041dbdb10))
 - keep sites up during self-updates, nest PR previews under their parent, weekly
   template tag bumps with an E2E suite deploying every template
-  ([27852f9](https://github.com/orochibraru/homerun/commit/27852f9a5958a3b27690684c50bca9faac3a7ff9))
+  ([27852f9](https://github.com/zedensix/homerun/commit/27852f9a5958a3b27690684c50bca9faac3a7ff9))
 - Previews tab with preview domain templates, instance-wide deployment history
   with recorded triggers, Website service category
-  ([3e64b91](https://github.com/orochibraru/homerun/commit/3e64b9178531b887029a4a366442338430f95808))
+  ([3e64b91](https://github.com/zedensix/homerun/commit/3e64b9178531b887029a4a366442338430f95808))
 - service Health tab with healthcheck overrides and off switch, DB-stored
   service dependencies driving start order, xterm.js terminal; fix false
   unhealthy verdict on unrouted services
-  ([0cbf285](https://github.com/orochibraru/homerun/commit/0cbf285caf110292dc8353000b18e5186fd15749))
+  ([0cbf285](https://github.com/zedensix/homerun/commit/0cbf285caf110292dc8353000b18e5186fd15749))
 - substacks with dependency tree, draggable architecture diagram and unlink;
   per-var secret marks, default datastore volumes, Dockerfile build target, own
   nightly workflow, update-status dialog; fix Pangolin org check and false
   service links
-  ([7aaee6b](https://github.com/orochibraru/homerun/commit/7aaee6ba99f9b6c160ff17a32ebedf99dd9f6f2a))
+  ([7aaee6b](https://github.com/zedensix/homerun/commit/7aaee6ba99f9b6c160ff17a32ebedf99dd9f6f2a))
 - nested substacks, per-stack dependency tree and architecture diagram,
   stack-prefixed slugs; auto-restart swarm services whose DNS alias Docker
   dropped
-  ([3153e59](https://github.com/orochibraru/homerun/commit/3153e59c902a7e1aaa7c600fc209b5fb7f5ffdff))
+  ([3153e59](https://github.com/zedensix/homerun/commit/3153e59c902a7e1aaa7c600fc209b5fb7f5ffdff))
 - nightly update channel, generated {{secret}} template passwords,
   authentication page tabs, deployment history API and MCP tool, recreate a
   missing swarm ingress network; fix MCP env redaction and Claude connector
   token auth
-  ([ab39c37](https://github.com/orochibraru/homerun/commit/ab39c37a6944ed386c0321ba0f91523bde4de85e))
+  ([ab39c37](https://github.com/zedensix/homerun/commit/ab39c37a6944ed386c0321ba0f91523bde4de85e))
 - self-updates check the new version in a candidate before switching and roll
   back on failure; public /api/v1/ready probe
-  ([711cb77](https://github.com/orochibraru/homerun/commit/711cb77c88b9f2ab541fdeb83864c95773928d7d))
+  ([711cb77](https://github.com/zedensix/homerun/commit/711cb77c88b9f2ab541fdeb83864c95773928d7d))
 - remote MCP server with OAuth for claude.ai, HTTP readiness in revision health;
   fix installer README formatting
-  ([9f0bb03](https://github.com/orochibraru/homerun/commit/9f0bb0389e6afe3295052c7b0f4f691d3318d7f7))
+  ([9f0bb03](https://github.com/zedensix/homerun/commit/9f0bb0389e6afe3295052c7b0f4f691d3318d7f7))
 - one-switch volume backups with schedule dialog, scheduled backups on /backups,
   DNS page with exclusive Cloudflare/Pangolin provider and domain listing; fix
   stale uptime alerts
-  ([5f3823c](https://github.com/orochibraru/homerun/commit/5f3823c46f23fe59af268d6edd72c83c8411c3b0))
+  ([5f3823c](https://github.com/zedensix/homerun/commit/5f3823c46f23fe59af268d6edd72c83c8411c3b0))
 - sorting, palettes, volume file editor, per-session HTTP cache, cancellable
   worker deploys, swarm rollback fix, schedule picker, stack-aware breadcrumbs
   and notifications, create-and-mount volumes
-  ([8f31e2a](https://github.com/orochibraru/homerun/commit/8f31e2a9cba5e65de63810929d7da771188a47f5))
+  ([8f31e2a](https://github.com/zedensix/homerun/commit/8f31e2a9cba5e65de63810929d7da771188a47f5))
 - published ports and per-domain ports, templates as JSON by category, CI deploy
   action and CLI image, queue orphan recovery fix, UI consistency fixes
-  ([8475c45](https://github.com/orochibraru/homerun/commit/8475c458f6edd1dc390707399ae965967b896925))
+  ([8475c45](https://github.com/zedensix/homerun/commit/8475c458f6edd1dc390707399ae965967b896925))
 - Stremio/Nuvio templates, deploy cancel button, fail status checks on commits
   with no checks
-  ([a83e937](https://github.com/orochibraru/homerun/commit/a83e93751d609dfddbd16753b17a02c6fc88cd74))
+  ([a83e937](https://github.com/zedensix/homerun/commit/a83e93751d609dfddbd16753b17a02c6fc88cd74))
 - header breadcrumbs replacing back links, tabbed stack page with services first
-  ([8ebb472](https://github.com/orochibraru/homerun/commit/8ebb4727bee038eb7a0a6f1f8a5db5f003b39b69))
+  ([8ebb472](https://github.com/zedensix/homerun/commit/8ebb4727bee038eb7a0a6f1f8a5db5f003b39b69))
 - right-click context menu on stacks list, coloured service tab icons
-  ([19b596b](https://github.com/orochibraru/homerun/commit/19b596b9b3e3d070c26697ff3ac4338603fa1c2b))
+  ([19b596b](https://github.com/zedensix/homerun/commit/19b596b9b3e3d070c26697ff3ac4338603fa1c2b))
 
 ### Bug Fixes
 
 - IDP pages overflow on mobile, grids get a shrinkable single column
-  ([8f9fdb9](https://github.com/orochibraru/homerun/commit/8f9fdb90b4459d8580946dcc5151f1c941700634))
+  ([8f9fdb9](https://github.com/zedensix/homerun/commit/8f9fdb90b4459d8580946dcc5151f1c941700634))
 - templates E2E green: template data volumes and {{url}}, twelve templates
   fixed, onboarding stops pre-filling an IP base domain
-  ([51fc8d6](https://github.com/orochibraru/homerun/commit/51fc8d6af30bd4d831f6d8778552e5abe0a82ff4))
+  ([51fc8d6](https://github.com/zedensix/homerun/commit/51fc8d6af30bd4d831f6d8778552e5abe0a82ff4))
 - login wall sign-in page offers only the methods the gated app allows
-  ([042e748](https://github.com/orochibraru/homerun/commit/042e7486c209b8703957e189cc2574c62ba9e8e3))
+  ([042e748](https://github.com/zedensix/homerun/commit/042e7486c209b8703957e189cc2574c62ba9e8e3))
 - pre-fill the deploy wizard's default data volume row for datastore images and
   show icons in the stack flat list
-  ([ea959a1](https://github.com/orochibraru/homerun/commit/ea959a1abac43c261872c3dc2eace5ab09fbdcea))
+  ([ea959a1](https://github.com/zedensix/homerun/commit/ea959a1abac43c261872c3dc2eace5ab09fbdcea))
 - MCP redacts env vars by secret-looking name, URL passwords and password args
   instead of every value; update_service merges env changes and refuses
   unmatched placeholders
-  ([788e77e](https://github.com/orochibraru/homerun/commit/788e77ee4f24f1443a12fc4f46caa02764c6d2ab))
+  ([788e77e](https://github.com/zedensix/homerun/commit/788e77ee4f24f1443a12fc4f46caa02764c6d2ab))
 - stop re-applying unchanged Traefik flags from recreating Traefik on every
   boot; pause uptime probes during updates, boot and Traefik restarts
-  ([7f9e243](https://github.com/orochibraru/homerun/commit/7f9e243f357ec26eaff8c1c34c5201b0dabb8881))
+  ([7f9e243](https://github.com/zedensix/homerun/commit/7f9e243f357ec26eaff8c1c34c5201b0dabb8881))
 - add cache engine names to the Vale vocabulary
-  ([6e14c5c](https://github.com/orochibraru/homerun/commit/6e14c5c39f12606df211ffe52ea055436d653e87))
+  ([6e14c5c](https://github.com/zedensix/homerun/commit/6e14c5c39f12606df211ffe52ea055436d653e87))
 - traefik expectations
-  ([ed6e234](https://github.com/orochibraru/homerun/commit/ed6e23464b5659ae2777ccd68b144f757376bf86))
+  ([ed6e234](https://github.com/zedensix/homerun/commit/ed6e23464b5659ae2777ccd68b144f757376bf86))
 - cover mcpResource and make the Claude Stop gate block on failure
-  ([4a5f006](https://github.com/orochibraru/homerun/commit/4a5f00640b3d51523fc71d361fe8614905be65db))
+  ([4a5f006](https://github.com/zedensix/homerun/commit/4a5f00640b3d51523fc71d361fe8614905be65db))
 - re-apply Traefik cache plugin on worker boot, stop treating gated apps' bearer
   tokens as API keys, damp flapping uptime alerts; feat: homerun mcp server,
   Vale prose linting for docs
-  ([c7dd792](https://github.com/orochibraru/homerun/commit/c7dd79221526d53d7ea5cd2fe9e76e85c3d0d19c))
+  ([c7dd792](https://github.com/zedensix/homerun/commit/c7dd79221526d53d7ea5cd2fe9e76e85c3d0d19c))
 - count 5xx responses as down in uptime probes; add htmx, Remix, SolidJS, Qwik,
   Vite, Hono and more service icons
-  ([e95bca7](https://github.com/orochibraru/homerun/commit/e95bca7c3926f4f2648b809c753d690c530516f7))
+  ([e95bca7](https://github.com/zedensix/homerun/commit/e95bca7c3926f4f2648b809c753d690c530516f7))
 - show an alert linking to a failed deploy instead of redirecting to it on every
   Overview visit
-  ([281a37e](https://github.com/orochibraru/homerun/commit/281a37e908747382de795cdda2f1c7906b9fa921))
+  ([281a37e](https://github.com/zedensix/homerun/commit/281a37e908747382de795cdda2f1c7906b9fa921))
 - contain absolutely-positioned content in the dashboard scroll area to kill the
   double scrollbar
-  ([5b4b2ab](https://github.com/orochibraru/homerun/commit/5b4b2ab89838b83dabb2f04dfbdbf0af5e3a6803))
+  ([5b4b2ab](https://github.com/zedensix/homerun/commit/5b4b2ab89838b83dabb2f04dfbdbf0af5e3a6803))
 - import Dokploy/Coolify domains on migration, target Traefik's 443 for
   in-network Pangolin tunnels
-  ([14c5b35](https://github.com/orochibraru/homerun/commit/14c5b354920ff1361597f626fe5ebbdfdd36e5f9))
+  ([14c5b35](https://github.com/zedensix/homerun/commit/14c5b354920ff1361597f626fe5ebbdfdd36e5f9))
 
 ### Performance Improvements
 
 - attach the login-wall middleware only to gated services and redeploy when the
   wall is toggled
-  ([c21162f](https://github.com/orochibraru/homerun/commit/c21162f32eca4d464238d15bae5095894db7cf73))
+  ([c21162f](https://github.com/zedensix/homerun/commit/c21162f32eca4d464238d15bae5095894db7cf73))
 
-## [1.0.48](https://github.com/orochibraru/homerun/compare/v1.0.47...v1.0.48) (2026-09-24)
+## [1.0.48](https://github.com/zedensix/homerun/compare/v1.0.47...v1.0.48) (2026-09-24)
 
 ### Bug Fixes
 
 - **ci:** push refreshed screenshots with RELEASE_TOKEN, root font 110% → 100%
-  ([4088964](https://github.com/orochibraru/homerun/commit/4088964a5ee85b9bbed19a5b13ed8e1d2663e06a))
+  ([4088964](https://github.com/zedensix/homerun/commit/4088964a5ee85b9bbed19a5b13ed8e1d2663e06a))
 - **ui:** drop root font size from 110% to 100%
-  ([952f4f1](https://github.com/orochibraru/homerun/commit/952f4f130f874e9c32bd79d3e75e12085ee570cc))
+  ([952f4f1](https://github.com/zedensix/homerun/commit/952f4f130f874e9c32bd79d3e75e12085ee570cc))
 
-## [1.0.47](https://github.com/orochibraru/homerun/compare/v1.0.46...v1.0.47) (2026-09-24)
+## [1.0.47](https://github.com/zedensix/homerun/compare/v1.0.46...v1.0.47) (2026-09-24)
 
 ### Bug Fixes
 
 - **screenshots:** encode webp in chromium, playwright workers have no Bun
   global
-  ([78594d1](https://github.com/orochibraru/homerun/commit/78594d1fd25bd50654983a697c68c687bf89932d))
+  ([78594d1](https://github.com/zedensix/homerun/commit/78594d1fd25bd50654983a697c68c687bf89932d))
 - **auth:** drop better-auth's unset baseURL warning
-  ([27ac4f5](https://github.com/orochibraru/homerun/commit/27ac4f529a2e7b15a1cec51f76e32fbb1a7643af))
+  ([27ac4f5](https://github.com/zedensix/homerun/commit/27ac4f529a2e7b15a1cec51f76e32fbb1a7643af))
 
-## [1.0.46](https://github.com/orochibraru/homerun/compare/v1.0.45...v1.0.46) (2026-09-24)
+## [1.0.46](https://github.com/zedensix/homerun/compare/v1.0.45...v1.0.46) (2026-09-24)
 
 ### Features
 
 - **services:** add rebuild, fresh build, pull image and kill actions, show
   lifecycle buttons on swarm, equal-height dashboard cards
-  ([9b9279c](https://github.com/orochibraru/homerun/commit/9b9279c3de3052c8fc2fdd3705f85c2f65a13aaa))
+  ([9b9279c](https://github.com/zedensix/homerun/commit/9b9279c3de3052c8fc2fdd3705f85c2f65a13aaa))
 
-## [1.0.45](https://github.com/orochibraru/homerun/compare/v1.0.44...v1.0.45) (2026-09-24)
+## [1.0.45](https://github.com/zedensix/homerun/compare/v1.0.44...v1.0.45) (2026-09-24)
 
 ### Features
 
 - **services:** add a volumes step and default login to Homerun sign-in in the
   wizard, split every oversized svelte file
-  ([974f672](https://github.com/orochibraru/homerun/commit/974f6726104cdfbc75a176b20fd15c7b0065b8a3))
+  ([974f672](https://github.com/zedensix/homerun/commit/974f6726104cdfbc75a176b20fd15c7b0065b8a3))
 - **templates:** add Bercail and give Penombre and Bercail their icons
-  ([eb7d8a3](https://github.com/orochibraru/homerun/commit/eb7d8a3e7e6826a19aab380a28b54328895e1556))
+  ([eb7d8a3](https://github.com/zedensix/homerun/commit/eb7d8a3e7e6826a19aab380a28b54328895e1556))
 
-## [1.0.44](https://github.com/orochibraru/homerun/compare/v1.0.43...v1.0.44) (2026-09-24)
+## [1.0.44](https://github.com/zedensix/homerun/compare/v1.0.43...v1.0.44) (2026-09-24)
 
 ### Features
 
 - **ui:** tint sidebar nav icons with the accent and regenerate docs screenshots
-  ([652453b](https://github.com/orochibraru/homerun/commit/652453b882fe70691ff73bbb0c9d86d665ddef69))
+  ([652453b](https://github.com/zedensix/homerun/commit/652453b882fe70691ff73bbb0c9d86d665ddef69))
 - **brand:** replace the house logo with a home-plate mark and drop the
   favicon's background box
-  ([e9cf65b](https://github.com/orochibraru/homerun/commit/e9cf65b399d8e9c03c6cabbb6ba9cb8385d67f70))
+  ([e9cf65b](https://github.com/zedensix/homerun/commit/e9cf65b399d8e9c03c6cabbb6ba9cb8385d67f70))
 - **ui:** make bordeaux the default accent and drop per-category sidebar colors
-  ([2ee7841](https://github.com/orochibraru/homerun/commit/2ee7841ca6f0574ebe1425d833fbe8c7c87ebf6d))
+  ([2ee7841](https://github.com/zedensix/homerun/commit/2ee7841ca6f0574ebe1425d833fbe8c7c87ebf6d))
 
-## [1.0.43](https://github.com/orochibraru/homerun/compare/v1.0.42...v1.0.43) (2026-09-24)
+## [1.0.43](https://github.com/zedensix/homerun/compare/v1.0.42...v1.0.43) (2026-09-24)
 
 ### Features
 
 - **installer:** add --dashboard-port/--http-port/--https-port to install next
   to Dokploy and take over 80/443 later
-  ([b03ce43](https://github.com/orochibraru/homerun/commit/b03ce43ababd002ac1794231ea3efb99f05952d8))
+  ([b03ce43](https://github.com/zedensix/homerun/commit/b03ce43ababd002ac1794231ea3efb99f05952d8))
 
-## [1.0.42](https://github.com/orochibraru/homerun/compare/v1.0.41...v1.0.42) (2026-09-22)
+## [1.0.42](https://github.com/zedensix/homerun/compare/v1.0.41...v1.0.42) (2026-09-22)
 
 ### Features
 
 - re-assert core services whenever the worker (re)starts, keyed on a worker boot
   id
-  ([c8cc39c](https://github.com/orochibraru/homerun/commit/c8cc39ca022707c2d7e8811b9fd5e92bf7e1905a))
+  ([c8cc39c](https://github.com/zedensix/homerun/commit/c8cc39ca022707c2d7e8811b9fd5e92bf7e1905a))
 
 ### Bug Fixes
 
 - **docker:** bump go-builder image to golang 1.27 to match go.mod
-  ([e5889ea](https://github.com/orochibraru/homerun/commit/e5889ea0b43ac4e848685d393e80cebe977b917f))
+  ([e5889ea](https://github.com/zedensix/homerun/commit/e5889ea0b43ac4e848685d393e80cebe977b917f))
 - probe swarm services internally via their overlay alias and show last deploy
   time in the service header
-  ([a004e63](https://github.com/orochibraru/homerun/commit/a004e636f50d96b95471d44aab524319f3817625))
+  ([a004e63](https://github.com/zedensix/homerun/commit/a004e636f50d96b95471d44aab524319f3817625))
 
-## [1.0.41](https://github.com/orochibraru/homerun/compare/v1.0.40...v1.0.41) (2026-09-21)
+## [1.0.41](https://github.com/zedensix/homerun/compare/v1.0.40...v1.0.41) (2026-09-21)
 
 ### Features
 
 - stable/canary release channel in settings, sync Pangolin/DNS when a service's
   domains change
-  ([610ac6f](https://github.com/orochibraru/homerun/commit/610ac6f7ef557052d848cdf66fac828cba87b6a5))
+  ([610ac6f](https://github.com/zedensix/homerun/commit/610ac6f7ef557052d848cdf66fac828cba87b6a5))
 
 ### Bug Fixes
 
 - **ci:** publish one immutable v<version> prerelease per canary instead of a
   rolling canary tag
-  ([a914946](https://github.com/orochibraru/homerun/commit/a914946177d9d3c31d2d46ade6137e5f7537196b))
+  ([a914946](https://github.com/zedensix/homerun/commit/a914946177d9d3c31d2d46ade6137e5f7537196b))
 
-## [1.0.40](https://github.com/orochibraru/homerun/compare/v1.0.39...v1.0.40) (2026-09-21)
+## [1.0.40](https://github.com/zedensix/homerun/compare/v1.0.39...v1.0.40) (2026-09-21)
 
 ### Features
 
 - go worker for all (#22)
-  ([dba2d4f](https://github.com/orochibraru/homerun/commit/dba2d4f54386b1ee7be0ecb4d7cf9da6e5e39c1e))
+  ([dba2d4f](https://github.com/zedensix/homerun/commit/dba2d4f54386b1ee7be0ecb4d7cf9da6e5e39c1e))
 
-## [1.0.39](https://github.com/orochibraru/homerun/compare/v1.0.38...v1.0.39) (2026-09-19)
+## [1.0.39](https://github.com/zedensix/homerun/compare/v1.0.38...v1.0.39) (2026-09-19)
 
 ### Features
 
-- system errors ([#21](https://github.com/orochibraru/homerun/issues/21))
-  ([bd873f4](https://github.com/orochibraru/homerun/commit/bd873f41fb68473c0920f10fda7a25cd47470922))
+- system errors ([#21](https://github.com/zedensix/homerun/issues/21))
+  ([bd873f4](https://github.com/zedensix/homerun/commit/bd873f41fb68473c0920f10fda7a25cd47470922))
 
-## [1.0.38](https://github.com/orochibraru/homerun/compare/v1.0.37...v1.0.38) (2026-09-19)
+## [1.0.38](https://github.com/zedensix/homerun/compare/v1.0.37...v1.0.38) (2026-09-19)
 
-## [1.0.37](https://github.com/orochibraru/homerun/compare/v1.0.36...v1.0.37) (2026-09-19)
+## [1.0.37](https://github.com/zedensix/homerun/compare/v1.0.36...v1.0.37) (2026-09-19)
 
 ### Features
 
 - shadcn selects everywhere, last sign-in on users, live CLI update progress,
   plus logo, domains polish and registry auth fix
-  ([c7bd3ef](https://github.com/orochibraru/homerun/commit/c7bd3efb4bb539d0cb27172fce2b503466d1d445))
+  ([c7bd3ef](https://github.com/zedensix/homerun/commit/c7bd3efb4bb539d0cb27172fce2b503466d1d445))
 
 ### Bug Fixes
 
 - registry setup
-  ([13151e1](https://github.com/orochibraru/homerun/commit/13151e1ea4bbd0544564a16415fe688f2346ef70))
+  ([13151e1](https://github.com/zedensix/homerun/commit/13151e1ea4bbd0544564a16415fe688f2346ef70))
 
-## [1.0.36](https://github.com/orochibraru/homerun/compare/v1.0.35...v1.0.36) (2026-09-19)
+## [1.0.36](https://github.com/zedensix/homerun/compare/v1.0.35...v1.0.36) (2026-09-19)
 
 ### Features
 
 - add a home-plate logo and favicon, and polish the service domains list
-  ([8fb8985](https://github.com/orochibraru/homerun/commit/8fb89851a042cff142c07f05caf1b483a419b85f))
+  ([8fb8985](https://github.com/zedensix/homerun/commit/8fb89851a042cff142c07f05caf1b483a419b85f))
 
-## [1.0.35](https://github.com/orochibraru/homerun/compare/v1.0.34...v1.0.35) (2026-09-18)
+## [1.0.35](https://github.com/zedensix/homerun/compare/v1.0.34...v1.0.35) (2026-09-18)
 
 ### Features
 
 - Go agent and worker foundation under cmd/ + internal/, multiple domains per
   service, email-first sign-in, OIDC app revocation, GitHub App setup, and
   auth/lifecycle fixes
-  ([4008956](https://github.com/orochibraru/homerun/commit/40089567315b284a5ef0549e9849b7ffd7daa1c6))
+  ([4008956](https://github.com/zedensix/homerun/commit/40089567315b284a5ef0549e9849b7ffd7daa1c6))
 - **registry:** add a Registry page and make the built-in registry pushable
-  ([443eb70](https://github.com/orochibraru/homerun/commit/443eb70007411b21a9d1a5858a294b14f123a00a))
+  ([443eb70](https://github.com/zedensix/homerun/commit/443eb70007411b21a9d1a5858a294b14f123a00a))
 
 ### Bug Fixes
 
 - **ci:** exclude gosec's taint-analysis SSRF rule for the CLI's configured
   instance URL
-  ([97eedf7](https://github.com/orochibraru/homerun/commit/97eedf7d344e89b1681457553d978a370bded6b0))
+  ([97eedf7](https://github.com/zedensix/homerun/commit/97eedf7d344e89b1681457553d978a370bded6b0))
 - **ci:** install golangci-lint in the code quality job so the prek lint-go hook
   can run
-  ([66489c0](https://github.com/orochibraru/homerun/commit/66489c0121e1d0fe29d24f90d5199b59c7fd9a92))
+  ([66489c0](https://github.com/zedensix/homerun/commit/66489c0121e1d0fe29d24f90d5199b59c7fd9a92))
 - **logs:** stream logs for swarm services instead of claiming they're
   undeployed
-  ([ba08d5b](https://github.com/orochibraru/homerun/commit/ba08d5b7550fab56fbae82a2d48f5afbdbe4d025))
+  ([ba08d5b](https://github.com/zedensix/homerun/commit/ba08d5b7550fab56fbae82a2d48f5afbdbe4d025))
 - skip registry htpasswd sync for token changes while auth is off, and render
   the UI at 110% root font size
-  ([97328ef](https://github.com/orochibraru/homerun/commit/97328efb958d08a6b9918faf4e6d547b891b5b07))
+  ([97328ef](https://github.com/zedensix/homerun/commit/97328efb958d08a6b9918faf4e6d547b891b5b07))
 - skip the sign-in lookup throttle when auth rate limiting is disabled and keep
   the Registry page up when Docker is unreachable
-  ([f2620ff](https://github.com/orochibraru/homerun/commit/f2620ff7c5e97660c5d17b86d3cfbffbac1cc2ff))
+  ([f2620ff](https://github.com/zedensix/homerun/commit/f2620ff7c5e97660c5d17b86d3cfbffbac1cc2ff))
 - **ui:** outline toast action buttons and hide Redeploy on services that were
   never deployed
-  ([25a2f4f](https://github.com/orochibraru/homerun/commit/25a2f4fd16d60b4fd0310bdf608a90148adbfac2))
+  ([25a2f4f](https://github.com/zedensix/homerun/commit/25a2f4fd16d60b4fd0310bdf608a90148adbfac2))
 
-## [1.0.34](https://github.com/orochibraru/homerun/compare/v1.0.33...v1.0.34) (2026-09-17)
+## [1.0.34](https://github.com/zedensix/homerun/compare/v1.0.33...v1.0.34) (2026-09-17)
 
-## [1.0.33](https://github.com/orochibraru/homerun/compare/v1.0.32...v1.0.33) (2026-09-17)
+## [1.0.33](https://github.com/zedensix/homerun/compare/v1.0.32...v1.0.33) (2026-09-17)
 
 ### Bug Fixes
 
 - **ci:** upload release binaries with retries and publish the draft only once
   all are uploaded
-  ([4531333](https://github.com/orochibraru/homerun/commit/4531333f45da1422fc5e9436318d1bab7afa07d1))
+  ([4531333](https://github.com/zedensix/homerun/commit/4531333f45da1422fc5e9436318d1bab7afa07d1))
 - count swarm tasks started during the rollout as running in the health watch
-  ([218b8df](https://github.com/orochibraru/homerun/commit/218b8dfcf05bdbae142b8ac25091ef844f06aca7))
+  ([218b8df](https://github.com/zedensix/homerun/commit/218b8dfcf05bdbae142b8ac25091ef844f06aca7))
 
-## [1.0.32](https://github.com/orochibraru/homerun/compare/v1.0.31...v1.0.32) (2026-09-17)
+## [1.0.32](https://github.com/zedensix/homerun/compare/v1.0.31...v1.0.32) (2026-09-17)
 
 ### Bug Fixes
 
 - duplicate traefik logs
-  ([856cc35](https://github.com/orochibraru/homerun/commit/856cc35a5b52b2b87f5243870680c93ed1572ea7))
+  ([856cc35](https://github.com/zedensix/homerun/commit/856cc35a5b52b2b87f5243870680c93ed1572ea7))
 - handle cli api errors
-  ([1aea7b7](https://github.com/orochibraru/homerun/commit/1aea7b718cb68dac53cf709b2ec61532466160c9))
+  ([1aea7b7](https://github.com/zedensix/homerun/commit/1aea7b718cb68dac53cf709b2ec61532466160c9))
 
-## [1.0.31](https://github.com/orochibraru/homerun/compare/v1.0.30...v1.0.31) (2026-09-17)
+## [1.0.31](https://github.com/zedensix/homerun/compare/v1.0.30...v1.0.31) (2026-09-17)
 
 ### Features
 
 - update the instance from the CLI, poll for releases, show remote function
   errors
-  ([81e3caf](https://github.com/orochibraru/homerun/commit/81e3caf6dfdcda94315a48016547a9bdc6a32c8d))
+  ([81e3caf](https://github.com/zedensix/homerun/commit/81e3caf6dfdcda94315a48016547a9bdc6a32c8d))
 
-## [1.0.30](https://github.com/orochibraru/homerun/compare/v1.0.29...v1.0.30) (2026-09-17)
+## [1.0.30](https://github.com/zedensix/homerun/compare/v1.0.29...v1.0.30) (2026-09-17)
 
 ### Features
 
 - unhealthy reason and service logs over API and CLI, docker group for install
   user
-  ([bc17e48](https://github.com/orochibraru/homerun/commit/bc17e48c231d4ffc9f032eac85c58cbb22dc598f))
+  ([bc17e48](https://github.com/zedensix/homerun/commit/bc17e48c231d4ffc9f032eac85c58cbb22dc598f))
 
-## [1.0.29](https://github.com/orochibraru/homerun/compare/v1.0.28...v1.0.29) (2026-09-17)
+## [1.0.29](https://github.com/zedensix/homerun/compare/v1.0.28...v1.0.29) (2026-09-17)
 
 ### Features
 
 - docs conf
-  ([d8850fa](https://github.com/orochibraru/homerun/commit/d8850fa1e34d4606c6effd75b239164733a3dc9d))
+  ([d8850fa](https://github.com/zedensix/homerun/commit/d8850fa1e34d4606c6effd75b239164733a3dc9d))
 - login wall on Security tab, editable PKCE, retrying rollouts, IP-origin fixes
-  ([e1b57b4](https://github.com/orochibraru/homerun/commit/e1b57b4e0e50316623a00af2b018cd9b55870b9a))
+  ([e1b57b4](https://github.com/zedensix/homerun/commit/e1b57b4e0e50316623a00af2b018cd9b55870b9a))
 - more docs
-  ([4370ead](https://github.com/orochibraru/homerun/commit/4370eada143f984d7d0154124a853fbc0d559ba4))
+  ([4370ead](https://github.com/zedensix/homerun/commit/4370eada143f984d7d0154124a853fbc0d559ba4))
 
 ### Bug Fixes
 
 - e2e
-  ([fb48a89](https://github.com/orochibraru/homerun/commit/fb48a896aeb2ce6fedc8ba91b335de7fdc5239ef))
+  ([fb48a89](https://github.com/zedensix/homerun/commit/fb48a896aeb2ce6fedc8ba91b335de7fdc5239ef))
 
-## [1.0.28](https://github.com/orochibraru/homerun/compare/v1.0.27...v1.0.28) (2026-09-17)
+## [1.0.28](https://github.com/zedensix/homerun/compare/v1.0.27...v1.0.28) (2026-09-17)
 
 ### Features
 
 - **pangolin:** run Newt as a Homerun-managed container, set up from onboarding
-  ([8e260bf](https://github.com/orochibraru/homerun/commit/8e260bf5cef2fabbbfa14b5be402c4102148c05c))
+  ([8e260bf](https://github.com/zedensix/homerun/commit/8e260bf5cef2fabbbfa14b5be402c4102148c05c))
 
-## [1.0.27](https://github.com/orochibraru/homerun/compare/v1.0.26...v1.0.27) (2026-09-17)
+## [1.0.27](https://github.com/zedensix/homerun/compare/v1.0.26...v1.0.27) (2026-09-17)
 
 ### Features
 
 - swarm by default with rootful migration, readiness gate, BuildKit/Bake builds,
   stable revisions list, copyable build logs
-  ([1ecadc1](https://github.com/orochibraru/homerun/commit/1ecadc1b09adffc50ff666822aed50a20bebda0f))
+  ([1ecadc1](https://github.com/zedensix/homerun/commit/1ecadc1b09adffc50ff666822aed50a20bebda0f))
 
-## [1.0.26](https://github.com/orochibraru/homerun/compare/v1.0.25...v1.0.26) (2026-09-17)
+## [1.0.26](https://github.com/zedensix/homerun/compare/v1.0.25...v1.0.26) (2026-09-17)
 
 ### Features
 
 - clear the TODO backlog (shared resources, roles, previews, BuildKit/Bake,
   health-gated rollout, swarm fixes)
-  ([a116ba1](https://github.com/orochibraru/homerun/commit/a116ba17aab790625a791d27fe9cefc7051f9143))
+  ([a116ba1](https://github.com/zedensix/homerun/commit/a116ba17aab790625a791d27fe9cefc7051f9143))
 
-## [1.0.25](https://github.com/orochibraru/homerun/compare/v1.0.24...v1.0.25) (2026-09-17)
+## [1.0.25](https://github.com/zedensix/homerun/compare/v1.0.24...v1.0.25) (2026-09-17)
 
 ### Bug Fixes
 
 - two factor cookies & macos cli
-  ([0d2b969](https://github.com/orochibraru/homerun/commit/0d2b9699f9607a0841414ca13ed4404086385d4c))
+  ([0d2b969](https://github.com/zedensix/homerun/commit/0d2b9699f9607a0841414ca13ed4404086385d4c))
 
-## [1.0.24](https://github.com/orochibraru/homerun/compare/v1.0.23...v1.0.24) (2026-09-17)
+## [1.0.24](https://github.com/zedensix/homerun/compare/v1.0.23...v1.0.24) (2026-09-17)
 
 ### Features
 
-- night sesh ([#19](https://github.com/orochibraru/homerun/issues/19))
-  ([d95d325](https://github.com/orochibraru/homerun/commit/d95d325b4b995e664b415e25cbe15f731f31da43))
+- night sesh ([#19](https://github.com/zedensix/homerun/issues/19))
+  ([d95d325](https://github.com/zedensix/homerun/commit/d95d325b4b995e664b415e25cbe15f731f31da43))
 - scan policy, fix bugs, safe delete, cli security, code cleanup, tooling
-  ([5b3c01a](https://github.com/orochibraru/homerun/commit/5b3c01a3a388342e8b19f302433b5173be044770))
+  ([5b3c01a](https://github.com/zedensix/homerun/commit/5b3c01a3a388342e8b19f302433b5173be044770))
 - so much stuff
-  ([0c28e26](https://github.com/orochibraru/homerun/commit/0c28e2654456f4096484a825a8e29b90068bdf8e))
+  ([0c28e26](https://github.com/zedensix/homerun/commit/0c28e2654456f4096484a825a8e29b90068bdf8e))
 
 ### Bug Fixes
 
 - release night session
-  ([bef8141](https://github.com/orochibraru/homerun/commit/bef8141d3ddd7f60ebe3fed8815c47019180ec45))
+  ([bef8141](https://github.com/zedensix/homerun/commit/bef8141d3ddd7f60ebe3fed8815c47019180ec45))
 - revocation, dropdownws tooling
-  ([b0c852a](https://github.com/orochibraru/homerun/commit/b0c852a888f56ee98b17fa195c70e8a838441605))
+  ([b0c852a](https://github.com/zedensix/homerun/commit/b0c852a888f56ee98b17fa195c70e8a838441605))
 
-## [1.0.23](https://github.com/orochibraru/homerun/compare/v1.0.22...v1.0.23) (2026-09-16)
+## [1.0.23](https://github.com/zedensix/homerun/compare/v1.0.22...v1.0.23) (2026-09-16)
 
 ### Features
 
 - stacks, global search, self-update, passkeys/2FA and migrate tab
-  ([#18](https://github.com/orochibraru/homerun/issues/18))
-  ([8cb03c2](https://github.com/orochibraru/homerun/commit/8cb03c23a3afcc1785f6f7f9d78766221f0ab699))
+  ([#18](https://github.com/zedensix/homerun/issues/18))
+  ([8cb03c2](https://github.com/zedensix/homerun/commit/8cb03c23a3afcc1785f6f7f9d78766221f0ab699))
 
-## [1.0.22](https://github.com/orochibraru/homerun/compare/v1.0.21...v1.0.22) (2026-09-16)
+## [1.0.22](https://github.com/zedensix/homerun/compare/v1.0.21...v1.0.22) (2026-09-16)
 
 ### Features
 
 - notification channels
-  ([969c11e](https://github.com/orochibraru/homerun/commit/969c11e6626f0d556c7855e56a92b71321060b56))
+  ([969c11e](https://github.com/zedensix/homerun/commit/969c11e6626f0d556c7855e56a92b71321060b56))
 
-## [1.0.21](https://github.com/orochibraru/homerun/compare/v1.0.20...v1.0.21) (2026-09-16)
+## [1.0.21](https://github.com/zedensix/homerun/compare/v1.0.20...v1.0.21) (2026-09-16)
 
 ### Bug Fixes
 
 - e2e
-  ([a4071fd](https://github.com/orochibraru/homerun/commit/a4071fd8107ae072f0db4b4ba2d5570535244d4d))
+  ([a4071fd](https://github.com/zedensix/homerun/commit/a4071fd8107ae072f0db4b4ba2d5570535244d4d))
 - endless cert generation
-  ([#17](https://github.com/orochibraru/homerun/issues/17))
-  ([ad15644](https://github.com/orochibraru/homerun/commit/ad1564443a1362e33045258e38cdc39010934316))
+  ([#17](https://github.com/zedensix/homerun/issues/17))
+  ([ad15644](https://github.com/zedensix/homerun/commit/ad1564443a1362e33045258e38cdc39010934316))
 - release
-  ([200c1f2](https://github.com/orochibraru/homerun/commit/200c1f2fd60e8daa29d6f035baf01bbfa79da819))
+  ([200c1f2](https://github.com/zedensix/homerun/commit/200c1f2fd60e8daa29d6f035baf01bbfa79da819))
 
-## [1.0.20](https://github.com/orochibraru/homerun/compare/v1.0.19...v1.0.20) (2026-09-16)
+## [1.0.20](https://github.com/zedensix/homerun/compare/v1.0.19...v1.0.20) (2026-09-16)
 
 ### Bug Fixes
 
 - ci filters & docs
-  ([51ccaf5](https://github.com/orochibraru/homerun/commit/51ccaf52793233d45f6bbf6c93452485b6b7d0af))
+  ([51ccaf5](https://github.com/zedensix/homerun/commit/51ccaf52793233d45f6bbf6c93452485b6b7d0af))
 
-## [1.0.19](https://github.com/orochibraru/homerun/compare/v1.0.18...v1.0.19) (2026-09-15)
+## [1.0.19](https://github.com/zedensix/homerun/compare/v1.0.18...v1.0.19) (2026-09-15)
 
 ### Bug Fixes
 
 - release the bug-batch merge
-  ([d420723](https://github.com/orochibraru/homerun/commit/d4207232becae812ac335ba48c0ed6f1e71d5edb))
+  ([d420723](https://github.com/zedensix/homerun/commit/d4207232becae812ac335ba48c0ed6f1e71d5edb))
 
-## [1.0.18](https://github.com/orochibraru/homerun/compare/v1.0.17...v1.0.18) (2026-09-15)
+## [1.0.18](https://github.com/zedensix/homerun/compare/v1.0.17...v1.0.18) (2026-09-15)
 
 ### Features
 
 - remote cron jobs, S3 restore, Dokploy migration, orphan network reclaim
-  ([#15](https://github.com/orochibraru/homerun/issues/15))
-  ([9f2b7c9](https://github.com/orochibraru/homerun/commit/9f2b7c9aa669a7195923442560472e249bd1edac))
+  ([#15](https://github.com/zedensix/homerun/issues/15))
+  ([9f2b7c9](https://github.com/zedensix/homerun/commit/9f2b7c9aa669a7195923442560472e249bd1edac))
 
-## [1.0.17](https://github.com/orochibraru/homerun/compare/v1.0.16...v1.0.17) (2026-09-15)
+## [1.0.17](https://github.com/zedensix/homerun/compare/v1.0.16...v1.0.17) (2026-09-15)
 
 ### Bug Fixes
 
 - release the bug-batch merge
-  ([48afa9b](https://github.com/orochibraru/homerun/commit/48afa9bf5a4141b5c6406927758b080ce65cbb4f))
+  ([48afa9b](https://github.com/zedensix/homerun/commit/48afa9bf5a4141b5c6406927758b080ce65cbb4f))
 
-## [1.0.16](https://github.com/orochibraru/homerun/compare/v1.0.15...v1.0.16) (2026-09-15)
+## [1.0.16](https://github.com/zedensix/homerun/compare/v1.0.15...v1.0.16) (2026-09-15)
 
 ### Bug Fixes
 
 - agent conf & types
-  ([315f383](https://github.com/orochibraru/homerun/commit/315f38305b1eb139e44d6e5f15f23e02c38e1b45))
+  ([315f383](https://github.com/zedensix/homerun/commit/315f38305b1eb139e44d6e5f15f23e02c38e1b45))
 - linting (should have done this in a pr -_-)
-  ([49a4ca9](https://github.com/orochibraru/homerun/commit/49a4ca9c445094776d0b978e557e6f9cb5548fcc))
+  ([49a4ca9](https://github.com/zedensix/homerun/commit/49a4ca9c445094776d0b978e557e6f9cb5548fcc))
 - no parallel commands
-  ([b518fc1](https://github.com/orochibraru/homerun/commit/b518fc15c8c07f600f890dcf740ee12fadd04387))
+  ([b518fc1](https://github.com/zedensix/homerun/commit/b518fc15c8c07f600f890dcf740ee12fadd04387))
 - pangolin integration & docs
-  ([#12](https://github.com/orochibraru/homerun/issues/12))
-  ([a356a00](https://github.com/orochibraru/homerun/commit/a356a00ab04d8bfa219275e87274db0eefd921d2))
+  ([#12](https://github.com/zedensix/homerun/issues/12))
+  ([a356a00](https://github.com/zedensix/homerun/commit/a356a00ab04d8bfa219275e87274db0eefd921d2))
 - release
-  ([3224ad0](https://github.com/orochibraru/homerun/commit/3224ad098c72a3609df6cd9ffab06997d52820d3))
+  ([3224ad0](https://github.com/zedensix/homerun/commit/3224ad098c72a3609df6cd9ffab06997d52820d3))
 - settings
-  ([70d6e24](https://github.com/orochibraru/homerun/commit/70d6e24854a58e3500f40aa70bd5dcef2c76fbef))
+  ([70d6e24](https://github.com/zedensix/homerun/commit/70d6e24854a58e3500f40aa70bd5dcef2c76fbef))
 - tests again
-  ([581c9bf](https://github.com/orochibraru/homerun/commit/581c9bf33c78906a3c4c74527a9b3e31467a3851))
+  ([581c9bf](https://github.com/zedensix/homerun/commit/581c9bf33c78906a3c4c74527a9b3e31467a3851))
 
-## [1.0.15](https://github.com/orochibraru/homerun/compare/v1.0.14...v1.0.15) (2026-09-14)
+## [1.0.15](https://github.com/zedensix/homerun/compare/v1.0.14...v1.0.15) (2026-09-14)
 
 ### Features
 
 - docs trigger floow
-  ([9f7790b](https://github.com/orochibraru/homerun/commit/9f7790b631057897ec0147248f91c2d63edc3547))
+  ([9f7790b](https://github.com/zedensix/homerun/commit/9f7790b631057897ec0147248f91c2d63edc3547))
 
-## [1.0.14](https://github.com/orochibraru/homerun/compare/v1.0.13...v1.0.14) (2026-09-14)
+## [1.0.14](https://github.com/zedensix/homerun/compare/v1.0.13...v1.0.14) (2026-09-14)
 
 ### Bug Fixes
 
 - installer docker path
-  ([2051ae2](https://github.com/orochibraru/homerun/commit/2051ae2e20d401d01f62becc4b58e891e3da9885))
+  ([2051ae2](https://github.com/zedensix/homerun/commit/2051ae2e20d401d01f62becc4b58e891e3da9885))
 
-## [1.0.13](https://github.com/orochibraru/homerun/compare/v1.0.12...v1.0.13) (2026-09-14)
+## [1.0.13](https://github.com/zedensix/homerun/compare/v1.0.12...v1.0.13) (2026-09-14)
 
 ### Bug Fixes
 
-- auth & ci ([#9](https://github.com/orochibraru/homerun/issues/9))
-  ([8133de5](https://github.com/orochibraru/homerun/commit/8133de51b3d46319287be8f59d2115b9e6f1b649))
+- auth & ci ([#9](https://github.com/zedensix/homerun/issues/9))
+  ([8133de5](https://github.com/zedensix/homerun/commit/8133de51b3d46319287be8f59d2115b9e6f1b649))
 
-## [1.0.12](https://github.com/orochibraru/homerun/compare/v1.0.11...v1.0.12) (2026-09-11)
+## [1.0.12](https://github.com/zedensix/homerun/compare/v1.0.11...v1.0.12) (2026-09-11)
 
 ### Bug Fixes
 
 - precommit & signin flow
-  ([3259623](https://github.com/orochibraru/homerun/commit/3259623e85e5b152051474ec7fc78adde0686608))
+  ([3259623](https://github.com/zedensix/homerun/commit/3259623e85e5b152051474ec7fc78adde0686608))
 - prek
-  ([acd16a2](https://github.com/orochibraru/homerun/commit/acd16a2d3e2589aaf10cfbe755f9d38048142a6e))
+  ([acd16a2](https://github.com/zedensix/homerun/commit/acd16a2d3e2589aaf10cfbe755f9d38048142a6e))
 - sveltekit sync before tests
-  ([ddcffaa](https://github.com/orochibraru/homerun/commit/ddcffaafbbe88143c454dbbca458b7a92b87efd8))
+  ([ddcffaa](https://github.com/zedensix/homerun/commit/ddcffaafbbe88143c454dbbca458b7a92b87efd8))
 
-## [1.0.11](https://github.com/orochibraru/homerun/compare/v1.0.10...v1.0.11) (2026-09-09)
+## [1.0.11](https://github.com/zedensix/homerun/compare/v1.0.10...v1.0.11) (2026-09-09)
 
 ### Bug Fixes
 
 - origin on setup
-  ([ece74be](https://github.com/orochibraru/homerun/commit/ece74bec313ba70e3897ac663d724b2e9f72bedb))
+  ([ece74be](https://github.com/zedensix/homerun/commit/ece74bec313ba70e3897ac663d724b2e9f72bedb))
 
-## [1.0.10](https://github.com/orochibraru/homerun/compare/v1.0.9...v1.0.10) (2026-09-07)
+## [1.0.10](https://github.com/zedensix/homerun/compare/v1.0.9...v1.0.10) (2026-09-07)
 
 ### Features
 
-- oauth gate ([#6](https://github.com/orochibraru/homerun/issues/6))
-  ([27ed10f](https://github.com/orochibraru/homerun/commit/27ed10fe671a490abdc1d0b23b146acb77dcd90c))
+- oauth gate ([#6](https://github.com/zedensix/homerun/issues/6))
+  ([27ed10f](https://github.com/zedensix/homerun/commit/27ed10fe671a490abdc1d0b23b146acb77dcd90c))
 
-## [1.0.9](https://github.com/orochibraru/homerun/compare/v1.0.8...v1.0.9) (2026-09-05)
+## [1.0.9](https://github.com/zedensix/homerun/compare/v1.0.8...v1.0.9) (2026-09-05)
 
 ### Features
 
 - remote functions
-  ([1eae07e](https://github.com/orochibraru/homerun/commit/1eae07ef9f3a6b690c61c6bdeac95b3964aef0d9))
+  ([1eae07e](https://github.com/zedensix/homerun/commit/1eae07ef9f3a6b690c61c6bdeac95b3964aef0d9))
 
-## [1.0.8](https://github.com/orochibraru/homerun/compare/v1.0.7...v1.0.8) (2026-09-05)
+## [1.0.8](https://github.com/zedensix/homerun/compare/v1.0.7...v1.0.8) (2026-09-05)
 
 ### Features
 
 - named volumes backup, compose import, smart service links, cron jobs from ui
-  ([dcf2e4f](https://github.com/orochibraru/homerun/commit/dcf2e4f5d2bf0e6fd3f104449250071e5d4ef23f))
+  ([dcf2e4f](https://github.com/zedensix/homerun/commit/dcf2e4f5d2bf0e6fd3f104449250071e5d4ef23f))
 
-## [1.0.7](https://github.com/orochibraru/homerun/compare/v1.0.6...v1.0.7) (2026-09-05)
+## [1.0.7](https://github.com/zedensix/homerun/compare/v1.0.6...v1.0.7) (2026-09-05)
 
 ### Features
 
 - filters & pagination
-  ([04fef9b](https://github.com/orochibraru/homerun/commit/04fef9b590645a33e15fa15b1c9925fbf60f73a1))
+  ([04fef9b](https://github.com/zedensix/homerun/commit/04fef9b590645a33e15fa15b1c9925fbf60f73a1))
 
-## [1.0.6](https://github.com/orochibraru/homerun/compare/v1.0.5...v1.0.6) (2026-09-05)
+## [1.0.6](https://github.com/zedensix/homerun/compare/v1.0.5...v1.0.6) (2026-09-05)
 
 ### Features
 
 - queue
-  ([f0207da](https://github.com/orochibraru/homerun/commit/f0207da21b0086baf4e0024cee5aa0658b6c2f67))
+  ([f0207da](https://github.com/zedensix/homerun/commit/f0207da21b0086baf4e0024cee5aa0658b6c2f67))
 
-## [1.0.5](https://github.com/orochibraru/homerun/compare/v1.0.4...v1.0.5) (2026-09-05)
+## [1.0.5](https://github.com/zedensix/homerun/compare/v1.0.4...v1.0.5) (2026-09-05)
 
 ### Bug Fixes
 
 - use service containers in ci
-  ([0f92067](https://github.com/orochibraru/homerun/commit/0f92067d7f66bb6d0383f7e57989aa0cfc8247a0))
+  ([0f92067](https://github.com/zedensix/homerun/commit/0f92067d7f66bb6d0383f7e57989aa0cfc8247a0))
 
-## [1.0.4](https://github.com/orochibraru/homerun/compare/v1.0.3...v1.0.4) (2026-09-04)
+## [1.0.4](https://github.com/zedensix/homerun/compare/v1.0.3...v1.0.4) (2026-09-04)
 
 ### Features
 
 - docker cleanup
-  ([8cbbae5](https://github.com/orochibraru/homerun/commit/8cbbae590805cc928c3a69a83b732655c7b68269))
+  ([8cbbae5](https://github.com/zedensix/homerun/commit/8cbbae590805cc928c3a69a83b732655c7b68269))
 
-## [1.0.3](https://github.com/orochibraru/homerun/compare/v1.0.2...v1.0.3) (2026-09-04)
+## [1.0.3](https://github.com/zedensix/homerun/compare/v1.0.2...v1.0.3) (2026-09-04)
 
 ### Features
 
 - add test run retry policy on ci
-  ([5ae92ce](https://github.com/orochibraru/homerun/commit/5ae92ceb3350d483db439ae8e045eb7d94d877dc))
+  ([5ae92ce](https://github.com/zedensix/homerun/commit/5ae92ceb3350d483db439ae8e045eb7d94d877dc))
 
 ### Bug Fixes
 
 - conf & docs
-  ([1d33ab3](https://github.com/orochibraru/homerun/commit/1d33ab3b12e6141a2c62ced6d5ae35ea288f281e))
+  ([1d33ab3](https://github.com/zedensix/homerun/commit/1d33ab3b12e6141a2c62ced6d5ae35ea288f281e))
 - rerun flaky tests
-  ([aefdfc2](https://github.com/orochibraru/homerun/commit/aefdfc255a07a3b0b5dc8958f3f09f1cbc458e4b))
+  ([aefdfc2](https://github.com/zedensix/homerun/commit/aefdfc255a07a3b0b5dc8958f3f09f1cbc458e4b))
 
-## [1.0.2](https://github.com/orochibraru/homerun/compare/v1.0.1...v1.0.2) (2026-09-03)
+## [1.0.2](https://github.com/zedensix/homerun/compare/v1.0.1...v1.0.2) (2026-09-03)
 
 ### Bug Fixes
 
 - ui
-  ([38f6c29](https://github.com/orochibraru/homerun/commit/38f6c29e0f7da9ff2834ffa98d0466f5cc4d6e6f))
+  ([38f6c29](https://github.com/zedensix/homerun/commit/38f6c29e0f7da9ff2834ffa98d0466f5cc4d6e6f))
 
-## [1.0.1](https://github.com/orochibraru/homerun/compare/v1.0.0...v1.0.1) (2026-09-03)
+## [1.0.1](https://github.com/zedensix/homerun/compare/v1.0.0...v1.0.1) (2026-09-03)
 
 ### Features
 
 - more prek hooks, prettier docs, fixed docs links
-  ([51ef41e](https://github.com/orochibraru/homerun/commit/51ef41e4b44ec81881c0ebf792dd919d0f730700))
+  ([51ef41e](https://github.com/zedensix/homerun/commit/51ef41e4b44ec81881c0ebf792dd919d0f730700))
 
 ### Bug Fixes
 
 - prek
-  ([9845f6e](https://github.com/orochibraru/homerun/commit/9845f6e9347ae391275af75e45ca965287d6c1e6))
+  ([9845f6e](https://github.com/zedensix/homerun/commit/9845f6e9347ae391275af75e45ca965287d6c1e6))
 - tests
-  ([67a3175](https://github.com/orochibraru/homerun/commit/67a317521cffea732fe4fb37865b6c58879238d1))
+  ([67a3175](https://github.com/zedensix/homerun/commit/67a317521cffea732fe4fb37865b6c58879238d1))
 
 ## 1.0.0 (2026-09-03)
 
 ### Features
 
 - another todo
-  ([68d7c89](https://github.com/orochibraru/homerun/commit/68d7c894c66dc770ac5fba7aa3a20c6817a8654d))
+  ([68d7c89](https://github.com/zedensix/homerun/commit/68d7c894c66dc770ac5fba7aa3a20c6817a8654d))
 - base
-  ([1693733](https://github.com/orochibraru/homerun/commit/1693733bc73f9e6ccd9e027003b2f8b853cc5ac5))
+  ([1693733](https://github.com/zedensix/homerun/commit/1693733bc73f9e6ccd9e027003b2f8b853cc5ac5))
 - better classes
-  ([87c925d](https://github.com/orochibraru/homerun/commit/87c925dc3d31738269794ab8c0d2218582fbd65f))
+  ([87c925d](https://github.com/zedensix/homerun/commit/87c925dc3d31738269794ab8c0d2218582fbd65f))
 - better linting & precommit
-  ([#8](https://github.com/orochibraru/homerun/issues/8))
-  ([a3f3c6e](https://github.com/orochibraru/homerun/commit/a3f3c6e5ed68f2065a9aa1830f4aa46395b9f713)),
-  closes [#123](https://github.com/orochibraru/homerun/issues/123)
-  [#456](https://github.com/orochibraru/homerun/issues/456)
+  ([#8](https://github.com/zedensix/homerun/issues/8))
+  ([a3f3c6e](https://github.com/zedensix/homerun/commit/a3f3c6e5ed68f2065a9aa1830f4aa46395b9f713)),
+  closes [#123](https://github.com/zedensix/homerun/issues/123)
+  [#456](https://github.com/zedensix/homerun/issues/456)
 - build log
-  ([09485d5](https://github.com/orochibraru/homerun/commit/09485d538a9690594f23c426ec5ac62c3741f24a))
+  ([09485d5](https://github.com/zedensix/homerun/commit/09485d538a9690594f23c426ec5ac62c3741f24a))
 - build on prs
-  ([71e499a](https://github.com/orochibraru/homerun/commit/71e499ab1f51efa3a074754a3fc28f3488397f84))
+  ([71e499a](https://github.com/zedensix/homerun/commit/71e499ab1f51efa3a074754a3fc28f3488397f84))
 - ci
-  ([e31ed4b](https://github.com/orochibraru/homerun/commit/e31ed4b6e7b8f36e5a5490dfb8aa9d90223da153))
+  ([e31ed4b](https://github.com/zedensix/homerun/commit/e31ed4b6e7b8f36e5a5490dfb8aa9d90223da153))
 - cli auth improvements
-  ([586e328](https://github.com/orochibraru/homerun/commit/586e3285cf6374ebcd47615eb475e665bb707b03))
+  ([586e328](https://github.com/zedensix/homerun/commit/586e3285cf6374ebcd47615eb475e665bb707b03))
 - docs & release tag
-  ([c99933d](https://github.com/orochibraru/homerun/commit/c99933d85f3532a11ff4d502e98e9f7e4c0c649c))
+  ([c99933d](https://github.com/zedensix/homerun/commit/c99933d85f3532a11ff4d502e98e9f7e4c0c649c))
 - e2e tests and docs website
-  ([84eca8b](https://github.com/orochibraru/homerun/commit/84eca8bcb01902a8cab2f11ca0e70ad6bfd92235))
+  ([84eca8b](https://github.com/zedensix/homerun/commit/84eca8bcb01902a8cab2f11ca0e70ad6bfd92235))
 - handle volumes
-  ([08bb3cf](https://github.com/orochibraru/homerun/commit/08bb3cf7c621785b892d7ec1ca47b9ba41185b1e))
+  ([08bb3cf](https://github.com/zedensix/homerun/commit/08bb3cf7c621785b892d7ec1ca47b9ba41185b1e))
 - image existence checker
-  ([617c0b6](https://github.com/orochibraru/homerun/commit/617c0b6237b04b44b9c459b298dbb68b51eef0fb))
+  ([617c0b6](https://github.com/zedensix/homerun/commit/617c0b6237b04b44b9c459b298dbb68b51eef0fb))
 - improve docs ui
-  ([ab4a74b](https://github.com/orochibraru/homerun/commit/ab4a74bb3cbcd6a45c1cfa81882f45a09eff6560))
+  ([ab4a74b](https://github.com/zedensix/homerun/commit/ab4a74bb3cbcd6a45c1cfa81882f45a09eff6560))
 - more classes
-  ([b885f09](https://github.com/orochibraru/homerun/commit/b885f096c8fa16c21a88df255a05226f3869b31f))
+  ([b885f09](https://github.com/zedensix/homerun/commit/b885f096c8fa16c21a88df255a05226f3869b31f))
 - more features
-  ([f3ab041](https://github.com/orochibraru/homerun/commit/f3ab041b16ce6277c1fccb8d22f9a78edf7b4183))
+  ([f3ab041](https://github.com/zedensix/homerun/commit/f3ab041b16ce6277c1fccb8d22f9a78edf7b4183))
 - more features
-  ([515eddf](https://github.com/orochibraru/homerun/commit/515eddf2ff43d5c1b90b40775f1df838e95814ca))
+  ([515eddf](https://github.com/zedensix/homerun/commit/515eddf2ff43d5c1b90b40775f1df838e95814ca))
 - more networking
-  ([2b27d11](https://github.com/orochibraru/homerun/commit/2b27d116e8226d445a093fcf76e899e9b9533bed))
+  ([2b27d11](https://github.com/zedensix/homerun/commit/2b27d116e8226d445a093fcf76e899e9b9533bed))
 - more stuff
-  ([c9d2bc4](https://github.com/orochibraru/homerun/commit/c9d2bc4c99b4f683ffa602f12278f0873da2d5d7))
+  ([c9d2bc4](https://github.com/zedensix/homerun/commit/c9d2bc4c99b4f683ffa602f12278f0873da2d5d7))
 - more todos
-  ([b532919](https://github.com/orochibraru/homerun/commit/b53291925b97ef64bf636743e1db03a45d9bbf62))
+  ([b532919](https://github.com/zedensix/homerun/commit/b53291925b97ef64bf636743e1db03a45d9bbf62))
 - onboarding
-  ([8a17b9e](https://github.com/orochibraru/homerun/commit/8a17b9e669c9b5c4c3fe10d9e4932e8631a5a0f7))
+  ([8a17b9e](https://github.com/zedensix/homerun/commit/8a17b9e669c9b5c4c3fe10d9e4932e8631a5a0f7))
 - pangolin integration
-  ([021765c](https://github.com/orochibraru/homerun/commit/021765caa606bbe074125e1f31e240fb2ab4d5d1))
+  ([021765c](https://github.com/zedensix/homerun/commit/021765caa606bbe074125e1f31e240fb2ab4d5d1))
 - publish job
-  ([3c987c4](https://github.com/orochibraru/homerun/commit/3c987c4fdc042ae45ed1c8c99e0bc579df758040))
+  ([3c987c4](https://github.com/zedensix/homerun/commit/3c987c4fdc042ae45ed1c8c99e0bc579df758040))
 - restart traefik from ui
-  ([9fff779](https://github.com/orochibraru/homerun/commit/9fff779be56ae0f32764a7af33b50af265b5c276))
+  ([9fff779](https://github.com/zedensix/homerun/commit/9fff779be56ae0f32764a7af33b50af265b5c276))
 - service volumes
-  ([6aa1fe0](https://github.com/orochibraru/homerun/commit/6aa1fe06a9667a9f793e3d8e88b066aaef0e13cb))
+  ([6aa1fe0](https://github.com/zedensix/homerun/commit/6aa1fe06a9667a9f793e3d8e88b066aaef0e13cb))
 - services
-  ([7f0de6a](https://github.com/orochibraru/homerun/commit/7f0de6a6364cfebe05f3933df057b8ecbe101cd9))
+  ([7f0de6a](https://github.com/zedensix/homerun/commit/7f0de6a6364cfebe05f3933df057b8ecbe101cd9))
 - ssl certs, remote hosts, wizard, ui components
-  ([ebd9cc9](https://github.com/orochibraru/homerun/commit/ebd9cc9e6a15231656b90974698550d36dbc77c7))
+  ([ebd9cc9](https://github.com/zedensix/homerun/commit/ebd9cc9e6a15231656b90974698550d36dbc77c7))
 - stats
-  ([b1327a5](https://github.com/orochibraru/homerun/commit/b1327a58b83a034fc7c08528f42740dc5bd520c4))
-- stronger CI ([#3](https://github.com/orochibraru/homerun/issues/3))
-  ([b9477eb](https://github.com/orochibraru/homerun/commit/b9477ebda039743b61b186c608b68fc9cfc6cb35)),
-  closes [#123](https://github.com/orochibraru/homerun/issues/123)
-  [#456](https://github.com/orochibraru/homerun/issues/456)
+  ([b1327a5](https://github.com/zedensix/homerun/commit/b1327a58b83a034fc7c08528f42740dc5bd520c4))
+- stronger CI ([#3](https://github.com/zedensix/homerun/issues/3))
+  ([b9477eb](https://github.com/zedensix/homerun/commit/b9477ebda039743b61b186c608b68fc9cfc6cb35)),
+  closes [#123](https://github.com/zedensix/homerun/issues/123)
+  [#456](https://github.com/zedensix/homerun/issues/456)
 - swarm mode
-  ([7cf7308](https://github.com/orochibraru/homerun/commit/7cf7308b62d35fe349d8bb816c209fda51b9433d))
-- tests ([#7](https://github.com/orochibraru/homerun/issues/7))
-  ([7bc3aa7](https://github.com/orochibraru/homerun/commit/7bc3aa7d2dd7b5ec8058d656c9ac5556850078e3)),
-  closes [#123](https://github.com/orochibraru/homerun/issues/123)
-  [#456](https://github.com/orochibraru/homerun/issues/456)
+  ([7cf7308](https://github.com/zedensix/homerun/commit/7cf7308b62d35fe349d8bb816c209fda51b9433d))
+- tests ([#7](https://github.com/zedensix/homerun/issues/7))
+  ([7bc3aa7](https://github.com/zedensix/homerun/commit/7bc3aa7d2dd7b5ec8058d656c9ac5556850078e3)),
+  closes [#123](https://github.com/zedensix/homerun/issues/123)
+  [#456](https://github.com/zedensix/homerun/issues/456)
 - todo & wip on Bun Webview
-  ([dab2b58](https://github.com/orochibraru/homerun/commit/dab2b589f1626edfa586a46b8ef5574ac3d8c46b))
+  ([dab2b58](https://github.com/zedensix/homerun/commit/dab2b589f1626edfa586a46b8ef5574ac3d8c46b))
 - todo items & better ui
-  ([c33caae](https://github.com/orochibraru/homerun/commit/c33caaef5b744a401849920cece6263bd0c88263))
+  ([c33caae](https://github.com/zedensix/homerun/commit/c33caaef5b744a401849920cece6263bd0c88263))
 - ultracite
-  ([52dbf14](https://github.com/orochibraru/homerun/commit/52dbf146dd27da2edf4da670261ad9d631764ccc))
+  ([52dbf14](https://github.com/zedensix/homerun/commit/52dbf146dd27da2edf4da670261ad9d631764ccc))
 - unit tests
-  ([c2f6b17](https://github.com/orochibraru/homerun/commit/c2f6b17d367b388342a3933fcc9c6a90603c3d7e))
+  ([c2f6b17](https://github.com/zedensix/homerun/commit/c2f6b17d367b388342a3933fcc9c6a90603c3d7e))
 - use smol adapter
-  ([3b36fef](https://github.com/orochibraru/homerun/commit/3b36fef9e59d2fd617c4db0b857a425ff74c9bc5))
+  ([3b36fef](https://github.com/zedensix/homerun/commit/3b36fef9e59d2fd617c4db0b857a425ff74c9bc5))
 - working deployments
-  ([4aec3f2](https://github.com/orochibraru/homerun/commit/4aec3f2a0bd16a750672e2a67f3bb48328603e87))
+  ([4aec3f2](https://github.com/zedensix/homerun/commit/4aec3f2a0bd16a750672e2a67f3bb48328603e87))
 
 ### Bug Fixes
 
 - action versions
-  ([81624aa](https://github.com/orochibraru/homerun/commit/81624aa794e12c31e06f5f2ac7095b4fb0a12f2d))
+  ([81624aa](https://github.com/zedensix/homerun/commit/81624aa794e12c31e06f5f2ac7095b4fb0a12f2d))
 - actions path
-  ([d3ca42f](https://github.com/orochibraru/homerun/commit/d3ca42f6fc55c6cac3572bd368ef576acaa144c1))
+  ([d3ca42f](https://github.com/zedensix/homerun/commit/d3ca42f6fc55c6cac3572bd368ef576acaa144c1))
 - actions trigger
-  ([4488a1f](https://github.com/orochibraru/homerun/commit/4488a1f6bd9d2aa51cfd6801c8562c7317c35199))
+  ([4488a1f](https://github.com/zedensix/homerun/commit/4488a1f6bd9d2aa51cfd6801c8562c7317c35199))
 - app name
-  ([0e2c2e7](https://github.com/orochibraru/homerun/commit/0e2c2e764530daffc7cc0f5901af17e25577c8b8))
+  ([0e2c2e7](https://github.com/zedensix/homerun/commit/0e2c2e764530daffc7cc0f5901af17e25577c8b8))
 - bake def
-  ([da14ab1](https://github.com/orochibraru/homerun/commit/da14ab10c53f61ef9583cc4bff6c344a7ebb09d5))
+  ([da14ab1](https://github.com/zedensix/homerun/commit/da14ab10c53f61ef9583cc4bff6c344a7ebb09d5))
 - cap release branch at major-zero, prevent auto-jump to v1.0.0
-  ([8f91335](https://github.com/orochibraru/homerun/commit/8f91335bc4ae8c704f5c392aebb7bab8918319fe))
+  ([8f91335](https://github.com/zedensix/homerun/commit/8f91335bc4ae8c704f5c392aebb7bab8918319fe))
 - ci
-  ([39cb4d6](https://github.com/orochibraru/homerun/commit/39cb4d6a7fcc89118fa382a1f29b482cb675414d))
+  ([39cb4d6](https://github.com/zedensix/homerun/commit/39cb4d6a7fcc89118fa382a1f29b482cb675414d))
 - ci
-  ([30e3e38](https://github.com/orochibraru/homerun/commit/30e3e38af17ce0bf20713f66683766d8c6bda17e))
+  ([30e3e38](https://github.com/zedensix/homerun/commit/30e3e38af17ce0bf20713f66683766d8c6bda17e))
 - ci
-  ([5a8ec6d](https://github.com/orochibraru/homerun/commit/5a8ec6d3da81c47b5277b158518a7a51c4cf5333))
+  ([5a8ec6d](https://github.com/zedensix/homerun/commit/5a8ec6d3da81c47b5277b158518a7a51c4cf5333))
 - ci docker build
-  ([84fbe3f](https://github.com/orochibraru/homerun/commit/84fbe3f4eec42788171eb8803e9bc00b9a4aec93))
+  ([84fbe3f](https://github.com/zedensix/homerun/commit/84fbe3f4eec42788171eb8803e9bc00b9a4aec93))
 - ci flow names
-  ([e55f884](https://github.com/orochibraru/homerun/commit/e55f8846f75b87c37d18be6af79bfeb7e409de0e))
+  ([e55f884](https://github.com/zedensix/homerun/commit/e55f8846f75b87c37d18be6af79bfeb7e409de0e))
 - ci flow names
-  ([c629952](https://github.com/orochibraru/homerun/commit/c6299526b1d8191d60ea23d2970ddcf8aed71939))
+  ([c629952](https://github.com/zedensix/homerun/commit/c6299526b1d8191d60ea23d2970ddcf8aed71939))
 - ci flows
-  ([8ccb128](https://github.com/orochibraru/homerun/commit/8ccb128ccb00319887f71dbcf3cd7c1c311ee998))
+  ([8ccb128](https://github.com/zedensix/homerun/commit/8ccb128ccb00319887f71dbcf3cd7c1c311ee998))
 - ci flows
-  ([8960f13](https://github.com/orochibraru/homerun/commit/8960f13b7b40b43004288d9cb31e21d6dc73aeaf))
+  ([8960f13](https://github.com/zedensix/homerun/commit/8960f13b7b40b43004288d9cb31e21d6dc73aeaf))
 - ci rules
-  ([8e57e46](https://github.com/orochibraru/homerun/commit/8e57e46e5fc4a7fd8a660271283b75add3f59ee4))
+  ([8e57e46](https://github.com/zedensix/homerun/commit/8e57e46e5fc4a7fd8a660271283b75add3f59ee4))
 - cli
-  ([be0c839](https://github.com/orochibraru/homerun/commit/be0c839c81831bc03b9f58feaee93ef42079b310))
+  ([be0c839](https://github.com/zedensix/homerun/commit/be0c839c81831bc03b9f58feaee93ef42079b310))
 - code quality
-  ([64c1150](https://github.com/orochibraru/homerun/commit/64c115081bd190b8148f3a1153b1f7d77dd65f76))
+  ([64c1150](https://github.com/zedensix/homerun/commit/64c115081bd190b8148f3a1153b1f7d77dd65f76))
 - config name
-  ([cb3528e](https://github.com/orochibraru/homerun/commit/cb3528e5d8dfe34245bbbd89fe17687abd42fbae))
+  ([cb3528e](https://github.com/zedensix/homerun/commit/cb3528e5d8dfe34245bbbd89fe17687abd42fbae))
 - docker builds
-  ([0de636c](https://github.com/orochibraru/homerun/commit/0de636ceda8520cdc47cdd3b77487b07ef04b340))
+  ([0de636c](https://github.com/zedensix/homerun/commit/0de636ceda8520cdc47cdd3b77487b07ef04b340))
 - docker conf
-  ([66cb582](https://github.com/orochibraru/homerun/commit/66cb58223f27ea63c7991ef6083c0738d4276f40))
+  ([66cb582](https://github.com/zedensix/homerun/commit/66cb58223f27ea63c7991ef6083c0738d4276f40))
 - docker env
-  ([f5887b8](https://github.com/orochibraru/homerun/commit/f5887b8eb237c18259e6e2956b2e59896cf877b7))
+  ([f5887b8](https://github.com/zedensix/homerun/commit/f5887b8eb237c18259e6e2956b2e59896cf877b7))
 - docker image name
-  ([f48b125](https://github.com/orochibraru/homerun/commit/f48b125ab98a0e83cdfcf60f1d762932eed770f5))
+  ([f48b125](https://github.com/zedensix/homerun/commit/f48b125ab98a0e83cdfcf60f1d762932eed770f5))
 - dockerfile
-  ([3aa766a](https://github.com/orochibraru/homerun/commit/3aa766ae38f35d27bf793776c8138351c88d0576))
+  ([3aa766a](https://github.com/zedensix/homerun/commit/3aa766ae38f35d27bf793776c8138351c88d0576))
 - docs
-  ([395f8e9](https://github.com/orochibraru/homerun/commit/395f8e99bc5e5026e4d696ad599dbcf0f75ffc4b))
+  ([395f8e9](https://github.com/zedensix/homerun/commit/395f8e99bc5e5026e4d696ad599dbcf0f75ffc4b))
 - docs
-  ([6417c8e](https://github.com/orochibraru/homerun/commit/6417c8e023e95f32c9cd2858a403f9f614ccdc26))
+  ([6417c8e](https://github.com/zedensix/homerun/commit/6417c8e023e95f32c9cd2858a403f9f614ccdc26))
 - docs
-  ([0f7defa](https://github.com/orochibraru/homerun/commit/0f7defaa437823c605609e13334b617eebfab977))
+  ([0f7defa](https://github.com/zedensix/homerun/commit/0f7defaa437823c605609e13334b617eebfab977))
 - don't build image if lint fails
-  ([52cec13](https://github.com/orochibraru/homerun/commit/52cec1339ee10725acfe44e610a6495cb5cca276))
+  ([52cec13](https://github.com/zedensix/homerun/commit/52cec1339ee10725acfe44e610a6495cb5cca276))
 - format
-  ([0dacdac](https://github.com/orochibraru/homerun/commit/0dacdac55caeb82194ded204e1349008fda42252))
+  ([0dacdac](https://github.com/zedensix/homerun/commit/0dacdac55caeb82194ded204e1349008fda42252))
 - image name
-  ([0a684f6](https://github.com/orochibraru/homerun/commit/0a684f616b199dce4235108d695e393816cea58f))
+  ([0a684f6](https://github.com/zedensix/homerun/commit/0a684f616b199dce4235108d695e393816cea58f))
 - latest tag
-  ([5a34f02](https://github.com/orochibraru/homerun/commit/5a34f0289643345435ccfaefae7208356d0907a2))
+  ([5a34f02](https://github.com/zedensix/homerun/commit/5a34f0289643345435ccfaefae7208356d0907a2))
 - lint
-  ([2ba0da5](https://github.com/orochibraru/homerun/commit/2ba0da54240529b6fa32aaadfee0ab8cf61df576))
+  ([2ba0da5](https://github.com/zedensix/homerun/commit/2ba0da54240529b6fa32aaadfee0ab8cf61df576))
 - lint & types
-  ([75b4e20](https://github.com/orochibraru/homerun/commit/75b4e202d9095c990ce19725dfc045854ab2bba6))
+  ([75b4e20](https://github.com/zedensix/homerun/commit/75b4e202d9095c990ce19725dfc045854ab2bba6))
 - md
-  ([6d92399](https://github.com/orochibraru/homerun/commit/6d92399e2c7ca79d3761b187346a5d7587c24207))
+  ([6d92399](https://github.com/zedensix/homerun/commit/6d92399e2c7ca79d3761b187346a5d7587c24207))
 - nginx alpine
-  ([d63647f](https://github.com/orochibraru/homerun/commit/d63647fa457f1b8512d0658ae62c0c73381b9c8d))
+  ([d63647f](https://github.com/zedensix/homerun/commit/d63647fa457f1b8512d0658ae62c0c73381b9c8d))
 - no default value on registry
-  ([6c09c8c](https://github.com/orochibraru/homerun/commit/6c09c8c1ab791f466b4f09fa3f949a39915c9ffd))
+  ([6c09c8c](https://github.com/zedensix/homerun/commit/6c09c8c1ab791f466b4f09fa3f949a39915c9ffd))
 - notifications
-  ([402e509](https://github.com/orochibraru/homerun/commit/402e50983ac7412b675a48c71120352b771ba0de))
+  ([402e509](https://github.com/zedensix/homerun/commit/402e50983ac7412b675a48c71120352b771ba0de))
 - oop
-  ([04f58b0](https://github.com/orochibraru/homerun/commit/04f58b03b6270440032f3236e54afbe441353a6e))
+  ([04f58b0](https://github.com/zedensix/homerun/commit/04f58b03b6270440032f3236e54afbe441353a6e))
 - precommit
-  ([f120209](https://github.com/orochibraru/homerun/commit/f12020979e6bdb968c0f5d850adfde121eb7d0a2))
+  ([f120209](https://github.com/zedensix/homerun/commit/f12020979e6bdb968c0f5d850adfde121eb7d0a2))
 - precommit hook
-  ([d66d299](https://github.com/orochibraru/homerun/commit/d66d29930cc546190ee64485b6d0597746550530))
+  ([d66d299](https://github.com/zedensix/homerun/commit/d66d29930cc546190ee64485b6d0597746550530))
 - prettier on changelog
-  ([11aff9a](https://github.com/orochibraru/homerun/commit/11aff9adb83ecf95825d994b43a4cd83add8dd2f))
+  ([11aff9a](https://github.com/zedensix/homerun/commit/11aff9adb83ecf95825d994b43a4cd83add8dd2f))
 - publish rules
-  ([1d35fd2](https://github.com/orochibraru/homerun/commit/1d35fd2f09b7a1e97f52d5b367cf5480793f86d6))
+  ([1d35fd2](https://github.com/zedensix/homerun/commit/1d35fd2f09b7a1e97f52d5b367cf5480793f86d6))
 - publish rules
-  ([1fe59f0](https://github.com/orochibraru/homerun/commit/1fe59f043c862b1db787220b23488943cf1747f1))
+  ([1fe59f0](https://github.com/zedensix/homerun/commit/1fe59f043c862b1db787220b23488943cf1747f1))
 - publish trigger
-  ([a4a2e2a](https://github.com/orochibraru/homerun/commit/a4a2e2a528f9ab53399dd6dd00da72c5da10c5d8))
+  ([a4a2e2a](https://github.com/zedensix/homerun/commit/a4a2e2a528f9ab53399dd6dd00da72c5da10c5d8))
 - qemu build
-  ([830c30f](https://github.com/orochibraru/homerun/commit/830c30fce12e165688c17c4647f67480a6ff004b))
+  ([830c30f](https://github.com/zedensix/homerun/commit/830c30fce12e165688c17c4647f67480a6ff004b))
 - readme & tests
-  ([bd00e5c](https://github.com/orochibraru/homerun/commit/bd00e5c491e97e8b0983674e211dc0973164aa44))
+  ([bd00e5c](https://github.com/zedensix/homerun/commit/bd00e5c491e97e8b0983674e211dc0973164aa44))
 - release
-  ([133852b](https://github.com/orochibraru/homerun/commit/133852bdd5ec17556115851b94f0daba28bdac77))
+  ([133852b](https://github.com/zedensix/homerun/commit/133852bdd5ec17556115851b94f0daba28bdac77))
 - release conf
-  ([8da3b9b](https://github.com/orochibraru/homerun/commit/8da3b9bd8bd2d0f386d5d39043155b573bf8d419))
+  ([8da3b9b](https://github.com/zedensix/homerun/commit/8da3b9bd8bd2d0f386d5d39043155b573bf8d419))
 - release note version
-  ([59c8b5d](https://github.com/orochibraru/homerun/commit/59c8b5df608df9b2916680ad44cc7ee1455da18c))
+  ([59c8b5d](https://github.com/zedensix/homerun/commit/59c8b5df608df9b2916680ad44cc7ee1455da18c))
 - remove build from webapp in ci, already ran by docker
-  ([fea99e0](https://github.com/orochibraru/homerun/commit/fea99e0e2c81b493c9fca15a82dac97ddd601cbf))
+  ([fea99e0](https://github.com/zedensix/homerun/commit/fea99e0e2c81b493c9fca15a82dac97ddd601cbf))
 - removed quality gate
-  ([bffedb7](https://github.com/orochibraru/homerun/commit/bffedb7b7f8e94461e6365341fe01776ce7a0189))
+  ([bffedb7](https://github.com/zedensix/homerun/commit/bffedb7b7f8e94461e6365341fe01776ce7a0189))
 - removed ultracite and fixed biome conf
-  ([1ef8c25](https://github.com/orochibraru/homerun/commit/1ef8c251f3e501f8427956138caa47c55fd66a24))
+  ([1ef8c25](https://github.com/zedensix/homerun/commit/1ef8c251f3e501f8427956138caa47c55fd66a24))
 - rename readme
-  ([ecd9253](https://github.com/orochibraru/homerun/commit/ecd925360a21e1bbb84b1535df013e0edbbfd02f))
+  ([ecd9253](https://github.com/zedensix/homerun/commit/ecd925360a21e1bbb84b1535df013e0edbbfd02f))
 - runner labels
-  ([8bbad8a](https://github.com/orochibraru/homerun/commit/8bbad8a60c6db203424d34e4bf433289127b1bd9))
+  ([8bbad8a](https://github.com/zedensix/homerun/commit/8bbad8a60c6db203424d34e4bf433289127b1bd9))
 - secret name
-  ([faf1123](https://github.com/orochibraru/homerun/commit/faf11238cfec14becb7bf25dd5479ddfceb453e2))
+  ([faf1123](https://github.com/zedensix/homerun/commit/faf11238cfec14becb7bf25dd5479ddfceb453e2))
 - service details
-  ([61964a3](https://github.com/orochibraru/homerun/commit/61964a329e76dafb3abbb962f716729bd8748451))
+  ([61964a3](https://github.com/zedensix/homerun/commit/61964a329e76dafb3abbb962f716729bd8748451))
 - spinner
-  ([b132c80](https://github.com/orochibraru/homerun/commit/b132c800ffb76d32c9447be2aa216a2c832f939d))
+  ([b132c80](https://github.com/zedensix/homerun/commit/b132c800ffb76d32c9447be2aa216a2c832f939d))
 - type errors
-  ([4ef257c](https://github.com/orochibraru/homerun/commit/4ef257cf74484fb1e91d5afea4483c8d0b178555))
+  ([4ef257c](https://github.com/zedensix/homerun/commit/4ef257cf74484fb1e91d5afea4483c8d0b178555))
 - types
-  ([5f5404e](https://github.com/orochibraru/homerun/commit/5f5404e04aa11a5d4b613468e35884b0d7adec68))
+  ([5f5404e](https://github.com/zedensix/homerun/commit/5f5404e04aa11a5d4b613468e35884b0d7adec68))
 - ui
-  ([aee3fb2](https://github.com/orochibraru/homerun/commit/aee3fb24045bc3cd9a2f6906e76a8e0f905696e1))
+  ([aee3fb2](https://github.com/zedensix/homerun/commit/aee3fb24045bc3cd9a2f6906e76a8e0f905696e1))
 - ui & release
-  ([cb277b3](https://github.com/orochibraru/homerun/commit/cb277b322972089d45f43612b3ead56f9c74ec5a))
+  ([cb277b3](https://github.com/zedensix/homerun/commit/cb277b322972089d45f43612b3ead56f9c74ec5a))
 - ui consistency
-  ([89b75fc](https://github.com/orochibraru/homerun/commit/89b75fca732ebe4aebfcac05345c6e64f15d1ddd))
+  ([89b75fc](https://github.com/zedensix/homerun/commit/89b75fca732ebe4aebfcac05345c6e64f15d1ddd))
 - upgrade svelte smol
-  ([a813ad1](https://github.com/orochibraru/homerun/commit/a813ad167501432d89efa42ee3207144df0c4cee))
+  ([a813ad1](https://github.com/zedensix/homerun/commit/a813ad167501432d89efa42ee3207144df0c4cee))
 - variables
-  ([96d1d92](https://github.com/orochibraru/homerun/commit/96d1d92a2f5df01bed493b8dfc77ed2cea1e676f))
+  ([96d1d92](https://github.com/zedensix/homerun/commit/96d1d92a2f5df01bed493b8dfc77ed2cea1e676f))
 - versions
-  ([57ba011](https://github.com/orochibraru/homerun/commit/57ba0114597c49f9767030b89a40bacc6e0dcd82))
+  ([57ba011](https://github.com/zedensix/homerun/commit/57ba0114597c49f9767030b89a40bacc6e0dcd82))
 
 ### Performance Improvements
 
 - speed up ci
-  ([9b851e8](https://github.com/orochibraru/homerun/commit/9b851e89559790aedba9198654cecb1b6e4db160))
+  ([9b851e8](https://github.com/zedensix/homerun/commit/9b851e89559790aedba9198654cecb1b6e4db160))
 
-## [0.3.8](https://github.com/orochibraru/homerun/compare/v0.3.7...v0.3.8) (2026-08-26)
+## [0.3.8](https://github.com/zedensix/homerun/compare/v0.3.7...v0.3.8) (2026-08-26)
 
 ### Bug Fixes
 
 - docs
-  ([6417c8e](https://github.com/orochibraru/homerun/commit/6417c8e023e95f32c9cd2858a403f9f614ccdc26))
+  ([6417c8e](https://github.com/zedensix/homerun/commit/6417c8e023e95f32c9cd2858a403f9f614ccdc26))
 
-## [0.3.7](https://github.com/orochibraru/homerun/compare/v0.3.6...v0.3.7) (2026-08-25)
+## [0.3.7](https://github.com/zedensix/homerun/compare/v0.3.6...v0.3.7) (2026-08-25)
 
 ### Bug Fixes
 
 - dockerfile
-  ([3aa766a](https://github.com/orochibraru/homerun/commit/3aa766ae38f35d27bf793776c8138351c88d0576))
+  ([3aa766a](https://github.com/zedensix/homerun/commit/3aa766ae38f35d27bf793776c8138351c88d0576))
 - nginx alpine
-  ([d63647f](https://github.com/orochibraru/homerun/commit/d63647fa457f1b8512d0658ae62c0c73381b9c8d))
+  ([d63647f](https://github.com/zedensix/homerun/commit/d63647fa457f1b8512d0658ae62c0c73381b9c8d))
 
-## [0.3.6](https://github.com/orochibraru/homerun/compare/v0.3.5...v0.3.6) (2026-08-25)
+## [0.3.6](https://github.com/zedensix/homerun/compare/v0.3.5...v0.3.6) (2026-08-25)
 
 ### Features
 
 - better linting & precommit
-  ([#8](https://github.com/orochibraru/homerun/issues/8))
-  ([a3f3c6e](https://github.com/orochibraru/homerun/commit/a3f3c6e5ed68f2065a9aa1830f4aa46395b9f713)),
-  closes [#123](https://github.com/orochibraru/homerun/issues/123)
-  [#456](https://github.com/orochibraru/homerun/issues/456)
+  ([#8](https://github.com/zedensix/homerun/issues/8))
+  ([a3f3c6e](https://github.com/zedensix/homerun/commit/a3f3c6e5ed68f2065a9aa1830f4aa46395b9f713)),
+  closes [#123](https://github.com/zedensix/homerun/issues/123)
+  [#456](https://github.com/zedensix/homerun/issues/456)
 - e2e tests and docs website
-  ([84eca8b](https://github.com/orochibraru/homerun/commit/84eca8bcb01902a8cab2f11ca0e70ad6bfd92235))
+  ([84eca8b](https://github.com/zedensix/homerun/commit/84eca8bcb01902a8cab2f11ca0e70ad6bfd92235))
 
-## [0.3.5](https://github.com/orochibraru/homerun/compare/v0.3.4...v0.3.5) (2026-08-25)
+## [0.3.5](https://github.com/zedensix/homerun/compare/v0.3.4...v0.3.5) (2026-08-25)
 
 ### Features
 
-- tests ([#7](https://github.com/orochibraru/homerun/issues/7))
-  ([7bc3aa7](https://github.com/orochibraru/homerun/commit/7bc3aa7d2dd7b5ec8058d656c9ac5556850078e3)),
-  closes [#123](https://github.com/orochibraru/homerun/issues/123)
-  [#456](https://github.com/orochibraru/homerun/issues/456)
+- tests ([#7](https://github.com/zedensix/homerun/issues/7))
+  ([7bc3aa7](https://github.com/zedensix/homerun/commit/7bc3aa7d2dd7b5ec8058d656c9ac5556850078e3)),
+  closes [#123](https://github.com/zedensix/homerun/issues/123)
+  [#456](https://github.com/zedensix/homerun/issues/456)
 
-## [0.3.4](https://github.com/orochibraru/homerun/compare/v0.3.3...v0.3.4) (2026-08-24)
+## [0.3.4](https://github.com/zedensix/homerun/compare/v0.3.3...v0.3.4) (2026-08-24)
 
 ### Bug Fixes
 
 - oop
-  ([04f58b0](https://github.com/orochibraru/homerun/commit/04f58b03b6270440032f3236e54afbe441353a6e))
+  ([04f58b0](https://github.com/zedensix/homerun/commit/04f58b03b6270440032f3236e54afbe441353a6e))
 
-## [0.3.3](https://github.com/orochibraru/homerun/compare/v0.3.2...v0.3.3) (2026-08-23)
+## [0.3.3](https://github.com/zedensix/homerun/compare/v0.3.2...v0.3.3) (2026-08-23)
 
 ### Features
 
 - more networking
-  ([2b27d11](https://github.com/orochibraru/homerun/commit/2b27d116e8226d445a093fcf76e899e9b9533bed))
+  ([2b27d11](https://github.com/zedensix/homerun/commit/2b27d116e8226d445a093fcf76e899e9b9533bed))
 - more stuff
-  ([c9d2bc4](https://github.com/orochibraru/homerun/commit/c9d2bc4c99b4f683ffa602f12278f0873da2d5d7))
+  ([c9d2bc4](https://github.com/zedensix/homerun/commit/c9d2bc4c99b4f683ffa602f12278f0873da2d5d7))
 - pangolin integration
-  ([021765c](https://github.com/orochibraru/homerun/commit/021765caa606bbe074125e1f31e240fb2ab4d5d1))
+  ([021765c](https://github.com/zedensix/homerun/commit/021765caa606bbe074125e1f31e240fb2ab4d5d1))
 - swarm mode
-  ([7cf7308](https://github.com/orochibraru/homerun/commit/7cf7308b62d35fe349d8bb816c209fda51b9433d))
+  ([7cf7308](https://github.com/zedensix/homerun/commit/7cf7308b62d35fe349d8bb816c209fda51b9433d))
 - unit tests
-  ([c2f6b17](https://github.com/orochibraru/homerun/commit/c2f6b17d367b388342a3933fcc9c6a90603c3d7e))
+  ([c2f6b17](https://github.com/zedensix/homerun/commit/c2f6b17d367b388342a3933fcc9c6a90603c3d7e))
 
 ### Bug Fixes
 
 - ci
-  ([39cb4d6](https://github.com/orochibraru/homerun/commit/39cb4d6a7fcc89118fa382a1f29b482cb675414d))
+  ([39cb4d6](https://github.com/zedensix/homerun/commit/39cb4d6a7fcc89118fa382a1f29b482cb675414d))
 - ci docker build
-  ([84fbe3f](https://github.com/orochibraru/homerun/commit/84fbe3f4eec42788171eb8803e9bc00b9a4aec93))
+  ([84fbe3f](https://github.com/zedensix/homerun/commit/84fbe3f4eec42788171eb8803e9bc00b9a4aec93))
 - docker builds
-  ([0de636c](https://github.com/orochibraru/homerun/commit/0de636ceda8520cdc47cdd3b77487b07ef04b340))
+  ([0de636c](https://github.com/zedensix/homerun/commit/0de636ceda8520cdc47cdd3b77487b07ef04b340))
 - docker conf
-  ([66cb582](https://github.com/orochibraru/homerun/commit/66cb58223f27ea63c7991ef6083c0738d4276f40))
+  ([66cb582](https://github.com/zedensix/homerun/commit/66cb58223f27ea63c7991ef6083c0738d4276f40))
 - notifications
-  ([402e509](https://github.com/orochibraru/homerun/commit/402e50983ac7412b675a48c71120352b771ba0de))
+  ([402e509](https://github.com/zedensix/homerun/commit/402e50983ac7412b675a48c71120352b771ba0de))
 - release note version
-  ([59c8b5d](https://github.com/orochibraru/homerun/commit/59c8b5df608df9b2916680ad44cc7ee1455da18c))
+  ([59c8b5d](https://github.com/zedensix/homerun/commit/59c8b5df608df9b2916680ad44cc7ee1455da18c))
 - remove build from webapp in ci, already ran by docker
-  ([fea99e0](https://github.com/orochibraru/homerun/commit/fea99e0e2c81b493c9fca15a82dac97ddd601cbf))
+  ([fea99e0](https://github.com/zedensix/homerun/commit/fea99e0e2c81b493c9fca15a82dac97ddd601cbf))
 - types
-  ([5f5404e](https://github.com/orochibraru/homerun/commit/5f5404e04aa11a5d4b613468e35884b0d7adec68))
+  ([5f5404e](https://github.com/zedensix/homerun/commit/5f5404e04aa11a5d4b613468e35884b0d7adec68))
 - versions
-  ([57ba011](https://github.com/orochibraru/homerun/commit/57ba0114597c49f9767030b89a40bacc6e0dcd82))
+  ([57ba011](https://github.com/zedensix/homerun/commit/57ba0114597c49f9767030b89a40bacc6e0dcd82))
 
 ### Performance Improvements
 
 - speed up ci
-  ([9b851e8](https://github.com/orochibraru/homerun/commit/9b851e89559790aedba9198654cecb1b6e4db160))
+  ([9b851e8](https://github.com/zedensix/homerun/commit/9b851e89559790aedba9198654cecb1b6e4db160))
 
-## [0.3.2](https://github.com/orochibraru/homerun/compare/v0.3.1...v0.3.2) (2026-08-21)
+## [0.3.2](https://github.com/zedensix/homerun/compare/v0.3.1...v0.3.2) (2026-08-21)
 
 ### Bug Fixes
 
 - cli
-  ([be0c839](https://github.com/orochibraru/homerun/commit/be0c839c81831bc03b9f58feaee93ef42079b310))
+  ([be0c839](https://github.com/zedensix/homerun/commit/be0c839c81831bc03b9f58feaee93ef42079b310))
 - format
-  ([0dacdac](https://github.com/orochibraru/homerun/commit/0dacdac55caeb82194ded204e1349008fda42252))
+  ([0dacdac](https://github.com/zedensix/homerun/commit/0dacdac55caeb82194ded204e1349008fda42252))
 - prettier on changelog
-  ([11aff9a](https://github.com/orochibraru/homerun/commit/11aff9adb83ecf95825d994b43a4cd83add8dd2f))
+  ([11aff9a](https://github.com/zedensix/homerun/commit/11aff9adb83ecf95825d994b43a4cd83add8dd2f))
 - release conf
-  ([8da3b9b](https://github.com/orochibraru/homerun/commit/8da3b9bd8bd2d0f386d5d39043155b573bf8d419))
+  ([8da3b9b](https://github.com/zedensix/homerun/commit/8da3b9bd8bd2d0f386d5d39043155b573bf8d419))
 
-## [0.3.1](https://github.com/orochibraru/homerun/compare/v0.3.0...v0.3.1) (2026-08-21)
+## [0.3.1](https://github.com/zedensix/homerun/compare/v0.3.0...v0.3.1) (2026-08-21)
 
 ### Features
 
 - cli auth improvements
-  ([586e328](https://github.com/orochibraru/homerun/commit/586e3285cf6374ebcd47615eb475e665bb707b03))
+  ([586e328](https://github.com/zedensix/homerun/commit/586e3285cf6374ebcd47615eb475e665bb707b03))
 
-## [0.3.0](https://github.com/orochibraru/homerun/compare/v0.2.0...v0.3.0) (2026-08-21)
+## [0.3.0](https://github.com/zedensix/homerun/compare/v0.2.0...v0.3.0) (2026-08-21)
 
 ### Features
 
-- stronger CI ([#3](https://github.com/orochibraru/homerun/issues/3))
-  ([b9477eb](https://github.com/orochibraru/homerun/commit/b9477ebda039743b61b186c608b68fc9cfc6cb35)),
-  closes [#123](https://github.com/orochibraru/homerun/issues/123)
-  [#456](https://github.com/orochibraru/homerun/issues/456)
+- stronger CI ([#3](https://github.com/zedensix/homerun/issues/3))
+  ([b9477eb](https://github.com/zedensix/homerun/commit/b9477ebda039743b61b186c608b68fc9cfc6cb35)),
+  closes [#123](https://github.com/zedensix/homerun/issues/123)
+  [#456](https://github.com/zedensix/homerun/issues/456)
 
 ### Bug Fixes
 
 - docs
-  ([0f7defa](https://github.com/orochibraru/homerun/commit/0f7defaa437823c605609e13334b617eebfab977))
+  ([0f7defa](https://github.com/zedensix/homerun/commit/0f7defaa437823c605609e13334b617eebfab977))
 - md
-  ([6d92399](https://github.com/orochibraru/homerun/commit/6d92399e2c7ca79d3761b187346a5d7587c24207))
+  ([6d92399](https://github.com/zedensix/homerun/commit/6d92399e2c7ca79d3761b187346a5d7587c24207))
 
-## [0.2.0](https://github.com/orochibraru/homerun/compare/v0.1.0...v0.2.0) (2026-08-21)
+## [0.2.0](https://github.com/zedensix/homerun/compare/v0.1.0...v0.2.0) (2026-08-21)
 
 ### Features
 
 - docs & release tag
-  ([c99933d](https://github.com/orochibraru/homerun/commit/c99933d85f3532a11ff4d502e98e9f7e4c0c649c))
+  ([c99933d](https://github.com/zedensix/homerun/commit/c99933d85f3532a11ff4d502e98e9f7e4c0c649c))

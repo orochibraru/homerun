@@ -20,7 +20,7 @@ export type LiveObject = Record<string, unknown>;
 /** Every live object Homerun manages, by Terraform resource type, as the REST API returns it. */
 export type Inventory = Record<string, LiveObject[]>;
 
-export const PROVIDER_SOURCE = "orochibraru/homerun";
+export const PROVIDER_SOURCE = "zedensix/homerun";
 
 /** What one generated project covers: a stack with its substacks, or one service. */
 export interface GenerateScope {

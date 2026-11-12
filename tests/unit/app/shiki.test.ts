@@ -36,7 +36,7 @@ describe("providerSnippets", () => {
 			"typescript",
 		]);
 		expect(snippets[0].code).toContain(
-			"pulumi package add terraform-provider orochibraru/homerun",
+			"pulumi package add terraform-provider zedensix/homerun",
 		);
 		expect(snippets.map((snippet) => snippet.code).join("\n")).not.toContain(
 			"terraformrc",

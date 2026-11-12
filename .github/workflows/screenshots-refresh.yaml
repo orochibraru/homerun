@@ -38,7 +38,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN }} # zizmor: ignore[artipacked]
 
       - name: Download the captured images
-        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        uses: zedensix/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           name: docs-images
           path: docs/images
@@ -66,5 +66,5 @@ jobs:
           curl -X POST \
             -H "Authorization: token $DOCS_TRIGGER_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/orochibraru/orochibraru/dispatches \
+            https://api.github.com/repos/zedensix/zedensix/dispatches \
             -d '{"event_type":"docs-update"}'

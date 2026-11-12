@@ -2,7 +2,7 @@
 set -euo pipefail
 
 GIT_HOST="github.com"
-GIT_REPO="orochibraru/homerun"
+GIT_REPO="zedensix/homerun"
 VERSION="latest"
 AGENT_USER="homerun"
 JOIN_TOKEN=""
@@ -14,7 +14,7 @@ usage() {
 Joins this host to an existing Homerun swarm as a worker, then installs the
 Homerun worker in agent mode on it.
 
-  curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/swarm-join.sh \
+  curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/swarm-join.sh \
     | sudo bash -s -- --token=<SWMTKN-...> --manager=<manager-ip>:2377
 
 Get the token and address on the manager with: docker swarm join-token worker

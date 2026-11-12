@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/jobs"
 )
 
 // Spec is what the app's prepare step resolves for one scan.

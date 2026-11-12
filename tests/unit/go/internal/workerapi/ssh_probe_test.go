@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 )
 
 // probe posts body to the SSH Docker probe route and answers its status and body.

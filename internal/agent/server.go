@@ -11,10 +11,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/orochibraru/homerun/internal/buildinfo"
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/hoststats"
-	"github.com/orochibraru/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/hoststats"
+	"github.com/zedensix/homerun/internal/httpapi"
 )
 
 // Server is the agent's HTTP control surface: /v1/health and /v1/openapi.json

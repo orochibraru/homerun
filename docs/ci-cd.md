@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # ...build and push ghcr.io/you/app:${{ github.sha }} first...
-      - uses: orochibraru/homerun/actions/deploy@v1.0.59
+      - uses: zedensix/homerun/actions/deploy@v1.0.59
         with:
           base-url: https://homerun.example.com
           api-key: ${{ secrets.HOMERUN_API_KEY }}
@@ -53,13 +53,13 @@ jobs:
           tag: ${{ github.sha }}
 ```
 
-| Action                                     | What it does                                                                                                          | Outputs                   |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `orochibraru/homerun`                      | Installs the CLI and puts it on the `PATH`; runs `args` (e.g. `manifest apply my-app --deploy`) when given.           | `stdout`, `cli-path`      |
-| `orochibraru/homerun/actions/deploy`       | `homerun services deploy`: switches to `tag` first when given, or deploys the `environment` canary or stable channel. | `deployment-id`, `result` |
-| `orochibraru/homerun/actions/rollback`     | `homerun services rollback`: the previous revision, or `revision`; `restore-config: true` restores its settings too.  | `deployment-id`, `result` |
-| `orochibraru/homerun/actions/preview`      | `homerun previews` with `command` `deploy`, `wait`, `promote` or `delete`, for the pull request that triggered it.    | `url` (deploy, wait)      |
-| `orochibraru/homerun/actions/gate-session` | `homerun gate session`: signs a [service account](login-wall.md) through an app's login wall for end-to-end tests.    | `cookie` (masked)         |
+| Action                                  | What it does                                                                                                          | Outputs                   |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `zedensix/homerun`                      | Installs the CLI and puts it on the `PATH`; runs `args` (e.g. `manifest apply my-app --deploy`) when given.           | `stdout`, `cli-path`      |
+| `zedensix/homerun/actions/deploy`       | `homerun services deploy`: switches to `tag` first when given, or deploys the `environment` canary or stable channel. | `deployment-id`, `result` |
+| `zedensix/homerun/actions/rollback`     | `homerun services rollback`: the previous revision, or `revision`; `restore-config: true` restores its settings too.  | `deployment-id`, `result` |
+| `zedensix/homerun/actions/preview`      | `homerun previews` with `command` `deploy`, `wait`, `promote` or `delete`, for the pull request that triggered it.    | `url` (deploy, wait)      |
+| `zedensix/homerun/actions/gate-session` | `homerun gate session`: signs a [service account](login-wall.md) through an app's login wall for end-to-end tests.    | `cookie` (masked)         |
 
 Every action takes `base-url`, `api-key` (a CI secret, never exported to later
 steps) and `cli-version`. `service` is an id or a slug. The root action's `args`
@@ -71,7 +71,7 @@ is split on whitespace; for an argument containing spaces, call it with no
 A rollback for a deploy step that failed:
 
 ```yaml
-- uses: orochibraru/homerun/actions/deploy@v1.0.59
+- uses: zedensix/homerun/actions/deploy@v1.0.59
   id: deploy
   with:
     base-url: ${{ vars.HOMERUN_BASE_URL }}
@@ -80,7 +80,7 @@ A rollback for a deploy step that failed:
     tag: ${{ github.sha }}
 - run: ./smoke-test.sh https://app.example.com
 - if: failure() && steps.deploy.outcome == 'success'
-  uses: orochibraru/homerun/actions/rollback@v1.0.59
+  uses: zedensix/homerun/actions/rollback@v1.0.59
   with:
     base-url: ${{ vars.HOMERUN_BASE_URL }}
     api-key: ${{ secrets.HOMERUN_API_KEY }}
@@ -177,7 +177,7 @@ jobs:
           docker build -t "$IMAGE:pr-$PR-$SHA" .
           docker push "$IMAGE:pr-$PR-$SHA"
       - name: Deploy the preview and wait for it
-        uses: orochibraru/homerun/actions/preview@v1.0.59
+        uses: zedensix/homerun/actions/preview@v1.0.59
         with:
           base-url: ${{ vars.HOMERUN_BASE_URL }}
           api-key: ${{ secrets.HOMERUN_API_KEY }}
@@ -195,7 +195,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Delete the preview
-        uses: orochibraru/homerun/actions/preview@v1.0.59
+        uses: zedensix/homerun/actions/preview@v1.0.59
         with:
           base-url: ${{ vars.HOMERUN_BASE_URL }}
           api-key: ${{ secrets.HOMERUN_API_KEY }}

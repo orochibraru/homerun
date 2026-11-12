@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/release"
+	"github.com/zedensix/homerun/internal/release"
 )
 
 // serve starts an httptest server and points release.APIBase/DownloadBase at it.

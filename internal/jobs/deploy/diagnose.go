@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
 )
 
 // FailedOutputTail is how many of a failed workload's last lines a diagnosis

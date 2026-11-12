@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/agent"
+	"github.com/zedensix/homerun/internal/agent"
 )
 
 func TestRepoMetadataStepsForABranch(t *testing.T) {

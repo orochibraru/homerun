@@ -9,7 +9,7 @@ image-based ones included, with the CLI or the REST API.
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/orochibraru/homerun/main/manifest.schema.json",
+  "$schema": "https://raw.githubusercontent.com/zedensix/homerun/main/manifest.schema.json",
   "gitBuildMethod": "railpack",
   "containerPort": 3000,
   "envVars": { "NODE_ENV": "production" },

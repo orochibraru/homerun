@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 const versionServiceID = "0b6f6c62-6a3b-4f8e-9d55-2f1a4c7e8d90"

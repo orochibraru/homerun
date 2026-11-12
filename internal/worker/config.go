@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockersocket"
-	"github.com/orochibraru/homerun/internal/httpapi"
-	"github.com/orochibraru/homerun/internal/secrets"
+	"github.com/zedensix/homerun/internal/dockersocket"
+	"github.com/zedensix/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/secrets"
 )
 
 // Config is the worker's environment, read once at startup.

@@ -9,9 +9,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/httpapi"
-	"github.com/orochibraru/homerun/internal/sshterm"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/sshterm"
 )
 
 // mountTerminal wires the web terminal routes.

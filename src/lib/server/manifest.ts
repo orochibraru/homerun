@@ -10,7 +10,7 @@ export const MANIFEST_FILES = [
 ] as const;
 
 export const MANIFEST_SCHEMA_URL =
-	"https://raw.githubusercontent.com/orochibraru/homerun/main/manifest.schema.json";
+	"https://raw.githubusercontent.com/zedensix/homerun/main/manifest.schema.json";
 
 const BUILD_KEYS = [
 	"gitBakeFile",

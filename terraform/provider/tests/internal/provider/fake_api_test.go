@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/orochibraru/homerun/terraform/provider/internal/provider"
+	"github.com/zedensix/homerun/terraform/provider/internal/provider"
 )
 
 type recorded struct {

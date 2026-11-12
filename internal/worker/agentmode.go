@@ -14,13 +14,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/agent"
-	"github.com/orochibraru/homerun/internal/buildinfo"
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/hoststats"
-	"github.com/orochibraru/homerun/internal/httpapi"
-	"github.com/orochibraru/homerun/internal/logging"
-	"github.com/orochibraru/homerun/internal/workstation"
+	"github.com/zedensix/homerun/internal/agent"
+	"github.com/zedensix/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/hoststats"
+	"github.com/zedensix/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/workstation"
 )
 
 // runAgent is the worker on a remote host: no Postgres, no job loop, only the

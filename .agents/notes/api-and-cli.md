@@ -165,7 +165,7 @@ to opt out of it and there is no per-request helper (`allowLongRequest()` and
 `src/lib/server/long-request.ts` are gone, along with every call site).
 `App.Platform` comes from adapter-bun's ambient types (`platform.server` only).
 adapter-bun also clears the timeout for `text/event-stream` responses on its
-own, and `@orochibraru/svelte-smol`'s `IDLE_TIMEOUT` env var no longer exists.
+own, and `@zedensix/svelte-smol`'s `IDLE_TIMEOUT` env var no longer exists.
 
 **Why it's `0`, a real reproduced finding.** Bun's default (10s) applies to a
 request that's still being _handled_, not just to an idle socket: a handler that
@@ -439,7 +439,7 @@ and drift against its own checkpoint. OpenTofu differs from Terraform only in
 the CLI name the pages and the generated README print (`GenerateOptions.cli`).
 
 **Pulumi goes through the Terraform bridge, there's no Pulumi provider.**
-`pulumi package add terraform-provider orochibraru/homerun` generates the
+`pulumi package add terraform-provider zedensix/homerun` generates the
 `@pulumi/homerun` SDK from the registry provider, so `src/lib/iac/pulumi.ts`
 derives every Pulumi name from the spec the way the bridge does: class
 `pulumiClass` (`homerun_service_environment` is `ServiceEnvironment`), token
@@ -447,7 +447,7 @@ derives every Pulumi name from the spec the way the bridge does: class
 checkpoint records), property `pulumiProperty`: camelCase of the Terraform name,
 **pluralized for a list** (`cap_add` is `capAdds`, `command` is `commands`).
 That last rule is a real finding, checked against the schema
-`pulumi package get-schema terraform-provider orochibraru/homerun` prints: every
+`pulumi package get-schema terraform-provider zedensix/homerun` prints: every
 attribute the published provider had matched, a plain camelCase didn't.
 `generatePulumiProgram` reuses `configuredAttributes` from `generate.ts` (the
 same defaults, references and secret variables as the HCL, through the
@@ -465,7 +465,7 @@ same `compareInstances` as the tfstate path. Encrypted outputs (the
 doesn't carry are skipped, never reported as drift.
 
 **The provider is generic.** `terraform/provider` is its own Go module (module
-path `github.com/orochibraru/homerun/terraform/provider`), kept out of the root
+path `github.com/zedensix/homerun/terraform/provider`), kept out of the root
 `go.mod` like `tools/go`, since terraform-plugin-framework pulls grpc and
 friends into the shipped binaries' minimum-version selection otherwise. One
 `specResource` and one `specDataSource` serve every type: schema from the spec,
@@ -492,7 +492,7 @@ its vet, golangci-lint (through `go -C terraform/provider tool`, with
 `-modfile=../../tools/go/go.mod` and `--config ../../.golangci.yml`) and tests;
 `scripts/build-packages.ts` cross-compiles it as
 `dist/homerun-terraform-provider-<target>`, and every stable release publishes
-it to registry.terraform.io and registry.opentofu.org as `orochibraru/homerun`
+it to registry.terraform.io and registry.opentofu.org as `zedensix/homerun`
 through a mirror repo (see Terraform provider registries in
 `packages-and-release.md`), so the Provider tab and a generated project's README
 only say to set the key and run `terraform init`.

@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/orochibraru/homerun/internal/agent"
-	"github.com/orochibraru/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/agent"
+	"github.com/zedensix/homerun/internal/httpapi"
 )
 
 // mountGit wires the git routes.

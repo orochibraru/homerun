@@ -7,8 +7,8 @@
 	"containerPort": 3000,
 	"icon": "bercail.svg",
 	"tags": ["dashboard", "start-page", "bookmarks", "status", "weather"],
-	"websiteUrl": "https://orochibraru.com/bercail",
-	"sourceUrl": "https://github.com/orochibraru/bercail",
+	"websiteUrl": "https://zedensix.com/bercail",
+	"sourceUrl": "https://github.com/zedensix/bercail",
 	"envVars": {
 		"ORIGIN": "https://dash.example.com"
 	}

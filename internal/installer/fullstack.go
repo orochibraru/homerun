@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/orochibraru/homerun/internal/release"
+	"github.com/zedensix/homerun/internal/release"
 )
 
 // SysctlConfPath is where the unprivileged-port sysctl is persisted. A variable

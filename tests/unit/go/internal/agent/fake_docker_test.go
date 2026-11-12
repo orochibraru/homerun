@@ -5,12 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"strings"
 	"sync"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
 )
 
 // fakeDocker is an in-memory daemon. Each git or builder container "runs" the

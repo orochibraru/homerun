@@ -17,7 +17,7 @@ import {
 } from "#lib/iac/resources.js";
 
 const DOCS_URL =
-	"https://github.com/orochibraru/homerun/blob/main/docs/infrastructure-as-code.md";
+	"https://github.com/zedensix/homerun/blob/main/docs/infrastructure-as-code.md";
 
 const LOCAL_NAME = "example";
 

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/orochibraru/homerun/internal/homerun"
+	"github.com/zedensix/homerun/internal/homerun"
 )
 
 // Client is the CLI's view of the API client: the same calls as

@@ -19,10 +19,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/jobs/backup"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/jobs/backup"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 )
 
 type fakeContainer struct {

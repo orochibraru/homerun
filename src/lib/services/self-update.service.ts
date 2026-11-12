@@ -40,9 +40,9 @@ import {
 import { isNewerVersion, normalizeVersion } from "./self-update/version.ts";
 
 const RELEASES_URL =
-	"https://api.github.com/repos/orochibraru/homerun/releases?per_page=30";
+	"https://api.github.com/repos/zedensix/homerun/releases?per_page=30";
 const LATEST_RELEASE_URL =
-	"https://api.github.com/repos/orochibraru/homerun/releases/latest";
+	"https://api.github.com/repos/zedensix/homerun/releases/latest";
 const RELEASE_CACHE_MS = 10 * 60 * 1000;
 const UPDATE_POLL_MS = 5000;
 const UPDATE_WATCH_MS = 30 * 60 * 1000;

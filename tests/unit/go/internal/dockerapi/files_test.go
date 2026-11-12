@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
 )
 
 func TestWithFilesWrapsImageArgv(t *testing.T) {

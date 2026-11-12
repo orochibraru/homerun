@@ -17,16 +17,16 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/orochibraru/homerun/internal/buildinfo"
-	"github.com/orochibraru/homerun/internal/db"
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/httpapi"
-	"github.com/orochibraru/homerun/internal/janitor"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/logging"
-	"github.com/orochibraru/homerun/internal/logship"
-	"github.com/orochibraru/homerun/internal/secrets"
-	"github.com/orochibraru/homerun/internal/tracing"
+	"github.com/zedensix/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/db"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/janitor"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/logship"
+	"github.com/zedensix/homerun/internal/secrets"
+	"github.com/zedensix/homerun/internal/tracing"
 )
 
 const helpText = `

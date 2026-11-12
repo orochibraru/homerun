@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
 )
 
 func TestContainersUsageSamplesEveryRunningContainer(t *testing.T) {

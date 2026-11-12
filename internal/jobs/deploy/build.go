@@ -12,10 +12,10 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/activity"
-	"github.com/orochibraru/homerun/internal/agent"
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/tracing"
+	"github.com/zedensix/homerun/internal/activity"
+	"github.com/zedensix/homerun/internal/agent"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )

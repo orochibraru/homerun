@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/moby/moby/api/types/container"
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/jobs/imagescan"
-	"github.com/orochibraru/homerun/internal/tracing"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/jobs/imagescan"
+	"github.com/zedensix/homerun/internal/tracing"
 )
 
 const (

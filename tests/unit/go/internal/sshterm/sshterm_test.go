@@ -17,7 +17,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/orochibraru/homerun/internal/sshterm"
+	"github.com/zedensix/homerun/internal/sshterm"
 )
 
 // clientKey is a PKCS#8 PEM ed25519 key, the form the app generates, and its public half.

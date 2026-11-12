@@ -7,8 +7,8 @@
 	"containerPort": 3000,
 	"icon": "nuvio.png",
 	"tags": ["stremio", "nuvio", "streaming", "player", "media"],
-	"websiteUrl": "https://nuvio.orochibraru.com",
-	"sourceUrl": "https://github.com/orochibraru/nuvio-web",
+	"websiteUrl": "https://nuvio.zedensix.com",
+	"sourceUrl": "https://github.com/zedensix/nuvio-web",
 	"envVars": {
 		"NUVIO_ADMIN_EMAILS": "you@example.com",
 		"NUVIO_SESSION_SECRET": "{{secret:hex64}}"

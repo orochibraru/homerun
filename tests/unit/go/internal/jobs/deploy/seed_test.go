@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/jobs/deploy"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/jobs/deploy"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 )
 
 type seedDaemon struct {

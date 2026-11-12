@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/homerun"
+	"github.com/zedensix/homerun/internal/homerun"
 )
 
 // DeviceStart is the device-authorization request the instance opens for us.

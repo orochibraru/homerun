@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/logging"
 )
 
 // scope labels every line this package logs.

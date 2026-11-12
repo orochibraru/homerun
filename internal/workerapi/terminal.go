@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/logging"
 )
 
 // scope labels every line the terminal hub logs.

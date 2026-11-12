@@ -295,7 +295,7 @@ run's `binaries-*` artifacts into `dist/` and run the script with that tag.
 repo named `terraform-provider-<name>`, so the monorepo can't be published
 directly: `publish.yaml`'s `stable-terraform-provider` job (stable releases
 only, after `stable-release`) copies `terraform/provider` into
-`orochibraru/terraform-provider-homerun` as one commit, tags it `vX.Y.Z`, and
+`zedensix/terraform-provider-homerun` as one commit, tags it `vX.Y.Z`, and
 creates the release there with what `scripts/package-terraform-provider.sh`
 builds from the `stable-binaries` artifact: one
 `terraform-provider-homerun_X.Y.Z_<os>_<arch>.zip` per target (holding
@@ -360,8 +360,8 @@ locally), see Homerun CLI in `api-and-cli.md`.
 The repository root is the generic **Homerun** composite action (install the
 CLI, put it on the `PATH`, optionally run `args`), and each dedicated action
 (deploy, rollback, preview, gate-session) is a composite action of its own,
-addressed as `orochibraru/homerun/actions/<name>@<tag>`. A composite action
-can't `uses:` a sibling at the same ref (`github.action_ref` isn't allowed in
+addressed as `zedensix/homerun/actions/<name>@<tag>`. A composite action can't
+`uses:` a sibling at the same ref (`github.action_ref` isn't allowed in
 `uses:`), so they share two scripts instead: `actions/install-cli.sh` resolves
 the CLI version from the action's own tag (else `latest`) and installs once per
 job into `$RUNNER_TEMP/homerun-cli`, and `actions/run-cli.sh` exports
@@ -623,7 +623,7 @@ Three audiences, three places, keep them apart:
   values, and demotes `homerun.yaml` to an optional config-as-code path. Don't
   reintroduce an env-var table as the opening section.
 
-- **The website** (<https://homerun.orochibraru.com>): built from a **separate
+- **The website** (<https://homerun.zedensix.com>): built from a **separate
   repository** that renders this repo's `docs/*.md` itself. It used to live here
   as `packages/docs/` (a static SvelteKit site published as
   `docker.io/zedensix/homerun-docs`, from back when `agent`/`cli`/`installer`
@@ -690,7 +690,7 @@ update.
 
 **The channel** is `instance_settings.update_channel` (`stable` when null), set
 on Settings → General. **Latest release** is
-`GET /repos/orochibraru/homerun/releases/latest` for stable, and the first
+`GET /repos/zedensix/homerun/releases/latest` for stable, and the first
 prerelease in `/releases?per_page=30` whose tag parses as a version for canary
 (the Go CLI's `release.LatestCanary` does the same). Cached per channel on the
 service instance for ten minutes (five minutes after a failure, which returns

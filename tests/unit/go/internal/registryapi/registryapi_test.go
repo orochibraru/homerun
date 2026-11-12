@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/registryapi"
+	"github.com/zedensix/homerun/internal/registryapi"
 )
 
 const (

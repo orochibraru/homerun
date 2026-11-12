@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/hoststats"
+	"github.com/zedensix/homerun/internal/hoststats"
 )
 
 // fakeProc writes fake /proc/stat and /proc/meminfo files into a scratch

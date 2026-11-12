@@ -1,6 +1,6 @@
 name: Homerun Login Wall Session
 description: Sign in through a Homerun app's login wall with a service account's API key and hand back the app's session cookie, for end-to-end tests.
-author: orochibraru
+author: zedensix
 branding:
   icon: lock
   color: red

@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/orochibraru/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/buildinfo"
 )
 
 // schemePrefix and trailingSlashes normalise a pasted dashboard URL down to the

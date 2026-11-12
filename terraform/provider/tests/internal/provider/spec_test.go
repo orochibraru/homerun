@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
-	"github.com/orochibraru/homerun/terraform/provider/internal/provider"
+	"github.com/zedensix/homerun/terraform/provider/internal/provider"
 )
 
 func loadSpec(t *testing.T) provider.Spec {

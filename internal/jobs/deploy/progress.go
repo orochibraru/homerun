@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/jobs"
 )
 
 const (

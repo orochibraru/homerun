@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 const stackUUID = "7d0c9a52-1f3e-4b6a-8c2d-5e4f3a2b1c0d"

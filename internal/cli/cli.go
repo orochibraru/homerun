@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/orochibraru/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/buildinfo"
 )
 
 // GlobalFlags are the --base-url/--api-key overrides every command accepts,

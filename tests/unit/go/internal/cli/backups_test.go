@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 func TestBackupRowsTimesARunningRunUpToNow(t *testing.T) {

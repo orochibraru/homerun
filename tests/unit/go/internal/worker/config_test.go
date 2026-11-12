@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/httpapi"
-	"github.com/orochibraru/homerun/internal/worker"
+	"github.com/zedensix/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/worker"
 )
 
 // clearWorkerEnv unsets every variable LoadConfig reads, so a test starts from

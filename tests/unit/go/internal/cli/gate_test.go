@@ -11,8 +11,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/cli"
-	"github.com/orochibraru/homerun/internal/homerun"
+	"github.com/zedensix/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/homerun"
 )
 
 type gateServers struct {

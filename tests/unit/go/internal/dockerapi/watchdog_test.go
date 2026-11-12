@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 )
 
 // fastTimeouts shrinks the control and stall windows for one test.

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/jobs/backup"
-	"github.com/orochibraru/homerun/internal/rclone"
+	"github.com/zedensix/homerun/internal/jobs/backup"
+	"github.com/zedensix/homerun/internal/rclone"
 )
 
 // remoteSpec is a restore of volume "data" from a legacy archive on an rclone

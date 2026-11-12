@@ -13,7 +13,7 @@
 set -euo pipefail
 
 GIT_HOST="github.com"
-GIT_REPO="orochibraru/homerun"
+GIT_REPO="zedensix/homerun"
 VERSION="latest"
 
 for arg in "$@"; do

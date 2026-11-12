@@ -89,7 +89,7 @@ export const shots: ShotModule = {
 			buildSource: "git",
 			containerPort: 3000,
 			gitRef: "main",
-			gitUrl: "https://github.com/orochibraru/homerun.git",
+			gitUrl: "https://github.com/zedensix/homerun.git",
 			name: "Handbook",
 			slug: "handbook",
 		});

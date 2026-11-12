@@ -3,12 +3,12 @@ package worker
 import (
 	"context"
 
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/jobs/backup"
-	"github.com/orochibraru/homerun/internal/jobs/cleanup"
-	"github.com/orochibraru/homerun/internal/jobs/cronjob"
-	"github.com/orochibraru/homerun/internal/jobs/deploy"
-	"github.com/orochibraru/homerun/internal/jobs/imagescan"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/jobs/backup"
+	"github.com/zedensix/homerun/internal/jobs/cleanup"
+	"github.com/zedensix/homerun/internal/jobs/cronjob"
+	"github.com/zedensix/homerun/internal/jobs/deploy"
+	"github.com/zedensix/homerun/internal/jobs/imagescan"
 )
 
 // Executor runs one job and returns its result, stored as the row's

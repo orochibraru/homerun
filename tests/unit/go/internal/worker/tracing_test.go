@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/tracing"
-	"github.com/orochibraru/homerun/internal/worker"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/tracing"
+	"github.com/zedensix/homerun/internal/worker"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

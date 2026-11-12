@@ -1,5 +1,5 @@
 {
-	"$id": "https://raw.githubusercontent.com/orochibraru/homerun/main/manifest.schema.json",
+	"$id": "https://raw.githubusercontent.com/zedensix/homerun/main/manifest.schema.json",
 	"$schema": "http://json-schema.org/draft-07/schema#",
 	"additionalProperties": false,
 	"description": "A Homerun Manifest: a service's configuration, kept as .homerun.json (or .homerun.yaml / .homerun.yml) in its repository and applied on every deploy, or applied to any service with `homerun manifest apply`. Every key is optional and uses the REST API's field name; keys left out keep their current value, and envVars are merged into the service's environment rather than replacing it.",

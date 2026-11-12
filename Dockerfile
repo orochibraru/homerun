@@ -12,7 +12,7 @@ ARG TARGETOS
 ARG TARGETARCH
 RUN VERSION="$(sed -n 's/^[[:space:]]*"version": "\(.*\)",*$/\1/p' package.json)"; \
     CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath \
-    -ldflags "-s -w -X github.com/orochibraru/homerun/internal/buildinfo.Version=${VERSION}" \
+    -ldflags "-s -w -X github.com/zedensix/homerun/internal/buildinfo.Version=${VERSION}" \
     -o /out/homerun-worker ./cmd/worker
 
 FROM go-builder AS cli-builder
@@ -22,7 +22,7 @@ ARG TARGETARCH
 ARG HOMERUN_VERSION=""
 RUN VERSION="${HOMERUN_VERSION:-$(sed -n 's/^[[:space:]]*"version": "\(.*\)",*$/\1/p' package.json)}"; \
     CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath \
-    -ldflags "-s -w -X github.com/orochibraru/homerun/internal/buildinfo.Version=${VERSION}" \
+    -ldflags "-s -w -X github.com/zedensix/homerun/internal/buildinfo.Version=${VERSION}" \
     -o /out/homerun ./cmd/cli
 
 FROM alpine:3 AS cli

@@ -3,7 +3,7 @@ package deploy_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"net/http"
 	"slices"
@@ -11,8 +11,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/jobs/deploy"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/jobs/deploy"
 )
 
 type fakeDaemon struct {

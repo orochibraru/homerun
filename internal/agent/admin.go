@@ -14,11 +14,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/orochibraru/homerun/internal/buildinfo"
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/httpapi"
-	"github.com/orochibraru/homerun/internal/logging"
-	"github.com/orochibraru/homerun/internal/release"
+	"github.com/zedensix/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/httpapi"
+	"github.com/zedensix/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/release"
 )
 
 // LogLine is one line the agent logged, stamped when it was written.

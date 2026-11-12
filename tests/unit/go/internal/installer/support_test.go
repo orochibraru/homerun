@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/installer"
+	"github.com/zedensix/homerun/internal/installer"
 )
 
 // fakeRunner records everything a step would have done, and can be told to fail

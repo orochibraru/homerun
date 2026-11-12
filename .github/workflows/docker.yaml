@@ -98,7 +98,7 @@ jobs:
           mv "$BAKE_FILE" "$RUNNER_TEMP/bake-meta.json"
 
       - name: Upload meta bake definition
-        uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
+        uses: zedensix/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
         with:
           name: bake-meta-${{ inputs.bake_target }}
           path: ${{ runner.temp }}/bake-meta.json
@@ -125,7 +125,7 @@ jobs:
           echo "PLATFORM_PAIR=${PLATFORM//\//-}" >> "$GITHUB_ENV"
 
       - name: Download meta bake definition
-        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        uses: zedensix/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           name: bake-meta-${{ inputs.bake_target }}
           path: ${{ runner.temp }}
@@ -175,7 +175,7 @@ jobs:
 
       - name: Upload digest
         if: inputs.push
-        uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
+        uses: zedensix/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
         with:
           name: digests-${{ inputs.bake_target }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*

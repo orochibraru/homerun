@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/buildinfo"
-	"github.com/orochibraru/homerun/internal/homerun"
+	"github.com/zedensix/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/homerun"
 )
 
 // scratchHome points HOME at a fresh temp directory and clears the

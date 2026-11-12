@@ -49,7 +49,7 @@ console.
 
 ## The Terraform provider
 
-The provider's address is `orochibraru/homerun`. It talks to the REST API, so it
+The provider's address is `zedensix/homerun`. It talks to the REST API, so it
 can do what an API key can (see [API & CLI](api-and-cli.md)), and it needs a key
 with the matching permission for each resource it manages (write on DNS for DNS
 connections, on Git providers for git providers, on Object storage for object
@@ -59,7 +59,7 @@ stores and buckets, and so on).
 terraform {
   required_providers {
     homerun = {
-      source = "orochibraru/homerun"
+      source = "zedensix/homerun"
     }
   }
 }
@@ -204,10 +204,10 @@ How the attributes behave:
 ### Installing it
 
 The provider is published to the
-[Terraform Registry](https://registry.terraform.io/providers/orochibraru/homerun)
+[Terraform Registry](https://registry.terraform.io/providers/zedensix/homerun)
 and the
-[OpenTofu Registry](https://search.opentofu.org/provider/orochibraru/homerun),
-with a version for every Homerun release, so `terraform init` (or `tofu init`)
+[OpenTofu Registry](https://search.opentofu.org/provider/zedensix/homerun), with
+a version for every Homerun release, so `terraform init` (or `tofu init`)
 downloads it like any other provider: nothing to build or install by hand. A
 project's **Generate** tab has the commands to run for its tool, with your
 instance's URL filled in.
@@ -361,7 +361,7 @@ Pulumi provider. Add it to a Pulumi project from the registry, which generates a
 typed SDK and records it under `packages` in `Pulumi.yaml`:
 
 ```sh
-pulumi package add terraform-provider orochibraru/homerun
+pulumi package add terraform-provider zedensix/homerun
 pulumi config set homerun:endpoint https://homerun.example.com
 pulumi config set --secret homerun:apiKey <an API key>
 ```
@@ -425,7 +425,7 @@ Then, in the folder:
 pulumi login '<the command from the State tab>'
 pulumi stack init prod
 npm install
-pulumi package add terraform-provider orochibraru/homerun
+pulumi package add terraform-provider zedensix/homerun
 export HOMERUN_ENDPOINT=https://homerun.example.com
 export HOMERUN_API_KEY=<an API key>
 sh secrets.sh

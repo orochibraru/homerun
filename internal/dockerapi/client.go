@@ -25,7 +25,7 @@ import (
 	"github.com/moby/moby/api/types/registry"
 	"github.com/moby/moby/client"
 
-	"github.com/orochibraru/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/logging"
 )
 
 // engineScope labels every Docker Engine call in the log, so a deploy that

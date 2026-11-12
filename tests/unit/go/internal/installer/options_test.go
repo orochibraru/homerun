@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/installer"
+	"github.com/zedensix/homerun/internal/installer"
 )
 
 func TestParseArgsDefaults(t *testing.T) {

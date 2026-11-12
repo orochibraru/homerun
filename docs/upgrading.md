@@ -94,7 +94,7 @@ Pick one on **Settings → General → Release channel**:
 - **Canary**: the notice offers every build merged to `main` once it passed the
   end-to-end tests, published as the `:canary` and `:vX.Y.Z-canary.N` images and
   a `vX.Y.Z-canary.N`
-  [prerelease](https://github.com/orochibraru/homerun/releases). Updating moves
+  [prerelease](https://github.com/zedensix/homerun/releases). Updating moves
   your install to the `canary` tag (`HOMERUN_VERSION=canary`).
 - **Nightly**: the same builds as canary, published as the `:nightly` and
   `:vX.Y.Z-nightly.N` images and a `vX.Y.Z-nightly.N` prerelease as soon as

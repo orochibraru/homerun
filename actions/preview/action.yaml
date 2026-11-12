@@ -1,6 +1,6 @@
 name: Homerun Preview
 description: Deploy, wait for, promote or delete a Homerun pull request preview.
-author: orochibraru
+author: zedensix
 branding:
   icon: git-pull-request
   color: red

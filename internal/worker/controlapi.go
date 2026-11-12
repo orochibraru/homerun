@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/janitor"
-	"github.com/orochibraru/homerun/internal/logging"
-	"github.com/orochibraru/homerun/internal/workerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/janitor"
+	"github.com/zedensix/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/workerapi"
 )
 
 // controlShutdownGrace is how long a shutdown waits for in-flight control

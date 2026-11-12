@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/orochibraru/homerun/terraform/provider/internal/client"
+	"github.com/zedensix/homerun/terraform/provider/internal/client"
 )
 
 func newServer(t *testing.T, handler http.HandlerFunc) *client.Client {

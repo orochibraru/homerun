@@ -7,8 +7,8 @@
 	"containerPort": 3000,
 	"icon": "opencount.svg",
 	"tags": ["finance", "expenses", "split", "money", "tricount-alternative"],
-	"websiteUrl": "https://orochibraru.com/opencount",
-	"sourceUrl": "https://github.com/orochibraru/opencount",
+	"websiteUrl": "https://zedensix.com/opencount",
+	"sourceUrl": "https://github.com/zedensix/opencount",
 	"envVars": {
 		"AUTH_SECRET": "{{secret}}",
 		"ORIGIN": "{{url}}"

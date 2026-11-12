@@ -7,8 +7,8 @@
 	"containerPort": 3000,
 	"icon": "penombre.svg",
 	"tags": ["drive", "files", "storage", "sync", "nextcloud-alternative"],
-	"websiteUrl": "https://orochibraru.com/penombre",
-	"sourceUrl": "https://github.com/orochibraru/penombre",
+	"websiteUrl": "https://zedensix.com/penombre",
+	"sourceUrl": "https://github.com/zedensix/penombre",
 	"envVars": {
 		"APP_NAME": "Penombre",
 		"DATABASE_URL": "file:/data/db/penombre.sqlite",

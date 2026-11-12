@@ -24,6 +24,10 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Mail server: verify the relay's certificate; docker-mailserver sets
+      `smtp_tls_security_level = encrypt` for a relay, which encrypts but
+      accepts any certificate, so an active man in the middle can read the relay
+      password (`secure` checks it against the relay's hostname)
 - [ ] Mail server: verify the whole path against a live docker-mailserver
       (bcrypt `{BLF-CRYPT}` sign-in, rspamd DKIM signing with the path template,
       `acme.json` extraction when Traefik issued a wildcard)

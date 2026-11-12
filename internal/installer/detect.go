@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/orochibraru/homerun/internal/release"
+	"github.com/zedensix/homerun/internal/release"
 )
 
 // PackageManager is the host's package manager and the argv that installs with it.

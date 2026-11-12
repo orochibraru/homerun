@@ -12,7 +12,7 @@ standalone-only setup, and `--migrate-to-rootful` moves such an install over.
 ## The one-liner
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/bootstrap.sh \
   | sudo bash -s -- --mode=full
 ```
 
@@ -28,7 +28,7 @@ The one-liner serves `bootstrap.sh` straight from this repo on
 isn't, download the release binary directly and run it instead:
 
 ```bash
-curl -fsSL https://github.com/orochibraru/homerun/releases/latest/download/homerun-installer-amd64.gz | gunzip -c > homerun-installer
+curl -fsSL https://github.com/zedensix/homerun/releases/latest/download/homerun-installer-amd64.gz | gunzip -c > homerun-installer
 chmod +x homerun-installer
 sudo ./homerun-installer --mode=full
 ```
@@ -143,7 +143,7 @@ node. The dashboard refuses Swarm up front on a rootless daemon.
 ## Migrating a rootless install (`--migrate-to-rootful`)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/bootstrap.sh \
   | sudo bash -s -- --migrate-to-rootful --yes
 ```
 
@@ -242,7 +242,7 @@ docker swarm join-token worker
 Then, on the node you want to add:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/swarm-join.sh \
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/swarm-join.sh \
   | sudo bash -s -- --token=<SWMTKN-...> --manager=<manager-ip>:2377
 ```
 

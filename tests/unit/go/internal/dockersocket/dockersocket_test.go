@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/dockersocket"
+	"github.com/zedensix/homerun/internal/dockersocket"
 )
 
 // stubContextHost makes dockersocket.ContextHost answer host for one test.

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/secrets"
+	"github.com/zedensix/homerun/internal/secrets"
 )
 
 type parityFixture struct {

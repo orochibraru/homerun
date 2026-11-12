@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/orochibraru/homerun/terraform/provider/internal/provider"
+	"github.com/zedensix/homerun/terraform/provider/internal/provider"
 )
 
 func factories() map[string]func() (tfprotov6.ProviderServer, error) {

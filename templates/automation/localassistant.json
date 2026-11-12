@@ -7,8 +7,8 @@
 	"containerPort": 3000,
 	"icon": "localassistant.svg",
 	"tags": ["home", "automation", "smart-home", "iot", "energy"],
-	"websiteUrl": "https://github.com/orochibraru/localassistant",
-	"sourceUrl": "https://github.com/orochibraru/localassistant",
+	"websiteUrl": "https://github.com/zedensix/localassistant",
+	"sourceUrl": "https://github.com/zedensix/localassistant",
 	"envVars": {
 		"AUTH_SECRET": "{{secret}}",
 		"ORIGIN": "{{url}}"

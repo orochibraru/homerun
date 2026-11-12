@@ -50,7 +50,7 @@ describe("renderHcl", () => {
 				attributes: [],
 				blocks: [
 					{
-						attributes: [["homerun", { source: "orochibraru/homerun" }]],
+						attributes: [["homerun", { source: "zedensix/homerun" }]],
 						labels: [],
 						type: "required_providers",
 					},
@@ -75,7 +75,7 @@ describe("renderHcl", () => {
 				"terraform {",
 				"  required_providers {",
 				"    homerun = {",
-				'      source = "orochibraru/homerun"',
+				'      source = "zedensix/homerun"',
 				"    }",
 				"  }",
 				"}",

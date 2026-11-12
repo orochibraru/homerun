@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/jobs/deploy"
+	"github.com/zedensix/homerun/internal/jobs/deploy"
 )
 
 func TestTraefikError(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/logging"
 )
 
 const (

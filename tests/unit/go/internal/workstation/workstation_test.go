@@ -19,9 +19,9 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moby/moby/api/types/network"
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/workstation"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/workstation"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 )
 
 const id = "0b5f8a3e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"

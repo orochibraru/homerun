@@ -15,7 +15,7 @@ export function agentSetupCommands(version: string): {
 	return {
 		docker: `docker run -d --name homerun-worker --restart unless-stopped -p 7420:7420 -v /var/run/docker.sock:/var/run/docker.sock -v homerun-worker-token:/root/.homerun-worker docker.io/zedensix/homerun-worker:${tag}`,
 		dockerToken: "docker exec homerun-worker cat /root/.homerun-worker/token",
-		installer: `curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh | sudo bash -s -- --mode=agent${versionFlag}`,
+		installer: `curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/bootstrap.sh | sudo bash -s -- --mode=agent${versionFlag}`,
 		installerToken: "sudo -u homerun cat /home/homerun/.homerun-worker/token",
 	};
 }
@@ -165,9 +165,9 @@ AGENT_JSON=""
 if [ "$BUILD_SERVER" = "yes" ]; then
 	echo "==> Installing the Homerun worker in agent mode ($VERSION)"
 	if [ "$VERSION" = "latest" ]; then
-		INSTALLER_URL="https://github.com/orochibraru/homerun/releases/latest/download/homerun-installer-$ARCH.gz"
+		INSTALLER_URL="https://github.com/zedensix/homerun/releases/latest/download/homerun-installer-$ARCH.gz"
 	else
-		INSTALLER_URL="https://github.com/orochibraru/homerun/releases/download/$VERSION/homerun-installer-$ARCH.gz"
+		INSTALLER_URL="https://github.com/zedensix/homerun/releases/download/$VERSION/homerun-installer-$ARCH.gz"
 	fi
 	INSTALLER_BINARY="$(mktemp)"
 	trap 'rm -f "$INSTALLER_BINARY"' EXIT

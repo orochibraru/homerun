@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/s3"
+	"github.com/zedensix/homerun/internal/s3"
 )
 
 func TestSignatureMatchesAWSExample(t *testing.T) {

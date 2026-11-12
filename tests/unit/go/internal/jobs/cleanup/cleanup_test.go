@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,11 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/registryapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/registryapi"
 
-	"github.com/orochibraru/homerun/internal/jobs/cleanup"
+	"github.com/zedensix/homerun/internal/jobs/cleanup"
 )
 
 type fakeDaemon struct {

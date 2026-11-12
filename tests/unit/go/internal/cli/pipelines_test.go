@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/cli"
 )
 
 const pipelineRepositoryUUID = "22222222-3333-4444-5555-666666666666"

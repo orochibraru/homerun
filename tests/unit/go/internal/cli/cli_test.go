@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/buildinfo"
-	"github.com/orochibraru/homerun/internal/cli"
-	"github.com/orochibraru/homerun/internal/homerun"
-	"github.com/orochibraru/homerun/internal/release"
+	"github.com/zedensix/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/cli"
+	"github.com/zedensix/homerun/internal/homerun"
+	"github.com/zedensix/homerun/internal/release"
 )
 
 func TestResolveConfigPrefersFlagsThenEnvThenStore(t *testing.T) {

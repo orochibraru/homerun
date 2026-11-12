@@ -14,12 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/dockersocket"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/s3"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/dockersocket"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/s3"
 
-	"github.com/orochibraru/homerun/internal/jobs/backup"
+	"github.com/zedensix/homerun/internal/jobs/backup"
 )
 
 type recorder struct {

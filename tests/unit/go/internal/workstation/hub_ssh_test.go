@@ -11,9 +11,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/workstation"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/workstation"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 )
 
 func TestHubDrivesAnSSHDockerHostOverOneConnection(t *testing.T) {

@@ -69,7 +69,7 @@ function buildCli(): void {
 		[
 			"build",
 			"-ldflags",
-			`-X github.com/orochibraru/homerun/internal/buildinfo.Version=${CLI_VERSION}`,
+			`-X github.com/zedensix/homerun/internal/buildinfo.Version=${CLI_VERSION}`,
 			"-o",
 			CLI_BINARY,
 			"./cmd/cli",

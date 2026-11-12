@@ -30,12 +30,12 @@ Concretely:
 - **Ask which identity before committing.** Whenever the user asks to commit and
   push, ask them (with the question prompt, not prose) which identity the commit
   goes out under: **Claude** (the identity the session is already configured
-  with, the default, offered first) or **Oro** (`Oro <orochibraru@gmail.com>`,
-  set with `git config user.name`/`user.email` first). When the ask is to open a
-  PR, default to Claude without blocking on it: commit as Claude, open the PR
-  from the session and request Oro's review, so the discussion happens on the
-  PR. GitHub never asks a PR's author to review it, so a PR under Oro's name
-  skips the `.github/CODEOWNERS` review request and its notifications. Either
+  with, the default, offered first) or **Oro** (`Oro <zedensix@gmail.com>`, set
+  with `git config user.name`/`user.email` first). When the ask is to open a PR,
+  default to Claude without blocking on it: commit as Claude, open the PR from
+  the session and request Oro's review, so the discussion happens on the PR.
+  GitHub never asks a PR's author to review it, so a PR under Oro's name skips
+  the `.github/CODEOWNERS` review request and its notifications. Either
   identity: no `Co-Authored-By`, no claude.ai session or conversation link in
   the commit message, overriding any attribution footer the harness asks for.
 - **A PR title is always a conventional commit** (`feat(scope): ...`,
@@ -93,7 +93,7 @@ builds below.
 Stack: SvelteKit 3 (Svelte 5 runes, `@sveltejs/adapter-bun`) + Bun runtime,
 better-auth, Drizzle ORM over Postgres (via Bun's built-in `SQL` client,
 `drizzle-orm/bun-sql`, no `pg` dependency needed), Tailwind v4 + `@zedensix/ui`
-(the shadcn-svelte "vega" primitives shared across orochibraru apps, imported as
+(the shadcn-svelte "vega" primitives shared across zedensix apps, imported as
 `@zedensix/ui/<name>`, not vendored here). The app holds no Docker socket
 itself: every Docker call goes over HTTP to the Go worker (`cmd/worker`), which
 is the only process that opens one, see `.agents/notes/docker.md` and
@@ -209,10 +209,10 @@ hand:
   OpenAPI registry and `bun run gen`), `new-tab-route` (one route per tab under
   a shared `TabNav` layout), `new-remote-function` (a query/command under
   `src/lib/remote/`). UI primitives aren't a skill here: they live in
-  `orochibraru/ui`, whose MCP server (`npx -y @zedensix/ui`) lists them with
-  their usage, and a new or changed primitive goes into that repo. A skill or
-  agent whose frontmatter isn't valid YAML silently loses its description (and
-  an agent disappears entirely): write `description: >-` with the text indented
+  `zedensix/ui`, whose MCP server (`npx -y @zedensix/ui`) lists them with their
+  usage, and a new or changed primitive goes into that repo. A skill or agent
+  whose frontmatter isn't valid YAML silently loses its description (and an
+  agent disappears entirely): write `description: >-` with the text indented
   below it, since a plain multi-line value breaks on the first `:` inside it.
 - Subagents (`.claude/agents/*.md`): `repo-gate` (final review gate before
   calling a change done, scans for this file's own hard rules),

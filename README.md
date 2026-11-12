@@ -1,5 +1,27 @@
 # Homerun
 
+> [!CAUTION]
+>
+> ## Homerun moved to `zedensix`
+>
+> The images are now **`docker.io/zedensix/homerun`** and
+> **`docker.io/zedensix/homerun-worker`**, and the repository is
+> **`github.com/zedensix/homerun`**. The old `zedensix` Docker Hub account no
+> longer exists.
+>
+> **An instance installed before November 12, 2026 can't update itself any
+> more**: it keeps pulling `zedensix/homerun`, which is gone. Switch it once, as
+> the user Homerun runs under (`homerun` by default):
+>
+> ```sh
+> cd ~/homerun
+> sed -i 's#zedensix/homerun#zedensix/homerun#g' .env compose*.yaml
+> docker compose pull && docker compose up -d
+> ```
+>
+> On a swarm install, add `-f compose.yaml -f compose.swarm.yaml` to both
+> `docker compose` commands. After that, updates from the dashboard work again.
+
 **A self-hosted PaaS that starts on one box. Swarm workers when you want more.
 No Kubernetes, no separate control plane.** Deploy Docker containers with a
 click-config form, a Dokploy / Cloud Run alternative for your own hardware, for
@@ -349,7 +371,7 @@ the file. See [`docs/configuration.md`](docs/configuration.md).
 [`docs/`](docs/README.md) in this repo is the source of truth, plain Markdown,
 readable straight from the file browser. Start with
 [Getting started](docs/getting-started.md). The
-[website](https://homerun.orochibraru.com) renders the same files.
+[website](https://homerun.zedensix.com) renders the same files.
 
 ## Sub-projects
 

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/orochibraru/homerun/internal/worker"
+	"github.com/zedensix/homerun/internal/worker"
 )
 
 // testPool connects to a real Postgres (skipping the test when DATABASE_URL

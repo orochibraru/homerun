@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/orochibraru/homerun/internal/buildinfo"
-	"github.com/orochibraru/homerun/internal/logging"
+	"github.com/zedensix/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/logging"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -24,7 +24,7 @@ import (
 // trace_span.service_name the instance's traces page filters on.
 const ServiceName = "homerun-worker"
 
-const instrumentationName = "github.com/orochibraru/homerun/internal/worker"
+const instrumentationName = "github.com/zedensix/homerun/internal/worker"
 
 // Tracer is the worker's tracer, from whichever provider is installed
 // globally: the Postgres-exporting one after Setup, a no-op before.

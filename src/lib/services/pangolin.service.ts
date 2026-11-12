@@ -22,7 +22,7 @@ const logger = new Logger("Pangolin");
 // fetchable after all : GET https://api.pangolin.net/v1/openapi.json (the
 // Swagger UI at /v1/docs is a widget over it). This file used to carry a
 // "the OAS is broken, types are guesses" note inherited from
-// github.com/orochibraru/dokploy-to-pangolin ; the paths and request bodies
+// github.com/zedensix/dokploy-to-pangolin ; the paths and request bodies
 // below are now checked against that document. Response payloads for the
 // list endpoints are typed as a bare `object` there, so those shapes are
 // still hand-written, /org/{orgId}/domains being the one fully specified.

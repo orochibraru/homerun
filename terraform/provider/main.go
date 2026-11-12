@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
-	"github.com/orochibraru/homerun/terraform/provider/internal/provider"
+	"github.com/zedensix/homerun/terraform/provider/internal/provider"
 )
 
 var version = "dev"
@@ -18,7 +18,7 @@ func main() {
 	debug := flag.Bool("debug", false, "Run with support for debuggers like delve.")
 	flag.Parse()
 	err := providerserver.Serve(context.Background(), provider.New(version), providerserver.ServeOpts{
-		Address: "registry.terraform.io/orochibraru/homerun",
+		Address: "registry.terraform.io/zedensix/homerun",
 		Debug:   *debug,
 	})
 	if err != nil {

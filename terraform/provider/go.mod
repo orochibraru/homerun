@@ -1,4 +1,4 @@
-module github.com/orochibraru/homerun/terraform/provider
+module github.com/zedensix/homerun/terraform/provider
 
 go 1.27.2
 

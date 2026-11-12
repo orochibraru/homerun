@@ -16,11 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/rclone"
-	"github.com/orochibraru/homerun/internal/s3"
-	"github.com/orochibraru/homerun/internal/tracing"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/rclone"
+	"github.com/zedensix/homerun/internal/s3"
+	"github.com/zedensix/homerun/internal/tracing"
 )
 
 const (

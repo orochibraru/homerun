@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/installer"
+	"github.com/zedensix/homerun/internal/installer"
 )
 
 func TestCopyableVolumesSkipsAnonymous(t *testing.T) {

@@ -58,7 +58,7 @@ these being out of line, in `package.json` or in `bun.lock`.
 ## Setup
 
 ```sh
-git clone https://github.com/orochibraru/homerun.git && cd homerun
+git clone https://github.com/zedensix/homerun.git && cd homerun
 mise install
 bun install
 docker network create homerun # already done by mise install

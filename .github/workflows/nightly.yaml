@@ -150,21 +150,21 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Download app digests
-        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        uses: zedensix/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           path: ${{ runner.temp }}/digests/app
           pattern: digests-app-ci-*
           merge-multiple: true
 
       - name: Download worker digests
-        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        uses: zedensix/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           path: ${{ runner.temp }}/digests/worker
           pattern: digests-worker-ci-*
           merge-multiple: true
 
       - name: Download binaries
-        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
+        uses: zedensix/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           name: nightly-binaries
           path: dist

@@ -186,7 +186,7 @@ describe("generateStructure", () => {
 	});
 
 	test("writes the provider, the backend and an import block next to each object", () => {
-		expect(file("versions.tf")).toContain('source = "orochibraru/homerun"');
+		expect(file("versions.tf")).toContain('source = "zedensix/homerun"');
 		expect(file("versions.tf")).toContain(
 			'address        = "https://homerun.example.com/api/v1/iac/projects/p1/state"',
 		);

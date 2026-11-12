@@ -16,7 +16,7 @@ the _integration suite_ typed against the spec.
 ## Installing it
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/cli/install.sh | bash
 ```
 
 `install.sh` (Linux or macOS) detects your OS and arch, downloads the matching

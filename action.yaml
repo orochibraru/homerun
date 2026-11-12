@@ -1,6 +1,6 @@
 name: Homerun
 description: Install the Homerun CLI and run any homerun command with it, or just put it on the PATH for the steps after.
-author: orochibraru
+author: zedensix
 branding:
   icon: upload-cloud
   color: red

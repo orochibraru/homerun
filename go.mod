@@ -1,4 +1,4 @@
-module github.com/orochibraru/homerun
+module github.com/zedensix/homerun
 
 go 1.27.2
 

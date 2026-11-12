@@ -110,7 +110,7 @@ describe("generatePulumiProgram", () => {
 		expect(JSON.parse(file("package.json")).name).toBe("apps");
 		expect(file("README.md")).toContain("pulumi login 's3://iac/apps'");
 		expect(file("README.md")).toContain(
-			"pulumi package add terraform-provider orochibraru/homerun",
+			"pulumi package add terraform-provider zedensix/homerun",
 		);
 		expect(file(".gitignore")).toContain("secrets.sh");
 	});

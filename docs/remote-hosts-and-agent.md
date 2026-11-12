@@ -255,7 +255,7 @@ the join token/manager address from `docker swarm join-token worker` on your
 manager:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/swarm-join.sh \
+curl -fsSL https://raw.githubusercontent.com/zedensix/homerun/main/cmd/installer/swarm-join.sh \
   | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377
 ```
 

@@ -1,6 +1,6 @@
 package installer
 
-import "github.com/orochibraru/homerun/internal/release"
+import "github.com/zedensix/homerun/internal/release"
 
 // DownloadReleaseBinary downloads a release binary (gzipped, see
 // scripts/upload-release-assets.ts) next to dest, unpacks it, makes it

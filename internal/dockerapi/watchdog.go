@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/activity"
+	"github.com/zedensix/homerun/internal/activity"
 )
 
 var (

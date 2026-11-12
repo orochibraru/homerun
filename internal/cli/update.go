@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/orochibraru/homerun/internal/buildinfo"
-	"github.com/orochibraru/homerun/internal/release"
+	"github.com/zedensix/homerun/internal/buildinfo"
+	"github.com/zedensix/homerun/internal/release"
 )
 
 // SelfUpdate replaces the running binary with the newest release on channel

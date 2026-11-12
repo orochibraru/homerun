@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/janitor"
-	"github.com/orochibraru/homerun/internal/workerapi"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/janitor"
+	"github.com/zedensix/homerun/internal/workerapi"
 )
 
 const token = "worker-token"

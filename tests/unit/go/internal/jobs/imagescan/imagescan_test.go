@@ -3,7 +3,7 @@ package imagescan_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
+	"github.com/zedensix/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,9 +12,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/dockerapi"
-	"github.com/orochibraru/homerun/internal/jobs"
-	"github.com/orochibraru/homerun/internal/jobs/imagescan"
+	"github.com/zedensix/homerun/internal/dockerapi"
+	"github.com/zedensix/homerun/internal/jobs"
+	"github.com/zedensix/homerun/internal/jobs/imagescan"
 )
 
 // vulnerability builds one fake Trivy vulnerability entry.
