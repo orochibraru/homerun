@@ -117,9 +117,10 @@ holding it are gone.
 ### Backups of deleted volumes
 
 Deleting a volume with backups asks whether to delete its backups on the
-destination too; kept, they stay there as a restore point. A destination's page
-lists the backups whose volume no longer exists as **orphans**, with a button to
-delete each of them.
+destination too; kept, they stay there as a restore point. On a destination's
+page, **Look for orphaned backups** lists the backups whose volume no longer
+exists, with a button to delete each of them. It walks the whole destination, so
+it only runs when you click it.
 
 ## Backups
 

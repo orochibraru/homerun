@@ -12,7 +12,8 @@
 
 	const { destinationId }: { destinationId: string } = $props();
 
-	const orphans = $derived(getOrphanBackups(destinationId));
+	let looking = $state(false);
+	const orphans = $derived(looking ? getOrphanBackups(destinationId) : null);
 
 	let pending = $state<string[]>([]);
 	let queued = $state<string[]>([]);
@@ -33,60 +34,67 @@
 		title="Orphaned backups"
 	/>
 	<div class="p-5">
-		<AsyncBlock errorTitle="Couldn't list this destination." query={orphans}>
-			{#snippet pending()}
-				<Skeleton class="h-10 w-full" />
-			{/snippet}
-			{#snippet children(repositories)}
-				{@const waiting = repositories.filter(
-					(repository) => !queued.includes(repository.path),
-				)}
-				{#if repositories.length === 0}
-					<p class="text-text-muted text-sm">
-						None: every backup here belongs to a volume that still exists.
-					</p>
-				{:else}
-					<ul class="divide-border divide-y text-sm">
-						{#each repositories as repository (repository.path)}
-							<li class="flex items-center justify-between gap-3 py-2">
-								<span class="text-text min-w-0 truncate font-mono text-xs">
-									{repository.path}
-								</span>
-								{#if queued.includes(repository.path)}
-									<span class="text-text-muted shrink-0 text-xs">
-										Deletion queued
+		{#if !orphans}
+			<Button onclick={() => (looking = true)} size="sm" variant="outline">
+				<Ghost class="size-3.5" />
+				Look for orphaned backups
+			</Button>
+		{:else}
+			<AsyncBlock errorTitle="Couldn't list this destination." query={orphans}>
+				{#snippet pending()}
+					<Skeleton class="h-10 w-full" />
+				{/snippet}
+				{#snippet children(repositories)}
+					{@const waiting = repositories.filter(
+						(repository) => !queued.includes(repository.path),
+					)}
+					{#if repositories.length === 0}
+						<p class="text-text-muted text-sm">
+							None: every backup here belongs to a volume that still exists.
+						</p>
+					{:else}
+						<ul class="divide-border divide-y text-sm">
+							{#each repositories as repository (repository.path)}
+								<li class="flex items-center justify-between gap-3 py-2">
+									<span class="text-text min-w-0 truncate font-mono text-xs">
+										{repository.path}
 									</span>
-								{:else}
-									<Button
-										class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
-										disabled={deleting}
-										onclick={() => requestDelete([repository.path])}
-										size="sm"
-										variant="ghost"
-									>
-										<Trash2 class="size-3.5" />
-										Delete
-									</Button>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-					{#if waiting.length > 1}
-						<Button
-							class="mt-3"
-							disabled={deleting}
-							onclick={() =>
-								requestDelete(waiting.map((repository) => repository.path))}
-							size="sm"
-							variant="destructive"
-						>
-							<Trash2 class="size-3.5" />
-							Delete all {waiting.length}
-						</Button>
+									{#if queued.includes(repository.path)}
+										<span class="text-text-muted shrink-0 text-xs">
+											Deletion queued
+										</span>
+									{:else}
+										<Button
+											class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+											disabled={deleting}
+											onclick={() => requestDelete([repository.path])}
+											size="sm"
+											variant="ghost"
+										>
+											<Trash2 class="size-3.5" />
+											Delete
+										</Button>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+						{#if waiting.length > 1}
+							<Button
+								class="mt-3"
+								disabled={deleting}
+								onclick={() =>
+									requestDelete(waiting.map((repository) => repository.path))}
+								size="sm"
+								variant="destructive"
+							>
+								<Trash2 class="size-3.5" />
+								Delete all {waiting.length}
+							</Button>
+						{/if}
 					{/if}
-				{/if}
-			{/snippet}
-		</AsyncBlock>
+				{/snippet}
+			</AsyncBlock>
+		{/if}
 		<form
 			class="hidden"
 			action="?/deleteOrphans"
