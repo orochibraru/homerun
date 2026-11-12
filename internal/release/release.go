@@ -15,7 +15,7 @@ import (
 )
 
 // Repo is the GitHub repository releases are published to.
-const Repo = "orochibraru/homerun"
+const Repo = "zedensix/homerun"
 
 // RegistryHost is where the app's Docker image is published.
 const RegistryHost = "docker.io"

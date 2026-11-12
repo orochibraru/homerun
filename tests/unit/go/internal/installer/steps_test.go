@@ -89,20 +89,20 @@ func TestArch(t *testing.T) {
 
 func TestReleaseAssetURL(t *testing.T) {
 	latest := release.AssetURL("latest", "homerun-worker-amd64.gz")
-	if latest != "https://github.com/orochibraru/homerun/releases/latest/download/homerun-worker-amd64.gz" {
+	if latest != "https://github.com/zedensix/homerun/releases/latest/download/homerun-worker-amd64.gz" {
 		t.Errorf("latest should use the latest-download path, got %q", latest)
 	}
 	pinned := release.AssetURL("v1.2.3", "homerun-cli-arm64.gz")
-	if pinned != "https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-cli-arm64.gz" {
+	if pinned != "https://github.com/zedensix/homerun/releases/download/v1.2.3/homerun-cli-arm64.gz" {
 		t.Errorf("a tag should pin that release, got %q", pinned)
 	}
 }
 
 func TestImageRef(t *testing.T) {
-	if got := release.ImageRef("latest"); got != "docker.io/orochibraru/homerun:latest" {
+	if got := release.ImageRef("latest"); got != "docker.io/zedensix/homerun:latest" {
 		t.Errorf("got %q", got)
 	}
-	if got := release.ImageRef("v1.2.3"); got != "docker.io/orochibraru/homerun:v1.2.3" {
+	if got := release.ImageRef("v1.2.3"); got != "docker.io/zedensix/homerun:v1.2.3" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -113,7 +113,7 @@ func TestDownloadReleaseBinaryUnpacksThenRenames(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
-		"curl -fsSL https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-worker-arm64.gz -o /usr/local/bin/homerun-worker.download.gz",
+		"curl -fsSL https://github.com/zedensix/homerun/releases/download/v1.2.3/homerun-worker-arm64.gz -o /usr/local/bin/homerun-worker.download.gz",
 		"gunzip -f /usr/local/bin/homerun-worker.download.gz",
 		"chmod +x /usr/local/bin/homerun-worker.download",
 		"mv -f /usr/local/bin/homerun-worker.download /usr/local/bin/homerun-worker",

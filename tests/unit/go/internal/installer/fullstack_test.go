@@ -13,7 +13,7 @@ func TestComposeFileShape(t *testing.T) {
 
 	for _, fragment := range []string{
 		"# homerun:generated",
-		"image: ${HOMERUN_IMAGE:-docker.io/orochibraru/homerun}:${HOMERUN_VERSION:-latest}",
+		"image: ${HOMERUN_IMAGE:-docker.io/zedensix/homerun}:${HOMERUN_VERSION:-latest}",
 		"ORIGIN: ${ORIGIN:-http://${HOMERUN_HOST:?",
 		"postgres-data:/var/lib/postgresql",
 		"traefik.http.routers.homerun.tls.certresolver=${DASHBOARD_CERT_RESOLVER-letsencrypt}",
@@ -63,7 +63,7 @@ func TestComposeFileRunsTheWorkerFromTheAppImage(t *testing.T) {
 	compose := installer.ComposeFile
 	worker := compose[strings.Index(compose, "  worker:"):strings.Index(compose, "  traefik:")]
 	for _, fragment := range []string{
-		"image: ${HOMERUN_IMAGE:-docker.io/orochibraru/homerun}:${HOMERUN_VERSION:-latest}",
+		"image: ${HOMERUN_IMAGE:-docker.io/zedensix/homerun}:${HOMERUN_VERSION:-latest}",
 		`command: ["/usr/local/bin/homerun-worker"]`,
 		`AUTH_SECRET: "${AUTH_SECRET:?`,
 		"DOCKER_SOCKET_PATH: ${HOMERUN_DOCKER_SOCKET:-/var/run/docker.sock}",
@@ -100,12 +100,12 @@ func TestComposeSwarmFile(t *testing.T) {
 }
 
 func TestComposeEnv(t *testing.T) {
-	env := installer.ComposeEnv("docker.io/orochibraru/homerun:v1.2.3", "/run/user/1000/docker.sock", "homerun.example.com")
+	env := installer.ComposeEnv("docker.io/zedensix/homerun:v1.2.3", "/run/user/1000/docker.sock", "homerun.example.com")
 	want := map[string]string{
 		"DASHBOARD_CERT_RESOLVER": "letsencrypt",
 		"HOMERUN_DOCKER_SOCKET":   "/run/user/1000/docker.sock",
 		"HOMERUN_HOST":            "homerun.example.com",
-		"HOMERUN_IMAGE":           "docker.io/orochibraru/homerun",
+		"HOMERUN_IMAGE":           "docker.io/zedensix/homerun",
 		"HOMERUN_VERSION":         "v1.2.3",
 	}
 	for key, value := range want {

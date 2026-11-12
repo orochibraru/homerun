@@ -313,7 +313,7 @@ locally too:
 signing with the default key of the current `GNUPGHOME`.
 
 **Container images go to Docker Hub, not GHCR**, deliberately:
-`docker.io/orochibraru/homerun{,-worker}`. That's the one piece of the pipeline
+`docker.io/zedensix/homerun{,-worker}`. That's the one piece of the pipeline
 that does _not_ follow the code host, so `docker.yaml`'s login takes a real
 Docker Hub credential (`secrets.DOCKER_REGISTRY_PASSWORD`, an access token; the
 Docker Hub username is the plain `registry_username` input, since it isn't
@@ -539,7 +539,7 @@ own runtime).
   network, health endpoint + OpenAPI both responding from outside the VM), and
   `--mode=full` end to end on a second VM (real rootless Docker, real
   `docker compose pull && ...up -d` bringing up Traefik, Postgres, and the real
-  published `docker.io/orochibraru/homerun` app image, all healthy, dashboard
+  published `docker.io/zedensix/homerun` app image, all healthy, dashboard
   reachable from outside the VM). See `cmd/installer/README.md` for the full
   verification notes and the real bugs this run found and fixed
   (AppArmor-restricted unprivileged user namespaces on Ubuntu 24.04, an
@@ -626,7 +626,7 @@ Three audiences, three places, keep them apart:
 - **The website** (<https://homerun.orochibraru.com>): built from a **separate
   repository** that renders this repo's `docs/*.md` itself. It used to live here
   as `packages/docs/` (a static SvelteKit site published as
-  `docker.io/orochibraru/homerun-docs`, from back when `agent`/`cli`/`installer`
+  `docker.io/zedensix/homerun-docs`, from back when `agent`/`cli`/`installer`
   still lived under `packages/` too); that sub-project, its `scripts/docs.ts`
   wrapper, the `dev:docs`/`build:docs`/`check:docs` scripts, the `docs`
   Dockerfile stage and bake target, and every CI job building or publishing it

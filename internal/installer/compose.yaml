@@ -4,7 +4,7 @@
 # in .env (next to this file) or homerun.yaml instead.
 services:
   app:
-    image: ${HOMERUN_IMAGE:-docker.io/orochibraru/homerun}:${HOMERUN_VERSION:-latest}
+    image: ${HOMERUN_IMAGE:-docker.io/zedensix/homerun}:${HOMERUN_VERSION:-latest}
     restart: unless-stopped
     stop_grace_period: 35s
     depends_on:
@@ -37,7 +37,7 @@ services:
       default: {}
 
   worker:
-    image: ${HOMERUN_IMAGE:-docker.io/orochibraru/homerun}:${HOMERUN_VERSION:-latest}
+    image: ${HOMERUN_IMAGE:-docker.io/zedensix/homerun}:${HOMERUN_VERSION:-latest}
     restart: unless-stopped
     stop_grace_period: 75s
     command: ["/usr/local/bin/homerun-worker"]

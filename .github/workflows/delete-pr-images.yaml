@@ -26,8 +26,8 @@ jobs:
       fail-fast: false
       matrix:
         repository:
-          - orochibraru/homerun
-          - orochibraru/homerun-worker
+          - zedensix/homerun
+          - zedensix/homerun-worker
     steps:
       - name: Delete the tag from Docker Hub
         env:

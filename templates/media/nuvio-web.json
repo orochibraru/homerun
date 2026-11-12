@@ -2,7 +2,7 @@
 	"$schema": "../schema.json",
 	"name": "Nuvio Web",
 	"description": "Unofficial web client for Nuvio : watch from your Nuvio library in the browser. NUVIO_ADMIN_EMAILS unlocks /admin; NUVIO_SESSION_SECRET is generated for you, keep it or everyone is signed out.",
-	"image": "orochibraru/nuvio-web",
+	"image": "zedensix/nuvio-web",
 	"tag": "latest",
 	"containerPort": 3000,
 	"icon": "nuvio.png",

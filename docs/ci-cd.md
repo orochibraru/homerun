@@ -89,14 +89,14 @@ A rollback for a deploy step that failed:
 
 ## GitLab CI and other CIs: the Docker image
 
-`orochibraru/homerun-cli` is the CLI on Alpine, with a shell and nothing else.
-It reads its instance and key from `HOMERUN_BASE_URL` and `HOMERUN_API_KEY`, so
+`zedensix/homerun-cli` is the CLI on Alpine, with a shell and nothing else. It
+reads its instance and key from `HOMERUN_BASE_URL` and `HOMERUN_API_KEY`, so
 there's no login step:
 
 ```yaml
 deploy:
   stage: deploy
-  image: orochibraru/homerun-cli:v1.0.49
+  image: zedensix/homerun-cli:v1.0.49
   variables:
     HOMERUN_BASE_URL: https://homerun.example.com
     # HOMERUN_API_KEY: a masked CI/CD variable set in the project settings

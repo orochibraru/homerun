@@ -434,7 +434,7 @@ between containers) instead, see the Docker integration section above.
   with no `DATABASE_URL`, which is what puts it in agent mode), for exercising
   the containerized app locally.
 - `compose.prod.yaml`, the operator-facing stack: the published
-  `docker.io/orochibraru/homerun` image alongside Traefik and Postgres.
+  `docker.io/zedensix/homerun` image alongside Traefik and Postgres.
   Deliberately **self-contained**, no `extends:`, since someone who `curl`s just
   this one file down has no `tools/` directory; it's Option B in
   `docs/getting-started.md`, so a change here has to stay in step with that doc

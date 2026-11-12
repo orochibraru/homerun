@@ -98,17 +98,17 @@ func TestAssetSuffix(t *testing.T) {
 
 func TestAssetURL(t *testing.T) {
 	if got, want := release.AssetURL("latest", "homerun-cli-amd64.gz"),
-		"https://github.com/orochibraru/homerun/releases/latest/download/homerun-cli-amd64.gz"; got != want {
+		"https://github.com/zedensix/homerun/releases/latest/download/homerun-cli-amd64.gz"; got != want {
 		t.Errorf("latest release.AssetURL = %q, want %q", got, want)
 	}
 	if got, want := release.AssetURL("v1.2.3", "homerun-cli-arm64.gz"),
-		"https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-cli-arm64.gz"; got != want {
+		"https://github.com/zedensix/homerun/releases/download/v1.2.3/homerun-cli-arm64.gz"; got != want {
 		t.Errorf("pinned release.AssetURL = %q, want %q", got, want)
 	}
 }
 
 func TestImageRef(t *testing.T) {
-	if got, want := release.ImageRef("v1.2.3"), "docker.io/orochibraru/homerun:v1.2.3"; got != want {
+	if got, want := release.ImageRef("v1.2.3"), "docker.io/zedensix/homerun:v1.2.3"; got != want {
 		t.Errorf("release.ImageRef = %q, want %q", got, want)
 	}
 }
@@ -124,7 +124,7 @@ func TestLatestTag(t *testing.T) {
 		if err != nil || got != "v9.8.7" {
 			t.Fatalf("release.LatestTag = %q, %v; want v9.8.7, nil", got, err)
 		}
-		if path != "/repos/orochibraru/homerun/releases/latest" {
+		if path != "/repos/zedensix/homerun/releases/latest" {
 			t.Errorf("release.LatestTag requested %q", path)
 		}
 	})

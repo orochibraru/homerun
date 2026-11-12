@@ -104,9 +104,9 @@ jobs:
       push:
         ${{ github.event.pull_request.head.repo.full_name == github.repository
         }}
-      image_name: orochibraru/homerun
+      image_name: zedensix/homerun
       registry_name: docker.io
-      registry_username: orochibraru
+      registry_username: zedensix
       bake_target: app-ci
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
@@ -121,9 +121,9 @@ jobs:
       push:
         ${{ github.event.pull_request.head.repo.full_name == github.repository
         }}
-      image_name: orochibraru/homerun-worker
+      image_name: zedensix/homerun-worker
       registry_name: docker.io
-      registry_username: orochibraru
+      registry_username: zedensix
       bake_target: worker-ci
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
@@ -151,7 +151,7 @@ jobs:
     with:
       image: ${{ needs.build-app.outputs.image }}
       registry_name: docker.io
-      registry_username: orochibraru
+      registry_username: zedensix
       bake_target: app-ci
       pulled:
         ${{ github.event.pull_request.head.repo.full_name == github.repository
@@ -166,9 +166,9 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/docker-manifest.yaml
     with:
-      image_name: orochibraru/homerun
+      image_name: zedensix/homerun
       registry_name: docker.io
-      registry_username: orochibraru
+      registry_username: zedensix
       bake_target: app-ci
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
@@ -179,9 +179,9 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/docker-manifest.yaml
     with:
-      image_name: orochibraru/homerun-worker
+      image_name: zedensix/homerun-worker
       registry_name: docker.io
-      registry_username: orochibraru
+      registry_username: zedensix
       bake_target: worker-ci
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}

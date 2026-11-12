@@ -331,7 +331,7 @@ disposable VM/CI runner this environment doesn't have" note):
   OpenAPI doc both responded correctly from outside the VM).
 - `--mode=full` end to end on a second VM: real rootless Docker, real
   `docker compose pull && ...up -d` bringing up Traefik + Postgres + the real
-  published `docker.io/orochibraru/homerun` app image, all reporting healthy,
+  published `docker.io/zedensix/homerun` app image, all reporting healthy,
   dashboard reachable from outside the VM on port 3000.
 - The two VMs together, closing a gap the main repo's `CLAUDE.md` (Remote hosts
   section) used to flag: the `--mode=full` VM's dashboard registered the

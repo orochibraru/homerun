@@ -42,17 +42,17 @@ Its token then lives in the rootless user's `~/.homerun-worker/token`
 (`sudo -u homerun cat /home/homerun/.homerun-worker/token`).
 
 **Already running Docker your own way?** Run the published image
-(`docker.io/orochibraru/homerun-worker`, `linux/amd64` + `linux/arm64`, built
-from the `worker` stage in the root [`Dockerfile`](../../Dockerfile) via the
-`worker` target in the root [`docker-bake.hcl`](../../docker-bake.hcl)),
-mounting the Docker socket the same way any Docker-managing container does:
+(`docker.io/zedensix/homerun-worker`, `linux/amd64` + `linux/arm64`, built from
+the `worker` stage in the root [`Dockerfile`](../../Dockerfile) via the `worker`
+target in the root [`docker-bake.hcl`](../../docker-bake.hcl)), mounting the
+Docker socket the same way any Docker-managing container does:
 
 ```bash
 docker run -d --name homerun-worker --restart unless-stopped \
   -p 7420:7420 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v homerun-worker-token:/root/.homerun-worker \
-  docker.io/orochibraru/homerun-worker:latest
+  docker.io/zedensix/homerun-worker:latest
 ```
 
 The second volume persists the generated token across container restarts; set

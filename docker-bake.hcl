@@ -30,14 +30,14 @@ target "ci-base" {
 target "app-base" {
   target = "app"
   args       = { HOMERUN_APP_VERSION = HOMERUN_APP_VERSION }
-  tags       = ["docker.io/orochibraru/homerun:latest", "docker.io/orochibraru/homerun:${TAG}"]
+  tags       = ["docker.io/zedensix/homerun:latest", "docker.io/zedensix/homerun:${TAG}"]
   cache-from = ["type=gha,scope=app"]
   cache-to   = ["type=gha,mode=max,scope=app"]
 }
 
 target "worker-base" {
   target = "worker"
-  tags       = ["docker.io/orochibraru/homerun-worker:latest", "docker.io/orochibraru/homerun-worker:${TAG}"]
+  tags       = ["docker.io/zedensix/homerun-worker:latest", "docker.io/zedensix/homerun-worker:${TAG}"]
   cache-from = ["type=gha,scope=worker"]
   cache-to   = ["type=gha,mode=max,scope=worker"]
 }

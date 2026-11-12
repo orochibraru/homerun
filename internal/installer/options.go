@@ -53,7 +53,7 @@ type Options struct {
 	// disposable VM.
 	DryRun bool
 	// Image is an app image to run instead of the release's
-	// docker.io/orochibraru/homerun:<version>, e.g. a locally loaded build.
+	// docker.io/zedensix/homerun:<version>, e.g. a locally loaded build.
 	Image string
 	// MigrateToRootful moves an existing rootless --mode=full install onto the
 	// system daemon in swarm mode, see migrate.go.
@@ -256,7 +256,7 @@ Options:
                       Only written when given : a re-run without them keeps
                       what .env has.
   --image=<ref>       App image to run instead of the release's
-                      docker.io/orochibraru/homerun:<version>
+                      docker.io/zedensix/homerun:<version>
   --user=<name>       System user owning the install (default: homerun)
   --port=<n>          Agent-mode worker HTTP port (default: 7420)
   --dry-run           Print every command instead of running it

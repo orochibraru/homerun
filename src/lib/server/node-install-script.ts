@@ -13,7 +13,7 @@ export function agentSetupCommands(version: string): {
 	const tag = releaseTagFor(version);
 	const versionFlag = tag === "latest" ? "" : ` --version=${tag}`;
 	return {
-		docker: `docker run -d --name homerun-worker --restart unless-stopped -p 7420:7420 -v /var/run/docker.sock:/var/run/docker.sock -v homerun-worker-token:/root/.homerun-worker docker.io/orochibraru/homerun-worker:${tag}`,
+		docker: `docker run -d --name homerun-worker --restart unless-stopped -p 7420:7420 -v /var/run/docker.sock:/var/run/docker.sock -v homerun-worker-token:/root/.homerun-worker docker.io/zedensix/homerun-worker:${tag}`,
 		dockerToken: "docker exec homerun-worker cat /root/.homerun-worker/token",
 		installer: `curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh | sudo bash -s -- --mode=agent${versionFlag}`,
 		installerToken: "sudo -u homerun cat /home/homerun/.homerun-worker/token",

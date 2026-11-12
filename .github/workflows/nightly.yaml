@@ -96,9 +96,9 @@ jobs:
     with:
       app_version: ${{ needs.version.outputs.version }}
       image_tag: nightly
-      image_name: orochibraru/homerun
+      image_name: zedensix/homerun
       registry_name: docker.io
-      registry_username: orochibraru
+      registry_username: zedensix
       bake_target: app-ci
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
@@ -110,9 +110,9 @@ jobs:
     with:
       app_version: ${{ needs.version.outputs.version }}
       image_tag: nightly
-      image_name: orochibraru/homerun-worker
+      image_name: zedensix/homerun-worker
       registry_name: docker.io
-      registry_username: orochibraru
+      registry_username: zedensix
       bake_target: worker-ci
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
@@ -173,7 +173,7 @@ jobs:
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: docker.io
-          username: orochibraru
+          username: zedensix
           password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
       - name: Set up Docker Buildx
@@ -185,12 +185,12 @@ jobs:
         run: |
           set -euo pipefail
           for pair in app:homerun worker:homerun-worker; do
-            image="docker.io/orochibraru/${pair#*:}"
+            image="docker.io/zedensix/${pair#*:}"
             sources=()
             for digest in "$RUNNER_TEMP/digests/${pair%%:*}"/*; do sources+=("$image@sha256:$(basename "$digest")"); done
             docker buildx imagetools create -t "$image:nightly" -t "$image:v$VERSION" "${sources[@]}"
           done
-          docker buildx imagetools inspect docker.io/orochibraru/homerun:nightly
+          docker buildx imagetools inspect docker.io/zedensix/homerun:nightly
 
       - name: Publish the nightly prerelease
         env:

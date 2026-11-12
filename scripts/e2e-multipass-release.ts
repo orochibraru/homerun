@@ -24,7 +24,7 @@ const COMPOSE_VM = "homerun-e2e-rel-compose";
 const CLI_CONTAINER = "homerun-e2e-rel-cli";
 const ADMIN_EMAIL = "e2e@homerun-release-suite.local";
 const ADMIN_PASSWORD = "ReleaseE2eSuite123!";
-const APP_IMAGE = "orochibraru/homerun";
+const APP_IMAGE = "zedensix/homerun";
 
 const ALL_PHASES = [
 	"docs",

@@ -1,6 +1,6 @@
 services:
   app:
-    image: docker.io/orochibraru/homerun:${HOMERUN_VERSION:-latest}
+    image: docker.io/zedensix/homerun:${HOMERUN_VERSION:-latest}
     restart: unless-stopped
     stop_grace_period: 35s
     depends_on:
@@ -38,7 +38,7 @@ services:
       internal: {}
 
   worker:
-    image: docker.io/orochibraru/homerun:${HOMERUN_VERSION:-latest}
+    image: docker.io/zedensix/homerun:${HOMERUN_VERSION:-latest}
     restart: unless-stopped
     command: ["/usr/local/bin/homerun-worker"]
     labels:
