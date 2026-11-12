@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { RotateCw, TriangleAlert } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import type { Snippet } from "svelte";
 
 	import Alert from "./alert.svelte";

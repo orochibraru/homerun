@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Bug, Cpu, HeartPulse, Timer, TrendingUp } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount, tick } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";

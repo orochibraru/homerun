@@ -8,10 +8,10 @@
 		Plus,
 		Server,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as ContextMenu from "@orochibraru/ui/context-menu";
-	import { Input } from "@orochibraru/ui/input";
-	import { Switch } from "@orochibraru/ui/switch";
+	import { Button } from "@zedensix/ui/button";
+	import * as ContextMenu from "@zedensix/ui/context-menu";
+	import { Input } from "@zedensix/ui/input";
+	import { Switch } from "@zedensix/ui/switch";
 	import { onMount, type Snippet } from "svelte";
 
 	import EntityList from "#lib/components/entity-list.svelte";

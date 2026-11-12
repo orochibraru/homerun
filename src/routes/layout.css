@@ -10,7 +10,7 @@
 @import "@fontsource/dejavu-sans/700.css";
 @import "@fontsource/vt323";
 @plugin "@tailwindcss/forms";
-@source "../../node_modules/@orochibraru/ui/dist";
+@source "../../node_modules/@zedensix/ui/dist";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Cpu } from "@lucide/svelte";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import { Input } from "@orochibraru/ui/input";
-	import { Switch } from "@orochibraru/ui/switch";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import { Input } from "@zedensix/ui/input";
+	import { Switch } from "@zedensix/ui/switch";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import { onMount } from "svelte";
 
 	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";

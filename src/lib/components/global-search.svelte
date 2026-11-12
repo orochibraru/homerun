@@ -2,7 +2,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { CornerDownLeft, FileText, Search } from "@lucide/svelte";
-	import * as Command from "@orochibraru/ui/command";
+	import * as Command from "@zedensix/ui/command";
 	import type { Component } from "svelte";
 
 	import { headerControlClass } from "#lib/components/header-styles.js";

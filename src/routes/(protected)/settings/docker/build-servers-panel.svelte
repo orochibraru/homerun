@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import { Input } from "@orochibraru/ui/input";
-	import { Label } from "@orochibraru/ui/label";
+	import { Input } from "@zedensix/ui/input";
+	import { Label } from "@zedensix/ui/label";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 	import { untrack } from "svelte";
 
 	import CheckBox from "#lib/components/check-box.svelte";

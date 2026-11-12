@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { HardDrive, Plus, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import * as Dialog from "@orochibraru/ui/dialog";
-	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import * as Dialog from "@zedensix/ui/dialog";
+	import { Input } from "@zedensix/ui/input";
+	import * as Select from "@zedensix/ui/select";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 

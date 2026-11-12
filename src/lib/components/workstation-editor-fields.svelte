@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { RefreshCw } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 	import { toast } from "svelte-sonner";

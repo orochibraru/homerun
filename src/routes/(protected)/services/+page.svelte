@@ -2,7 +2,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { Plus, Upload } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount } from "svelte";
 
 	import Skeleton from "#lib/components/skeleton.svelte";

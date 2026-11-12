@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { X } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import type { Snippet } from "svelte";
 	import { quintOut } from "svelte/easing";
 	import { fade, fly } from "svelte/transition";

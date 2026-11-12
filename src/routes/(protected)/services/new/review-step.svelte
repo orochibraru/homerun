@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ClipboardCheck, Pencil } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import { BUILD_METHOD_LABELS, isBuildMethod } from "#lib/build-methods.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";

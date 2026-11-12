@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Plus, ShieldCheck } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import Pagination from "#lib/components/pagination.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";

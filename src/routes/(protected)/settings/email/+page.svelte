@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { page } from "$app/state";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";

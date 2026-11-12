@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Command from "@orochibraru/ui/command";
-	import * as InputGroup from "@orochibraru/ui/input-group";
-	import * as Popover from "@orochibraru/ui/popover";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import * as Command from "@zedensix/ui/command";
+	import * as InputGroup from "@zedensix/ui/input-group";
+	import * as Popover from "@zedensix/ui/popover";
+	import { Spinner } from "@zedensix/ui/spinner";
 
 	import { tagFamilies, tagFamily } from "#lib/image-versions.js";
 	import { listImageTags } from "#lib/remote/image-check.remote.js";

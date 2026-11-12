@@ -2,8 +2,8 @@
 	import { dev } from "$app/env";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import { Button } from "@orochibraru/ui/button";
-	import { cn } from "@orochibraru/ui/utils";
+	import { Button } from "@zedensix/ui/button";
+	import { cn } from "@zedensix/ui/utils";
 	import { onMount } from "svelte";
 
 	import { title } from "#lib/store/title.js";

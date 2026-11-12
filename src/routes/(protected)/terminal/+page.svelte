@@ -2,8 +2,8 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { KeyRound, Server, TerminalSquare } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 	import { onMount } from "svelte";
 
 	import CopyBox from "#lib/components/copy-box.svelte";

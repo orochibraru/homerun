@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Input } from "@zedensix/ui/input";
+	import { Textarea } from "@zedensix/ui/textarea";
 
 	import VolumeDiskSelect from "#lib/components/volume-disk-select.svelte";
 	import { getHostDisks } from "#lib/remote/volumes.remote.js";

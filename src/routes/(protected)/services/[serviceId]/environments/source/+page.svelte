@@ -3,13 +3,13 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Container, GitBranch } from "@lucide/svelte";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 	import { onMount } from "svelte";
 
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";

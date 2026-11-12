@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { ArrowLeft, ArrowRight } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { toast } from "svelte-sonner";
 
 	import { authClient } from "#lib/auth-client.js";

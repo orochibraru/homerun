@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown, X } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import * as Command from "@orochibraru/ui/command";
-	import { Input } from "@orochibraru/ui/input";
-	import * as Popover from "@orochibraru/ui/popover";
-	import * as Select from "@orochibraru/ui/select";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import * as Command from "@zedensix/ui/command";
+	import { Input } from "@zedensix/ui/input";
+	import * as Popover from "@zedensix/ui/popover";
+	import * as Select from "@zedensix/ui/select";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";

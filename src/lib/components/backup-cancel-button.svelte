@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { CircleStop } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import { enhanceToast } from "#lib/toast.js";

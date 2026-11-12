@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Input } from "@zedensix/ui/input";
+	import * as Select from "@zedensix/ui/select";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 

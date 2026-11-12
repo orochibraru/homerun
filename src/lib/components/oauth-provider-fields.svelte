@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
+	import { Input } from "@zedensix/ui/input";
+	import * as Select from "@zedensix/ui/select";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";

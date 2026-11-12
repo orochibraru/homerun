@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import { Label } from "@orochibraru/ui/label";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import { Label } from "@zedensix/ui/label";
 
 	interface Props {
 		checked: boolean;

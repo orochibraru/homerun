@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { ButtonVariant } from "@orochibraru/ui/button";
+	import type { ButtonVariant } from "@zedensix/ui/button";
 	import type { HTMLFormAttributes } from "svelte/elements";
 
 	export type DialogSize = "sm" | "md" | "lg" | "fullscreen";
@@ -39,10 +39,10 @@
 
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Button, buttonVariants } from "@orochibraru/ui/button";
-	import * as Dialog from "@orochibraru/ui/dialog";
-	import * as Drawer from "@orochibraru/ui/drawer";
-	import { cn } from "@orochibraru/ui/utils";
+	import { Button, buttonVariants } from "@zedensix/ui/button";
+	import * as Dialog from "@zedensix/ui/dialog";
+	import * as Drawer from "@zedensix/ui/drawer";
+	import { cn } from "@zedensix/ui/utils";
 	import type { Snippet } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
 

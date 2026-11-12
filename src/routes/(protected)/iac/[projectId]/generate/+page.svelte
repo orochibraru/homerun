@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Download, FileCode2, FolderTree, Package } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import CodeBlock from "#lib/components/code-block.svelte";
 	import EmptyState from "#lib/components/empty-state.svelte";

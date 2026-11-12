@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Box } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import { type DevcontainerConfig, hasApplicable } from "#lib/devcontainer.js";
 	import { detectDevcontainer } from "#lib/remote/workstations.remote.js";

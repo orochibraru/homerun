@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Checkbox } from "@zedensix/ui/checkbox";
 
 	let { checked = $bindable(false) }: { checked?: boolean } = $props();
 </script>

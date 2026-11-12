@@ -8,8 +8,8 @@
 		RefreshCw,
 		Settings,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Spinner } from "@zedensix/ui/spinner";
 
 	import Alert from "#lib/components/alert.svelte";
 	import TabNav from "#lib/components/tab-nav.svelte";

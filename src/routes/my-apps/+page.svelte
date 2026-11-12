@@ -8,7 +8,7 @@
 		LogOut,
 		Smartphone,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 

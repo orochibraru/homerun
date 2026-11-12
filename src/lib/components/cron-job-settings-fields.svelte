@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";

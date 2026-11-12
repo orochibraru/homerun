@@ -20,19 +20,19 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { ArrowDownUp, Check, ListFilter, Search, X } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import {
 		Drawer,
 		DrawerContent,
 		DrawerHeader,
 		DrawerTitle,
-	} from "@orochibraru/ui/drawer";
+	} from "@zedensix/ui/drawer";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 	import type { Snippet } from "svelte";
 
 	import type { SortOption } from "#lib/list-sorts.js";

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
-	import { Switch } from "@orochibraru/ui/switch";
+	import { Switch } from "@zedensix/ui/switch";
 
 	import { enhanceToast } from "#lib/toast.js";
 

@@ -9,7 +9,7 @@
 		SlidersHorizontal,
 		SquareTerminal,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import TabNav from "#lib/components/tab-nav.svelte";
 	import { describeCronJobTarget } from "#lib/cron-job-script.js";

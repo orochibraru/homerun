@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { ArchiveRestore, ChevronDown, RotateCcw } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Popover from "@orochibraru/ui/popover";
+	import { Button } from "@zedensix/ui/button";
+	import * as Popover from "@zedensix/ui/popover";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";

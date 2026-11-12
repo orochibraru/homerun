@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Link2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 	import { toast } from "svelte-sonner";
 
 	import { labelClass } from "#lib/components/form-styles.js";

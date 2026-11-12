@@ -10,7 +10,7 @@
 		Power,
 		RotateCcw,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount } from "svelte";
 
 	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";

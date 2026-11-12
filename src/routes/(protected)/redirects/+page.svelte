@@ -2,8 +2,8 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ArrowRightLeft, Pencil, Plus, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Switch } from "@orochibraru/ui/switch";
+	import { Button } from "@zedensix/ui/button";
+	import { Switch } from "@zedensix/ui/switch";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";

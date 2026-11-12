@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
+	import { Input } from "@zedensix/ui/input";
+	import * as Select from "@zedensix/ui/select";
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 

@@ -12,9 +12,9 @@
 		Link2,
 		Trash2,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as ContextMenu from "@orochibraru/ui/context-menu";
-	import * as Dialog from "@orochibraru/ui/dialog";
+	import { Button } from "@zedensix/ui/button";
+	import * as ContextMenu from "@zedensix/ui/context-menu";
+	import * as Dialog from "@zedensix/ui/dialog";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";

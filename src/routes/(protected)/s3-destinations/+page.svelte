@@ -2,7 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { CloudUpload, Pencil, Plus, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount } from "svelte";
 
 	import { describeDestination } from "#lib/backup-destinations.js";

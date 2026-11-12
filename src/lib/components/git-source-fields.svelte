@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Input } from "@zedensix/ui/input";
+	import * as Select from "@zedensix/ui/select";
+	import { Spinner } from "@zedensix/ui/spinner";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import GitRepoPicker from "#lib/components/git-repo-picker.svelte";

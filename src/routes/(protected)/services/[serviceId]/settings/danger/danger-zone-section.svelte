@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { AlertTriangle, Trash2Icon, TriangleAlertIcon } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { tick } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";

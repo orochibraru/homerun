@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { Mail, UserPlus } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import * as Select from "@zedensix/ui/select";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import { CUSTOM_ROLE, ROLE_OPTIONS } from "#lib/permissions.js";

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Plus, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 	import { untrack } from "svelte";
 
 	import CodeEditor from "#lib/components/code-editor.svelte";

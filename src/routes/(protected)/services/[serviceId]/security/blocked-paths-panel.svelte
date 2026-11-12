@@ -2,8 +2,8 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Plus, ShieldBan } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Button } from "@zedensix/ui/button";
+	import { Textarea } from "@zedensix/ui/textarea";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";

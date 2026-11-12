@@ -2,10 +2,10 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ArrowLeft, Container, Database, Layers } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import { Input } from "@orochibraru/ui/input";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import { Input } from "@zedensix/ui/input";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import type { Component } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";

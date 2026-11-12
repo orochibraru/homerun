@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 
 	import AsyncBlock from "#lib/components/async-block.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";

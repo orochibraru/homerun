@@ -2,13 +2,13 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Check } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";

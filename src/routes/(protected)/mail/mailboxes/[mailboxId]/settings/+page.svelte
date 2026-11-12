@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { AtSign, KeyRound, Trash2, TriangleAlert } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import MailMailboxFields from "#lib/components/mail-mailbox-fields.svelte";

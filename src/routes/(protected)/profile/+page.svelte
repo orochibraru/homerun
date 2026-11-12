@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ShieldCheck, UserCircle } from "@lucide/svelte";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 

@@ -2,7 +2,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { LaptopMinimal, LayoutGrid, Plus, Rocket } from "@lucide/svelte";
-	import * as Drawer from "@orochibraru/ui/drawer";
+	import * as Drawer from "@zedensix/ui/drawer";
 	import type { Component } from "svelte";
 
 	import { can, mayVisit, type Permissions } from "#lib/permissions.js";

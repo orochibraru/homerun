@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Ban, MailWarning, Radar, Undo2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityToolbar from "#lib/components/entity-toolbar.svelte";

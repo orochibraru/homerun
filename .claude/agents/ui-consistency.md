@@ -5,12 +5,12 @@ description:
   tabs, badges, empty states, form fields, modals, and any other reusable
   pattern — or before merging a change that touches route markup
   (`+page.svelte`/`+layout.svelte`) or `src/lib/components/`. Compares
-  route/page markup against this repo's canonical primitives
-  (`@orochibraru/ui/*`) and shared components (`tab-nav.svelte`,
-  `empty-state.svelte`, `form-styles.ts`, `stepper.svelte`,
-  `status-badge.svelte`), flags ad-hoc reimplementations of an existing pattern
-  and genuine visual drift between equivalent surfaces. Static/code-level audit
-  only, this repo has no E2E harness to screenshot with.
+  route/page markup against this repo's canonical primitives (`@zedensix/ui/*`)
+  and shared components (`tab-nav.svelte`, `empty-state.svelte`,
+  `form-styles.ts`, `stepper.svelte`, `status-badge.svelte`), flags ad-hoc
+  reimplementations of an existing pattern and genuine visual drift between
+  equivalent surfaces. Static/code-level audit only, this repo has no E2E
+  harness to screenshot with.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -25,7 +25,7 @@ against this repo's own canonical primitives and shared components.
 
 ## What "canonical" means here
 
-- **shadcn-svelte primitives**, `@orochibraru/ui/*` (button, input, checkbox,
+- **shadcn-svelte primitives**, `@zedensix/ui/*` (button, input, checkbox,
   select, textarea, label, field, dialog, drawer, dropdown-menu, popover,
   separator, sonner, spinner). Any real form control or interactive element (a
   clickable action, a text field, a dropdown) should normally go through one of

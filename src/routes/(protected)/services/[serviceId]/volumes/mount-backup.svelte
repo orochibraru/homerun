@@ -2,16 +2,16 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Settings } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Dialog from "@orochibraru/ui/dialog";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import * as Dialog from "@zedensix/ui/dialog";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
-	import { Switch } from "@orochibraru/ui/switch";
+	} from "@zedensix/ui/select";
+	import { Switch } from "@zedensix/ui/switch";
 	import { tick } from "svelte";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";

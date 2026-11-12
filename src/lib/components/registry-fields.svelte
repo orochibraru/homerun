@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChevronDown, Lock } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 
 	interface Props {
 		class?: string;

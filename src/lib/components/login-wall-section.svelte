@@ -2,7 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { LockKeyhole } from "@lucide/svelte";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Textarea } from "@zedensix/ui/textarea";
 
 	import {
 		EMAIL_OTP_METHOD,

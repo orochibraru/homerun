@@ -2,7 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Layers } from "@lucide/svelte";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import { onMount } from "svelte";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";

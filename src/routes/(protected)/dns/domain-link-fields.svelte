@@ -4,7 +4,7 @@
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";

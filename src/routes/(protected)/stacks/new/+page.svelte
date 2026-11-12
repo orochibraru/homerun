@@ -2,10 +2,10 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Check } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import { Spinner } from "@orochibraru/ui/spinner";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import { Spinner } from "@zedensix/ui/spinner";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";

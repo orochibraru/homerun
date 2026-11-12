@@ -8,8 +8,8 @@
 		RotateCw,
 		Trash2,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 	import { onMount } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";

@@ -6,7 +6,7 @@
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import IconPicker from "#lib/components/icon-picker.svelte";

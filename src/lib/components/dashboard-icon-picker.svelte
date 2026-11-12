@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	} from "@zedensix/ui/select";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { mode } from "mode-watcher";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";

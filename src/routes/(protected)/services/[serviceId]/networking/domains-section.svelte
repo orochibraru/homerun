@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Globe, Plus, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import { Input } from "@zedensix/ui/input";
 
 	import PanelHeader from "#lib/components/panel-header.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";

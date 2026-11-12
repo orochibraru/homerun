@@ -2,7 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Database, FileCode2, History, Lock } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import BucketConnection from "#lib/components/bucket-connection.svelte";
 	import CodeBlock from "#lib/components/code-block.svelte";

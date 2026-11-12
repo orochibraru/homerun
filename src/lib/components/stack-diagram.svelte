@@ -8,7 +8,7 @@
 		RotateCcw,
 		Server,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { type Snippet, tick } from "svelte";
 
 	import LaneStrip from "#lib/components/lane-strip.svelte";

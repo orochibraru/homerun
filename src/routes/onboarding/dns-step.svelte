@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import {

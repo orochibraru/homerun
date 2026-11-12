@@ -8,10 +8,10 @@
 		RotateCw,
 		Square,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import * as Select from "@zedensix/ui/select";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { onMount, untrack } from "svelte";
 
 	import CopyBox from "#lib/components/copy-box.svelte";

@@ -2,7 +2,7 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { ChevronRight, FileText, Search, X } from "@lucide/svelte";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import { onMount } from "svelte";
 
 	import { SEARCH_KIND_ICONS } from "#lib/components/search-kind-icons.js";

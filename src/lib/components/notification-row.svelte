@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { X } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import { timeAgo } from "#lib/formatting.js";
 	import {

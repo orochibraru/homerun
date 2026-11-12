@@ -9,7 +9,7 @@
 
 <script lang="ts">
 	import { ArrowLeft, ArrowRight, Check } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import type { Component, Snippet } from "svelte";
 
 	import StepperMobileHeader from "#lib/components/stepper-mobile-header.svelte";

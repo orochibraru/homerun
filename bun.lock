@@ -39,7 +39,6 @@
         "@jridgewell/gen-mapping": "0.3.13",
         "@kitql/helpers": "0.8.15",
         "@lucide/svelte": "1.65.0",
-        "@orochibraru/ui": "1.0.4",
         "@playwright/test": "1.64.1",
         "@sveltejs/adapter-bun": "1.0.0",
         "@sveltejs/kit": "3.0.1",
@@ -55,6 +54,7 @@
         "@types/sanitize-html": "2.16.2",
         "@xterm/addon-fit": "0.11.0",
         "@xterm/xterm": "6.0.0",
+        "@zedensix/ui": "1.0.6",
         "agnix": "0.57.0",
         "auth": "1.7.18",
         "devalue": "6.0.2",
@@ -380,8 +380,6 @@
 
     "@opentelemetry/api": ["@opentelemetry/api@1.10.0", "", {}, "sha512-lMkyes8iHrG+mk6WH7X70MdCLI2RS0FwNBY1PyQ8UemaijE2m5mv5A0Niy3HtbYTFrgkUEQjFMXmSAk2hQDuPQ=="],
 
-    "@orochibraru/ui": ["@orochibraru/ui@1.0.4", "", { "dependencies": { "@internationalized/date": "^3.12.4", "@lucide/svelte": "^1.64.0", "@opentelemetry/api": "^1.10.0", "bits-ui": "^2.20.2", "cn": "^0.5.0", "mode-watcher": "^1.1.0", "paneforge": "^1.0.2", "svelte-sonner": "^1.2.2", "tailwind-variants": "^3.3.1", "tw-animate-css": "^1.4.0", "vaul-svelte": "1.0.0-next.7" }, "peerDependencies": { "@opentelemetry/context-async-hooks": "^3.0.0", "@opentelemetry/exporter-trace-otlp-proto": "^0.300.0", "@opentelemetry/resources": "^3.0.0", "@opentelemetry/sdk-trace": "^3.0.0", "@sveltejs/kit": "^3.0.0", "svelte": "^5.57.0", "tailwindcss": "^4.3.0" }, "optionalPeers": ["@opentelemetry/context-async-hooks", "@opentelemetry/exporter-trace-otlp-proto", "@opentelemetry/resources", "@opentelemetry/sdk-trace"], "hasInstallScript": true, "bin": { "orochibraru-ui-mcp": "dist/mcp.js" } }, "sha512-Me327ICiFPqrG5YSAC1pINuTN7eZR0WV37gXz9dTelJeZNjHB1tgrM/W41Fit+K645nS1chU/5OMC7iTK9abfw=="],
-
     "@oxc-project/types": ["@oxc-project/types@0.156.0", "", {}, "sha512-1Duyg48TdJNdyhEB8Xn1L36bT9Pv6GUtlKjHxOys8xkaF/rQq3XJE+bAurSK/AgIz5mGFsb77cn9Pb20+WCScw=="],
 
     "@oxlint-tsgolint/darwin-arm64": ["@oxlint-tsgolint/darwin-arm64@7.0.2004", "", { "os": "darwin", "cpu": "arm64" }, "sha512-uJk3ttju7Lz+Nv8WG4CsLyewoL1qf/Ny8S8OksJ7Bm/F14Tc9gMfW6arM1PCc57IzH/X/I79YsCWTgxX1FKibQ=="],
@@ -639,6 +637,8 @@
     "@xterm/addon-fit": ["@xterm/addon-fit@0.11.0", "", {}, "sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g=="],
 
     "@xterm/xterm": ["@xterm/xterm@6.0.0", "", {}, "sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg=="],
+
+    "@zedensix/ui": ["@zedensix/ui@1.0.6", "", { "dependencies": { "@internationalized/date": "^3.12.4", "@lucide/svelte": "^1.64.0", "@opentelemetry/api": "^1.10.0", "bits-ui": "^2.20.6", "cn": "^0.5.2", "mode-watcher": "^1.1.0", "paneforge": "^1.0.2", "svelte-sonner": "^1.2.3", "tailwind-variants": "^3.3.1", "tw-animate-css": "^1.4.0", "vaul-svelte": "1.0.0-next.7" }, "peerDependencies": { "@opentelemetry/context-async-hooks": "^3.0.0", "@opentelemetry/exporter-trace-otlp-proto": "^0.300.0", "@opentelemetry/resources": "^3.0.0", "@opentelemetry/sdk-trace": "^3.0.0", "@sveltejs/kit": "^3.0.0", "svelte": "^5.57.0", "tailwindcss": "^4.3.0" }, "optionalPeers": ["@opentelemetry/context-async-hooks", "@opentelemetry/exporter-trace-otlp-proto", "@opentelemetry/resources", "@opentelemetry/sdk-trace"], "hasInstallScript": true, "bin": { "zedensix-ui-mcp": "dist/mcp.js" } }, "sha512-bdrxLnYjppE4sBvGuLbr9GtAWFUWvnBMF66eHBIf9g+L+IsZkedCT2lTyM1IV4kbK7IUt292AMmzu7KvSNG5XA=="],
 
     "acorn": ["acorn@8.19.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw=="],
 
@@ -1403,6 +1403,8 @@
     "@testing-library/dom/aria-query": ["aria-query@5.3.0", "", { "dependencies": { "dequal": "^2.0.3" } }, "sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A=="],
 
     "@types/ssh2/@types/node": ["@types/node@18.19.130", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg=="],
+
+    "@zedensix/ui/svelte-sonner": ["svelte-sonner@1.2.3", "", { "peerDependencies": { "svelte": "^5.0.0" } }, "sha512-SjQaDI/k6L/ordD2w84XOkGv3kaZwyGRsJzR+lHW097/aJCaydvp63VblMTFsrakm58BxRjUSySK/BWH9jdY1Q=="],
 
     "bits-ui/runed": ["runed@0.35.1", "", { "dependencies": { "dequal": "^2.0.3", "esm-env": "^1.0.0", "lz-string": "^1.5.0" }, "peerDependencies": { "@sveltejs/kit": "^2.21.0", "svelte": "^5.7.0" }, "optionalPeers": ["@sveltejs/kit"] }, "sha512-2F4Q/FZzbeJTFdIS/PuOoPRSm92sA2LhzTnv6FXhCoENb3huf5+fDuNOg1LNvGOouy3u/225qxmuJvcV3IZK5Q=="],
 

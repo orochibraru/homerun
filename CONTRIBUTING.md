@@ -245,7 +245,7 @@ that script, not the page.
 
 Commit messages follow
 [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`,
-`chore:`, etc.). `orochibraru/releaser` drives version bumps and changelog
+`chore:`, etc.). `zedensix/releaser` drives version bumps and changelog
 generation from them on every push to `main` (`.github/workflows/publish.yaml`),
 so a misformatted subject line isn't just a style nit, it changes what actually
 ships.
@@ -259,7 +259,7 @@ commit. Only `feat`, `fix`, `perf`, `refactor`, `docs` and breaking changes
 ## Releases
 
 There's no local release command; releasing is CI-only, triggered on push to
-`main` by `orochibraru/releaser`. See the "Release automation" section of
+`main` by `zedensix/releaser`. See the "Release automation" section of
 [`.agents/notes/packages-and-release.md`](.agents/notes/packages-and-release.md)
 for what it does (binaries for `cmd/cli`/`cmd/installer`/`cmd/worker`, the
 Docker image, the GitHub release).

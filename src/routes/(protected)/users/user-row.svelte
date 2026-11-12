@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from "$app/forms";
 	import { Pencil, ShieldCheck, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import * as Select from "@orochibraru/ui/select";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import * as Select from "@zedensix/ui/select";
 	import { tick } from "svelte";
 
 	import PermissionPicker from "#lib/components/permission-picker.svelte";

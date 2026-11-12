@@ -9,8 +9,8 @@
 		Plus,
 		Trash2,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
 	import { onMount } from "svelte";
 
 	import BulkActionBar from "#lib/components/bulk-action-bar.svelte";

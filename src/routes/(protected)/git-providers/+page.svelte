@@ -2,7 +2,7 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { GitBranch, Link2, Plus, RefreshCw, Unlink } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 

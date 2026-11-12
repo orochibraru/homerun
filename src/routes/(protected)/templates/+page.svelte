@@ -2,8 +2,8 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { LayoutGrid, Plus, Rocket, SettingsIcon, Tags } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { onMount } from "svelte";
 
 	import EntityList from "#lib/components/entity-list.svelte";

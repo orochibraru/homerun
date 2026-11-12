@@ -2,16 +2,16 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { AlertTriangle, FolderKanban, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	} from "@zedensix/ui/select";
+	import { Spinner } from "@zedensix/ui/spinner";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import { onMount, tick } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";

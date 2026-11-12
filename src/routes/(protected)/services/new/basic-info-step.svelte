@@ -16,7 +16,7 @@
 
 <script lang="ts">
 	import { GitBranch, Server } from "@lucide/svelte";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import { untrack } from "svelte";
 
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";

@@ -3,8 +3,8 @@
 	import { browser } from "$app/env";
 	import { onNavigate } from "$app/navigation";
 	import { page } from "$app/state";
-	import { Toaster } from "@orochibraru/ui/sonner";
-	import * as Tooltip from "@orochibraru/ui/tooltip";
+	import { Toaster } from "@zedensix/ui/sonner";
+	import * as Tooltip from "@zedensix/ui/tooltip";
 	import { ModeWatcher } from "mode-watcher";
 	import { onMount } from "svelte";
 

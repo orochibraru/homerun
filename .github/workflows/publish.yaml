@@ -130,7 +130,7 @@ jobs:
 
       - name: Dry-run release to compute the next version
         id: releaser
-        uses: orochibraru/releaser@f4e670849b608549cd6ac88d32eeb41cab364709 # v1.7.1
+        uses: zedensix/releaser@ba23a5840fb7ec8db1aa81bff4d4478f6e499020 # v1.7.3
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch
@@ -341,7 +341,7 @@ jobs:
             | while read -r tag; do gh release delete "$tag" --cleanup-tag --yes || echo "::warning::Could not prune canary $tag"; done
 
       - name: Open or update the release PR
-        uses: orochibraru/releaser@f4e670849b608549cd6ac88d32eeb41cab364709 # v1.7.1
+        uses: zedensix/releaser@ba23a5840fb7ec8db1aa81bff4d4478f6e499020 # v1.7.3
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch
@@ -384,7 +384,7 @@ jobs:
 
       - name: Dry-run release to read the version
         id: releaser
-        uses: orochibraru/releaser@f4e670849b608549cd6ac88d32eeb41cab364709 # v1.7.1
+        uses: zedensix/releaser@ba23a5840fb7ec8db1aa81bff4d4478f6e499020 # v1.7.3
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch
@@ -481,7 +481,7 @@ jobs:
 
       - name: Tag the release commit and draft the release
         id: releaser
-        uses: orochibraru/releaser@f4e670849b608549cd6ac88d32eeb41cab364709 # v1.7.1
+        uses: zedensix/releaser@ba23a5840fb7ec8db1aa81bff4d4478f6e499020 # v1.7.3
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch

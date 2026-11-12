@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Cpu } from "@lucide/svelte";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 	import { untrack } from "svelte";
 
 	import AdvancedDisclosure from "#lib/components/advanced-disclosure.svelte";

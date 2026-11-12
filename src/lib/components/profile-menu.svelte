@@ -7,7 +7,7 @@
 		Sparkles,
 		UserCircle,
 	} from "@lucide/svelte";
-	import * as DropdownMenu from "@orochibraru/ui/dropdown-menu";
+	import * as DropdownMenu from "@zedensix/ui/dropdown-menu";
 
 	import { handleSignOut, handleSwitchMode } from "#lib/account-actions.js";
 	import { headerControlClass } from "#lib/components/header-styles.js";

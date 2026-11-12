@@ -2,7 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import { formatDate } from "#lib/formatting.js";
 	import type { CrowdsecDecision } from "#lib/services/crowdsec.service.js";

@@ -10,8 +10,8 @@
 		Settings as SettingsIcon,
 		Users,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as ContextMenu from "@orochibraru/ui/context-menu";
+	import { Button } from "@zedensix/ui/button";
+	import * as ContextMenu from "@zedensix/ui/context-menu";
 	import { onMount, type Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
 

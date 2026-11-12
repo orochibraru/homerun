@@ -2,7 +2,7 @@
 	import { goto } from "$app/navigation";
 	import { page as appPage } from "$app/state";
 	import { ChevronLeft, ChevronRight } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	interface Props {
 		label?: string;

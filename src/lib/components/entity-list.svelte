@@ -9,7 +9,7 @@
 </script>
 
 <script lang="ts" generics="T extends EntityRow">
-	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Checkbox } from "@zedensix/ui/checkbox";
 	import type { Snippet } from "svelte";
 
 	import type { ViewMode } from "#lib/view-mode.svelte.js";

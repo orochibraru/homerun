@@ -2,16 +2,16 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { AlertTriangle, FileUp, HardDrive, Rocket } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	} from "@zedensix/ui/select";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { onMount, untrack } from "svelte";
 
 	import Alert from "#lib/components/alert.svelte";

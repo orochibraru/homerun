@@ -2,10 +2,10 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ChevronDown, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import { Label } from "@orochibraru/ui/label";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import { Label } from "@zedensix/ui/label";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";

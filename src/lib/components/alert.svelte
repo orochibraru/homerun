@@ -4,7 +4,7 @@
 
 <script lang="ts">
 	import { AlertTriangle, CheckCircle2, Info, OctagonX } from "@lucide/svelte";
-	import { cn } from "@orochibraru/ui/utils";
+	import { cn } from "@zedensix/ui/utils";
 	import type { Snippet } from "svelte";
 
 	const {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { KeyRound } from "@lucide/svelte";
-	import * as Select from "@orochibraru/ui/select";
+	import * as Select from "@zedensix/ui/select";
 
 	import Alert from "#lib/components/alert.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";

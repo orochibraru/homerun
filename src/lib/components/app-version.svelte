@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { ArrowUpCircle, CircleCheck, RefreshCw } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Dialog from "@orochibraru/ui/dialog";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import * as Dialog from "@zedensix/ui/dialog";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { onDestroy } from "svelte";
 	import { toast } from "svelte-sonner";
 

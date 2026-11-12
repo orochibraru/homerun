@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Input } from "@zedensix/ui/input";
+	import { Textarea } from "@zedensix/ui/textarea";
 
 	import Alert from "#lib/components/alert.svelte";
 	import CheckBox from "#lib/components/check-box.svelte";

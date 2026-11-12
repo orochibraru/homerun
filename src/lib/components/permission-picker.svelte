@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Ban, Eye, PencilLine } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import type { Component } from "svelte";
 
 	import {

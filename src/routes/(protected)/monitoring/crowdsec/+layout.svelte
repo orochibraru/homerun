@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { ShieldCheck, Siren, Users } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import SectionNav from "#lib/components/section-nav.svelte";

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	} from "@zedensix/ui/select";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import { untrack } from "svelte";
 
 	import {

@@ -16,8 +16,8 @@
 		Plus,
 		Server,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as DropdownMenu from "@orochibraru/ui/dropdown-menu";
+	import { Button } from "@zedensix/ui/button";
+	import * as DropdownMenu from "@zedensix/ui/dropdown-menu";
 	import type { Snippet } from "svelte";
 
 	import EntityToolbar, {

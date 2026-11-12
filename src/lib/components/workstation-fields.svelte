@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Select from "@orochibraru/ui/select";
+	import * as Select from "@zedensix/ui/select";
 	import type { Snippet } from "svelte";
 	import { untrack } from "svelte";
 

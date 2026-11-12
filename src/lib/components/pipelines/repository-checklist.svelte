@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Check, Search } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import { Input } from "@orochibraru/ui/input";
-	import { Label } from "@orochibraru/ui/label";
-	import * as Select from "@orochibraru/ui/select";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import { Input } from "@zedensix/ui/input";
+	import { Label } from "@zedensix/ui/label";
+	import * as Select from "@zedensix/ui/select";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { untrack } from "svelte";
 
 	import { GIT_PROVIDER_KIND_LABELS } from "#lib/git-provider-kinds.js";

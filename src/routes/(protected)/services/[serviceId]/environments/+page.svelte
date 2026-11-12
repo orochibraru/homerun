@@ -2,9 +2,9 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { ExternalLink, Layers, Pencil, Plus, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import { onMount } from "svelte";
 
 	import CheckBox from "#lib/components/check-box.svelte";

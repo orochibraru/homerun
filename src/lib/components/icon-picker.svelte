@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Upload, X } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 	import { toast } from "svelte-sonner";
 
 	import DashboardIconPicker from "#lib/components/dashboard-icon-picker.svelte";

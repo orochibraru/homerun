@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Plus, X } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import { errorClass, inputClass } from "#lib/components/form-styles.js";
 

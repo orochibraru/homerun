@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@orochibraru/ui/utils";
+	import { cn } from "@zedensix/ui/utils";
 
 	import CopyButton from "#lib/components/copy-button.svelte";
 

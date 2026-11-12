@@ -2,7 +2,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { ChevronRight, Plus } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { modeStorageKey, setMode } from "mode-watcher";
 	import { type Component, onMount, tick } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";

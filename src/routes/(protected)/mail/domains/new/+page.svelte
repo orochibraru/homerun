@@ -2,8 +2,8 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Globe } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Select from "@orochibraru/ui/select";
+	import { Button } from "@zedensix/ui/button";
+	import * as Select from "@zedensix/ui/select";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import { labelClass } from "#lib/components/form-styles.js";

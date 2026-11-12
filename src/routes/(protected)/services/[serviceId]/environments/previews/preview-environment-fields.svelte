@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Textarea } from "@zedensix/ui/textarea";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 

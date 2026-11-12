@@ -2,7 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Forward, Trash2, TriangleAlert } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import MailAliasFields from "#lib/components/mail-alias-fields.svelte";

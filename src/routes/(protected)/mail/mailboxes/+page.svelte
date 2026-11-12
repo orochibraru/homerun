@@ -2,8 +2,8 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { AtSign, Pencil, Plus } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Switch } from "@orochibraru/ui/switch";
+	import { Button } from "@zedensix/ui/button";
+	import { Switch } from "@zedensix/ui/switch";
 
 	import EmptyState from "#lib/components/empty-state.svelte";
 	import EntityList from "#lib/components/entity-list.svelte";

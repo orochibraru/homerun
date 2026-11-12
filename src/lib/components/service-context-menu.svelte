@@ -11,7 +11,7 @@
 		Unlink,
 		Wrench,
 	} from "@lucide/svelte";
-	import * as ContextMenu from "@orochibraru/ui/context-menu";
+	import * as ContextMenu from "@zedensix/ui/context-menu";
 	import type { Snippet } from "svelte";
 
 	interface Service {

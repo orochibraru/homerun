@@ -3,13 +3,13 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Settings } from "@lucide/svelte";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 	import { onMount } from "svelte";
 
 	import PanelHeader from "#lib/components/panel-header.svelte";

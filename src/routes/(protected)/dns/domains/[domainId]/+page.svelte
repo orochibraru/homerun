@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Globe, Pencil, Plus, Server, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { untrack } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Route } from "@lucide/svelte";
-	import * as Select from "@orochibraru/ui/select";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import * as Select from "@zedensix/ui/select";
+	import { Textarea } from "@zedensix/ui/textarea";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import PanelHeader from "#lib/components/panel-header.svelte";

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { refreshAll } from "$app/navigation";
 	import { FileText, RefreshCw } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount } from "svelte";
 
 	import DeployLogPanel from "#lib/components/deploy-log-panel.svelte";

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 
 	import { BUILTIN_BUILD_CACHE } from "#lib/build-cache.js";
 	import {

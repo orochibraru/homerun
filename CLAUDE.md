@@ -92,13 +92,13 @@ builds below.
 
 Stack: SvelteKit 3 (Svelte 5 runes, `@sveltejs/adapter-bun`) + Bun runtime,
 better-auth, Drizzle ORM over Postgres (via Bun's built-in `SQL` client,
-`drizzle-orm/bun-sql`, no `pg` dependency needed), Tailwind v4 +
-`@orochibraru/ui` (the shadcn-svelte "vega" primitives shared across orochibraru
-apps, imported as `@orochibraru/ui/<name>`, not vendored here). The app holds no
-Docker socket itself: every Docker call goes over HTTP to the Go worker
-(`cmd/worker`), which is the only process that opens one, see
-`.agents/notes/docker.md` and `.agents/notes/worker.md`. `dockerode` is a
-devDependency now, used only by an integration-test fixture, not by the app.
+`drizzle-orm/bun-sql`, no `pg` dependency needed), Tailwind v4 + `@zedensix/ui`
+(the shadcn-svelte "vega" primitives shared across orochibraru apps, imported as
+`@zedensix/ui/<name>`, not vendored here). The app holds no Docker socket
+itself: every Docker call goes over HTTP to the Go worker (`cmd/worker`), which
+is the only process that opens one, see `.agents/notes/docker.md` and
+`.agents/notes/worker.md`. `dockerode` is a devDependency now, used only by an
+integration-test fixture, not by the app.
 
 ## Commands
 
@@ -139,11 +139,11 @@ bun run screenshots       # regenerate docs/images/ through playwright.screensho
 ```
 
 Package.json's script list is deliberately short (15 entries): there's no
-`bun run release` (releases run entirely in CI, driven by
-`orochibraru/releaser`, see `.agents/notes/packages-and-release.md`), and a
-handful of scripts that used to exist are now just the raw command, run directly
-instead of through a name: `bun run build:app` → `bun run build`;
-`bun run build:packages` → `bun scripts/build-packages.ts`;
+`bun run release` (releases run entirely in CI, driven by `zedensix/releaser`,
+see `.agents/notes/packages-and-release.md`), and a handful of scripts that used
+to exist are now just the raw command, run directly instead of through a name:
+`bun run build:app` → `bun run build`; `bun run build:packages` →
+`bun scripts/build-packages.ts`;
 `check:app`/`check:go`/`check:scripts`/`check:packages`/`check:agent`/
 `check:cli`/`check:installer` → `bun run type-check` (or the scoped raw command,
 e.g. `go test ./internal/cli/...`, for one slice of it);
@@ -159,7 +159,7 @@ e.g. `go test ./internal/cli/...`, for one slice of it);
 `bun run dev --only=app`/`--only=worker`; `dev:agent` → gone, there's no
 standalone agent to run any more, `go run ./cmd/worker` with no `DATABASE_URL`
 is agent mode (see `.agents/notes/packages-and-release.md`); `component:add` →
-gone, primitives come from `@orochibraru/ui` and new ones are added there;
+gone, primitives come from `@zedensix/ui` and new ones are added there;
 `auth:db:generate` → `bunx auth generate`; `preview` → gone, use
 `bun run build && bun run start`.
 
@@ -209,7 +209,7 @@ hand:
   OpenAPI registry and `bun run gen`), `new-tab-route` (one route per tab under
   a shared `TabNav` layout), `new-remote-function` (a query/command under
   `src/lib/remote/`). UI primitives aren't a skill here: they live in
-  `orochibraru/ui`, whose MCP server (`npx -y @orochibraru/ui`) lists them with
+  `orochibraru/ui`, whose MCP server (`npx -y @zedensix/ui`) lists them with
   their usage, and a new or changed primitive goes into that repo. A skill or
   agent whose frontmatter isn't valid YAML silently loses its description (and
   an agent disappears entirely): write `description: >-` with the text indented
@@ -253,8 +253,8 @@ pattern for any new skill.
   are `#lib/...` Node subpath imports (`package.json` `imports`) written _with_
   the file extension, `.ts` module → `#lib/foo.js`, `.svelte.ts` →
   `#lib/foo.svelte.js`, component → `#lib/components/x.svelte`, a directory
-  index → `#lib/<dir>/index.js`, a UI primitive → `@orochibraru/ui/button`;
-  tests' `mock.module(...)` specifiers use the same form. `$app/environment` is
+  index → `#lib/<dir>/index.js`, a UI primitive → `@zedensix/ui/button`; tests'
+  `mock.module(...)` specifiers use the same form. `$app/environment` is
   `$app/env`. `resolve()` takes pathnames with no leading slash
   (`resolve("services")`, home is `resolve("")`); only route ids start with `/`
   (`resolve("/(protected)/services/[serviceId]", { serviceId })`).
@@ -512,7 +512,7 @@ to reintroduce a fixed bug.
 | `jobs-and-queue.md`         | The `job` table and worker, cron schedulers, user cron jobs, S3 backups                                                                                                                                  |
 | `worker.md`                 | The Go worker (`cmd/worker`, `internal/worker`, `internal/jobs`), the job stage protocol, porting a job type to Go, the Docker control API (`internal/workerapi`)                                        |
 | `testing.md`                | `tests/` (unit, integration, e2e), `bunfig.toml`, Playwright, the CI Postgres wiring                                                                                                                     |
-| `packages-and-release.md`   | `cmd/installer/`, `cmd/worker/`'s agent mode, `orochibraru/releaser`, CI/Docker publishing, `docs/`                                                                                                      |
+| `packages-and-release.md`   | `cmd/installer/`, `cmd/worker/`'s agent mode, `zedensix/releaser`, CI/Docker publishing, `docs/`                                                                                                         |
 | `dns.md`                    | Cloudflare or Pangolin DNS automation                                                                                                                                                                    |
 | `observability.md`          | `Logger`, `app_log`, in-app notifications, system stats, setup diagnostics, tracing, CI pipelines                                                                                                        |
 | `planned-features.md`       | Proposing or building something that might be a deliberate gap — check here before designing it                                                                                                          |

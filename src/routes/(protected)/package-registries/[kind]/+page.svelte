@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import Alert from "#lib/components/alert.svelte";
 	import CodeBlock from "#lib/components/code-block.svelte";

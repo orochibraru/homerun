@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from "$app/forms";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import type { Snippet } from "svelte";
 
 	import type { ListSelection } from "#lib/list-selection.svelte.js";

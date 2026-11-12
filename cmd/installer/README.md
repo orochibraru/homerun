@@ -297,7 +297,7 @@ bun run scripts/build-packages.ts amd64   # or arm64; cross-compiles the install
 
 Output lands in `dist/homerun-installer-<arch>` (plus the worker/cli binaries
 alongside it). CI does exactly this for every release
-(`.github/workflows/binaries.yaml` builds them, `orochibraru/releaser` +
+(`.github/workflows/binaries.yaml` builds them, `zedensix/releaser` +
 `scripts/upload-release-assets.ts` publish them as GitHub-release assets):
 building locally is only for iterating on the installer itself.
 

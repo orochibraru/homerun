@@ -2,9 +2,9 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Dialog from "@orochibraru/ui/dialog";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import * as Dialog from "@zedensix/ui/dialog";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { toast } from "svelte-sonner";
 
 	import { authClient } from "#lib/auth-client.js";

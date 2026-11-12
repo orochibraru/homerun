@@ -8,7 +8,7 @@
 </script>
 
 <script lang="ts">
-	import { cn } from "@orochibraru/ui/utils";
+	import { cn } from "@zedensix/ui/utils";
 
 	import { ChartHover } from "#lib/chart-hover.svelte.js";
 	import ChartTooltip from "#lib/components/chart-tooltip.svelte";

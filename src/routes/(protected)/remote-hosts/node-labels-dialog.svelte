@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Button } from "@orochibraru/ui/button";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Button } from "@zedensix/ui/button";
+	import { Textarea } from "@zedensix/ui/textarea";
 
 	import { labelClass as label } from "#lib/components/form-styles.js";
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";

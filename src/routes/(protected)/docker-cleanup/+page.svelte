@@ -10,7 +10,7 @@
 		ShieldCheck,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount } from "svelte";
 
 	import AsyncBlock from "#lib/components/async-block.svelte";

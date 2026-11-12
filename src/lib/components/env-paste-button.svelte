@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { FileUp } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { toast } from "svelte-sonner";
 
 	import ResponsiveDialog from "#lib/components/responsive-dialog.svelte";

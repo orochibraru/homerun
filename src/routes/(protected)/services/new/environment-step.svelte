@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Plus, ScanSearch, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 
 	import EnvPasteButton from "#lib/components/env-paste-button.svelte";
 	import PanelHeader from "#lib/components/panel-header.svelte";

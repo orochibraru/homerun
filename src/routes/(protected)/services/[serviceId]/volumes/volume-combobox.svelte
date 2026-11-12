@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown, FolderOpen, HardDrive } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Command from "@orochibraru/ui/command";
-	import * as Popover from "@orochibraru/ui/popover";
+	import { Button } from "@zedensix/ui/button";
+	import * as Command from "@zedensix/ui/command";
+	import * as Popover from "@zedensix/ui/popover";
 
 	import { HOST_VOLUME_PREFIX } from "#lib/constants.js";
 

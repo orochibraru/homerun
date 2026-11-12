@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { refreshAll } from "$app/navigation";
 	import { Link2, RefreshCw, Unlink, Webhook } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 

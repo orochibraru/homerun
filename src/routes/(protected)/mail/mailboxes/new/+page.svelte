@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";
 	import MailDomainSelect from "#lib/components/mail-domain-select.svelte";

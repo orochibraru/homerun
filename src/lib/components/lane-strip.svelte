@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@orochibraru/ui/utils";
+	import { cn } from "@zedensix/ui/utils";
 
 	import { clockLabel } from "#lib/chart-hover.js";
 	import { ChartHover } from "#lib/chart-hover.svelte.js";

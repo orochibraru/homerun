@@ -9,8 +9,8 @@
 		Server,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { onMount } from "svelte";
 
 	import BrandMark from "#lib/components/brand-mark.svelte";

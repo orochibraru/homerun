@@ -2,7 +2,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Bug, CircleCheck, EyeOff, RotateCcw } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount, tick } from "svelte";
 
 	import EmptyState from "#lib/components/empty-state.svelte";

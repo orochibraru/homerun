@@ -13,9 +13,9 @@
 		Undo2,
 		Zap,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as DropdownMenu from "@orochibraru/ui/dropdown-menu";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import * as DropdownMenu from "@zedensix/ui/dropdown-menu";
+	import { Spinner } from "@zedensix/ui/spinner";
 
 	import type { DeployProgress } from "#lib/deploy-progress.svelte.js";
 	import { isDeployed } from "#lib/service-state.js";

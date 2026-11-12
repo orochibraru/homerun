@@ -13,9 +13,9 @@
 		Trash2,
 		Webhook,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import { Switch } from "@orochibraru/ui/switch";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import { Switch } from "@zedensix/ui/switch";
 	import { onMount } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";

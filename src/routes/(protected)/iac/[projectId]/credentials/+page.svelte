@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { KeyRound, Plus } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import ApiKeyList from "#lib/components/api-key-list.svelte";
 	import BucketAccessKeys from "#lib/components/bucket-access-keys.svelte";

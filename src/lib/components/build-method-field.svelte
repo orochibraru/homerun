@@ -4,7 +4,7 @@
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 
 	import {
 		BUILD_METHOD_DESCRIPTIONS,

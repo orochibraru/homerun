@@ -3,9 +3,9 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { ChevronDown } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 

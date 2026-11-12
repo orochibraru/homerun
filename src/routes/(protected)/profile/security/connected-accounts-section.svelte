@@ -2,7 +2,7 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { KeyRound } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { toast } from "svelte-sonner";
 
 	import { authClient } from "#lib/auth-client.js";

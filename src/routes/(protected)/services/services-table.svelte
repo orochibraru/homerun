@@ -30,7 +30,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Layers, Server } from "@lucide/svelte";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Checkbox } from "@zedensix/ui/checkbox";
 	import type { Snippet } from "svelte";
 
 	import { clockLabel } from "#lib/chart-hover.js";

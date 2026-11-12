@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Check, ChevronsUpDown } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Command from "@orochibraru/ui/command";
-	import * as Popover from "@orochibraru/ui/popover";
+	import { Button } from "@zedensix/ui/button";
+	import * as Command from "@zedensix/ui/command";
+	import * as Popover from "@zedensix/ui/popover";
 
 	import type { IacScopeOption } from "#lib/iac/generate.js";
 

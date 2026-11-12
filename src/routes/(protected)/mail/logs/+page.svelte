@@ -2,7 +2,7 @@
 	import { goto, refreshAll } from "$app/navigation";
 	import { page } from "$app/state";
 	import { RefreshCw, ScrollText, TriangleAlert } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { toast } from "svelte-sonner";
 
 	import { inputClass } from "#lib/components/form-styles.js";

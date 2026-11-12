@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { Crown, Pencil, Trash2, X } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";
 	import type { NodeEnrollmentSummary } from "#lib/dto/node-enrollment-dto.js";

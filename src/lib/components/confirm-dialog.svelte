@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Button } from "@orochibraru/ui/button";
-	import * as Dialog from "@orochibraru/ui/dialog";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import * as Dialog from "@zedensix/ui/dialog";
+	import { Input } from "@zedensix/ui/input";
 	import type { Snippet } from "svelte";
 
 	import CopyBox from "#lib/components/copy-box.svelte";

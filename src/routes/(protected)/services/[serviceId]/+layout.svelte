@@ -15,7 +15,7 @@
 		ShieldCheck,
 		Terminal,
 	} from "@lucide/svelte";
-	import * as Select from "@orochibraru/ui/select";
+	import * as Select from "@zedensix/ui/select";
 	import { onDestroy, onMount } from "svelte";
 
 	import CopyButton from "#lib/components/copy-button.svelte";

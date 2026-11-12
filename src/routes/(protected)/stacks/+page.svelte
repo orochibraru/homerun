@@ -12,8 +12,8 @@
 		Settings as SettingsIcon,
 		Trash2,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as ContextMenu from "@orochibraru/ui/context-menu";
+	import { Button } from "@zedensix/ui/button";
+	import * as ContextMenu from "@zedensix/ui/context-menu";
 	import { onMount, type Snippet, tick } from "svelte";
 
 	import ConfirmDialog from "#lib/components/confirm-dialog.svelte";

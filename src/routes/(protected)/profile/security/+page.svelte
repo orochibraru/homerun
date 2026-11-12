@@ -7,8 +7,8 @@
 		ShieldCheck,
 		Smartphone,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 

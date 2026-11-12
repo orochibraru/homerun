@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Input } from "@orochibraru/ui/input";
+	import { Input } from "@zedensix/ui/input";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import SaveButton from "#lib/components/save-button.svelte";

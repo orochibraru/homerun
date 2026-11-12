@@ -16,7 +16,7 @@
 		X,
 		XCircle,
 	} from "@lucide/svelte";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import type { Component } from "svelte";
 	import { untrack } from "svelte";
 

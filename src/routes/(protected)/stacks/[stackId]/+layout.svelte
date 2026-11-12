@@ -10,7 +10,7 @@
 		Server,
 		Settings,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import TabNav, { type NavTab } from "#lib/components/tab-nav.svelte";
 	import TemplateIcon from "#lib/components/template-icon.svelte";

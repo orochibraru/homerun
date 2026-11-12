@@ -14,7 +14,7 @@
 		Server,
 		Stethoscope,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";

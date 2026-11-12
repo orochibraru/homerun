@@ -11,7 +11,7 @@
 		Trash2,
 		Wrench,
 	} from "@lucide/svelte";
-	import * as DropdownMenu from "@orochibraru/ui/dropdown-menu";
+	import * as DropdownMenu from "@zedensix/ui/dropdown-menu";
 
 	import type { ServiceAction } from "#lib/service-actions.js";
 

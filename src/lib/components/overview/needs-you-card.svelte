@@ -13,7 +13,7 @@
 		TriangleAlert,
 		Unplug,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import type { Component } from "svelte";
 	import { toast } from "svelte-sonner";
 

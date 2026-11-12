@@ -2,7 +2,7 @@
 	import { goto, refreshAll } from "$app/navigation";
 	import { page } from "$app/state";
 	import { Cpu, MemoryStick, Timer, TrendingUp } from "@lucide/svelte";
-	import * as Select from "@orochibraru/ui/select";
+	import * as Select from "@zedensix/ui/select";
 	import { type Component, onMount } from "svelte";
 
 	import { clampX, entryX } from "#lib/chart-hover.js";

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { KeySquare, MonitorSmartphone, Send } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import CopyButton from "#lib/components/copy-button.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { FileText, SlidersHorizontal } from "@lucide/svelte";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import { onMount } from "svelte";
 
 	import EnvVarsEditor from "#lib/components/env-vars-editor.svelte";

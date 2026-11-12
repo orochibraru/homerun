@@ -32,7 +32,7 @@ carry (`authenticatedCloneUrl`/`redactCloneUrl`, deleted from the app once
 nothing there called them anymore), and every log line and error message goes
 through the redaction so a token can't reach the deployment log.
 
-## Release automation (`orochibraru/releaser`, `scripts/upload-release-assets.ts`, `scripts/build-packages.ts`)
+## Release automation (`zedensix/releaser`, `scripts/upload-release-assets.ts`, `scripts/build-packages.ts`)
 
 **The CI pipeline builds each image once and reuses it.** Both
 `pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
@@ -180,8 +180,8 @@ screenshots and `code_quality`'s `ts-test` (its `tests` input). Lint still runs,
 it covers markdown. Keep the two pattern lists in sync.
 
 **PR titles must be conventional commits.** The repo squash-merges with the PR
-title as the commit message, so the title is what `orochibraru/releaser` reads
-to pick the next version and write the changelog. `pr-title.yaml` rejects a
+title as the commit message, so the title is what `zedensix/releaser` reads to
+pick the next version and write the changelog. `pr-title.yaml` rejects a
 non-conventional title and leaves a notice saying whether the type cuts a
 release (`feat`/`fix`/`perf`/`refactor`/`docs`, or a `!`). A title like "Fix/bug
 batch" merged without releasing anything before this existed.
@@ -232,7 +232,7 @@ which is what keeps `openapi.json`, `homerun.schema.json` and
 REST API change (the CLI itself has no generated types to go stale, see Homerun
 CLI in `api-and-cli.md`).
 
-`orochibraru/releaser` (this org's own GitHub Action, replacing the whole
+`zedensix/releaser` (this org's own GitHub Action, replacing the whole
 `semantic-release` plugin chain: `@semantic-release/{exec,git,github,npm}` and
 `.releaserc.json` are gone, along with `scripts/bump-version.ts`), driven by
 conventional-commit messages the same way (this repo's commits already follow
@@ -348,9 +348,9 @@ warms the layer cache) without needing a credential. `secrets.registry_password`
 is `required: false` for the same reason.
 
 **Not verified**: an actual release running end-to-end through
-`orochibraru/releaser` on GitHub Actions (creating a real tag/release and
-pushing the version bump back to `main`), since it's an external action this
-repo doesn't control the internals of. `scripts/build-packages.ts`'s
+`zedensix/releaser` on GitHub Actions (creating a real tag/release and pushing
+the version bump back to `main`), since it's an external action this repo
+doesn't control the internals of. `scripts/build-packages.ts`'s
 cross-compilation is verified live regardless, unrelated to which release tool
 drives it: all eight release binaries build from one machine (run for real
 locally), see Homerun CLI in `api-and-cli.md`.
@@ -677,7 +677,7 @@ queries (`getAppVersion`, `getReleaseStatus`, `getUpdatePreflight`) and one
 
 **The version is `HOMERUN_APP_VERSION`, falling back to `package.json`**
 (`src/lib/server/app-version.ts`). Reading `package.json` alone is always one
-release behind in a published image: `orochibraru/releaser` bumps it in the
+release behind in a published image: `zedensix/releaser` bumps it in the
 `release` job, after the image was built, and the promote path retags a PR image
 that was built before the merge. So `docker.yaml` takes an `app_version` input
 (the `version` job's dry-run result) and bakes it as a build arg

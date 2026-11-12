@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Bell, CheckCheck, Settings2, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import * as Tooltip from "@orochibraru/ui/tooltip";
+	import { Button } from "@zedensix/ui/button";
+	import * as Tooltip from "@zedensix/ui/tooltip";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import {
 		Select as SelectRoot,
 		SelectContent,
 		SelectItem,
 		SelectTrigger,
-	} from "@orochibraru/ui/select";
+	} from "@zedensix/ui/select";
 	import { untrack } from "svelte";
 
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";

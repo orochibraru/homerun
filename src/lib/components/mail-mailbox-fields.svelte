@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Select from "@orochibraru/ui/select";
+	import * as Select from "@zedensix/ui/select";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { inputClass, labelClass } from "#lib/components/form-styles.js";

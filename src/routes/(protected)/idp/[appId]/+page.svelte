@@ -8,7 +8,7 @@
 		PlugZap,
 		ShieldCheck,
 	} from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import Alert from "#lib/components/alert.svelte";
 	import CopyButton from "#lib/components/copy-button.svelte";

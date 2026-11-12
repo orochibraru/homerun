@@ -3,7 +3,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { CalendarClock, Eraser, Globe, Plug, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 	import { onMount, tick } from "svelte";
 
 	import BucketAccessKeys from "#lib/components/bucket-access-keys.svelte";

@@ -3,8 +3,8 @@
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { BellRing, Monitor, Plus } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
 	import { onMount } from "svelte";
 
 	import { currentPushSubscription } from "#lib/browser-push.js";

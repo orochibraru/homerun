@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Eye, EyeOff } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 
 	import { SECRET_MASK } from "#lib/formatting.js";
 

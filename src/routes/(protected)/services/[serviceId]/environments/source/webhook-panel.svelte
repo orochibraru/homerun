@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { Button } from "@orochibraru/ui/button";
+	import { Button } from "@zedensix/ui/button";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import CopyBox from "#lib/components/copy-box.svelte";

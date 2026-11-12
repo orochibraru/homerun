@@ -3,8 +3,8 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { KeyRound } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Input } from "@orochibraru/ui/input";
+	import { Button } from "@zedensix/ui/button";
+	import { Input } from "@zedensix/ui/input";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 

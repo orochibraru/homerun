@@ -3,10 +3,10 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { AlertTriangle, Layers, Stethoscope, Trash2 } from "@lucide/svelte";
-	import { Button } from "@orochibraru/ui/button";
-	import { Checkbox } from "@orochibraru/ui/checkbox";
-	import { Input } from "@orochibraru/ui/input";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Button } from "@zedensix/ui/button";
+	import { Checkbox } from "@zedensix/ui/checkbox";
+	import { Input } from "@zedensix/ui/input";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 

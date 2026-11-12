@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Input } from "@orochibraru/ui/input";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Input } from "@zedensix/ui/input";
+	import { Textarea } from "@zedensix/ui/textarea";
 	import type { Snippet } from "svelte";
 
 	import { labelClass } from "#lib/components/form-styles.js";

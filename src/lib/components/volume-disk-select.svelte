@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Select from "@orochibraru/ui/select";
+	import * as Select from "@zedensix/ui/select";
 
 	import { formatBytes } from "#lib/formatting.js";
 	import type { HostDisk } from "#lib/services/host-disk.service.js";

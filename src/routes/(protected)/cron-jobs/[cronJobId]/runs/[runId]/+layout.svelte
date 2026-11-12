@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { Activity, ArrowLeft, ScrollText } from "@lucide/svelte";
-	import { Spinner } from "@orochibraru/ui/spinner";
+	import { Spinner } from "@zedensix/ui/spinner";
 	import { onMount } from "svelte";
 
 	import PanelHeader from "#lib/components/panel-header.svelte";

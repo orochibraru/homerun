@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import { ShieldCheck } from "@lucide/svelte";
-	import { Textarea } from "@orochibraru/ui/textarea";
+	import { Textarea } from "@zedensix/ui/textarea";
 
 	import CheckBox from "#lib/components/check-box.svelte";
 	import { labelClass as label } from "#lib/components/form-styles.js";

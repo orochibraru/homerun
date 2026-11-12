@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Checkbox } from "@orochibraru/ui/checkbox";
+	import { Checkbox } from "@zedensix/ui/checkbox";
 
 	import type { ListSelection } from "#lib/list-selection.svelte.js";
 
