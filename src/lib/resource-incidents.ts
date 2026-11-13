@@ -21,6 +21,25 @@ export function describeCauses(causes: ResourceCause[]): string {
 	return causes.map((cause) => `${cause.label} ${cause.amount}`).join(" · ");
 }
 
+/** One reading of a host while one of its incidents was open: when, and each resource's percentage. */
+export interface IncidentSample {
+	at: number;
+	percents: Partial<Record<ResourceKind, number>>;
+}
+
+/** The readings taken at `at` as one incident sample. */
+export function toIncidentSample(
+	readings: ResourceReading[],
+	at: number,
+): IncidentSample {
+	return {
+		at,
+		percents: Object.fromEntries(
+			readings.map((reading) => [reading.kind, reading.percent]),
+		),
+	};
+}
+
 export interface ResourceIncidentState {
 	/** The biggest consumers at its last alert, empty when they couldn't be read. */
 	causes: ResourceCause[];

@@ -19,7 +19,19 @@ var (
 		"type":       "object",
 	}
 	nullableNumber = object{"type": []string{"number", "null"}}
-	statsSchema    = object{
+	processSchema  = object{
+		"properties": object{
+			"container":  object{"type": "boolean"},
+			"count":      object{"type": "integer"},
+			"cpuPercent": object{"type": "number"},
+			"group":      object{"type": "string"},
+			"memUsedMb":  object{"type": "number"},
+			"name":       object{"type": "string"},
+		},
+		"required": []string{"container", "count", "cpuPercent", "group", "memUsedMb", "name"},
+		"type":     "object",
+	}
+	statsSchema = object{
 		"properties": object{
 			"cpuPercent":  object{"type": "number"},
 			"diskPercent": nullableNumber,
@@ -341,6 +353,16 @@ func openAPIDocument(baseURL string) object {
 				"security": bearer,
 				"summary":  "Stop a workstation",
 				"tags":     []string{"Workstations"},
+			}},
+			"/v1/processes": object{"get": object{
+				"description": "Every process on the host, grouped by name and cgroup unit, busiest CPU first. CPU is measured over one second, so the answer takes that long.",
+				"responses": object{
+					"200": jsonResponse("The host's processes", object{"items": processSchema, "type": "array"}),
+					"401": jsonResponse("Unauthorized", errorSchema),
+				},
+				"security": bearer,
+				"summary":  "Host processes",
+				"tags":     []string{"Meta"},
 			}},
 			"/v1/stats": object{"get": object{
 				"responses": object{

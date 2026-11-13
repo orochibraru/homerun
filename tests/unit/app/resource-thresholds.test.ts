@@ -223,11 +223,27 @@ describe("CapacityService", () => {
 
 	function stubIncidents() {
 		const opened: string[] = [];
+		const openedOn: (string | null)[] = [];
+		const seeded: number[] = [];
+		const sampled: string[][] = [];
 		const updates: { level: string; resolved: boolean }[] = [];
 		stub(ResourceIncidentDTO, "listOpen", async () => []);
-		stub(ResourceIncidentDTO, "open", async (incident: { kind: string }) => {
-			opened.push(incident.kind);
-			return `incident-${incident.kind}`;
+		stub(
+			ResourceIncidentDTO,
+			"open",
+			async (
+				incident: { kind: string },
+				remoteHostId: string | null,
+				samples: unknown[],
+			) => {
+				opened.push(incident.kind);
+				openedOn.push(remoteHostId);
+				seeded.push(samples.length);
+				return `incident-${incident.kind}`;
+			},
+		);
+		stub(ResourceIncidentDTO, "addSample", async (open: { kind: string }[]) => {
+			sampled.push(open.map((incident) => incident.kind));
 		});
 		stub(ResourceIncidentDTO, "notificationCount", async () => 1);
 		stub(
@@ -241,7 +257,7 @@ describe("CapacityService", () => {
 				updates.push({ level: incident.level, resolved: resolvedAt !== null });
 			},
 		);
-		return { opened, updates };
+		return { opened, openedOn, sampled, seeded, updates };
 	}
 
 	test("a full disk alerts at once, memory only once it's stayed high for a minute, and each recovers", async () => {
@@ -279,6 +295,8 @@ describe("CapacityService", () => {
 		await CapacityService.evaluate(host);
 		expect(channels).toEqual(["resource.critical", "resource.warning"]);
 		expect(incidents.opened).toEqual(["disk", "memory"]);
+		expect(incidents.seeded).toEqual([1, 3]);
+		expect(incidents.sampled).toEqual([[], ["disk"], ["disk"]]);
 		expect(await CapacityService.refusal()).toContain(
 			"Disk at 97% (hard limit 95%)",
 		);
@@ -294,6 +312,54 @@ describe("CapacityService", () => {
 		expect(incidents.updates.filter((update) => update.resolved)).toHaveLength(
 			2,
 		);
+		expect(incidents.sampled.at(-1)).toEqual(["memory", "disk"]);
+	});
+
+	test("a remote host's incidents are its own: named after it, explained by its agent, and never refusing services", async () => {
+		stubSettings();
+		const incidents = stubIncidents();
+		const titles: string[] = [];
+		const details: (string | null)[] = [];
+		stub(NotificationDTO, "notify", () => undefined);
+		stub(
+			NotificationChannelService,
+			"notify",
+			(message: { detail: string | null; title: string }) => {
+				titles.push(message.title);
+				details.push(message.detail);
+			},
+		);
+		stub(ResourceInsightsService, "causes", async () => {
+			throw new Error("the local host isn't asked about a remote one");
+		});
+		stub(
+			ResourceInsightsService,
+			"remoteCauses",
+			async (connection: { agentUrl: string }) => [
+				{ amount: "61%", label: `java on ${connection.agentUrl}` },
+			],
+		);
+		const remote = {
+			connection: { agentUrl: "http://agent", token: "t" },
+			id: "remote-1",
+			name: "Build box",
+		};
+		const start = Date.now() + 60 * 60 * 1000;
+		stub(Date, "now", () => start);
+		await CapacityService.evaluate({ ...host, memUsedMb: 100 }, remote);
+		expect(titles).toEqual(["Build box past a hard resource limit"]);
+		expect(details).toEqual([null]);
+		expect(incidents.openedOn).toEqual(["remote-1"]);
+		expect(CapacityService.watched(start).map((watch) => watch.name)).toContain(
+			"Build box",
+		);
+		stub(SystemStatsService, "getSystemStats", async () => ({
+			...host,
+			diskUsedGb: 10,
+			memUsedMb: 100,
+		}));
+		stub(Date, "now", () => start + 10 * 60 * 1000);
+		expect(await CapacityService.refusal()).toBeNull();
 	});
 
 	test("with no recent sample it reads the host itself, and never blocks when it can't", async () => {

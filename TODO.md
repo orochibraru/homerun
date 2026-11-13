@@ -22,6 +22,12 @@ When done delete the entry, no bloat.
       gain a lazy connect, or if the suite learns to deploy a template next to
       its app.
 
+- [ ] Resource incidents have no REST API, MCP tool or CLI command yet: only
+      Monitoring → Incidents reads them.
+- [ ] A remote host connected as a raw Docker daemon (`tcp://`, `ssh://`) isn't
+      measured for resource incidents, only agent hosts are; reading the machine
+      would take a helper container on that daemon.
+
 ## Medium
 
 - [ ] Mail server: verify the relay's certificate; docker-mailserver sets

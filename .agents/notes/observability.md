@@ -515,18 +515,53 @@ is recomputed. Parsed maps are cached in memory by id (32). Resolving at ingest
 means a late upload doesn't fix stored events; that's the Sentry behavior too.
 Operator doc: `docs/error-tracking.md`.
 
-## Resource incidents (`src/lib/resource-incidents.ts`, `CapacityService`, `resource_incident`)
+## Resource incidents (`src/lib/resource-incidents.ts`, `CapacityService`, `resource_incident`, Monitoring → Incidents)
 
 Modelled on baba (github.com/zedensix/baba, `internal/monitor`): each resource
-has at most one incident. `ResourceIncidentTracker` is pure and time-based (the
-stats sampler calls `CapacityService.evaluate` every minute): a breach opens an
+on each host has at most one incident. `ResourceIncidentTracker` is pure and
+time-based; `CapacityService` keeps one per host (keyed by
+`resource_incident.remoteHostId`, null for this server), and the stats sampler
+calls `CapacityService.evaluate` every minute for this server and for every
+enabled agent host whose `GET /v1/stats` answers within 10s (checked alongside
+the rest of the tick, so a dead agent never stretches it; a raw
+`tcp://`/`ssh://` host has no agent and isn't measured). A breach opens an
 incident once it has lasted `resourceAlertSustainSeconds` (disk at once),
 escalates soft → hard, reminds every `resourceAlertReminderMinutes` (0 never)
 and recovers on the first reading under the soft limit. Incidents are rows so a
-restart restores the open ones (`restore`) instead of alerting again or losing
-the recovery; breach timers live in memory and start over. One check's events
-are grouped into at most five messages (critical, warning, the two reminder
-kinds, recovered) on the existing `resource.*` events.
+restart restores the open ones (`restore`, per host on its first check) instead
+of alerting again or losing the recovery; breach timers live in memory and start
+over. One check's events are grouped into at most five messages (critical,
+warning, the two reminder kinds, recovered) on the existing `resource.*` events,
+titled with the remote host's name when it's one, linking to
+`/monitoring/incidents`. Only this server's hard breaches refuse new services
+(`hardBreaches` reads the local `#latest` only).
+
+**The performance timeline is the incident's own `samples` jsonb**, one
+`{at, percents}` per minute (every resource, not just the breached one),
+appended with `samples || $1::jsonb` while it's open and once more on recovery.
+It's seeded on open from the per-host buffer of the last readings (sustain
+window plus three minutes), so it starts where the breach started rather than
+where the sustain window ended. Kept on the row rather than in `stat_sample`
+because `stat_sample`'s host rows are "serviceId and workstationId both null",
+and a remote host's readings there would have to be filtered out of every host
+query. The detail page also compares Traefik's traffic
+(`TrafficSampleDTO.totals` over every service) during the incident against as
+long a stretch right before, for this server only.
+
+**Causes come from processes, not just containers.** On this server the worker
+is itself a container, so its `/proc` lists only its own processes;
+`GET /v1/host/processes` runs `hoststats.ProcessScript` (two `/proc/*/stat`
+reads a second apart, `VmRSS`, `cgroup`) in an Alpine helper with
+`PidMode: host`, and `hoststats.ParseProcesses` groups by name and cgroup unit,
+flagging any process whose cgroup path holds a 64-hex id as a container's (works
+for the systemd and cgroupfs drivers and under rootless nesting).
+`ResourceInsightsService` splits "Outside containers" into the non-container
+groups past 0.5% plus a "Rest outside containers" row, falling back to the one
+row when the helper fails; concurrent reads (an alert's CPU and memory causes)
+share one helper run. Agent mode runs on the host itself and reads the same
+script natively (`GET /v1/processes`); a remote host's causes are its busiest
+processes, containers' included, since the agent has no Homerun labels to name
+containers by.
 
 ## Monitoring (`traffic_sample`, `TrafficSampleDTO`, `MonitoringService`, Observability → Monitoring, stack Monitoring, `/monitoring`)
 

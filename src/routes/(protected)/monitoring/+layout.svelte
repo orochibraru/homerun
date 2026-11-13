@@ -7,6 +7,7 @@
 		Settings2,
 		ShieldBan,
 		ShieldCheck,
+		Siren,
 	} from "@lucide/svelte";
 
 	import TabNav from "#lib/components/tab-nav.svelte";
@@ -22,6 +23,14 @@
 			icon: BarChart3,
 			id: "monitoring",
 			label: "Overview",
+		},
+		{
+			description:
+				"Every time a resource on this server or a remote host stayed past its limit",
+			href: resolve("/(protected)/monitoring/incidents"),
+			icon: Siren,
+			id: "monitoring/incidents",
+			label: "Incidents",
 		},
 		{
 			description: "Timings of Homerun's own jobs: deploys, builds, backups",
@@ -77,8 +86,9 @@
 			Monitoring
 		</h1>
 		<p class="text-text-muted mt-1 text-sm">
-			Traffic and uptime across every service, this host's CPU and memory, and
-			the traces of Homerun's own jobs.
+			Traffic and uptime across every service, this host's CPU and memory, the
+			resource incidents on it and the remote hosts, and the traces of Homerun's
+			own jobs.
 		</p>
 	</div>
 

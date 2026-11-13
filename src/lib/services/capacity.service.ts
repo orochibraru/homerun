@@ -7,7 +7,9 @@ import {
 	describeCauses,
 	describeIncidentEvent,
 	type IncidentEvent,
+	type IncidentSample,
 	ResourceIncidentTracker,
+	toIncidentSample,
 } from "#lib/resource-incidents.js";
 import {
 	describeReading,
@@ -18,6 +20,7 @@ import {
 	type ResourceReading,
 } from "#lib/resource-thresholds.js";
 
+import type { AgentConnection } from "./agent-client.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import type { ChannelMessage } from "./notification-messages.ts";
 import {
@@ -29,6 +32,31 @@ import { SystemStatsService } from "./system-stats.service.ts";
 const logger = new Logger("Capacity");
 
 const FRESH_MS = 3 * 60 * 1000;
+
+/** How long a host's last reading stays on the Incidents page without a newer one. */
+const WATCH_MS = 5 * 60 * 1000;
+
+/** A remote host the stats sampler measures through its agent. */
+export interface WatchedRemoteHost {
+	connection: AgentConnection;
+	id: string;
+	name: string;
+}
+
+/** What the last check read on one host: this server when `remoteHostId` is null. */
+export interface HostWatch {
+	at: number;
+	name: string;
+	readings: ResourceReading[];
+	remoteHostId: string | null;
+}
+
+/** One host's incident state: its tracker, whether it picked up the open incidents yet, and its last few readings. */
+interface HostIncidents {
+	recent: IncidentSample[];
+	restored: boolean;
+	tracker: ResourceIncidentTracker;
+}
 
 /** Which live reading explains each resource, null for one with none. */
 const INSIGHT_KINDS: Record<ResourceKind, InsightResource | null> = {
@@ -74,31 +102,43 @@ export function groupIncidentEvents(events: IncidentEvent[]): ResourceAlert[] {
 	return groups.filter((group) => group.events.length > 0);
 }
 
-const TITLES: Record<ResourceAlertEvent, [string, string]> = {
-	"resource.critical": [
-		"Server past a hard resource limit",
-		"Server still past a hard resource limit",
-	],
-	"resource.recovered": [
-		"Server resources back to normal",
-		"Server resources back to normal",
-	],
-	"resource.warning": [
-		"Server resources running high",
-		"Server resources still running high",
-	],
-};
+/** An alert's title, naming the remote host it's about, or "Server" for this one. */
+function alertTitle(
+	event: ResourceAlertEvent,
+	reminder: boolean,
+	hostName: string | null,
+): string {
+	const subject = hostName ?? "Server";
+	switch (event) {
+		case "resource.critical":
+			return reminder
+				? `${subject} still past a hard resource limit`
+				: `${subject} past a hard resource limit`;
+		case "resource.warning":
+			return reminder
+				? `${subject} resources still running high`
+				: `${subject} resources running high`;
+		default:
+			return `${subject} resources back to normal`;
+	}
+}
 
-/** The channel message for a resource alert: a server-wide one, with no service attached. */
+/**
+ * The channel message for a resource alert: a host-wide one, with no
+ * service attached, about this server or the remote host `options.hostName`
+ * names, timed at `options.now` (`timestamp` by default).
+ */
 export function resourceAlertMessage(
 	alert: ResourceAlert,
 	origin: string | null,
 	timestamp: string,
-	now: number = Date.parse(timestamp),
+	options: { hostName?: string | null; now?: number } = {},
 ): ChannelMessage {
+	const hostName = options.hostName ?? null;
+	const now = options.now ?? Date.parse(timestamp);
 	return {
 		detail:
-			alert.event === "resource.critical"
+			alert.event === "resource.critical" && hostName === null
 				? "New services are refused until usage drops back under the hard limit."
 				: null,
 		event: alert.event,
@@ -117,53 +157,87 @@ export function resourceAlertMessage(
 						},
 					];
 		}),
-		link: origin ? `${origin.replace(/\/+$/, "")}/` : null,
+		link: origin ? `${origin.replace(/\/+$/, "")}/monitoring/incidents` : null,
 		serviceId: null,
 		serviceName: null,
 		timestamp,
-		title: TITLES[alert.event][alert.reminder ? 1 : 0],
+		title: alertTitle(alert.event, alert.reminder, hostName),
 	};
 }
 
 /**
- * Watches the host's usage against the soft and hard thresholds in the
- * instance settings: alerts on crossings (in-app and on notification
- * channels) and refuses new services past a hard one.
+ * Watches this server's usage, and every remote host's its agent reports,
+ * against the soft and hard thresholds in the instance settings: records an
+ * incident per resource per host, alerts on crossings (in-app and on
+ * notification channels) and refuses new services while this server is past
+ * a hard one.
  */
 class CapacityServiceClass {
-	readonly #tracker = new ResourceIncidentTracker();
-	#restored = false;
+	readonly #hosts = new Map<string, HostIncidents>();
+
+	readonly #watched = new Map<string, HostWatch>();
 
 	#latest: { at: number; readings: ResourceReading[] } | null = null;
 
 	/**
-	 * Evaluates one host sample, called by the stats sampler every minute:
-	 * remembers it for `hardBreaches`, moves each resource's incident along
-	 * (open once past a limit for the sustain window, escalate, remind,
-	 * recover), records it, and sends the alerts that calls for. Picks up the
-	 * incidents left open by the last run on its first call.
+	 * Evaluates one host sample, called by the stats sampler every minute for
+	 * this server and for each remote host whose agent answered: remembers
+	 * it for `hardBreaches` (this server only) and `watched`, moves each
+	 * resource's incident along (open once past a limit for the sustain
+	 * window, escalate, remind, recover), records it with the reading, and
+	 * sends the alerts that calls for. Picks up the host's incidents left
+	 * open by the last run on its first call.
 	 */
-	async evaluate(host: HostUsageInput): Promise<void> {
+	async evaluate(
+		host: HostUsageInput,
+		remote: WatchedRemoteHost | null = null,
+	): Promise<void> {
 		const settings = await InstanceSettingsDTO.get();
 		const readings = readResources(host, settings.resourceThresholds);
 		const now = Date.now();
-		this.#latest = { at: now, readings };
-		if (!this.#restored) {
-			this.#tracker.restore(await ResourceIncidentDTO.listOpen());
-			this.#restored = true;
+		const remoteHostId = remote?.id ?? null;
+		if (!remote) {
+			this.#latest = { at: now, readings };
 		}
-		const events = this.#tracker.next(readings, now, {
-			reminderMs: settings.resourceAlertReminderMinutes * 60_000,
-			sustainMs: settings.resourceAlertSustainSeconds * 1000,
+		this.#watched.set(remoteHostId ?? "", {
+			at: now,
+			name: remote?.name ?? "This server",
+			readings,
+			remoteHostId,
 		});
-		await this.#explain(events);
-		await this.#record(events, now);
+		const state = await this.#state(remoteHostId);
+		const sustainMs = settings.resourceAlertSustainSeconds * 1000;
+		const sample = toIncidentSample(readings, now);
+		state.recent = [
+			...state.recent.filter((kept) => now - kept.at <= sustainMs + FRESH_MS),
+			sample,
+		];
+		const events = state.tracker.next(readings, now, {
+			reminderMs: settings.resourceAlertReminderMinutes * 60_000,
+			sustainMs,
+		});
+		await this.#explain(events, remote);
+		await this.#record(events, now, remoteHostId, state.recent);
+		const opened = new Set(
+			events
+				.filter((event) => event.type === "open")
+				.map((event) => event.incident),
+		);
+		await ResourceIncidentDTO.addSample(
+			[
+				...state.tracker.open().filter((incident) => !opened.has(incident)),
+				...events
+					.filter((event) => event.type === "recover")
+					.map((event) => event.incident),
+			],
+			sample,
+		);
 		for (const alert of groupIncidentEvents(events)) {
 			const message = resourceAlertMessage(
 				alert,
 				config.auth.origin ?? null,
 				new Date(now).toISOString(),
-				now,
+				{ hostName: remote?.name ?? null, now },
 			);
 			logger.info(
 				`${message.title}: ${message.fields.map((f) => f.value).join(", ")}`,
@@ -182,12 +256,49 @@ class CapacityServiceClass {
 		}
 	}
 
+	/** Every host read in the last few minutes, this server first, then the remote hosts by name. */
+	watched(now = Date.now()): HostWatch[] {
+		return [...this.#watched.values()]
+			.filter((watch) => now - watch.at <= WATCH_MS)
+			.toSorted((a, b) =>
+				a.remoteHostId === null
+					? -1
+					: b.remoteHostId === null
+						? 1
+						: a.name.localeCompare(b.name),
+			);
+	}
+
+	/** One host's incident state, its open incidents picked up from the database the first time. */
+	async #state(remoteHostId: string | null): Promise<HostIncidents> {
+		const key = remoteHostId ?? "";
+		let state = this.#hosts.get(key);
+		if (!state) {
+			state = {
+				recent: [],
+				restored: false,
+				tracker: new ResourceIncidentTracker(),
+			};
+			this.#hosts.set(key, state);
+		}
+		if (!state.restored) {
+			state.tracker.restore(await ResourceIncidentDTO.listOpen(remoteHostId));
+			state.restored = true;
+		}
+		return state;
+	}
+
 	/**
 	 * Records why each alerting event fired: the resource's biggest consumers
-	 * right now, read once per resource, onto its incident. A recovery keeps
-	 * the causes of the last alert; a GPU has no per-container reading to name.
+	 * right now, read once per resource, onto its incident. This server names
+	 * its containers and processes, a remote host its agent's processes. A
+	 * recovery keeps the causes of the last alert; a GPU has no per-container
+	 * reading to name.
 	 */
-	async #explain(events: IncidentEvent[]): Promise<void> {
+	async #explain(
+		events: IncidentEvent[],
+		remote: WatchedRemoteHost | null,
+	): Promise<void> {
 		const alerting = events.filter((event) => event.type !== "recover");
 		const resources = [
 			...new Set(alerting.map((event) => INSIGHT_KINDS[event.reading.kind])),
@@ -196,7 +307,15 @@ class CapacityServiceClass {
 			await Promise.all(
 				resources.map(
 					async (resource) =>
-						[resource, await ResourceInsightsService.causes(resource)] as const,
+						[
+							resource,
+							remote
+								? await ResourceInsightsService.remoteCauses(
+										remote.connection,
+										resource,
+									)
+								: await ResourceInsightsService.causes(resource),
+						] as const,
 				),
 			),
 		);
@@ -206,13 +325,26 @@ class CapacityServiceClass {
 		}
 	}
 
-	/** Writes each event onto its incident's row: a new row when it opens, its alert count, level, peak and causes after, its end when it recovers. */
-	async #record(events: IncidentEvent[], now: number): Promise<void> {
+	/**
+	 * Writes each event onto its incident's row: a new row when it opens, with
+	 * the readings since its breach began, its alert count, level, peak and
+	 * causes after, its end when it recovers.
+	 */
+	async #record(
+		events: IncidentEvent[],
+		now: number,
+		remoteHostId: string | null,
+		recent: IncidentSample[],
+	): Promise<void> {
 		for (const event of events) {
 			const { incident } = event;
 			if (event.type === "open") {
 				// oxlint-disable-next-line no-await-in-loop -- a check moves a handful of resources at most
-				incident.id = await ResourceIncidentDTO.open(incident);
+				incident.id = await ResourceIncidentDTO.open(
+					incident,
+					remoteHostId,
+					recent.filter((sample) => sample.at >= incident.startedAt),
+				);
 				continue;
 			}
 			if (!incident.id) {

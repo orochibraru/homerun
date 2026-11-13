@@ -48,6 +48,7 @@ func (s *Server) Handler() http.Handler {
 	router.Group(func(authed chi.Router) {
 		authed.Use(httpapi.BearerAuth(s.token))
 		authed.Get("/v1/stats", httpapi.H(s.statsRoute))
+		authed.Get("/v1/processes", httpapi.H(s.processesRoute))
 		authed.Post("/v1/build", httpapi.H(s.build))
 		authed.Get("/v1/images/save", httpapi.H(s.saveImage))
 		for _, mount := range s.mounts {
@@ -74,6 +75,14 @@ func (s *Server) openAPI(w http.ResponseWriter, r *http.Request) {
 // statsRoute answers GET /v1/stats with a fresh host stats sample.
 func (s *Server) statsRoute(w http.ResponseWriter, _ *http.Request) error {
 	httpapi.WriteJSON(w, http.StatusOK, s.stats.Sample())
+	return nil
+}
+
+// processesRoute answers GET /v1/processes with every process on the host,
+// grouped by name and cgroup unit, busiest CPU first. It takes a second, the
+// window CPU is measured over.
+func (s *Server) processesRoute(w http.ResponseWriter, _ *http.Request) error {
+	httpapi.WriteJSON(w, http.StatusOK, s.stats.Processes())
 	return nil
 }
 

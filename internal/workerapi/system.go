@@ -116,6 +116,7 @@ func (s *Server) mountSystem(r chi.Router) {
 	r.Get("/v1/df", httpapi.H(s.diskUsage))
 	r.Get("/v1/host/stats", httpapi.H(s.hostStats))
 	r.Get("/v1/host/usage", httpapi.H(s.hostUsage))
+	r.Get("/v1/host/processes", httpapi.H(s.hostProcesses))
 	r.Post("/v1/prune/{kind}", httpapi.H(s.prune))
 	r.Post("/v1/one-off", httpapi.H(s.runOneOff))
 }
@@ -256,6 +257,21 @@ func (s *Server) runOneOff(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpapi.Answer(w, http.StatusOK, result)
+}
+
+// hostProcesses answers with every process on the host, grouped by name and
+// cgroup unit, read by the helper image the query names.
+func (s *Server) hostProcesses(w http.ResponseWriter, r *http.Request) error {
+	image := r.URL.Query().Get("image")
+	if image == "" {
+		return httpapi.Invalid(w, "Invalid request",
+			[]httpapi.ValidationIssue{{Message: "image is required", Path: []string{"image"}}})
+	}
+	processes, err := s.docker.HostProcesses(r.Context(), image)
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, processes)
 }
 
 // hostUsage answers with every running container's CPU and memory right now,

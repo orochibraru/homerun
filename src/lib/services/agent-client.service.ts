@@ -41,7 +41,8 @@ export class AgentRequestError extends Error {
  */
 class AgentClientServiceClass {
 	/**
-	 * One authenticated JSON call to an agent, with a 30s timeout.
+	 * One authenticated JSON call to an agent, with a 30s timeout unless
+	 * `timeoutMs` says otherwise.
 	 *
 	 * @throws `AgentRequestError` on a non-2xx answer (a 404 on an agent too
 	 *   old to know the route reads as such), a plain Error when the agent
@@ -51,7 +52,11 @@ class AgentClientServiceClass {
 		connection: AgentConnection,
 		method: string,
 		path: string,
-		options?: { body?: unknown; query?: Record<string, string> },
+		options?: {
+			body?: unknown;
+			query?: Record<string, string>;
+			timeoutMs?: number;
+		},
 	): Promise<T> {
 		const url = new URL(path, connection.agentUrl);
 		for (const [key, value] of Object.entries(options?.query ?? {})) {
@@ -71,7 +76,7 @@ class AgentClientServiceClass {
 						: { "content-type": "application/json" }),
 				},
 				method,
-				signal: AbortSignal.timeout(30_000),
+				signal: AbortSignal.timeout(options?.timeoutMs ?? 30_000),
 			});
 		} catch (error) {
 			throw new Error(

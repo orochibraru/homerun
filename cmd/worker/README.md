@@ -115,6 +115,11 @@ Every route requires `Authorization: Bearer <token>` except `/v1/health` and
 - `GET /v1/openapi.json`, this surface's own OpenAPI document, unauthenticated.
 - `GET /v1/stats`, host CPU/RAM/disk/GPU, the same shape as the main app's
   `SystemStatsService`.
+- `GET /v1/processes`, every process on the host grouped by name and cgroup
+  unit, busiest CPU first
+  (`{name, group, count, container, cpuPercent, memUsedMb}`). CPU is measured
+  over a second, so it answers after one. The main app reads it for a remote
+  host's resource incidents.
 - `POST /v1/build`, body is a `BuildInput` (see `internal/agent/build.go`):
   clones a git repo at a ref (a branch, tag or full commit SHA) and builds it
   into a local image with `buildMethod`: `dockerfile` (the default,

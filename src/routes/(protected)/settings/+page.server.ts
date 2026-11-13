@@ -2,7 +2,6 @@ import { fail } from "@sveltejs/kit";
 
 import { config } from "#lib/config.js";
 import { InstanceSettingsDTO } from "#lib/dto/instance-settings-dto.js";
-import { ResourceIncidentDTO } from "#lib/dto/resource-incident-dto.js";
 import { Logger } from "#lib/logger.js";
 import { passkeyRpId } from "#lib/security-policy.js";
 import { redirectToSignIn } from "#lib/server/sign-in-redirect.js";
@@ -22,17 +21,13 @@ const logger = new Logger("InstanceSettings");
 
 export const load = async ({ parent }) => {
 	await parent();
-	const [settings, incidents] = await Promise.all([
-		InstanceSettingsDTO.get(),
-		ResourceIncidentDTO.recent(10),
-	]);
+	const settings = await InstanceSettingsDTO.get();
 	return {
 		passkeyCount: await AccountSecurityService.countAllPasskeys(),
 		resourceAlertTiming: {
 			reminderMinutes: settings.resourceAlertReminderMinutes,
 			sustainSeconds: settings.resourceAlertSustainSeconds,
 		},
-		resourceIncidents: incidents.map((incident) => incident.toJSON()),
 		resourceThresholds: settings.resourceThresholds,
 		passkeyRpId: passkeyRpId(config.auth.origin) ?? "localhost",
 	};

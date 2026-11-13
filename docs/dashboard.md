@@ -49,13 +49,27 @@ phone, or focus it and use the arrow keys, for the same reading.
   until usage drops back. While the incident lasts it reminds you (**Remind
   every**, 30 minutes by default, 0 for never), and the first reading back under
   the soft limit sends a **back to normal** for that resource with how long it
-  lasted and its peak. The last incidents are listed under the limits in
-  Settings, and one still open when Homerun restarts stays open: no second
-  alert, and you still get its recovery. If the host's stats can't be read,
-  nothing is refused. Every warning, critical and reminder names the resource's
-  biggest users at that moment (`web 62%, 2.5 cores · Outside containers 12%`),
-  read the same way as [What's using it](#whats-using-it): in the alert itself,
-  in the bell, and on the incident under the limits.
+  lasted and its peak. One still open when Homerun restarts stays open: no
+  second alert, and you still get its recovery. If the host's stats can't be
+  read, nothing is refused. Every warning, critical and reminder names the
+  resource's biggest users at that moment
+  (`web 62%, 2.5 cores · slirp4netns 12%`), read the same way as
+  [What's using it](#whats-using-it), in the alert itself and in the bell.
+- **Remote hosts** connected through a Homerun agent are checked against the
+  same limits every minute, with their own incidents and alerts, named after the
+  host (`Build box past a hard resource limit`). Their biggest users are the
+  agent's busiest processes, containers' included. A remote host never refuses a
+  new service, and a raw Docker connection (`tcp://`, `ssh://`) isn't measured:
+  there's no agent on it to read the machine with.
+- **Monitoring → Incidents** lists every incident, newest first, filterable by
+  host, status, resource and limit, and searchable by what was using the
+  resource. Above the list, each host's last reading. An incident's page shows
+  when it started and ended, how long it lasted, its peak and how many alerts it
+  sent; what triggered it; the host's CPU, memory, disk and GPU every minute it
+  lasted, from when the limit was first crossed, against the soft and hard
+  limits; and, for this server, how the services performed during it (requests a
+  minute, average response time, server errors) against as long a stretch right
+  before.
 
 ![Settings → General → Resource limits, with each resource's soft and hard threshold and the alert timing](images/dashboard-resource-limits.webp)
 
@@ -70,9 +84,16 @@ with a Refresh button. It needs read access to Services.
   build or other helper container, or the container's own name. CPU is each
   container's share of every core together, the same scale as the ring, with the
   cores it keeps busy. Memory leaves out the page cache the kernel can take
-  back, the way `docker stats` counts it. **Outside containers** is what the
-  host uses that no container accounts for: the system, and anything run outside
-  Docker.
+  back, the way `docker stats` counts it. What the host uses that no container
+  accounts for is broken down into its processes: each one past half a percent
+  of the host gets its own row (the same name in the same systemd unit summed,
+  `php-fpm ×12`), with the unit it runs in and, for Docker's own processes, what
+  it is: rootless Docker's network proxy (`slirp4netns`, `pasta`), for one,
+  carries every container's traffic and can be the busiest thing on the host.
+  **Rest outside containers** is what's left: the kernel and every smaller
+  process. The worker reads the processes from a short-lived Alpine helper in
+  the host's PID namespace, since it runs in a container of its own; when that
+  fails, the whole remainder is one **Outside containers** row.
 - **Disk** lists Docker's volumes one by one, its images (layers they share
   counted once), the build cache no other cache shares, each container's own
   writable layer, and **Everything else** on the disk: the system, logs, files

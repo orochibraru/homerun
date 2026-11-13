@@ -16,7 +16,8 @@ export interface GpuStats {
 	utilizationPercent: number;
 }
 
-interface HostStats {
+/** What a worker answers for its host, on `/v1/host/stats` locally and `/v1/stats` in agent mode. */
+export interface HostStats {
 	cpuPercent: number;
 	diskPercent: number | null;
 	diskTotalMb: number | null;
@@ -28,6 +29,19 @@ interface HostStats {
 }
 
 const MB_PER_GB = 1024;
+
+/** A worker's host stats in the dashboard's shape, disk in GB. */
+export function toSystemStats(host: HostStats): SystemStats {
+	return {
+		cpuPercent: host.cpuPercent,
+		diskTotalGb:
+			host.diskTotalMb === null ? null : host.diskTotalMb / MB_PER_GB,
+		diskUsedGb: host.diskUsedMb === null ? null : host.diskUsedMb / MB_PER_GB,
+		gpu: host.gpu,
+		memTotalMb: host.memTotalMb,
+		memUsedMb: host.memUsedMb,
+	};
+}
 
 /** Host-level (not per-container) CPU/RAM/disk/GPU stats for the dashboard. */
 class SystemStatsServiceClass {
@@ -41,16 +55,7 @@ class SystemStatsServiceClass {
 	 * the worker starts reports 0.
 	 */
 	async getSystemStats(): Promise<SystemStats> {
-		const host = await WorkerClient.get<HostStats>("/v1/host/stats");
-		return {
-			cpuPercent: host.cpuPercent,
-			diskTotalGb:
-				host.diskTotalMb === null ? null : host.diskTotalMb / MB_PER_GB,
-			diskUsedGb: host.diskUsedMb === null ? null : host.diskUsedMb / MB_PER_GB,
-			gpu: host.gpu,
-			memTotalMb: host.memTotalMb,
-			memUsedMb: host.memUsedMb,
-		};
+		return toSystemStats(await WorkerClient.get<HostStats>("/v1/host/stats"));
 	}
 }
 

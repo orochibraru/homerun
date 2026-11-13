@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance, type SubmitFunction } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { TriangleAlert } from "@lucide/svelte";
 	import { Input } from "@zedensix/ui/input";
@@ -25,8 +26,6 @@
 	} from "#lib/security-policy.js";
 	import { enhanceToast, saveToast } from "#lib/toast.js";
 	import { DEFAULT_UI_MODE } from "#lib/ui-mode.js";
-
-	import ResourceIncidents from "./resource-incidents.svelte";
 
 	const { data } = $props();
 
@@ -348,7 +347,14 @@
 				</label>
 			</div>
 		</form>
-		<ResourceIncidents incidents={data.resourceIncidents} />
+		<p class="border-border text-text-muted border-t px-5 py-3 text-xs">
+			Every time a limit was crossed, on this server or a remote host, is under
+			<a
+				class="text-accent hover:underline"
+				href={resolve("/(protected)/monitoring/incidents")}
+				>Monitoring → Incidents</a
+			>.
+		</p>
 	</section>
 
 	<section class="panel rounded-md">

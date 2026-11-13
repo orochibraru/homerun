@@ -41,6 +41,9 @@ const { SystemStatsService } =
 const { CapacityService } =
 	await import("../../../src/lib/services/capacity.service");
 const { Logger } = await import("../../../src/lib/logger");
+const { RemoteHostDTO } = await import("../../../src/lib/dto/remote-host-dto");
+const { AgentClientService } =
+	await import("../../../src/lib/services/agent-client.service");
 
 const METRICS = `# HELP traefik_service_requests_total How many HTTP requests processed.
 traefik_service_requests_total{code="200",method="GET",protocol="http",service="web@docker"} 90
@@ -243,9 +246,85 @@ describe("StatsSampler traffic", () => {
 		stub(TrafficSampleDTO, "recordMany", async (rows: unknown[]) => {
 			traffic.push(rows);
 		});
+		stub(RemoteHostDTO, "list", async () => []);
 	});
 
 	afterEach(() => restoreStubs());
+
+	test("every enabled agent host is checked against the thresholds, one that doesn't answer skipped", async () => {
+		const checked: unknown[][] = [];
+		stub(CapacityService, "evaluate", async (...args: unknown[]) => {
+			checked.push(args);
+		});
+		stub(Logger.prototype, "debug", () => undefined);
+		const connection = { agentUrl: "http://agent", token: "t" };
+		stub(RemoteHostDTO, "list", async () => [
+			{
+				enabled: true,
+				id: "h1",
+				name: "Build box",
+				toAgentConnection: () => connection,
+			},
+			{
+				enabled: true,
+				id: "h2",
+				name: "Down",
+				toAgentConnection: () => ({ ...connection, agentUrl: "http://down" }),
+			},
+			{
+				enabled: true,
+				id: "h3",
+				name: "Raw docker",
+				toAgentConnection: () => null,
+			},
+			{
+				enabled: false,
+				id: "h4",
+				name: "Off",
+				toAgentConnection: () => connection,
+			},
+		]);
+		const asked: string[] = [];
+		stub(
+			AgentClientService,
+			"request",
+			async (target: { agentUrl: string }, _method: string, path: string) => {
+				asked.push(`${target.agentUrl}${path}`);
+				if (target.agentUrl === "http://down") {
+					throw new Error("unreachable");
+				}
+				return {
+					cpuPercent: 97,
+					diskTotalMb: 2048,
+					diskUsedMb: 1024,
+					gpu: null,
+					memTotalMb: 1000,
+					memUsedMb: 100,
+				};
+			},
+		);
+		const sampler = new StatsSampler() as unknown as {
+			tick: () => Promise<void>;
+		};
+		await sampler.tick();
+		expect(asked.toSorted()).toEqual([
+			"http://agent/v1/stats",
+			"http://down/v1/stats",
+		]);
+		const remote = checked.find((args) => args[1] !== undefined);
+		expect(remote).toEqual([
+			{
+				cpuPercent: 97,
+				diskTotalGb: 2,
+				diskUsedGb: 1,
+				gpu: null,
+				memTotalMb: 1000,
+				memUsedMb: 100,
+			},
+			{ connection, id: "h1", name: "Build box" },
+		]);
+		expect(checked).toHaveLength(2);
+	});
 
 	test("the first read is a baseline, the next records the increase", async () => {
 		const sampler = new StatsSampler() as unknown as {

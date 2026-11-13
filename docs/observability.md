@@ -56,7 +56,9 @@ so the peak is the stack's real peak rather than the sum of each service's.
 **Monitoring** in the sidebar covers every service on the instance, with this
 host's own CPU and memory instead of the sum of the services'. Both add a **By
 service** table, busiest first, that links to each service's own monitoring. The
-sidebar's Monitoring page also has a **Traces** tab, the traces of Homerun's own
+sidebar's Monitoring page also has an **Incidents** tab, every time a resource
+on this server or a remote host stayed past its limit (see
+[Resource limits](dashboard.md)), a **Traces** tab, the traces of Homerun's own
 background jobs, and for admins a **Blocked IPs** tab (see
 [Blocked paths and IP bans](blocked-paths-and-ip-bans.md)), a **CrowdSec** tab
 (see [CrowdSec](blocked-paths-and-ip-bans.md#crowdsec)) and a **Settings** tab

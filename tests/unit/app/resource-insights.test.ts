@@ -16,6 +16,8 @@ const { WorkerClient } = await import("../../../src/lib/server/worker-client");
 const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 const { CronJobDTO } = await import("../../../src/lib/dto/cron-job-dto");
 const { WorkstationDTO } = await import("../../../src/lib/dto/workstation-dto");
+const { AgentClientService } =
+	await import("../../../src/lib/services/agent-client.service");
 
 const GB = 1024 * 1024 * 1024;
 
@@ -35,7 +37,7 @@ function stubHost() {
 	]);
 }
 
-function stubWorker(df: unknown = {}) {
+function stubWorker(df: unknown = {}, processes: unknown = []) {
 	const containers = [
 		{
 			cpuPercent: 240,
@@ -74,9 +76,12 @@ function stubWorker(df: unknown = {}) {
 			name: "homerun-build-x",
 		},
 	];
-	stub(WorkerClient, "get", async (path: string) =>
-		path === "/v1/df" ? df : containers,
-	);
+	stub(WorkerClient, "get", async (path: string) => {
+		if (path === "/v1/df") {
+			return df;
+		}
+		return path === "/v1/host/processes" ? processes : containers;
+	});
 }
 
 describe("ResourceInsightsService", () => {
@@ -106,6 +111,105 @@ describe("ResourceInsightsService", () => {
 			],
 			["homerun-build-x", "helper", "2.0%, 0.1 cores", null],
 		]);
+	});
+
+	test("what's outside containers is split into the host's biggest processes, and the rest", async () => {
+		stubHost();
+		stubWorker({}, [
+			{
+				container: false,
+				count: 1,
+				cpuPercent: 9,
+				group: "docker.service",
+				memUsedMb: 1200,
+				name: "slirp4netns",
+			},
+			{
+				container: true,
+				count: 4,
+				cpuPercent: 50,
+				group: "abcdefabcdef",
+				memUsedMb: 900,
+				name: "nginx",
+			},
+			{
+				container: false,
+				count: 3,
+				cpuPercent: 0.2,
+				group: "system.slice",
+				memUsedMb: 10,
+				name: "sshd",
+			},
+		]);
+		const cpu = await ResourceInsightsService.insight("cpu");
+		const outside = cpu.consumers.filter(
+			(c) => c.kind === "process" || c.kind === "other",
+		);
+		expect(outside.map((c) => [c.label, c.amount, c.detail])).toEqual([
+			[
+				"slirp4netns",
+				"9.0%",
+				"Rootless Docker's network: every container's traffic goes through it. Outside containers, in docker.service",
+			],
+			[
+				"Rest outside containers",
+				"4.0%",
+				"The system and anything this host runs outside Docker, measured as what the containers don't account for",
+			],
+		]);
+		const memory = await ResourceInsightsService.insight("memory");
+		expect(
+			memory.consumers
+				.filter((c) => c.kind === "process" || c.kind === "other")
+				.map((c) => [c.label, c.amount]),
+		).toEqual([
+			["Rest outside containers", "1.3 GB"],
+			["slirp4netns", "1.2 GB"],
+		]);
+	});
+
+	test("a remote host's causes are its agent's busiest processes, containers' included, and none for its disk", async () => {
+		stub(
+			AgentClientService,
+			"request",
+			async (_connection: unknown, _method: string, path: string) => {
+				expect(path).toBe("/v1/processes");
+				return [
+					{
+						container: false,
+						count: 1,
+						cpuPercent: 3,
+						group: "user.slice",
+						memUsedMb: 4000,
+						name: "java",
+					},
+					{
+						container: true,
+						count: 2,
+						cpuPercent: 40,
+						group: "abcdefabcdef",
+						memUsedMb: 100,
+						name: "node",
+					},
+				];
+			},
+		);
+		const connection = { agentUrl: "http://agent", token: "t" };
+		expect(
+			await ResourceInsightsService.remoteCauses(connection, "cpu", 1),
+		).toEqual([{ amount: "40%", label: "node ×2 (container)" }]);
+		expect(
+			await ResourceInsightsService.remoteCauses(connection, "memory", 1),
+		).toEqual([{ amount: "3.9 GB", label: "java" }]);
+		expect(
+			await ResourceInsightsService.remoteCauses(connection, "disk"),
+		).toEqual([]);
+		stub(AgentClientService, "request", async () => {
+			throw new Error("agent down");
+		});
+		expect(
+			await ResourceInsightsService.remoteCauses(connection, "cpu"),
+		).toEqual([]);
 	});
 
 	test("someone else's workstation stays anonymous, and memory adds what's held outside containers", async () => {

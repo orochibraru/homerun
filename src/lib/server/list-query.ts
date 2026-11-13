@@ -142,7 +142,8 @@ export function sortOrder(
 	return [sort.desc ? desc(target) : asc(target), fallback];
 }
 
-function escapeLike(value: string): string {
+/** `value` with the LIKE wildcards and the escape character escaped, to match it literally. */
+export function escapeLike(value: string): string {
 	return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 

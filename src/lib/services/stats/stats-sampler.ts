@@ -1,3 +1,4 @@
+import { RemoteHostDTO } from "#lib/dto/remote-host-dto.js";
 import { ServiceDTO } from "#lib/dto/service-dto.js";
 import {
 	type NewStatSampleInput,
@@ -12,13 +13,18 @@ import {
 	type TrafficCounters,
 } from "#lib/traffic-metrics.js";
 
+import { AgentClientService } from "../agent-client.service.ts";
 import { CapacityService } from "../capacity.service.ts";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { DockerService } from "../docker.service.ts";
 import type { ContainerSample } from "../docker/containers.ts";
 import { sumReplicaSamples } from "../docker/swarm-replicas.ts";
 import { ScaleToZeroService } from "../scale-to-zero.service.ts";
-import { SystemStatsService } from "../system-stats.service.ts";
+import {
+	type HostStats,
+	SystemStatsService,
+	toSystemStats,
+} from "../system-stats.service.ts";
 import { WorkstationService } from "../workstation.service.ts";
 
 /** One in this many ticks also prunes, the same amortized shape AppLogDTO/NotificationDTO use. */
@@ -31,7 +37,8 @@ const PRUNE_EVERY_TICKS = 60;
  * service's own resource graphs read back. Nothing else records history :
  * the Host Resources panel polls live values and keeps none. Each host
  * sample is also checked against the resource thresholds (`CapacityService`),
- * and each tick also records the requests every service served, from
+ * as is every enabled remote host's whose agent answers, and each tick also
+ * records the requests every service served, from
  * Traefik's metrics, then puts the services scale to zero finds idle to
  * sleep.
  */
@@ -99,6 +106,39 @@ export class StatsSampler extends BaseScheduler {
 		return null;
 	}
 
+	/**
+	 * Reads every enabled agent host's stats and checks them against the
+	 * resource thresholds, all at once, 10s each at most. A host that doesn't
+	 * answer is skipped until the next tick; a raw Docker host has no agent to
+	 * read the machine with.
+	 */
+	async #checkRemoteHosts(): Promise<void> {
+		const hosts = (await RemoteHostDTO.list()).filter((host) => host.enabled);
+		await Promise.all(
+			hosts.map(async (host) => {
+				const connection = host.toAgentConnection();
+				if (!connection) {
+					return;
+				}
+				try {
+					const stats = await AgentClientService.request<HostStats>(
+						connection,
+						"GET",
+						"/v1/stats",
+						{ timeoutMs: 10_000 },
+					);
+					await CapacityService.evaluate(toSystemStats(stats), {
+						connection,
+						id: host.id,
+						name: host.name,
+					});
+				} catch (err) {
+					this.logger.debug(`Couldn't check ${host.name}'s resources`, err);
+				}
+			}),
+		);
+	}
+
 	/** Every running workstation's sample, wherever it runs; one that can't be read (still starting, its agent down) is skipped. */
 	async #sampleWorkstations(): Promise<NewStatSampleInput[]> {
 		const running = await WorkstationDTO.listRunning();
@@ -124,12 +164,15 @@ export class StatsSampler extends BaseScheduler {
 	/**
 	 * Samples host stats, every running service's container stats, every
 	 * swarm service's local replicas and every running workstation in parallel and writes them as one batch of `stat_sample` rows
-	 * (`StatSampleDTO.recordMany`). Every `PRUNE_EVERY_TICKS`th tick also
+	 * (`StatSampleDTO.recordMany`), while the remote hosts are checked alongside. Every `PRUNE_EVERY_TICKS`th tick also
 	 * prunes old samples (`StatSampleDTO.prune`).
 	 */
 	protected async tick(): Promise<void> {
 		this.#ticks += 1;
 
+		const remoteHosts = this.#checkRemoteHosts().catch((err: unknown) => {
+			this.logger.warn("Couldn't check the remote hosts' resources", err);
+		});
 		const [host, services, workstations] = await Promise.all([
 			SystemStatsService.getSystemStats(),
 			ServiceDTO.listRunningWithContainers(),
@@ -186,5 +229,6 @@ export class StatsSampler extends BaseScheduler {
 			await StatSampleDTO.prune();
 			await TrafficSampleDTO.prune();
 		}
+		await remoteHosts;
 	}
 }

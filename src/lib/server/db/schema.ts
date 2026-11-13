@@ -48,7 +48,7 @@ import type {
 	PipelineStatus,
 } from "#lib/pipelines/types.js";
 import type { ExposedPort, PublishedPort } from "#lib/published-ports.js";
-import type { ResourceCause } from "#lib/resource-incidents.js";
+import type { IncidentSample, ResourceCause } from "#lib/resource-incidents.js";
 import type { ResourceKind, Threshold } from "#lib/resource-thresholds.js";
 import type { BackupRunKind, RevisionConfig } from "#lib/revision-config.js";
 import type { ServiceEventLane } from "#lib/service-events.js";
@@ -2584,10 +2584,17 @@ export const resourceIncident = pgTable(
 		level: text("level").$type<"hard" | "soft">().notNull(),
 		notifications: integer("notifications").default(1).notNull(),
 		peakPercent: integer("peak_percent").notNull(),
+		remoteHostId: text("remote_host_id").references(() => remoteHost.id, {
+			onDelete: "cascade",
+		}),
 		resolvedAt: timestamp("resolved_at", { mode: "date" }),
+		samples: jsonb("samples").$type<IncidentSample[]>().default([]).notNull(),
 		startedAt: timestamp("started_at", { mode: "date" }).notNull(),
 	},
-	(table) => [index("resourceIncident_startedAt_idx").on(table.startedAt)],
+	(table) => [
+		index("resourceIncident_startedAt_idx").on(table.startedAt),
+		index("resourceIncident_remoteHostId_idx").on(table.remoteHostId),
+	],
 );
 
 export const errorSourceMap = pgTable(

@@ -59,6 +59,9 @@ type HelperConfig struct {
 	Labels          map[string]string
 	NetworkDisabled bool
 	NetworkMode     string
+	// PidMode is "host" to see every process on the host, empty for the
+	// helper's own namespace.
+	PidMode string
 	// Stdin, when set, is streamed into the process's stdin, closed at EOF.
 	Stdin io.Reader
 	// Stdout, when set, receives the process's stdout as it streams;
@@ -193,6 +196,7 @@ func helperRequest(config HelperConfig) container.CreateRequest {
 	hostConfig := &container.HostConfig{
 		Binds:       config.Binds,
 		NetworkMode: container.NetworkMode(config.NetworkMode),
+		PidMode:     container.PidMode(config.PidMode),
 	}
 	if len(config.ImageMounts) > 0 {
 		hostConfig.Mounts = imageMounts(config.ImageMounts)
