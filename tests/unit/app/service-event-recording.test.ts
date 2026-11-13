@@ -103,6 +103,30 @@ describe("ServiceDTO.update", () => {
 		expect(svc?.toJSON().containerPort).toBe(9090);
 		expect(warnings).toHaveLength(1);
 	});
+
+	test("forgets the repository's provider id once the service builds from another repository", async () => {
+		const sets: Record<string, unknown>[] = [];
+		stub(db, "select", () =>
+			thenable([
+				{ ...row, gitProviderId: "gh", gitRepo: "ada/app", gitRepoId: "42" },
+			]),
+		);
+		stub(db, "update", () => ({
+			set: (patch: Record<string, unknown>) => {
+				sets.push(patch);
+				return thenable([]);
+			},
+		}));
+		const svc = await ServiceDTO.get("s1");
+		await svc?.update({ gitRepo: "ada/app" });
+		expect(svc?.toJSON().gitRepoId).toBe("42");
+		await svc?.update({ gitRepo: "ada/other" });
+		expect(svc?.toJSON().gitRepoId).toBeNull();
+		await svc?.update({ gitRepo: "grace/app", gitRepoId: "43" });
+		expect(sets.at(-1)).toEqual({ gitRepo: "grace/app", gitRepoId: "43" });
+		await svc?.update({ gitProviderId: "gitea" });
+		expect(sets.at(-1)).toEqual({ gitProviderId: "gitea", gitRepoId: null });
+	});
 });
 
 describe("ServiceLifecycleService", () => {

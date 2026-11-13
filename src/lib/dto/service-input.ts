@@ -121,6 +121,7 @@ export type ServiceUpdateInput = Partial<
 		| "gitUrl"
 		| "gitProviderId"
 		| "gitRepo"
+		| "gitRepoId"
 		| "autoDeployOnPush"
 		| "gitIgnorePaths"
 		| "gitWatchPaths"
@@ -291,6 +292,7 @@ export function newServiceBuildColumns(
 		gitUrl: input.gitUrl ?? null,
 		gitProviderId: input.gitProviderId ?? null,
 		gitRepo: input.gitRepo ?? null,
+		gitRepoId: null,
 		autoDeployOnPush: input.autoDeployOnPush ?? false,
 		gitIgnorePaths: input.gitIgnorePaths ?? [],
 		gitWatchPaths: input.gitWatchPaths ?? [],

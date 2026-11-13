@@ -323,6 +323,7 @@ export const init = async () => {
 	CronService.startMirrorGcScheduler();
 	CronService.startUpdateCheckScheduler();
 	CronService.startGitPollScheduler();
+	CronService.startGitRepoReconcile();
 	CronService.startPipelineSync();
 	CronService.startErrorRetention();
 	CronService.startTraceRetention();

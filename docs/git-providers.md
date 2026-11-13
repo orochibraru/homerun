@@ -60,6 +60,27 @@ doesn't delete the app there.
 Cloning itself is provider-agnostic, so any public HTTPS git URL works with no
 provider connected at all.
 
+## Renamed accounts, organizations and repositories
+
+Rename your account or organization on the provider, or rename or transfer a
+repository, and Homerun follows it within the hour. Every hour it reads each
+repository picked from a connected account (services building from it, their
+environments and previews, and [watched repositories](pipelines.md)) by the
+provider's own id for it, which never changes, and writes the new `owner/name`
+and clone URL wherever the old one was. The service's activity shows the change.
+A repository Homerun hasn't learned the id of yet (one picked before this
+existed, until its first check) is read by its old path, which most providers
+redirect for a while, or else matched by name among the repositories your
+account can see, when exactly one has that name. The account name shown on a
+connection is refreshed the same way. Webhooks keep working through a rename,
+since providers tie them to the repository, not to its path.
+
+Following the id also means a repository whose old path gets taken over (someone
+registers your old username and creates a repository with the same name) isn't
+built in its place. A repository entered as a clone URL, with no provider
+picked, isn't followed: edit its URL by hand. Neither is a workstation's
+repository.
+
 **Connections made before deploy-on-push existed** only allowed reading repos on
 GitLab, Gitea and Bitbucket. The Source section offers to reconnect them once
 Homerun is refused; until then it shows the webhook to add by hand. **Gitea

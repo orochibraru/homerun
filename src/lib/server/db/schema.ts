@@ -1380,6 +1380,7 @@ export const service = pgTable(
 		gitUrl: text("git_url"),
 		gitProviderId: text("git_provider_id"),
 		gitRepo: text("git_repo"),
+		gitRepoId: text("git_repo_id"),
 		gitWatchPaths: jsonb("git_watch_paths")
 			.$type<string[]>()
 			.default([])
@@ -2672,6 +2673,7 @@ export const repository = pgTable(
 		pipelinesSyncedAt: timestamp("pipelines_synced_at", { mode: "date" }),
 		providerId: text("provider_id").notNull(),
 		providerKind: text("provider_kind").$type<GitProviderKind>().notNull(),
+		providerRepoId: text("provider_repo_id"),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),

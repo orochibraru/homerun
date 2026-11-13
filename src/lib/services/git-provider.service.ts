@@ -586,6 +586,22 @@ class GitProviderServiceClass {
 	}
 
 	/**
+	 * The connection's account name as the provider has it now, which moves
+	 * when the account is renamed.
+	 *
+	 * @throws When the provider refuses or can't be reached.
+	 */
+	async accountName(
+		provider: GitProviderConfig,
+		connection: GitConnectionDTO,
+	): Promise<string | null> {
+		const body = (await (
+			await this.api(provider, connection, "/user")
+		).json()) as { login?: string; username?: string };
+		return body.login ?? body.username ?? null;
+	}
+
+	/**
 	 * Calls the provider's REST API as the connection's account, refreshing
 	 * its token first when needed.
 	 *

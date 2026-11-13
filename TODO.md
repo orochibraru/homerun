@@ -27,6 +27,9 @@ When done delete the entry, no bloat.
 - [ ] A remote host connected as a raw Docker daemon (`tcp://`, `ssh://`) isn't
       measured for resource incidents, only agent hosts are; reading the machine
       would take a helper container on that daemon.
+- [ ] A workstation's (and workstation preset's) repository isn't followed when
+      it's renamed on its provider: they store a clone URL only, no `owner/name`
+      or provider id, and its checkout directory is named after the URL.
 
 ## Medium
 

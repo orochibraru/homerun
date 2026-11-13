@@ -29,12 +29,15 @@ export type RepositoryUpdateInput = Partial<
 	Pick<
 		Repository,
 		| "defaultBranch"
+		| "fullName"
 		| "pipelineRates"
 		| "pipelinesEnabled"
 		| "pipelinesError"
 		| "pipelinesSyncedAt"
+		| "providerRepoId"
 		| "webhookError"
 		| "webhookId"
+		| "webUrl"
 	>
 >;
 
@@ -62,6 +65,7 @@ export class RepositoryDTO extends BaseDTO<Repository> {
 			pipelinesEnabled: true,
 			pipelinesError: null,
 			pipelinesSyncedAt: null,
+			providerRepoId: null,
 			updatedAt: now,
 			webhookError: null,
 			webhookId: null,

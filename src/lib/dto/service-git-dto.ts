@@ -175,6 +175,21 @@ export class ServiceGitDTO extends ServiceDTO {
 		return row ? new ServiceGitDTO(row) : null;
 	}
 
+	/** Every git service built from a repository picked on a connected provider, previews and environments included. */
+	static async listFromProviderRepos(): Promise<ServiceDTO[]> {
+		const rows = await db
+			.select()
+			.from(service)
+			.where(
+				and(
+					eq(service.buildSource, "git"),
+					isNotNull(service.gitProviderId),
+					isNotNull(service.gitRepo),
+				),
+			);
+		return rows.map((row) => new ServiceGitDTO(row));
+	}
+
 	/**
 	 * The git services a user owns on one provider whose webhook isn't
 	 * registered although deploy on push or previews want one, to retry once

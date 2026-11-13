@@ -37,6 +37,12 @@ export class GitConnectionDTO extends BaseDTO<GitConnection> {
 		return rows.map((row) => new GitConnectionDTO(row));
 	}
 
+	/** Every git provider connection, of every user. */
+	static async listAll(): Promise<GitConnectionDTO[]> {
+		const rows = await db.select().from(gitConnection);
+		return rows.map((row) => new GitConnectionDTO(row));
+	}
+
 	/**
 	 * The user's connection to one configured git provider, null when they
 	 * haven't connected it.

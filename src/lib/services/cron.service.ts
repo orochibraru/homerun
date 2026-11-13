@@ -24,6 +24,7 @@ import { parseCronSchedule, type ParsedCron } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
 import { ErrorRetentionScheduler } from "./cron/error-retention-scheduler.ts";
 import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
+import { GitRepoReconcileScheduler } from "./cron/git-repo-reconcile-scheduler.ts";
 import { IpBanScheduler } from "./cron/ip-ban-scheduler.ts";
 import { LogRetentionScheduler } from "./cron/log-retention-scheduler.ts";
 import { MailWatchScheduler } from "./cron/mail-watch-scheduler.ts";
@@ -86,6 +87,8 @@ class CronServiceClass {
 
 	private readonly gitPollScheduler = new GitPollScheduler();
 
+	private readonly gitRepoReconcileScheduler = new GitRepoReconcileScheduler();
+
 	private readonly pipelineSyncScheduler = new PipelineSyncScheduler();
 
 	private readonly errorRetentionScheduler = new ErrorRetentionScheduler();
@@ -147,6 +150,11 @@ class CronServiceClass {
 	/** Starts the branch poller that deploys on push when a webhook can't be delivered. */
 	startGitPollScheduler(): void {
 		this.gitPollScheduler.start();
+	}
+
+	/** Starts the hourly pass that follows repositories renamed or moved on their provider. */
+	startGitRepoReconcile(): void {
+		this.gitRepoReconcileScheduler.start();
 	}
 
 	/** Starts the five-minute CI pipeline sync. */

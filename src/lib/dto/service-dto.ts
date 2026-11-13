@@ -483,9 +483,15 @@ export class ServiceDTO extends BaseDTO<Service> {
 	 * `serviceChanges`).
 	 */
 	async update(input: ServiceUpdateInput): Promise<void> {
-		const events = serviceChanges(this.row, input);
-		await db.update(service).set(input).where(eq(service.id, this.row.id));
-		Object.assign(this.row, input);
+		const moved =
+			!("gitRepoId" in input) &&
+			((input.gitRepo !== undefined && input.gitRepo !== this.row.gitRepo) ||
+				(input.gitProviderId !== undefined &&
+					input.gitProviderId !== this.row.gitProviderId));
+		const patch = moved ? { ...input, gitRepoId: null } : input;
+		const events = serviceChanges(this.row, patch);
+		await db.update(service).set(patch).where(eq(service.id, this.row.id));
+		Object.assign(this.row, patch);
 		await ServiceEventDTO.record(this.row.id, events);
 	}
 

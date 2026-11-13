@@ -1594,6 +1594,31 @@ enqueues a `push` deploy. A verified push delivery also writes
 from deploying the same commit twice. Services are polled one at a time to stay
 under per-token rate limits.
 
+### Following renames (`service.gitRepoId`, `repository.providerRepoId`, `GitRepoReconcileService`)
+
+A provider path (`owner/name`) moves when an account, organization or repo is
+renamed or transferred; the provider's repo id doesn't.
+`GitRepoReconcileScheduler` runs `GitRepoReconcileService.reconcileAll()`
+hourly: it refreshes every connection's `providerUsername` from `/user`, then
+groups every git service with `gitProviderId` + `gitRepo` (previews and
+environments included) and every watched `repository` by provider and path, and
+reads each once through the first of its users still connected. Lookup order: by
+id (`repoByIdPath`, GitHub and Gitea `/repositories/<id>`, GitLab
+`/projects/<id>`, Bitbucket `/repositories/{workspace uuid}/{repo uuid}`, which
+is why its stored id is both UUIDs), else by path (GitHub, GitLab and Gitea
+redirect an old path), else the single repo in `listRepos` with the same last
+segment, case-insensitive. A new path is written with `renameRepoInUrl` onto
+`gitUrl` (https and scp-style) and `webUrl`; a watched repository whose new path
+is already watched is left alone, since `(providerId, fullName)` is unique. Ids
+are only learned here, never at pick time, so nothing in the pickers or the REST
+API carries them.
+
+`ServiceDTO.update` nulls `gitRepoId` whenever `gitRepo` or `gitProviderId`
+changes without an id in the same patch: otherwise the next pass would read the
+old repo by its id and move the service back. Reading by id is also what stops
+repojacking: a repo created at the old path by whoever takes the old username
+has another id. Workstations aren't followed (clone URL only, see `TODO.md`).
+
 ### Reconnect on refusal (`GitProviderRefusedError`, `service.gitWebhookReconnect`)
 
 `GitProviderService.#api` throws `GitProviderRefusedError` on a 401/403.
