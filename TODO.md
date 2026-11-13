@@ -30,6 +30,13 @@ When done delete the entry, no bloat.
 - [ ] A workstation's (and workstation preset's) repository isn't followed when
       it's renamed on its provider: they store a clone URL only, no `owner/name`
       or provider id, and its checkout directory is named after the URL.
+- [ ] Drizzle's bun-sql driver stores every jsonb value as a JSON string
+      (`"[...]"`), healed only when drizzle reads it back. Anything that works
+      on jsonb in SQL sees the string: `UserPreferencesDTO.updateViewMode`'s
+      `||` merge turns `viewModes` into an array of strings, so a list's
+      list/card choice doesn't stick, and `causes::text ilike` searches escaped
+      text. Fix the encoding once (a custom column type, or binding jsonb as
+      text) and repair the stored rows.
 
 ## Medium
 

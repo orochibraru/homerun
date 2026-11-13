@@ -17,6 +17,21 @@
 		compact?: boolean;
 		children: Snippet;
 	} = $props();
+
+	function messageOf(error: unknown): string {
+		if (error instanceof Error) {
+			return error.message;
+		}
+		if (
+			typeof error === "object" &&
+			error !== null &&
+			"message" in error &&
+			typeof error.message === "string"
+		) {
+			return error.message;
+		}
+		return String(error);
+	}
 </script>
 
 <svelte:boundary>
@@ -28,7 +43,7 @@
 				class="text-red-500"
 				onclick={reset}
 				size="sm"
-				title={error instanceof Error ? error.message : String(error)}
+				title={messageOf(error)}
 				variant="ghost"
 			>
 				<TriangleAlert class="size-4" />
@@ -37,7 +52,7 @@
 		{:else}
 			<div class={className}>
 				<Alert {title}>
-					{error instanceof Error ? error.message : String(error)}
+					{messageOf(error)}
 					{#snippet actions()}
 						<Button onclick={reset} size="sm" variant="outline">
 							<RotateCw class="size-4" />

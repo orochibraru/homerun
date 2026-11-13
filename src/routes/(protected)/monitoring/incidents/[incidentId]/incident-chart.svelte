@@ -98,7 +98,7 @@
 			role="img"
 			viewBox="0 0 {WIDTH} {HEIGHT}"
 		>
-			{#each [threshold.soft, threshold.hard] as limit (limit)}
+			{#each new Set([threshold.soft, threshold.hard]) as limit (limit)}
 				<line
 					stroke="currentColor"
 					stroke-dasharray="4 4"

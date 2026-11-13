@@ -195,25 +195,34 @@ export class ResourceIncidentDTO extends BaseDTO<ResourceIncident> {
 			.where(eq(resourceIncident.id, incident.id));
 	}
 
-	/** Appends one reading of the host, and each incident's peak so far, to the incidents still open on it. */
+	/**
+	 * Appends one reading of the host, and each incident's peak so far, to the
+	 * incidents still open on it. The array is rebuilt here rather than with
+	 * SQL `||`: the Bun SQL driver stores jsonb as a JSON string, so an append
+	 * in SQL adds strings instead of readings.
+	 */
 	static async addSample(
 		incidents: ResourceIncidentState[],
 		sample: IncidentSample,
 	): Promise<void> {
 		await Promise.all(
-			incidents.flatMap((incident) =>
-				incident.id
-					? [
-							db
-								.update(resourceIncident)
-								.set({
-									peakPercent: incident.peak,
-									samples: sql`${resourceIncident.samples} || ${JSON.stringify([sample])}::jsonb`,
-								})
-								.where(eq(resourceIncident.id, incident.id)),
-						]
-					: [],
-			),
+			incidents.map(async ({ id, peak }) => {
+				if (!id) {
+					return;
+				}
+				const [row] = await db
+					.select({ samples: resourceIncident.samples })
+					.from(resourceIncident)
+					.where(eq(resourceIncident.id, id))
+					.limit(1);
+				if (!row) {
+					return;
+				}
+				await db
+					.update(resourceIncident)
+					.set({ peakPercent: peak, samples: [...row.samples, sample] })
+					.where(eq(resourceIncident.id, id));
+			}),
 		);
 	}
 

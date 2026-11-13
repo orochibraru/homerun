@@ -422,3 +422,51 @@ describe("SystemStatsService", () => {
 		expect([stats.diskTotalGb, stats.diskUsedGb]).toEqual([null, null]);
 	});
 });
+
+describe("ResourceIncidentDTO.addSample", () => {
+	test("appends the reading to the readings already stored, as an object, and skips incidents never recorded", async () => {
+		const { db } = await import("../../../src/lib/server/db/lib");
+		const stored = [{ at: 1, percents: { cpu: 90 } }];
+		const sets: Record<string, unknown>[] = [];
+		const chain = (value: unknown): object =>
+			new Proxy(
+				{},
+				{
+					get: (_target, prop) =>
+						prop === "then"
+							? (resolve: (result: unknown) => unknown) => resolve(value)
+							: () => chain(value),
+				},
+			);
+		stub(db, "select", () => chain([{ samples: stored }]));
+		stub(db, "update", () => ({
+			set: (patch: Record<string, unknown>) => {
+				sets.push(patch);
+				return chain([]);
+			},
+		}));
+		const incident = {
+			causes: [],
+			kind: "cpu" as const,
+			lastNotifiedAt: 0,
+			level: "hard" as const,
+			startedAt: 0,
+		};
+		await ResourceIncidentDTO.addSample(
+			[
+				{ ...incident, id: "inc-1", peak: 97 },
+				{ ...incident, id: null, peak: 99 },
+			],
+			{ at: 2, percents: { cpu: 97 } },
+		);
+		expect(sets).toEqual([
+			{
+				peakPercent: 97,
+				samples: [
+					{ at: 1, percents: { cpu: 90 } },
+					{ at: 2, percents: { cpu: 97 } },
+				],
+			},
+		]);
+	});
+});
