@@ -29,6 +29,7 @@ bcrypt
 buildx
 CIs?
 CNAMEs
+cgroups?
 [Cc]onfigs?
 Coolify
 Dashy
